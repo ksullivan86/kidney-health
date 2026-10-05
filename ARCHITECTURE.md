@@ -122,8 +122,14 @@ Values must agree with `docs/diet-guide.md` after the reconcile step.
 
 * protein_g: non-dialysis CKD 3–5 with diabetes 0.6–0.8 g/kg (use 0.8 for max, 0.6 for min);
   hemodialysis / peritoneal 1.0–1.2 g/kg (min 1.0, max 1.2).
-* potassium_mg: stage 3: 3000; stage 4–5 non-dialysis: 2500; hemodialysis: 2300; peritoneal: 3000.
-* phosphorus_mg: 800–1000 → use 900 for stage 3b+, 1000 for stage 3a.
+* potassium_mg (no guideline fixes a number; restriction is ordered only when serum potassium runs high,
+  so these are the starting points `docs/research/ckd-diet.md` arrived at): stage 1–2: 4000 (informational);
+  stage 3a: 4000; stage 3b: 3500; stage 4: 3000; stage 5 non-dialysis: 2500; hemodialysis: 2500;
+  peritoneal: 3500. The note returned with the suggestion must say: "Only restrict potassium if your
+  blood potassium is high; your care team sets the number."
+  **These values are provisional until the reconcile step compares them with `docs/research/targets_by_stage.json`
+  (the fact-checked file wins).**
+* phosphorus_mg: 800–1000 when phosphate runs high → use 1000 for stage 1–4 and hemodialysis, 900 for stage 5 non-dialysis and peritoneal (provisional, same reconcile rule).
 * sodium_mg: 2000 (all stages; KDOQI < 2300, many programs use 2000).
 * fluid_ml: `null` (no limit) unless dialysis: hemodialysis 1000 + urine output ≈ 1500 default; peritoneal 2000.
 * carbs_g: 45 % of calories / 4 → default calories 30 kcal/kg (KDOQI 25–35) → carbs = round(cal*0.45/4).
@@ -143,6 +149,8 @@ CREATE TABLE IF NOT EXISTS profile (
   diabetes TEXT NOT NULL DEFAULT 'type1',      -- 'none','type1','type2'
   warn_fraction REAL NOT NULL DEFAULT 0.8,
   targets_json TEXT NOT NULL DEFAULT '{}',     -- {"potassium_mg": 2500, "protein_g": {"min": 42, "max": 56}, ...}
+  dialysis_days_json TEXT NOT NULL DEFAULT '[]', -- v0.2: weekdays of dialysis sessions, 0=Mon .. 6=Sun, e.g. [0,2,4]
+  week_start TEXT NOT NULL DEFAULT 'monday',   -- v0.2: 'monday' | 'sunday' (Plan view grid)
   updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS foods (
@@ -172,14 +180,28 @@ CREATE TABLE IF NOT EXISTS log_entries (
   servings REAL NOT NULL,
   grams REAL,                                  -- optional, if the user entered weight
   note TEXT,
+  status TEXT NOT NULL DEFAULT 'eaten',        -- v0.2: 'eaten' | 'planned'
   -- snapshot of nutrients for this entry (already multiplied by servings)
   calories_kcal REAL, protein_g REAL, fat_g REAL, sat_fat_g REAL, carbs_g REAL, fiber_g REAL, sugar_g REAL,
   sodium_mg REAL, potassium_mg REAL, phosphorus_mg REAL, calcium_mg REAL, fluid_ml REAL,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS log_date ON log_entries(date);
-CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);  -- e.g. foods_json_version
+CREATE TABLE IF NOT EXISTS meal_templates (   -- v0.2: saved meals
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  note TEXT,
+  items_json TEXT NOT NULL,                    -- [{"food_id": 12, "servings": 1.5}, ...]
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);  -- e.g. foods_json_version, schema_version
 ```
+
+**Migrations.** `CREATE TABLE IF NOT EXISTS` never adds columns to an existing
+database. `app/db.py` keeps `meta.schema_version` and an ordered list of migration
+steps; each step inspects `PRAGMA table_info(<table>)` and issues `ALTER TABLE ... ADD COLUMN`
+only when the column is missing, so a v0.1 `kidney.db` upgrades in place on startup
+and a fresh database gets the full schema. Never drop or rename columns.
 
 Builtin foods are loaded from `data/foods.json` at startup (upsert by `fdc_id`
 for `source='builtin'`; a `version` string in the JSON is stored in `meta` and the
@@ -231,6 +253,8 @@ Profile = {
   "id": 1, "name": "", "weight_kg": 70, "height_cm": null,
   "ckd_stage": "3b", "dialysis": "none", "diabetes": "type1",
   "warn_fraction": 0.8,
+  "dialysis_days": [0, 2, 4],          // v0.2, weekdays 0=Mon..6=Sun; [] when not on hemodialysis
+  "week_start": "monday",              // v0.2
   "targets": {
     "calories_kcal": 2100, "protein_g": {"min": 42, "max": 56}, "carbs_g": 236,
     "carbs_per_meal_g": 60, "sodium_mg": 2000, "potassium_mg": 2500,
@@ -301,12 +325,18 @@ DaySummary = {
 ```
 
 ### Auth (optional)
-If `APP_PASSWORD` is set, every route (including static) requires HTTP Basic auth
-with any username and that password. Otherwise no auth (LAN use behind a reverse proxy).
+If `APP_PASSWORD` is set, every route (including static) **except `GET /healthz`**
+requires HTTP Basic auth with any username and that password (constant-time compare,
+realm `kidney-health`). `/healthz` stays open so container and Kubernetes probes work;
+it exposes only the food count. Otherwise no auth (LAN use behind a reverse proxy).
+
+### Validation errors
+Request validation failures return **400** with `{"detail": "<message>", "errors": [...]}`
+(not FastAPI's default 422), so every error has the `detail` string shape above.
 
 ## Frontend behaviour (app/static)
 
-Mobile-first single page, four views switched client-side (no router library):
+Mobile-first single page, five views switched client-side (no router library):
 
 1. **Today** (default): date picker (prev/next day), the day's status bars for each
    targeted nutrient (color by level), per-meal sections with entries, each entry
@@ -320,12 +350,133 @@ Mobile-first single page, four views switched client-side (no router library):
 3. **Trends**: last 14 days, one small inline-SVG bar chart per limited nutrient
    (K, P, Na, protein, carbs, fluid if set) with target line. Export CSV button.
 4. **Profile & targets**: profile fields, targets editor, "Suggest targets" button
-   (fills the form from `/api/profile/suggested-targets`, never auto-saves), warn_fraction.
+   (fills the form from `/api/profile/suggested-targets`, never auto-saves), warn_fraction,
+   dialysis days (weekday checkboxes, shown when dialysis is hemodialysis), week start.
    Footer disclaimer: targets come from the person's nephrologist / renal dietitian.
+5. **Plan** (v0.2): a 7-day grid starting at the profile's week start (7 columns on desktop,
+   a vertical list of day cards on phones). Each day shows projected (eaten + planned) K, P, Na,
+   protein, carbs and fluid (when targeted) as small chips colored by `projected_status` level,
+   plus counts of planned/eaten items; tapping a day opens it in Today. Actions: "Copy day…"
+   (POST /api/log/copy-day), week navigation, a **Saved meals** section (list, create/edit/delete,
+   "Add to a day" → POST /api/meals/{id}/apply with date + meal + status), and a **Shopping list**
+   for the visible week (GET /api/plan/shopping) with checkboxes kept only in localStorage.
+
+v0.2 changes to the other views:
+* Today: planned entries render in their meal section with a dashed outline and a "planned"
+  badge, are excluded from the meal's eaten totals but shown in a second line
+  ("Planned: +32 g carbs"); each has a one-tap "Eaten" button (PUT status) and each meal has
+  "Mark all eaten" (POST /api/log/mark-eaten) and "Save as meal" (POST /api/meals/from-log) and
+  "Add saved meal". Status bars draw the projected total as a lighter extension of the bar with
+  a marker, and `projected_alerts` show below the eaten alerts in a muted style
+  ("If you eat what's planned…"). A compact **"Last 7 days"** strip at the bottom shows the
+  average per logged day for K, P, Na, protein vs target (from GET /api/log/summary) so weekly
+  trends are visible without leaving the page; when the profile is hemodialysis with dialysis
+  days set, it also shows the "since last dialysis" accumulation for potassium and fluid.
+* Add: an "Eaten now / Plan for later" toggle in the entry sheet (default Eaten for today or past
+  dates, Plan for future dates); a "Saved meals" shortcut list above the search results.
+* Trends: a **Period summary** card at the top (same data as GET /api/log/summary for the
+  selected range): per nutrient the average per logged day vs target with level color, days over,
+  change vs the previous period, and the interdialytic block when applicable; the explanatory
+  `notes` are shown once under the card.
 
 Colors: green `#2e7d32`, yellow `#f9a825`, red `#c62828`, neutral grays; must pass
 contrast on both light and dark (`prefers-color-scheme`). Fonts: system stack.
 All strings in English. `fetch()` only to same-origin `/api/...`.
+
+## v0.2 additions: meal planning and period summaries
+
+### Why periods matter (drives the copy in the UI and `notes` in the API)
+* Potassium, sodium and fluid act within the day: a day well over the limit is a risk on
+  its own, there is no "banking" a low day against a high one. Between hemodialysis sessions
+  they do accumulate until the next session, so for hemodialysis the app also totals them
+  over the current interdialytic interval (the long weekend gap is the dangerous one).
+* Phosphorus and protein are judged on the average over several days: serum phosphate and
+  nutritional status reflect weeks of intake, so a weekly average above target matters more
+  than one high day.
+* Carbohydrate is counted per meal and per day for insulin; the weekly average is informational.
+
+### Log entries gain `status`
+* `POST /api/log` and `POST /api/log/quick` accept `"status": "eaten" | "planned"` (default `eaten`).
+* `PUT /api/log/{id}` accepts `status`.
+* `Entry` includes `"status"`.
+* `POST /api/log/mark-eaten` body `{"date": "YYYY-MM-DD", "meal"?: Meal}` → `{"updated": n}`
+  sets every planned entry of that day (or meal) to `eaten`.
+* `POST /api/log/copy-day` body `{"from_date", "to_date", "meals"?: [Meal], "include"?: "all"|"eaten"|"planned" (default all), "status"?: "planned"|"eaten" (default planned)}`
+  → `{"created": n, "entries": [Entry]}`; copies entries (snapshot recomputed from current foods) onto `to_date` with the given status. 400 if from_date == to_date.
+
+### DaySummary gains projection fields
+```json
+DaySummary += {
+  "totals": {...eaten only...},
+  "planned_totals": {...planned only...},
+  "projected_totals": {...eaten + planned...},
+  "status": {...on eaten totals...},
+  "projected_status": {...same shape, on projected totals...},
+  "meals": { "breakfast": {...eaten totals...}, ... },
+  "planned_meals": { "breakfast": {...planned totals...}, ... },
+  "alerts": [...on eaten...],
+  "projected_alerts": [ {"level": "caution"|"over", "nutrient": "potassium_mg", "message": "If you eat what's planned, potassium reaches 104 % of today's limit (2600 / 2500 mg)"} ],
+  "counts": {"eaten": 5, "planned": 2}
+}
+```
+`entries` still contains both statuses, ordered by meal, then status (`eaten` before `planned`), then created_at.
+
+### Range gains planned/projected per day
+`GET /api/log/range` items become
+`{"date", "totals", "planned_totals", "projected_totals", "status", "projected_status", "counts": {"eaten", "planned"}}`.
+
+### Period summary
+`GET /api/log/summary?start=YYYY-MM-DD&end=YYYY-MM-DD` (default: the 7 days ending today; max 366 days)
+```json
+PeriodSummary = {
+  "start": "2026-09-29", "end": "2026-10-05", "days": 7,
+  "logged_days": 5,                               // days with at least one eaten entry
+  "nutrients": {
+    "potassium_mg": {
+      "role": "limit", "target": 2500,            // target: max for limits/ranges, goal for goals, null → key omitted
+      "total": 11200, "average": 2240,            // average per LOGGED day (null when logged_days == 0)
+      "fraction": 0.9, "level": "caution",        // average vs target with the profile's warn_fraction
+      "days_over": 1, "max_day": {"date": "2026-10-03", "value": 3100},
+      "previous_average": 2400, "change_pct": -6.7, // the same-length period immediately before; null when no data
+      "assessment": "daily"                        // "daily" (K, Na, fluid, carbs) or "weekly_average" (P, protein, calories, calcium)
+    }, ...
+  },
+  "interdialytic": null,                          // or, when dialysis == hemodialysis and dialysis_days non-empty:
+  // { "since": "2026-10-03", "days": 3, "next": "2026-10-06",
+  //   "nutrients": { "potassium_mg": {"total": 7200, "limit": 7500, "fraction": 0.96, "level": "caution"},
+  //                  "sodium_mg": {...}, "fluid_ml": {...} } }
+  "notes": ["Potassium, sodium and fluid are judged day by day ...", "Phosphorus and protein are judged on the weekly average ..."]
+}
+```
+Interdialytic interval: `since` is the most recent dialysis weekday on or before `end`
+(intake on a dialysis day counts toward the next session), `days = end - since + 1`,
+`limit = per-day target × days`, `next` the next dialysis weekday after `end`.
+Only eaten entries count. Include only nutrients that have a numeric target.
+
+### Saved meals (templates), prefix `/api/meals`
+* `GET /api/meals` → `{"meals": [MealTemplate]}` (alphabetical)
+* `POST /api/meals` body `{"name", "note"?, "items": [{"food_id", "servings"}]}` → MealTemplate (201); 404 if a food id is unknown; 400 if items empty.
+* `GET /api/meals/{id}` → MealTemplate; `PUT /api/meals/{id}` (same body) → MealTemplate; `DELETE /api/meals/{id}` → 204.
+* `POST /api/meals/from-log` body `{"date", "meal", "name", "note"?}` → MealTemplate (201) built from that day's entries of that meal (both statuses); 400 if none.
+* `POST /api/meals/{id}/apply` body `{"date", "meal", "status"?: "planned"|"eaten" (default planned), "scale"?: number > 0 (default 1)}` → `{"entries": [Entry]}` (201).
+
+```json
+MealTemplate = {
+  "id": 3, "name": "Usual breakfast", "note": null,
+  "items": [ {"food_id": 12, "food_name": "Egg white, cooked", "servings": 2, "serving_desc": "1 large (33 g)",
+              "nutrients": {...scaled...}, "kidney_rating": "green", "hidden": false} ],
+  "totals": {...12 keys...},
+  "kidney_rating": "yellow",                      // worst item rating
+  "created_at": "...", "updated_at": "..."
+}
+```
+A food referenced by a template may be hidden later; keep the item, return `hidden: true`, and
+`apply` still works (the entry snapshot comes from the stored food row).
+
+### Shopping list
+`GET /api/plan/shopping?start=&end=` → `{"items": [{"food_id", "food_name", "serving_desc", "servings", "grams", "days": 3}]}`
+aggregating **planned** entries in the range by food (servings summed; `grams = servings × serving_g`), ordered by name.
+
 
 ## Conventions
 
