@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kidney-health
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  # SQLite on a ReadWriteOnce volume: never run more than one replica.
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    # Recreate (not RollingUpdate): the old pod must release the volume and the
+    # SQLite lock before the new pod starts.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kidney-health
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kidney-health
+    spec:
+      automountServiceAccountToken: false
+      # Pin to one node when using a hostPath-style StorageClass (local-path):
+      # nodeSelector:
+      #   kubernetes.io/hostname: talos-worker-1
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001            # matches USER in deploy/Containerfile
+        runAsGroup: 10001
+        fsGroup: 10001              # volume files become group-writable by the app user
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: ghcr.io/ksullivan86/kidney-health:latest
+          # Always: with the :latest tag a `kubectl rollout restart` picks up new builds.
+          # Pin a tag via kustomization.yaml `images:` for controlled upgrades.
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: DATA_DIR
+              value: /data
+          envFrom:
+            # USDA_API_KEY / APP_PASSWORD. optional: the pod starts without the Secret
+            # (then: no USDA search, no password). See secret.example.yaml.
+            - secretRef:
+                name: kidney-health
+                optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            # - name: tmp
+            #   mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /healthz          # exempt from APP_PASSWORD auth
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            # The app writes only to /data, so `true` should work. Left false for the
+            # first deployment because SQLite may spill temp files to /tmp on large
+            # queries; if you flip it, also uncomment the `tmp` emptyDir above/below.
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kidney-health-data
+        # - name: tmp
+        #   emptyDir:
+        #     medium: Memory
+        #     sizeLimit: 64Mi

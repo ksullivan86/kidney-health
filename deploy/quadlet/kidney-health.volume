@@ -1,0 +1,15 @@
+# kidney-health.volume -- persistent storage for /data (the SQLite database).
+# Quadlet creates the Podman volume as "systemd-kidney-health":
+#   podman volume inspect systemd-kidney-health --format '{{.Mountpoint}}'
+#
+# Ownership: the image owns /data as uid 10001 and Podman copies that ownership into
+# the empty volume on first start, so no manual chown is needed. If you ever see
+# "unable to open database file", run:
+#   podman unshare chown -R 10001:10001 "$(podman volume inspect systemd-kidney-health --format '{{.Mountpoint}}')"
+
+[Unit]
+Description=Kidney Health data volume (kidney.db)
+
+[Volume]
+# Podman >= 5.0 can pick the volume name instead of the systemd- prefix:
+# VolumeName=kidney-health-data

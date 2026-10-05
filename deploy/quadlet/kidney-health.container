@@ -1,0 +1,63 @@
+# kidney-health.container -- systemd Quadlet unit for rootless Podman.
+# Needs Podman >= 4.6 (Quadlet health keys arrived in 4.5, AutoUpdate= in 4.6; the
+# optional ReadOnly= below needs 4.8). Check with `podman --version`.
+#
+# Install as the unprivileged user that will run the container:
+#   mkdir -p ~/.config/containers/systemd
+#   cp deploy/quadlet/kidney-health.container deploy/quadlet/kidney-health.volume ~/.config/containers/systemd/
+#   cp deploy/.env.example ~/.config/containers/systemd/kidney-health.env   # edit, then chmod 600
+#   systemctl --user daemon-reload                  # Quadlet generates kidney-health.service
+#   systemctl --user start kidney-health.service
+#   loginctl enable-linger "$USER"                  # keep it running after logout; start at boot
+#
+# Status / logs:  systemctl --user status kidney-health
+#                 journalctl --user -u kidney-health -f
+# Typos in this file make daemon-reload skip the unit silently; check with the generator:
+#   /usr/libexec/podman/quadlet -user -dryrun       (Debian/Ubuntu: /usr/lib/podman/quadlet)
+# Rootful alternative: place the files in /etc/containers/systemd/ and drop every "--user".
+# Quadlet units are not "enabled" with systemctl; [Install] below handles autostart.
+
+[Unit]
+Description=Kidney Health food log (renal diet + type 1 diabetes nutrient tracker)
+Documentation=https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+# :latest follows the main branch. Pin a release instead (e.g. :0.2.0) for controlled upgrades;
+# AutoUpdate then only acts when that tag is re-pushed.
+Image=ghcr.io/ksullivan86/kidney-health:latest
+ContainerName=kidney-health
+# `podman auto-update` (or `systemctl --user enable --now podman-auto-update.timer`)
+# pulls a newer image for the tag above and restarts this unit, rolling back if it fails.
+AutoUpdate=registry
+# host:container. Use 127.0.0.1:8000:8000 when a reverse proxy on this host is the only client.
+PublishPort=8000:8000
+# Named volume declared in kidney-health.volume (Podman volume "systemd-kidney-health").
+Volume=kidney-health.volume:/data
+Environment=DATA_DIR=/data
+# USDA_API_KEY and APP_PASSWORD. The path is relative to this unit file and the
+# file must exist (an empty file is fine).
+EnvironmentFile=kidney-health.env
+# Same probe as the image HEALTHCHECK; declared here so HealthOnFailure applies.
+HealthCmd=python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"
+HealthInterval=30s
+HealthTimeout=5s
+HealthStartPeriod=15s
+HealthRetries=3
+# Kill the container when the health check keeps failing so systemd restarts it.
+HealthOnFailure=kill
+NoNewPrivileges=true
+DropCapability=ALL
+# The app writes only under /data. Uncomment after a successful test run for an immutable
+# rootfs (Podman >= 4.8).
+# ReadOnly=true
+
+[Service]
+Restart=always
+RestartSec=5
+# Give the first image pull time on slow links.
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
