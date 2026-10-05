@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+data-local/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+scripts/.cache/
+.DS_Store
+node_modules/
