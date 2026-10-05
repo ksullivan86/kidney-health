@@ -546,6 +546,9 @@ aggregating **planned** entries in the range by food (servings summed; `grams = 
 
 * Timestamps ISO-8601 UTC with `Z`. Dates `YYYY-MM-DD` as provided by the client.
 * Round nutrient numbers to 1 decimal in responses (mg values to integers).
+* Food rows store per-serving nutrients at that same precision, and `serving_g` to 1 decimal
+  (custom, USDA and builtin alike; `data/foods.json` is already rounded), so a client that scales
+  a food's shown values gets the numbers and warnings the saved entry gets.
 * `python -m pytest` must pass with no network.
 * `uvicorn app.main:app --host 0.0.0.0 --port 8000` runs the server; `DATA_DIR` default
   `./data-local` when running outside a container (gitignored), `/data` in the image.

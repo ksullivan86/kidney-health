@@ -132,8 +132,11 @@ def _value(day_totals: Mapping[str, Mapping[str, Any]], day: str, key: str) -> f
     return value if math.isfinite(value) else 0.0
 
 
+# Sums of day totals use math.fsum: exactly rounded, so a period's total and average do not depend
+# on the Python version (3.11's sum() adds left to right, 3.12+ compensates; the two can differ in
+# the last bit and so by 0.1 after rounding, e.g. 2244.1499999999996 vs 2244.15).
 def _average(values: list[float]) -> float | None:
-    return (sum(values) / len(values)) if values else None
+    return (math.fsum(values) / len(values)) if values else None
 
 
 def summarize_period(
@@ -165,7 +168,7 @@ def summarize_period(
         if target is None:
             continue
         values = [(d, _value(day_totals, d, key)) for d in current]
-        total = sum(v for _, v in values)
+        total = math.fsum(v for _, v in values)
         average = _average([v for _, v in values])
         fraction = None if average is None else round(average / target, 2)
         max_day = max(values, key=lambda t: t[1]) if values else None
@@ -256,7 +259,7 @@ def interdialytic_block(
         target = summary_target(key, targets.get(key))
         if target is None:
             continue
-        total = sum(_value(day_totals, d, key) for d in window)
+        total = math.fsum(_value(day_totals, d, key) for d in window)
         limit = target * days
         fraction = round(total / limit, 2)
         nutrients[key] = {

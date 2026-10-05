@@ -29,6 +29,7 @@
         <path d="M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z" fill="#fff"/>
       </svg>
       <span class="brand-name">Kidney Diet Log</span>
+      <span class="brand-pill" id="brand-pill" hidden>Preview</span>
     </div>
 
     <nav class="tabs" aria-label="Views">
@@ -62,6 +63,13 @@
     </button>
   </div>
 </header>
+
+<div class="preview-banner" id="preview-banner" role="note" aria-label="About this preview" hidden>
+  <p>Preview with sample data. Nothing is saved: reloading starts over. To try the hemodialysis features, set Dialysis to Hemodialysis in Profile, save, then use the suggested targets it offers.</p>
+  <button class="icon-btn" type="button" id="preview-banner-close" aria-label="Dismiss the preview notice">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+</div>
 
 <main id="main" class="main">
 
@@ -211,7 +219,7 @@
           <button type="button" class="seg" data-days="14" aria-pressed="true">14 d</button>
           <button type="button" class="seg" data-days="30">30 d</button>
         </div>
-        <a id="export-csv" class="btn secondary" href="#" download="kidney-log.csv">
+        <a id="export-csv" class="btn secondary" href="#">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Export CSV
         </a>
@@ -307,7 +315,15 @@
           <button class="btn secondary" type="button" id="btn-suggest">Suggest targets</button>
         </div>
         <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, height, stage and dialysis setting (calories and protein are per kg of ideal body weight, so add your height if you are over- or under-weight); discuss them with your care team before using them.</p>
-        <div id="suggest-notes" class="notes" hidden></div>
+        <div id="targets-stale" class="notes targets-stale" role="status" hidden>
+          <div class="notes-title">Check your daily targets</div>
+          <p id="targets-stale-msg"></p>
+          <div class="targets-stale-actions">
+            <button class="btn secondary" type="button" id="targets-stale-suggest">Suggest targets</button>
+            <button class="link-btn" type="button" id="targets-stale-keep">Keep my targets</button>
+          </div>
+        </div>
+        <div id="suggest-notes" class="notes" tabindex="-1" hidden></div>
         <div class="form-grid targets-grid">
           <div class="field">
             <label for="tg-potassium_mg">Potassium (mg)</label>
@@ -761,6 +777,32 @@
       <button class="btn primary" type="submit" id="savemeal-save">Save meal</button>
     </div>
   </form>
+</dialog>
+
+<!-- ===================== CSV SHEET (demo and preview only: they cannot download files) ===================== -->
+<dialog id="sheet-csv" class="sheet" aria-labelledby="sheet-csv-title">
+  <div class="sheet-form">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-csv-title" class="sheet-title">Export CSV</h2>
+        <div class="sheet-sub" id="sheet-csv-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="hint csv-note">The installed app downloads this as a .csv file. Here, copy the text and paste it into a spreadsheet or a text file.</p>
+      <label class="sr-only" for="csv-text">CSV text, one row per log entry</label>
+      <textarea id="csv-text" class="csv-text" readonly rows="12" spellcheck="false" wrap="off"></textarea>
+      <p class="status-msg" id="csv-status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Close</button>
+      <button class="btn primary" type="button" id="csv-copy">Copy CSV</button>
+    </div>
+  </div>
 </dialog>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

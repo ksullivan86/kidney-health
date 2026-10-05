@@ -274,6 +274,37 @@ def test_create_custom_food(client):
     assert [f["id"] for f in client.get("/api/foods", params={"source": "custom"}).json()["foods"]] == [food["id"]]
 
 
+def test_food_rows_store_the_values_the_api_shows(client):
+    """A client that scales a food's shown per-serving values (the Add sheet's live preview) must
+    get the numbers and warnings the saved entry gets: 2.5 x 80.4 mg potassium was 201 mg (high)
+    on the server while 2.5 x the shown 80 mg is 200 mg (moderate)."""
+    label = {"potassium_mg": 80.4, "phosphorus_mg": 40.3, "sodium_mg": 56.2, "carbs_g": 11.98, "protein_g": 5.98, "fluid_ml": None}
+    body = {"name": "Probe granola bar", "serving_desc": "1 bar", "serving_g": 33.33, "nutrients": label, "flags": ["counts_as_fluid"]}
+    food = client.post("/api/foods", json=body).json()
+    n = food["nutrients"]
+    assert (n["potassium_mg"], n["phosphorus_mg"], n["sodium_mg"], n["carbs_g"], n["protein_g"]) == (80, 40, 56, 12.0, 6.0)
+    assert food["serving_g"] == 33.3 and n["fluid_ml"] == 33  # unknown fluid = the (stored) serving weight
+
+    e = client.post("/api/log", json={"date": DAY, "meal": "snack", "food_id": food["id"], "servings": 2.5}).json()
+    en = e["nutrients"]
+    assert (en["potassium_mg"], en["phosphorus_mg"], en["sodium_mg"], en["carbs_g"], en["protein_g"]) == (200, 100, 140, 30.0, 15.0)
+    assert {(w["nutrient"], w["level"]) for w in e["warnings"]} == {("potassium_mg", "medium"), ("protein_g", "medium"), ("carbs_g", "medium")}
+    assert next(w for w in e["warnings"] if w["nutrient"] == "potassium_mg")["message"] == "Moderate potassium: 200 mg in this entry"
+    # by weight: grams / the shown serving_g
+    g = client.post("/api/log", json={"date": DAY, "meal": "snack", "food_id": food["id"], "grams": 99.9}).json()
+    assert g["servings"] == 3 and g["nutrients"]["potassium_mg"] == 240
+
+    # editing the food and quick add store the same way
+    body["nutrients"] = {"potassium_mg": 100.5, "carbs_g": 14.95}
+    edited = client.put(f"/api/foods/{food['id']}", json=body).json()
+    assert edited["nutrients"]["potassium_mg"] == 101 and edited["nutrients"]["carbs_g"] == 15.0
+    assert {w["nutrient"] for w in edited["warnings"]} == {"potassium_mg", "carbs_g"}
+    q = client.post("/api/log/quick", json={"date": DAY, "meal": "lunch", "name": "Soup", "serving_g": 250.04,
+                                            "nutrients": {"sodium_mg": 400.4, "protein_g": 14.96}, "servings": 2}).json()
+    assert q["nutrients"]["sodium_mg"] == 800 and q["nutrients"]["protein_g"] == 30.0
+    assert client.get(f"/api/foods/{q['food_id']}").json()["serving_g"] == 250.0
+
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -356,7 +387,8 @@ def test_create_entry_snapshots_and_multiplies(client):
     e = r.json()
     assert e["date"] == DAY and e["meal"] == "breakfast" and e["food_id"] == banana["id"]
     assert e["food_name"] == "Banana, raw" and e["servings"] == 2 and e["grams"] is None and e["note"] == "with oats"
-    assert e["nutrients"]["potassium_mg"] == 844 and e["nutrients"]["carbs_g"] == 53.9
+    # the fixture banana says carbs 26.95 g; a food row stores what the API shows (27.0 g)
+    assert e["nutrients"]["potassium_mg"] == 844 and e["nutrients"]["carbs_g"] == 54.0
     assert e["kidney_rating"] == "red"
     assert e["warnings"][0]["message"] == "High potassium: 844 mg in this entry"
     assert e["created_at"].endswith("Z") and e["updated_at"].endswith("Z")

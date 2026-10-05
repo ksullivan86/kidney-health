@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from .config import Settings
 from .db import get_db, get_meta, set_meta, utcnow
 from .models import Categories, Food, FoodCreate, FoodList, UsdaImport, UsdaSearchResult
-from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, food_warnings, kidney_rating, round_nutrients
+from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, food_warnings, kidney_rating, round_nutrients, round_value
 
 log = logging.getLogger("kidney_health.foods")
 router = APIRouter(prefix="/api/foods", tags=["foods"])
@@ -126,6 +126,21 @@ def normalise_fluid(nutrients: Mapping[str, float | None], flags: Iterable[str],
     return out
 
 
+def stored_food_values(
+    nutrients: Mapping[str, float | None], flags: Iterable[str], serving_g: float
+) -> tuple[float, dict[str, float | int | None]]:
+    """``(serving_g, nutrients)`` as a food row stores them: at the precision the API shows.
+
+    Per-serving values are kept the way ``data/foods.json`` already is (mg and mL whole, the rest
+    to 1 decimal; ``serving_g`` to 1 decimal), so the numbers a client sees for a food are the
+    ones every entry is scaled from. Storing a label's 80.4 mg while showing 80 made a client's
+    2.5-serving preview say 200 mg (moderate) where the saved entry said 201 mg (high).
+    """
+    serving = round(float(serving_g), 1)
+    values = normalise_fluid(nutrients, flags, serving)
+    return serving, {key: round_value(key, values[key]) for key in NUTRIENT_KEYS}
+
+
 def row_to_food(row: sqlite3.Row) -> dict[str, Any]:
     flags = parse_flags(row["flags_json"])
     nutrients = raw_nutrients(row)
@@ -190,7 +205,7 @@ def insert_food(
     hidden: bool = False,
 ) -> int:
     flag_list = list(flags)
-    values = normalise_fluid(nutrients, flag_list, serving_g)
+    serving_g, values = stored_food_values(nutrients, flag_list, serving_g)
     now = utcnow()
     cur = conn.execute(
         f"""INSERT INTO foods (name, brand, category, source, fdc_id, serving_desc, serving_g,
@@ -221,7 +236,7 @@ def update_food_row(
     fdc_id: Any = ...,  # Ellipsis = leave unchanged
 ) -> None:
     flag_list = list(flags)
-    values = normalise_fluid(nutrients, flag_list, serving_g)
+    serving_g, values = stored_food_values(nutrients, flag_list, serving_g)
     sets = ["name = ?", "brand = ?", "category = ?", "serving_desc = ?", "serving_g = ?"]
     params: list[Any] = [name, brand, category, serving_desc, float(serving_g)]
     for key in NUTRIENT_KEYS:

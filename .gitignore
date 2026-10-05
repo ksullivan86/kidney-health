@@ -11,3 +11,4 @@ data-local/
 scripts/.cache/
 .DS_Store
 node_modules/
+build/

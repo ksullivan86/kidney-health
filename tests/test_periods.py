@@ -287,3 +287,18 @@ def test_summarize_period_ignores_non_finite_stored_values_and_targets():
     assert p.summary_target("phosphorus_mg", inf) is None and p.summary_target("phosphorus_mg", {"max": float("nan")}) is None
     block = p.interdialytic_block({"since": MON, "end": TUE, "days": 2, "next": WED}, totals, {"potassium_mg": 2500})
     assert block["nutrients"]["potassium_mg"]["total"] == 1000
+
+
+def test_period_sums_are_exactly_rounded_whatever_the_python_version():
+    # Left-to-right float addition (Python 3.11's sum()) gives 2015.7499999999998 and 3379.4999999999995
+    # here, which round to 2015.7 kcal and 3379 mg; the exact sums are 2015.75 and 3379.5.
+    kcal = [189.92, 501.38, 720.9, 603.55]
+    potassium = [1839.6, 914.3, 625.6]
+    days = ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01"]
+    totals = {d: {"calories_kcal": kcal[i], "potassium_mg": potassium[i] if i < 3 else 0.0} for i, d in enumerate(days)}
+    out = p.summarize_period(days[0], days[-1], totals, {"calories_kcal": 2000, "potassium_mg": 3000})
+    assert out["nutrients"]["calories_kcal"]["total"] == 2015.8
+    assert out["nutrients"]["potassium_mg"]["total"] == 3380
+    iv = {"since": days[0], "end": days[2], "days": 3, "next": days[3]}
+    block = p.interdialytic_block(iv, totals, {"potassium_mg": 2500})
+    assert block["nutrients"]["potassium_mg"]["total"] == 3380

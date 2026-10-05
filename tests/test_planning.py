@@ -287,7 +287,8 @@ def test_summary_aggregates_eaten_entries_only_with_previous_period(client):
     assert pr["role"] == "range" and pr["target"] == 56.0 and pr["assessment"] == "weekly_average"
     assert pr["total"] == 11.1 and pr["average"] == 3.7 and pr["days_over"] == 0
     assert pr["max_day"] == {"date": "2026-10-05", "value": 7.2}
-    assert pr["previous_average"] == 2.6 and pr["change_pct"] == pytest.approx(43.0, abs=0.05)
+    # protein per banana is stored as shown (1.3 g, the fixture says 1.29): 3.7 vs 2.6 g/day
+    assert pr["previous_average"] == 2.6 and pr["change_pct"] == pytest.approx(42.3, abs=0.05)
     assert s["interdialytic"] is None and len(s["notes"]) == 3
 
 
