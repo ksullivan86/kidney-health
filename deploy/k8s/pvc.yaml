@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kidney-health-data
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  accessModes:
+    - ReadWriteOnce            # SQLite: one writer, one pod (see Recreate strategy)
+  resources:
+    requests:
+      storage: 1Gi             # the database is a few MB; 1Gi leaves room for backups
+  # Leave storageClassName unset to use the cluster default, or pick the one you run on Talos:
+  # storageClassName: local-path        # rancher/local-path-provisioner (hostPath; pins the pod to one node)
+  # storageClassName: longhorn          # Longhorn (needs iscsi-tools + util-linux-tools Talos extensions)
+  # storageClassName: ceph-block        # Rook-Ceph RBD (name varies: rook-ceph-block, ceph-block)
+  # storageClassName: openebs-hostpath  # OpenEBS LocalPV hostpath
+  # storageClassName: mayastor-single   # OpenEBS Mayastor
+  # storageClassName: nfs-csi           # csi-driver-nfs; works but SQLite over NFS is discouraged

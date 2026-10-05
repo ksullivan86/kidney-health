@@ -1,0 +1,28 @@
+# Build-context filter for deploy/Containerfile (always build from the repo root).
+# Only app/, data/foods.json and requirements.txt are copied into the image.
+.git
+.github
+.gitignore
+.pytest_cache
+.venv
+venv
+**/__pycache__
+**/*.pyc
+**/*.db
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
+**/.env
+tests
+docs
+scripts/.cache
+data-local
+deploy/compose.yaml
+deploy/.env.example
+deploy/quadlet
+deploy/k8s
+deploy/README.md
+README.md
+ARCHITECTURE.md
+.DS_Store
+node_modules

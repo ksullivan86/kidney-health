@@ -1,0 +1,76 @@
+# syntax=docker/dockerfile:1
+# Kidney Health food log -- OCI image for Podman, Docker and Kubernetes.
+#
+# Build from the REPOSITORY ROOT so app/, data/ and requirements.txt are in the context:
+#   podman build -f deploy/Containerfile -t kidney-health:local .
+#   docker build -f deploy/Containerfile -t kidney-health:local .
+# Multi-arch (linux/amd64 + linux/arm64) images are published to
+# ghcr.io/ksullivan86/kidney-health by .github/workflows/ci.yml. See docs/deployment.md.
+
+# ---------------------------------------------------------------------------
+# Stage 1: install the Python dependencies into a virtualenv. Keeps pip's build
+# artefacts and caches out of the runtime layer.
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim AS builder
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ---------------------------------------------------------------------------
+# Stage 2: runtime image
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim
+
+LABEL org.opencontainers.image.title="kidney-health" \
+      org.opencontainers.image.description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings" \
+      org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health"
+
+# DATA_DIR is set explicitly: app/config.py only auto-detects Podman/Docker
+# (/run/.containerenv, /.dockerenv), not containerd under Kubernetes.
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DATA_DIR=/data
+
+# Dedicated non-root user. uid/gid 10001 matches runAsUser/fsGroup in
+# deploy/k8s/deployment.yaml so volume ownership is consistent everywhere.
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home --shell /usr/sbin/nologin app \
+ && mkdir -p /app /data \
+ && chown -R app:app /app /data
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
+# Application code and the builtin food database. app/config.py resolves the
+# default FOODS_JSON to <parent of app/>/data/foods.json, i.e. /app/data/foods.json.
+COPY --chown=app:app requirements.txt ./requirements.txt
+COPY --chown=app:app app/ ./app/
+COPY --chown=app:app data/foods.json ./data/foods.json
+
+# Compile bytecode once at build time; the runtime user never needs to write to /app.
+RUN python -m compileall -q ./app
+
+USER app
+
+# All persistent state (kidney.db + WAL files). Mount a named volume or PVC here.
+VOLUME ["/data"]
+EXPOSE 8000
+
+# python:3.12-slim ships no curl/wget, so probe with the stdlib. /healthz is exempt
+# from APP_PASSWORD Basic auth, so this keeps working with auth enabled.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"]
+
+# --proxy-headers / --forwarded-allow-ips=* make scheme and client IP follow the
+# X-Forwarded-* headers set by a reverse proxy (ingress-nginx, Traefik, Caddy, Authelia).
+# Exec form: there is no shell, so the * is passed literally and must NOT be quoted.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

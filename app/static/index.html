@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kidney Diet Log</title>
+<meta name="description" content="Self-hosted food log for a renal diet with type 1 diabetes: tracks potassium, phosphorus, sodium, protein, fluid and carbohydrate against targets set with your care team.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111417" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%232e7d32'/%3E%3Cpath d='M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  // Apply the stored theme before first paint to avoid a flash.
+  try {
+    var t = localStorage.getItem('kdl-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="16" r="15" fill="var(--ok)"/>
+        <path d="M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z" fill="#fff"/>
+      </svg>
+      <span class="brand-name">Kidney Diet Log</span>
+    </div>
+
+    <nav class="tabs" aria-label="Views">
+      <div role="tablist" class="tablist">
+        <button role="tab" class="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/></svg>
+          <span>Today</span>
+        </button>
+        <button role="tab" class="tab" id="tab-add" aria-controls="view-add" aria-selected="false" tabindex="-1" data-view="add">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Add</span>
+        </button>
+        <button role="tab" class="tab" id="tab-trends" aria-controls="view-trends" aria-selected="false" tabindex="-1" data-view="trends">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="11" width="3.5" height="7" rx="1" fill="currentColor"/><rect x="10.25" y="6" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="15.5" y="13" width="3.5" height="5" rx="1" fill="currentColor"/></svg>
+          <span>Trends</span>
+        </button>
+        <button role="tab" class="tab" id="tab-profile" aria-controls="view-profile" aria-selected="false" tabindex="-1" data-view="profile">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Profile</span>
+        </button>
+      </div>
+    </nav>
+
+    <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main" class="main">
+
+  <!-- ===================== TODAY ===================== -->
+  <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today">
+    <div class="date-nav">
+      <button class="icon-btn" type="button" id="date-prev" aria-label="Previous day">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="date-center">
+        <div id="date-label" class="date-label" aria-live="polite">Today</div>
+        <label class="sr-only" for="date-input">Choose a date</label>
+        <input type="date" id="date-input" class="date-input">
+      </div>
+      <button class="icon-btn" type="button" id="date-next" aria-label="Next day">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="date-today-row"><button class="link-btn" type="button" id="date-today" hidden>Back to today</button></div>
+
+    <div id="alerts" class="alerts" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <section class="card" aria-labelledby="status-heading">
+      <div class="card-head">
+        <h2 id="status-heading" class="card-title">Daily status</h2>
+        <span class="muted small">running total / target</span>
+      </div>
+      <div id="status-bars" class="status-bars"></div>
+    </section>
+
+    <div id="meals" class="meals"></div>
+
+    <details class="card details-card" id="totals-details">
+      <summary>All nutrient totals for the day</summary>
+      <div id="totals-all" class="nutrient-grid"></div>
+    </details>
+  </section>
+
+  <!-- ===================== ADD ===================== -->
+  <section id="view-add" class="view" role="tabpanel" aria-labelledby="tab-add" hidden>
+    <div class="search-row">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <label class="sr-only" for="food-search">Search foods</label>
+      <input id="food-search" class="search-input" type="search" placeholder="Search foods, e.g. banana" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+    </div>
+    <div id="category-chips" class="chips" role="group" aria-label="Filter by category"></div>
+    <div class="add-actions">
+      <button class="btn secondary" type="button" id="btn-quick">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Quick add
+      </button>
+      <button class="btn secondary" type="button" id="btn-usda">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        Search USDA
+      </button>
+    </div>
+    <div class="card-head results-head">
+      <h2 id="results-heading" class="card-title">Recent foods</h2>
+      <span id="results-count" class="muted small"></span>
+    </div>
+    <ul id="food-results" class="list food-list" aria-labelledby="results-heading"></ul>
+  </section>
+
+  <!-- ===================== TRENDS ===================== -->
+  <section id="view-trends" class="view" role="tabpanel" aria-labelledby="tab-trends" hidden>
+    <div class="trends-head">
+      <div>
+        <h2 class="card-title" id="trends-title">Last 14 days</h2>
+        <p class="muted small" id="trends-range"></p>
+      </div>
+      <div class="trends-actions">
+        <div class="segmented small-seg" role="group" aria-label="Range">
+          <button type="button" class="seg" data-days="7">7 d</button>
+          <button type="button" class="seg" data-days="14" aria-pressed="true">14 d</button>
+          <button type="button" class="seg" data-days="30">30 d</button>
+        </div>
+        <a id="export-csv" class="btn secondary" href="#" download="kidney-log.csv">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export CSV
+        </a>
+      </div>
+    </div>
+    <p class="muted small chart-legend">
+      Daily totals against your target (dashed line). Bars:
+      <span class="legend-key"><i class="swatch level-ok"></i>OK</span>
+      <span class="legend-key"><i class="swatch level-caution"></i>Near limit</span>
+      <span class="legend-key"><i class="swatch level-over"></i>Over</span>
+    </p>
+    <div id="charts" class="charts"></div>
+  </section>
+
+  <!-- ===================== PROFILE ===================== -->
+  <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
+    <form id="profile-form" class="profile-form" novalidate>
+      <section class="card">
+        <h2 class="card-title">About you</h2>
+        <div class="form-grid">
+          <div class="field span-2">
+            <label for="pf-name">Name</label>
+            <input id="pf-name" name="name" type="text" autocomplete="name" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="pf-weight">Weight (kg)</label>
+            <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70">
+          </div>
+          <div class="field">
+            <label for="pf-height">Height (cm)</label>
+            <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="pf-stage">CKD stage</label>
+            <select id="pf-stage" name="ckd_stage">
+              <option value="1">Stage 1</option>
+              <option value="2">Stage 2</option>
+              <option value="3a">Stage 3a</option>
+              <option value="3b">Stage 3b</option>
+              <option value="4">Stage 4</option>
+              <option value="5">Stage 5</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pf-dialysis">Dialysis</label>
+            <select id="pf-dialysis" name="dialysis">
+              <option value="none">None</option>
+              <option value="hemodialysis">Hemodialysis</option>
+              <option value="peritoneal">Peritoneal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pf-diabetes">Diabetes</label>
+            <select id="pf-diabetes" name="diabetes">
+              <option value="none">None</option>
+              <option value="type1">Type 1</option>
+              <option value="type2">Type 2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pf-warn">Warn at (% of limit)</label>
+            <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80">
+            <span class="hint">Status turns to "near limit" at this share of a daily target.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Daily targets</h2>
+          <button class="btn secondary" type="button" id="btn-suggest">Suggest targets</button>
+        </div>
+        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, stage and dialysis setting; discuss them with your care team before using them.</p>
+        <div id="suggest-notes" class="notes" hidden></div>
+        <div class="form-grid targets-grid">
+          <div class="field">
+            <label for="tg-potassium_mg">Potassium (mg)</label>
+            <input id="tg-potassium_mg" data-target="potassium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-phosphorus_mg">Phosphorus (mg)</label>
+            <input id="tg-phosphorus_mg" data-target="phosphorus_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-sodium_mg">Sodium (mg)</label>
+            <input id="tg-sodium_mg" data-target="sodium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-fluid_ml">Fluid (mL)</label>
+            <input id="tg-fluid_ml" data-target="fluid_ml" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+          <div class="field span-2 range-field">
+            <span class="label" id="tg-protein-label">Protein (g), minimum to maximum</span>
+            <div class="range-inputs">
+              <label class="sr-only" for="tg-protein_min">Protein minimum (g)</label>
+              <input id="tg-protein_min" data-target-min="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="min">
+              <span aria-hidden="true">to</span>
+              <label class="sr-only" for="tg-protein_max">Protein maximum (g)</label>
+              <input id="tg-protein_max" data-target-max="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="max">
+            </div>
+          </div>
+          <div class="field">
+            <label for="tg-carbs_g">Carbohydrate per day (g)</label>
+            <input id="tg-carbs_g" data-target="carbs_g" type="number" inputmode="numeric" min="0" step="5" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-carbs_per_meal_g">Carbohydrate per meal (g)</label>
+            <input id="tg-carbs_per_meal_g" data-target="carbs_per_meal_g" type="number" inputmode="numeric" min="0" step="5" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-calories_kcal">Calories (kcal)</label>
+            <input id="tg-calories_kcal" data-target="calories_kcal" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+          <div class="field">
+            <label for="tg-calcium_mg">Calcium (mg, incl. binders)</label>
+            <input id="tg-calcium_mg" data-target="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Appearance</h2>
+        <div class="field">
+          <label for="pf-theme">Theme</label>
+          <select id="pf-theme">
+            <option value="auto">Match device</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button class="btn primary" type="submit" id="btn-save-profile">Save profile</button>
+        <span id="profile-saved" class="muted small" aria-live="polite"></span>
+      </div>
+    </form>
+
+    <footer class="disclaimer">
+      <strong>Not medical advice.</strong> Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. The food database is reference data; check labels and portions. Food warnings are general renal-diet conventions, not a prescription.
+    </footer>
+  </section>
+</main>
+
+<!-- ===================== ENTRY SHEET (add + edit) ===================== -->
+<dialog id="sheet-entry" class="sheet" aria-labelledby="sheet-entry-title">
+  <form method="dialog" class="sheet-form" id="entry-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-entry-title" class="sheet-title">Add food</h2>
+        <div id="sheet-entry-food" class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="sheet-entry-flags" class="flag-chips"></div>
+      <p id="sheet-entry-notes" class="food-notes" hidden></p>
+
+      <fieldset class="field">
+        <legend>Meal</legend>
+        <div class="segmented meal-seg" id="entry-meal">
+          <input type="radio" name="meal" id="meal-breakfast" value="breakfast"><label for="meal-breakfast">Breakfast</label>
+          <input type="radio" name="meal" id="meal-lunch" value="lunch"><label for="meal-lunch">Lunch</label>
+          <input type="radio" name="meal" id="meal-dinner" value="dinner"><label for="meal-dinner">Dinner</label>
+          <input type="radio" name="meal" id="meal-snack" value="snack"><label for="meal-snack">Snack</label>
+        </div>
+      </fieldset>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="entry-servings">Servings</label>
+          <div class="stepper">
+            <button type="button" class="step-btn" data-step="-0.5" aria-label="Half a serving less">−</button>
+            <input id="entry-servings" type="number" inputmode="decimal" min="0" step="0.25" value="1">
+            <button type="button" class="step-btn" data-step="0.5" aria-label="Half a serving more">+</button>
+          </div>
+          <span class="hint" id="entry-serving-desc"></span>
+        </div>
+        <div class="field">
+          <label for="entry-grams">Grams</label>
+          <input id="entry-grams" type="number" inputmode="decimal" min="0" step="1" placeholder="optional">
+          <span class="hint" id="entry-grams-hint"></span>
+        </div>
+        <div class="field span-2 edit-only">
+          <label for="entry-date">Date</label>
+          <input id="entry-date" type="date">
+        </div>
+        <div class="field span-2">
+          <label for="entry-note">Note</label>
+          <input id="entry-note" type="text" maxlength="200" placeholder="Optional, e.g. half a plate">
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="preview-head">
+          <h3 class="preview-title">For this amount</h3>
+          <span class="muted small" id="entry-preview-amount"></span>
+        </div>
+        <div id="entry-preview-key" class="key-numbers"></div>
+        <details class="inline-details">
+          <summary>All nutrients</summary>
+          <div id="entry-preview-all" class="nutrient-grid"></div>
+        </details>
+      </div>
+
+      <div class="warnings" id="entry-warnings" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn danger edit-only" type="button" id="entry-delete">Delete</button>
+      <button class="btn secondary add-only" type="button" id="entry-delete-food" hidden>Delete food</button>
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="entry-save">Add to meal</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== QUICK ADD SHEET ===================== -->
+<dialog id="sheet-quick" class="sheet" aria-labelledby="sheet-quick-title">
+  <form method="dialog" class="sheet-form" id="quick-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-quick-title" class="sheet-title">Quick add</h2>
+        <div class="sheet-sub">Type the numbers from a label. Saved as a custom food you can log again.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="q-name">Food name <span class="req" aria-hidden="true">*</span></label>
+          <input id="q-name" type="text" required maxlength="120" placeholder="e.g. Rice cakes, plain">
+        </div>
+        <div class="field">
+          <label for="q-serving-desc">Serving</label>
+          <input id="q-serving-desc" type="text" maxlength="60" placeholder="e.g. 2 cakes" value="1 serving">
+        </div>
+        <div class="field">
+          <label for="q-serving-g">Serving weight (g)</label>
+          <input id="q-serving-g" type="number" inputmode="decimal" min="0.1" step="0.1" value="100">
+        </div>
+      </div>
+
+      <fieldset class="field">
+        <legend>Meal</legend>
+        <div class="segmented meal-seg" id="quick-meal">
+          <input type="radio" name="qmeal" id="qmeal-breakfast" value="breakfast"><label for="qmeal-breakfast">Breakfast</label>
+          <input type="radio" name="qmeal" id="qmeal-lunch" value="lunch"><label for="qmeal-lunch">Lunch</label>
+          <input type="radio" name="qmeal" id="qmeal-dinner" value="dinner"><label for="qmeal-dinner">Dinner</label>
+          <input type="radio" name="qmeal" id="qmeal-snack" value="snack"><label for="qmeal-snack">Snack</label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="q-servings">Servings eaten</label>
+        <input id="q-servings" type="number" inputmode="decimal" min="0" step="0.25" value="1">
+      </div>
+
+      <fieldset class="field">
+        <legend>Nutrients per serving</legend>
+        <div class="form-grid nutrient-inputs" id="quick-nutrients"></div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Flags</legend>
+        <div class="checks" id="quick-flags"></div>
+      </fieldset>
+
+      <div class="warnings" id="quick-warnings" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="quick-save">Log it</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== USDA SHEET ===================== -->
+<dialog id="sheet-usda" class="sheet" aria-labelledby="sheet-usda-title">
+  <form method="dialog" class="sheet-form" id="usda-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-usda-title" class="sheet-title">Search USDA FoodData Central</h2>
+        <div class="sheet-sub">Import a food into your database, then log it.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="search-row">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <label class="sr-only" for="usda-q">Search USDA</label>
+        <input id="usda-q" class="search-input" type="search" placeholder="e.g. cottage cheese" autocomplete="off" enterkeyhint="search">
+        <button class="btn primary" type="button" id="usda-go">Search</button>
+      </div>
+      <div id="usda-status" class="status-msg" role="status" aria-live="polite"></div>
+      <ul id="usda-results" class="list"></ul>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="chart-tip" class="chart-tip" role="tooltip" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

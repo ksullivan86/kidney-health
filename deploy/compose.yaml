@@ -1,0 +1,48 @@
+# Kidney Health food log -- Compose file for podman-compose or docker compose.
+#
+#   cp deploy/.env.example deploy/.env && $EDITOR deploy/.env    # optional secrets
+#   podman-compose -f deploy/compose.yaml up -d
+#   docker compose  -f deploy/compose.yaml up -d
+#
+# Compose reads deploy/.env (the directory of this file) for the ${...} substitutions
+# below. Without it both optional variables are empty, which the app treats as unset.
+name: kidney-health
+
+services:
+  kidney-health:
+    image: ghcr.io/ksullivan86/kidney-health:latest
+    # Build locally instead of pulling from GHCR (the context is the repository root):
+    # build:
+    #   context: ..
+    #   dockerfile: deploy/Containerfile
+    container_name: kidney-health
+    restart: unless-stopped
+    ports:
+      - "8000:8000"                      # host:container; change the left side to move it
+    environment:
+      DATA_DIR: /data                    # image default, stated for clarity
+      USDA_API_KEY: ${USDA_API_KEY:-}    # optional: enables "Search USDA" (see .env.example)
+      APP_PASSWORD: ${APP_PASSWORD:-}    # optional: HTTP Basic auth on every page
+    volumes:
+      - kidney-data:/data                # SQLite database (kidney.db + -wal/-shm files)
+    healthcheck:
+      # The image has no curl; the Python stdlib is used instead. /healthz needs no auth.
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    # Hardening: the process runs as uid 10001 on port 8000 and needs no capabilities.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The app writes only under /data, so a read-only root filesystem also works:
+    # read_only: true
+    # tmpfs:
+    #   - /tmp
+
+volumes:
+  kidney-data:
+    # Rootless Podman keeps it under ~/.local/share/containers/storage/volumes/kidney-health_kidney-data,
+    # Docker under /var/lib/docker/volumes/kidney-health_kidney-data. See docs/deployment.md for backups.

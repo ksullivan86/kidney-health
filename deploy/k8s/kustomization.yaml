@@ -1,0 +1,20 @@
+# kubectl apply -k deploy/k8s        (or: kustomize build deploy/k8s | kubectl apply -f -)
+#
+# Before applying, edit:
+#   pvc.yaml      storageClassName for your cluster (or leave unset for the default class)
+#   ingress.yaml  host (and TLS / cert-manager annotations)
+#   images:       pin a tag below instead of :latest if you want controlled upgrades
+# Then create the optional Secret (see secret.example.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kidney-health
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  # - httproute.example.yaml   # Gateway API instead of Ingress: enable this, drop ingress.yaml
+images:
+  - name: ghcr.io/ksullivan86/kidney-health
+    newTag: latest             # e.g. "0.1.0" or "sha-1a2b3c4" for a pinned release
