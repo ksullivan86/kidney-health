@@ -1,0 +1,30 @@
+# hadolint configuration for deploy/Containerfile.
+#   local: hadolint deploy/Containerfile        (run from the repository root)
+#   CI:    .github/workflows/ci.yml, hadolint/hadolint-action with config: .hadolint.yaml
+#
+# Fail on warnings and errors; info/style findings are reported but do not fail.
+failure-threshold: warning
+
+# Nothing is ignored on purpose: the Containerfile passes every rule. Rules that
+# would usually need silencing do not apply here, so keep this list empty unless a
+# new, deliberate violation appears -- and write down why next to the rule id:
+#   DL3013 (pin pip versions)        not triggered: pip installs only from requirements.txt,
+#                                    which carries the version ranges.
+#   DL3042 (pip --no-cache-dir)      satisfied explicitly in the builder stage.
+#   DL3008 / DL3015 (apt pins)       no apt packages are installed.
+#   DL3059 (consecutive RUN lines)   info level, below the threshold, and not present.
+ignored: []
+
+# DL3026: FROM must come from a registry listed here. python:3.12-slim has no registry
+# prefix, which hadolint resolves to docker.io.
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
+# DL3049-DL3054: the OCI labels we rely on must be present and well formed. The licence
+# label is validated as an SPDX identifier (PolyForm-Noncommercial-1.0.0 is one).
+label-schema:
+  org.opencontainers.image.title: text
+  org.opencontainers.image.source: url
+  org.opencontainers.image.licenses: spdx
+strict-labels: false

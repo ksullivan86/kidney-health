@@ -41,6 +41,10 @@
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span>Add</span>
         </button>
+        <button role="tab" class="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" tabindex="-1" data-view="plan">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 4v17M15 4v17" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 14.5l1.5 1.5 2.5-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Plan</span>
+        </button>
         <button role="tab" class="tab" id="tab-trends" aria-controls="view-trends" aria-selected="false" tabindex="-1" data-view="trends">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="11" width="3.5" height="7" rx="1" fill="currentColor"/><rect x="10.25" y="6" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="15.5" y="13" width="3.5" height="5" rx="1" fill="currentColor"/></svg>
           <span>Trends</span>
@@ -79,6 +83,7 @@
     <div class="date-today-row"><button class="link-btn" type="button" id="date-today" hidden>Back to today</button></div>
 
     <div id="alerts" class="alerts" role="status" aria-live="polite" aria-atomic="false"></div>
+    <div id="projected-alerts" class="alerts projected" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <section class="card" aria-labelledby="status-heading">
       <div class="card-head">
@@ -94,6 +99,17 @@
       <summary>All nutrient totals for the day</summary>
       <div id="totals-all" class="nutrient-grid"></div>
     </details>
+
+    <section class="card week-strip" id="week-strip" aria-labelledby="week-strip-heading">
+      <div class="card-head">
+        <h2 id="week-strip-heading" class="card-title">Last 7 days</h2>
+        <span id="week-strip-sub" class="muted small">average per logged day</span>
+      </div>
+      <div id="week-strip-body" class="week-strip-body"></div>
+      <div class="week-strip-foot">
+        <button class="link-btn" type="button" id="week-strip-trends">See Trends</button>
+      </div>
+    </section>
   </section>
 
   <!-- ===================== ADD ===================== -->
@@ -114,11 +130,72 @@
         Search USDA
       </button>
     </div>
+    <section class="saved-shortcuts" id="saved-shortcuts" aria-labelledby="saved-shortcuts-heading" hidden>
+      <div class="card-head results-head">
+        <h2 id="saved-shortcuts-heading" class="card-title">Saved meals</h2>
+        <button class="link-btn" type="button" id="saved-shortcuts-manage">Manage in Plan</button>
+      </div>
+      <div id="saved-shortcuts-list" class="chips meal-chips" role="list"></div>
+    </section>
     <div class="card-head results-head">
       <h2 id="results-heading" class="card-title">Recent foods</h2>
       <span id="results-count" class="muted small"></span>
     </div>
     <ul id="food-results" class="list food-list" aria-labelledby="results-heading"></ul>
+  </section>
+
+  <!-- ===================== PLAN ===================== -->
+  <section id="view-plan" class="view" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <div class="date-nav week-nav">
+      <button class="icon-btn" type="button" id="week-prev" aria-label="Previous week">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="date-center">
+        <div id="week-label" class="date-label" aria-live="polite">This week</div>
+        <div id="week-range" class="muted small"></div>
+      </div>
+      <button class="icon-btn" type="button" id="week-next" aria-label="Next week">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="plan-actions">
+      <button class="link-btn" type="button" id="week-this" hidden>Back to this week</button>
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" id="btn-copy-day">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        Copy day…
+      </button>
+    </div>
+    <p class="muted small plan-legend">Projected totals (eaten + planned) per day. Tap a day to open it in Today.
+      <span class="legend-key"><i class="swatch level-ok"></i>OK</span>
+      <span class="legend-key"><i class="swatch level-caution"></i>Near limit</span>
+      <span class="legend-key"><i class="swatch level-over"></i>Over</span>
+    </p>
+    <div id="plan-grid" class="plan-grid" role="list" aria-label="Days of the week"></div>
+
+    <section class="card" aria-labelledby="saved-meals-heading">
+      <div class="card-head">
+        <h2 id="saved-meals-heading" class="card-title">Saved meals</h2>
+        <button class="btn secondary" type="button" id="btn-new-meal">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          New saved meal
+        </button>
+      </div>
+      <p class="hint">Combinations you eat often. Add one to any day as planned or eaten, scaled if needed.</p>
+      <ul id="saved-meals" class="list saved-meals" aria-labelledby="saved-meals-heading"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="shopping-heading">
+      <div class="card-head">
+        <h2 id="shopping-heading" class="card-title">Shopping list</h2>
+        <span class="muted small" id="shopping-sub"></span>
+      </div>
+      <p class="hint">Everything planned for the visible week, grouped by food. Checks are kept only on this device.</p>
+      <ul id="shopping-list" class="list shopping-list" aria-labelledby="shopping-heading"></ul>
+      <div class="shopping-foot">
+        <button class="link-btn" type="button" id="shopping-clear" hidden>Clear checks</button>
+      </div>
+    </section>
   </section>
 
   <!-- ===================== TRENDS ===================== -->
@@ -140,6 +217,15 @@
         </a>
       </div>
     </div>
+    <section class="card period-card" id="period-summary" aria-labelledby="period-heading">
+      <div class="card-head">
+        <h3 id="period-heading" class="card-title">Period summary</h3>
+        <span id="period-sub" class="muted small"></span>
+      </div>
+      <div id="period-body" class="period-body"></div>
+      <div id="period-interdialytic" class="period-inter" hidden></div>
+      <ul id="period-notes" class="period-notes"></ul>
+    </section>
     <p class="muted small chart-legend">
       Daily totals against your target (dashed line). Bars:
       <span class="legend-key"><i class="swatch level-ok"></i>OK</span>
@@ -199,6 +285,19 @@
             <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80">
             <span class="hint">Status turns to "near limit" at this share of a daily target.</span>
           </div>
+          <div class="field">
+            <label for="pf-week-start">Week starts on</label>
+            <select id="pf-week-start" name="week_start">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+            <span class="hint">Used by the Plan view grid and shopping list.</span>
+          </div>
+          <fieldset class="field span-2" id="pf-dialysis-days-field" hidden>
+            <legend>Dialysis days</legend>
+            <div class="weekday-checks" id="pf-dialysis-days"></div>
+            <span class="hint">Potassium, sodium and fluid accumulate between sessions; with days set, Today and Trends also total them since the last session.</span>
+          </fieldset>
         </div>
       </section>
 
@@ -207,7 +306,7 @@
           <h2 class="card-title">Daily targets</h2>
           <button class="btn secondary" type="button" id="btn-suggest">Suggest targets</button>
         </div>
-        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, stage and dialysis setting; discuss them with your care team before using them.</p>
+        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, height, stage and dialysis setting (calories and protein are per kg of ideal body weight, so add your height if you are over- or under-weight); discuss them with your care team before using them.</p>
         <div id="suggest-notes" class="notes" hidden></div>
         <div class="form-grid targets-grid">
           <div class="field">
@@ -305,19 +404,28 @@
         </div>
       </fieldset>
 
+      <fieldset class="field">
+        <legend>Status</legend>
+        <div class="segmented meal-seg status-seg" id="entry-status">
+          <input type="radio" name="status" id="status-eaten" value="eaten" checked><label for="status-eaten">Eaten</label>
+          <input type="radio" name="status" id="status-planned" value="planned"><label for="status-planned">Planned</label>
+        </div>
+        <span class="hint" id="entry-status-hint"></span>
+      </fieldset>
+
       <div class="form-grid">
         <div class="field">
           <label for="entry-servings">Servings</label>
           <div class="stepper">
             <button type="button" class="step-btn" data-step="-0.5" aria-label="Half a serving less">−</button>
-            <input id="entry-servings" type="number" inputmode="decimal" min="0" step="0.25" value="1">
+            <input id="entry-servings" type="number" inputmode="decimal" min="0" max="1000" step="0.25" value="1">
             <button type="button" class="step-btn" data-step="0.5" aria-label="Half a serving more">+</button>
           </div>
           <span class="hint" id="entry-serving-desc"></span>
         </div>
         <div class="field">
           <label for="entry-grams">Grams</label>
-          <input id="entry-grams" type="number" inputmode="decimal" min="0" step="1" placeholder="optional">
+          <input id="entry-grams" type="number" inputmode="decimal" min="0" max="100000" step="1" placeholder="optional">
           <span class="hint" id="entry-grams-hint"></span>
         </div>
         <div class="field span-2 edit-only">
@@ -330,6 +438,8 @@
         </div>
       </div>
 
+      <div class="warnings" id="entry-warnings" aria-live="polite"></div>
+
       <div class="preview">
         <div class="preview-head">
           <h3 class="preview-title">For this amount</h3>
@@ -341,8 +451,6 @@
           <div id="entry-preview-all" class="nutrient-grid"></div>
         </details>
       </div>
-
-      <div class="warnings" id="entry-warnings" aria-live="polite"></div>
     </div>
     <div class="sheet-foot">
       <button class="btn danger edit-only" type="button" id="entry-delete">Delete</button>
@@ -378,7 +486,7 @@
         </div>
         <div class="field">
           <label for="q-serving-g">Serving weight (g)</label>
-          <input id="q-serving-g" type="number" inputmode="decimal" min="0.1" step="0.1" value="100">
+          <input id="q-serving-g" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" value="100">
         </div>
       </div>
 
@@ -392,9 +500,18 @@
         </div>
       </fieldset>
 
-      <div class="field">
-        <label for="q-servings">Servings eaten</label>
-        <input id="q-servings" type="number" inputmode="decimal" min="0" step="0.25" value="1">
+      <div class="form-grid">
+        <div class="field">
+          <label for="q-servings">Servings</label>
+          <input id="q-servings" type="number" inputmode="decimal" min="0" max="1000" step="0.25" value="1">
+        </div>
+        <fieldset class="field">
+          <legend>Status</legend>
+          <div class="segmented meal-seg status-seg" id="quick-status">
+            <input type="radio" name="qstatus" id="qstatus-eaten" value="eaten" checked><label for="qstatus-eaten">Eaten</label>
+            <input type="radio" name="qstatus" id="qstatus-planned" value="planned"><label for="qstatus-planned">Planned</label>
+          </div>
+        </fieldset>
       </div>
 
       <fieldset class="field">
@@ -438,6 +555,210 @@
       </div>
       <div id="usda-status" class="status-msg" role="status" aria-live="polite"></div>
       <ul id="usda-results" class="list"></ul>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== COPY DAY SHEET ===================== -->
+<dialog id="sheet-copy" class="sheet" aria-labelledby="sheet-copy-title">
+  <form method="dialog" class="sheet-form" id="copy-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-copy-title" class="sheet-title">Copy a day</h2>
+        <div class="sheet-sub">Copies entries onto another day. Amounts are recomputed from your current foods.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="copy-from">From</label>
+          <input id="copy-from" type="date" required>
+        </div>
+        <div class="field">
+          <label for="copy-to">To</label>
+          <input id="copy-to" type="date" required>
+        </div>
+      </div>
+      <p class="status-msg" id="copy-summary" aria-live="polite"></p>
+      <fieldset class="field">
+        <legend>Meals to copy</legend>
+        <div class="checks four" id="copy-meals">
+          <label class="check" for="copy-m-breakfast"><input type="checkbox" id="copy-m-breakfast" value="breakfast" checked><span class="check-text">Breakfast</span></label>
+          <label class="check" for="copy-m-lunch"><input type="checkbox" id="copy-m-lunch" value="lunch" checked><span class="check-text">Lunch</span></label>
+          <label class="check" for="copy-m-dinner"><input type="checkbox" id="copy-m-dinner" value="dinner" checked><span class="check-text">Dinner</span></label>
+          <label class="check" for="copy-m-snack"><input type="checkbox" id="copy-m-snack" value="snack" checked><span class="check-text">Snack</span></label>
+        </div>
+      </fieldset>
+      <div class="form-grid">
+        <div class="field">
+          <label for="copy-include">Include</label>
+          <select id="copy-include">
+            <option value="all">Eaten and planned</option>
+            <option value="eaten">Eaten only</option>
+            <option value="planned">Planned only</option>
+          </select>
+        </div>
+        <fieldset class="field">
+          <legend>Copy as</legend>
+          <div class="segmented meal-seg status-seg" id="copy-status">
+            <input type="radio" name="cstatus" id="cstatus-eaten" value="eaten"><label for="cstatus-eaten">Eaten</label>
+            <input type="radio" name="cstatus" id="cstatus-planned" value="planned" checked><label for="cstatus-planned">Planned</label>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="copy-save">Copy</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== SAVED MEAL EDITOR SHEET ===================== -->
+<dialog id="sheet-meal" class="sheet" aria-labelledby="sheet-meal-title">
+  <form method="dialog" class="sheet-form" id="meal-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-meal-title" class="sheet-title">New saved meal</h2>
+        <div class="sheet-sub">A reusable combination of foods and amounts.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="meal-name">Name <span class="req" aria-hidden="true">*</span></label>
+          <input id="meal-name" type="text" required maxlength="80" placeholder="e.g. Usual breakfast">
+        </div>
+        <div class="field span-2">
+          <label for="meal-note">Note</label>
+          <input id="meal-note" type="text" maxlength="200" placeholder="Optional">
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" id="meal-items-label">Foods in this meal</span>
+        <ul id="meal-items" class="list meal-items" aria-labelledby="meal-items-label"></ul>
+      </div>
+      <div class="field">
+        <label for="meal-search">Add a food</label>
+        <div class="search-row">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="meal-search" class="search-input" type="search" placeholder="Search foods" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        </div>
+        <ul id="meal-search-results" class="list compact-list" aria-label="Search results"></ul>
+      </div>
+      <div class="preview">
+        <div class="preview-head">
+          <h3 class="preview-title">Meal totals</h3>
+          <span class="muted small" id="meal-preview-count"></span>
+        </div>
+        <div id="meal-preview-key" class="key-numbers"></div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn danger" type="button" id="meal-delete" hidden>Delete</button>
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="meal-save">Save meal</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== APPLY SAVED MEAL SHEET ===================== -->
+<dialog id="sheet-apply" class="sheet" aria-labelledby="sheet-apply-title">
+  <form method="dialog" class="sheet-form" id="apply-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-apply-title" class="sheet-title">Add saved meal</h2>
+        <div class="sheet-sub" id="sheet-apply-sub">Logs every food in the saved meal onto one day.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="field" id="apply-pick-field">
+        <label for="apply-meal-id">Saved meal</label>
+        <select id="apply-meal-id"></select>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="apply-date">Date</label>
+          <input id="apply-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="apply-scale">Scale</label>
+          <input id="apply-scale" type="number" inputmode="decimal" min="0.1" max="100" step="0.25" value="1">
+          <span class="hint">1 = as saved, 0.5 = half portions</span>
+        </div>
+      </div>
+      <fieldset class="field">
+        <legend>Meal</legend>
+        <div class="segmented meal-seg" id="apply-meal">
+          <input type="radio" name="ameal" id="ameal-breakfast" value="breakfast"><label for="ameal-breakfast">Breakfast</label>
+          <input type="radio" name="ameal" id="ameal-lunch" value="lunch"><label for="ameal-lunch">Lunch</label>
+          <input type="radio" name="ameal" id="ameal-dinner" value="dinner"><label for="ameal-dinner">Dinner</label>
+          <input type="radio" name="ameal" id="ameal-snack" value="snack"><label for="ameal-snack">Snack</label>
+        </div>
+      </fieldset>
+      <fieldset class="field">
+        <legend>Status</legend>
+        <div class="segmented meal-seg status-seg" id="apply-status">
+          <input type="radio" name="astatus" id="astatus-eaten" value="eaten"><label for="astatus-eaten">Eaten</label>
+          <input type="radio" name="astatus" id="astatus-planned" value="planned" checked><label for="astatus-planned">Planned</label>
+        </div>
+      </fieldset>
+      <div class="preview">
+        <div class="preview-head">
+          <h3 class="preview-title">For this amount</h3>
+          <span class="muted small" id="apply-preview-amount"></span>
+        </div>
+        <ul id="apply-items" class="compact-items"></ul>
+        <div id="apply-preview-key" class="key-numbers"></div>
+      </div>
+      <div class="warnings" id="apply-warnings" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="apply-save">Add to day</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== SAVE AS MEAL SHEET ===================== -->
+<dialog id="sheet-savemeal" class="sheet" aria-labelledby="sheet-savemeal-title">
+  <form method="dialog" class="sheet-form" id="savemeal-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-savemeal-title" class="sheet-title">Save as meal</h2>
+        <div class="sheet-sub" id="sheet-savemeal-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <label for="savemeal-name">Name <span class="req" aria-hidden="true">*</span></label>
+        <input id="savemeal-name" type="text" required maxlength="80" placeholder="e.g. Usual breakfast">
+      </div>
+      <div class="field">
+        <label for="savemeal-note">Note</label>
+        <input id="savemeal-note" type="text" maxlength="200" placeholder="Optional">
+      </div>
+      <ul id="savemeal-items" class="compact-items"></ul>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="savemeal-save">Save meal</button>
     </div>
   </form>
 </dialog>

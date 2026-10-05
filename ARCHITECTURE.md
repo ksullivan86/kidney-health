@@ -40,16 +40,23 @@ app/db.py                   sqlite connection helper + schema (idempotent CREATE
 app/models.py               Pydantic request/response models (shapes below)
 app/nutrients.py            PURE FUNCTIONS: nutrient registry, per-serving thresholds, daily status, suggested targets
 app/foods.py                food search/CRUD, builtin JSON import, USDA proxy
-app/log.py                  log entries, day summary, range summary, CSV export
-app/profile.py              profile + targets
+app/log.py                  log entries (eaten/planned), day/range/period summaries, mark-eaten, copy-day, CSV export
+app/periods.py              PURE FUNCTIONS (v0.2): period averages, previous period, interdialytic interval, week bounds
+app/meals.py                saved meals (templates), from-log, apply, shopping list (v0.2)
+app/profile.py              profile + targets (+ dialysis days, week start)
 app/static/index.html
 app/static/app.js
 app/static/style.css
 data/foods.json             builtin food database (generated, committed)
 scripts/build_food_db.py    downloads USDA SR Legacy CSV zip and writes data/foods.json
 scripts/curated_foods.py    the curated list (fdc_id, display name, serving, category, flags)
-tests/test_nutrients.py
+tests/conftest.py           fixture food database + TestClient
+tests/test_nutrients.py     pure rules incl. suggest_targets vs docs/research/targets_by_stage.json
 tests/test_api.py
+tests/test_periods.py       period maths
+tests/test_planning.py      planned entries, saved meals, summary, shopping (API)
+tests/test_migrations.py    v0.1 database upgrades in place
+tests/test_food_db.py       invariants of the committed data/foods.json (flags vs numbers, guide records)
 deploy/Containerfile
 deploy/compose.yaml
 deploy/quadlet/kidney-health.container
@@ -94,7 +101,7 @@ Returned as `warnings` on every food and log entry. Levels: `"medium"`, `"high"`
 | potassium_mg    | 101–200 mg       | > 200 mg                   | renal dietitian low/medium/high potassium food convention |
 | phosphorus_mg   | 101–150 mg       | > 150 mg, or any food flagged `phosphate_additive` | NKF guidance; additive phosphorus is ~90–100 % absorbed |
 | sodium_mg       | 141–400 mg       | > 400 mg                   | FDA "low sodium" ≤ 140 mg; 20 % DV ≈ 460 mg |
-| carbs_g         | 15–30 g ("1–2 carb choices") | > 30 g, or flagged `high_gi` | type 1 carb counting |
+| carbs_g         | 15–30 g ("1–2 carb choices"), or flagged `high_gi` with < 15 g | > 30 g, or flagged `high_gi` with ≥ 15 g | type 1 carb counting; the GI upgrade needs one carb choice to act on (per-portion glycaemic load), so a condiment's 4 g is a note, not a red |
 | protein_g       | 15–25 g          | > 25 g                     | large protein portion for restricted intake |
 
 Flags (strings, set in curated data or by the user on custom foods):
@@ -102,7 +109,17 @@ Flags (strings, set in curated data or by the user on custom foods):
 `hypo_treatment` (fast carbs that are also low potassium, e.g. glucose tablets),
 `low_potassium_fruit`, `processed`.
 
+Flags must agree with the serving they are shown next to (`scripts/build_food_db.py` and
+`tests/test_food_db.py` enforce it): a `low_potassium_fruit` serving stays ≤ 200 mg potassium
+(berries and grapes are served at ½ cup, pears as "1 small") and a `hypo_treatment` serving is a
+rescue portion of ≤ 20 g carbohydrate (sodas at 4 fl oz, sports drink at 8 fl oz), because the
+flag switches the carbohydrate warning off.
+
 `avoid_ckd` always yields a `high` warning with the food's `kidney_notes` text.
+`hypo_treatment` foods get **no carbohydrate warning** (neither the 15/30 g thresholds nor
+the `high_gi` upgrade): fast carbohydrate is the point of treating a low and the diet guide
+says hypo treatments are never warned against. Their potassium / phosphorus / sodium
+warnings still apply so the lowest-potassium option can be chosen.
 
 `kidney_rating` is computed, never stored: `"red"` if any high warning,
 `"yellow"` if any medium, else `"green"`.
@@ -115,25 +132,44 @@ if `warn_fraction ≤ fraction ≤ 1.0`, `"over"` if > 1.0. For `protein_g` with
 `min`, also `"low"` if end-of-day and below min is **not** computed server-side —
 just report `fraction` against max and include `min` so the UI can show the range.
 
-### Suggested targets (`nutrients.suggest_targets(weight_kg, ckd_stage, dialysis)`)
+### Suggested targets (`nutrients.suggest_targets(weight_kg, ckd_stage, dialysis, diabetes, height_cm=None)`)
 
-Starting points only; the UI labels them "discuss with your care team".
-Values must agree with `docs/diet-guide.md` after the reconcile step.
+Starting points only; the UI labels them "discuss with your care team". These are the
+**final, reconciled** numbers: they equal `docs/research/targets_by_stage.json` (the
+fact-checked file) and `docs/diet-guide.md` section 7, and `tests/test_nutrients.py`
+compares the code with the JSON row by row.
 
-* protein_g: non-dialysis CKD 3–5 with diabetes 0.6–0.8 g/kg (use 0.8 for max, 0.6 for min);
-  hemodialysis / peritoneal 1.0–1.2 g/kg (min 1.0, max 1.2).
-* potassium_mg (no guideline fixes a number; restriction is ordered only when serum potassium runs high,
-  so these are the starting points `docs/research/ckd-diet.md` arrived at): stage 1–2: 4000 (informational);
-  stage 3a: 4000; stage 3b: 3500; stage 4: 3000; stage 5 non-dialysis: 2500; hemodialysis: 2500;
-  peritoneal: 3500. The note returned with the suggestion must say: "Only restrict potassium if your
-  blood potassium is high; your care team sets the number."
-  **These values are provisional until the reconcile step compares them with `docs/research/targets_by_stage.json`
-  (the fact-checked file wins).**
-* phosphorus_mg: 800–1000 when phosphate runs high → use 1000 for stage 1–4 and hemodialysis, 900 for stage 5 non-dialysis and peritoneal (provisional, same reconcile rule).
-* sodium_mg: 2000 (all stages; KDOQI < 2300, many programs use 2000).
+**Per kg means per kg of ideal body weight** (KDOQI 2020 3.0.1, 3.1.x). The profile has no
+sex, so `nutrients.dosing_weight(weight_kg, height_cm)` takes the ideal weight sex-neutrally as
+the weight at the edge of the healthy BMI band for the person's height: BMI 25 when they are
+above it, BMI 18.5 when below, the actual weight in between. Without a height the actual weight
+is used. The first note returned always states which weight the numbers assume
+("Weight basis: …"), and `GET /api/profile/suggested-targets` passes the stored `height_cm`.
+
+| stage / dialysis | protein g/kg (min–max) | potassium mg | phosphorus mg | sodium mg | fluid mL | kcal/kg | calcium mg |
+|---|---|---|---|---|---|---|---|
+| 1, 2 (no dialysis) | 0.8–1.0 | 4000 (informational) | 1000 | 2000 | null | 30 | 1000 |
+| 3a | 0.6–0.8 | 4000 | 1000 | 2000 | null | 30 | 1000 |
+| 3b | 0.6–0.8 | 3500 | 1000 | 2000 | null | 30 | 1000 |
+| 4 | 0.6–0.8 | 3000 | 1000 | 2000 | null | 30 | 1000 |
+| 5, no dialysis | 0.6–0.8 | 2500 | 900 | 2000 | null | 30 | 1000 |
+| hemodialysis | 1.0–1.2 | 2500 | 1000 | 2000 | 1500 (1000 + ~500 urine) | 30 | 1000 |
+| peritoneal | 1.0–1.2 | 3500 | 1000 | 2000 | 2000 | 30 | 1000 |
+
+* protein_g: `{"min": round(min_per_kg × kg), "max": round(max_per_kg × kg)}` (KDOQI 2020 3.1.2–3.1.4;
+  stages 1–2 use the 0.8 g/kg RDA floor with a 1.0 ceiling, KDIGO 2024: avoid > 1.3). The note for
+  non-dialysis stages 3–5 says that below 0.6 g/kg risks wasting and hypoglycaemia, that guidelines
+  recommend 0.8 and advise avoiding more than 1.3 g/kg (KDIGO 2024); it cites KDOQI 2020 3.1.3 with
+  diabetes and 3.1.1 / KDIGO 2024 3.3.1.1 without.
+* potassium_mg: no guideline fixes a number; restriction is ordered only when serum potassium runs
+  high, so these are review ceilings. The note returned with the suggestion must say: "Only restrict
+  potassium if your blood potassium is high; your care team sets the number."
+* phosphorus_mg: KDOQI 2003 800–1000 mg when phosphate runs high; 1000 at stages 1–4 and on either
+  dialysis ("adjusted for protein needs"), 900 at stage 5 before dialysis.
+* sodium_mg: 2000 (all stages; KDIGO 2024 < 2000, KDOQI < 2300).
 * fluid_ml: `null` (no limit) unless dialysis: hemodialysis 1000 + urine output ≈ 1500 default; peritoneal 2000.
-* carbs_g: 45 % of calories / 4 → default calories 30 kcal/kg (KDOQI 25–35) → carbs = round(cal*0.45/4).
-* calories_kcal: 30 kcal/kg.
+* calories_kcal: 30 kcal/kg (KDOQI 25–35). carbs_g: 45 % of calories / 4 = round(cal × 0.45 / 4);
+  carbs_per_meal_g: carbs / 4 rounded to 5 g (minimum 15).
 * calcium_mg: 1000 (max, including binders).
 
 ## Data model (SQLite)
@@ -269,7 +305,8 @@ Every target may be a number, `{"min","max"}`, or `null` (= not tracked).
 * `GET /api/foods?q=<text>&category=<cat>&source=<src>&limit=25` → `{"foods":[Food]}`;
   with empty `q` returns most recently logged foods first (then alphabetical).
   Search: case-insensitive substring over `name` and `brand`; every whitespace-separated
-  word must match; exact-prefix matches rank first.
+  word must match; exact-prefix matches rank first. `q` is at most 200 characters (400 otherwise)
+  and only the first 10 words are matched.
 * `GET /api/foods/categories` → `{"categories":[string]}`
 * `GET /api/foods/{id}` → Food
 * `POST /api/foods` body FoodCreate → Food (source forced to `custom`)
@@ -299,7 +336,9 @@ FoodCreate = { "name", "brand"?, "category"?, "serving_desc", "serving_g", "nutr
 * `GET /api/log?date=YYYY-MM-DD` → DaySummary
 * `POST /api/log` body `{"date","meal","food_id","servings"?,"grams"?,"note"?}`
   (`servings` default 1; if `grams` given, servings = grams / serving_g) → Entry (201)
-* `PUT /api/log/{id}` body any of `meal`, `servings`, `grams`, `note`, `date` → Entry (recomputes snapshot from the food)
+* `PUT /api/log/{id}` body any of `meal`, `servings`, `grams`, `note`, `date` → Entry (recomputes snapshot from the food;
+  an entry that was logged by weight keeps its grams and re-derives servings from the food's *current* `serving_g`
+  unless the body sets `servings`, so grams and servings always agree, as with copy-day)
 * `DELETE /api/log/{id}` → 204
 * `POST /api/log/quick` body `{"date","meal","name","serving_desc"?,"serving_g"?,"nutrients":{...},"servings"?,"flags"?}`
   → Entry; creates a `custom` food then logs it.
@@ -332,7 +371,18 @@ it exposes only the food count. Otherwise no auth (LAN use behind a reverse prox
 
 ### Validation errors
 Request validation failures return **400** with `{"detail": "<message>", "errors": [...]}`
-(not FastAPI's default 422), so every error has the `detail` string shape above.
+(not FastAPI's default 422), so every error has the `detail` string shape above. `errors`
+carries only `type`, `loc`, `msg` and `input` (a non-finite `input` is echoed as text), so the
+400 itself can always be serialised.
+
+### Numeric bounds (`app/models.py`)
+Every numeric request field rejects the JSON literals `NaN` / `Infinity` and has a ceiling, so
+no stored snapshot can be infinite and no read can fail on one: `servings` ≤ 1000, `grams` ≤
+100 000, `serving_g` 0.1–100 000, apply `scale` ≤ 100, nutrient values and targets ≤ 1 000 000,
+ids ≤ 2⁶³ − 1 (a larger path or body id is a 404 / 400, never a 500). The status, alert and
+period builders additionally treat a non-finite stored value as unknown (status `fraction`
+`null`, level still `over` for +∞, no alert, 0 in period totals) and a non-finite target as
+"not tracked", so a database written before these bounds existed stays readable.
 
 ## Frontend behaviour (app/static)
 
@@ -372,8 +422,22 @@ v0.2 changes to the other views:
   average per logged day for K, P, Na, protein vs target (from GET /api/log/summary) so weekly
   trends are visible without leaving the page; when the profile is hemodialysis with dialysis
   days set, it also shows the "since last dialysis" accumulation for potassium and fluid.
-* Add: an "Eaten now / Plan for later" toggle in the entry sheet (default Eaten for today or past
-  dates, Plan for future dates); a "Saved meals" shortcut list above the search results.
+* Add: an "Eaten / Planned" toggle in the entry sheet (default Eaten for today or past dates,
+  Planned for future dates; the same two labels in the same order in every sheet that has the
+  toggle). When Planned is selected the sheet is titled "Plan food" and its button reads
+  "Plan for <meal>"; the toast after saving names the day when it is not today. The warnings
+  block sits above the "For this amount" preview so it is visible on a phone without scrolling.
+  A "Saved meals" shortcut list above the search results (`role="list"` of `role="listitem"`
+  wrappers, each holding a plain `<button>`).
+* Trends: the period-summary tag reads "weekly average" only for a 7-day range, otherwise
+  "<n>-day average"; charts that cross a month boundary label the first bar of each month with
+  the month name on a second axis line.
+* Profile: "Suggest targets" first checks the form client-side (empty weight → "Enter your weight
+  (kg) first…", weight or height differing from the saved profile → "Save profile first so the
+  suggestion uses your weight and height") so the server's 400 is never shown; "Last saved" only
+  appears once the profile holds a weight, height, name or target.
+* Touch targets: on a coarse pointer or below 720 px every control (chips, segments, link
+  buttons, checkboxes, `<summary>` toggles, saved-meal actions) is at least `--tap` (44 px) tall.
 * Trends: a **Period summary** card at the top (same data as GET /api/log/summary for the
   selected range): per nutrient the average per logged day vs target with level color, days over,
   change vs the previous period, and the interdialytic block when applicable; the explanatory

@@ -16,7 +16,10 @@ services:
     #   context: ..
     #   dockerfile: deploy/Containerfile
     container_name: kidney-health
-    restart: unless-stopped
+    # `always` (not unless-stopped) so Podman's podman-restart.service can bring it back
+    # after a reboot: `systemctl --user enable --now podman-restart.service`. Docker restarts
+    # it with the daemon either way. For a real systemd service use deploy/quadlet instead.
+    restart: always
     ports:
       - "8000:8000"                      # host:container; change the left side to move it
     environment:

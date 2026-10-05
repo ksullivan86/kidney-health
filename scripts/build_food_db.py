@@ -17,7 +17,9 @@ That is all. The script:
    app tracks (per 100 g), scales them to the curated household serving,
    derives ``fluid_ml`` from the water content for foods flagged
    ``counts_as_fluid``, rounds (mg -> integer, g/kcal -> 1 decimal) and
-   validates categories, flags and ids;
+   validates categories, flags, ids and the flag/nutrient invariants (a
+   ``low_potassium_fruit`` serving must stay <= 200 mg potassium, a
+   ``hypo_treatment`` serving <= 20 g carbohydrate);
 4. writes ``data/foods.json`` in the shape defined in ARCHITECTURE.md and
    prints a per-category count plus a few sanity checks against well-known
    values (banana potassium, milk phosphorus, ...).
@@ -296,6 +298,25 @@ def finish_entry(e: dict, out_id: int, nutrients: dict) -> dict:
     }
 
 
+# Flags must agree with the numbers they are shown next to (ARCHITECTURE.md "Per-serving
+# thresholds"): a "low-potassium fruit" badge next to a red potassium warning, or a hypo
+# treatment that hides a whole can of sugar, is worse than no flag at all.
+LOWK_MAX_POTASSIUM_MG = 200  # the app's "high" potassium line
+HYPO_MAX_CARBS_G = 20  # a rescue portion is ~15 g fast carbs
+
+
+def check_flag_invariants(foods: list[dict]) -> None:
+    problems = []
+    for f in foods:
+        n = f["nutrients"]
+        if "low_potassium_fruit" in f["flags"] and (n.get("potassium_mg") or 0) > LOWK_MAX_POTASSIUM_MG:
+            problems.append(f"{f['name']!r}: low_potassium_fruit but {n['potassium_mg']} mg potassium per {f['serving_desc']}")
+        if "hypo_treatment" in f["flags"] and (n.get("carbs_g") or 0) > HYPO_MAX_CARBS_G:
+            problems.append(f"{f['name']!r}: hypo_treatment but {n['carbs_g']} g carbohydrate per {f['serving_desc']}")
+    if problems:
+        fail("flag/nutrient mismatch:\n  " + "\n  ".join(problems))
+
+
 def check_portions(entries: list[dict], portions: dict, verbose: bool) -> None:
     """Report curated serving sizes that match no USDA household portion (informational)."""
     unmatched = []
@@ -362,6 +383,7 @@ def main() -> None:
         foods.append(build_usda_entry(e, descriptions, per100) if "fdc_id" in e else build_manual_entry(e))
 
     check_portions(CURATED_FOODS, portions, args.verbose)
+    check_flag_invariants(foods)
 
     doc = {"version": args.version, "source": SOURCE, "foods": foods}
     args.out.parent.mkdir(parents=True, exist_ok=True)

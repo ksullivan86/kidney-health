@@ -1,9 +1,13 @@
 # syntax=docker/dockerfile:1
 # Kidney Health food log -- OCI image for Podman, Docker and Kubernetes.
 #
-# Build from the REPOSITORY ROOT so app/, data/ and requirements.txt are in the context:
+# Build from the REPOSITORY ROOT so app/, data/, LICENSE and requirements.txt are in
+# the build context (.dockerignore at the root trims everything else):
 #   podman build -f deploy/Containerfile -t kidney-health:local .
 #   docker build -f deploy/Containerfile -t kidney-health:local .
+# Podman writes OCI-format images by default and drops the HEALTHCHECK below with a
+# warning; add `--format docker` to keep it. compose.yaml and the Quadlet unit declare
+# the same probe themselves, so this only matters for a bare `podman run`.
 # Multi-arch (linux/amd64 + linux/arm64) images are published to
 # ghcr.io/ksullivan86/kidney-health by .github/workflows/ci.yml. See docs/deployment.md.
 
@@ -20,6 +24,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Versions are pinned (as ranges) in requirements.txt, so hadolint DL3013 does not apply.
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
@@ -28,9 +33,14 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim
 
+# OCI annotations. The licence id is the SPDX identifier of the repository LICENSE
+# (PolyForm Noncommercial 1.0.0: personal and noncommercial use only).
 LABEL org.opencontainers.image.title="kidney-health" \
       org.opencontainers.image.description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings" \
-      org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health"
+      org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
+      org.opencontainers.image.url="https://github.com/ksullivan86/kidney-health" \
+      org.opencontainers.image.documentation="https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md" \
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 
 # DATA_DIR is set explicitly: app/config.py only auto-detects Podman/Docker
 # (/run/.containerenv, /.dockerenv), not containerd under Kubernetes.
@@ -50,9 +60,9 @@ WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 
-# Application code and the builtin food database. app/config.py resolves the
-# default FOODS_JSON to <parent of app/>/data/foods.json, i.e. /app/data/foods.json.
-COPY --chown=app:app requirements.txt ./requirements.txt
+# Application code, the builtin food database and the licence. app/config.py resolves
+# the default FOODS_JSON to <parent of app/>/data/foods.json, i.e. /app/data/foods.json.
+COPY --chown=app:app requirements.txt LICENSE ./
 COPY --chown=app:app app/ ./app/
 COPY --chown=app:app data/foods.json ./data/foods.json
 
@@ -61,7 +71,8 @@ RUN python -m compileall -q ./app
 
 USER app
 
-# All persistent state (kidney.db + WAL files). Mount a named volume or PVC here.
+# All persistent state (kidney.db + WAL files). Mount a named volume or PVC here;
+# without one Podman/Docker create an anonymous volume that `podman rm -v` deletes.
 VOLUME ["/data"]
 EXPOSE 8000
 

@@ -1,5 +1,5 @@
 {
- "version": "2026-10-05.1",
+ "version": "2026-10-05.2",
  "source": "USDA FoodData Central, SR Legacy (April 2018 release), https://fdc.nal.usda.gov/ - public domain. Nutrients are per the listed household serving, scaled from the USDA per-100 g values. Entries with a negative fdc_id are not USDA records; their values come from product labels.",
  "foods": [
   {
@@ -56,20 +56,20 @@
    "fdc_id": 171711,
    "name": "Blueberries, raw",
    "category": "Fruits",
-   "serving_desc": "1 cup (148 g)",
-   "serving_g": 148,
+   "serving_desc": "1/2 cup (74 g)",
+   "serving_g": 74,
    "nutrients": {
-    "calories_kcal": 84.4,
-    "protein_g": 1.1,
-    "fat_g": 0.5,
+    "calories_kcal": 42.2,
+    "protein_g": 0.5,
+    "fat_g": 0.2,
     "sat_fat_g": 0.0,
-    "carbs_g": 21.4,
-    "fiber_g": 3.6,
-    "sugar_g": 14.7,
+    "carbs_g": 10.7,
+    "fiber_g": 1.8,
+    "sugar_g": 7.4,
     "sodium_mg": 1,
-    "potassium_mg": 114,
-    "phosphorus_mg": 18,
-    "calcium_mg": 9,
+    "potassium_mg": 57,
+    "phosphorus_mg": 9,
+    "calcium_mg": 4,
     "fluid_ml": 0
    },
    "flags": [
@@ -81,20 +81,20 @@
    "fdc_id": 167762,
    "name": "Strawberries, raw",
    "category": "Fruits",
-   "serving_desc": "1 cup, whole (144 g)",
-   "serving_g": 144,
+   "serving_desc": "1/2 cup, halves (76 g)",
+   "serving_g": 76,
    "nutrients": {
-    "calories_kcal": 46.1,
-    "protein_g": 1.0,
-    "fat_g": 0.4,
+    "calories_kcal": 24.3,
+    "protein_g": 0.5,
+    "fat_g": 0.2,
     "sat_fat_g": 0.0,
-    "carbs_g": 11.1,
-    "fiber_g": 2.9,
-    "sugar_g": 7.0,
+    "carbs_g": 5.8,
+    "fiber_g": 1.5,
+    "sugar_g": 3.7,
     "sodium_mg": 1,
-    "potassium_mg": 220,
-    "phosphorus_mg": 35,
-    "calcium_mg": 23,
+    "potassium_mg": 116,
+    "phosphorus_mg": 18,
+    "calcium_mg": 12,
     "fluid_ml": 0
    },
    "flags": [
@@ -106,20 +106,20 @@
    "fdc_id": 167755,
    "name": "Raspberries, raw",
    "category": "Fruits",
-   "serving_desc": "1 cup (123 g)",
-   "serving_g": 123,
+   "serving_desc": "1/2 cup (61.5 g)",
+   "serving_g": 61.5,
    "nutrients": {
-    "calories_kcal": 64.0,
-    "protein_g": 1.5,
-    "fat_g": 0.8,
+    "calories_kcal": 32.0,
+    "protein_g": 0.7,
+    "fat_g": 0.4,
     "sat_fat_g": 0.0,
-    "carbs_g": 14.7,
-    "fiber_g": 8.0,
-    "sugar_g": 5.4,
+    "carbs_g": 7.3,
+    "fiber_g": 4.0,
+    "sugar_g": 2.7,
     "sodium_mg": 1,
-    "potassium_mg": 186,
-    "phosphorus_mg": 36,
-    "calcium_mg": 31,
+    "potassium_mg": 93,
+    "phosphorus_mg": 18,
+    "calcium_mg": 15,
     "fluid_ml": 0
    },
    "flags": [
@@ -131,20 +131,20 @@
    "fdc_id": 173946,
    "name": "Blackberries, raw",
    "category": "Fruits",
-   "serving_desc": "1 cup (144 g)",
-   "serving_g": 144,
+   "serving_desc": "1/2 cup (72 g)",
+   "serving_g": 72,
    "nutrients": {
-    "calories_kcal": 61.9,
-    "protein_g": 2.0,
-    "fat_g": 0.7,
+    "calories_kcal": 31.0,
+    "protein_g": 1.0,
+    "fat_g": 0.4,
     "sat_fat_g": 0.0,
-    "carbs_g": 13.8,
-    "fiber_g": 7.6,
-    "sugar_g": 7.0,
+    "carbs_g": 6.9,
+    "fiber_g": 3.8,
+    "sugar_g": 3.5,
     "sodium_mg": 1,
-    "potassium_mg": 233,
-    "phosphorus_mg": 32,
-    "calcium_mg": 42,
+    "potassium_mg": 117,
+    "phosphorus_mg": 16,
+    "calcium_mg": 21,
     "fluid_ml": 0
    },
    "flags": [
@@ -181,26 +181,26 @@
    "fdc_id": 174683,
    "name": "Grapes, red or green, raw",
    "category": "Fruits",
-   "serving_desc": "1 cup (151 g)",
-   "serving_g": 151,
+   "serving_desc": "1/2 cup, about 15 (75.5 g)",
+   "serving_g": 75.5,
    "nutrients": {
-    "calories_kcal": 104.2,
-    "protein_g": 1.1,
-    "fat_g": 0.2,
-    "sat_fat_g": 0.1,
-    "carbs_g": 27.3,
-    "fiber_g": 1.4,
-    "sugar_g": 23.4,
-    "sodium_mg": 3,
-    "potassium_mg": 288,
-    "phosphorus_mg": 30,
-    "calcium_mg": 15,
+    "calories_kcal": 52.1,
+    "protein_g": 0.5,
+    "fat_g": 0.1,
+    "sat_fat_g": 0.0,
+    "carbs_g": 13.7,
+    "fiber_g": 0.7,
+    "sugar_g": 11.7,
+    "sodium_mg": 2,
+    "potassium_mg": 144,
+    "phosphorus_mg": 15,
+    "calcium_mg": 8,
     "fluid_ml": 0
    },
    "flags": [
     "low_potassium_fruit"
    ],
-   "kidney_notes": null
+   "kidney_notes": "Low potassium at 1/2 cup (about 15 grapes); a full bowl is 300+ mg."
   },
   {
    "fdc_id": 169124,
@@ -304,26 +304,26 @@
    "fdc_id": 169118,
    "name": "Pear, raw",
    "category": "Fruits",
-   "serving_desc": "1 medium (178 g)",
-   "serving_g": 178,
+   "serving_desc": "1 small (148 g)",
+   "serving_g": 148,
    "nutrients": {
-    "calories_kcal": 101.5,
-    "protein_g": 0.6,
+    "calories_kcal": 84.4,
+    "protein_g": 0.5,
     "fat_g": 0.2,
     "sat_fat_g": 0.0,
-    "carbs_g": 27.1,
-    "fiber_g": 5.5,
-    "sugar_g": 17.4,
-    "sodium_mg": 2,
-    "potassium_mg": 206,
-    "phosphorus_mg": 21,
-    "calcium_mg": 16,
+    "carbs_g": 22.5,
+    "fiber_g": 4.6,
+    "sugar_g": 14.4,
+    "sodium_mg": 1,
+    "potassium_mg": 172,
+    "phosphorus_mg": 18,
+    "calcium_mg": 13,
     "fluid_ml": 0
    },
    "flags": [
     "low_potassium_fruit"
    ],
-   "kidney_notes": null
+   "kidney_notes": "One small pear stays under 200 mg potassium; a medium one is about 206 mg."
   },
   {
    "fdc_id": 169936,
@@ -3809,23 +3809,23 @@
    "kidney_notes": null
   },
   {
-   "fdc_id": 174516,
+   "fdc_id": 171496,
    "name": "Turkey breast, roasted",
    "category": "Meat, Poultry & Eggs",
    "serving_desc": "3 oz (85 g)",
    "serving_g": 85,
    "nutrients": {
-    "calories_kcal": 115.6,
-    "protein_g": 25.1,
-    "fat_g": 1.7,
-    "sat_fat_g": 0.6,
+    "calories_kcal": 125.0,
+    "protein_g": 25.6,
+    "fat_g": 1.8,
+    "sat_fat_g": 0.5,
     "carbs_g": 0.0,
     "fiber_g": 0.0,
     "sugar_g": 0.0,
-    "sodium_mg": 97,
-    "potassium_mg": 252,
-    "phosphorus_mg": 215,
-    "calcium_mg": 12,
+    "sodium_mg": 84,
+    "potassium_mg": 212,
+    "phosphorus_mg": 196,
+    "calcium_mg": 8,
     "fluid_ml": 0
    },
    "flags": [],
@@ -5263,27 +5263,27 @@
    "kidney_notes": null
   },
   {
-   "fdc_id": 172475,
+   "fdc_id": 172448,
    "name": "Tofu, firm",
    "category": "Legumes, Nuts & Seeds",
-   "serving_desc": "1/2 cup (126 g)",
-   "serving_g": 126,
+   "serving_desc": "1/4 block, about 3 oz (81 g)",
+   "serving_g": 81,
    "nutrients": {
-    "calories_kcal": 181.4,
-    "protein_g": 21.8,
-    "fat_g": 11.0,
-    "sat_fat_g": 1.6,
-    "carbs_g": 3.5,
-    "fiber_g": 2.9,
-    "sugar_g": null,
-    "sodium_mg": 18,
-    "potassium_mg": 299,
-    "phosphorus_mg": 239,
-    "calcium_mg": 861,
+    "calories_kcal": 63.2,
+    "protein_g": 7.3,
+    "fat_g": 3.4,
+    "sat_fat_g": 0.6,
+    "carbs_g": 2.3,
+    "fiber_g": 0.7,
+    "sugar_g": 0.5,
+    "sodium_mg": 10,
+    "potassium_mg": 120,
+    "phosphorus_mg": 98,
+    "calcium_mg": 163,
     "fluid_ml": 0
    },
    "flags": [],
-   "kidney_notes": "Tofu is a kidney-friendly protein but still ~240 mg phosphorus per 1/2 cup; calcium-set tofu also adds calcium."
+   "kidney_notes": "A kidney-friendly protein: 1/4 block is ~7 g protein with ~100 mg phosphorus (plant phosphorus is poorly absorbed); calcium-set brands add calcium."
   },
   {
    "fdc_id": 168411,
@@ -5868,21 +5868,21 @@
    "fdc_id": 173205,
    "name": "Lemon-lime soda, regular",
    "category": "Beverages",
-   "serving_desc": "1 can, 12 fl oz (368 g)",
-   "serving_g": 368,
+   "serving_desc": "4 fl oz, 1/3 can (123 g)",
+   "serving_g": 123,
    "nutrients": {
-    "calories_kcal": 150.9,
-    "protein_g": 0.3,
+    "calories_kcal": 50.4,
+    "protein_g": 0.1,
     "fat_g": 0.0,
     "sat_fat_g": 0.0,
-    "carbs_g": 38.3,
+    "carbs_g": 12.8,
     "fiber_g": 0.0,
-    "sugar_g": 38.2,
-    "sodium_mg": 37,
-    "potassium_mg": 4,
+    "sugar_g": 12.8,
+    "sodium_mg": 12,
+    "potassium_mg": 1,
     "phosphorus_mg": 0,
-    "calcium_mg": 7,
-    "fluid_ml": 329
+    "calcium_mg": 2,
+    "fluid_ml": 110
    },
    "flags": [
     "hypo_treatment",
@@ -5890,7 +5890,7 @@
     "counts_as_fluid",
     "processed"
    ],
-   "kidney_notes": "No phosphoric acid, so a clear soda is the renal choice for treating a low (4 fl oz is about 13 g carbs); otherwise it is 38 g of sugar."
+   "kidney_notes": "No phosphoric acid, so a clear soda is the renal choice for treating a low: 4 fl oz is about 13 g carbs. A whole 12 oz can is 3 servings and 38 g of sugar."
   },
   {
    "fdc_id": 173204,
@@ -5922,21 +5922,21 @@
    "fdc_id": 174846,
    "name": "Ginger ale",
    "category": "Beverages",
-   "serving_desc": "1 can, 12 fl oz (366 g)",
-   "serving_g": 366,
+   "serving_desc": "4 fl oz, 1/3 can (122 g)",
+   "serving_g": 122,
    "nutrients": {
-    "calories_kcal": 124.4,
+    "calories_kcal": 41.5,
     "protein_g": 0.0,
     "fat_g": 0.0,
     "sat_fat_g": 0.0,
-    "carbs_g": 32.1,
+    "carbs_g": 10.7,
     "fiber_g": 0.0,
-    "sugar_g": 32.6,
-    "sodium_mg": 26,
-    "potassium_mg": 4,
+    "sugar_g": 10.9,
+    "sodium_mg": 9,
+    "potassium_mg": 1,
     "phosphorus_mg": 0,
-    "calcium_mg": 11,
-    "fluid_ml": 334
+    "calcium_mg": 4,
+    "fluid_ml": 111
    },
    "flags": [
     "hypo_treatment",
@@ -5944,7 +5944,7 @@
     "counts_as_fluid",
     "processed"
    ],
-   "kidney_notes": "Clear and phosphate-free: usable for a low (4 fl oz is about 11 g carbs) and a safer soda than cola."
+   "kidney_notes": "Clear and phosphate-free: 4 fl oz (about 11 g carbs) treats a low. A whole 12 oz can is 3 servings and 32 g of sugar."
   },
   {
    "fdc_id": 171871,
@@ -6056,27 +6056,28 @@
    "fdc_id": 171903,
    "name": "Cranberry juice cocktail",
    "category": "Beverages",
-   "serving_desc": "1 cup (253 g)",
-   "serving_g": 253,
+   "serving_desc": "1/2 cup, 4 fl oz (126.5 g)",
+   "serving_g": 126.5,
    "nutrients": {
-    "calories_kcal": 136.6,
+    "calories_kcal": 68.3,
     "protein_g": 0.0,
-    "fat_g": 0.3,
+    "fat_g": 0.1,
     "sat_fat_g": 0.0,
-    "carbs_g": 34.2,
+    "carbs_g": 17.1,
     "fiber_g": 0.0,
-    "sugar_g": 30.0,
-    "sodium_mg": 5,
-    "potassium_mg": 35,
-    "phosphorus_mg": 3,
-    "calcium_mg": 8,
-    "fluid_ml": 218
+    "sugar_g": 15.0,
+    "sodium_mg": 3,
+    "potassium_mg": 18,
+    "phosphorus_mg": 1,
+    "calcium_mg": 4,
+    "fluid_ml": 109
    },
    "flags": [
+    "hypo_treatment",
     "high_gi",
     "counts_as_fluid"
    ],
-   "kidney_notes": "One of the lowest-potassium juices (~45 mg per cup) but ~30 g sugar; the light version is the everyday choice."
+   "kidney_notes": "The lowest-potassium juice (~18 mg per 1/2 cup) and NIDDK's named alternative to orange juice for treating a low (4 fl oz is ~17 g fast carbs); the light version is the everyday choice."
   },
   {
    "fdc_id": 169098,
@@ -6266,21 +6267,21 @@
    "fdc_id": 175108,
    "name": "Sports drink (lemon-lime)",
    "category": "Beverages",
-   "serving_desc": "12 fl oz (365 g)",
-   "serving_g": 365,
+   "serving_desc": "8 fl oz (243 g)",
+   "serving_g": 243,
    "nutrients": {
-    "calories_kcal": 116.8,
+    "calories_kcal": 77.8,
     "protein_g": 0.0,
-    "fat_g": 0.2,
+    "fat_g": 0.1,
     "sat_fat_g": 0.0,
-    "carbs_g": 28.6,
+    "carbs_g": 19.1,
     "fiber_g": 0.0,
-    "sugar_g": 22.3,
-    "sodium_mg": 153,
-    "potassium_mg": 66,
-    "phosphorus_mg": 4,
-    "calcium_mg": 4,
-    "fluid_ml": 335
+    "sugar_g": 14.8,
+    "sodium_mg": 102,
+    "potassium_mg": 44,
+    "phosphorus_mg": 2,
+    "calcium_mg": 2,
+    "fluid_ml": 223
    },
    "flags": [
     "hypo_treatment",
@@ -6288,7 +6289,7 @@
     "counts_as_fluid",
     "processed"
    ],
-   "kidney_notes": "Low potassium, so usable for a low (8 fl oz is ~19 g carbs); otherwise it is sugar water with ~160 mg sodium."
+   "kidney_notes": "Low potassium, so 8 fl oz (~19 g carbs) can treat a low; otherwise it is sugar water with ~110 mg sodium per cup."
   },
   {
    "fdc_id": 173210,
@@ -8555,12 +8556,13 @@
     "potassium_mg": 47,
     "phosphorus_mg": 17,
     "calcium_mg": 3,
-    "fluid_ml": 0
+    "fluid_ml": 51
    },
    "flags": [
+    "counts_as_fluid",
     "processed"
    ],
-   "kidney_notes": "Canned gravy is ~330 mg sodium per 1/4 cup; thicken your own pan juices with a little cornstarch."
+   "kidney_notes": "Canned gravy is ~330 mg sodium per 1/4 cup and, being liquid, counts toward a fluid limit; thicken your own pan juices with a little cornstarch."
   },
   {
    "fdc_id": 168561,
@@ -9000,7 +9002,7 @@
     "phosphate_additive",
     "processed"
    ],
-   "kidney_notes": "Pepperoni adds cured-meat sodium and phosphates to the pizza problem; a cheese or vegetable slice is better."
+   "kidney_notes": "Pepperoni adds cured-meat sodium to the phosphate-leavened crust and processed cheese; a cheese or vegetable slice is better."
   },
   {
    "fdc_id": 172114,

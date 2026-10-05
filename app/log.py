@@ -1,0 +1,512 @@
+"""Food log: entries (eaten or planned) with nutrient snapshots, day / range / period
+summaries, mark-eaten, copy-day, CSV export and quick add."""
+from __future__ import annotations
+
+import csv
+import io
+import sqlite3
+from datetime import date as _date, datetime, timedelta
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import StreamingResponse
+
+from .db import get_db, utcnow
+from .foods import fetch_food, get_food_or_404, insert_food, parse_flags, raw_nutrients
+from .models import (
+    CopyDay,
+    CopyDayResult,
+    DaySummary,
+    Entry,
+    LogCreate,
+    LogUpdate,
+    MarkEaten,
+    MarkEatenResult,
+    PeriodSummary,
+    QuickAdd,
+    RangeSummary,
+    validate_date,
+)
+from .nutrients import (
+    MEALS,
+    NUTRIENT_KEYS,
+    add_totals,
+    build_alerts,
+    build_projected_alerts,
+    daily_status,
+    empty_totals,
+    food_warnings,
+    kidney_rating,
+    meal_carb_alerts,
+    projected_meal_carb_alerts,
+    round_nutrients,
+    round_value,
+    scale_nutrients,
+)
+from .periods import interdialytic_block, interdialytic_interval, previous_period, summarize_period, summary_notes, to_date
+from .profile import get_profile
+
+router = APIRouter(prefix="/api/log", tags=["log"])
+
+MAX_RANGE_DAYS = 366
+DEFAULT_SUMMARY_DAYS = 7
+ENTRY_STATUSES: tuple[str, ...] = ("eaten", "planned")
+
+_MEAL_ORDER_SQL = "CASE e.meal WHEN 'breakfast' THEN 0 WHEN 'lunch' THEN 1 WHEN 'dinner' THEN 2 ELSE 3 END"
+_STATUS_ORDER_SQL = "CASE e.status WHEN 'eaten' THEN 0 ELSE 1 END"
+_NUTRIENT_COLS = ", ".join(NUTRIENT_KEYS)
+_NUTRIENT_PLACEHOLDERS = ", ".join("?" for _ in NUTRIENT_KEYS)
+_ENTRY_SELECT = """
+    SELECT e.*, f.flags_json AS food_flags_json, f.kidney_notes AS food_kidney_notes
+    FROM log_entries e
+    JOIN foods f ON f.id = e.food_id
+"""
+# Contract order: meal, then status (eaten before planned), then created_at.
+_ENTRY_ORDER = f" ORDER BY e.date, {_MEAL_ORDER_SQL}, {_STATUS_ORDER_SQL}, e.created_at, e.id"
+
+CSV_COLUMNS: tuple[str, ...] = (
+    "id", "date", "meal", "status", "food_id", "food_name", "servings", "grams", "note",
+    *NUTRIENT_KEYS,
+    "created_at", "updated_at",
+)
+
+
+# --------------------------------------------------------------------------- #
+# Helpers
+# --------------------------------------------------------------------------- #
+
+
+def parse_date_param(value: str | None, name: str) -> str:
+    if value is None or value == "":
+        raise HTTPException(status_code=400, detail=f"{name} is required (YYYY-MM-DD)")
+    try:
+        return validate_date(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"{name}: {exc}") from exc
+
+
+def check_range(start_d: _date, end_d: _date, max_days: int = MAX_RANGE_DAYS) -> None:
+    if end_d < start_d:
+        raise HTTPException(status_code=400, detail="end must not be before start")
+    if (end_d - start_d).days >= max_days:
+        raise HTTPException(status_code=400, detail=f"range too large (max {max_days} days)")
+
+
+def parse_range(start: str | None, end: str | None) -> tuple[str, str]:
+    """Validate a required ``start``/``end`` query pair (ordered, at most ``MAX_RANGE_DAYS``)."""
+    start_s = parse_date_param(start, "start")
+    end_s = parse_date_param(end, "end")
+    check_range(_date.fromisoformat(start_s), _date.fromisoformat(end_s))
+    return start_s, end_s
+
+
+def today_local() -> str:
+    return datetime.now().date().isoformat()
+
+
+def row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
+    nutrients = raw_nutrients(row)
+    flags = parse_flags(row["food_flags_json"])
+    warnings = food_warnings(nutrients, flags, row["food_kidney_notes"], scope="in this entry")
+    grams = row["grams"]
+    return {
+        "id": row["id"],
+        "date": row["date"],
+        "meal": row["meal"],
+        "food_id": row["food_id"],
+        "food_name": row["food_name"],
+        "servings": round(float(row["servings"]), 3),
+        "grams": None if grams is None else round(float(grams), 1),
+        "note": row["note"],
+        "status": row["status"],
+        "nutrients": round_nutrients(nutrients),
+        "warnings": warnings,
+        "kidney_rating": kidney_rating(warnings),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def fetch_entry(conn: sqlite3.Connection, entry_id: int) -> sqlite3.Row | None:
+    try:
+        return conn.execute(_ENTRY_SELECT + " WHERE e.id = ?", (entry_id,)).fetchone()
+    except OverflowError:  # id beyond SQLite's 64-bit INTEGER: no such row
+        return None
+
+
+def get_entry_or_404(conn: sqlite3.Connection, entry_id: int) -> sqlite3.Row:
+    row = fetch_entry(conn, entry_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"log entry {entry_id} not found")
+    return row
+
+
+def fetch_entries(
+    conn: sqlite3.Connection,
+    start: str | None = None,
+    end: str | None = None,
+    *,
+    status: str | None = None,
+    meal: str | None = None,
+) -> list[sqlite3.Row]:
+    where: list[str] = []
+    params: list[Any] = []
+    if start:
+        where.append("e.date >= ?")
+        params.append(start)
+    if end:
+        where.append("e.date <= ?")
+        params.append(end)
+    if status:
+        where.append("e.status = ?")
+        params.append(status)
+    if meal:
+        where.append("e.meal = ?")
+        params.append(meal)
+    sql = _ENTRY_SELECT + (" WHERE " + " AND ".join(where) if where else "") + _ENTRY_ORDER
+    return conn.execute(sql, params).fetchall()
+
+
+def eaten_day_totals(conn: sqlite3.Connection, start: str, end: str) -> dict[str, dict[str, float]]:
+    """``{date: totals}`` of *eaten* entries per day; days without eaten entries are absent."""
+    sums = ", ".join(f"SUM({key}) AS {key}" for key in NUTRIENT_KEYS)
+    rows = conn.execute(
+        f"SELECT date, {sums} FROM log_entries WHERE status = 'eaten' AND date >= ? AND date <= ? GROUP BY date",
+        (start, end),
+    ).fetchall()
+    return {row["date"]: {key: float(row[key] or 0.0) for key in NUTRIENT_KEYS} for row in rows}
+
+
+def resolve_servings(food: sqlite3.Row, servings: float | None, grams: float | None) -> tuple[float, float | None]:
+    """``grams`` wins when given (servings = grams / serving_g); default 1 serving."""
+    if grams is not None:
+        return float(grams) / float(food["serving_g"]), float(grams)
+    return (float(servings) if servings is not None else 1.0), None
+
+
+def insert_entry(
+    conn: sqlite3.Connection,
+    *,
+    date: str,
+    meal: str,
+    food: sqlite3.Row,
+    servings: float,
+    grams: float | None,
+    note: str | None,
+    status: str = "eaten",
+) -> int:
+    if status not in ENTRY_STATUSES:
+        raise ValueError(f"status must be one of {', '.join(ENTRY_STATUSES)}")
+    snapshot = scale_nutrients(raw_nutrients(food), servings)
+    now = utcnow()
+    cur = conn.execute(
+        f"""INSERT INTO log_entries (date, meal, food_id, food_name, servings, grams, note, status,
+                {_NUTRIENT_COLS}, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?)""",
+        (date, meal, food["id"], food["name"], servings, grams, note, status, *[snapshot[k] for k in NUTRIENT_KEYS], now, now),
+    )
+    return int(cur.lastrowid)
+
+
+def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, Any]:
+    """Totals, status and alerts for one day's rows: eaten, planned and projected (eaten + planned).
+
+    ``totals`` / ``status`` / ``alerts`` are computed on eaten entries only (unchanged from
+    v0.1). ``projected_alerts`` is empty when nothing is planned, so the UI never shows
+    "If you eat what's planned…" for a day that has no plan.
+    """
+    eaten = empty_totals()
+    planned = empty_totals()
+    meals = {meal: empty_totals() for meal in MEALS}
+    planned_meals = {meal: empty_totals() for meal in MEALS}
+    counts = {"eaten": 0, "planned": 0}
+    for row in rows:
+        raw = raw_nutrients(row)
+        if row["status"] == "planned":
+            add_totals(planned, raw)
+            add_totals(planned_meals.setdefault(row["meal"], empty_totals()), raw)
+            counts["planned"] += 1
+        else:
+            add_totals(eaten, raw)
+            add_totals(meals.setdefault(row["meal"], empty_totals()), raw)
+            counts["eaten"] += 1
+    projected = add_totals(dict(eaten), planned)
+
+    targets = profile["targets"]
+    warn_fraction = profile["warn_fraction"]
+    status = daily_status(eaten, targets, warn_fraction)
+    projected_status = daily_status(projected, targets, warn_fraction)
+    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"))
+    projected_alerts: list[dict[str, Any]] = []
+    if counts["planned"]:
+        projected_meals = {meal: add_totals(dict(meals[meal]), planned_meals.get(meal, {})) for meal in meals}
+        projected_alerts = build_projected_alerts(projected_status) + projected_meal_carb_alerts(
+            projected_meals, targets.get("carbs_per_meal_g")
+        )
+    return {
+        "totals": round_nutrients(eaten),
+        "planned_totals": round_nutrients(planned),
+        "projected_totals": round_nutrients(projected),
+        "status": status,
+        "projected_status": projected_status,
+        "meals": {meal: round_nutrients(values) for meal, values in meals.items()},
+        "planned_meals": {meal: round_nutrients(values) for meal, values in planned_meals.items()},
+        "alerts": alerts,
+        "projected_alerts": projected_alerts,
+        "counts": counts,
+    }
+
+
+def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, Any]:
+    figures = day_figures(rows, profile)
+    return {
+        "date": date,
+        "entries": [row_to_entry(r) for r in rows],
+        "targets": profile["targets"],
+        **figures,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Routes (static paths before ``/{entry_id}``)
+# --------------------------------------------------------------------------- #
+
+
+@router.get("", response_model=DaySummary)
+def get_day(date: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    day = parse_date_param(date, "date") if date else today_local()
+    profile = get_profile(conn)
+    rows = fetch_entries(conn, day, day)
+    return summarize_day(day, rows, profile)
+
+
+@router.get("/range", response_model=RangeSummary)
+def get_range(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    start_s, end_s = parse_range(start, end)
+    start_d, end_d = _date.fromisoformat(start_s), _date.fromisoformat(end_s)
+
+    profile = get_profile(conn)
+    by_date: dict[str, list[sqlite3.Row]] = {}
+    for row in fetch_entries(conn, start_s, end_s):
+        by_date.setdefault(row["date"], []).append(row)
+
+    days = []
+    current = start_d
+    while current <= end_d:
+        key = current.isoformat()
+        figures = day_figures(by_date.get(key, []), profile)
+        days.append(
+            {
+                "date": key,
+                "totals": figures["totals"],
+                "planned_totals": figures["planned_totals"],
+                "projected_totals": figures["projected_totals"],
+                "status": figures["status"],
+                "projected_status": figures["projected_status"],
+                "counts": figures["counts"],
+            }
+        )
+        current += timedelta(days=1)
+    return {"days": days}
+
+
+@router.get("/summary", response_model=PeriodSummary)
+def get_summary(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Period summary of *eaten* entries: averages per logged day vs targets, days over,
+    the same-length previous period and, for hemodialysis, the current interdialytic interval.
+
+    Default: the 7 days ending today. Giving only one bound fills the other for a 7-day period.
+    """
+    span = timedelta(days=DEFAULT_SUMMARY_DAYS - 1)
+    if start is None and end is None:
+        end_d = _date.fromisoformat(today_local())
+        start_d = end_d - span
+    elif end is None:
+        start_d = _date.fromisoformat(parse_date_param(start, "start"))
+        end_d = start_d + span
+    elif start is None:
+        end_d = _date.fromisoformat(parse_date_param(end, "end"))
+        start_d = end_d - span
+    else:
+        start_d = _date.fromisoformat(parse_date_param(start, "start"))
+        end_d = _date.fromisoformat(parse_date_param(end, "end"))
+    check_range(start_d, end_d)
+
+    profile = get_profile(conn)
+    targets = profile["targets"]
+    warn_fraction = profile["warn_fraction"]
+
+    interval = None
+    if profile["dialysis"] == "hemodialysis":
+        interval = interdialytic_interval(end_d, profile["dialysis_days"])
+
+    fetch_from, _ = previous_period(start_d, end_d)
+    if interval is not None:
+        fetch_from = min(fetch_from, to_date(interval["since"]))
+    day_totals = eaten_day_totals(conn, fetch_from.isoformat(), end_d.isoformat())
+
+    summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction)
+    summary["interdialytic"] = None if interval is None else interdialytic_block(interval, day_totals, targets, warn_fraction)
+    summary["notes"] = summary_notes(profile["dialysis"], profile["dialysis_days"], interval)
+    return summary
+
+
+@router.get("/export.csv")
+def export_csv(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> StreamingResponse:
+    start_s = parse_date_param(start, "start") if start else None
+    end_s = parse_date_param(end, "end") if end else None
+    if start_s and end_s and end_s < start_s:
+        raise HTTPException(status_code=400, detail="end must not be before start")
+    rows = fetch_entries(conn, start_s, end_s)  # materialised before the connection closes
+
+    def generate():
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(CSV_COLUMNS)
+        yield buffer.getvalue()
+        for row in rows:
+            buffer.seek(0)
+            buffer.truncate(0)
+            values: list[Any] = [
+                row["id"], row["date"], row["meal"], row["status"], row["food_id"], row["food_name"],
+                round(float(row["servings"]), 3),
+                None if row["grams"] is None else round(float(row["grams"]), 1),
+                row["note"],
+            ]
+            values += [round_value(key, row[key]) for key in NUTRIENT_KEYS]
+            values += [row["created_at"], row["updated_at"]]
+            writer.writerow(["" if v is None else v for v in values])
+            yield buffer.getvalue()
+
+    filename = f"kidney-log_{start_s or 'all'}_{end_s or 'all'}.csv"
+    return StreamingResponse(
+        generate(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/quick", response_model=Entry, status_code=201)
+def quick_add(body: QuickAdd, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Create a custom food from manually entered nutrients, then log it."""
+    food_id = insert_food(
+        conn,
+        source="custom",
+        name=body.name,
+        serving_desc=body.serving_desc,
+        serving_g=body.serving_g,
+        nutrients=body.nutrients,
+        flags=body.flags,
+    )
+    food = fetch_food(conn, food_id)
+    entry_id = insert_entry(
+        conn, date=body.date, meal=body.meal, food=food, servings=body.servings, grams=None, note=body.note, status=body.status
+    )
+    conn.commit()
+    return row_to_entry(fetch_entry(conn, entry_id))
+
+
+@router.post("/mark-eaten", response_model=MarkEatenResult)
+def mark_eaten(body: MarkEaten, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Set every planned entry of the day (or of one meal) to ``eaten``."""
+    sql = "UPDATE log_entries SET status = 'eaten', updated_at = ? WHERE date = ? AND status = 'planned'"
+    params: list[Any] = [utcnow(), body.date]
+    if body.meal:
+        sql += " AND meal = ?"
+        params.append(body.meal)
+    cur = conn.execute(sql, params)
+    conn.commit()
+    return {"updated": int(cur.rowcount)}
+
+
+@router.post("/copy-day", response_model=CopyDayResult, status_code=201)
+def copy_day(body: CopyDay, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Copy a day's entries onto another date (snapshot recomputed from the current foods).
+
+    Entries entered by weight keep their grams (servings follow the food's current
+    serving size); all others keep their servings. Notes are copied.
+    """
+    status_filter = None if body.include == "all" else body.include
+    rows = fetch_entries(conn, body.from_date, body.from_date, status=status_filter)
+    if body.meals:
+        rows = [r for r in rows if r["meal"] in body.meals]
+    if not rows:
+        what = "entries" if body.include == "all" else f"{body.include} entries"
+        raise HTTPException(status_code=400, detail=f"no {what} on {body.from_date} to copy")
+
+    created: list[int] = []
+    for row in rows:
+        food = fetch_food(conn, row["food_id"])
+        if food is None:  # cannot happen with foreign keys on
+            continue
+        if row["grams"] is not None:
+            servings, grams = resolve_servings(food, None, row["grams"])
+        else:
+            servings, grams = float(row["servings"]), None
+        created.append(
+            insert_entry(
+                conn, date=body.to_date, meal=row["meal"], food=food, servings=servings, grams=grams,
+                note=row["note"], status=body.status,
+            )
+        )
+    conn.commit()
+    entries = [row_to_entry(fetch_entry(conn, entry_id)) for entry_id in created]
+    return {"created": len(entries), "entries": entries}
+
+
+@router.post("", response_model=Entry, status_code=201)
+def create_entry(body: LogCreate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    food = get_food_or_404(conn, body.food_id)
+    servings, grams = resolve_servings(food, body.servings, body.grams)
+    entry_id = insert_entry(
+        conn, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams, note=body.note, status=body.status
+    )
+    conn.commit()
+    return row_to_entry(fetch_entry(conn, entry_id))
+
+
+@router.put("/{entry_id}", response_model=Entry)
+def update_entry(entry_id: int, body: LogUpdate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    row = get_entry_or_404(conn, entry_id)
+    food = fetch_food(conn, row["food_id"])
+    if food is None:  # cannot happen with foreign keys on, but keep the error explicit
+        raise HTTPException(status_code=404, detail="the entry's food no longer exists")
+    data = body.model_dump(exclude_unset=True)
+
+    date = data.get("date") or row["date"]
+    meal = data.get("meal") or row["meal"]
+    status = data.get("status") or row["status"]
+    note = data["note"] if "note" in data else row["note"]
+
+    servings = float(row["servings"])
+    grams = row["grams"]
+    if data.get("grams") is not None:
+        servings, grams = resolve_servings(food, None, data["grams"])
+    elif data.get("servings") is not None:
+        servings, grams = float(data["servings"]), None
+    elif "grams" in data:  # explicit null clears the weight, servings unchanged
+        grams = None
+    elif grams is not None:
+        # Weight-based entry, amount untouched: the servings follow the food's *current* serving
+        # size (as copy-day does), so grams and servings agree after a food is re-portioned.
+        servings, grams = resolve_servings(food, None, grams)
+
+    snapshot = scale_nutrients(raw_nutrients(food), servings)
+    sets = ["date = ?", "meal = ?", "status = ?", "food_name = ?", "servings = ?", "grams = ?", "note = ?"]
+    params: list[Any] = [date, meal, status, food["name"], servings, grams, note]
+    for key in NUTRIENT_KEYS:
+        sets.append(f"{key} = ?")
+        params.append(snapshot[key])
+    sets.append("updated_at = ?")
+    params += [utcnow(), entry_id]
+    conn.execute(f"UPDATE log_entries SET {', '.join(sets)} WHERE id = ?", params)
+    conn.commit()
+    return row_to_entry(fetch_entry(conn, entry_id))
+
+
+@router.delete("/{entry_id}", status_code=204, response_class=Response)
+def delete_entry(entry_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    get_entry_or_404(conn, entry_id)
+    conn.execute("DELETE FROM log_entries WHERE id = ?", (entry_id,))
+    conn.commit()
+    return Response(status_code=204)

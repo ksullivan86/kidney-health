@@ -1,7 +1,8 @@
 # Build-context filter for deploy/Containerfile (always build from the repo root).
-# Only app/, data/foods.json and requirements.txt are copied into the image.
+# Only app/, data/foods.json, LICENSE and requirements.txt are copied into the image.
 .git
 .github
+.hadolint.yaml
 .gitignore
 .pytest_cache
 .venv
