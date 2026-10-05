@@ -552,3 +552,149 @@ aggregating **planned** entries in the range by food (servings summed; `grams = 
 * `python -m pytest` must pass with no network.
 * `uvicorn app.main:app --host 0.0.0.0 --port 8000` runs the server; `DATA_DIR` default
   `./data-local` when running outside a container (gitignored), `/data` in the image.
+
+---
+
+# v0.3 contract: accounts, security, PWA, guidance, AI, barcode, personalised targets, handbook
+
+Written 2026-10-05 after the research round. Everything above still holds unless this
+section changes it. **The research notes in `docs/dev/research/` are the normative
+specifications**; this section only fixes the cross-cutting decisions, resolves conflicts
+between notes, assigns file ownership, and fixes interface names so parallel builders do not
+collide.
+
+## Specs and precedence
+
+| Area | Spec |
+|---|---|
+| Rootless, image, runtime flags, k8s, supply chain, app security middleware | `docs/dev/research/01-rootless-and-security.md` |
+| Home-screen install (PWA), service worker, offline, HTTPS guide | `02-ios-pwa.md` |
+| Barcode, Open Food Facts, USDA branded, label/plate photos | `03-barcode-and-photo.md` |
+| Optional AI (OpenAI-compatible, Ollama, Hermes, OpenRouter, ...) | `04-optional-ai.md` |
+| Personalised targets (age, sex, activity, labs, eGFR) | `05-personalized-targets.md` |
+| Rule-based meal guidance | `06-meal-guidance.md` |
+| Accounts, sessions, settings, secrets, audit, export | `07-accounts-settings-secrets.md` |
+| Patient handbook site (`/learn`) | `08-handbook-site.md` |
+
+When notes disagree, apply in this order: (1) this section; (2) the "Security review" and
+"Fact-check" sections appended to a note override that note's earlier text; (3) note 07 for
+anything about identity, settings or secrets; (4) note 01 for anything about headers, CSP,
+proxies, the image and CI; (5) the note that owns the feature.
+
+## Conflict resolutions and owner decisions
+
+1. **Guidance lives in the package `app/guidance/`** (note 06 layout). Note 04's `app/guidance.py`
+   means that package. AI lives in the package `app/ai/` (note 04 layout).
+2. **Settings and secrets:** one registry (`app/settings_registry.py`, `app/settings_store.py`)
+   and one credential resolver (`app/crypto.py`, `app/credentials.py`) from note 07. Notes 03, 04
+   and 06 register their keys there; no other settings store. Env names follow note 07 and the
+   security review: `AI_PRIVATE_HOSTS` (not `ALLOW_PRIVATE_AI_HOSTS`), `ALLOWED_HOSTS`,
+   `PUBLIC_URL`, `TRUSTED_PROXIES`, `TRUSTED_PROXY_SECRET_FILE`.
+3. **Identity interface (fixed names):** `app/auth/deps.py` exports `current_user`,
+   `CurrentUser`, `require_admin`, `AdminUser`, `require_recent_auth`. `User` is a frozen
+   dataclass in `app/auth/models.py` with at least `id: int`, `username: str`, `role:
+   Literal["admin","user"]`, `status: str`, `display_name: str | None`. Every data router uses
+   `dependencies=[Depends(current_user)]`, and every query takes `user.id` explicitly. Not found
+   and not yours are both **404**.
+4. **HTTP client:** move the whole app from `httpx` to **`httpx2`** (Starlette's TestClient now
+   warns about `httpx`; note 04 F14). No `openai` SDK.
+5. **New runtime dependency:** only `cryptography` (note 07 §4.2). Locks with hashes via
+   `pip-compile --generate-hashes` (`requirements.in` → `requirements.lock`, same for dev).
+   Install with `--require-hashes`.
+6. **Base image:** Chainguard Python pinned by digest for `deploy/Containerfile`, plus
+   `deploy/Containerfile.debian` as the fallback (note 01 §5.1). CI tests on **Python 3.12 and
+   the image's Python** (3.14 at the time of writing). The app must stay compatible with 3.11+.
+7. **Image tags:** pushes to `main` publish `:edge` and `:sha-<short>`; `v*` tags publish
+   `:latest`, `:X.Y.Z`, `:X.Y`. Signing, SBOM and provenance per note 01 §5.4; attestation steps
+   that need a public repo are gated on `github.event.repository.private == false`.
+8. **Open Food Facts** is **off by default** (`food.off_enabled=false`); the admin turns it on in
+   Settings, and the first-run setup screen offers a checkbox for it.
+9. **`potassium_additive` flag** (note 03 R5): a **medium** warning ("contains a potassium
+   additive; potassium not listed") when potassium is unknown; normal thresholds when it is
+   listed. Marked for clinical review in the handbook's review list. Not a high warning.
+10. **Protein for diabetes at G3a–G5 without dialysis: 0.8 g/kg floor** (note 05 fact-check H1).
+    `docs/research/targets_by_stage.json`, `docs/diet-guide.md` and the v0.2 tests are updated to
+    match; the old 0.6 lower bound remains only for `diabetes: none` with the supervision note.
+11. **Handbook text licence:** CC BY-NC-SA 4.0 (code stays PolyForm Noncommercial 1.0.0). Every
+    handbook page shows a "draft, not yet reviewed by a clinician" banner until a named reviewer
+    signs it off in front matter.
+12. **Links into the handbook** use `/learn/...` (not `/handbook/...`); note 08 §4.10 owns the slug
+    list (`app/guidance/topics.py` reads it).
+13. **Hermes:** the `hermes` AI preset is supported only against a dedicated tool-free Hermes
+    Agent profile (note 04 F1 + security review); the app probes it and refuses otherwise. Users
+    who only want a Hermes *model* use the `ollama` or `openrouter` presets.
+14. **`AUTH_MODE` default `local`.** `APP_PASSWORD` is deprecated and imported once (note 07).
+15. **Preview/demo mode remains a supported feature** (it powers the claude.ai preview and lets
+    contributors try the UI without a server). Its twins of server logic must stay in parity
+    (see "Frontend modules" below).
+
+## Database migrations
+
+Move schema evolution into `app/migrations/` with one module per step, applied in order by
+`app/db.py` and recorded in `meta.schema_version`. Each step is idempotent (checks
+`PRAGMA table_info` before `ALTER TABLE`). Fixed numbering so parallel builders do not collide:
+
+| Step | Module | Owner (milestone) | Content |
+|---|---|---|---|
+| 1, 2 | `m001_base.py`, `m002_planning.py` | backend-core (M1) | v0.1 schema and v0.2 additions, moved verbatim from `db.py` |
+| 3 | `m003_accounts.py` | backend-core (M1) | note 07 §4.4 schema v3 (users, sessions, invites, user_profiles, `user_id` columns + triggers, settings tables, secrets, audit, login throttling) + automatic `kidney.db.pre-v3.bak` |
+| 4 | `m004_targets_labs.py` | targets (M2) | note 05 §4.6 (profile columns on `user_profiles`, `lab_results`) |
+| 5 | `m005_guidance_log.py` | guidance (M2) | note 06 §4.11 (`log_entries.purpose`, `meal_templates.meal_hint`, food preferences) **and** note 02 R5 `log_entries.client_id` + unique index (offline outbox) |
+| 6 | `m006_barcode_ai.py` | ai-barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) and note 04 (AI usage/audit tables with `ON DELETE CASCADE`) |
+
+## Backend file ownership
+
+| Milestone / owner | Files |
+|---|---|
+| M1 backend-core | `app/config.py`, `app/db.py`, `app/migrations/**` (steps 1–3), `app/security.py`, `app/auth/**`, `app/settings_registry.py`, `app/settings_store.py`, `app/crypto.py`, `app/credentials.py`, `app/audit.py`, `app/account.py` (export/delete), `app/admin.py` (CLI), `app/healthcheck.py`, `app/pwa.py` (note 02 R6: `/sw.js`, manifest/icon headers), `app/main.py`, `app/models.py`, user scoping edits in `app/foods.py`, `app/log.py`, `app/meals.py`, `app/profile.py`, `app/periods.py`; `requirements*.in/.lock`, `pyproject.toml`, `scripts/lock.sh`; `tests/**` except frontend-owned tests |
+| M1 deploy | `deploy/**`, `.github/**`, `.hadolint.yaml`, `.dockerignore`, `scripts/verify-image.sh`, `SECURITY.md`, `docs/security.md`, `docs/https.md`, `docs/deployment.md`, `docs/network-allowlist.md` |
+| M1 frontend | `app/static/**`, `scripts/build_preview.py`, `scripts/build_icons.py`, `requirements-tools.txt`, `tests/test_preview_build.py`, `tests/js/**`, `docs/install-on-your-phone.md` |
+| Handbook (parallel) | `handbook/**`, `scripts/build_handbook.py`, `tests/test_handbook_content.py` |
+| M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/nutrients.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
+| M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
+| M2 ai-barcode | `app/ai/**`, `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/vision.py`, `app/imagecheck.py`, `app/migrations/m006_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/ai.md`, `docs/barcode-and-photos.md`, their tests and fixtures |
+| M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/README.md`, `tools/e2e/**` |
+
+Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
+the listed additions; each M2 owner registers its router in `app/main.py` with one import line and
+one `include_router` line and its settings keys in `app/settings_registry.py`.
+
+## Frontend modules (M1 restructure)
+
+`app/static/app.js` is split into plain scripts (no bundler, no ES module imports, so the preview
+build can inline them in order). All code hangs off one namespace `window.KH`:
+
+```
+app/static/
+  index.html            shell only: no inline script or style attributes (CSP), placeholders for every view/sheet
+  theme-init.js         loaded in <head> (was the inline theme script)
+  manifest.webmanifest, apple-touch-icon.png, icons/, sw.js (template), vendor/ (M2)
+  css/base.css, css/<view>.css
+  js/core.js            KH.h/s/$, KH.api (fetch wrapper: X-Requested-With, 401 → sign-in, toasts), state, router, sheets, confirm
+  js/engine/rules.js    warnings, ratings, rounding, number formatting (twin of app/nutrients.py)
+  js/engine/targets.js, js/engine/kidney_function.js        (M2 targets)
+  js/engine/guidance.js (or js/engine/guidance/*.js)        (M2 guidance)
+  js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
+  js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
+  js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
+  js/views/labs.js, guidance.js                                                    (M2)
+  js/pwa.js (M1), js/offline.js, js/scan.js (M2)
+  js/main.js            boot
+```
+
+`scripts/build_preview.py` inlines the `<link rel="stylesheet">` and `<script src>` tags of
+`index.html` in document order. **Parity rule:** every JS twin of server logic (`js/engine/*`,
+`js/mock/*`) is checked against the server by shared vector files in `tests/data/*.json`, run by
+pytest on the Python side and by `node tests/js/run_vectors.mjs` on the JS side (CI runs both).
+In demo/preview mode the user is a signed-in demo admin; AI, Open Food Facts and USDA calls
+answer "available in the installed app" except for a few recorded barcode fixtures.
+
+## Milestones
+
+* **M1 foundation:** accounts, settings, secrets, security middleware, migrations framework,
+  scoping, admin CLI, healthcheck, PWA shell, frontend restructure + sign-in/setup/settings UI,
+  rootless/hardened deploy assets, CI/release pipeline. Handbook writing runs in parallel.
+* **M2 features:** personalised targets + labs + eGFR; guidance engine; AI; barcode/photo;
+  offline outbox; their UI and mock twins.
+* **M3 integration:** `/learn` mount and handbook build in the image, contributor docs, e2e
+  harnesses in `tools/e2e/`, full review, preview rebuild, PR.
