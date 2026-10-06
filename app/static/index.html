@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/sheets.css">
 <link rel="stylesheet" href="css/pwa.css">
+<link rel="stylesheet" href="css/ai.css">
 <link rel="stylesheet" href="css/touch.css">
 <script src="theme-init.js"></script>
 </head>
@@ -320,6 +321,8 @@
         Search USDA
       </button>
     </div>
+    <!-- Optional AI (js/views/ai.js): shown only when the server offers AI to this person -->
+    <div class="ai-add" id="ai-add-slot" aria-label="AI help" role="group" hidden></div>
     <section class="saved-shortcuts" id="saved-shortcuts" aria-labelledby="saved-shortcuts-heading" hidden>
       <div class="card-head results-head">
         <h2 id="saved-shortcuts-heading" class="card-title">Saved meals</h2>
@@ -1282,6 +1285,53 @@
   </form>
 </dialog>
 
+<!-- ===================== AI SHEETS (js/views/ai.js fills them) ===================== -->
+<dialog id="sheet-ai" class="sheet" aria-labelledby="sheet-ai-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-title" class="sheet-title">AI</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+<dialog id="sheet-ai-consent" class="sheet" aria-labelledby="sheet-ai-consent-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-consent-title" class="sheet-title">Before anything is sent</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+<dialog id="sheet-ai-sent" class="sheet" aria-labelledby="sheet-ai-sent-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-sent-title" class="sheet-title">What will be sent?</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <div id="update-toast" class="update-toast" role="status" aria-live="polite" hidden>
   <span>Update ready.</span>
@@ -1296,6 +1346,15 @@
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
+<script src="js/engine/guidance/rules.js"></script>
+<script src="js/engine/guidance/messages.js"></script>
+<script src="js/engine/guidance/budget.js"></script>
+<script src="js/engine/guidance/score.js"></script>
+<script src="js/engine/guidance/fits.js"></script>
+<script src="js/engine/guidance/swaps.js"></script>
+<script src="js/engine/guidance/planner.js"></script>
+<script src="js/engine/guidance/insights.js"></script>
+<script src="js/engine/guidance/hypo.js"></script>
 <script src="js/core.js"></script>
 <script src="js/learn.js"></script>
 <script src="js/mock/core.js"></script>
@@ -1304,9 +1363,11 @@
 <script src="js/mock/labs.js"></script>
 <script src="js/mock/log.js"></script>
 <script src="js/mock/meals.js"></script>
+<script src="js/mock/guidance.js"></script>
 <script src="js/mock/auth.js"></script>
 <script src="js/mock/settings.js"></script>
 <script src="js/mock/handbook.js"></script>
+<script src="js/mock/ai.js"></script>
 <script src="js/mock/seed.js"></script>
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>
@@ -1316,6 +1377,7 @@
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>
+<script src="js/views/ai.js"></script>
 <script src="js/pwa.js" data-preview="omit"></script>
 <script src="js/main.js"></script>
 </body>
