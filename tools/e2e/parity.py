@@ -34,6 +34,11 @@ Sections
      entry with unit conversion and its validation, history filters, deletion, the kidney-function card
      for several profiles, and the suggestion (targets, notes, rules, derived, alerts, 422 refusals with
      their code) over a matrix of profiles x lab results x the targets.* settings
+  12 meal guidance (v0.3 M2, note 06): every /api/guidance route (what fits, swaps for foods and entries,
+     the plan builder and its variants, day and period insights, low-treatment options, the rules table,
+     "Not for me") with their validation and the person's and admin's guidance settings, over a history
+     with usual meals, saved meals with meal_hint and treated lows; the log's purpose and client_id
+     (POST /api/log, /quick, /batch, PUT, copy-day, CSV) and POST /api/log/batch's all-or-nothing rule
 
 ``--sections 0,11`` runs only those sections (section 1 always runs first: the others need its food ids).
 Error answers are compared by status, detail and, when either side sends one, ``code``.
@@ -245,6 +250,7 @@ HELPERS_JS = r"""
       m._entries = []; m._nextEntryId = 1;
       m._templates = []; m._nextTemplateId = 1;
       m._labs = []; m._nextLabId = 1;
+      m._notForMe = new Map();
       m._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1',
         warn_fraction: 0.8, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: m._stamp() };
       return { foods: m._foods.length, custom: m._foods.filter((f) => f.source !== 'builtin').length, nextFoodId: m._nextFoodId, source: m.foodsSource };
@@ -1145,6 +1151,332 @@ class Harness:
                 if r["status"] != 204 and not (side == 1 and r["status"] == 200):
                     self.rec.note_failure(section, f"clear labs side {side}", json.dumps(r))
 
+    # ------------------------------------------------------------------ #
+    # 12: meal guidance, the log's purpose / client_id / batch, saved meals' meal_hint (note 06)
+    # ------------------------------------------------------------------ #
+    G = "2026-05-12"  # a Tuesday with 20 days of history before it; no other section logs within 60 days of it
+    # Ids that differ between the sides by design (row ids, the saved meal a plan applies) and the profile's timestamp.
+    GIGNORE = IGNORE | {"entry_id", "template_id", "endpoint", "profile_updated_at"}
+
+    def gboth(self, section: str, label: str, method: str, path: Any, body: Any = None):
+        return self.both(section, label, method, path, body, ignore=self.GIGNORE)
+
+    def _clear_not_for_me(self, section: str) -> None:
+        for caller in (self.server, self.mock):
+            for row in caller.call("GET", "/api/guidance/not-for-me")["body"]["foods"]:
+                caller.call("DELETE", f"/api/guidance/not-for-me/{row['food_id']}")
+
+    def section12(self) -> None:
+        """Meal guidance (ARCHITECTURE.md "M2 API: guidance") over the browser twin js/engine/guidance/*.js."""
+        G = self.G
+        ago = lambda n: d(G, -n)  # noqa: E731
+        uuid = lambda n: f"00000000-0000-4000-8000-{n:012d}"  # noqa: E731
+        f = self.fid
+
+        S = "12a guidance without targets"
+        self._clear_not_for_me(S)
+        self.both(S, "PATCH /api/me/settings guidance default", "PATCH", "/api/me/settings", {"guidance": None}, ignore=frozenset({"settings"}))
+        self.put_profile(S, "no targets", {**self.PROFILE, "targets": {k: None for k in self.PROFILE["targets"]}})
+        self.gboth(S, "next-meal no_targets", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}")
+        self.gboth(S, "plan-day no_targets", "POST", "/api/guidance/plan-day", {"date": G})
+        self.gboth(S, "insights/day no_targets", "GET", f"/api/guidance/insights/day?date={G}")
+        self.gboth(S, "insights/period no_targets", "GET", f"/api/guidance/insights/period?start={ago(7)}&end={ago(1)}")
+        self.gboth(S, "swaps no_targets", "GET", f"/api/guidance/swaps?food_id={f('Banana, raw')}&meal=lunch&date={G}")
+        self.gboth(S, "hypo-options without targets (always answers)", "GET", "/api/guidance/hypo-options")
+        self.put_profile(S, "only a meal carb goal", {"targets": {"carbs_per_meal_g": 45}})
+        self.gboth(S, "next-meal with only carbs_per_meal_g", "GET", f"/api/guidance/next-meal?meal=lunch&date={G}")
+        self.put_profile(S, "guidance profile", self.PROFILE)
+        self.gboth(S, "GET /api/guidance/rules", "GET", "/api/guidance/rules")
+        self.gboth(S, "GET /api/guidance/hypo-options", "GET", "/api/guidance/hypo-options")
+
+        S = "12b history and saved meals"
+        history = [
+            # a usual breakfast on 6 days, a usual dinner on 4, some snacks and a treated low
+            *[(ago(n), "breakfast", "Cream of wheat, cooked", {"servings": 0.75}) for n in (1, 2, 3, 5, 8, 12)],
+            *[(ago(n), "breakfast", "Bread, white", {"servings": 1}) for n in (1, 2, 3, 5, 8, 12)],
+            *[(ago(n), "breakfast", "Egg, hard-boiled", {"servings": 1}) for n in (1, 3, 8, 12)],
+            *[(ago(n), "dinner", "Chicken breast, roasted, skinless", {"servings": 1}) for n in (2, 4, 9, 15)],
+            *[(ago(n), "dinner", "Rice, white, long-grain, cooked", {"servings": 0.75}) for n in (2, 4, 9, 15)],
+            *[(ago(n), "dinner", "Green beans, boiled", {"servings": 1}) for n in (2, 4, 9)],
+            (ago(6), "lunch", "Potato, baked, with skin", {"servings": 1.5}),
+            (ago(6), "lunch", "Orange juice", {"grams": 400}),
+            (ago(7), "snack", "Banana, raw", {"servings": 1}),
+            (ago(10), "snack", "Applesauce, unsweetened", {"servings": 1}),
+            (ago(11), "lunch", "Cheeseburger, fast food, with condiments", {"servings": 1}),
+            (ago(13), "snack", "Glucose tablet (4 g carb)", {"servings": 4}),
+            (ago(20), "dinner", "Salmon, Atlantic, farmed, cooked", {"servings": 1}),
+        ]
+        for i, (dt, meal, food, amount) in enumerate(history):
+            self.log(S, f"g-hist-{i}", dt, meal, food, **amount)
+        rs, rm = self.both(S, "POST /api/meals with meal_hint", "POST", "/api/meals", {
+            "name": "Guidance lunch", "meal_hint": "lunch",
+            "items": [{"food_id": f("Bread, white"), "servings": 2}, {"food_id": f("Chicken breast, roasted, skinless"), "servings": 0.5},
+                      {"food_id": f("Apple, raw, with skin"), "servings": 1}]})
+        self.tpl_ids["g_lunch"] = (rs["body"]["id"], rm["body"]["id"])
+        self.both(S, "POST /api/meals meal_hint null", "POST", "/api/meals", {
+            "name": "Guidance any", "meal_hint": None, "items": [{"food_id": f("Rice cakes, plain, unsalted"), "servings": 2}]})
+        self.both(S, "POST /api/meals meal_hint brunch (400)", "POST", "/api/meals", {
+            "name": "x", "meal_hint": "brunch", "items": [{"food_id": f("Bread, white"), "servings": 1}]})
+        self.both(S, "PUT saved meal without meal_hint keeps it", "PUT", self.tpl_path("g_lunch"), {
+            "name": "Guidance lunch", "items": [{"food_id": f("Bread, white"), "servings": 2}, {"food_id": f("Apple, raw, with skin"), "servings": 1}]})
+        self.both(S, "PUT saved meal meal_hint dinner", "PUT", self.tpl_path("g_lunch"), {
+            "name": "Guidance lunch", "meal_hint": "dinner", "items": [{"food_id": f("Bread, white"), "servings": 2}]})
+        self.both(S, "PUT saved meal meal_hint null clears it", "PUT", self.tpl_path("g_lunch"), {
+            "name": "Guidance lunch", "meal_hint": None, "items": [{"food_id": f("Bread, white"), "servings": 2},
+                                                                    {"food_id": f("Chicken breast, roasted, skinless"), "servings": 0.5}]})
+        self.both(S, "PUT saved meal meal_hint lunch again", "PUT", self.tpl_path("g_lunch"), {
+            "name": "Guidance lunch", "meal_hint": "lunch", "items": [{"food_id": f("Bread, white"), "servings": 2},
+                                                                      {"food_id": f("Chicken breast, roasted, skinless"), "servings": 0.5}]})
+        self.both(S, "from-log breakfast (meal_hint = breakfast)", "POST", "/api/meals/from-log", {"date": ago(1), "meal": "breakfast", "name": "Usual breakfast"})
+        self.both(S, "from-log snack with only a low treatment (400)", "POST", "/api/meals/from-log", {"date": ago(13), "meal": "snack", "name": "x"})
+        self.both(S, "GET /api/meals", "GET", "/api/meals", ignore=self.GIGNORE)
+
+        S = "12c the day and what fits"
+        for meal in ("breakfast", "lunch", "dinner", "snack"):
+            self.gboth(S, f"next-meal {meal} on an empty day", "GET", f"/api/guidance/next-meal?meal={meal}&date={G}")
+        self.log(S, "g-b1", G, "breakfast", "Oatmeal, cooked (regular or quick oats)", servings=1)
+        self.log(S, "g-b2", G, "breakfast", "Milk, 2% reduced fat", servings=0.5)
+        self.log(S, "g-l1", G, "lunch", "Bread, white", servings=2, status="planned")
+        self.both(S, "POST /api/log glucose tablets (purpose defaults to hypo)", "POST", "/api/log",
+                  {"date": G, "meal": "snack", "food_id": f("Glucose tablet (4 g carb)"), "servings": 4})
+        self.both(S, "POST /api/log apple juice purpose none", "POST", "/api/log",
+                  {"date": G, "meal": "snack", "food_id": f("Apple juice"), "servings": 0.5, "purpose": "none"})
+        rs, rm = self.both(S, "POST /api/log banana purpose hypo", "POST", "/api/log",
+                           {"date": G, "meal": "snack", "food_id": f("Banana, raw"), "servings": 1, "purpose": "hypo"})
+        self.entry_ids["g-banana-hypo"] = (rs["body"]["id"], rm["body"]["id"])
+        self.both(S, f"GET /api/log?date={G}", "GET", f"/api/log?date={G}")
+        for meal in ("breakfast", "lunch", "dinner", "snack"):
+            self.gboth(S, f"next-meal {meal}", "GET", f"/api/guidance/next-meal?meal={meal}&date={G}")
+        self.gboth(S, "next-meal dinner limit 3", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}&limit=3")
+        self.gboth(S, "next-meal dinner limit 20 explain", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}&limit=20&explain=true")
+        self.gboth(S, "next-meal lunch explain=YES", "GET", f"/api/guidance/next-meal?meal=lunch&date={G}&explain=YES")
+        self.gboth(S, "next-meal dinner without a date (today)", "GET", "/api/guidance/next-meal?meal=dinner")
+        self.gboth(S, "next-meal dinner date empty (today)", "GET", "/api/guidance/next-meal?meal=dinner&date=")
+
+        S = "12d swaps"
+        for label, q in [
+            ("baked potato 1.5 servings at lunch", f"food_id={f('Potato, baked, with skin')}&meal=lunch&servings=1.5&date={G}"),
+            ("orange juice 400 g at dinner", f"food_id={f('Orange juice')}&meal=dinner&grams=400&date={G}"),
+            ("cheeseburger at dinner", f"food_id={f('Cheeseburger, fast food, with condiments')}&meal=dinner&date={G}"),
+            ("deli ham (phosphate additive)", f"food_id={f('Deli ham, sliced')}&meal=lunch&servings=2&date={G}"),
+            ("star fruit (avoid)", f"food_id={f('Star fruit (carambola)')}&meal=snack&date={G}"),
+            ("salt substitute (avoid)", f"food_id={f('Salt substitute (potassium chloride, e.g. NoSalt, Nu-Salt)')}&meal=dinner&date={G}"),
+            ("rice (no warning)", f"food_id={f('Rice, white, long-grain, cooked')}&meal=dinner&date={G}"),
+            ("orange juice as a low treatment", f"food_id={f('Orange juice')}&meal=snack&servings=1&purpose=hypo&date={G}"),
+            ("apple juice (hypo food, default hypo)", f"food_id={f('Apple juice')}&meal=snack&date={G}"),
+            ("apple juice purpose none", f"food_id={f('Apple juice')}&meal=snack&servings=2&purpose=none&date={G}"),
+            ("glucose tablets (hypo, no potassium)", f"food_id={f('Glucose tablet (4 g carb)')}&meal=snack&servings=4&date={G}"),
+            ("banana explain", f"food_id={f('Banana, raw')}&meal=dinner&servings=2&date={G}&explain=1"),
+            ("spinach boiled", f"food_id={f('Spinach, boiled')}&meal=dinner&date={G}"),
+            ("milk, today's date", f"food_id={f('Milk, whole')}&meal=breakfast&servings=2"),
+        ]:
+            self.gboth(S, f"swaps {label}", "GET", f"/api/guidance/swaps?{q}")
+        self.gboth(S, "swaps for a hypo entry", "GET", lambda side: f"/api/guidance/swaps?entry_id={self.entry_ids['g-banana-hypo'][side]}")
+        self.gboth(S, "swaps for a hypo entry as food", "GET", lambda side: f"/api/guidance/swaps?entry_id={self.entry_ids['g-banana-hypo'][side]}&purpose=none")
+        self.gboth(S, "swaps for an eaten entry", "GET", lambda side: f"/api/guidance/swaps?entry_id={self.entry_ids['g-b2'][side]}")
+        for label, q in [
+            ("neither id (400)", f"meal=dinner&date={G}"),
+            ("both ids (400)", f"food_id={f('Banana, raw')}&entry_id=1&meal=dinner"),
+            ("food without meal (400)", f"food_id={f('Banana, raw')}&date={G}"),
+            ("unknown food (404)", "food_id=999999&meal=dinner"),
+            ("unknown entry (404)", "entry_id=999999"),
+            ("food_id 0", "food_id=0&meal=dinner"),
+            ("food_id 2**63", "food_id=9223372036854775808&meal=dinner"),
+            ("food_id abc", "food_id=abc&meal=dinner"),
+            ("servings 0", f"food_id={f('Banana, raw')}&meal=dinner&servings=0"),
+            ("servings 1001", f"food_id={f('Banana, raw')}&meal=dinner&servings=1001"),
+            ("servings nan", f"food_id={f('Banana, raw')}&meal=dinner&servings=nan"),
+            ("grams 100001", f"food_id={f('Banana, raw')}&meal=dinner&grams=100001"),
+            ("purpose maybe", f"food_id={f('Banana, raw')}&meal=dinner&purpose=maybe"),
+            ("meal brunch", f"food_id={f('Banana, raw')}&meal=brunch"),
+            ("bad date", f"food_id={f('Banana, raw')}&meal=dinner&date=2026-02-30"),
+            ("explain maybe", f"food_id={f('Banana, raw')}&meal=dinner&explain=maybe"),
+            ("every parameter wrong (order)", "date=x&meal=x&food_id=x&servings=x&grams=x&entry_id=x&purpose=x&explain=x"),
+        ]:
+            self.gboth(S, f"swaps {label}", "GET", f"/api/guidance/swaps?{q}")
+
+        S = "12e plan the day"
+        for label, body in [
+            ("defaults", {"date": G}),
+            ("variant 1", {"date": G, "variant": 1}),
+            ("variant 4", {"date": G, "variant": 4}),
+            ("dinner only", {"date": G, "meals": ["dinner"]}),
+            ("all four slots", {"date": G, "meals": ["snack", "dinner", "lunch", "breakfast"]}),
+            ("no saved, no usual, no starters", {"date": G, "use_saved_meals": False, "use_usual": False, "use_starters": False}),
+            ("no starters, explain", {"date": G, "use_starters": False, "explain": True}),
+            ("lax booleans", {"date": G, "use_saved_meals": "no", "use_usual": 0, "explain": "true"}),
+            ("an empty day", {"date": d(G, 3)}),
+            ("an empty day, variant 2", {"date": d(G, 3), "variant": 2}),
+            ("a past day full of history", {"date": ago(2)}),
+            ("meals null", {"date": G, "meals": None}),
+            # refused
+            ("no date", {}),
+            ("bad date", {"date": "2026-13-01"}),
+            ("date a number", {"date": 20260512}),
+            ("meals empty", {"date": G, "meals": []}),
+            ("meals repeated", {"date": G, "meals": ["dinner", "dinner"]}),
+            ("five meals", {"date": G, "meals": ["breakfast", "lunch", "dinner", "snack", "dinner"]}),
+            ("meal brunch", {"date": G, "meals": ["brunch", "x"]}),
+            ("meals a string", {"date": G, "meals": "dinner"}),
+            ("variant 5", {"date": G, "variant": 5}),
+            ("variant -1", {"date": G, "variant": -1}),
+            ("variant 1.5", {"date": G, "variant": 1.5}),
+            ("variant '2'", {"date": G, "variant": "2"}),
+            ("use_usual maybe", {"date": G, "use_usual": "maybe"}),
+            ("unknown field", {"date": G, "extra": 1}),
+            ("every field wrong (order)", {"extra": 1, "explain": "x", "variant": "x", "use_starters": "x", "meals": [1], "date": 1}),
+            ("a list", [G]),
+            ("no body", None),
+        ]:
+            self.gboth(S, f"plan-day {label}", "POST", "/api/guidance/plan-day", body)
+
+        S = "12f insights"
+        for label, path in [
+            (f"day {G}", f"/api/guidance/insights/day?date={G}"),
+            ("day before (history)", f"/api/guidance/insights/day?date={ago(1)}"),
+            ("day with a cheeseburger", f"/api/guidance/insights/day?date={ago(11)}"),
+            ("day with orange juice", f"/api/guidance/insights/day?date={ago(6)}"),
+            ("empty day", f"/api/guidance/insights/day?date={d(G, 40)}"),
+            ("day today", "/api/guidance/insights/day"),
+            ("day bad date", "/api/guidance/insights/day?date=12-05-2026"),
+            ("period default (7 days to yesterday)", "/api/guidance/insights/period"),
+            ("period 7 days to G-1", f"/api/guidance/insights/period?start={ago(7)}&end={ago(1)}"),
+            ("period 14 days", f"/api/guidance/insights/period?start={ago(14)}&end={ago(1)}"),
+            ("period 30 days to G", f"/api/guidance/insights/period?start={ago(29)}&end={G}"),
+            ("period start only", f"/api/guidance/insights/period?start={ago(10)}"),
+            ("period end only", f"/api/guidance/insights/period?end={ago(1)}"),
+            ("period 92 days", f"/api/guidance/insights/period?start={ago(91)}&end={G}"),
+            ("period 93 days (400)", f"/api/guidance/insights/period?start={ago(92)}&end={G}"),
+            ("period end before start (400)", f"/api/guidance/insights/period?start={G}&end={ago(1)}"),
+            ("period bad start", "/api/guidance/insights/period?start=x"),
+            ("period bad end", "/api/guidance/insights/period?end=2026-02-30"),
+        ]:
+            self.gboth(S, f"insights {label}", "GET", path)
+
+        S = "12g not for me"
+        self.gboth(S, "GET list (empty)", "GET", "/api/guidance/not-for-me")
+        for name in ("Rice, white, long-grain, cooked", "Green beans, boiled", "Egg, hard-boiled"):
+            self.gboth(S, f"PUT {name}", "PUT", f"/api/guidance/not-for-me/{f(name)}")
+        self.gboth(S, "PUT again (idempotent)", "PUT", f"/api/guidance/not-for-me/{f('Green beans, boiled')}")
+        self.gboth(S, "next-meal dinner without them", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}")
+        self.gboth(S, "plan-day without them", "POST", "/api/guidance/plan-day", {"date": G})
+        for label, path in [("unknown food", "/api/guidance/not-for-me/999999"), ("0", "/api/guidance/not-for-me/0"),
+                            ("negative", "/api/guidance/not-for-me/-5"), ("2**63", "/api/guidance/not-for-me/9223372036854775808"),
+                            ("huge", "/api/guidance/not-for-me/99999999999999999999999"), ("abc", "/api/guidance/not-for-me/abc"),
+                            ("5.0", f"/api/guidance/not-for-me/{f('Banana, raw')}.0")]:
+            self.gboth(S, f"PUT {label}", "PUT", path)
+            self.gboth(S, f"DELETE {label}", "DELETE", path)
+        self.gboth(S, "DELETE green beans", "DELETE", f"/api/guidance/not-for-me/{f('Green beans, boiled')}")
+        self.gboth(S, "DELETE green beans again (404)", "DELETE", f"/api/guidance/not-for-me/{f('Green beans, boiled')}")
+        self.gboth(S, "GET list", "GET", "/api/guidance/not-for-me")
+        self._clear_not_for_me(S)
+
+        S = "12h guidance settings"
+        for label, patch in [
+            ("hypo dose 20, tolerance 5", {"hypo_dose_g": 20, "carb_tolerance_g": 5}),
+            ("never suggest fruits and grains", {"exclude_categories": ["Fruits", "Grains & Breads", "Fruits"]}),
+        ]:
+            self.both(S, f"PATCH guidance {label}", "PATCH", "/api/me/settings", {"guidance": patch}, ignore=frozenset({"settings"}))
+            self.gboth(S, f"hypo-options [{label}]", "GET", "/api/guidance/hypo-options")
+            self.gboth(S, f"next-meal dinner [{label}]", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}")
+            self.gboth(S, f"swaps orange juice hypo [{label}]", "GET", f"/api/guidance/swaps?food_id={f('Orange juice')}&meal=snack&purpose=hypo&date={G}")
+            self.gboth(S, f"plan-day [{label}]", "POST", "/api/guidance/plan-day", {"date": G})
+        for label, patch in [
+            ("tolerance 4", {"carb_tolerance_g": 4}), ("hypo dose 31", {"hypo_dose_g": 31}), ("unknown field", {"diet": "vegan"}),
+            ("categories not a list", {"exclude_categories": "Fruits"}), ("enabled maybe", {"enabled": "maybe"}),
+        ]:
+            self.both(S, f"PATCH guidance {label} (400)", "PATCH", "/api/me/settings", {"guidance": patch})
+        for label, patch, checks in [
+            ("guidance off", {"enabled": False}, ["next", "swaps", "plan", "day", "period", "hypo"]),
+            ("plan builder off", {"show_plan_builder": False}, ["next", "plan"]),
+            ("insights off", {"show_insights": False}, ["day", "period", "next"]),
+        ]:
+            self.both(S, f"PATCH guidance {label}", "PATCH", "/api/me/settings", {"guidance": patch}, ignore=frozenset({"settings"}))
+            self._guidance_calls(S, label, checks)
+        self.both(S, "PATCH guidance default", "PATCH", "/api/me/settings", {"guidance": None}, ignore=frozenset({"settings"}))
+        for label, patch, checks in [
+            ("server switch off", {"guidance.enabled": False}, ["next", "plan", "day", "hypo"]),
+            ("plan pool 20, beam 1", {"guidance.enabled": None, "guidance.pool_per_role": 20, "guidance.beam_width": 1}, ["plan"]),
+            ("plan pool 2000, beam 64", {"guidance.pool_per_role": 2000, "guidance.beam_width": 64}, ["plan"]),
+            ("restored", {"guidance.pool_per_role": None, "guidance.beam_width": None}, ["plan"]),
+        ]:
+            self.both(S, f"PATCH /api/admin/settings {label}", "PATCH", "/api/admin/settings", patch, ignore=frozenset({"settings"}))
+            self._guidance_calls(S, label, checks)
+
+        S = "12i log purpose, client_id and batch"
+        B = d(G, 5)
+        entries = [
+            {"date": B, "meal": "breakfast", "food_id": f("Oatmeal, cooked (regular or quick oats)"), "servings": 1, "status": "planned",
+             "purpose": "none", "client_id": uuid(1)},
+            {"date": B, "meal": "lunch", "food_id": f("Bread, white"), "grams": 60, "status": "planned", "client_id": uuid(2).upper()},
+            {"date": B, "meal": "snack", "food_id": f("Glucose tablet (4 g carb)"), "servings": 4, "client_id": f" {uuid(3)} "},
+            {"date": B, "meal": "dinner", "food_id": f("Rice, white, long-grain, cooked"), "servings": 0.75, "note": " from a plan "},
+        ]
+        self.gboth(S, "batch of 4 (created)", "POST", "/api/log/batch", {"entries": entries})
+        self.gboth(S, "the same batch again (existing, but the item without a client_id is added again)", "POST", "/api/log/batch", {"entries": entries})
+        self.gboth(S, "batch: one new, one existing", "POST", "/api/log/batch", {"entries": [
+            {**entries[0]}, {"date": B, "meal": "snack", "food_id": f("Apple juice"), "servings": 1, "client_id": uuid(4)}]})
+        self.both(S, f"GET /api/log?date={B}", "GET", f"/api/log?date={B}")
+        for label, body in [
+            ("repeated client_id (400)", {"entries": [{**entries[0], "client_id": uuid(9)}, {**entries[1], "client_id": uuid(9).upper()}]}),
+            ("41 items (400)", {"entries": [{"date": B, "meal": "snack", "food_id": f("Bread, white")}] * 41}),
+            ("no items (400)", {"entries": []}),
+            ("entries missing (400)", {}),
+            ("entries not a list (400)", {"entries": {"date": B}}),
+            ("extra key (400)", {"entries": [entries[3]], "dry_run": True}),
+            ("an item not an object (400)", {"entries": [entries[3], 5]}),
+            ("item errors (400)", {"entries": [{"date": "x", "meal": "brunch", "food_id": 0, "servings": -1, "purpose": "low", "client_id": "nope"},
+                                               {"meal": "lunch"}]}),
+            ("client_id not a string (400)", {"entries": [{**entries[3], "client_id": 12345}]}),
+            ("unknown food rolls back (404)", {"entries": [{**entries[3], "client_id": uuid(20)}, {"date": B, "meal": "snack", "food_id": 999999}]}),
+            ("a list", [entries[3]]),
+            ("no body", None),
+        ]:
+            self.gboth(S, f"batch {label}", "POST", "/api/log/batch", body)
+        self.both(S, f"GET /api/log?date={B} after refused batches", "GET", f"/api/log?date={B}")
+        self.gboth(S, "batch item with the rolled-back client_id now created", "POST", "/api/log/batch", {"entries": [{**entries[3], "client_id": uuid(20)}]})
+        body = {"date": B, "meal": "dinner", "food_id": f("Green beans, boiled"), "servings": 1, "client_id": uuid(30)}
+        self.gboth(S, "POST /api/log with client_id", "POST", "/api/log", body)
+        self.gboth(S, "POST /api/log same client_id (the existing entry)", "POST", "/api/log", {**body, "servings": 3, "client_id": uuid(30).upper()})
+        self.gboth(S, "POST /api/log client_id used by a batch item", "POST", "/api/log", {**body, "client_id": uuid(1)})
+        self.gboth(S, "POST /api/log bad client_id", "POST", "/api/log", {**body, "client_id": "0f8fad5b-d9cb-469f-a165-70867728950"})
+        self.gboth(S, "POST /api/log client_id null", "POST", "/api/log", {**body, "client_id": None, "purpose": None})
+        self.gboth(S, "POST /api/log purpose bad", "POST", "/api/log", {**body, "client_id": None, "purpose": "Hypo"})
+        quick = {"date": B, "meal": "snack", "name": "Juice box", "serving_desc": "1 box", "serving_g": 200, "nutrients": {"carbs_g": 15, "potassium_mg": 20},
+                 "flags": ["hypo_treatment"], "client_id": uuid(40)}
+        self.gboth(S, "POST /api/log/quick hypo flag (purpose hypo)", "POST", "/api/log/quick", quick)
+        self.gboth(S, "POST /api/log/quick same client_id (no second food)", "POST", "/api/log/quick", {**quick, "name": "Another"})
+        self.gboth(S, "POST /api/log/quick purpose none", "POST", "/api/log/quick", {**quick, "client_id": uuid(41), "purpose": "none"})
+        self.gboth(S, "POST /api/log/quick bad client_id", "POST", "/api/log/quick", {**quick, "client_id": "x"})
+        found = [[(x["name"], x["source"]) for x in side.call("GET", "/api/foods?q=juice%20box")["body"]["foods"]] for side in (self.server, self.mock)]
+        self.rec.compare(S, "custom foods named Juice box (two: the repeat made none)", *found)
+        rs, rm = self.log(S, "g-put", B, "lunch", "Apple, raw, with skin", servings=1)
+        self.gboth(S, "PUT purpose hypo", "PUT", self.entry_path("g-put"), {"purpose": "hypo"})
+        self.gboth(S, "PUT without purpose keeps it", "PUT", self.entry_path("g-put"), {"servings": 1.5})
+        self.gboth(S, "PUT purpose null keeps it", "PUT", self.entry_path("g-put"), {"purpose": None})
+        self.gboth(S, "PUT purpose none clears it", "PUT", self.entry_path("g-put"), {"purpose": "none"})
+        self.gboth(S, "PUT purpose bad", "PUT", self.entry_path("g-put"), {"purpose": "low"})
+        self.gboth(S, "PUT client_id is ignored", "PUT", self.entry_path("g-put"), {"client_id": uuid(50)})
+        self.both(S, "copy-day keeps purpose", "POST", "/api/log/copy-day", {"from_date": B, "to_date": d(B, 1)}, ignore=self.GIGNORE)
+        self.both(S, f"GET /api/log?date={d(B, 1)}", "GET", f"/api/log?date={d(B, 1)}")
+        self.both(S, "insights/day with treated lows", "GET", f"/api/guidance/insights/day?date={B}", ignore=self.GIGNORE)
+        self.compare_csv(S, f"/api/log/export.csv?start={B}&end={d(B, 1)}")
+        self.put_profile(S, "restore", self.PROFILE)
+
+    def _guidance_calls(self, section: str, label: str, which: list[str]) -> None:
+        G, f = self.G, self.fid
+        calls = {
+            "next": ("next-meal", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}", None),
+            "swaps": ("swaps", "GET", f"/api/guidance/swaps?food_id={f('Banana, raw')}&meal=dinner&date={G}", None),
+            "plan": ("plan-day", "POST", "/api/guidance/plan-day", {"date": G}),
+            "day": ("insights/day", "GET", f"/api/guidance/insights/day?date={G}", None),
+            "period": ("insights/period", "GET", f"/api/guidance/insights/period?start={d(G, -7)}&end={d(G, -1)}", None),
+            "hypo": ("hypo-options", "GET", "/api/guidance/hypo-options", None),
+        }
+        for key in which:
+            name, method, path, body = calls[key]
+            self.gboth(section, f"{name} [{label}]", method, path, body)
+
 # --------------------------------------------------------------------------- #
 
 
@@ -1187,7 +1519,7 @@ def main(argv: list[str] | None = None) -> int:
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
                          ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
-                         ("11", h.section11)]
+                         ("11", h.section11), ("12", h.section12)]
                 if args.sections:
                     wanted = {"1", *args.sections.split(",")}
                     steps = [(name, fn) for name, fn in steps if name in wanted]

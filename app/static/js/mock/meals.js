@@ -1,4 +1,8 @@
-/* Kidney Diet Log — demo API: saved meals and the shopping list (twin of app/meals.py). */
+/* Kidney Diet Log — demo API: saved meals and the shopping list (twin of app/meals.py).
+
+   v0.3 (ARCHITECTURE.md "Log changes"): a saved meal has `meal_hint`, the slot it is for (a meal or
+   null). POST accepts it, PUT keeps the stored one when the field is left out (a v0.2 client) and
+   clears it on null, POST /from-log sets it to the source meal and leaves low-treatment entries out. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -26,7 +30,7 @@
       const rank = { green: 0, yellow: 1, red: 2 };
       let worst = 'green';
       for (const it of items) if (rank[it.kidney_rating] > rank[worst]) worst = it.kidney_rating;
-      return { id: t.id, name: t.name, note: t.note, items, totals: roundNutrients(totals), kidney_rating: worst, created_at: t.created_at, updated_at: t.updated_at };
+      return { id: t.id, name: t.name, note: t.note, meal_hint: t.meal_hint || null, items, totals: roundNutrients(totals), kidney_rating: worst, created_at: t.created_at, updated_at: t.updated_at };
     },
     _templateBody(body) {
       const c = new Check(body);
@@ -36,11 +40,12 @@
         ic.num('food_id', { required: true, ge: 1, int: true, nullable: false, maxId: true });
         ic.num('servings', { required: true, gt: 0, le: 1000, nullable: false });
       }, { minLength: 1 });
+      c.choice('meal_hint', MEAL_KEYS, { nullable: true });
       return c.done();
     },
-    _insertTemplate({ name, note, items, createdAt = null }) {
+    _insertTemplate({ name, note, items, mealHint = null, createdAt = null }) {
       const now = createdAt || this._stamp();
-      const t = { id: this._nextTemplateId++, name, note: note == null ? null : note, items: items.map((it) => ({ food_id: Number(it.food_id), servings: Number(it.servings) })),
+      const t = { id: this._nextTemplateId++, name, note: note == null ? null : note, meal_hint: mealHint || null, items: items.map((it) => ({ food_id: Number(it.food_id), servings: Number(it.servings) })),
         created_at: now, updated_at: now };
       this._templates.push(t);
       return t;
@@ -74,7 +79,7 @@
   route('POST', '/api/meals', function ({ body }) {
     const b = this._templateBody(body);
     for (const it of b.items) this._foodOr404(it.food_id);
-    return this._templateView(this._insertTemplate(b));
+    return this._templateView(this._insertTemplate({ ...b, mealHint: b.meal_hint }));
   });
   route('POST', '/api/meals/from-log', function ({ body }) {
     const c = new Check(body);
@@ -82,9 +87,11 @@
     c.str('name', { required: true, min: 1, max: 200, nullable: false });
     c.str('note', { max: 1000, def: null, emptyToNull: true });
     const b = c.done();
-    const rows = this._fetchEntries({ start: b.date, end: b.date, meal: b.meal });
+    // Entries that treated a low (purpose "hypo") are not part of the meal.
+    const rows = this._fetchEntries({ start: b.date, end: b.date, meal: b.meal }).filter((r) => r.purpose !== 'hypo');
     if (!rows.length) fail(400, `nothing logged for ${b.meal} on ${b.date}`);
-    return this._templateView(this._insertTemplate({ name: b.name, note: b.note, items: rows.map((r) => ({ food_id: r.food_id, servings: r.servings })) }));
+    return this._templateView(this._insertTemplate({ name: b.name, note: b.note, mealHint: b.meal,
+      items: rows.map((r) => ({ food_id: r.food_id, servings: r.servings })) }));
   });
   route('POST', '/api/meals/{id}/apply', function ({ id, body }) {
     const c = new Check(body);
@@ -108,7 +115,9 @@
     if (method === 'GET') return this._templateView(t);
     if (method === 'PUT') {
       for (const it of b.items) this._foodOr404(it.food_id);
-      Object.assign(t, { name: b.name, note: b.note, items: b.items.map((it) => ({ food_id: Number(it.food_id), servings: Number(it.servings) })), updated_at: this._stamp() });
+      // A body without meal_hint (a v0.2 screen) keeps the stored one; null clears it.
+      const mealHint = 'meal_hint' in b ? b.meal_hint : t.meal_hint || null;
+      Object.assign(t, { name: b.name, note: b.note, meal_hint: mealHint, items: b.items.map((it) => ({ food_id: Number(it.food_id), servings: Number(it.servings) })), updated_at: this._stamp() });
       return this._templateView(t);
     }
     if (method === 'DELETE') { this._templates.splice(this._templates.indexOf(t), 1); return null; }

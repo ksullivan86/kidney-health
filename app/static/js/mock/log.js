@@ -1,5 +1,10 @@
 /* Kidney Diet Log — demo API: the food log, day / range / period summaries and CSV export
-   (twins of app/log.py and app/periods.py). */
+   (twins of app/log.py and app/periods.py).
+
+   v0.3 (ARCHITECTURE.md "M2 API: guidance", "Log changes"): every entry carries `purpose` ("hypo" = it
+   treated a low, else null) and `client_id` (the offline outbox's UUID, lower-case, unique per person);
+   a repeated client_id answers with the entry already created; POST /api/log/batch adds 1–40 entries all
+   or nothing. A hypo_treatment food defaults to purpose "hypo" unless the request says "none". */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -20,7 +25,28 @@
     + "the 'since last dialysis' totals cover the current interval (the long weekend gap is the one to watch).";
   const NOTE_NO_DIALYSIS_DAYS = 'Set your dialysis days in the profile to see potassium, sodium and fluid totals since your last session.';
   const NOTE_CAPPED = `No dialysis day fell within the last ${MAX_INTERDIALYTIC_DAYS} days, so the interval is capped at ${MAX_INTERDIALYTIC_DAYS} days.`;
-  const CSV_COLUMNS = ['id', 'date', 'meal', 'status', 'food_id', 'food_name', 'servings', 'grams', 'note', ...NUTRIENT_KEYS, 'created_at', 'updated_at'];
+  // log.CSV_COLUMNS: v0.3 adds purpose (guidance) and the food's source and licence (barcodes, ODbL notice).
+  const CSV_COLUMNS = ['id', 'date', 'meal', 'status', 'food_id', 'food_name', 'servings', 'grams', 'note', ...NUTRIENT_KEYS, 'created_at', 'updated_at',
+    'purpose', 'source', 'source_license'];
+  const HYPO_PURPOSE = 'hypo';
+  const MAX_LOG_BATCH = 40;
+  const CLIENT_ID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  // log.resolve_purpose: "hypo" / "none" as asked; left out, "hypo" for a hypo_treatment food.
+  function resolvePurpose(food, requested) {
+    if (requested === HYPO_PURPOSE) return HYPO_PURPOSE;
+    if (requested === 'none') return null;
+    return (food.flags || []).includes('hypo_treatment') ? HYPO_PURPOSE : null;
+  }
+  // models.validate_client_id (a field validator on `str | None`).
+  function checkClientId(c) {
+    if (!c.has('client_id')) { c.out.client_id = null; return; }
+    const v = c.body.client_id;
+    if (v == null) { c.out.client_id = null; return; }
+    if (typeof v !== 'string') { c.err('client_id', 'Input should be a valid string'); return; }
+    const t = v.trim();
+    if (!CLIENT_ID_RE.test(t)) { c.err('client_id', 'must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e'); return; }
+    c.out.client_id = t.toLowerCase();
+  }
 
   function csvCell(v) {
     if (v == null) return '';
@@ -29,21 +55,24 @@
   }
 
   Object.assign(MockApi.prototype, {
-    _insertEntry({ date, meal, food, servings, grams = null, note = null, status = 'eaten', createdAt = null }) {
+    _insertEntry({ date, meal, food, servings, grams = null, note = null, status = 'eaten', createdAt = null, purpose = null, clientId = null }) {
       const now = createdAt || this._stamp();
       const row = { id: this._nextEntryId++, date, meal, food_id: food.id, food_name: food.name, servings: Number(servings),
         grams: grams == null ? null : Number(grams), note: note == null ? null : note, status,
-        nutrients: scaleNutrients(food.nutrients, Number(servings)), created_at: now, updated_at: now };
+        nutrients: scaleNutrients(food.nutrients, Number(servings)), purpose: purpose === HYPO_PURPOSE ? HYPO_PURPOSE : null,
+        client_id: clientId || null, created_at: now, updated_at: now };
       this._entries.push(row);
       return row;
     },
     _entry(id) { return this._entries.find((e) => e.id === Number(id)) || null; },
+    _entryByClientId(clientId) { return clientId ? this._entries.find((e) => e.client_id === clientId) || null : null; },
     _entryView(row) {
       const food = this._food(row.food_id) || { flags: [], kidney_notes: null };
       const warnings = evaluateWarnings(row.nutrients, food.flags, food.kidney_notes, 'in this entry');
       return { id: row.id, date: row.date, meal: row.meal, food_id: row.food_id, food_name: row.food_name, servings: pyRound(row.servings, 3),
         grams: row.grams == null ? null : pyRound(row.grams, 1), note: row.note, status: row.status, nutrients: roundNutrients(row.nutrients),
-        warnings, kidney_rating: ratingFromWarnings(warnings), created_at: row.created_at, updated_at: row.updated_at };
+        warnings, kidney_rating: ratingFromWarnings(warnings), purpose: row.purpose || null, client_id: row.client_id || null,
+        created_at: row.created_at, updated_at: row.updated_at };
     },
     // fetch_entries: ORDER BY date, meal, status (eaten first), created_at, id
     _fetchEntries({ start = null, end = null, status = null, meal = null } = {}) {
@@ -193,7 +222,9 @@
         const values = [row.id, row.date, row.meal, row.status, row.food_id, row.food_name, pyRepr(pyRound(row.servings, 3)),
           row.grams == null ? null : pyRepr(pyRound(row.grams, 1)), row.note,
           ...NUTRIENT_KEYS.map((k) => { const v = roundValue(k, row.nutrients[k]); return v == null ? null : isIntUnit(k) ? String(v) : pyRepr(v); }),
-          row.created_at, row.updated_at];
+          row.created_at, row.updated_at, row.purpose || null];
+        const food = this._food(row.food_id) || {};
+        values.push(food.source || null, food.source_license || null);
         lines.push(values.map(csvCell).join(','));
       }
       return `${lines.join('\r\n')}\r\n`;
@@ -206,7 +237,19 @@
       c.num('grams', { gt: 0, le: 100000 });
       c.str('note', { max: 500 });
       if (update) c.choice('status', ['eaten', 'planned'], { nullable: true }); else c.choice('status', ['eaten', 'planned'], { def: 'eaten' });
+      c.choice('purpose', ['hypo', 'none'], { nullable: true });
+      if (!update) checkClientId(c);
       return c.done();
+    },
+    // POST /api/log body after validation: the entry it creates (or the one its client_id already made).
+    _createLogged(b, where = '') {
+      const existing = this._entryByClientId(b.client_id);
+      if (existing) return [existing, 'existing'];
+      const food = this._food(b.food_id);
+      if (!food) fail(404, `${where}food ${b.food_id} not found`);
+      const [servings, grams] = b.grams != null ? [b.grams / food.serving_g, b.grams] : [b.servings != null ? b.servings : 1, null];
+      return [this._insertEntry({ date: b.date, meal: b.meal, food, servings, grams, note: b.note ?? null, status: b.status,
+        purpose: resolvePurpose(food, b.purpose), clientId: b.client_id }), 'created'];
     },
   });
 
@@ -217,9 +260,41 @@
   });
   route('POST', '/api/log', function ({ body }) {
     const b = this._logBody(body);
-    const food = this._foodOr404(b.food_id);
-    const [servings, grams] = b.grams != null ? [b.grams / food.serving_g, b.grams] : [b.servings != null ? b.servings : 1, null];
-    return this._entryView(this._insertEntry({ date: b.date, meal: b.meal, food, servings, grams, note: b.note ?? null, status: b.status }));
+    return this._entryView(this._createLogged(b)[0]);
+  });
+  // log.create_batch: each item validated as POST /api/log ("entries.<i>.<field>: …"), then all or nothing.
+  route('POST', '/api/log/batch', function ({ body }) {
+    const c = new Check(body);
+    const items = [];
+    if (!c.has('entries')) c.err('entries', 'Field required');
+    else if (!Array.isArray(body.entries)) c.err('entries', 'Input should be a valid list');
+    else {
+      body.entries.forEach((it, i) => {
+        if (!M.isDict(it)) { c.err(`entries.${i}`, 'Input should be a valid dictionary or object to extract fields from'); return; }
+        try { items.push(this._logBody(it)); } catch (e) {
+          if (!(e instanceof M.ApiError) || e.status !== 400) throw e;
+          for (const part of String(e.detail).split('; ')) c.errors.push(`entries.${i}.${part}`); // "entries.0.date: Field required"
+        }
+      });
+      const n = body.entries.length;
+      if (c.errors.length === 0 && n < 1) c.err('entries', 'List should have at least 1 item after validation, not 0');
+      if (c.errors.length === 0 && n > MAX_LOG_BATCH) c.err('entries', `List should have at most ${MAX_LOG_BATCH} items after validation, not ${n}`);
+    }
+    for (const k of Object.keys(c.body)) if (k !== 'entries') c.err(k, 'Extra inputs are not permitted');
+    c.done();
+    const seen = new Map();
+    items.forEach((it, index) => {
+      if (it.client_id == null) return;
+      if (seen.has(it.client_id)) failFields([`entries[${index}].client_id repeats entries[${seen.get(it.client_id)}].client_id`]); // a model validator: no field prefix
+      seen.set(it.client_id, index);
+    });
+    // One transaction: check every food first, so a failing item leaves nothing behind.
+    items.forEach((it, index) => {
+      if (!this._entryByClientId(it.client_id) && !this._food(it.food_id)) fail(404, `entries[${index}]: food ${it.food_id} not found`);
+    });
+    const results = items.map((it) => this._createLogged(it));
+    return { entries: results.map(([row]) => this._entryView(row)),
+      results: results.map(([row, state], index) => ({ index, id: row.id, result: state })) };
   });
   route('GET', '/api/log/range', function ({ qp }) { return this._range(qp('start'), qp('end')); });
   route('GET', '/api/log/summary', function ({ qp }) { return this._summary(qp('start'), qp('end')); });
@@ -235,9 +310,14 @@
     c.flags();
     c.str('note', { max: 500, def: null });
     c.choice('status', ['eaten', 'planned'], { def: 'eaten' });
+    c.choice('purpose', ['hypo', 'none'], { nullable: true });
+    checkClientId(c);
     const b = c.done();
+    const existing = this._entryByClientId(b.client_id);
+    if (existing) return this._entryView(existing); // a repeat creates no second food
     const food = this._food(this._insertFood({ source: 'custom', name: b.name, serving_desc: b.serving_desc, serving_g: b.serving_g, nutrients: b.nutrients, flags: b.flags }));
-    return this._entryView(this._insertEntry({ date: b.date, meal: b.meal, food, servings: b.servings, grams: null, note: b.note, status: b.status }));
+    return this._entryView(this._insertEntry({ date: b.date, meal: b.meal, food, servings: b.servings, grams: null, note: b.note, status: b.status,
+      purpose: resolvePurpose(food, b.purpose), clientId: b.client_id }));
   });
   route('POST', '/api/log/mark-eaten', function ({ body }) {
     const c = new Check(body);
@@ -267,7 +347,7 @@
       const food = this._food(row.food_id);
       if (!food) continue;
       const [servings, grams] = row.grams != null ? [row.grams / food.serving_g, row.grams] : [row.servings, null];
-      created.push(this._insertEntry({ date: b.to_date, meal: row.meal, food, servings, grams, note: row.note, status: b.status }));
+      created.push(this._insertEntry({ date: b.to_date, meal: row.meal, food, servings, grams, note: row.note, status: b.status, purpose: row.purpose }));
     }
     const entries = created.map((r) => this._entryView(r));
     return { created: entries.length, entries };
@@ -284,16 +364,17 @@
       const meal = data.meal || row.meal;
       const status = data.status || row.status;
       const note = 'note' in data ? data.note : row.note;
+      const purpose = data.purpose == null ? row.purpose || null : data.purpose === HYPO_PURPOSE ? HYPO_PURPOSE : null;
       let servings = row.servings, grams = row.grams;
       if (data.grams != null) [servings, grams] = [data.grams / food.serving_g, data.grams];
       else if (data.servings != null) [servings, grams] = [data.servings, null];
       else if ('grams' in data) grams = null;
       else if (grams != null) servings = grams / food.serving_g; // weight-based entry follows the food's serving size
-      Object.assign(row, { date, meal, status, food_name: food.name, servings, grams, note, nutrients: scaleNutrients(food.nutrients, servings), updated_at: this._stamp() });
+      Object.assign(row, { date, meal, status, food_name: food.name, servings, grams, note, purpose, nutrients: scaleNutrients(food.nutrients, servings), updated_at: this._stamp() });
       return this._entryView(row);
     }
     return fail(404, 'Not Found');
   });
 
-  Object.assign(M, { csvCell, CSV_COLUMNS });
+  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose });
 })();

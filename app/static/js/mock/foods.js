@@ -84,6 +84,12 @@
     _importBuiltin(data) {
       if (!data || typeof data !== 'object' || !Array.isArray(data.foods)) return;
       const byFdc = new Map(), byName = new Map();
+      // The curated guidance role of a builtin food (coleslaw is a vegetable side), by fdc_id: what
+      // app/guidance/context.py role_overrides() reads from data/foods.json (js/mock/guidance.js uses it).
+      this._builtinRoles = new Map();
+      for (const item of data.foods) {
+        if (item && item.fdc_id != null && typeof item.role === 'string') this._builtinRoles.set(Math.trunc(Number(item.fdc_id)), item.role);
+      }
       for (const item of data.foods) {
         let parsed;
         try { parsed = parseBuiltinItem(item); } catch (e) { continue; }
