@@ -68,7 +68,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # Tags are only computed here; the publish job applies them after the scan.
-      # GitHub reports the PolyForm licence as "Other", so the licence label is explicit.
+      # GitHub reports the PolyForm licence as "Other", so the licence label is explicit: the code
+      # (LICENSE) and the handbook text served at /learn (handbook/LICENSE), as in deploy/Containerfile.
       # :latest moves on every non-prerelease v* tag (ARCHITECTURE.md decision 7), unless the
       # repository variable HOLD_LATEST is "true". v0.2's Quadlet unit tracked :latest with
       # AutoUpdate=registry and a shell HealthCmd that fails in the shell-less v0.3 image (a kill and
@@ -91,7 +92,7 @@ jobs:
             org.opencontainers.image.title=kidney-health
             org.opencontainers.image.description=Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings
             org.opencontainers.image.documentation=https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md
-            org.opencontainers.image.licenses=PolyForm-Noncommercial-1.0.0
+            org.opencontainers.image.licenses=PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0
       # Push by digest only: no tag exists until the publish job. mode=max provenance and the SBOM
       # are stored in the image index (unsigned on their own; covered once the index is signed).
       # Never pass secrets as build-args: mode=max provenance records them.

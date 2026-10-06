@@ -8,9 +8,11 @@ failure-threshold: warning
 
 # Nothing is ignored globally. The only exception is inline and explained where it is used:
 #   DL3002 (last USER is root) in the throw-away builder and handbook stages of deploy/Containerfile,
-#          which must run as root to create /opt/venv; the runtime stage ends with USER 10001:10001.
+#          which must run as root to create /opt/venv and /opt/hb; the runtime stage ends with
+#          USER 10001:10001.
 # Rules that might look relevant but are satisfied:
-#   DL3013 (pin pip versions)    pip installs only from the hash-locked requirements.lock.
+#   DL3013 (pin pip versions)    pip installs only from the hash-locked requirements.lock and
+#                                handbook/requirements.lock.
 #   DL3042 (pip --no-cache-dir)  set on every pip call (and PIP_NO_CACHE_DIR=1).
 #   DL3007 (:latest)             every FROM carries an @sha256 digest, which is what pins it.
 #   DL3008 / DL3015 (apt pins)   no apt or apk packages are installed.
@@ -25,13 +27,15 @@ trustedRegistries:
   - docker.io
   - ghcr.io
 
-# DL3049-DL3054: the OCI labels we rely on must be present and well formed. The licence label is
-# validated as an SPDX expression (PolyForm-Noncommercial-1.0.0 is an SPDX identifier).
+# DL3049-DL3054: the OCI labels we rely on must be present and well formed. The licence label is an
+# SPDX expression, "PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0" (the code and the handbook text
+# in /app/learn), which hadolint's `spdx` check cannot parse (it accepts single identifiers only), so
+# it is `text` here and tests/test_deploy.py pins its exact value instead.
 label-schema:
   org.opencontainers.image.title: text
   org.opencontainers.image.description: text
   org.opencontainers.image.source: url
   org.opencontainers.image.url: url
   org.opencontainers.image.documentation: url
-  org.opencontainers.image.licenses: spdx
+  org.opencontainers.image.licenses: text
 strict-labels: false

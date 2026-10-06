@@ -25,6 +25,21 @@ reading; they changed no files. Started 2026-10-06.
    - tests/fixtures/learn/ (3 pages + 404, Material-shaped), tests/test_handbook_serving.py.
    - .gitignore: handbook/site/, handbook/.cache/.
 
+2. Image (§4.7), verified by hadolint (both Containerfiles + caddy: clean), shellcheck, pytest
+   tests/test_deploy.py, and smoke_http.py against a local uvicorn on :8320 with the real site:
+   - deploy/Containerfile + Containerfile.debian: handbook stage = venv --without-pip + pip --python
+     --no-deps --require-hashes --only-binary=:all: from handbook/requirements.lock (every pin has a
+     py3-none-any or cp314 manylinux x86_64+aarch64 wheel, checked on PyPI), mkdocs build --strict
+     -d /out/learn with HANDBOOK_SITE_URL=http://localhost/learn/ HANDBOOK_APP_LINK=/, *.map removed,
+     index.html required, chmod go=rX; runtime COPY --from=handbook --chown=0:0 /out/learn /app/learn.
+   - licences label "PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0" (Containerfiles + release.yml);
+     hadolint's spdx check cannot parse expressions, so .hadolint.yaml checks it as text and
+     tests/test_deploy.py pins the value.
+   - .github/scripts/smoke_http.py: /learn/ 200 + handbook CSP, / keeps Trusted Types, topic page,
+     search index, 404 page, fingerprinted bundle immutable. smoke-test.sh doc line.
+   - tests/test_deploy.py: handbook-stage test, release label test, .dockerignore test accepts files
+     under allowed dirs and requires handbook/site + handbook/.cache excluded.
+
 ## Decisions
 
 - HANDBOOK_PUBLIC_URL lives in config.py (deployment URL like PUBLIC_URL), not the settings registry.
@@ -40,7 +55,6 @@ reading; they changed no files. Started 2026-10-06.
 
 ## Next
 
-2. Containerfiles (both) + smoke-test.sh /learn fetch + tests/test_deploy.py updates.
 3. ci.yml handbook job (image jobs need it) + handbook-pages.yml.
 4. Frontend Learn entry + About link + /learn links from warnings/target notes + link test.
 5. Docs: diet-guide pointer, self-hosting pages link to canonical docs, "coming in v0.3" fixes,

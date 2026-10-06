@@ -218,7 +218,7 @@ def test_hash_locks_are_refreshed_weekly_with_a_cooldown_by_pull_request():
 @pytest.mark.parametrize("path", CONTAINERFILES, ids=lambda p: p.name)
 def test_containerfile_bases_are_digest_pinned_and_move_together(path):
     froms = re.findall(r"^FROM\s+(\S+)", path.read_text(encoding="utf-8"), re.M)
-    assert len(froms) == 3, froms  # builder, handbook (M3 placeholder), runtime
+    assert len(froms) == 3, froms  # builder, handbook, runtime
     for ref in froms:
         assert DIGEST.search(ref), f"{path.name}: FROM without @sha256 digest: {ref}"
     assert froms[0] == froms[1], "builder and handbook stages must use the identical FROM line"
@@ -256,8 +256,40 @@ def test_containerfile_hardening(path):
     assert "--no-proxy-headers" in args and "--no-server-header" in args
     assert args[args.index("--limit-concurrency") + 1] == "64"
     assert "forwarded-allow-ips" not in text
-    assert 'org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"' in runtime
-    assert "PLACEHOLDER" in text and "AS handbook" in text
+    # SPDX expression: the code (LICENSE) and the handbook text in /app/learn (handbook/LICENSE).
+    # hadolint cannot parse SPDX expressions, so .hadolint.yaml checks it as text and this pins it.
+    assert f'org.opencontainers.image.licenses="{IMAGE_LICENCES}"' in runtime
+    assert "PLACEHOLDER" not in text
+
+
+IMAGE_LICENCES = "PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0"
+
+
+@pytest.mark.parametrize("path", CONTAINERFILES, ids=lambda p: p.name)
+def test_handbook_is_built_in_a_throwaway_stage_and_copied_read_only(path):
+    """Note 08 §4.7: hash-locked toolchain in its own stage; only the built site reaches /app/learn."""
+    text = path.read_text(encoding="utf-8")
+    stages = re.split(r"^FROM ", text, flags=re.M)
+    handbook = next(s for s in stages if re.match(r"\S+ AS handbook\s*$", s.splitlines()[0]))
+    runtime = stages[-1]
+    assert "COPY handbook/requirements.lock /tmp/handbook.lock" in handbook
+    assert re.search(r"--no-deps --require-hashes --only-binary=:all: -r /tmp/handbook\.lock", handbook)
+    assert "COPY handbook/ /src/handbook/" in handbook
+    assert "HANDBOOK_SITE_URL=http://localhost/learn/" in handbook and "HANDBOOK_APP_LINK=/" in handbook
+    assert "NO_MKDOCS_2_WARNING=true" in handbook
+    assert "mkdocs build --strict -d /out/learn" in handbook
+    assert "-name '*.map'" in handbook and "test -f /out/learn/index.html" in handbook
+    assert "chmod -R u=rwX,go=rX /out/learn" in handbook
+    # The runtime gets the plain files, root-owned, and nothing of the toolchain.
+    assert re.search(r"^COPY --from=handbook\s+--chown=0:0\s+/out/learn\s+/app/learn\s*$", runtime, re.M)
+    assert len(re.findall(r"--from=handbook", runtime)) == 1
+    assert "/opt/hb" not in runtime and "mkdocs" not in runtime
+    assert "HANDBOOK_DIR=/app/learn" in runtime
+
+
+def test_release_labels_match_the_containerfile():
+    rel = read(".github/workflows/release.yml")
+    assert f"org.opencontainers.image.licenses={IMAGE_LICENCES}\n" in rel
 
 
 def test_debian_fallback_removes_pip_and_setuid_bits():
@@ -272,9 +304,14 @@ def test_dockerignore_is_an_allowlist_that_matches_the_copy_sources():
     allowed = {ln[1:].rstrip("/") for ln in lines if ln.startswith("!")}
     assert {"app", "data/foods.json", "LICENSE", "requirements.lock"} <= allowed
     assert not any(a.startswith(("deploy", "tests", ".git", "docs")) for a in allowed)
+    excluded = {ln.rstrip("/") for ln in lines[1:] if not ln.startswith("!")}
     for path in CONTAINERFILES:
         for src in re.findall(r"^COPY (?!--from)(\S+)", path.read_text(encoding="utf-8"), re.M):
-            assert src.rstrip("/") in allowed, f"{path.name} copies {src}, which .dockerignore excludes"
+            src = src.rstrip("/")
+            inside = any(src == a or src.startswith(a + "/") for a in allowed)
+            assert inside and src not in excluded, f"{path.name} copies {src}, which .dockerignore excludes"
+    # The handbook stage builds from handbook/; a local build output must never reach the context.
+    assert {"handbook/site", "handbook/.cache"} <= excluded
 
 
 def test_hadolint_trusts_the_base_registries():

@@ -54,38 +54,56 @@ RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
  && chmod 0770 /out/rootfs/data
 
 # ---------------------------------------------------------------------------------------------------
-# Stage 2: handbook. PLACEHOLDER -- filled in by M3 integration (ARCHITECTURE.md milestones;
-# docs/dev/research/08-handbook-site.md §4.7). Until then it only provides an empty /out/learn, so
-# /learn answers 404 (app/handbook.py serves it only when index.html exists).
-# M3 replaces the WORKDIR line below with, in this order:
-#   COPY handbook/requirements.lock /tmp/handbook.lock
-#   RUN python -m venv /opt/hb && /opt/hb/bin/pip install --no-cache-dir --require-hashes \
-#         --only-binary=:all: -r /tmp/handbook.lock
-#   COPY handbook/ /src/handbook/
-#   ENV NO_MKDOCS_2_WARNING=true HANDBOOK_SITE_URL=http://localhost/learn/ HANDBOOK_APP_LINK=/
-#   RUN cd /src/handbook && /opt/hb/bin/mkdocs build --strict -d /out/learn \
-#    && find /out/learn -name '*.map' -delete
-# and adds " AND CC-BY-NC-SA-4.0" (the handbook text licence) to the licenses label below.
+# Stage 2: handbook (docs/dev/research/08-handbook-site.md §4.7). A throw-away stage that builds the
+# patient handbook (MkDocs + Material, hash-locked in handbook/requirements.lock) into /out/learn.
+# Only those plain files reach the runtime image: the toolchain stays here, so the runtime gains no
+# dependency. app/handbook.py serves the site at /learn with its own CSP (hashes of the theme's
+# inline scripts, computed at start-up). The generated pages (menus, tables, sources) are committed
+# and checked by CI (scripts/build_handbook.py --check), so nothing outside handbook/ is needed here.
 # Keep the FROM line identical to the builder's so Dependabot bumps all three together.
 # ---------------------------------------------------------------------------------------------------
 FROM cgr.dev/chainguard/python:latest-dev@sha256:a876b1000774bdd68322ac020cd813aaf42b52941ca812f4d2f0149059bd0e67 AS handbook
+# Root only in this throw-away stage (it creates /opt/hb and /out/learn).
 # hadolint ignore=DL3002
 USER 0
-WORKDIR /out/learn
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /src/handbook
+COPY handbook/requirements.lock /tmp/handbook.lock
+# Same rules as the app's dependencies: every wheel matches a hash in the lock, no sdist is built,
+# nothing is resolved at build time.
+RUN python -m venv --without-pip /opt/hb \
+ && python -m pip --python /opt/hb/bin/python install --no-cache-dir \
+      --no-deps --require-hashes --only-binary=:all: -r /tmp/handbook.lock
+COPY handbook/ /src/handbook/
+# LAN build: site_url http://localhost/learn/ (no port, so instant navigation works behind a reverse
+# proxy on 443 or 80; note 08 F4) and the "Back to the food log" link to the app at /.
+ENV NO_MKDOCS_2_WARNING=true \
+    HANDBOOK_SITE_URL=http://localhost/learn/ \
+    HANDBOOK_APP_LINK=/
+# --strict: any warning fails the image build (broken links, external assets via the privacy plugin).
+# Source maps are dropped (1.3 MB nobody needs); sitemap.xml stays (instant navigation reads it).
+RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
+ && find /out/learn -type f -name '*.map' -exec rm -f {} + \
+ && test -f /out/learn/index.html \
+ && chmod -R u=rwX,go=rX /out/learn
 
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
 FROM cgr.dev/chainguard/python:latest@sha256:3de78d5699d76c56f74a4a47abcd81f22f5a16757eee9fac45837fb2ae3f0e06
 
-# OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licence is
-# the SPDX id of LICENSE: PolyForm Noncommercial 1.0.0 (personal and noncommercial use only).
+# OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
+# SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
+# and the handbook text at /app/learn, CC BY-NC-SA 4.0 (handbook/LICENSE).
 LABEL org.opencontainers.image.title="kidney-health" \
       org.opencontainers.image.description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings" \
       org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
       org.opencontainers.image.url="https://github.com/ksullivan86/kidney-health" \
       org.opencontainers.image.documentation="https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md" \
-      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0" \
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0" \
       org.opencontainers.image.base.name="cgr.dev/chainguard/python:latest"
 
 # PYTHONPATH makes `python -m app.admin` work from any working directory (kubectl exec, podman exec).
@@ -99,6 +117,7 @@ ENV PATH=/opt/venv/bin:/usr/bin:/bin \
 
 COPY --from=builder  --chown=0:0     /opt/venv  /opt/venv
 COPY --from=builder  --chown=0:0     /opt/app   /app
+# The built handbook: plain files, root-owned and read-only like the rest of /app.
 COPY --from=handbook --chown=0:0     /out/learn /app/learn
 # /data must keep mode 0770 (group 0 writable, for runs as an arbitrary UID with GID 0). COPY of a
 # directory copies its contents and creates the destination with default 0755, so copy the staging

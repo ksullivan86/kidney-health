@@ -6,8 +6,9 @@
 # Runs the image the way the shipped profiles do (read-only root, tmpfs /tmp, every capability
 # dropped, no-new-privileges, pids and memory limits, SECRET_KEY_FILE as a read-only file) twice:
 # as 10001:10001 (the image user) and as 12345:0 (an arbitrary UID with GID 0, OpenShift style).
-# Each run must answer /healthz, log a meal (POST /api/log -> 201) and turn "healthy" through the
-# image's own HEALTHCHECK, which runs without a shell. Then it checks the image itself: no shell
+# Each run must answer /healthz, log a meal (POST /api/log -> 201), serve the handbook it built at
+# /learn/ with its own CSP (smoke_http.py) and turn "healthy" through the image's own HEALTHCHECK,
+# which runs without a shell. Then it checks the image itself: no shell
 # (unless --allow-shell, for the Debian fallback), no pip, and nothing under /app or /opt/venv
 # writable by the app user.
 set -euo pipefail
