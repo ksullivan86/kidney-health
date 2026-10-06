@@ -81,6 +81,8 @@ carbohydrate check, and guidance never suggests a smaller dose. If a treatment h
 "For your next low: Glucose gel (1 tube) gives 15 g carbs with 0 mg potassium."
 The suggested amount is never below your low-treatment dose (default 15 g, which you can set from 5 to
 30 g as your diabetes team advises) ([ADA 2026][A26-6], section 6; [Treating a low](../t1d/treating-a-low.md)).
+Tablets and other single pieces are counted out whole, rounded up: with 4 g glucose tablets and a 15 g
+dose that is 4 tablets (16 g).
 
 ## Example
 

@@ -22,9 +22,11 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
+from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-05.1"
+RULES_VERSION = "2026-10-06.1"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -97,6 +99,10 @@ SWAP_MAX = 5
 SWAP_AI_MAX = 15
 PORTION_MIN, PORTION_MAX = 0.25, 3.0
 PORTION_OPTION_FRACTIONS: tuple[float, ...] = (0.75, 0.5)
+HYPO_PORTION_MAX = 10.0  # a low treatment may take up to 10 servings: 8 × 4 g glucose tablets reach the 30 g maximum
+# A serving of exactly one of these is counted out whole for a low (no "3¾ glucose tablets").
+HYPO_WHOLE_UNITS: tuple[str, ...] = ("tablet", "piece", "candy", "candies", "sweet", "lozenge", "gummy", "gummies",
+                                     "chew", "pastille", "mint", "jelly bean", "cube", "sachet", "packet")
 HYPO_SWAP_TRIGGER_MG = 0.0  # in hypo mode the only trigger is potassium above this
 HYPO_INSIGHT_K_MG = 50.0  # day.hypo.logged suggests a better treatment above this
 HYPO_BEST_MAX_K_MG = 20.0  # … when a hypo food at or below this exists
@@ -199,13 +205,32 @@ def round_to_quarter(value: float) -> float:
     return js_round(value * 4.0) / 4.0
 
 
-def ceil_to_quarter(value: float) -> float:
-    """Round up to the next ¼ serving (a low is never under-treated). Float noise is ignored."""
-    quarters = value * 4.0
-    nearest = js_round(quarters)
-    if abs(quarters - nearest) < 1e-9:
-        return nearest / 4.0
-    return math.ceil(quarters) / 4.0
+def ceil_to_step(value: float, step: float) -> float:
+    """Round up to the next multiple of ``step`` servings (¼, or 1 for a counted item). Float noise is ignored."""
+    units = value / step
+    nearest = js_round(units)
+    if abs(units - nearest) < 1e-9:
+        return nearest * step
+    return math.ceil(units) * step
+
+
+_WHOLE_UNIT = re.compile(
+    r"^\s*(?:1|one)\s+(?:[a-z-]+\s+)?(?:" + "|".join(re.escape(u) for u in sorted(HYPO_WHOLE_UNITS, key=len, reverse=True))
+    + r")s?\b",
+    re.IGNORECASE,
+)
+
+
+@lru_cache(maxsize=4096)
+def is_whole_unit_serving(serving_desc: str | None) -> bool:
+    """``"1 tablet (4 g)"``, ``"1 glucose tablet"``, ``"1 piece"``: one serving is one item you count out,
+    so a low-treatment portion is a whole number of them. ``"3 pieces"`` or ``"1 tube"`` keep ¼ steps."""
+    return bool(serving_desc) and _WHOLE_UNIT.match(serving_desc) is not None
+
+
+def hypo_portion_step(serving_desc: str | None) -> float:
+    """The step of a low-treatment portion: 1 serving for a counted item, else ¼ (§4.6)."""
+    return 1.0 if is_whole_unit_serving(serving_desc) else 0.25
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -362,6 +387,8 @@ RULE_DOCS: tuple[tuple[str, str], ...] = (
     ("PORTION_MIN", "Smallest portion (servings)"),
     ("PORTION_MAX", "Largest portion (servings)"),
     ("PORTION_OPTION_FRACTIONS", "Smaller-portion fallbacks of a swap request (¾, then ½)"),
+    ("HYPO_PORTION_MAX", "Largest low-treatment portion (servings): enough single 4 g glucose tablets for the 30 g maximum dose; never fewer carbs than the dose"),
+    ("HYPO_WHOLE_UNITS", "A serving of one of these items (\"1 tablet\") is counted out whole for a low, rounded up"),
     ("HYPO_SWAP_TRIGGER_MG", "In low-treatment mode the only trigger is potassium above this"),
     ("HYPO_INSIGHT_K_MG", "A low treatment above this potassium makes the insight name a lower-potassium choice"),
     ("HYPO_BEST_MAX_K_MG", "… when one of the person's low treatments has at most this much"),

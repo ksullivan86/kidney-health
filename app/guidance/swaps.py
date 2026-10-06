@@ -84,16 +84,21 @@ def match_dimension(food: FoodVec, q: float, mode: str, dose_g: float) -> tuple[
 
 
 def candidate_portion(cand: FoodVec, match: str, target: float, mode: str) -> float | None:
-    """The candidate's portion that matches ``target`` (¼ servings, 0.25–3), or ``None``."""
+    """The candidate's portion that matches ``target`` (¼ servings, 0.25–3), or ``None``.
+
+    For a low (``mode == "hypo"``) the portion is rounded **up** so it gives at least ``target`` grams of
+    carbohydrate: to the next ¼ serving, or to whole servings when one serving is one counted item
+    ("1 tablet"), and up to :data:`~app.guidance.rules.HYPO_PORTION_MAX` servings."""
     if match == "serving":
         return 1.0
     per = cand.carbs if match == "carbs" else cand.protein
     if per is None or per <= 0:
         return None
     if mode == "hypo":
-        q = max(R.PORTION_MIN, R.ceil_to_quarter(target / per))
-        if q > R.PORTION_MAX or q * per < target - 1e-9:
-            return None  # cannot reach the treatment amount within 3 servings: never under-treat
+        step = R.hypo_portion_step(cand.serving_desc)
+        q = max(step, R.ceil_to_step(target / per, step))
+        if q > R.HYPO_PORTION_MAX or q * per < target - 1e-9:
+            return None  # cannot reach the treatment amount: never under-treat
         return q
     q = R.clamp(R.round_to_quarter(target / per), R.PORTION_MIN, R.PORTION_MAX)
     tol_min, tol_frac = R.SWAP_CARB_MATCH if match == "carbs" else R.SWAP_PROTEIN_MATCH
@@ -292,7 +297,7 @@ def portion_option(food: FoodVec, servings: float, room: Room, triggers: Sequenc
 
 def hypo_options(ctx: GuidanceContext) -> dict[str, Any]:
     """The person's low-treatment foods at the amount that treats a low (``hypo_dose_g`` rounded up
-    to ¼ serving), lowest potassium first. Never filtered by a budget or a target (§4.6)."""
+    to ¼ serving, or to whole items such as tablets), lowest potassium first. Never filtered by a budget or a target (§4.6)."""
     dose = float(ctx.prefs.hypo_dose_g)
     fluid_tracked = R.target_max(ctx.profile.targets.get(R.FLUID)) is not None
     rows: list[tuple[tuple, dict[str, Any]]] = []

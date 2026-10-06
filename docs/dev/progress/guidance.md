@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # guidance (M2): rule-based meal guidance, log batch + client_id, m005
 
@@ -9,63 +9,47 @@ slugs (note 08 §4.10); AI hook only; GuidanceContext reads targets through one 
 vectors `tests/data/guidance_vectors.json` (+ generator + staleness test); `docs/guidance.md`;
 ARCHITECTURE "M2 API: guidance". Ports 8310-8319. Scratch:
 /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/guidance/
-Attempt 3 (this one) resumed from commit 908c00d; attempts 1–2 wrote the pure engine.
 
 ## Decisions (and why)
 
 * m005 = purpose + client_id (+ partial unique index per person) + meal_hint + `food_preferences`
   table ("Not for me", FK cascade on user and food) + `meta.foods_rev` bumped by **triggers** on
-  `foods` and `user_food_links` (every write path, incl. barcode/USDA code I do not own, invalidates
-  the vector cache; no edit of app/foods.py needed). No backfill of `purpose` (never guess health
-  data). `guidance_json` profile column of note 06 is superseded by note 07's registry key `guidance`.
-* `ingredient`: a real flag in `data/foods.json` (curated_foods.py + regenerate). Role overrides
-  (`role` on foods.json items, coleslaw → veg_fruit) are read by the guidance context from the
-  configured foods.json by fdc_id.
-* Settings: note 07 wins (one registry): instance `guidance.enabled` (env GUIDANCE_ENABLED),
-  `guidance.pool_per_role` (GUIDANCE_POOL_PER_ROLE), `guidance.beam_width` (GUIDANCE_BEAM_WIDTH);
-  user object `guidance` {enabled, carb_tolerance_g, hypo_dose_g, exclude_categories,
-  show_plan_builder, show_insights, ai_enrich}. "Not for me" foods are `food_preferences` rows.
-* Guidance response models live in `app/guidance/models.py` (package-owned) instead of the shared
-  `app/models.py`; only the log models (purpose, client_id, LogBatch) go into `app/models.py`.
-* Spec reconciliations (all vectors reproduce):
-  - TV-F3 food 13 = −0.58 needs the fixture's history entries to be food 13 (P 1,100, protein 49).
-  - TV-P1 protein shows 8.2 g (the table's blueberries 0.5 g protein); the spec's "8.1 g" came from
-    0.4 g; score 10.71 matches 0.5.
-  - Portion option (TV-S2 picks ½ though ¾ fits the room): ¾ only when it removes every trigger
-    (within room and no longer "high"), else ½ when it fits the room.
-  - Swap mode follows the purpose: hypo when the entry/request purpose is hypo; a request for a
-    hypo_treatment food without purpose defaults to hypo (as POST /api/log does), `purpose=none`
-    forces normal (TV-S6's apple juice is that case).
-  - Wording: grams one decimal only below 10 g (rule wins over the example "13.5 g protein").
-  - Plan `new_alerts` lists only new "over" alerts.
-* Unknown carbs block a food/meal while a carb goal is set (`unknown:carbs_g`).
-* Hypo options/swaps: portion = ceil to ¼ of dose/carbs; dropped (never shrunk) if > 3 servings needed.
+  `foods` and `user_food_links` (every write path invalidates the vector cache without editing
+  app/foods.py). No backfill of `purpose` (never guess health data). Note 06's `guidance_json`
+  profile column is superseded by note 07's registry key `guidance`.
+* Settings: one registry (note 07): instance `guidance.enabled` (env GUIDANCE_ENABLED),
+  `guidance.pool_per_role`, `guidance.beam_width`; user object `guidance` {enabled,
+  carb_tolerance_g, hypo_dose_g, exclude_categories, show_plan_builder, show_insights, ai_enrich}.
+* Guidance response models live in `app/guidance/models.py`; only log models go into `app/models.py`.
+* Spec reconciliations (listed for readers in docs/guidance.md "Decisions where the specification
+  was ambiguous"): portion option ¾/½; swap mode follows purpose; meal check carb rule = food filter;
+  one food never tips the day (day_left); plan new_alerts only "over"; TV-P1 8.2 g; apply entries
+  purpose "none"; from-log skips hypo entries; **hypo portions** round up to whole items for a
+  one-item serving ("1 tablet") and may take up to HYPO_PORTION_MAX = 10 servings (the shipped
+  4 g glucose tablet was dropped at 15 g under the 3-serving cap); **plan why** says "close to"
+  only within the carb tolerance, else "N g under/over". RULES_VERSION 2026-10-06.1.
 
-## Done
+## Done (all committed; see `git log --oneline | grep guidance`)
 
-* Pure engine (rules, state, budget, score, fits, swaps, planner, insights, messages, topics,
-  ai_bridge, hypo); tests test_budget/test_fits/test_swaps (52 pass). Commit 908c00d.
-* m005 + tests/guidance/test_migration_m005.py (populated v4 upgrade, idempotent, client_id
-  uniqueness per person, cascades, foods_rev triggers). Commit 7c42ea3.
+* Pure engine, m005 + migration tests, log purpose/client_id/batch, meal_hint, settings keys,
+  context/vectors/api/models/not-for-me, router, export of food_preferences, §6 vector/property/
+  oracle/wording/topic/AI-bridge/data tests, perf work + bench + perf tests, parity vectors +
+  generator + staleness test, docs/guidance.md (generated rules table), ARCHITECTURE section,
+  ROADMAP, Containerfiles ship data/combos.json, diet-guide [47] citation, handbook app/guidance.md.
+* Live smoke on port 8310 (stopped): login, profile, batch 201 / replay 200, next-meal, plan,
+  hypo-options, anonymous 401, Cache-Control no-store. Found and fixed: hypo options left out the
+  4 g glucose tablet; plan "why" said "close to" outside the tolerance.
 
-* log.py purpose/client_id/batch + meals.py meal_hint + models + tests/guidance/test_log_api.py (17).
-  CSV gains a trailing `purpose` column (tests/test_api.py header assertion updated). Commit 5b0b90b.
-* settings keys (guidance.enabled/pool_per_role/beam_width + user object `guidance`), settings vectors
-  regenerated. JS twin app/static/js/engine/settings.js lacks them (frontend handoff, like targets).
-* vectors.py, context.py (VectorCache, load_profile = profile.get_profile, the Today source), api.py,
-  guidance/models.py (strict response models), not-for-me routes, router in main.py;
-  tests/guidance/test_api_guidance.py (39). Commits 27fc24b, 0e3f04b (main.py duplicate fix: the
-  handbook agent committed main.py with my lines in between; always re-check HEAD before staging).
+## Handoffs (not this role's files)
 
-## Next
-
-4. Remaining pure tests: vectors/renal property, score, planner (TV-P1..P7 + beam oracle), insights
-   (TV-I1..I5), messages lint, topics (pages exist), ai_bridge, hypo prefilter, determinism.
-5. data/combos.json (review) + test; tests/data/guidance_vectors.json + generator + staleness test;
-   scripts/bench_guidance.py + test_perf_guidance.py; docs/guidance.md (+ rules table drift test);
-   ARCHITECTURE "M2 API: guidance"; ROADMAP; diet-guide dead UMich citation.
+* `app/static/js/engine/settings.js` lacks the `guidance` keys (JS twin parity tests
+  test_settings_vectors JS cases fail until the frontend role adds them; same for targets keys).
+* handbook `sources.yml` DG47 (dead UMich link) is still cited by 14 recipe pages (handbook owner).
+* UI for guidance (frontend builder), AI modes (ai role), Raspberry Pi 4 p95 (release gate, unmeasured).
 
 ## Commands
 
     python3 -m pytest tests/guidance -q
     python3 -m pytest -q   # full suite
+    python3 tests/data/gen_guidance_vectors.py && python3 scripts/guidance_rules_doc.py
+    python3 scripts/bench_guidance.py --runs 20 --copies 1,5

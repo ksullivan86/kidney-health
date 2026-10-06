@@ -205,8 +205,12 @@ def test_hypo_options_are_always_available_and_lowest_potassium_first(real):
     ks = [o["nutrients"]["potassium_mg"] for o in body["options"]]
     assert ks == sorted(ks) and body["options"][0]["name"].startswith("Glucose")
     assert all(o["nutrients"]["carbs_g"] >= 15 for o in body["options"])
+    tablet = next(o for o in body["options"] if o["serving_desc"].startswith("1 tablet"))
+    assert tablet["servings"] == 4 and tablet["nutrients"]["carbs_g"] == 16  # 4 whole tablets, not 3¾
     real.patch("/api/me/settings", json={"guidance": {"hypo_dose_g": 20}})
-    assert all(o["nutrients"]["carbs_g"] >= 20 for o in real.get("/api/guidance/hypo-options").json()["options"])
+    options = real.get("/api/guidance/hypo-options").json()["options"]
+    assert all(o["nutrients"]["carbs_g"] >= 20 for o in options)
+    assert next(o for o in options if o["food_id"] == tablet["food_id"])["servings"] == 5
 
 
 # --------------------------------------------------------------------------- #

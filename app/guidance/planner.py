@@ -459,7 +459,8 @@ def _why(plan: SlotPlan) -> list[str]:
     totals, _ = meal_totals(plan.items)
     out: list[str] = []
     if plan.room.carbs is not None:
-        out.append(M.plan_why_carbs(totals[R.CARBS], plan.room.carbs.goal, plan.meal))
+        carb = plan.room.carbs
+        out.append(M.plan_why_carbs(totals[R.CARBS], carb.goal, plan.meal, carb.gap, carb.tolerance))
     for key in (R.K, R.P, R.NA, R.FLUID):
         item = plan.room.nutrients.get(key)
         if item is not None:

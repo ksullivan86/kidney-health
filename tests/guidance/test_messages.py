@@ -59,7 +59,12 @@ def test_note_06_example_strings():
         "For your next low: Glucose tablets, 4 (1 × 4 tablets) gives 16 g carbs with 0 mg potassium")
     assert M.portion_option_text(0.5, 18.5, {"potassium_mg": 462.5}, ["potassium_mg"]) == (
         "Half portion: 19 g carbs and 463 mg potassium. The carbs change, so count the new amount.")
-    assert M.plan_why_carbs(58.75, 60, "dinner") == "59 g carbs, close to your 60 g dinner goal"
+    assert M.plan_why_carbs(58.75, 60, "dinner", 60, 10) == "59 g carbs, close to your 60 g dinner goal"
+    assert M.plan_why_carbs(56, 60, "dinner", 60, 4) == "56 g carbs, close to your 60 g dinner goal"  # at the edge
+    assert M.plan_why_carbs(17, 30, "snack", 30, 10) == "17 g carbs, 13 g under your 30 g snack goal"
+    assert M.plan_why_carbs(45, 30, "snack", 30, 10) == "45 g carbs, 15 g over your 30 g snack goal"
+    assert M.plan_why_carbs(28, 60, "lunch", 30, 10) == "28 g carbs, close to the 30 g left of your 60 g lunch goal"
+    assert M.plan_why_carbs(4, 60, "lunch", -5, 10) == "4 g carbs: your 60 g lunch goal is already reached"
     assert M.plan_why_room(178.75, 750, "dinner") == "Uses 179 of the 750 mg potassium left for dinner"
     assert M.room_line("dinner", {"potassium_mg": {"room": 750}, "phosphorus_mg": {"room": 167}, "sodium_mg": {"room": 600},
                                   "fluid_ml": None, "carbs_g": {"gap": 60, "goal": 60}}) == (

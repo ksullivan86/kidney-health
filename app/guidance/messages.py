@@ -291,9 +291,23 @@ def portion_option_text(fraction: float, carbs: float, amounts: Mapping[str, flo
 # --------------------------------------------------------------------------- #
 
 
-def plan_why_carbs(carbs: float, goal: float, meal: str) -> str:
-    """"59 g carbs, close to your 60 g dinner goal"."""
-    return f"{fmt_g(carbs)} g carbs, close to your {fmt_g(goal)} g {meal} goal"
+def plan_why_carbs(carbs: float, goal: float, meal: str, gap: float, tolerance: float) -> str:
+    """How the plan's carbs compare with what the meal still needs (``gap``: the goal minus what is logged).
+
+    ``"59 g carbs, close to your 60 g dinner goal"`` within the person's tolerance;
+    ``"17 g carbs, 13 g under your 30 g snack goal"`` outside it; ``"… the 30 g left of your 60 g dinner goal"``
+    when part of the meal is already logged."""
+    left = gap
+    goal_text = f"your {fmt_g(goal)} g {meal} goal"
+    if left <= 0:
+        return f"{fmt_g(carbs)} g carbs: {goal_text} is already reached"
+    if abs(left - goal) >= 0.05:
+        goal_text = f"the {fmt_g(left)} g left of {goal_text}"
+    diff = carbs - left
+    if abs(diff) <= tolerance + 1e-9:
+        return f"{fmt_g(carbs)} g carbs, close to {goal_text}"
+    word = "under" if diff < 0 else "over"
+    return f"{fmt_g(carbs)} g carbs, {fmt_g(abs(diff))} g {word} {goal_text}"
 
 
 def plan_why_room(used: float, room: float, meal: str, key: str = R.K) -> str:

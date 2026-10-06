@@ -31,7 +31,7 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
   (`purpose = "hypo"`) counts toward potassium, phosphorus, sodium and fluid (the person really had
   it) and never toward a meal's carbohydrate or the carb insights. The only "swap" for a low treatment
   is *for the next low*: another low treatment with **at least** the person's own treatment amount
-  (rounded up to ¼ serving, never down) and less potassium. The low-treatment options and the
+  (rounded up to ¼ serving, or to whole items such as tablets, never down) and less potassium. The low-treatment options and the
   "Treating a low" card are available even when an admin or the person switches guidance off.
 * **Never weakens a warning.** A food with a "high" warning for a nutrient that is already at caution
   or over today is not suggested; unknown potassium, phosphorus or sodium values are never treated as
@@ -256,6 +256,14 @@ provider is logged and reported as unavailable, so guidance always answers.
 * **`apply` entries carry `purpose: "none"`**: a planned meal is never a low treatment, even when a saved
   meal holds apple juice.
 * **"From log"** leaves low-treatment entries out of the saved meal and sets its `meal_hint`.
+* **Low-treatment portions** (§4.6 says `ceil_to_quarter(dose / carbs per serving)` within the 3-serving
+  cap): a food whose serving is one counted item ("1 tablet (4 g)", `HYPO_WHOLE_UNITS`) is rounded up to
+  whole items, and a low treatment may take up to `HYPO_PORTION_MAX` (10) servings. Otherwise the shipped
+  "Glucose tablet (4 g carb)" would be left out at the default 15 g (3 tablets give 12 g) and offered as
+  "2½ tablets" at 10 g. The
+  portion still never gives less than the dose.
+* **Plan "why" lines** say "close to your goal" only within the person's carb tolerance, otherwise
+  "17 g carbs, 13 g under your 30 g snack goal" (§4.15's string covered only the first case).
 
 ## Performance
 
@@ -293,7 +301,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-05.1** (hash `9cb5141562aeba25`).
+Rules version **2026-10-06.1** (hash `6ef4fb557606f4e1`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -351,6 +359,8 @@ Rules version **2026-10-05.1** (hash `9cb5141562aeba25`).
 | `PORTION_MIN` | `0.25` | Smallest portion (servings) |
 | `PORTION_MAX` | `3.0` | Largest portion (servings) |
 | `PORTION_OPTION_FRACTIONS` | `[0.75, 0.5]` | Smaller-portion fallbacks of a swap request (¾, then ½) |
+| `HYPO_PORTION_MAX` | `10.0` | Largest low-treatment portion (servings): enough single 4 g glucose tablets for the 30 g maximum dose; never fewer carbs than the dose |
+| `HYPO_WHOLE_UNITS` | `["tablet", "piece", "candy", "candies", "sweet", "lozenge", "gummy", "gummies", "chew", "pastille", "mint", "jelly bean", "cube", "sachet", "packet"]` | A serving of one of these items ("1 tablet") is counted out whole for a low, rounded up |
 | `HYPO_SWAP_TRIGGER_MG` | `0.0` | In low-treatment mode the only trigger is potassium above this |
 | `HYPO_INSIGHT_K_MG` | `50.0` | A low treatment above this potassium makes the insight name a lower-potassium choice |
 | `HYPO_BEST_MAX_K_MG` | `20.0` | … when one of the person's low treatments has at most this much |

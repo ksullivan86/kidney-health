@@ -4,6 +4,7 @@ from __future__ import annotations
 import fixtures as fx
 import pytest
 from app.guidance import messages as M
+from app.guidance import rules as R
 from app.guidance import swaps
 from app.guidance.state import Prefs
 from app.guidance.vectors import make_food
@@ -120,12 +121,50 @@ def test_hypo_options_rank_by_potassium_and_never_need_targets():
     assert [o["food_id"] for o in excluded["options"]] == [12]
 
 
-def test_hypo_option_dropped_when_three_servings_cannot_reach_the_dose():
+def _hypo_food(fid, desc, carbs, k=0.0):
+    return make_food(id=fid, name=f"Low treatment {fid}", category="Diabetes supplies", serving_desc=desc, serving_g=4,
+                     nutrients=fx.nutrients(carbs, 0, 0, 0, 0, k), flags=("hypo_treatment",))
+
+
+def test_hypo_option_dropped_when_the_largest_portion_cannot_reach_the_dose():
     fs = fx.foods()
-    weak = make_food(id=70, name="Gummy, 1", category="Diabetes supplies", serving_desc="1 piece (3 g)", serving_g=3,
-                     nutrients=fx.nutrients(2.5, 0, 0, 0, 0, 0), flags=("hypo_treatment",))
+    weak = _hypo_food(70, "1 piece (1 g)", 1.0)  # 15 pieces needed, more than HYPO_PORTION_MAX
     r = swaps.hypo_options(fx.context(food_map={**fs, 70: weak}))
     assert 70 not in [o["food_id"] for o in r["options"]]
+    assert R.HYPO_PORTION_MAX * 1.0 < 15
+
+
+@pytest.mark.parametrize(("dose", "tablets"), [(5, 2), (15, 4), (16, 4), (20, 5), (30, 8)])
+def test_single_tablets_are_counted_out_whole_and_never_under_the_dose(dose, tablets):
+    fs = fx.foods()
+    tab = _hypo_food(71, "1 tablet (4 g)", 4.0)
+    r = swaps.hypo_options(fx.context(food_map={**fs, 71: tab}, prefs=Prefs(hypo_dose_g=dose)))
+    option = next(o for o in r["options"] if o["food_id"] == 71)
+    assert option["servings"] == tablets and option["nutrients"]["carbs_g"] >= dose
+    assert (tablets - 1) * 4.0 < dose  # the smallest whole number of tablets that reaches the dose
+    assert option["portion_text"] == f"{tablets} × 1 tablet (4 g)"
+
+
+@pytest.mark.parametrize(("desc", "carbs", "dose", "servings"), [
+    ("1 tube (38 g)", 15.0, 20, 1.5),  # a gel tube can be part-used: ¼ steps
+    ("3 pieces (18 g)", 17.6, 20, 1.25),  # a serving of several items keeps ¼ steps
+    ("1 piece (3 g)", 2.5, 15, 6.0),  # one counted item per serving: whole items
+    ("1 glucose tablet", 3.0, 15, 5.0),
+    ("1 tbsp", 12.6, 15, 1.25),
+])
+def test_hypo_portion_steps(desc, carbs, dose, servings):
+    q = swaps.candidate_portion(_hypo_food(72, desc, carbs), "carbs", dose, "hypo")
+    assert q == servings and q * carbs >= dose
+
+
+@pytest.mark.parametrize(("desc", "whole"), [
+    ("1 tablet (4 g)", True), ("1 glucose tablet", True), ("One piece", True), ("1 large jelly bean", True),
+    ("1 packet (4 g)", True), ("1 sugar cube", True), ("1 tbsp", False), ("1 tablespoon", False),
+    ("1 tube (38 g)", False), ("3 pieces (18 g)", False), ("1 cup (240 ml)", False), ("1 bean burrito", False),
+    ("1 chewy bar", False), ("", False),
+])
+def test_whole_unit_servings(desc, whole):
+    assert R.is_whole_unit_serving(desc) is whole
 
 
 # --------------------------------------------------------------------------- #
