@@ -30,8 +30,8 @@ patient-facing version of this page is the handbook's
 * **Typing the digits** under the bars always works, also with a USB or Bluetooth scanner that types, and
   with a screen reader.
 
-Every way ends the same: only the digits go to your server. A 12-, 13- or 8-digit code, a short UPC-E
-code and a 14-digit case code of the same product all find the same food.
+Every way ends the same: only the digits go to your server. A US 12-digit code, the same number read as
+13 digits (with a leading 0), its 14-digit form and the short 8-digit UPC-E code all find the same food.
 
 ### Turning lookups on
 
