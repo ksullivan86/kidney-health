@@ -28,7 +28,7 @@ as "2 eggs, toast with butter, tea" into food searches, or read the numbers from
 |---|---|
 | Pick and order meal ideas, using **only** foods the rules already allowed | Invent a food or a nutrient number: every number comes from the app's food list |
 | Split "describe a meal" text into search words; you pick each match | Save anything: you tap **Add to plan** and the normal rules run again |
-| Copy printed numbers from a label photo into Quick add, marked "from photo" | Estimate nutrients from a plate photo: plate photos give food **names** only |
+| Copy printed numbers from a label photo into a draft food you check, marked "from photo" | Estimate nutrients from a plate photo: it gives food **names** and a rough weight; the numbers come from your food list |
 | Name foods it sees on a plate photo | Chat freely, answer medical questions, or read your lab results |
 
 ### Safety rules that always apply
@@ -38,7 +38,8 @@ as "2 eggs, toast with butter, tea" into food searches, or read the numbers from
 - **Lows never go to AI.** If you type words like "low", "hypo" or "shaky", the app shows its own
   "Treating a low" card and does not call AI ([ADA 2026][A26-6], section 6).
 - **Red-flag symptoms never go to AI.** If you type "chest pain", "can't breathe", "confused", "faint" or
-  "seizure", the app shows "contact your care team now, or emergency services" instead.
+  "seizure", the app shows a **Get help now** card (call your emergency number; treat a low first)
+  instead.
 - **AI never overrides a warning.** An idea that would push your day over a limit is dropped.
 - **No free text from AI in v0.3.** The reasons you read under an idea ("Low in potassium; fits your
   dinner carbohydrate goal") are written by the app's maintainers, not by the AI.
@@ -80,19 +81,28 @@ A model your admin runs at home keeps your data in the house and is the most pri
 have your own OpenAI or OpenRouter key, you may be able to add it in **Settings → AI ideas**
 ([Settings and keys](settings-and-keys.md)).
 
+## Where to find it
+
+When AI is on for you, the **Add** screen shows **AI meal ideas**, **Describe a meal (AI)**, **Read a
+label (AI)** and, if your admin allows it, **Plate photo (AI)**, with the number of shared AI calls left
+today. Each AI idea shows its foods with their warnings, the totals, what is left of your day after it,
+and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead.
+
 ## Turn it on
 
-1. Check that your admin has switched AI on (**Settings → AI ideas** appears).
+1. Check that your admin has switched AI on (**Settings → AI ideas** says whether it is on).
 2. Tick **Use AI ideas**.
 3. Choose the provider your admin offers, or your own key if allowed.
 4. Decide whether to share age band and sex. It is off by default.
 5. Optional: write preferences such as "vegetarian, no fish".
-6. The first time you use an AI button, read the consent sheet and the exact text, then accept.
+6. The first time you use an AI button, read the consent sheet and the exact text, then accept. Photos
+   have their own consent. You can also ask to see the request before every AI call.
 
 ## Take it back
 
 - Untick **Use AI ideas** to stop all AI calls for your account.
-- **Settings → AI activity** lists what was sent and what came back. **Delete my AI history** removes it.
+- **Settings → AI ideas → AI activity** lists what was sent and what came back. **Delete my AI history**
+  removes it. **What you agreed to send** has **Withdraw** for each server.
   Stored requests are kept for 30 days by default; admins see only counts, not contents.
 - If your admin changes a provider's address, everyone is asked for consent again.
 

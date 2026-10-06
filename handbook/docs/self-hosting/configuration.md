@@ -109,19 +109,24 @@ the variable locks it. Each person still decides whether their own scans go to O
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AI_ENABLED` | `false` | Master switch. When false, no AI routes exist and no AI traffic happens. |
-| `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` | unset | The shared provider: `ollama`, `hermes`, `openai`, `openrouter`, `nous_portal`, `openai_compatible` and others. |
-| `AI_API_KEY_FILE` | unset | The shared provider's key. |
-| `AI_VISION_MODEL` | empty | Set it to enable label and food photos. |
-| `AI_PRIVATE_HOSTS` | empty | `host:port` list that **shared** providers may reach on private addresses, for example `ollama:11434`. The old `ALLOW_PRIVATE_AI_HOSTS` is refused. |
-| `AI_ALLOW_USER_KEYS` / `AI_ALLOW_USER_BASE_URL` | `true` / `false` | Whether people may add their own key, or their own (public, HTTPS) address. |
-| `AI_SHARED_DAILY_LIMIT` | 30 | Shared AI calls per person per day. |
+| `AI_ENABLED` | `false` | Master switch (also **Settings → Admin → Server settings**). While off, every AI route answers "not found" and nothing is sent anywhere. |
+| `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` | unset | The server's shared provider: a preset (`openai`, `openrouter`, `nous_portal`, `ollama`, `lmstudio`, `llamacpp`, `vllm`, `litellm`, `hermes`, `openai_compatible`). Admins can add more in **Settings → AI ideas**. |
+| `AI_API_KEY_FILE` | unset | The shared provider's key (`AI_API_KEY` also works; `OPENAI_API_KEY_FILE` for `openai`). Never stored in the database. |
+| `AI_VISION_MODEL` | empty | Set it to enable label and plate photos. |
+| `AI_PRIVATE_HOSTS` | empty | `host:port` list that **shared** providers may reach on private addresses, for example `ollama:11434`. No wildcard; the old `ALLOW_PRIVATE_AI_HOSTS` is refused. |
+| `AI_DENY_CIDRS` | empty | Addresses AI calls may never reach: add your own public (WAN) address. |
+| `AI_ALLOW_USER_KEYS` / `AI_ALLOW_USER_BASE_URL` | `true` / `false` | Whether people may add their own key, or their own (public, HTTPS, port 443) address. |
+| `AI_SHARED_DAILY_LIMIT` | 30 | Shared AI calls per person per day (photos and connection tests count). |
+| `AI_MAX_CONCURRENCY` | 2 | AI calls at the same time on the whole server (one per person). |
 | `AI_AUDIT_RETENTION_DAYS` | 30 | How long request and response bodies are kept (0 = metadata only). |
+| `AI_VISION_PLATE_ENABLED` / `AI_VISION_ALLOW_AGENT` | `false` / `false` | Plate photos; photos to a Hermes agent (which must also pass its tool check before every photo). |
 | `AI_HTTP_PROXY` | unset | Explicit egress proxy; `HTTP(S)_PROXY` is ignored for AI on purpose. |
 
-Also `AI_TIMEOUT_S`, `AI_MAX_TOKENS` (1500), `AI_STRUCTURED_OUTPUT` (`auto`), `AI_REASONING_EFFORT`,
-`AI_CONTEXT_TOKENS`, `AI_MAX_CONCURRENCY` (2), `AI_MAX_RESPONSE_BYTES` and `AI_DENY_CIDRS`
-([design note 04][NOTE04]). The repository's `docs/ai.md` will hold the final list and setup recipes.
+Also `AI_TIMEOUT_S`, `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500), `AI_STRUCTURED_OUTPUT` (`auto`),
+`AI_REASONING_EFFORT`, `AI_CONTEXT_TOKENS`, `AI_MAX_RESPONSE_BYTES`, `AI_OPENROUTER_ZDR` and `MAX_IMAGE_BYTES`
+([design note 04][NOTE04]). Setup recipes (Ollama next to the app, Kubernetes, a dedicated tool-free Hermes
+Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in the repository's
+[AI guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/ai.md).
 
 ## Meal guidance (coming in v0.3)
 

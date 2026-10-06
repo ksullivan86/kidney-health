@@ -97,15 +97,21 @@ The app offers **Enter from the label**: Quick add opens with the barcode filled
 4. Type or paste the **ingredients** so the app can set the additive flags.
 5. Save. The new food keeps the barcode, so the next scan finds it at once.
 
-**Optional: "Read the label for me".** If your admin switched on AI with photos and you opted in, an AI
-model can fill the form from the photo ([Optional AI](ai.md)). It only copies printed numbers, leaves
-missing ones empty, and marks every field it filled with "from photo". Check each one against the label
-before you save. The app never saves it for you ([design note 04][NOTE04]).
+**Optional: Read a label (AI).** If your admin switched on AI with photos and you opted in, **Add →
+Read a label (AI)** sends the photo to the AI ([Optional AI](ai.md)). Your phone first redraws it, which
+removes the location and camera data, and the server removes any that remain. The AI only copies printed
+numbers and leaves missing ones empty; the app works out sodium from salt and marks values it estimated
+from the % Daily Value. You get a draft with every field the AI filled marked "from photo". Check each one
+against the label, correct the ingredients if needed, then tap **Save as my food**: saving checks the
+ingredients you confirmed for phosphate and potassium additives. The app never saves it for you
+([design note 04][NOTE04]).
 
 ## Photo of a plate (optional, AI only)
 
-If your admin enables it, a photo of your plate can suggest **which foods** are on it. The app then
-matches them to foods in its own list; the AI never supplies nutrient numbers. Portions from photos are
+If your admin enables it, **Add → Plate photo (AI)** can suggest **which foods** are on your plate and a
+rough weight. The app matches each one to foods in your own list and works out servings from the weight;
+the AI never supplies nutrient numbers. Foods the AI was unsure about start unticked, and nothing is added
+until you tap **Add selected** (as planned, unless you choose eaten). Portions from photos are
 rough: in a 2025 test the best AI models were off by about 36 % on average, and they guessed too low for
 large portions ([Fridolfsson 2025][FRIDOLFSSON25]). On a 60 g carbohydrate meal, that is about 20 g too
 many or too few. Weigh or measure when it matters.
