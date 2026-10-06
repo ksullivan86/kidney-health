@@ -530,7 +530,8 @@ class Mapped:
     additives: list[str] = field(default_factory=list)
     # Quality codes in a stable order; "implausible:<key>" and "filled_from_<src>:<key>" name a nutrient.
     quality: list[str] = field(default_factory=list)
-    us_label: bool = False
+    us_label: bool = False  # the product is sold in the US or Canada (countries_tags)
+    country_known: bool = False  # countries_tags was present at all
 
     def food_kwargs(self) -> dict[str, Any]:
         return {
@@ -704,6 +705,7 @@ def map_product(product: Mapping[str, Any], gtin14: str) -> Mapped:
         additives=scan.additives,
         quality=list(dict.fromkeys(quality)),
         us_label=us_label,
+        country_known=bool(countries),
     )
 
 
