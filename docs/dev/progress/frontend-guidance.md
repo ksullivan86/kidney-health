@@ -44,6 +44,15 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
   Walk: `python3 $S/walk.py real` (server :8360, populated person; 375/1280 × light/dark): 0 console errors, 0 CSP/TT
   violations, 0 failed requests, no overflow. Screenshots in $S/walk/real/<config>/.
 
+* AI hooks (note 06 §4.13 "Shown as"; only with guidance.ai_enrich opted in and AI available): "AI order · provider"
+  toggle (rerank) in What fits, "Ask AI to pick" under rule swaps (swap; never for a low), "Let AI choose" in the
+  plan sheet (plan; "AI's pick" badges), the ai_enrich box in Settings → Meal guidance. Verified with KH.ai stubbed in
+  the guard.py answer shapes: `python3 $S/ai_walk.py` (no AI provider in this environment).
+* Preview walk: `python3 $S/walk.py preview` (built preview served on :8361) 4 configs, 0 issues.
+* Perf (§4.12) of the twin in Chromium 141, CPU ×4, `python3 $S/perf.py`: demo (395 foods) p95 what-fits 10 ms,
+  swaps 4, plan-day 38, insights 2; 1,975 foods + 60 days + 100 saved meals: what-fits 20, swaps 6, plan-day 45,
+  insights day 3 / period 3, hypo 5; cold first call ≤ 120 ms. All far under the 200 ms p95 request budget.
+
 ## Handoffs / findings for other owners
 * SAFETY (guidance backend): What fits now suggests "Spirits (gin, rum, vodka, whiskey), 80 proof" as an extra (no carbs,
   no potassium). Alcohol raises the risk of hypoglycaemia in type 1 diabetes; suggest never offering alcoholic drinks

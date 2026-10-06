@@ -249,7 +249,7 @@
 
   // One suggested food (FoodPortion + fit_text + reasons): name, portion, fit text, one reason, the
   // renal dot, Add / Plan and the row menu.
-  function foodRow(item, { meal, date, onChange }) {
+  function foodRow(item, { meal, date, onChange, ai = null }) {
     const status = defaultStatusFor(date);
     const reason = item.reasons && item.reasons.length ? item.reasons[0].text : null;
     const nameId = uid('g-food');
@@ -265,14 +265,15 @@
           h('div', { class: 'row-title', id: nameId }, item.name),
           h('div', { class: 'row-sub' }, item.portion_text),
           item.fit_text ? h('div', { class: 'g-fit tabular' }, item.fit_text) : null,
-          reason ? h('div', { class: 'g-reason' }, reason) : null)),
+          reason ? h('div', { class: 'g-reason' }, reason) : null,
+          ai && ai.why ? h('div', { class: 'g-ai-why' }, h('span', { class: 'g-ai-badge' }, `AI #${ai.ai_rank}`), ` ${ai.why}`) : null)),
       actions, menu);
   }
 
   // ---------------------------------------------------------------------------
   // "What fits now" (Add view)
   // ---------------------------------------------------------------------------
-  const fits = { meal: null, request: 0, block: null };
+  const fits = { meal: null, request: 0, last: null, ai: null }; // ai: the AI order for last.meal/date, or null
   const fitsEl = $('#guidance-fits');
   const fitsBody = $('#guidance-fits-body');
   const fitsStatus = $('#guidance-fits-status');
@@ -318,6 +319,8 @@
       const { data, at } = await remembered(`next:${date}:${meal}`, () => api.nextMeal({ meal, date }));
       if (reqId !== fits.request) return;
       noteAnswer(data);
+      if (!fits.last || fits.last.meal !== meal || fits.last.date !== date) fits.ai = null;
+      fits.last = { res: data, meal, date, at };
       renderFits(data, { meal, date, at });
     } catch (err) {
       if (reqId !== fits.request) return;
@@ -345,7 +348,7 @@
       const items = foods.filter((f) => f.group === group);
       if (!items.length) continue;
       const hid = uid('g-grp');
-      const rows = items.map((item) => foodRow(item, { meal, date, onChange }));
+      const rows = aiOrdered(items).map((item) => foodRow(item, { meal, date, onChange, ai: fits.ai ? fits.ai.ranks.get(item.food_id) : null }));
       const ul = list('g-foods', rows);
       ul.id = uid('g-list');
       const sec = h('section', { class: 'g-group', 'aria-labelledby': hid }, h('h3', { class: 'g-group-title', id: hid }, label), ul);
@@ -376,7 +379,10 @@
     for (const tip of res.tips || []) {
       fitsBody.append(h('div', { class: 'g-tip' }, h('p', {}, tip.text), learnFor(tip.url, tipTitle(tip))));
     }
-    if (res.ai && res.ai.available && KH.ai && typeof KH.ai.mountIdeas === 'function') fitsBody.append(aiBlock(meal, date, res.ai));
+    if (res.ai && res.ai.available && KH.ai && typeof KH.ai.mountIdeas === 'function') {
+      if (aiEnrich()) fitsBody.prepend(aiOrderBar(res, meal, date));
+      fitsBody.append(aiBlock(meal, date, res.ai));
+    }
     const n = notes(res.notes);
     if (n) fitsBody.append(n);
     fitsStatus.textContent = `${foods.length} ${foods.length === 1 ? 'food fits' : 'foods fit'} ${mealWord}${saved.length ? `, and ${saved.length} ${saved.length === 1 ? 'meal' : 'meals'}` : ''}. ${res.room_text}`;
@@ -404,6 +410,115 @@
         h('span', { class: 'meal-chip-sub' }, [m.source === 'usual' ? 'Usual' : 'Saved', carbs].filter(Boolean).join(' · '))));
     b.addEventListener('click', () => openMealSheet(m, { meal, date, trigger: b }));
     return b;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Optional AI on top of the rules (note 06 §4.13; js/views/ai.js does consent and the calls). Only
+  // when the person opted in to "AI may re-order and explain" (guidance.ai_enrich) and the server
+  // offers AI; the numbers, fit checks and texts always stay the rules' own.
+  // ---------------------------------------------------------------------------
+  function aiEnrich() { return prefValue('ai_enrich', false) === true && !!(KH.ai && KH.ai.withConsent); }
+  async function aiAvailable() {
+    if (!aiEnrich()) return null;
+    try { const st = await KH.ai.status(); return st && st.features && st.features.next_meal ? st : null; } catch (e) { return null; }
+  }
+  async function aiNextMeal(body, trigger) {
+    return KH.ai.withConsent('text', () => KH.ai.api.nextMeal(body), () => KH.ai.api.nextMeal(body, true), trigger);
+  }
+  function aiAnswerNote(answer) {
+    if (!answer || answer.status === 'ok') return null;
+    return h('p', { class: 'g-offline', role: 'note' }, answer.message || 'The AI answer could not be used; these are the app’s own suggestions.');
+  }
+  function aiError(box, err) {
+    if (err && (err.handled || err.cancelled)) return;
+    clear(box).append(h('p', { class: 'form-error' }, `AI: ${(err && (err.detail || err.message)) || 'the request failed'}`));
+  }
+  function aiOrdered(items) {
+    if (!fits.ai) return items;
+    const rank = (f) => { const r = fits.ai.ranks.get(f.food_id); return r ? r.ai_rank : Infinity; };
+    return items.map((f, i) => [f, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([f]) => f);
+  }
+  // "AI order · provider": a toggle over the same list (mode "rerank").
+  function aiOrderBar(res, meal, date) {
+    const on = !!fits.ai;
+    const label = (res.ai && res.ai.provider_label) || 'AI';
+    const toggle = h('button', { class: 'btn secondary g-ai-toggle', type: 'button', 'aria-pressed': on ? 'true' : 'false' },
+      `AI order · ${on ? fits.ai.provider : label}`);
+    const msg = h('div', { class: 'g-ai-msg' });
+    toggle.addEventListener('click', async () => {
+      if (fits.ai) {
+        fits.ai = null;
+        renderFits(fits.last.res, fits.last);
+        const t = $('.g-ai-toggle', fitsBody);
+        if (t) t.focus();
+        return;
+      }
+      toggle.disabled = true;
+      clear(msg);
+      try {
+        const answer = await aiNextMeal({ meal, date, mode: 'rerank' }, toggle);
+        if (!answer) return;
+        if (answer.status === 'ok' && (answer.order || []).length) {
+          fits.ai = { provider: (answer.provider && answer.provider.label) || label, ranks: new Map(answer.order.map((o) => [o.food_id, o])) };
+          renderFits(fits.last.res, fits.last);
+          const t = $('.g-ai-toggle', fitsBody);
+          if (t) t.focus();
+          fitsStatus.textContent = `Shown in the AI's order (${fits.ai.provider}). The numbers and fit checks are the app's own.`;
+        } else msg.append(aiAnswerNote(answer));
+      } catch (err) { aiError(msg, err); } finally { if (document.contains(toggle)) toggle.disabled = false; }
+    });
+    return h('div', { class: 'g-ai-bar' }, toggle,
+      h('p', { class: 'hint' }, on ? 'In the AI’s order. The numbers and fit checks are still the app’s own.'
+        : 'Let AI put these foods in the order it suggests and say why. The numbers stay the app’s own.'), msg);
+  }
+  // "Ask AI to pick" under the rule swaps (mode "swap": the AI picks among the rule swaps). Never for a low.
+  function aiSwapBlock(c, res) {
+    const box = h('div', { class: 'g-ai-swap' });
+    aiAvailable().then((st) => {
+      if (!st || !document.contains(box)) return;
+      const out = h('div', { class: 'g-ai-msg' });
+      const ask = h('button', { class: 'btn secondary', type: 'button' }, `Ask AI to pick · ${st.provider ? st.provider.label : 'AI'}`);
+      ask.addEventListener('click', async () => {
+        ask.disabled = true;
+        clear(out);
+        const body = c.mode === 'edit' && c.entry && !c.amountTouched ? { meal: c.meal, date: c.date, mode: 'swap', entry_id: c.entry.id }
+          : { meal: c.meal, date: c.date, mode: 'swap', food_id: c.food.id, servings: Math.min(20, c.servings > 0 ? c.servings : 1) };
+        try {
+          const answer = await aiNextMeal(body, ask);
+          if (!answer) return;
+          if (answer.status === 'ok' && (answer.pick || []).length) {
+            out.append(list('g-foods', answer.pick.map((p) => h('li', { class: 'g-food' }, h('div', { class: 'g-food-main' }, ratingIcon(p.renal_rating || 'green'),
+              h('div', { class: 'g-food-text' }, h('div', { class: 'row-title' }, h('span', { class: 'g-ai-badge' }, 'AI’s pick'), ` ${p.name}`),
+                p.text ? h('div', { class: 'g-reason' }, p.text) : null, p.why ? h('div', { class: 'g-ai-why' }, p.why) : null))))));
+          } else out.append(aiAnswerNote(answer) || h('p', { class: 'hint' }, 'The AI did not pick a swap.'));
+        } catch (err) { aiError(out, err); } finally { if (document.contains(ask)) ask.disabled = false; }
+      });
+      box.append(ask, out);
+    });
+    return (res.swaps || []).length ? box : null;
+  }
+  // "Let AI choose" in the plan sheet (mode "plan"): the AI picks one option per meal; the rules rebuild
+  // and check the whole day again; the meals it picked carry an "AI's pick" badge.
+  async function aiPlanButton(foot) {
+    const st = await aiAvailable();
+    if (!st || sheetEl.dataset.kind !== 'plan' || $('#g-plan-ai')) return;
+    const b = btn(`Let AI choose · ${st.provider ? st.provider.label : 'AI'}`, 'secondary', async () => {
+      const res = planState.result;
+      const out = $('#g-plan-out');
+      if (!res || !res.meals.length || !out) return;
+      b.disabled = true;
+      try {
+        const answer = await aiNextMeal({ meal: res.meals[0].meal, date: res.date, mode: 'plan' }, b);
+        if (!answer) return;
+        if (answer.status === 'ok' && answer.plan && answer.plan.status === 'ok') {
+          planState.result = answer.plan;
+          planState.aiPicks = answer.ai_picks || {};
+          renderPlan(out, answer.plan, null);
+          $('#g-plan-status').textContent = `The AI chose ${Object.keys(planState.aiPicks).length} of the meals; the app checked the whole day again.`;
+        } else { const n = aiAnswerNote(answer); if (n) out.prepend(n); }
+      } catch (err) { const box = h('div'); aiError(box, err); out.prepend(box); } finally { if (document.contains(b)) b.disabled = false; }
+    }, { id: 'g-plan-ai' });
+    foot.insertBefore(b, foot.querySelector('.spacer'));
   }
 
   // ---------------------------------------------------------------------------
@@ -460,13 +575,14 @@
 
   // ---- Plan the rest of my day ----------------------------------------------------------------------
   const planState = { date: null, variant: 0, meals: null, options: { use_saved_meals: true, use_usual: true, use_starters: true },
-    result: null, request: 0, busy: false };
+    result: null, request: 0, busy: false, aiPicks: null };
   async function openPlan({ date = null, trigger = null } = {}) {
     await loadPrefs();
     planState.date = date || state.date || todayStr();
     planState.variant = 0;
     planState.meals = null;
     planState.result = null;
+    planState.aiPicks = null;
     const { body, foot } = fillSheet('plan', 'Plan the rest of my day', 'Foods from your own list that fit what is left of your targets.');
     const dateId = uid('g-plan-date');
     const dateInput = h('input', { id: dateId, type: 'date', value: planState.date, required: true });
@@ -506,6 +622,7 @@
     foot.append(another, h('span', { class: 'spacer' }), use); // the header's × closes (no third button at 375 px)
     sheets.open(sheetEl, trigger, dateInput);
     runPlan();
+    aiPlanButton(foot);
   }
   async function runPlan() {
     const out = $('#g-plan-out');
@@ -530,6 +647,7 @@
       if (reqId !== planState.request) return;
       noteAnswer(data);
       planState.result = data;
+      planState.aiPicks = null;
       renderPlan(out, data, at);
     } catch (err) {
       if (reqId !== planState.request) return;
@@ -563,7 +681,7 @@
     if (!res.meals.length) {
       out.append(h('p', { class: 'empty-state' }, `Every meal of ${fmtDateLong(res.date)} already has food. Tick the meals you want planned anyway.`));
     }
-    for (const m of res.meals) out.append(planMeal(m));
+    for (const m of res.meals) out.append(planMeal(m, !!(planState.aiPicks && m.meal in planState.aiPicks)));
     if (res.protein_topup && res.protein_topup.length) {
       out.append(h('p', { class: 'g-tip' }, `The protein portion at ${joinWords(res.protein_topup.map((x) => MEAL_LABEL[x].toLowerCase()))} was made larger to reach your daily protein minimum.`));
     }
@@ -577,19 +695,20 @@
     use.disabled = !entries.length || !!at;
     use.setAttribute('aria-label', entries.length ? `Use this plan: plan ${entries.length} ${entries.length === 1 ? 'food' : 'foods'} for ${fmtDateLong(res.date)}` : 'Use this plan');
     const okMeals = res.meals.filter((m) => m.status !== 'no_fit').length;
-    live.textContent = `Plan option ${res.variant + 1}: ${okMeals} of ${res.meals.length} ${res.meals.length === 1 ? 'meal' : 'meals'} planned, ${entries.length} ${entries.length === 1 ? 'food' : 'foods'}.`;
+    live.textContent = !res.meals.length ? `Every meal of ${fmtDateLong(res.date)} already has food. Tick the meals to plan anyway.`
+      : `Plan option ${res.variant + 1}: ${okMeals} of ${res.meals.length} ${res.meals.length === 1 ? 'meal' : 'meals'} planned, ${entries.length} ${entries.length === 1 ? 'food' : 'foods'}.`;
   }
   function joinWords(words) {
     if (words.length < 2) return words.join('');
     return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
   }
   const SOURCE_TEXT = { saved: 'Your saved meal', usual: 'A meal you often have', starter: 'Starter meal', built: 'Built from your foods' };
-  function planMeal(m) {
+  function planMeal(m, aiPick = false) {
     const hid = uid('g-plan-h');
     const sec = h('section', { class: `g-plan-meal status-${m.status}`, 'aria-labelledby': hid });
     const source = m.source ? SOURCE_TEXT[m.source] || m.source : null;
     sec.append(h('div', { class: 'g-plan-head' },
-      h('h3', { class: 'g-plan-title', id: hid }, MEAL_LABEL[m.meal]),
+      h('h3', { class: 'g-plan-title', id: hid }, MEAL_LABEL[m.meal], aiPick ? h('span', { class: 'g-ai-badge' }, 'AI’s pick') : null),
       source ? h('span', { class: 'g-source' }, m.name && m.source !== 'built' ? `${source}: ${m.name}` : source) : null));
     if (m.message) {
       sec.append(h('div', { class: `warning level-${m.status === 'no_fit' ? 'over' : 'caution'}` },
@@ -1021,6 +1140,8 @@
     const swaps = res.swaps || [];
     if (swaps.length) {
       out.append(list('g-foods g-swap-list', swaps.map((s) => swapRow(s, res, c))));
+      const ai = res.mode === 'normal' ? aiSwapBlock(c, res) : null;
+      if (ai) out.append(ai);
     } else if (res.reason === 'no_warning') {
       out.append(h('p', { class: 'hint' }, 'Nothing in this amount needs a swap for this meal.'));
     } else if (res.mode !== 'hypo') {
@@ -1066,6 +1187,18 @@
   // ---------------------------------------------------------------------------
   // Settings → Meal guidance (the person's "guidance" object and the "Not for me" list)
   // ---------------------------------------------------------------------------
+  // "Let AI re-order and explain" (guidance.ai_enrich, note 04): shown when this server offers AI.
+  function aiEnrichRow(check) {
+    const slot = h('div', { class: 'g-ai-setting' });
+    if (KH.ai && typeof KH.ai.status === 'function') {
+      KH.ai.status().then((st) => {
+        if (!st || !st.enabled || !document.contains(slot)) return;
+        slot.append(check('ai_enrich', 'Let AI re-order and explain suggestions',
+          'Adds “AI order”, “Ask AI to pick” and “Let AI choose” next to the app’s own suggestions, once AI ideas are on in Settings → AI ideas. The app still checks every number.'));
+      }).catch(() => null);
+    }
+    return slot;
+  }
   async function renderSettings() {
     const body = $('#set-guidance-body');
     if (!body) return;
@@ -1141,6 +1274,7 @@
       check('enabled', 'Show meal guidance', '“What fits now”, swap ideas, the plan builder and insights. Treating a low is always available.'),
       check('show_plan_builder', 'Show “Plan the rest of my day”'),
       check('show_insights', 'Show insights on Today and Trends'),
+      aiEnrichRow(check),
       number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure.', 5, 20),
       number('hypo_dose_g', 'Carbs I take to treat a low (g)', 'The amount your diabetes team gave you, 5 to 30 g. Low-treatment options are sized to it.', 5, 30));
     // Never suggest (categories)
