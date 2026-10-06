@@ -74,7 +74,9 @@ def test_module_layout_and_load_order() -> None:
     # the engine twins (pure, no DOM) come first, then core.js
     engines = [s for s in body_scripts if s.startswith("js/engine/")]
     assert body_scripts[: len(engines) + 1] == [*engines, "js/core.js"]
-    assert engines[:2] == ["js/engine/rules.js", "js/engine/targets.js"] and "js/engine/settings.js" in engines
+    assert engines[0] == "js/engine/rules.js" and "js/engine/settings.js" in engines
+    # targets.js reads the lab tables of kidney_function.js when it loads (M2 targets)
+    assert engines.index("js/engine/kidney_function.js") < engines.index("js/engine/targets.js")
     assert body_scripts[-2:] == ["js/pwa.js", "js/main.js"]
     mocks = [s for s in body_scripts if s.startswith("js/mock/")]
     views = [s for s in body_scripts if s.startswith("js/views/")]

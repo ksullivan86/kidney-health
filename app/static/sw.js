@@ -33,6 +33,7 @@ const SHELL_URLS = [
   '/css/pwa.css',
   '/css/touch.css',
   '/js/engine/rules.js',
+  '/js/engine/kidney_function.js',
   '/js/engine/targets.js',
   '/js/engine/settings.js',
   '/js/core.js',
