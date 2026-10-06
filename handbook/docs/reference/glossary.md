@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K20NOM, NIDDK-CKD, K24, K22, K26A, K17, A26-6, HC24, TIR19, NIDDK-kidneys, NIDDK-HD, NIDDK-PD, NIDDK-Tx, NIDDK-conservative, NIDDK-tests, NKF-HDaccess, MHRA, KER, MEDLINE-BUN, MED-ESRD, OPTN, NKF-CKDEPI]
+fact_checked: 2026-10-05
+sources: [K20NOM, NIDDK-CKD, K24, K22, K26A, K17, A26-6, HC24, TIR19, NIDDK-kidneys, NIDDK-HD, NIDDK-PD, NIDDK-Tx, NIDDK-conservative, NIDDK-tests, NKF-HDaccess, MHRA, KER, FARXIGA, MEDLINE-BUN, MED-ESRD, OPTN, NKF-CKDEPI]
 ---
 
 # Glossary
@@ -152,7 +153,8 @@ G category
     ([KDIGO 2024][K24], Table 2).
 
 GFR (glomerular filtration rate)
-:   How much blood the kidneys filter each minute. eGFR is the estimate from a blood test.
+:   How much fluid the kidneys' filters clear from the blood each minute. eGFR is the estimate from a
+    blood test ([KDIGO 2024][K24], Table 2).
 
 Glomerulus (plural glomeruli)
 :   One of the tiny filters in the kidney.
@@ -264,9 +266,9 @@ Retinopathy
     from diabetes. See [Type 1 diabetes and your kidneys](../ckd/diabetes-and-your-kidneys.md).
 
 SGLT2 inhibitor
-:   A diabetes and kidney medicine approved for type 2 diabetes. It is not approved for type 1
-    diabetes in the US: its safety there has not been established, and DKA is a concern
-    ([KDIGO 2022][K22]).
+:   A medicine approved for type 2 diabetes and, for some of them, for kidney disease or heart
+    failure. It is not approved for type 1 diabetes in the US: its safety there has not been
+    established, and DKA is a concern ([KDIGO 2022][K22]; [Farxiga label][FARXIGA]).
 
 Sick-day plan
 :   Your team's written plan for when you are ill: how often to check glucose and ketones, which
@@ -293,7 +295,7 @@ UACR (urine albumin-to-creatinine ratio)
 
 Uremia
 :   Symptoms from waste building up when the kidneys fail, such as poor appetite, nausea, itching and
-    tiredness ([KDIGO 2024][K24], practice point 5.2.2.1).
+    tiredness ([KDIGO 2024][K24], practice point 5.2.2.1 and Tables 38 and 41).
 
 Vascular access
 :   The way blood gets to the hemodialysis machine: a fistula, a graft or a catheter
@@ -310,5 +312,6 @@ Vascular access
   [peritoneal dialysis][NIDDK-PD]; [transplant][NIDDK-Tx]; [conservative management][NIDDK-conservative];
   [tests][NIDDK-tests].
 - [NKF: hemodialysis access][NKF-HDaccess]; [MHRA: icodextrin][MHRA]; [Kerendia label][KER];
+  [Farxiga (dapagliflozin) label][FARXIGA];
   [MedlinePlus: BUN][MEDLINE-BUN]; [Medicare: kidney failure coverage][MED-ESRD]; [OPTN policies][OPTN];
   [NKF: CKD-EPI 2021 equation][NKF-CKDEPI].

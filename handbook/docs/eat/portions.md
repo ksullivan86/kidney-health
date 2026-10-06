@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DG5, FDC, DG48, DG38, MEDLINE-PORTION, NIDDK-portions, ARCH]
 ---
 
@@ -15,8 +16,8 @@ sources: [DG5, FDC, DG48, DG38, MEDLINE-PORTION, NIDDK-portions, ARCH]
 
 ## In short
 
-Most kidney-diet problems are size problems. "A large serving of a low-potassium food becomes a
-high-potassium food" ([NKF][DG5]), and the same is true for phosphorus, sodium and carbohydrate. Learn
+Most kidney-diet problems are size problems. "A large amount of a low-potassium food can easily turn it
+into a high-potassium food" ([NKF][DG5]), and the same is true for phosphorus, sodium and carbohydrate. Learn
 a few standard portions, measure them for a week, and you will be able to judge them by eye at home
 and when eating out.
 
@@ -36,8 +37,9 @@ Hand and object guides from [MedlinePlus][MEDLINE-PORTION]; kidney portions from
 [NKF dining out][DG48]. Hands differ in size: check your own hand against a measuring cup once.
 
 **Portion and serving are not the same.** A *portion* is how much you choose to eat. A *serving* is
-the amount on the Nutrition Facts label, and the two often do not match ([NIDDK][NIDDK-portions]). If
-you eat two label servings, double every number, carbohydrate included ([NKF label guide][DG38]).
+the amount on the Nutrition Facts label, and the two often do not match ([NIDDK][NIDDK-portions]); the
+label's serving may not match your kidney diet plan either ([NKF label guide][DG38]). If you eat two
+label servings, double every number, carbohydrate included.
 
 ## What to do
 
@@ -57,7 +59,7 @@ you eat two label servings, double every number, carbohydrate included ([NKF lab
 | Food | Small portion | Bigger portion |
 |---|---|---|
 | Cantaloupe | ½ cup: about 210 mg potassium | 1 cup: about 430 mg |
-| Tomato | 2 thin slices: about 95 mg potassium | 1 whole tomato: 292 mg |
+| Tomato | 2 medium slices (¼ inch): about 95 mg potassium | 1 whole tomato: 292 mg |
 | Yogurt, plain low-fat | ¼ cup is the portion | 6-oz pot: 398 mg potassium, 245 mg phosphorus |
 | Peanut butter | 1 tbsp: about 90 mg potassium | 2 tbsp: about 180 mg potassium, 107 mg phosphorus |
 | Bagel | ½ bagel is the portion | whole bagel: about 420 mg sodium, 52 g carbohydrate |

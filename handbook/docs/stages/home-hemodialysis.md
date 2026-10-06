@@ -8,8 +8,9 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 figures_as_of: 2026-10-06
-sources: [NKF-HHD, NIDDK-HD, Q15HD, MED-ESRD, DG23, CMSPREP, JBDS, NKF-HDaccess, Q20, K22, K17, K26A, A26-6]
+sources: [NKF-HHD, NIDDK-HD, Q15HD, MED-ESRD, DG23, CMSPREP, JBDS, NKF-HDaccess, Q20, K22, K17, K26A, A26-6, AKF-bleed, HC24]
 ---
 
 # Home hemodialysis
@@ -49,7 +50,8 @@ before and after every session, just as in a unit ([JBDS–Renal Association][JB
 
 The same blood tests as in-centre dialysis: calcium and phosphate every 1–3 months, PTH every 3–6
 months ([KDIGO 2017][K17]), haemoglobin and iron about every 3 months ([KDIGO 2026 anemia][K26A]), and
-dialysis dose checks by your home unit ([KDOQI 2015][Q15HD]).
+dialysis dose checks by your home unit. For schedules other than 3 times a week, KDOQI measures the
+dose over a whole week (standard Kt/V, target 2.3, minimum 2.1) ([KDOQI 2015][Q15HD], guideline 3.3).
 
 ## What changes now
 
@@ -57,12 +59,13 @@ dialysis dose checks by your home unit ([KDOQI 2015][Q15HD]).
 fewer blood pressure medicines, feel less "washed out" after dialysis, have more energy for daily
 tasks, and have fewer and shorter hospital stays ([NKF][NKF-HHD]).
 
-**What KDOQI asks your team to tell you.** Longer or more frequent home dialysis can mean more access
-problems, more strain on your care partner, and a faster loss of the urine you still make
-([KDOQI 2015][Q15HD]).
+**What KDOQI asks your team to tell you.** Long overnight sessions on many nights a week can mean
+more access problems, more strain on your care partner, and a faster loss of the urine you still
+make ([KDOQI 2015][Q15HD], guideline 2.4). Short sessions on most days can mean more access
+procedures and low blood pressure during dialysis (guideline 2.2).
 
-**A care partner.** Most programmes ask for a care partner to be with you during each treatment
-([NKF][NKF-HHD]). Both of you are trained.
+**A care partner.** Most programmes ask you to have a care partner, who trains with you
+([NKF][NKF-HHD]). Ask your unit whether your partner must be there for every treatment.
 
 **Diet and fluid.** Ask your dietitian whether your potassium, phosphorus and fluid limits change on
 your new schedule. Protein stays at 1.0–1.2 g/kg.
@@ -117,10 +120,13 @@ team in the morning.
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Chest pain; severe breathlessness; fainting; bleeding from your access that you cannot stop with
-    firm pressure; a low the person cannot treat themselves (give glucagon, then call). If you must
-    leave in an emergency, follow your unit's disconnection training. Full list:
-    [Get help now](../get-help-now.md).
+    Chest pain; severe breathlessness; fainting; bleeding from your access that is heavy or
+    spurting, or has not stopped after 10–15 minutes of firm pressure, or starts again (keep pressing
+    while you call, [AKF][AKF-bleed]); a low the person cannot treat themselves (give glucagon, then
+    call); possible DKA: blood ketones of 3.0 mmol/L or more, or any ketones with vomiting, deep fast
+    breathing or fruity breath; on dialysis these signs count even under 3.0
+    ([2024 consensus][HC24]). If you must leave in an emergency, follow your unit's disconnection
+    training. Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your home unit today"
     No buzz (thrill) in your access; redness or pus at an access or catheter site; a missed session;
@@ -137,11 +143,12 @@ team in the morning.
 ## Sources
 
 - [NKF: home hemodialysis][NKF-HHD]; [NIDDK: hemodialysis][NIDDK-HD].
-- [KDOQI 2015 hemodialysis adequacy guideline][Q15HD].
+- [KDOQI 2015 hemodialysis adequacy guideline][Q15HD]: guidelines 2.2, 2.4, 3.3.
 - [Medicare: kidney failure coverage][MED-ESRD].
 - [DaVita: hemodialysis fluid intake][DG23].
 - [CMS: preparing for emergencies on dialysis][CMSPREP].
 - [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]; [ADA Standards of Care 2026, section 6][A26-6].
-- [NKF: hemodialysis access][NKF-HDaccess].
+- [NKF: hemodialysis access][NKF-HDaccess]; [AKF: fistula and graft bleeds][AKF-bleed].
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria, Table 4 (lower ketone levels with kidney failure).
 - [KDOQI 2020 nutrition guideline][Q20]; [KDIGO 2022 diabetes in CKD guideline][K22].
 - [KDIGO 2017 CKD-MBD guideline update][K17]; [KDIGO 2026 anemia in CKD guideline][K26A].

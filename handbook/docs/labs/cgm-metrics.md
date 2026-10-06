@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K22, TIR19, A26-6, A26-7, MHRA, EXTRANEAL, DG25a, JBDS, DEXCOM-G7, LIBRE-ISI]
+fact_checked: 2026-10-05
+sources: [K22, TIR19, A26-6, A26-7, MHRA, EXTRANEAL, DG25a, JBDS, JBDS22, DEXCOM-G7, LIBRE-ISI]
 ---
 
 # CGM metrics
@@ -18,9 +19,10 @@ sources: [K22, TIR19, A26-6, A26-7, MHRA, EXTRANEAL, DG25a, JBDS, DEXCOM-G7, LIB
 A continuous glucose monitor (CGM) shows how much of the day you spend in range, low and high. With
 advanced kidney disease, when A1c becomes unreliable, these numbers are the main way your team judges
 your glucose ([KDIGO 2022][K22]; [A1c](a1c.md)). **Look at the lows first**: kidney disease makes lows
-more likely and harder to feel ([JBDS–Renal Association][JBDS]). On dialysis, CGM makers say their
-sensors have not been tested in people on dialysis, so check any low or surprising reading with a
-fingerstick meter.
+more likely and harder to feel ([JBDS–Renal Association][JBDS]). On dialysis, the makers of the main
+US sensors say not to use them, because they have not been tested in people on dialysis. Many dialysis
+teams still use CGM, and UK guidance recommends offering it ([JBDS 2022][JBDS22]). If you use one,
+treat it as a guide and check any low or surprising reading with a fingerstick meter.
 
 ## Your numbers
 
@@ -46,11 +48,17 @@ fingerstick meter.
     | Time above 13.9 mmol/L | less than 5 % (1 h 12 min) | less than 10 % (2 h 24 min) |
     | Glucose variability (CV) | 36 % or less | |
 
+Goals from the [time-in-range consensus][TIR19] and [ADA 2026 §6][A26-6] (recommendations 6.3b–6.3c).
 Use 14 days of data with the sensor working at least 70 % of the time ([time-in-range consensus][TIR19];
-[ADA 2026 §6][A26-6], recommendations 6.3b–6.3c). Each 1 % of the day is about 15 minutes. **Every 5 %
+[ADA 2026 §6][A26-6], Table 6.2). Each 1 % of the day is about 15 minutes. **Every 5 %
 more time in range brings real health benefits**, so small steps count ([time-in-range consensus][TIR19]).
 As a guide, 70 % in range goes with an A1c of about 7 %, and 50 % with about 8 %. The "older or
 higher-risk" column often applies with advanced kidney disease; ask your team which column is yours.
+
+**On dialysis, a different range may be used.** UK dialysis guidance (2022) puts avoiding every severe
+low first, then avoiding time below 54 mg/dL (3.0 mmol/L). For people on insulin it proposes a higher
+target range of 108–216 mg/dL (6–12 mmol/L), with more than 70 % of the time in it
+([JBDS 2022][JBDS22]). Your team decides which range your report uses.
 
 ## Reading your AGP report, step by step
 
@@ -74,11 +82,11 @@ Most CGM apps can make an **AGP** (ambulatory glucose profile) report: a one-pag
 
 ## Dialysis days on the report
 
-- **Hemodialysis.** Glucose can swing during a session and most often drops in the last hour. The
-  lowest readings usually come **after** dialysis, and lows in the hours after a session are common and
-  often not felt ([JBDS–Renal Association][JBDS]). On the daily profiles this shows as a dip during or
-  after your session times. UK guidance says glucose should be checked before and after dialysis for
-  people on insulin ([JBDS–Renal Association][JBDS]).
+- **Hemodialysis.** Glucose tends to fall during a session; in one study the lowest point came in the
+  third hour. In a CGM study, 3 in 4 lows happened within 24 hours of a session, and lows after
+  dialysis are often not felt ([JBDS 2022][JBDS22]; [JBDS–Renal Association][JBDS]). On the daily
+  profiles this shows as a dip during or after your session times. UK guidance says glucose should be
+  checked before and after dialysis for people on insulin ([JBDS 2022][JBDS22]).
 - **Peritoneal dialysis.** Glucose in the dialysis fluid is absorbed (often 400 calories a day or
   more) and can raise your glucose ([DaVita][DG25a]). If you
   use **icodextrin (Extraneal)**, some fingerstick meters read falsely **high**, even up to two weeks
@@ -89,20 +97,26 @@ Most CGM apps can make an **AGP** (ambulatory glucose profile) report: a one-pag
 
 ## CGM accuracy on dialysis
 
-- **What the makers say.** Dexcom (G7) and Abbott (FreeStyle Libre 3 Plus and 2 Plus) state that their
-  systems have not been evaluated in people on dialysis, and that readings may be inaccurate
-  ([Dexcom G7 user guide][DEXCOM-G7]; [Abbott safety information][LIBRE-ISI]). Many people on dialysis
-  still use a CGM with their team's agreement; ask yours.
+- **What the makers say.** Dexcom (G7) and Abbott (FreeStyle Libre 3 Plus and 2 Plus) say **not to use**
+  their systems if you are on dialysis, because they have not been evaluated in people on dialysis and
+  readings may be inaccurate ([Dexcom G7 user guide][DEXCOM-G7]; [Abbott safety information][LIBRE-ISI]).
+  UK guidance notes that no CGM is licensed for dialysis and accuracy data are limited, yet recommends
+  offering CGM to people on dialysis, for example when lows keep coming back or are not felt
+  ([JBDS 2022][JBDS22], recommendations 2.8–2.9). Use one on dialysis only with your team's agreement.
 - **The time lag is longer.** CGM measures glucose in the fluid under the skin, which trails blood
   glucose. That lag is longer in kidney failure, so a CGM can be late to show a low
-  ([JBDS–Renal Association][JBDS]). UK guidance suggests starting a new sensor on a non-dialysis day.
+  ([JBDS–Renal Association][JBDS]). The 2016 UK guidance suggested starting a new sensor on a
+  non-dialysis day, when sensors still needed fingerstick calibration.
 - **Use a meter when in doubt.** Both makers say to use a blood glucose meter when the sensor reading
   does not match how you feel ([Dexcom G7 user guide][DEXCOM-G7]; [Abbott safety information][LIBRE-ISI]).
   ADA says CGM accuracy should be confirmed with a meter when readings and the clinical picture do not
   match ([ADA 2026 §7][A26-7]).
-- **Things that can make sensors read falsely high:** hydroxyurea (Dexcom, Medtronic Guardian 4),
-  acetaminophen (paracetamol: at any amount for some sensors, above a set amount for others), and
-  high-dose vitamin C (FreeStyle Libre) ([ADA 2026 §7][A26-7]). Check your own sensor's list and tell your team what you take.
+- **Things that can make sensors read falsely high**, which can hide a low: hydroxyurea (Dexcom,
+  Medtronic Guardian 4); acetaminophen (paracetamol: at any amount for Guardian 4, above 4 g a day for
+  Dexcom); vitamin C above 500–1,000 mg a day, depending on the model (FreeStyle Libre); and mannitol or
+  sorbitol given into a vein or in peritoneal dialysis fluid (Eversense 365) ([ADA 2026 §7][A26-7],
+  Table 7.4; [Abbott safety information][LIBRE-ISI]). Check your own sensor's list and tell your team
+  what you take.
 
 ## What to do
 
@@ -157,8 +171,10 @@ Most CGM apps can make an **AGP** (ambulatory glucose profile) report: a one-pag
 - [ADA Standards of Care 2026, section 6][A26-6] (recommendations 6.3b–6.3c) and [section 7][A26-7]
   (confirming with a meter; interfering substances).
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice points 2.1.3–2.1.6, 2.2.2.
-- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]: glucose around dialysis,
-  CGM lag, sensor start.
+- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS] (2016): CGM lag, sensor start,
+  lows after dialysis.
+- [JBDS 2022 guidance on diabetes and dialysis][JBDS22]: glucose during and after hemodialysis, checks
+  before and after sessions, CGM on dialysis (recommendations 2.8–2.9), dialysis glucose goals.
 - [MHRA: icodextrin and false glucose readings][MHRA]; [Extraneal (icodextrin) prescribing information][EXTRANEAL].
 - [DaVita: peritoneal dialysis diet][DG25a]: calories absorbed from dialysis fluid.
 - [Dexcom G7 user guide][DEXCOM-G7]; [Abbott FreeStyle Libre safety information][LIBRE-ISI].

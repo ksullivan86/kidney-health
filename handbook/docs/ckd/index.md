@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, K20NOM, NIDDK-CKD, NIDDK-CKDwhat, NIDDK-kidneys, NIDDK-DKD, NIDDK-choosing, AK22, NKF-eGFR, NKF-CKDEPI, K26A, K17]
 ---
 

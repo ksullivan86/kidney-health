@@ -47,8 +47,8 @@ Supported: installable on iOS and iPadOS 17 and later; tested on 26 and 27.
 1. Open the app's address in **Chrome**.
 2. Sign in if the app asks you to.
 3. Tap **Install app** on the banner, or open the **⋮** menu and choose **Install app** (on some
-   phones: **Add to Home screen**). In the app, **Profile → Install on your phone** also offers
-   an **Install app** button when Chrome allows it.
+   phones: **Add to Home screen**). In the app, **Settings → This device** (the gear at the top)
+   also offers an **Install app** button when Chrome allows it.
 4. Open the app from its new icon.
 
 Firefox for Android can also add the app to the home screen from its menu.
@@ -75,8 +75,8 @@ you logged is lost: your log lives on the server, not in the app on the device.
   when "Update ready" appears. If the server's administrator has switched the installable app
   off (`PWA_ENABLED=false`), opening the app once removes the old version.
 * **The app does not open without a connection.** Offline use needs HTTPS (see the table above).
-  Open the app once while connected, then check **Profile → Install on your phone**: it says
-  "Offline ready" when the app can open without a connection.
+  Open the app once while connected, then check **Settings → This device**: "Works offline" says
+  "Yes" when the app can open without a connection.
 * **The camera shows a black picture.** Use the photo button instead and take a picture of the
   barcode or label.
 * **"My data is gone."** Check the address: the same app at a different address starts empty.
@@ -84,5 +84,7 @@ you logged is lost: your log lives on the server, not in the app on the device.
 * **The app keeps asking me to sign in.** An installed app has its own sign-in, separate from the
   browser's; sign in once inside the app.
 
-The app shows what it can do on this device under **Profile → Install on your phone** (in a
-later version: **Settings → This device**).
+The app shows what it can do on this device under **Settings → This device** (the gear at the
+top, or **Profile → Open Settings**): installed or in the browser, offline ready, storage used, the
+connection (HTTPS or not) and the app version, with **Clear offline data on this device**, which
+removes the app's offline copy (your log stays on the server).

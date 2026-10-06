@@ -8,8 +8,9 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 figures_as_of: 2026-10-06
-sources: [K20TX, OPTN, NIDDK-Tx, NKF-Tx, MED-ESRD, A26-9, K24]
+sources: [K20TX, OPTN, NIDDK-Tx, NKF-Tx, MED-ESRD, A26-9, K24, HC24]
 ---
 
 # Before a kidney transplant
@@ -43,9 +44,9 @@ when you are on the list with an eGFR of 20 or less, or from the day you started
 
 | Item | What it means |
 |---|---|
-| Coverage for the transplant | can begin the month you are admitted for the transplant (or 2 months before, if the surgery is delayed) |
+| Coverage for the transplant | can begin the month you are admitted to a Medicare-certified hospital for the transplant (or for tests you need before it), if the transplant happens that month or within the next 2 months; if it is delayed longer, coverage can begin 2 months before the month of the transplant |
 | After the transplant | Medicare that you have only because of kidney failure ends **36 months** after a successful transplant |
-| Immunosuppressive drug benefit (Part B-ID) | helps pay for anti-rejection medicines after that; **$121.60 a month** (or more with higher income) and a $283 yearly deductible in 2026 |
+| Immunosuppressive drug benefit (Part B-ID) | helps pay for anti-rejection medicines after that, if you had Medicare for kidney failure at the time of the transplant and have no other cover for these medicines; **$121.60 a month** (or more with higher income) and a $283 yearly deductible in 2026 |
 
 Source: [Medicare: kidney failure coverage][MED-ESRD]. Amounts change every year; see
 [Costs and benefits](../living/costs-and-benefits.md).
@@ -78,8 +79,8 @@ because of obesity ([KDIGO 2020 transplant][K20TX], 7.1.1).
 - [ ] See a dentist and get any problems treated: KDIGO suggests a dental check before a transplant
       ([KDIGO 2020 transplant][K20TX], 10.4.1).
 - [ ] Bring your vaccines up to date. Live vaccines must be given at least 4 weeks before a transplant
-      ([KDIGO 2020 transplant][K20TX], 10.7).
-- [ ] Keep up routine cancer screening for your age ([KDIGO 2020 transplant][K20TX]).
+      ([KDIGO 2020 transplant][K20TX], 10.7.2–10.7.2.1).
+- [ ] Keep up routine cancer screening for your age ([KDIGO 2020 transplant][K20TX], 11.1.1).
 - [ ] Do not smoke or use other tobacco products, before or after the transplant
       ([KDIGO 2020 transplant][K20TX], 6.2).
 - [ ] Keep active and keep your glucose in range.
@@ -115,7 +116,9 @@ before you leave and take fast sugar with you. Tell the team when you last ate a
 
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain; severe breathlessness; fainting; a low the person cannot treat themselves (give
-    glucagon, then call). Full list: [Get help now](../get-help-now.md).
+    glucagon, then call); possible DKA: blood ketones of 3.0 mmol/L or more, or any ketones with
+    vomiting, deep fast breathing or fruity breath. On dialysis these signs count even under 3.0
+    ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your transplant centre"
     If you are admitted to hospital, get a serious infection, or change your phone number or address
@@ -132,9 +135,10 @@ before you leave and take fast sugar with you. Tell the team when you last ate a
 ## Sources
 
 - [KDIGO 2020 transplant candidate guideline][K20TX]: recommendations 1.1, 1.1.1, 1.1.2, 1.2, 1.3.1,
-  1.4, 1.4.1, 5.1, 6.2, 7.1.1, 8.1.1, 10.4.1, 10.7.
+  1.4, 1.4.1, 5.1, 6.2, 7.1.1, 8.1.1, 10.4.1, 10.7.2–10.7.2.1, 11.1.1.
 - [OPTN policies][OPTN]: Policy 8.4.A (waiting time).
 - [NIDDK: kidney transplant][NIDDK-Tx]; [NKF: kidney transplant][NKF-Tx].
 - [Medicare: kidney failure coverage][MED-ESRD]: 2026 amounts.
 - [ADA Standards of Care 2026, section 9][A26-9]: pancreas transplantation.
 - [KDIGO 2024 CKD guideline][K24]: practice point 5.4.3.
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria, Table 4 (lower ketone levels with kidney failure).

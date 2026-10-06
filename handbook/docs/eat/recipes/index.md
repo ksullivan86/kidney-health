@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [FDC, DG47, DG5, DG46b, DG37a, DG34, DG20, DG18, FSTEMPS, AKFkitchen]
 ---
 
@@ -70,11 +71,11 @@ Where the lines come from:
 
 - **Season with acid, heat and herbs.** Lemon or lime juice, vinegar, black pepper, garlic, onion,
   ginger, paprika, oregano, dill and thyme. Use garlic *powder*, not garlic *salt*.
-- **No salt substitutes.** "NoSalt", "Lite Salt" and similar products are potassium chloride
+- **No salt substitutes.** "NoSalt", "Lite Salt" and similar products contain potassium chloride
   ([Sodium](../sodium.md)).
 - **Skip baking powder and mixes.** Most baking powders and pancake or biscuit mixes contain a
-  phosphate: USDA lists 2,000–10,000 mg of phosphorus per 100 g of baking powder ([FDC][FDC];
-  [review of phosphate additives][DG18]). Crepes and yeast doughs do not need it
+  phosphate: USDA lists 2,000–10,000 mg of phosphorus per 100 g of baking powder, and the low-sodium
+  kind also has about 10,000 mg of potassium per 100 g ([FDC][FDC]; [review of phosphate additives][DG18]). Crepes and yeast doughs do not need it
   ([Phosphate additives](../phosphate-additives.md)).
 - **Cook grains and pasta without salt,** and rinse canned vegetables and beans, which removes some of
   the sodium ([FDA][DG34]).

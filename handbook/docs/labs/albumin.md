@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [Q20, MEDLINE-ALB, ISRNM08, ALB18, K22, MEDLINE-CA, NIDDK-tests, NOTE05]
+fact_checked: 2026-10-05
+sources: [Q20, MEDLINE-ALB, ISRNM08, ALB18, K22, MEDLINE-CA, NIDDK-tests, CFR494, CDC-SICK, NOTE05]
 ---
 
 # Serum albumin
@@ -42,21 +43,23 @@ Range from [MedlinePlus][MEDLINE-ALB]. The 3.8 g/dL cut-off is one of the criter
 protein-energy wasting, a kind of malnutrition seen in kidney disease ([ISRNM 2008][ISRNM08]).
 To convert, multiply g/dL by 10 to get g/L.
 
-**Lab methods differ.** Labs measure albumin in different ways. In one study of 521 people on
-hemodialysis, the bromocresol purple method read on average 34.5 g/L and the bromocresol green method
-40.3 g/L ([de Roij van Zuijdewijn 2018][ALB18]). So the same blood can look "low" at one lab and
-"normal" at another. Ask which method your lab uses, and compare results from the same lab.
+**Lab methods differ.** Labs measure albumin in different ways. On hemodialysis the bromocresol green
+method tends to read high and the bromocresol purple method low. In a Dutch study of about 500 people on
+hemodialysis, centres using the purple method reported an average albumin of 34.5 g/L and centres using
+the green method 40.3 g/L ([de Roij van Zuijdewijn 2018][ALB18]). So a result that counts as "low" at
+one lab may count as "normal" at another. Ask which method your lab uses, and compare results from the
+same lab.
 
-**How often.** Ask your team how often you need it. On dialysis, blood for nutrition tests is taken
-before the session ([KDOQI 2020][Q20]).
+**How often.** US dialysis units must measure albumin and weight at least once a month
+([42 CFR 494.90][CFR494]). Before dialysis, ask your team how often you need it.
 
 ## What lowers albumin
 
 | Cause | What it means for you |
 |---|---|
 | Not eating enough protein or calories | A dietitian can help; see [Eating enough](../eat/eating-enough.md) and [Protein](../eat/protein.md) |
-| Infection or inflammation | The liver makes less albumin while you are ill; it often recovers as you get better ([KDOQI 2020][Q20], statement 1.2.1) |
-| Protein lost in the urine (UACR in the A3 range) or into peritoneal dialysis fluid | Low albumin is common with heavy urine protein and on peritoneal dialysis ([KDIGO 2022][K22]) |
+| Infection or inflammation | Albumin falls with illness and inflammation whatever you eat, so it is best rechecked when you are well ([KDOQI 2020][Q20], statement 1.2.1 and its rationale) |
+| Protein lost in the urine (UACR in the A3 range) or into peritoneal dialysis fluid | Low albumin is common with heavy urine protein and on peritoneal dialysis ([KDIGO 2022][K22]; [KDOQI 2020][Q20]) |
 | Liver disease, or gut conditions that block absorption | ([MedlinePlus][MEDLINE-ALB]) |
 
 A result can read **high** with dehydration, or if the tourniquet was left on too long during the blood
@@ -118,10 +121,14 @@ statement 1.2.1):
 
 A low albumin is not an emergency on its own.
 
+!!! danger "Call 911 (or your local emergency number)"
+    You cannot keep liquids down for more than 4 hours, or you have ketones with vomiting
+    ([CDC][CDC-SICK]; [Sick days](../t1d/sick-days.md)); or you are very short of breath or cannot lie
+    flat. See [Get help now](../get-help-now.md).
+
 !!! warning "Call your care team today"
-    You cannot eat or drink for a day or more, you have vomiting or diarrhoea, or you have new swelling
-    or sudden weight gain. Start your [sick-day plan](../t1d/sick-days.md). Breathlessness or being
-    unable to lie flat: see [Get help now](../get-help-now.md).
+    You are eating much less than usual, you have vomiting or diarrhoea (check your ketones and start
+    your [sick-day plan](../t1d/sick-days.md)), or you have new swelling or sudden weight gain.
 
 ## Related pages
 
@@ -135,6 +142,8 @@ A low albumin is not an emergency on its own.
 - [MedlinePlus: albumin blood test][MEDLINE-ALB]; [MedlinePlus: calcium blood test][MEDLINE-CA].
 - [ISRNM 2008 protein-energy wasting criteria][ISRNM08].
 - [de Roij van Zuijdewijn 2018][ALB18]: albumin methods on hemodialysis.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly albumin and weight.
+- [CDC: managing sick days][CDC-SICK]: when vomiting needs emergency care.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: low albumin with urine protein and peritoneal dialysis;
   bias in glycated albumin and fructosamine.
 - [NIDDK: CKD tests and diagnosis][NIDDK-tests]: urine albumin.

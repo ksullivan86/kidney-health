@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
-sources: [DG17, DG39, FDC, DG46a, DG46b, DG5, DG20, DG34, Q20, DG25a, DG22]
+fact_checked: 2026-10-05
+sources: [DG17, DG39, FDC, DG46a, DG46b, DG5, DG20, DG34, Q20, DG25a, DG22, SALTSUB-LABELS, DG35b, KER, PROGRAF]
 ---
 
 # Food lists
@@ -120,7 +121,7 @@ label, the label wins.
     | Fruit | Peaches, canned in juice | ½ cup | 160 | 21 | 5 | 14 | 0.8 | K; fine as a hypo fruit |
     | Fruit | Peach, fresh, small | 1 | 247 | 26 | 0 | 12 | 1.2 | K; a medium is ~285 |
     | Fruit | Pear, fresh, small | 1 | 172 | 18 | 2 | 22 | 0.5 | K |
-    | Fruit | Grapefruit | ½ | 166 | 22 | 0 | 13 | 0.9 | K; drug interactions |
+    | Fruit | Grapefruit | ½ | 166 | 22 | 0 | 13 | 0.9 | K; avoid with finerenone or tacrolimus (see below) |
     | Fruit | Kiwi | 1 | 215 | 24 | 2 | 10 | 0.8 | K; two = high |
     | Fruit | Cantaloupe / honeydew | ½ cup diced | 194–208 | 9–12 | 12–15 | 6–8 | 0.5–0.7 | K; a full cup is 388–417 |
     | Fruit | Mandarin oranges, canned in juice | ½ cup | 166 | 12 | 6 | 12 | 0.8 | K; the one "orange" that fits |
@@ -133,7 +134,7 @@ label, the label wins.
     | Vegetables | Green peas, cooked | ½ cup | 217 | 94 | 2 | 12 | 4.3 | K, P, carb |
     | Vegetables | Zucchini, cooked | ½ cup | 238 | 33 | 3 | 2 | 1.0 | K (shrinks when cooked) |
     | Vegetables | Mushrooms, cooked | ½ cup | **278** | 68 | 2 | 4 | 1.7 | eat raw (111) or ¼ cup |
-    | Vegetables | Tomato, fresh | 2 thin slices | 95 | 10 | 2 | 2 | 0.4 | a whole tomato is 292 |
+    | Vegetables | Tomato, fresh | 2 medium slices (¼ in) | 95 | 10 | 2 | 2 | 0.4 | a whole tomato is 292 |
     | Vegetables | Potato, boiled, unleached | ½ cup | **256** | 31 | 4 | 16 | 1.3 | leached/double-boiled ≈ 130 |
     | Grains | Brown rice, cooked | ½ cup | 87 | 104 | 4 | 26 | 2.8 | P (plant, poorly absorbed) |
     | Grains | Whole-wheat bread | 1 slice | 81 | 68 | 146 | 14 | 4.0 | two slices = medium P |
@@ -225,6 +226,10 @@ label, the label wins.
     | High Na | Frozen pot pie or entrée | 1 | — | — | **1,390** | 70 | 26 |
     | Sugar (T1D) | Fruit punch, sweet tea, energy drinks, sports drinks | 12 oz | 8–115 | 0–60 | 11–270 | 26–44 | 0–1 |
 
+Grapefruit and grapefruit juice change the blood level of some medicines: the labels for finerenone
+(Kerendia) and tacrolimus (Prograf) say to avoid them ([Kerendia label][KER]; [Prograf label][PROGRAF]).
+Ask your pharmacist about your own medicines.
+
 !!! note "On dialysis"
     On hemodialysis the high-potassium list stays off (2,000–3,000 mg a day); on peritoneal dialysis
     potassium is often more liberal and your dietitian may allow some foods back; on either, protein
@@ -254,5 +259,8 @@ label, the label wins.
 - [NKF: potassium][DG5]; [NKF: phosphorus][DG20]; [NKF: 40 low-potassium fruits and vegetables][DG22]; [NKF: star fruit][DG17].
 - [FDA: sodium in your diet][DG34].
 - [de Oliveira 2015][DG39]: star fruit toxicity.
+- [Kerendia (finerenone) label][KER] and [Prograf (tacrolimus) label][PROGRAF]: avoid grapefruit.
 - [KDOQI 2020 nutrition guideline][Q20]; [DaVita: peritoneal dialysis diet][DG25a].
-- [USDA FoodData Central][FDC]: every value (FDC IDs per row in `docs/research/food-lists.md`, Appendix 1).
+- [USDA FoodData Central][FDC]: every value (FDC IDs per row in `docs/research/food-lists.md`, Appendix 1),
+  except the salt-substitute row, which is from the product labels ([NoSalt and Nu-Salt labels][SALTSUB-LABELS];
+  [Morton Lite Salt label][DG35b]).

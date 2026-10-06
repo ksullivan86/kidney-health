@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [FDC, DG47, DG5, DG46b, DG37a]
 ---
 
@@ -15,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a]
 
 # Peach and blueberry crisp
 
-Fruit crisps are often made with oats and nuts, which add phosphorus and potassium. This topping is just flour, brown sugar, butter and cinnamon. Canned peaches in juice are lower in potassium than fresh peaches per serving, and draining them removes some more.
+Fruit crisps are often made with oats and nuts, which add phosphorus and potassium. This topping is just flour, brown sugar, butter and cinnamon. Half a cup of canned peaches in juice has about 160 mg potassium, against about 285 mg in a medium fresh peach, and draining off the juice removes some more.
 
 **Serves 6** · 45 minutes · Lower potassium · Lower phosphorus · Vegetarian · Freezes well
 

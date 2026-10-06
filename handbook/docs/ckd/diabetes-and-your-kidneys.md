@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K22, K24, A26-11, A26-6, TIR19, KER, F1, HC24, NIDDK-DKD]
+fact_checked: 2026-10-05
+sources: [K22, K24, A26-11, A26-6, TIR19, KER, F1, HC24, NIDDK-DKD, MHRA-DAPA]
 ---
 
 # Type 1 diabetes and your kidneys
@@ -35,9 +36,9 @@ an ACE inhibitor or ARB when albumin is present, not smoking and staying active.
     | What helps | Typical goal | Source |
     |---|---|---|
     | Yearly kidney tests | UACR and eGFR every year, starting 5 years after diagnosis | [ADA 2026 §11][A26-11], rec. 11.1a |
-    | A1c | your own goal, somewhere from under 6.5 % to under 8.0 % | [KDIGO 2022][K22], rec. 2.2.1 |
-    | CGM time in range (70–180 mg/dL) | more than 70 % of the day, with less than 4 % under 70 mg/dL | [ADA 2026 §6][A26-6]; [time in range consensus][TIR19] |
-    | Blood pressure | KDIGO: top number under 120 if you tolerate it. ADA: under 130/80 if safe, with under 120 encouraged | [KDIGO 2024][K24], rec. 3.4.1; [ADA 2026 §11][A26-11], rec. 11.5 |
+    | A1c (not on dialysis) | your own goal, somewhere from under 6.5 % to under 8.0 % | [KDIGO 2022][K22], rec. 2.2.1 |
+    | CGM time in range (70–180 mg/dL) | more than 70 % of the day, with less than 4 % under 70 mg/dL. If lows are a risk for you, as they often are with kidney disease, your team may set more than 50 % with less than 1 % under 70 mg/dL | [ADA 2026 §6][A26-6]; [time in range consensus][TIR19] |
+    | Blood pressure | KDIGO: top number under 120 if you tolerate it, measured the standard way at the clinic. ADA: under 130/80 if safe, with under 120 encouraged | [KDIGO 2024][K24], rec. 3.4.1; [ADA 2026 §11][A26-11], rec. 11.5 |
     | Albumin in the urine | an ACE inhibitor or ARB once UACR is 30 mg/g or more | [KDIGO 2024][K24], rec. 3.6.3 |
     | Sodium | under 2,000 mg a day | [KDIGO 2022][K22], rec. 3.1.2 |
     | Protein (not on dialysis) | about 0.8 g per kg of body weight a day | [KDIGO 2022][K22], rec. 3.1.1 |
@@ -49,9 +50,9 @@ an ACE inhibitor or ARB when albumin is present, not smoking and staying active.
     | What helps | Typical goal | Source |
     |---|---|---|
     | Yearly kidney tests | UACR and eGFR every year, starting 5 years after diagnosis | [ADA 2026 §11][A26-11], rec. 11.1a |
-    | A1c | your own goal, somewhere from under 48 to under 64 mmol/mol | [KDIGO 2022][K22], rec. 2.2.1 |
-    | CGM time in range (3.9–10.0 mmol/L) | more than 70 % of the day, with less than 4 % under 3.9 mmol/L | [ADA 2026 §6][A26-6]; [time in range consensus][TIR19] |
-    | Blood pressure | KDIGO: top number under 120 if you tolerate it. ADA: under 130/80 if safe, with under 120 encouraged | [KDIGO 2024][K24], rec. 3.4.1; [ADA 2026 §11][A26-11], rec. 11.5 |
+    | A1c (not on dialysis) | your own goal, somewhere from under 48 to under 64 mmol/mol | [KDIGO 2022][K22], rec. 2.2.1 |
+    | CGM time in range (3.9–10.0 mmol/L) | more than 70 % of the day, with less than 4 % under 3.9 mmol/L. If lows are a risk for you, as they often are with kidney disease, your team may set more than 50 % with less than 1 % under 3.9 mmol/L | [ADA 2026 §6][A26-6]; [time in range consensus][TIR19] |
+    | Blood pressure | KDIGO: top number under 120 if you tolerate it, measured the standard way at the clinic. ADA: under 130/80 if safe, with under 120 encouraged | [KDIGO 2024][K24], rec. 3.4.1; [ADA 2026 §11][A26-11], rec. 11.5 |
     | Albumin in the urine | an ACE inhibitor or ARB once UACR is 3 mg/mmol or more | [KDIGO 2024][K24], rec. 3.6.3 |
     | Sodium | under 2 g a day (about 5 g of salt) | [KDIGO 2022][K22], rec. 3.1.2 |
     | Protein (not on dialysis) | about 0.8 g per kg of body weight a day | [KDIGO 2022][K22], rec. 3.1.1 |
@@ -94,8 +95,10 @@ albumin-to-creatinine ratio (UACR)" in adults with CKD and type 1 diabetes ([Ker
 
 **SGLT2 inhibitors** (for example empagliflozin or dapagliflozin) protect the kidneys in type 2
 diabetes, but their safety and benefit **have not been established in type 1 diabetes**, and the FDA
-has not approved them for it. In Europe, the maker of dapagliflozin withdrew its type 1 diabetes
-approval in 2021 because of concerns about diabetic ketoacidosis (DKA) ([KDIGO 2022][K22], chapter 1).
+has not approved them for it ([KDIGO 2022][K22], chapter 1). In Europe, dapagliflozin was approved
+for some adults with type 1 diabetes in 2019, and its maker withdrew that use in 2021. The UK
+regulator said this was not because of a new safety problem, but diabetic ketoacidosis (DKA) was
+common in the type 1 diabetes trials, affecting up to 1 in 10 people ([MHRA][MHRA-DAPA]).
 KDIGO still lists people with type 1 diabetes as not well studied ([KDIGO 2024][K24], research
 recommendations). In trials in type 1 diabetes, a fasting ketone level of 0.8 mmol/L or more meant a
 3.2 times higher chance of DKA in the next month ([ADA 2026 §6][A26-6]). DKA can happen even when
@@ -105,9 +108,9 @@ whatever your glucose. See [Kidney-protecting medicines](../t1d/kidney-protectin
 [Sick days](../t1d/sick-days.md).
 
 **Statins** (cholesterol medicines) protect the heart, the biggest risk in CKD. KDIGO recommends one
-for adults aged 50 or over with an eGFR under 60 who are not on dialysis, and suggests one for adults
-aged 18–49 with diabetes and CKD who are not on dialysis ([KDIGO 2024][K24], recommendations 3.15.1.1
-and 3.15.1.3).
+for adults aged 50 or over with CKD who are not on dialysis, whatever their eGFR, and suggests one
+for adults aged 18–49 with diabetes and CKD who are not on dialysis
+([KDIGO 2024][K24], recommendations 3.15.1.1–3.15.1.3).
 
 ## When to suspect another cause
 
@@ -177,11 +180,12 @@ when the cause is unclear, or when albumin rises or eGFR falls quickly (recommen
 
 - [KDIGO 2022 diabetes in CKD guideline][K22]: recommendations 1.2.1, 1.5.1, 2.2.1, 3.1.1, 3.1.2,
   3.2.1; practice point 2.1.2; chapter 1 (SGLT2 inhibitors in type 1 diabetes).
-- [KDIGO 2024 CKD guideline][K24]: recommendations 3.4.1, 3.6.3, 3.15.1.1, 3.15.1.3; practice points
+- [KDIGO 2024 CKD guideline][K24]: recommendations 3.4.1, 3.6.3, 3.15.1.1–3.15.1.3; practice points
   3.6.2–3.6.4, 3.6.7, 4.1.4; research recommendations (SGLT2 inhibitors).
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendations 11.1a, 11.5, 11.12a–b; signs of
   other causes. [Section 6][A26-6]: CGM goals; SGLT2 inhibitors and DKA in type 1 diabetes.
-- [International consensus on time in range][TIR19].
+- [International consensus on time in range][TIR19]: standard and older or high-risk targets.
+- [MHRA: dapagliflozin no longer authorised for type 1 diabetes][MHRA-DAPA].
 - [Kerendia (finerenone) prescribing information, revised 9/2026][KER]; [FINE-ONE trial][F1].
 - [2024 hyperglycemic crises consensus][HC24]: DKA definition.
 - [NIDDK: diabetic kidney disease][NIDDK-DKD].

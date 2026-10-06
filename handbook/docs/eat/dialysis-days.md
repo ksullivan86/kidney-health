@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [DG53, JBDS, K24, DG23, DG28a, DG24b, FDC, AKF-bleed]
+fact_checked: 2026-10-05
+sources: [DG53, JBDS, JBDS22, K24, DG23, DG28a, DG24b, FDC, AKF-bleed, HC24]
 ---
 
 # Dialysis days
@@ -21,8 +22,8 @@ On hemodialysis, potassium, sodium and fluid build up between sessions, so they 
 whole gap, not just one day. The long weekend gap (Friday to Monday on a Monday–Wednesday–Friday
 schedule) is the riskiest time: deaths on the day after it were 22.1 vs 18.0 per 100 patient-years,
 and hospital stays for heart-rhythm problems roughly doubled ([Foley 2011][DG53]). Glucose often drops
-during and after a session, so check before and after, carry glucose tablets, and follow the insulin
-plan your team gives you for dialysis days ([JBDS][JBDS]).
+during a session, and most lows come within 24 hours of one, so check before and after, carry glucose
+tablets, and follow the insulin plan your team gives you for dialysis days ([JBDS 2022][JBDS22]).
 
 ## Your numbers
 
@@ -33,7 +34,7 @@ plan your team gives you for dialysis days ([JBDS][JBDS]).
 | Allowance between sessions | your per-day target × the number of days since the last session: with 2,500 mg potassium a day, the app compares a 3-day weekend gap with 7,500 mg. A low day still does not "bank" room for a high day, because potassium acts within hours ([KDIGO 2024][K24]) |
 | Fluid | about 1,000 mL a day plus your urine output ([DaVita][DG23]) |
 | Weight gain between sessions | above 3.5 % of body weight is linked to death ([Cabrera 2015][DG28a]); about 2.5 kg (5.5 lb) for 70 kg |
-| When glucose drops | most often in the last hour of a session; the lowest readings usually come in the hours after it ([JBDS][JBDS]) |
+| When glucose drops | it tends to fall during a session, lowest around the third hour; 3 in 4 lows happen within 24 hours of a session ([JBDS 2022][JBDS22]) |
 
 The app adds up potassium, sodium and fluid **since your last session** when you enter your dialysis
 days in the profile, and compares them with your per-day target × days
@@ -46,8 +47,8 @@ days in the profile, and compares them with your per-day target × days
 - **The dialysis fluid matters.** UK guidance asks units to use dialysis fluid that contains glucose for
   everyone with diabetes on glucose-lowering treatment ([JBDS][JBDS]). Ask your unit what yours contains.
 - **Lows are common and easy to miss.** In kidney failure, lows happen about twice as often as with
-  normal kidney function, usually in the hours after dialysis, and many people do not feel the warning
-  signs ([JBDS][JBDS]). A CGM alarm helps; confirm a CGM low with a fingerstick if your team asks you to.
+  normal kidney function, most within 24 hours of a session, and many people do not feel the warning
+  signs ([JBDS][JBDS]; [JBDS 2022][JBDS22]). A CGM alarm helps; confirm a CGM low with a fingerstick if your team asks you to.
 - **Your team adjusts insulin for dialysis days.** Ask them to write the plan down. Never change a dose
   on your own.
 
@@ -59,8 +60,8 @@ days in the profile, and compares them with your per-day target × days
 - [ ] Eat your usual meal at home if your unit does not allow food during the session.
 - [ ] Ask your unit about a carbohydrate snack. UK guidance suggests units offer 20–30 g of
       carbohydrate at the start if glucose before dialysis is under 126 mg/dL (7 mmol/L), and 10–20 g
-      of a slower carbohydrate, such as a slice of bread, in the second hour ([JBDS][JBDS]). Your unit's
-      policy wins.
+      of a slower (low-GI) carbohydrate in the second hour, to stop glucose falling further in the third
+      hour ([JBDS 2022][JBDS22]). Your unit's policy wins.
 
 **During the session**
 
@@ -73,7 +74,7 @@ days in the profile, and compares them with your per-day target × days
 **After the session**
 
 - [ ] Check your glucose before you drive or travel home, and again before bed.
-- [ ] Eat your next meal on time; the hours after dialysis are when lows are most likely.
+- [ ] Eat your next meal on time; the 24 hours after a session are when lows are most likely.
 - [ ] Take phosphate binders with meals and snacks the way your team prescribed.
 
 **Between sessions**
@@ -122,8 +123,12 @@ team's limit, Saturday and Sunday are the days to cut back on fluid and salt.
 ## Get help now if…
 
 - You miss a session, or gain more weight than your alarm number: call your unit today.
-- Your access keeps bleeding after you get home: press firmly on it, and if it has not stopped after
-  10–15 minutes, call 911 ([AKF][AKF-bleed]).
+- Your access bleeds after you get home: press firmly on gauze with two fingers. Call 911 if the bleeding
+  is heavy or spurting, has not stopped after 10–15 minutes of firm pressure, or starts again
+  ([AKF][AKF-bleed]).
+- Blood ketones of 3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity
+  breath: call 911. With kidney failure these signs count even when ketones are under 3.0
+  ([2024 consensus][HC24]).
 - Chest pain, severe breathlessness, fainting, a very slow or irregular pulse, or a low you cannot treat
   yourself: call 911 (or your local emergency number). See [Get help now](../get-help-now.md).
 
@@ -131,7 +136,9 @@ team's limit, Saturday and Sunday are the days to cut back on fluid and salt.
 
 - [Foley 2011][DG53]: the long gap between sessions.
 - [Cabrera 2015][DG28a]: weight gain between sessions.
-- [JBDS–Renal Association guidance][JBDS]: glucose on dialysis days, when lows happen, glucose in the dialysis fluid, snacks, meals during dialysis.
+- [JBDS–Renal Association guidance][JBDS]: lows twice as common, glucose in the dialysis fluid, meals during dialysis.
+- [JBDS 2022 guidance][JBDS22]: glucose falls during a session (lowest around the third hour), 75 % of lows within 24 hours, snacks at the start and in the second hour.
+- [2024 hyperglycaemic crises consensus][HC24]: DKA signs, and lower ketone levels in DKA with kidney failure.
 - [DaVita: hemodialysis fluid intake][DG23]: 1,000 mL plus urine; 1 L of fluid is about 1 kg.
 - [ADA Consumer Guide: Dex4 tablets][DG24b].
 - [AKF: fistula and graft bleeds][AKF-bleed].

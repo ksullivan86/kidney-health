@@ -22,6 +22,8 @@
 <link rel="stylesheet" href="css/plan.css">
 <link rel="stylesheet" href="css/trends.css">
 <link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/sheets.css">
 <link rel="stylesheet" href="css/pwa.css">
 <link rel="stylesheet" href="css/touch.css">
@@ -41,7 +43,7 @@
       <span class="brand-pill" id="brand-pill" hidden>Preview</span>
     </div>
 
-    <nav class="tabs" aria-label="Views">
+    <nav class="tabs" aria-label="Views" data-signed-in hidden>
       <div role="tablist" class="tablist">
         <button role="tab" class="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/></svg>
@@ -70,8 +72,15 @@
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
     </button>
+    <button id="settings-open" class="icon-btn" type="button" aria-label="Settings" title="Settings" data-signed-in hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.6a7.6 7.6 0 0 0 0-3.2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-2.7-1.6L14 2.3h-4l-.3 2.5a7.4 7.4 0 0 0-2.7 1.6l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3.2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 2.7 1.6l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 2.7-1.6l2.4 1 2-3.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>
   </div>
 </header>
+
+<div class="nologin-banner" id="nologin-banner" role="note" hidden>
+  <p><strong>No sign-in.</strong> Anyone who can open this page can see and change this data. The server runs with AUTH_MODE=none; your admin can turn sign-in on (docs/accounts.md).</p>
+</div>
 
 <div class="preview-banner" id="preview-banner" role="note" aria-label="About this preview" hidden>
   <p>Preview with sample data. Nothing is saved: reloading starts over. To try the hemodialysis features, set Dialysis to Hemodialysis in Profile, save, then use the suggested targets it offers.</p>
@@ -82,8 +91,159 @@
 
 <main id="main" class="main">
 
+  <!-- ===================== SIGN-IN, FIRST-RUN SETUP, INVITE, RESET, NEW PASSWORD (js/views/auth.js) =====================
+       Hash routes #/login, #/setup, #/invite/<token>, #/reset/<token> (tokens travel only in the URL fragment). -->
+  <section id="view-auth" class="auth-view" aria-labelledby="auth-title" hidden>
+    <div class="auth-card card">
+      <div class="auth-head">
+        <svg class="auth-logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <circle cx="16" cy="16" r="15" fill="var(--ok)"/>
+          <path d="M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z" fill="#fff"/>
+        </svg>
+        <div>
+          <h1 id="auth-title" class="auth-title" tabindex="-1">Sign in</h1>
+          <p class="auth-sub" id="auth-instance">Kidney Health</p>
+        </div>
+      </div>
+
+      <div class="auth-note level-over" id="auth-https" role="note" hidden>
+        <p><strong>HTTPS required.</strong> This server has more than one account, so signing in over plain HTTP is turned off: anyone on the network could read passwords. Open the app's https:// address instead, or ask your admin (see docs/https.md).</p>
+      </div>
+      <div class="auth-note level-caution" id="auth-insecure" role="note" hidden>
+        <p><strong>This connection is not encrypted (plain HTTP).</strong> Use it only on a network you trust. Inviting other people needs HTTPS; your admin can set it up with docs/https.md.</p>
+      </div>
+      <div class="auth-note info" id="auth-notice" role="status" hidden></div>
+      <div class="auth-error" id="auth-error" role="alert" aria-live="assertive"></div>
+
+      <form id="form-login" class="auth-form" data-screen="login" novalidate hidden>
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64">
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <div class="pw-wrap">
+            <input id="login-password" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+            <button class="pw-toggle" type="button" aria-controls="login-password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="login-submit">Sign in</button>
+        <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
+        <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
+      </form>
+
+      <form id="form-setup" class="auth-form" data-screen="setup" novalidate hidden>
+        <p class="auth-intro">Welcome. Create the first account on this server: it becomes the <b>admin</b>, and any data already on the server becomes yours.</p>
+        <div class="field">
+          <label for="setup-code">Setup code</label>
+          <input id="setup-code" name="code" type="text" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" required maxlength="64" placeholder="XXXX-XXXX-XXXX-XXXX" aria-describedby="setup-code-hint" class="code-input">
+          <span class="hint" id="setup-code-hint">Printed in the server's log on its first start: look for the line with FIRST-RUN SETUP (for example <code>podman logs kidney-health | grep FIRST-RUN</code>). It is valid for 60 minutes; restarting the server prints a new one.</span>
+        </div>
+        <div class="setup-local">
+        <div class="field">
+          <label for="setup-username">Username</label>
+          <input id="setup-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64" aria-describedby="setup-username-hint">
+          <span class="hint" id="setup-username-hint">3 to 64 characters: letters, digits and . _ @ + -</span>
+        </div>
+        <div class="field">
+          <label for="setup-display">Your name <span class="muted small">(optional)</span></label>
+          <input id="setup-display" name="display_name" type="text" autocomplete="nickname" maxlength="80" placeholder="Shown in the app, e.g. Sam">
+        </div>
+        <div class="field">
+          <label for="setup-password">Password</label>
+          <div class="pw-wrap">
+            <input id="setup-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="setup-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="setup-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="setup-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        </div>
+        <p class="hint setup-proxy" hidden>Your sign-in proxy tells the app who you are, so no password is needed here.</p>
+        <label class="check setup-off" for="setup-off">
+          <input type="checkbox" id="setup-off" name="off_enabled">
+          <span class="check-text">Look up barcodes with Open Food Facts
+            <span class="hint">Off unless you tick it. When on, a scanned barcode that is not in this server's food list is looked up at world.openfoodfacts.org; only the barcode number is sent. You can change this later in Settings.</span>
+          </span>
+        </label>
+        <button class="btn primary auth-submit" type="submit" id="setup-submit">Create admin account</button>
+      </form>
+
+      <form id="form-register" class="auth-form" data-screen="invite" novalidate hidden>
+        <p class="auth-intro" id="register-intro">You have been invited. Choose a username and a password for your account.</p>
+        <div class="field">
+          <label for="reg-username">Username</label>
+          <input id="reg-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64" aria-describedby="reg-username-hint">
+          <span class="hint" id="reg-username-hint">3 to 64 characters: letters, digits and . _ @ + -</span>
+        </div>
+        <div class="field">
+          <label for="reg-display">Your name <span class="muted small">(optional)</span></label>
+          <input id="reg-display" name="display_name" type="text" autocomplete="nickname" maxlength="80" placeholder="Shown in the app, e.g. Sam">
+        </div>
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <div class="pw-wrap">
+            <input id="reg-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="reg-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="reg-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="reg-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="reg-submit">Create account</button>
+        <p class="hint auth-help">The link works once. If it has expired, ask the person who sent it for a new one.</p>
+      </form>
+
+      <form id="form-reset" class="auth-form" data-screen="reset" novalidate hidden>
+        <p class="auth-intro">Choose a password for your account. Every other device signed in to it is signed out.</p>
+        <div class="field">
+          <label for="reset-password">New password</label>
+          <div class="pw-wrap">
+            <input id="reset-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="reset-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="reset-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="reset-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="reset-submit">Save password</button>
+        <p class="hint auth-help">The link works once and expires. If it no longer works, ask your admin for a new one.</p>
+      </form>
+
+      <form id="form-change" class="auth-form" data-screen="change" novalidate hidden>
+        <p class="auth-intro">Your admin asks you to choose a new password before you continue.</p>
+        <input id="chg-username" name="username" type="text" autocomplete="username" readonly hidden>
+        <div class="field">
+          <label for="chg-current">Current password</label>
+          <div class="pw-wrap">
+            <input id="chg-current" name="current" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+            <button class="pw-toggle" type="button" aria-controls="chg-current" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="chg-new">New password</label>
+          <div class="pw-wrap">
+            <input id="chg-new" name="new" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="chg-new-hint">
+            <button class="pw-toggle" type="button" aria-controls="chg-new" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="chg-new-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="chg-submit">Save new password</button>
+        <button class="link-btn auth-alt" type="button" id="chg-signout">Sign out instead</button>
+      </form>
+
+      <div class="auth-form" data-screen="proxy" id="auth-proxy" hidden>
+        <p class="auth-intro">Your sign-in proxy did not tell the app who you are. Your sign-in there may have expired.</p>
+        <a class="btn primary auth-submit" id="proxy-signin" href="/?reauth=1">Sign in again</a>
+        <p class="hint auth-help">If this keeps happening, ask your admin to check the proxy settings (docs/accounts.md).</p>
+      </div>
+
+      <div class="auth-form" data-screen="signedin" id="auth-signedin" hidden>
+        <p class="auth-intro" id="signedin-msg">You are already signed in.</p>
+        <button class="btn primary auth-submit" type="button" id="signedin-continue">Continue to the app</button>
+        <button class="btn secondary auth-submit" type="button" id="signedin-signout">Sign out and use the link</button>
+      </div>
+    </div>
+    <p class="auth-foot">Not medical advice. Targets and limits come from your nephrologist or renal dietitian.</p>
+  </section>
+
   <!-- ===================== TODAY ===================== -->
-  <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today">
+  <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today" hidden>
     <div class="date-nav">
       <button class="icon-btn" type="button" id="date-prev" aria-label="Previous day">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -379,35 +539,108 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2 class="card-title">Appearance</h2>
-        <div class="field">
-          <label for="pf-theme">Theme</label>
-          <select id="pf-theme">
-            <option value="auto">Match device</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </div>
-      </section>
-
       <div class="form-actions">
         <button class="btn primary" type="submit" id="btn-save-profile">Save profile</button>
         <span id="profile-saved" class="muted small" aria-live="polite"></span>
       </div>
     </form>
 
-    <!-- Settings → "This device" (note 02 R10). Lives here until the Settings view exists; js/pwa.js
-         fills and shows it in the installed app only (never in the demo or the preview). -->
-    <section class="card install-panel" id="install-panel" aria-labelledby="install-heading" hidden>
-      <h2 class="card-title" id="install-heading">Install on your phone</h2>
-      <p class="install-state" id="install-state"></p>
-      <div class="install-body" id="install-body"></div>
+    <section class="card profile-settings" aria-labelledby="profile-settings-heading">
+      <div class="card-head">
+        <h2 class="card-title" id="profile-settings-heading">Settings</h2>
+      </div>
+      <p class="hint">Your account and password, theme, food-data keys, installing the app on this device, and (for admins) people and server settings.</p>
+      <button class="btn secondary" type="button" id="profile-open-settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.6a7.6 7.6 0 0 0 0-3.2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-2.7-1.6L14 2.3h-4l-.3 2.5a7.4 7.4 0 0 0-2.7 1.6l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3.2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 2.7 1.6l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 2.7-1.6l2.4 1 2-3.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        Open Settings
+      </button>
     </section>
 
     <footer class="disclaimer">
       <strong>Not medical advice.</strong> Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. The food database is reference data; check labels and portions. Food warnings are general renal-diet conventions, not a prescription.
     </footer>
+  </section>
+
+  <!-- ===================== SETTINGS (js/views/settings.js; note 07 §4.17, note 02 R10) =====================
+       Reached from the header gear and from Profile (#settings). Sections are filled by settings.js;
+       This device is completed by js/pwa.js in the installed app. -->
+  <section id="view-settings" class="view settings-view" aria-labelledby="settings-title" hidden>
+    <div class="settings-head">
+      <h2 id="settings-title" class="settings-title" tabindex="-1">Settings</h2>
+      <p class="muted small" id="settings-who"></p>
+    </div>
+    <nav class="settings-nav" aria-label="Settings sections">
+      <ul class="settings-nav-list" id="settings-nav"></ul>
+    </nav>
+
+    <section class="card settings-section" id="set-account" data-title="Account" aria-labelledby="set-account-h">
+      <h2 class="card-title" id="set-account-h">Account</h2>
+      <div id="set-account-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-prefs" data-title="Preferences" aria-labelledby="set-prefs-h">
+      <h2 class="card-title" id="set-prefs-h">Preferences</h2>
+      <div class="settings-body">
+        <div class="setting-row">
+          <div class="field">
+            <label for="set-theme">Theme</label>
+            <select id="set-theme" aria-describedby="set-theme-source">
+              <option value="auto">Match device</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+            <span class="setting-source" id="set-theme-source"></span>
+          </div>
+          <div class="field">
+            <label for="set-week-start">Week starts on</label>
+            <select id="set-week-start" aria-describedby="set-week-start-hint">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+            <span class="hint" id="set-week-start-hint">Used by the Plan view and the shopping list. Saved with your profile.</span>
+          </div>
+          <div class="field">
+            <label for="set-units">Units</label>
+            <select id="set-units" disabled aria-describedby="set-units-hint">
+              <option>Metric: g, mg, mL, kg, cm</option>
+            </select>
+            <span class="hint" id="set-units-hint">Other units (lb, oz, mmol) are planned for a later version.</span>
+          </div>
+        </div>
+        <p class="status-msg" id="set-prefs-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="card settings-section" id="set-food" data-title="Food data" aria-labelledby="set-food-h">
+      <h2 class="card-title" id="set-food-h">Food data</h2>
+      <div id="set-food-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-ai" data-title="AI ideas" aria-labelledby="set-ai-h">
+      <h2 class="card-title" id="set-ai-h">AI ideas</h2>
+      <div id="set-ai-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-device" data-title="This device" aria-labelledby="set-device-h">
+      <h2 class="card-title" id="set-device-h">This device</h2>
+      <div id="set-device-body" class="settings-body"></div>
+      <!-- Note 02 R10: js/pwa.js fills and shows this in the installed app only (never in the demo or the preview). -->
+      <div class="install-panel" id="install-panel" aria-labelledby="install-heading" hidden>
+        <h3 class="settings-subtitle" id="install-heading">Install on your phone</h3>
+        <p class="install-state" id="install-state"></p>
+        <div class="install-body" id="install-body"></div>
+      </div>
+    </section>
+
+    <section class="card settings-section" id="set-admin" data-title="Admin" aria-labelledby="set-admin-h" hidden>
+      <h2 class="card-title" id="set-admin-h">Admin</h2>
+      <div id="set-admin-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-about" data-title="About" aria-labelledby="set-about-h">
+      <h2 class="card-title" id="set-about-h">About &amp; privacy</h2>
+      <div id="set-about-body" class="settings-body"></div>
+    </section>
   </section>
 </main>
 
@@ -822,6 +1055,37 @@
   </div>
 </dialog>
 
+<!-- ===================== RE-AUTHENTICATION (js/views/auth.js): sensitive actions answer reauth_required ===================== -->
+<dialog id="sheet-reauth" class="sheet" aria-labelledby="sheet-reauth-title" aria-describedby="sheet-reauth-sub">
+  <form method="dialog" class="sheet-form" id="reauth-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-reauth-title" class="sheet-title">Enter your password again</h2>
+        <div class="sheet-sub" id="sheet-reauth-sub">This action needs your password because you have not entered it in the last few minutes.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <input id="reauth-username" name="username" type="text" autocomplete="username" readonly hidden>
+      <div class="field">
+        <label for="reauth-password">Password</label>
+        <div class="pw-wrap">
+          <input id="reauth-password" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+          <button class="pw-toggle" type="button" aria-controls="reauth-password" aria-pressed="false">Show</button>
+        </div>
+      </div>
+      <div class="auth-error" id="reauth-error" role="alert" aria-live="assertive"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="reauth-submit">Continue</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <div id="update-toast" class="update-toast" role="status" aria-live="polite" hidden>
   <span>Update ready.</span>
@@ -830,21 +1094,27 @@
 <div id="chart-tip" class="chart-tip" role="tooltip" hidden></div>
 
 <!-- Plain scripts sharing window.KH, in dependency order: rules engine, core, demo API twins,
-     views, PWA shell (left out of the preview build), boot. -->
+     views (auth.js: sign-in screens and re-auth; settings.js: the Settings view), PWA shell (left
+     out of the preview build), boot. -->
 <script src="js/engine/rules.js"></script>
 <script src="js/engine/targets.js"></script>
+<script src="js/engine/settings.js"></script>
 <script src="js/core.js"></script>
 <script src="js/mock/core.js"></script>
 <script src="js/mock/foods.js"></script>
 <script src="js/mock/profile.js"></script>
 <script src="js/mock/log.js"></script>
 <script src="js/mock/meals.js"></script>
+<script src="js/mock/auth.js"></script>
+<script src="js/mock/settings.js"></script>
 <script src="js/mock/seed.js"></script>
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>
 <script src="js/views/plan.js"></script>
 <script src="js/views/trends.js"></script>
 <script src="js/views/profile.js"></script>
+<script src="js/views/auth.js"></script>
+<script src="js/views/settings.js"></script>
 <script src="js/pwa.js" data-preview="omit"></script>
 <script src="js/main.js"></script>
 </body>

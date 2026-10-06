@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, K26A, K17, K22, A26-11, NIDDK-tests, NIDDK-HD, NKF-CKDEPI, MEDLINE-CREAT, NOTE05, KER]
+fact_checked: 2026-10-05
+sources: [K24, K26A, K17, K22, A26-11, NIDDK-tests, NIDDK-HD, CFR494, NKF-CKDEPI, MEDLINE-CREAT, MEDLINE-K, NOTE05, KER]
 ---
 
 # Reading your lab results
@@ -70,20 +71,21 @@ medicine change or when a result is off.
 | Potassium | with each kidney check, and 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | same | monthly on dialysis | [Blood potassium](blood-potassium.md) |
 | Calcium and phosphate | every 6–12 months | every 3–6 months | every 1–3 months | [Phosphate, calcium and PTH](phosphate-calcium-pth.md) |
 | PTH | depends on your first result | every 6–12 months | every 3–6 months | same |
-| Haemoglobin | at least once a year | at least twice a year | at least every 3 months | [Haemoglobin and iron](haemoglobin-and-iron.md) |
+| Haemoglobin | at least once a year | at least twice a year | at least every 3 months; at least monthly at US dialysis units | [Haemoglobin and iron](haemoglobin-and-iron.md) |
 | A1c | twice a year; up to 4 times if not at goal or after a change | same, but less reliable | same, but unreliable | [A1c](a1c.md), [CGM metrics](cgm-metrics.md) |
 
 Sources: eGFR and UACR ([ADA 2026 §11][A26-11], recommendation 11.1b; [KDIGO 2024][K24], practice
 points 2.1.1–2.1.2); potassium after ACE inhibitors and ARBs ([KDIGO 2024][K24], practice point 3.6.2)
 and 4 weeks after starting finerenone ([Kerendia label][KER]); calcium, phosphate and PTH
-([KDIGO 2017][K17], recommendation 3.1.2); haemoglobin ([KDIGO 2026 anemia][K26A], Figure 5);
+([KDIGO 2017][K17], recommendation 3.1.2); haemoglobin ([KDIGO 2026 anemia][K26A], Figure 5; US
+dialysis units: [42 CFR 494.90][CFR494]);
 A1c ([KDIGO 2022][K22], practice point 2.1.1); monthly tests on dialysis ([NIDDK][NIDDK-HD]).
 
 ## Does age or sex change my numbers?
 
 - **eGFR: yes.** The equation uses your creatinine, age and sex, because creatinine comes from muscle
   and muscle mass differs by age and sex ([NKF][NKF-CKDEPI]). The same creatinine of 1.4 mg/dL at
-  age 60 gives an eGFR of about 43 for a woman and 57 for a man. Normal creatinine is also lower in
+  age 60 gives an eGFR of about 43 for a woman and 58 for a man. Normal creatinine is also lower in
   women ([MedlinePlus][MEDLINE-CREAT]).
 - **Anaemia: yes.** It starts below 13 g/dL in men and below 12 g/dL in women
   ([KDIGO 2026 anemia][K26A]).
@@ -94,8 +96,9 @@ A1c ([KDIGO 2022][K22], practice point 2.1.1); monthly tests on dialysis ([NIDDK
 - **Food limits: no.** Potassium, phosphorus and sodium limits do not change with age or sex. Age, sex,
   height and activity change your calorie needs, and being 65 or older can raise protein
   ([design note 05][NOTE05]). See [Targets and warnings](../app/targets-and-warnings.md).
-- **Pregnancy and children: different rules.** The eGFR equations were not built for pregnancy, and
-  children use other equations ([KDIGO 2024][K24], practice point 1.2.4.3). Ask your specialist team;
+- **Pregnancy and children: different rules.** The adult eGFR equations were not developed for
+  pregnancy, so the app does not work out eGFR while you are pregnant ([design note 05][NOTE05]).
+  Children use other equations ([KDIGO 2024][K24], practice point 1.2.4.3). Ask your specialist team;
   see [Sex, fertility and pregnancy](../living/sex-fertility-pregnancy.md).
 
 ## What to do
@@ -141,8 +144,9 @@ Fill in one row per test date. Use the units on your lab report and write them i
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    A lab or your team tells you your **potassium is 6.5 mmol/L or more**, or you have chest pain,
-    severe breathlessness, fainting or a very slow or irregular pulse ([KDIGO 2024][K24], Table 28).
+    A lab or your team tells you your **potassium is 6.5 mmol/L or more** ([KDIGO 2024][K24],
+    Table 28), or you have chest pain, severe breathlessness, fainting or a very slow or irregular
+    pulse ([MedlinePlus][MEDLINE-K]).
     Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
@@ -164,11 +168,13 @@ Fill in one row per test date. Use the units on your lab report and write them i
 
 - [KDIGO 2024 CKD guideline][K24]: practice points 1.2.2.4, 1.2.4.3, 2.1.1–2.1.5, 3.6.2, 3.6.4;
   Tables 16, 24, 25 and 28.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly haemoglobin.
 - [KDIGO 2017 CKD-MBD guideline update][K17]: recommendations 3.1.2 and 3.1.4.
 - [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia definition and Figure 5.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.1.
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendation 11.1b.
 - [Kerendia (finerenone) prescribing information][KER].
 - [NIDDK: CKD tests and diagnosis][NIDDK-tests]; [NIDDK: hemodialysis][NIDDK-HD].
-- [NKF: CKD-EPI 2021 equation][NKF-CKDEPI]; [MedlinePlus: creatinine blood test][MEDLINE-CREAT].
+- [NKF: CKD-EPI 2021 equation][NKF-CKDEPI]; [MedlinePlus: creatinine blood test][MEDLINE-CREAT];
+  [MedlinePlus: high potassium level][MEDLINE-K].
 - [Design note 05][NOTE05]: what age, sex and labs change in the app.

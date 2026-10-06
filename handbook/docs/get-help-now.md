@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, A26-6, HC24, NHS-DKA, ADAK, CDC-DKA, CDC-STROKE, CDC-SEPSIS, MEDLINE-K, MEDLINE-PE, NIDDK-hypo, GLUCAGON-KIT, AKF-bleed, NKF-HDaccess, NIDDK-PD, I22P, NIDDK-Tx, Q15HD, DG53, DG28a, "988", KCUK]
 ---
 
@@ -62,8 +63,9 @@ Call 911 (or your local emergency number) for any of these. Do not drive yoursel
   ([AKF][AKF-bleed]; [NKF][NKF-HDaccess]).
 - **Signs of a serious infection (sepsis):** fever, shivering or feeling very cold, together with
   confusion, a fast heartbeat or weak pulse, shortness of breath, clammy skin or extreme pain. Sepsis
-  is a life-threatening emergency ([CDC][CDC-SEPSIS]). Take it especially seriously after a transplant
-  ([NIDDK][NIDDK-Tx]).
+  is a life-threatening emergency ([CDC][CDC-SEPSIS]). After a transplant, anti-rejection medicines
+  raise the risk of infection ([NIDDK][NIDDK-Tx]), so **fever with shaking chills** is enough: do not
+  wait for other signs.
 - **Thoughts of harming yourself:** call or text **988** in the US ([988 Lifeline][988]). If you are in
   immediate danger, call 911.
 
@@ -88,6 +90,8 @@ feel worse, go to urgent care or the emergency department.
   also ill, call your team ([NHS][NHS-DKA]).
 - **Check ketones** whenever you are ill, have missed insulin or have symptoms, especially if glucose is
   above 200 mg/dL (11.1 mmol/L) ([ADA 2026 §6][A26-6]).
+- **High glucose that does not come down** after the correction your plan tells you to take: check
+  ketones and call your diabetes team ([NHS][NHS-DKA]).
 - **Vomiting, diarrhea or not eating:** start your written sick-day plan and call. Ask which of your
   medicines to pause and exactly when to restart them ([KDIGO 2024][K24], practice points 4.3.2–4.3.3;
   [Sick days](t1d/sick-days.md)).
@@ -120,8 +124,10 @@ feel worse, go to urgent care or the emergency department.
 ## Mention at your next visit
 
 Itch, tiredness, poor appetite or nausea, muscle cramps, restless legs, low mood, poor sleep, or
-problems with sex. These are common, often treatable, and KDIGO asks clinicians to ask about symptoms
-like these at every visit ([KDIGO 2024][K24], practice point 5.2.2.1). Also mention high glucose
+problems with sex. These are common and often treatable. KDIGO asks clinicians to ask about poor
+appetite, nausea and tiredness at every visit as kidney disease progresses, and lists ways to manage
+itch, restless legs, poor sleep, low mood and other common symptoms ([KDIGO 2024][K24], practice
+point 5.2.2.1 and Table 38). Also mention high glucose
 readings that keep happening, a medicine you are struggling to take or pay for, and any new medicine,
 supplement or scan that another doctor suggests ([Medicines to avoid](medicines/avoid.md)).
 
@@ -179,8 +185,8 @@ in the app, warnings link back here: [Targets and warnings](app/targets-and-warn
 ## Sources
 
 - [KDIGO 2024 CKD guideline][K24]: Table 28 (potassium action levels), Table 41 (reasons to start
-  dialysis), section 3.15 (heart disease), practice points 4.3.2–4.3.3 (sick days) and 5.2.2.1
-  (symptoms).
+  dialysis), section 3.15 (heart disease), practice points 4.3.2–4.3.3 (sick days) and 5.2.2.1, and
+  Table 38 (symptoms).
 - [2024 hyperglycemic crises consensus][HC24]: DKA definition (ketones 3.0 mmol/L or more) and Table 4.
 - [NHS: diabetic ketoacidosis][NHS-DKA]; [ADA: DKA and ketones][ADAK]; [CDC: diabetic ketoacidosis][CDC-DKA].
 - [ADA Standards of Care 2026, section 6][A26-6]: hypoglycemia, glucagon, ketone checks.

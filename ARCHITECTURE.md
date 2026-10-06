@@ -684,6 +684,7 @@ app/static/
   css/base.css, css/<view>.css
   js/core.js            KH.h/s/$, KH.api (fetch wrapper: X-Requested-With, 401 → sign-in, toasts), state, router, sheets, confirm
   js/engine/rules.js    warnings, ratings, rounding, number formatting (twin of app/nutrients.py)
+  js/engine/settings.js settings registry + precedence (twin of app/settings_registry.py / settings_store.py)
   js/engine/targets.js, js/engine/kidney_function.js        (M2 targets)
   js/engine/guidance.js (or js/engine/guidance/*.js)        (M2 guidance)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
@@ -700,6 +701,35 @@ app/static/
 pytest on the Python side and by `node tests/js/run_vectors.mjs` on the JS side (CI runs both).
 In demo/preview mode the user is a signed-in demo admin; AI, Open Food Facts and USDA calls
 answer "available in the installed app" except for a few recorded barcode fixtures.
+
+### Sign-in screens and Settings (M1)
+
+* **Boot** (`js/main.js` → `KH.auth.boot()` in `js/views/auth.js`): `GET /api/auth/status` decides
+  between the first-run **setup** screen (setup code from the server log, the first admin, and the
+  "Look up barcodes with Open Food Facts" box that sets `food.off_enabled`), **sign-in**, the
+  **invite** and **reset** screens (`#/invite/<token>`, `#/reset/<token>`; the page moves the token
+  out of the address bar at once), the **new password** screen (`must_change_password`), the proxy
+  "Sign in again" screen (`/?reauth=1`), and the app. Tabs and the header gear carry
+  `data-signed-in` and stay hidden until someone is signed in. `AUTH_MODE=none` shows a red banner;
+  plain HTTP shows a yellow note, and `https_required` a red one.
+* **API hooks** (`js/core.js`, one error path for the server and the demo API): `401` → sign-in
+  screen, then back to the same view (a different person → a fresh page); `403 reauth_required` →
+  the "Enter your password again" sheet, `POST /api/auth/reauth`, and the request is sent again
+  once; `403 password_change_required` → new-password screen; `503 setup_required` → setup screen.
+  `KH.download()` saves the export zip through the same path.
+* **Sign-out** warns about unsynced offline entries when `KH.offline` exists (M2), calls
+  `POST /api/auth/logout`, follows `redirect` (proxy `PROXY_LOGOUT_URL`), else reloads the page.
+* **Settings view** (`#settings`, no tab; header gear and Profile → Open Settings;
+  `js/views/settings.js`): Account (name, password, signed-in devices, export zip, delete account,
+  recent activity, sign out), Preferences (theme saved as `ui.theme`, week start saved with the
+  profile, units placeholder), Food data (own USDA key, shared-key status, Open Food Facts
+  consent), AI ideas (placeholder `#set-ai-slot` for M2), This device (install, offline, storage,
+  connection, version, clear offline data; `js/pwa.js` supplies the device state), Admin (admins:
+  people, invites and one-time links, server settings, shared keys, usage, activity log, about this
+  server) and About & privacy (licences). Every setting shows its source ("Set by the server
+  (ENV), locked" / your choice / admin / app default). Keys are write-only: an empty password
+  field, "Set · ends in 9xQz · updated Oct 3", Replace / Remove, never a value from the server.
+  The theme and Install panel moved here from Profile.
 
 ## Milestones
 

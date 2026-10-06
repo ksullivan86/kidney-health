@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [DG48, DG14b, DG35a, FDAmenu, A26-5, A26-6, DG37b, FDC, FOODSAFE]
+fact_checked: 2026-10-05
+sources: [DG48, DG14b, DG35a, FDAmenu, A26-5, A26-6, DG37b, FDC, FOODSAFE, NIDDK-hypo]
 ---
 
 # Eating out
@@ -21,7 +22,9 @@ You can eat out on a kidney diet. Plan the day around the meal (lighter on potas
 the other meals), look up the menu first, and prefer places that cook to order
 ([NKF: dining out with confidence][DG48]; [AKF][DG14b]). Restaurant plates often carry 1,000–3,000 mg
 of sodium ([Harvard Health][DG35a]) and 2–3 times a kidney-diet portion of meat. Know the
-carbohydrate before you take insulin, and carry glucose tablets so your rescue is never a cola.
+carbohydrate before you take insulin, and carry glucose tablets: they treat a low with no potassium,
+phosphorus or fluid. If a low starts and all you have is juice or a regular (not diet) soda, drink
+4 oz of juice or 4–6 oz of soda straight away; treating the low comes first ([NIDDK][NIDDK-hypo]).
 
 ## Your numbers
 
@@ -29,7 +32,7 @@ carbohydrate before you take insulin, and carry glucose tablets so your rescue i
 |---|---|
 | Sodium in one restaurant meal | often 1,000–3,000 mg ([Harvard Health][DG35a]) |
 | Restaurant meat portion | 4–8 oz, two to three times the 3-oz kidney portion ([NKF][DG48]) |
-| Restaurant rice or pasta | often about 90 g carbohydrate |
+| Restaurant rice or pasta | 2 cups of rice is about 89 g carbohydrate; restaurant plates often hold that much or more ([FDC][FDC]) |
 | Written nutrition information | US chains with 20 or more locations must provide calories on the menu and written nutrition information on request, including sodium, carbohydrate and protein (not potassium or phosphorus) ([FDA menu labeling][FDAmenu]) |
 
 ## What to say
@@ -112,8 +115,8 @@ insulin. Add a side such as a small fruit cup if your plan needs more carbohydra
 - [ ] Look up the menu and its nutrition information before you go.
 - [ ] Order a half portion, share, or box half before you start.
 - [ ] Ask for the requests above.
-- [ ] Find out the carbohydrate before you take insulin; restaurant rice and pasta are often
-      about 90 g.
+- [ ] Find out the carbohydrate before you take insulin; a restaurant plate of rice or pasta can
+      hold about 90 g.
 - [ ] Alcohol only with food, and with a plan for delayed lows, which can come hours later
       ([ADA 2026 §5][A26-5], recommendations 5.18–5.19; [DaVita: alcohol and CKD][DG37b]).
 - [ ] On a fluid limit: save some of your allowance for the meal, ask for a small glass, and ask the
@@ -122,7 +125,7 @@ insulin. Add a side such as a small fruit cup if your plan needs more carbohydra
       ([NKF][DG48]).
 - [ ] Eat out a few times a week at most: NKF notes that more than 3 times a week makes it hard to keep
       sodium down ([NKF][DG48]).
-- [ ] Carry glucose tablets.
+- [ ] Carry glucose tablets, and treat a low at once with whatever fast sugar is to hand.
 
 ## Ask your care team
 
@@ -162,4 +165,4 @@ insulin. Add a side such as a small fruit cup if your plan needs more carbohydra
 - [DaVita: alcohol and CKD][DG37b].
 - [USDA FoodData Central][FDC]: the burger example.
 - [FoodSafety.gov: weakened immune systems][FOODSAFE]: raw fish after a transplant.
-- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon.
+- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NIDDK: low blood glucose][NIDDK-hypo]: ½ cup (4 oz) of juice or 4–6 oz of regular soda treats a low.

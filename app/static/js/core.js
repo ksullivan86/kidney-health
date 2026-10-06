@@ -193,8 +193,14 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Auth hook. A 401 from the API calls KH.auth.onUnauthorized(err); this stub only says so.
-  // The sign-in view (js/views/auth.js, M1 accounts) replaces it with the in-app sign-in.
+  // Auth hooks. The API client hands these answers to KH.auth (js/views/auth.js replaces the
+  // stubs with the in-app screens):
+  //   401                                  → onUnauthorized(err): the sign-in screen
+  //   403 {reauth_required: true}          → reauth(err): asks for the password, resolves true
+  //                                          once POST /api/auth/reauth succeeded; the request is
+  //                                          then sent again, once
+  //   403 {password_change_required: true} → onPasswordChangeRequired(err)
+  //   503 {setup_required: true}           → onSetupRequired(err)
   // ---------------------------------------------------------------------------
   const auth = KH.auth || {};
   if (typeof auth.onUnauthorized !== 'function') {
@@ -202,6 +208,9 @@
       toast('You are signed out. Reload the page to sign in again.', 'error');
     };
   }
+  if (typeof auth.reauth !== 'function') auth.reauth = async () => false;
+  if (typeof auth.onPasswordChangeRequired !== 'function') auth.onPasswordChangeRequired = () => toast('Choose a new password first.', 'error');
+  if (typeof auth.onSetupRequired !== 'function') auth.onSetupRequired = () => toast('This server needs its first-run setup.', 'error');
 
   // ---------------------------------------------------------------------------
   // API layer
@@ -213,9 +222,42 @@
     if (d && typeof d === 'object') return JSON.stringify(d);
     return res ? `${res.status} ${res.statusText || 'error'}` : 'Request failed';
   }
-  async function request(method, path, body) {
+  // One error path for the server and the demo API: hands auth answers to KH.auth and marks the
+  // error `handled` when the person has already been told (no second toast).
+  function apiError(status, data, res) {
+    const err = new Error(errorDetail(data, res));
+    err.status = status; err.detail = err.message; err.data = data;
+    return err;
+  }
+  async function afterError(err, retry, opts) {
+    const data = err.data || {};
+    if (err.status === 401 && !opts.quiet401) {
+      err.handled = true;
+      try { KH.auth.onUnauthorized(err); } catch (e) { console.error(e); }
+    } else if (err.status === 403 && data.reauth_required && !opts.retried) {
+      let ok = false;
+      try { ok = await KH.auth.reauth(err); } catch (e) { console.error(e); }
+      if (ok) return retry({ ...opts, retried: true });
+      err.handled = true; err.cancelled = true; // the person closed the password prompt
+    } else if (err.status === 403 && data.password_change_required) {
+      err.handled = true;
+      try { KH.auth.onPasswordChangeRequired(err); } catch (e) { console.error(e); }
+    } else if (err.status === 503 && data.setup_required) {
+      err.handled = true;
+      try { KH.auth.onSetupRequired(err); } catch (e) { console.error(e); }
+    }
+    throw err;
+  }
+  // opts: { quiet401 } leaves a 401 to the caller (the sign-in screens), { retried } is internal.
+  async function request(method, path, body, opts = {}) {
+    const retry = (o) => request(method, path, body, o);
     const mock = KH.mock && KH.mock.instance;
-    if (mock) return mock.request(method, path, body);
+    if (mock) {
+      try { return await mock.request(method, path, body); } catch (e) {
+        if (!(KH.mock.ApiError && e instanceof KH.mock.ApiError)) throw e;
+        return afterError(apiError(e.status, { detail: e.detail, ...(e.extra || {}) }, null), retry, opts);
+      }
+    }
     const headers = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     // Every write carries the app's own header: the server's CSRF check refuses cross-site
@@ -238,16 +280,36 @@
     const text = await res.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text.slice(0, 200) }; }
-    if (!res.ok) {
-      const err = new Error(errorDetail(data, res));
-      err.status = res.status; err.detail = err.message; err.data = data;
-      if (res.status === 401) {
-        err.handled = true;
-        try { KH.auth.onUnauthorized(err); } catch (e) { console.error(e); }
-      }
-      throw err;
-    }
+    if (!res.ok) return afterError(apiError(res.status, data, res), retry, opts);
     return data;
+  }
+  // A file download (GET) through the same error handling: the browser saves the body under the
+  // server's Content-Disposition name. Used for the data export (re-auth may be asked first).
+  async function download(path, fallbackName, opts = {}) {
+    let res;
+    try {
+      res = await fetch(path, { method: 'GET', headers: { Accept: 'application/zip, application/json' }, credentials: 'same-origin' });
+    } catch (e) {
+      const err = new Error('Cannot reach the server. Check your connection.');
+      err.status = 0; err.detail = err.message; throw err;
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text.slice(0, 200) }; }
+      return afterError(apiError(res.status, data, res), (o) => download(path, fallbackName, o), opts);
+    }
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = /filename="?([^";]+)"?/i.exec(cd);
+    const name = m ? m[1] : fallbackName;
+    const url = URL.createObjectURL(blob);
+    const a = h('a', { href: url, download: name, class: 'sr-only' });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return { name, bytes: blob.size };
   }
   const api = {
     profile: () => request('GET', '/api/profile'),
@@ -276,6 +338,15 @@
     mealFromLog: (b) => request('POST', '/api/meals/from-log', b),
     applyMeal: (id, b) => request('POST', `/api/meals/${id}/apply`, b),
     shopping: (start, end) => request('GET', '/api/plan/shopping?' + qs({ start, end })),
+    // accounts, settings, keys (ARCHITECTURE.md "M1 API")
+    authStatus: () => request('GET', '/api/auth/status'),
+    me: () => request('GET', '/api/me'),
+    updateMe: (b) => request('PATCH', '/api/me', b),
+    mySettings: () => request('GET', '/api/me/settings'),
+    updateMySettings: (b) => request('PATCH', '/api/me/settings', b),
+    myKeys: () => request('GET', '/api/me/keys'),
+    setMyKey: (provider, b) => request('PUT', `/api/me/keys/${encodeURIComponent(provider)}`, b),
+    deleteMyKey: (provider) => request('DELETE', `/api/me/keys/${encodeURIComponent(provider)}`),
   };
 
   // ---------------------------------------------------------------------------
@@ -301,6 +372,8 @@
     plan: null,           // { start, end, days: [...] }
     shopping: null,       // { start, end, items: [...] }
     targetsStale: null,   // { from, to } profiles: stage/dialysis changed since the targets were set
+    authStatus: null,     // GET /api/auth/status (auth mode, registration, plain HTTP, instance name)
+    me: null,             // the signed-in person (Me), null while signed out
   };
 
   // Shared caches. Profile: Today, Plan and Profile; saved meals: Add, Today and Plan.
@@ -335,7 +408,7 @@
   function syncThemeControls(mode) {
     const eff = effectiveTheme();
     $('#theme-toggle').setAttribute('aria-label', eff === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-    const sel = $('#pf-theme'); if (sel && mode) sel.value = mode;
+    const sel = $('#set-theme'); if (sel && mode) sel.value = mode;
     $$('meta[name="theme-color"]').forEach((mtag) => mtag.setAttribute('content', eff === 'dark' ? '#111417' : '#f4f5f7'));
   }
   function applyTheme(mode) {
@@ -346,7 +419,7 @@
     syncThemeControls(mode);
   }
   $('#theme-toggle').addEventListener('click', () => applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'));
-  $('#pf-theme').addEventListener('change', (e) => applyTheme(e.target.value));
+  $('#set-theme').addEventListener('change', (e) => applyTheme(e.target.value));
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const onScheme = () => syncThemeControls(null);
@@ -358,21 +431,30 @@
   // ---------------------------------------------------------------------------
   // Tabs / views. Each js/views/<name>.js registers what showing it loads.
   // ---------------------------------------------------------------------------
-  const VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
+  // Tabbed views, then views without a tab (Settings: the header gear and Profile open it).
+  const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
+  const VIEWS = [...TAB_VIEWS, 'settings'];
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
   function showView(name, { focusTab = false } = {}) {
     if (!VIEWS.includes(name)) name = 'today';
     state.view = name;
+    const authView = $('#view-auth');
+    if (authView) authView.hidden = true;
     for (const v of VIEWS) {
       const panel = $(`#view-${v}`);
       const tab = $(`#tab-${v}`);
       const active = v === name;
       panel.hidden = !active;
-      tab.setAttribute('aria-selected', active ? 'true' : 'false');
-      tab.tabIndex = active ? 0 : -1;
+      if (tab) {
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        // With Settings open no tab is selected; the first tab stays reachable with Tab.
+        tab.tabIndex = active || (!TAB_VIEWS.includes(name) && v === TAB_VIEWS[0]) ? 0 : -1;
+      }
     }
-    if (focusTab) $(`#tab-${name}`).focus();
+    const gear = $('#settings-open');
+    if (gear) { if (name === 'settings') gear.setAttribute('aria-current', 'page'); else gear.removeAttribute('aria-current'); }
+    if (focusTab && $(`#tab-${name}`)) $(`#tab-${name}`).focus();
     try { if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`); } catch (e) { /* sandboxed frame: the view still switches */ }
     window.scrollTo({ top: 0 });
     const load = viewLoaders[name];
@@ -386,18 +468,19 @@
   $$('.tab').forEach((tab) => {
     tab.addEventListener('click', () => showView(tab.dataset.view));
     tab.addEventListener('keydown', (e) => {
-      const i = VIEWS.indexOf(tab.dataset.view);
+      const i = TAB_VIEWS.indexOf(tab.dataset.view);
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
-        const next = VIEWS[(i + (e.key === 'ArrowRight' ? 1 : VIEWS.length - 1)) % VIEWS.length];
+        const next = TAB_VIEWS[(i + (e.key === 'ArrowRight' ? 1 : TAB_VIEWS.length - 1)) % TAB_VIEWS.length];
         showView(next, { focusTab: true });
-      } else if (e.key === 'Home') { e.preventDefault(); showView(VIEWS[0], { focusTab: true }); }
-      else if (e.key === 'End') { e.preventDefault(); showView(VIEWS[VIEWS.length - 1], { focusTab: true }); }
+      } else if (e.key === 'Home') { e.preventDefault(); showView(TAB_VIEWS[0], { focusTab: true }); }
+      else if (e.key === 'End') { e.preventDefault(); showView(TAB_VIEWS[TAB_VIEWS.length - 1], { focusTab: true }); }
     });
   });
   window.addEventListener('hashchange', () => {
     const name = location.hash.replace('#', '');
-    if (VIEWS.includes(name) && name !== state.view) showView(name);
+    // Only while the app is showing (not on a sign-in screen): #/... routes belong to js/views/auth.js.
+    if (VIEWS.includes(name) && name !== state.view && state.me && state.view !== 'auth') showView(name);
   });
 
   // ---------------------------------------------------------------------------
@@ -559,9 +642,9 @@
       daysBetween, defaultStatusFor, fmtChange, defaultMealForNow, debounce, qs, numOrNull,
     },
     $, $$, h, s, clear,
-    api, request, auth, state, toast, toastError, loadProfile, loadMeals,
+    api, request, download, auth, state, toast, toastError, loadProfile, loadMeals,
     theme: { stored: storedTheme, effective: effectiveTheme, apply: applyTheme, sync: syncThemeControls },
-    router: { VIEWS, register: registerView, show: showView, openDay },
+    router: { VIEWS, TAB_VIEWS, register: registerView, show: showView, openDay },
     sheets: { setup: setupDialog, open: openDialog, onSubmit },
     confirm: { inline: inlineConfirm, dismiss: dismissConfirm },
     views: KH.views || {},

@@ -417,7 +417,7 @@
   sheets.setup(usdaDlg);
   const USDA_DISABLED_MSG = MOCK
     ? 'USDA search needs the installed app with a USDA API key (free at api.data.gov); the server looks foods up for you. This preview has no server, so use the built-in list or Quick add.'
-    : 'USDA search is not enabled on this server. Set USDA_API_KEY to enable it (free key at api.data.gov).';
+    : 'USDA search is not set up on this server. Add your own key in Settings → Food data (free at api.data.gov), or ask your admin to share one.';
   $('#btn-usda').addEventListener('click', (e) => {
     clear(usdaResults);
     usdaStatus.textContent = MOCK ? USDA_DISABLED_MSG : '';
@@ -443,7 +443,10 @@
         usdaResults.append(h('li', {}, btn));
       }
     } catch (err) {
-      usdaStatus.textContent = err.status === 503 ? USDA_DISABLED_MSG : `USDA search failed: ${err.detail || err.message}`;
+      // v0.3: a 503 with a reason ("not_configured", "quota_exhausted", ...) says what to do,
+      // e.g. "Add your own key in Settings → Food data"; an older 503 gets the general text.
+      usdaStatus.textContent = err.status === 503 ? (err.data && err.data.reason && err.detail ? err.detail : USDA_DISABLED_MSG)
+        : `USDA search failed: ${err.detail || err.message}`;
     }
   }
   async function usdaImport(f, btn) {
@@ -455,7 +458,8 @@
       toast(`Imported ${food.name}`, 'ok');
       openEntrySheet('add', { food, trigger: $('#btn-usda') });
     } catch (err) {
-      usdaStatus.textContent = err.status === 503 ? USDA_DISABLED_MSG : `Import failed: ${err.detail || err.message}`;
+      usdaStatus.textContent = err.status === 503 ? (err.data && err.data.reason && err.detail ? err.detail : USDA_DISABLED_MSG)
+        : `Import failed: ${err.detail || err.message}`;
       btn.disabled = false;
     }
   }

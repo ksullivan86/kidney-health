@@ -189,3 +189,32 @@ register(
         label="Theme",
     ),
 )
+
+
+# --------------------------------------------------------------------------- #
+# Note 03 (barcodes, Open Food Facts): the two keys the M1 setup screen and Settings already use.
+# Registered early by the M1 sign-in/settings work (ARCHITECTURE v0.3 item 8: the first-run setup
+# screen offers the Open Food Facts checkbox); the M2 barcode work owns them and adds its other
+# food.off_* keys next to these. OFF_BASE_URL stays env-only (note 03 security review B5).
+# --------------------------------------------------------------------------- #
+
+register(
+    SettingDef(
+        key="food.off_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="OFF_ENABLED",
+        label="Look up barcodes with Open Food Facts",
+        help="Off by default. When on, a barcode that is not in this server's food list is looked up at "
+        "world.openfoodfacts.org (only the barcode number is sent). Product data is under the Open Database License.",
+    ),
+    SettingDef(
+        key="food.off_consent",
+        model=bool,
+        default=False,
+        scope="user",
+        label="Send barcodes I scan to Open Food Facts",
+        help="Your own choice, used only when the admin has turned Open Food Facts lookups on.",
+    ),
+)

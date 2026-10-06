@@ -8,16 +8,17 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, Q20, DG52, DG26, DG36, K22, DG46a, DG5, DG38, DG30a, FDC, SHERMAN09, FDA-label, DG16b, DG25a, NOTE05]
+fact_checked: 2026-10-05
+sources: [K24, Q20, DG52, DG26, DG36, K22, DG46a, DG5, DG38, DG30a, FDC, SHERMAN09, FDA-label, DG16b, DG25a, NOTE05, MEDLINE-LOWK, MEDLINE-K, SALTSUB-LABELS, DG35b]
 ---
 
 # Potassium
 
 ## In short
 
-Potassium keeps your nerves, muscles and heart rhythm working. About 90 % of the potassium you eat
-leaves through the kidneys, so as kidney function falls, blood potassium can rise. A very high level
-can cause a dangerous heart rhythm ([KDIGO 2024][K24]). **Only limit potassium if your blood potassium
+Potassium keeps your nerves, muscles and heart rhythm working. Healthy kidneys remove most of the
+potassium you eat, so as kidney function falls, blood potassium can rise. A very high level can cause
+a dangerous heart rhythm ([KDIGO 2024][K24]). **Only limit potassium if your blood potassium
 is high; your care team sets the number** ([KDOQI 2020][Q20], statement 6.4.1). When a limit is needed,
 the biggest wins are portion size, processed foods with potassium additives, and a few very high foods
 such as bananas, potatoes, tomato sauce and orange juice.
@@ -30,9 +31,9 @@ Blood potassium is the same number in mmol/L and mEq/L, so one table covers both
 
 | | Typical |
 |---|---|
-| Blood potassium | 3.5–5.0 mmol/L (= mEq/L); your lab's range wins |
+| Blood potassium | about 3.5–5.1 mmol/L (= mEq/L); your lab's range wins ([MedlinePlus][MEDLINE-LOWK]) |
 | High (hyperkalaemia) | above 5.0–5.5 mmol/L |
-| Call your team today | 6.0–6.4 mmol/L ([KDIGO 2024][K24], Table 28) |
+| Call your team today | 6.0–6.4 mmol/L; if you feel unwell, get checked in hospital now ([KDIGO 2024][K24], Table 28) |
 | Emergency | 6.5 mmol/L or more ([KDIGO 2024][K24], Table 28) |
 | Food, when a limit is ordered | usually 2,000–3,000 mg a day; AKF suggests aiming for 2,500 mg and no more than 3,000 mg ([AKF][DG52]; [DaVita][DG26]) |
 | Peritoneal dialysis | often 3,000–4,000 mg; some people run low and need more ([DaVita][DG25a]) |
@@ -43,7 +44,8 @@ in the urine and 34.4 % at G5 with a lot ([KDIGO 2024][K24], Figure 30). Food is
 enough insulin, high blood glucose, ACE inhibitors and ARBs, finerenone, constipation and acid build-up
 push it up too ([KDIGO 2024][K24]; [Sousa 2016][DG36]). So a run of high glucose readings, a missed basal
 insulin dose, or a new blood-pressure or kidney-protecting medicine is a reason to be stricter that week
-and to expect a blood test ([KDIGO 2022][K22]). See [Blood potassium](../labs/blood-potassium.md).
+and to expect a blood test ([KDIGO 2022][K22]). High glucose or a missed basal dose also means checking
+ketones and following your [sick-day plan](../t1d/sick-days.md). See [Blood potassium](../labs/blood-potassium.md).
 
 ## How much is in a serving
 
@@ -57,11 +59,11 @@ and to expect a blood test ([KDIGO 2022][K22]). See [Blood potassium](../labs/bl
 ([AKF potassium guide][DG46a]; [NKF][DG5]; NKF's shopping cue is 200 mg or less per serving,
 [NKF label guide][DG38].) The app marks a single food "medium" at 101–200 mg and "high" above 200 mg.
 
-**Portion size matters most.** "A large serving of a low-potassium food becomes a high-potassium
-food" ([NKF][DG5]). Half a cup of cantaloupe is about 214 mg; a full cup is 427 mg ([FDC][FDC]).
+**Portion size matters most.** "A large amount of a low-potassium food can easily turn it into a
+high-potassium food" ([NKF][DG5]). Half a cup of cantaloupe is about 214 mg; a full cup is 427 mg ([FDC][FDC]).
 
-**Potassium is on the label.** Since 2020 the US Nutrition Facts label must show potassium in
-milligrams ([FDA][FDA-label]). The % Daily Value is based on 4,700 mg ([FDA: Daily Values][DG16b]),
+**Potassium is on the label.** Since 2020 (2021 for smaller companies) the US Nutrition Facts label
+must show potassium in milligrams ([FDA][FDA-label]). The % Daily Value is based on 4,700 mg ([FDA: Daily Values][DG16b]),
 far more than a kidney limit, so read the milligrams ([Reading food labels](label-reading.md)).
 
 ## Hidden potassium
@@ -79,7 +81,9 @@ absorbable potassium than many plant-based fresh foods". It advises limiting foo
 *bioavailable* potassium, such as processed foods, when potassium runs high ([KDIGO 2024][K24],
 practice point 3.11.5.2). Where hidden potassium turns up:
 
-- **Salt substitutes** such as NoSalt, Nu-Salt and Lite Salt: they are potassium chloride ([Sodium](sodium.md)).
+- **Salt substitutes** such as NoSalt and Nu-Salt (potassium chloride) and Lite Salt (a mix of salt and
+  potassium chloride) ([NoSalt and Nu-Salt labels][SALTSUB-LABELS]; [Morton Lite Salt label][DG35b];
+  [Sodium](sodium.md)).
 - **"Reduced-sodium" soups, broths, sauces and deli meats**, which often swap salt for potassium chloride.
 - **"Enhanced" fresh meat and poultry**, injected with a salt and phosphate solution. In one study, 5 of
   25 enhanced products had at least 692 mg of potassium per 100 g, against under 387 mg in plain meat,
@@ -135,7 +139,8 @@ carbohydrate changes too (about 177 g against 161 g), so count each meal as usua
 !!! tip "In the app"
     Every food shows a potassium warning per serving, and your day shows how close you are to your
     potassium target. If you add a potassium result under **Labs**, the app adjusts its review ceiling:
-    a normal result relaxes it one step, a high result tightens it, and a low result removes it
+    a normal result relaxes it one step (unless you have had high potassium before), a high result
+    tightens it, and a low result removes it
     ([design note 05][NOTE05]). See [Targets and warnings](../app/targets-and-warnings.md) and
     [Logging food](../app/logging.md).
 
@@ -150,12 +155,13 @@ carbohydrate changes too (about 177 g against 161 g), so count each meal as usua
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Your lab potassium is **6.5 mmol/L or more**, or you have fainting, a very slow or irregular pulse,
-    chest pain or sudden severe weakness and your potassium has been high ([KDIGO 2024][K24], Table 28).
+    Your lab potassium is **6.5 mmol/L or more** ([KDIGO 2024][K24], Table 28), or you have fainting, a
+    very slow or irregular pulse, chest pain or sudden severe weakness and your potassium has been high
+    ([MedlinePlus][MEDLINE-K]).
 
 !!! warning "Call your care team today"
-    A result of **6.0–6.4 mmol/L**: KDIGO advises assessment in hospital if you feel unwell, otherwise
-    a repeat test within 24 hours ([KDIGO 2024][K24], Table 28). Also call if vomiting or diarrhoea stops
+    A result of **6.0–6.4 mmol/L**: if you feel unwell, go to hospital **now** to be checked and treated;
+    if you feel well, call your team today for a repeat test within 24 hours ([KDIGO 2024][K24], Table 28). Also call if vomiting or diarrhoea stops
     you eating or drinking. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
@@ -175,6 +181,8 @@ carbohydrate changes too (about 177 g against 161 g), so count each meal as usua
 - [Sousa 2016][DG36]: diabetes, insulin and high potassium.
 - [Picard 2021][DG30a]: potassium absorption by food source.
 - [Sherman and Mehta 2009][SHERMAN09]: potassium and phosphate in enhanced meat and poultry.
+- [NoSalt and Nu-Salt labels][SALTSUB-LABELS]; [Morton Lite Salt label][DG35b]: potassium in salt substitutes.
+- [MedlinePlus: low blood potassium][MEDLINE-LOWK] (usual range); [MedlinePlus: high potassium level][MEDLINE-K] (symptoms).
 - [FDA: changes to the Nutrition Facts label][FDA-label]: potassium required on the label; [FDA: Daily Values][DG16b].
 - [USDA FoodData Central][FDC]: food values.
 - [Design note 05][NOTE05]: how a lab result changes the app's potassium ceiling.

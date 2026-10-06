@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, KER, DG36, MEDLINE-K, MEDLINE-LOWK, DG53, DG25a, NOTE05]
+fact_checked: 2026-10-05
+sources: [K24, KER, DG36, MEDLINE-K, MEDLINE-LOWK, DG53, DG25a, CDC-SICK, NOTE05]
 ---
 
 # Blood potassium
@@ -147,7 +148,9 @@ stopping the medicine ([KDIGO 2024][K24], practice point 3.6.3).
 !!! warning "Call your care team today"
     A potassium of **6.0–6.4 mmol/L**: if you feel unwell, get checked and treated in hospital; if you
     feel well, the test should be repeated within 24 hours ([KDIGO 2024][K24], Table 28). Also call for
-    vomiting or diarrhoea that stops you eating or drinking. Full list: [Get help now](../get-help-now.md).
+    vomiting or diarrhoea, and check your ketones. If you cannot keep liquids down for more than 4 hours,
+    or you have ketones with vomiting, that is an emergency ([CDC][CDC-SICK];
+    [Sick days](../t1d/sick-days.md)). Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 
@@ -165,4 +168,5 @@ stopping the medicine ([KDIGO 2024][K24], practice point 3.6.3).
 - [MedlinePlus: high potassium level][MEDLINE-K]; [MedlinePlus: low blood potassium][MEDLINE-LOWK].
 - [Foley 2011][DG53]: the long gap between hemodialysis sessions.
 - [DaVita: peritoneal dialysis diet][DG25a].
+- [CDC: managing sick days][CDC-SICK]: when vomiting needs emergency care.
 - [Design note 05][NOTE05]: the app's potassium alert and ceilings.

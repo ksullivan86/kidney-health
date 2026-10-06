@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, A26-11, NIDDK-tests, NIDDK-DKD, KER, F1, Q20, NOTE05]
 ---
 
@@ -18,8 +19,9 @@ sources: [K24, A26-11, NIDDK-tests, NIDDK-DKD, KER, F1, Q20, NOTE05]
 Albumin is a protein that healthy kidney filters keep in the blood. When the filters are damaged,
 albumin leaks into the urine. The **UACR** (urine albumin-to-creatinine ratio) measures that leak in a
 small urine sample. Comparing albumin with creatinine corrects for how concentrated your urine is.
-A UACR under 30 mg/g is normal ([NIDDK][NIDDK-tests]). The higher it is, the higher the risk of kidney
-failure and heart disease, so **lowering it is a treatment goal** ([KDIGO 2024][K24]).
+A UACR under 30 mg/g is in the normal range ([KDIGO 2024][K24]; [NIDDK][NIDDK-tests]). The higher it
+is, the higher the risk of kidney failure and heart disease, so **lowering it is a treatment goal**
+([KDIGO 2024][K24]).
 
 ## Your numbers
 
@@ -93,8 +95,10 @@ Most people with kidney disease from diabetes have no symptoms, so tests are the
   expected to lower the risk of eGFR decline and kidney failure ([Kerendia label][KER]). In the
   FINE-ONE trial (242 adults with type 1 diabetes), UACR was 22 % lower than with placebo at 3 months
   and 28 % lower at 6 months ([Kerendia label][KER]; [FINE-ONE][F1]).
-- **Less salt.** Sodium under 2,000 mg a day helps blood pressure and helps these medicines work
-  ([KDIGO 2024][K24]; [KDOQI 2020][Q20]; [Sodium](../eat/sodium.md)).
+- **Less salt.** KDIGO suggests under 2,000 mg of sodium a day (recommendation 3.3.2.1) and notes that
+  less salt helps ACE inhibitors and ARBs work fully ([KDIGO 2024][K24]). KDOQI suggests under
+  2,300 mg a day to lower urine protein (statement 6.5.2) ([KDOQI 2020][Q20]). See
+  [Sodium](../eat/sodium.md).
 - **Glucose and blood pressure in range**, and not smoking ([Diabetes and your kidneys](../ckd/diabetes-and-your-kidneys.md)).
 
 ## What to do
@@ -148,11 +152,12 @@ UACR on its own is not an emergency.
 ## Sources
 
 - [KDIGO 2024 CKD guideline][K24]: albuminuria categories; practice points 1.3.1.1–1.3.1.3 and 2.1.5;
-  recommendation 3.6.3; Table 16.
+  recommendations 3.3.2.1 and 3.6.3, and the rationale for practice point 3.6.4 (salt and RAS
+  inhibitors); Table 16.
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendations 11.1a and 11.1b; variability and
   factors that raise UACR.
 - [NIDDK: CKD tests and diagnosis][NIDDK-tests]; [NIDDK: diabetic kidney disease][NIDDK-DKD].
 - [Kerendia (finerenone) prescribing information][KER]: indication and section 14.2.
 - [FINE-ONE trial][F1].
-- [KDOQI 2020 nutrition guideline][Q20]: sodium.
+- [KDOQI 2020 nutrition guideline][Q20]: statement 6.5.2 (sodium and urine protein).
 - [Design note 05][NOTE05]: the app's UACR note.

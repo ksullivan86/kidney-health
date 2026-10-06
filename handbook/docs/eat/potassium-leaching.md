@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DG5, DG6, FDC, DG32a, DG49, K24, ABREU23]
 ---
 
@@ -20,7 +21,8 @@ down the drain. Potatoes, sweet potatoes, carrots, beets and winter squash are t
 them small and boiling them, then draining, removes about half of the potassium; shredding removes more.
 Soaking raw pieces in cold water does almost nothing, and baking, roasting, microwaving or frying removes
 none ([Bethke and Jansky 2008][DG6]). A leached potato still has potassium, so it still counts toward
-your day. You only need this if your team has asked you to limit potassium.
+your day: "Since leaching does not remove all the potassium, you still must limit the amount of leached
+high-potassium vegetables you eat" ([NKF][DG5]). You only need this if your team has asked you to limit potassium.
 
 ## Your numbers
 
@@ -29,7 +31,7 @@ Potassium before leaching, per ½ cup unless stated ([USDA FoodData Central][FDC
 | Vegetable | Potassium |
 |---|---|
 | Potato, boiled, peeled, not leached | 256 mg |
-| Potato, leached or double-boiled | **about 130 mg** ([NKF][DG5]) |
+| Potato, leached or double-boiled | **about 130 mg**, an estimate: boiling small pieces removed about half ([Bethke and Jansky 2008][DG6]), and leaching never removes all of it ([NKF][DG5]) |
 | Potato, baked with skin, 1 medium | 926 mg (baking removes none) |
 | Sweet potato, baked | 475 mg |
 | Butternut squash, baked | 293 mg |

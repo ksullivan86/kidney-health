@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, K15SC, NIDDK-conservative, A26-6, A26-9, K22, K17, K26A, HC24, ADAK, JBDS, AK22, DG19a, FDC]
 ---
 
@@ -53,10 +54,10 @@ KDIGO lists these reasons to start dialysis ([KDIGO 2024][K24], practice point 5
 in plain words:
 
 - **Symptoms from kidney failure**, such as trouble thinking, poor appetite, itching that will not
-  stop, inflammation around the heart (pericarditis) or other linings, bleeding, or acid and salt
+  stop, inflammation around the heart (pericarditis) or other body linings, or acid and salt
   problems that medicines cannot fix.
 - **Fluid or blood pressure** that cannot be controlled.
-- **Getting thinner and weaker** even with diet help, or a decline in thinking.
+- **Nutrition that keeps getting worse** even with diet help, or a decline in thinking.
 
 The decision weighs your symptoms, your quality of life, what you want, your eGFR and your blood
 tests together (practice point 5.4.1).
@@ -119,7 +120,7 @@ life may choose it, especially those who are frail or have other serious illness
 **A poor-appetite day.** You can only manage half your usual breakfast. Treat any low straight away.
 Tell your diabetes team that you are eating less, so they can adjust your plan. Small, frequent meals
 with some fat and starch give energy without much potassium or phosphorus: a slice of white toast
-has about 37 mg potassium and 28 mg phosphorus, and a tablespoon of olive oil has none
+has about 35 mg potassium and 28 mg phosphorus, and a tablespoon of olive oil has none
 ([USDA][FDC]). A dietitian can tailor this ([Eating enough](../eat/eating-enough.md)).
 
 **"My eGFR is 9. Do I need dialysis now?"** Not because of the number alone. Your team looks at your
@@ -139,12 +140,16 @@ symptoms, fluid, blood tests and wishes ([KDIGO 2024][K24], practice point 5.4.1
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain (it can be pericarditis); severe breathlessness or not being able to lie flat; new
     confusion, a seizure or drowsiness you cannot wake from; fainting or a very slow or irregular
-    pulse; a low the person cannot treat themselves (give glucagon, then call); vomiting with blood
-    ketones of 3.0 mmol/L or more. Full list: [Get help now](../get-help-now.md).
+    pulse; a low the person cannot treat themselves (give glucagon, then call); possible DKA: blood
+    ketones of 3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity breath.
+    With kidney failure, DKA can come with lower ketone readings, so these signs count even under 3.0
+    ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
     New or worse swelling, much less urine, weight gain above your team's alarm number, vomiting or not
-    eating, a lab potassium of 6.0–6.4 mmol/L, or new trouble thinking clearly ([KDIGO 2024][K24]).
+    eating, or new trouble thinking clearly ([KDIGO 2024][K24], Table 41). A lab potassium of
+    6.0–6.4 mmol/L: KDIGO advises a repeat test within 24 hours, or checks and treatment in hospital
+    **now** if you feel unwell ([KDIGO 2024][K24], Table 28).
 
 ## Related pages
 
@@ -157,12 +162,13 @@ symptoms, fluid, blood tests and wishes ([KDIGO 2024][K24], practice point 5.4.1
 ## Sources
 
 - [KDIGO 2024 CKD guideline][K24]: practice points 5.2.2.1, 5.2.3.2–5.2.3.3, 5.4.1–5.4.2, 5.5.2–5.5.3;
-  Table 41.
+  Tables 28 and 41.
 - [KDIGO 2015 supportive care conference][K15SC]: definition of comprehensive conservative care.
 - [NIDDK: conservative management][NIDDK-conservative].
 - [ADA Standards of Care 2026, section 6][A26-6]: recommendation 6.5; [section 9][A26-9]: recommendation 9.1.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.2.
-- [ADA: DKA and ketones][ADAK]; [2024 hyperglycemic crises consensus][HC24].
+- [ADA: DKA and ketones][ADAK]; [2024 hyperglycemic crises consensus][HC24]: DKA criteria, Table 4
+  (lower ketone levels with kidney failure).
 - [JBDS–Renal Association guidance][JBDS]; [ADA–KDIGO 2022 consensus report][AK22].
 - [KDIGO 2017 CKD-MBD guideline update][K17]; [KDIGO 2026 anemia in CKD guideline][K26A].
 - [AKF Kidney Kitchen: fluids][DG19a]; [USDA FoodData Central][FDC].

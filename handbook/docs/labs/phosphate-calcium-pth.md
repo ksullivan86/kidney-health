@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K17, DG20, DG10, DG13a, MEDLINE-CA, Q20, ALB18, NOTE05]
+fact_checked: 2026-10-05
+sources: [K17, DG20, DG10, DG13a, MEDLINE-CA, Q20, ALB18, NIDDK-HD, NOTE05]
 ---
 
 # Phosphate, calcium and PTH
@@ -32,7 +33,7 @@ and take any binder **with** food.
     | Test | Typical range (your lab's range wins) |
     |---|---|
     | Phosphate (phosphorus) | 2.5–4.5 mg/dL |
-    | Calcium (total) | about 8.5–10.3 mg/dL; MedlinePlus lists 8.8–10.3 |
+    | Calcium (total) | 8.8–10.3 mg/dL (MedlinePlus); many labs use a slightly different range |
     | PTH, not on dialysis | the best level is not known; your team acts if it keeps rising or stays above your lab's upper limit |
     | PTH, on dialysis | about 2–9 times your lab's upper limit |
     | Alkaline phosphatase | lab-specific; read with PTH |
@@ -42,7 +43,7 @@ and take any binder **with** food.
     | Test | Typical range (your lab's range wins) |
     |---|---|
     | Phosphate (phosphorus) | 0.81–1.45 mmol/L |
-    | Calcium (total) | about 2.1–2.6 mmol/L; MedlinePlus lists 2.20–2.58 |
+    | Calcium (total) | 2.20–2.58 mmol/L (MedlinePlus); many labs use a slightly different range |
     | PTH, not on dialysis | the best level is not known; your team acts if it keeps rising or stays above your lab's upper limit |
     | PTH, on dialysis | about 2–9 times your lab's upper limit |
     | Alkaline phosphatase | lab-specific; read with PTH |
@@ -64,8 +65,8 @@ recommendation 4.2.3).
 | G5 and dialysis | every 1–3 months | every 3–6 months | every 12 months, or more often if PTH is high |
 
 More often if a result is off or treatment changes. Vitamin D (25-hydroxy vitamin D) may also be
-checked ([KDIGO 2017][K17], recommendation 3.1.3). On dialysis, blood for these tests is taken before
-the session ([KDOQI 2020][Q20]).
+checked ([KDIGO 2017][K17], recommendation 3.1.3). On hemodialysis, blood is tested every month
+([NIDDK][NIDDK-HD]); compare results taken at the same point, for example before a session.
 
 ## Why they matter
 
@@ -74,9 +75,10 @@ the session ([KDOQI 2020][Q20]).
 - **Calcium.** KDIGO suggests avoiding high calcium in adults ([KDIGO 2017][K17], recommendation
   4.1.3). Calcium comes from food, from calcium-based binders and supplements, and from vitamin D
   medicines, so all of these count. About half of blood calcium rides on albumin, so a low albumin makes
-  total calcium look low ([MedlinePlus][MEDLINE-CA]). The albumin test method matters too: on
-  hemodialysis, one common method read about 6 g/L lower than another, which changes "corrected"
-  calcium ([de Roij van Zuijdewijn 2018][ALB18]; [Serum albumin](albumin.md)).
+  total calcium look low ([MedlinePlus][MEDLINE-CA]). The albumin test method matters too: in a study
+  of about 500 people on hemodialysis, centres using one common method reported albumin about 6 g/L
+  lower than centres using another, and their "corrected" calcium came out higher
+  ([de Roij van Zuijdewijn 2018][ALB18]; [Serum albumin](albumin.md)).
 - **PTH.** If PTH keeps rising, your team first looks for causes they can fix: high phosphate, low
   calcium, a high phosphate intake, and low vitamin D ([KDIGO 2017][K17], recommendation 4.2.1). On
   dialysis, PTH-lowering medicines may be added; surgery is for severe cases that do not respond
@@ -157,6 +159,7 @@ These tests are rarely an emergency on their own.
 - [K/DOQI 2003 bone metabolism guideline][DG10]: 800–1,000 mg dietary phosphorus.
 - [Noori 2010][DG13a]: absorption of additive, animal and plant phosphorus; phosphorus per gram of protein.
 - [MedlinePlus: calcium blood test][MEDLINE-CA].
-- [KDOQI 2020 nutrition guideline][Q20]: statement 6.3.3; pre-dialysis blood tests.
+- [KDOQI 2020 nutrition guideline][Q20]: statement 6.3.3.
+- [NIDDK: hemodialysis][NIDDK-HD]: monthly blood tests.
 - [de Roij van Zuijdewijn 2018][ALB18]: albumin methods and corrected calcium on hemodialysis.
 - [Design note 05][NOTE05]: the app's phosphorus rules.

@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [K24, DG5, DG34, DG12, DG13a, DG20, DG38, A26-5, A26-6, DG39, DG17, Q20, K22, A26-11, DG25a, DG4, DG24a, DG52, DG26, DG10, K17, DG19a, DG23, DG7, DG53, DG28a, NOTE05]
 ---
 
@@ -29,8 +30,8 @@ kidneys can still handle. The sixth number, **carbohydrate**, keeps doing what i
 type 1 diabetes: it decides the insulin dose.
 
 - **Portions, not bans.** Most kidney-diet problems are size problems: ½ cup of fruit or
-  vegetables, 3 oz of meat (a deck of cards), 1 oz of cheese. "A large serving of a low-potassium
-  food becomes a high-potassium food" ([NKF][DG5]).
+  vegetables, 3 oz of meat (a deck of cards), 1 oz of cheese. "A large amount of a low-potassium
+  food can easily turn it into a high-potassium food" ([NKF][DG5]).
 - **Fresh over packaged.** More than 70 % of sodium comes from packaged and restaurant food, not
   the salt shaker ([FDA][DG34]), and the phosphate *additives* in processed food are absorbed almost
   completely while natural phosphorus is not ([Kalantar-Zadeh 2010][DG12]; [Noori 2010][DG13a]).
@@ -112,7 +113,7 @@ is near normal. The app's "Suggest targets" shows which of your details it used
 
 Before dialysis, extra protein makes the kidneys work harder, and more than 1.3 g per kg a day is
 linked to faster loss of kidney function ([KDIGO 2024][K24]). Too *little* protein is also harmful:
-it causes muscle loss and, with insulin, raises the risk of lows ([KDOQI 2020][Q20]). Dialysis
+it causes muscle loss and, with insulin, raises the risk of lows ([KDOQI 2020][Q20]; [KDIGO 2022][K22]). Dialysis
 removes protein and the body's need rises, so the target goes up to 1.0–1.2 g per kg
 ([KDIGO 2022][K22]; [ADA 2026 §11][A26-11]). See [Protein](protein.md).
 

@@ -83,7 +83,7 @@ activity level, frailty, weight 6 months ago, and "I have had high potassium". L
 
 | Detail | Changes | Does not change |
 |---|---|---|
-| Age | calories; protein from age 65; calcium only at stages 1–2 and after a transplant | sodium, potassium, phosphorus, fluid on dialysis |
+| Age | calories; protein from age 65; calcium only at stages 1–2 (a transplant kidney included) | sodium, potassium, phosphorus, fluid on dialysis |
 | Sex used in formulas | calories; calcium at stages 1–2; the eGFR estimate | protein per kg, sodium, potassium, phosphorus |
 | Height and weight | the weight used for protein and calories | sodium, potassium, phosphorus |
 | Activity | calories | everything else |

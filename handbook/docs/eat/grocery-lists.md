@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [FDC, DG46a, DG22, DG4, DG20, DG34, DG5]
 ---
 
@@ -652,4 +653,4 @@ For one person for 7 days of the [After a kidney transplant](menus/transplant.md
 - [AKF potassium food guide][DG46a] and [NKF: 40 low-potassium fruits and vegetables][DG22]: the low-potassium list.
 - [NIDDK: healthy eating for adults with CKD][DG4] and [NKF: phosphorus and your CKD diet][DG20]: "PHOS" additives and label reading.
 - [FDA: sodium in your diet][DG34]: where sodium comes from and label claims.
-- [NKF: potassium and your CKD diet][DG5]: salt substitutes are potassium chloride.
+- [NKF: potassium and your CKD diet][DG5]: salt substitutes and lite salt are high in potassium.

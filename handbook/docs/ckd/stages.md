@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, K22, A26-11, Q20, K26A, NIDDK-tests, NKF-eGFR, NKF-CKDEPI]
 ---
 
@@ -69,8 +70,8 @@ problems and death compared with people without CKD ([KDIGO 2024][K24], chapter 
 
 | Example results | Categories | What it means |
 |---|---|---|
-| eGFR 75, UACR 10 mg/g, no other damage | not CKD | normal for age; keep yearly checks if you have diabetes |
-| eGFR 75, UACR 120 mg/g | G2 A2 | CKD. Albumin is the early sign in diabetes. A kidney-protecting medicine (ACE inhibitor or ARB) is recommended ([KDIGO 2024][K24], recommendation 3.6.3) |
+| eGFR 75, UACR 10 mg/g, no other damage | not CKD | an eGFR of 60–89 is not CKD on its own; keep yearly checks if you have diabetes |
+| eGFR 75, UACR 120 mg/g | G2 A2 | CKD. Albumin is the early sign in diabetes. With diabetes, a kidney-protecting medicine (ACE inhibitor or ARB) is recommended ([KDIGO 2024][K24], recommendation 3.6.3) |
 | eGFR 40, UACR 15 mg/g | G3b A1 | high risk |
 | eGFR 50, UACR 450 mg/g | G3a A3 | **higher** risk than the G3b A1 example, even though the eGFR is better |
 | eGFR 22, any UACR | G4 | very high risk; time to plan with a nephrologist |
@@ -100,8 +101,9 @@ be valid at G1–G2** (practice point 2.2.4).
   depending on the stage ([ADA 2026 §11][A26-11], recommendation 11.1b).
 - **eGFR:** a change of **more than 20 %** from one test to the next is more than normal day-to-day
   variation and should be looked into (practice point 2.1.3).
-- **After starting a kidney-protecting medicine**, a small, early drop in eGFR is expected. A fall of
-  **more than 30 %** should be looked into (practice points 2.1.4 and 3.6.4).
+- **After starting a kidney-protecting medicine**, a small, early drop in eGFR is expected. An eGFR
+  fall of **more than 30 %** should be looked into (practice point 2.1.4). For an ACE inhibitor or
+  ARB, KDIGO's line is a creatinine rise of more than 30 % within 4 weeks (practice point 3.6.4).
 - **UACR:** a result that has **doubled** is more than lab variation (practice point 2.1.5).
 
 **How to work out a change:** (old − new) ÷ old × 100.
@@ -113,9 +115,9 @@ be valid at G1–G2** (practice point 2.2.4).
 
 ## Does age or sex change my numbers?
 
-- The **G and A categories are the same for everyone**. KDIGO looked at changing the eGFR cut-off for
-  younger and older adults and decided the current staging works at all adult ages
-  ([KDIGO 2024][K24], introduction).
+- The **G and A categories are the same for all adults**. KDIGO notes there is still debate about
+  using the same eGFR cut-off in older adults, but keeps one set because the risk of harm rises with
+  each stage at every age ([KDIGO 2024][K24], introduction).
 - **Age and sex go into the eGFR equation** and into the KFRE, so they are already counted in those
   numbers ([CKD-EPI 2021 equation][NKF-CKDEPI]; [KDIGO 2024][K24], chapter 2).
 - **Sex changes the anemia cut-offs**: hemoglobin under 13 g/dL (130 g/L) in men and under 12 g/dL
@@ -145,8 +147,10 @@ be valid at G1–G2** (practice point 2.2.4).
 - **Maria, 45, type 1 diabetes for 25 years:** eGFR 52, UACR 520 mg/g (59 mg/mmol). She is **G3a A3**.
   Her nephrologist starts an ACE inhibitor and talks about finerenone, because the albumin level puts
   her at higher risk than her eGFR alone suggests.
-- **John, 72:** eGFR 38, UACR 18 mg/g. He is **G3b A1**. His 5-year KFRE is 2 %, so for now his family doctor
-  keeps up yearly checks and a blood pressure plan, and will refer him if his risk rises.
+- **John, 72:** eGFR 38, UACR 18 mg/g. He is **G3b A1**, which KDIGO counts as high risk. His 5-year
+  KFRE is 2 %, so for now his family doctor checks his eGFR and UACR more often than once a year, as
+  KDIGO advises at higher risk ([KDIGO 2024][K24], practice point 2.1.2), keeps a blood pressure plan,
+  and will refer him if his risk rises.
 - **Priya, 58, on her third year at G4:** her 2-year KFRE has risen to 42 %. Her team starts education
   on dialysis, transplant and conservative care, and refers her for a transplant evaluation.
 

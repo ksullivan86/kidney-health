@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, K17, K26A, AK22, JBDS, A26-6, A26-11, K22, NKFpain, NIDDK-whatis, Q20, DG20]
+fact_checked: 2026-10-05
+sources: [K24, K17, K26A, AK22, JBDS, A26-6, A26-11, K22, NKFpain, NIDDK-whatis, Q20, DG20, MEDLINE-LOWK, HC24]
 ---
 
 # Stage G3a
@@ -45,7 +46,7 @@ Full table: [Eating well](../eat/index.md).
     | Calcium and phosphate | every 6–12 months | phosphate 2.5–4.5 mg/dL |
     | PTH and alkaline phosphatase | PTH depends on your first result; both start at G3a | lab-specific |
     | Haemoglobin | at least once a year | anaemia: under 13 g/dL (men), under 12 g/dL (women) |
-    | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium 3.5–5.0 mEq/L |
+    | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium about 3.5–5.1 mEq/L |
 
 === "International"
 
@@ -55,12 +56,13 @@ Full table: [Eating well](../eat/index.md).
     | Calcium and phosphate | every 6–12 months | phosphate 0.81–1.45 mmol/L |
     | PTH and alkaline phosphatase | PTH depends on your first result; both start at G3a | lab-specific |
     | Haemoglobin | at least once a year | anaemia: under 130 g/L (men), under 120 g/L (women) |
-    | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium 3.5–5.0 mmol/L |
+    | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium about 3.5–5.1 mmol/L |
 
 Sources: eGFR and UACR ([ADA 2026 §11][A26-11], recommendation 11.1b); calcium, phosphate, PTH and
 alkaline phosphatase ([KDIGO 2017][K17], recommendations 3.1.1–3.1.2); phosphate range
 ([NKF][DG20]); haemoglobin
-([KDIGO 2026 anemia][K26A]); potassium after medicine changes ([KDIGO 2024][K24], practice point 3.6.2).
+([KDIGO 2026 anemia][K26A]); potassium range ([MedlinePlus][MEDLINE-LOWK]); potassium after medicine
+changes ([KDIGO 2024][K24], practice point 3.6.2).
 
 ## What changes now
 
@@ -138,13 +140,16 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain, severe breathlessness, fainting or a very slow or irregular pulse (especially with a
     lab potassium of 6.5 mmol/L or more), a low the person
-    cannot treat themselves (give glucagon, then call), or vomiting with blood ketones of 3.0 mmol/L
-    or more. Full list: [Get help now](../get-help-now.md).
+    cannot treat themselves (give glucagon, then call), or possible DKA: blood ketones of 3.0 mmol/L
+    or more, or any ketones with vomiting, deep fast breathing or fruity breath
+    ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
     Vomiting, diarrhoea or not eating (start your sick-day plan); lows that keep happening or that you
     no longer feel coming; dizziness on standing after a new blood pressure medicine; a lab potassium
-    of 6.0–6.4 mmol/L ([KDIGO 2024][K24]; 6.5 or more: see [Get help now](../get-help-now.md)).
+    of 6.0–6.4 mmol/L: KDIGO advises a repeat test within 24 hours, or checks and treatment in
+    hospital **now** if you feel unwell ([KDIGO 2024][K24], Table 28; 6.5 or more: see
+    [Get help now](../get-help-now.md)).
 
 ## Related pages
 
@@ -157,7 +162,7 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 ## Sources
 
 - [KDIGO 2024 CKD guideline][K24]: recommendation 2.2.1; practice points 2.2.1, 3.6.2, 3.6.4,
-  3.11.5.1–3.11.5.2, 4.1.3, 4.2.1, 4.3.1, 4.3.2.
+  3.11.5.1–3.11.5.2, 4.1.3, 4.2.1, 4.3.1, 4.3.2; Table 28.
 - [KDIGO 2017 CKD-MBD guideline update][K17]: recommendations 3.1.1–3.1.2.
 - [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia definition and testing intervals.
 - [ADA–KDIGO 2022 consensus report][AK22]; [JBDS–Renal Association guidance][JBDS]: insulin and lows in CKD.
@@ -166,3 +171,4 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: recommendation 3.1.1.
 - [KDOQI 2020 nutrition guideline][Q20]; [NKF: phosphorus][DG20].
 - [NKF: pain medicines and kidney disease][NKFpain]; [NIDDK: what is chronic kidney disease?][NIDDK-whatis].
+- [MedlinePlus: low blood potassium][MEDLINE-LOWK]: usual potassium range; [2024 hyperglycemic crises consensus][HC24]: DKA criteria.

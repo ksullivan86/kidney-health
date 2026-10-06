@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [NIDDK-HD, NIDDK-HD-eat, Q15HD, Q19VA, JBDS, DG19a, DG23, DG28a, DG53, DOPPS03, NKF-HDaccess, NKF-HHD, Q20, K22, DG26, DG20, K24, K17, K26A, CMSPREP, FDC, A26-6]
+fact_checked: 2026-10-05
+sources: [NIDDK-HD, NIDDK-HD-eat, Q15HD, Q19VA, JBDS, JBDS22, AKF-bleed, HC24, DG19a, DG23, DG28a, DG53, DOPPS03, NKF-HDaccess, NKF-HHD, Q20, K22, DG26, DG20, K24, K17, K26A, CMSPREP, FDC, A26-6]
 ---
 
 # In-centre hemodialysis
@@ -29,7 +30,7 @@ and after and carry fast sugar ([JBDS–Renal Association][JBDS]).
 | What | Typical number | Source |
 |---|---|---|
 | Sessions | 3 a week, about 4 hours each; at least 3 hours if your own kidneys make little urine | [NIDDK][NIDDK-HD]; [KDOQI 2015][Q15HD] |
-| Dialysis dose (spKt/V) | target 1.4 per session; never below 1.2 | [KDOQI 2015][Q15HD] |
+| Dialysis dose (spKt/V) | with 3 sessions a week: target 1.4 per session, with a minimum of 1.2 | [KDOQI 2015][Q15HD], guideline 3.1 |
 | Fluid | about 1,000 mL (32 oz) a day **plus** the urine you pass; the app starts at 1,500 mL | [AKF][DG19a]; [DaVita][DG23] |
 | Weight gain between sessions | your team's limit; gains above 3.5 % of body weight are linked to death (about 2.5 kg or 5.4 lb at 70 kg) | [Cabrera 2015][DG28a] |
 | Protein | **1.0–1.2 g/kg** a day (70–84 g at 70 kg) | [KDOQI 2020][Q20], statement 3.0.4; [KDIGO 2022][K22], practice point 3.1.2 |
@@ -65,18 +66,20 @@ your unit straight away to rearrange it.
 protein) and makes the body break down muscle, and a little more protein may also help prevent lows
 with diabetes ([KDIGO 2022][K22], practice point 3.1.2; [KDOQI 2020][Q20]). Choose high-quality protein
 such as eggs, fish and poultry ([NIDDK][NIDDK-HD-eat]). Fluid goes **down**, because there is little or no
-urine to get rid of it. Salt makes you thirsty, so cutting salt is the best way to keep to your fluid
-limit ([DaVita][DG23]). See [Dialysis days](../eat/dialysis-days.md) and [Fluid](../eat/fluid.md).
+urine to get rid of it. Salt makes you thirsty, so cutting salt is one of the best ways to keep to
+your fluid limit ([DaVita][DG23]; [KDOQI 2015][Q15HD], guideline 4.2). See [Dialysis days](../eat/dialysis-days.md) and [Fluid](../eat/fluid.md).
 
-**Your access.** Feel your fistula or graft for the buzz (thrill) every day. Do not let anyone take
-blood pressure or blood from that arm unless your team says so. Avoid tight sleeves, watches and
-bracelets over it, do not sleep on it, and do not carry heavy bags on that arm ([NKF][NKF-HDaccess]).
+**Your access.** Feel your fistula or graft for the buzz (thrill) every day. Never let anyone put a
+blood pressure cuff on that arm, and do not let anyone take blood or put a drip in it unless your
+dialysis team says it is OK. Avoid tight sleeves, watches and bracelets over it, do not sleep on it,
+and do not carry heavy bags on that arm ([NKF][NKF-HDaccess]).
 Watch for redness, warmth, swelling, pain or drainage ([NKF][NKF-HDaccess]; [NIDDK][NIDDK-HD]).
 
 **Diabetes on dialysis days** ([JBDS–Renal Association][JBDS]):
 
-- Check your glucose **before and after** each session. Glucose is usually lowest after dialysis, and
-  lows often come in the hours afterwards.
+- Check your glucose **before and after** each session. Glucose often falls during a session and is
+  often lowest late in it or afterwards; most lows happen within 24 hours of dialysis
+  ([JBDS 2022][JBDS22]). Tell the nurse at once if you feel low during a session.
 - Units should use dialysis fluid that contains glucose for people on insulin.
 - Many people need less insulin on dialysis days. Your team sets this; you do not change it yourself.
 - You should be able to treat a low at any time, including on the way to and from the unit. Carry
@@ -113,7 +116,8 @@ session ([KDOQI 2015][Q15HD]).
 
 **Your weight-gain limit.** If you weigh 70 kg (154 lb), 3.5 % is about 2.5 kg (5.4 lb). About
 1,000 mL of fluid adds about 1 kg ([DaVita][DG23]). So two extra 12 oz (355 mL) cans of soda a day over
-a 3-day weekend add over 2 kg on their own (2 × 355 mL × 3 days = 2,130 mL).
+the long weekend gap (Friday to Monday is close to 3 days) add over 2 kg on their own
+(2 × 355 mL × 3 days = 2,130 mL).
 
 **A protein top-up.** Going from 56 g to 70–84 g of protein a day means about 14–28 g more. One large
 egg has about 6 g and 2 oz of roast chicken breast about 18 g ([USDA][FDC]).
@@ -146,10 +150,12 @@ Storms, power cuts and closed roads can stop dialysis. CMS advises ([CMS][CMSPRE
 
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain; severe breathlessness or not being able to lie flat (fluid overload); fainting or a
-    very slow or irregular pulse; **bleeding from your fistula or graft**: press hard on the spot,
-    and call if it has not stopped after 10 minutes of firm pressure (an access bleed is an emergency,
-    [KDOQI vascular access][Q19VA]); a low the person cannot treat themselves (give glucagon, then
-    call).
+    very slow or irregular pulse; **bleeding from your fistula or graft** that is heavy or spurting,
+    or that has not stopped after 10–15 minutes of firm pressure, or starts again: press hard on
+    gauze with two fingers and keep pressing while you call ([AKF][AKF-bleed]); a low the person
+    cannot treat themselves (give glucagon, then call); possible DKA: blood ketones of 3.0 mmol/L or
+    more, or any ketones with vomiting, deep fast breathing or fruity breath. On dialysis, DKA can
+    come with lower ketone readings, so these signs count even under 3.0 ([2024 consensus][HC24]).
     Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your unit today"
@@ -168,9 +174,10 @@ Storms, power cuts and closed roads can stop dialysis. CMS advises ([CMS][CMSPRE
 ## Sources
 
 - [NIDDK: hemodialysis][NIDDK-HD]; [NIDDK: eating and nutrition on hemodialysis][NIDDK-HD-eat].
-- [KDOQI 2015 hemodialysis adequacy guideline][Q15HD]: Kt/V target and minimum; session length.
+- [KDOQI 2015 hemodialysis adequacy guideline][Q15HD]: guidelines 3.1 (Kt/V target and minimum), 4.1–4.2
+  (session length, longer or extra sessions, sodium).
 - [KDOQI 2019 vascular access guideline][Q19VA]; [NKF: hemodialysis access][NKF-HDaccess].
-- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS].
+- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]; [JBDS 2022 guidance: diabetes on dialysis][JBDS22].
 - [AKF Kidney Kitchen: fluids][DG19a]; [DaVita: hemodialysis fluid intake][DG23].
 - [Cabrera 2015: weight gain between sessions][DG28a]; [Foley 2011: the long interdialytic interval][DG53].
 - [DOPPS 2003: skipped and shortened sessions][DOPPS03].
@@ -178,5 +185,6 @@ Storms, power cuts and closed roads can stop dialysis. CMS advises ([CMS][CMSPRE
   practice point 3.1.2.
 - [DaVita: high or low potassium foods][DG26]; [NKF: phosphorus][DG20]; [KDIGO 2024 CKD guideline][K24].
 - [KDIGO 2017 CKD-MBD guideline update][K17]; [KDIGO 2026 anemia in CKD guideline][K26A].
-- [CMS: preparing for emergencies on dialysis][CMSPREP].
+- [CMS: preparing for emergencies on dialysis][CMSPREP]; [AKF: fistula and graft bleeds][AKF-bleed].
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria, Table 4 (lower ketone levels with kidney failure).
 - [USDA FoodData Central][FDC]; [ADA Standards of Care 2026, section 6][A26-6]; [NKF: home hemodialysis][NKF-HHD].

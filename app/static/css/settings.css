@@ -1,0 +1,116 @@
+/* Kidney Diet Log — Settings view (note 07 §4.17): section navigation, key/value lists, setting
+   rows with their source line ("Set by the server (ENV)" / your choice / admin / default), the
+   write-only key widget, devices, people and invites, one-time link boxes and notes; the header
+   gear and the Settings entry in Profile. Loaded after profile.css. */
+
+#settings-open[aria-current="page"] { color: var(--accent); background: var(--accent-tint); }
+.profile-settings .btn { align-self: flex-start; }
+
+/* ---------- head and section navigation ---------- */
+.settings-head { display: flex; flex-direction: column; gap: 2px; }
+.settings-title { font-size: 1.3rem; }
+.settings-title:focus, .settings-section > h2:focus { outline: none; }
+.settings-title:focus-visible, .settings-section > h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.settings-head p { margin: 0; }
+.settings-nav-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.nav-chip { font-weight: 600; }
+.settings-section { scroll-margin-top: 72px; }
+.settings-section > h2 { margin-bottom: 10px; }
+.settings-body { display: flex; flex-direction: column; gap: 12px; }
+.settings-body:empty { display: none; }
+.settings-subtitle { font-size: 1rem; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--border); }
+.settings-body > .settings-subtitle:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.settings-minor { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); margin: 10px 0 0; }
+.install-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ---------- key / value ---------- */
+.kv { margin: 0; display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 6px 16px; }
+.kv-row { display: contents; }
+.kv dt { color: var(--text-2); font-size: 0.88rem; padding-top: 1px; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .kv { grid-template-columns: 1fr; gap: 0; }
+  .kv dd { margin-bottom: 8px; }
+}
+
+/* ---------- forms and rows ---------- */
+.settings-form { display: flex; flex-direction: column; gap: 12px; }
+.inline-row { display: flex; gap: 8px; align-items: center; }
+.inline-row input, .inline-row select { flex: 1; min-width: 0; }
+.inline-row .btn { flex: none; }
+.settings-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.signout-row { padding-top: 14px; border-top: 1px solid var(--border); }
+.signout-row .hint { margin: 0; }
+.setting-row { display: flex; flex-direction: column; gap: 14px; }
+.setting-source { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-2); line-height: 1.35; }
+.setting-source.src-env { color: var(--caution-text); font-weight: 600; }
+.setting-source.src-user, .setting-source.src-instance { color: var(--text-2); }
+.lock-icon { width: 14px; height: 14px; flex: none; }
+.setting-status { margin: 0; font-weight: 600; }
+.setting-status .setting-source { font-weight: 600; }
+.state-pill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.state-pill.off { background: var(--surface-3); color: var(--text-2); }
+.setting-list { display: flex; flex-direction: column; gap: 14px; }
+.setting-item { display: flex; flex-direction: column; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.setting-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.setting-item.locked select, .setting-item.locked input[type="text"], .setting-item.locked input[type="number"] { background: var(--surface-2); color: var(--text-2); }
+.setting-tail { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+
+/* Collapsible blocks: change password, delete, activity, invite, manage a person. */
+.settings-details { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 12px; }
+.settings-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+.settings-details[open] { padding-bottom: 12px; }
+.settings-details[open] > summary { margin-bottom: 6px; }
+.danger-zone > summary { color: var(--over-text); }
+.settings-note { border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.9rem; color: var(--text); }
+.settings-note p { margin: 0; }
+.settings-note.caution { background: var(--caution-tint); border-left: 4px solid var(--caution); }
+.settings-note.danger { background: var(--over-tint); border-left: 4px solid var(--over); }
+
+/* ---------- key widget ---------- */
+.key-widget { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.key-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.key-name { font-weight: 600; }
+.key-state { margin: 0; color: var(--text-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.key-state.warn { color: var(--over-text); font-weight: 600; }
+.key-actions, .key-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.key-editor { display: flex; flex-direction: column; gap: 10px; }
+.key-widget .status-msg { margin: 0; }
+
+/* ---------- devices, people, invites, usage, activity ---------- */
+.device-list, .user-list, .invite-list, .usage-list { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.device, .invite { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.device-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.device .btn, .invite .btn { flex: none; }
+.invite.inv-used, .invite.inv-expired { color: var(--text-2); }
+.invite-list .empty-state { padding: 10px 12px; }
+.badge.this-device { background: var(--accent-tint); color: var(--accent); }
+.badge.role-admin { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
+.badge.role-user { background: var(--surface-3); color: var(--text-2); margin-left: 0; }
+.badge.status-disabled, .badge.status-locked { background: var(--over-tint); color: var(--over-text); margin-left: 0; }
+.badge.status-pending_setup { background: var(--caution-tint); color: var(--caution-text); margin-left: 0; }
+.user-badges .badge.this-device { margin-left: 0; }
+.user-row { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.user-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.user-main .row-title { overflow-wrap: anywhere; }
+.user-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.user-manage > summary { cursor: pointer; color: var(--accent); font-weight: 600; min-height: var(--tap); display: inline-flex; align-items: center; padding: 0 2px; }
+.user-manage-body { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 6px; }
+.invite-block { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.invite-out:empty { display: none; }
+.usage { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; padding: 8px 12px; align-items: center; }
+.activity-list { display: flex; flex-direction: column; }
+.activity-list li { display: flex; flex-direction: column; gap: 1px; padding: 8px 0; border-top: 1px solid var(--border); }
+.activity-list li:first-child { border-top: 0; }
+.act-what { overflow-wrap: anywhere; }
+
+/* One-time links (invite, account setup, password reset), with Copy. */
+.link-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--accent-tint); }
+.link-box .hint { margin: 0; color: var(--text-2); }
+.link-row { display: flex; gap: 8px; }
+.link-input { flex: 1; min-width: 0; font-family: var(--mono); font-size: 0.85rem; }
+@media (max-width: 480px) { .link-row { flex-direction: column; } }
+
+.about-list { list-style: disc; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+/* A source line under a checkbox lines up with the checkbox's text. */
+.setting-row > .check + .setting-source, .setting-item > .check + .setting-tail { margin-left: 28px; }

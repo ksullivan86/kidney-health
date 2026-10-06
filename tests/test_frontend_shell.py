@@ -71,13 +71,17 @@ def test_only_pwa_js_creates_a_trusted_types_policy_and_only_for_sw_js() -> None
 # --------------------------------------------------------------------------- module layout
 def test_module_layout_and_load_order() -> None:
     body_scripts = re.findall(r'<script src="([^"]+)"', BODY)
-    assert body_scripts[:3] == ["js/engine/rules.js", "js/engine/targets.js", "js/core.js"]
+    # the engine twins (pure, no DOM) come first, then core.js
+    engines = [s for s in body_scripts if s.startswith("js/engine/")]
+    assert body_scripts[: len(engines) + 1] == [*engines, "js/core.js"]
+    assert engines[:2] == ["js/engine/rules.js", "js/engine/targets.js"] and "js/engine/settings.js" in engines
     assert body_scripts[-2:] == ["js/pwa.js", "js/main.js"]
     mocks = [s for s in body_scripts if s.startswith("js/mock/")]
     views = [s for s in body_scripts if s.startswith("js/views/")]
     assert mocks[0] == "js/mock/core.js" and mocks[-1] == "js/mock/seed.js"
     assert body_scripts.index(mocks[-1]) < body_scripts.index(views[0])
-    assert set(views) >= {f"js/views/{v}.js" for v in ("today", "add", "plan", "trends", "profile")}
+    assert set(views) >= {f"js/views/{v}.js" for v in ("today", "add", "plan", "trends", "profile", "auth", "settings")}
+    assert set(mocks) >= {"js/mock/auth.js", "js/mock/settings.js"}
     assert re.search(r'<script src="js/pwa.js" data-preview="omit"></script>', BODY)
     styles = re.findall(r'<link rel="stylesheet" href="([^"]+)">', HEAD)
     assert styles[0] == "css/base.css" and styles[-1] == "css/touch.css"
@@ -96,7 +100,13 @@ def test_every_referenced_file_exists() -> None:
 def test_api_client_marks_writes_and_hands_401_to_auth() -> None:
     core = (STATIC / "js" / "core.js").read_text(encoding="utf-8")
     assert "if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = 'kidney-health';" in core
-    assert "if (res.status === 401)" in core and "KH.auth.onUnauthorized(err)" in core
+    # one error path for the server and the demo API (afterError): 401 → sign-in screen,
+    # reauth_required → password prompt and one retry, password_change_required, setup_required
+    assert "if (err.status === 401 && !opts.quiet401)" in core and "KH.auth.onUnauthorized(err)" in core
+    assert "data.reauth_required && !opts.retried" in core and "KH.auth.reauth(err)" in core
+    assert "return retry({ ...opts, retried: true });" in core
+    assert "data.password_change_required" in core and "data.setup_required" in core
+    assert core.count("return afterError(") >= 3  # fetch, demo API and download all use it
 
 
 # --------------------------------------------------------------------------- PWA head, service worker, manifest, icons

@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, NIDDK-whatis, NIDDK-choosing, NIDDK-CKD, K15SC, DG17, A26-6]
+fact_checked: 2026-10-05
+sources: [K24, NIDDK-whatis, NIDDK-choosing, NIDDK-CKD, K15SC, DG17, A26-6, HC24]
 ---
 
 # Your stage, day to day
@@ -92,7 +93,7 @@ the next steps ([KDIGO 2024][K24], recommendation 2.2.1 and practice points 2.2.
 | more than 10 % over 2 years | joining a kidney care team (diet, medicines, education and social support) |
 | more than 40 % over 2 years | learning about treatments, planning dialysis access, transplant referral |
 
-KFRE is **not valid at G1 and G2** ([KDIGO 2024][K24], practice point 2.2.4).
+KFRE **may not be valid at G1 and G2**, so it is not used there ([KDIGO 2024][K24], practice point 2.2.4).
 
 ### Starting numbers by stage
 
@@ -140,8 +141,11 @@ These apply at every stage:
 
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain, severe breathlessness or not being able to lie flat, fainting, new confusion or a
-    seizure, a low the person cannot treat themselves (give glucagon, then call), or vomiting with
-    blood ketones of 3.0 mmol/L or more. Full list: [Get help now](../get-help-now.md).
+    seizure, a low the person cannot treat themselves (give glucagon, then call), or possible
+    diabetic ketoacidosis (DKA): blood ketones of 3.0 mmol/L or more, or any ketones with vomiting,
+    deep fast breathing or fruity breath. With kidney failure, DKA can come with lower ketone
+    readings, so the signs count too ([2024 consensus][HC24]). Full list:
+    [Get help now](../get-help-now.md).
 
 ## Sources
 
@@ -152,3 +156,4 @@ These apply at every stage:
 - [KDIGO 2015 supportive care conference][K15SC]: comprehensive conservative care.
 - [NKF: avoid star fruit][DG17].
 - [ADA Standards of Care 2026, section 6][A26-6]: treating lows, glucagon.
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria; lower ketone levels with kidney failure.

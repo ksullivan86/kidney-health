@@ -17,6 +17,7 @@
 # without arguments to regenerate the pages. A `note` is shown next to the food name.
 
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 
 reference_person:
   weight_kg: 70        # used as the reference ("ideal") weight: BMI 24.2 at 170 cm, so the app uses it as is
@@ -42,7 +43,7 @@ common:
     ([Eating enough](../eating-enough.md)).
   seasoning: &seasoning >-
     **Season without salt:** herbs, spices, garlic and onion powder, lemon and vinegar. Do not use salt
-    substitutes: they are potassium chloride ([Sodium](../sodium.md)).
+    substitutes: they contain potassium chloride ([Sodium](../sodium.md)).
   src_fdc: &src_fdc "[USDA FoodData Central (SR Legacy)][FDC]: every nutrient value, through the app's food list."
   src_q20: &src_q20 "[KDOQI 2020 nutrition guideline][Q20]: energy 25–35 kcal/kg (statement 3.1.1) and protein (statements 3.0.1–3.0.4)."
   src_k24: &src_k24 "[KDIGO 2024 CKD guideline][K24]: sodium under 2 g a day (Rec 3.3.2.1); protein 0.8 g/kg at G3–G5 (Rec 3.3.1.1); limit bioavailable potassium only when it runs high (PP 3.11.5.2)."
@@ -1969,4 +1970,4 @@ grocery:
     - "[AKF potassium food guide][DG46a] and [NKF: 40 low-potassium fruits and vegetables][DG22]: the low-potassium list."
     - "[NIDDK: healthy eating for adults with CKD][DG4] and [NKF: phosphorus and your CKD diet][DG20]: \"PHOS\" additives and label reading."
     - "[FDA: sodium in your diet][DG34]: where sodium comes from and label claims."
-    - "[NKF: potassium and your CKD diet][DG5]: salt substitutes are potassium chloride."
+    - "[NKF: potassium and your CKD diet][DG5]: salt substitutes and lite salt are high in potassium."

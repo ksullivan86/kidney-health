@@ -1,5 +1,6 @@
 /* Kidney Diet Log — Profile view: about you, dialysis days, daily targets with "Suggest
-   targets" (never auto-saved), the stale-targets notice, and the theme choice. */
+   targets" (never auto-saved), the stale-targets notice, and the way into Settings (theme,
+   account, keys and this device moved there in v0.3). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -34,7 +35,6 @@
     $$('#pf-dialysis-days input').forEach((c) => { c.checked = dd.has(Number(c.dataset.weekday)); });
     syncDialysisDaysVisibility();
     fillTargets(p.targets || {});
-    $('#pf-theme').value = KH.theme.stored();
     $('#suggest-notes').hidden = true;
     renderTargetsStale();
     // A fresh database already has a profile row (with a creation timestamp); only call it
@@ -149,6 +149,8 @@
     } catch (err) { toastError(err); }
     finally { btn.disabled = false; }
   }
+
+  $('#profile-open-settings').addEventListener('click', () => router.show('settings'));
 
   router.register('profile', () => KH.loadProfile().then(renderProfile).catch(toastError));
   KH.views.profile = { renderProfile, fillTargets, suggestTargetsIntoForm };

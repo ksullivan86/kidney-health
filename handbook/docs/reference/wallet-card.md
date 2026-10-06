@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [NIDDK-hypo, A26-6, GLUCAGON-KIT, NKF-HDaccess, MHRA, NIDDK-Tx, K24, NHS-DKA]
+fact_checked: 2026-10-05
+sources: [NIDDK-hypo, A26-6, GLUCAGON-KIT, NKF-HDaccess, MHRA, EXTRANEAL, NIDDK-Tx, K24, NHS-DKA]
 ---
 
 # Wallet cards
@@ -81,9 +82,10 @@ Why each line is there:
   [ADA 2026 §6][A26-6]; [glucagon instructions][GLUCAGON-KIT]).
 - **Access arm:** blood pressure cuffs, blood draws and IVs can damage a fistula or graft
   ([NKF][NKF-HDaccess]).
-- **Icodextrin:** this PD fluid makes some glucose meters read falsely high, and insulin given for a
-  false high reading has caused deaths. The effect can last up to two weeks after stopping the fluid
-  ([MHRA][MHRA]).
+- **Icodextrin:** this PD fluid makes some glucose meters read falsely high. Extra insulin given for
+  a false high can cause a severe low, coma or death ([MHRA][MHRA]), and a real low can be missed. The
+  false readings can last up to two weeks after stopping the fluid
+  ([Extraneal label][EXTRANEAL]).
 - **Transplant:** without anti-rejection medicine, your immune system may attack the new kidney
   ([NIDDK][NIDDK-Tx]).
 
@@ -155,7 +157,8 @@ team tells you how to adjust it. More on illness: [Sick days](../t1d/sick-days.m
 - [ADA Standards of Care 2026, section 6][A26-6]: hypoglycemia and glucagon.
 - [Glucagon Emergency Kit instructions][GLUCAGON-KIT]: side position, feeding once able to swallow.
 - [NKF: hemodialysis access][NKF-HDaccess]: protecting the access arm.
-- [MHRA: icodextrin and false glucose readings][MHRA].
+- [MHRA: icodextrin and false glucose readings][MHRA]; [Extraneal (icodextrin) prescribing information][EXTRANEAL]:
+  meters affected, missed lows, two weeks after stopping.
 - [NIDDK: kidney transplant][NIDDK-Tx].
 - [KDIGO 2024 CKD guideline][K24]: practice points 4.3.2–4.3.3 (sick-day plans).
 - [NHS: diabetic ketoacidosis][NHS-DKA]: keep taking insulin when ill.

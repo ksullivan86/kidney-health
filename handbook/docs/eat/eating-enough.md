@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [Q20, K22, DG25a, NOTE05, K24, FDC]
 ---
 
@@ -60,7 +61,7 @@ it cites; [KDOQI 2020][Q20]):
 ## Examples
 
 The original sample day in the diet guide (stage 3b–4, 80 kg) came to about 1,470 kcal, which is
-400–500 kcal under the 25 kcal/kg floor. Each of these adds about 100–120 kcal with no protein,
+about 530 kcal under the 25 kcal/kg floor (2,000 kcal for 80 kg). Each of these adds about 100–120 kcal with no protein,
 potassium or phosphorus to speak of ([USDA FoodData Central][FDC]):
 
 - 1 tablespoon of olive oil (119 kcal) or canola oil (124 kcal) in cooking

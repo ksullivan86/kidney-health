@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K26A, K22, DG55a, JBDS, MEDLINE-GIB]
+fact_checked: 2026-10-05
+sources: [K26A, K22, DG55a, JBDS, JBDS22, MEDLINE-GIB, CFR494]
 ---
 
 # Haemoglobin and iron
@@ -66,7 +67,7 @@ proposed, but the WHO thresholds above are the ones used in kidney studies ([KDI
 |---|---|
 | Stage G3 | once a year |
 | Stage G4 | twice a year |
-| Stage G5 and dialysis | every 3 months |
+| Stage G5 and dialysis | every 3 months; at US dialysis units, at least monthly ([42 CFR 494.90][CFR494]) |
 | Taking iron | Hb, ferritin and TSAT every 3 months; every 1–3 months on hemodialysis |
 | Starting or changing an ESA | every 2–4 weeks, then at least every 3 months |
 
@@ -110,7 +111,8 @@ This handbook gives no doses: your team sets them.
 
 Anaemia, transfusions, ESAs and iron all make A1c read **lower** than your real average glucose,
 mostly at stages G4–G5 and on dialysis ([KDIGO 2022][K22]; [Pecoits-Filho 2016][DG55a]). Iron
-deficiency can make it read **higher** ([JBDS–Renal Association][JBDS]). After any of these changes,
+deficiency can make it read **higher** ([JBDS–Renal Association][JBDS]; [JBDS 2022][JBDS22]). After any
+of these changes,
 judge your glucose by your CGM or meter, not A1c alone ([A1c](a1c.md); [CGM metrics](cgm-metrics.md)).
 
 ## What to do
@@ -151,12 +153,15 @@ judge your glucose by your CGM or meter, not A1c alone ([A1c](a1c.md); [CGM metr
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain, severe breathlessness, fainting, vomiting blood or material that looks like coffee
     grounds, black tarry stools or a lot of blood in your stool, or feeling dizzy from bleeding
-    ([MedlinePlus][MEDLINE-GIB]). See [Get help now](../get-help-now.md).
+    ([MedlinePlus][MEDLINE-GIB]). After an iron infusion: trouble breathing, swelling of the face, lips
+    or throat, or feeling faint, which can be signs of a reaction ([KDIGO 2026 anemia][K26A], practice
+    point 2.9). See [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
-    Small amounts of new bleeding, much more tiredness or breathlessness than usual, or a reaction
-    during or after an iron infusion such as itching, flushing or chest tightness
-    ([KDIGO 2026 anemia][K26A], practice point 2.9).
+    Small amounts of new bleeding, or much more tiredness or breathlessness than usual. During an iron
+    infusion, tell the nurse at once about itching, flushing, breathlessness or feeling faint: these
+    can be signs of a reaction, which the unit is set up to treat ([KDIGO 2026 anemia][K26A], practice
+    point 2.9).
 
 ## Related pages
 
@@ -171,5 +176,7 @@ judge your glucose by your CGM or meter, not A1c alone ([A1c](a1c.md); [CGM metr
   3.4.3.2–3.4.3.3, 4.2, 4.4.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.2 and Figure 10.
 - [Pecoits-Filho 2016: kidney disease and diabetes][DG55a].
-- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]: HbA1c and iron deficiency.
+- [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]; [JBDS 2022 guidance on
+  diabetes and dialysis][JBDS22]: HbA1c and iron deficiency.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly haemoglobin.
 - [MedlinePlus: gastrointestinal bleeding][MEDLINE-GIB].

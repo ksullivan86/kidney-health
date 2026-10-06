@@ -148,6 +148,7 @@ JBDS:
   licence: "Publisher copyright: cite and paraphrase only"
   checked: 2026-10-05
   kind: guideline
+  note: "2016 summary (recommendations re-read in the local PDF text 2026-10-06): HbA1c by HPLC to avoid carbamylation; HbA1c underestimates unless iron deficient; target 58–68 mmol/mol (7.5–8.5 %) with treatments that cause lows; glycated albumin for research; CGM lag longer in kidney failure; start CGM on a non-dialysis day (calibration); glucose most often drops in the last hour of dialysis and is lowest afterwards; hypoglycaemia unawareness common. Updated by JBDS22, which no longer gives the A1c target: cite JBDS22 for current dialysis targets."
 UKKA19:
   cite: "Wiles K, et al. Clinical practice guideline on pregnancy and renal disease. BMC Nephrol 2019;20:401."
   short: "UK Kidney Association 2019 pregnancy guideline"
@@ -298,8 +299,17 @@ MHRA:
   short: "MHRA: icodextrin and false glucose readings"
   url: https://www.gov.uk/drug-safety-update/extraneal-and-products-that-contain-or-are-metabolised-to-maltose-xylose-or-galactose-false-blood-glucose-readings
   licence: "Open Government Licence v3.0"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Re-read 2026-10-06: GDH-PQQ and glucose-dye-oxidoreductase meters read falsely high; a false high 'could result in administration of more insulin than needed and subsequent hypoglycaemia, loss of consciousness, coma, neurological damage, or death'; use only glucose-specific monitors. It does not give the two-week duration: cite the Extraneal label (EXTRANEAL) for that."
+MHRA-DAPA:
+  cite: "Medicines and Healthcare products Regulatory Agency. Drug Safety Update: Dapagliflozin (Forxiga): no longer authorised for treatment of type 1 diabetes mellitus (10 December 2021)."
+  short: "MHRA: dapagliflozin no longer authorised for type 1 diabetes"
+  url: https://www.gov.uk/drug-safety-update/dapagliflozin-forxiga-no-longer-authorised-for-treatment-of-type-1-diabetes-mellitus
+  licence: "Open Government Licence v3.0"
+  checked: 2026-10-06
+  kind: government
+  note: "The type 1 diabetes indication was withdrawn across Europe and the UK on 25 October 2021; 'The removal of the type 1 diabetes indication is not due to any new safety concerns'. DKA is common (up to 1 in 10) in type 1 diabetes, including euglycaemic DKA. KDIGO 2022 chapter 1 says the maker withdrew it 'citing concerns about diabetic ketoacidosis'; the regulator's wording is used in the handbook."
 FDANaP:
   cite: "US Food and Drug Administration. FDA Drug Safety Communication: FDA warns of possible harm from exceeding recommended dose of over-the-counter sodium phosphate products to treat constipation (2014)."
   short: "FDA: OTC sodium phosphate products"
@@ -1418,7 +1428,15 @@ ALB18:
   licence: "Publisher copyright (free full text in PMC): cite and paraphrase only"
   checked: 2026-10-06
   kind: study
-  note: "521 hemodialysis patients: albumin 34.5 g/L with the bromocresol purple method vs 40.3 g/L with bromocresol green (different centres)."
+  note: "Abstract re-read on PubMed (PMID 30212837) 2026-10-06: 506 hemodialysis patients from the CONTRAST cohort, 331 at 9 centres using bromocresol purple and 175 at 16 centres using bromocresol green (different patients, not the same samples). Mean albumin 34.5 vs 40.3 g/L; measured calcium similar, corrected calcium higher in the purple group (2.45 vs 2.33 mmol/L). The earlier note's '521' was not found in the abstract."
+BICARB20:
+  cite: "BiCARB study group (Witham MD, et al.). Clinical and cost-effectiveness of oral sodium bicarbonate therapy for older patients with chronic kidney disease and low-grade acidosis (BiCARB): a pragmatic randomised, double-blind, placebo-controlled trial. BMC Med 2020;18:91."
+  short: "BiCARB trial (2020)"
+  url: https://doi.org/10.1186/s12916-020-01542-9
+  licence: "CC BY 4.0 (open access)"
+  checked: 2026-10-06
+  kind: study
+  note: "Abstract read on PubMed (PMID 32268897) 2026-10-06: 300 adults aged 60 or over with eGFR under 30 (G4–G5), not on dialysis, bicarbonate under 22 mmol/L; no benefit on physical function or kidney function at 12 months; higher costs, lower EQ-5D quality of life and more adverse events (457 vs 400). KDIGO 2024's text describes the population as 'CKD G3–G4'; the trial report says eGFR under 30."
 DEXCOM-G7:
   cite: "Dexcom. Dexcom G7 Continuous Glucose Monitoring System user guide (AW00078-10 Rev 005, 05/2026)."
   short: "Dexcom G7 user guide"
@@ -1589,7 +1607,7 @@ FDA-label:
   licence: "Public domain (US government work)"
   checked: 2026-10-06
   kind: government
-  note: "\"Vitamin D and potassium are required on the label.\" Manufacturers must declare the actual amount as well as % DV for vitamin D, calcium, iron and potassium. Compliance: 1 January 2020 (annual food sales of $10 million or more), 1 January 2021 (smaller manufacturers)."
+  note: "\"Vitamin D and potassium are required on the label.\" Manufacturers must declare the actual amount as well as % DV for vitamin D, calcium, iron and potassium. Compliance: 1 January 2020 (annual food sales of $10 million or more), 1 January 2021 (smaller manufacturers). Serving sizes: \"for packages that are between one and two servings, such as a 20 ounce soda or a 15-ounce can of soup, the calories and other nutrients are required to be labeled as one serving\"; larger packages that could be eaten in one sitting carry dual-column labels (per serving and per package)."
 EU1169:
   cite: "Regulation (EU) No 1169/2011 of the European Parliament and of the Council of 25 October 2011 on the provision of food information to consumers. Annex I, point 11."
   short: "EU food information regulation 1169/2011"
@@ -1631,7 +1649,7 @@ CFR494:
   licence: "Public domain (US government work)"
   checked: 2026-10-06
   kind: government
-  note: "Read through the eCFR API on 2026-10-06. 494.70(a): right to be told about all treatment options including transplant and home dialysis, about advance directives, to refuse or stop treatment, and about grievance routes (ESRD Network, State survey agency). 494.80: the team includes the patient, a nurse, a physician, a social worker and a dietitian; assessment covers psychosocial needs, transplant referral, physical activity and vocational rehabilitation; reassessed at least yearly. 494.90: written plan of care signed by the patient; home dialysis plan or reasons; transplant referral tracked; education for patients and family; seen by a clinician at least monthly. 494.140: each facility must have a registered dietitian and a master's-level clinical social worker."
+  note: "Read through the eCFR API on 2026-10-06. 494.70(a): right to be told about all treatment options including transplant and home dialysis, about advance directives, to refuse or stop treatment, and about grievance routes (ESRD Network, State survey agency). 494.80: the team includes the patient, a nurse, a physician, a social worker and a dietitian; assessment covers psychosocial needs, transplant referral, physical activity and vocational rehabilitation; reassessed at least yearly. 494.90: written plan of care signed by the patient; home dialysis plan or reasons; transplant referral tracked; education for patients and family; seen by a clinician at least monthly. 494.140: each facility must have a registered dietitian and a master's-level clinical social worker. Labs fact-check 2026-10-06 (494.90 text): (a)(1) dose of dialysis to meet a hemodialysis Kt/V of at least 1.2 and a peritoneal dialysis weekly Kt/V of at least 1.7, or an alternative equivalent accepted standard; (a)(2) albumin and body weight measured at least monthly; (a)(4) hemoglobin/hematocrit measured at least monthly."
 UNOS-ML:
   cite: "United Network for Organ Sharing. Talking about transplantation: multiple listing (patient brochure 102, 2020)."
   short: "UNOS: multiple listing"
@@ -1985,3 +2003,22 @@ SECURITYMD:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-06
   kind: project
+# ---------------------------------------------------------------- added by the eat/ fact-check (2026-10-06)
+SALTSUB-LABELS:
+  cite: "Product labels (retailer listings): NoSalt Original Sodium-Free Salt Alternative (potassium chloride; 640 mg potassium per 1/4 teaspoon); Nu-Salt Salt Substitute (potassium chloride; 530 mg potassium per serving)."
+  short: "NoSalt and Nu-Salt labels"
+  url: https://hannaford.com/groceries/product/no-salt-original-sodium-free-salt-alternative-11-oz-can/51918
+  also:
+    - https://www.heb.com/product-detail/nu-salt-salt-substitute/140095
+  licence: "Product label facts: cite only"
+  checked: 2026-10-06
+  kind: label
+  note: "NoSalt label: 640 mg potassium (18 % DV) and 0 mg sodium per 1/4 tsp; ingredients potassium chloride, potassium bitartrate and others; warning: \"Persons with diabetes, heart or kidney disease, or persons receiving medical treatment should consult a physician before using a sodium-free salt.\" Nu-Salt: 530 mg potassium (15 % DV) per serving."
+SULLIVAN07:
+  cite: "Sullivan CM, Leon JB, Sehgal AR. Phosphorus-containing food additives and the accuracy of nutrient databases: implications for renal patients. J Ren Nutr 2007;17(5):350–354. doi:10.1053/j.jrn.2007.05.008"
+  short: "Sullivan 2007: additives and nutrient databases"
+  url: https://pubmed.ncbi.nlm.nih.gov/17720105/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "35 of 38 chicken products had phosphate additives; measured phosphorus was higher than the ESHA database value in every additive category (breaded breast strips by an average of 84 mg/100 g); \"Available nutrient databases do not reflect this higher phosphorus content\"."

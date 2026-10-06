@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [Q20, K24, K22, DG4, DG24a, DG34, DG35a, DG37a, DG38, DG35b, DG20, DG33, DG5, DG23, EU1169, FDC, ARCH]
+fact_checked: 2026-10-05
+sources: [Q20, K24, K22, DG4, DG24a, DG34, DG35a, DG37a, DG38, DG35b, SALTSUB-LABELS, DG33, DG5, DG23, EU1169, FDC, ARCH]
 ---
 
 # Sodium
@@ -18,8 +19,8 @@ sources: [Q20, K24, K22, DG4, DG24a, DG34, DG35a, DG37a, DG38, DG35b, DG20, DG33
 Sodium holds water in the body. When the kidneys cannot get rid of it, the extra water raises blood
 pressure, causes swelling, increases protein in the urine and, on dialysis, makes you thirsty enough to
 break a fluid limit ([KDOQI 2020][Q20]; [KDIGO 2024][K24]). Aim for **under 2,000 mg a day** at every
-stage. Most sodium comes from packaged and restaurant food, not the salt shaker. **Salt substitutes are
-potassium chloride and are not safe without your team's OK.**
+stage. Most sodium comes from packaged and restaurant food, not the salt shaker. **Salt substitutes
+contain potassium chloride and are not safe without your team's OK.**
 
 ## Your numbers
 
@@ -77,13 +78,15 @@ sodium ([EU regulation 1169/2011][EU1169]).
 ## Salt substitutes
 
 "NoSalt", "Nu-Salt", "Lite Salt", "half salt" and many "low-sodium" soups and broths are made with
-**potassium chloride**. NoSalt lists 640 mg potassium per ¼ teaspoon; Morton Lite Salt 350 mg potassium
-*plus* 290 mg sodium per ¼ teaspoon, with a label warning against use on sodium- or potassium-restricted
-diets without a doctor's approval; Nu-Salt 530 mg per labelled serving ([Morton Lite Salt label][DG35b];
-[NKF][DG20]). Potassium from potassium chloride is about 90 % absorbed, far more than the potassium in
+**potassium chloride**. NoSalt lists 640 mg potassium per ¼ teaspoon, and its label tells people with
+diabetes or kidney disease to ask a doctor first; Nu-Salt lists 530 mg per labelled serving
+([NoSalt and Nu-Salt labels][SALTSUB-LABELS]). Morton Lite Salt is half salt: 350 mg potassium *plus*
+290 mg sodium per ¼ teaspoon, with a label warning against use on sodium- or potassium-restricted diets
+without a doctor's approval ([Morton Lite Salt label][DG35b]). NKF lists salt substitutes and lite
+salt among high-potassium foods ([NKF][DG5]). Potassium from potassium chloride is about 90 % absorbed, far more than the potassium in
 fruit ([KDIGO 2024][K24]). Kidney groups have opposed allowing potassium-chloride salt substitutes in
-standard foods for this reason ([AAKP letter][DG33]). NIDDK, NKF and AKF all say to use herbs, spices,
-lemon and vinegar instead ([NIDDK][DG4]; [NKF][DG5]). Use garlic *powder*, not garlic *salt*.
+standard foods for this reason ([AAKP letter][DG33]). NIDDK suggests spices, herbs and sodium-free
+seasonings instead ([NIDDK][DG4]); lemon and vinegar work too. Use garlic *powder*, not garlic *salt*.
 
 ## What to do
 
@@ -155,8 +158,8 @@ The home day leaves well over 1,000 mg for bread, condiments and the foods you l
 
 - [KDIGO 2024 CKD guideline][K24]: recommendation 3.3.2.1 and its rationale; Figure 33 (potassium absorption).
 - [KDIGO 2022 diabetes in CKD guideline][K22]; [KDOQI 2020 nutrition guideline][Q20]: statement 6.5.1.
-- [NIDDK: healthy eating for adults with CKD][DG4]; [NKF: potassium][DG5]; [NKF: phosphorus][DG20]; [NKF: label guide][DG38]; [NKF: hemodialysis and your diet][DG24a].
+- [NIDDK: healthy eating for adults with CKD][DG4]; [NKF: potassium][DG5]; [NKF: label guide][DG38]; [NKF: hemodialysis and your diet][DG24a].
 - [FDA: sodium in your diet][DG34]; [FDA claim definitions][DG37a]; [EU regulation 1169/2011][EU1169]: salt on EU labels.
-- [Harvard Health: the salty six][DG35a]; [Morton Lite Salt label][DG35b]; [AAKP letter on salt substitutes][DG33].
+- [Harvard Health: the salty six][DG35a]; [Morton Lite Salt label][DG35b]; [NoSalt and Nu-Salt labels][SALTSUB-LABELS]; [AAKP letter on salt substitutes][DG33].
 - [DaVita: hemodialysis fluid intake][DG23]: salt and thirst.
 - [USDA FoodData Central][FDC]; [project architecture contract][ARCH]: the app's sodium warnings.

@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, Q20, K26A, DG26, A26-11, K22, K17, DG36, DG35b, FDC, DG5]
+fact_checked: 2026-10-05
+sources: [K24, Q20, K26A, DG26, A26-11, K22, K17, DG36, DG35b, FDC, DG5, MEDLINE-LOWK, HC24]
 ---
 
 # Stage G3b
@@ -37,32 +38,34 @@ feel well, so the blood tests guide what to do.
 
     | Test | Typical (your lab's range wins) | What your team watches for |
     |---|---|---|
-    | Potassium | 3.5–5.0 mEq/L | 6.0–6.4 "moderate"; 6.5 or more "severe" |
+    | Potassium | about 3.5–5.1 mEq/L | 6.0–6.4 "moderate"; 6.5 or more "severe" |
     | Bicarbonate (CO2) | 22 mEq/L or more; lower means acid is building up | under 18: treatment is considered |
     | Haemoglobin | men 13 g/dL or more; women 12 g/dL or more | below that is anaemia; iron is checked first |
-    | Iron (TSAT and ferritin) | – | TSAT under 20 % with ferritin under 100 ng/mL means iron deficiency |
+    | Iron (TSAT and ferritin) | – | TSAT under 20 % with ferritin under 100 ng/mL means low iron stores; with anaemia, KDIGO suggests iron at higher levels too (ferritin under 100 with TSAT under 40 %, or ferritin 100–299 with TSAT under 25 %) |
     | Calcium and phosphate | phosphate 2.5–4.5 mg/dL | checked every 6–12 months |
 
 === "International"
 
     | Test | Typical (your lab's range wins) | What your team watches for |
     |---|---|---|
-    | Potassium | 3.5–5.0 mmol/L | 6.0–6.4 "moderate"; 6.5 or more "severe" |
+    | Potassium | about 3.5–5.1 mmol/L | 6.0–6.4 "moderate"; 6.5 or more "severe" |
     | Bicarbonate | 22 mmol/L or more; lower means acid is building up | under 18: treatment is considered |
     | Haemoglobin | men 130 g/L or more; women 120 g/L or more | below that is anaemia; iron is checked first |
-    | Iron (TSAT and ferritin) | – | TSAT under 20 % with ferritin under 100 µg/L means iron deficiency |
+    | Iron (TSAT and ferritin) | – | TSAT under 20 % with ferritin under 100 µg/L means low iron stores; with anaemia, KDIGO suggests iron at higher levels too (ferritin under 100 with TSAT under 40 %, or ferritin 100–299 with TSAT under 25 %) |
     | Calcium and phosphate | phosphate 0.81–1.45 mmol/L | checked every 6–12 months |
 
-Sources: potassium action levels ([KDIGO 2024][K24], Table 28); bicarbonate (KDIGO 2024 uses under
+Sources: potassium range ([MedlinePlus][MEDLINE-LOWK]); potassium action levels ([KDIGO 2024][K24],
+Table 28); bicarbonate (KDIGO 2024 uses under
 22 mmol/L for acid build-up, and practice point 3.10.1 for treatment);
-haemoglobin and iron ([KDIGO 2026 anemia][K26A]); calcium and phosphate ([KDIGO 2017][K17]).
+haemoglobin and iron ([KDIGO 2026 anemia][K26A], recommendation 2.3); calcium and phosphate
+([KDIGO 2017][K17]).
 See [Blood potassium](../labs/blood-potassium.md), [Bicarbonate](../labs/bicarbonate.md) and
 [Haemoglobin and iron](../labs/haemoglobin-and-iron.md).
 
 ## What changes now
 
 **Seeing a nephrologist.** KDIGO lists reasons to be seen by kidney specialists, including a
-5-year kidney failure risk (KFRE) above 3–5 %, an eGFR under 30, a fall in eGFR of more than 20 %,
+5-year kidney failure risk (KFRE) above 3–5 %, an eGFR under 30, a lasting fall in eGFR of more than 20 %,
 a UACR of 300 mg/g (30 mg/mmol) or more with blood in the urine, a UACR above 700 mg/g, and problems
 with potassium, acid, anaemia, bones or nutrition ([KDIGO 2024][K24], practice point 5.1.1 and
 Figure 48; [ADA 2026 §11][A26-11], recommendation 11.12a).
@@ -93,7 +96,8 @@ This handbook and the app use 0.8 g/kg. Your dietitian decides with you. See [Pr
 - [ ] If your potassium is high, ask for a renal dietitian appointment.
 - [ ] Check ingredient lists for "potassium chloride" and other potassium salts
       ([Reading labels](../eat/label-reading.md)).
-- [ ] Never use salt substitutes such as "lite salt": they are potassium chloride ([Morton][DG35b]).
+- [ ] Do not use salt substitutes such as "lite salt" unless your kidney team says so: they contain
+      potassium chloride ([Morton][DG35b]; [NKF][DG5]).
 - [ ] Keep fruit and vegetables to ½-cup portions if you have a potassium limit
       ([Potassium](../eat/potassium.md)).
 - [ ] Keep glucose in range and never miss basal insulin: both affect potassium.
@@ -109,11 +113,12 @@ This handbook and the app use 0.8 g/kg. Your dietitian decides with you. See [Pr
 |---|---|---|---|
 | ½ cup orange juice | about 248 mg | ½ cup apple juice | about 125 mg |
 | 1 small banana | about 362 mg | ½ cup blueberries | about 57 mg |
-| 1 cup cantaloupe | about 417 mg | ½ cup cantaloupe | about 200 mg |
+| 1 cup cantaloupe | about 417 mg | ½ cup cantaloupe | about 208 mg |
 | ¼ tsp "lite" salt | 350 mg | herbs, lemon, garlic, pepper | very little in the amounts used |
 
-**Portion matters.** "A large serving of a low-potassium food becomes a high-potassium food"
-([NKF][DG5]). Half a cup of cantaloupe is a medium choice; a whole cup is high.
+**Portion matters.** "A large amount of a low-potassium food can easily turn it into a
+high-potassium food" ([NKF][DG5]). Half a cup of cantaloupe has half the potassium of a whole cup
+([USDA][FDC]).
 
 **A low on a potassium limit.** Treat it straight away. If orange juice is all there is, drink it:
 4 oz is about 250 mg, which your day can absorb. Glucose tablets have none
@@ -133,7 +138,9 @@ This handbook and the app use 0.8 g/kg. Your dietitian decides with you. See [Pr
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain; severe breathlessness; fainting, a very slow or irregular pulse or sudden severe
     weakness, especially with a lab potassium of 6.5 mmol/L or more; a low the person cannot treat
-    themselves (give glucagon, then call). Full list: [Get help now](../get-help-now.md).
+    themselves (give glucagon, then call); possible DKA: blood ketones of 3.0 mmol/L or more, or any
+    ketones with vomiting, deep fast breathing or fruity breath ([2024 consensus][HC24]). Full list:
+    [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
     A lab potassium of 6.0–6.4 mmol/L: KDIGO advises assessment in hospital if you feel unwell,
@@ -152,10 +159,11 @@ This handbook and the app use 0.8 g/kg. Your dietitian decides with you. See [Pr
 - [KDIGO 2024 CKD guideline][K24]: Table 28; Figure 48; recommendation 3.3.1.1; practice points
   3.10.1, 3.11.5.1–3.11.5.2, 5.1.1.
 - [KDOQI 2020 nutrition guideline][Q20]: statement 3.0.2.
-- [KDIGO 2026 anemia in CKD guideline][K26A].
+- [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia and iron thresholds, recommendation 2.3.
 - [KDIGO 2017 CKD-MBD guideline update][K17].
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendations 11.3, 11.12a.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: recommendation 3.1.1.
 - [DaVita: high or low potassium foods][DG26]; [NKF: potassium][DG5]; [Morton Lite Salt label][DG35b].
 - [Sousa 2016][DG36]: insulin, glucose and potassium.
 - [USDA FoodData Central][FDC]: food values.
+- [MedlinePlus: low blood potassium][MEDLINE-LOWK]: usual potassium range; [2024 hyperglycemic crises consensus][HC24]: DKA criteria.

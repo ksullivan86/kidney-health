@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [Q20, DG10, DG20, DG14a, DG12, DG13a, DG15, DG46b, K17, FDC, DG38, DG25b, LEON13, SHERMAN09, ARCH]
+fact_checked: 2026-10-05
+sources: [Q20, DG10, DG20, DG14a, DG12, DG13a, DG15, DG46b, K17, FDC, DG38, DG25b, LEON13, SHERMAN09, SULLIVAN07, ARCH]
 ---
 
 # Phosphorus
@@ -67,12 +68,13 @@ day's limit ([León 2013][LEON13]). "Enhanced" fresh meat and poultry carried on
 phosphate for the same protein ([Sherman and Mehta 2009][SHERMAN09]).
 
 Phosphorus does not have to be listed on the US Nutrition Facts label, so the ingredient list is your
-main tool ([NKF label guide][DG38]). Every food database under-counts additive phosphorus, so the app
-treats any food flagged with a phosphate additive as "high" whatever its number. See
+main tool ([NKF label guide][DG38]). Food databases can under-count additive phosphorus: chicken
+products with additives measured higher than their database values ([Sullivan 2007][SULLIVAN07]). So
+the app treats any food flagged with a phosphate additive as "high" whatever its number. See
 [Phosphate additives](phosphate-additives.md) for the ingredient names.
 
 **Per serving** ([AKF phosphorus guide][DG46b]): low 100 mg or less, medium 101–199 mg, high 200 mg or
-more, and *any* "phos" ingredient counts as high. The app marks a food "medium" at 101–150 mg and
+more. Treat *any* "phos" ingredient as high too ([NKF][DG20]). The app marks a food "medium" at 101–150 mg and
 "high" above 150 mg.
 
 **Phosphorus-to-protein ratio.** If a label lists phosphorus, under 10–12 mg of phosphorus per gram of
@@ -82,8 +84,9 @@ nuts, beans and colas are not ([Noori 2010][DG13a]; [Noori 2010][DG14a]).
 ## Binders
 
 Phosphate binders are tablets, chews, powders or liquids that hold on to phosphorus in your gut so it
-leaves in your stool. They "must be taken every time you eat, including meals and snacks", the way your
-team prescribes them ([NKF][DG20]; [KDIGO 2017][K17]). Binders work on the food in your gut, so they only
+leaves in your stool. NKF says they "must be taken every time you eat, including meals and snacks"
+([NKF][DG20]). Take them exactly as your team prescribes, and ask what to do about snacks and skipped
+meals ([KDIGO 2017][K17]). Binders work on the food in your gut, so they only
 help when taken with food. Calcium-based binders count toward your calcium total ([KDIGO 2017][K17], recommendation 4.1.6).
 
 ## What to do
@@ -119,7 +122,7 @@ From the app's USDA-based food list ([USDA FoodData Central][FDC]); see [Food li
 
 | Instead of | Phosphorus | Try | Phosphorus |
 |---|---|---|---|
-| Boxed macaroni and cheese, 1 cup (additive) | 222 mg | Pasta, 1 cup, with 1 tbsp butter and 1 tbsp grated Parmesan | 106 mg |
+| Boxed macaroni and cheese, 1 cup (additive) | 222 mg (442 mg for the kind with a cheese-sauce pouch) | Pasta, 1 cup, with 1 tbsp butter and 1 tbsp grated Parmesan | 106 mg |
 | Deli turkey, 2 oz (additive) | 142 mg | Turkey breast you roast yourself, 2 oz | 131 mg, none of it additive |
 | Chocolate pudding cup, 4 oz (additive) | 60 mg | Orange sherbet, ½ cup | 30 mg |
 | Cola, 12 oz | 33 mg | Lemon-lime soda, 12 oz | 0 mg |
@@ -162,6 +165,7 @@ phosphorus is not, so the swap matters more than the numbers suggest ([Kalantar-
 - [Kalantar-Zadeh 2010][DG12]; [Noori 2010, Iran J Kidney Dis][DG13a]; [Noori 2010, CJASN][DG14a]; [St-Jules 2017][DG15].
 - [León 2013][LEON13]: phosphate additives in best-selling groceries.
 - [Sherman and Mehta 2009][SHERMAN09]: enhanced meat and poultry.
+- [Sullivan 2007][SULLIVAN07]: additive phosphorus missing from nutrient databases.
 - [NKF: phosphorus and your CKD diet][DG20]; [NKF: label guide][DG38]; [AKF phosphorus food guide][DG46b].
 - [USDA FoodData Central][FDC]; [measured beverage phosphorus][DG25b].
 - [Project architecture contract][ARCH]: weekly averages and the additive flag in the app.

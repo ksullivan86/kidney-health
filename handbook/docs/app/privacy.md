@@ -45,7 +45,7 @@ or delete it.
       in your activity.
 - **Backups** made by the admin contain everyone's data until they expire.
 
-!!! warning "If the app says \"No sign-in\""
+!!! warning "If the app says “No sign-in”"
     A red banner, "No sign-in: anyone who can open this page can see and change this data", means the
     server runs without accounts. That is meant for one person on a trusted home network only. Do not
     share that server with anyone else ([design note 07][NOTE07]).

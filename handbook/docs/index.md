@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, A26-6, NIDDK-hypo, DG17, DG39, NIDDK-CKD, NIDDK-CKDwhat, UKKA19, A26-15]
 ---
 
@@ -28,9 +29,10 @@ the top of every page.
 
 ## Five things to know today
 
-1. **Never skip treating a low.** Glucose tablets first; if juice or soda is what you have, drink
-   4 oz now. Potassium never delays treatment ([Treating a low](t1d/treating-a-low.md);
-   [ADA 2026 §6][A26-6]; [NIDDK][NIDDK-hypo]).
+1. **Never skip treating a low.** Under 70 mg/dL (3.9 mmol/L), take 15 g of fast sugar straight
+   away, best as 4 glucose tablets; if juice or regular soda is what you have, drink 4 oz (½ cup).
+   Recheck in 15 minutes and repeat if still low. Potassium never delays treatment
+   ([Treating a low](t1d/treating-a-low.md); [ADA 2026 §6][A26-6]; [NIDDK][NIDDK-hypo]).
 2. **Have a written sick-day plan** from your team, including when to pause medicines and when to
    restart them ([Sick days](t1d/sick-days.md); [KDIGO 2024][K24], practice point 4.3.2).
 3. **Know your own potassium and fluid rules, if you have them**, from your latest blood tests and your

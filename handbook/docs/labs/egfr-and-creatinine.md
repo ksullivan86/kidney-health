@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, NKF-CKDEPI, NKF-eGFR, NIDDK-tests, MEDLINE-CREAT, A26-11, KER, NOTE05, Q15HD]
+fact_checked: 2026-10-05
+sources: [K24, NKF-CKDEPI, NKF-eGFR, NIDDK-tests, MEDLINE-CREAT, A26-11, KER, FARXIGA, NOTE05, Q15HD]
 ---
 
 # eGFR and creatinine
@@ -17,10 +18,11 @@ sources: [K24, NKF-CKDEPI, NKF-eGFR, NIDDK-tests, MEDLINE-CREAT, A26-11, KER, NO
 
 **Creatinine** is a waste product your muscles make every day. Healthy kidneys filter it out, so when
 kidney function falls, creatinine in the blood rises. **eGFR** (estimated glomerular filtration rate)
-turns your creatinine, age and sex into an estimate of how much blood your kidneys filter each minute
-([NKF][NKF-CKDEPI]). An eGFR of 60 or more is in the normal range; under 60 for more than 3 months
-means chronic kidney disease; 15 or less is kidney failure ([NIDDK][NIDDK-tests]). It is an
-estimate, so look at the trend over several tests, and know what can fool it.
+turns your creatinine, age and sex into an estimate of how much fluid your kidneys filter out of the
+blood each minute ([NKF][NKF-CKDEPI]). NIDDK calls an eGFR of 60 or more the normal range and 15 or
+less kidney failure ([NIDDK][NIDDK-tests]). Under 60 for 3 months or more means chronic kidney
+disease, and under 15 is stage G5 ([KDIGO 2024][K24]). It is an estimate, so look at the trend over
+several tests, and know what can fool it.
 
 ## Your numbers
 
@@ -70,7 +72,7 @@ and sex. The equation adjusts for that. Examples, worked with the CKD-EPI 2021 e
 | Person | Creatinine | eGFR |
 |---|---|---|
 | Woman, 60 | 1.4 mg/dL (124 µmol/L) | about 43 (G3b) |
-| Man, 60 | 1.4 mg/dL (124 µmol/L) | about 57 (G3a) |
+| Man, 60 | 1.4 mg/dL (124 µmol/L) | about 58 (G3a) |
 | Woman, 30 | 1.0 mg/dL (88 µmol/L) | about 78 (G2) |
 | Woman, 75 | 1.0 mg/dL (88 µmol/L) | about 59 (G3a) |
 
@@ -85,10 +87,11 @@ for treatment ([KDIGO 2024][K24], recommendation 1.2.2.1). Examples from KDIGO's
 
 - very muscular people, bodybuilders, or extreme exercise;
 - an above-knee amputation, spinal cord injury, or muscle-wasting disease;
-- very low weight, eating disorders, malnutrition or frailty, or a BMI over about 35–40;
+- eating disorders, malnutrition, or severe obesity (a BMI over about 35–40);
 - unusual diets: very low or very high protein, vegetarian, keto, or **creatine supplements**;
 - serious illness: cancer, heart failure, cirrhosis;
-- some medicines, such as steroids or drugs that block how the kidney removes creatinine.
+- some medicines, such as steroids, drugs that block how the kidney removes creatinine, or some
+  broad-spectrum antibiotics.
 
 Using creatinine and cystatin C together is more accurate than either one alone
 ([KDIGO 2024][K24], practice point 1.2.2.6).
@@ -107,11 +110,15 @@ Using creatinine and cystatin C together is more accurate than either one alone
 ## The expected dip with kidney-protecting medicines
 
 ACE inhibitors, ARBs, finerenone and SGLT2 inhibitors often lower eGFR a little in the first weeks.
-This is expected and is part of how they protect the kidneys.
+This is expected and is part of how they protect the kidneys. (With type 1 diabetes, SGLT2 inhibitors
+are not approved for glucose control and markedly raise the risk of DKA ([Farxiga label][FARXIGA]);
+see [Kidney-protecting medicines](../t1d/kidney-protecting-medicines.md#sglt2-inhibitors-not-for-type-1-without-a-plan).)
 
 - KDIGO: keep taking an ACE inhibitor or ARB unless creatinine rises by **more than 30 %** within
-  4 weeks of starting or a dose increase. Blood pressure, creatinine and potassium are checked
-  2–4 weeks after a start or a dose change ([KDIGO 2024][K24], practice points 2.1.4, 3.6.2, 3.6.4).
+  4 weeks of starting or a dose increase. After starting any of these medicines, an eGFR fall of more
+  than 30 % is more than expected and is looked into. Blood pressure, creatinine and potassium are
+  checked 2–4 weeks after a start or a dose change ([KDIGO 2024][K24], practice points 2.1.4, 3.6.2,
+  3.6.4).
 - ADA: a creatinine rise of up to 30 % on these medicines "must not be confused with" acute kidney
   injury ([ADA 2026 §11][A26-11]).
 - Finerenone: the label describes a small eGFR drop (on average 2–3 mL/min) in the first 4 weeks
@@ -142,10 +149,10 @@ is in the expected range.
 ## Examples
 
 - **Same number, different meaning.** Maria and her brother are both 60 and both have a creatinine of
-  1.4 mg/dL. Her eGFR is about 43 (G3b); his is about 57 (G3a).
+  1.4 mg/dL. Her eGFR is about 43 (G3b); his is about 58 (G3a).
 - **Starting an ACE inhibitor.** Sam's eGFR was 50. Three weeks after starting an ACE inhibitor it is
   44, a 12 % dip: expected, and the medicine continues. If it had fallen to 33 (a 34 % drop), his team
-  would review it ([KDIGO 2024][K24], practice point 3.6.4).
+  would review it ([KDIGO 2024][K24], practice points 2.1.4 and 3.6.4).
 - **The steak dinner.** Lee had a large steak the night before an early blood test, and his eGFR came
   back lower than usual. His team repeated it after a light evening meal, and it was back to his
   normal level.
@@ -189,5 +196,7 @@ eGFR on its own is rarely urgent, but a fast fall can come with warning signs.
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendation 11.1b; creatinine rise with ACE
   inhibitors and ARBs.
 - [Kerendia (finerenone) prescribing information][KER]: section 6.1, laboratory tests.
+- [Farxiga (dapagliflozin) prescribing information][FARXIGA]: limitations of use and section 5.1 (DKA in
+  type 1 diabetes).
 - [KDOQI 2015 hemodialysis adequacy guideline][Q15HD].
 - [Design note 05][NOTE05]: how the app suggests a stage.

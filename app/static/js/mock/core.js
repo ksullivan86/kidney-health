@@ -7,7 +7,7 @@
        KH.mock.route(method, pattern, handler)
    `pattern` is an exact path, a path with `{id}` placeholders (digits), or a RegExp;
    `handler(req)` runs with `this` = the MockApi and req = { method, path, id, ids, query, qp, body }.
-   Feature files (js/mock/foods.js, profile.js, log.js, meals.js) add their table methods to
+   Feature files (js/mock/foods.js, profile.js, log.js, meals.js, auth.js, settings.js) add their table methods to
    MockApi.prototype and register their routes; js/mock/seed.js seeds the demo person and
    KH.mock.start() (called by main.js in demo mode) builds the instance.
 
@@ -29,10 +29,11 @@
   const MAX_RANGE_DAYS = 366;
   const MAX_INTERDIALYTIC_DAYS = 7;
 
+  // `extra`: the keys the server adds next to `detail` (reauth_required, retry_after, field, ...).
   class ApiError extends Error {
-    constructor(status, detail) { super(detail); this.status = status; this.detail = detail; }
+    constructor(status, detail, extra = null) { super(detail); this.status = status; this.detail = detail; this.extra = extra; }
   }
-  function fail(status, detail) { throw new ApiError(status, detail); }
+  function fail(status, detail, extra = null) { throw new ApiError(status, detail, extra); }
   function failFields(errors) { fail(400, errors.join('; ') || 'invalid request'); }
 
   // ---------------------------------------------------------------------------

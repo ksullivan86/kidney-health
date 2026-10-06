@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [I20PD, I22P, NIDDK-PD, DG25a, MHRA, EXTRANEAL, AK22, K22, Q20, K24, K17, K26A, CMSPREP, FDC, A26-6]
+fact_checked: 2026-10-05
+sources: [I20PD, I22P, NIDDK-PD, DG25a, MHRA, EXTRANEAL, AK22, K22, Q20, K24, K17, K26A, CMSPREP, FDC, A26-6, JBDS22, HC24]
 ---
 
 # Peritoneal dialysis
@@ -79,8 +80,10 @@ absorbed ([KDOQI 2020][Q20]; [Phosphate additives](../eat/phosphate-additives.md
 
 **Diabetes.** The longer the fluid stays in, the more sugar (dextrose) your body absorbs
 ([NIDDK][NIDDK-PD]). That is often 400 calories or more a day ([DaVita][DG25a]). Glucose patterns
-change when PD starts and when your prescription changes, so tell your diabetes team every change. A1c
-is less reliable on dialysis ([KDIGO 2022][K22], practice point 2.1.2); CGM data help
+change when PD starts and when your prescription changes, and sugar-based fluids can mean you need
+more insulin, so tell your diabetes team every change. UK guidance asks for a specialist diabetes team
+to be involved for people with type 1 diabetes on PD ([JBDS 2022][JBDS22], recommendations 6.6 and
+6.10). A1c is less reliable on dialysis ([KDIGO 2022][K22], practice point 2.1.2); CGM data help
 ([ADA–KDIGO 2022][AK22]).
 
 !!! danger "Icodextrin (Extraneal) and glucose meters"
@@ -88,7 +91,8 @@ is less reliable on dialysis ([KDIGO 2022][K22], practice point 2.1.2); CGM data
     high**: meters and strips using GDH-PQQ, GDO and some GDH-FAD methods. False highs have led to
     lows being missed and to insulin being given wrongly, which can cause coma and death. Use only a
     **glucose-specific** meter your PD unit approves. The false readings can last up to two weeks after stopping icodextrin, and
-    CGM systems "may or may not be compatible" ([Extraneal label][EXTRANEAL]; [MHRA][MHRA]). Tell every
+    CGM systems "may or may not be compatible" ([Extraneal label][EXTRANEAL]; [MHRA][MHRA];
+    [JBDS 2022][JBDS22], 6.4). Tell every
     hospital and paramedic that you use it.
 
 ## What to do
@@ -135,7 +139,9 @@ says cloudy fluid should be treated as peritonitis until proven otherwise ([ISPD
 
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain; severe breathlessness or not being able to lie flat; fainting; new confusion; a low the
-    person cannot treat themselves (give glucagon, then call) ([ADA 2026 §6][A26-6]). Full list:
+    person cannot treat themselves (give glucagon, then call) ([ADA 2026 §6][A26-6]); possible DKA:
+    blood ketones of 3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity
+    breath. On dialysis these signs count even under 3.0 ([2024 consensus][HC24]). Full list:
     [Get help now](../get-help-now.md).
 
 !!! warning "Call your PD unit the same day"
@@ -161,6 +167,8 @@ says cloudy fluid should be treated as peritonitis until proven otherwise ([ISPD
 - [Extraneal (icodextrin) prescribing information][EXTRANEAL]; [MHRA: icodextrin and false glucose readings][MHRA].
 - [ADA–KDIGO 2022 consensus report][AK22]; [KDIGO 2022 diabetes in CKD guideline][K22]: practice
   points 2.1.2, 3.1.2.
+- [JBDS 2022 guidance: diabetes on dialysis][JBDS22]: recommendations 6.4, 6.6, 6.10.
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria, Table 4 (lower ketone levels with kidney failure).
 - [KDOQI 2020 nutrition guideline][Q20]; [KDIGO 2024 CKD guideline][K24].
 - [KDIGO 2017 CKD-MBD guideline update][K17]; [KDIGO 2026 anemia in CKD guideline][K26A].
 - [CMS: preparing for emergencies on dialysis][CMSPREP].

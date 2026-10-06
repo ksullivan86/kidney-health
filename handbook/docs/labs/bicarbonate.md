@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, Q20, HC24, MEDLINE-CO2, NHS-DKA, NOTE05]
+fact_checked: 2026-10-05
+sources: [K24, Q20, HC24, BICARB20, MEDLINE-CO2, NHS-DKA, ADAK, JBDS22, NIDDK-HD, NOTE05]
 ---
 
 # Bicarbonate
@@ -17,7 +18,8 @@ sources: [K24, Q20, HC24, MEDLINE-CO2, NHS-DKA, NOTE05]
 
 Bicarbonate is the body's main buffer against acid. On a lab report it may be called **CO2, total
 CO2, TCO2 or HCO3** ([MedlinePlus][MEDLINE-CO2]). Healthy kidneys remove acid every day. As kidney
-function falls, acid builds up and bicarbonate drops, mostly from stage G4 on ([KDIGO 2024][K24]). A
+function falls below an eGFR of 60, acid builds up and bicarbonate starts to drop, most clearly at
+stages G4–G5 ([KDIGO 2024][K24]). A
 low bicarbonate is linked with muscle loss and other problems, so your team may treat it with tablets
 or, if your potassium allows, more fruit and vegetables. **A low bicarbonate on its own is not DKA.**
 If you are ill, your **ketone** reading is the number that tells you about DKA.
@@ -39,7 +41,8 @@ with little urine albumin, rising to 38 % at stage G5 with a lot ([KDIGO 2024][K
 
 **How often.** It is most often part of an electrolyte or basic metabolic panel, the same blood test
 that reports potassium and creatinine ([MedlinePlus][MEDLINE-CO2]). Ask for the number if you do not
-see it on your report. On dialysis, blood is taken before the session ([KDOQI 2020][Q20]).
+see it on your report. On hemodialysis it is part of the monthly blood tests ([NIDDK][NIDDK-HD]);
+compare results taken at the same point, for example before a session.
 
 **Age and sex.** Average bicarbonate differs only slightly by age and sex ([KDIGO 2024][K24], Table 23).
 The treatment thresholds are the same for everyone.
@@ -49,8 +52,9 @@ The treatment thresholds are the same for everyone.
 Long-term acid build-up is linked with breakdown of protein and muscle, inflammation, and heart and
 other problems ([KDIGO 2024][K24]). It also pushes potassium out of cells, so it can raise your
 potassium ([Blood potassium](blood-potassium.md)). The evidence that treatment changes long-term
-outcomes is limited: in the BiCARB trial (people aged 60 or over at stages G3–G4 with bicarbonate under
-22), bicarbonate tablets did not improve kidney or other outcomes and cost more ([KDIGO 2024][K24]).
+outcomes is limited: in the BiCARB trial (300 people aged 60 or over with an eGFR under 30, not on
+dialysis, and bicarbonate under 22), bicarbonate tablets did not improve physical function or kidney
+function, cost more and caused more side effects ([BiCARB trial][BICARB20]; [KDIGO 2024][K24]).
 That is why KDIGO frames treatment as preventing more severe acidosis, with 18 as the level to avoid.
 
 ## How it is treated
@@ -78,9 +82,13 @@ Diabetic ketoacidosis (DKA) is diagnosed when three things happen together ([202
 With advanced kidney disease your bicarbonate may already be under 18 because of the kidneys. So the
 bicarbonate on a routine report cannot tell you whether you have DKA, and a low result does not mean
 you have it. When you are ill, have high glucose or missed insulin, **check your ketones**: they are
-the deciding number. Blood ketones of 1.6–2.9 mmol/L mean call your diabetes team now; 3.0 or more
-means emergency care ([NHS][NHS-DKA]; [Sick days](../t1d/sick-days.md)). A low bicarbonate does leave
-less buffer: ketoacidosis and diarrhoea both lower bicarbonate further ([MedlinePlus][MEDLINE-CO2]).
+the deciding number. Blood ketones of 1.6–2.9 mmol/L mean call your diabetes team now, and go to the
+emergency department if you cannot reach them quickly or you are vomiting; 3.0 or more means emergency
+care ([NHS][NHS-DKA]; [ADA][ADAK]; [Sick days](../t1d/sick-days.md)). With kidney failure, ketone
+readings in DKA can be lower than usual, so symptoms such as vomiting, belly pain, deep breathing or
+drowsiness count even when the meter reads under 3.0 ([2024 consensus][HC24], Table 4;
+[JBDS 2022][JBDS22]). A low bicarbonate does leave less buffer: ketoacidosis and diarrhoea both lower
+bicarbonate further ([MedlinePlus][MEDLINE-CO2]).
 
 ## What to do
 
@@ -105,8 +113,10 @@ less buffer: ketoacidosis and diarrhoea both lower bicarbonate further ([Medline
 - **Stage G4, bicarbonate 17, potassium 5.4.** More fruit would add potassium, so Leo's team starts
   bicarbonate tablets and watches his blood pressure and swelling.
 - **On hemodialysis, bicarbonate 20, vomiting since last night.** Nora's routine bicarbonate is often
-  around 20, so it tells her nothing new. She checks blood ketones: 2.1 mmol/L. She calls her diabetes
-  team straight away and follows her sick-day plan.
+  around 20, so it tells her nothing new. She checks blood ketones: 2.1 mmol/L. Ketones with vomiting
+  are an emergency, and on dialysis DKA can show lower ketone numbers, so her family takes her to the
+  emergency department and calls her diabetes team and dialysis unit on the way
+  ([Sick days](../t1d/sick-days.md)).
 
 ## Ask your care team
 
@@ -119,14 +129,15 @@ less buffer: ketoacidosis and diarrhoea both lower bicarbonate further ([Medline
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Blood ketones **3.0 mmol/L or more**, or ketones with vomiting so you cannot keep fluids down, deep
-    or fast breathing, fruity-smelling breath or confusion ([NHS][NHS-DKA]; [2024 consensus][HC24]).
+    Blood ketones **3.0 mmol/L or more**; ketones of 1.6 mmol/L or more with vomiting, or when you
+    cannot reach your diabetes team quickly; or ketones with deep or fast breathing, fruity-smelling
+    breath, drowsiness or confusion ([NHS][NHS-DKA]; [ADA][ADAK]; [2024 consensus][HC24]).
     See [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
-    Blood ketones **1.6–2.9 mmol/L** (call now, not later in the day), vomiting or diarrhoea, or new
-    swelling or breathlessness after starting bicarbonate tablets ([NHS][NHS-DKA];
-    [KDIGO 2024][K24], practice point 3.10.2).
+    Blood ketones **1.6–2.9 mmol/L** without vomiting: call your diabetes team now, not later in the
+    day ([NHS][NHS-DKA]). Also call for diarrhoea, or new swelling or higher blood pressure after
+    starting bicarbonate tablets ([KDIGO 2024][K24], practice point 3.10.2).
 
 ## Related pages
 
@@ -139,7 +150,11 @@ less buffer: ketoacidosis and diarrhoea both lower bicarbonate further ([Medline
 - [KDIGO 2024 CKD guideline][K24]: section 3.10; practice points 3.10.1–3.10.2; Table 23; BiCARB trial
   summary.
 - [KDOQI 2020 nutrition guideline][Q20]: statements 6.1.1–6.1.3.
-- [2024 hyperglycemic crises consensus (ADA, EASD, JBDS, AACE, DTS)][HC24]: DKA definition.
-- [NHS: diabetic ketoacidosis][NHS-DKA]: blood ketone action levels.
+- [2024 hyperglycemic crises consensus (ADA, EASD, JBDS, AACE, DTS)][HC24]: DKA definition; Table 4
+  (lower ketones in kidney failure).
+- [BiCARB trial (2020)][BICARB20]: who was studied and what it found.
+- [NHS: diabetic ketoacidosis][NHS-DKA]: blood ketone action levels; [ADA: DKA and ketones][ADAK].
+- [JBDS 2022 guidance on diabetes and dialysis][JBDS22]: DKA on dialysis.
+- [NIDDK: hemodialysis][NIDDK-HD]: monthly blood tests.
 - [MedlinePlus: CO2 blood test][MEDLINE-CO2].
 - [Design note 05][NOTE05]: the app's bicarbonate notes.

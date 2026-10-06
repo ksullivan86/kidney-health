@@ -8,8 +8,9 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 figures_as_of: 2026-10-06
-sources: [K09TX, NIDDK-Tx, NKF-Tx, PROGRAF, CELLCEPT, FDA-MYCO26, REMS, FDAgrapefruit, FSTX, FOODSAFE, MED-ESRD, A26-9, A26-6]
+sources: [K09TX, K22, NIDDK-Tx, NKF-Tx, PROGRAF, CELLCEPT, FDA-MYCO26, REMS, FDAgrapefruit, FSTX, FOODSAFE, MED-ESRD, A26-9, A26-6, HC24]
 ---
 
 # After a kidney transplant
@@ -53,7 +54,7 @@ that (recommendation 8.2). Your team also checks your anti-rejection medicine le
     | What | Number | Source |
     |---|---|---|
     | Fever that needs a call to the centre | more than 100 °F | [NIDDK][NIDDK-Tx] |
-    | A1c goal with diabetes after transplant | KDIGO suggests about 7.0–7.5 %, and not 6.0 % or lower, especially if you have lows | [KDIGO 2009][K09TX], 15.2.2 |
+    | A1c goal with diabetes after transplant | your own goal: KDIGO 2009 says to consider about 7.0–7.5 %, and not 6.0 % or lower, especially if you have lows; the newer KDIGO 2022 range is under 6.5 % to under 8.0 % | [KDIGO 2009][K09TX], 15.2.2; [KDIGO 2022][K22], 2.2.1 |
     | Wait before trying for a baby | at least 1 year, with stable kidney function and urine protein under 1 g a day | [KDIGO 2009][K09TX], 25.2.1 |
     | Skin check by a professional | once a year | [KDIGO 2009][K09TX], 18.4 |
     | Medicare after transplant | ends 36 months after the transplant if you have it only because of kidney failure; Part B-ID costs $121.60 a month in 2026 | [Medicare][MED-ESRD] |
@@ -63,7 +64,7 @@ that (recommendation 8.2). Your team also checks your anti-rejection medicine le
     | What | Number | Source |
     |---|---|---|
     | Fever that needs a call to the centre | more than 37.8 °C | [NIDDK][NIDDK-Tx] |
-    | HbA1c goal with diabetes after transplant | KDIGO suggests about 53–58 mmol/mol, and not 42 mmol/mol or lower, especially if you have lows | [KDIGO 2009][K09TX], 15.2.2 |
+    | HbA1c goal with diabetes after transplant | your own goal: KDIGO 2009 says to consider about 53–58 mmol/mol, and not 42 mmol/mol or lower, especially if you have lows; the newer KDIGO 2022 range is under 48 to under 64 mmol/mol | [KDIGO 2009][K09TX], 15.2.2; [KDIGO 2022][K22], 2.2.1 |
     | Wait before trying for a baby | at least 1 year, with stable kidney function and urine protein under 1 g a day | [KDIGO 2009][K09TX], 25.2.1 |
     | Skin check by a professional | once a year | [KDIGO 2009][K09TX], 18.4 |
     | Medicare (US only) | ends 36 months after the transplant if you have it only because of kidney failure | [Medicare][MED-ESRD] |
@@ -105,8 +106,8 @@ report new spots (18.3).
 ([KDIGO 2009 transplant][K09TX], 25.2.1). **Mycophenolate** can cause miscarriage and birth defects.
 It must be stopped or replaced **before** trying to get pregnant (25.2.2). Women who could get
 pregnant need contraception counselling and must use acceptable birth control during treatment and for
-6 weeks after stopping; men taking it are also advised to use effective contraception
-([CellCept label][CELLCEPT]). In July 2026 the FDA ended the mycophenolate REMS programme, but these
+6 weeks after stopping; men taking it, or their partners, are advised to use effective
+contraception during treatment and for at least 90 days after ([CellCept label][CELLCEPT]). In July 2026 the FDA ended the mycophenolate REMS programme, but these
 label warnings still apply ([FDA][FDA-MYCO26]; [REMS][REMS]). This handbook does not give pregnancy
 advice beyond this: see [Sex, fertility and pregnancy](../living/sex-fertility-pregnancy.md), which
 refers you to specialists.
@@ -164,15 +165,17 @@ instead.
 
 !!! danger "Call 911 (or your local emergency number)"
     Fever with shaking chills; chest pain; severe breathlessness; fainting; a low the person cannot
-    treat themselves (give glucagon, then call) ([ADA 2026 §6][A26-6]). Full list:
-    [Get help now](../get-help-now.md).
+    treat themselves (give glucagon, then call) ([ADA 2026 §6][A26-6]); possible DKA: blood ketones of
+    3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity breath
+    ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your transplant centre right away"
     A fever over 100 °F (37.8 °C); drainage from your scar; burning when you pass urine; a cold or cough
-    that will not go away ([NIDDK][NIDDK-Tx]); new swelling or a rise in blood pressure, which can mean
+    that will not go away; or you just do not feel well. Anti-rejection medicines can hide the signs
+    of an infection ([NIDDK][NIDDK-Tx]). Also new swelling or a rise in blood pressure, which can mean
     the kidney is not clearing salt and fluid ([NIDDK][NIDDK-Tx]); much less urine
-    ([KDIGO 2009 transplant][K09TX], 8.1); vomiting or diarrhoea, or you cannot keep your medicines
-    down; or you just do not feel well ([NIDDK][NIDDK-Tx]).
+    ([KDIGO 2009 transplant][K09TX], 8.1); and vomiting or diarrhoea that stops you keeping your
+    medicines down, because missed doses risk rejection ([KDIGO 2009 transplant][K09TX], chapter 11).
 
 ## Related pages
 
@@ -194,3 +197,5 @@ instead.
 - [USDA–FDA: food safety for transplant recipients][FSTX]; [FoodSafety.gov][FOODSAFE].
 - [Medicare: kidney failure coverage][MED-ESRD]: 2026 amounts.
 - [ADA Standards of Care 2026, section 9][A26-9]: pancreas transplantation; [section 6][A26-6].
+- [KDIGO 2022 diabetes in CKD guideline][K22]: recommendation 2.2.1.
+- [2024 hyperglycemic crises consensus][HC24]: DKA criteria.

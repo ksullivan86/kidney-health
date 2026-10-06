@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [A26-5, K22, DG16a, DG7, FDC, DG12, DG13a, DG22, DG32b, DG30b, DG25b, DG25a, JBDS, ARCH, A26-6, NHS-DKA]
+fact_checked: 2026-10-05
+sources: [A26-5, K22, DG16a, DG7, FDC, DG12, DG13a, DG22, DG32b, DG30b, DG25b, DG25a, JBDS, JBDS22, ARCH, A26-6, NHS-DKA, ADAK, FDA-label, HC24]
 ---
 
 # Carb counting on a kidney diet
@@ -21,7 +22,7 @@ Nothing about kidney disease changes carb counting: rapid-acting insulin is stil
 of carbohydrate, and people on fixed insulin plans keep carbohydrate consistent "with respect to time
 and amount" ([ADA 2026 §5][A26-5], recommendations 5.27–5.28). What changes is the food. Kidney
 swaps (white rice for brown, white bread for whole-wheat, canned fruit for a banana) lower potassium
-and phosphorus but cut fibre and make glucose rise faster, so **expect your insulin-to-carb ratio to
+and phosphorus but cut fibre and can make glucose rise faster, so **your insulin-to-carb ratio may
 need re-tuning with your diabetes team** ([KDIGO 2022][K22]; [PLADO][DG16a]).
 
 ## Your numbers
@@ -104,18 +105,23 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 - **Peritoneal dialysis.** The glucose in the dialysis fluid is absorbed and adds calories, often 400
   kcal or more a day, and raises glucose ([DaVita][DG25a]). Your team counts it in your insulin plan;
   food carbohydrate is counted as usual.
-- **Hemodialysis days.** Glucose often falls during and after a session, so your team may plan
-  different carbohydrate or insulin for dialysis days ([JBDS][JBDS]; [Dialysis days](dialysis-days.md)).
+- **Hemodialysis days.** Glucose often falls during a session, and most lows come within 24 hours of
+  one, so your team may plan different carbohydrate or insulin for dialysis days ([JBDS 2022][JBDS22];
+  [Dialysis days](dialysis-days.md)).
 - **Slow stomach emptying (gastroparesis).** If your glucose rises hours after meals, or you feel full
   quickly, tell your team. Small, regular, low-fat and low-fibre meals are the usual advice
   ([JBDS][JBDS]).
 
 ## Labels and "diabetic" foods
 
-- Count **Total Carbohydrate × the servings you actually eat**: a 20-oz soda is 2.5 servings, and
-  cereal bowls are usually 1½ servings.
-- **Sugar alcohols are still carbohydrate.** The usual teaching is to count about half of them
-  (erythritol about none) and watch your CGM ([Medtronic][DG32b]).
+- Count **Total Carbohydrate × the servings you actually eat**, and check what "one serving" means
+  first. Since the 2020 label rules, a package that holds one to two servings, such as a 20-oz soda or
+  a 15-oz can of soup, is labelled as **one** serving: the numbers already cover the whole bottle or
+  can, so do not multiply them. Bigger packages often show two columns, per serving and per package
+  ([FDA][FDA-label]). A bowl of cereal is often 1½–2 label servings.
+- **Sugar alcohols are still carbohydrate.** One common method is to subtract half of the sugar
+  alcohol grams from Total Carbohydrate ([Medtronic][DG32b]). Ask your diabetes team which method
+  they want you to use, and watch your CGM.
 - "Diabetic" cookies, bars and shakes often add phosphate or potassium salts ([DaVita][DG30b]).
 - Diet colas still contain phosphoric acid (about 27 mg phosphorus per 12 oz measured, 41–68 mg for
   some brands); clear diet sodas have none ([measured beverage phosphorus][DG25b]; [FDC][FDC]).
@@ -126,8 +132,9 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 - [ ] Keep carbohydrate at each meal about the same from day to day, as your plan says.
 - [ ] When you switch to kidney-friendly starches, check your CGM after meals for a week or two and
       take the pattern to your diabetes team.
-- [ ] Log meals with their carbohydrate in the app, and record the glucose pattern around them; the
-      clinic adjusts insulin from time in range, not A1c ([CGM metrics](../labs/cgm-metrics.md)).
+- [ ] Log meals with their carbohydrate in the app, and record the glucose pattern around them. With
+      kidney disease A1c is less reliable, so your team leans on CGM patterns as well
+      ([CGM metrics](../labs/cgm-metrics.md)).
 - [ ] Measure starches with a cup for a week until you can judge portions by eye ([Portions](portions.md)).
 
 ## Ask your care team
@@ -142,12 +149,15 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 !!! danger "Call 911 (or your local emergency number)"
     Someone with a low cannot swallow safely, is very drowsy or confused, or has a seizure: give glucagon
     if you have it, turn them on their side and call ([ADA 2026 §6][A26-6]). Also call for blood ketones
-    of 3.0 mmol/L or more, or ketones with vomiting, deep fast breathing or fruity breath ([NHS][NHS-DKA]).
+    of 3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity breath
+    ([NHS][NHS-DKA]; [2024 consensus][HC24]).
 
 !!! warning "Call your care team today"
-    Glucose stays above about 250 mg/dL (13.9 mmol/L) for 2 hours or more, or blood ketones are
-    1.6–2.9 mmol/L (call now) ([NHS][NHS-DKA]). Follow your [sick-day plan](../t1d/sick-days.md). Also call
-    about lows that keep coming back after you change foods. Full list: [Get help now](../get-help-now.md).
+    Glucose stays high after the correction your plan tells you to take: check ketones and call your
+    diabetes team. Blood ketones of 1.6–2.9 mmol/L: call **now**; if you cannot reach the team quickly,
+    or you are vomiting, go to the emergency department ([NHS][NHS-DKA]; [ADA][ADAK]). Follow your
+    [sick-day plan](../t1d/sick-days.md). Also call about lows that keep coming back after you change
+    foods. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 
@@ -164,9 +174,10 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 - [PLADO][DG16a]: plant-dominant eating and glycaemic load.
 - [Kalantar-Zadeh 2010][DG12]; [Noori 2010][DG13a]: phosphorus absorption.
 - [NKF: 40 low-potassium fruits and vegetables][DG22].
+- [FDA: changes to the Nutrition Facts label][FDA-label]: packages of one to two servings are labelled as one serving.
 - [Medtronic: net carbs vs total carbs][DG32b]; [DaVita: creamers and additives][DG30b]; [measured beverage phosphorus][DG25b].
 - [USDA FoodData Central][FDC].
 - [DaVita: peritoneal dialysis diet][DG25a]: calories from dialysis fluid.
-- [JBDS–Renal Association guidance][JBDS]: glucose on dialysis days; meals for gastroparesis.
+- [JBDS–Renal Association guidance][JBDS]: meals for gastroparesis; [JBDS 2022][JBDS22]: glucose on dialysis days.
 - [Project architecture contract][ARCH]: the app's meal carbohydrate total.
-- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NHS: diabetic ketoacidosis][NHS-DKA]: ketone levels.
+- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NHS: diabetic ketoacidosis][NHS-DKA] and [ADA: DKA and ketones][ADAK]: ketone levels; [2024 hyperglycaemic crises consensus][HC24]: DKA signs.

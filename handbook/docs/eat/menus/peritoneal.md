@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [FDC, Q20, K24, A26-11, A26-5, DG7, DG25a, DG6]
 ---
 

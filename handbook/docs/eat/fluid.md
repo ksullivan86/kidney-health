@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DG19a, DG28a, DG23, DG24a, DG25a, DG24b, Q20, AKF-thirst, JBDS, NIDDK-HD-eat, MEDLINE-PE, ARCH]
 ---
 
@@ -16,11 +17,12 @@ sources: [DG19a, DG28a, DG23, DG24a, DG25a, DG24b, Q20, AKF-thirst, JBDS, NIDDK-
 ## In short
 
 Most people with kidney disease **do not need a fluid limit** until late stage 5 or dialysis, when
-they make much less urine and water has nowhere to go ([AKF][DG19a]). Then extra fluid causes
+they make much less urine and water has nowhere to go. Some people at stages 3–5 do need one, so ask
+your team ([AKF][DG19a]). Then extra fluid causes
 swelling, high blood pressure, breathlessness and strain on the heart, and on hemodialysis gaining
 more than 3.5 % of your body weight between sessions is linked to death ([Cabrera 2015][DG28a]).
-Your dialysis unit sets your allowance. Salt makes you thirsty, so cutting salt is the best way to
-keep to it ([DaVita][DG23]).
+Your dialysis unit sets your allowance. Salt makes you thirsty, so cutting salt is one of the best ways
+to keep to it ([DaVita][DG23]).
 
 ## Your numbers
 
@@ -50,7 +52,11 @@ keep to it ([DaVita][DG23]).
 - gelatin desserts and pudding
 
 The app counts fluid for foods that are drinks or liquid at room temperature, and on hemodialysis it
-totals fluid since your last session ([Dialysis days](dialysis-days.md)).
+totals fluid since your last session ([Dialysis days](dialysis-days.md)). For frozen desserts it counts
+only the water in them: about 50 mL for ½ cup of sherbet and 40 mL for ½ cup of ice cream, less than
+their volume (120 mL). NKF and AKF count frozen desserts as fluid but do not say how much; counting
+the whole volume is the cautious way. Ask your unit which way to count, and if they count by volume,
+log the difference as water ([NKF][DG24a]; [AKF][DG19a]).
 
 ## What to do
 
@@ -82,15 +88,15 @@ Other tricks that help ([AKF][AKF-thirst]):
 
 A low is always treated first, whatever your fluid allowance. Four glucose tablets (4 g each, 16 g in
 all) or a tube of glucose gel give the 15 g you need and add no fluid at all
-([ADA Consumer Guide: Dex4][DG24b]); 4 oz of juice adds about 110 mL. Keep tablets at the bedside, in
+([ADA Consumer Guide: Dex4][DG24b]); 4 oz of juice adds about 120 mL. Keep tablets at the bedside, in
 your bag and at the dialysis unit. If juice is all there is, drink it and count it later
 ([Treating a low](../t1d/treating-a-low.md)).
 
 ## Examples
 
 A hemodialysis day that fits 1,500 mL: 1 cup (237 mL) of coffee at breakfast, ½ cup of sherbet
-(about 50 mL), ½ cup of gelatin (about 110 mL) and 1½ cups (355 mL) of water through the day, leaving
-about 750 mL for drinks with medicines and hot weather. See the [hemodialysis menu](menus/hemodialysis.md).
+(120 mL counted by volume), ½ cup of gelatin (120 mL) and 1½ cups (355 mL) of water through the day,
+leaving about 670 mL for drinks with medicines and hot weather. See the [hemodialysis menu](menus/hemodialysis.md).
 
 !!! tip "In the app"
     Drinks and foods that are liquid at room temperature count toward your fluid total automatically.

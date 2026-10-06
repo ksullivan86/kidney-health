@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [DG12, DG20, DG38, DG4, DG25b, FDC, DG30b, DG28b, DG18]
 ---
 

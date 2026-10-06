@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [Q15HD, I20PD, NIDDK-HD, Q19VA, DOPPS03, DG53, K24]
+fact_checked: 2026-10-05
+sources: [Q15HD, I20PD, NIDDK-HD, Q19VA, DOPPS03, DG53, K24, CFR494, AKF-bleed]
 ---
 
 # Dialysis adequacy
@@ -19,8 +20,8 @@ sources: [Q15HD, I20PD, NIDDK-HD, Q19VA, DOPPS03, DG53, K24]
 the main number is **Kt/V**, worked out from blood taken before and after a session. On peritoneal
 dialysis there is no single number to hit: the team looks at how you feel, your fluid, your nutrition,
 your blood tests and the clearance results together ([ISPD 2020][I20PD]). The number you control most
-is **time on dialysis**: skipping or shortening sessions lowers adequacy and is linked with a higher
-risk of death ([DOPPS 2003][DOPPS03]).
+is **time on dialysis**: shortening sessions lowers the dose you get, and skipping sessions is linked
+with a higher risk of death ([KDOQI 2015][Q15HD]; [DOPPS 2003][DOPPS03]).
 
 ## Your numbers
 
@@ -51,6 +52,10 @@ Longer time (t) or better blood flow through your access raises it.
 - Your urine output (remaining kidney function) matters a lot and is protected; avoiding dehydration
   and low blood pressure helps.
 
+**US rules.** US dialysis units must aim for a Kt/V of at least 1.2 per hemodialysis session and a
+weekly Kt/V of at least 1.7 on peritoneal dialysis, or meet another accepted standard of adequacy
+([42 CFR 494.90][CFR494]).
+
 **How often.** If you are on hemodialysis, at home or in a centre, your blood is tested once a month
 ([NIDDK][NIDDK-HD]). On peritoneal dialysis your unit tests clearance and the peritoneal membrane from
 time to time; ask how often.
@@ -71,7 +76,7 @@ The day after the long 2-day gap is the riskiest day of the week on a 3-a-week s
 ## Signs that dialysis may not be enough
 
 Tell your team if you notice these, even if your Kt/V looks fine. They are among the reasons KDIGO
-lists for starting or changing dialysis ([KDIGO 2024][K24], Table 41):
+lists for starting dialysis, so on dialysis they can mean you need more ([KDIGO 2024][K24], Table 41):
 
 - poor appetite, nausea, or weight and muscle loss that diet advice does not fix;
 - itching that will not go away;
@@ -105,8 +110,9 @@ When dialysis is working, many people notice **more energy and a better appetite
   Kt/V was 1.45.
 - **A quiet access warning.** Ade's Kt/V fell from 1.5 to 1.25 with no change in his prescription. His
   unit checked his fistula and found a narrowing, which was treated.
-- **Peritoneal dialysis, feeling well.** Rosa's weekly Kt/V is 1.6. She eats well, her fluid and blood
-  tests are fine, and she still passes urine. Her team keeps her prescription the same.
+- **Peritoneal dialysis, feeling well.** Rosa's weekly Kt/V is 1.7. She eats well, her fluid and blood
+  tests are fine, and she still passes urine. Her team keeps her prescription the same rather than
+  pushing the number higher ([ISPD 2020][I20PD]).
 
 ## Ask your care team
 
@@ -119,9 +125,10 @@ When dialysis is working, many people notice **more energy and a better appetite
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Severe breathlessness or being unable to lie flat, chest pain, fainting, a lab potassium of
-    6.5 mmol/L or more, or bleeding from your access that does not stop after 10–15 minutes of firm
-    pressure. See [Get help now](../get-help-now.md).
+    Severe breathlessness or being unable to lie flat, chest pain, fainting, or a lab potassium of
+    6.5 mmol/L or more ([KDIGO 2024][K24], Table 28). Bleeding from your fistula or graft that is heavy
+    or spurting, or has not stopped after 10–15 minutes of firm pressure: keep pressing while you call
+    ([AKF][AKF-bleed]). See [Get help now](../get-help-now.md).
 
 !!! warning "Call your dialysis unit today"
     A missed or shortened session (to make it up), no buzz in your fistula or graft, fever or redness at
@@ -142,4 +149,6 @@ When dialysis is working, many people notice **more energy and a better appetite
 - [KDOQI 2019 vascular access guideline][Q19VA]: Kt/V falls and access dysfunction.
 - [DOPPS 2003: skipped and shortened sessions][DOPPS03].
 - [Foley 2011: the long interdialytic interval][DG53].
-- [KDIGO 2024 CKD guideline][K24]: Table 41.
+- [KDIGO 2024 CKD guideline][K24]: Tables 28 and 41.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: minimum Kt/V.
+- [AKF: fistula and graft bleeds][AKF-bleed].

@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-05
+fact_checked: 2026-10-05
 sources: [A26-5, K24, A26-11, Q20, FDC, K22, DG19a, K09TX, FDAgrapefruit, FSTEMPS]
 ---
 
@@ -101,7 +102,7 @@ Day 1 of the [stage 3 menu](g3.md) is built from it.
 What to notice ([KDOQI 2020][Q20]; [KDIGO 2022][K22]; [AKF][DG19a]):
 
 - **It was deliberately light on calories.** 25–35 kcal/kg is about 1,900–2,800 kcal for 75–80 kg;
-  that day was 400–500 kcal under the floor. Close the gap with fat (olive oil, butter, mayonnaise,
+  that day was about 400–530 kcal under the floor. Close the gap with fat (olive oil, butter, mayonnaise,
   a second tablespoon of peanut butter) or more measured starch covered by insulin, **not with more
   meat**, which would push protein and phosphorus up. The new menus do this and stay at or above
   1,750 kcal for 70 kg, except on peritoneal dialysis, where the dialysis fluid adds calories
@@ -110,7 +111,7 @@ What to notice ([KDOQI 2020][Q20]; [KDIGO 2022][K22]; [AKF][DG19a]):
   a second vegetable, depending on the ceiling in use.
 - **Hypo treatments sit on top:** two 15 g lows treated with glucose tablets add 0 mg potassium; with
   apple juice about 250 mg; with orange juice about 500 mg. The app logs them as foods.
-- To fit a smaller person, shrink the meat (1 oz turkey, 1½ oz chicken): about 12 g protein and 90 mg
+- To fit a smaller person, shrink the meat (1 oz turkey, 1½ oz chicken): about 9 g protein and 65 mg
   phosphorus less.
 - If blood potassium is normal and the dietitian agrees, oatmeal instead of Cream of Wheat (about
   +125 mg potassium, +140 mg phosphorus and +2.7 g fibre per cup) is a fair trade for glucose

@@ -122,6 +122,19 @@ def front_matter(meta: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def with_fact_check(meta: dict, fact_checked) -> dict:
+    """Add ``fact_checked`` (the date of the last clinical fact-check, from the data file) after
+    ``last_checked`` so generated pages carry the same front matter as hand-written ones."""
+    if not fact_checked:
+        return meta
+    out: dict = {}
+    for key, value in meta.items():
+        out[key] = value
+        if key == "last_checked":
+            out["fact_checked"] = str(fact_checked)
+    return out
+
+
 def md_cell(text: str) -> str:
     return str(text).replace("|", "\\|")
 
@@ -557,13 +570,13 @@ def _fluid(v: float) -> str:
     return fmt_int(v) if v > 0.5 else "–"
 
 
-def render_menu_page(res: MenuResult, person: dict, last_checked: str) -> str:
+def render_menu_page(res: MenuResult, person: dict, last_checked: str, fact_checked=None) -> str:
     spec, t, lim = res.spec, res.targets, res.limits
-    meta = {
+    meta = with_fact_check({
         "title": spec["title"], "description": spec["description"], "slug": f"menu-{spec['id']}",
         "audience": ["patient", "caregiver"], "applies_to": spec["applies_to"], "status": "draft",
         "reviewed_by": "", "reviewed_on": None, "last_checked": last_checked, "sources": spec["sources"],
-    }
+    }, fact_checked)
     pmin, pmax = lim["protein_g"]
     if t.protein_min_g == t.protein_max_g:
         protein_goal = f"about {t.protein_min_g} g ({t.protein_min_per_kg:.1f} g/kg); days stay within {pmin:g}–{fmt_1(pmax)} g"
@@ -672,13 +685,13 @@ def render_grocery_lists(results: list[MenuResult], menus: dict, last_checked: s
     sources = menus["grocery"]["sources"]
     order = ["G1-G2", "G3a", "G3b", "G4", "G5", "HD", "HHD", "PD", "Tx"]
     stages = {s for r in results for s in r.spec["applies_to"]}
-    meta = {
+    meta = with_fact_check({
         "title": "Grocery lists for the sample menus",
         "description": "Printable weekly shopping checklists for each 7-day sample menu, with staples and what to check on labels.",
         "slug": "grocery-lists", "audience": ["patient", "caregiver"],
         "applies_to": [s for s in order if s in stages], "status": "draft", "reviewed_by": "",
         "reviewed_on": None, "last_checked": last_checked, "sources": sources,
-    }
+    }, menus.get("fact_checked"))
     out = [front_matter(meta), MARKER, "", "# Grocery lists for the sample menus", "",
            menus["grocery"]["intro"].strip(), ""]
     for r in results:
@@ -838,12 +851,12 @@ def render_recipe_page(res: RecipeResult, data: dict, last_checked: str) -> str:
     spec, per = res.spec, res.per_serving
     course = COURSES[spec["course"]]
     lim = RECIPE_LIMITS[course]
-    meta = {
+    meta = with_fact_check({
         "title": spec["title"], "description": spec["description"], "slug": spec["id"],
         "audience": ["patient", "caregiver"], "applies_to": spec.get("applies_to", data["applies_to"]),
         "status": "draft", "reviewed_by": "", "reviewed_on": None, "last_checked": last_checked,
         "sources": list(dict.fromkeys(list(data["sources"]) + list(spec.get("sources", [])))),
-    }
+    }, data.get("fact_checked"))
     tags = " · ".join(RECIPE_TAGS[t] for t in spec.get("tags", []))
     serves = nice_number(float(spec["serves"]))
     out = [front_matter(meta), MARKER, "", f"# {spec['title']}", "",
@@ -977,7 +990,8 @@ def build_all() -> tuple[dict[Path, str], list[MenuResult], list[str]]:
         DOCS / "eat" / "grocery-lists.md": render_grocery_lists(results, menus, last_checked),
     }
     for r in results:
-        files[DOCS / "eat" / "menus" / f"{r.spec['id']}.md"] = render_menu_page(r, person, last_checked)
+        files[DOCS / "eat" / "menus" / f"{r.spec['id']}.md"] = render_menu_page(
+            r, person, last_checked, menus.get("fact_checked"))
     recipe_files, _, recipe_problems = build_recipes(foods, sources)
     files.update(recipe_files)
     problems += recipe_problems

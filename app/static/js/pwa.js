@@ -9,8 +9,10 @@
    * Updates: a waiting worker shows the update toast; Reload posts SKIP_WAITING and the page
      reloads on controllerchange. registration.update() runs at start and when the page becomes
      visible again, at most once an hour (a standalone app has no reload button).
-   * The install panel lives in the Profile view until the Settings view exists
-     ("Settings → This device"); renderInstallPanel(container) can render it anywhere. */
+   * The install panel is part of Settings → This device; renderInstallPanel(container) can render
+     it anywhere. deviceStatus() and clearOfflineData() serve the rest of that section
+     (js/views/settings.js), which has no service-worker code of its own (the preview build leaves
+     this file out). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -156,8 +158,49 @@
     panel.hidden = false;
   }
 
+  // ---------------------------------------------------------------------------
+  // Settings → This device (R10): state for the Settings view, and "Clear offline data"
+  // ---------------------------------------------------------------------------
+  async function deviceStatus() {
+    const out = { installed: isStandalone(), secure: window.isSecureContext === true, platform: platform(), offline: 'off',
+      storage: null, persisted: null, updateReady: !!($('#update-toast') && !$('#update-toast').hidden) };
+    if (!out.secure) out.offline = 'insecure';
+    else if (MOCK || !('serviceWorker' in navigator)) out.offline = 'unsupported';
+    else if (navigator.serviceWorker.controller) out.offline = 'ready';
+    else if (registration) out.offline = 'installing';
+    const st = navigator.storage;
+    if (out.secure && st) {
+      try { if (st.estimate) { const e = await st.estimate(); out.storage = { usage: Number(e.usage) || 0, quota: Number(e.quota) || 0 }; } } catch (e) { /* unavailable */ }
+      try { if (st.persisted) out.persisted = await st.persisted(); } catch (e) { /* unavailable */ }
+    }
+    return out;
+  }
+  // Removes what this device keeps for offline use: the app's caches, the offline database
+  // (M2) and the service worker itself; the next visit installs a fresh copy. Never touches
+  // the server or the sign-in.
+  async function clearOfflineData() {
+    let removed = 0;
+    if (window.caches && caches.keys) {
+      for (const key of await caches.keys()) if (key.startsWith('kdl-')) { await caches.delete(key); removed += 1; }
+    }
+    try { if (window.indexedDB) indexedDB.deleteDatabase('kdl'); } catch (e) { /* not created yet */ }
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      for (const reg of await navigator.serviceWorker.getRegistrations()) { try { await reg.unregister(); } catch (e) { /* already gone */ } }
+    }
+    registration = null;
+    renderInstallPanel();
+    return removed;
+  }
+  // Note 02 R5: an app opened from the home screen asks the browser to keep its storage.
+  function askPersistence() {
+    try {
+      if (isStandalone() && window.isSecureContext && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    } catch (e) { /* unsupported */ }
+  }
+
   function init() {
     if (MOCK) return; // demo and preview: no service worker, no install panel
+    askPersistence();
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault(); // offer it from the panel instead of the browser's mini bar
       installPrompt = e;
@@ -170,5 +213,5 @@
     else window.addEventListener('load', () => { register(); }, { once: true });
   }
 
-  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate };
+  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, deviceStatus, clearOfflineData };
 })();

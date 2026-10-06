@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [K24, K22, A26-11, Q20, NOTE05, FDC, ARCH, NKFherb]
 ---
 
@@ -27,7 +28,7 @@ before dialysis** and **1.0–1.2 g per kg on dialysis**, and avoid more than 1.
 
 | | Per kg a day | For 60 kg | For 70 kg | For 80 kg |
 |---|---|---|---|---|
-| Stages 1–2 | 0.8 (up to 1.0) | 48–60 g | 56–70 g | 64–80 g |
+| Stages 1–2 | 0.8 (the app allows up to 1.0) | 48–60 g | 56–70 g | 64–80 g |
 | Stages 3–5 with diabetes, no dialysis | **0.8** | about 48 g | about 56 g | about 64 g |
 | Hemodialysis or peritoneal dialysis | **1.0–1.2** | 60–72 g | 70–84 g | 80–96 g |
 | Avoid more than | 1.3 | 78 g | 91 g | 104 g |
@@ -56,7 +57,7 @@ before dialysis** and **1.0–1.2 g per kg on dialysis**, and avoid more than 1.
 
 ## What a portion looks like
 
-A 3-oz cooked portion of meat or fish is about the size of a deck of cards and gives about 19–27 g of
+A 3-oz cooked portion of meat or fish is about the size of a deck of cards and gives about 17–27 g of
 protein. Each protein brings some potassium and phosphorus with it:
 
 | Food | Portion | Protein | Potassium | Phosphorus |

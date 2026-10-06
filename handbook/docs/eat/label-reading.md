@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DG20, DG38, DG16b, DG4, K24, DG30a, DG30b, DG46a, DG46b, DG34, DG37a, DG32b, DG25b, FDC, DG13a, DG14a, DG28b, FDA-label, NIDDK-portions, EU1169, SHERMAN09, NOTE03]
 ---
 
@@ -56,9 +57,13 @@ on the label; the portion is what you put on your plate, and the two often diffe
       less, "low sodium" 140 mg or less, "reduced sodium" 25 % less than the original
       ([FDA][DG34]; [FDA claim definitions][DG37a]). NKF's rule of thumb: 240 mg or less per serving,
       and fewer milligrams of sodium than calories ([NKF label guide][DG38]).
-- [ ] **4. Carbohydrate.** Total Carbohydrate × the servings you actually eat (a 20-oz soda is
-      2.5 servings; cereal bowls are usually 1½). Sugar alcohols are still carbohydrate: the usual
-      teaching is to count about half (erythritol about none) and watch your CGM ([Medtronic][DG32b]).
+- [ ] **4. Carbohydrate.** Total Carbohydrate × the servings you actually eat. Check the serving
+      first: a package of one to two servings, such as a 20-oz soda or a 15-oz can of soup, is now
+      labelled as **one** serving, so its numbers already cover the whole bottle or can; bigger packages
+      may show a second column for the whole package ([FDA][FDA-label]). A bowl of cereal is often 1½–2
+      label servings. Sugar alcohols are still carbohydrate: one common method is to subtract half of
+      them from Total Carbohydrate ([Medtronic][DG32b]); ask your diabetes team which method to use and
+      watch your CGM.
       "Diabetic" cookies, bars and shakes often add phosphate or potassium salts ([DaVita][DG30b]).
       Diet colas still contain phosphoric acid (about 27 mg per 12 oz measured, 41–68 mg for some
       brands); clear diet sodas are phosphate-free ([measured beverage phosphorus][DG25b]; [FDC][FDC]).
@@ -69,7 +74,9 @@ on the label; the portion is what you put on your plate, and the two often diffe
 ## Worked example: a can of chicken noodle soup
 
 These are typical USDA values for canned chicken noodle soup, prepared, per 1-cup serving
-([FDC][FDC]). A can often holds 2 servings or more, so a full bowl may well be 2 cups.
+([FDC][FDC]). A can of condensed soup is labelled as more than one serving, so a full bowl may well
+be 2 cups. (A ready-to-serve can of up to about 2 servings is labelled as one serving, so read the
+serving line first: [FDA][FDA-label].)
 
 | Label line | Per serving (1 cup) | If you eat 2 cups | What it tells you |
 |---|---|---|---|
