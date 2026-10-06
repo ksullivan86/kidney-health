@@ -14,10 +14,15 @@
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
      "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
-     "food_preferences"}
+     "food_preferences", "ai_usage", "ai_consents", "ai_provider"}
 
 ``food_preferences`` (v0.3, schema step 5) lists the foods the person marked "Not for me" in meal
 guidance: ``[{food_id, name, preference, created_at}]``.
+
+AI (v0.3, schema step 6; note 04 §9 A8): ``ai_audit`` is the person's AI activity (what was sent and
+received while kept, never images), ``ai_usage`` the daily call and token counts, ``ai_consents`` the
+hosts they agreed to send data to, and ``ai_provider`` their own provider without its key (``null``
+when they have none).
 """
 from __future__ import annotations
 
@@ -48,6 +53,10 @@ This archive holds everything this server stores about your account, in two form
 * foods.csv    - foods you created, and shared foods you imported or scanned.
 * meals.csv    - your saved meals, one line per food.
 * labs.csv     - your lab results (empty if you have none).
+
+export.json also holds your AI activity (what the app sent to an AI provider for you and what came
+back, for as long as the server keeps it; never photos), your daily AI call counts and the AI
+providers you agreed to send data to.
 
 What is NOT in it: your password, your sign-in sessions and any API keys you stored (not even part
 of them). The person who runs the server keeps backups of the whole database; deleting your account
@@ -80,6 +89,25 @@ def _food_preferences(conn: sqlite3.Connection, user_id: int) -> list[dict[str, 
         return []
     return _rows(conn, """SELECT p.food_id, f.name, p.preference, p.created_at FROM food_preferences p
                           JOIN foods f ON f.id = p.food_id WHERE p.user_id = ? ORDER BY p.food_id""", (int(user_id),))
+
+
+def _ai_rows(conn: sqlite3.Connection, table: str, user_id: int, order: str) -> list[dict[str, Any]]:
+    """Rows of a per-user AI table (``WITHOUT ROWID``, so ordered by its key); [] on an older schema."""
+    if not table_exists(conn, table):
+        return []
+    return _rows(conn, f"SELECT * FROM {table} WHERE user_id = ? ORDER BY {order}", (int(user_id),))
+
+
+def _own_ai_provider(conn: sqlite3.Connection, user_id: int) -> dict[str, Any] | None:
+    """The person's own AI provider (schema step 6) without its key or key hint; None if they have none."""
+    if not table_exists(conn, "ai_providers"):
+        return None
+    row = conn.execute(
+        """SELECT preset, label, base_url, model, vision_model, created_at, updated_at, api_key_enc IS NOT NULL AS key_set
+           FROM ai_providers WHERE scope = 'user' AND owner_user_id = ?""",
+        (int(user_id),),
+    ).fetchone()
+    return None if row is None else {k: (bool(row[k]) if k == "key_set" else row[k]) for k in row.keys()}
 
 
 def _lab_results(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
@@ -138,6 +166,9 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
         "activity": list_events(conn, actor_user_id=uid, actions=USER_VISIBLE_ACTIONS, limit=500),
         "food_preferences": _food_preferences(conn, uid),
+        "ai_usage": _ai_rows(conn, "ai_usage", uid, "day, provider_id"),
+        "ai_consents": _ai_rows(conn, "ai_consents", uid, "provider_id, purpose"),
+        "ai_provider": _own_ai_provider(conn, uid),
     }
 
 

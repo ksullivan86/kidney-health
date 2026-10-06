@@ -32,6 +32,14 @@ Keys (defaults in brackets):
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
   ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``
+* Optional AI (note 04 R4, §9 A5; ``app/ai/``), parsed into :class:`AiEnv` (``Settings.ai``): the
+  server-defined provider ``AI_PROVIDER``, ``AI_BASE_URL``, ``AI_API_KEY[_FILE]`` (``OPENAI_API_KEY[_FILE]``
+  is accepted for ``AI_PROVIDER=openai``), ``AI_MODEL``, ``AI_VISION_MODEL``, ``AI_TIMEOUT_S``,
+  ``AI_VISION_TIMEOUT_S`` [120], ``AI_MAX_TOKENS`` [1500], ``AI_STRUCTURED_OUTPUT`` [auto],
+  ``AI_REASONING_EFFORT``, ``AI_CONTEXT_TOKENS``, ``AI_OPENROUTER_ZDR`` [false]; and the network policy
+  ``AI_PRIVATE_HOSTS``, ``AI_DENY_CIDRS``, ``AI_MAX_RESPONSE_BYTES`` [262144], ``AI_HTTP_PROXY``. These are
+  env-only on purpose (an SSRF allowlist is never runtime-editable); the switches (``AI_ENABLED`` …) are
+  settings-registry keys with env locks. ``app/ai/config.py`` checks the values at start-up.
 * ``OFF_BASE_URL`` [``https://world.openfoodfacts.org``]: the Open Food Facts server barcode lookups
   ask (staging ``https://world.openfoodfacts.net`` or a self-hosted Product Opener). Env only, never a
   runtime setting (note 03 §9 B5): ``https://`` (plain ``http://`` only for localhost), no path. A
@@ -95,6 +103,70 @@ def default_data_dir() -> Path:
 
 
 @dataclass(frozen=True)
+class AiEnv:
+    """The optional AI layer's environment (note 04 R4): the server-defined provider and the network
+    policy. Parsed here, checked against the presets and the SSRF rules by ``app/ai/config.py``."""
+
+    provider: str | None = None  # AI_PROVIDER: a preset name (app/ai/presets.py)
+    base_url: str | None = None
+    api_key: str | None = field(default=None, repr=False)
+    model: str | None = None
+    vision_model: str | None = None
+    timeout_s: float | None = None  # None: the preset's read timeout
+    vision_timeout_s: float = 120.0
+    max_tokens: int = 1500
+    structured: str = "auto"  # auto | json_schema | json_object | prompt
+    reasoning_effort: str | None = None
+    context_tokens: int | None = None  # None: 8192 for self-hosted presets, 32768 for cloud ones
+    private_hosts: tuple[str, ...] = ()  # AI_PRIVATE_HOSTS entries (host:port, ip:port, CIDR)
+    deny_cidrs: tuple[str, ...] = ()  # AI_DENY_CIDRS
+    max_response_bytes: int = 262_144
+    http_proxy: str | None = None  # AI_HTTP_PROXY; HTTP(S)_PROXY are ignored for AI calls
+    openrouter_zdr: bool = False
+
+
+def _parse_float(env: Mapping[str, str], name: str, lo: float, hi: float) -> float | None:
+    raw = _raw(env, name)
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ConfigError(f"{name} must be a number of seconds, not {raw!r}.") from None
+    if not lo <= value <= hi:
+        raise ConfigError(f"{name} must be between {lo:g} and {hi:g}, not {value:g}.")
+    return value
+
+
+def load_ai_env(env: Mapping[str, str]) -> AiEnv:
+    """``AiEnv`` from the environment (types and ranges only; ``app/ai/config.py`` checks the meaning)."""
+    provider = (_raw(env, "AI_PROVIDER") or "").lower() or None
+    key, _, _ = read_secret(env, "AI_API_KEY")
+    if key is None and provider == "openai":
+        key, _, _ = read_secret(env, "OPENAI_API_KEY")  # note 01's name, accepted as an alias for OpenAI
+    key = (key or "").strip() or None
+    vision_timeout = _parse_float(env, "AI_VISION_TIMEOUT_S", 5.0, 600.0)
+    return AiEnv(
+        provider=provider,
+        base_url=_raw(env, "AI_BASE_URL"),
+        api_key=key,
+        model=_raw(env, "AI_MODEL"),
+        vision_model=_raw(env, "AI_VISION_MODEL"),
+        timeout_s=_parse_float(env, "AI_TIMEOUT_S", 5.0, 600.0),
+        vision_timeout_s=120.0 if vision_timeout is None else vision_timeout,
+        max_tokens=parse_int(env, "AI_MAX_TOKENS", 1500, 64, 32_768),
+        structured=_choice(env, "AI_STRUCTURED_OUTPUT", "auto", ("auto", "json_schema", "json_object", "prompt")),
+        reasoning_effort=(_raw(env, "AI_REASONING_EFFORT") or "").lower() or None,
+        context_tokens=(parse_int(env, "AI_CONTEXT_TOKENS", 8192, 1024, 2_000_000) if _raw(env, "AI_CONTEXT_TOKENS") else None),
+        private_hosts=_split_list(env.get("AI_PRIVATE_HOSTS")),
+        deny_cidrs=_split_list(env.get("AI_DENY_CIDRS")),
+        max_response_bytes=parse_int(env, "AI_MAX_RESPONSE_BYTES", 262_144, 4096, 16 * 1024 * 1024),
+        http_proxy=_raw(env, "AI_HTTP_PROXY"),
+        openrouter_zdr=parse_bool(env, "AI_OPENROUTER_ZDR", False),
+    )
+
+
+@dataclass(frozen=True)
 class Settings:
     """Validated runtime configuration. Secret fields are kept out of ``repr()``."""
 
@@ -151,6 +223,9 @@ class Settings:
     pwa_enabled: bool = True
     log_level: str = "INFO"
 
+    # Optional AI (note 04): the env provider and the network policy; Settings built in code have none.
+    ai: AiEnv = field(default_factory=AiEnv, repr=False)
+
     warnings: tuple[str, ...] = field(default=(), compare=False, repr=False)
 
     # ------------------------------------------------------------------ paths
@@ -186,7 +261,7 @@ class Settings:
 
     def secret_values(self) -> list[str]:
         """Every secret value loaded from the environment, for the log-redaction filter."""
-        values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret]
+        values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -494,6 +569,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         hsts_max_age=parse_int(env, "HSTS_MAX_AGE", 31_536_000, 0, 63_072_000),
         pwa_enabled=parse_bool(env, "PWA_ENABLED", True),
         log_level=_choice(env, "LOG_LEVEL", "INFO", LOG_LEVELS, upper=True),
+        ai=load_ai_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):

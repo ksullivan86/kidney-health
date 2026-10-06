@@ -406,3 +406,123 @@ register(
         help="carb_tolerance_g (5–20) and hypo_dose_g (5–30) come from your diabetes team.",
     ),
 )
+
+
+# --------------------------------------------------------------------------- #
+# Note 04 (optional AI), R4 with §9 A5–A7. Owner: M2 ai (read by app/ai/config.py and app/ai/routes.py).
+# Providers and their keys are rows of ai_providers (schema step 6), never settings: the person's `ai`
+# object below has no key field (§9 A6). The env-only parts (AI_PROVIDER, AI_BASE_URL, AI_API_KEY_FILE,
+# AI_PRIVATE_HOSTS, AI_DENY_CIDRS, AI_HTTP_PROXY, …) live in app/config.py `AiEnv`: an SSRF allowlist is
+# never runtime-editable.
+# --------------------------------------------------------------------------- #
+
+# Keys only the environment may set while the server runs without sign-in (AUTH_MODE=none): then everybody
+# on the network is an admin and could re-point AI at their own server (note 04 §9 A7). PATCH
+# /api/admin/settings answers 403 for them in that mode.
+NO_SIGNIN_ENV_ONLY: set[str] = set()
+
+AiPreferencesText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
+
+
+class AiPreferences(BaseModel):
+    """The person's AI choices (note 04 R4 "User settings"; Settings → AI ideas). No key field (§9 A6):
+    a personal key goes only to ``ai_providers.api_key_enc`` through ``PUT /api/me/ai/provider``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    opt_in: bool = False  # "Use AI ideas"
+    provider: Annotated[str, StringConstraints(pattern=r"^(auto|own|shared:[1-9][0-9]{0,17})$")] = "auto"
+    share_age_sex: bool = False  # send a 10-year age band and sex with meal requests
+    preferences: AiPreferencesText = ""  # e.g. "vegetarian, no fish" (sent as untrusted data)
+
+
+register(
+    SettingDef(
+        key="ai.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_ENABLED",
+        label="Optional AI ideas",
+        help="Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. "
+        "The rules always run first and check every AI idea; nothing is sent anywhere while this is off.",
+    ),
+    SettingDef(
+        key="ai.user_keys_allowed",
+        model=bool,
+        default=True,
+        scope="instance",
+        env="AI_ALLOW_USER_KEYS",
+        label="People may use their own AI key",
+        help="For OpenAI, OpenRouter or Nous Portal. Their key is encrypted and never shown again.",
+    ),
+    SettingDef(
+        key="ai.allow_user_base_url",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_ALLOW_USER_BASE_URL",
+        label="People may enter their own AI server address",
+        help="Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.",
+    ),
+    SettingDef(
+        key="ai.shared_daily_limit",
+        model=Annotated[int, Field(ge=0, le=100_000)],
+        default=30,
+        scope="instance",
+        env="AI_SHARED_DAILY_LIMIT",
+        label="Shared AI calls per person per day",
+        help="Counts meal ideas, described meals, photos and connection tests on shared providers. 0 means unlimited.",
+    ),
+    SettingDef(
+        key="ai.max_concurrency",
+        model=Annotated[int, Field(ge=1, le=32)],
+        default=2,
+        scope="instance",
+        env="AI_MAX_CONCURRENCY",
+        label="AI calls at the same time (whole server)",
+        help="Each person has at most one call running. Extra calls are told to try again in a few seconds.",
+    ),
+    SettingDef(
+        key="ai.audit_retention_days",
+        model=Annotated[int, Field(ge=0, le=365)],
+        default=30,
+        scope="instance",
+        env="AI_AUDIT_RETENTION_DAYS",
+        label="Keep what was sent to and received from AI for (days)",
+        help="Each person sees their own AI activity in Settings. 0 keeps only the time, provider and outcome. "
+        "Backups keep it until they expire.",
+    ),
+    SettingDef(
+        key="ai.vision_plate_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_VISION_PLATE_ENABLED",
+        label="Plate photos (AI estimate of what is on a plate)",
+        help="Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app "
+        "says so on every result and never logs them without a tap.",
+    ),
+    SettingDef(
+        key="ai.vision_allow_agent",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_VISION_ALLOW_AGENT",
+        label="Allow photos to go to a Hermes agent",
+        help="Off by default. Text printed on a package could try to instruct an agent; even when on, the app only uses "
+        "a Hermes profile whose tool check passes.",
+    ),
+    SettingDef(
+        key="ai",
+        model=AiPreferences,
+        default=AiPreferences(),
+        scope="user",
+        label="AI ideas",
+        help="opt_in, provider (auto, own or shared:<id>), share_age_sex and preferences (at most 200 characters).",
+    ),
+)
+NO_SIGNIN_ENV_ONLY.update(
+    {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
+     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent"}
+)

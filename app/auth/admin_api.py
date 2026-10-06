@@ -291,7 +291,14 @@ def read_instance_settings(request: Request, admin: AdminUser, conn: sqlite3.Con
 @router.patch("/settings")
 def update_instance_settings(request: Request, admin: RecentAdmin, body: dict[str, Any] = Body(...),
                              conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    store = auth_context(request).store
+    ctx = auth_context(request)
+    store = ctx.store
+    if ctx.settings.auth_mode == "none":  # note 04 §9 A7: everyone on the network is an admin in this mode
+        from ..settings_registry import NO_SIGNIN_ENV_ONLY
+
+        env_only = sorted(k for k in body if k in NO_SIGNIN_ENV_ONLY)
+        if env_only:
+            raise ApiProblem(403, "Set AI settings with environment variables when sign-in is off (AUTH_MODE=none).", keys=env_only)
     try:
         changed = store.update_instance(conn, body, updated_by=admin.id)
     except Exception as exc:  # mapped to 400/403/409; anything else re-raised by settings_error

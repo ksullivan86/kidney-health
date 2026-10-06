@@ -28,8 +28,28 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * Step 1: app/migrations/m006_ai.py (ai_providers, ai_consents, ai_usage, ai_audit; cascades) +
   tests/test_migration_m006.py (populated v5 upgrade, idempotent, constraints, cascade). `pytest tests/test_migration_m006.py`.
 
+* Steps 2–7 (first pass, smoke-tested end to end with a fake OpenAI transport; route tests next):
+  registry block "Note 04" in app/settings_registry.py (ai.* + `ai` object, NO_SIGNIN_ENV_ONLY for §9 A7),
+  `AiEnv` + `load_ai_env` in app/config.py, app/ai/{presets,netpolicy,transport,client,schemas,prompts,guard,
+  features,config,routes}.py, app/imagecheck.py, app/vision.py, main.py registration + startup hook, admin_api
+  A7 refusal for ai.* settings in none mode, export.json ai_usage/ai_consents/ai_provider.
+  Verified: `pytest tests/test_ai_netpolicy.py` (122 cases), smoke script
+  `$SCRATCH/v030/ai/smoke.py` (dry run, 409 consent, call, audit, /api/me/ai, admin list).
+
 ## Decisions
 * Consents are rows (`ai_consents`, FK to provider and user) rather than a list inside the `ai` settings
   object: they must only be written by the consent route (which shows the exact payload), must not be
   clobbered by a generic settings PATCH, and must disappear when a provider's host changes.
 * The env provider (`AI_PROVIDER`…) is a `locked=1` row synced at start-up; its key stays in the env only.
+* `/api/ai/*` and `/api/vision/*` are always mounted but answer 404 (as unregistered) while `ai.enabled` is off,
+  checked per request after `current_user` (anonymous → 401 like every /api route; test_auth_coverage needs it),
+  so an admin can switch AI on in Settings without a restart.
+* Routes are `/api/vision/label` and `/api/vision/plate` (task), not note 04's `/api/ai/read-label|identify-food`.
+* No separate AI_VISION_ENABLED switch: vision is on exactly when the provider has a vision model (task).
+* A2: meal features have no model free text; `theme` + `reason_codes` enums, claims re-checked against the
+  recomputed numbers (false ones removed and counted), sentences from server templates (guard.REASON_TEXT).
+* Upstream failure: next-meal/parse-meal answer 200 `{"status":"error","reason",...,"fallback"}` (Layer 0
+  degrade, R1); vision routes answer 502 (no rule result to fall back to).
+* At most one extra request per call (one retry for 429/5xx/connect, or one repair turn), R6 "at most one".
+* Frontend (app/static/**: AI cards, consent sheet, settings slot, label/plate UI, mock twins) is the
+  frontend owner's; handoff below. settings.js lacks the ai.* keys (as it lacks guidance/food.* keys already).
