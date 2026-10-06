@@ -47,6 +47,7 @@
   const DIABETES_TYPES = ['none', 'type1', 'type2'];
   const FLAGS = [
     { key: 'phosphate_additive', label: 'Phosphate additives', hint: 'Ingredient list has "phos" (e.g. sodium phosphate); nearly fully absorbed', kind: 'warn' },
+    { key: 'potassium_additive', label: 'Potassium additives', hint: 'Ingredient list has a potassium salt (e.g. potassium chloride, potassium lactate); about 90 % absorbed', kind: 'warn' },
     { key: 'high_gi', label: 'High glycemic index', hint: 'Raises blood glucose quickly', kind: 'warn' },
     { key: 'counts_as_fluid', label: 'Counts as fluid', hint: 'Liquid at room temperature', kind: '' },
     { key: 'avoid_ckd', label: 'Avoid with CKD', hint: 'e.g. star fruit', kind: 'warn' },
@@ -72,6 +73,8 @@
   };
   const WARNING_ORDER = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'carbs_g'];
   const HIGH_GI_MIN_CARBS_G = 15; // high_gi upgrades carbohydrate to "high" only from one carb choice
+  // ARCHITECTURE.md v0.3 item 9 (mirror of nutrients.POTASSIUM_ADDITIVE_MESSAGE): medium when potassium is unknown.
+  const POTASSIUM_ADDITIVE_MESSAGE = 'Contains a potassium additive; potassium not listed';
 
   // ---------------------------------------------------------------------------
   // Display formatting (what the UI prints; the server already rounded its numbers)
@@ -293,6 +296,7 @@
       return amount ? `${base}: ${amount} phosphorus ${scope}` : base;
     }
     if (flag === 'high_gi') return `High glycaemic index: ${amount} fast-acting carbohydrate ${scope}`;
+    if (flag === 'potassium_additive') return POTASSIUM_ADDITIVE_MESSAGE;
     if (key === 'carbs_g') {
       if (level === 'high') return `High carbohydrate: ${amount} ${scope} (${carbChoicesText(value || 0)})`;
       return `${carbChoicesText(value || 0)}: ${amount} carbohydrate ${scope}`;
@@ -317,6 +321,9 @@
       let level = thresholdLevel(key, value);
       let flag = null;
       if (key === 'phosphorus_mg' && fl.has('phosphate_additive')) { level = 'high'; flag = 'phosphate_additive'; }
+      else if (key === 'potassium_mg' && fl.has('potassium_additive') && roundValue(key, value) == null) {
+        level = 'medium'; flag = 'potassium_additive'; // potassium not listed: medium; listed: normal thresholds
+      }
       else if (key === 'carbs_g' && fl.has('high_gi') && (value || 0) > 0) {
         // Glycaemic index matters once there is a carb choice to spike on (glycaemic load).
         level = (roundValue(key, value) || 0) >= HIGH_GI_MIN_CARBS_G ? 'high' : 'medium';
@@ -420,7 +427,7 @@
   KH.rules = {
     // registry
     NUTRIENTS, NUT, NUTRIENT_KEYS, TARGET_KEYS, MEALS, MEAL_KEYS, MEAL_LABEL, CKD_STAGES, DIALYSIS_MODES, DIABETES_TYPES,
-    FLAGS, FLAG, ASSESSMENT, ROLE_WORD, THRESHOLDS, WARNING_ORDER, HIGH_GI_MIN_CARBS_G,
+    FLAGS, FLAG, ASSESSMENT, ROLE_WORD, THRESHOLDS, WARNING_ORDER, HIGH_GI_MIN_CARBS_G, POTASSIUM_ADDITIVE_MESSAGE,
     // display formatting
     isInt, roundVal, fmtNum, fmtWithUnit, fmtServings, pct,
     // Python-compatible numbers

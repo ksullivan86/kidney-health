@@ -53,7 +53,8 @@ BOUNDARIES = {
     "carbs_g": [0.04, 0.05, 0.06, 4, 7.5, 14.94, 14.95, 14.96, 15, 22.5, 29.95, 29.96, 30, 30.04, 30.05, 37.5, 52.5, 67.5],
     "protein_g": [14.94, 14.95, 15, 24.95, 25, 25.04, 25.05, 25.06],
 }
-FLAG_SETS = ([], ["high_gi"], ["hypo_treatment"], ["phosphate_additive"], ["hypo_treatment", "high_gi"], ["avoid_ckd"])
+FLAG_SETS = ([], ["high_gi"], ["hypo_treatment"], ["phosphate_additive"], ["hypo_treatment", "high_gi"], ["avoid_ckd"],
+             ["potassium_additive"], ["potassium_additive", "hypo_treatment"])
 ROUND_VALUES = [0, 0.05, 0.15, 0.25, 0.35, 0.45, 0.5, 1.005, 1.5, 2.5, 2.675, 14.95, 26.95, 29.95, 100.5, 100.49999,
                 200.5, 1e-7, 0.000123, 123456.75, 999999.95, 1 / 3, 2 / 3, 0.1 + 0.2, 33.3 * 3, 422 * 1.5, 26.95 * 2.5]
 
@@ -93,6 +94,14 @@ def boundary_vectors() -> list[dict]:
     add({"carbs_g": None}, ["high_gi"], None, "per serving")
     add({"potassium_mg": 121}, ["avoid_ckd"], "  Star fruit contains caramboxin.  ", "per serving")
     add({"potassium_mg": 121}, ["avoid_ckd"], "   ", "in this meal")
+    # potassium_additive (ARCHITECTURE v0.3 item 9): medium when potassium is unknown, thresholds when listed.
+    for flags in (["potassium_additive"], ["potassium_additive", "hypo_treatment"], ["potassium_additive", "phosphate_additive"],
+                  ["potassium_additive", "avoid_ckd"], ["potassium_additive", "high_gi"]):
+        for scope in ("per serving", "in this entry", "in this meal"):
+            add({"potassium_mg": None, "phosphorus_mg": None, "carbs_g": 20}, flags, "Avoid." if "avoid_ckd" in flags else None, scope)
+        add({}, flags, None, "per serving")
+        add({k: None for k in NUTRIENT_KEYS}, flags, None, "in this entry")
+        add({"potassium_mg": 0}, flags, None, "per serving")
     rnd = random.Random(20261005)
     pool = ["high_gi", "hypo_treatment", "phosphate_additive", "avoid_ckd", "counts_as_fluid", "processed"]
     base = [26.95, 422, 105, 0.15, 1.29, 33.3, 12.25, 0.35, 2.45, 18.75]
@@ -112,6 +121,14 @@ def boundary_vectors() -> list[dict]:
         flags = [f for f in pool if rnd.random() < 0.2]
         notes = rnd.choice([None, "", "Avoid.", "  Star fruit contains caramboxin.  "])
         add(nut, flags, notes, rnd.choice(["per serving", "in this entry", "in this meal"]))
+    # A second fixed-seed sample with the v0.3 potassium_additive flag (kept separate so the first
+    # sample above stays byte-for-byte the same).
+    rnd = random.Random(20261006)
+    pool_v3 = pool + ["potassium_additive"]
+    for _ in range(150):
+        nut = {key: (None if rnd.random() < 0.35 else rnd.choice(BOUNDARIES[key])) for key in BOUNDARIES}
+        flags = [f for f in pool_v3 if rnd.random() < (0.6 if f == "potassium_additive" else 0.15)]
+        add(nut, flags, rnd.choice([None, "Avoid."]), rnd.choice(["per serving", "in this entry", "in this meal"]))
     return cases
 
 

@@ -52,6 +52,7 @@ CATEGORIES = [
 
 FLAGS = [
     "phosphate_additive",
+    "potassium_additive",  # v0.3 (note 03 R5); no builtin food needs it today
     "high_gi",
     "counts_as_fluid",
     "avoid_ckd",

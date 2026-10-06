@@ -52,7 +52,8 @@ def test_rules_vectors_cover_every_food_at_three_amounts() -> None:
     for expected in [("avoid_ckd", "high", "avoid_ckd"), ("phosphorus_mg", "high", "phosphate_additive"), ("carbs_g", "high", "high_gi"),
                      ("carbs_g", "medium", "high_gi"), ("potassium_mg", "medium", None), ("potassium_mg", "high", None),
                      ("sodium_mg", "medium", None), ("sodium_mg", "high", None), ("protein_g", "medium", None), ("protein_g", "high", None),
-                     ("carbs_g", "medium", None), ("carbs_g", "high", None), ("phosphorus_mg", "medium", None)]:
+                     ("carbs_g", "medium", None), ("carbs_g", "high", None), ("phosphorus_mg", "medium", None),
+                     ("potassium_mg", "medium", "potassium_additive")]:
         assert expected in levels, expected
     assert {c["kidney_rating"] for c in doc["food_cases"]} == {"green", "yellow", "red"}
 

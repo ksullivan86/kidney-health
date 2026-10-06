@@ -55,10 +55,11 @@ MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner", "snack")
 CKD_STAGES: tuple[str, ...] = ("1", "2", "3a", "3b", "4", "5")
 DIALYSIS_MODES: tuple[str, ...] = ("none", "hemodialysis", "peritoneal")
 DIABETES_TYPES: tuple[str, ...] = ("none", "type1", "type2")
-FOOD_SOURCES: tuple[str, ...] = ("builtin", "usda", "custom")
+FOOD_SOURCES: tuple[str, ...] = ("builtin", "usda", "custom", "off")  # off: Open Food Facts (v0.3, note 03)
 
 FLAGS: tuple[str, ...] = (
     "phosphate_additive",
+    "potassium_additive",  # v0.3 (note 03 R5, ARCHITECTURE v0.3 item 9): a bulk potassium salt in the ingredients
     "high_gi",
     "counts_as_fluid",
     "avoid_ckd",
@@ -124,6 +125,8 @@ def _fmt(key: str, value: float | int | None) -> str:
     if value is None:
         return "?"
     rounded = round_value(key, value)
+    if rounded is None:  # NaN or infinity from an old database row: shown as unknown
+        return "?"
     if isinstance(rounded, int):
         return str(rounded)
     return f"{rounded:g}"
@@ -163,6 +166,12 @@ HIGH_GI_MIN_CARBS_G = 15.0
 
 _LEVEL_WORD = {"high": "High", "medium": "Moderate"}
 
+# ARCHITECTURE.md v0.3 item 9: shown when a food lists a potassium additive but no potassium value.
+# Products listing one measured 750-1,100 mg potassium per 100 g (Parpia 2018) and additive potassium
+# is about 90 % absorbed (KDIGO 2024 Figure 33); docs/research/fact-check.md section 5. Medium, not high,
+# until a renal dietitian reviews it (handbook review list).
+POTASSIUM_ADDITIVE_MESSAGE = "Contains a potassium additive; potassium not listed"
+
 
 def threshold_level(key: str, value: float | None) -> str | None:
     """``"high"``, ``"medium"`` or ``None`` for one nutrient amount."""
@@ -194,6 +203,8 @@ def _warning_message(key: str, level: str, value: float | None, flag: str | None
         return f"{base}: {amount} phosphorus {scope}" if amount else base
     if flag == "high_gi":
         return f"High glycaemic index: {amount} fast-acting carbohydrate {scope}"
+    if flag == "potassium_additive":
+        return POTASSIUM_ADDITIVE_MESSAGE
     if key == "carbs_g":
         if level == "high":
             return f"High carbohydrate: {amount} {scope} ({_carb_choices(value or 0)})"
@@ -220,6 +231,10 @@ def food_warnings(
     warning**: fast carbohydrate is the point of treating a low, and the diet guide says
     hypo treatments are never warned against. Their potassium, phosphorus and sodium
     warnings stay, so the person can still pick the lowest-potassium option.
+
+    ``potassium_additive`` (v0.3 item 9): when the potassium value is unknown (``None``) the food
+    gets a ``medium`` potassium warning, "Contains a potassium additive; potassium not listed", with
+    ``value`` ``None``; when potassium is listed the normal thresholds apply unchanged.
     """
     flag_set = set(flags or ())
     hypo = "hypo_treatment" in flag_set
@@ -245,6 +260,8 @@ def food_warnings(
         flag = None
         if key == "phosphorus_mg" and "phosphate_additive" in flag_set:
             level, flag = "high", "phosphate_additive"
+        elif key == "potassium_mg" and "potassium_additive" in flag_set and round_value(key, value) is None:
+            level, flag = "medium", "potassium_additive"
         elif key == "carbs_g" and "high_gi" in flag_set and (value or 0) > 0:
             # Glycaemic index only matters once there is a carb choice to spike on: a condiment's
             # 4 g of fast sugar is a note, not the same red as a sugary drink (glycaemic load).

@@ -28,6 +28,14 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   `app/additives.py` (E tiers, tag sub-codes, text scan in en/de/nl/fr/es/it/pt, trace notes, KCl first →
   avoid_ckd, salt-substitute names). Tests: tests/test_textclean.py, tests/test_gtin.py, tests/test_additives.py.
 
+* Step 2: `nutrients.py` FOOD_SOURCES += off, FLAGS += potassium_additive, rule in food_warnings (unknown
+  or non-finite potassium → medium, flag potassium_additive, "Contains a potassium additive; potassium not
+  listed"; listed → normal thresholds), `_fmt` no longer crashes on NaN; `rules.js` twin (FLAGS entry,
+  POTASSIUM_ADDITIVE_MESSAGE); `gen_rules_vectors.py` extra flag sets + a second seeded sample;
+  `rules_vectors.json` regenerated (5721 JS checks pass); curated FLAGS. Tests: tests/test_potassium_additive.py.
+  Note: `node tests/js/run_vectors.mjs` still fails on the *settings* vectors (settings.js lacks the targets
+  and guidance keys; frontend-owned, pre-existing).
+
 ## In progress
 
 ## Decisions (and why)
