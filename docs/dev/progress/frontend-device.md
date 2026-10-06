@@ -43,8 +43,23 @@ Do not edit Python under app/. WIP commits end with " [skip ci]". Commit only my
   (zxing-wasm 3.1.5 exists but the ponyfill still uses 3.1.3). `.github/workflows/vendor-check.yml` (weekly,
   warn-only for releases, fails on a pin mismatch): actionlint + zizmor clean, tests/test_deploy.py passes.
 
+* Step 2 (twins + vectors): js/engine/textclean.js, gtin.js, additives.js, off.js (KH.textclean/gtin/additives/off);
+  tests/data/gen_barcode_vectors.py → barcode_vectors.json (784 GTIN, 528 text, 702 additive incl. every OFF/USDA
+  fixture + 500 seeded generated lists, 5 quality, 3 demo products via the real route over the fixtures);
+  run_vectors.mjs section 6: 2,028 checks pass. Mutations caught (drop e622 from POTASSIUM_BULK → 15 fail; drop the
+  ß fold → 1 fail). tests/test_barcode_vectors.py (fresh file, DEMO_PRODUCTS block equal, coverage of every rule).
+* Step 3 (mock): js/mock/barcode.js (POST /api/foods/barcode: model checks, normalise/classify 400s, local first,
+  60/hour, consent, 3 recorded products, demo 404), mock foods v0.3 Food fields, gtin + ingredients_text on
+  POST/PUT /api/foods and /api/log/quick with the additive scan, shared rows read-only/linked; demo env
+  OFF_ENABLED=true (was false) so the samples answer after consent; Settings → Food data demo hint names the samples.
+* tests/test_vendor.py is parked in $S/test_vendor.py.pending until js/scan.js, the index.html ponyfill tag and
+  the sw.js entry exist (its last two tests check them); restore it then.
+
 ## Decisions
-(none yet)
+* Additive scan twin in the browser (not in the contract's list before): Quick add shows what the server will flag
+  before saving, and the demo stores the same flags as the server; kept in parity by vectors.
+* js/engine/off.js holds the quality sentences and attribution constants (one file per Python module, as guidance).
+* Demo: OFF "on" (env-locked) with three recorded products; consent still needed per person (shows the real flow).
 
 ## Reproduce
 (to be filled)

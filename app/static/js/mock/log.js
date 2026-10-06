@@ -4,7 +4,8 @@
    v0.3 (ARCHITECTURE.md "M2 API: guidance", "Log changes"): every entry carries `purpose` ("hypo" = it
    treated a low, else null) and `client_id` (the offline outbox's UUID, lower-case, unique per person);
    a repeated client_id answers with the entry already created; POST /api/log/batch adds 1–40 entries all
-   or nothing. A hypo_treatment food defaults to purpose "hypo" unless the request says "none". */
+   or nothing. A hypo_treatment food defaults to purpose "hypo" unless the request says "none". Quick add takes
+   gtin and ingredients_text (barcodes): the new custom food keeps the barcode and gets the additive scan. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -246,7 +247,7 @@
       const existing = this._entryByClientId(b.client_id);
       if (existing) return [existing, 'existing'];
       const food = this._food(b.food_id);
-      if (!food) fail(404, `${where}food ${b.food_id} not found`);
+      if (!food || !this._foodVisible(food)) fail(404, `${where}food ${b.food_id} not found`);
       const [servings, grams] = b.grams != null ? [b.grams / food.serving_g, b.grams] : [b.servings != null ? b.servings : 1, null];
       return [this._insertEntry({ date: b.date, meal: b.meal, food, servings, grams, note: b.note ?? null, status: b.status,
         purpose: resolvePurpose(food, b.purpose), clientId: b.client_id }), 'created'];
@@ -290,7 +291,8 @@
     });
     // One transaction: check every food first, so a failing item leaves nothing behind.
     items.forEach((it, index) => {
-      if (!this._entryByClientId(it.client_id) && !this._food(it.food_id)) fail(404, `entries[${index}]: food ${it.food_id} not found`);
+      const food = this._food(it.food_id);
+      if (!this._entryByClientId(it.client_id) && !(food && this._foodVisible(food))) fail(404, `entries[${index}]: food ${it.food_id} not found`);
     });
     const results = items.map((it) => this._createLogged(it));
     return { entries: results.map(([row]) => this._entryView(row)),
@@ -312,10 +314,14 @@
     c.choice('status', ['eaten', 'planned'], { def: 'eaten' });
     c.choice('purpose', ['hypo', 'none'], { nullable: true });
     checkClientId(c);
+    M.checkGtin(c); // v0.3 barcodes: the food is found by this barcode next time
+    c.str('ingredients_text', { max: KH.additives.MAX_INGREDIENTS_CHARS, def: null }); // v0.3: the additive scan reads it
     const b = c.done();
     const existing = this._entryByClientId(b.client_id);
     if (existing) return this._entryView(existing); // a repeat creates no second food
-    const food = this._food(this._insertFood({ source: 'custom', name: b.name, serving_desc: b.serving_desc, serving_g: b.serving_g, nutrients: b.nutrients, flags: b.flags }));
+    const scanned = this._scanCustomFood(b.name, b.flags, null, b.ingredients_text);
+    const food = this._food(this._insertFood({ source: 'custom', name: b.name, serving_desc: b.serving_desc, serving_g: b.serving_g, nutrients: b.nutrients,
+      ...scanned, gtin: b.gtin || null }));
     return this._entryView(this._insertEntry({ date: b.date, meal: b.meal, food, servings: b.servings, grams: null, note: b.note, status: b.status,
       purpose: resolvePurpose(food, b.purpose), clientId: b.client_id }));
   });

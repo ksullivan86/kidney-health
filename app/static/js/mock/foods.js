@@ -1,4 +1,12 @@
-/* Kidney Diet Log — demo API: foods (twin of app/foods.py) and /healthz. */
+/* Kidney Diet Log — demo API: foods (twin of app/foods.py) and /healthz.
+
+   v0.3 (ARCHITECTURE.md "M2 API: barcode", "Foods and log changes"): every Food carries gtin, source_url,
+   source_license, quality, additives and ingredients_text; POST/PUT /api/foods take gtin (any GS1 code,
+   stored as a GTIN-14; js/engine/gtin.js) and ingredients_text, which the additive scan reads on save
+   (js/engine/additives.js: phosphate_additive / potassium_additive / avoid_ckd with the salt-substitute
+   note). Shared rows (`off`, from the demo's barcode samples) are read-only like the server's: visible once
+   "scanned" (linked), PUT is a 409, DELETE removes only the link, /copy keeps the barcode, ingredient list
+   and attribution but not the quality notes. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -80,6 +88,20 @@
     return { version: 'mock-fallback', source: 'hand-typed sample (js/mock/foods.js)', foods: foods.map((f, i) => ({ fdc_id: 100001 + i, ...f })) };
   }
 
+  // models.validate_gtin on a stripped `str | None` (max 32): empty is none; else 8, 12, 13 or 14 digits with
+  // a valid check digit, stored as a GTIN-14; the GtinError message otherwise.
+  function checkGtin(c, k = 'gtin') {
+    const n = c.errors.length;
+    c.str(k, { max: 32, def: null });
+    if (c.errors.length !== n || !c.has(k) || c.out[k] == null) return;
+    if (!c.out[k]) { c.out[k] = null; return; }
+    try { c.out[k] = KH.gtin.normalize(c.out[k], 'unknown'); } catch (e) {
+      if (!(e instanceof KH.gtin.GtinError)) throw e;
+      delete c.out[k];
+      c.err(k, e.message);
+    }
+  }
+
   Object.assign(MockApi.prototype, {
     _importBuiltin(data) {
       if (!data || typeof data !== 'object' || !Array.isArray(data.foods)) return;
@@ -112,30 +134,46 @@
       const serving = pyRound(Number(servingG), 1);
       return [serving, roundNutrients(this._normaliseFluid(nutrients, flags, serving))];
     },
-    _insertFood({ name, serving_desc, serving_g, nutrients, source = 'custom', brand = null, category = null, fdc_id = null, flags = [], kidney_notes = null, hidden = false }) {
+    _insertFood({ name, serving_desc, serving_g, nutrients, source = 'custom', brand = null, category = null, fdc_id = null, flags = [], kidney_notes = null, hidden = false,
+      gtin = null, source_url = null, source_license = null, ingredients_text = null, additives = [], quality = [] }) {
       const now = this._stamp();
       const [servingG, values] = this._storedFoodValues(nutrients, flags, serving_g);
       const row = { id: this._nextFoodId++, name, brand, category, source, fdc_id, serving_desc, serving_g: servingG,
-        nutrients: values, flags: [...flags], kidney_notes, hidden: !!hidden, created_at: now, updated_at: now };
+        nutrients: values, flags: [...flags], kidney_notes, hidden: !!hidden, created_at: now, updated_at: now,
+        gtin, source_url, source_license, ingredients_text, additives: [...additives], quality: [...quality] };
       this._foods.push(row);
       this._foodById.set(row.id, row);
       return row.id;
     },
-    _updateFood(id, { name, serving_desc, serving_g, nutrients, brand = null, category = null, flags = [], kidney_notes = null, hidden = null, fdc_id }) {
+    _updateFood(id, { name, serving_desc, serving_g, nutrients, brand = null, category = null, flags = [], kidney_notes = null, hidden = null, fdc_id, provenance }) {
       const row = this._foodById.get(id);
       const [servingG, values] = this._storedFoodValues(nutrients, flags, serving_g);
       Object.assign(row, { name, brand, category, serving_desc, serving_g: servingG, nutrients: values,
         flags: [...flags], kidney_notes, updated_at: this._stamp() });
       if (hidden != null) row.hidden = !!hidden;
       if (fdc_id !== undefined) row.fdc_id = fdc_id;
+      if (provenance) Object.assign(row, provenance);
     },
     _food(id) { return this._foodById.get(Number(id)) || null; },
-    _foodOr404(id) { const f = this._food(id); if (!f) fail(404, `food ${id} not found`); return f; },
+    _foodOr404(id) { const f = this._food(id); if (!f || !this._foodVisible(f)) fail(404, `food ${id} not found`); return f; },
     _foodView(row) {
       const warnings = evaluateWarnings(row.nutrients, row.flags, row.kidney_notes, 'per serving');
       return { id: row.id, name: row.name, brand: row.brand, category: row.category, source: row.source, fdc_id: row.fdc_id,
         serving_desc: row.serving_desc, serving_g: pyRound(row.serving_g, 1), nutrients: roundNutrients(row.nutrients), flags: [...row.flags],
-        kidney_notes: row.kidney_notes, hidden: row.hidden, warnings, kidney_rating: ratingFromWarnings(warnings) };
+        kidney_notes: row.kidney_notes, hidden: row.hidden, warnings, kidney_rating: ratingFromWarnings(warnings),
+        gtin: row.gtin || null, source_url: row.source_url || null, source_license: row.source_license || null,
+        quality: KH.off.qualityItems(row.quality || []), additives: [...(row.additives || [])], ingredients_text: row.ingredients_text || null };
+    },
+    // Shared rows (Open Food Facts samples) are visible once "scanned"; builtin and the person's own always.
+    _foodLinks() { if (!this._links) this._links = new Set(); return this._links; },
+    _foodVisible(row) { return row.source === 'builtin' || row.source === 'custom' || this._foodLinks().has(row.id); },
+    // foods.scan_custom_food: the person's flags plus what the ingredient list (or a salt-substitute name)
+    // calls for; the person's own notes win, else the salt-substitute warning.
+    _scanCustomFood(name, flags, kidneyNotes, ingredientsText) {
+      const ingredients = KH.textclean.cleanText(ingredientsText, { maxLen: KH.additives.MAX_INGREDIENTS_CHARS, keepNewlines: true });
+      const scan = KH.additives.scan([], ingredients, name);
+      const merged = [...new Set([...flags, ...scan.flags])];
+      return { flags: merged, kidney_notes: kidneyNotes || scan.kidney_notes, ingredients_text: ingredients, additives: scan.additives };
     },
     _foodReferenced(id) {
       return this._entries.some((e) => e.food_id === id) || this._templates.some((t) => t.items.some((it) => it.food_id === id));
@@ -145,7 +183,7 @@
       const words = query ? query.split(' ').slice(0, MAX_SEARCH_WORDS) : [];
       const last = new Map(); // food_id -> MAX(created_at) of its log entries
       for (const e of this._entries) { const l = last.get(e.food_id); if (l == null || e.created_at > l) last.set(e.food_id, e.created_at); }
-      const rows = this._foods.filter((f) => !f.hidden && (!category || f.category === category) && (!source || f.source === source)
+      const rows = this._foods.filter((f) => !f.hidden && this._foodVisible(f) && (!category || f.category === category) && (!source || f.source === source)
         && words.every((w) => asciiLower(f.name).includes(w) || asciiLower(f.brand || '').includes(w)));
       rows.sort((a, b) => {
         const la = last.get(a.id), lb = last.get(b.id);
@@ -166,6 +204,8 @@
       c.nutrients();
       c.flags();
       c.str('kidney_notes', { max: 1000, def: null, emptyToNull: true });
+      checkGtin(c);
+      c.str('ingredients_text', { max: KH.additives.MAX_INGREDIENTS_CHARS, def: null, emptyToNull: true });
       return c.done();
     },
   });
@@ -191,7 +231,8 @@
   });
   route('POST', '/api/foods', function ({ body }) {
     const b = this._foodBody(body);
-    return this._foodView(this._food(this._insertFood({ ...b, source: 'custom' })));
+    const scanned = this._scanCustomFood(b.name, b.flags, b.kidney_notes, b.ingredients_text);
+    return this._foodView(this._food(this._insertFood({ ...b, ...scanned, source: 'custom', gtin: b.gtin || null })));
   });
   route('GET', '/api/foods/categories', function () {
     const extras = [...new Set(this._foods.filter((f) => !f.hidden && f.category).map((f) => f.category))].filter((c) => !FOOD_CATEGORIES.includes(c)).sort();
@@ -208,10 +249,13 @@
     c.done();
     fail(503, 'USDA_API_KEY not configured');
   });
+  // The copy keeps the barcode, the ingredient list and the attribution (ODbL travels with copied data), not the quality notes.
   route('POST', '/api/foods/{id}/copy', function ({ id }) {
     const row = this._foodOr404(id);
     return this._foodView(this._food(this._insertFood({ source: 'custom', fdc_id: row.fdc_id, name: row.name, brand: row.brand, category: row.category,
-      serving_desc: row.serving_desc, serving_g: row.serving_g, nutrients: { ...row.nutrients }, flags: row.flags, kidney_notes: row.kidney_notes })));
+      serving_desc: row.serving_desc, serving_g: row.serving_g, nutrients: { ...row.nutrients }, flags: row.flags, kidney_notes: row.kidney_notes,
+      gtin: row.gtin || null, source_url: row.source_url || null, source_license: row.source_license || null,
+      ingredients_text: row.ingredients_text || null, additives: row.additives || [] })));
   });
   route('*', '/api/foods/{id}', function ({ method, id, body }) {
     const b = method === 'PUT' ? this._foodBody(body) : null; // the body is validated before the lookup
@@ -219,11 +263,21 @@
     if (method === 'GET') return this._foodView(row);
     if (method === 'PUT') {
       if (row.source === 'builtin') fail(409, 'Builtin foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy');
-      this._updateFood(row.id, b);
+      if (row.source !== 'custom') fail(409, 'Shared foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy');
+      // A client that does not send gtin / ingredients_text (v0.2) keeps the stored ones.
+      const sent = (k) => M.isDict(body) && Object.prototype.hasOwnProperty.call(body, k);
+      const ingredientsIn = sent('ingredients_text') ? b.ingredients_text : row.ingredients_text;
+      const scanned = this._scanCustomFood(b.name, b.flags, b.kidney_notes, ingredientsIn);
+      this._updateFood(row.id, { ...b, flags: scanned.flags, kidney_notes: scanned.kidney_notes,
+        provenance: { gtin: sent('gtin') ? b.gtin || null : row.gtin || null, ingredients_text: scanned.ingredients_text, additives: scanned.additives } });
       return this._foodView(row);
     }
     if (method === 'DELETE') {
       if (row.source === 'builtin') fail(409, 'Builtin foods cannot be deleted');
+      if (row.source !== 'custom') { // a shared food: only this person's link goes
+        if (!this._foodLinks().delete(row.id)) fail(404, `food ${id} not found`);
+        return null;
+      }
       if (this._foodReferenced(row.id)) { row.hidden = true; row.updated_at = this._stamp(); }
       else { this._foods.splice(this._foods.indexOf(row), 1); this._foodById.delete(row.id); }
       return null;
@@ -231,5 +285,5 @@
     return fail(404, 'Not Found');
   });
 
-  Object.assign(M, { parseBuiltinItem, searchRank, fallbackFoods });
+  Object.assign(M, { parseBuiltinItem, searchRank, fallbackFoods, checkGtin });
 })();

@@ -682,7 +682,11 @@
         offAdmin.locked_by_env ? null : ' Change it in Admin → Server settings.'));
     }
     body.append(h('p', { class: 'hint' }, 'Product data from Open Food Facts is © Open Food Facts contributors, under the Open Database License (ODbL). USDA FoodData Central data is in the public domain.'));
-    if (MOCK) body.append(h('p', { class: 'hint' }, 'The preview never contacts USDA or Open Food Facts; these lookups work in the installed app.'));
+    if (MOCK) {
+      body.append(h('p', { class: 'hint' }, 'The demo never contacts USDA or Open Food Facts. Its barcode lookups answer from three sample products '
+        + 'recorded from Open Food Facts: Diet Coke (049000028911), Kraft Macaroni & Cheese (021000658831) and Nutella (3017624010701). '
+        + 'In the installed app the server asks Open Food Facts for any product barcode.'));
+    }
   }
   async function refreshMyKeys(message = null) {
     try { cache.myKeys = await api.myKeys(); } catch (err) { cache.myKeys = err; }

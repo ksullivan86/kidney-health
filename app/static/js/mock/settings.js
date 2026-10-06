@@ -3,7 +3,9 @@
 
    Values live in memory, with the precedence of js/engine/settings.js (env lock > own value >
    instance value > default). The demo "server" locks one key the way an environment variable
-   would: OFF_ENABLED=false, because the demo never contacts Open Food Facts. Keys are write-only
+   would: OFF_ENABLED=true, because its barcode lookups answer from three products recorded from Open
+   Food Facts (js/mock/barcode.js) and never contact Open Food Facts; each person still has to agree
+   (food.off_consent) as on a real server. Keys are write-only
    as on the server: only "set", the last four characters of a key of 20 or more characters and
    the time are kept, never the key itself, and the demo never contacts USDA (no key test). */
 (() => {
@@ -13,7 +15,7 @@
   const S = KH.settings;
   const { route, MockApi, fail } = M;
 
-  const DEMO_ENV = { OFF_ENABLED: 'false' };
+  const DEMO_ENV = { OFF_ENABLED: 'true' };
   const LAST4_MIN_LENGTH = 20;
   const PROVIDERS = { usda: { label: 'USDA FoodData Central', prefix: 'providers.usda' } };
 
