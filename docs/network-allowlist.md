@@ -28,7 +28,9 @@ travel in headers, never in URLs.
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` (k-anonymity: only 5 hex characters of a hash leave the server) | off |
 
 Not used: Web Push services (planned for v0.4, opt-in; their hosts will be added here), telemetry,
-update checks, analytics. DNS resolution is needed for any of the hosts above.
+update checks, analytics. The patient handbook at `/learn` makes no request outside the server either:
+its fonts, scripts and search run from the image (a CI build fails on any external asset). DNS
+resolution is needed for any of the hosts above.
 
 **How to enforce it.**
 
@@ -64,7 +66,7 @@ and Sigstore's public services (`tuf-repo-cdn.sigstore.dev`, `rekor.sigstore.dev
 | Host | For |
 |---|---|
 | `cgr.dev` and its blob storage (a `*.r2.cloudflarestorage.com` host, redirected to by cgr.dev) | Chainguard `python:latest-dev` / `:latest` base images (`deploy/Containerfile`) |
-| `pypi.org`, `files.pythonhosted.org` | The hash-locked wheels from `requirements.lock` |
+| `pypi.org`, `files.pythonhosted.org` | The hash-locked wheels from `requirements.lock`, and the handbook toolchain from `handbook/requirements.lock` (the image's `handbook` stage) |
 | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` | Only for `deploy/Containerfile.debian` (python:3.14-slim-trixie) or the Caddy example. Anonymous Docker Hub pulls are rate-limited. |
 | `proxy.golang.org`, `sum.golang.org` | Only for the Caddy image with a DNS module (`xcaddy` downloads Go modules and checks them against the checksum database) |
 | `docker.io/ollama/ollama` (Docker Hub hosts above) | Only for the Ollama overlay; then the model pull reaches `registry.ollama.ai` and its download CDN once |
@@ -88,6 +90,9 @@ egress auditing. The workflows reach:
 | `grype.anchore.io` | The Grype vulnerability database (fresh on every scan) |
 | `fulcio.sigstore.dev`, `rekor.sigstore.dev`, `tuf-repo-cdn.sigstore.dev` | Keyless cosign signing and GitHub attestations (public repository only) |
 | `nodejs.org` (if the toolchain cache misses) | `actions/setup-node` |
+| none extra | The `handbook` job's browser check uses the runner's preinstalled Google Chrome (no browser download) and talks only to the app on `127.0.0.1` |
+| `*.github.io` (Pages) | `handbook-pages.yml` deploys the public copy of the handbook through the Pages API, only when the repository variable `HANDBOOK_PAGES` is `true` |
+| Every external link in the handbook | `handbook-links.yml` (weekly) checks the sources and links of the handbook with lychee |
 
 ## 4. Development environment (Claude Code cloud)
 

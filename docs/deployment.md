@@ -38,6 +38,7 @@ Contents:
 | Secrets | files: `SECRET_KEY_FILE`, `USDA_API_KEY_FILE`, ... (never environment variables) |
 | Health | `GET /healthz` → `{"status":"ok","foods":395}`; in the image: `python -m app.healthcheck` |
 | Admin CLI | `python -m app.admin backup|check|restore-check|rotate-secret-key|reencrypt|settings|create-admin|reset-password` (no shell needed) |
+| Patient handbook | built into the image and served at **`/learn/`** (no sign-in, no internet needed); the app's **Learn** entry opens it |
 | Outbound network | none until you turn a feature on ([`network-allowlist.md`](network-allowlist.md)) |
 | Footprint | about 60–100 MB RAM; the shipped limits are 512 MiB and 128 PIDs |
 | Licence | PolyForm Noncommercial 1.0.0 (personal and noncommercial use) |
@@ -124,6 +125,8 @@ with defaults is at the top of [`app/config.py`](../app/config.py).
 | `ENABLE_API_DOCS` | `false` | `/docs` and `/openapi.json` (with a relaxed CSP on those paths only). |
 | `PWA_ENABLED` | `true` | `false` is the kill switch for the offline service worker. |
 | `DATA_DIR` | `/data` in the image | Where `kidney.db` lives. |
+| `HANDBOOK_DIR` | `/app/learn` in the image; `handbook/site` in a checkout | The built handbook served at `/learn/`. Without an `index.html` there, `/learn` answers 404 and the app's Learn links use `HANDBOOK_PUBLIC_URL`, or are hidden. The app reads the site once at start: restart it after rebuilding the handbook in place. |
+| `HANDBOOK_PUBLIC_URL` | unset | A published copy of the handbook (for example GitHub Pages), `http(s)://` only: where Learn links point when this server has no handbook, and the "public copy" link in Settings → About. |
 | `AI_*` | AI off | Optional AI features (v0.3 M2): `docs/ai.md` once they ship, and `deploy/compose.ai-ollama.yaml`. |
 
 `APP_PASSWORD` (v0.2's HTTP Basic auth) is **deprecated**: on the first v0.3 start with no admin
@@ -554,8 +557,11 @@ compiles anything.
   supported.
 * **Base digests** are pinned in the `FROM` lines and bumped by Dependabot; to re-resolve them by
   hand: `crane digest cgr.dev/chainguard/python:latest-dev` and `crane digest cgr.dev/chainguard/python:latest`.
-* The `/learn` patient handbook is built into the image by a separate stage (a placeholder until the
-  handbook ships; then `/learn` is served from `/app/learn`).
+* The patient handbook is built by a separate, throw-away stage (`handbook`) from the hash-locked
+  `handbook/requirements.lock` with `mkdocs build --strict`; only the built site reaches the runtime
+  image, read-only at `/app/learn`, and the app serves it at `/learn/`. The build fails on any broken
+  link or external asset. To build or preview it without the image, see
+  [`handbook/README.md`](../handbook/README.md).
 
 ## Local development run
 

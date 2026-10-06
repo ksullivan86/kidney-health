@@ -63,8 +63,9 @@ database. Each step checks before it changes anything, so a restart in the middl
 
 ## From v0.2 to v0.3
 
-1. **Back up first.** v0.2 has no `app.admin backup`; the [deployment guide][DEPLOY] has a one-line
-   SQLite copy for the old image.
+1. **Back up first.** v0.2 has no `app.admin backup`; the guide's
+   [v0.2 to v0.3 steps](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#from-v02-to-v03) have a one-line SQLite copy for the old image, and what to
+   do first on a host that auto-updates `:latest`.
 2. **The upgrade makes its own backup** too, `/data/kidney.db.pre-v3.bak`, before the accounts migration.
    It is deleted automatically after 30 days ([design note 07][NOTE07]).
 3. **Replace your deployment files** with the v0.3 ones. What changed:
@@ -88,8 +89,8 @@ database. Each step checks before it changes anything, so a restart in the middl
 - **`400 Unknown host` after the upgrade**: set `PUBLIC_URL`.
 - **The health check fails**: an old string-form health command runs through `/bin/sh`, which the image
   no longer has. Use the exec form `["python", "-m", "app.healthcheck"]`.
-- **Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'`, or the image
-  field of the Kubernetes Deployment.
+- **Which version is running?** **Settings → Admin → About** shows the version and schema; the engine
+  shows the image digest ([Troubleshooting](troubleshooting.md#which-version-is-running)).
 - More: [Troubleshooting](troubleshooting.md).
 
 ## Related pages
@@ -98,6 +99,6 @@ database. Each step checks before it changes anything, so a restart in the middl
 
 ## Sources
 
-- [Deployment guide][DEPLOY], "Upgrades"; [operator security guide][SECDOC], sections 7 and 9; [security policy][SECURITYMD].
+- [Deployment guide: upgrades](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#upgrades); [operator security guide][SECDOC], sections 7 and 9; [security policy][SECURITYMD].
 - [Design note 01][NOTE01]; [design note 07][NOTE07] §4.15; [architecture contract][ARCH], v0.3 contract.
 - [Podman: Quadlet units][PODMAN-QUADLET].

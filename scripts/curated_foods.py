@@ -121,7 +121,8 @@ CURATED_FOODS = [
     # ------------------------------------------------------------------ Fruits
     f(171688, "Apple, raw, with skin", FRUIT, "1 medium", 182, [LOWK]),
     f(171695, "Applesauce, unsweetened", FRUIT, "1/2 cup", 122, [LOWK]),
-    # Berries and grapes are served at the 1/2 cup of docs/diet-guide.md section 3: a full cup of
+    # Berries and grapes are served at the 1/2 cup of the handbook's food lists (handbook/docs/eat/food-lists.md;
+    # formerly docs/diet-guide.md section 3): a full cup of
     # strawberries, blackberries or grapes is over 200 mg potassium, which would contradict the
     # low_potassium_fruit badge ("a large serving of a low-potassium food becomes a high one").
     f(171711, "Blueberries, raw", FRUIT, "1/2 cup", 74, [LOWK]),
@@ -382,8 +383,9 @@ CURATED_FOODS = [
     f(171475, "Chicken breast, batter-fried", MEAT, "3 oz", 85, [PROC],
       "Batter adds sodium and phosphate leavening; roasted or grilled chicken is the swap."),
     f(171117, "Ground chicken, cooked", MEAT, "3 oz", 85, []),
-    # 171496 (whole-bird breast, meat only) is the record docs/diet-guide.md section 3 quotes
-    # (K 212, P 196, Na 84, 26 g protein per 3 oz), so the guide's EAT row and the app agree.
+    # 171496 (whole-bird breast, meat only) is the record the handbook's food lists quote
+    # (handbook/docs/eat/food-lists.md; formerly docs/diet-guide.md section 3)
+    # (K 212, P 196, Na 84, 26 g protein per 3 oz), so the handbook's Eat row and the app agree.
     f(171496, "Turkey breast, roasted", MEAT, "3 oz", 85, []),
     f(174492, "Ground turkey, 93% lean, patty", MEAT, "3 oz", 85, []),
     f(174032, "Ground beef, 85% lean, patty", MEAT, "3 oz", 85, []),
@@ -534,8 +536,8 @@ CURATED_FOODS = [
       "Sugar-free, but still phosphoric acid (~35 mg phosphorus per can, essentially all of it absorbed); diet lemon-lime or sparkling water is the swap."),
     f(173209, "Pepper-type soda, regular", BEV, "1 can, 12 fl oz", 368, [PA, GI, FL, PROC],
       "Contains phosphoric acid and ~40 g sugar; clear soda or sparkling water is the swap."),
-    # hypo_treatment foods are served at the rescue portion (~15 g fast carbs) of docs/diet-guide.md
-    # section 4, because the flag switches the carbohydrate warning off: a whole 12 oz can would
+    # hypo_treatment foods are served at the rescue portion (~15 g fast carbs) of the handbook's
+    # handbook/docs/t1d/treating-a-low.md (formerly docs/diet-guide.md section 4), because the flag switches the carbohydrate warning off: a whole 12 oz can would
     # otherwise hide 38 g of sugar from a type 1 diabetic.
     f(173205, "Lemon-lime soda, regular", BEV, "4 fl oz, 1/3 can", 123, [HYPO, GI, FL, PROC],
       "No phosphoric acid, so a clear soda is the renal choice for treating a low: 4 fl oz is about 13 g carbs. A whole 12 oz can is 3 servings and 38 g of sugar."),

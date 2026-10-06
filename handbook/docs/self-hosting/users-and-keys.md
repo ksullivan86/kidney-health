@@ -27,9 +27,8 @@ On the first start of an empty (or v0.2) database the app creates no account by 
 FIRST-RUN SETUP: open https://food.home.example.net/#/setup and enter the code 7KQ2-M9XD-PL4R-T6WN (valid 60 min; ...)
 ```
 
-1. Read it: `journalctl --user -u kidney-health | grep 'FIRST-RUN SETUP'` (Quadlet),
-   `podman logs kidney-health 2>&1 | grep 'FIRST-RUN SETUP'` (compose; `docker logs` on Docker), or
-   `kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'`.
+1. Read it from the log: the line starts with `FIRST-RUN SETUP` (the command for each engine is in
+   the deployment guide's [first-run section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#first-run)).
 2. Open the address, enter the code, and choose the admin's user name and a password of at least
    15 characters ([NIST SP 800-63B-4][NIST-63B4]).
 3. The setup screen also asks whether to switch on Open Food Facts barcode lookups (off by default).

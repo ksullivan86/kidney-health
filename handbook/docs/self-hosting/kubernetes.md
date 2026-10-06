@@ -36,44 +36,25 @@ PodDisruptionBudget, because with one replica it would block node drains.
 
 ## Steps
 
+The commands for each step are in the deployment guide's [Kubernetes section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#kubernetes-talos).
+
 1. **Storage.** Set `storageClassName` in `pvc.yaml`, or leave it for the cluster default. Avoid NFS:
    SQLite needs file locking that NFS handles poorly.
-2. **Secret.** Create it with two keys; an empty `usda_api_key` means "off":
-
-    ```bash
-    kubectl create namespace kidney-health --dry-run=client -o yaml | kubectl apply -f -
-    kubectl -n kidney-health create secret generic kidney-health \
-      --from-literal=secret_key="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')" \
-      --from-literal=usda_api_key=''
-    ```
-
-    Keep a copy of `secret_key` in your password manager ([Backups](backups.md)).
+2. **Secret.** Create it with two keys, `secret_key` (a long random value) and `usda_api_key` (empty
+   means "off"). Keep a copy of `secret_key` in your password manager ([Backups](backups.md)).
 3. **Edit** `httproute.yaml` (hostname, Gateway), `networkpolicy.yaml` (Gateway namespace) and
    `deployment.yaml`: `PUBLIC_URL` = `https://` plus the route's hostname; `TRUSTED_PROXIES` as narrow
    as your Gateway's pods allow.
-4. **Apply** and read the setup code:
-
-    ```bash
-    kubectl apply -k deploy/k8s
-    kubectl -n kidney-health rollout status deploy/kidney-health
-    kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'
-    ```
-
-5. **Pin the image** after verifying it ([Security](security.md)):
-   `scripts/verify-image.sh 0.3.0`, then `kustomize edit set image` with `:0.3.0@sha256:<digest>`.
+4. **Apply** the Kustomize base, wait for the rollout, and read the one-time setup code from the log.
+5. **Pin the image** by digest after verifying it ([Security](security.md)).
 
 ## Pod Security restricted
 
 The namespace enforces the **restricted** profile: non-root, no privilege escalation, all capabilities
 dropped, seccomp `RuntimeDefault`, and only safe volume types ([Kubernetes: Pod Security
-Standards][K8S-PSS]). Any extra container you add (debug, init, restore) must meet the same rules.
-Check with:
-
-```bash
-kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted
-```
-
-No warnings means the pod passes.
+Standards][K8S-PSS]). Any extra container you add (debug, init, restore) must meet the same rules. A
+server-side dry run of the namespace label reports any pod that would not pass; the command is in the
+guide's [Pod Security step](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#5-check-pod-security-pin-the-digest).
 
 ## Make NetworkPolicy real
 
@@ -81,8 +62,9 @@ A NetworkPolicy does nothing unless the network plugin enforces it ([Kubernetes:
 Policies][K8S-NETPOL]). On Talos, the default Flannel **accepts but ignores** policies unless
 `kubeNetworkPoliciesEnabled: true` is set (Talos 1.13 and later) ([Talos: Flannel][TALOS-FLANNEL]).
 
-Test it: the [deployment guide][DEPLOY] has a one-line `kubectl run` that tries to reach the app from
-a test pod. It **must fail**. If it prints `{"status":"ok",...}`, policies are not enforced.
+Test it: the guide's [NetworkPolicy step](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#4-make-networkpolicy-real-on-talos) has a one-line test
+pod that tries to reach the app. It **must fail**. If it prints `{"status":"ok",...}`, policies are not
+enforced.
 
 The shipped policy lets the pod reach DNS and **public** addresses on port 443 only (private, CGNAT,
 link-local and loopback ranges excluded, so cloud metadata and the API server are unreachable). With
@@ -100,18 +82,18 @@ Gateway's pods where you can ([operator security guide][SECDOC]).
 `hostUsers: false` runs the pod in its own user namespace, so even root inside it is unprivileged on the
 node. It is stable since Kubernetes 1.36 and needs Linux 6.3 or later, containerd 2.0 or later, and
 idmap-capable volumes such as ext4, xfs, btrfs or tmpfs, not NFS ([Kubernetes: user
-namespaces][K8S-USERNS]). On Talos, also raise `user.max_user_namespaces` with a `SysctlConfig` patch
-([deployment guide][DEPLOY]).
+namespaces][K8S-USERNS]). On Talos, also raise `user.max_user_namespaces` with a machine config patch
+([deployment guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#6-optional-a-user-namespace-for-the-pod)).
 
 ## Debugging without a shell
 
-The image has no shell. Use the admin CLI (`kubectl exec deploy/kidney-health -- python -m app.admin
-check`), or an ephemeral debug container with the restricted profile ([deployment guide][DEPLOY]).
+The image has no shell. Use the admin CLI (`python -m app.admin check` through `kubectl exec`), or an
+ephemeral debug container with the restricted profile ([deployment guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#debugging-without-a-shell)).
 
 ## If something goes wrong
 
-- **Pod `Pending`**: `kubectl -n kidney-health describe pvc kidney-health-data`. Usually a mistyped
-  storage class or no default class.
+- **Pod `Pending`**: describe the volume claim `kidney-health-data`. Usually a mistyped storage class or
+  no default class.
 - **Pod rejected by Pod Security**: an added container is missing one of the restricted settings.
 - **`400 Unknown host`**: `PUBLIC_URL` does not match the route's hostname.
 - **`database is locked`**: two pods share the volume; keep one replica and `Recreate`.

@@ -77,34 +77,27 @@ Release images are built from hash-locked dependencies on digest-pinned bases an
 moves. Once the repository is public, they are also signed keylessly with cosign and carry
 GitHub-signed provenance and SBOM attestations ([security policy][SECURITYMD]).
 
-```bash
-scripts/verify-image.sh 0.3.0      # checks signature and attestations, prints the digest to pin
-```
+The repository's `scripts/verify-image.sh` checks the signature and the attestations and prints the
+digest to pin. By hand, `cosign verify` (cosign **3.0 or later**: older versions cannot see the
+bundle-format signatures the release workflow makes and report "no signatures found") checks that the
+signature came from this repository's release workflow ([Sigstore][SIGSTORE-VERIFY]). The exact
+commands are in the security policy's [verification section](https://github.com/ksullivan86/kidney-health/blob/main/SECURITY.md#verifying-the-image-before-you-run-it).
+Podman cannot enforce these signatures at pull time, so verify first and then deploy **by digest**.
 
-By hand, `cosign verify` (cosign **3.0 or later**: older versions cannot see the bundle-format
-signatures the release workflow makes and report "no signatures found") checks that the signature came
-from this repository's release workflow, using
-`--certificate-identity-regexp` and `--certificate-oidc-issuer` ([Sigstore][SIGSTORE-VERIFY]); the exact
-lines are in the [security policy][SECURITYMD]. Podman cannot enforce these signatures at pull time, so
-verify first and then deploy **by digest**.
+## Serving `/learn` from its own origin (optional)
 
-## Serving `/learn` from its own origin (optional, coming in v0.3)
-
-By default the app serves this handbook at `/learn/` on the same address as the app. The handbook's theme
-needs a few inline scripts, so `/learn` gets a slightly looser policy than the app: those scripts are
-allowed by exact hash, and Trusted Types are off there. No handbook page reads or sends data, and the
-policy still blocks every other script ([design note 08][NOTE08]).
+By default the app serves this handbook at `/learn/` on the same address as the app, with no sign-in
+(it holds no personal data). The handbook's theme needs a few inline scripts, so `/learn` gets a
+slightly looser policy than the app: those scripts are allowed by exact hash, computed when the app
+starts from the files it serves, and Trusted Types are off there. No handbook page reads or sends data,
+and the policy still blocks every other script ([design note 08][NOTE08]).
 
 For stricter isolation, serve the handbook from **another host name**, so its policy never shares an
-origin (cookies, storage, API) with the app:
-
-1. Copy the built handbook out of the image:
-   `podman create --name hb ghcr.io/ksullivan86/kidney-health:0.3 && podman cp hb:/app/learn ./site/learn && podman rm hb`.
-2. Serve `./site` as static files on its own name, for example `https://learn.home.example.net/learn/`,
-   from your reverse proxy. Keep the `/learn/` path: the build expects it.
-3. On the app, point `HANDBOOK_DIR` at a path that does not exist, so `/learn` answers 404 there, and set
-   `HANDBOOK_PUBLIC_URL=https://learn.home.example.net/learn/`, so the app's **Learn** link goes to the
-   new address ([Configuration](configuration.md#the-handbook-at-learn-coming-in-v03)).
+origin (cookies, storage, API) with the app: copy the built site out of the image, serve it from your
+reverse proxy with the header that `python -m app.handbook csp` prints, and point the app's
+`HANDBOOK_PUBLIC_URL` at it ([Configuration](configuration.md#the-handbook-at-learn)). The commands are in
+the operator security guide's
+[handbook section](https://github.com/ksullivan86/kidney-health/blob/main/docs/security.md#the-handbook-at-learn-its-own-policy-and-its-own-origin).
 
 A public copy on GitHub Pages works the same way through `HANDBOOK_PUBLIC_URL`, but then readers load it
 from the internet.

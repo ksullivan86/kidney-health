@@ -75,6 +75,21 @@ the link checker. The build never fetches anything: fonts are off, the privacy p
 `assets_fetch: false`, and there is no analytics, Mermaid or MathJax, so the site works offline on a
 home network and under the app's hash-only Content Security Policy.
 
+To see it exactly as the app serves it (the image builds with `HANDBOOK_APP_LINK=/`, which adds the
+"Back to the food log" link to `/`, so the link checker is told that `/` is allowed):
+
+```bash
+(cd handbook && NO_MKDOCS_2_WARNING=true HANDBOOK_APP_LINK=/ ../.venv-hb/bin/mkdocs build --strict)
+python3 handbook/tools/check_links.py handbook/site --allow /
+HANDBOOK_DIR=handbook/site uvicorn app.main:app --port 8000 --no-proxy-headers   # then open /learn/
+python tools/e2e/learn.py --site handbook/site     # the browser check CI runs (needs Playwright)
+python -m pytest tests/test_learn_links.py         # every /learn link in the app has a page here
+```
+
+CI (the `handbook` job in `.github/workflows/ci.yml`) runs all of these on every pull request; the image
+jobs wait for it. The app reads the site once at start-up (it computes the security policy from the
+pages' inline scripts), so restart it after rebuilding.
+
 ## Edit a page
 
 1. **Start from a template.** Copy `templates/medical-page.md` for anything clinical

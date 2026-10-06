@@ -20,17 +20,10 @@ app's own command while it keeps running ([deployment guide][DEPLOY]).
 
 ## Take a backup
 
-The built-in command uses SQLite's online backup API, which copies a database in use and leaves a
-consistent snapshot ([SQLite][SQLITE-BACKUP]). It needs no shell in the container and never overwrites a
-file.
-
-```bash
-# Quadlet, compose or Docker (use docker instead of podman as needed)
-podman exec kidney-health python -m app.admin backup - > "kidney-$(date +%F).db"
-# Kubernetes
-kubectl -n kidney-health exec deploy/kidney-health -- python -m app.admin backup - > "kidney-$(date +%F).db"
-chmod 0600 kidney-*.db
-```
+The built-in command, `python -m app.admin backup`, uses SQLite's online backup API, which copies a
+database in use and leaves a consistent snapshot ([SQLite][SQLITE-BACKUP]). It needs no shell in the
+container and never overwrites a file. The one-line command for Podman, Docker and Kubernetes is in the
+deployment guide's [backups section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#backups-and-restore).
 
 Then, every time:
 
@@ -55,20 +48,11 @@ store, outside `/data` ([operator security guide][SECDOC]).
 
 ## Check a backup
 
-```bash
-podman run --rm --user 10001:10001 --entrypoint python \
-  --secret kidney-secret-key,type=mount,target=secret_key,uid=10001,mode=0400 \
-  -e SECRET_KEY_FILE=/run/secrets/secret_key \
-  -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.3 -m app.admin restore-check /restore/kidney.db
-```
-
-`restore-check` reports integrity, the schema version, the number of users, and whether stored keys
-decrypt with the current key. That last check needs the app's secret, which the `--secret` and
-`SECRET_KEY_FILE` lines pass in (compose and Docker keep it as a file: mount
-`deploy/secrets/secret_key` at `/run/secrets/secret_key` instead); without it the command says the
-keys were not checked. Do it now and then, not only when you need the backup
-([deployment guide][DEPLOY]).
+`python -m app.admin restore-check`, run with the same image, reports integrity, the schema version, the
+number of users, and whether stored keys decrypt with the current key. That last check needs the app's
+secret passed in; without it the command says the keys were not checked. Do it now and then, not only
+when you need the backup. The command, for each engine, is step 1 of the guide's
+[restore steps](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#backups-and-restore).
 
 The file can stay on a read-only (`:ro`) mount: `app.admin backup` writes its copies in SQLite's
 rollback-journal mode, and `restore-check` opens a read-only file as immutable, so SQLite never has
@@ -76,17 +60,16 @@ to create a `-shm` file next to it.
 
 ## Restore
 
-1. **Stop the app** so nothing writes during the copy (`systemctl --user stop kidney-health`; compose:
-   `podman-compose -f deploy/compose.yaml stop`; Kubernetes: scale to 0).
-2. Make the backup readable for UID 10001: `podman unshare chown 10001:0 FILE` (rootless Podman), or
-   `chmod 0644` inside a `0700` directory (rootless Docker).
-3. Copy it **into** the volume through SQLite, which also handles the `-wal` and `-shm` files. The
-   one-liner opens the backup with `file:/restore/kidney.db?mode=ro&immutable=1`, so it works on a
-   read-only mount even for a WAL-mode copy. The exact one-off command for each engine is in the
-   [deployment guide][DEPLOY]. On Kubernetes the image has no `tar`, so `kubectl cp` cannot copy into
-   it: the guide streams the file into a one-off restore pod (`deploy/k8s/restore-pod.example.yaml`).
-4. Optional: sign everyone out of the restored copy, with the app still stopped and the volume
-   mounted: `python -m app.admin revoke-sessions --all` (same `podman run` pattern as above).
+What happens, in order; the commands for Podman, Docker and Kubernetes are in the guide's
+[restore steps](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#backups-and-restore):
+
+1. **Stop the app** so nothing writes during the copy.
+2. Make the backup readable for UID 10001 (rootless engines map your own UID to container root).
+3. Copy it **into** the volume through SQLite, which also handles the `-wal` and `-shm` files and works
+   from a read-only mount. On Kubernetes the image has no `tar`, so `kubectl cp` cannot copy into it: the
+   guide streams the file into a one-off restore pod (`deploy/k8s/restore-pod.example.yaml`).
+4. Optional: sign everyone out of the restored copy (sessions in the backup become valid again), with
+   the app still stopped.
 5. Start the app. Migrations run on start, so a backup restores into the **same or a newer** version,
    never an older one.
 
@@ -123,6 +106,6 @@ A replicated volume (Longhorn, Ceph) faithfully copies a corrupted file. Keep re
 
 ## Sources
 
-- [Deployment guide][DEPLOY], "Backups and restore"; [operator security guide][SECDOC], section 6.
+- [Deployment guide: backups and restore](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#backups-and-restore); [operator security guide][SECDOC], section 6.
 - [Design note 07][NOTE07] §4.15 and the security review; [design note 01][NOTE01].
 - [SQLite: online backup API][SQLITE-BACKUP]; [GDPR][GDPR], Article 20.

@@ -153,7 +153,7 @@ def test_ci_builds_and_checks_the_handbook():
     assert "--require-hashes" in hb and "-r handbook/requirements.lock" in hb and "-r requirements-dev.lock" in hb
     assert "scripts/build_handbook.py --check" in hb
     assert 'mkdocs" build --strict -d "$RUNNER_TEMP/learn"' in hb and "HANDBOOK_SITE_URL: http://localhost/learn/" in hb
-    assert "handbook/tools/check_links.py" in hb
+    assert 'handbook/tools/check_links.py "$RUNNER_TEMP/learn" --allow /' in hb
     assert "--noconftest" in hb and "tests/test_handbook_content.py" in hb
     assert 'HANDBOOK_BUILT_SITE="$RUNNER_TEMP/learn"' in hb and "tests/test_learn_links.py" in hb
     assert "-r tools/e2e/requirements.lock" in hb and "tools/e2e/learn.py" in hb
@@ -528,12 +528,13 @@ def test_k8s_restore_pod_is_restricted_and_documented():
 def test_restore_procedure_works_on_read_only_mounts():
     """Docs restore steps: the one-liner opens the backup immutable, the key check gets the secret, and
     sessions are revoked on the volume (a :ro mount cannot be written)."""
-    for path in ("docs/deployment.md", "handbook/docs/self-hosting/backups.md"):
-        text = read(path)
-        assert "mode=ro&immutable=1" in text, path
-        assert "SECRET_KEY_FILE=/run/secrets/secret_key" in text, path
-        assert "revoke-sessions --all" in text, path
-        assert not re.search(r"restore-check[^\n]*--revoke-sessions[^\n]*/restore/", text), path
+    text = read("docs/deployment.md")
+    assert "mode=ro&immutable=1" in text
+    assert "SECRET_KEY_FILE=/run/secrets/secret_key" in text
+    assert "revoke-sessions --all" in text
+    assert not re.search(r"restore-check[^\n]*--revoke-sessions[^\n]*/restore/", text)
+    # The handbook explains the steps and links to the commands instead of repeating them.
+    assert f"{DOCS_URL}/docs/deployment.md#backups-and-restore" in read("handbook/docs/self-hosting/backups.md")
 
 
 # --------------------------------------------------------------------------- docs
@@ -585,6 +586,7 @@ def test_rootless_docker_docs_trust_the_gateway_for_a_same_host_proxy():
     assert "TRUSTED_PROXY_SECRET_FILE" in row and "compose.caddy.yaml" in row
     for doc in ("docs/deployment.md", "docs/https.md", "handbook/docs/self-hosting/docker-rootless.md"):
         assert "172.17.0.1" in read(doc), doc
+    assert f"{DOCS_URL}/docs/deployment.md#rootless-docker" in read("handbook/docs/self-hosting/docker-rootless.md")
     assert "https_required` although the browser shows HTTPS" in read("docs/deployment.md")
     run = read("deploy/docker-rootless-run.sh")
     assert 'TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1,::1}"' in run
@@ -595,10 +597,62 @@ def test_rootless_docker_docs_trust_the_gateway_for_a_same_host_proxy():
 
 
 def test_compose_docs_require_podman_compose_1_5():
-    for doc in ("deploy/compose.yaml", "docs/deployment.md", "handbook/docs/self-hosting/podman-rootless.md"):
+    for doc in ("deploy/compose.yaml", "docs/deployment.md"):
         text = read(doc)
         assert re.search(r"podman-compose (must be )?1\.5\.0 or later|podman-compose 1\.5\.0 or later", text), doc
         assert "chcon -t container_file_t deploy/secrets/*" in text, doc
+    page = read("handbook/docs/self-hosting/podman-rootless.md")
+    assert "podman-compose (1.5.0 or later)" in page
+    assert f"{DOCS_URL}/docs/deployment.md#compose-podman-compose-or-docker-compose" in page
+
+
+# --------------------------------------------------------------------------- handbook self-hosting pages
+
+DOCS_URL = "https://github.com/ksullivan86/kidney-health/blob/main"
+SELF_HOSTING = sorted((REPO / "handbook" / "docs" / "self-hosting").glob("*.md"))
+
+
+def github_anchors(rel: str) -> set[str]:
+    """Heading anchors GitHub generates for a Markdown file (code blocks skipped, duplicates numbered)."""
+    anchors: set[str] = set()
+    seen: dict[str, int] = {}
+    fence = False
+    for line in read(rel).splitlines():
+        if line.lstrip().startswith("```"):
+            fence = not fence
+            continue
+        m = None if fence else re.match(r"^#{1,6}\s+(.+?)\s*#*\s*$", line)
+        if not m:
+            continue
+        slug = re.sub(r"[^\w\- ]", "", m.group(1).replace("`", "").strip().lower()).replace(" ", "-")
+        n = seen.get(slug, 0)
+        seen[slug] = n + 1
+        anchors.add(slug if n == 0 else f"{slug}-{n}")
+    return anchors
+
+
+def test_handbook_links_to_the_canonical_docs_resolve():
+    """docs/deployment.md, docs/security.md, docs/https.md and SECURITY.md are canonical; the handbook
+    links to their sections, and every link must name a file and a heading that exist."""
+    pattern = re.compile(re.escape(DOCS_URL) + r"/([\w./-]+\.md)(?:#([\w-]+))?")
+    checked = 0
+    for page in sorted((REPO / "handbook" / "docs").rglob("*.md")):
+        for rel, anchor in pattern.findall(page.read_text(encoding="utf-8")):
+            assert (REPO / rel).is_file(), f"{page.relative_to(REPO)} links to {rel}, which does not exist"
+            if anchor:
+                assert anchor in github_anchors(rel), f"{page.relative_to(REPO)}: {rel} has no heading #{anchor}"
+            checked += 1
+    assert checked >= 20, checked
+
+
+@pytest.mark.parametrize("page", [p for p in SELF_HOSTING if p.name != "building-the-handbook.md"], ids=lambda p: p.name)
+def test_self_hosting_pages_link_to_commands_instead_of_copying_them(page):
+    text = page.read_text(encoding="utf-8")
+    shells = re.findall(r"^\s*```(?:bash|sh|shell|console|zsh)\s*$", text, re.M)
+    assert not shells, f"{page.name}: shell command blocks belong in docs/deployment.md, docs/security.md or docs/https.md"
+    for command in ("podman run", "podman exec", "kubectl apply", "kubectl -n", "systemctl --user", "docker run",
+                    "podman unshare chown", "loginctl enable-linger"):
+        assert command not in text, f"{page.name} repeats `{command}`; link to the canonical guide instead"
 
 
 def test_verify_image_requires_cosign_3():

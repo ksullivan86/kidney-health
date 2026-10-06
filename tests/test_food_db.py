@@ -1,8 +1,9 @@
 """Invariants of the committed builtin database ``data/foods.json`` (no network).
 
 These pin the review fixes to the curated list: flags must agree with the numbers shown next
-to them, hypo treatments are served at a rescue portion, and the foods quoted in
-docs/diet-guide.md section 3 carry the same USDA record (and therefore the same numbers).
+to them, hypo treatments are served at a rescue portion, and the foods quoted in the handbook's
+food lists (handbook/docs/eat/food-lists.md, formerly docs/diet-guide.md section 3) carry the same USDA
+record (and therefore the same numbers).
 """
 from __future__ import annotations
 

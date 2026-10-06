@@ -60,10 +60,10 @@ Caddy image with the Cloudflare DNS module, an example Caddyfile and a compose o
 
 ### 2. Tailscale
 
-`tailscale serve --bg localhost:8000` gives `https://<machine>.<tailnet>.ts.net` with a trusted
-certificate. Rename the machine to something neutral first: machine names are published in the public
-certificate ledger ([Tailscale][TS-HTTPS]). Do not use Tailscale **Funnel** (public internet) unless the
-app's own sign-in is on.
+`tailscale serve` puts the app at `https://<machine>.<tailnet>.ts.net` with a trusted certificate (the
+command is in the [HTTPS guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/https.md#tier-2-easiest-tailscale)). Rename the machine to something neutral
+first: machine names are published in the public certificate ledger ([Tailscale][TS-HTTPS]). Do not use
+Tailscale **Funnel** (public internet) unless the app's own sign-in is on.
 
 ### 3. Your own certificate authority
 

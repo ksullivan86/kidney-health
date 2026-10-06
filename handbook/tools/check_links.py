@@ -4,9 +4,12 @@ Usage (after `mkdocs build --strict`, from the repository root):
 
     python3 handbook/tools/check_links.py handbook/site            # internal links and #anchors
     python3 handbook/tools/check_links.py handbook/site --external # also list external URLs
+    python3 handbook/tools/check_links.py site --allow /           # the image build: "/" is the app
 
 Relative links are resolved against the page that contains them; a directory resolves to its
-index.html. Absolute paths must stay under --base (default /learn/, where the app serves the site).
+index.html. Absolute paths must stay under --base (default /learn/, where the app serves the site),
+except the exact paths given with --allow (repeatable): the build the image serves links "Back to the
+food log" to "/", the app itself (HANDBOOK_APP_LINK=/).
 Exits 1 if any link points at a missing file or a missing #anchor. External links are not fetched
 (the weekly handbook-links workflow does that).
 """
@@ -45,6 +48,7 @@ def main(argv: list[str]) -> int:
         return 2
     site = Path(argv[0]).resolve()
     base = argv[argv.index("--base") + 1] if "--base" in argv else "/learn/"
+    allowed = {argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "--allow"}
     pages: dict[Path, _Page] = {}
     for f in site.rglob("*.html"):
         p = _Page()
@@ -66,6 +70,8 @@ def main(argv: list[str]) -> int:
             checked += 1
             path = unquote(u.path)
             if path.startswith("/"):
+                if path in allowed and not path.startswith(base):
+                    continue
                 if not path.startswith(base):
                     broken.append(f"{rel}: {url} (absolute path outside {base})")
                     continue

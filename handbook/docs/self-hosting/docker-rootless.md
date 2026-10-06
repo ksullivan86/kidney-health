@@ -19,27 +19,19 @@ land as root on the host. It works for kidney-health, but it hides your users' r
 the app by default, which changes how you set up proxy trust ([design note 01][NOTE01]). If you are
 choosing fresh, [rootless Podman](podman-rootless.md) is the better fit.
 
-## Set up rootless Docker
+## Set up rootless Docker and run kidney-health
 
-1. Install `uidmap` and `docker-ce-rootless-extras`, then, as your user:
-   `dockerd-rootless-setuptool.sh install`.
-2. `systemctl --user enable --now docker` and `sudo loginctl enable-linger "$USER"`.
-3. `docker context use rootless`.
-4. Check: `docker info` lists `name=rootless` under Security Options, and shows cgroup v2 with systemd.
+The commands are in the deployment guide's [rootless Docker section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#rootless-docker). In short:
 
-## Run kidney-health
-
-Either:
-
-- **compose**: `docker compose -f deploy/compose.yaml up -d`, with secrets in `deploy/secrets/` and
-  settings in `deploy/.env` (see [Rootless Podman](podman-rootless.md#compose-instead-of-quadlet)); or
-- **the run script**: `deploy/docker-rootless-run.sh`. It spells out every hardening flag
-  (`--read-only`, `--tmpfs /tmp`, `--cap-drop ALL`, `--security-opt no-new-privileges:true`,
-  `--pids-limit 128`, `--memory 512m`, publishing on `127.0.0.1`, secrets as read-only files), creates
-  the `secret_key` file on first run, and **refuses a rootful daemon** ([deployment guide][DEPLOY]).
-
-Set `PUBLIC_URL` (the script reads it from the environment), then read the setup code with
-`docker logs kidney-health 2>&1 | grep 'FIRST-RUN SETUP'` ([Users and keys](users-and-keys.md)).
+1. Install Docker's rootless extras, run its setup tool as your user, start the user service and switch
+   on linger so it runs at boot.
+2. Switch to the rootless context and check that Docker reports `rootless` and cgroup v2.
+3. Run the app either with **compose** (`deploy/compose.yaml`, the same files as on
+   [Podman](podman-rootless.md#compose-instead-of-quadlet)) or with **the run script**
+   `deploy/docker-rootless-run.sh`. The script spells out every hardening flag (read-only root, `/tmp` in
+   memory, no capabilities, no new privileges, process and memory limits, publishing on `127.0.0.1`,
+   secrets as read-only files), creates the secret key on first run, and **refuses a rootful daemon**.
+4. Set `PUBLIC_URL`, then read the one-time setup code from the log ([Users and keys](users-and-keys.md)).
 
 ## The limits that matter
 
@@ -55,19 +47,18 @@ Set `PUBLIC_URL` (the script reads it from the environment), then read the setup
 Trusting the gateway would mean trusting everyone only if the port were published on a LAN address;
 on `127.0.0.1` it means trusting the processes on this machine, which is what a same-host proxy needs.
 In proxy sign-in mode also set `TRUSTED_PROXY_SECRET_FILE`. The Caddy compose overlay avoids the
-question (container to container). With the run script:
-`TRUSTED_PROXIES=172.17.0.1 deploy/docker-rootless-run.sh` (use the address from your log). Running
-the script again replaces the container; the data stays on its volume.
+question (container to container). How to pass the gateway address to the run script, and how running
+it again replaces the container (the data stays on its volume), is in the
+[deployment guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#rootless-docker).
 
-You can make client addresses visible with RootlessKit 3.0 or later and `"userland-proxy": false`, or
-with `DOCKERD_ROOTLESS_ROOTLESSKIT_NET=pasta` and `..._PORT_DRIVER=implicit`
-([operator security guide][SECDOC]).
+Client addresses can be made visible with newer RootlessKit network settings; the
+[operator security guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/security.md#4-proxy-trust-trusted_proxies-per-topology) lists them.
 
 ## Secret files
 
 Under rootless Docker your UID is container root, so a `0600` file you own is unreadable for the app's
 UID 10001. Use `0644` files inside a `0700` directory: other host users still cannot reach them
-([deployment guide][DEPLOY]).
+([deployment guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#compose-podman-compose-or-docker-compose)).
 
 ## Checklist
 

@@ -222,8 +222,10 @@ the app (Settings → Admin → Server settings).
   **day by day**; phosphorus, protein, calories and calcium on the **weekly average**.
 
 The reasoning and the sources behind every number, the eat / limit / avoid food lists, carb
-counting with renal swaps, treating a low on a kidney diet and label reading are in
-**[docs/diet-guide.md](docs/diet-guide.md)** (research notes in `docs/research/`).
+counting with renal swaps, treating a low on a kidney diet and label reading are in the **patient
+handbook**: in the app under **Learn** (served at `/learn/` with no internet needed), source in
+[`handbook/docs/`](handbook/docs/index.md), how to build it in [`handbook/README.md`](handbook/README.md).
+Research notes for contributors are in `docs/research/`.
 
 ## Development
 
@@ -273,14 +275,15 @@ app/
   nutrients.py, periods.py    pure rules: thresholds, daily status, targets, period maths
   foods.py, log.py, meals.py, profile.py   the data routes, scoped to the signed-in person
   pwa.py                  service worker and install manifest headers
+  handbook.py             the patient handbook at /learn: mount, its own CSP, /api/handbook
   static/                 index.html, js/ (KH modules), css/, icons, sw.js (no build step)
 data/foods.json           builtin food database (generated)
 deploy/                   Containerfile(s), compose, Quadlet, Kubernetes, Caddy example
 docs/                     operator guides (deployment, security, https, accounts, privacy, ...)
-handbook/                 patient handbook site (served at /learn from a later milestone)
+handbook/                 patient handbook (MkDocs); built into the image and served at /learn
 scripts/                  food database, preview, icons, lock files, image verification
 tests/                    pytest suite; tests/js and tests/data hold the JS parity vectors
-tools/e2e/                browser harnesses (parity, sandbox, regress)
+tools/e2e/                browser harnesses (parity, sandbox, regress, learn)
 ```
 
 ## Disclaimer

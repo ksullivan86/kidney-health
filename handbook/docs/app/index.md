@@ -38,8 +38,9 @@ that server is called the **admin** in these pages.
 | See, export or delete your data | **Settings** → **Account** | [Privacy and your data](privacy.md) |
 
 The screens at the bottom of the app are **Today**, **Add**, **Plan**, **Trends** and **Profile**
-([architecture contract][ARCH]). From v0.3 this handbook opens from a **Learn** link in the app, at `/learn/` on
-the same server.
+([architecture contract][ARCH]). This handbook opens from the **Learn** entry (the book icon) at the top of
+the app and from **Settings → About & privacy**, at `/learn/` on the same server; warnings and notes in the
+app link to the page that explains them.
 
 ## What it does not do
 

@@ -378,3 +378,23 @@ def test_handbook_public_url_rejects_bad_values(tmp_path: Path, raw: str, messag
     with pytest.raises(ConfigError, match=re.escape(message)) as exc:
         load_settings({"DATA_DIR": str(tmp_path), "HANDBOOK_PUBLIC_URL": raw})
     assert "HANDBOOK_PUBLIC_URL" in str(exc.value)
+
+
+# --------------------------------------------------------------------------- python -m app.handbook csp
+def test_cli_prints_the_policy_for_a_built_site(site: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert handbook.main(["csp", str(site)]) == 0
+    assert capsys.readouterr().out.strip() == expected_policy(EXPECTED_HASHES)
+
+
+def test_cli_defaults_to_handbook_dir(site: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setenv("HANDBOOK_DIR", str(site))
+    assert handbook.main(["csp"]) == 0
+    assert capsys.readouterr().out.strip() == expected_policy(EXPECTED_HASHES)
+
+
+def test_cli_refuses_a_missing_or_broken_site(tmp_path: Path, site: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert handbook.main(["csp", str(tmp_path / "nothing")]) == 2
+    assert "not a built handbook" in capsys.readouterr().err
+    (site / "many.html").write_text("".join(f"<script>s{i}()</script>" for i in range(80)), encoding="utf-8")
+    assert handbook.main(["csp", str(site)]) == 1
+    assert "cannot build a policy" in capsys.readouterr().err

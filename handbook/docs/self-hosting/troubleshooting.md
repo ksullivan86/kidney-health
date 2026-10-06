@@ -19,14 +19,13 @@ volume it cannot write, or a proxy it does not trust ([deployment guide][DEPLOY]
 
 ## First checks
 
-```bash
-podman logs kidney-health 2>&1 | tail -50           # or: journalctl --user -u kidney-health -n 50
-podman exec kidney-health python -m app.admin check  # configuration, database integrity, schema, secret key
-podman healthcheck run kidney-health && echo healthy
-```
+1. **The log**: the last 50 lines usually name the problem (secrets are redacted from logs).
+2. **`python -m app.admin check`** inside the container: configuration, database integrity, schema
+   version and the secret key in one report.
+3. **The health check**, run by hand.
 
-On Kubernetes, use `kubectl -n kidney-health logs deploy/kidney-health` and
-`kubectl -n kidney-health exec deploy/kidney-health -- python -m app.admin check`.
+The commands for each engine, and the fixes below in more detail, are in the deployment guide's
+[troubleshooting section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#troubleshooting).
 
 ## Messages and fixes
 
@@ -36,15 +35,15 @@ On Kubernetes, use `kubectl -n kidney-health logs deploy/kidney-health` and
 | `403` on every save | the browser's origin does not match | set `PUBLIC_URL` to exactly the address bar's scheme, host and port, especially if your proxy rewrites `Host` |
 | `503 Setup required` | first-run setup is not done | use the setup code from the log ([Users and keys](users-and-keys.md)) |
 | Sign-in refused over HTTP | two or more accounts exist, so plain-HTTP sign-in from other machines is refused | set up HTTPS ([HTTPS for phones](https.md)) |
-| `unable to open database file`, `attempt to write a readonly database` | `/data` is not writable by UID 10001 | named volumes need nothing; bind mounts need `:U` or `podman unshare chown -R 10001:0 DIR`, plus `:Z` on SELinux. Kubernetes: `fsGroup: 10001` |
+| `unable to open database file`, `attempt to write a readonly database` | `/data` is not writable by UID 10001 | named volumes need nothing; a bind mount needs its owner fixed and, on SELinux, a label ([volumes](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#volumes-u-and-z)). Kubernetes: `fsGroup: 10001` |
 | `SECRET_KEY_FILE points to ..., which does not exist`, or `permission denied` | the secret is missing or unreadable for UID 10001 | create the Podman secret or Kubernetes Secret; compose files need `0644` in a `0700` directory. Setting both `X` and `X_FILE` is also refused |
 | The app exits naming `ALLOW_PRIVATE_AI_HOSTS` | that old name is not accepted | use `AI_PRIVATE_HOSTS` with explicit `host:port` entries ([Configuration](configuration.md)) |
 | Health check failing | a string-form health command runs through `/bin/sh`, which the image does not have | use `["python", "-m", "app.healthcheck"]`; on Docker do not pass `--health-cmd`. On slow storage raise the start period |
 | Every request from one address; rate limits hit everyone | the engine hides client addresses, or `TRUSTED_PROXIES` does not match the proxy | read the peer address from the log and set `TRUSTED_PROXIES` ([Security](security.md)) |
 | `database is locked` | two processes share one database | run exactly one container (one pod) per volume |
-| Memory or process limit ignored | rootless engines need cgroup v2 with systemd ([Docker][DOCKER-ROOTLESS]) | check `podman info` / `docker info` for the cgroup version |
+| Memory or process limit ignored | rootless engines need cgroup v2 with systemd ([Docker][DOCKER-ROOTLESS]) | check the cgroup version the engine reports |
 | `USDA request failed` / `USDA API key was rejected` | no route to `api.nal.usda.gov:443` / a wrong key | check egress rules ([Network allowlist](network-allowlist.md)) / the key |
-| Kubernetes pod `Pending` | the volume claim cannot bind | `kubectl -n kidney-health describe pvc kidney-health-data`: storage class name, default class, node selector |
+| Kubernetes pod `Pending` | the volume claim cannot bind | describe the claim `kidney-health-data`: storage class name, default class, node selector |
 | Pod rejected by Pod Security | an added container misses a restricted setting | non-root, `allowPrivilegeEscalation: false`, drop `ALL`, seccomp `RuntimeDefault` |
 | NetworkPolicy test pod gets `{"status":"ok"}` | policies are not enforced ([Kubernetes][K8S-NETPOL]) | enable enforcement in your network plugin (Talos Flannel: `kubeNetworkPoliciesEnabled`) |
 
@@ -70,9 +69,8 @@ On Kubernetes, use `kubectl -n kidney-health logs deploy/kidney-health` and
 
 ## Which version is running?
 
-`podman inspect kidney-health --format '{{.ImageDigest}}'`, or
-`kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`.
-**Settings → Admin → About** shows the version and schema too.
+**Settings → Admin → About** shows the version and schema. The engine shows the image digest; the
+commands are at the end of the guide's [troubleshooting section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#troubleshooting).
 
 ## Debugging without a shell
 
@@ -87,6 +85,6 @@ problems privately ([Security](security.md)).
 
 ## Sources
 
-- [Deployment guide][DEPLOY], "Troubleshooting"; [operator security guide][SECDOC]; [HTTPS guide][HTTPSDOC].
+- [Deployment guide: troubleshooting](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#troubleshooting); [operator security guide][SECDOC]; [HTTPS guide][HTTPSDOC].
 - [Design note 01][NOTE01]; [design note 02][NOTE02]; [design note 07][NOTE07].
 - [Docker: rootless mode limitations][DOCKER-ROOTLESS]; [Kubernetes: Network Policies][K8S-NETPOL].

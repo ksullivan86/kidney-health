@@ -126,7 +126,7 @@ section lists what has landed so far.
 * `handbook/`: a patient handbook site in plain language (stages, eating, labs, type 1 diabetes,
   medicines, preparing for treatment, living well, the app, self-hosting), fact-checked against
   primary sources and marked "draft, not yet reviewed by a clinician". Text under CC BY-NC-SA 4.0.
-  It will be served at `/learn` in a later milestone.
+  Served at `/learn` (see "The patient handbook at `/learn`" below).
 
 **Development**
 
@@ -166,12 +166,28 @@ section lists what has landed so far.
   the `*.lock` files, so `.github/workflows/refresh-locks.yml` refreshes them weekly with a 7-day
   cooldown; `HOLD_LATEST` can keep `:latest` back at the v0.3.0 release.
 
+### The patient handbook at `/learn`
+
+* The image now builds the handbook (a throw-away stage from the hash-locked
+  `handbook/requirements.lock`) and the app serves it at **`/learn/`**: no sign-in, no internet, its
+  own Content-Security-Policy that allows the theme's inline scripts by hash only (the app's strict
+  policy is unchanged everywhere else). New settings: `HANDBOOK_DIR` (`/app/learn` in the image) and
+  `HANDBOOK_PUBLIC_URL` ([docs/deployment.md](docs/deployment.md#configuration),
+  [docs/security.md](docs/security.md#the-handbook-at-learn-its-own-policy-and-its-own-origin)).
+* A **Learn** entry (book icon) at the top of the app and in Settings → About & privacy; food warnings,
+  Today's alerts and the suggested-target notes link to the page that explains them.
+* `docs/diet-guide.md` moved into the handbook's "Eating well" pages; the file now maps its old
+  sections to the new pages. The handbook's self-hosting pages link to the commands in `docs/`
+  instead of repeating them.
+* CI builds and checks the handbook on every change and opens it in Chrome with the real app; an
+  opt-in workflow publishes a public copy to GitHub Pages (repository variable `HANDBOOK_PAGES`), and a
+  weekly one checks its external links.
+
 ### Still to come in 0.3
 
 Personalised targets (age, sex, activity, lab results, eGFR) with lab history; rule-based meal
 guidance; optional AI ideas (OpenAI-compatible, Ollama, OpenRouter); barcode lookups (Open Food
-Facts, USDA branded) and label photos; an offline outbox for logging without a connection; the
-handbook at `/learn`.
+Facts, USDA branded) and label photos; an offline outbox for logging without a connection.
 
 ## 0.2.0 (2026-10-05): first release
 

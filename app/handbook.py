@@ -385,3 +385,43 @@ router = APIRouter(prefix="/api/handbook", tags=["handbook"], dependencies=[Depe
 def handbook_info(request: Request) -> dict[str, Any]:
     """Where the app's Learn links go, and the pages warnings, alerts and notes link to."""
     return info(getattr(request.app.state, "handbook", None), request.app.state.settings)
+
+
+# --------------------------------------------------------------------------- #
+# python -m app.handbook csp DIR
+# --------------------------------------------------------------------------- #
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Print the Content-Security-Policy for a built handbook.
+
+    For operators who serve the handbook from its own host name (docs/security.md): their reverse
+    proxy sends this header there, so the handbook keeps the same policy as at ``/learn``.
+    """
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(prog="python -m app.handbook", description=main.__doc__.splitlines()[0])
+    sub = parser.add_subparsers(dest="command", required=True)
+    csp = sub.add_parser("csp", help="print the Content-Security-Policy header value for a built handbook")
+    csp.add_argument("site", type=Path, nargs="?", default=None,
+                     help="the built site (default: HANDBOOK_DIR, else <repo>/handbook/site)")
+    args = parser.parse_args(argv)
+    if args.site is None:
+        from .config import DEFAULT_HANDBOOK_DIR
+
+        args.site = Path(os.environ.get("HANDBOOK_DIR") or DEFAULT_HANDBOOK_DIR)
+    if not (args.site / "index.html").is_file():
+        print(f"{args.site} is not a built handbook (no index.html); build it with: cd handbook && mkdocs build", file=sys.stderr)
+        return 2
+    try:
+        hashes = inline_script_hashes(args.site)
+    except HandbookError as exc:
+        print(f"cannot build a policy for {args.site}: {exc}", file=sys.stderr)
+        return 1
+    print(handbook_csp(hashes))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

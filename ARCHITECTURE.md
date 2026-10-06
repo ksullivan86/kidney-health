@@ -703,6 +703,8 @@ app/static/
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
   js/views/labs.js, guidance.js                                                    (M2)
   js/pwa.js (M1), js/offline.js, js/scan.js (M2)
+  js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
+  js/mock/handbook.js   demo answer for GET /api/handbook (no handbook in the demo)
   js/main.js            boot
 ```
 
@@ -1207,3 +1209,87 @@ engine (`tests/guidance/test_parity_vectors.py` fails when it is stale): plain-J
 subset, the person's profile, preferences, day, history, saved meals, combos) and the engine's JSON
 answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, `day_insights`,
 `period_insights` and `prefilter`.
+
+## M3: the handbook at `/learn`
+
+Built in M3 (handbook integration) from note 08 §4.6–§4.8, §4.10 and §4.11. **`/learn` is live**: the
+image builds the handbook and the app serves it. Code: `app/handbook.py`, `HANDBOOK_DIR` and
+`HANDBOOK_PUBLIC_URL` in `app/config.py`, path policies in `app/security.py`, the `handbook` stage of both
+Containerfiles, `js/learn.js`. People-facing: `handbook/docs/app/index.md`,
+`handbook/docs/self-hosting/configuration.md`; operators: `docs/deployment.md` (Configuration),
+`docs/security.md` ("The handbook at `/learn`").
+
+### Serving
+
+* `HANDBOOK_DIR`: `/app/learn` in the image, `<repo>/handbook/site` from source (`load_settings`);
+  `Settings` built in code default to `None` (no handbook), so tests stay hermetic. The site is served
+  only when `HANDBOOK_DIR/index.html` exists, else `/learn` is 404 (and nothing else changes).
+* Mounted before `/` (`handbook.mount`): `StaticFiles(html=True)`, read-only, `GET`/`HEAD` only;
+  `/learn` → `308 /learn/`; a directory serves its `index.html` (missing slash: 307); an unknown path
+  serves the site's `404.html` with status 404; never a directory listing; `..`, encoded separators,
+  absolute paths and symlinks that leave `HANDBOOK_DIR` → 404.
+* **Public**: no sign-in, like the app shell (static, no personal data; note 07 §4.10).
+* Cache: `assets/**/<name>.<8 hex>.min.(js|css)` → `public, max-age=31536000, immutable`; everything
+  else under `/learn` → `no-cache` (ETag revalidation); `.gz` files are labelled `application/gzip`.
+* **CSP for `/learn` only** (`handbook_csp`; `security.install(path_policies=…)` applies it to `/learn`
+  and `/learn/*`, the app's policy stays unchanged everywhere else, `upgrade-insecure-requests` is added
+  over HTTPS as for the app, every other header is the same):
+  `default-src 'self'; script-src 'self' 'sha256-…'×N; style-src 'self'; img-src 'self' data:; font-src
+  'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none';
+  form-action 'self'; frame-ancestors 'none'`. No Trusted Types, never `'unsafe-inline'`. The hashes
+  are computed once at start-up from every inline script (no `src`; JavaScript, module, importmap or
+  speculationrules type) of every HTML file the mount can serve, after line-break normalisation.
+  More than 64 distinct scripts, or a page that is not UTF-8: the handbook is not served, an ERROR names
+  the reason, the app starts normally. `python -m app.handbook csp [DIR]` prints the policy (for
+  operators serving the handbook from its own host name).
+* The service worker leaves `/learn` to the network (offline handbook pages: v0.4, `docs/ROADMAP.md`).
+
+### `GET /api/handbook` (signed in)
+
+```json
+{"available": true,                   // this server serves the built handbook at /learn/
+ "url": "/learn/",                    // where Learn links go: "/learn/", HANDBOOK_PUBLIC_URL, or null (hide them)
+ "public_url": null,                  // HANDBOOK_PUBLIC_URL (http(s), normalised to end with "/"), for Settings → About
+ "links": {"nutrients": {"potassium_mg": {"path": "eat/potassium/", "title": "Potassium"}, …},
+           "flags": {"phosphate_additive": {…}, "avoid_ckd": {…}, "high_gi": {…}, "hypo_treatment": {…}, "potassium_additive": {…}},
+           "pages": {"home": {"path": "", …}, "targets": {…}, "first_setup": {…}, "get_help_now": {…}, "blood_potassium": {…}, "treating_a_low": {…}}}}
+```
+
+`links` is `app/handbook.py` `LINKS`, built from `app/guidance/topics.py` (`TOPIC_PAGES`,
+`NUTRIENT_TOPIC`: the one slug table). Paths are relative to `url` and end with `/`. Demo mode
+(`js/mock/handbook.js`): `available: false, url: null` (no Learn links in the preview).
+
+### Frontend (`js/learn.js`, `KH.learn`)
+
+* `load()` (once per signed-in page, with the profile; never throws), `href(path)` (a table path or a
+  server URL `/learn/…` → the href for this server, or `null`: no handbook, or not a handbook path),
+  `link(group, key)` and `forWarning({nutrient, flag})` (an `<a>` "Learn: <page title>" or `null`),
+  `info()`, `available()`, `publicUrl()`.
+* The header entry `#learn-link` (book icon, accessible name "Learn") and Settings → About & privacy
+  open the handbook **in the same window** (the handbook's "Back to the food log" returns to `/`).
+  Links inside warnings (`KH.ui.renderWarnings`), Today's alerts and projected alerts, and the
+  suggested-target notes open in a **new tab** ("opens in a new tab" for screen readers), so an entry
+  being typed is not lost.
+* **Rule for every view:** link into the handbook only through `KH.learn` (server texts carry
+  `/learn/<path>/` URLs from `topics.py`; pass them to `KH.learn.href`). `tests/test_learn_links.py`
+  scans `app/static` and every Python module for `/learn/…` links, adds `TOPIC_PAGES` and `LINKS`, and
+  fails unless each resolves to a page in `handbook/docs` (and, in CI's handbook job, in the built site),
+  anchors included.
+
+### Build, CI and publishing
+
+* Image: a throw-away `handbook` stage (same base as the builder) installs `handbook/requirements.lock`
+  (`--require-hashes --only-binary=:all: --no-deps`), runs `mkdocs build --strict -d /out/learn` with
+  `HANDBOOK_SITE_URL=http://localhost/learn/` and `HANDBOOK_APP_LINK=/`, drops `*.map`; the runtime copies
+  only `/out/learn` to `/app/learn` (root-owned, `go=rX`). Licence label: `PolyForm-Noncommercial-1.0.0
+  AND CC-BY-NC-SA-4.0`. The container smoke test fetches `/learn/` (CSP, 404 page, immutable bundle).
+* CI job `handbook` (the image jobs need it): `build_handbook.py --check`, the strict build, the link
+  checker, `tests/test_handbook_content.py`, `tests/test_learn_links.py` against the built site, and
+  `tools/e2e/learn.py` (real app + built site in the runner's Chrome at 375×812 and 1280×800; fails on
+  any CSP/Trusted Types violation, page or console error, failed or outside request). `handbook-zensical`
+  is an allowed-to-fail canary. `handbook-pages.yml` publishes to GitHub Pages only when the repository
+  variable `HANDBOOK_PAGES` is `true`; `handbook-links.yml` checks external links weekly.
+* Docs: `docs/deployment.md`, `docs/security.md`, `docs/https.md` and `SECURITY.md` hold the commands;
+  `handbook/docs/self-hosting/` explains and links to their sections (`tests/test_deploy.py` checks the
+  anchors and that those pages carry no shell blocks). `docs/diet-guide.md` is a pointer to
+  `/learn/eat/` with a map from its old sections to the handbook pages.

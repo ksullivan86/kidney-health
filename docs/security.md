@@ -60,9 +60,53 @@ Do not remove a line unless you understand what it stops.
 | **Secrets as files** (`*_FILE`), never env vars | Env vars leak through `inspect`, `/proc/<pid>/environ`, child processes and crash dumps. |
 | **uvicorn `--no-proxy-headers`**; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXIES` | Clients cannot fake their address (to dodge rate limits) or fake HTTPS. |
 | **Host allowlist**: localhost, IP literals, the `PUBLIC_URL` host and `ALLOWED_HOSTS` | DNS rebinding: a web page whose name re-resolves to your server would otherwise be "same-origin" with the app. Unknown names get `400 Unknown host` and one log line naming the host to add. |
-| **Security headers** on every response: strict CSP, `frame-ancestors 'none'`, Trusted Types, `nosniff`, `no-referrer`, COOP/CORP; HSTS over HTTPS | Script injection, clickjacking, referrer leaks. |
+| **Security headers** on every response: strict CSP, `frame-ancestors 'none'`, Trusted Types, `nosniff`, `no-referrer`, COOP/CORP; HSTS over HTTPS | Script injection, clickjacking, referrer leaks. The patient handbook at `/learn` gets its own, slightly looser policy ([below](#the-handbook-at-learn-its-own-policy-and-its-own-origin)). |
 | **`--limit-concurrency 64`**, `MAX_BODY_BYTES` 1 MiB, photos `MAX_IMAGE_BYTES` 4 MiB with a header check | Connection floods and oversized bodies. |
 | **Local accounts by default** (`AUTH_MODE=local`) with a one-time setup code | No "first visitor becomes admin" race. Passwords of at least 15 characters (NIST SP 800-63B-4), Argon2id, throttling. |
+
+### The handbook at `/learn`: its own policy, and its own origin
+
+The image serves the patient handbook (a static MkDocs site, built in the image's `handbook` stage) at
+`/learn/`, public like the app's own pages because it holds no personal data. Its theme needs a few
+small inline scripts per page, which the app's policy forbids, so `/learn` gets its own
+Content-Security-Policy (`app/handbook.py`; `docs/dev/research/08-handbook-site.md` §4.6):
+
+* inline scripts are allowed **by exact SHA-256 hash only**, computed at start-up from the files the
+  app serves (about 8 for the whole site), never with `'unsafe-inline'`; any other inline or external
+  script is blocked. More than 64 distinct inline scripts, or a page that is not UTF-8, and the app
+  refuses to serve the handbook (logged as an error; `/learn` answers 404, the food log runs on);
+* `img-src 'self' data:` for the theme's icons, and **no Trusted Types** (the theme's search worker and
+  page loading are not Trusted-Types clean);
+* everything else is the app's baseline: `default-src`, `connect-src`, `worker-src` and the rest
+  `'self'`, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`, and the same `nosniff`,
+  `no-referrer`, COOP, CORP and HSTS headers.
+
+`/learn` never reads or sends data, and `/learn/` responses carry no cookies of their own, but the two
+policies do share an origin with the API. Operators who want strict isolation serve the handbook from
+**its own host name** instead, so the looser policy never shares an origin (cookies, storage, API) with
+the app:
+
+```bash
+# 1. Copy the built handbook out of the image you run (no shell needed in the image).
+mkdir -p learn-site
+podman create --name kh-learn ghcr.io/ksullivan86/kidney-health:0.3
+podman cp kh-learn:/app/learn ./learn-site/learn && podman rm kh-learn     # docker: same commands
+# 2. The header your proxy must send there (the same policy the app sends at /learn):
+podman run --rm --entrypoint python -v "$PWD/learn-site/learn:/site:ro,Z" \
+  ghcr.io/ksullivan86/kidney-health:0.3 -m app.handbook csp /site
+```
+
+3. Serve `./learn-site` as static files on its own name, for example
+   `https://learn.home.example.net/learn/`, keeping the `/learn/` path (the build expects it), with that
+   `Content-Security-Policy` header plus `X-Content-Type-Options: nosniff` and `Referrer-Policy:
+   no-referrer`. Recompute the header after every upgrade: the hashes change with the theme.
+4. On the app, set `HANDBOOK_DIR` to a path that does not exist (so `/learn` answers 404 there) and
+   `HANDBOOK_PUBLIC_URL=https://learn.home.example.net/learn/`, so the app's **Learn** links go to the
+   new address.
+
+A public copy on GitHub Pages (`.github/workflows/handbook-pages.yml`, opt-in) works the same way
+through `HANDBOOK_PUBLIC_URL`, but then readers load it from the internet, and Pages cannot send a CSP
+header.
 
 ## 4. Proxy trust: `TRUSTED_PROXIES` per topology
 
@@ -197,6 +241,8 @@ second layer.
 
 * **Dependencies**: `requirements.lock` pins every package with SHA-256 hashes; the image installs
   with `--require-hashes --only-binary=:all:`, so no build script from a source package ever runs.
+  The handbook is built the same way from `handbook/requirements.lock` in a throw-away stage; only
+  the built HTML, CSS and JavaScript reach the image, never the toolchain.
 * **Base images**: pinned by digest (`FROM …@sha256:`); Dependabot bumps builder and runtime
   together; a daily check because digests carry security fixes.
 * **Actions**: every `uses:` is pinned to a full commit SHA (a test fails otherwise), every workflow
@@ -227,6 +273,9 @@ second layer.
   the Cilium FQDN example closes that on Kubernetes. Rootless Podman has no simple per-container
   egress allowlist.
 * NetworkPolicy is a no-op on Talos' default Flannel until you enable it.
+* The handbook at `/learn` runs its theme's inline scripts (allowed by hash) without Trusted Types on
+  the app's origin. The files are static, read-only and take no input; serve the handbook from its
+  own host name if that is still too much ([above](#the-handbook-at-learn-its-own-policy-and-its-own-origin)).
 * A kernel zero-day that escapes a user namespace is out of scope; the subordinate-UID mapping limits
   what it can reach.
 * Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.3`

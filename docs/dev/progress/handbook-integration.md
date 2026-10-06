@@ -70,6 +70,25 @@ reading; they changed no files. Started 2026-10-06.
      anchors included.
    - tools/e2e/learn.py + README + tests/test_e2e_tools.py HARNESSES.
 
+5. Docs (§4.11) + ARCHITECTURE, verified by tests/test_deploy.py (79), test_learn_links (26),
+   test_handbook_content (584, handbook venv --noconftest), strict rebuild (HANDBOOK_APP_LINK=/),
+   check_links --allow / (119 pages, 0 broken):
+   - docs/diet-guide.md → pointer (in-app /learn/eat/, source, `git show 331f1b1:docs/diet-guide.md`,
+     old section → page map); comments in scripts/curated_foods.py, tests/test_food_db.py updated
+     (guidance-owned citations "diet-guide §6" left; the map resolves them).
+   - docs canonical: handbook/docs/self-hosting/{podman-rootless,docker-rootless,kubernetes,backups,
+     upgrades,troubleshooting,security,users-and-keys,https,configuration} now link to sections of
+     docs/deployment.md, docs/security.md, docs/https.md, SECURITY.md instead of copying commands;
+     tests/test_deploy.py: anchor check for every such link + no shell blocks on those pages; the 3
+     tests that checked commands in both places now check docs/ + the link.
+   - docs/security.md: "The handbook at /learn: its own policy, and its own origin" (+ commands, row in
+     defaults, residual risk, supply chain); docs/deployment.md: config rows, image facts;
+     docs/network-allowlist.md: handbook build/CI hosts, /learn makes no requests.
+   - `python -m app.handbook csp [DIR]` (tests added); handbook/tools/check_links.py `--allow PATH`
+     (CI passes `--allow /` for the app link); handbook README + building-the-handbook page.
+   - "coming in v0.3" for /learn removed (configuration.md, security.md, app/index.md, README layout).
+   - ARCHITECTURE.md "M3: the handbook at /learn"; CHANGELOG; docs/ROADMAP.md (note 08 deferrals).
+
 ## Decisions
 
 - HANDBOOK_PUBLIC_URL lives in config.py (deployment URL like PUBLIC_URL), not the settings registry.
@@ -89,6 +108,4 @@ reading; they changed no files. Started 2026-10-06.
 
 ## Next
 
-5. Docs: diet-guide pointer, self-hosting pages link to canonical docs, "coming in v0.3" fixes,
-   ARCHITECTURE.md (/learn live), ROADMAP for deferred items.
 6. E2E Chromium check, hadolint, actionlint, zizmor, SHA-pin check, full pytest.

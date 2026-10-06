@@ -299,8 +299,8 @@ jobs:
           set -euo pipefail
           "$RUNNER_TEMP/hb/bin/mkdocs" build --strict -d "$RUNNER_TEMP/learn"
           find "$RUNNER_TEMP/learn" -type f -name '*.map' -exec rm -f {} +
-      - name: Internal links and anchors of the built site
-        run: python handbook/tools/check_links.py "$RUNNER_TEMP/learn"
+      - name: Internal links and anchors of the built site ("/" is the app's own link)
+        run: python handbook/tools/check_links.py "$RUNNER_TEMP/learn" --allow /
       - name: Content rules (front matter, sources, no dosing, slugs)
         run: '"$RUNNER_TEMP/hb/bin/python" -m pytest --noconftest -p no:cacheprovider tests/test_handbook_content.py'
       - name: Every /learn link in the app resolves to a built page

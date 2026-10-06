@@ -123,15 +123,20 @@ Also `AI_TIMEOUT_S`, `AI_MAX_TOKENS` (1500), `AI_STRUCTURED_OUTPUT` (`auto`), `A
 `GUIDANCE_ENABLED` (`true`), `GUIDANCE_POOL_PER_ROLE` (200), `GUIDANCE_BEAM_WIDTH` (16)
 ([design note 06][NOTE06]).
 
-## The handbook at `/learn` (coming in v0.3)
+## The handbook at `/learn`
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `HANDBOOK_DIR` | `/app/learn` in the image; `handbook/site` in a checkout | The built handbook, served at `/learn/`. If it is missing, `/learn` answers 404 and the app's **Learn** link uses `HANDBOOK_PUBLIC_URL` instead. |
-| `HANDBOOK_PUBLIC_URL` | empty | The public copy (for example on GitHub Pages): the fallback link, and the "public copy" link in **Settings → About**. |
+| `HANDBOOK_DIR` | `/app/learn` in the image; `handbook/site` in a checkout | The built handbook, served at `/learn/` with no sign-in. Without an `index.html` there, `/learn` answers 404 and the app's **Learn** links go to `HANDBOOK_PUBLIC_URL`, or are hidden when that is not set. |
+| `HANDBOOK_PUBLIC_URL` | empty | A published copy (for example on GitHub Pages), `https://` or `http://` only: where the Learn links go when this server has no handbook, and the "public copy" link in **Settings → About**. |
 
 The image builds the handbook in a separate stage, so it needs no internet at runtime
-([design note 08][NOTE08]; [Building the handbook](building-the-handbook.md)).
+([design note 08][NOTE08]; [Building the handbook](building-the-handbook.md)). The app reads the site
+once when it starts, to compute the handbook's security policy, so restart it after rebuilding the
+handbook in place. A broken build (a page that is not UTF-8, or far more inline scripts than the theme
+uses) is not served: the log says why, and the food log itself keeps working. To serve the handbook
+from its own host name instead, see [Security](security.md#serving-learn-from-its-own-origin-optional)
+and the [operator security guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/security.md#the-handbook-at-learn-its-own-policy-and-its-own-origin).
 
 ## Example: Quadlet behind Caddy on the same host
 
