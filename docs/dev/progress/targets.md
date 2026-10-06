@@ -11,9 +11,9 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 2. app/units.py, app/kidney_function.py (+ tests U1–U7, E1–E10) — DONE
 3. app/target_rules.py + app/targets.py (+ tests TV01–TV23, properties) — DONE
 4. nutrients.suggest_targets / dosing_weight wrapper + §5.3 test changes + targets_by_stage.json — DONE
-5. models + profile fields + GET suggested-targets (rules/derived/missing_inputs/alerts, 422 refusals)
-6. app/labs.py router + main.py include + settings keys §4.9 (+ regenerate settings_vectors.json)
-7. export/delete (account.py minimal), API tests (isolation, auth), migration from populated v3
+5. models + profile fields + GET suggested-targets (rules/derived/missing_inputs/alerts, 422 refusals) — DONE
+6. app/labs.py router + main.py include + settings keys §4.9 (+ regenerate settings_vectors.json) — DONE
+7. export/delete (account.py minimal), API tests (isolation, auth), migration from populated v3 — DONE
 8. parity vectors tests/data/targets_vectors.json + kidney_function_vectors.json (+ generators, staleness test)
 9. docs/targets-and-labs.md, ARCHITECTURE "M2 API: targets and labs", docs/ROADMAP.md, live smoke on 8300
 
@@ -48,11 +48,30 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   PH-2.none (transplant G1–G3b), K-0/PH-0 labs-off variants, kidney-function messages other than G-1.
 * Lab dates up to one day after the server's date count as fresh (time zones); see labs API for validation.
 
+* Steps 5–7: models.py (Sex/Activity/Analyte, ProfileUpdate fields with ""→null, validate_birth_month,
+  validate_past_date with one day of time-zone slack, Profile fields, SuggestedRange/AppliedRule/SafetyAlert,
+  LabCreate/LabResult/LabCreated/LabList/KidneyFunction), profile.py (fields, reset-to-default on null, suggestion
+  via targets.suggest_from_records + settings + newest labs, 422 `{"detail", "code"}`), app/labs.py (POST/GET/DELETE,
+  kidney-function), main.py (1 import + 1 include_router), settings_registry.py (§4.9 keys), account.py
+  (lab_results + labs.csv with the canonical unit), tests/test_targets_api.py (58 tests: fields, validation,
+  suggestion, refusals, labs, alerts, settings C6, two-person isolation, anonymous 401, export, deletion).
+  tests/data/settings_vectors.json regenerated (gen_settings_vectors.py).
+
+## Handoff to the frontend builder (app/static is not mine)
+`node tests/js/run_vectors.mjs` (and so tests/test_rules_vectors.py::test_js_engine_matches_vectors and
+tests/test_settings_ui.py::test_engine_registry_lists_every_server_key) fail until app/static/js/engine/settings.js
+DEFS gains the seven keys below (sorted by key: the targets.* ones after registration.mode, user.units.labs last):
+
+    { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: null, label: "Activity level used until a person chooses theirs", help: "Used for the calorie estimate (2023 Dietary Reference Intakes)." },
+    { key: 'targets.lab_fresh_days.albumin', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null, label: "An albumin result counts for (days)", help: "" },
+    { key: 'targets.lab_fresh_days.bicarbonate', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null, label: "A bicarbonate result counts for (days)", help: "" },
+    { key: 'targets.lab_fresh_days.phosphate', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null, label: "A phosphate result counts for (days)", help: "" },
+    { key: 'targets.lab_fresh_days.potassium', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null, label: "A potassium result counts for (days)", help: "" },
+    { key: 'targets.lab_rules_enabled', type: 'bool', default: true, scope: 'instance', env: null, label: "Let lab results change suggested targets", help: "Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning for a very high potassium result is always shown. Keep it off on public demo servers until a clinician has reviewed the lab rules." },
+    { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: null, label: "Units for lab results", help: "us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, mmol/mol. Only the unit offered first changes; any unit can still be entered." },
+
 ## Next
-Step 5: models.py (Sex, Activity, Analyte literals, ProfileUpdate fields with "" → null, Profile fields,
-LabCreate/LabResult, SuggestedTargets additive keys), profile.py (row_to_profile new fields, PUT merge with
-NOT NULL reset-to-default on null, suggested-targets via targets.suggest_from_records + settings + labs, 422
-`{"detail": message, "code": code}` per ARCHITECTURE error shape).
+Step 8: parity vectors (gen_targets_vectors.py, gen_kidney_function_vectors.py, staleness tests), then step 9 docs.
 
 ## Commands
 * `python3 -m pytest -q -p no:cacheprovider tests/test_targets.py tests/test_units.py tests/test_kidney_function.py tests/test_nutrients.py`

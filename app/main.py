@@ -16,6 +16,7 @@ from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 
 from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
+from . import labs  # M2 targets: /api/labs
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
@@ -96,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(log_router.router)
     app.include_router(meals.router)
     app.include_router(meals.plan_router)
+    app.include_router(labs.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

@@ -4,9 +4,11 @@ from __future__ import annotations
 import math
 import re
 from datetime import date as _date
+from datetime import datetime as _datetime
+from datetime import timedelta as _timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 from .nutrients import FLAGS, NUTRIENT_KEYS, TARGET_KEYS
 from .periods import normalise_dialysis_days
@@ -32,6 +34,10 @@ EntryStatus = Literal["eaten", "planned"]  # v0.2
 WeekStart = Literal["monday", "sunday"]  # v0.2
 CopyInclude = Literal["all", "eaten", "planned"]  # v0.2
 Assessment = Literal["daily", "weekly_average"]  # v0.2
+# v0.3 personalised targets (note 05 §4.2, §4.6); the pure modules keep the same tuples.
+Sex = Literal["female", "male", "unspecified"]
+Activity = Literal["inactive", "low_active", "active", "very_active"]
+Analyte = Literal["potassium", "phosphate", "albumin", "bicarbonate", "uacr", "creatinine", "cystatin_c", "egfr", "a1c"]
 
 # int | float keeps integers (mg, mL) as integers in JSON instead of coercing to 422.0.
 Number = int | float
@@ -48,6 +54,42 @@ def validate_date(value: str) -> str:
         _date.fromisoformat(value)
     except ValueError as exc:  # e.g. 2026-02-30
         raise ValueError("date is not a valid calendar date") from exc
+    return value
+
+
+# A date or month "today" may be one day ahead of the server's date (the client's time zone).
+FUTURE_TOLERANCE = _timedelta(days=1)
+MAX_AGE_YEARS = 120  # note 05 §4.2: birth year within the last 120 years
+_BIRTH_MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+def _latest_allowed_date() -> _date:
+    return _datetime.now().date() + FUTURE_TOLERANCE
+
+
+def validate_past_date(value: str) -> str:
+    """``YYYY-MM-DD``, a real date, not in the future (one day of time-zone slack) and not before 1900.
+
+    Messages leave out the field name: the validation handler prefixes it (``taken_on: …``).
+    """
+    validate_date(value)
+    day = _date.fromisoformat(value)
+    if day > _latest_allowed_date():
+        raise ValueError("must not be in the future")
+    if day.year < 1900:
+        raise ValueError("must be 1900 or later")
+    return value
+
+
+def validate_birth_month(value: str) -> str:
+    """``YYYY-MM`` (note 05 §4.2): month 01–12, not in the future, at most 120 years ago."""
+    if not isinstance(value, str) or not _BIRTH_MONTH_RE.match(value):
+        raise ValueError("must be a year and month formatted YYYY-MM (for example 1971-03)")
+    latest = _latest_allowed_date()
+    if value > latest.isoformat()[:7]:
+        raise ValueError("must not be in the future")
+    if int(value[:4]) < latest.year - MAX_AGE_YEARS:
+        raise ValueError(f"must be within the last {MAX_AGE_YEARS} years")
     return value
 
 
@@ -585,6 +627,12 @@ class ShoppingList(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
+PROFILE_V03_FIELDS: tuple[str, ...] = (
+    "birth_month", "sex", "activity", "transplant_date", "frail_or_sarcopenic", "weight_6_months_ago_kg",
+    "pregnant_or_breastfeeding", "hyperkalemia_history", "urine_output_ml", "pd_uf_ml", "pd_dialysate_kcal",
+)
+
+
 class ProfileUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -598,6 +646,34 @@ class ProfileUpdate(BaseModel):
     targets: dict[str, Any] | None = None
     dialysis_days: list[Any] | None = None
     week_start: WeekStart | None = None
+    # v0.3 "About you" and treatment fields (note 05 §4.2). Empty or null clears a field: back to NULL,
+    # or to the default for sex ("unspecified") and the yes/no fields (false).
+    birth_month: str | None = None  # 'YYYY-MM'
+    sex: Sex | None = None
+    activity: Activity | None = None  # null: not chosen (the instance default applies)
+    transplant_date: str | None = None  # 'YYYY-MM-DD'
+    frail_or_sarcopenic: bool | None = None
+    weight_6_months_ago_kg: float | None = Field(default=None, ge=20, le=400, allow_inf_nan=False)
+    pregnant_or_breastfeeding: bool | None = None
+    hyperkalemia_history: bool | None = None
+    urine_output_ml: float | None = Field(default=None, ge=0, le=5000, allow_inf_nan=False)
+    pd_uf_ml: float | None = Field(default=None, ge=0, le=4000, allow_inf_nan=False)
+    pd_dialysate_kcal: float | None = Field(default=None, ge=0, le=1000, allow_inf_nan=False)
+
+    @field_validator(*PROFILE_V03_FIELDS, mode="before")
+    @classmethod
+    def _empty_is_null(cls, v: Any) -> Any:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("birth_month")
+    @classmethod
+    def _birth_month(cls, v: str | None) -> str | None:
+        return None if v is None else validate_birth_month(v)
+
+    @field_validator("transplant_date")
+    @classmethod
+    def _transplant_date(cls, v: str | None) -> str | None:
+        return None if v is None else validate_past_date(v)
 
     @field_validator("targets")
     @classmethod
@@ -623,23 +699,165 @@ class Profile(BaseModel):
     dialysis_days: list[int]
     week_start: WeekStart
     targets: dict[str, TargetValue]
+    birth_month: str | None = None
+    sex: Sex = "unspecified"
+    activity: Activity | None = None
+    transplant_date: str | None = None
+    frail_or_sarcopenic: bool = False
+    weight_6_months_ago_kg: Number | None = None
+    pregnant_or_breastfeeding: bool = False
+    hyperkalemia_history: bool = False
+    urine_output_ml: Number | None = None
+    pd_uf_ml: Number | None = None
+    pd_dialysate_kcal: Number | None = None
     updated_at: str
 
 
+# --------------------------------------------------------------------------- #
+# Personalised targets and labs (v0.3 M2 targets, note 05 §4.6)
+# --------------------------------------------------------------------------- #
+
+
+class SuggestedRange(BaseModel):
+    """A suggested ``{"min", "max"}`` target; a missing bound is left out (fibre is ``{"min": 29}``)."""
+
+    min: int | None = None
+    max: int | None = None
+
+    @model_serializer
+    def _without_missing_bounds(self) -> dict[str, int]:
+        return {k: v for k, v in (("min", self.min), ("max", self.max)) if v is not None}
+
+
+class AppliedRule(BaseModel):
+    """One rule behind the suggestion ("Why this number?"): source, grade and whether part of it is the project's opinion."""
+
+    id: str
+    source: str
+    grade: str
+    opinion: bool
+    opinion_note: str | None
+    url: str
+
+
+class SafetyAlert(BaseModel):
+    """A lab result that needs action now (potassium of 6.0 mmol/L or more, KDIGO 2024 Table 28)."""
+
+    level: Literal["urgent", "emergency"]
+    code: str
+    analyte: str
+    value: float
+    taken_on: str
+    message: str
+
+
 class SuggestedTargets(BaseModel):
-    targets: dict[str, TargetValue]
+    targets: dict[str, int | SuggestedRange | None]
     notes: list[str]
+    # v0.3, additive (old clients ignore them): note 05 §4.6.
+    rules: list[AppliedRule] = []
+    derived: dict[str, Any] = {}
+    missing_inputs: list[str] = []
+    alerts: list[SafetyAlert] = []
+
+
+class LabCreate(BaseModel):
+    """``POST /api/labs``: one result as typed; converted to the analyte's canonical unit (app/units.py)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    analyte: Analyte
+    value: float = Field(ge=0, le=MAX_NUTRIENT_VALUE, allow_inf_nan=False)
+    unit: str = Field(min_length=1, max_length=40)
+    taken_on: str
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("taken_on")
+    @classmethod
+    def _taken_on(cls, v: str) -> str:
+        return validate_past_date(v)
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _note(cls, v: Any) -> Any:
+        return "" if v is None else v
+
+    @model_validator(mode="after")
+    def _convert(self) -> "LabCreate":
+        from .units import UnitError, convert
+
+        try:
+            convert(self.analyte, self.value, self.unit)
+        except UnitError as exc:
+            raise ValueError(str(exc)) from None
+        return self
+
+
+class LabResult(BaseModel):
+    id: int
+    analyte: Analyte
+    label: str
+    value: Number  # canonical unit, rounded to the analyte's shown decimals
+    unit: str  # canonical unit
+    entered_value: Number
+    entered_unit: str
+    display: str  # "1.94 mmol/L = 6.0 mg/dL"
+    taken_on: str
+    note: str
+    created_at: str
+
+
+class LabCreated(LabResult):
+    alerts: list[SafetyAlert]
+
+
+class LabList(BaseModel):
+    labs: list[LabResult]
+
+
+class EgfrResult(BaseModel):
+    value: int | None
+    method: Literal["lab", "ckd_epi_2021_cr_cys", "ckd_epi_2021_cr", "ckd_epi_2012_cys"]
+    method_label: str
+    category: str | None  # "G3a", "G3aT" after a transplant; null when the two formulas disagree
+    suggested_stage: CkdStage | None
+    matches_profile: bool | None
+    female: int | None  # both formulas when sex is unspecified
+    male: int | None
+    taken_on: str
+
+
+class AlbuminuriaResult(BaseModel):
+    value_mg_g: float
+    category: Literal["A1", "A2", "A3"]
+    label: str
+    entered_value: Number
+    entered_unit: str
+    taken_on: str
+
+
+class KidneyFunction(BaseModel):
+    egfr: EgfrResult | None
+    albuminuria: AlbuminuriaResult | None
+    profile_stage: CkdStage
+    mode: Literal["ckd", "transplant", "hemodialysis", "peritoneal"]
+    message: str
 
 
 # Exported for the routers.
 __all__ = [
+    "Activity",
     "Alert",
+    "AlbuminuriaResult",
+    "Analyte",
+    "AppliedRule",
     "Categories",
     "CopyDay",
     "CopyDayResult",
     "Counts",
     "DaySummary",
     "DayTotals",
+    "EgfrResult",
     "Entry",
     "FLAGS",
     "Food",
@@ -647,6 +865,11 @@ __all__ = [
     "FoodList",
     "Interdialytic",
     "InterdialyticNutrient",
+    "KidneyFunction",
+    "LabCreate",
+    "LabCreated",
+    "LabList",
+    "LabResult",
     "LogCreate",
     "LogUpdate",
     "MarkEaten",
@@ -663,20 +886,26 @@ __all__ = [
     "NutrientStatus",
     "PeriodNutrient",
     "PeriodSummary",
+    "PROFILE_V03_FIELDS",
     "Profile",
     "ProfileUpdate",
     "QuickAdd",
     "Range",
     "RangeSummary",
+    "SafetyAlert",
+    "Sex",
     "ShoppingItem",
     "ShoppingList",
+    "SuggestedRange",
     "SuggestedTargets",
     "UsdaImport",
     "UsdaSearchHit",
     "UsdaSearchResult",
     "Warning",
+    "validate_birth_month",
     "validate_date",
     "validate_flags",
     "validate_nutrients",
+    "validate_past_date",
     "validate_targets",
 ]

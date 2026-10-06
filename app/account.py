@@ -64,6 +64,15 @@ def _per_user_table(conn: sqlite3.Connection, table: str, user_id: int) -> list[
     return _rows(conn, f"SELECT * FROM {table} WHERE user_id = ? ORDER BY rowid", (int(user_id),))
 
 
+def _lab_results(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """Lab results (schema step 4) with the canonical unit, unrounded; [] on an older schema."""
+    if not table_exists(conn, "lab_results"):
+        return []
+    from .labs import export_rows
+
+    return export_rows(conn, user_id)
+
+
 def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
     from .log import csv_safe
 
@@ -107,7 +116,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "custom_foods": [row_to_food(r) for r in custom],
         "linked_foods": [{k: r[k] for k in r.keys()} for r in linked],
         "meal_templates": [row_to_template(conn, r) for r in templates],
-        "lab_results": _per_user_table(conn, "lab_results", uid),
+        "lab_results": _lab_results(conn, uid),
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
         "activity": list_events(conn, actor_user_id=uid, actions=USER_VISIBLE_ACTIONS, limit=500),
     }
@@ -144,9 +153,9 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
             meal_rows.append([meal["id"], meal["name"], meal["note"], item.get("food_id"), item.get("food_name"), item.get("servings")])
     meals_csv = _csv(("meal_id", "meal_name", "note", "food_id", "food_name", "servings"), meal_rows)
 
-    labs = data["lab_results"]
-    lab_header = [k for k in (labs[0].keys() if labs else ("id", "date", "test", "value", "unit")) if k != "user_id"]
-    labs_csv = _csv(lab_header, ([lab.get(k) for k in lab_header] for lab in labs))
+    from .labs import CSV_COLUMNS as LAB_CSV_COLUMNS
+
+    labs_csv = _csv(LAB_CSV_COLUMNS, ([lab.get(k) for k in LAB_CSV_COLUMNS] for lab in data["lab_results"]))
 
     buffer = io.BytesIO()
     stamp = datetime.now(timezone.utc).timetuple()[:6]

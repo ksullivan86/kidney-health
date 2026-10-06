@@ -218,3 +218,69 @@ register(
         help="Your own choice, used only when the admin has turned Open Food Facts lookups on.",
     ),
 )
+
+
+# --------------------------------------------------------------------------- #
+# Note 05 (personalised targets and labs), §4.9. Owner: M2 targets (app/targets.py reads them through
+# app/profile.py and app/labs.py).
+# --------------------------------------------------------------------------- #
+
+FreshDays = Annotated[int, Field(ge=1, le=365)]
+
+register(
+    SettingDef(
+        key="targets.lab_rules_enabled",
+        model=bool,
+        default=True,
+        scope="instance",
+        label="Let lab results change suggested targets",
+        help="Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning "
+        "for a very high potassium result is always shown. Keep it off on public demo servers until a clinician has "
+        "reviewed the lab rules.",
+    ),
+    SettingDef(
+        key="targets.lab_fresh_days.potassium",
+        model=FreshDays,
+        default=90,
+        scope="instance",
+        label="A potassium result counts for (days)",
+    ),
+    SettingDef(
+        key="targets.lab_fresh_days.phosphate",
+        model=FreshDays,
+        default=90,
+        scope="instance",
+        label="A phosphate result counts for (days)",
+    ),
+    SettingDef(
+        key="targets.lab_fresh_days.albumin",
+        model=FreshDays,
+        default=180,
+        scope="instance",
+        label="An albumin result counts for (days)",
+    ),
+    SettingDef(
+        key="targets.lab_fresh_days.bicarbonate",
+        model=FreshDays,
+        default=180,
+        scope="instance",
+        label="A bicarbonate result counts for (days)",
+    ),
+    SettingDef(
+        key="targets.default_activity",
+        model=Literal["inactive", "low_active", "active", "very_active"],
+        default="inactive",
+        scope="instance",
+        label="Activity level used until a person chooses theirs",
+        help="Used for the calorie estimate (2023 Dietary Reference Intakes).",
+    ),
+    SettingDef(
+        key="user.units.labs",
+        model=Literal["us", "si"],
+        default="us",
+        scope="user_default",
+        label="Units for lab results",
+        help="us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, "
+        "g/L, mg/mmol, mmol/mol. Only the unit offered first changes; any unit can still be entered.",
+    ),
+)
