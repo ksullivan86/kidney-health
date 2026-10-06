@@ -42,14 +42,22 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   providers + re-test after an env key change (key fingerprint in probe_json) + R12 CA-store self-check
   (eddb33b). Verified: `pytest tests/test_ai_*.py tests/test_imagecheck.py tests/test_migration_m006.py`.
 
+* Also done (2026-10-06, second attempt): tests/test_vision_api.py (21), tests/test_ai_prompts.py (payload snapshot
+  `tests/fixtures/ai/next_meal_payload.json`, PROMPT_VERSION fingerprint pin `prompt_version.json`; version now
+  2026-10-06.2 after candidates use full nutrient keys), failure-path tests in test_ai_routes.py, scripts/ai_eval.py
+  + tests/test_ai_eval_script.py + docs/dev/ai-eval/README.md, ARCHITECTURE "M2 API: AI and photos" + ownership
+  rows, docs/ai.md, docs/barcode-and-photos.md "Photos", docs/privacy.md, docs/network-allowlist.md, ROADMAP.
+  Branch coverage (scratch coverage install): guard.py 100 %, AI package 92 % overall.
+  Label draft: `flags` empty (saving scans the confirmed ingredient text), `needs` lists name/serving_g when missing.
+
 ## Next (in order)
-1. tests/test_vision_api.py (route level: 404 off, 415/413/422, metadata removed in the forwarded bytes,
-   vision/plate/agent switches, Hermes check before every photo, photo consent, quota, dry run, 502, draft,
-   plate checklist, isolation); tests/test_ai_prompts.py (payload snapshot, escaping, never-sent fields).
-2. scripts/ai_eval.py (manual live runner over the golden inputs; results to docs/dev/ai-eval/).
-3. docs/ai.md, ARCHITECTURE "M2 API: AI and photos" + ownership row, docs/network-allowlist.md,
-   compose overlay check, docs/barcode-and-photos.md Photos section, docs/privacy.md (A8), ROADMAP (R14, A2).
-4. Frontend: decide (contract: app/static/** is the frontend owner's); at least a precise handoff.
+1. Frontend (decided: build it; M1 reserved `#set-ai-slot` for M2, R13 lists `app/static/ai.js`, nobody else owns AI UI):
+   new files `app/static/js/ai.js` (KH.ai), `app/static/css/ai.css`, `app/static/js/mock/ai.js` (demo: "available
+   in the installed app"); index.html: link/script tags, `#ai-add-slot` in the Add view, AI sheets; settings.js:
+   one-line hook in renderAi. Then Chromium checks (375/1280, light/dark), test_frontend_shell, preview build.
+2. Handbook pages app/ai.md + self-hosting/configuration.md AI section: drop "coming in v0.3", plate gives names
+   + rough weight (note 03 R9), link docs/ai.md; build the handbook strict.
+3. Final: full `python -m pytest`, node vectors, progress note "Status: complete".
 
 ## Decisions
 * Consents are rows (`ai_consents`, FK to provider and user) rather than a list inside the `ai` settings
