@@ -1,0 +1,276 @@
+{
+ "candidates": [
+  {
+   "category": "Meat, Poultry & Eggs",
+   "flags": [],
+   "group": "protein",
+   "id": 8,
+   "name": "Egg white, raw",
+   "often": false,
+   "per_portion": {
+    "carbs_g": 0.2,
+    "fluid_ml": 0,
+    "phosphorus_mg": 5,
+    "potassium_mg": 54,
+    "protein_g": 3.6,
+    "sodium_mg": 55
+   },
+   "portion_quarters": 4,
+   "rating": "green",
+   "reasons": [
+    "adds_missing_group",
+    "low_potassium"
+   ],
+   "ref": "f1",
+   "serving": "1 large (33 g)",
+   "source": "builtin",
+   "warnings": []
+  },
+  {
+   "category": "Meat, Poultry & Eggs",
+   "flags": [],
+   "group": "protein",
+   "id": 7,
+   "name": "Chicken breast, roasted",
+   "often": false,
+   "per_portion": {
+    "carbs_g": 0.0,
+    "fluid_ml": 0,
+    "phosphorus_mg": 98,
+    "potassium_mg": 109,
+    "protein_g": 13.2,
+    "sodium_mg": 32
+   },
+   "portion_quarters": 2,
+   "rating": "yellow",
+   "reasons": [
+    "adds_missing_group",
+    "protein_quality"
+   ],
+   "ref": "f2",
+   "serving": "3 oz (85 g)",
+   "source": "builtin",
+   "warnings": [
+    {
+     "level": "medium",
+     "nutrient": "potassium_mg"
+    }
+   ]
+  },
+  {
+   "category": "Beverages",
+   "flags": [
+    "counts_as_fluid"
+   ],
+   "group": "extra",
+   "id": 6,
+   "name": "Water, tap",
+   "often": false,
+   "per_portion": {
+    "carbs_g": 0.0,
+    "fluid_ml": 240,
+    "phosphorus_mg": 0,
+    "potassium_mg": 0,
+    "protein_g": 0.0,
+    "sodium_mg": 7
+   },
+   "portion_quarters": 4,
+   "rating": "green",
+   "reasons": [
+    "low_potassium",
+    "low_phosphorus"
+   ],
+   "ref": "f3",
+   "serving": "1 cup (240 g)",
+   "source": "builtin",
+   "warnings": []
+  },
+  {
+   "category": "Fruits",
+   "flags": [
+    "low_potassium_fruit"
+   ],
+   "group": "veg_fruit",
+   "id": 2,
+   "name": "Apple, raw, with skin",
+   "often": false,
+   "per_portion": {
+    "carbs_g": 12.6,
+    "fluid_ml": 0,
+    "phosphorus_mg": 10,
+    "potassium_mg": 98,
+    "protein_g": 0.3,
+    "sodium_mg": 1
+   },
+   "portion_quarters": 2,
+   "rating": "green",
+   "reasons": [
+    "adds_missing_group",
+    "low_potassium"
+   ],
+   "ref": "f4",
+   "serving": "1 medium (182 g)",
+   "source": "builtin",
+   "warnings": []
+  }
+ ],
+ "handbook_pages": [
+  {
+   "slug": "potassium",
+   "title": "Potassium"
+  },
+  {
+   "slug": "potassium-leaching",
+   "title": "Potassium leaching"
+  },
+  {
+   "slug": "phosphorus",
+   "title": "Phosphorus"
+  },
+  {
+   "slug": "phosphate-additives",
+   "title": "Phosphate additives"
+  },
+  {
+   "slug": "sodium",
+   "title": "Sodium"
+  },
+  {
+   "slug": "fluid",
+   "title": "Fluid"
+  },
+  {
+   "slug": "protein",
+   "title": "Protein"
+  },
+  {
+   "slug": "eating-enough",
+   "title": "Eating enough"
+  },
+  {
+   "slug": "carb-counting",
+   "title": "Carb counting on a kidney diet"
+  },
+  {
+   "slug": "dialysis-days",
+   "title": "Dialysis days"
+  },
+  {
+   "slug": "label-reading",
+   "title": "Reading food labels"
+  },
+  {
+   "slug": "eating-out",
+   "title": "Eating out"
+  },
+  {
+   "slug": "portions",
+   "title": "Portions"
+  },
+  {
+   "slug": "guidance",
+   "title": "Meal guidance"
+  }
+ ],
+ "judged": {
+  "day": [
+   "carbs_g",
+   "fluid_ml",
+   "potassium_mg",
+   "sodium_mg"
+  ],
+  "week": [
+   "calcium_mg",
+   "calories_kcal",
+   "phosphorus_mg",
+   "protein_g"
+  ]
+ },
+ "meal": "dinner",
+ "meal_budget": {
+  "carbs_g": {
+   "gap": 60.0,
+   "goal": 60.0,
+   "in_meal": 0.0,
+   "tolerance": 10.0
+  },
+  "fluid_ml": {
+   "basis": "day",
+   "day_level": "ok",
+   "share": 1000
+  },
+  "phosphorus_mg": {
+   "basis": "week_average",
+   "day_level": "ok",
+   "share": 300
+  },
+  "potassium_mg": {
+   "basis": "day",
+   "day_level": "ok",
+   "share": 750
+  },
+  "protein_g": {
+   "aim": 14.7,
+   "aim_min": 10.1
+  },
+  "sodium_mg": {
+   "basis": "day",
+   "day_level": "ok",
+   "share": 600
+  }
+ },
+ "meals_left": [
+  "dinner",
+  "snack"
+ ],
+ "person": {
+  "age_band": null,
+  "ckd_stage": "4",
+  "diabetes": "type1",
+  "dialysis": "none",
+  "preferences": "vegetarian, no fish",
+  "sex": null
+ },
+ "saved_meals": [],
+ "targets": {
+  "carbs_per_meal_g": 60.0,
+  "fluid_ml": 1500,
+  "phosphorus_mg": 1000,
+  "potassium_mg": 2500,
+  "protein_g": {
+   "max": 56.0,
+   "min": 42.0
+  },
+  "sodium_mg": 2000
+ },
+ "today": {
+  "eaten": {
+   "calories_kcal": 235,
+   "carbs_g": 25.1,
+   "fluid_ml": 0,
+   "phosphorus_mg": 216,
+   "potassium_mg": 413,
+   "protein_g": 26.9,
+   "sodium_mg": 65
+  },
+  "planned": {
+   "calories_kcal": 0,
+   "carbs_g": 0.0,
+   "fluid_ml": 0,
+   "phosphorus_mg": 0,
+   "potassium_mg": 0,
+   "protein_g": 0.0,
+   "sodium_mg": 0
+  },
+  "status": {
+   "fluid_ml": "ok",
+   "phosphorus_mg": "ok",
+   "potassium_mg": "ok",
+   "sodium_mg": "ok"
+  }
+ },
+ "week_avg": {
+  "phosphorus_mg": 31,
+  "protein_g": 3.8
+ }
+}

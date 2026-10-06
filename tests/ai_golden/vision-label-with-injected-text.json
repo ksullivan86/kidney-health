@@ -14,14 +14,12 @@
       "potassium_mg": 94.0,
       "sodium_mg": 230.0,
       "serving_g": 30.0,
-      "flags": [
-        "phosphate_additive",
-        "potassium_additive"
-      ]
+      "flags": []
     },
     "checks_include": [
       "estimated:potassium_mg",
-      "additive:phosphate"
+      "additive:phosphate",
+      "additive:potassium"
     ]
   }
 }

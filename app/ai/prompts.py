@@ -27,7 +27,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from ..textclean import clean_text
 
-PROMPT_VERSION = "2026-10-06.1"
+PROMPT_VERSION = "2026-10-06.2"
 
 SYSTEM_PROMPT = """\
 You are the optional "meal ideas" helper inside Kidney Health, a self-hosted food log used by a
@@ -107,6 +107,9 @@ WEEK_JUDGED = ("calcium_mg", "calories_kcal", "phosphorus_mg", "protein_g")
 TARGET_KEYS = ("calories_kcal", "protein_g", "carbs_g", "carbs_per_meal_g", "carbs_per_snack_g", "fiber_g", "sodium_mg",
                "potassium_mg", "phosphorus_mg", "calcium_mg", "fluid_ml")
 TOTAL_KEYS = ("carbs_g", "protein_g", "potassium_mg", "phosphorus_mg", "sodium_mg", "fluid_ml", "calories_kcal")
+# The guidance bridge names per-portion numbers briefly; the prompt uses the app's nutrient keys throughout.
+PER_PORTION_KEYS: Mapping[str, str] = {"carbs": "carbs_g", "potassium": "potassium_mg", "phosphorus": "phosphorus_mg",
+                                       "sodium": "sodium_mg", "fluid": "fluid_ml", "protein": "protein_g"}
 SHOWN_FLAGS = frozenset({"phosphate_additive", "potassium_additive", "high_gi", "counts_as_fluid", "processed", "low_potassium_fruit"})
 UNTRUSTED_NAME_CHARS = 80
 PREFERENCES_CHARS = 200
@@ -253,7 +256,7 @@ def candidate_block(item: Mapping[str, Any], food: Any) -> dict[str, Any]:
         "group": item.get("group"),
         "serving": clean(food.serving_desc, 60),
         "portion_quarters": int(round(float(item["portion"]) * 4)),
-        "per_portion": item.get("per_portion"),
+        "per_portion": {PER_PORTION_KEYS.get(k, k): v for k, v in (item.get("per_portion") or {}).items()},
         "rating": item.get("renal_rating"),
         "warnings": [{"nutrient": n, "level": lv} for n, lv in warnings],
         "flags": sorted(f for f in food.flags if f in SHOWN_FLAGS),

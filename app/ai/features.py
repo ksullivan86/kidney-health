@@ -355,7 +355,12 @@ def label_checks(values: Mapping[str, float | None], serving_g: float | None) ->
 
 
 def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
-    """Note 03 R8 step 4 + note 04 R3: scale, salt → sodium, %DV → mg (estimated), additive scan, checks."""
+    """Note 03 R8 step 4 + note 04 R3: scale, salt → sodium, %DV → mg (estimated), additive scan, checks.
+
+    The ``draft`` has the shape of ``POST /api/foods`` (``FoodCreate``); ``needs`` lists the fields the
+    person must fill in before it can be saved (``name``, ``serving_g``), ``from_photo`` the fields the
+    AI read (the UI marks them), ``estimated`` the values worked out from % Daily Value or salt. Saving
+    is the person's ordinary ``POST /api/foods``, which scans the **confirmed** ingredient text again."""
     if answer.status != "ok":
         message = ("This does not look like a nutrition label." if answer.status == "not_a_label"
                    else "The label could not be read; try a sharper photo with less glare.")
@@ -397,7 +402,8 @@ def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
     ingredients = clean_text(answer.ingredients_text, max_len=4000, keep_newlines=True)
     additives = scan_additives(None, ingredients, name)
     for f in additives.findings:
-        checks.append({"code": f"additive:{f.kind}", "message": f"The ingredients list {f.name}."})
+        checks.append({"code": f"additive:{f.kind}", "message": f"The ingredients list {f.name}; saving keeps the warning "
+                       "if it is still in the ingredients you confirm."})
     nutrients = {k: (None if v is None else round(float(v), 1)) for k, v in values.items()}
     nutrients["fluid_ml"] = None
     draft = {
@@ -407,25 +413,24 @@ def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
         "serving_desc": serving_text or (f"1 serving ({serving_g:g} g)" if serving_g else "1 serving"),
         "serving_g": round(float(serving_g), 1) if serving_g else None,
         "nutrients": nutrients,
-        "flags": list(additives.flags),
-        "kidney_notes": additives.kidney_notes,
+        # No flags from the model's reading: saving runs the additive scan on the ingredient text the person
+        # confirmed (note 04 §9.2); ``checks`` already tells them what the scan found in the text as read.
+        "flags": [],
+        "kidney_notes": None,
         "ingredients_text": ingredients,
     }
+    needs = [field for field, missing in (("name", not draft["name"]), ("serving_g", draft["serving_g"] is None)) if missing]
     return {"status": "ok", "draft": draft, "from_photo": from_photo + (["name"] if name else []) + (["ingredients_text"] if ingredients else []),
-            "estimated": estimated, "checks": checks, "notice": LABEL_NOTICE}
+            "estimated": estimated, "needs": needs, "checks": checks, "notice": LABEL_NOTICE}
 
 
 def prepare_read_label(cfg: ProviderConfig, image: CheckedImage) -> Prepared:
     schema = schemas.read_label_schema()
     body = _vision_body(cfg, "read_label", schema, "nutrition_label", image)
 
-    def judge(answer: schemas.LabelAnswer) -> dict[str, Any]:
-        result = label_draft(answer)
-        result["provider"] = f"{cfg.preset}:{cfg.vision_model or cfg.model}"
-        return result
-
+    # The route adds ``provider`` ({id, label, model, host}) to every answer (note 03 R8 step 5).
     return Prepared(feature="read_label", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.LabelAnswer),
-                    judge=judge, purpose="photos", vision=True, images=[image])
+                    judge=label_draft, purpose="photos", vision=True, images=[image])
 
 
 def prepare_plate(cfg: ProviderConfig, image: CheckedImage, *, search: Callable[[str], list[dict[str, Any]]]) -> Prepared:
@@ -452,7 +457,6 @@ def prepare_plate(cfg: ProviderConfig, image: CheckedImage, *, search: Callable[
                           "portion_text": None if grams is None else f"about {round(grams):d} g", "confidence": item.confidence,
                           "ticked": item.confidence != "low", "candidates": candidates})
         return {"status": "ok", "items": items, "dropped": dropped, "banner": PLATE_BANNER,
-                "provider": f"{cfg.preset}:{cfg.vision_model or cfg.model}",
                 "notice": "AI estimate from a photo. Check each food and amount; entries are added as planned."}
 
     return Prepared(feature="plate", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.PlateAnswer),
