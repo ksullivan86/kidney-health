@@ -1,0 +1,40 @@
+# Weekly check of the vendored barcode decoder (docs/dev/research/03-barcode-and-photo.md §6 item 19 and
+# §5 "Vendored code goes stale or vulnerable"): Dependabot cannot see app/static/vendor/, so this job
+# asks the npm registry whether barcode-detector (and the zxing-wasm build it uses) has a newer release,
+# and re-checks the committed files against their SHA-256 pins (scripts/vendor_barcode.py).
+#
+# Warn-only: a newer release is a warning annotation on the run; nothing is written anywhere. Updating is a
+# reviewed change (app/static/vendor/README.md "Updating"). A pin mismatch fails the job: the committed
+# files changed without the script.
+name: Vendored decoder check
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: vendor-check
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    name: Barcode decoder (pins and npm releases)
+    if: github.repository == 'ksullivan86/kidney-health'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: The committed files match their pins
+        run: python scripts/vendor_barcode.py --check
+      - name: Newer releases on npm (warn only)
+        run: python scripts/vendor_barcode.py --check-latest
