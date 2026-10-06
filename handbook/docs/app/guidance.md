@@ -14,9 +14,8 @@ sources: [NOTE06, NOTE04, ARCH, AKF-meal, A26-5, A26-6, DG12, Q20, FDC]
 
 # Meal guidance
 
-!!! note "Coming in v0.3"
-    Meal guidance arrives with version 0.3. It is switched on by default; you can hide it in
-    **Settings → Meal guidance**.
+!!! note "New in v0.3"
+    Meal guidance is switched on by default; you can hide it in **Settings → Meal guidance**.
 
 Meal guidance answers "what can I still eat today?" from your own targets, what you have already eaten
 and planned, and the foods you usually have. It uses fixed, written rules, **not AI**, so it works
@@ -26,13 +25,16 @@ without the internet and gives the same answer every time ([design note 06][NOTE
 
 | Part | Where | What you get |
 |---|---|---|
-| **What fits now** | **Add**, after you pick a meal | Up to 11 foods, grouped as protein, starch, vegetables and fruit, and extras, each with a portion that fits, the numbers, and one reason ("Low in potassium (55 mg)"). Saved meals that fit appear as chips. |
-| **Swap ideas** | the food sheet, when a food has a potassium, phosphorus or sodium warning | Up to 5 foods from the same group with **about the same carbohydrate** (or protein) and at least 25 % less of the problem nutrient, plus a smaller-portion option. |
-| **Plan the rest of my day** | **Today** | A suggested plan for the meals you have not logged yet, built from your saved meals, your usual meals and the food list. **Use this plan** adds it as planned food; **Show another** gives a different one. |
-| **Insights** | **Today** in the evening, **Trends** for the week | Short notes with numbers, such as "Potassium was over your limit on 2 of 7 days (Sat, Sun). The main sources were potatoes and orange juice." |
+| **What fits now** | the top of **Add**, after you pick a meal there; or **What fits** under a meal in **Today** | Up to 11 foods, grouped as protein, starch, vegetables and fruit, and extras (the best two of each group first, **Show more** for the rest), each with a portion that fits, the numbers, and one reason ("Low in potassium (55 mg)"). **Add** and **Plan** open the food sheet with that portion filled in. Saved meals and meals you often have that fit appear as chips. |
+| **Swap ideas** | the food sheet, under a potassium, phosphorus or sodium warning: open **Lower-potassium ideas** (or lower-phosphorus, lower-sodium) | Up to 5 foods with **about the same carbohydrate** (or protein) and at least 25 % less of the problem nutrient, plus a smaller-portion option. **Use this instead** puts the other food in the sheet; **Use this amount** sets the smaller portion. |
+| **Plan the rest of my day** | the **Meal ideas** card in **Today**, or **Plan a day…** in **Plan** | A suggested plan for the meals you have not logged yet (tick other meals to plan them anyway), built from your saved meals, your usual meals and the food list, with how the day would end up. **Use this plan** adds it as planned food; **Show another** gives a different one (5 options). |
+| **Insights** | **Today** once breakfast, lunch and dinner are logged or after 7 pm (and for any past day); **Trends** for the days you choose there | Short notes with numbers, such as "Potassium was over your limit on 2 of 7 days (Sat, Sun). The main sources were potatoes and orange juice." |
 
 Nothing is saved until you tap a button, and everything you add goes through the same warnings as any
 other food ([architecture contract][ARCH]).
+
+To stop a food from coming up, open **⋯** next to it and choose **Not for me**. It stays in search, and
+**Settings → Meal guidance** lists it with **Suggest again**.
 
 ## How the rules decide
 
@@ -72,12 +74,17 @@ your own meals.
 ## Low treatments
 
 Treat a low first, with 15 g of fast carbohydrate when your glucose is under 70 mg/dL (3.9 mmol/L),
-and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). When you log it, keep
+and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). If your profile says you have
+diabetes, **Today** has a **Treating a low** button: it shows what to do and your own low-treatment
+foods at your dose, lowest potassium first, each with **Log it**. It works even with meal guidance
+switched off, and without a connection it still shows what to do. When you log a low treatment, keep
 **Used to treat a low** ticked (it is ticked for you for glucose tablets, glucose gel and the other
 low-treatment foods; you can tick it for any food you used, and untick it when, say, apple juice was
 part of a meal). Low treatments count toward
 potassium, phosphorus, sodium and fluid (you really had them) but are left out of the meal
-carbohydrate check, and guidance never suggests a smaller dose. If a treatment had a lot of potassium, the app may add:
+carbohydrate check, and guidance never suggests a smaller dose. While the box is ticked the food sheet shows
+the numbers as plain information, never as a warning, and Today marks the entry **treated a low**. If a
+treatment had a lot of potassium, **For your next low** in the food sheet (and the day's insights) may add:
 "For your next low: Glucose gel (1 tube) gives 15 g carbs with 0 mg potassium."
 The suggested amount is never below your low-treatment dose (default 15 g, which you can set from 5 to
 30 g as your diabetes team advises) ([ADA 2026][A26-6], section 6; [Treating a low](../t1d/treating-a-low.md)).
@@ -108,13 +115,14 @@ In **Settings → Meal guidance**:
 
 | Setting | Default | What it does |
 |---|---|---|
-| Show meal guidance | on | hides every part when off |
+| Show meal guidance | on | hides every part when off (**Treating a low** stays) |
+| Show "Plan the rest of my day" | on | hides the plan builder when off |
+| Show insights on Today and Trends | on | hides the insight notes when off |
 | How close to my meal carb goal counts as on target | 10 g | 5–20 g; ask your diabetes team |
-| Carbs I take to treat a low | 15 g | 5–30 g, from your diabetes team; used only for "for your next low" |
-| Show the plan builder | on | hides **Plan the rest of my day** when off |
-| Show insights | on | hides the insight notes when off |
-| Never suggest | none | food categories to leave out, for example Fish & Seafood |
-| Not for me | none | single foods (up to 500), added from any suggestion; they stay searchable and loggable |
+| Carbs I take to treat a low | 15 g | 5–30 g, from your diabetes team; sizes the low-treatment options |
+| Never suggest these kinds of food | none | food categories to leave out, for example Fish & Seafood |
+| Let AI re-order and explain suggestions | off | shown when your server offers AI; see below |
+| "Not for me" foods | none | single foods (up to 500), added from any suggestion; they stay searchable and loggable; **Suggest again** removes one |
 
 ## What to do
 
@@ -129,14 +137,22 @@ In **Settings → Meal guidance**:
   shows the closest meal and the numbers left. Choose a small, low-potassium meal and check
   [Potassium](../eat/potassium.md).
 - **The same foods keep coming up.** Mark them **Not for me**, or save new meals you like.
-- **"Guidance needs a connection to your server."** Guidance runs on the server; the app shows the last
-  ideas it fetched, with their time.
+- **"Guidance needs a connection to your server."** Guidance runs on the server. While the app stays
+  open it shows the last ideas it fetched, with their time ("Saved at 6:40 PM"); nothing is kept after
+  you close it, because the ideas are about your health.
 
 ## Optional AI ideas
 
 If your admin allows it and you opt in, AI can re-rank the app's own ideas and pick between them. AI
 only chooses from foods the rules already allowed, and every idea is checked again by the same rules
 before you see it ([Optional AI](ai.md); [design note 04][NOTE04]).
+
+- **AI ideas, checked against your targets** appears at the end of **What fits now** once AI ideas are on
+  in **Settings → AI ideas**.
+- With **Let AI re-order and explain suggestions** ticked in **Settings → Meal guidance**, you also get
+  **AI order** (the same foods in the AI's order, each with its reason; tap again for the app's order),
+  **Ask AI to pick** under swap ideas, and **Let AI choose** in the plan, which marks the meals it chose
+  **AI's pick**. Low treatments are never sent to AI.
 
 ## Related pages
 

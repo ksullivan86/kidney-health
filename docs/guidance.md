@@ -51,16 +51,22 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 
 | Feature | Where (UI, frontend builder) | Endpoint |
 |---|---|---|
-| **What fits now**: foods and saved/usual meals that fit the next meal, with a reason each | Add view, after choosing a meal | `GET /api/guidance/next-meal` |
-| **Swap ideas**: lower-potassium/phosphorus/sodium alternatives with the same carbs | Entry sheet, under a warning | `GET /api/guidance/swaps` |
-| **For your next low**: the person's low treatments, lowest potassium first, and the "Treating a low" card | Entry sheet of a low treatment | `GET /api/guidance/hypo-options` |
-| **Plan the rest of my day**: one option per open meal, "Show another", "Use this plan" | Today | `POST /api/guidance/plan-day` |
-| **Insights**: end of day and weekly, in plain language with numbers | Today, Trends | `GET /api/guidance/insights/day`, `/insights/period` |
-| **Not for me**: foods never suggested again (still searchable and loggable) | Row menu of a suggestion | `PUT/DELETE /api/guidance/not-for-me/{food_id}` |
+| **What fits now**: foods and saved/usual meals that fit the next meal, with a reason each | Top of the Add view after choosing a meal; "What fits" under a meal in Today | `GET /api/guidance/next-meal` |
+| **Swap ideas**: lower-potassium/phosphorus/sodium alternatives with the same carbs | Entry sheet, "Lower-… ideas" under a warning | `GET /api/guidance/swaps` |
+| **For your next low**: lower-potassium low treatments and the "Treating a low" card | Entry sheet with "Used to treat a low" ticked | `GET /api/guidance/swaps?purpose=hypo` |
+| **Treating a low**: the card and the person's low treatments at their dose, with "Log it" | Today's Meal ideas card (people with diabetes), even with guidance off; offline from the browser twin of the card | `GET /api/guidance/hypo-options` |
+| **Plan the rest of my day**: one option per open meal, "Show another", "Use this plan" | Today's Meal ideas card; Plan → "Plan a day…" | `POST /api/guidance/plan-day`, then `POST /api/log/batch` |
+| **Insights**: end of day and weekly, in plain language with numbers | Today (a past day, or once breakfast, lunch and dinner are eaten or after 19:00), Trends (the chosen days ending yesterday) | `GET /api/guidance/insights/day`, `/insights/period` |
+| **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/not-for-me/{food_id}` |
 | **The rules**: every number below, its basis, the handbook pages | Docs, contributors | `GET /api/guidance/rules` |
 
 When the profile has no numeric potassium, phosphorus or sodium target and no meal carbohydrate goal,
 every guidance answer is `{"status": "no_targets", "message": "Set your targets in Settings first; …"}`.
+
+The screens are described for people in the handbook (`handbook/docs/app/guidance.md`) and for
+contributors in ARCHITECTURE.md, "M2 API: guidance" → "Frontend". The app (`js/views/guidance.js`)
+shows the server's texts word for word and keeps the last answer of each kind in memory for the
+offline message; nothing is written to browser storage.
 
 ## The room left for a meal
 

@@ -706,14 +706,19 @@ app/static/
   js/engine/settings.js settings registry + precedence (twin of app/settings_registry.py / settings_store.py)
   js/engine/targets.js, js/engine/kidney_function.js        (M2 targets: KH.targets twin of app/targets.py + target_rules.py;
                         KH.kidney twin of app/units.py + app/kidney_function.py; kidney_function.js loads first)
-  js/engine/guidance.js (or js/engine/guidance/*.js)        (M2 guidance)
+  js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
+                        budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
   js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
   js/views/labs.js, guidance.js                                                    (M2)
                         labs.js: the Lab results view (#labs, no tab; opened from Profile) and KH.labs (helpers Profile uses)
+                        guidance.js: KH.guidance, the meal guidance UI (M2 guidance; see "M2 API: guidance" → Frontend)
   css/labs.css          Lab results view, the potassium safety banner, Profile's lab summary (M2 targets)
   js/mock/labs.js       demo /api/labs routes (M2 targets); js/mock/profile.js answers the v0.3 profile fields and suggestion
+  css/guidance.css      What fits now, the Meal ideas and insight cards, the guidance sheet, swap ideas, Settings → Meal guidance
+  js/mock/guidance.js   demo /api/guidance/* routes over KH.guidanceEngine; js/mock/log.js answers POST /api/log/batch,
+                        purpose and client_id; js/mock/meals.js answers meal_hint
   js/pwa.js (M1), js/offline.js, js/scan.js (M2)
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
   js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
@@ -1247,7 +1252,45 @@ The browser twin (`js/engine/guidance.js` + `js/mock/guidance.js`, frontend buil
 engine (`tests/guidance/test_parity_vectors.py` fails when it is stale): plain-JSON inputs (a fixed food
 subset, the person's profile, preferences, day, history, saved meals, combos) and the engine's JSON
 answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, `day_insights`,
-`period_insights` and `prefilter`.
+`period_insights` and `prefilter`. The engine is `js/engine/guidance/*.js` (one file per Python module,
+`KH.guidanceEngine`); `tools/e2e/parity.py` section 12 compares every guidance route, `POST /api/log/batch`,
+`purpose`/`client_id` and `meal_hint` with a real server, and `tests/test_guidance_ui.py` keeps the demo's
+texts, limits and starter-meal copy equal to the server's.
+
+### Frontend (`js/views/guidance.js`, `KH.guidance`; note 06 §4.16)
+
+* **Add**: "What fits now" (`#guidance-fits`) above the search: a meal picker (set by Today's "Add to …" /
+  "What fits"), the `room_text`, foods by group (two per group, then "Show more"), each with portion,
+  `fit_text`, the first reason, the renal dot, **Add** / **Plan** (the entry sheet, prefilled) and a "⋯"
+  disclosure with **Not for me**; saved/usual meals that fit as chips (a sheet: add or plan them, saved
+  ones through `/apply`, usual ones through `/api/log/batch`); tips; `KH.ai.mountIdeas` when `ai.available`.
+* **Entry sheet** (`js/views/add.js` calls `KH.guidance.entry`): **Used to treat a low** (`#entry-hypo`) shows
+  for low-treatment foods, entries stored as one and people with diabetes; pre-ticked for low-treatment
+  foods; sent as `purpose` `hypo`/`none` (on edit only when changed). Ticked: the warnings become a plain
+  note with the numbers, the rating pill is hidden, and "For your next low" (`/swaps?purpose=hypo`: the card
+  and lower-potassium low treatments) replaces swap ideas. Otherwise a K/P/Na warning (or day overflow)
+  shows "Lower-… ideas" (`/swaps`, fetched when opened): **Use this instead** (new entries) and **Use this
+  amount** (`portion_option`).
+* **Today**: the Meal ideas card (`#guidance-today`: What fits <meal>, Plan the rest of my day, Treating a
+  low for people with diabetes), "What fits" under each meal, a "treated a low" badge, and end-of-day
+  insights (`#guidance-day-insights`) for a past day or today once breakfast, lunch and dinner are eaten or
+  after 19:00 local.
+* **Plan sheet** (`#sheet-guidance`, from Today or Plan → "Plan a day…"): date, meals to plan (the
+  server's open slots first), where ideas come from (saved / usual / starters), each meal with its items,
+  totals and why-lines, the day with the plan, the energy note; **Show another** cycles `variant` 0–4;
+  **Use this plan** sends `apply.entries` to `POST /api/log/batch` with a fresh `client_id` each (one retry
+  after a network error is answered `existing`).
+* **Treating a low** (`GET /hypo-options`): the card, the person's options at their dose with **Log it**
+  (`purpose: "hypo"`); never filtered, never warned against, available with guidance off; offline the card
+  is drawn from `KH.guidanceEngine.M.treatingALowCard`.
+* **Trends**: period insights (`#guidance-period`) for the chosen 7/14/30 days ending yesterday.
+* **Settings → Meal guidance** (`#set-guidance`): the `guidance` object's fields (labelled, errors under the
+  field) and the "Not for me" list (**Suggest again**); Admin → Server settings groups `guidance.*`.
+* **Optional AI** (only with `ai_enrich` and AI available; `KH.ai.withConsent`): "AI order" (rerank) over the
+  same list, "Ask AI to pick" under rule swaps (never for a low), "Let AI choose" in the plan ("AI's pick").
+* **Offline**: the last answer of each kind is kept in memory with its time ("Saved at …"); without one,
+  "Guidance needs a connection to your server." Nothing goes to browser storage. Lists carry
+  `role="list"`, async results are announced through `role="status"` regions.
 
 ## M2 API: barcode
 
