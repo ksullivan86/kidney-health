@@ -112,13 +112,16 @@ SLEEPS: list[float] = []
 
 
 @contextmanager
-def attach(app: Any, provider: FakeProvider) -> Iterator[FakeProvider]:
-    """Point the app's AI client at ``provider`` (and make retries instant) for the duration."""
+def attach(app: Any, provider: FakeProvider, *, reprobe: bool = False) -> Iterator[FakeProvider]:
+    """Point the app's AI client at ``provider`` (and make retries instant) for the duration. The daily
+    background connection test is off unless ``reprobe`` (it would add requests to the exact sequences
+    the tests replay)."""
     state = app.state.ai
-    old_factory, old_sleep = state.client.transport_factory, state.client._sleep
+    old_factory, old_sleep, old_reprobe = state.client.transport_factory, state.client._sleep, state.auto_reprobe
     state.client.transport_factory = provider.factory
     state.client._sleep = no_sleep
+    state.auto_reprobe = reprobe
     try:
         yield provider
     finally:
-        state.client.transport_factory, state.client._sleep = old_factory, old_sleep
+        state.client.transport_factory, state.client._sleep, state.auto_reprobe = old_factory, old_sleep, old_reprobe

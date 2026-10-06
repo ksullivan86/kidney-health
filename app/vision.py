@@ -25,7 +25,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from starlette.concurrency import run_in_threadpool
 
 from .ai import features as F
@@ -88,7 +88,7 @@ def _upstream_error(result: dict[str, Any]) -> None:
 
 
 @router.post("/label")
-async def read_label(request: Request, user: CurrentUser, dry_run: bool = Query(False),
+async def read_label(request: Request, user: CurrentUser, background: BackgroundTasks, dry_run: bool = Query(False),
                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Read a nutrition label: printed values only, a Quick-add draft the person checks (never saved)."""
     cfg = await run_in_threadpool(_vision_config, request, conn, user, plate=False)
@@ -96,13 +96,13 @@ async def read_label(request: Request, user: CurrentUser, dry_run: bool = Query(
     prep = F.prepare_read_label(cfg, image)
     if dry_run:
         return prep.dry_run(request.app.version)
-    result = await run_call(request, conn, user, prep)
+    result = await run_call(request, conn, user, prep, background)
     _upstream_error(result)
     return result
 
 
 @router.post("/plate")
-async def plate(request: Request, user: CurrentUser, dry_run: bool = Query(False),
+async def plate(request: Request, user: CurrentUser, background: BackgroundTasks, dry_run: bool = Query(False),
                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """What is on this plate: names and a rough weight, matched to the person's own foods (off by default)."""
     cfg = await run_in_threadpool(_vision_config, request, conn, user, plate=True)
@@ -110,6 +110,6 @@ async def plate(request: Request, user: CurrentUser, dry_run: bool = Query(False
     prep = F.prepare_plate(cfg, image, search=F.search_function(conn, user.id))
     if dry_run:
         return prep.dry_run(request.app.version)
-    result = await run_call(request, conn, user, prep)
+    result = await run_call(request, conn, user, prep, background)
     _upstream_error(result)
     return result

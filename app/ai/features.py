@@ -24,7 +24,7 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import date as _date
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping
 
 from ..additives import scan as scan_additives
 from ..guidance import hypo

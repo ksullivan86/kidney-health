@@ -15,10 +15,9 @@ food names and copied label text; those strings are cleaned, capped and filtered
 """
 from __future__ import annotations
 
-import math
-from typing import Annotated, Any, Iterable, Literal, Mapping, Sequence
+from typing import Annotated, Any, Literal, Mapping, Sequence
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from ..nutrients import NUTRIENT_KEYS
 
@@ -242,12 +241,6 @@ class ParseMealAnswer(BaseModel):
     items: Annotated[list[ParsedItem], Field(max_length=MAX_PARSE_ITEMS)]
 
 
-def _finite_or_none(value: Any) -> Any:
-    if isinstance(value, float) and not math.isfinite(value):
-        raise ValueError("must be a finite number")
-    return value
-
-
 class LabelPerServing(BaseModel):
     model_config = _FORBID
     calories_kcal: Number | None
@@ -298,11 +291,6 @@ class PlateAnswer(BaseModel):
     status: Literal["ok", "no_food", "unsure"]
     items: Annotated[list[PlateItem], Field(max_length=MAX_PLATE_ITEMS)]
 
-    @field_validator("items")
-    @classmethod
-    def _cap(cls, value: list[PlateItem]) -> list[PlateItem]:
-        return value
-
 
 def model_validator_for(model: type[BaseModel]):
     """A validator for :meth:`app.ai.client.ChatClient.complete_json`."""
@@ -312,6 +300,3 @@ def model_validator_for(model: type[BaseModel]):
 
     return validate
 
-
-def enum_values(values: Iterable[Any]) -> list[Any]:
-    return list(dict.fromkeys(values))

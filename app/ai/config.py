@@ -36,12 +36,16 @@ from ..security import register_secret
 from ..settings_store import SettingsStore
 from .client import ProviderConfig
 from .netpolicy import BaseUrl, NetPolicy, PolicyError, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
+from .transport import ca_store_problem
 from .presets import PRESETS, POLICY_VERSION, STRUCTURED_SETTINGS, REASONING_EFFORTS, Preset, get as get_preset, policy_line
 
 log = logging.getLogger("kidney_health.ai")
 
 LAST4_MIN_LENGTH = 20
 SAFETY_ID_INFO = "kidney-health/v1/openai-safety-id"  # §9 A6
+KEY_FINGERPRINT_INFO = "kidney-health/v1/ai-key-fingerprint"  # tells a changed env key without storing it
+REPROBE_EVERY_S = 86_400.0  # R4 step 5: shared providers are tested again daily
+REPROBE_RETRY_S = 3_600.0  # after an attempt (passed, failed or skipped), the next one waits at least this long
 MAX_TOKENS_RANGE = (64, 32_768)
 TIMEOUT_RANGE = (5.0, 600.0)
 CONTEXT_RANGE = (1024, 2_000_000)
@@ -70,16 +74,18 @@ def check_env(settings: Settings) -> list[str]:
     env = settings.ai
     warnings: list[str] = []
     build_policy(settings)
+    ca_problem = ca_store_problem()
     if env.http_proxy:
         try:
-            parts = parse_proxy(env.http_proxy)
+            parse_proxy(env.http_proxy)
         except ValueError as exc:
             raise ConfigError(f"AI_HTTP_PROXY: {exc}") from None
-        del parts
     if not env.provider:
         stray = [n for n, v in (("AI_BASE_URL", env.base_url), ("AI_MODEL", env.model), ("AI_API_KEY", env.api_key)) if v]
         if stray:
             warnings.append(f"{', '.join(stray)} {'is' if len(stray) == 1 else 'are'} set but AI_PROVIDER is not, so no server AI provider is defined.")
+        if ca_problem:
+            warnings.append(f"AI providers on https will not work: {ca_problem}.")
         return warnings
     try:
         preset = get_preset(env.provider)
@@ -89,9 +95,13 @@ def check_env(settings: Settings) -> list[str]:
     if not base:
         raise ConfigError(f"AI_PROVIDER={preset.name} needs AI_BASE_URL (the server's address ending in /v1).")
     try:
-        parse_base_url(base)
+        parsed = parse_base_url(base)
     except PolicyError as exc:
         raise ConfigError(f"AI_BASE_URL: {exc}") from None
+    if ca_problem and parsed.scheme == "https":
+        raise ConfigError(f"AI_PROVIDER={preset.name} uses https, but {ca_problem}.")
+    if ca_problem:
+        warnings.append(f"AI providers on https will not work: {ca_problem}.")
     if not (env.model or preset.default_model):
         raise ConfigError(f"AI_PROVIDER={preset.name} needs AI_MODEL (the model name the server knows).")
     if preset.key_required and not env.api_key:
@@ -107,6 +117,7 @@ def check_env(settings: Settings) -> list[str]:
 
 
 def parse_proxy(raw: str) -> str:
+    """``AI_HTTP_PROXY`` must be an ``http://`` or ``https://`` URL with a host (``ValueError`` otherwise)."""
     from urllib.parse import urlsplit
 
     parts = urlsplit(raw)
@@ -115,11 +126,21 @@ def parse_proxy(raw: str) -> str:
     return raw
 
 
-def sync_env_provider(conn: sqlite3.Connection, settings: Settings) -> int | None:
+def key_fingerprint(keyring: Keyring | None, key: str | None) -> str | None:
+    """A short HMAC of a key under ``SECRET_KEY`` (never the key): lets the start-up sync notice that the
+    environment's key changed, so the env provider is tested again (R4 step 5)."""
+    if keyring is None:
+        return None
+    return keyring.mac(KEY_FINGERPRINT_INFO, key or "").hex()[:16]
+
+
+def sync_env_provider(conn: sqlite3.Connection, settings: Settings, keyring: Keyring | None = None) -> int | None:
     """Keep the ``locked`` shared provider in step with ``AI_PROVIDER`` (no commit). Returns its id.
 
     The key stays in the environment. When the host changes, consents given for the old host are
-    deleted, so everyone is asked again (R9 step 3).
+    deleted, so everyone is asked again (R9 step 3). A new URL, model or key clears the last
+    connection test, so the provider is tested again (R4 step 5; the key is compared through
+    :func:`key_fingerprint`).
     """
     if not table_exists(conn, "ai_providers"):
         return None
@@ -153,6 +174,11 @@ def sync_env_provider(conn: sqlite3.Connection, settings: Settings) -> int | Non
         sets = ", ".join(f"{k} = ?" for k in changed)
         conn.execute(f"UPDATE ai_providers SET {sets}, probe_json = NULL, probed_at = NULL, disabled_reason = NULL, updated_at = ? WHERE id = ?",
                      (*changed.values(), now, row["id"]))
+        return int(row["id"])
+    probe = _probe(row)
+    fingerprint = key_fingerprint(keyring, env.api_key)
+    if probe is not None and fingerprint is not None and probe.get("key_fp") != fingerprint:
+        clear_probe(conn, int(row["id"]))
     return int(row["id"])
 
 
@@ -328,6 +354,27 @@ def save_probe(conn: sqlite3.Connection, provider_id: int, probe: Mapping[str, A
         reason = "hermes_tools" if "tools enabled" in str(tools.get("reason") or "") else "hermes_check_failed"
     conn.execute("UPDATE ai_providers SET probe_json = ?, probed_at = ?, disabled_reason = ? WHERE id = ?",
                  (json.dumps(probe, separators=(",", ":"), default=str), utcnow(), reason, provider_id))
+
+
+def probe_age_s(row: Mapping[str, Any], now: datetime | None = None) -> float | None:
+    """Seconds since the provider's last connection test (``None`` when never tested or unreadable)."""
+    if not row["probed_at"]:
+        return None
+    try:
+        probed = datetime.fromisoformat(str(row["probed_at"]).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if probed.tzinfo is None:
+        probed = probed.replace(tzinfo=timezone.utc)
+    return ((now or datetime.now(timezone.utc)) - probed).total_seconds()
+
+
+def reprobe_due(row: Mapping[str, Any] | None, now: datetime | None = None) -> bool:
+    """R4 step 5: an enabled shared provider whose last test is missing or a day old is tested again."""
+    if row is None or row["scope"] != "shared" or not row["enabled"]:
+        return False
+    age = probe_age_s(row, now)
+    return age is None or age >= REPROBE_EVERY_S
 
 
 def record_tool_check(conn: sqlite3.Connection, row: Mapping[str, Any], ok: bool, reason: str | None) -> None:

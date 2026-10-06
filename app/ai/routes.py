@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date as _date, datetime, timedelta, timezone
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Path, Query, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_validator
 from starlette.concurrency import run_in_threadpool
 
@@ -35,7 +35,7 @@ from ..audit import audit
 from ..config import Settings
 from ..credentials import InvalidCredential, validate_api_key
 from ..crypto import InvalidToken
-from ..db import get_db
+from ..db import connect, get_db
 from ..guidance import ai_bridge
 from ..guidance import api as guidance_api
 from ..guidance import context as guidance_context
@@ -48,7 +48,6 @@ from . import features as F
 from . import presets as P
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
-from .transport import AiTransportError
 
 log = logging.getLogger("kidney_health.ai")
 
@@ -92,6 +91,8 @@ class AiState:
     client: C.ChatClient
     gate: C.ConcurrencyGate = field(default_factory=C.ConcurrencyGate)
     last_purge: float = 0.0
+    reprobe_attempts: dict[int, float] = field(default_factory=dict)  # provider id → monotonic time of the last try
+    auto_reprobe: bool = True  # the daily background test (R4 step 5); tests that replay exact request sequences turn it off
 
     @property
     def policy(self):  # noqa: ANN201 - NetPolicy
@@ -113,9 +114,7 @@ def _keyring(request: Request):  # noqa: ANN202 - Keyring
 
 
 def _policy_for(request: Request):  # noqa: ANN202
-    server = request.scope.get("server")
-    port = server[1] if isinstance(server, (tuple, list)) and len(server) > 1 else None
-    return ai_state(request).policy.with_self_port(port)
+    return ai_state(request).policy.with_self_port(_server_port(request))
 
 
 def _client_for(request: Request) -> C.ChatClient:
@@ -190,8 +189,9 @@ async def tool_gate(request: Request, conn: sqlite3.Connection, prep: F.Prepared
 
     await run_in_threadpool(store)
     if not check.ok:
-        log.warning("AI provider %s refused: Hermes tool check failed", prep.cfg.id)
-        raise ApiProblem(503, check.reason or C.HERMES_CHECK_FAILED, reason="hermes_tools")
+        code = "hermes_tools" if check.reason == C.HERMES_TOOLS_REASON else "hermes_check_failed"
+        log.warning("AI provider %s refused: Hermes tool check failed (%s)", prep.cfg.id, code)
+        raise ApiProblem(503, check.reason or C.HERMES_CHECK_FAILED, reason=code)
 
 
 def _take_quota(conn: sqlite3.Connection, state: AiState, user: User, cfg: C.ProviderConfig, requests: int = 1,
@@ -226,9 +226,83 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
     return audit_id
 
 
-async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared) -> dict[str, Any]:
+def _claim_reprobe(conn: sqlite3.Connection, state: AiState, provider_id: int) -> bool:
+    """Whether this call should start the daily re-test of a shared provider (R4 step 5): the test is
+    due and nobody started one in the last hour (a failing provider is not hammered)."""
+    if not K.reprobe_due(K.provider_row(conn, provider_id)):
+        return False
+    now = time.monotonic()
+    last = state.reprobe_attempts.get(provider_id)
+    if last is not None and now - last < K.REPROBE_RETRY_S:
+        return False
+    state.reprobe_attempts[provider_id] = now
+    return True
+
+
+async def maintenance_probe(app: FastAPI, provider_id: int, server_port: int | None = None) -> None:
+    """The daily connection test of a shared provider, run after a response has been sent (R4 step 5).
+
+    It opens its own database connection, takes a server slot under a pseudo-person (or skips when the
+    server is busy), stores the result like "Test connection" does (a failed Hermes tool check switches
+    the provider off, §9 A1) and counts toward nobody's quota. Errors are logged, never raised."""
+    state: AiState = app.state.ai
+    keyring = getattr(app.state, "keyring", None)
+    if keyring is None:
+        return
+    conn = connect(state.settings.db_path)
+    slot = -int(provider_id)  # never a real user id
+    try:
+        row = await run_in_threadpool(K.provider_row, conn, provider_id)
+        if not K.reprobe_due(row):
+            return
+        try:
+            cfg = await run_in_threadpool(K.to_config, row, keyring, state.settings, user_id=0)
+        except InvalidToken:
+            log.warning("AI provider %s: daily connection test skipped, its key cannot be decrypted", provider_id)
+            return
+        try:
+            state.gate.enter(slot, int(await run_in_threadpool(state.store.get, conn, "ai.max_concurrency")))
+        except C.Busy:
+            return
+        try:
+            client = state.client
+            if server_port:
+                policy = state.policy.with_self_port(server_port)
+                if policy is not state.policy:
+                    client = C.ChatClient(policy, app_version=client.app_version, transport_factory=client.transport_factory,
+                                          sleep=client._sleep)
+            result = await C.probe(client, cfg)
+        finally:
+            state.gate.leave(slot)
+        if row["locked"]:
+            result["key_fp"] = K.key_fingerprint(keyring, state.settings.ai.api_key)
+
+        def store() -> None:
+            current = K.provider_row(conn, provider_id)
+            if current is not None and (current["base_url"], current["model"]) == (row["base_url"], row["model"]):
+                K.save_probe(conn, provider_id, result)
+                conn.commit()
+
+        await run_in_threadpool(store)
+        log.info("AI provider %s: daily connection test ok=%s structured=%s", provider_id, result.get("ok"), result.get("structured"))
+    except Exception:  # a background job must never take the server down
+        log.exception("AI provider %s: daily connection test failed", provider_id)
+    finally:
+        conn.close()
+
+
+def _server_port(request: Request) -> int | None:
+    server = request.scope.get("server")
+    return server[1] if isinstance(server, (tuple, list)) and len(server) > 1 else None
+
+
+async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared,
+                   background: BackgroundTasks | None = None) -> dict[str, Any]:
     """Consent → tool check → concurrency slot → quota → call → judge → audit. Never writes anything
-    the person did not ask for; nothing AI-generated reaches the log or the food list (G12)."""
+    the person did not ask for; nothing AI-generated reaches the log or the food list (G12).
+
+    With ``background``, a shared provider that is due for its daily connection test gets one after
+    the response is sent (:func:`maintenance_probe`)."""
     state = ai_state(request)
     client = _client_for(request)
     await run_in_threadpool(_check_consent, conn, user, prep)
@@ -266,6 +340,9 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     verdict["retried"] = result.retried
     verdict["trimmed"] = prep.trimmed
     audit_id = await run_in_threadpool(_finish, conn, state, user, prep, result, verdict, status)
+    if (background is not None and state.auto_reprobe and prep.cfg.scope == "shared"
+            and await run_in_threadpool(_claim_reprobe, conn, state, prep.cfg.id)):
+        background.add_task(maintenance_probe, request.app, prep.cfg.id, _server_port(request))
     log.info("ai call feature=%s provider=%s preset=%s model=%s host=%s latency_ms=%d prompt_tokens=%d completion_tokens=%d status=%s",
              prep.feature, prep.cfg.id, prep.cfg.preset, prep.model, prep.cfg.host, result.latency_ms,
              result.usage.get("prompt_tokens", 0), result.usage.get("completion_tokens", 0), status)
@@ -401,15 +478,15 @@ def _photos_allowed(conn: sqlite3.Connection, state: AiState, cfg: C.ProviderCon
 
 
 @router.post("/next-meal")
-async def next_meal(body: NextMealBody, request: Request, user: CurrentUser, dry_run: bool = Query(False),
-                    conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+async def next_meal(body: NextMealBody, request: Request, user: CurrentUser, background: BackgroundTasks,
+                    dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """AI ideas, order, swap picks or plan picks for one meal, checked by the rules (R3, note 06 §4.13)."""
     prep = await run_in_threadpool(_prepare_next_meal, request, conn, user, body)
     if isinstance(prep, dict):
         return prep
     if dry_run:
         return prep.dry_run(request.app.version)
-    return await run_call(request, conn, user, prep)
+    return await run_call(request, conn, user, prep, background)
 
 
 def _prepare_parse(request: Request, conn: sqlite3.Connection, user: User, body: ParseMealBody) -> F.Prepared | dict[str, Any]:
@@ -425,15 +502,15 @@ def _prepare_parse(request: Request, conn: sqlite3.Connection, user: User, body:
 
 
 @router.post("/parse-meal")
-async def parse_meal(body: ParseMealBody, request: Request, user: CurrentUser, dry_run: bool = Query(False),
-                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+async def parse_meal(body: ParseMealBody, request: Request, user: CurrentUser, background: BackgroundTasks,
+                     dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """"2 eggs, toast with butter": phrases with search terms; the person picks each match (R3)."""
     prep = await run_in_threadpool(_prepare_parse, request, conn, user, body)
     if isinstance(prep, dict):
         return prep
     if dry_run:
         return prep.dry_run(request.app.version)
-    return await run_call(request, conn, user, prep)
+    return await run_call(request, conn, user, prep, background)
 
 
 @router.post("/consent")
@@ -661,6 +738,9 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
         result = await C.probe(client, cfg, error_snippet=snippet if admin and row["scope"] == "shared" else None)
     finally:
         state.gate.leave(user.id)
+
+    if row["locked"]:
+        result["key_fp"] = K.key_fingerprint(_keyring(request), state.settings.ai.api_key)
 
     def store() -> None:
         current = K.provider_row(conn, int(row["id"]))
@@ -896,7 +976,7 @@ def install(app: FastAPI, settings: Settings, store: SettingsStore, *, app_versi
 def startup(app: FastAPI, conn: sqlite3.Connection) -> None:
     """At start-up: keep the env provider row in step with ``AI_PROVIDER`` and run the retention purge."""
     state: AiState = app.state.ai
-    K.sync_env_provider(conn, state.settings)
+    K.sync_env_provider(conn, state.settings, getattr(app.state, "keyring", None))
     conn.commit()
     housekeeping(conn, state, force=True)
 

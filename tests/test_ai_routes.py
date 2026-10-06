@@ -574,3 +574,134 @@ def test_logs_carry_metadata_only(ai_client, caplog):
 def test_install_registers_the_guidance_status_provider(tmp_path, foods_json):
     app = create_app(make_settings(tmp_path, foods_json))
     assert isinstance(app.state.ai, ai_routes.AiState)
+
+
+# --------------------------------------------------------------------------- #
+# Connection tests kept current (R4 step 5): daily for shared providers, after a change of the env key
+# --------------------------------------------------------------------------- #
+
+
+def probing_provider() -> FakeProvider:
+    """Answers the models list, the probe's JSON and vision questions, and the meal call."""
+    from ai_support import fixture
+
+    def route(req: Any) -> Any:
+        if req.url.path.endswith("/models"):
+            return fixture("openai_models.json")
+        body = json.loads(req.content)
+        name = (body.get("response_format") or {}).get("json_schema", {}).get("name")
+        if name == "probe":
+            return chat({"ok": "yes"})
+        if name == "vision_probe":
+            return chat({"color": "red"})
+        return chat(IDEAS)
+
+    return FakeProvider(route=route)
+
+
+def _probed_at(client: TestClient, pid: int) -> str | None:
+    conn = sqlite3.connect(client.app.state.settings.db_path)
+    try:
+        return conn.execute("SELECT probed_at FROM ai_providers WHERE id = ?", (pid,)).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def test_a_shared_provider_is_tested_again_daily_after_a_call(ai_client):
+    pid = ready(ai_client)
+    assert _probed_at(ai_client, pid) is None  # never tested
+    provider = probing_provider()
+    with attach(ai_client.app, provider, reprobe=True):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert r.status_code == 200
+    paths = [q.url.path for q in provider.requests]
+    assert paths[0].endswith("/chat/completions") and any(p.endswith("/models") for p in paths[1:])
+    assert len(provider.chat_requests) == 3  # the call, then the JSON probe and the vision probe (after the answer)
+    view = ai_client.get("/api/admin/ai-providers").json()["providers"][0]
+    assert view["probe"]["ok"] is True and view["probe"]["structured"] == "json_schema" and view["probed_at"]
+    assert ai_client.get("/api/ai/audit").json()["events"].__len__() == 1  # the test is not the person's AI activity
+    assert ai_client.get("/api/me/ai").json()["remaining_today"] == 29  # and counts toward nobody's quota
+
+    with attach(ai_client.app, provider, reprobe=True):  # tested today: no new test
+        ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert len(provider.chat_requests) == 4
+
+    conn = sqlite3.connect(ai_client.app.state.settings.db_path)
+    conn.execute("UPDATE ai_providers SET probed_at = '2026-01-01T00:00:00.000000Z' WHERE id = ?", (pid,))
+    conn.commit()
+    conn.close()
+    with attach(ai_client.app, provider, reprobe=True):  # a day old, but an attempt was made within the hour
+        ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert len(provider.chat_requests) == 5
+    ai_client.app.state.ai.reprobe_attempts.clear()
+    with attach(ai_client.app, provider, reprobe=True):
+        ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert len(provider.chat_requests) == 8 and _probed_at(ai_client, pid) != "2026-01-01T00:00:00.000000Z"
+
+
+def test_the_daily_test_skips_own_providers_and_survives_failures(ai_client, caplog):
+    ai_client.put("/api/me/ai/provider", json={"preset": "openai", "model": "gpt-6-luna", "api_key": OWN_KEY})
+    ai_client.patch("/api/me/ai", json={"provider": "own"})
+    ready(ai_client)
+    provider = probing_provider()
+    with attach(ai_client.app, provider, reprobe=True):
+        assert ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}).status_code == 200
+    assert len(provider.requests) == 1  # a person's own provider is tested only when they ask
+
+    ai_client.patch("/api/me/ai", json={"provider": "auto"})
+    pid = ai_client.get("/api/ai/status").json()["provider"]["id"]
+    ai_client.post("/api/ai/consent", json={"provider_id": pid, "purpose": "text"})
+    broken = FakeProvider(route=lambda req: chat(IDEAS) if req.url.path.endswith("/chat/completions") and len(broken.requests) == 1
+                          else {"status": 500, "body": {"error": "down"}})
+    caplog.set_level(logging.INFO, logger="kidney_health.ai")
+    with attach(ai_client.app, broken, reprobe=True):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert r.status_code == 200 and r.json()["status"] == "dropped_all"  # the person's answer is unaffected
+    view = ai_client.get("/api/admin/ai-providers").json()["providers"][0]
+    assert view["probe"]["ok"] is False and view["probe"]["errors"]
+    assert "daily connection test ok=False" in caplog.text
+
+
+def test_a_new_env_key_means_a_new_connection_test(tmp_path, foods_json):
+    def start(key: str) -> dict[str, Any]:
+        with TestClient(create_app(ai_settings(tmp_path, foods_json, api_key=key)), base_url=HTTPS_URL) as c:
+            sign_in(c)
+            pid = c.get("/api/admin/ai-providers").json()["providers"][0]["id"]
+            if _probed_at(c, pid) is None:
+                with attach(c.app, probing_provider()):
+                    assert c.post(f"/api/admin/ai-providers/{pid}/probe").json()["probe"]["ok"] is True
+            return c.get("/api/admin/ai-providers").json()["providers"][0]
+
+    first = start(OPENAI_KEY)
+    assert first["probed_at"]
+    assert start(OPENAI_KEY)["probed_at"] == first["probed_at"]  # same key: the test stands
+    conn = sqlite3.connect(tmp_path / "data" / "kidney.db")
+    stored = conn.execute("SELECT probe_json FROM ai_providers WHERE locked = 1").fetchone()[0]
+    conn.close()
+    assert OPENAI_KEY not in stored and "key_fp" in stored  # a fingerprint, never the key
+    with TestClient(create_app(ai_settings(tmp_path, foods_json, api_key="sk-env-rotated-0123456789abcdef"))):
+        pass
+    conn = sqlite3.connect(tmp_path / "data" / "kidney.db")
+    assert conn.execute("SELECT probe_json, probed_at FROM ai_providers WHERE locked = 1").fetchone() == (None, None)
+    conn.close()
+
+
+def test_missing_ca_certificates_stop_an_https_env_provider(tmp_path, foods_json, monkeypatch):
+    import ssl
+
+    from app.ai import transport
+
+    empty = ssl.DefaultVerifyPaths(None, None, "SSL_CERT_FILE", str(tmp_path / "none.pem"), "SSL_CERT_DIR", str(tmp_path / "none"))
+    monkeypatch.setattr(transport.ssl, "get_default_verify_paths", lambda: empty)
+    monkeypatch.setattr(transport, "CA_FILE_CANDIDATES", (str(tmp_path / "missing.pem"),))
+    assert "ca-certificates" in (transport.ca_store_problem("linux") or "")
+    assert transport.ca_store_problem("darwin") is None  # truststore uses the system store there
+    with pytest.raises(ConfigError, match="uses https, but no CA certificates"):
+        create_app(ai_settings(tmp_path, foods_json))
+    local = ai_settings(tmp_path, foods_json, provider="ollama", api_key=None, model="qwen3-vl:8b", private_hosts=("ollama:11434",))
+    warnings = K.check_env(local)  # a plain-http self-hosted provider still starts, with a warning
+    assert any("AI providers on https will not work" in w for w in warnings)
+    bundle = tmp_path / "bundle.pem"
+    bundle.write_text("-----BEGIN CERTIFICATE-----\n")
+    monkeypatch.setattr(transport, "CA_FILE_CANDIDATES", (str(bundle),))
+    assert transport.ca_store_problem("linux") is None

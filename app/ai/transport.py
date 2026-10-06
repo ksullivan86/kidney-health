@@ -22,7 +22,11 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
+import re
 import socket
+import ssl
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
@@ -40,6 +44,43 @@ CONNECT_TIMEOUT_S = 5.0
 WRITE_TIMEOUT_S = 10.0
 POOL_TIMEOUT_S = 5.0
 DEADLINE_EXTRA_S = 10.0  # total deadline = read timeout + this
+
+
+# Where truststore (httpx2's TLS verifier) finds CA certificates on Linux when OpenSSL's default paths are
+# empty: the same candidates as truststore._openssl (from certifi-system-store), copied so a private name
+# of that package is not imported.
+CA_FILE_CANDIDATES: tuple[str, ...] = (
+    "/etc/ssl/cert.pem",
+    "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+    "/etc/pki/tls/cert.pem",
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/ssl/ca-bundle.pem",
+)
+_HASHED_CERT = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
+
+
+def ca_store_problem(platform: str | None = None) -> str | None:
+    """R12 start-up self-check: ``None`` when TLS verification has CA certificates to use, else the reason.
+
+    On Linux, httpx2 verifies with ``truststore``, which reads OpenSSL's default CA file or directory
+    (``SSL_CERT_FILE`` / ``SSL_CERT_DIR`` included) and then a few well-known bundle paths. A minimal
+    image without ``ca-certificates`` has none, and every https call would then fail with an opaque TLS
+    error. On macOS and Windows truststore uses the system store, which always exists.
+    """
+    if not (platform or sys.platform).startswith("linux"):
+        return None
+    paths = ssl.get_default_verify_paths()
+    try:
+        if paths.cafile and os.path.getsize(paths.cafile) > 0:
+            return None
+        if paths.capath and os.path.isdir(paths.capath) and any(_HASHED_CERT.match(n) for n in os.listdir(paths.capath)):
+            return None
+        if any(os.path.isfile(p) and os.path.getsize(p) > 0 for p in CA_FILE_CANDIDATES):
+            return None
+    except OSError:
+        pass
+    return ("no CA certificates were found for TLS verification (OpenSSL's default file and directory and the usual "
+            "bundle paths are empty): install the ca-certificates package in the image or set SSL_CERT_FILE")
 
 
 class AiTransportError(Exception):
