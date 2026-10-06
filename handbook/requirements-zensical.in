@@ -1,0 +1,8 @@
+# The Zensical canary (CI job "handbook-zensical", allowed to fail; note 08 §4.1 and §4.8): does the
+# handbook build with Zensical, the Material team's successor to MkDocs + Material? Migrate when a
+# Zensical >= 0.1 release passes the same checks, before Material's security fixes end (Nov 2026 at
+# the earliest). Constrained by requirements.lock so the Markdown extensions match the real build.
+# Regenerate with scripts/lock.sh (all locks); install with
+#   pip install --require-hashes --no-deps -r handbook/requirements-zensical.lock
+-c requirements.lock
+zensical==0.0.68

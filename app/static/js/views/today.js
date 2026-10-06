@@ -58,9 +58,10 @@
     clear(alertsEl);
     for (const a of day.alerts || []) {
       const lvl = a.level === 'over' ? 'over' : 'caution';
+      const more = KH.learn ? KH.learn.forWarning(a) : null; // the nutrient's handbook page
       alertsEl.append(h('div', { class: `alert level-${lvl}` },
         ratingIcon(lvl, { label: lvl === 'over' ? 'Over limit' : 'Near limit' }),
-        h('div', {}, h('b', {}, lvl === 'over' ? 'Over limit. ' : 'Near limit. '), a.message)));
+        h('div', {}, h('b', {}, lvl === 'over' ? 'Over limit. ' : 'Near limit. '), a.message, more ? [' ', more] : null)));
     }
     // Projected alerts: only worth showing when something is planned and the level differs from the eaten alert.
     const projEl = $('#projected-alerts');
@@ -77,9 +78,10 @@
           // The heading already says "If you eat what's planned"; do not read the phrase twice per line.
           const text = String(a.message || '').replace(/^If you eat what's planned,\s*/i, '');
           const message = text ? text.charAt(0).toUpperCase() + text.slice(1) : a.message;
+          const more = KH.learn ? KH.learn.forWarning(a) : null;
           projEl.append(h('div', { class: `alert projected level-${lvl}` },
             ratingIcon(lvl, { label: lvl === 'over' ? 'Projected over limit' : 'Projected near limit' }),
-            h('div', {}, h('b', {}, lvl === 'over' ? 'Projected over. ' : 'Projected near limit. '), message)));
+            h('div', {}, h('b', {}, lvl === 'over' ? 'Projected over. ' : 'Projected near limit. '), message, more ? [' ', more] : null)));
         }
       }
     }

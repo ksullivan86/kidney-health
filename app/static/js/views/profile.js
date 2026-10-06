@@ -141,6 +141,9 @@
       clear(notes);
       notes.append(h('div', { class: 'notes-title' }, `Suggested starting points for ${settingText(saved)} filled in below (not saved yet). Discuss with your care team, then press Save profile.`));
       if (res.notes && res.notes.length) notes.append(h('ul', {}, res.notes.map((t) => h('li', {}, t))));
+      // How the numbers are worked out, and which details change them (the handbook, when there is one).
+      const how = KH.learn ? [KH.learn.link('pages', 'targets'), KH.learn.link('pages', 'first_setup')].filter(Boolean) : [];
+      if (how.length) notes.append(h('p', { class: 'notes-learn' }, how.flatMap((a, i) => (i ? [' · ', a] : [a]))));
       notes.hidden = false;
       state.targetsStale = null; // the suggestion for the saved setting is in the form now
       renderTargetsStale();

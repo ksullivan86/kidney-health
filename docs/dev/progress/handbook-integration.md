@@ -40,12 +40,46 @@ reading; they changed no files. Started 2026-10-06.
    - tests/test_deploy.py: handbook-stage test, release label test, .dockerignore test accepts files
      under allowed dirs and requires handbook/site + handbook/.cache excluded.
 
+3. CI and Pages (§4.8), verified by actionlint (all workflows), zizmor 1.30.1 --offline (no
+   findings), the CI SHA-pin grep, .github/scripts/yaml_parse.py, tests/test_deploy.py (66 pass):
+   - ci.yml: job `handbook` (app deps + handbook venv + build_handbook --check + strict build like the
+     image + check_links + content tests (--noconftest) + test_learn_links against the built site +
+     Playwright from tools/e2e/requirements.lock with the runner's /usr/bin/google-chrome running
+     tools/e2e/learn.py); job `handbook-zensical` (continue-on-error, handbook/requirements-zensical.lock,
+     `zensical build -f mkdocs.yml -s`); `image` needs [test, lint, handbook].
+   - handbook-pages.yml (vars.HANDBOOK_PAGES == 'true'; build: contents read; deploy: pages+id-token
+     write, github-pages env; mkdocs.pages.yml; link check under the Pages base path).
+   - handbook-links.yml (weekly Mon 06:17 UTC; lychee v2.9.0; accept 200..=299,403,429; one issue
+     labelled handbook-links; contents read + issues write).
+   - Action SHAs from `git ls-remote --tags` (the GitHub API is blocked here): configure-pages v6.0.0
+     45bfe019…, upload-pages-artifact v5.0.0 fc324d35…, deploy-pages v5.0.1 368f8252…, lychee v2.9.0
+     e7477775… (= spec).
+   - New locks (pip-tools 7.6.1 on Python 3.14, as scripts/lock.sh): handbook/requirements-zensical.lock
+     (-c requirements.lock), tools/e2e/requirements.lock (-c ../../requirements-dev.lock); both added to
+     scripts/lock.sh and refresh-locks.yml.
+4. App integration (§4.10), verified by node --check, pytest (frontend shell, preview build,
+   test_learn_links 26 pass, with and without HANDBOOK_BUILT_SITE), tools/e2e/learn.py (50/50 pass on
+   :8321 with the real site) and an ad-hoc Chromium run (target-note links, About):
+   - js/learn.js (KH.learn: load/href/link/forWarning), js/mock/handbook.js (demo: no handbook),
+     header #learn-link (book icon, name "Learn", same window), Settings → About "Learn: the patient
+     handbook" (+ public copy), warnings (core.js renderWarnings), Today alerts and projected alerts,
+     suggested-target notes (Targets and warnings · First setup); in-context links open a new tab.
+   - main.js start() loads /api/handbook with the profile; sw.js shell list + comment.
+   - tests/test_learn_links.py: scans app/static + app/**/*.py for /learn/ links, plus TOPIC_PAGES and
+     handbook.LINKS; resolves against handbook/docs (and the built site when HANDBOOK_BUILT_SITE is set),
+     anchors included.
+   - tools/e2e/learn.py + README + tests/test_e2e_tools.py HARNESSES.
+
 ## Decisions
 
 - HANDBOOK_PUBLIC_URL lives in config.py (deployment URL like PUBLIC_URL), not the settings registry.
 - /api/handbook (signed in, not public) tells the UI where Learn links go; the link table imports
   app/guidance/topics.py (NUTRIENT_TOPIC, TOPIC_PAGES) so slugs have one source.
 - A broken site (too many inline scripts, non-UTF-8 page) → ERROR log, /learn 404, app keeps running.
+- Header Learn entry is icon-only (book) with accessible name "Learn" + tooltip: the 880 px header
+  truncated the app name with a visible word. In-context links (warnings, alerts, notes) open a new
+  tab so an entry being typed in a sheet is not lost; nav links use the same window (spec).
+- Playwright in CI uses the runner's Google Chrome (no unpinned browser download).
 
 ## Known failures not mine
 
@@ -55,8 +89,6 @@ reading; they changed no files. Started 2026-10-06.
 
 ## Next
 
-3. ci.yml handbook job (image jobs need it) + handbook-pages.yml.
-4. Frontend Learn entry + About link + /learn links from warnings/target notes + link test.
 5. Docs: diet-guide pointer, self-hosting pages link to canonical docs, "coming in v0.3" fixes,
    ARCHITECTURE.md (/learn live), ROADMAP for deferred items.
 6. E2E Chromium check, hadolint, actionlint, zizmor, SHA-pin check, full pytest.

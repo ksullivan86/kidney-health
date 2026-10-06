@@ -3,7 +3,8 @@
 #
 # Why not Dependabot: it reads only requirement files ending in .txt or .in and never regenerates a
 # *.lock file (ARCHITECTURE.md decision 5 names the locks requirements.lock, requirements-dev.lock
-# and handbook/requirements.lock), so its pip ecosystem covers only /.github (requirements-lint.txt).
+# and handbook/requirements.lock; the handbook CI job adds handbook/requirements-zensical.lock and
+# tools/e2e/requirements.lock), so its pip ecosystem covers only /.github (requirements-lint.txt).
 #
 # Cooldown: pip only takes releases uploaded at least `cooldown_days` days ago (7 on the schedule),
 # so a compromised release has time to be noticed and yanked first. A security fix that cannot wait:
@@ -51,7 +52,8 @@ jobs:
           set -euo pipefail
           case "$COOLDOWN_DAYS" in (*[!0-9]*|'') echo "cooldown_days must be a whole number" >&2; exit 1;; esac
           PIP_UPLOADED_PRIOR_TO="P${COOLDOWN_DAYS}D" scripts/lock.sh --upgrade
-          git diff --stat -- requirements.lock requirements-dev.lock handbook/requirements.lock
+          git diff --stat -- requirements.lock requirements-dev.lock handbook/requirements.lock \
+            handbook/requirements-zensical.lock tools/e2e/requirements.lock
       - name: Open or update the pull request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,7 +62,8 @@ jobs:
           COOLDOWN_DAYS: ${{ inputs.cooldown_days || '7' }}
         run: |
           set -euo pipefail
-          locks=(requirements.lock requirements-dev.lock handbook/requirements.lock)
+          locks=(requirements.lock requirements-dev.lock handbook/requirements.lock
+                 handbook/requirements-zensical.lock tools/e2e/requirements.lock)
           if git diff --quiet -- "${locks[@]}"; then
             echo "The locks are current; nothing to propose."
             exit 0

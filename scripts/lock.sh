@@ -3,6 +3,8 @@
 #   requirements.in           -> requirements.lock            (runtime, what the image installs)
 #   requirements-dev.in       -> requirements-dev.lock        (runtime + test tools, what CI installs)
 #   handbook/requirements.in  -> handbook/requirements.lock   (handbook build, image's handbook stage)
+#   handbook/requirements-zensical.in -> handbook/requirements-zensical.lock   (CI's Zensical canary)
+#   tools/e2e/requirements.in -> tools/e2e/requirements.lock  (Playwright for CI's /learn browser check)
 #
 # Usage: scripts/lock.sh [extra pip-compile options, e.g. --upgrade or --upgrade-package cryptography]
 #
@@ -27,6 +29,8 @@ compile_with() { # $1 = pip-compile executable
   "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file requirements.lock requirements.in
   "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file requirements-dev.lock requirements-dev.in
   "$1" "${COMPILE_OPTS[@]}" --allow-unsafe ${EXTRA[@]+"${EXTRA[@]}"} --output-file handbook/requirements.lock handbook/requirements.in
+  "$1" "${COMPILE_OPTS[@]}" --allow-unsafe ${EXTRA[@]+"${EXTRA[@]}"} --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
+  "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
 }
 
 EXTRA=("$@")
@@ -54,7 +58,10 @@ if [[ -n "$engine" && "${LOCK_LOCAL:-0}" != "1" ]]; then
       pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file requirements.lock requirements.in
       pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file requirements-dev.lock requirements-dev.in
       pip-compile '"${COMPILE_OPTS[*]}"' --allow-unsafe "$@" --output-file handbook/requirements.lock handbook/requirements.in
-      chown "$HOST_UID:$HOST_GID" requirements.lock requirements-dev.lock handbook/requirements.lock 2>/dev/null || true
+      pip-compile '"${COMPILE_OPTS[*]}"' --allow-unsafe "$@" --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
+      pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
+      chown "$HOST_UID:$HOST_GID" requirements.lock requirements-dev.lock handbook/requirements.lock \
+        handbook/requirements-zensical.lock tools/e2e/requirements.lock 2>/dev/null || true
     ' "$PIP_TOOLS_VERSION" "$PIP_VERSION" ${EXTRA[@]+"${EXTRA[@]}"}
   exit 0
 fi

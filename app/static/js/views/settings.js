@@ -1258,12 +1258,36 @@
         h('li', {}, 'This device keeps only the app itself for offline use (and, later, entries waiting to sync); signing out clears it.')),
       subtitle('Not medical advice'),
       h('p', {}, 'Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. Food warnings are general renal-diet conventions, not a prescription.'),
+      subtitle('Learn: the patient handbook'),
+      handbookAbout(),
       subtitle('Licences'),
       h('ul', { class: 'about-list' },
         h('li', {}, 'App code: PolyForm Noncommercial License 1.0.0.'),
         h('li', {}, 'Handbook text: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0).'),
         h('li', {}, 'Food data from USDA FoodData Central: public domain (U.S. government work; CC0 1.0).'),
         h('li', {}, 'Product data from Open Food Facts (when lookups are on): © Open Food Facts contributors, under the Open Database License (ODbL) 1.0; the app shows no product images.')));
+  }
+
+  // Where the handbook is (js/learn.js asks the server): this server's copy at /learn, the public copy,
+  // or neither. Same window for the handbook itself, a new tab for the public copy next to it.
+  function handbookAbout() {
+    const L = KH.learn;
+    const url = L ? L.href('') : null;
+    const intro = h('p', {}, 'What to eat at each stage, lab results explained, treating a low, sick days, and when to get help now: '
+      + 'written for people with kidney disease and type 1 diabetes and their families, with sources. Education, not medical advice.');
+    if (!url) {
+      return h('div', {}, intro, h('p', { class: 'hint' }, MOCK
+        ? 'The handbook is not part of this demo; the installed app serves it at /learn.'
+        : 'This server has no copy of the handbook and no public copy is set (your admin can set HANDBOOK_PUBLIC_URL).'));
+    }
+    const items = [h('li', {}, h('a', { href: url }, 'Open the handbook'),
+      L.available() ? ' (served by this server, so it works without internet)' : ' (the public copy)')];
+    const pub = L.publicUrl();
+    if (L.available() && pub) {
+      items.push(h('li', {}, 'Public copy to share: ',
+        h('a', { href: pub, target: '_blank', rel: 'noopener' }, pub, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))));
+    }
+    return h('div', {}, intro, h('ul', { class: 'about-list' }, items));
   }
 
   // ---------------------------------------------------------------------------

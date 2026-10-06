@@ -183,6 +183,9 @@ jobs:
 
   image:
     name: image (${{ matrix.variant }}) build + smoke test
+    # Only build an image from a tree whose tests, linters and handbook pass (note 08 §4.8): the
+    # image's handbook stage runs the same strict build.
+    needs: [test, lint, handbook]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -259,9 +262,86 @@ jobs:
           fail-build: true
           output-format: table
 
-  # ---------------------------------------------------------------------------------------------
-  # PLACEHOLDER (M3 integration, docs/dev/research/08-handbook-site.md §4.8): the `handbook` job
-  # (pip install --require-hashes -r handbook/requirements.lock; python scripts/build_handbook.py
-  # --check; mkdocs build --strict; pytest tests/test_handbook_content.py) and the Playwright CSP
-  # smoke test that also loads /learn/. The image job then lists it in `needs:`.
-  # ---------------------------------------------------------------------------------------------
+  # The patient handbook (docs/dev/research/08-handbook-site.md §4.8): generated pages current, the
+  # strict build the image runs, internal links, the content rules, the app's links into it, and the
+  # built site served by the real app in Chromium with zero CSP / Trusted Types violations.
+  handbook:
+    name: handbook (build, content, links, /learn in Chromium)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      NO_MKDOCS_2_WARNING: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install the app (hash-locked; the browser check runs the real server)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements-dev.lock
+      - name: Install the handbook toolchain in its own venv (hash-locked)
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/hb"
+          "$RUNNER_TEMP/hb/bin/python" -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r handbook/requirements.lock
+      - name: Generated pages are current (scripts/build_handbook.py --check)
+        run: '"$RUNNER_TEMP/hb/bin/python" scripts/build_handbook.py --check'
+      - name: Strict build, as the image's handbook stage runs it
+        working-directory: handbook
+        env:
+          HANDBOOK_SITE_URL: http://localhost/learn/
+          HANDBOOK_APP_LINK: /
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/hb/bin/mkdocs" build --strict -d "$RUNNER_TEMP/learn"
+          find "$RUNNER_TEMP/learn" -type f -name '*.map' -exec rm -f {} +
+      - name: Internal links and anchors of the built site
+        run: python handbook/tools/check_links.py "$RUNNER_TEMP/learn"
+      - name: Content rules (front matter, sources, no dosing, slugs)
+        run: '"$RUNNER_TEMP/hb/bin/python" -m pytest --noconftest -p no:cacheprovider tests/test_handbook_content.py'
+      - name: Every /learn link in the app resolves to a built page
+        run: HANDBOOK_BUILT_SITE="$RUNNER_TEMP/learn" python -m pytest -p no:cacheprovider tests/test_learn_links.py
+      # Playwright from a hash-locked file; the browser is the runner's own Google Chrome, so no
+      # browser download happens here.
+      - name: Install Playwright (hash-locked)
+        run: |
+          set -euo pipefail
+          python -m venv --system-site-packages "$RUNNER_TEMP/pw"
+          "$RUNNER_TEMP/pw/bin/python" -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r tools/e2e/requirements.lock
+      - name: /learn in Chromium (375x812 and 1280x800; CSP, Trusted Types, failed or outside requests)
+        env:
+          PLAYWRIGHT_CHROMIUM: /usr/bin/google-chrome
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/pw/bin/python" tools/e2e/learn.py --site "$RUNNER_TEMP/learn" \
+            --server-python "$(command -v python)" --out "$RUNNER_TEMP/learn-e2e"
+
+  # Canary for the Material team's successor (note 08 §4.1): allowed to fail. Migrate when a
+  # Zensical >= 0.1 release builds the handbook and passes the checks above.
+  handbook-zensical:
+    name: handbook canary (Zensical; allowed to fail)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install Zensical (hash-locked)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r handbook/requirements-zensical.lock
+      - name: Build the handbook with Zensical (strict)
+        working-directory: handbook
+        env:
+          HANDBOOK_SITE_URL: http://localhost/learn/
+          HANDBOOK_APP_LINK: /
+        run: zensical build -f mkdocs.yml -s

@@ -143,6 +143,52 @@ def test_ci_covers_the_required_checks():
     assert "push: false" in image and "load: true" in image
     assert "smoke-test.sh" in image
     assert "severity-cutoff: high" in image and "only-fixed: true" in image
+    assert re.search(r"^    needs: \[test, lint, handbook\]$", image, re.M)
+
+
+def test_ci_builds_and_checks_the_handbook():
+    """Note 08 §4.8: the handbook job (the image jobs need it) and the Zensical canary."""
+    jobs = job_blocks(read(".github/workflows/ci.yml"))
+    hb = jobs["handbook"]
+    assert "--require-hashes" in hb and "-r handbook/requirements.lock" in hb and "-r requirements-dev.lock" in hb
+    assert "scripts/build_handbook.py --check" in hb
+    assert 'mkdocs" build --strict -d "$RUNNER_TEMP/learn"' in hb and "HANDBOOK_SITE_URL: http://localhost/learn/" in hb
+    assert "handbook/tools/check_links.py" in hb
+    assert "--noconftest" in hb and "tests/test_handbook_content.py" in hb
+    assert 'HANDBOOK_BUILT_SITE="$RUNNER_TEMP/learn"' in hb and "tests/test_learn_links.py" in hb
+    assert "-r tools/e2e/requirements.lock" in hb and "tools/e2e/learn.py" in hb
+    assert "playwright install" not in hb  # the runner's Chrome, never a browser download
+    assert "PLACEHOLDER" not in read(".github/workflows/ci.yml")
+    canary = jobs["handbook-zensical"]
+    assert "continue-on-error: true" in canary
+    assert "-r handbook/requirements-zensical.lock" in canary and "zensical build -f mkdocs.yml -s" in canary
+    assert re.search(r"^zensical==\S+ \\$", read("handbook/requirements-zensical.lock"), re.M)
+
+
+def test_handbook_pages_is_opt_in_and_least_privilege():
+    wf = read(".github/workflows/handbook-pages.yml")
+    assert re.search(r"^permissions: \{\}$", wf, re.M)
+    jobs = job_blocks(wf)
+    assert list(jobs) == ["build", "deploy"]
+    assert "if: vars.HANDBOOK_PAGES == 'true'" in jobs["build"]
+    assert re.search(r"permissions:\n      contents: read\n", jobs["build"])
+    assert "--require-hashes" in jobs["build"] and "mkdocs build --strict -f mkdocs.pages.yml" in jobs["build"]
+    assert "scripts/build_handbook.py --check" in jobs["build"]
+    assert "needs: build" in jobs["deploy"] and "name: github-pages" in jobs["deploy"]
+    assert re.findall(r"^      (\S+): write", jobs["deploy"], re.M) == ["pages", "id-token"]
+    assert "cancel-in-progress: false" in wf and "branches: [main]" in wf
+    for action in ("actions/configure-pages@", "actions/upload-pages-artifact@", "actions/deploy-pages@"):
+        assert action in wf
+
+
+def test_handbook_links_are_checked_weekly_and_reported_in_one_issue():
+    wf = read(".github/workflows/handbook-links.yml")
+    assert re.search(r"^permissions: \{\}$", wf, re.M)
+    job = job_blocks(wf)["links"]
+    assert re.findall(r"^      (\S+): (read|write)", job, re.M) == [("contents", "read"), ("issues", "write")]
+    assert "lycheeverse/lychee-action@" in job and "--accept 200..=299,403,429" in job
+    assert "handbook/sources.yml" in job and "handbook-links" in job
+    assert re.search(r"- cron: ", wf)
 
 
 def test_release_moves_tags_only_after_scan_and_gates_public_only_steps():
@@ -208,6 +254,9 @@ def test_hash_locks_are_refreshed_weekly_with_a_cooldown_by_pull_request():
     assert re.search(r"contents: write", jobs["refresh"]) and re.search(r"pull-requests: write", jobs["refresh"])
     lock = read("scripts/lock.sh")
     assert "handbook/requirements.lock handbook/requirements.in" in lock
+    for name in ("handbook/requirements-zensical", "tools/e2e/requirements"):
+        assert lock.count(f"{name}.lock {name}.in") == 2, name  # local and container branches
+        assert f"{name}.lock" in wf
     assert re.search(r'PIP_VERSION="2[6-9]\.', lock)  # pip >= 26.0 understands --uploaded-prior-to
     assert "-e PIP_UPLOADED_PRIOR_TO" in lock
 

@@ -7,8 +7,9 @@
 
    Caches ONLY the static shell: personal data never enters Cache Storage. Not intercepted:
    /api/**, /healthz, any non-GET request, other origins, and navigations to anything but the
-   app itself (a future /learn handbook goes to the network). `?reauth=1` on a navigation goes to
-   the network too, so an auth proxy can redirect to its sign-in page.
+   app itself: the /learn handbook goes to the network (offline handbook pages are a v0.4 item,
+   docs/ROADMAP.md). `?reauth=1` on a navigation goes to the network too, so an auth proxy can
+   redirect to its sign-in page.
 
    SHELL_URLS lists every file index.html loads (tests/test_frontend_shell.py keeps the two in
    step); M2 adds js/offline.js and js/scan.js here when they exist. */
@@ -35,6 +36,7 @@ const SHELL_URLS = [
   '/js/engine/targets.js',
   '/js/engine/settings.js',
   '/js/core.js',
+  '/js/learn.js',
   '/js/mock/core.js',
   '/js/mock/foods.js',
   '/js/mock/profile.js',
@@ -42,6 +44,7 @@ const SHELL_URLS = [
   '/js/mock/meals.js',
   '/js/mock/auth.js',
   '/js/mock/settings.js',
+  '/js/mock/handbook.js',
   '/js/mock/seed.js',
   '/js/views/today.js',
   '/js/views/add.js',

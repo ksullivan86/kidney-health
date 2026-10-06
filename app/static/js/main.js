@@ -13,7 +13,8 @@
 
   // Runs once per page, for the signed-in person: at boot, or after the sign-in screens.
   async function start(view) {
-    try { await KH.loadProfile(); } catch (e) { toastError(e); }
+    // The profile, and where the handbook links go (js/learn.js; it never throws), before the first view.
+    await Promise.all([KH.loadProfile().catch(toastError), KH.learn ? KH.learn.load() : null]);
     const initial = view || location.hash.replace('#', '');
     router.show(router.VIEWS.includes(initial) ? initial : 'today');
   }

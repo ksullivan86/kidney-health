@@ -68,6 +68,12 @@
       </div>
     </nav>
 
+    <!-- The patient handbook (/learn, or its public copy). js/learn.js shows it once the server says
+         where the handbook is; same window: the handbook links back to the food log. -->
+    <a id="learn-link" class="icon-btn learn-link" href="/learn/" title="Learn: the patient handbook" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 7c-1.6-1.5-4.4-2.3-9-2v13c4.6-.3 7.4.5 9 2 1.6-1.5 4.4-2.3 9-2V5c-4.6-.3-7.4.5-9 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 7v13" stroke="currentColor" stroke-width="1.9"/></svg>
+      <span class="learn-text">Learn</span>
+    </a>
     <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -1106,6 +1112,7 @@
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/core.js"></script>
+<script src="js/learn.js"></script>
 <script src="js/mock/core.js"></script>
 <script src="js/mock/foods.js"></script>
 <script src="js/mock/profile.js"></script>
@@ -1113,6 +1120,7 @@
 <script src="js/mock/meals.js"></script>
 <script src="js/mock/auth.js"></script>
 <script src="js/mock/settings.js"></script>
+<script src="js/mock/handbook.js"></script>
 <script src="js/mock/seed.js"></script>
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>

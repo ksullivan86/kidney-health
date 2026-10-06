@@ -564,8 +564,9 @@
     }
     for (const w of warnings) {
       const lvl = w.level === 'high' ? 'over' : 'caution';
+      const more = KH.learn ? KH.learn.forWarning(w) : null; // the handbook page (js/learn.js), when there is one
       container.append(h('div', { class: `warning level-${lvl}` }, ratingIcon(lvl, { label: w.level === 'high' ? 'High' : 'Moderate' }),
-        h('div', {}, h('span', { class: 'w-level' }, w.level === 'high' ? 'High. ' : 'Moderate. '), w.message)));
+        h('div', {}, h('span', { class: 'w-level' }, w.level === 'high' ? 'High. ' : 'Moderate. '), w.message, more ? [' ', more] : null)));
     }
   }
 
