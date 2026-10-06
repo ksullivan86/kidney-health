@@ -8,7 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [DG19a, DG28a, DG23, DG24a, DG25a, DG24b, K24, Q20, AKF-thirst, JBDS, NIDDK-HD-eat]
+sources: [DG19a, DG28a, DG23, DG24a, DG25a, DG24b, Q20, AKF-thirst, JBDS, NIDDK-HD-eat, MEDLINE-PE, ARCH]
 ---
 
 # Fluid
@@ -34,8 +34,10 @@ keep to it ([DaVita][DG23]).
 | Peritoneal dialysis | **2–3 L**, set for you from urine output and how much fluid the dialysis removes ([DaVita][DG25a]); the app starts at 2,000 mL |
 
 - **1,000 mL of fluid is about 1 kg (2.2 lb) of body weight** ([DaVita][DG23]).
-- On hemodialysis, weight gain between sessions above **3.5 % of body weight** (about 2.5 kg for
-  70 kg) is linked to heart problems and death ([Cabrera 2015][DG28a]).
+- On hemodialysis, weight gain between sessions above **3.5 % of body weight** (about 2.5 kg for a
+  70 kg person, or about 5.4 lb for 154 lb) is linked to heart problems and death ([Cabrera 2015][DG28a]).
+- Eating less salt helps you reach your target ("dry") weight and control fluid ([KDOQI 2020][Q20],
+  statement 6.5.3; [Sodium](sodium.md)).
 
 ## What counts as fluid
 
@@ -78,15 +80,23 @@ Other tricks that help ([AKF][AKF-thirst]):
 
 ## Treating a low on a fluid limit
 
-A low is always treated first. Glucose tablets (4 g each; take 4) and glucose gel add no fluid at all
+A low is always treated first, whatever your fluid allowance. Four glucose tablets (4 g each, 16 g in
+all) or a tube of glucose gel give the 15 g you need and add no fluid at all
 ([ADA Consumer Guide: Dex4][DG24b]); 4 oz of juice adds about 110 mL. Keep tablets at the bedside, in
-your bag and at the dialysis unit.
+your bag and at the dialysis unit. If juice is all there is, drink it and count it later
+([Treating a low](../t1d/treating-a-low.md)).
 
 ## Examples
 
 A hemodialysis day that fits 1,500 mL: 1 cup (237 mL) of coffee at breakfast, ½ cup of sherbet
 (about 50 mL), ½ cup of gelatin (about 110 mL) and 1½ cups (355 mL) of water through the day, leaving
 about 750 mL for drinks with medicines and hot weather. See the [hemodialysis menu](menus/hemodialysis.md).
+
+!!! tip "In the app"
+    Drinks and foods that are liquid at room temperature count toward your fluid total automatically.
+    With your hemodialysis days set, the app also shows fluid, potassium and sodium **since your last
+    session** against your allowance, so the long weekend gap is easy to see ([architecture contract][ARCH];
+    [Dialysis days](dialysis-days.md); [Targets and warnings](../app/targets-and-warnings.md)).
 
 ## Ask your care team
 
@@ -97,12 +107,20 @@ about 750 mL for drinks with medicines and hot weather. See the [hemodialysis me
 
 ## Get help now if…
 
-- You are very short of breath, cannot lie flat, have a frothy cough, or chest pain: call 911 (or
-  your local emergency number).
-- You gain more than your team's alarm weight, have new swelling, or miss a dialysis session: call
-  your team today.
-- You are very thirsty with glucose that stays high or with ketones: follow your sick-day plan and call
-  your team ([Sick days](../t1d/sick-days.md)). See [Get help now](../get-help-now.md).
+!!! danger "Call 911 (or your local emergency number)"
+    You are very short of breath, cannot lie flat, have a frothy cough, or chest pain. These can be signs
+    of fluid in the lungs ([MedlinePlus][MEDLINE-PE]).
+
+!!! warning "Call your care team today"
+    You gain more than your team's alarm weight, have new swelling, or miss a dialysis session. If you are
+    very thirsty with glucose that stays high or with ketones, follow your sick-day plan and call your team
+    ([Sick days](../t1d/sick-days.md)). Full list: [Get help now](../get-help-now.md).
+
+## Related pages
+
+- [Sodium](sodium.md) · [Dialysis days](dialysis-days.md) · [Treating a low](../t1d/treating-a-low.md)
+- [Hemodialysis in a centre](../stages/hemodialysis-in-centre.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
+- [Hemodialysis sample menu](menus/hemodialysis.md) · In the app: [Targets and warnings](../app/targets-and-warnings.md)
 
 ## Sources
 
@@ -113,4 +131,5 @@ about 750 mL for drinks with medicines and hot weather. See the [hemodialysis me
 - [ADA Consumer Guide: Dex4 tablets][DG24b].
 - [AKF: tips for a fluid plan][AKF-thirst]; [NIDDK: eating and nutrition on hemodialysis][NIDDK-HD-eat]: salt and thirst.
 - [JBDS–Renal Association guidance][JBDS]: glucose control and weight gain between sessions.
-- [KDIGO 2024 CKD guideline][K24]; [KDOQI 2020 nutrition guideline][Q20].
+- [KDOQI 2020 nutrition guideline][Q20]: statement 6.5.3 (salt and fluid control).
+- [MedlinePlus: pulmonary edema][MEDLINE-PE]; [project architecture contract][ARCH]: fluid counting in the app.

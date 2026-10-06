@@ -29,6 +29,8 @@
 # Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
 # ---------------------------------------------------------------------------------------------------
 FROM cgr.dev/chainguard/python:latest-dev@sha256:a876b1000774bdd68322ac020cd813aaf42b52941ca812f4d2f0149059bd0e67 AS builder
+# Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
+# hadolint ignore=DL3002
 USER 0
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -67,6 +69,7 @@ RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
 # Keep the FROM line identical to the builder's so Dependabot bumps all three together.
 # ---------------------------------------------------------------------------------------------------
 FROM cgr.dev/chainguard/python:latest-dev@sha256:a876b1000774bdd68322ac020cd813aaf42b52941ca812f4d2f0149059bd0e67 AS handbook
+# hadolint ignore=DL3002
 USER 0
 WORKDIR /out/learn
 

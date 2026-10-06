@@ -8,7 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [DG34, DG37a, DG4, DG20, DG38, DG5, DG22, DG46a, DG28b, DG18, FDC, ARCH, NOTE03]
+sources: [DG34, DG37a, DG4, DG20, DG38, DG5, DG22, DG46a, DG28b, DG18, LEON13, FDC, ARCH, NOTE03]
 ---
 
 # Grocery shopping
@@ -18,7 +18,8 @@ sources: [DG34, DG37a, DG4, DG20, DG38, DG5, DG22, DG46a, DG28b, DG18, FDC, ARCH
 Most of a kidney diet is decided in the store. More than 70 % of the sodium people eat comes from
 packaged and restaurant food ([FDA][DG34]), and the phosphate additives in processed food are absorbed
 almost completely ([NKF][DG20]). Shop from a list, buy fresh or plain frozen food first, and read the
-ingredient list on anything in a package. You do not need special "kidney" products.
+ingredient list on anything in a package. In one study, 44 % of best-selling grocery items had a
+phosphate additive ([León 2013][LEON13]). You do not need special "kidney" products.
 
 --8<-- "includes/starting-points.md"
 
@@ -103,6 +104,11 @@ canned one because it has much more chicken; it is a full meal.
     food is free of additives: always read the list yourself ([Barcode and photo](../app/barcode-and-photo.md);
     [design note 03][NOTE03]).
 
+**On a budget.** The same study found that additive-free meals cost about $2 more a day at the time
+([León 2013][LEON13]). Plain staples help keep the cost down: rice, pasta, eggs, cabbage, onions,
+frozen plain vegetables, apples and canned fruit in juice, and a whole chicken or turkey
+breast cooked once for several meals.
+
 ## Ask your care team
 
 1. Do I need to limit potassium or phosphorus right now, or only sodium?
@@ -115,6 +121,13 @@ canned one because it has much more chicken; it is a full meal.
 - Shopping does not cause emergencies. If you feel a low coming on in the store, stop and take glucose
   straight away. For other urgent symptoms, see [Get help now](../get-help-now.md).
 
+## Related pages
+
+- [Reading food labels](label-reading.md) · [Phosphate additives](phosphate-additives.md) ·
+  [Grocery lists](grocery-lists.md) · [Recipes](recipes/index.md)
+- [Sodium](sodium.md) · [Potassium](potassium.md) · [Phosphorus](phosphorus.md) · [Sample menus](menus/index.md)
+- In the app: [Planning and menus](../app/planning-and-menus.md) · [Barcodes and label photos](../app/barcode-and-photo.md)
+
 ## Sources
 
 - [FDA: sodium in your diet][DG34]: over 70 % of sodium from packaged and restaurant food; fresh and plain frozen choices; rinsing canned food; % DV.
@@ -122,6 +135,6 @@ canned one because it has much more chicken; it is a full meal.
 - [NIDDK: healthy eating for adults with CKD][DG4]; [NKF: phosphorus and your CKD diet][DG20]; [NKF: label guide][DG38].
 - [NKF: potassium and your CKD diet][DG5]: do not drink the liquid from canned fruit and vegetables.
 - [NKF: 40 low-potassium fruits and vegetables][DG22]; [AKF potassium food guide][DG46a]; [NKF: milk alternatives][DG28b].
-- [Review of phosphate additives in the Western diet][DG18].
+- [Review of phosphate additives in the Western diet][DG18]; [León 2013][LEON13]: additives in best-selling groceries and their cost.
 - [USDA FoodData Central][FDC]: the numbers in the swap table.
 - [Project architecture contract][ARCH] (shopping list) and [design note 03][NOTE03] (barcode additive flags).

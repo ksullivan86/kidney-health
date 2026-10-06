@@ -23,3 +23,6 @@ addopts = "-q"
 
 [tool.setuptools.packages.find]
 include = ["app", "app.*"]
+
+[tool.setuptools.package-data]
+"app.auth" = ["password-blocklist.txt.gz"]

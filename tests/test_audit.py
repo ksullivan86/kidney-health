@@ -75,8 +75,10 @@ def test_ip_prefix():
 
 
 def test_audit_if_available_skips_old_databases():
+    from app import migrations
+
     c = db.connect(":memory:")
-    db.migrate(c)
+    db.migrate(c, migrations.steps()[:2])  # schema v2: no audit table
     assert audit.audit_if_available(c, None, "backup.created") is None
     c.close()
 
@@ -96,5 +98,5 @@ def test_startup_purges_expired_rows(settings):
     with TestClient(create_app(settings)):
         pass
     c = db.connect(settings.db_path)
-    assert c.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] == 0
+    assert c.execute("SELECT COUNT(*) FROM audit_log WHERE at < '2001'").fetchone()[0] == 0
     c.close()

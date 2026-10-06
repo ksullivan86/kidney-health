@@ -1,0 +1,109 @@
+# Weekly vulnerability scan of the PUBLISHED image with a fresh Grype database: new CVEs appear
+# after release, and the release gate (release.yml) only sees the database of its day.
+# Spec: docs/dev/research/01-rootless-and-security.md §5.4 (risk R12: only-fixed gating hides
+# unfixed Highs, so the full report is printed here every week).
+#
+# The scan job has read-only scopes and no secrets (scanners run with whatever the job can reach).
+# When the gate fails on the schedule, a separate job WITHOUT the scanner opens (or comments on)
+# one tracking issue, so a maintainer sees it without reading workflow logs.
+name: Scheduled image scan
+
+on:
+  schedule:
+    - cron: "41 5 * * 1"   # Mondays 05:41 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-scan
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/ksullivan86/kidney-health
+  GRYPE_VERSION: "v0.120.0"
+
+jobs:
+  scan:
+    name: Grype ${{ matrix.tag }} (${{ matrix.platform }})
+    if: github.repository == 'ksullivan86/kidney-health'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read         # pull the published image (the GHCR package may be private)
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: [latest, edge]
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Before the first release there is no :latest; that is not a finding.
+      - name: Resolve the tag to a digest
+        id: ref
+        env:
+          TAG: ${{ matrix.tag }}
+        run: |
+          set -euo pipefail
+          if digest="$(docker buildx imagetools inspect "${IMAGE}:${TAG}" --format '{{json .Manifest.Digest}}' 2>/dev/null)"; then
+            digest="${digest//\"/}"
+            echo "ref=${IMAGE}@${digest}" >> "$GITHUB_OUTPUT"
+            echo "Scanning ${IMAGE}:${TAG} = ${digest}"
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "::notice::${IMAGE}:${TAG} does not exist yet; nothing to scan."
+          fi
+      - name: Full report (every severity, informational)
+        if: steps.ref.outputs.ref != ''
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        env:
+          GRYPE_PLATFORM: ${{ matrix.platform }}
+        with:
+          image: registry:${{ steps.ref.outputs.ref }}
+          grype-version: ${{ env.GRYPE_VERSION }}
+          severity-cutoff: negligible
+          only-fixed: false
+          fail-build: false
+          output-format: table
+      - name: Gate (High/Critical with a fix available)
+        if: steps.ref.outputs.ref != ''
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        env:
+          GRYPE_PLATFORM: ${{ matrix.platform }}
+        with:
+          image: registry:${{ steps.ref.outputs.ref }}
+          grype-version: ${{ env.GRYPE_VERSION }}
+          severity-cutoff: high
+          only-fixed: true
+          fail-build: true
+          output-format: table
+
+  report:
+    name: open a tracking issue
+    needs: scan
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write          # open or comment on the tracking issue; nothing else
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Scheduled scan: fixable High/Critical vulnerability in the published image"
+          body="The weekly Grype scan failed its gate (High or Critical with a fix available): ${RUN_URL}
+          Rebuild with updated base digests (Dependabot docker PRs) and dependencies, then tag a patch release."
+          existing="$(gh issue list --state open --search "\"${title}\" in:title" --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

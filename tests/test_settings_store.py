@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from app import db, settings_registry
 from app.config import ConfigError
 from app.settings_registry import SettingDef
+from conftest import insert_users
 from app.settings_store import (
     InvalidSettingValue,
     SettingLocked,
@@ -21,16 +22,12 @@ from app.settings_store import (
     create_settings_tables,
 )
 
-USERS_STUB = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT)"
-
-
 def make_db(path: str | Path = ":memory:") -> sqlite3.Connection:
-    """A migrated database plus the schema-v3 settings tables (as m003 will create them)."""
+    """A migrated (schema v3) database with two accounts."""
     conn = db.connect(path)
     db.migrate(conn)
-    conn.execute(USERS_STUB)
-    create_settings_tables(conn)
-    conn.executemany("INSERT INTO users (id, username) VALUES (?, ?)", [(1, "admin"), (2, "sam")])
+    create_settings_tables(conn)  # idempotent: m003 created them already
+    insert_users(conn, [(1, "admin"), (2, "sam")])
     conn.commit()
     return conn
 
@@ -191,8 +188,10 @@ def test_update_user_and_instance_validate_everything_first(conn):
 
 
 def test_missing_tables_read_defaults_and_refuse_writes(tmp_path):
+    from app import migrations
+
     conn = db.connect(":memory:")
-    db.migrate(conn)  # schema v2: no settings tables yet
+    db.migrate(conn, migrations.steps()[:2])  # schema v2: no settings tables yet
     store = SettingsStore(env={}, defs=CUSTOM)
     assert store.effective(conn, "ui.theme", 1).source == "default"
     assert SettingsStore(env={"REGISTRATION_MODE": "closed"}, defs=CUSTOM).get(conn, "registration.mode") == "closed"

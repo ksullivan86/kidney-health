@@ -1,10 +1,10 @@
 # kubectl apply -k deploy/k8s        (or: kustomize build deploy/k8s | kubectl apply -f -)
-#
-# Before applying, edit:
-#   pvc.yaml      storageClassName for your cluster (or leave unset for the default class)
-#   ingress.yaml  host (and TLS / cert-manager annotations)
-#   images:       pin a tag below instead of :latest if you want controlled upgrades
-# Then create the optional Secret (see secret.example.yaml).
+# Guide: docs/deployment.md (Kubernetes / Talos). Before applying, edit:
+#   httproute.yaml       parentRefs + hostnames (or use ingress.example.yaml instead)
+#   networkpolicy.yaml   the namespace of your Gateway / ingress controller
+#   deployment.yaml      TRUSTED_PROXIES and PUBLIC_URL
+#   pvc.yaml             storageClassName for your cluster (or leave the default class)
+# and create the Secret first (secret.example.yaml shows the command).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: kidney-health
@@ -13,8 +13,15 @@ resources:
   - pvc.yaml
   - deployment.yaml
   - service.yaml
-  - ingress.yaml
-  # - httproute.example.yaml   # Gateway API instead of Ingress: enable this, drop ingress.yaml
+  - networkpolicy.yaml
+  - httproute.yaml
+  # Not included on purpose: secret.example.yaml (never commit secrets),
+  # ingress.example.yaml (Ingress instead of HTTPRoute), cilium-networkpolicy.example.yaml (Cilium).
 images:
+  # Pin the release you verified, by tag AND digest (the digest wins; the tag is for humans):
+  #   scripts/verify-image.sh 0.3.0        prints the verified digest, then:
+  #   kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<digest>
+  # Never :latest or :edge here.
   - name: ghcr.io/ksullivan86/kidney-health
-    newTag: latest             # e.g. "0.1.0" or "sha-1a2b3c4" for a pinned release
+    newTag: "0.3"
+    # digest: sha256:<verified digest>

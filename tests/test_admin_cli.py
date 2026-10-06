@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from conftest import insert_users
 
 from app import admin, audit, credentials, crypto, db
 from app.settings_store import create_settings_tables
@@ -21,18 +22,16 @@ KEY_NEW = "n" * 40
 
 
 def make_v3ish_db(data_dir: Path) -> Path:
-    """A migrated database plus the schema-v3 tables this platform provides DDL for."""
+    """A migrated (schema v3) database with two accounts and one session."""
     data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / "kidney.db"
     db.init_db(path)
     conn = db.connect(path)
-    conn.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT)")
-    conn.execute("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id INTEGER)")
-    create_settings_tables(conn)
-    credentials.create_credentials_tables(conn)
-    audit.create_audit_table(conn)
-    conn.executemany("INSERT INTO users (id, username) VALUES (?, ?)", [(1, "admin"), (2, "sam")])
-    conn.execute("INSERT INTO sessions VALUES ('abc', 1)")
+    insert_users(conn, [(1, "admin"), (2, "sam")])
+    conn.execute(
+        """INSERT INTO sessions (id, user_id, verifier_hash, created_at, last_seen_at, expires_at)
+           VALUES ('abc', 1, x'00', '2026-10-05T00:00:00.000000Z', '2026-10-05T00:00:00.000000Z', '2099-01-01T00:00:00.000000Z')"""
+    )
     conn.commit()
     conn.close()
     return path
@@ -95,7 +94,7 @@ def test_check_and_restore_check(tmp_path, env):
     assert code == 0 and "no database yet" in out and "created on first start" in out
     path = make_v3ish_db(tmp_path / "data")
     code, out = run(["check"], env)
-    assert code == 0 and "ok: integrity_check" in out and "schema version 2" in out
+    assert code == 0 and "ok: integrity_check" in out and "schema version 3" in out
     code, out = run(["restore-check", str(path), "--revoke-sessions"], env)
     assert code == 0 and "revoked 1 session" in out
     conn = sqlite3.connect(path)
@@ -193,8 +192,106 @@ def test_settings_commands(tmp_path, env):
     conn.close()
 
 
-def test_account_commands_are_stubs_for_now(env):
-    code, _ = run(["create-admin"], env)
-    assert code == admin.EXIT_USAGE
-    code, _ = run(["reset-password", "--user", "2"], env)
-    assert code == admin.EXIT_USAGE
+
+
+# --------------------------------------------------------------------------- #
+# Accounts: create-admin, reset-password, list-users, setup-code, revoke-sessions (note 07 §3.8, §4.5)
+# --------------------------------------------------------------------------- #
+
+GOOD_PASSWORD = "plum-orbit-candle-73"
+
+
+def run_with_stdin(argv: list[str], env: dict[str, str], stdin_text: str) -> tuple[int, str]:
+    out = io.StringIO()
+    code = admin.main(argv, env=env, out=out, stdin=io.StringIO(stdin_text))
+    return code, out.getvalue()
+
+
+def fresh_v3(data_dir: Path) -> Path:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    path = data_dir / "kidney.db"
+    db.init_db(path)
+    return path
+
+
+def test_create_admin_claims_user_one_and_checks_the_policy(tmp_path, env, capsys):
+    path = fresh_v3(tmp_path / "data")
+    code, _ = run_with_stdin(["create-admin", "mum"], env, "short\n")
+    assert code == 1 and "at least 15" in capsys.readouterr().err
+    code, out = run_with_stdin(["create-admin", "Mum", "--display-name", "Mum"], env, GOOD_PASSWORD + "\n")
+    assert code == 0 and "user 1" in out
+    conn = sqlite3.connect(path)
+    row = conn.execute("SELECT username, username_norm, role, status, password_hash FROM users WHERE id = 1").fetchone()
+    assert row[:4] == ("Mum", "mum", "admin", "active") and row[4].startswith("$argon2id$")
+    assert conn.execute("SELECT COUNT(*) FROM audit_log WHERE action = 'setup.completed'").fetchone()[0] == 1
+    conn.close()
+    # a second admin gets a new account; an existing name is refused
+    code, out = run_with_stdin(["create-admin", "dad"], env, GOOD_PASSWORD + "x\n")
+    assert code == 0 and "user 2" in out
+    code, _ = run_with_stdin(["create-admin", "DAD"], env, GOOD_PASSWORD + "\n")
+    assert code == 1 and "exists" in capsys.readouterr().err
+
+
+def test_reset_password_link_and_stdin(tmp_path, env, capsys):
+    path = fresh_v3(tmp_path / "data")
+    run_with_stdin(["create-admin", "mum"], env, GOOD_PASSWORD + "\n")
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE users SET status = 'locked' WHERE id = 1")
+    conn.execute(
+        "INSERT INTO sessions (id, user_id, verifier_hash, created_at, last_seen_at, expires_at) VALUES ('s1', 1, x'00', 'a', 'a', 'z')"
+    )
+    conn.commit()
+    code, out = run(["reset-password", "mum"], {**env, "PUBLIC_URL": "https://kidney.example.org"})
+    assert code == 0 and "https://kidney.example.org/#/reset/" in out
+    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE purpose = 'reset' AND user_id = 1").fetchone()[0] == 1
+    code, out = run_with_stdin(["reset-password", "mum", "--stdin"], env, "violet-meadow-compass-19\n")
+    assert code == 0 and "1 session(s) signed out" in out
+    row = conn.execute("SELECT status FROM users WHERE id = 1").fetchone()
+    assert row[0] == "active"  # break-glass also unlocks
+    assert conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 0
+    conn.close()
+    code, _ = run(["reset-password", "nobody"], env)
+    assert code == 1 and "no account" in capsys.readouterr().err
+
+
+def test_list_users_setup_code_and_revoke_sessions(tmp_path, env, capsys):
+    path = fresh_v3(tmp_path / "data")
+    code, out = run(["list-users"], env)
+    assert code == 0 and "(first-run setup pending)" in out
+    code, out = run(["setup-code"], env)
+    assert code == 0 and "FIRST-RUN SETUP" in out
+    conn = sqlite3.connect(path)
+    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE purpose = 'setup'").fetchone()[0] == 1
+    conn.close()
+    run_with_stdin(["create-admin", "mum"], env, GOOD_PASSWORD + "\n")
+    code, _ = run(["setup-code"], env)
+    assert code == 1 and "complete" in capsys.readouterr().err
+    code, out = run(["list-users", "--json"], env)
+    users = json.loads(out)
+    assert users[0]["username"] == "mum" and "password_hash" not in users[0]
+    code, out = run(["revoke-sessions", "mum"], env)
+    assert code == 0 and "signed out 0" in out
+    code, out = run(["revoke-sessions", "--all"], env)
+    assert code == 0
+
+
+def test_account_commands_need_schema_v3(tmp_path, env, capsys):
+    from app import migrations
+
+    data = tmp_path / "data"
+    data.mkdir()
+    conn = db.connect(data / "kidney.db")
+    db.migrate(conn, migrations.steps()[:2])
+    conn.close()
+    code, _ = run(["list-users"], env)
+    assert code == 1 and "schema below v3" in capsys.readouterr().err
+
+
+def test_purge_pre_v3_backup_and_vacuum(tmp_path, env):
+    path = fresh_v3(tmp_path / "data")
+    backup = Path(f"{path}.pre-v3.bak")
+    backup.write_bytes(b"old")
+    code, out = run(["purge-pre-v3-backup"], env)
+    assert code == 0 and not backup.exists()
+    code, out = run(["vacuum"], env)
+    assert code == 0 and "vacuumed" in out

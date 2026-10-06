@@ -1,5 +1,9 @@
 """Food log: entries (eaten or planned) with nutrient snapshots, day / range / period
-summaries, mark-eaten, copy-day, CSV export and quick add."""
+summaries, mark-eaten, copy-day, CSV export and quick add.
+
+Every query is scoped by the signed-in person's ``user_id`` (note 07 §4.10); an entry id that
+belongs to someone else answers 404, exactly like one that does not exist.
+"""
 from __future__ import annotations
 
 import csv
@@ -11,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 
+from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .foods import fetch_food, get_food_or_404, insert_food, parse_flags, raw_nutrients
 from .models import (
@@ -46,7 +51,7 @@ from .nutrients import (
 from .periods import interdialytic_block, interdialytic_interval, previous_period, summarize_period, summary_notes, to_date
 from .profile import get_profile
 
-router = APIRouter(prefix="/api/log", tags=["log"])
+router = APIRouter(prefix="/api/log", tags=["log"], dependencies=[Depends(current_user)])
 
 MAX_RANGE_DAYS = 366
 DEFAULT_SUMMARY_DAYS = 7
@@ -127,15 +132,15 @@ def row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def fetch_entry(conn: sqlite3.Connection, entry_id: int) -> sqlite3.Row | None:
+def fetch_entry(conn: sqlite3.Connection, user_id: int, entry_id: int) -> sqlite3.Row | None:
     try:
-        return conn.execute(_ENTRY_SELECT + " WHERE e.id = ?", (entry_id,)).fetchone()
+        return conn.execute(_ENTRY_SELECT + " WHERE e.id = ? AND e.user_id = ?", (entry_id, int(user_id))).fetchone()
     except OverflowError:  # id beyond SQLite's 64-bit INTEGER: no such row
         return None
 
 
-def get_entry_or_404(conn: sqlite3.Connection, entry_id: int) -> sqlite3.Row:
-    row = fetch_entry(conn, entry_id)
+def get_entry_or_404(conn: sqlite3.Connection, user_id: int, entry_id: int) -> sqlite3.Row:
+    row = fetch_entry(conn, user_id, entry_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"log entry {entry_id} not found")
     return row
@@ -143,14 +148,15 @@ def get_entry_or_404(conn: sqlite3.Connection, entry_id: int) -> sqlite3.Row:
 
 def fetch_entries(
     conn: sqlite3.Connection,
+    user_id: int,
     start: str | None = None,
     end: str | None = None,
     *,
     status: str | None = None,
     meal: str | None = None,
 ) -> list[sqlite3.Row]:
-    where: list[str] = []
-    params: list[Any] = []
+    where: list[str] = ["e.user_id = ?"]
+    params: list[Any] = [int(user_id)]
     if start:
         where.append("e.date >= ?")
         params.append(start)
@@ -163,16 +169,17 @@ def fetch_entries(
     if meal:
         where.append("e.meal = ?")
         params.append(meal)
-    sql = _ENTRY_SELECT + (" WHERE " + " AND ".join(where) if where else "") + _ENTRY_ORDER
+    sql = _ENTRY_SELECT + " WHERE " + " AND ".join(where) + _ENTRY_ORDER
     return conn.execute(sql, params).fetchall()
 
 
-def eaten_day_totals(conn: sqlite3.Connection, start: str, end: str) -> dict[str, dict[str, float]]:
-    """``{date: totals}`` of *eaten* entries per day; days without eaten entries are absent."""
+def eaten_day_totals(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> dict[str, dict[str, float]]:
+    """``{date: totals}`` of ``user_id``'s *eaten* entries per day; days without eaten entries are absent."""
     sums = ", ".join(f"SUM({key}) AS {key}" for key in NUTRIENT_KEYS)
     rows = conn.execute(
-        f"SELECT date, {sums} FROM log_entries WHERE status = 'eaten' AND date >= ? AND date <= ? GROUP BY date",
-        (start, end),
+        f"""SELECT date, {sums} FROM log_entries
+            WHERE user_id = ? AND status = 'eaten' AND date >= ? AND date <= ? GROUP BY date""",
+        (int(user_id), start, end),
     ).fetchall()
     return {row["date"]: {key: float(row[key] or 0.0) for key in NUTRIENT_KEYS} for row in rows}
 
@@ -187,6 +194,7 @@ def resolve_servings(food: sqlite3.Row, servings: float | None, grams: float | N
 def insert_entry(
     conn: sqlite3.Connection,
     *,
+    user_id: int,
     date: str,
     meal: str,
     food: sqlite3.Row,
@@ -200,10 +208,11 @@ def insert_entry(
     snapshot = scale_nutrients(raw_nutrients(food), servings)
     now = utcnow()
     cur = conn.execute(
-        f"""INSERT INTO log_entries (date, meal, food_id, food_name, servings, grams, note, status,
+        f"""INSERT INTO log_entries (user_id, date, meal, food_id, food_name, servings, grams, note, status,
                 {_NUTRIENT_COLS}, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?)""",
-        (date, meal, food["id"], food["name"], servings, grams, note, status, *[snapshot[k] for k in NUTRIENT_KEYS], now, now),
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?)""",
+        (int(user_id), date, meal, food["id"], food["name"], servings, grams, note, status,
+         *[snapshot[k] for k in NUTRIENT_KEYS], now, now),
     )
     return int(cur.lastrowid)
 
@@ -273,21 +282,22 @@ def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any]) -
 
 
 @router.get("", response_model=DaySummary)
-def get_day(date: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def get_day(user: CurrentUser, date: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     day = parse_date_param(date, "date") if date else today_local()
-    profile = get_profile(conn)
-    rows = fetch_entries(conn, day, day)
+    profile = get_profile(conn, user.id)
+    rows = fetch_entries(conn, user.id, day, day)
     return summarize_day(day, rows, profile)
 
 
 @router.get("/range", response_model=RangeSummary)
-def get_range(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def get_range(user: CurrentUser, start: str | None = None, end: str | None = None,
+              conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     start_s, end_s = parse_range(start, end)
     start_d, end_d = _date.fromisoformat(start_s), _date.fromisoformat(end_s)
 
-    profile = get_profile(conn)
+    profile = get_profile(conn, user.id)
     by_date: dict[str, list[sqlite3.Row]] = {}
-    for row in fetch_entries(conn, start_s, end_s):
+    for row in fetch_entries(conn, user.id, start_s, end_s):
         by_date.setdefault(row["date"], []).append(row)
 
     days = []
@@ -311,7 +321,8 @@ def get_range(start: str | None = None, end: str | None = None, conn: sqlite3.Co
 
 
 @router.get("/summary", response_model=PeriodSummary)
-def get_summary(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def get_summary(user: CurrentUser, start: str | None = None, end: str | None = None,
+                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Period summary of *eaten* entries: averages per logged day vs targets, days over,
     the same-length previous period and, for hemodialysis, the current interdialytic interval.
 
@@ -332,7 +343,7 @@ def get_summary(start: str | None = None, end: str | None = None, conn: sqlite3.
         end_d = _date.fromisoformat(parse_date_param(end, "end"))
     check_range(start_d, end_d)
 
-    profile = get_profile(conn)
+    profile = get_profile(conn, user.id)
     targets = profile["targets"]
     warn_fraction = profile["warn_fraction"]
 
@@ -343,7 +354,7 @@ def get_summary(start: str | None = None, end: str | None = None, conn: sqlite3.
     fetch_from, _ = previous_period(start_d, end_d)
     if interval is not None:
         fetch_from = min(fetch_from, to_date(interval["since"]))
-    day_totals = eaten_day_totals(conn, fetch_from.isoformat(), end_d.isoformat())
+    day_totals = eaten_day_totals(conn, user.id, fetch_from.isoformat(), end_d.isoformat())
 
     summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction)
     summary["interdialytic"] = None if interval is None else interdialytic_block(interval, day_totals, targets, warn_fraction)
@@ -351,13 +362,41 @@ def get_summary(start: str | None = None, end: str | None = None, conn: sqlite3.
     return summary
 
 
+# A cell starting with one of these runs as a formula in Excel, LibreOffice and Google Sheets
+# (CSV injection, OWASP); such text cells get a leading apostrophe.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n", "\uff1d", "\uff0b", "\uff0d", "\uff20")
+
+
+def csv_safe(value: Any) -> Any:
+    """A CSV cell value: ``None`` → empty; text that a spreadsheet would run as a formula is escaped."""
+    if value is None:
+        return ""
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def csv_row(row: sqlite3.Row) -> list[Any]:
+    """One entry as the values of :data:`CSV_COLUMNS` (not yet escaped)."""
+    values: list[Any] = [
+        row["id"], row["date"], row["meal"], row["status"], row["food_id"], row["food_name"],
+        round(float(row["servings"]), 3),
+        None if row["grams"] is None else round(float(row["grams"]), 1),
+        row["note"],
+    ]
+    values += [round_value(key, row[key]) for key in NUTRIENT_KEYS]
+    values += [row["created_at"], row["updated_at"]]
+    return values
+
+
 @router.get("/export.csv")
-def export_csv(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> StreamingResponse:
+def export_csv(user: CurrentUser, start: str | None = None, end: str | None = None,
+               conn: sqlite3.Connection = Depends(get_db)) -> StreamingResponse:
     start_s = parse_date_param(start, "start") if start else None
     end_s = parse_date_param(end, "end") if end else None
     if start_s and end_s and end_s < start_s:
         raise HTTPException(status_code=400, detail="end must not be before start")
-    rows = fetch_entries(conn, start_s, end_s)  # materialised before the connection closes
+    rows = fetch_entries(conn, user.id, start_s, end_s)  # materialised before the connection closes
 
     def generate():
         buffer = io.StringIO()
@@ -367,15 +406,7 @@ def export_csv(start: str | None = None, end: str | None = None, conn: sqlite3.C
         for row in rows:
             buffer.seek(0)
             buffer.truncate(0)
-            values: list[Any] = [
-                row["id"], row["date"], row["meal"], row["status"], row["food_id"], row["food_name"],
-                round(float(row["servings"]), 3),
-                None if row["grams"] is None else round(float(row["grams"]), 1),
-                row["note"],
-            ]
-            values += [round_value(key, row[key]) for key in NUTRIENT_KEYS]
-            values += [row["created_at"], row["updated_at"]]
-            writer.writerow(["" if v is None else v for v in values])
+            writer.writerow([csv_safe(v) for v in csv_row(row)])
             yield buffer.getvalue()
 
     filename = f"kidney-log_{start_s or 'all'}_{end_s or 'all'}.csv"
@@ -387,11 +418,12 @@ def export_csv(start: str | None = None, end: str | None = None, conn: sqlite3.C
 
 
 @router.post("/quick", response_model=Entry, status_code=201)
-def quick_add(body: QuickAdd, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def quick_add(body: QuickAdd, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Create a custom food from manually entered nutrients, then log it."""
     food_id = insert_food(
         conn,
         source="custom",
+        owner_user_id=user.id,
         name=body.name,
         serving_desc=body.serving_desc,
         serving_g=body.serving_g,
@@ -400,17 +432,18 @@ def quick_add(body: QuickAdd, conn: sqlite3.Connection = Depends(get_db)) -> dic
     )
     food = fetch_food(conn, food_id)
     entry_id = insert_entry(
-        conn, date=body.date, meal=body.meal, food=food, servings=body.servings, grams=None, note=body.note, status=body.status
+        conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=body.servings, grams=None,
+        note=body.note, status=body.status,
     )
     conn.commit()
-    return row_to_entry(fetch_entry(conn, entry_id))
+    return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
 
 @router.post("/mark-eaten", response_model=MarkEatenResult)
-def mark_eaten(body: MarkEaten, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def mark_eaten(body: MarkEaten, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Set every planned entry of the day (or of one meal) to ``eaten``."""
-    sql = "UPDATE log_entries SET status = 'eaten', updated_at = ? WHERE date = ? AND status = 'planned'"
-    params: list[Any] = [utcnow(), body.date]
+    sql = "UPDATE log_entries SET status = 'eaten', updated_at = ? WHERE user_id = ? AND date = ? AND status = 'planned'"
+    params: list[Any] = [utcnow(), user.id, body.date]
     if body.meal:
         sql += " AND meal = ?"
         params.append(body.meal)
@@ -420,14 +453,14 @@ def mark_eaten(body: MarkEaten, conn: sqlite3.Connection = Depends(get_db)) -> d
 
 
 @router.post("/copy-day", response_model=CopyDayResult, status_code=201)
-def copy_day(body: CopyDay, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Copy a day's entries onto another date (snapshot recomputed from the current foods).
 
     Entries entered by weight keep their grams (servings follow the food's current
     serving size); all others keep their servings. Notes are copied.
     """
     status_filter = None if body.include == "all" else body.include
-    rows = fetch_entries(conn, body.from_date, body.from_date, status=status_filter)
+    rows = fetch_entries(conn, user.id, body.from_date, body.from_date, status=status_filter)
     if body.meals:
         rows = [r for r in rows if r["meal"] in body.meals]
     if not rows:
@@ -445,29 +478,30 @@ def copy_day(body: CopyDay, conn: sqlite3.Connection = Depends(get_db)) -> dict[
             servings, grams = float(row["servings"]), None
         created.append(
             insert_entry(
-                conn, date=body.to_date, meal=row["meal"], food=food, servings=servings, grams=grams,
+                conn, user_id=user.id, date=body.to_date, meal=row["meal"], food=food, servings=servings, grams=grams,
                 note=row["note"], status=body.status,
             )
         )
     conn.commit()
-    entries = [row_to_entry(fetch_entry(conn, entry_id)) for entry_id in created]
+    entries = [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]
     return {"created": len(entries), "entries": entries}
 
 
 @router.post("", response_model=Entry, status_code=201)
-def create_entry(body: LogCreate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    food = get_food_or_404(conn, body.food_id)
+def create_entry(body: LogCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    food = get_food_or_404(conn, user.id, body.food_id)
     servings, grams = resolve_servings(food, body.servings, body.grams)
     entry_id = insert_entry(
-        conn, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams, note=body.note, status=body.status
+        conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams,
+        note=body.note, status=body.status,
     )
     conn.commit()
-    return row_to_entry(fetch_entry(conn, entry_id))
+    return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
 
 @router.put("/{entry_id}", response_model=Entry)
-def update_entry(entry_id: int, body: LogUpdate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    row = get_entry_or_404(conn, entry_id)
+def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    row = get_entry_or_404(conn, user.id, entry_id)
     food = fetch_food(conn, row["food_id"])
     if food is None:  # cannot happen with foreign keys on, but keep the error explicit
         raise HTTPException(status_code=404, detail="the entry's food no longer exists")
@@ -498,15 +532,15 @@ def update_entry(entry_id: int, body: LogUpdate, conn: sqlite3.Connection = Depe
         sets.append(f"{key} = ?")
         params.append(snapshot[key])
     sets.append("updated_at = ?")
-    params += [utcnow(), entry_id]
-    conn.execute(f"UPDATE log_entries SET {', '.join(sets)} WHERE id = ?", params)
+    params += [utcnow(), entry_id, user.id]
+    conn.execute(f"UPDATE log_entries SET {', '.join(sets)} WHERE id = ? AND user_id = ?", params)
     conn.commit()
-    return row_to_entry(fetch_entry(conn, entry_id))
+    return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
 
 @router.delete("/{entry_id}", status_code=204, response_class=Response)
-def delete_entry(entry_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    get_entry_or_404(conn, entry_id)
-    conn.execute("DELETE FROM log_entries WHERE id = ?", (entry_id,))
+def delete_entry(entry_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    get_entry_or_404(conn, user.id, entry_id)
+    conn.execute("DELETE FROM log_entries WHERE id = ? AND user_id = ?", (entry_id, user.id))
     conn.commit()
     return Response(status_code=204)

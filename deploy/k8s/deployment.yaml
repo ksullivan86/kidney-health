@@ -1,3 +1,5 @@
+# kidney-health Deployment, hardened for Pod Security "restricted" and a read-only root filesystem.
+# Spec: docs/dev/research/01-rootless-and-security.md §3.5, §5.3 and §10. Guide: docs/deployment.md.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,12 +8,12 @@ metadata:
   labels:
     app.kubernetes.io/name: kidney-health
 spec:
-  # SQLite on a ReadWriteOnce volume: never run more than one replica.
+  # SQLite on a ReadWriteOnce volume: never more than one replica.
   replicas: 1
   revisionHistoryLimit: 3
   strategy:
-    # Recreate (not RollingUpdate): the old pod must release the volume and the
-    # SQLite lock before the new pod starts.
+    # Recreate, not RollingUpdate: the old pod must release the volume and the SQLite lock first.
+    # No PodDisruptionBudget on purpose: with one replica it would block every node drain.
     type: Recreate
   selector:
     matchLabels:
@@ -21,24 +23,32 @@ spec:
       labels:
         app.kubernetes.io/name: kidney-health
     spec:
+      # No Kubernetes API access from the pod, and no env vars about other Services.
       automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Optional, Kubernetes >= 1.36 (GA): run the pod in its own user namespace. Needs Linux >= 6.3,
+      # idmap-capable volumes (ext4, xfs, btrfs, tmpfs; not NFS), containerd >= 2.0 and, on Talos,
+      # a SysctlConfig with user.max_user_namespaces (docs/deployment.md).
+      # hostUsers: false
       # Pin to one node when using a hostPath-style StorageClass (local-path):
       # nodeSelector:
       #   kubernetes.io/hostname: talos-worker-1
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10001            # matches USER in deploy/Containerfile
+        runAsUser: 10001            # USER in deploy/Containerfile; never 0
         runAsGroup: 10001
-        fsGroup: 10001              # volume files become group-writable by the app user
+        fsGroup: 10001              # the volume and the secret files become group 10001
         fsGroupChangePolicy: OnRootMismatch
+        # Ignore group memberships from the image's /etc/group (beta, on by default since 1.33;
+        # needs containerd >= 2.0, which Talos ships). Remove it if the kubelet rejects the pod.
+        supplementalGroupsPolicy: Strict
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: app
-          image: ghcr.io/ksullivan86/kidney-health:latest
-          # Always: with the :latest tag a `kubectl rollout restart` picks up new builds.
-          # Pin a tag via kustomization.yaml `images:` for controlled upgrades.
-          imagePullPolicy: Always
+          # The tag and digest are set in kustomization.yaml (`images:`).
+          image: ghcr.io/ksullivan86/kidney-health:0.3
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
@@ -46,22 +56,43 @@ spec:
           env:
             - name: DATA_DIR
               value: /data
-          envFrom:
-            # USDA_API_KEY / APP_PASSWORD. optional: the pod starts without the Secret
-            # (then: no USDA search, no password). See secret.example.yaml.
-            - secretRef:
-                name: kidney-health
-                optional: true
+            # Secrets are files, not env vars (secret.example.yaml).
+            - name: SECRET_KEY_FILE
+              value: /run/secrets/kidney-health/secret_key
+            - name: USDA_API_KEY_FILE
+              value: /run/secrets/kidney-health/usda_api_key
+            # Whose X-Forwarded-For / -Proto to believe. A pod CIDR trusts EVERY pod in the cluster,
+            # so it is only safe while networkpolicy.yaml is enforced (Talos' default Flannel ignores
+            # NetworkPolicy unless kubeNetworkPoliciesEnabled: true) or TRUSTED_PROXY_SECRET_FILE is
+            # set. Narrow it to your Gateway's pod range when you can (docs/security.md).
+            - name: TRUSTED_PROXIES
+              value: "10.244.0.0/16"
+            # The URL people type; its host passes the Host check and invite links use it.
+            # - name: PUBLIC_URL
+            #   value: https://food.home.example.net
+            # - name: AUTH_MODE
+            #   value: local
           volumeMounts:
             - name: data
               mountPath: /data
-            # - name: tmp
-            #   mountPath: /tmp
+            - name: tmp
+              mountPath: /tmp
+            - name: secrets
+              mountPath: /run/secrets/kidney-health
+              readOnly: true
+          # Probes come from the node's kubelet, which NetworkPolicy cannot block. The pod IP in
+          # the Host header is an IP literal, which the Host allowlist always accepts.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
           readinessProbe:
             httpGet:
-              path: /healthz          # exempt from APP_PASSWORD auth
+              path: /healthz
               port: http
-            initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
@@ -69,7 +100,6 @@ spec:
             httpGet:
               path: /healthz
               port: http
-            initialDelaySeconds: 20
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
@@ -77,23 +107,34 @@ spec:
             requests:
               cpu: 50m
               memory: 128Mi
+              ephemeral-storage: 64Mi
             limits:
-              cpu: 500m
+              # No CPU limit on purpose: it only causes throttling for a bursty single user.
               memory: 512Mi
+              ephemeral-storage: 256Mi
           securityContext:
             allowPrivilegeEscalation: false
-            # The app writes only to /data, so `true` should work. Left false for the
-            # first deployment because SQLite may spill temp files to /tmp on large
-            # queries; if you flip it, also uncomment the `tmp` emptyDir above/below.
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: true   # the app writes only /data and /tmp
+            runAsNonRoot: true
+            privileged: false
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: kidney-health-data
-        # - name: tmp
-        #   emptyDir:
-        #     medium: Memory
-        #     sizeLimit: 64Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+        - name: secrets
+          secret:
+            secretName: kidney-health
+            # Group-readable: the files belong to group fsGroup (10001), never world-readable.
+            defaultMode: 0440
+            # The pod starts without the Secret, but then SECRET_KEY_FILE points at a missing file
+            # and the app refuses to start with a clear message: create the Secret first.
+            optional: true

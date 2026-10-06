@@ -5,10 +5,17 @@ talks to ``http://localhost`` (the Host allowlist refuses Starlette's default ``
 sends ``X-Requested-With: kidney-health`` like the app's own ``fetch()`` wrapper, so unsafe
 ``/api`` requests pass the CSRF check. Security tests that need a bare client pass ``headers={}``
 explicitly or use :data:`BareTestClient`.
+
+Accounts (v0.3): the ``settings`` fixture creates the first admin from ``ADMIN_USERNAME`` /
+``ADMIN_PASSWORD`` (as an operator would with ``ADMIN_PASSWORD_FILE``), and ``client`` is that admin,
+signed in through ``POST /api/auth/login``. ``anon_client`` is the same kind of app with nobody
+signed in. :func:`add_user` creates a second account the way people get one (an admin's invite,
+then ``POST /api/auth/register``) and returns a client signed in as that person.
 """
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
@@ -21,6 +28,11 @@ from app.main import create_app
 
 CSRF_HEADERS = {"X-Requested-With": "kidney-health"}
 BASE_URL = "http://localhost"
+HTTPS_URL = "https://localhost"
+
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "plum-orbit-candle-73"
+USER_PASSWORD = "quiet-harbour-lantern-58"
 
 
 class TestClient(BareTestClient):
@@ -126,15 +138,92 @@ def foods_json(tmp_path: Path) -> Path:
     return path
 
 
+def make_settings(tmp_path: Path, foods_json: Path, **kwargs: Any) -> Settings:
+    """Settings with a temporary DATA_DIR and the first admin created from env-style credentials."""
+    values: dict[str, Any] = {
+        "data_dir": tmp_path / "data",
+        "foods_json": foods_json,
+        "admin_username": ADMIN_USERNAME,
+        "admin_password": ADMIN_PASSWORD,
+    }
+    values.update(kwargs)
+    return Settings(**values)
+
+
 @pytest.fixture
 def settings(tmp_path: Path, foods_json: Path) -> Settings:
-    return Settings(data_dir=tmp_path / "data", foods_json=foods_json)
+    return make_settings(tmp_path, foods_json)
+
+
+def sign_in(client: BareTestClient, username: str = ADMIN_USERNAME, password: str = ADMIN_PASSWORD) -> dict[str, Any]:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+@contextmanager
+def signed_in_client(settings: Settings, base_url: str = BASE_URL, **kwargs: Any) -> Iterator[TestClient]:
+    """A started app (lifespan) with the admin signed in."""
+    with TestClient(create_app(settings), base_url=base_url, **kwargs) as c:
+        sign_in(c)
+        yield c
 
 
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
+    with signed_in_client(settings) as c:
+        yield c
+
+
+@pytest.fixture
+def anon_client(settings: Settings) -> Iterator[TestClient]:
     with TestClient(create_app(settings)) as c:
         yield c
+
+
+def invite_token(admin: BareTestClient, role: str = "user") -> str:
+    response = admin.post("/api/admin/invites", json={"role": role})
+    assert response.status_code == 201, response.text
+    return response.json()["url"].split("/#/invite/", 1)[1]
+
+
+def add_user(admin: BareTestClient, username: str = "sam", password: str = USER_PASSWORD, role: str = "user",
+             base_url: str | None = None) -> TestClient:
+    """Invite + register a new account on ``admin``'s app; returns a client signed in as that person.
+
+    The new client shares the running app (no second lifespan). A second account needs HTTPS (or
+    ``allow_insecure_http=True``), so use an ``https://localhost`` admin client for two-user tests.
+    """
+    token = invite_token(admin, role)
+    other = TestClient(admin.app, base_url=base_url or str(admin.base_url).rstrip("/"))
+    response = other.post("/api/auth/register", json={"token": token, "username": username, "password": password})
+    assert response.status_code == 201, response.text
+    return other
+
+
+@pytest.fixture
+def https_client(settings: Settings) -> Iterator[TestClient]:
+    with signed_in_client(settings, base_url=HTTPS_URL) as c:
+        yield c
+
+
+@pytest.fixture
+def two_clients(https_client: TestClient) -> tuple[TestClient, TestClient]:
+    """(admin "admin", user "sam") on one app over HTTPS."""
+    return https_client, add_user(https_client)
+
+
+def insert_users(conn: Any, users: list[tuple[int, str]], role: str = "user") -> None:
+    """Rows in the real schema-v3 ``users`` table for low-level tests (user 1 is updated in place)."""
+    now = "2026-10-05T00:00:00.000000Z"
+    for user_id, name in users:
+        conn.execute(
+            """INSERT INTO users (id, username, username_norm, role, status, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'active', ?, ?)
+               ON CONFLICT(id) DO UPDATE SET username = excluded.username, username_norm = excluded.username_norm,
+                 status = 'active'""",
+            (user_id, name, name.lower(), "admin" if user_id == 1 else role, now, now),
+        )
 
 
 def find_food(client: TestClient, query: str) -> dict[str, Any]:
@@ -159,3 +248,37 @@ def send_json(client: TestClient, method: str, path: str, body: Any) -> httpx2.R
     Infinity), this uses the stdlib encoder's permissive default so tests can post the JSON
     literals ``Infinity`` / ``NaN`` that real clients can send."""
     return client.request(method, path, content=json.dumps(body), headers={"content-type": "application/json"})
+
+
+class FakeClock:
+    """Replaces :func:`app.auth.clock.now` (sessions, tokens, throttles, rate limits)."""
+
+    def __init__(self) -> None:
+        from datetime import datetime, timezone
+
+        self.moment = datetime.now(timezone.utc)
+
+    def now(self):  # noqa: ANN201 - datetime
+        return self.moment
+
+    def advance(self, **delta: float) -> None:
+        from datetime import timedelta
+
+        self.moment += timedelta(**delta)
+
+
+@pytest.fixture
+def fake_clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
+    fake = FakeClock()
+    monkeypatch.setattr("app.auth.clock.now", fake.now)
+    return fake
+
+
+def setup_code_from_logs(caplog: pytest.LogCaptureFixture) -> str:
+    import re
+
+    for record in reversed(caplog.records):
+        match = re.search(r"enter the code ([A-Z2-7]{4}-[A-Z2-7]{4}-[A-Z2-7]{4}-[A-Z2-7]{4})", record.getMessage())
+        if match:
+            return match.group(1)
+    raise AssertionError("no FIRST-RUN SETUP line in the logs")

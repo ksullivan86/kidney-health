@@ -1,0 +1,42 @@
+# EXAMPLE, not in kustomization.yaml. For clusters running Cilium: an FQDN-precise egress allowlist
+# that replaces the "any public address on 443" rule of networkpolicy.yaml, closing the residual
+# exfiltration path to arbitrary HTTPS hosts (docs/security.md). Keep networkpolicy.yaml's
+# default-deny and ingress rules; delete its 0.0.0.0/0 egress rule when you apply this.
+#   kubectl apply -f deploy/k8s/cilium-networkpolicy.example.yaml
+# The DNS rule must allow lookups through Cilium's DNS proxy, which is what makes toFQDNs work.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kidney-health-egress-fqdn
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kidney-health
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toFQDNs:
+        - matchName: api.nal.usda.gov          # USDA FoodData Central (when a USDA key is set)
+        - matchName: world.openfoodfacts.org   # barcode lookups (when Open Food Facts is on)
+        # Optional AI providers (docs/network-allowlist.md):
+        # - matchName: api.openai.com
+        # - matchName: openrouter.ai
+        # - matchName: inference-api.nousresearch.com
+        # Optional breached-password check (PASSWORD_BREACH_CHECK=true):
+        # - matchName: api.pwnedpasswords.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

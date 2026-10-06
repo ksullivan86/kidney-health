@@ -93,6 +93,12 @@ Where the lines come from:
 - You have a low you cannot treat yourself, chest pain or severe breathlessness: call 911 (or your
   local emergency number). See [Get help now](../../get-help-now.md).
 
+## Related pages
+
+- [Sample menus](../menus/index.md) · [Grocery shopping](../grocery-shopping.md) · [Grocery lists](../grocery-lists.md)
+- [Carb counting](../carb-counting.md) · [Potassium leaching](../potassium-leaching.md) · [Portions](../portions.md)
+- In the app: [Planning and menus](../../app/planning-and-menus.md) · [Logging food](../../app/logging.md)
+
 ## Sources
 
 - [USDA FoodData Central (SR Legacy)][FDC]: every ingredient value.

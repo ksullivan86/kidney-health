@@ -8,7 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [A26-5, K22, DG16a, DG7, FDC, DG12, DG13a, DG22, DG32b, DG30b, DG25b, DG25a, JBDS, ARCH]
+sources: [A26-5, K22, DG16a, DG7, FDC, DG12, DG13a, DG22, DG32b, DG30b, DG25b, DG25a, JBDS, ARCH, A26-6, NHS-DKA]
 ---
 
 # Carb counting on a kidney diet
@@ -139,8 +139,22 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 
 ## Get help now if…
 
-- Your glucose stays above about 250 mg/dL (13.9 mmol/L) for 2 hours or more, or you have ketones:
-  follow your sick-day plan and call your team ([Sick days](../t1d/sick-days.md); [Get help now](../get-help-now.md)).
+!!! danger "Call 911 (or your local emergency number)"
+    Someone with a low cannot swallow safely, is very drowsy or confused, or has a seizure: give glucagon
+    if you have it, turn them on their side and call ([ADA 2026 §6][A26-6]). Also call for blood ketones
+    of 3.0 mmol/L or more, or ketones with vomiting, deep fast breathing or fruity breath ([NHS][NHS-DKA]).
+
+!!! warning "Call your care team today"
+    Glucose stays above about 250 mg/dL (13.9 mmol/L) for 2 hours or more, or blood ketones are
+    1.6–2.9 mmol/L (call now) ([NHS][NHS-DKA]). Follow your [sick-day plan](../t1d/sick-days.md). Also call
+    about lows that keep coming back after you change foods. Full list: [Get help now](../get-help-now.md).
+
+## Related pages
+
+- [Treating a low](../t1d/treating-a-low.md) · [Sick days](../t1d/sick-days.md) · [CGM metrics](../labs/cgm-metrics.md)
+- [Portions](portions.md) · [Reading food labels](label-reading.md) · [Recipes](recipes/index.md) ·
+  [Sample menus](menus/index.md)
+- In the app: [Logging food](../app/logging.md) · [Targets and warnings](../app/targets-and-warnings.md)
 
 ## Sources
 
@@ -155,3 +169,4 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 - [DaVita: peritoneal dialysis diet][DG25a]: calories from dialysis fluid.
 - [JBDS–Renal Association guidance][JBDS]: glucose on dialysis days; meals for gastroparesis.
 - [Project architecture contract][ARCH]: the app's meal carbohydrate total.
+- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NHS: diabetic ketoacidosis][NHS-DKA]: ketone levels.

@@ -7,8 +7,8 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-05
-sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05]
+last_checked: 2026-10-06
+sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, FDC]
 ---
 
 # Targets and warnings
@@ -73,10 +73,95 @@ blocked or warned against.
 - **Fluid** not tracked before dialysis; 1,500 mL on hemodialysis (1,000 mL plus an assumed 500 mL of
   urine) and 2,000 mL on peritoneal dialysis.
 
-!!! info "Still to write (after the v0.3 app features land)"
-    - [ ] Personalised targets from age, sex, activity and labs (design note 05) and which details do not
-          change targets.
-    - [ ] Screenshots of the warnings, the day view and the period summary (local images only).
+## Personalised targets (coming in v0.3)
+
+Version 0.3 adds optional details in **Profile → About you** and a **Labs** screen. "Suggest targets"
+then starts from you rather than from a 70 kg example ([design note 05][NOTE05]). Which detail changes
+which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
+
+**Blood potassium** (a result from the last 90 days) moves the potassium review ceiling. "Default" is
+the stage number above, for example 3,000 mg at stage 4. Potassium is the same number in both unit
+systems (mmol/L = mEq/L).
+
+| Your blood potassium | Suggested potassium |
+|---|---|
+| below 3.5 | no limit |
+| 3.5–5.0 | one step higher than the default (stage 4: 3,500 mg); the default if you ticked "I have had high potassium" |
+| 5.1–5.5 | the default, but no more than 3,000 mg |
+| 5.6–5.9 | no more than 2,500 mg |
+| 6.0 or more | no more than 2,000 mg, **and an urgent alert** (see below) |
+
+**Blood phosphate** (last 90 days) sets phosphorus:
+
+=== "US units"
+
+    | Your blood phosphate | Suggested phosphorus |
+    |---|---|
+    | below 2.5 mg/dL | no limit |
+    | 2.5–4.5 mg/dL | 1,000 mg |
+    | above 4.5 mg/dL | 800 mg |
+
+=== "International"
+
+    | Your blood phosphate | Suggested phosphorus |
+    |---|---|
+    | below 0.81 mmol/L | no limit |
+    | 0.81–1.45 mmol/L | 1,000 mg |
+    | above 1.45 mmol/L | 800 mg |
+
+Other v0.3 changes:
+
+- **Calories** use your age, sex, height and activity, kept inside KDOQI's 25–35 kcal per kg, and are
+  rounded to 10 kcal ([KDOQI 2020][Q20], 3.1.1). Without age and height the app keeps 30 kcal/kg.
+- **Protein** goes up, not down, from age 65 or with signs of poor nutrition (low albumin, weight loss
+  over 5 % in 6 months, frailty): 0.8–1.0 g/kg at stages 3–5 before dialysis, 1.0–1.2 g/kg at stages
+  1–2, and 1.2–1.3 g/kg on dialysis with nutrition risk ([design note 05][NOTE05]).
+- **Fluid** on hemodialysis is 1,000 mL plus your 24-hour urine output; on peritoneal dialysis, urine
+  output plus the fluid your exchanges remove.
+- **Fibre** gets a goal of at least 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24).
+- No starting targets during pregnancy or breastfeeding, under age 18, or in the first 12 weeks after a
+  transplant.
+
+**Potassium additives** (coming in v0.3, with barcode scanning): a packaged food whose ingredients list
+a potassium additive, such as potassium chloride or potassium lactate, but whose label gives no
+potassium number gets a **medium** potassium warning: "contains a potassium additive; potassium not
+listed". When the label lists potassium, the normal thresholds apply. This rule is marked for review by
+a renal dietitian ([architecture contract][ARCH], v0.3 item 9;
+[Barcodes and label photos](barcode-and-photo.md)).
+
+## Examples
+
+What the app shows for some builtin foods, per serving ([USDA FoodData Central][FDC]):
+
+| Food and serving | Potassium | Phosphorus | Sodium | Carbs | Rating and why |
+|---|---|---|---|---|---|
+| Banana, 1 medium (118 g) | 422 mg | 26 mg | 1 mg | 27 g | **red**: potassium over 200 mg |
+| White rice, cooked, 1 cup (158 g) | 55 mg | 68 mg | 2 mg | 45 g | **red**: carbohydrate over 30 g (fine for kidneys; count it for insulin) |
+| White bread, 1 slice (29 g) | 37 mg | 28 mg | 142 mg | 14 g | **yellow**: sodium 141–400 mg, quick-acting carbohydrate |
+| Cola, regular, 12 fl oz can | 18 mg | 33 mg | 11 mg | 38 g | **red**: phosphate additive, and over 30 g carbohydrate |
+| Apple juice, ½ cup, logged as a low treatment | 125 mg | 9 mg | 5 mg | 14 g | **yellow**: potassium only; no carbohydrate warning |
+| Glucose gel, 1 tube | 0 mg | 0 mg | 0 mg | 15 g | **green**: the lowest-potassium way to treat a low |
+
+A red rating is not a ban. It tells you to check the portion and the rest of your day. Rice is red only
+because of its carbohydrate, which you count for insulin; for your kidneys it is a low-potassium choice.
+
+## Get help now if…
+
+!!! danger "Call 911 (or your local emergency number)"
+    Your lab potassium is **6.5 mmol/L or more**, or you have chest pain, fainting, a very slow or
+    irregular pulse, or sudden severe weakness and your potassium has been high
+    ([KDIGO 2024][K24], Table 28).
+
+!!! warning "Call your care team today"
+    A potassium of **6.0–6.4 mmol/L**: KDIGO advises a repeat test within 24 hours, or care in hospital if
+    you feel unwell ([KDIGO 2024][K24], Table 28). The app's day status is about food, not blood levels;
+    a "green" day does not mean your blood potassium is safe. Full list: [Get help now](../get-help-now.md).
+
+## Related pages
+
+- [First setup](first-setup.md) · [Logging food](logging.md) · [Reports for your care team](reports-for-your-team.md)
+- [Potassium](../eat/potassium.md) · [Phosphorus](../eat/phosphorus.md) · [Dialysis days](../eat/dialysis-days.md) ·
+  [Blood potassium](../labs/blood-potassium.md) · [Treating a low](../t1d/treating-a-low.md)
 
 ## Sources
 
@@ -85,3 +170,6 @@ blocked or warned against.
 - [NKF: potassium][DG5]; [NKF: phosphorus][DG20]; [FDA: sodium in your diet][DG34].
 - [Kalantar-Zadeh 2010][DG12]; [St-Jules 2017][DG15].
 - [KDOQI 2020 nutrition guideline][Q20]; [Cabrera 2015][DG28a]; [Foley 2011][DG53].
+- [KDIGO 2024 CKD guideline][K24], Table 28 (action levels for high potassium).
+- [ADA Standards of Care 2026, section 5][A26-5], Rec 5.24 (fibre).
+- [USDA FoodData Central][FDC]: the food values in the examples.

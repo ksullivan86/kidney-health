@@ -1,0 +1,3 @@
+# Your real Caddyfile and the DNS API token stay local.
+Caddyfile
+caddy.env

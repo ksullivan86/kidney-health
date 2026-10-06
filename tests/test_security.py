@@ -333,7 +333,13 @@ def test_cross_site_reads_of_the_api_are_refused(client):
 
 
 def test_x_requested_with_is_required_for_unsafe_api_requests(settings):
+    from conftest import ADMIN_PASSWORD, ADMIN_USERNAME
+
     with TestClient(create_app(settings), headers={}) as bare:
+        login = {"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
+        r = bare.post("/api/auth/login", json=login)  # login CSRF: the sign-in form needs the header too
+        assert r.status_code == 403 and r.json() == {"detail": "Missing X-Requested-With header"}
+        assert bare.post("/api/auth/login", json=login, headers={"X-Requested-With": "kidney-health"}).status_code == 200
         r = bare.post("/api/foods", json={"name": "x", "serving_desc": "1", "serving_g": 1, "nutrients": {}})
         assert r.status_code == 403 and r.json() == {"detail": "Missing X-Requested-With header"}
         r = bare.post("/api/foods", json={}, headers={"X-Requested-With": "XMLHttpRequest"})

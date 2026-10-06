@@ -10,7 +10,7 @@ from app import pwa
 from app.config import Settings
 from app.main import create_app
 
-from conftest import DAY, TestClient
+from conftest import ADMIN_PASSWORD, ADMIN_USERNAME, DAY, TestClient, sign_in
 
 SW_TEMPLATE = "const VERSION = '__VERSION__';\nconst SHELL = `kdl-shell-${VERSION}`;\nself.addEventListener('fetch', () => {});\n"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
@@ -38,6 +38,8 @@ def static(tmp_path: Path) -> Path:
 
 
 def app_client(tmp_path: Path, foods_json: Path, static: Path, **kw) -> TestClient:
+    kw.setdefault("admin_username", ADMIN_USERNAME)
+    kw.setdefault("admin_password", ADMIN_PASSWORD)
     return TestClient(create_app(Settings(data_dir=tmp_path / "data", foods_json=foods_json, static_dir=static, **kw)))
 
 
@@ -108,13 +110,14 @@ def test_static_content_types_and_cache_headers(tmp_path, foods_json, static):
         assert c.get("/api/profile").headers["cache-control"] == "no-store"
 
 
-def test_pwa_paths_are_public_under_the_legacy_password(tmp_path, foods_json, static):
-    with app_client(tmp_path, foods_json, static, app_password="s3cret") as c:
-        for path in ("/sw.js", "/manifest.webmanifest", "/icons/icon-192.png", "/apple-touch-icon.png", "/healthz"):
+def test_pwa_paths_and_the_shell_are_public_but_the_api_needs_a_session(tmp_path, foods_json, static):
+    """v0.3: static files carry no data, so the shell, manifest, icons and /sw.js load before sign-in
+    (iOS fetches the icon at install time); every /api route but the public auth ones needs a session."""
+    with app_client(tmp_path, foods_json, static) as c:
+        for path in ("/sw.js", "/manifest.webmanifest", "/icons/icon-192.png", "/apple-touch-icon.png", "/healthz", "/", "/js/app.js"):
             assert c.get(path).status_code == 200, path
-        assert c.get("/").status_code == 401
-        assert c.get("/js/app.js").status_code == 401
         assert c.get("/api/profile").status_code == 401
+        assert c.get("/api/auth/status").status_code == 200
         assert c.get("/sw.js", headers={"Host": "evil.example"}).status_code == 400
 
 
@@ -125,6 +128,7 @@ def test_is_public_path():
 
 def test_static_is_gzipped_but_api_is_not(tmp_path, foods_json, static):
     with app_client(tmp_path, foods_json, static) as c:
+        sign_in(c)
         r = c.get("/js/app.js", headers={"Accept-Encoding": "gzip"})
         assert r.headers.get("content-encoding") == "gzip"
         assert r.text.startswith("'use strict'")  # the client decodes it

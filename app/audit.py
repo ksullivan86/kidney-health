@@ -53,6 +53,7 @@ ACTIONS: set[str] = {
     "user.disabled",
     "user.enabled",
     "user.deleted",
+    "user.updated",
     "user.reset_link_issued",
     "user.password_changed",
     "user.must_change_password",

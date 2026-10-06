@@ -71,7 +71,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 ## Make it fit you
 
-- **Other fish:** haddock, pollock or tilapia work the same way; they have more potassium (about 300–330 mg per 3 oz).
+- **Other fish:** tilapia or pollock work the same way, but they have more potassium: about 320–390 mg per 3 oz cooked, against about 210 mg for cod.
 - **Before dialysis:** 2 oz of fish per person, with a little more couscous, if your team set a lower protein target.
 - **Rice instead of couscous:** ¾ cup white rice has about the same carbohydrate.
 

@@ -65,7 +65,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 ## Make it fit you
 
-- **Before dialysis:** use 4 whites and 1 egg for 2 people (about 13 g protein a serving) if your team set a lower protein target.
+- **Before dialysis:** use 4 whites and 1 egg for 2 people (about 16 g protein a serving) if your team set a lower protein target.
 - **Different vegetables:** green pepper, zucchini or a few mushrooms swap for the red pepper.
 - **Warmth without salt:** a pinch of red pepper flakes or a few drops of hot sauce (count its sodium).
 

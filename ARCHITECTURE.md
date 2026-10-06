@@ -57,11 +57,13 @@ tests/test_periods.py       period maths
 tests/test_planning.py      planned entries, saved meals, summary, shopping (API)
 tests/test_migrations.py    v0.1 database upgrades in place
 tests/test_food_db.py       invariants of the committed data/foods.json (flags vs numbers, guide records)
-deploy/Containerfile
-deploy/compose.yaml
+deploy/Containerfile        published image (Chainguard by digest); Containerfile.debian = CI-built fallback
+deploy/compose.yaml         rootless compose (+ compose.caddy.yaml, compose.ai-ollama.yaml overlays)
 deploy/quadlet/kidney-health.container
-deploy/k8s/*.yaml (+ kustomization.yaml)
-.github/workflows/ci.yml    pytest + build image + push to ghcr.io on main
+deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRoute
+.github/workflows/ci.yml    pytest 3.12+3.14, JS parity, linters, image smoke test + Grype gate (never pushes)
+.github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
+SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
 pyproject.toml, requirements.txt, requirements-dev.txt, .gitignore
 ```
 
@@ -371,6 +373,8 @@ DaySummary = {
 ```
 
 ### Auth (optional)
+*v0.2 only; replaced in v0.3 by accounts (see "M1 API" at the end of this file). `APP_PASSWORD`
+is now imported once as the first admin's password and HTTP Basic is no longer accepted.*
 If `APP_PASSWORD` is set, every route (including static) **except `GET /healthz`**
 requires HTTP Basic auth with any username and that password (constant-time compare,
 realm `kidney-health`). `/healthz` stays open so container and Kubernetes probes work;
@@ -706,3 +710,170 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   offline outbox; their UI and mock twins.
 * **M3 integration:** `/learn` mount and handbook build in the image, contributor docs, e2e
   harnesses in `tools/e2e/`, full review, preview rebuild, PR.
+
+## M1 API
+
+Built in M1 (backend-core accounts) from note 07 §4.4–§4.17 and its §9 security review, plus the
+identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admin_api`, `sessions`,
+`throttle`, `passwords`, `policy`, `proxy`, `tokens`, `ratelimit`, `bootstrap`), `app/account.py`
+(export, deletion), `app/admin.py` (CLI), schema step `app/migrations/m003_accounts.py`.
+
+### Identity and request rules
+
+* **Modes** (`AUTH_MODE`): `local` (default; username + password, cookie session), `proxy` (identity
+  from `TRUSTED_PROXY_USER_HEADER`, only from `TRUSTED_PROXIES` with a matching `X-Proxy-Secret`;
+  `TRUSTED_PROXY_SECRET_FILE` is required and `0.0.0.0/0`/`::/0` are refused at start-up), `none`
+  (no sign-in: every request is user 1, an admin; `GET /api/auth/status` says `"no_login": true` so
+  the UI shows a red banner).
+* **Every `/api` route needs a signed-in, active person** except `GET /api/auth/status` and
+  `POST /api/auth/{login,setup,register,reset}`. Anonymous → `401 {"detail": "Sign in required"}`
+  (dependencies run before body validation, so an invalid body is still 401). Admin routes →
+  `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
+  including ones hidden from the OpenAPI schema.
+* **Before first-run setup** every protected route and login/register/reset answer
+  `503 {"detail": "Setup required", "setup_required": true}`.
+* **`must_change_password`**: every route except `POST /api/me/password` and `POST /api/auth/logout`
+  answers `403 {"detail": "Choose a new password first", "password_change_required": true}`.
+* **Re-authentication**: sensitive routes need the password entered on this session within
+  `REAUTH_MINUTES` (10), else `403 {"detail": "Please enter your password again", "reauth_required":
+  true}`; the client calls `POST /api/auth/reauth` and retries once. Signing in counts as entering
+  the password. Proxy and none modes have no local password and skip this check. Marked *(re-auth)*
+  below.
+* **Scoping**: every query takes the signed-in person's `user.id`; not found and not yours are both
+  **404**. Admins have no route that reads another person's log, foods, meals, profile or keys.
+* **Sessions**: opaque `<selector>.<verifier>` (SHA-256 of the verifier stored). Cookie
+  `__Host-kh_session` (`Secure; HttpOnly; SameSite=Lax; Path=/`) when the effective scheme is
+  HTTPS, `kh_session` (same, without `Secure`) on plain HTTP; each scheme reads only its own name.
+  30 days absolute (`SESSION_MAX_DAYS`), 14 days idle (`SESSION_IDLE_DAYS`); a new session id at
+  sign-in, password change and role change. A one-year device cookie (`__Host-kh_device` /
+  `kh_device`, `SameSite=Strict`) lets the owner's device skip that account's sign-in delay.
+* **Plain HTTP** (`ALLOW_INSECURE_HTTP`, unset = automatic): sign-in, setup and registration over
+  non-loopback plain HTTP are allowed while the server has at most one active account (counting the
+  one being created); otherwise `400 {"detail": "HTTPS required…", "https_required": true}`. Open
+  registration always needs HTTPS.
+* **Throttling**: per account name (5 free failures, then 30 s doubling to 15 min, `429` with
+  `Retry-After`), per client IP (`LOGIN_IP_MAX_FAILURES` in 10 min → 10-min block; skipped for
+  `TRUSTED_PROXIES` and rootless gateway addresses), 60 sign-ins per minute instance-wide (queued up
+  to 5 s, then `503`), 2 password hashes at a time (`503` + `Retry-After: 1`), 100 consecutive
+  failures lock the account (an admin reset link or the CLI unlocks it). Unknown, disabled and
+  locked accounts get the same answer after the same single hash. Other limits (`app/auth/ratelimit.py`):
+  open registration 3/hour per IP, key tests 10/hour, exports 10/hour.
+* **Errors** keep the `{"detail": "…"}` shape and may add keys: `reauth_required`, `setup_required`,
+  `password_change_required`, `https_required`, `retry_after`, `field`, `problems` (password policy
+  messages), `reason` (USDA key resolution), `locked_by_env`.
+
+```json
+Me = {"id": 1, "username": "mum", "display_name": "Mum", "role": "admin",
+      "auth_source": "local", "must_change_password": false, "created_at": "2026-10-06T08:00:00.000000Z"}
+```
+
+### `/api/auth`
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/auth/status` | public | → `{setup_required, auth_mode, registration ("invite"\|"closed"\|"open"\|"disabled"), insecure_http, https_required, password_min_length, password_max_length (128), instance_name, user: Me\|null, logout_url, no_login}` |
+| `POST /api/auth/setup` | public + setup code | `{code, username, display_name?, password, off_enabled?}` (proxy mode: `{code}`, identity from the header) → `{user: Me}`; claims user 1 (keeps the migrated data), signs in. 400 wrong/expired code, 409 already set up. 404 in none mode |
+| `POST /api/auth/login` | public | `{username, password}` → `{user: Me, notice}` + cookies; 401 `{"detail": "Username or password is incorrect"}`, 429, 400 HTTPS required. 404 in proxy/none mode |
+| `POST /api/auth/logout` | user | → `{ok: true, redirect?}` (proxy: `PROXY_LOGOUT_URL`); deletes the session, expires both cookie names, `Clear-Site-Data: "cache", "storage"` |
+| `POST /api/auth/register` | public + invite token (or open mode) | `{token?, username, display_name?, password}` → 201 `{user: Me}`, signed in. 403 closed/no invite, 400 bad token, 409 username taken |
+| `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; signs out every other session, clears `locked`, activates a new account |
+| `POST /api/auth/reauth` | user (local) | `{password}` → `{ok: true, reauth_until}`; wrong → 403; 5 wrong in a row revoke the session (401) |
+
+Usernames (local): 3–64 of `a-z 0-9 . _ @ + -` after NFKC + casefold (stored as typed for display).
+Passwords: 15–128 code points (`PASSWORD_MIN_LENGTH`, 8–64), NFC, no composition rules; refused when
+on the blocklist (10,000 most common NCSC entries ≥ 8 characters), equal to the username, display
+name or app/instance name, one repeated character or a straight keyboard/alphabet/digit run;
+optional HIBP check (`PASSWORD_BREACH_CHECK`). Tokens in links travel in the URL fragment:
+`/#/setup`, `/#/invite/<id>.<verifier>`, `/#/reset/<id>.<verifier>`; links are built from
+`PUBLIC_URL` (else the request's origin).
+
+### `/api/me`
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/me` · `PATCH /api/me` | user | → Me; PATCH `{display_name}` |
+| `DELETE /api/me` | user + password | `{password, confirm: "DELETE"}` → 204, cookies cleared, `Clear-Site-Data`; 409 for the last active admin. Deletes the account and everything it owns (cascade) |
+| `POST /api/me/password` | user (local) | `{current_password, new_password}` → `{user: Me}`; signs out other devices, renews this session |
+| `GET /api/me/sessions` | user | → `{sessions: [{id, created_at, last_seen_at, expires_at, user_agent, ip_prefix, current}]}` |
+| `DELETE /api/me/sessions/{id}` | user | → 204 (404 if not one of yours) |
+| `POST /api/me/sessions/revoke-others` | user *(re-auth)* | → `{revoked: n}` |
+| `GET /api/me/settings` · `PATCH /api/me/settings` | user | → `{settings: {key: {value, source ("env"\|"user"\|"instance"\|"default"), editable}}}`; PATCH `{key: value \| null}` (null = back to inherited); 400 invalid/unknown, 403 not a personal key, 409 locked by env |
+| `GET /api/me/keys` | user | → `{providers: [KeyItem]}` |
+| `PUT /api/me/keys/{provider}` | user *(re-auth)* | `{api_key, test?}` → KeyItem (+ `test: "ok"\|"rejected"\|"unreachable"`); 8–512 printable ASCII, no spaces; 403 when personal keys are off |
+| `DELETE /api/me/keys/{provider}` | user *(re-auth)* | → 204 |
+| `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
+| `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events) |
+| `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
+
+```json
+KeyItem = {"provider": "usda", "label": "USDA FoodData Central",
+           "own": {"set": true, "last4": "9xQz", "updated_at": "…"},          // or {"set": false}; {"set": true, "status": "unreadable"} after a lost SECRET_KEY
+           "shared": {"available": true, "remaining_today": 187, "daily_limit": 200},
+           "user_keys_allowed": true, "effective": "own" | "shared" | "none"}
+export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
+               "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
+               "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity"}
+```
+
+`last4` is shown only for keys of 20 characters or more. Keys are never returned, logged or
+audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/crypto.py`).
+
+### `/api/admin` (admins; every write *(re-auth)*)
+
+| Method and path | Body → response |
+|---|---|
+| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at}]}` |
+| `POST /api/admin/users` | `{username, display_name?, role}` → 201 `{user, setup_url, expires_at}`: a `pending_setup` account and a one-time link (`/#/reset/…`, `registration.invite_ttl_days`) where the person sets a password. Proxy mode: pre-creates the proxy identity (`setup_url: null`) |
+| `PATCH /api/admin/users/{id}` | any of `{role, status ("active"\|"disabled"), can_use_shared, must_change_password (true), display_name}` → `{user}`. 409 when it would leave no active admin, for disabling yourself, or enabling a locked/new account (use a reset link). A role change or disabling signs the person out |
+| `DELETE /api/admin/users/{id}` | `{confirm_username}` → 204 (cascade); 409 for yourself or the last admin |
+| `POST /api/admin/users/{id}/reset-link` | → `{url, expires_at}` (24 h, single use; also unlocks) |
+| `POST /api/admin/users/{id}/revoke-sessions` | → `{revoked: n}` |
+| `GET /api/admin/invites` · `POST /api/admin/invites` · `DELETE /api/admin/invites/{id}` | POST `{role, note?, ttl_days? (1–90)}` → 201 `{invite, url, expires_at}` (the URL is shown once); list → `{invites: [{id, role, note, created_by, created_at, expires_at, used_at, state}]}`; 409 when registration is `closed` or in proxy mode |
+| `GET /api/admin/settings` · `PATCH /api/admin/settings` | → `{settings: {key: {value, source, locked_by_env, scope}}}`; PATCH `{key: value \| null}`, audited with old and new values |
+| `GET /api/admin/keys` · `PUT/DELETE /api/admin/keys/{provider}` | shared keys: `{providers: [{provider, label, shared: {set, source ("db"\|"env"), locked, last4?, updated_at?}}]}`; PUT `{api_key, test?}`; an env key (`USDA_API_KEY[_FILE]`) is locked (409); 403 in none mode |
+| `GET /api/admin/usage?days=30` | → `{days, usage: [{user_id, username, provider, key_scope, requests}]}` (counts only) |
+| `GET /api/admin/audit?before=&limit=` | → `{events: [{id, at, actor_user_id, ip_prefix, action, target_type, target_id, details}]}` |
+| `GET /api/admin/about` | → `{version, schema_version, auth_mode, accounts, https, public_url, secret_key: {source, on_data_volume, warning, secrets: {current, older_key, unreadable}}, proxy: {first_forwarded_peer, ignored_identity_headers, …}, pre_v3_backup, last_backup_at}` |
+
+With `AUTH_MODE=none` the users and invites routes answer 404.
+
+### Changes to existing routes
+
+* All of `/api/profile`, `/api/foods`, `/api/log`, `/api/meals`, `/api/plan` act on the signed-in
+  person. `Profile.id` is the user id. `GET /healthz` counts only builtin foods.
+* **Foods**: `builtin` rows are shared; `custom` rows belong to their owner; `usda` (and later
+  `off`) rows are shared but visible to a person only after they imported or scanned them.
+  Search, categories and "recently logged first" use only visible foods and the caller's own log.
+  `PUT /api/foods/{id}` on a `usda`/`off` row → **409** (copy first). `DELETE` on a shared row
+  removes only the caller's link (404 if none); a custom food is hidden when the owner's entries or
+  saved meals use it, else deleted. `POST /api/log`, `/api/meals` and `/apply` answer 404 for a food
+  that is not visible.
+* **USDA**: the key is resolved per request: own key → shared key (if allowed, `can_use_shared`, and
+  within `providers.usda.daily_limit_per_user`) → `503 {"detail", "reason": "not_configured" |
+  "not_allowed" | "quota_exhausted" | "own_key_unreadable"}`. A rejected own key is reported and never
+  retried with the shared key. A key whose `X-RateLimit-Remaining` drops below 50 is paused for an
+  hour (429). `POST /api/foods/usda/import` reuses the shared row for that `fdc_id` and links it.
+* **CSV** (`/api/log/export.csv` and the export archive): text cells starting with `= + - @`, tab or
+  newline get a leading `'` so spreadsheets do not run them as formulas.
+
+### Admin CLI (`python -m app.admin`)
+
+`create-admin USERNAME` (password on stdin; claims user 1 while setup is pending), `reset-password
+USERNAME [--stdin]` (prints a 24-hour link, or sets the password from stdin and unlocks),
+`list-users [--json]`, `setup-code`, `revoke-sessions USERNAME|--all`, `purge-pre-v3-backup`,
+`vacuum`, plus the platform's `backup`, `check`, `restore-check`, `rotate-secret-key`, `reencrypt`,
+`settings`.
+
+### Schema v3 summary (`m003_accounts.py`)
+
+`users`, `sessions` (hashed verifiers), `auth_tokens` (setup code, invites, reset links; hashed),
+`login_failures` (HMAC of the name), `user_profiles` (the v0.2 `profile` row copied to user 1; the
+old table is kept and never read), `user_food_links`, `instance_settings`, `user_settings`,
+`secrets`, `usage_daily`, `audit_log` (append-only trigger); `log_entries.user_id`,
+`meal_templates.user_id`, `foods.owner_user_id` (nullable `REFERENCES users(id) ON DELETE CASCADE`,
+back-filled to user 1, NULL refused by triggers; a `custom` food needs an owner). The first start on
+an existing database copies it to `kidney.db.pre-v3.bak` (mode 0600, once), which is deleted 30
+days after the upgrade (`python -m app.admin purge-pre-v3-backup` does it now). User 1 starts as a
+`pending_setup` admin and is claimed by first-run setup, `ADMIN_USERNAME` + `ADMIN_PASSWORD[_FILE]`,
+the deprecated `APP_PASSWORD` (imported once; user `ADMIN_USERNAME` or `admin`; must change it if it
+fails the policy) or `create-admin`.

@@ -15,7 +15,7 @@ from app.config import Settings
 from app.main import create_app
 from app.nutrients import NUTRIENT_KEYS
 
-from conftest import TestClient, DAY, FIXTURE_FOOD_COUNT, find_food, log_food, send_json
+from conftest import ADMIN_PASSWORD, TestClient, DAY, FIXTURE_FOOD_COUNT, find_food, log_food, make_settings, send_json, signed_in_client
 
 
 # --------------------------------------------------------------------------- #
@@ -38,13 +38,13 @@ def test_startup_without_foods_json_still_serves(tmp_path):
 
 
 def test_import_is_idempotent_versioned_and_preserves_ids(settings, foods_json):
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         first_ids = {f["name"]: f["id"] for f in c.get("/api/foods", params={"limit": 100}).json()["foods"]}
         assert len(first_ids) == FIXTURE_FOOD_COUNT
         c.app.state.foods_import["status"] == "imported"
 
     # Same version: skipped, nothing changes.
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         assert c.app.state.foods_import["status"] == "unchanged"
         again = {f["name"]: f["id"] for f in c.get("/api/foods", params={"limit": 100}).json()["foods"]}
         assert again == first_ids
@@ -62,7 +62,7 @@ def test_import_is_idempotent_versioned_and_preserves_ids(settings, foods_json):
     data["foods"] = foods
     foods_json.write_text(json.dumps(data))
 
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         assert c.app.state.foods_import["status"] == "imported"
         assert c.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT - 1
         banana = c.get(f"/api/foods/{first_ids['Banana, raw']}").json()
@@ -347,7 +347,9 @@ def test_builtin_foods_cannot_be_edited_or_deleted_but_can_be_copied(client):
     assert edited["name"] == "Banana, small" and edited["nutrients"]["potassium_mg"] == 362
     assert edited["nutrients"]["carbs_g"] is None  # PUT replaces the nutrient set
     assert edited["kidney_rating"] == "red"
-    assert client.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT + 1
+    # /healthz is public and counts only the shared builtin foods, never anyone's own
+    assert client.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT
+    assert any(f["id"] == copy["id"] for f in client.get("/api/foods", params={"q": "banana"}).json()["foods"])
 
 
 def test_put_and_delete_unknown_food_404(client):
@@ -601,31 +603,34 @@ def test_quick_add_creates_custom_food_and_entry(client):
 
 
 # --------------------------------------------------------------------------- #
-# Basic auth
+# Legacy APP_PASSWORD (v0.2 HTTP Basic) is imported once and Basic auth is gone
 # --------------------------------------------------------------------------- #
 
 
-def test_basic_auth_when_password_set(tmp_path, foods_json):
+def test_app_password_is_imported_once_and_basic_auth_is_gone(tmp_path, foods_json):
     settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json, app_password="s3cret")
     with TestClient(create_app(settings)) as c:
         r = c.get("/api/profile")
-        assert r.status_code == 401
-        assert r.headers["www-authenticate"] == 'Basic realm="kidney-health"'
-        assert r.json() == {"detail": "Unauthorized"}
-        assert c.get("/api/profile", auth=("anyone", "wrong")).status_code == 401
-        assert c.get("/api/profile", headers={"Authorization": "Bearer s3cret"}).status_code == 401
-        assert c.get("/api/profile", headers={"Authorization": "Basic not-base64!"}).status_code == 401
-        assert c.get("/api/profile", auth=("anyone", "s3cret")).status_code == 200
-        assert c.get("/api/profile", auth=("someone-else", "s3cret")).status_code == 200
-        assert c.get("/api/foods", params={"q": "banana"}, auth=("u", "s3cret")).status_code == 200
-        # static routes are protected too
-        assert c.get("/").status_code == 401
-        assert c.get("/", auth=("u", "s3cret")).status_code in (200, 404)
-        # the health check stays open for liveness probes
+        assert r.status_code == 401 and "www-authenticate" not in r.headers
+        assert r.json() == {"detail": "Sign in required"}
+        assert c.get("/api/profile", auth=("anyone", "s3cret")).status_code == 401  # no HTTP Basic any more
+        # the old password became the password of admin "admin"; it is too short for today's policy
+        r = c.post("/api/auth/login", json={"username": "admin", "password": "s3cret"})
+        assert r.status_code == 200 and r.json()["user"]["must_change_password"] is True
+        r = c.get("/api/profile")
+        assert r.status_code == 403 and r.json()["password_change_required"] is True
+        r = c.post("/api/me/password", json={"current_password": "s3cret", "new_password": ADMIN_PASSWORD})
+        assert r.status_code == 200, r.text
+        assert c.get("/api/profile").status_code == 200
+        # static files and the health check need no session (index.html carries no data)
+        assert c.get("/").status_code in (200, 404)
         assert c.get("/healthz").status_code == 200
+    # imported once: a restart does not reset the password
+    with TestClient(create_app(settings)) as c:
+        assert c.post("/api/auth/login", json={"username": "admin", "password": "s3cret"}).status_code == 401
 
 
-def test_no_auth_when_password_unset(client):
+def test_signed_in_client_reads_the_profile(client):
     assert client.get("/api/profile").status_code == 200
     assert "www-authenticate" not in client.get("/api/profile").headers
 
@@ -730,15 +735,16 @@ def usda_client(tmp_path, foods_json, monkeypatch):
         return httpx2.Client(base_url=foods_module.USDA_BASE_URL, transport=httpx2.MockTransport(handler))
 
     monkeypatch.setattr(foods_module, "usda_client", fake_client)
-    settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json, usda_api_key="TESTKEY")
-    with TestClient(create_app(settings)) as c:
+    settings = make_settings(tmp_path, foods_json, usda_api_key="TESTKEY")
+    with signed_in_client(settings) as c:
         c.seen_requests = seen  # type: ignore[attr-defined]
         yield c
 
 
 def test_usda_endpoints_503_without_key(client):
     r = client.get("/api/foods/usda/search", params={"q": "banana"})
-    assert r.status_code == 503 and r.json() == {"detail": "USDA_API_KEY not configured"}
+    assert r.status_code == 503 and r.json()["reason"] == "not_configured"
+    assert "Settings" in r.json()["detail"]
     r = client.post("/api/foods/usda/import", json={"fdc_id": 173944})
     assert r.status_code == 503
 
@@ -778,9 +784,12 @@ def test_usda_import_sr_legacy_with_household_portion(usda_client):
     again = usda_client.post("/api/foods/usda/import", json={"fdc_id": 173944}).json()
     assert again["id"] == food["id"]
     assert len([f for f in usda_client.get("/api/foods", params={"source": "usda"}).json()["foods"]]) == 1
-    # usda foods are editable (only builtin is locked)
+    # usda rows are shared between people, so they are read-only (edit = copy, note 07 §4.16)
     body = {"name": "Banana (USDA)", "serving_desc": "1 medium", "serving_g": 118, "nutrients": {"potassium_mg": 422}}
-    assert usda_client.put(f"/api/foods/{food['id']}", json=body).status_code == 200
+    r = usda_client.put(f"/api/foods/{food['id']}", json=body)
+    assert r.status_code == 409 and "copy" in r.json()["detail"].lower()
+    copy = usda_client.post(f"/api/foods/{food['id']}/copy").json()
+    assert usda_client.put(f"/api/foods/{copy['id']}", json=body).status_code == 200
 
 
 def test_usda_import_beverage_counts_as_fluid(usda_client):

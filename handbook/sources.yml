@@ -65,7 +65,7 @@ K20TX:
   short: "KDIGO 2020 transplant candidate guideline"
   url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7147399/
   licence: "Publisher copyright (KDIGO guideline): cite and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: guideline
 K09TX:
   cite: "KDIGO Transplant Work Group. KDIGO Clinical Practice Guideline for the Care of Kidney Transplant Recipients. Am J Transplant 2009;9(Suppl 3):S1–S155."
@@ -106,7 +106,7 @@ Q19VA:
   short: "KDOQI 2019 vascular access guideline"
   url: https://doi.org/10.1053/j.ajkd.2019.12.001
   licence: "© National Kidney Foundation (Elsevier): cite and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: guideline
 Q15HD:
   cite: "National Kidney Foundation. KDOQI Clinical Practice Guideline for Hemodialysis Adequacy: 2015 Update. Am J Kidney Dis 2015;66:884–930."
@@ -153,15 +153,17 @@ UKKA19:
   short: "UK Kidney Association 2019 pregnancy guideline"
   url: https://doi.org/10.1186/s12882-019-1560-2
   licence: "CC BY 4.0 (open access)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: guideline
+  note: "Checked 2026-10-06 (full text, Europe PMC PMC6822421): contraception advice for all women with CKD (3.1.1) and especially within a year of transplant (3.1.2); pre-pregnancy counselling by a team with an obstetrician and nephrologist (3.3.1); higher risk of pre-eclampsia, preterm birth and growth restriction (3.3.2); ACE inhibitor discontinuation plan (3.3.5), ARBs stopped before pregnancy (3.3.6), and in diabetic kidney disease ACE inhibitors continued until conception with regular pregnancy tests (5.4.2); mycophenolate stopped 3 months before conception (2.5); wait usually more than a year after a transplant (5.1.1); long, frequent haemodialysis in pregnancy (5.2.2); PD converted to HD (5.2.4)."
 AASM24:
-  cite: "Winkelman JW, et al. Treatment of restless legs syndrome and periodic limb movement disorder: an American Academy of Sleep Medicine clinical practice guideline. J Clin Sleep Med, published online 2024-09-26."
+  cite: "Winkelman JW, et al. Treatment of restless legs syndrome and periodic limb movement disorder: an American Academy of Sleep Medicine clinical practice guideline. J Clin Sleep Med 2025;21(1):137–152 (published online 2024-09-26)."
   short: "AASM 2024 restless legs guideline"
   url: https://doi.org/10.5664/jcsm.11390
   licence: "Publisher copyright: cite and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: guideline
+  note: "Abstract read on Europe PMC (PMID 39324694) 2026-10-06. Check ferritin and TSAT; iron if ferritin ≤ 75 ng/mL or TSAT < 20 %; gabapentinoids are strong recommendations; suggests against standard use of dopamine agonists (augmentation). With kidney failure (ESRD): suggests gabapentin, IV iron sucrose when ferritin < 200 ng/mL and TSAT < 20 %, and vitamin C; suggests against standard use of levodopa and rotigotine. Address caffeine, alcohol, antihistamines and untreated sleep apnoea first."
 CON20:
   cite: "Davenport MS, et al. Use of intravenous iodinated contrast media in patients with kidney disease: consensus statements from the American College of Radiology and the National Kidney Foundation. Radiology 2020;294:660–668."
   short: "ACR–NKF 2020 iodinated contrast consensus"
@@ -250,8 +252,9 @@ EX17:
   short: "Exercise in type 1 diabetes consensus (2017)"
   url: https://doi.org/10.1016/S2213-8587(17)30014-1
   licence: "Publisher copyright: cite and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: consensus
+  note: "Checked 2026-10-06 (full text, Lancet Diabetes Endocrinol 2017, panel 1): before exercise below 90 mg/dL (5 mmol/L) take 10–20 g glucose and wait; above 270 mg/dL (15 mmol/L) unexplained, check blood ketones; up to 1.4 mmol/L light exercise under 30 min only; 1.5 mmol/L or more exercise is contraindicated; 3.0 or more needs urgent care; severe hypoglycaemia in the past 24 h is a contraindication; vigorous exercise and heavy lifting are contraindicated with long-standing poorly controlled diabetes, especially with kidney failure."
 NHSK:
   cite: "NHS London Procurement Partnership. Ketone testing in type 1 diabetes: patient advice for primary care (October 2018)."
   short: "NHS ketone testing advice"
@@ -289,7 +292,7 @@ F1:
   licence: "Publisher copyright: cite and paraphrase only"
   checked: 2026-10-05
   kind: study
-  note: "DOI confirmed on Crossref 2026-10-05 (published 2026-03-05)."
+  note: "DOI confirmed on Crossref 2026-10-05 (published 2026-03-05). Abstract re-read on PubMed (PMID 41780000) 2026-10-06: 242 adults; UACR fell 25 % more than with placebo over 6 months; hyperkalaemia 10.1 % vs 3.3 % (1.7 % stopped for it); eGFR change at 6 months −5.6 vs −2.7 mL/min/1.73 m², approaching baseline after the washout."
 MHRA:
   cite: "Medicines and Healthcare products Regulatory Agency. Drug Safety Update: Extraneal (icodextrin) and products that contain (or are metabolised to) maltose, xylose or galactose: false blood glucose readings."
   short: "MHRA: icodextrin and false glucose readings"
@@ -339,6 +342,64 @@ AKFherb:
   checked: 2026-10-05
   kind: patient-info
   dg: [42]
+JBDS22:
+  cite: "Frankel AH, Wahba M, Ashworth V, et al. Management of adults with diabetes on dialysis: summary of recommendations of the Joint British Diabetes Societies guidelines 2022. Diabet Med 2023;40(4):e15027. Full guideline: JBDS-IP, Management of adults with diabetes on dialysis (JBDS 11, August 2022)."
+  short: "JBDS 2022 guidance: diabetes on dialysis"
+  url: https://doi.org/10.1111/dme.15027
+  also:
+    - https://ukkidney.org/sites/default/files/JBDS_11_Renal_Guide_August_2022.pdf
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: guideline
+  note: "Updates the 2016 hemodialysis guidance (JBDS) and adds peritoneal dialysis. Read in the full PDF 2026-10-06. Rec 2.7: do not use glucose oxidase or GDH-PQQ meters on dialysis; 2.9: real-time CGM for recurrent lows or lost awareness; 3B.5: lower insulin on hemodialysis days may reduce lows, CGM is a better guide (dose figures deliberately not repeated in the handbook); 5A.1: pre-dialysis glucose under 7 mmol/L (126 mg/dL): 20–30 g low-GI carbohydrate at the start of the session; 5A.2: check before and after hemodialysis; 5A.3: a low treatment always within reach, including on the journey; 5A.4: rescue carbohydrate chosen for fluid, potassium and phosphate limits. PD (section 6): insulin under the skin only, not in the bags (6.8–6.9); glucose dialysate may raise insulin needs (6.10); CAPD can absorb up to 100–200 g glucose a day (400–800 kcal); icodextrin meter interference lasts at least two weeks after stopping; CGM accuracy on PD has limited data (2.8). DKA (5D): rarer but happens on dialysis; ketone levels were lower in ESKD; ketones above 3.0 mmol/L need immediate assessment; signs of dehydration and deep breathing may be missing; people may miss sessions because of DKA symptoms."
+CDC-SICK:
+  cite: "Centers for Disease Control and Prevention. Managing sick days (page last reviewed 15 May 2024)."
+  short: "CDC: managing sick days with diabetes"
+  url: https://www.cdc.gov/diabetes/living-with/managing-sick-days.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Check blood sugar every 4 hours; keep taking insulin; if you can't eat meals, about 50 g carbohydrate every 4 hours; emergency care for trouble breathing, being unable to keep liquids down for more than 4 hours or food for more than 24 hours, vomiting or severe diarrhea for more than 6 hours, losing 5 lb or more, blood sugar below 60 mg/dL, or a temperature over 101 °F for 24 hours. Its 'drink plenty of water' and fruit-juice examples ignore fluid and potassium limits, so the handbook adapts them."
+FARXIGA:
+  cite: "AstraZeneca. Farxiga (dapagliflozin) tablets: US prescribing information, revised 6/2026 (DailyMed)."
+  short: "Farxiga (dapagliflozin) prescribing information"
+  url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=72ad22ae-efe6-4cd6-a302-98aaee423d69
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Limitations of use: 'not recommended for use to improve glycemic control in patients with type 1 diabetes mellitus'. 5.1: in type 1 diabetes it 'significantly increases the risk of diabetic ketoacidosis'; check for ketoacidosis whatever the glucose; ketoacidosis has been reported up to 2 weeks after stopping an SGLT2 inhibitor. The CKD indication names no diabetes type, but people with type 1 diabetes were not studied (KDIGO 2024 research recommendations)."
+OZEMPIC:
+  cite: "Novo Nordisk. Ozempic (semaglutide) injection: US prescribing information (DailyMed version of June 2026)."
+  short: "Ozempic (semaglutide) prescribing information"
+  url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=adec4fd2-6858-4c99-91d4-531f5f2a2d79
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Every indication, including the kidney indication from the FLOW trial, is for adults with type 2 diabetes."
+ALKA:
+  cite: "Bayer HealthCare. Alka-Seltzer Original effervescent tablets: Drug Facts label (DailyMed version of December 2025)."
+  short: "Alka-Seltzer Original Drug Facts label"
+  url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=5be36a7f-7d1f-468d-9c29-92c8cd3ef1bc
+  licence: "Product label: quote at most one sentence"
+  checked: 2026-10-06
+  kind: label
+  note: "Active ingredients include aspirin (labelled as an NSAID) and sodium bicarbonate; each tablet contains 567 mg sodium; 'ask a doctor before use' with kidney disease, high blood pressure, a diuretic or a sodium-restricted diet."
+POISON:
+  cite: "America's Poison Centers. Poison Help line 1-800-222-1222."
+  short: "America's Poison Centers: Poison Help"
+  url: https://poisoncenters.org/
+  licence: "Link and paraphrase"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "1-800-222-1222, 24/7/365, no cost; answered by poison centre specialists (physicians, pharmacists, nurses). Also text POISON to 301-597-7137."
+EMA-PSE:
+  cite: "European Medicines Agency. Pseudoephedrine-containing medicinal products: referral (PRAC review; European Commission decisions of 25 and 27 March 2024)."
+  short: "EMA: pseudoephedrine safety review"
+  url: https://www.ema.europa.eu/en/medicines/human/referrals/pseudoephedrine-containing-medicinal-products
+  licence: "© European Medicines Agency: reproduction authorised with acknowledgement; link and paraphrase"
+  checked: 2026-10-06
+  kind: government
+  note: "Must not be used by people with severe or uncontrolled high blood pressure or severe acute or chronic kidney disease or kidney failure; rare risks of PRES and RCVS (reduced blood supply to the brain)."
 
 # ---------------------------------------------------------------- NKF topic pages
 NKF-eGFR:
@@ -353,8 +414,9 @@ NKF-HDaccess:
   short: "NKF: hemodialysis access"
   url: https://www.kidney.org/kidney-topics/hemodialysis-access
   licence: "© National Kidney Foundation: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: fistula takes weeks to months to be ready and has fewer infections; graft can often be used sooner but has more infection and clotting; catheters have a higher infection risk; feel the thrill daily and call if it stops or changes; no tight sleeves or jewellery, sleeping on, heavy bags, blood pressure cuffs, blood draws or IVs on the access arm; wash before each treatment."
 NKF-HHD:
   cite: "National Kidney Foundation. Home hemodialysis."
   short: "NKF: home hemodialysis"
@@ -367,22 +429,25 @@ NKF-Tx:
   short: "NKF: kidney transplant"
   url: https://www.kidney.org/kidney-topics/kidney-transplant
   licence: "© National Kidney Foundation: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: you can ask for a referral or self-refer to a centre; you are not listed automatically; average graft life about 15–20 years from a living donor and 8–12 years from a deceased donor; pre-emptive transplant can lead to better long-term health."
 NKF-exercise:
   cite: "National Kidney Foundation. Exercise and chronic kidney disease."
   short: "NKF: exercise and CKD"
   url: https://www.kidney.org/kidney-topics/exercise-and-chronic-kidney-disease
   licence: "© National Kidney Foundation: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: exercise on most days; aerobic and resistance exercise; start slow; some dialysis units offer exercise bikes during hemodialysis."
 NKF-pregnancy:
   cite: "National Kidney Foundation. Pregnancy and kidney disease."
   short: "NKF: pregnancy and kidney disease"
   url: https://www.kidney.org/kidney-topics/pregnancy-and-kidney-disease
   licence: "© National Kidney Foundation: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: wait at least a year after a transplant; people on dialysis or with a transplant who are sexually active should use birth control; risks much greater at stages 3–5; dialysis in pregnancy needs more dialysis and close supervision."
 
 # ---------------------------------------------------------------- NIDDK (US government)
 NIDDK-CKD:
@@ -411,8 +476,9 @@ NIDDK-HD:
   short: "NIDDK: hemodialysis"
   url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/hemodialysis
   licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: in-centre usually 3 times a week, about 4 hours each; fistula 'Healing may take several months'; graft can be used soon after surgery; feel the vibration over a working access; home HD training 4½–6 hours a day, 5 days a week, for 3–8 weeks."
 NIDDK-HD-eat:
   cite: "NIDDK. Eating and nutrition for hemodialysis."
   short: "NIDDK: eating and nutrition on hemodialysis"
@@ -425,29 +491,33 @@ NIDDK-PD:
   short: "NIDDK: peritoneal dialysis"
   url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/peritoneal-dialysis
   licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: catheter works better with 10–20 days to heal before a full schedule; CAPD at least 4 exchanges a day of 30–40 minutes; APD 3–5 exchanges at night; 1–2 weeks of training; supplies delivered about monthly and can be shipped to a travel destination."
 NIDDK-Tx:
   cite: "NIDDK. Kidney transplant."
   short: "NIDDK: kidney transplant"
   url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/kidney-transplant
   licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: tests of heart and other organs; waits from a few months to years; living-donor kidney can be planned; go to hospital straight away when a kidney is offered; Medicare pays for the transplant and care for 3 years after it."
 NIDDK-conservative:
   cite: "NIDDK. Conservative management of kidney failure."
   short: "NIDDK: conservative management"
   url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/conservative-management
   licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: care continues without dialysis or transplant; focus on quality of life and symptoms (nausea, poor appetite, feelings, anaemia); may suit people for whom dialysis may not prolong life or improve its quality; hospice described."
 NIDDK-choosing:
   cite: "NIDDK. Choosing a treatment for kidney failure."
   short: "NIDDK: choosing a treatment for kidney failure"
   url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/choosing-treatment
   licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: comparison of in-centre HD (fixed schedule, no partner or equipment at home, most diet limits), home HD (choose your time, partner training, storage space, travel with a machine), PD (no partner needed after training, boxes of solution, fewer fluid limits), transplant (fewest diet limits) and conservative management; you can change your mind and try another treatment."
 NIDDK-hypo:
   cite: "NIDDK. Low blood glucose (hypoglycemia)."
   short: "NIDDK: low blood glucose"
@@ -575,30 +645,33 @@ MED-ESRD:
   short: "Medicare: kidney failure coverage"
   url: https://www.medicare.gov/basics/end-stage-renal-disease
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: eligibility by work record (Social Security, RRB or government) or as spouse or dependent child; coverage usually starts the first day of the fourth month of dialysis, as early as the first month with home dialysis training in the first 3 months, or the month of a transplant admission; ends 12 months after dialysis stops or 36 months after a transplant; 30-month coordination period with employer plans; ESRD may choose Medicare Advantage; Part B-ID $121.60/month and $283 deductible in 2026."
 MED-KDE:
   cite: "Medicare.gov. Kidney disease education."
   short: "Medicare: kidney disease education"
   url: https://www.medicare.gov/coverage/kidney-disease-education
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: stage 4 CKD; up to 6 sessions; doctor referral needed; 20 % coinsurance after the Part B deductible."
 MED-INS:
   cite: "Medicare.gov. Insulin."
   short: "Medicare: insulin coverage"
   url: https://www.medicare.gov/coverage/insulin
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: no more than $35 for a one-month supply of each Part B- or Part D-covered insulin; no deductible for insulin."
 CMS26:
   cite: "Centers for Medicare & Medicaid Services. 2026 Medicare Parts A & B premiums and deductibles (fact sheet)."
   short: "CMS: 2026 Medicare premiums and deductibles"
   url: https://www.cms.gov/newsroom/fact-sheets/2026-medicare-parts-b-premiums-deductibles
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
-  note: "Amounts change every year; recheck each November."
+  note: "Amounts change every year; recheck each November. Checked 2026-10-06: 2026 Part B premium $202.90/month, Part B deductible $283, Part A inpatient deductible $1,736, immunosuppressive drug premium $121.60/month."
 OPTN:
   cite: "Organ Procurement and Transplantation Network. OPTN Policies (Policy 8: Kidney; Policy 11: Pancreas)."
   short: "OPTN policies"
@@ -612,31 +685,33 @@ TSA:
   short: "TSA: medical items"
   url: https://www.tsa.gov/travel/security-screening/whatcanibring/medical
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
-  note: "Returns 403 to automated checkers; works in a browser."
+  note: "Returns 403 to automated checkers; works in a browser. Checked 2026-10-06 through a fetch: tell the officer you have diabetes; insulin must be identified; medically necessary liquids over 3.4 oz allowed after declaring them; TSA notification card."
 ADA-travel:
   cite: "American Diabetes Association. What can I bring with me on the plane?"
   short: "ADA: flying with diabetes supplies"
   url: https://diabetes.org/tools-support/know-your-rights/what-can-i-bring-with-me-on-plane
   licence: "© American Diabetes Association: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: diabetes supplies allowed in carry-on; juice and glucose gel over 3.4 oz allowed; prescription not required but may speed screening; insulin never in checked baggage."
 EEOC:
   cite: "US Equal Employment Opportunity Commission. Diabetes in the workplace and the ADA."
   short: "EEOC: diabetes in the workplace"
   url: https://www.eeoc.gov/laws/guidance/diabetes-workplace-and-ada
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
+  note: "Checked 2026-10-06: examples of accommodations (breaks to eat, drink, take medicine or check glucose; a private place; a place to rest; schedule changes; leave for treatment); you do not have to tell an employer about diabetes, and you can ask for an accommodation at any time after you are hired; medical information is confidential; employers with 15 or more employees; 180 days (300 in some states) to file a charge."
 FMLA:
   cite: "US Department of Labor, Wage and Hour Division. Family and Medical Leave Act."
   short: "US Department of Labor: FMLA"
   url: https://www.dol.gov/agencies/whd/fmla
   licence: "Public domain (US government work)"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: government
-  note: "Returns 403 to automated checkers; works in a browser."
+  note: "Returns 403 to automated checkers; works in a browser. Checked 2026-10-06: up to 12 workweeks of unpaid, job-protected leave in 12 months; employer with 50 or more employees within 75 miles; 12 months and 1,250 hours worked; may be taken intermittently or on a reduced schedule; covers caring for a spouse, child or parent with a serious health condition; group health cover continues."
 SSA:
   cite: "Social Security Administration. Disability benefits."
   short: "SSA: disability benefits"
@@ -650,22 +725,25 @@ HIPP:
   short: "AKF: Health Insurance Premium Program"
   url: https://www.kidneyfund.org/get-assistance/health-insurance-premium-program
   licence: "© American Kidney Fund: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: for people on dialysis in the US with household income up to 500 % of the federal poverty level and limited assets; pays premiums for Medicare Part B, Medigap, Medicare Advantage, commercial, employer and COBRA plans; apply with the dialysis social worker."
 KCUK:
   cite: "Kidney Care UK. Patient support grants (financial support)."
   short: "Kidney Care UK: patient grants"
   url: https://kidneycareuk.org/get-support/patient-grants/
   licence: "© Kidney Care UK: link and paraphrase only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: UK residents over 18 at CKD stage 4–5 or with a transplant, in financial need, with a health professional's letter of support."
 "988":
   cite: "988 Suicide & Crisis Lifeline (US)."
   short: "988 Suicide & Crisis Lifeline"
   url: https://988lifeline.org/
   licence: "Link only"
-  checked: 2026-10-05
+  checked: 2026-10-06
   kind: patient-info
+  note: "Checked 2026-10-06: call, text or chat 988; free, confidential, 24/7; text and chat also in Spanish."
 FDAmenu:
   cite: "US Food and Drug Administration. Menu labeling requirements."
   short: "FDA: menu labeling requirements"
@@ -1504,3 +1582,406 @@ AKF-thirst:
   checked: 2026-10-06
   kind: patient-info
   note: "Avoid salty foods; drink slowly from smaller cups; chill or freeze fruit; chew gum or suck sugar-free hard candy; ask about medicines that cause dry mouth."
+FDA-label:
+  cite: "US Food and Drug Administration. Changes to the Nutrition Facts label."
+  short: "FDA: changes to the Nutrition Facts label"
+  url: https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/changes-nutrition-facts-label
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "\"Vitamin D and potassium are required on the label.\" Manufacturers must declare the actual amount as well as % DV for vitamin D, calcium, iron and potassium. Compliance: 1 January 2020 (annual food sales of $10 million or more), 1 January 2021 (smaller manufacturers)."
+EU1169:
+  cite: "Regulation (EU) No 1169/2011 of the European Parliament and of the Council of 25 October 2011 on the provision of food information to consumers. Annex I, point 11."
+  short: "EU food information regulation 1169/2011"
+  url: https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32011R1169
+  licence: "EU legal text: free reuse with source acknowledgement (Commission Decision 2011/833/EU)"
+  checked: 2026-10-06
+  kind: government
+  note: "Annex I point 11: \"'salt' means the salt equivalent content calculated using the formula: salt = sodium × 2,5\". EU (and UK) labels give salt, not sodium; potassium is optional."
+SHERMAN09:
+  cite: "Sherman RA, Mehta O. Phosphorus and potassium content of enhanced meat and poultry products: implications for patients who receive dialysis. Clin J Am Soc Nephrol 2009;4(8):1370–1373. doi:10.2215/CJN.02830409"
+  short: "Sherman and Mehta 2009: enhanced meat and poultry"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2723964/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "36 uncooked meat and poultry products. Products with additives had a phosphate-to-protein ratio 28 % higher on average (up to almost 100 % higher); additive-free products had < 387 mg potassium/100 g, while 5 of 25 enhanced products had ≥ 692 mg/100 g (max 930); 8 of 25 enhanced products did not list the additives."
+LEON13:
+  cite: "León JB, Sullivan CM, Sehgal AR. The prevalence of phosphorus-containing food additives in top-selling foods in grocery stores. J Ren Nutr 2013;23(4):265–270.e2. doi:10.1053/j.jrn.2012.12.003"
+  short: "León 2013: phosphorus additives in top-selling groceries"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3674209/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "2,394 best-selling grocery products (northeast Ohio): 44 % had phosphorus additives (prepared frozen foods 72 %, dry mixes 70 %, packaged meat 65 %, bread and baked goods 57 %, soup 54 %, yogurt 51 %). Additive foods averaged 67 mg/100 g more phosphorus; sample meals of additive foods had 736 mg more phosphorus a day; additive-free meals cost about $2.00 more a day."
+ABREU23:
+  cite: "de Abreu DBV, Picard K, Klein MRST, Gadas OM, Richard C, Barreto Silva MI. Soaking to reduce potassium and phosphorus content of foods. J Ren Nutr 2023;33(1):165–171. doi:10.1053/j.jrn.2022.06.010"
+  short: "de Abreu 2023: soaking foods in hot water"
+  url: https://pubmed.ncbi.nlm.nih.gov/35803495/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "KDIGO 2024 reference 599. 20 Brazilian staple foods soaked 5–10 minutes in just-boiled water (5 parts water to 1 part food). Potassium fell 40–49 % in beef, leafy greens and grains; 30–39 % in chicken, fish and non-leafy vegetables; 10–20 % in tubers. Phosphorus fell 30–39 % in grains and beans, 20–29 % in non-leafy vegetables, 10–20 % in meat and fish."
+
+# ---------------------------------------------------------------- prepare/ and living/ (added 2026-10-06)
+CFR494:
+  cite: "US Code of Federal Regulations, 42 CFR Part 494: Conditions for Coverage for End-Stage Renal Disease Facilities (§ 494.70 patients' rights, § 494.80 patient assessment, § 494.90 plan of care, § 494.140 personnel)."
+  short: "42 CFR 494: rules for US dialysis facilities"
+  url: https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-G/part-494
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Read through the eCFR API on 2026-10-06. 494.70(a): right to be told about all treatment options including transplant and home dialysis, about advance directives, to refuse or stop treatment, and about grievance routes (ESRD Network, State survey agency). 494.80: the team includes the patient, a nurse, a physician, a social worker and a dietitian; assessment covers psychosocial needs, transplant referral, physical activity and vocational rehabilitation; reassessed at least yearly. 494.90: written plan of care signed by the patient; home dialysis plan or reasons; transplant referral tracked; education for patients and family; seen by a clinician at least monthly. 494.140: each facility must have a registered dietitian and a master's-level clinical social worker."
+UNOS-ML:
+  cite: "United Network for Organ Sharing. Talking about transplantation: multiple listing (patient brochure 102, 2020)."
+  short: "UNOS: multiple listing"
+  url: https://unos.org/wp-content/uploads/Brochure-102-Multiple-listing.pdf
+  licence: "© UNOS: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "OPTN policy allows multiple listing; each hospital decides whether to accept you; little benefit from two hospitals in the same local area; check insurance for extra evaluations, travel and lodging; for a kidney, waiting time counts from the start of dialysis and is the same at each program that has that date."
+MED-TRAVEL:
+  cite: "Medicare.gov. Travel outside the U.S."
+  short: "Medicare: travel outside the US"
+  url: https://www.medicare.gov/coverage/travel-outside-the-u.s.
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Medicare usually doesn't cover health care while travelling outside the US (rare exceptions); Medicare drug plans don't cover drugs bought abroad; some Medigap policies cover foreign emergency care; US territories count as the US."
+MED-ACP:
+  cite: "Medicare.gov. Advance care planning."
+  short: "Medicare: advance care planning"
+  url: https://www.medicare.gov/coverage/advance-care-planning
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Part B covers voluntary advance care planning; no cost when it is part of the Welcome to Medicare or yearly Wellness visit (provider accepts assignment). An advance directive includes a health care proxy and a living will."
+MED-MSP:
+  cite: "Medicare.gov. Medicare Savings Programs."
+  short: "Medicare Savings Programs"
+  url: https://www.medicare.gov/basics/costs/help/medicare-savings-programs
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Run by each state (apply through the state Medicaid office); can pay Part A and B premiums and sometimes deductibles, coinsurance and copays; members also get Extra Help with drug costs."
+SSA-6:
+  cite: "Social Security Administration. Disability evaluation under Social Security (Blue Book), 6.00 Genitourinary disorders – adult (listings 6.03 and 6.04)."
+  short: "SSA Blue Book 6.00: kidney disease"
+  url: https://www.ssa.gov/disability/professionals/bluebook/6.00-Genitourinary-Adult.htm
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser. Content confirmed through search snippets on 2026-10-06: 6.03 CKD with dialysis that has lasted or is expected to last at least 12 months; 6.04 after a kidney transplant you are considered disabled for 1 year from the transplant, then reassessed."
+JAN-DIAL:
+  cite: "Job Accommodation Network (US Department of Labor, Office of Disability Employment Policy). Accommodation ideas for individuals on dialysis (May 2017)."
+  short: "JAN: accommodation ideas for people on dialysis"
+  url: https://askjan.org/blogs/jan/2017/05/accommodation-ideas-for-individuals-on-dialysis.cfm
+  also:
+    - https://askjan.org/
+  licence: "Public domain (US government-funded service): link and paraphrase"
+  checked: 2026-10-06
+  kind: government
+  note: "Ideas: PD at work (storage, private clean area, waste disposal, flexible schedule), flexible leave, working from home, a laptop or tablet to work from the dialysis center, rest breaks for fatigue, reassignment to a less physically demanding job. JAN gives free, confidential advice."
+TSA-DIABETES:
+  cite: "Transportation Security Administration. Travel tip: traveling with diabetes (TSA blog, 13 November 2020)."
+  short: "TSA: traveling with diabetes"
+  url: https://www.tsa.gov/blog/2020/11/13/travel-tip-traveling-diabetes
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Tell officers where a pump or CGM is attached before screening; devices need not be removed; screening may be imaging, metal detector or pat-down; medically needed liquids over 3.4 oz allowed in reasonable amounts; TSA notification card; TSA Cares (855) 787-2227, call 72 hours before travel."
+FDA-INSULIN:
+  cite: "US Food and Drug Administration. Information regarding insulin storage and switching between products in an emergency."
+  short: "FDA: insulin storage"
+  url: https://www.fda.gov/drugs/emergency-preparedness-drugs/information-regarding-insulin-storage-and-switching-between-products-emergency
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Unopened insulin in a refrigerator at about 36–46 °F; vials or cartridges may be kept at 59–86 °F for up to 28 days; never use insulin that has been frozen; keep away from direct heat and sunlight."
+NKF-travel:
+  cite: "National Kidney Foundation. Travel tips: a guide for kidney patients."
+  short: "NKF: travel tips for kidney patients"
+  url: https://www.kidney.org/kidney-topics/travel-tips-guide-kidney-patients
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Start planning dialysis away from home at least 6–8 weeks ahead; many units have a staff member who arranges it; the visiting unit needs your prescription, 3–5 recent treatment records, labs, ECG, chest X-ray and medicine list; most state Medicaid programs do not pay outside your home state; APD supplies can be delivered for trips of a week or more; carry low treatments."
+NKF-PEERS:
+  cite: "National Kidney Foundation. NKF PEERS: peer mentoring by phone; NKF Cares helpline 855-653-2273."
+  short: "NKF PEERS peer mentoring"
+  url: https://www.kidney.org/peers
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Kidney patients, living donors and care partners are matched with a trained mentor and talk one-to-one by phone; NKF Cares Monday–Friday 9 am–7 pm ET, English and Spanish."
+POLST:
+  cite: "National POLST. About POLST (Portable Medical Orders)."
+  short: "National POLST: about POLST"
+  url: https://polst.org/about/
+  licence: "© National POLST: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "A portable medical order for people who are seriously ill or frail, completed and signed by a health care professional after a conversation with the patient; part of advance care planning; state names include MOLST, POST, MOST and LST."
+AHRQ-TB:
+  cite: "Agency for Healthcare Research and Quality. TeamSTEPPS tool: Teach-Back."
+  short: "AHRQ: teach-back"
+  url: https://www.ahrq.gov/teamstepps-program/curriculum/communication/tools/teachback.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Returns 403 to automated checkers; works in a browser. Teach-back: the patient or family caregiver explains, in their own words, what they need to know or do, to confirm understanding."
+
+# ---------------------------------------------------------------- added for app/ and self-hosting/ (2026-10-06)
+NIST-63B4:
+  cite: "Temoshok D, Fenton JL, Choong YY, et al. Digital Identity Guidelines: Authentication and Authenticator Management. NIST Special Publication 800-63B-4 (August 2025), section 3.1.1.2 Password verifiers."
+  short: "NIST SP 800-63B-4: password rules"
+  url: https://pages.nist.gov/800-63-4/sp800-63b.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "§3.1.1.2: passwords used as a single factor SHALL be at least 15 characters; verifiers SHOULD allow at least 64; no composition rules; no periodic changes; check against a blocklist of common, expected or compromised passwords."
+LE-LIFETIMES:
+  cite: "Let's Encrypt. Decreasing certificate lifetimes to 45 days (2025-12-02)."
+  short: "Let's Encrypt: shorter certificate lifetimes"
+  url: https://letsencrypt.org/2025/12/02/from-90-to-45/
+  also:
+    - https://letsencrypt.org/docs/cert-lifetimes/
+  licence: "CC BY-NC 4.0 (Let's Encrypt website): link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Default (classic) profile: 64-day certificates from 2027-02-10, 45-day certificates from 2028-02-16; 90 days until then."
+FDC-API:
+  cite: "US Department of Agriculture, Agricultural Research Service. FoodData Central API Guide."
+  short: "USDA FoodData Central API guide"
+  url: https://fdc.nal.usda.gov/api-guide/
+  also:
+    - https://fdc.nal.usda.gov/api-key-signup
+  licence: "Public domain (CC0 1.0)"
+  checked: 2026-10-06
+  kind: data
+  note: "Default limit 1,000 requests per hour per IP address for a key; DEMO_KEY 30 requests per hour and 50 per day per IP address. FDC data are public domain under CC0 1.0."
+OFF-API:
+  cite: "Open Food Facts. API documentation: introduction (rate limits, User-Agent, licence)."
+  short: "Open Food Facts API documentation"
+  url: https://openfoodfacts.github.io/openfoodfacts-server/api/
+  licence: "Documentation © Open Food Facts contributors: link and paraphrase"
+  checked: 2026-10-06
+  kind: data
+  note: "Database under the Open Database License, contents under the Database Contents License; 15 product reads per minute per IP address; always send a custom User-Agent naming the app and a contact."
+ODBL:
+  cite: "Open Data Commons. Open Database License (ODbL) v1.0."
+  short: "Open Database License (ODbL) v1.0"
+  url: https://opendatacommons.org/licenses/odbl/1-0/
+  licence: "Licence text (Open Data Commons)"
+  checked: 2026-10-06
+  kind: data
+  note: "Attribution and share-alike for public derivative databases; the licence that covers Open Food Facts data."
+WEBKIT-26:
+  cite: "WebKit. News from WWDC25: web technology coming this fall in Safari 26 beta (2025-06-09)."
+  short: "WebKit: Safari 26 and Home Screen web apps"
+  url: https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/
+  licence: "© Apple: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "\"By default, every website added to the Home Screen opens as a web app\"; turning off \"Open as Web App\" adds a browser bookmark instead."
+CHROME-PWA:
+  cite: "Google. Use web apps (Google Chrome Help)."
+  short: "Chrome Help: use web apps"
+  url: https://support.google.com/chrome/answer/9658361
+  licence: "© Google: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Computer: More (⋮) → Cast, save, and share → Install page as app, or the install icon in the address bar; separate tabs cover Android and iPhone."
+MDN-SECURE:
+  cite: "MDN Web Docs (Mozilla). Secure contexts."
+  short: "MDN: secure contexts"
+  url: https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts
+  licence: "CC BY-SA 2.5 (MDN prose): link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Only secure contexts may register service workers; a page is a secure context over HTTPS or from a loopback address (localhost), not over plain HTTP on a LAN address."
+TS-HTTPS:
+  cite: "Tailscale. Enabling HTTPS (knowledge base 1153)."
+  short: "Tailscale: enabling HTTPS"
+  url: https://tailscale.com/kb/1153/enabling-https
+  licence: "© Tailscale: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Machine names are published in the public Certificate Transparency ledger; do not enable HTTPS if any machine name contains sensitive information."
+APPLE-TRUST:
+  cite: "Apple Support. Trust manually installed certificate profiles in iOS, iPadOS and visionOS (article 102390)."
+  short: "Apple: trust a manually installed certificate"
+  url: https://support.apple.com/en-us/102390
+  licence: "© Apple: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Settings → General → About → Certificate Trust Settings → Enable full trust for root certificates."
+APPLE-TLS:
+  cite: "Apple Support. Requirements for trusted certificates in iOS 13 and macOS 10.15 (article 103769)."
+  short: "Apple: requirements for trusted certificates"
+  url: https://support.apple.com/en-us/103769
+  licence: "© Apple: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "RSA keys of 2048 bits or more; SHA-2 signatures; DNS name in the Subject Alternative Name; serverAuth extended key usage; validity of 825 days or fewer."
+RFC8375:
+  cite: "Pfister P, Lemon T. Special-Use Domain 'home.arpa.'. RFC 8375 (May 2018)."
+  short: "RFC 8375: home.arpa"
+  url: https://www.rfc-editor.org/rfc/rfc8375
+  licence: "IETF Trust (BCP 78): quote with attribution"
+  checked: 2026-10-06
+  kind: tool
+  note: "'home.arpa.' is designated for non-unique use in residential home networks."
+PODMAN-QUADLET:
+  cite: "Podman documentation. podman-systemd.unit(5): systemd units using Podman Quadlet."
+  short: "Podman: Quadlet units"
+  url: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html
+  licence: "Apache-2.0 (Podman documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Quadlet is a systemd generator for .container and .volume files; rootless units go in ~/.config/containers/systemd/; AutoUpdate=registry needs a fully qualified image; Notify=healthy waits for the health check."
+PODMAN-ROOTLESS:
+  cite: "Podman project. Basic setup and use of Podman in a rootless environment (tutorial)."
+  short: "Podman: rootless tutorial"
+  url: https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md
+  licence: "Apache-2.0 (Podman documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Rootless Podman needs a range of UIDs and GIDs in /etc/subuid and /etc/subgid (for example 100000-165535, set with usermod --add-subuids/--add-subgids) and the newuidmap/newgidmap helpers."
+DOCKER-ROOTLESS:
+  cite: "Docker documentation. Rootless mode: troubleshooting and known limitations."
+  short: "Docker: rootless mode limitations"
+  url: https://docs.docker.com/engine/security/rootless/troubleshoot/
+  also:
+    - https://docs.docker.com/engine/security/rootless/
+  licence: "Apache-2.0 (Docker documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "docker run -p does not propagate source IP addresses by default (RootlessKit 3.0+ needs userland-proxy disabled); --cpus, --memory and --pids-limit are ignored without cgroup v2; ports below 1024 need extra configuration."
+K8S-PSS:
+  cite: "Kubernetes documentation. Pod Security Standards."
+  short: "Kubernetes: Pod Security Standards"
+  url: https://kubernetes.io/docs/concepts/security/pod-security-standards/
+  licence: "CC BY 4.0 (Kubernetes documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Restricted: runAsNonRoot, allowPrivilegeEscalation false, capabilities drop ALL, seccomp RuntimeDefault or Localhost, limited volume types."
+K8S-NETPOL:
+  cite: "Kubernetes documentation. Network Policies."
+  short: "Kubernetes: Network Policies"
+  url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  licence: "CC BY 4.0 (Kubernetes documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "\"Creating a NetworkPolicy resource without a controller that implements it will have no effect.\""
+K8S-USERNS:
+  cite: "Kubernetes documentation. User namespaces."
+  short: "Kubernetes: user namespaces"
+  url: https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/
+  licence: "CC BY 4.0 (Kubernetes documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Stable since Kubernetes v1.36; needs Linux 6.3 or later, idmap-capable filesystems (btrfs, ext4, xfs, fat, tmpfs, overlayfs), containerd 2.0+ or CRI-O 1.25+."
+TALOS-FLANNEL:
+  cite: "Sidero Labs. Talos Linux documentation: Flannel CNI."
+  short: "Talos: Flannel and NetworkPolicy"
+  url: https://docs.siderolabs.com/kubernetes-guides/cni/flannel
+  licence: "© Sidero Labs (MPL-2.0 project): link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "From Talos 1.13 Flannel can enforce NetworkPolicy with kubeNetworkPoliciesEnabled: true (KubeFlannelCNIConfig from 1.14); without it NetworkPolicy resources are accepted but not enforced."
+SQLITE-BACKUP:
+  cite: "SQLite. SQLite Backup API."
+  short: "SQLite: online backup API"
+  url: https://www.sqlite.org/backup.html
+  licence: "Public domain (SQLite documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "The online backup API copies a database while it is in use and leaves a consistent, up-to-date snapshot."
+GDPR:
+  cite: "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation). Articles 2(2)(c), 9, 15, 17 and 20."
+  short: "EU General Data Protection Regulation"
+  url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+  licence: "EU legal text: free reuse with source acknowledgement (Commission Decision 2011/833/EU)"
+  checked: 2026-10-06
+  kind: government
+  note: "Does not apply to a purely personal or household activity (Art. 2(2)(c)); data concerning health is a special category (Art. 9); rights of access (15), erasure (17) and portability (20)."
+OPENAI-DATA:
+  cite: "OpenAI. Data controls in the OpenAI platform (API documentation: your data)."
+  short: "OpenAI API: your data"
+  url: https://developers.openai.com/api/docs/guides/your-data
+  licence: "© OpenAI: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "API data is not used to train or improve OpenAI models unless you opt in; abuse-monitoring logs are kept for up to 30 days unless the law requires longer."
+OPENROUTER-ROUTING:
+  cite: "OpenRouter. Provider routing (documentation): the data_collection preference."
+  short: "OpenRouter: provider routing"
+  url: https://openrouter.ai/docs/features/provider-routing
+  licence: "© OpenRouter: link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "data_collection \"deny\": use only providers which do not collect user data (the default \"allow\" permits providers that store data and may train on it)."
+OLLAMA-OAI:
+  cite: "Ollama documentation. OpenAI compatibility."
+  short: "Ollama: OpenAI compatibility"
+  url: https://docs.ollama.com/openai
+  licence: "MIT (Ollama project)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Ollama serves a subset of the OpenAI API at /v1 (http://localhost:11434/v1/ by default), so the app's OpenAI-compatible client can use a local model."
+HERMES-API:
+  cite: "Nous Research. Hermes Agent documentation: API server."
+  short: "Hermes Agent: API server"
+  url: https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
+  licence: "© Nous Research (MIT project): link and paraphrase"
+  checked: 2026-10-06
+  kind: tool
+  note: "Binds 127.0.0.1:8642 by default; API_SERVER_KEY is required for every deployment; \"The API server gives full access to hermes-agent's toolset, including terminal commands.\""
+SIGSTORE-VERIFY:
+  cite: "Sigstore. Verifying signatures (cosign documentation)."
+  short: "Sigstore: verifying signatures"
+  url: https://docs.sigstore.dev/cosign/verifying/verify/
+  licence: "Apache-2.0 (Sigstore documentation)"
+  checked: 2026-10-06
+  kind: tool
+  note: "Keyless verification checks the signer's identity with --certificate-identity and --certificate-oidc-issuer."
+FRIDOLFSSON25:
+  cite: "Fridolfsson J, Sjöberg E, Thiwång M, Pettersson S. Performance evaluation of 3 large language models for nutritional content estimation from food images. Curr Dev Nutr 2025;9(10):107556. doi:10.1016/j.cdnut.2025.107556"
+  short: "Fridolfsson 2025: AI estimates from food photos"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12513282/
+  licence: "CC BY 4.0 (open access): cite and paraphrase"
+  checked: 2026-10-06
+  kind: study
+  note: "52 standardised food photos. Mean absolute percentage error: ChatGPT-4o 36 % (weight) and 36 % (energy), Claude 3.5 Sonnet 37 % and 36 %, Gemini 1.5 Pro 65 % and 64 %; large portions were systematically underestimated."
+AKF-meal:
+  cite: "American Kidney Fund, Kidney Kitchen. Where do I find meal plans for low potassium? Ask a dietitian (C. Feibig, MS, RD, LD, CCTD)."
+  short: "AKF Kidney Kitchen: potassium per meal"
+  url: https://kitchen.kidneyfund.org/?p=86324
+  also:
+    - https://kitchen.kidneyfund.org/ask-a-dietitian/
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "\"600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800–2200mg\"; avoid several high-potassium foods in one day."
+HTTPSDOC:
+  cite: "kidney-health project. docs/https.md: HTTPS for your homelab (four tiers for phones)."
+  short: "HTTPS guide"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/https.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-06
+  kind: project
+SECDOC:
+  cite: "kidney-health project. docs/security.md: security guide for operators (threat model, defaults, TRUSTED_PROXIES per topology, checklists)."
+  short: "Operator security guide"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/security.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-06
+  kind: project
+SECURITYMD:
+  cite: "kidney-health project. SECURITY.md: reporting vulnerabilities and verifying images."
+  short: "Security policy and image verification"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/SECURITY.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-06
+  kind: project

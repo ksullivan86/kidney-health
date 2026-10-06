@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx2
 import pytest
+from conftest import insert_users
 
 import app.foods as foods_module
 from app import credentials, crypto, db
@@ -29,10 +30,9 @@ def ring() -> crypto.Keyring:
 def conn():
     c = db.connect(":memory:")
     db.migrate(c)
-    c.execute("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT)")
     create_settings_tables(c)
     credentials.create_credentials_tables(c)
-    c.executemany("INSERT INTO users (id, username) VALUES (?, ?)", [(1, "admin"), (2, "sam"), (3, "kim")])
+    insert_users(c, [(1, "admin"), (2, "sam"), (3, "kim")])
     c.commit()
     yield c
     c.close()

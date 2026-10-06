@@ -161,9 +161,12 @@ def test_full_schema_is_the_v02_schema():
 
 
 def test_fresh_database_matches_v02(tmp_path):
+    """Steps 1-2 alone still produce exactly what the v0.2 code produced."""
     old, new = tmp_path / "old.db", tmp_path / "new.db"
     build_with_v02_code(old)
-    assert db.init_db(new)[:2] == [1, 2]
+    conn = db.connect(new)
+    assert db.migrate(conn, migrations.steps()[:2]) == [1, 2]
+    conn.close()
     assert schema_of(new) == schema_of(old)
     assert dump_of(new) == dump_of(old)
 
@@ -177,9 +180,15 @@ def test_existing_v02_database_is_untouched(tmp_path):
     assert applied == [s.version for s in migrations.steps() if s.version > 2]
     if not applied:  # with only steps 1-2 the database must be byte-for-byte the same
         assert schema_of(path) == before_schema and dump_of(path) == before_dump
-    else:  # later steps may add to it, but never change what v0.2 wrote
-        after = dump_of(path)
-        assert all(line in after for line in before_dump if line.startswith("INSERT INTO \"log_entries\""))
+    else:  # later steps may add to it (new columns, new tables), but never change what v0.2 wrote
+        before = sqlite3.connect(f"{path}.pre-v3.bak")  # the automatic copy is the v0.2 file as it was
+        after = sqlite3.connect(path)
+        for table in ("profile", "foods", "log_entries", "meal_templates"):
+            cols = ", ".join(r[1] for r in before.execute(f"PRAGMA table_info({table})"))
+            assert before.execute(f"SELECT {cols} FROM {table} ORDER BY 1").fetchall() == \
+                after.execute(f"SELECT {cols} FROM {table} ORDER BY 1").fetchall(), table
+        before.close()
+        after.close()
 
 
 def test_v01_database_upgrades_exactly_like_v02_did(tmp_path, foods_json):

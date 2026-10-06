@@ -7,75 +7,24 @@ so uvicorn must not apply them too). Tests call :func:`create_app` with their ow
 """
 from __future__ import annotations
 
-import base64
-import binascii
 import logging
-import secrets
 import sqlite3
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator
 
 from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from starlette.datastructures import Headers
-from starlette.types import ASGIApp, Receive, Scope, Send
 
-from . import crypto, foods, log as log_router, meals, profile, pwa, security
+from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
+from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
 from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger("kidney_health")
 
+APP_VERSION = "0.3.0.dev0"
 STATIC_DIR = DEFAULT_STATIC_DIR
-AUTH_REALM = "kidney-health"
-# Liveness/readiness probes cannot carry a secret, so the health check stays open; the PWA
-# manifest, icons and /sw.js are public too (note 02 R6). See app.pwa.is_public_path.
-AUTH_EXEMPT_PATHS = pwa.PUBLIC_PATHS
-
-
-class BasicAuthMiddleware:
-    """Pure-ASGI HTTP Basic auth: any username, one shared password (v0.2; replaced by accounts in v0.3)."""
-
-    def __init__(
-        self,
-        app: ASGIApp,
-        password: str,
-        realm: str = AUTH_REALM,
-        is_exempt: Callable[[str], bool] = pwa.is_public_path,
-    ):
-        self.app = app
-        self._password = password.encode("utf-8")
-        self.realm = realm
-        self.is_exempt = is_exempt
-
-    def _authorised(self, header: str | None) -> bool:
-        if not header:
-            return False
-        scheme, _, param = header.partition(" ")
-        if scheme.lower() != "basic":
-            return False
-        try:
-            decoded = base64.b64decode(param.strip(), validate=True).decode("utf-8")
-        except (binascii.Error, UnicodeDecodeError, ValueError):
-            return False
-        _, _, password = decoded.partition(":")
-        return secrets.compare_digest(password.encode("utf-8"), self._password)
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or self.is_exempt(scope.get("path", "")):
-            await self.app(scope, receive, send)
-            return
-        if self._authorised(Headers(scope=scope).get("authorization")):
-            await self.app(scope, receive, send)
-            return
-        response = JSONResponse(
-            {"detail": "Unauthorized"},
-            status_code=401,
-            headers={"WWW-Authenticate": f'Basic realm="{self.realm}"'},
-        )
-        await response(scope, receive, send)
 
 
 def _startup_maintenance(conn: sqlite3.Connection, store: SettingsStore) -> None:
@@ -107,11 +56,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         applied = init_db(settings.db_path)
         if applied:
             logger.info("database schema migrated to version %d (steps %s)", applied[-1], applied)
+        auth_ctx.keyring = app.state.keyring
         conn = connect(settings.db_path)
         try:
             result = foods.import_builtin_foods(conn, settings.foods_json)
             app.state.foods_import = result
             _startup_maintenance(conn, store)
+            try:
+                auth_bootstrap.startup(conn, auth_ctx)
+            except auth_bootstrap.StartupError as exc:
+                logger.error("start-up stopped: %s", exc)
+                raise
         finally:
             conn.close()
         logger.info("database %s ready; builtin foods: %s", settings.db_path, result.get("status"))
@@ -120,7 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     docs = settings.docs_enabled
     app = FastAPI(
         title="Kidney Health Food Log",
-        version="0.2.0",
+        version=APP_VERSION,
         description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.",
         lifespan=lifespan,
         docs_url="/docs" if docs else None,
@@ -130,10 +85,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.settings_store = store
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
+    auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 
     # Middleware: added innermost first (security.install adds the outer stack last).
-    if settings.app_password:
-        app.add_middleware(BasicAuthMiddleware, password=settings.app_password)
     pwa.setup(app, settings)  # GET /sw.js (before the static mount) + gzip for static files
     security.install(app, settings)
 
@@ -145,7 +99,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-        count = conn.execute("SELECT COUNT(*) FROM foods WHERE hidden = 0").fetchone()[0]
+        # Public: counts only the shared builtin foods (nothing about anybody's own data).
+        count = conn.execute("SELECT COUNT(*) FROM foods WHERE hidden = 0 AND source = 'builtin'").fetchone()[0]
         return {"status": "ok", "foods": int(count)}
 
     pwa.mount_static(app, settings)

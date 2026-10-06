@@ -1,643 +1,551 @@
-# Deployment guide
+# Deployment guide (v0.3)
 
-How to run the Kidney Health food log on a laptop, a Podman host, or a Talos Kubernetes
-cluster, and how to keep its one small database safe. Everything the app needs is in one
-container image; all state is a single SQLite file.
+How to run the Kidney Health food log on **rootless** Podman, rootless Docker or Kubernetes
+(Talos), set it up on first start, keep its database safe, and upgrade it. Everything the app needs
+is in one container image; all state is one SQLite database.
+
+Read with it: [`security.md`](security.md) (what the defaults protect, per-runtime checklists, the
+`TRUSTED_PROXIES` table), [`https.md`](https.md) (HTTPS so phones can install the app) and
+[`network-allowlist.md`](network-allowlist.md) (outbound hosts). The design behind this page is
+[`docs/dev/research/01-rootless-and-security.md`](dev/research/01-rootless-and-security.md).
+
+Contents:
+[What you are deploying](#what-you-are-deploying) ·
+[Before you start](#before-you-start) ·
+[Configuration](#configuration) ·
+[First run](#first-run) ·
+[Rootless Podman with Quadlet](#rootless-podman-with-quadlet-recommended) ·
+[Compose](#compose-podman-compose-or-docker-compose) ·
+[Rootless Docker](#rootless-docker) ·
+[Kubernetes (Talos)](#kubernetes-talos) ·
+[Sign-in modes](#sign-in-modes) ·
+[Backups and restore](#backups-and-restore) ·
+[Upgrades](#upgrades) ·
+[Building the image yourself](#building-the-image-yourself) ·
+[Local development run](#local-development-run) ·
+[Troubleshooting](#troubleshooting)
 
 ## What you are deploying
 
 | Fact | Value |
 |---|---|
-| Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64) |
-| Image tags | `latest` = current `main`; `0.2.0`, `0.2` = releases (`v0.2.0` git tag); `sha-<short>` = every main build |
-| Listens on | TCP **8000** (plain HTTP; put TLS on a reverse proxy) |
-| Runs as | uid/gid **10001** (`app`), no capabilities, no root |
-| State | `DATA_DIR` = **`/data`** inside the image: `kidney.db` (+ `kidney.db-wal`, `kidney.db-shm` while running) |
-| Health probe | `GET /healthz` returns `{"status":"ok","foods":395}`; it never requires a password |
-| Outbound network | none, unless `USDA_API_KEY` is set (then only `api.nal.usda.gov:443`) |
-| Browser | talks only to the app itself; no CDN, works on a LAN without internet |
-| Footprint | ~60 MB RAM idle; 50 m CPU / 128 Mi requests are generous |
-| Licence | PolyForm Noncommercial 1.0.0 (personal and noncommercial use; commercial use needs the author's permission) |
+| Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager) |
+| Tags | `0.3` = the current 0.3.x release (**track this**); `0.3.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.3.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
+| Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
+| Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
+| Secrets | files: `SECRET_KEY_FILE`, `USDA_API_KEY_FILE`, ... (never environment variables) |
+| Health | `GET /healthz` → `{"status":"ok","foods":395}`; in the image: `python -m app.healthcheck` |
+| Admin CLI | `python -m app.admin backup|check|restore-check|rotate-secret-key|reencrypt|settings|create-admin|reset-password` (no shell needed) |
+| Outbound network | none until you turn a feature on ([`network-allowlist.md`](network-allowlist.md)) |
+| Footprint | about 60–100 MB RAM; the shipped limits are 512 MiB and 128 PIDs |
+| Licence | PolyForm Noncommercial 1.0.0 (personal and noncommercial use) |
 
-Environment variables (all optional; empty means unset):
+**Rules that follow from SQLite:** exactly one container per database (never two containers or
+two pods on the same volume), a `ReadWriteOnce` volume, and a `Recreate` rollout on Kubernetes. The
+shipped files already do this.
+
+## Before you start
+
+### Rootless prerequisites (Podman or Docker)
+
+1. **Subordinate IDs.** `grep "^$USER:" /etc/subuid /etc/subgid` must show a range of at least
+   65 536 IDs. Otherwise:
+   `sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$USER"`, then
+   `podman system migrate`. Also install `newuidmap`/`newgidmap` (package `uidmap` or `shadow-utils`).
+2. **Linger**, so the container runs without an open login and starts at boot:
+   `sudo loginctl enable-linger "$USER"`.
+3. **cgroup v2** (`stat -fc %T /sys/fs/cgroup` prints `cgroup2fs`). systemd delegates the **memory**
+   and **pids** controllers to users by default, which is what the shipped limits use. CPU limits
+   (`--cpus`) need the cpu controller delegated too:
+
+   ```ini
+   # /etc/systemd/system/user@.service.d/delegate.conf, then: sudo systemctl daemon-reload
+   [Service]
+   Delegate=cpu cpuset io memory pids
+   ```
+4. **Networking (Podman).** pasta is the rootless default since Podman 5.0 (Podman 6 removed
+   slirp4netns). On Podman 4.9 (Ubuntu 24.04) install the `passt` package; the Quadlet unit sets
+   `Network=pasta` because slirp4netns would show every client as `10.0.2.100`.
+
+### User namespaces: keep the default
+
+Under rootless Podman your UID is container root and container UID *n* maps to a subordinate UID.
+The app's UID 10001 is therefore an unused subordinate UID on the host: **not root and not you**.
+
+* **Do not use `--userns=keep-id`** (or `UserNS=keep-id`) for this app outside development: it maps
+  *your own* UID to 10001, so an escaped process could read `~/.ssh`, your other containers and any
+  agent keys. Older versions of this guide recommended it; that advice is withdrawn.
+* `--userns=auto` (Quadlet `UserNS=auto`) gives the container its own slice of your subordinate
+  range, which also isolates it from your other containers. Use it with a named volume, or with
+  `:U` on a bind mount. It is an advanced option because the `podman unshare chown` recipes below
+  no longer apply.
+
+### Volumes, `:U` and `:Z`
+
+* A **named volume** that starts empty is populated from the image's `/data` (owner 10001, group 0,
+  mode 0770): nothing to chown. This is the default everywhere.
+* A **bind mount** must be writable by 10001: either `podman unshare chown -R 10001:0 DIR`, or the
+  `:U` volume option (chowns it to the container user on every start; `/data` is small, so that is
+  cheap). On SELinux hosts (Fedora, RHEL, Alma) add `:Z`. Example: `-v ~/kidney-data:/data:Z,U`.
+  **Never** use `:U` or `:Z` on `$HOME` itself or a system directory.
+* Never use `--security-opt label=disable`.
+
+### Plan HTTPS and the URL first
+
+Phones need HTTPS for offline mode, the barcode camera and secure sign-in. Pick the address people
+will type **before** anyone installs the app on a phone; changing it later creates a new, empty app
+on every phone. The four options are in [`https.md`](https.md).
+
+## Configuration
+
+Set these as environment variables (Quadlet `Environment=`, `deploy/.env` for compose, `env:` in
+Kubernetes). Every **secret** is given as a file through its `*_FILE` variable; setting both `NAME`
+and `NAME_FILE` is a start-up error, an empty file means "unset", and trailing newlines are ignored.
+Anything set here is **locked**: the Settings screen shows it as "set by server". The complete list
+with defaults is at the top of [`app/config.py`](../app/config.py).
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DATA_DIR` | `/data` in the image, `./data-local` outside | Directory holding `kidney.db`; created on start |
-| `USDA_API_KEY` | unset | Enables the "Search USDA" button, see [USDA lookups](#f-enabling-usda-lookups) |
-| `APP_PASSWORD` | unset | Turns on HTTP Basic auth for every page and API call except `/healthz` |
-| `FOODS_JSON` | `/app/data/foods.json` | Path of the builtin food database; leave alone |
+| `PUBLIC_URL` | unset | The URL people type, e.g. `https://food.home.example.net`. Its host passes the Host check, browsers' `Origin` must match it, and invite/reset links and the setup line use it. **Set it whenever you use a host name.** |
+| `ALLOWED_HOSTS` | localhost, IP literals and the `PUBLIC_URL` host | Extra host names (comma list, `*.example.org` wildcards). Any other `Host` gets `400 Unknown host` (DNS-rebinding defence) and one log line naming it. |
+| `TRUSTED_PROXIES` | `127.0.0.1,::1` | Addresses whose `X-Forwarded-For`/`-Proto` are believed. **Depends on your engine**: see [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology). |
+| `AUTH_MODE` | `local` | `local` (accounts with passwords), `proxy` (identity from Authelia, Authentik or `tailscale serve`), `none` (no sign-in). See [Sign-in modes](#sign-in-modes). |
+| `SECRET_KEY_FILE` | auto-generated `/data/secret.key` with a warning | Encrypts stored API keys. One key per line, ≥ 32 characters. Every shipped profile mounts it from the engine's secret store, **outside** the data volume. |
+| `USDA_API_KEY_FILE` | unset | Enables "Search USDA" (free key: <https://fdc.nal.usda.gov/api-key-signup>; `DEMO_KEY` allows 30 requests per hour). |
+| `ADMIN_USERNAME` + `ADMIN_PASSWORD_FILE` | unset | First run only: create the admin from a file instead of the setup code (GitOps). |
+| `TRUSTED_PROXY_USER_HEADER`, `TRUSTED_PROXY_SECRET_FILE` | unset | `AUTH_MODE=proxy`: the identity header (`Remote-User`) and the shared secret the proxy sends as `X-Proxy-Secret`. |
+| `ALLOW_INSECURE_HTTP` | automatic | Plain-HTTP sign-in from other machines is allowed while only one account exists, refused once there are two. |
+| `SESSION_IDLE_DAYS`, `SESSION_MAX_DAYS` | 14, 30 | Sign-in lifetime. |
+| `LOG_LEVEL` | `INFO` | `DEBUG` shows more; secrets are redacted from logs either way. |
+| `MAX_BODY_BYTES`, `MAX_IMAGE_BYTES` | 1 MiB, 4 MiB | Request size limits (JSON; photos). |
+| `HSTS_MAX_AGE` | 31536000 | Sent only over HTTPS; `0` disables it. |
+| `ENABLE_API_DOCS` | `false` | `/docs` and `/openapi.json` (with a relaxed CSP on those paths only). |
+| `PWA_ENABLED` | `true` | `false` is the kill switch for the offline service worker. |
+| `DATA_DIR` | `/data` in the image | Where `kidney.db` lives. |
+| `AI_*` | AI off | Optional AI features (v0.3 M2): `docs/ai.md` once they ship, and `deploy/compose.ai-ollama.yaml`. |
 
-The server starts in about two seconds: it creates or migrates the schema, then upserts
-the 395 builtin foods (skipped when the food database version is unchanged).
+`APP_PASSWORD` (v0.2's HTTP Basic auth) is **deprecated**: on the first v0.3 start with no admin
+it becomes the admin's password, then it is ignored. HTTP Basic is no longer accepted.
 
-**Rules that follow from SQLite:** exactly one instance per database (never two
-containers or two pods on the same volume), a `ReadWriteOnce` volume, and a
-`Recreate` rollout strategy on Kubernetes. The manifests in `deploy/` already do this.
+## First run
 
----
+On the first start of an empty (or v0.2) database the app creates no account by itself. It prints a
+**one-time setup code** to its log, valid for 60 minutes:
 
-## a. Local run with uvicorn
-
-Needs Python 3.11 or newer (3.12 is what the image and CI use).
-
-```bash
-git clone https://github.com/ksullivan86/kidney-health.git
-cd kidney-health
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements-dev.txt
-python -m pytest                                   # no network needed
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+FIRST-RUN SETUP: open https://food.home.example.net/#/setup and enter the code 7KQ2-M9XD-PL4R-T6WN (valid 60 min; restart or run "python -m app.admin setup-code" for a new one)
 ```
 
-Open <http://localhost:8000>. The database lands in `./data-local/kidney.db` (gitignored).
-Optional settings go in the environment:
+Read it with `journalctl --user -u kidney-health | grep 'FIRST-RUN SETUP'` (Quadlet),
+`podman logs kidney-health 2>&1 | grep 'FIRST-RUN SETUP'` (compose, Docker: `docker logs`), or
+`kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'`. Open the app, enter
+the code, and choose the admin's user name and password (at least 15 characters). The setup screen
+also offers to switch on Open Food Facts barcode lookups (off by default). Until setup is done,
+every API call except the setup screen answers `503 Setup required`.
 
-```bash
-DATA_DIR=$HOME/kidney-data APP_PASSWORD='a long passphrase' USDA_API_KEY=... \
-  uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+Alternatives: `ADMIN_USERNAME` + `ADMIN_PASSWORD_FILE` (GitOps, Kubernetes), or
+`python -m app.admin create-admin` inside the container (the password is read from stdin). After
+setup, invite the other people in your household from Settings → Admin → Users & invites.
 
-Add `--reload` while developing. Use `--host 127.0.0.1` if only this machine should
-reach it.
+## Rootless Podman with Quadlet (recommended)
 
----
-
-## b. Podman run / podman-compose
-
-Pulling from GHCR needs outbound access to `ghcr.io` and
-`pkg-containers.githubusercontent.com` (see `docs/network-allowlist.md`).
-
-### Plain `podman run`
-
-```bash
-podman volume create kidney-data
-
-podman run -d --name kidney-health \
-  -p 8000:8000 \
-  -v kidney-data:/data \
-  --restart always \
-  --security-opt no-new-privileges --cap-drop ALL \
-  ghcr.io/ksullivan86/kidney-health:latest
-
-podman logs -f kidney-health          # "database /data/kidney.db ready; builtin foods: imported"
-curl -s http://localhost:8000/healthz # {"status":"ok","foods":395}
-```
-
-Add `-e APP_PASSWORD='...'` and `-e USDA_API_KEY='...'` as needed. Docker: replace
-`podman` with `docker`; the flags are identical.
-
-Rootless Podman can bind port 8000 without any sysctl (only ports below 1024 need
-`net.ipv4.ip_unprivileged_port_start`). Always name the volume: the image declares
-`VOLUME /data`, so a run without `-v` gets an anonymous volume that `podman rm -v`
-deletes.
-
-**Bind mount instead of a named volume.** The container writes as uid 10001, so the
-directory must be writable by that uid *as seen from inside the container*. With
-rootless Podman, uid 10001 inside maps to a sub-uid of your user, hence `podman unshare`:
-
-```bash
-mkdir -p ~/kidney-health-data
-podman unshare chown -R 10001:10001 ~/kidney-health-data
-podman run -d --name kidney-health -p 8000:8000 \
-  -v ~/kidney-health-data:/data:Z \
-  ghcr.io/ksullivan86/kidney-health:latest
-```
-
-`:Z` applies the SELinux container label (Fedora, RHEL, CentOS, AlmaLinux); it is
-ignored elsewhere. Alternative that keeps the files owned by *you* on the host:
-`--userns=keep-id:uid=10001,gid=10001` (Podman 4.3+) maps your user to uid 10001 inside
-the container, so no chown is required.
-
-### Building locally
-
-```bash
-podman build -f deploy/Containerfile -t kidney-health:local .      # from the repo root
-```
-
-Podman builds OCI-format images and warns that `HEALTHCHECK` is ignored; add
-`--format docker` if you want the probe embedded. compose and Quadlet below declare the
-probe themselves so this does not matter for them. Local builds also pull
-`python:3.12-slim` from Docker Hub (`registry-1.docker.io`, `auth.docker.io`,
-`production.cloudflare.docker.com`).
-
-### podman-compose / docker compose
-
-```bash
-cp deploy/.env.example deploy/.env      # optional: USDA_API_KEY, APP_PASSWORD
-chmod 600 deploy/.env
-$EDITOR deploy/.env
-
-podman-compose -f deploy/compose.yaml up -d      # or: docker compose -f deploy/compose.yaml up -d
-podman-compose -f deploy/compose.yaml logs -f
-podman-compose -f deploy/compose.yaml down       # keeps the volume; add -v to delete the data
-```
-
-Compose reads `deploy/.env` because it sits next to the compose file. The volume is
-named `kidney-health_kidney-data`. To build locally instead of pulling, uncomment the
-`build:` block in `deploy/compose.yaml`.
-
-**Start at boot.** `restart: always` only acts while Podman is running. On a reboot,
-rootless containers come back if you enable Podman's restart unit for your user:
-
-```bash
-systemctl --user enable --now podman-restart.service
-loginctl enable-linger "$USER"
-```
-
-For a proper service with health-based restarts and auto-update, use Quadlet (next).
-
----
-
-## c. Quadlet: systemd service with autostart and auto-update
-
-Quadlet turns `deploy/quadlet/kidney-health.container` into a systemd service. Needs
-Podman 4.6 or newer (`podman --version`): Fedora 38+, Debian 13, Ubuntu 24.04, RHEL 9.3+.
+Quadlet turns [`deploy/quadlet/kidney-health.container`](../deploy/quadlet/kidney-health.container)
+into a systemd user service with auto-start, health-based restarts and auto-update. It needs Podman
+4.9 or later (`Notify=healthy` needs 5.0).
 
 ```bash
 mkdir -p ~/.config/containers/systemd
 cp deploy/quadlet/kidney-health.container deploy/quadlet/kidney-health.volume ~/.config/containers/systemd/
-cp deploy/.env.example ~/.config/containers/systemd/kidney-health.env
-chmod 600 ~/.config/containers/systemd/kidney-health.env
-$EDITOR ~/.config/containers/systemd/kidney-health.env      # optional USDA_API_KEY / APP_PASSWORD
 
-systemctl --user daemon-reload                 # generates kidney-health.service + kidney-health-volume.service
-systemctl --user start kidney-health.service
-systemctl --user status kidney-health.service
-loginctl enable-linger "$USER"                 # start at boot, keep running after logout
+# The encryption key for stored API keys, kept by Podman's secret store (not on the data volume).
+python3 -c "import secrets; print(secrets.token_urlsafe(32))" | podman secret create kidney-secret-key -
+# Optional USDA key: create the secret, then uncomment the two USDA lines in the unit.
+#   printf '%s' "$USDA_KEY" | podman secret create kidney-usda-key -
+
+$EDITOR ~/.config/containers/systemd/kidney-health.container     # PUBLIC_URL, TRUSTED_PROXIES
+/usr/libexec/podman/quadlet -user -dryrun >/dev/null && echo unit OK  # Debian/Ubuntu: /usr/lib/podman/quadlet
+systemctl --user daemon-reload
+systemctl --user start kidney-health
+sudo loginctl enable-linger "$USER"
+systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.3 tag
 ```
 
-`kidney-health.env` must exist even if empty. Logs: `journalctl --user -u kidney-health -f`.
-Quadlet units are not `enable`d; the `[Install] WantedBy=default.target` line makes them
-start at boot once linger is on. If `systemctl --user start` says the unit does not exist,
-run the generator by hand to see the parse error:
-`/usr/libexec/podman/quadlet -user -dryrun` (Debian/Ubuntu: `/usr/lib/podman/quadlet`).
-
-The data lives in the Podman volume `systemd-kidney-health`:
+What the unit sets, and why, is commented line by line in the file: `127.0.0.1` publishing,
+`ReadOnly=true` with a `noexec` tmpfs on `/tmp`, `DropCapability=all`, `NoNewPrivileges=true`,
+`PidsLimit=128`, `--memory=512m`, a `noexec,nosuid,nodev` data volume, `Secret=` mounted as
+`/run/secrets/secret_key` (owner 10001, mode 0400), and the health check in exec form (the image has
+no shell). Check the result:
 
 ```bash
-podman volume inspect systemd-kidney-health --format '{{.Mountpoint}}'
+podman info --format '{{.Host.Security.Rootless}}'        # true
+podman top kidney-health user huser                       # 10001  <subordinate UID>
+podman inspect kidney-health --format '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}'
+podman healthcheck run kidney-health && echo healthy
 ```
 
-**Auto-update.** The unit carries `AutoUpdate=registry`, so:
+Status and logs: `systemctl --user status kidney-health`, `journalctl --user -u kidney-health -f`.
+Typos make `daemon-reload` skip the unit silently: run the `quadlet -dryrun` line above.
+
+**A local Ollama or Hermes on the same host.** pasta maps `host.containers.internal` to the host
+(169.254.1.2, Podman ≥ 5.3), but a host service that listens only on `127.0.0.1` (the default for
+Ollama and Hermes) stays unreachable, which is good. Do not "fix" that with `pasta:--map-gw`, which
+exposes every loopback service on the host to the container. Run Ollama as a container next to the
+app instead (`deploy/compose.ai-ollama.yaml`), or bind Hermes to a specific LAN address and add it
+to `AI_PRIVATE_HOSTS`.
+
+**Rootful instead?** Not recommended. If you must, place the files in `/etc/containers/systemd/`
+and drop `--user`; the app still runs as UID 10001, but an escape lands as a host UID that the
+kernel does not separate from root's user namespace.
+
+## Compose (podman-compose or docker compose)
+
+[`deploy/compose.yaml`](../deploy/compose.yaml) carries the same hardening. Secrets are files in
+`deploy/secrets/` (git-ignored):
 
 ```bash
-podman auto-update --dry-run                              # what would change
-podman auto-update                                        # pull + restart if the image changed
-systemctl --user enable --now podman-auto-update.timer    # do that daily (00:00 by default)
+install -d -m 0700 deploy/secrets
+python3 -c "import secrets; print(secrets.token_urlsafe(32))" > deploy/secrets/secret_key
+: > deploy/secrets/usda_api_key            # empty = USDA search off; or paste your key
+chmod 0644 deploy/secrets/secret_key deploy/secrets/usda_api_key
+cp deploy/.env.example deploy/.env && $EDITOR deploy/.env     # PUBLIC_URL, TRUSTED_PROXIES, ...
+podman-compose -f deploy/compose.yaml up -d                   # or: docker compose -f deploy/compose.yaml up -d
 ```
 
-Podman rolls back to the previous image when the restarted unit fails to become active.
-`:latest` follows every merge to `main`; for calmer upgrades change `Image=` to a release
-tag such as `ghcr.io/ksullivan86/kidney-health:0.2` and `systemctl --user daemon-reload &&
-systemctl --user restart kidney-health`. Back up before upgrades regardless, see
-[Upgrading](#h-upgrading).
+Why `0644` inside a `0700` directory: compose mounts file secrets as bind mounts, and under a
+rootless engine your UID is container root, so a `0600` file you own is unreadable for UID 10001.
+The directory keeps other host users out. On Podman you can instead keep `0600` and run
+`podman unshare chown 10001:10001 deploy/secrets/*`. On SELinux hosts podman-compose relabels the
+secrets (`x-podman.relabel: Z`).
 
-**Rootful variant.** Put the three files in `/etc/containers/systemd/` and drop every
-`--user`; the volume is then under `/var/lib/containers/storage/volumes/`.
+With `restart: always`, enable `systemctl --user enable --now podman-restart.service` so Podman
+starts the container after a reboot, or use Quadlet. Optional overlays:
+`-f deploy/compose.caddy.yaml` (HTTPS with Caddy, [`https.md`](https.md) tier 1) and
+`-f deploy/compose.ai-ollama.yaml` (a local Ollama on an internal network).
 
----
+## Rootless Docker
 
-## d. Talos Kubernetes with kustomize
+1. Install `uidmap` and `docker-ce-rootless-extras`, then as your user:
+   `dockerd-rootless-setuptool.sh install`.
+2. `systemctl --user enable --now docker` and `sudo loginctl enable-linger "$USER"`.
+3. `docker context use rootless`; `docker info` must list `name=rootless` under Security Options.
+4. Run it, either with compose as above, or with
+   [`deploy/docker-rootless-run.sh`](../deploy/docker-rootless-run.sh), which spells out every flag
+   (`--read-only`, `--tmpfs /tmp`, `--cap-drop ALL`, `--security-opt no-new-privileges:true`,
+   `--pids-limit 128`, `--memory 512m`, `127.0.0.1` publishing, secrets as read-only bind mounts)
+   and refuses a rootful daemon.
 
-The base in `deploy/k8s/` creates a namespace, a PVC, a single-replica Deployment
-(`Recreate`), a ClusterIP Service on port 80 and an Ingress. It satisfies the Pod Security
-"restricted" profile, which the namespace opts into (Talos enforces "baseline"
-cluster-wide by default; "restricted" is stricter, and the Deployment complies).
+Limits that matter here:
+
+* **Source addresses are not propagated by default**: every client appears to come from the
+  RootlessKit gateway. Keep publishing on `127.0.0.1` and `TRUSTED_PROXIES` at the loopback default
+  (details and the fix in [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology)).
+* `--memory` and `--pids-limit` need cgroup v2 with systemd; otherwise Docker ignores them silently.
+* No AppArmor; ports below 1024 need `net.ipv4.ip_unprivileged_port_start`.
+* Docker's `--health-cmd` always runs through `/bin/sh`, which the image does not have, so do not
+  pass one: the image's own `HEALTHCHECK` (exec form) applies.
+
+## Kubernetes (Talos)
+
+The Kustomize base in [`deploy/k8s/`](../deploy/k8s/) satisfies Pod Security **restricted**, which
+the namespace enforces:
 
 ```
 deploy/k8s/
-  kustomization.yaml       resources list + image tag pin
-  namespace.yaml           kidney-health, PSA labels
-  pvc.yaml                 1 Gi ReadWriteOnce            <- choose storageClassName
-  deployment.yaml          uid 10001, probes on /healthz, resources, Secret envFrom (optional)
-  service.yaml             ClusterIP :80 -> :8000
-  ingress.yaml             host + optional cert-manager / Authelia annotations   <- set host
-  httproute.example.yaml   Gateway API alternative, not applied by default
-  secret.example.yaml      USDA_API_KEY / APP_PASSWORD, not applied by default
+  kustomization.yaml                  resources + image pin (tag and digest)
+  namespace.yaml                      PSA enforce/audit/warn: restricted
+  pvc.yaml                            1 Gi ReadWriteOnce                    <- storageClassName
+  deployment.yaml                     UID 10001, read-only root, /tmp emptyDir, secret files, probes
+  service.yaml                        ClusterIP :80 -> :8000
+  networkpolicy.yaml                  default-deny + DNS + public 443 + ingress from the Gateway
+  httproute.yaml                      Gateway API route (default)           <- parentRefs, hostname
+  ingress.example.yaml                Ingress instead (not applied; ingress-nginx is retired)
+  cilium-networkpolicy.example.yaml   FQDN egress allowlist for Cilium (not applied)
+  secret.example.yaml                 the Secret's shape (not applied: never commit secrets)
 ```
-
-Prerequisites: `talosctl kubeconfig` done, `kubectl get nodes` works, a StorageClass
-exists (`kubectl get sc`), and an ingress controller or Gateway is installed.
 
 ### 1. Pick storage
 
-Edit `deploy/k8s/pvc.yaml` and set `storageClassName`, or leave it unset to use the
-cluster default. On Talos the usual choices are:
+Edit `pvc.yaml` (`storageClassName`) or leave it unset for the cluster default.
 
 | StorageClass | Fits when | Notes |
 |---|---|---|
-| `local-path` (rancher local-path-provisioner) | one node, or you accept the pod being tied to one node | hostPath under `/var/local-path-provisioner`; on Talos the provisioner's namespace needs the `privileged` PSA label and a kubelet extra mount for that path. Pin the pod with the `nodeSelector` comment in `deployment.yaml`. Fastest to set up. |
-| `longhorn` | 2+ nodes, want replicas and snapshots | Talos needs the `iscsi-tools` and `util-linux-tools` system extensions and a `/var/lib/longhorn` kubelet mount. Snapshots/backups of the volume are a bonus. |
-| `rook-ceph-block` (Rook-Ceph RBD) | you already run Ceph | Needs raw disks. Name is your CephBlockPool StorageClass. Solid, heavier. |
-| `mayastor-*` (OpenEBS Mayastor) | you already run Mayastor | Needs hugepages per node; create a StorageClass (`repl: "1"` or `"3"`) and use its name. |
-| `openebs-hostpath` | like local-path | Same single-node caveats. |
-| NFS (`nfs-csi`) | avoid | SQLite relies on file locking that NFS implements poorly. |
+| `local-path` | one node, or the pod may be tied to one node | hostPath; on Talos the provisioner's namespace needs the `privileged` PSA label and a kubelet extra mount. Pin the pod with the `nodeSelector` comment in `deployment.yaml`. |
+| `longhorn` | 2+ nodes, replicas and snapshots | Talos needs the `iscsi-tools` and `util-linux-tools` extensions and a `/var/lib/longhorn` kubelet mount. |
+| `rook-ceph-block` | you already run Ceph | Raw disks; the name is your CephBlockPool StorageClass. |
+| `mayastor-*` (OpenEBS) | you already run Mayastor | Hugepages per node; create a StorageClass and use its name. |
+| NFS | avoid | SQLite relies on file locking that NFS implements poorly; also not idmap-capable (no `hostUsers: false`). |
 
-The database is a few megabytes; `1Gi` is already generous. Replication does not replace
-backups: a replicated volume faithfully replicates a corrupted file. Do section (e).
+A replicated volume faithfully replicates a corrupted file: replication does not replace backups.
 
-### 2. Apply the base
+### 2. Secret, then apply
 
 ```bash
-kubectl apply -k deploy/k8s
-kubectl -n kidney-health get pods,pvc,svc,ingress
-kubectl -n kidney-health logs deploy/kidney-health
-```
-
-Expected log lines: `database schema migrated to version N` (first start only) and
-`database /data/kidney.db ready; builtin foods: imported`. A pod stuck in `Pending`
-almost always means the PVC is unbound: `kubectl -n kidney-health describe pvc
-kidney-health-data`.
-
-Quick check without an Ingress:
-
-```bash
-kubectl -n kidney-health port-forward svc/kidney-health 8000:80
-curl -s http://localhost:8000/healthz
-```
-
-### 3. Secret for `USDA_API_KEY` / `APP_PASSWORD` (optional)
-
-The Deployment references a Secret named `kidney-health` with `optional: true`, so the
-pod runs without it (no USDA search, no password). To set either value:
-
-```bash
+kubectl create namespace kidney-health --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n kidney-health create secret generic kidney-health \
-  --from-literal=USDA_API_KEY='your-key' \
-  --from-literal=APP_PASSWORD='a long passphrase'
-kubectl -n kidney-health rollout restart deploy/kidney-health     # env is read at start
+  --from-literal=secret_key="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')" \
+  --from-literal=usda_api_key=''
+$EDITOR deploy/k8s/httproute.yaml deploy/k8s/networkpolicy.yaml deploy/k8s/deployment.yaml
+kubectl apply -k deploy/k8s
+kubectl -n kidney-health rollout status deploy/kidney-health
+kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'
 ```
 
-Or copy `deploy/k8s/secret.example.yaml` outside the repository, fill it in and
-`kubectl apply -f` it. Do not commit the filled-in file. Rotate the same way.
+Both Secret keys must exist (the app reads both files; an empty `usda_api_key` means "off"). Keep a
+copy of `secret_key` in your password manager. Talos encrypts Secrets in etcd (secretbox) by default.
 
-### 4. Ingress or Gateway HTTPRoute
+### 3. Things to set in `deployment.yaml`
 
-**Ingress** (default): in `deploy/k8s/ingress.yaml` change `kidney.home.example` to your
-hostname and `ingressClassName: nginx` to your controller (`traefik`, `cilium`, ...).
-The app must be served at the root of a hostname, not under a sub-path: the frontend
-calls `/api/...` with absolute paths.
+* `PUBLIC_URL` = the HTTPRoute host name with `https://`.
+* `TRUSTED_PROXIES`: the shipped `10.244.0.0/16` (Talos' default pod CIDR) trusts **every pod**; it is
+  only safe while the NetworkPolicy below is enforced or `TRUSTED_PROXY_SECRET_FILE` is set. Narrow
+  it to your Gateway's pods where you can.
+* `supplementalGroupsPolicy: Strict` needs containerd ≥ 2.0 (Talos ships it); remove the line if the
+  kubelet rejects the pod.
 
-**TLS with cert-manager**: uncomment the `cert-manager.io/cluster-issuer` annotation and
-the `spec.tls` block; cert-manager then creates `kidney-health-tls`. For a hostname that
-is not reachable from the internet use a DNS-01 solver (Cloudflare, Route53, ...) or a
-cert-manager `CA` ClusterIssuer with your own root certificate installed on the phone.
-Letting the browser store a Basic-auth password over plain HTTP on anything but a trusted
-LAN is a bad idea, so get TLS working before setting `APP_PASSWORD` on a public hostname.
+### 4. Make NetworkPolicy real on Talos
 
-**Gateway API** instead: edit `deploy/k8s/httproute.example.yaml` (`parentRefs` to your
-Gateway, `hostnames`), add it to `resources:` in `kustomization.yaml` and remove
-`ingress.yaml`. TLS is configured on the Gateway listener, not on the route, and the
-Gateway must allow routes from the `kidney-health` namespace
-(`allowedRoutes.namespaces`). The route targets Service port 80.
-
-### 5. Pin the image
-
-`kustomization.yaml` has an `images:` entry. `newTag: latest` plus
-`imagePullPolicy: Always` means `kubectl rollout restart` pulls whatever `main` is now.
-For controlled upgrades set `newTag: "0.2.0"` (or `sha-1a2b3c4`) and `kubectl apply -k`.
-
----
-
-## e. Backups and restore of `/data/kidney.db`
-
-The database runs in WAL mode. While the app is running, the current state is
-`kidney.db` **plus** whatever sits in `kidney.db-wal` (present whenever a connection is open); copying `kidney.db` alone can lose the most recent
-entries or produce an inconsistent file. Use one of:
-
-1. SQLite's online backup (safe while running; preferred), or
-2. stop the app, then copy the files.
-
-The image has no `sqlite3` command-line tool, but Python's `sqlite3` module does the
-same thing. The one-liner used below:
-
-```python
-import sqlite3; s=sqlite3.connect('/data/kidney.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d); d.close(); s.close()
-```
-
-A second, human-readable safety net is the CSV export in the Trends view
-(`GET /api/log/export.csv?start=...&end=...`); it holds the log entries but not the
-profile, targets, saved meals or custom foods.
-
-### Podman: online backup
+Talos' default CNI (Flannel) **silently ignores** NetworkPolicy unless `kubeNetworkPoliciesEnabled:
+true` is set in its configuration (Talos ≥ 1.13; from 1.14 in the `KubeFlannelCNIConfig` document;
+see the Talos Flannel guide). Test that the policy is enforced:
 
 ```bash
-podman exec kidney-health python -c "import sqlite3; s=sqlite3.connect('/data/kidney.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d); d.close(); s.close()"
-podman cp kidney-health:/data/backup.db "./kidney-$(date +%F).db"
-podman exec kidney-health rm /data/backup.db
+kubectl -n kidney-health run np-test --rm -it --restart=Never \
+  --image=cgr.dev/chainguard/curl:latest --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"np-test","image":"cgr.dev/chainguard/curl:latest","args":["-sS","-m","5","http://kidney-health/healthz"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}'
+# must FAIL (DNS error or timeout): default-deny blocks this pod's egress and the app's ingress.
+# If it prints {"status":"ok",...}, NetworkPolicy is not enforced on your cluster.
 ```
 
-With the `sqlite3` CLI on the host and a rootless named volume (the files are owned by a
-sub-uid, so wrap it in `podman unshare`):
+`networkpolicy.yaml` lets the Gateway's namespace in on port 8000 (edit `gateway-system`), and lets
+the pod out only to kube-dns and to **public** addresses on 443 (private, CGNAT, link-local and
+loopback ranges are excluded, so cloud metadata and the API server are unreachable). Kubelet probes
+come from the node and are not affected. With Cilium, replace the `0.0.0.0/0` rule with
+`cilium-networkpolicy.example.yaml` (exact host names). A LAN Ollama needs its own egress rule (a
+commented example is in the file) and an `AI_PRIVATE_HOSTS` entry.
+
+### 5. Check Pod Security, pin the digest
 
 ```bash
-M=$(podman volume inspect kidney-data --format '{{.Mountpoint}}')     # systemd-kidney-health for Quadlet
-podman unshare sqlite3 "$M/kidney.db" ".backup '$PWD/kidney-$(date +%F).db'"
+kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
+scripts/verify-image.sh 0.3.0                 # prints the verified digest
+cd deploy/k8s && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<digest>
 ```
 
-### Podman: stop and copy
+`imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
+There is deliberately **no PodDisruptionBudget**: with one replica it would block every node drain
+(`talosctl upgrade`); a short outage during a drain is fine for this app.
+
+### 6. Optional: a user namespace for the pod
+
+`hostUsers: false` (GA in Kubernetes 1.36) runs the pod in its own user namespace, so even root in
+the container is unprivileged on the node. It needs Linux ≥ 6.3, containerd ≥ 2.0, idmap-capable
+volumes (ext4, xfs, btrfs, tmpfs; not NFS) and, on Talos, user namespaces switched on:
+
+```yaml
+# Talos machine config patch
+apiVersion: v1alpha1
+kind: SysctlConfig
+sysctls:
+  user.max_user_namespaces: "11255"
+```
+
+Then uncomment `hostUsers: false` in `deployment.yaml`.
+
+### Debugging without a shell
+
+The image has no shell by design. Use `kubectl debug -it --profile=restricted --target=app POD
+--image=cgr.dev/chainguard/python:latest-dev`, or on Podman `podman cp` and
+`podman run --rm -it --volumes-from kidney-health cgr.dev/chainguard/python:latest-dev sh`. Most
+tasks have an `app.admin` command instead (below).
+
+## Sign-in modes
+
+* **`AUTH_MODE=local`** (default): accounts with passwords, an in-app sign-in page, sessions in an
+  `HttpOnly` cookie. Works behind any reverse proxy. Use HTTPS once more than one person signs in
+  (the app refuses plain-HTTP sign-in from other machines when there are two accounts).
+* **`AUTH_MODE=proxy`**: your reverse proxy signs people in (Authelia, Authentik) and passes the
+  user name in a header. Set `TRUSTED_PROXY_USER_HEADER=Remote-User` (optionally
+  `TRUSTED_PROXY_GROUPS_HEADER`, `TRUSTED_PROXY_ADMIN_GROUP`, `PROXY_LOGOUT_URL`),
+  `TRUSTED_PROXIES` = the proxy's address, and **`TRUSTED_PROXY_SECRET_FILE`**: a long random value
+  the proxy also sends as `X-Proxy-Secret`. Without it the app refuses to start, because any process
+  that can reach the app from the proxy's address could otherwise claim to be anyone. Caddy:
+  `header_up X-Proxy-Secret {env.KH_PROXY_SECRET}` inside `reverse_proxy`; Traefik:
+  `headers.customRequestHeaders`; nginx: `proxy_set_header X-Proxy-Secret ...`. `tailscale serve`
+  cannot add headers, so it needs `TRUSTED_PROXY_SECRET_OPTIONAL=true` (logged as a warning).
+* **`AUTH_MODE=none`**: no sign-in at all; everything belongs to one person and anyone who can open
+  the page can read and change it. Only for one person on a trusted LAN, never exposed beyond it.
+
+## Backups and restore
+
+`kidney.db` holds every person's health data, password hashes and the encrypted API keys. Back it
+up with the built-in command: it uses SQLite's online backup API, so the copy is consistent while
+the app keeps running, and it needs no shell in the container.
 
 ```bash
-podman stop kidney-health          # or: systemctl --user stop kidney-health
-podman volume export kidney-data -o "kidney-data-$(date +%F).tar"   # whole volume as a tar
-podman start kidney-health         # or: systemctl --user start kidney-health
+# Quadlet / compose / Docker (use docker instead of podman as needed)
+podman exec kidney-health python -m app.admin backup - > "kidney-$(date +%F).db"
+# Kubernetes
+kubectl -n kidney-health exec deploy/kidney-health -- python -m app.admin backup - > "kidney-$(date +%F).db"
+chmod 0600 kidney-*.db
 ```
 
-Put either command in a cron job or a systemd timer and copy the files off the host.
+Then:
 
-### Kubernetes
+* **Encrypt** the copies (restic, borg or age): they contain special-category health data.
+* **Back up `SECRET_KEY` separately** (a password manager). The `app.admin backup` copy does not
+  contain it; a volume-level backup does if the key was auto-generated as `/data/secret.key`, which
+  is why every shipped profile mounts `SECRET_KEY_FILE` instead. Restoring without the key loses
+  only the stored API keys.
+* Check a backup now and then: `python -m app.admin restore-check FILE` reports integrity, the
+  schema version, the number of users and whether the stored keys decrypt with the current key.
+
+**Restore** (the app must be stopped, so nothing writes during the copy). The backup file must be
+readable for UID 10001 inside the container: `podman unshare chown 10001:0 kidney-2026-10-01.db`
+(rootless Podman), or `chmod 0644` it inside a `0700` directory (rootless Docker).
 
 ```bash
-NS=kidney-health
-kubectl -n $NS exec deploy/kidney-health -- python -c "import sqlite3; s=sqlite3.connect('/data/kidney.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d); d.close(); s.close()"
-kubectl -n $NS exec deploy/kidney-health -- cat /data/backup.db > "kidney-$(date +%F).db"
-kubectl -n $NS exec deploy/kidney-health -- rm /data/backup.db
+# 1. Check the backup with the same image (no shell needed; works on Docker too).
+podman run --rm --user 10001:10001 --entrypoint python \
+  -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
+  ghcr.io/ksullivan86/kidney-health:0.3 -m app.admin restore-check /restore/kidney.db
+
+# 2. Stop the app, then copy the backup INTO the volume through SQLite (handles the WAL files).
+systemctl --user stop kidney-health          # compose: podman-compose -f deploy/compose.yaml stop
+podman run --rm --user 10001:10001 --entrypoint python \
+  -v systemd-kidney-health:/data \
+  -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
+  ghcr.io/ksullivan86/kidney-health:0.3 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+systemctl --user start kidney-health
 ```
 
-(`kubectl cp` works too; the image contains `tar`.) Longhorn or Ceph volume snapshots
-are a fine addition but are crash-consistent, not application-consistent; keep the
-`.backup` copies as the primary.
+(The compose volume is `kidney-health_kidney-data`; Docker without compose: `kidney-health-data`.)
+Add `--revoke-sessions` to `restore-check` on a copy you restore if everyone should sign in again.
+On Kubernetes, scale the Deployment to 0, run the same two `python` commands in a one-off pod that
+mounts the PVC (restricted security context, UID 10001), then scale back to 1.
 
-### Verify a backup
+A backup restores into the same or a **newer** app version (migrations run on start); never into an
+older one.
+
+## Upgrades
+
+* **Track `:0.3`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
+  `podman-auto-update.timer`, or pin a digest you verified (`scripts/verify-image.sh`) and change
+  it deliberately. Do not track `:latest` or `:edge` on a machine you care about: `:edge` follows
+  every merge to `main`.
+* Before a minor upgrade (0.3 → 0.4): take a backup, read the release notes, then change the tag.
+* Never mount the Podman or Docker socket into an "updater" container ([`security.md` §7](security.md#7-never-mount-the-container-engines-socket)).
+
+### From v0.2 to v0.3
+
+1. **Back up first** (`app.admin backup` does not exist in v0.2; with the old image, which still
+   has a shell, copy the file: `podman exec kidney-health python -c "import sqlite3; s=sqlite3.connect('/data/kidney.db'); d=sqlite3.connect('/data/v02-backup.db'); s.backup(d)"` and
+   `podman cp kidney-health:/data/v02-backup.db .`).
+2. **The upgrade makes its own backup too**: before the accounts migration (schema v3) the app copies
+   the database to `/data/kidney.db.pre-v3.bak` with the SQLite backup API. It is the rollback path
+   and is deleted automatically 30 days after the upgrade (Admin → About shows it while it exists).
+   To roll back, stop v0.3, restore that file as `kidney.db` (as in [Restore](#backups-and-restore)) and
+   start the old image. **Do not roll back after a second person has signed up**: v0.2 has no
+   accounts and would mix everyone's log; restore the pre-v3 backup instead.
+3. **Replace your deployment files** with the v0.3 ones (Quadlet unit, `compose.yaml`, `deploy/k8s/`).
+   What changed and why it matters:
+   * The image has no shell any more: backups, restores and health checks use `python -m app...`.
+   * Secrets are files: move `USDA_API_KEY` from the env file into a Podman secret,
+     `deploy/secrets/usda_api_key` or the Kubernetes Secret, and add `SECRET_KEY_FILE`.
+   * The port is published on `127.0.0.1`; reach the app through your HTTPS proxy.
+   * Set **`PUBLIC_URL`** (or `ALLOWED_HOSTS`) if people use a host name: unknown host names now get
+     `400 Unknown host`. IP addresses and `localhost` keep working.
+   * `--forwarded-allow-ips=*` is gone: list your proxy in `TRUSTED_PROXIES` ([`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology)).
+   * Tags: `:latest` now means "newest release", not "main"; `main` builds are `:edge`. Track `:0.3`.
+   * `--userns=keep-id` is no longer recommended (see [User namespaces](#user-namespaces-keep-the-default)).
+4. **Accounts.** On first start the existing log becomes the admin's (user 1). If you used
+   `APP_PASSWORD`, it becomes that admin's password (you are asked to change it if it is shorter
+   than 15 characters); otherwise finish setup with the setup code from the log.
+5. Volumes keep working: the owner UID is still 10001 (new volumes are `10001:0`, mode 0770). For a
+   bind mount, `:U` or `podman unshare chown -R 10001:0 DIR` sets the new group.
+
+## Building the image yourself
+
+From the repository root (the `.dockerignore` lets only `app/`, `data/foods.json`, `LICENSE`,
+`requirements.lock` and `handbook/` into the build):
 
 ```bash
-python3 -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute('pragma integrity_check').fetchone()[0]); print(c.execute('select count(*) from log_entries').fetchone()[0], 'log entries')" kidney-2026-10-05.db
+podman build --format docker -f deploy/Containerfile -t kidney-health:local .          # Chainguard (published)
+podman build --format docker -f deploy/Containerfile.debian -t kidney-health:debian .  # Debian fallback
 ```
 
-### Restore
+`--format docker` keeps the image `HEALTHCHECK` (Podman's default OCI format drops it; the Quadlet
+unit and compose file declare the probe anyway). Dependencies are installed from the hash-locked
+`requirements.lock`, wheels only, so a build needs `pypi.org` and `files.pythonhosted.org` but never
+compiles anything.
 
-Stop the app, replace the file, delete stale WAL files, fix ownership, start.
+* **Which file?** `deploy/Containerfile` (Chainguard Python, 0 High/Critical findings when chosen)
+  is what CI publishes. `deploy/Containerfile.debian` (`python:3.14-slim-trixie`) is the fallback
+  if Chainguard's free tier changes or a wheel lags its Python; it keeps `/bin/sh` for debugging but
+  has no pip and no setuid binaries. CI builds and smoke-tests both.
+* **ARM**: the published image covers linux/arm64 (Raspberry Pi 4/5, Talos on arm64). To build on
+  the device itself just run the command above; to cross-build use
+  `podman build --platform linux/arm64 ...` with `qemu-user-static` installed. 32-bit ARM is not
+  supported.
+* **Base digests** are pinned in the `FROM` lines and bumped by Dependabot; to re-resolve them by
+  hand: `crane digest cgr.dev/chainguard/python:latest-dev` and `crane digest cgr.dev/chainguard/python:latest`.
+* The `/learn` patient handbook is built into the image by a separate stage (a placeholder until the
+  handbook ships; then `/learn` is served from `/app/learn`).
 
-Podman, named volume:
+## Local development run
 
 ```bash
-podman stop kidney-health
-M=$(podman volume inspect kidney-data --format '{{.Mountpoint}}')
-podman unshare sh -c "rm -f '$M/kidney.db-wal' '$M/kidney.db-shm' && cp kidney-2026-10-05.db '$M/kidney.db' && chown 10001:10001 '$M/kidney.db'"
-podman start kidney-health
+python3 -m venv .venv && . .venv/bin/activate
+pip install --require-hashes --no-deps -r requirements-dev.lock
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers   # DATA_DIR defaults to ./data-local
+python -m pytest
 ```
 
-(`podman volume import kidney-data kidney-data-2026-10-05.tar` restores a tar made with
-`volume export`.) Bind mount: same, with the directory path instead of `$M`; rootful or
-Docker: `sudo chown 10001:10001` without `podman unshare`.
+## Troubleshooting
 
-Kubernetes: scale to zero, mount the PVC in a throwaway pod (the app image itself, so
-it already runs as uid 10001 and passes the restricted PSA), copy the file in, scale up.
+**`400 Unknown host`** – you opened the app by a host name the app does not know. Set `PUBLIC_URL`
+(or `ALLOWED_HOSTS`); the log names the host it refused. IP addresses and `localhost` always work.
 
-```bash
-NS=kidney-health
-kubectl -n $NS scale deploy/kidney-health --replicas=0
-kubectl -n $NS apply -f - <<'EOF'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kidney-restore
-  namespace: kidney-health
-spec:
-  restartPolicy: Never
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 10001
-    runAsGroup: 10001
-    fsGroup: 10001
-    seccompProfile: {type: RuntimeDefault}
-  containers:
-    - name: shell
-      image: ghcr.io/ksullivan86/kidney-health:latest
-      command: ["sleep", "infinity"]
-      securityContext:
-        allowPrivilegeEscalation: false
-        capabilities: {drop: ["ALL"]}
-      volumeMounts: [{name: data, mountPath: /data}]
-  volumes:
-    - name: data
-      persistentVolumeClaim: {claimName: kidney-health-data}
-EOF
-kubectl -n $NS wait --for=condition=Ready pod/kidney-restore --timeout=120s
-kubectl -n $NS exec kidney-restore -- rm -f /data/kidney.db-wal /data/kidney.db-shm
-kubectl -n $NS cp kidney-2026-10-05.db kidney-restore:/data/kidney.db
-kubectl -n $NS delete pod kidney-restore
-kubectl -n $NS scale deploy/kidney-health --replicas=1
-```
+**`unable to open database file` / `attempt to write a readonly database`** – `/data` is not
+writable by UID 10001. Named volumes need nothing. Bind mounts: `:U` (Podman) or
+`podman unshare chown -R 10001:0 DIR`; on SELinux hosts add `:Z` (`ausearch -m avc -ts recent`
+shows denials). Kubernetes: `fsGroup: 10001` handles CSI volumes; hostPath-style classes may need
+the directory chowned on the node.
 
-After any restore, check `curl .../healthz` and the startup log; if the backup is from an
-older release the schema migrates forward automatically on start.
+**`SECRET_KEY_FILE points to ..., which does not exist`** or `permission denied` – the secret is
+missing or unreadable for UID 10001: create the Podman secret / Kubernetes Secret, or fix the file
+mode (compose: `0644` in a `0700` directory). Setting both `X` and `X_FILE` is also refused.
 
----
+**Health check failing** – the probe runs `python -m app.healthcheck` in exec form. A health command
+given as a plain string (Docker `--health-cmd`, an old Quadlet `HealthCmd=` line) runs through
+`/bin/sh`, which the image does not have: use the JSON form `["python", "-m", "app.healthcheck"]`.
+`podman healthcheck run kidney-health` runs it by hand; `podman logs kidney-health` shows Python
+errors. On slow storage raise the start period.
 
-## f. Enabling USDA lookups
+**Every request looks like it comes from one address / rate limits hit everyone** – your engine does
+not pass client addresses through (rootless Docker, slirp4netns) or `TRUSTED_PROXIES` does not
+match your proxy. See [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology).
 
-Without a key the app works fully from its 395 builtin foods plus whatever you add by
-hand; "Search USDA" is hidden and `GET /api/foods/usda/search` answers
-`503 {"detail":"USDA_API_KEY not configured"}`.
+**`403` on every save** – the browser's `Origin` does not match: set `PUBLIC_URL` to exactly the
+URL in the address bar (scheme, host and port), especially if your proxy rewrites `Host`.
 
-1. Get a free key: <https://fdc.nal.usda.gov/api-key-signup> (arrives by e-mail at once).
-   Your key allows 1,000 requests per hour; `DEMO_KEY` works for a quick test but is
-   limited to 30 requests per hour and 50 per day.
-2. Set `USDA_API_KEY`:
-   * `podman run`: `-e USDA_API_KEY=...`
-   * compose: `USDA_API_KEY=...` in `deploy/.env`, then `up -d` again
-   * Quadlet: `USDA_API_KEY=...` in `~/.config/containers/systemd/kidney-health.env`, then
-     `systemctl --user restart kidney-health`
-   * Kubernetes: the Secret in section d.3, then `rollout restart`
-3. Reload the page: the Add view shows "Search USDA". Imported foods get `source: usda`
-   and a 100 g serving unless USDA supplies a household portion.
+**Sign-in refused over HTTP** – with two or more accounts the app refuses plain-HTTP sign-in from
+other machines. Set up HTTPS ([`https.md`](https.md)).
 
-The server (not the browser) calls `https://api.nal.usda.gov/fdc/v1/...`, so only the
-host/cluster needs egress to `api.nal.usda.gov` on 443. Blocked egress shows up as
-`502 USDA request failed: ConnectError`; a wrong key as `503 USDA API key was rejected`.
+**Memory or pids limit ignored** – rootless engines need cgroup v2 with systemd (see
+[Before you start](#before-you-start)); `docker info`/`podman info` show the cgroup version.
 
----
+**Pod `Pending`** – `kubectl -n kidney-health describe pvc kidney-health-data`: a mistyped
+`storageClassName`, no default class, or a `nodeSelector` that matches no node.
 
-## g. Reverse proxy, Authelia or `APP_PASSWORD`
+**Pod rejected by Pod Security** – any extra container you add (debug, init, restore) must run as
+non-root with `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, `seccompProfile:
+RuntimeDefault`.
 
-The app speaks plain HTTP on 8000 and has one optional protection: `APP_PASSWORD`.
-Pick **one** of the two models.
+**`database is locked`** – two processes share one database. Run exactly one container per volume.
 
-### Model 1: `APP_PASSWORD` (built-in Basic auth)
+**`USDA request failed`** – the server cannot reach `api.nal.usda.gov:443` (egress rules,
+[`network-allowlist.md`](network-allowlist.md)); `USDA API key was rejected` means a wrong key.
 
-Set the variable and every page and API call demands HTTP Basic auth, realm
-`kidney-health`, any username, that password (constant-time comparison). `/healthz` stays
-open for probes and reveals only the food count. Browsers remember the credentials until
-closed; there is no logout. Fine for one person on a home LAN, or behind a TLS-terminating
-proxy on the internet. Unset or empty means no auth at all, so never publish port 8000
-to the internet without it.
-
-### Model 2: reverse proxy with its own login (Authelia, Authentik, Caddy basic_auth...)
-
-Leave `APP_PASSWORD` empty and let the proxy authenticate. The image starts uvicorn with
-`--proxy-headers --forwarded-allow-ips=*`, so client IPs and the `https` scheme are taken
-from `X-Forwarded-For` / `X-Forwarded-Proto` **from any source**. That is convenient
-behind a proxy and dangerous without one: when using this model, bind the container to
-localhost (`-p 127.0.0.1:8000:8000`, `PublishPort=127.0.0.1:8000:8000`) or keep it on an
-internal network so only the proxy can reach it. Serve the app at the root of its own
-hostname (no sub-path).
-
-Caddy (automatic TLS):
-
-```caddyfile
-kidney.home.example {
-    reverse_proxy 127.0.0.1:8000
-    # Authelia forward auth, if you run it:
-    # forward_auth authelia:9091 {
-    #     uri /api/authz/forward-auth
-    #     copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
-    # }
-}
-```
-
-nginx:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name kidney.home.example;
-    # ssl_certificate ...; ssl_certificate_key ...;
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Kubernetes with ingress-nginx: `deploy/k8s/ingress.yaml` carries commented annotations
-for Authelia forward-auth and for nginx's own htpasswd Basic auth; uncomment one block.
-Authelia 4.38+ exposes `/api/authz/forward-auth`; older releases use `/api/verify`.
-
-Running both models at once makes the browser answer two different Basic-auth prompts
-and is not recommended.
-
----
-
-## h. Upgrading
-
-1. **Back up first** (section e). The schema migrates forward automatically on start
-   (`app/db.py` adds missing columns and tables, never removes any) and logs
-   `database schema migrated to version N`. Rolling *back* to an older image after a
-   migration is not supported; restore the backup instead.
-2. Pull and restart:
-   * `podman run`: `podman pull ghcr.io/ksullivan86/kidney-health:latest`, then
-     `podman stop kidney-health && podman rm kidney-health` and the same `podman run`
-     command as before (the named volume keeps the data).
-   * compose: `podman-compose -f deploy/compose.yaml pull && podman-compose -f deploy/compose.yaml up -d`
-   * Quadlet: `podman auto-update` (or wait for the timer). To move to a specific release,
-     edit `Image=` in the `.container` file, `systemctl --user daemon-reload`,
-     `systemctl --user restart kidney-health`.
-   * Kubernetes: change `newTag` in `deploy/k8s/kustomization.yaml` and `kubectl apply -k
-     deploy/k8s`; with `latest`, `kubectl -n kidney-health rollout restart deploy/kidney-health`.
-3. Check `/healthz` and the startup log. New builtin foods (a new `data/foods.json`
-   version) are upserted on the first start; your custom foods and log are untouched.
-
-Tag choice: `latest` is every merge to `main`; `0.2` follows patch releases of 0.2;
-`0.2.0` never changes. Release tags are created by pushing a `v0.2.0` git tag.
-
----
-
-## i. ARM homelab builds
-
-The published image is a manifest list for **linux/amd64 and linux/arm64**, so
-`podman pull ghcr.io/ksullivan86/kidney-health:latest` picks the right one on a
-Raspberry Pi 4/5 or other 64-bit ARM board (Talos also runs on arm64). Nothing to do.
-
-**Build on the ARM device itself** (a Pi 4 takes two to three minutes; all dependencies
-have aarch64 wheels, so no compiler is needed):
-
-```bash
-podman build -f deploy/Containerfile -t kidney-health:local .
-```
-
-**Cross-build from an x86 machine** with QEMU user emulation:
-
-```bash
-sudo dnf install qemu-user-static          # Fedora; Debian/Ubuntu: apt install qemu-user-static binfmt-support
-podman build --platform linux/arm64 -f deploy/Containerfile -t kidney-health:arm64 .
-
-# or a multi-arch manifest pushed to your own registry:
-podman build --platform linux/amd64,linux/arm64 --manifest registry.home.example/kidney-health:local -f deploy/Containerfile .
-podman manifest push --all registry.home.example/kidney-health:local
-```
-
-32-bit ARM (`armv7`, e.g. a Pi 3 or a Pi running a 32-bit OS) is not published:
-`uvicorn[standard]` pulls in `uvloop` and `httptools`, which have no armv7 wheels and
-would need a compiler. Use a 64-bit OS on those boards.
-
-CI (`.github/workflows/ci.yml`) builds the arm64 half under QEMU on GitHub's amd64
-runners, which is why the image job is allowed up to an hour.
-
----
-
-## j. Troubleshooting
-
-**`unable to open database file`, `attempt to write a readonly database`,
-`PermissionError: /data`** – the volume is not writable by uid 10001.
-
-* Rootless Podman, bind mount: `podman unshare chown -R 10001:10001 /path/on/host`
-  (or run with `--userns=keep-id:uid=10001,gid=10001`).
-* Rootful Podman / Docker: `sudo chown -R 10001:10001 /path/on/host`.
-* Named volumes normally need nothing: Podman copies the image's `/data` ownership into
-  an empty volume on first start. If an older container created the volume as root,
-  fix it with `podman unshare chown -R 10001:10001 "$(podman volume inspect NAME --format '{{.Mountpoint}}')"`.
-* SELinux hosts: add `:Z` to the bind mount, or `ausearch -m avc -ts recent` will show the denial.
-* Kubernetes: `fsGroup: 10001` in the Deployment handles CSI volumes (Longhorn, Ceph,
-  Mayastor). hostPath-style classes ignore fsGroup; local-path creates its directory
-  world-writable so it still works. For any other hostPath volume, chown the directory
-  on the node to 10001 (on Talos: a one-off privileged pod in a non-restricted namespace,
-  since there is no SSH).
-
-**Health check failing / pod restarting** – the probe is `GET /healthz` on 8000 inside
-the container, run with Python because the image has no curl:
-
-```bash
-podman healthcheck run kidney-health && echo healthy
-podman exec kidney-health python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/healthz').read())"
-kubectl -n kidney-health describe pod -l app.kubernetes.io/name=kidney-health   # Events section
-```
-
-The first start imports 395 foods; on a slow SD card that can take longer than the
-15 s start period / 5 s readiness delay. Raise `HealthStartPeriod` (Quadlet),
-`start_period` (compose) or `initialDelaySeconds` (Kubernetes). Also check
-`podman logs kidney-health` for a Python traceback.
-
-**Every page returns 401** – `APP_PASSWORD` is set (any username, that password).
-`/healthz` is exempt by design, so a 200 there and a 401 everywhere else means auth is
-working as intended. An empty value disables auth.
-
-**Wrong client IP or `http://` links behind a proxy** – the proxy must send
-`X-Forwarded-For` and `X-Forwarded-Proto` (examples in section g). The container trusts
-those headers from all sources, so make sure port 8000 is reachable only by the proxy.
-
-**App not reachable from the phone** – open the port on the host firewall
-(`sudo firewall-cmd --add-port=8000/tcp --permanent && sudo firewall-cmd --reload`, or
-`sudo ufw allow 8000/tcp`), use the host's LAN IP, and confirm `podman port kidney-health`
-shows `0.0.0.0:8000` rather than `127.0.0.1:8000`.
-
-**Pod `Pending`** – `kubectl -n kidney-health describe pvc kidney-health-data`: a
-mistyped `storageClassName`, no default StorageClass, or (with local-path) a
-`nodeSelector` that matches no node. A previous pod still holding the RWO volume resolves
-itself within a minute thanks to the `Recreate` strategy.
-
-**Pod rejected by Pod Security** – the namespace enforces `restricted`. Any extra
-container you add (debug pods, init containers) must run as non-root with
-`allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]` and
-`seccompProfile.type: RuntimeDefault`; the restore pod in section e is a template.
-
-**`database is locked`** – two processes share one database. Run exactly one container
-per volume and keep `replicas: 1`. The app waits up to 5 s for locks, which covers the
-backup command.
-
-**Data disappeared after `podman rm`** – the container used an anonymous volume. Check
-`podman volume ls`; the data may still be in a volume with a random name. Always pass `-v`.
-
-**`USDA_API_KEY not configured` / `USDA request failed`** – see section f; the second
-message means the host or cluster cannot reach `api.nal.usda.gov`.
-
-**Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'`
-or `kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`,
-and `GET /docs` shows the API version in the OpenAPI title.
-
-Logs: `podman logs -f kidney-health`, `journalctl --user -u kidney-health -f`,
-`kubectl -n kidney-health logs deploy/kidney-health -f`. Dates in the log are the dates
-the browser sent, so the container's time zone does not matter.
+**Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'` or
+`kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`.

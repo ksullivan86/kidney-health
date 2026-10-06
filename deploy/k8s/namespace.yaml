@@ -4,7 +4,13 @@ metadata:
   name: kidney-health
   labels:
     app.kubernetes.io/name: kidney-health
-    # Talos enforces Pod Security Admission ("baseline") cluster-wide by default.
-    # deployment.yaml satisfies the stricter "restricted" profile, so opt in to it.
+    # Pod Security Admission. Talos enforces "baseline" cluster-wide and only audits/warns on
+    # "restricted"; this namespace opts in to ENFORCE "restricted" (deployment.yaml satisfies it).
+    # Check: kubectl label --dry-run=server --overwrite ns kidney-health \
+    #          pod-security.kubernetes.io/enforce=restricted      -> no warnings
     pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
     pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest

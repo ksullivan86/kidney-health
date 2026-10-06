@@ -1,0 +1,2 @@
+# Local compose settings (copied from .env.example) are personal; never commit them.
+.env

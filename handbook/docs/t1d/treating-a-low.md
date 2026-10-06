@@ -7,8 +7,8 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-05
-sources: [A26-6, DG55a, NIDDK-hypo, DG24b, DG4, FDC, DG27]
+last_checked: 2026-10-06
+sources: [A26-6, DG55a, NIDDK-hypo, DG24b, DG4, FDC, DG27, JBDS, JBDS22]
 ---
 
 # Treating a low
@@ -97,6 +97,13 @@ of potassium.
 **On a fluid limit:** glucose tablets and gel add no fluid; 4 oz of juice adds about 110 mL
 ([Fluid](../eat/fluid.md)).
 
+**On hemodialysis:** lows are most likely in the hours after a session ([JBDS–Renal
+Association][JBDS]). UK guidance says to
+check glucose before and after each session, to keep a low treatment within reach on the way to and
+from the unit, and to choose one that fits your fluid, potassium and phosphate limits
+([JBDS 2022][JBDS22], recommendations 5A.2–5A.4). See
+[Insulin on dialysis](insulin-and-dialysis.md).
+
 ## Glucagon
 
 - Glucagon should be prescribed for **everyone who uses insulin**, preferably a form that does not need
@@ -120,6 +127,14 @@ of potassium.
 - Lows keep happening, happen at night, or you no longer feel them coming: call your team today.
   See [Get help now](../get-help-now.md).
 
+## Related pages
+
+- [How kidney disease changes type 1 diabetes](index.md) · [Sick days](sick-days.md) ·
+  [Insulin on dialysis](insulin-and-dialysis.md) · [CGM reports](../labs/cgm-metrics.md)
+- [Fluid](../eat/fluid.md) · [Potassium](../eat/potassium.md) · [Wallet cards](../reference/wallet-card.md)
+- In the app: [Targets and warnings](../app/targets-and-warnings.md) (low treatments are never
+  warned against or blocked) · [Logging food](../app/logging.md)
+
 ## Sources
 
 - [ADA Standards of Care 2026, section 6][A26-6]: hypoglycaemia levels; recommendations 6.11, 6.15, 6.16.
@@ -127,3 +142,4 @@ of potassium.
 - [ADA Consumer Guide: Dex4 tablets][DG24b]; [DaVita: kidney-friendly foods for low blood sugar][DG27].
 - [Pecoits-Filho 2016][DG55a]: why lows are more common with kidney disease.
 - [USDA FoodData Central][FDC].
+- [JBDS–Renal Association 2016][JBDS] and [JBDS 2022][JBDS22]: lows around hemodialysis.

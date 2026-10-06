@@ -523,7 +523,9 @@ def test_new_endpoints_are_registered(client):
         "/api/plan/shopping",
     ):
         assert path in paths, path
-    assert client.app.version == "0.2.0"
+    from app.main import APP_VERSION
+
+    assert client.app.version == APP_VERSION
     assert client.get("/healthz").status_code == 200
 
 

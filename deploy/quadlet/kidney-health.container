@@ -1,20 +1,23 @@
-# kidney-health.container -- systemd Quadlet unit for rootless Podman.
-# Needs Podman >= 4.6 (Quadlet health keys arrived in 4.5, AutoUpdate= in 4.6; the
-# optional ReadOnly= below needs 4.8). Check with `podman --version`.
+# kidney-health.container -- systemd Quadlet unit for ROOTLESS Podman (the recommended way to run
+# the app on a single host). Spec: docs/dev/research/01-rootless-and-security.md §5.2 and §10.
+# Works with Podman >= 4.9 (Ubuntu 24.04 LTS); the optional Notify=healthy needs 5.0, Memory= 5.5.
+# Full guide: docs/deployment.md. Hardening background: docs/security.md.
 #
-# Install as the unprivileged user that will run the container:
+# Install as the unprivileged user that will run the container (never root):
 #   mkdir -p ~/.config/containers/systemd
 #   cp deploy/quadlet/kidney-health.container deploy/quadlet/kidney-health.volume ~/.config/containers/systemd/
-#   cp deploy/.env.example ~/.config/containers/systemd/kidney-health.env   # edit, then chmod 600
+#   python3 -c "import secrets; print(secrets.token_urlsafe(32))" | podman secret create kidney-secret-key -
 #   systemctl --user daemon-reload                  # Quadlet generates kidney-health.service
 #   systemctl --user start kidney-health.service
-#   loginctl enable-linger "$USER"                  # keep it running after logout; start at boot
+#   sudo loginctl enable-linger "$USER"             # keep it running after logout; start at boot
+#   journalctl --user -u kidney-health | grep 'FIRST-RUN SETUP'     # the one-time setup code
 #
-# Status / logs:  systemctl --user status kidney-health
-#                 journalctl --user -u kidney-health -f
-# Typos in this file make daemon-reload skip the unit silently; check with the generator:
+# Check the result:
+#   podman info --format '{{.Host.Security.Rootless}}'        # true
+#   podman top kidney-health user huser                       # 10001  <a subordinate UID>, never your UID
+#   podman inspect kidney-health --format '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}'
+# Typos make daemon-reload skip the unit silently; check with the generator:
 #   /usr/libexec/podman/quadlet -user -dryrun       (Debian/Ubuntu: /usr/lib/podman/quadlet)
-# Rootful alternative: place the files in /etc/containers/systemd/ and drop every "--user".
 # Quadlet units are not "enabled" with systemctl; [Install] below handles autostart.
 
 [Unit]
@@ -24,34 +27,76 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-# :latest follows the main branch. Pin a release instead (e.g. :0.2.0) for controlled upgrades;
-# AutoUpdate then only acts when that tag is re-pushed.
-Image=ghcr.io/ksullivan86/kidney-health:latest
+# Track the minor release: patch releases arrive through AutoUpdate, breaking changes never do.
+# Do not track :latest (or :edge, the main branch) on a machine you care about. To pin a verified
+# digest instead: Image=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:... (scripts/verify-image.sh)
+Image=ghcr.io/ksullivan86/kidney-health:0.3
 ContainerName=kidney-health
-# `podman auto-update` (or `systemctl --user enable --now podman-auto-update.timer`)
-# pulls a newer image for the tag above and restarts this unit, rolling back if it fails.
+# `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily
+# and restarts the unit, rolling back if it fails. Never mount podman.sock into a container for
+# this (Watchtower-style updaters): that hands the container your whole account.
 AutoUpdate=registry
-# host:container. Use 127.0.0.1:8000:8000 when a reverse proxy on this host is the only client.
-PublishPort=8000:8000
-# Named volume declared in kidney-health.volume (Podman volume "systemd-kidney-health").
-Volume=kidney-health.volume:/data
-Environment=DATA_DIR=/data
-# USDA_API_KEY and APP_PASSWORD. The path is relative to this unit file and the
-# file must exist (an empty file is fine).
-EnvironmentFile=kidney-health.env
-# Same probe as the image HEALTHCHECK; declared here so HealthOnFailure applies.
-HealthCmd=python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"
+
+# Network: pasta (the rootless default since Podman 5; on 4.9 install the `passt` package).
+# slirp4netns would show every client, LAN included, as 10.0.2.100 (docs/security.md).
+Network=pasta
+# Loopback only: your reverse proxy on this host is the only client. 0.0.0.0 would let any LAN
+# device bypass the proxy and its login.
+PublishPort=127.0.0.1:8000:8000
+
+# /data on a named volume (kidney-health.volume); no exec, setuid or device files there.
+# Bind mount instead: Volume=%h/kidney-data:/data:Z,U,noexec,nosuid,nodev
+#   (:U chowns it to 10001 on every start, :Z relabels it for SELinux; never on $HOME itself)
+Volume=kidney-health.volume:/data:noexec,nosuid,nodev
+
+# User namespace: the default rootless mapping. Container UID 10001 is an unprivileged subordinate
+# UID on the host, never your own. Do NOT add UserNS=keep-id (development only): it would run the
+# app as YOUR host UID, so an escape could read ~/.ssh. Advanced isolation: UserNS=auto (docs).
+User=10001
+Group=10001
+ReadOnly=true
+# ReadOnly=true already adds tmpfs on /tmp, /var/tmp, /run and /dev/shm (ReadOnlyTmpfs=true, the
+# default); this one sets safe options and a size for /tmp, where SQLite puts its temp files.
+Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
+DropCapability=all
+NoNewPrivileges=true
+# SELinux (Fedora, RHEL, Alma): the container runs as container_t. Never SecurityLabelDisable=true.
+PidsLimit=128
+# Memory= needs Podman 5.5; this form works from 4.9 to 6.x. Rootless memory and pids limits need
+# cgroup v2 (delegated by default). Add --cpus=1 only after delegating the cpu controller:
+# /etc/systemd/system/user@.service.d/delegate.conf with Delegate=cpu cpuset io memory pids.
+PodmanArgs=--memory=512m
+
+# Secrets are files under /run/secrets, owned by the app user, mode 0400 (never env vars).
+Secret=kidney-secret-key,type=mount,target=secret_key,uid=10001,gid=10001,mode=0400
+Environment=SECRET_KEY_FILE=/run/secrets/secret_key
+# Optional USDA FoodData Central key (https://fdc.nal.usda.gov/api-key-signup):
+#   printf '%s' "$USDA_KEY" | podman secret create kidney-usda-key -
+# then uncomment both lines:
+# Secret=kidney-usda-key,type=mount,target=usda_api_key,uid=10001,gid=10001,mode=0400
+# Environment=USDA_API_KEY_FILE=/run/secrets/usda_api_key
+
+# Proxy trust (docs/security.md has the per-topology table). With pasta, a proxy on this host shows
+# up as the container's OWN address, not 127.0.0.1, so the default below matches nothing: proxy
+# headers are ignored, which is safe. Put the address the app logs here; in AUTH_MODE=proxy also
+# mount TRUSTED_PROXY_SECRET_FILE (a Secret= like the one above).
+Environment=TRUSTED_PROXIES=127.0.0.1,::1
+# The URL people type (scheme included). Its host passes the Host check (DNS-rebinding defence).
+# Environment=PUBLIC_URL=https://food.home.example.net
+# Environment=ALLOWED_HOSTS=food.home.example.net
+# Environment=AUTH_MODE=local
+
+# Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does
+# not have, and the check would always fail.
+HealthCmd=["python", "-m", "app.healthcheck"]
 HealthInterval=30s
 HealthTimeout=5s
 HealthStartPeriod=15s
 HealthRetries=3
-# Kill the container when the health check keeps failing so systemd restarts it.
+# Kill the container when the check keeps failing, so systemd restarts it.
 HealthOnFailure=kill
-NoNewPrivileges=true
-DropCapability=ALL
-# The app writes only under /data. Uncomment after a successful test run for an immutable
-# rootfs (Podman >= 4.8).
-# ReadOnly=true
+# Podman >= 5.0: report the unit started only once the app is healthy.
+# Notify=healthy
 
 [Service]
 Restart=always

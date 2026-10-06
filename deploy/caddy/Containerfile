@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# Caddy with the Cloudflare DNS module, for HTTPS tier 1 of docs/https.md (DNS-01: no open ports,
+# works for names that only resolve on your LAN). Spec: docs/dev/research/02-ios-pwa.md R9.
+#   podman build -f deploy/caddy/Containerfile -t localhost/kidney-health-caddy:2.11.7 deploy/caddy
+# Other DNS providers: swap the --with module (https://caddyserver.com/docs/modules/, "dns.providers").
+# Both FROM lines are digest-pinned and literal so Dependabot (docker, directory /deploy/caddy)
+# bumps them together; keep the version in the xcaddy line equal to the tag.
+FROM docker.io/library/caddy:2.11.7-builder@sha256:91443bd37eafc9ea2c3ff43749e33e56a61a323da1a9cf36f6d25f0f5c468027 AS build
+# Go verifies every module against the public checksum database (sum.golang.org).
+RUN xcaddy build v2.11.7 --with github.com/caddy-dns/cloudflare@v0.2.4
+
+FROM docker.io/library/caddy:2.11.7@sha256:d41fbe1c07bfb1bed6336eff319c602a5fc7f69f3a92f84c231385a8730813ef
+LABEL org.opencontainers.image.title="kidney-health-caddy" \
+      org.opencontainers.image.description="Caddy 2.11.7 with caddy-dns/cloudflare v0.2.4 for DNS-01 certificates" \
+      org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
+      org.opencontainers.image.url="https://github.com/ksullivan86/kidney-health/blob/main/docs/https.md" \
+      org.opencontainers.image.documentation="https://github.com/ksullivan86/kidney-health/blob/main/docs/https.md" \
+      org.opencontainers.image.licenses="Apache-2.0"
+# The copied binary carries no file capabilities, so it starts under cap_drop ALL; the example
+# Caddyfile listens on 8443, which needs no capability.
+COPY --from=build /usr/bin/caddy /usr/bin/caddy

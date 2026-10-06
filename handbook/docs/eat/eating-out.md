@@ -8,7 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [DG48, DG14b, DG35a, FDAmenu, A26-5, DG37b, FDC, FOODSAFE]
+sources: [DG48, DG14b, DG35a, FDAmenu, A26-5, A26-6, DG37b, FDC, FOODSAFE]
 ---
 
 # Eating out
@@ -130,10 +130,28 @@ insulin. Add a side such as a small fruit cup if your plan needs more carbohydra
 2. How should I handle insulin for a large or slow meal? Please write it down.
 3. Is alcohol OK for me, and how much?
 
+!!! tip "In the app"
+    Log the closest foods from the app's list, such as "Hamburger, fast food, plain" and "French fries,
+    fast food" ([FDC][FDC]); they include potassium and phosphorus, which chain menus leave out. If you
+    enter a custom food from the chain's own information instead, remember it will under-count those two
+    ([Logging food](../app/logging.md)). Plan the rest of the day around the meal with planned entries
+    ([Planning and menus](../app/planning-and-menus.md)).
+
 ## Get help now if…
 
-- You have a low you cannot treat yourself, or chest pain or severe breathlessness: call 911 (or your
-  local emergency number). See [Get help now](../get-help-now.md).
+!!! danger "Call 911 (or your local emergency number)"
+    Someone has a low they cannot treat themselves (cannot swallow safely, very drowsy or confused):
+    give glucagon if you have it and call ([ADA 2026 §6][A26-6]). Also call for chest pain or severe
+    breathlessness ([Get help now](../get-help-now.md)).
+
+!!! warning "Call your care team"
+    Lows that keep coming back after meals out or after drinking alcohol, or a big weight gain after a
+    salty meal if you are on dialysis.
+
+## Related pages
+
+- [Sodium](sodium.md) · [Potassium](potassium.md) · [Phosphorus](phosphorus.md) · [Portions](portions.md)
+- [Carb counting](carb-counting.md) · [Treating a low](../t1d/treating-a-low.md) · [Fluid](fluid.md)
 
 ## Sources
 
@@ -144,3 +162,4 @@ insulin. Add a side such as a small fruit cup if your plan needs more carbohydra
 - [DaVita: alcohol and CKD][DG37b].
 - [USDA FoodData Central][FDC]: the burger example.
 - [FoodSafety.gov: weakened immune systems][FOODSAFE]: raw fish after a transplant.
+- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon.

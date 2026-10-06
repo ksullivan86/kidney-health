@@ -1,0 +1,62 @@
+# Optional overlay: Caddy with HTTPS in front of kidney-health (docs/https.md, tier 1: your own
+# domain + Let's Encrypt DNS-01). Spec: docs/dev/research/02-ios-pwa.md R9, 01 §10 S2.
+#
+#   cp deploy/caddy/Caddyfile.example deploy/caddy/Caddyfile          # edit the domain names
+#   printf 'CF_API_TOKEN=%s\n' "$TOKEN" > deploy/caddy/caddy.env && chmod 0600 deploy/caddy/caddy.env
+#   echo 'PUBLIC_URL=https://food.home.example.net:8443' >> deploy/.env
+#   podman-compose -f deploy/compose.yaml -f deploy/compose.caddy.yaml up -d --build
+#
+# Proxy trust: Caddy is the only other container on the `edge` network and has a fixed address
+# there, so TRUSTED_PROXIES names exactly that address. Container-to-container traffic keeps its
+# real source address on every engine, unlike connections through a published port (pasta shows a
+# same-host proxy as the container's own address; rootless Docker shows every client as the
+# RootlessKit gateway). If 172.31.86.0/24 collides with your LAN, change all three places.
+services:
+  kidney-health:
+    environment:
+      TRUSTED_PROXIES: 172.31.86.10
+      # Required here: its host passes the Host check, and the browser's Origin must match it.
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in deploy/.env, for example https://food.home.example.net:8443}
+    networks:
+      - default
+      - edge
+
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Containerfile
+    image: localhost/kidney-health-caddy:2.11.7
+    container_name: kidney-health-caddy
+    restart: always
+    # Root inside the container but without a single capability (it listens on 8443). On Podman
+    # you can also map that root to an unused subordinate UID range: userns_mode: auto
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 256m
+    ports:
+      - "${HTTPS_PORT:-8443}:8443"   # 443:8443 once net.ipv4.ip_unprivileged_port_start <= 443
+    env_file:
+      - ./caddy/caddy.env            # CF_API_TOKEN=... (git-ignored; a token scoped to one DNS zone)
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy-data:/data               # certificates and the ACME account: back it up
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: 172.31.86.10
+
+networks:
+  default: {}                          # declared so podman-compose accepts `default` above
+  edge:
+    ipam:
+      config:
+        - subnet: 172.31.86.0/24
+
+volumes:
+  caddy-data: {}
+  caddy-config: {}

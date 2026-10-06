@@ -67,7 +67,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 - **Other fruit:** strawberries or raspberries swap cup for cup and have less carbohydrate.
 - **Freeze:** stack cooled crepes between sheets of baking paper, freeze, and warm them in a dry pan.
-- **Rice milk instead of almond milk:** fine if the label has no phosphate; it adds about 9 g carbohydrate to the recipe.
+- **Rice milk instead of almond milk:** fine if the label has no phosphate; it adds about 15 g carbohydrate to the recipe (about 8 g a serving).
 
 ## Log it in the app
 

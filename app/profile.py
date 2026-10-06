@@ -1,4 +1,6 @@
-"""Singleton profile (id = 1) with the person's targets, dialysis weekdays and week start."""
+"""Each person's profile (``user_profiles``, one row per account) with their targets, dialysis
+weekdays and week start. The v0.2 singleton ``profile`` table was copied into user 1's row by
+schema step 3 and is never read again."""
 from __future__ import annotations
 
 import json
@@ -7,25 +9,29 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .models import Profile, ProfileUpdate, SuggestedTargets
 from .nutrients import suggest_targets
 from .periods import WEEK_STARTS
 
-router = APIRouter(prefix="/api/profile", tags=["profile"])
+router = APIRouter(prefix="/api/profile", tags=["profile"], dependencies=[Depends(current_user)])
 
 # Columns a PUT may change (NOT NULL columns ignore explicit nulls).
 _NULLABLE_COLUMNS = ("weight_kg", "height_cm")
 _NOT_NULL_COLUMNS = ("name", "ckd_stage", "dialysis", "diabetes", "warn_fraction", "week_start")
 
 
-def ensure_profile(conn: sqlite3.Connection) -> sqlite3.Row:
-    """Return the profile row, creating it with schema defaults on first access."""
-    row = conn.execute("SELECT * FROM profile WHERE id = 1").fetchone()
+def ensure_profile(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
+    """Return ``user_id``'s profile row, creating it with schema defaults on first access."""
+    row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (int(user_id),)).fetchone()
     if row is None:
-        conn.execute("INSERT OR IGNORE INTO profile (id, updated_at) VALUES (1, ?)", (utcnow(),))
+        conn.execute(
+            "INSERT OR IGNORE INTO user_profiles (user_id, updated_at, updated_by) VALUES (?, ?, ?)",
+            (int(user_id), utcnow(), int(user_id)),
+        )
         conn.commit()
-        row = conn.execute("SELECT * FROM profile WHERE id = 1").fetchone()
+        row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (int(user_id),)).fetchone()
     return row
 
 
@@ -57,7 +63,7 @@ def parse_dialysis_days(days_json: str | None) -> list[int]:
 def row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
     week_start = row["week_start"] if row["week_start"] in WEEK_STARTS else "monday"
     return {
-        "id": row["id"],
+        "id": row["user_id"],
         "name": row["name"],
         "weight_kg": row["weight_kg"],
         "height_cm": row["height_cm"],
@@ -72,17 +78,17 @@ def row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def get_profile(conn: sqlite3.Connection) -> dict[str, Any]:
-    return row_to_profile(ensure_profile(conn))
+def get_profile(conn: sqlite3.Connection, user_id: int) -> dict[str, Any]:
+    return row_to_profile(ensure_profile(conn, user_id))
 
 
 @router.get("", response_model=Profile)
-def read_profile(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    return get_profile(conn)
+def read_profile(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    return get_profile(conn, user.id)
 
 
 @router.put("", response_model=Profile)
-def update_profile(body: ProfileUpdate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Merge the provided fields into the profile.
 
     ``targets`` is merged key by key: keys that are sent overwrite (``null`` means
@@ -90,7 +96,7 @@ def update_profile(body: ProfileUpdate, conn: sqlite3.Connection = Depends(get_d
     replaces the whole list (``null`` or ``[]`` clears it) and is stored for any
     ``dialysis`` value; only the hemodialysis summary uses it.
     """
-    current = get_profile(conn)
+    current = get_profile(conn, user.id)
     data = body.model_dump(exclude_unset=True)
 
     sets: list[str] = []
@@ -112,16 +118,16 @@ def update_profile(body: ProfileUpdate, conn: sqlite3.Connection = Depends(get_d
         sets.append("dialysis_days_json = ?")
         params.append(json.dumps(data["dialysis_days"] or []))
 
-    sets.append("updated_at = ?")
-    params.append(utcnow())
-    conn.execute(f"UPDATE profile SET {', '.join(sets)} WHERE id = 1", params)
+    sets += ["updated_at = ?", "updated_by = ?"]
+    params += [utcnow(), user.id]
+    conn.execute(f"UPDATE user_profiles SET {', '.join(sets)} WHERE user_id = ?", [*params, user.id])
     conn.commit()
-    return get_profile(conn)
+    return get_profile(conn, user.id)
 
 
 @router.get("/suggested-targets", response_model=SuggestedTargets)
-def suggested_targets(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    profile = get_profile(conn)
+def suggested_targets(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    profile = get_profile(conn, user.id)
     if profile["weight_kg"] is None:
         raise HTTPException(
             status_code=400,
