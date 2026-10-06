@@ -41,8 +41,27 @@
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',
       label: 'Registration',
       help: 'invite: admins send single-use links. closed: admins create accounts. open: anyone who reaches the page can register (HTTPS required).' },
+    // Personalised targets and labs (note 05 §4.9; app/settings_registry.py).
+    { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: null,
+      label: 'Activity level used until a person chooses theirs', help: 'Used for the calorie estimate (2023 Dietary Reference Intakes).' },
+    { key: 'targets.lab_fresh_days.albumin', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null,
+      label: 'An albumin result counts for (days)', help: '' },
+    { key: 'targets.lab_fresh_days.bicarbonate', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null,
+      label: 'A bicarbonate result counts for (days)', help: '' },
+    { key: 'targets.lab_fresh_days.phosphate', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null,
+      label: 'A phosphate result counts for (days)', help: '' },
+    { key: 'targets.lab_fresh_days.potassium', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null,
+      label: 'A potassium result counts for (days)', help: '' },
+    { key: 'targets.lab_rules_enabled', type: 'bool', default: true, scope: 'instance', env: null,
+      label: 'Let lab results change suggested targets',
+      help: 'Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning for a very high '
+        + 'potassium result is always shown. Keep it off on public demo servers until a clinician has reviewed the lab rules.' },
     { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: null,
       label: 'Theme', help: '' },
+    { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: null,
+      label: 'Units for lab results',
+      help: 'us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, '
+        + 'mmol/mol. Only the unit offered first changes; any unit can still be entered.' },
   ];
   const BY_KEY = Object.fromEntries(DEFS.map((d) => [d.key, d]));
 
