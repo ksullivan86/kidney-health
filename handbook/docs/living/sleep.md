@@ -96,8 +96,8 @@ you are still. Moving eases it for a while ([AASM 2024][AASM24]).
 - Loud snoring, stopping breathing in your sleep, gasping, morning headaches or falling asleep in
   the day are reasons to ask for a sleep test. Untreated sleep apnea also makes restless legs worse
   ([AASM 2024][AASM24]; [ADA 2026 §5][A26-5]).
-- Waking often to pass urine is worth raising. Your team can look for causes, including high
-  glucose overnight ([ADA 2026 §5][A26-5]).
+- Waking often to pass urine is worth raising with your kidney and diabetes teams, who can look for
+  the cause. Keep a note of how often it happens in your sleep diary.
 
 ## Night-time lows
 

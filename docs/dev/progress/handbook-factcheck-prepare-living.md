@@ -1,51 +1,42 @@
-Status: in progress (started 2026-10-06; second attempt resumed 2026-10-06 after a usage limit)
+Status: complete (2026-10-06)
 
 # Handbook fact-check: prepare/ and living/
 
 Role: adversarial clinical fact-checker for `handbook/docs/prepare/**` (4 pages) and
 `handbook/docs/living/**` (9 pages). Owned paths: `handbook/docs/prepare`, `handbook/docs/living`,
-`handbook/REVIEW.md`, `handbook/sources.yml`, this note. Commit only those with
-`git commit -- <paths>` and push; WIP messages end with " [skip ci]".
+`handbook/REVIEW.md`, `handbook/sources.yml`, this note. Commits use `git commit -- <paths>`; WIP
+messages end with " [skip ci]".
 
 Scratch: `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/factcheck-prepare-living/`
-(`src/` = fetched source texts, `tools/fetch.sh name url` fetches and converts). Primary-source PDFs
-fetched earlier by the page writer are reused read-only from `.../scratchpad/handbook/`
-(q19va.txt = KDOQI 2019 VA, k20tx.txt, k09tx.txt, k24.txt, cellcept_pi.txt, cellcept_letter.txt,
-cmsprep.txt, g7ug.txt, txfood.txt, dl/ex17/ex17.txt, dl/ukka/u.txt, dl/unos/ml.txt, dl/cfr494/*.txt);
-identity of each was checked from its first page. Handbook venv:
-`.../scratchpad/handbook/venv` (the first attempt's note named a `v030/hbvenv` that does not exist).
+(`src/` = source texts fetched 2026-10-06; `tools/fetch.sh name url` fetches and converts).
+Primary-source PDFs fetched earlier by the page writer were reused read-only from
+`.../scratchpad/handbook/` (q19va.txt, k20tx.txt, k09tx.txt, k24.txt, cellcept_pi.txt,
+cellcept_letter.txt, cmsprep.txt, g7ug.txt, txfood.txt, dl/ex17/ex17.txt, dl/ukka/u.txt,
+dl/unos/ml.txt, dl/cfr494/*.txt) after checking each one's first page. ADA 2026 §5/§9/§15 and AASM
+2024 were read with WebFetch on pmc.ncbi.nlm.nih.gov (curl gets a captcha); DOL and TSA with WebFetch;
+SSA listings from eCFR (20 CFR 404 Subpart P App. 1). Handbook venv: `.../scratchpad/handbook/venv`.
 
 ## Done
 
-- Attempt 1: read spec (note 08 §4.9, §5.8–5.9, F9) and REVIEW.md format; read the pages (no edits).
-- Attempt 2: re-read all 13 pages; fetched fresh (2026-10-06): Medicare ESRD, KDE, insulin, ACP,
-  travel, MSP; CMS 2026 fact sheet; AKF HIPP; Kidney Care UK grants; EEOC diabetes; JAN dialysis;
-  NKF travel, HD access (updated 2026-08-20), home HD, exercise, pregnancy, PEERS, transplant;
-  AKF bleeds; 988; POLST; AHRQ; NIDDK HD, PD, transplant, choosing, conservative, hypo, managing.
-  Blocked by 403 from curl: dol.gov (FMLA), ssa.gov, tsa.gov, optn PDF -> use WebFetch.
-  Europe PMC / efetch give no ADA full text -> use WebFetch on pmc.ncbi.nlm.nih.gov.
+- Read the spec (note 08 §4.9, §5.8–5.9, F9), REVIEW.md format, all 13 pages and their sources.
+- Verified every number, benefit amount, legal rule and cited recommendation (list in REVIEW.md,
+  "Fact-check: prepare/ and living/ (2026-10-06)"). Counts: high 0, medium 4, low 31.
+- Fixed the pages in place; `fact_checked: 2026-10-06` added after `last_checked` on all 13.
+- REVIEW.md: new section (findings table, checked-and-correct list, notes for other owners, clinician
+  items P1–P8) and the open-decisions index (legend **P**, items P1–P8, coverage line ticked, OPTN note).
+- Commits: `WIP(handbook-factcheck-prepare-living): page corrections …` and the REVIEW/final commit.
 
-## Findings so far (to apply)
+## Decisions
 
-- CMS 2026 amounts all confirmed ($202.90, $283, $1,736, B-ID $121.60; B-ID deductible $283 then 20 %).
-- Medicare ESRD: B-ID needs Medicare (ESRD) at the time of transplant; home-training start needs
-  the doctor to expect you to finish training and a regular course of dialysis.
-- Kidney Care UK: under-18s can apply through an adult or guardian (page says "over 18").
-- EEOC: accommodation can be requested during hiring too (page: "after you are hired").
-- NKF HD access 2026: catheter fever/chills/redness -> call "right away" (page: "same day");
-  never a BP cuff on the access arm (page groups it with "unless your team says").
-- NKF home HD: training "several weeks to a few months" (choosing page says 3–8 weeks; check NIDDK).
-- NKF travel: tell the transplant coordinator before travel if listed (missing on travel page).
+- `sources.yml` left unchanged: the only candidate edit (OPTN URL now redirects to HRSA) would change
+  the generated `includes/sources.md` and `reference/sources.md`, which this role may not commit; it
+  is recorded as a note for the handbook owner. No new source ids were needed.
+- Where a page disagreed with `get-help-now` (fever after a transplant; ketones with vomiting), the
+  page was aligned to `get-help-now` and the wording choice listed for a clinician.
+- An unsourced cause (nocturia "high glucose", cited to ADA §5 which does not cover it) was removed
+  rather than re-sourced to a page that refuses automated checks (CDC).
 
-## Next
-
-1. Verify remaining sources (KDOQI VA, KDIGO Tx 2020/2009, K24, OPTN, UNOS, ADA §5/§6/§9/§15,
-   AASM, EX17, UKKA, CellCept/REMS letter, CFR 494, FDA insulin, TSA, Dexcom G7, CMSPREP, FSTX,
-   glucagon kit, NIDDK pages, NKF pregnancy/Tx/PEERS, 988, POLST, AHRQ, SSA, FMLA).
-2. Fix pages, add `fact_checked: 2026-10-06` after `last_checked`.
-3. Append REVIEW.md section + update index; run checks; commit.
-
-## Checks to run
+## Checks (all passed on 2026-10-06 after the last edit)
 
 ```
 V=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/handbook/venv
@@ -53,4 +44,12 @@ W=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/sc
 cd /home/user/kidney-health && $V/bin/mkdocs build --strict -f handbook/mkdocs.yml -d $W/site
 $V/bin/python scripts/build_handbook.py --check
 python3 -m pytest -q tests/test_handbook_content.py
+python3 -m pytest -q
 ```
+
+## Not verifiable here
+
+- CDC DKA page (403 to automated requests; the wording comes from `get-help-now`).
+- KDIGO 2015 supportive care conference: abstract only.
+- OPTN policy 8.4.A read through OPTN policy notices and search results (the policy PDF host now
+  redirects to hrsa.gov, which refuses automated requests).

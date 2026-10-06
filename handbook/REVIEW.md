@@ -7,7 +7,7 @@ Findings from adversarial fact-checks of the handbook, one section per checked a
 Every item a clinician still has to decide, grouped by topic. The numbers point to the "For a
 clinician to decide" list in each fact-check section below: **S** = Start here, Get help now, ckd/,
 reference/; **St** = stages/; **L** = labs/; **E** = eat/; **A** = app/ and self-hosting/;
-**T** = t1d/ and medicines/. Until each is decided, the pages keep their current, cautious wording and
+**T** = t1d/ and medicines/; **P** = prepare/ and living/. Until each is decided, the pages keep their current, cautious wording and
 the draft banner. When you decide one, record the decision and your name in that section, change the
 pages, and tick it here.
 
@@ -29,7 +29,13 @@ pages, and tick it here.
       faintness afterwards (L7)
 - [ ] A large extra dose of long-acting insulin: straight to the emergency department? (T9)
 - [ ] Peritonitis: "keep the bag" and the PD red flags come from the content plan's reading of ISPD
-      2022, whose full text was not re-checked (listed on the About page's reviewer questions)
+      2022, whose full text was not re-checked (listed on the About page's reviewer questions);
+      NIDDK says "seek immediate care", the handbook says "call your PD unit the same day" (P notes)
+- [ ] Fever or chills with a hemodialysis catheter: now "call your unit right away" (NKF), with 911
+      only for shaking chills, confusion or a racing heart (P1; see S1)
+- [ ] The 911 ketone line on exercise, travel, caregivers and costs now matches `get-help-now`:
+      "any ketones with vomiting so you cannot keep fluids down" (narrower than the old "ketones with
+      vomiting") (P2; see S5, T1)
 
 **Glucose, A1c and CGM** (reviewer: diabetes specialist or CDCES)
 
@@ -44,6 +50,10 @@ pages, and tick it here.
       app's 5–30 g setting range (A3)
 - [ ] Sugar alcohols in carb counting: give the "subtract half" method at all? (E2)
 - [ ] Hypo treatment ranking with NIDDK's "no orange juice" vs "treat with whatever is to hand" (E4)
+- [ ] Exercise with blood ketones 0.6–1.4 mmol/L: the 2017 consensus allows brief light exercise,
+      the handbook's sick-day tier says follow the plan and retest in 2 hours (P3)
+- [ ] Heavy lifting and competitive endurance events with kidney failure: contraindicated in the
+      2017 consensus, no specific limits in ADA 2026 Rec 5.39; the page says "ask first" (P4)
 
 **Food targets and the app's numbers** (reviewer: renal dietitian)
 
@@ -63,6 +73,8 @@ pages, and tick it here.
 - [ ] Salt substitutes at G1–G2 with normal potassium: keep "not without your team's OK" (E7)
 - [ ] Acesulfame-K on the hidden-potassium list (E8)
 - [ ] Weight gain between hemodialysis sessions: show Cabrera's 3.5 % at all (St6)
+- [ ] Conservative care diet: "eat for comfort and strength; older or frail people may need more
+      protein, not less" (KDIGO PP 3.3.1.5) replaced "protein is limited" (P5)
 
 **Labs** (reviewer: nephrologist)
 
@@ -81,20 +93,29 @@ pages, and tick it here.
 - [ ] Statin wording for ages 18–49 and on dialysis (T7)
 - [ ] Medicine holds around contrast scans against local radiology practice (T8)
 - [ ] Oral phenylephrine on the "avoid" list or "ask first" (T10)
+- [ ] ACE inhibitor before pregnancy with diabetic kidney disease: UK guidance (continue until
+      conception with pregnancy tests) vs ADA 15.25a (stop before conception); the page shows both (P6)
+- [ ] Restless legs: the page follows AASM 2024 (dopamine agonists not for standard use; IV iron at
+      ferritin < 200 and TSAT < 20 % on dialysis), not KDIGO 2024 Table 38 (P7)
 
 **Transplant rules that change** (reviewer: transplant nephrologist or coordinator)
 
 - [ ] OPTN waiting-time rule (policy 8.4.A): recheck at every review while kidney allocation moves to
       continuous distribution (St11)
 
-**Sections not yet independently fact-checked**
+**Living well** (reviewer: nephrologist; diabetes specialist or CDCES for exercise and sleep)
 
-- [ ] `prepare/` (4 pages) and `living/` (9 pages) were written and source-checked by their writer
-      but have **no** adversarial fact-check section below (skipped in the 2026-10-06 run). They need
-      one before clinical review. Pages with prices, benefit amounts or laws carry `figures_as_of`
-      (living/costs-and-benefits, living/travel, living/work, prepare/choosing-a-treatment,
-      prepare/transplant-referral, stages/g4, stages/before-transplant, stages/after-transplant,
-      stages/home-hemodialysis); recheck them every November (Medicare amounts).
+- [ ] Waking at night to pass urine: add a sourced line on common causes? ADA 2026 §5 does not
+      cover it, so the unsourced attribution was removed (P8)
+
+**Fact-check coverage**
+
+- [x] Every section now has an adversarial fact-check below; `prepare/` (4 pages) and `living/`
+      (9 pages) were checked on 2026-10-06. Pages with prices, benefit amounts or laws carry
+      `figures_as_of` (living/costs-and-benefits, living/travel, living/work,
+      prepare/choosing-a-treatment, prepare/transplant-referral, stages/g4, stages/before-transplant,
+      stages/after-transplant, stages/home-hemodialysis); recheck them every November (Medicare
+      amounts).
 
 **Sign-off status**
 
@@ -108,7 +129,9 @@ change ships (then remove the "Coming in v0.3" sentences in `app/first-setup` an
 v0.3" marker on the app pages at release; `docs/diet-guide.md` and `docs/research/food-lists.md`
 still carry the soda-serving and orange-juice errors fixed in the handbook (E notes); KDOQI 2020
 statement numbers cited from the public-review copy need checking against the published text (L
-notes); the `FDANaP` archive link needs a browser check (T notes).
+notes); the `FDANaP` archive link needs a browser check (T notes); the `OPTN` link in `sources.yml`
+now redirects to HRSA's OPTN page (HRSA took over the site in December 2025), so update the URL and
+regenerate the source pages together (P notes).
 
 ## Fact-check: Start here, Get help now, ckd/, reference/ (2026-10-05)
 
@@ -814,3 +837,208 @@ Counts: **high 1, medium 9, low 34.**
 10. **Oral phenylephrine.** The FDA calls it ineffective but found no safety signal; US labels say to ask
     a doctor first with high blood pressure, heart disease or diabetes. Confirm it belongs on the
     "avoid" list rather than "ask first".
+
+## Fact-check: prepare/ and living/ (2026-10-06)
+
+Pages: `prepare/choosing-a-treatment.md`, `prepare/dialysis-access.md`, `prepare/transplant-referral.md`,
+`prepare/advance-care-planning.md`, `living/exercise.md`, `living/sleep.md`, `living/mental-health.md`,
+`living/work.md`, `living/travel.md`, `living/sex-fertility-pregnancy.md`, `living/costs-and-benefits.md`,
+`living/appointments.md`, `living/caregivers.md`. Each page now has `fact_checked: 2026-10-06` in its
+front matter. Done in two sittings (the first was cut off by a usage limit after reading the pages).
+
+How it was checked: every clinical number, benefit amount, legal rule and cited recommendation was
+compared with the source text, fetched on 2026-10-06. Sources read: Medicare.gov (ESRD; kidney disease
+education; insulin; advance care planning; travel outside the US; Medicare Savings Programs), the CMS
+2026 Parts A & B fact sheet (14 November 2025), AKF HIPP, Kidney Care UK patient grants, EEOC "Diabetes
+in the workplace and the ADA", the Department of Labor FMLA page, JAN (dialysis), the SSA adult listings
+6.03–6.04 (text from 20 CFR 404 Subpart P Appendix 1 on eCFR, because ssa.gov refuses automated
+requests), TSA (medical items; the 2020 diabetes travel tip), ADA "What can I bring on the plane?", FDA
+insulin storage, the Dexcom G7 user guide (Rev 005, 05/2026), CMS "Preparing for Emergencies" (June
+2026), USDA–FDA food safety for transplant recipients, NKF (travel; hemodialysis access, updated
+2026-08-20; home hemodialysis; exercise; pregnancy; transplant; PEERS), AKF fistula and graft bleeds,
+NIDDK (hemodialysis; peritoneal dialysis; transplant; choosing a treatment; conservative management;
+low blood glucose; managing CKD), KDOQI 2019 vascular access (statements 1–10), KDIGO 2020 transplant
+candidates (sections 1, 4, 8, 10), KDIGO 2009 transplant recipients (chapter 25), KDIGO 2024 CKD (full
+text: chapters 2, 3.2–3.3, 4.1, 5.2–5.5; Tables 38 and 41; Figure 49), the 2017 exercise consensus
+(EX17, full text), ADA Standards 2026 §5, §9 and §15 (PMC full text), AASM 2024 restless legs guideline
+(PMC full text), the UK Kidney Association 2019 pregnancy guideline (full text), the CellCept label
+(7/2026) and the FDA letter of 31 July 2026 removing the mycophenolate REMS, 42 CFR 494.70, 494.80,
+494.90 and 494.140 (eCFR), the OPTN waiting-time rule (policy 8.4.A, through OPTN policy notices because
+the OPTN site now redirects to HRSA), the UNOS multiple-listing brochure (2020), 988 Lifeline, National
+POLST, AHRQ (teach-back; questions), the Glucagon Emergency Kit instructions and the PubMed abstract of
+the KDIGO 2015 supportive care conference.
+
+Counts: **high 0, medium 4, low 31.**
+
+### Findings and corrections
+
+| # | Severity | Page | Issue | Correction | Source |
+|---|---|---|---|---|---|
+| 1 | medium | `prepare/choosing-a-treatment` | Comparison table, conservative care: "protein is limited to ease the kidneys' work". Not in the cited NIDDK page, and KDIGO advises considering **higher** protein and calorie targets for older adults with frailty or sarcopenia; the page's own conservative-care example is a frail 84-year-old. | "Eat for comfort and strength, with a dietitian's help; older or frail people may need more protein, not less", cited to KDIGO PP 3.3.1.5. | NIDDK-conservative; K24 PP 3.3.1.5 |
+| 2 | medium | `prepare/dialysis-access` | Hemodialysis catheter: "Fever, chills or redness at the exit site means call your unit the same day"; warning box "Call your dialysis or PD unit today". NKF (updated August 2026) says call right away, and a catheter infection can reach the bloodstream. | "Call your unit right away, not at your next session"; 911 with shaking chills, confusion or a racing heart; added NKF's other catheter red flags (dressing wet, loose or off; catheter moves, cracks, leaks or comes out; never open the caps). Box retitled "right away". | NKF-HDaccess; get-help-now (sepsis line) |
+| 3 | medium | `living/sex-fertility-pregnancy` | "Medicines to review before pregnancy" listed ACE inhibitors, ARBs, statins and mycophenolate but not finerenone (FDA-approved for CKD with type 1 diabetes in September 2026; ADA 15.25a names MRAs with ACE inhibitors and ARBs), SGLT2 inhibitors (ADA Rec 11.10) or GLP-1 receptor agonists (ADA §15: stop before pregnancy, semaglutide at least 2 months before). The "late period" checklist and the same-day box had the same gap. | Bullets added for finerenone/MRAs (with Kerendia §8.1), SGLT2 inhibitors and GLP-1 receptor agonists; checklist and box now name them; statins cited to 15.25b. | A26-15 Rec 15.25a–b and text; A26-11 Rec 11.10; KER §8.1 |
+| 4 | medium | `living/costs-and-benefits`, `prepare/transplant-referral` | Part B-ID was described as available "if you have no other cover". Medicare also requires that you had Medicare because of kidney failure when you had the transplant; after the $283 deductible you pay 20 %; sign-up is through a dedicated SSA line. Planning anti-rejection cover on the wrong assumption risks a gap in medicines. | Eligibility, the 20 % coinsurance, what counts as other cover and the SSA number (1-877-465-0355) added on both pages. | MED-ESRD; CMS26 |
+| 5 | low | `prepare/choosing-a-treatment` | Timeline row "eGFR under 30 (G4)". KDOQI 6.1: eGFR 30 or less **with progressive decline**. | "eGFR 30 or less (G4) and falling". | Q19VA 6.1 |
+| 6 | low | `prepare/choosing-a-treatment`, `living/exercise`, `living/caregivers` | "Glucose is often lowest after a session" / "during and after". The t1d pages (fact-check T, finding 15) now say glucose falls during the session and most lows come in the 24 hours after it. | Wording aligned; JBDS 2022 cited. | JBDS; JBDS22 |
+| 7 | low | `prepare/dialysis-access` | Access bleeding: AKF also says call 911 if bleeding **starts again**; "heavy or spurting" came from NKF, not AKF. | Added "starts again" (box, numbers and example); NKF cited. | AKF-bleed; NKF-HDaccess |
+| 8 | low | `prepare/dialysis-access` | "No blood pressure cuff, blood draws or IVs on the access arm unless your dialysis team says it is okay". NKF: never a blood pressure cuff; draws and IVs only if the team agrees. | Split accordingly. | NKF-HDaccess |
+| 9 | low | `prepare/dialysis-access` | Vein protection gave no practical alternative. | Added NIDDK's "ask for a vein in the back of your hand". | NIDDK-HD |
+| 10 | low | `prepare/transplant-referral` | "Ask for a referral when your eGFR is under 30 … (KDIGO 1.1–1.1.1)". KDIGO 1.1: at GFR < 30, inform, educate and consider for transplant; 1.1.1: refer at least 6–12 months before expected dialysis. | Reworded to the two recommendations; "so ask early" kept as advice. Table row renamed "When to ask about transplant". | K20TX 1.1, 1.1.1 |
+| 11 | low | `prepare/transplant-referral` | US waiting time listed two start points; policy 8.4.A has three (registered at eGFR ≤ 20; the date eGFR falls to ≤ 20 after registration; regular dialysis). The example said waiting time starts "the month" eGFR reaches 20. | All three listed; example says "the date a test shows your eGFR at 20 or less". | OPTN 8.4.A (policy notices) |
+| 12 | low | `prepare/transplant-referral` | "Pre-emptive transplant: recommended when eGFR is under 10" could be read as when to be referred. | States it is when the transplant itself is done; referral and work-up start long before. | K20TX 1.4.1 |
+| 13 | low | `prepare/transplant-referral` | KDIGO 8.1.1 quoted as "considered for SPK … and referred to a center that does them"; the referral part is not in the recommendation. | Recommendation quoted alone; "so ask to be referred" kept as the handbook's advice. | K20TX 8.1.1 |
+| 14 | low | `prepare/advance-care-planning` | "KDIGO asks kidney teams to help with this planning, and to offer supportive care … (PP 5.5.3)". PP 5.5.3 is about access to advance care planning for people with a recognised need for end-of-life care; supportive care alongside dialysis is in the section 5.5 text. | Reworded to match each statement. | K24 PP 5.5.3, section 5.5 |
+| 15 | low | `prepare/advance-care-planning` | The KDIGO 2015 conference was said to have "named" four priorities; only the abstract could be read, and it does not list them. | Replaced with what the abstract says (heavy symptom burden; conservative and palliative care often fall short; a roadmap to improve them). | K15SC (abstract) |
+| 16 | low | `prepare/advance-care-planning` | "Insulin is always needed (ADA Rec 9.1)". Rec 9.1 is about pumps or multiple daily injections. | Cited to the §9 text (absent or near-absent β-cell function). | A26-9 |
+| 17 | low | `living/exercise` | Severe low in the last 24 hours defined only as "needed someone's help"; EX17 also counts glucose ≤ 2.8 mmol/L (50 mg/dL). | Added. | EX17 |
+| 18 | low | `living/exercise` | Ketones ≥ 1.5: "do not exercise, start your sick-day plan" without the handbook's 1.6 mmol/L "call your team now" tier. | Added "at 1.6 or more, call your diabetes team now". | EX17; NHS-DKA (get-help-now) |
+| 19 | low | `living/exercise` | PP 3.2.2.3 was quoted as advice on "balance and strength training"; it covers intensity and type (aerobic, resistance or both). | Reworded. | K24 PP 3.2.2.3 |
+| 20 | low | `living/sleep` | Figure 49 prevalences (fatigue 70 %, poor sleep 49 %, itch 46 %) were given for "people with kidney disease"; they are for CKD **not on dialysis**. | Scoped on both lines. | K24 Figure 49 |
+| 21 | low | `living/sleep` | "For restless legs, the first step is a simple iron test." AASM's good practice statements make addressing aggravating factors the first step, with iron tests for everyone with significant restless legs. | "The first steps are a simple iron test and looking for things that make it worse"; AASM's test conditions (morning; no iron pills or iron-rich food for 24 hours) added as "ask your team whether to skip them". | AASM24 GPS 1–2 |
+| 22 | low | `living/sleep` | Night-time urination: "including high glucose overnight (ADA 2026 §5)". ADA §5 does not discuss nocturia. | Unsourced cause and the ADA citation removed; "your teams can look for the cause; note it in your sleep diary". Clinician item P8. | A26-5 |
+| 23 | low | `living/mental-health` | Diabetes distress rescreening "when goals are not being met or life changes"; fear of lows "if you have frequent or severe lows". ADA: rescreen when treatment goals are not met; fear of hypoglycaemia at least annually and when clinically appropriate in people at high risk. | Aligned with Rec 5.45 and 5.47. | A26-5 |
+| 24 | low | `living/work` | ADA coverage "employers with 15 or more employees" and "300 days in some states". EEOC: private employers with 15+ and state and local governments; some state laws cover smaller employers; 300 days where a state or local agency enforces a disability law; federal employees have 45 days to contact an EEO counselor. | Table rows rewritten. | EEOC |
+| 25 | low | `living/work` | "You can ask for an accommodation at any time after you are hired". EEOC: during the application process too, and even if not mentioned before; a family member or health professional can ask for you; after an offer, health questions only if asked of everyone in that job. | Added. | EEOC |
+| 26 | low | `living/travel` | "Insulin must be clearly labeled (TSA)". TSA: insulin in any form must be clearly **identified**, and pumps and supplies must be accompanied by insulin. | TSA wording. | TSA |
+| 27 | low | `living/travel` | Dexcom G7 "asks for a hand inspection rather than the baggage X-ray" and "use a meter while your phone is in the scanner tray". The guide says you **can** wear the sensor through the metal detector and body scanner, then use a meter for treatment decisions until you leave the security area; hand-wanding or a pat-down is an option to avoid the scanners and the baggage X-ray. | Paragraph and the security example rewritten. | DEXCOM-G7 (safety statements) |
+| 28 | low | `living/travel` | Nothing for people on the transplant waiting list. NKF: tell the transplant coordinator before travel (on hold, or how you would get back for an offer). | New short section. | NKF-travel |
+| 29 | low | `living/travel`, `living/caregivers` | "Fever after a transplant: call today". NIDDK and `get-help-now`: a temperature over 100 °F (37.8 °C) means calling the transplant center **right away**. | Aligned (the 911 tier for shaking chills stays with S1). | NIDDK-Tx |
+| 30 | low | `living/exercise`, `living/travel`, `living/caregivers`, `living/costs-and-benefits` | 911 boxes said "ketones with vomiting"; `get-help-now` says "any ketones with vomiting so you cannot keep fluids down" (fact-check T, finding 4). | Aligned on all four pages; clinician item P2. | NHS-DKA; CDC-DKA (via get-help-now) |
+| 31 | low | `living/sex-fertility-pregnancy` | "With planning, many people have healthy pregnancies" (NKF) left out that NKF advises people with kidney failure against pregnancy because the risks are very high. | Scoped to early-stage CKD or a stable transplant; dialysis "usually advised against"; table row extended. | NKF-pregnancy |
+| 32 | low | `living/costs-and-benefits` | Home dialysis training: Medicare from the first month "if training started in the first 3 months". Medicare also requires a Medicare-certified training facility, that your doctor expects you to finish training, and that you keep up regular dialysis. | Conditions added to the table and the example. | MED-ESRD |
+| 33 | low | `living/costs-and-benefits` | Kidney Care UK grants "to UK residents over 18 … in financial need". The charity also accepts applications made by an adult or guardian for under-18s, requires a low income, and includes people on dialysis or conservative care. | Eligibility rewritten. | KCUK |
+| 34 | low | `living/costs-and-benefits` | Advance care planning row gave only the yearly Wellness visit. Medicare: $0 at the "Welcome to Medicare" or yearly Wellness visit when the provider accepts assignment; otherwise the Part B deductible and 20 % apply. | Row completed (matches `prepare/advance-care-planning`). | MED-ACP |
+| 35 | low | `living/appointments` | "The right … to see your own results". 42 CFR 494.70(a)(10) gives the right to be informed of your own medical status as recorded; the plan of care is revised at least yearly only for stable patients (monthly for unstable ones). | Reworded; complaint bodies named without "ESRD" (content rule). | CFR494 §§ 494.70, 494.80(d) |
+
+**Checked and correct (no change):**
+
+* CMS 2026: Part B premium $202.90 and deductible $283; Part A inpatient deductible $1,736; Part B-ID
+  premium $121.60 (income-related amounts higher). Medicare ESRD: eligibility by work record, benefits,
+  or as spouse or dependent child; start on the first day of the fourth month; transplant start rules
+  (month of admission if the transplant is that month or within 2 months, otherwise 2 months before);
+  end 12 months after dialysis stops or 36 months after a transplant; 30-month coordination period;
+  Original Medicare or Medicare Advantage; signing up is a choice. Kidney disease education: stage 4,
+  up to 6 sessions, 20 % after the Part B deductible, referral needed. Insulin: no more than $35 for a
+  month's supply of each covered insulin, no deductible. Extra Help: no more than $12.65 per drug in
+  2026. Travel abroad: Medicare usually pays nothing; drug plans do not cover drugs bought abroad;
+  some Medigap policies cover emergencies.
+* AKF HIPP: dialysis in the US, household income up to 500 % of the federal poverty level, liquid
+  assets up to $30,000, premiums for Part B, Medigap, Medicare Advantage, employer, COBRA and other
+  plans; apply with the social worker.
+* EEOC: "no magic words"; confidentiality, including not telling coworkers; reasonable documentation
+  when the need is not obvious; no disability questions before an offer; examples (breaks, a private
+  place, rest until glucose is normal, schedule changes, leave, reassignment). JAN dialysis ideas
+  (PD at work, telework, laptop at the unit, rest breaks, reassignment). FMLA: up to 12 workweeks in
+  12 months, group health cover continues, 50 employees within 75 miles, 12 months and 1,250 hours,
+  intermittent leave when medically necessary, care for a spouse, child or parent. SSA 6.03 (dialysis
+  lasting or expected to last at least 12 months) and 6.04 (disabled for 1 year after a transplant,
+  then reassessed).
+* Travel: NKF (book 6–8 weeks ahead; the records a visiting unit needs, including 3–5 treatment
+  records, EKG and chest X-ray; Medicare pays 80 % of dialysis in the US and territories; most state
+  Medicaid programs do not pay out of state); NIDDK (PD supplies shipped; cycler users take the machine
+  or do manual exchanges); CMS (cycler users learn manual CAPD); FDA (refrigerate at 36–46 °F; vials or
+  cartridges up to 28 days at 59–86 °F; never use frozen insulin; keep from heat and sun); TSA
+  (medically needed liquids over 3.4 oz in reasonable amounts, declared; no need to remove a device;
+  scanner, metal detector or pat-down; notification card; TSA Cares 855-787-2227, 72 hours ahead); ADA
+  (never in checked bags; a prescription speeds screening but is not required); USDA–FDA (raw or
+  undercooked meat, eggs and seafood, unpasteurised milk and cheese; talk to the doctor before travel
+  abroad).
+* Access and dialysis: KDOQI 2019 statements 1.1–1.2 (life plan, yearly review), 2.3, 2.6, 2.10, 6.1,
+  6.6 (referral at eGFR 15–20, earlier if falling more than 10 a year), 6.8 (PD catheter at least 2
+  weeks before), 6.10 (protect veins at CKD G3–G5; PICCs; cardiac devices), 10.1 (maturation check by
+  4–6 weeks) and 10.3 (whole-arm exercise); NIDDK (fistula healing "may take several months"; graft
+  usable soon but more infection and clotting; wash the access daily; in-center 3 sessions of about
+  4 hours; home training 3–8 weeks; trained partner; PD catheter works best after 10–20 days; PD
+  training 1–2 weeks; CAPD at least 4 exchanges of 30–40 minutes; APD 3–5 overnight); NKF (thrill
+  check daily; call right away if it stops; no tight sleeves or sleeping on the arm; short daily home
+  hemodialysis 5–7 days; most programs want a care partner); AKF (at least 10 minutes of firm pressure
+  with two fingers; 911 after 10–15 minutes).
+* Transplant: KDIGO 2020 1.1, 1.1.1, 1.1.2, 1.1.3.2, 1.2, 1.3.1, 1.4, 1.4.1 (eGFR < 10 or earlier with
+  symptoms), 4.1, 8.1.1, 10.4.1, 10.7; NIDDK (listing at eGFR 20 or less; waits from months to years;
+  living donor kidneys need no transport; fever over 100 °F); NKF (15–20 years living donor, 8–12
+  deceased donor; self-referral allowed; listing is not automatic); UNOS (multiple listing allowed;
+  usually helps only in a different area; the same dialysis-based waiting time at each program; extra
+  costs); ADA §9 (pancreas transplant with or after a kidney transplant, or for recurrent DKA or severe
+  lows; can normalise glucose; lifelong immunosuppression); 42 CFR 494.80(a)(10) and 494.90(a)(7).
+* KDIGO 2024: PP 2.2.2–2.2.3 (KFRE > 10 % and > 40 % at 2 years), Rec 3.2.2.1 and PP 3.2.2.2, PP 4.1.4,
+  5.2.2.1, 5.3.2, 5.3.3, 5.4.1–5.4.3 (GFR 5–10; plan at < 15–20 or > 40 %), Table 41, 5.5.1–5.5.2;
+  Table 38 (restless legs: hyperphosphataemia and iron deficiency; itch: gabapentinoids, UVB,
+  emollients; depression: exercise, CBT, social support, dose adjustment; linked with more
+  hospitalisation); Figure 49 (sexual dysfunction 48 %).
+* Exercise: EX17 panel 1 (all five glucose bands and actions, in both unit systems), ketone bands
+  (< 0.6, up to 1.4 for < 30 minutes of light exercise, ≥ 1.5 contraindicated, ≥ 3.0 urgent), and the
+  caution about heavy lifting and competitive endurance events with renal failure; ADA 2026 Rec 5.34,
+  5.36, 5.37 and 5.39 (no evidence that vigorous exercise speeds CKD; no specific limits in general);
+  NKF (foot bikes during hemodialysis at some units; start slowly and warm up).
+* Sleep and mood: AASM 2024 (ferritin ≤ 75 ng/mL or TSAT < 20 %; aggravating factors including
+  antihistamines, serotonergic and antidopaminergic drugs and untreated sleep apnoea; gabapentin,
+  gabapentin enacarbil and pregabalin strongly recommended; standard use of pramipexole, ropinirole and
+  rotigotine not recommended; in kidney failure IV iron sucrose at ferritin < 200 ng/mL and TSAT < 20 %,
+  vitamin C and gabapentin); TIR19 (< 4 % and < 1 % below range; < 1 % for older or high-risk adults);
+  NIDDK (night-time low signs; CGM alarms); ADA 2026 Rec 5.44–5.50 and 5.56–5.57; 988 (call, text or
+  chat; Spanish text and chat; free, confidential, 24/7); NKF PEERS (855-653-2273, Monday–Friday
+  9 am–7 pm ET); 42 CFR 494.80(a)(7), 494.90(a)(6) and 494.140(d).
+* Pregnancy: UKKA 2019 guidelines 1.1, 2.4–2.5, 3.1.1, 3.3.1–3.3.7 (blood pressure < 140/90; ARB
+  stopped before pregnancy), 4.2.1, 4.2.5, 5.1.1, 5.2.2, 5.2.4 and 5.4.2; KDIGO 2009 25.1.1–25.2.6 (at
+  least 1 year after a transplant, stable function, proteinuria < 1 g/day); ADA 2026 Rec 15.2, 15.3
+  (A1c ideally < 6.5 % "as close to normal as is safely possible without excessive hypoglycemia") and
+  15.11; CellCept 7/2026 §8.3 (contraception during treatment and 6 weeks after; men 90 days; no sperm
+  donation); FDA letter of 31 July 2026 (REMS no longer required).
+* Planning and rights: Medicare advance care planning (proxy and living will; costs); National POLST
+  (portable medical order for people who are seriously ill or frail; other state names); NIDDK
+  conservative management (who may choose it; anaemia and symptoms still treated); 42 CFR 494.70(a)(2),
+  (5)–(7) (including scheduling options for working patients), (14)–(17) and (d), 494.80 (team; (a)(11)
+  and (a)(13)), 494.90(a)(5), (a)(8), (b)(1), (b)(4) and (d); AHRQ ("the only way to know for sure"
+  that a patient understood is to ask them to explain it); NIDDK (teach coworkers to give glucagon and
+  call 911); Glucagon Emergency Kit steps 12–14 (side position, call for help, feed when able to swallow).
+* Arithmetic: 5 × 15 + 2 × 20 = 115 minutes; 140 mg/dL = 7.8, 290 = 16.1, 82 = 4.6, 58 = 3.2 and
+  92 = 5.1 mmol/L; 4 glucose tablets = 16 g; 4 % of a day ≈ 58 minutes and 1 % ≈ 14 minutes; dialysis
+  from 10 March → Medicare from 1 June.
+
+### Contradictions and notes for other owners (not edited here)
+
+* `sources.yml` `OPTN`: the URL now redirects to HRSA's OPTN page (HRSA took over the OPTN website on
+  15 December 2025). It was left unchanged because editing it changes the generated
+  `includes/sources.md` and `reference/sources.md`, which this role does not own; update all three
+  together.
+* `docs/dev/research/08-handbook-site.md` §5.8 asks for vein preservation "from G4"; KDOQI 6.10 says
+  CKD G3–G5, which the page follows.
+* KDIGO 2024 Table 38 still lists levodopa and dopamine agents among restless-legs options; AASM 2024
+  advises against their standard use. The page follows AASM (clinician item P7).
+* NIDDK says to "seek immediate care" for signs of peritonitis or an exit-site infection; the handbook
+  (here and in `get-help-now`) says to call the PD unit the same day and keep the bag. Kept for
+  consistency; it belongs with the open peritonitis item in the index.
+* `get-help-now`'s "Call your care team today" list has no line for fever or chills with a
+  hemodialysis catheter; `prepare/dialysis-access` now says "right away" (P1, S1).
+* ssa.gov, dol.gov, tsa.gov, cdc.gov and hrsa.gov refuse automated requests (403). DOL and TSA were
+  read through a browser-style fetch, SSA through the regulation text on eCFR; the CDC DKA page was not
+  re-read.
+* The UNOS multiple-listing brochure (2020) predates the 2021 kidney allocation change; the page's
+  "different area" wording is still accurate.
+* KDIGO 2015 supportive care conference: only the abstract was available.
+
+### For a clinician to decide
+
+1. **Hemodialysis catheter with fever or chills.** `dialysis-access` now says to call the unit right
+   away (NKF) and 911 for shaking chills, confusion or a racing heart. Decide whether any fever with a
+   tunneled catheter belongs in the 911 tier (see S1).
+2. **Ketones with vomiting.** Four pages now use the `get-help-now` 911 wording, "any ketones with
+   vomiting so you cannot keep fluids down", which is narrower than their old "ketones with vomiting".
+   Confirm (see S5 and T1).
+3. **Exercise with blood ketones 0.6–1.4 mmol/L.** EX17 allows brief light exercise (with a correction
+   the team plans); the handbook's sick-day tier says follow the plan and retest in 2 hours. Pick one
+   for people with CKD.
+4. **Heavy lifting and competitive endurance events with kidney failure.** EX17 calls them
+   contraindicated in long-standing diabetes with renal failure; ADA 2026 Rec 5.39 sees no need for
+   specific limits in CKD in general. The page says "ask first". Confirm.
+5. **Conservative care diet.** Confirm "eat for comfort and strength; older or frail people may need
+   more protein, not less" (KDIGO PP 3.3.1.5), and whether to mention supervised very-low-protein diets
+   (PP 3.3.1.2) for people who choose conservative care.
+6. **ACE inhibitor before pregnancy with diabetic kidney disease.** UKKA 5.4.2: continue until
+   conception with regular pregnancy tests; ADA 15.25a: stop before conception. The page gives both and
+   says the teams decide together. Confirm the framing for a US readership.
+7. **Restless legs.** Confirm following AASM 2024 over KDIGO 2024 Table 38, and showing the AASM iron
+   thresholds for kidney failure (ferritin < 200 ng/mL and TSAT < 20 %) on a patient page.
+8. **Waking at night to pass urine.** The spec asks for nocturia on the sleep page; ADA §5 does not
+   cover it, so the unsourced causes were removed. Decide whether to add a sourced line (for example
+   high glucose, evening fluid or diuretics).
