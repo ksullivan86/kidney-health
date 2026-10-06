@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, A26-6, A26-5, NIDDK-hypo, GLUCAGON-KIT, FMLA, NIDDK-HD, NKF-HDaccess, AKF-bleed, CFR494, NKF-PEERS, NKF-HHD]
+fact_checked: 2026-10-06
+sources: [K24, A26-6, A26-5, NIDDK-hypo, NIDDK-Tx, GLUCAGON-KIT, FMLA, NIDDK-HD, NKF-HDaccess, AKF-bleed, CFR494, NKF-PEERS, NKF-HHD, JBDS22]
 ---
 
 # For caregivers and family
@@ -32,7 +33,7 @@ members for distress too ([ADA 2026 §5][A26-5]), and US law can protect your jo
     | Glucose under 70 mg/dL, and they can swallow | Give 15 g of fast sugar (4 glucose tablets); recheck in 15 minutes; repeat if still low | [ADA 2026 §6][A26-6] |
     | They cannot swallow, cannot be woken, or are fitting | **Give glucagon, turn them on their side, call 911** | [glucagon instructions][GLUCAGON-KIT]; [NIDDK][NIDDK-hypo] |
     | Blood ketones 1.6–2.9 mmol/L | Call their team now (emergency room if no answer) | [Get help now](../get-help-now.md) |
-    | Blood ketones 3.0 mmol/L or more, or ketones with vomiting | Call 911 | [Get help now](../get-help-now.md) |
+    | Blood ketones 3.0 mmol/L or more, or any ketones with vomiting so they cannot keep fluids down | Call 911 | [Get help now](../get-help-now.md) |
     | Fistula or graft bleeding not stopped after 10–15 minutes of firm pressure | Keep pressing and call 911 | [AKF][AKF-bleed] |
 
 === "International"
@@ -42,7 +43,7 @@ members for distress too ([ADA 2026 §5][A26-5]), and US law can protect your jo
     | Glucose under 3.9 mmol/L, and they can swallow | Give 15 g of fast sugar (4 glucose tablets); recheck in 15 minutes; repeat if still low | [ADA 2026 §6][A26-6] |
     | They cannot swallow, cannot be woken, or are fitting | **Give glucagon, turn them on their side, call your emergency number** | [glucagon instructions][GLUCAGON-KIT]; [NIDDK][NIDDK-hypo] |
     | Blood ketones 1.6–2.9 mmol/L | Call their team now (emergency department if no answer) | [Get help now](../get-help-now.md) |
-    | Blood ketones 3.0 mmol/L or more, or ketones with vomiting | Call your emergency number | [Get help now](../get-help-now.md) |
+    | Blood ketones 3.0 mmol/L or more, or any ketones with vomiting so they cannot keep fluids down | Call your emergency number | [Get help now](../get-help-now.md) |
     | Fistula or graft bleeding not stopped after 10–15 minutes of firm pressure | Keep pressing and call your emergency number | [AKF][AKF-bleed] |
 
 **FMLA (US):** up to 12 weeks a year of unpaid, job-protected leave to care for a spouse, child or
@@ -75,8 +76,8 @@ parent with a serious health condition, which can be taken in short blocks
 - **In-center hemodialysis** is usually three sessions a week of about 4 hours, at set times
   ([NIDDK][NIDDK-HD]). Help them get there: missed or shortened sessions are risky
   ([In-center hemodialysis](../stages/hemodialysis-in-centre.md)).
-- **Lows after dialysis** are common. Pack glucose tablets and a snack for the trip home
-  ([Insulin on dialysis](../t1d/insulin-and-dialysis.md)).
+- **Lows after dialysis** are common: most come in the 24 hours after a session. Pack glucose tablets
+  and a snack for the trip home ([JBDS 2022][JBDS22]; [Insulin on dialysis](../t1d/insulin-and-dialysis.md)).
 - **Access checks:** the person should feel the buzz (thrill) of a fistula or graft every day. Call the
   unit if it stops. Help them avoid blood pressure cuffs, blood draws, tight sleeves and heavy bags on
   that arm ([NKF][NKF-HDaccess]).
@@ -139,12 +140,13 @@ peer mentor ([NKF][NKF-PEERS]).
 
 !!! danger "Call 911 (or your local emergency number)"
     They cannot be woken, cannot swallow or are fitting with a low (give glucagon first); chest pain;
-    severe breathlessness or cannot lie flat; ketones 3.0 mmol/L or more or ketones with vomiting; a
-    fistula bleed that will not stop. Full list: [Get help now](../get-help-now.md).
+    severe breathlessness or cannot lie flat; ketones 3.0 mmol/L or more, or any ketones with vomiting
+    so they cannot keep fluids down; a fistula bleed that will not stop. Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call their team today"
     Vomiting or not eating, lows that keep coming back, a missed dialysis session, no buzz in the
-    fistula, cloudy PD fluid (keep the bag), or fever after a transplant.
+    fistula (call the unit right away), or cloudy PD fluid (keep the bag). After a transplant, a
+    temperature over 100 °F (37.8 °C) means calling the transplant center right away ([NIDDK][NIDDK-Tx]).
 
 ## Related pages
 
@@ -160,7 +162,8 @@ peer mentor ([NKF][NKF-PEERS]).
 - [KDIGO 2024 CKD guideline][K24]: practice point 5.3.2.
 - [ADA Standards of Care 2026][A26-6], section 6 (lows, glucagon) and [section 5][A26-5] (distress in
   caregivers and family).
-- [NIDDK: low blood glucose][NIDDK-hypo]; [Glucagon Emergency Kit instructions][GLUCAGON-KIT].
+- [NIDDK: low blood glucose][NIDDK-hypo]; [Glucagon Emergency Kit instructions][GLUCAGON-KIT];
+  [NIDDK: kidney transplant][NIDDK-Tx]; [JBDS 2022 dialysis guideline][JBDS22].
 - [US Department of Labor: FMLA][FMLA].
 - [NIDDK: hemodialysis][NIDDK-HD]; [NKF: hemodialysis access][NKF-HDaccess];
   [NKF: home hemodialysis][NKF-HHD]; [AKF: fistula and graft bleeds][AKF-bleed].

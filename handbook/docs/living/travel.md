@@ -8,8 +8,9 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 figures_as_of: 2026-10-06
-sources: [TSA, TSA-DIABETES, ADA-travel, MED-TRAVEL, NIDDK-HD, NIDDK-PD, NKF-travel, FDA-INSULIN, DEXCOM-G7, FSTX, CMSPREP, A26-6]
+sources: [TSA, TSA-DIABETES, ADA-travel, MED-TRAVEL, NIDDK-HD, NIDDK-PD, NIDDK-Tx, NKF-travel, FDA-INSULIN, DEXCOM-G7, FSTX, CMSPREP, A26-6]
 ---
 
 # Travel
@@ -57,18 +58,25 @@ cover emergency care abroad, and travel insurance is another option ([Medicare][
 
 ## Flying with diabetes supplies (US)
 
-- **Tell the officer** you have diabetes and are carrying supplies. Insulin must be clearly labeled
-  ([TSA][TSA]). A TSA notification card can help you explain quietly ([TSA][TSA-DIABETES]).
+- **Tell the officer** you have diabetes and are carrying supplies. Insulin in any form must be clearly
+  identified, and a pump and its supplies must travel with insulin ([TSA][TSA]). A TSA notification card can help you explain quietly ([TSA][TSA-DIABETES]).
 - **You do not need to take off a pump or CGM.** Tell the officer where it is before screening. You
   can be screened by a body scanner, a metal detector or a pat-down, and you can ask for a pat-down
   ([TSA][TSA-DIABETES]).
-- **Follow your device maker's advice.** For example, Dexcom says its G7 sensor can go through metal
-  detectors and body scanners, but asks for a hand inspection rather than the baggage X-ray for any
-  part of the system, and says to use a meter for decisions while your phone is in the scanner tray
-  ([Dexcom G7 user guide][DEXCOM-G7]). Other devices differ.
+- **Follow your device maker's advice.** For example, Dexcom says you can wear its G7 sensor through
+  the metal detector and body scanner, but then use a meter for treatment decisions until you leave
+  the security area, because the system has not been tested with every scanner. You can also ask for
+  hand-wanding or a pat-down instead of the body scanner, and so that no part of the system goes
+  through the baggage X-ray ([Dexcom G7 user guide][DEXCOM-G7]). Other devices differ.
 - **Insulin never goes in checked bags**, where it can freeze or overheat ([ADA][ADA-travel]).
 - A prescription is not required at security, but having one can speed things up if you are
   screened further ([ADA][ADA-travel]).
+
+## On the transplant waiting list
+
+Tell your transplant coordinator before you travel. They will help you decide whether to be put
+"on hold" while you are away, or how you would get back in time if a kidney were offered, and make
+sure they can reach you ([NKF][NKF-travel]).
 
 ## Time zones
 
@@ -107,8 +115,8 @@ three sessions at a unit near the hotel and sends your records. Medicare pays it
 dialysis, as it does at home ([NKF][NKF-travel]).
 
 **Through security.** You tell the officer you have diabetes, an insulin pump on your belly and a CGM
-on your arm, and that you carry a juice box. You ask for a pat-down. Your phone goes through the
-scanner, so you check with your meter if you feel low ([TSA][TSA-DIABETES]; [Dexcom][DEXCOM-G7]).
+on your arm, and that you carry a juice box. You ask for a pat-down, and use your meter for any
+treatment decision until you are through security ([TSA][TSA-DIABETES]; [Dexcom][DEXCOM-G7]).
 
 **A beach holiday on PD.** Your supplier ships two weeks of PD fluid to the hotel. You keep insulin in
 a cool bag out of the sun and never leave it in a hot car ([NIDDK][NIDDK-PD]; [FDA][FDA-INSULIN]).
@@ -127,12 +135,13 @@ a cool bag out of the sun and never leave it in a hot car ([NIDDK][NIDDK-PD]; [F
 
 !!! danger "Call the local emergency number (911 in the US; 112 in the EU; 999 in the UK; 000 in Australia)"
     Chest pain; severe breathlessness; a low the person cannot treat (give glucagon, then call);
-    ketones 3.0 mmol/L or more, or ketones with vomiting; heavy bleeding from a fistula. Full list:
-    [Get help now](../get-help-now.md).
+    ketones 3.0 mmol/L or more, or any ketones with vomiting so you cannot keep fluids down; heavy
+    bleeding from a fistula. Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your team (or a local doctor) today"
     Vomiting or diarrhea (start your [sick-day plan](../t1d/sick-days.md)); a missed dialysis session;
-    cloudy PD fluid (keep the bag); fever after a transplant.
+    cloudy PD fluid (keep the bag). After a transplant, a temperature over 100 °F (37.8 °C) means calling
+    your transplant center right away ([NIDDK][NIDDK-Tx]).
 
 ## Related pages
 
@@ -150,7 +159,7 @@ a cool bag out of the sun and never leave it in a hot car ([NIDDK][NIDDK-PD]; [F
   [ADA: what can I bring on the plane?][ADA-travel].
 - [Dexcom G7 user guide][DEXCOM-G7]: travel and security screening.
 - [FDA: insulin storage][FDA-INSULIN].
-- [NIDDK: hemodialysis][NIDDK-HD]; [NIDDK: peritoneal dialysis][NIDDK-PD].
+- [NIDDK: hemodialysis][NIDDK-HD]; [NIDDK: peritoneal dialysis][NIDDK-PD]; [NIDDK: kidney transplant][NIDDK-Tx].
 - [Medicare: travel outside the US][MED-TRAVEL]; [CMS: preparing for emergencies on dialysis][CMSPREP].
 - [USDA–FDA: food safety for transplant recipients][FSTX].
 - [ADA Standards of Care 2026, section 6][A26-6]: treating lows.

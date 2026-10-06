@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 figures_as_of: 2026-10-06
 sources: [MED-ESRD, CMS26, MED-KDE, MED-INS, MED-MSP, MED-ACP, MED-TRAVEL, SSA, SSA-6, HIPP, KCUK, ADAK]
 ---
@@ -37,18 +38,18 @@ national health system.
 | Part B yearly deductible | $283 | [CMS][CMS26] |
 | Part A hospital deductible (per benefit period) | $1,736 | [CMS][CMS26] |
 | Immunosuppressive drug benefit (Part B-ID) premium | $121.60 a month (more with higher income) | [Medicare][MED-ESRD]; [CMS][CMS26] |
-| Part B-ID yearly deductible | $283 | [Medicare][MED-ESRD] |
+| Part B-ID yearly deductible | $283, then you pay 20 % of the Medicare-approved amount | [Medicare][MED-ESRD] |
 | Insulin covered by Part B or Part D | No more than **$35 for each month's supply** of each covered insulin; no deductible | [Medicare][MED-INS] |
 | Kidney disease education (stage 4) | Up to 6 sessions; 20 % coinsurance after the Part B deductible; needs a doctor's referral | [Medicare][MED-KDE] |
 | Extra Help with drug costs | No more than $12.65 for each covered drug | [Medicare][MED-MSP] |
-| Advance care planning | $0 when part of your yearly Wellness visit (provider accepts assignment) | [Medicare][MED-ACP] |
+| Advance care planning | $0 when part of your "Welcome to Medicare" or yearly Wellness visit (provider accepts assignment); otherwise the Part B deductible and 20 % apply | [Medicare][MED-ACP] |
 
 ## Medicare for kidney failure: when it starts and ends
 
 | Situation | Medicare usually starts | Source |
 |---|---|---|
 | In-center dialysis | The first day of the **fourth month** of dialysis | [Medicare][MED-ESRD] |
-| Home dialysis training started in the first 3 months | As early as the **first month** of dialysis | [Medicare][MED-ESRD] |
+| Home dialysis training at a Medicare-certified facility during the first 3 months | As early as the **first month** of dialysis, if your doctor expects you to finish training and do your own treatments, and you keep up regular dialysis | [Medicare][MED-ESRD] |
 | Kidney transplant | The month you are admitted to a Medicare-certified hospital for the transplant (if it happens that month or within 2 months); if the transplant is delayed, 2 months before it | [Medicare][MED-ESRD] |
 
 | Situation | Medicare based on kidney failure ends | Source |
@@ -62,7 +63,10 @@ national health system.
   a **30-month coordination period**.
 - **Medicare Advantage:** people with ESRD can choose Original Medicare or a Medicare Advantage plan.
 - **After a transplant:** the **Part B immunosuppressive drug benefit (Part B-ID)** helps pay for
-  anti-rejection medicines once your ESRD Medicare ends, if you have no other cover for them.
+  anti-rejection medicines once your ESRD Medicare ends. You can get it if you had Medicare because of
+  kidney failure when you had the transplant, and you do not have other cover for these medicines
+  (such as a group or individual health plan, TRICARE or Medicaid). It covers only these medicines.
+  You can sign up at any time by calling Social Security at 1-877-465-0355.
 - **Signing up is your choice**, but timing matters. Talk it through with your social worker before
   you decide.
 - **Travel abroad:** Original Medicare usually does not pay for care outside the US, and Medicare drug
@@ -87,8 +91,9 @@ national health system.
 - In most countries with a national health system, dialysis, transplant and anti-rejection medicines
   are covered. Ask your kidney unit's social worker or your national kidney charity what is free,
   what you pay, and what help exists for travel to dialysis.
-- **UK example:** Kidney Care UK offers grants to UK residents over 18 at CKD stage 4–5 or with a
-  transplant who are in financial need, with a letter of support from a health professional
+- **UK example:** Kidney Care UK offers grants to UK residents on a low income at CKD stage 4–5
+  (including dialysis and conservative care) or with a transplant. Applicants must be over 18, or have
+  an adult or guardian apply for them, and need a letter of support from a health professional
   ([Kidney Care UK][KCUK]).
 - Before traveling abroad, check that your travel insurance covers dialysis, your transplant and
   your diabetes ([Travel](travel.md)).
@@ -111,7 +116,8 @@ national health system.
 1 June 2026, the first day of the fourth month ([Medicare][MED-ESRD]).
 
 **Starting home dialysis training.** You start dialysis on 10 March 2026 and begin home PD training in
-April. Medicare can start in March, the first month of dialysis ([Medicare][MED-ESRD]).
+April. If your doctor expects you to finish training and you keep up your dialysis, Medicare can start
+in March, the first month of dialysis ([Medicare][MED-ESRD]).
 
 **After a transplant.** You have a transplant in September 2026. Your ESRD Medicare ends 36 months
 after that month. Before then, your transplant social worker helps you sign up for Part B-ID or
@@ -132,10 +138,9 @@ than $35 for a month's supply ([Medicare][MED-INS]).
 
 !!! danger "Never skip insulin because of cost"
     Running out of insulin with type 1 diabetes can lead to DKA, a dangerous build-up of ketones
-    ([ADA][ADAK]). If you cannot afford
-    insulin or other medicines, **call your diabetes team or pharmacist today**. If you have
-    ketones of 3.0 mmol/L or more, or ketones with vomiting, call 911. Full list:
-    [Get help now](../get-help-now.md).
+    ([ADA][ADAK]). If you cannot afford insulin or other medicines, **call your diabetes team or
+    pharmacist today**. If you have ketones of 3.0 mmol/L or more, or any ketones with vomiting so you
+    cannot keep fluids down, call 911. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 

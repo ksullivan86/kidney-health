@@ -8,8 +8,9 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 figures_as_of: 2026-10-06
-sources: [K24, NIDDK-choosing, K20TX, I20PD, MED-KDE, Q19VA, NIDDK-HD, NIDDK-PD, NKF-HHD, NIDDK-Tx, NIDDK-conservative, CFR494, A26-9, A26-6, JBDS, MHRA, DG25a, NKF-travel]
+sources: [K24, NIDDK-choosing, K20TX, I20PD, MED-KDE, Q19VA, NIDDK-HD, NIDDK-PD, NKF-HHD, NIDDK-Tx, NIDDK-conservative, CFR494, A26-9, A26-6, JBDS, JBDS22, MHRA, DG25a, NKF-travel]
 ---
 
 # Choosing a treatment for kidney failure
@@ -28,7 +29,7 @@ it later ([NIDDK][NIDDK-choosing]).
 
 | When | What happens | Source |
 |---|---|---|
-| eGFR under 30 (G4) | Learn about every option, including transplant | [KDOQI][Q19VA] 6.1; [KDIGO transplant][K20TX] 1.1 |
+| eGFR 30 or less (G4) and falling | Learn about every option, including transplant | [KDOQI][Q19VA] 6.1; [KDIGO transplant][K20TX] 1.1 |
 | At least 6–12 months before dialysis would be needed | Referral for transplant evaluation, so living donors can be tested | [KDIGO transplant][K20TX] 1.1.1 |
 | 2-year kidney failure risk (KFRE) over 10 % | Join a multidisciplinary kidney care team | [KDIGO 2024][K24] PP 2.2.2 |
 | eGFR 15–20, or 2-year KFRE over 40 % | Choose a treatment; plan a dialysis access or a transplant before dialysis | [KDIGO 2024][K24] PP 2.2.3, 5.4.3; [KDOQI][Q19VA] 6.6 |
@@ -44,11 +45,12 @@ it later ([NIDDK][NIDDK-choosing]).
 | **Home hemodialysis** | Standard, short daily (5–7 days a week) or overnight; training takes 3–8 weeks | Often more relaxed, because fluid is removed more often | You choose the time, which makes work easier; you can travel with a machine or book a unit | Space for a machine and supplies; usually a trained care partner |
 | **Peritoneal dialysis (PD)** | By hand: at least 4 exchanges a day, 30–40 minutes each (CAPD). By machine: 3–5 exchanges overnight (APD). Training takes 1–2 weeks | Fluid limits are often less strict; sodium and phosphorus still limited | Supplies can be shipped to where you are going; overnight PD leaves the day free | Storage for boxes of fluid; a cycler for APD; no partner needed once trained |
 | **Kidney transplant** | Surgery, then frequent clinic visits at first; anti-rejection medicines every day for life | The fewest limits | Most like life before kidney failure once things settle | Your medicines and a phone that is always on while you wait |
-| **Comprehensive conservative care** | Regular clinic visits focused on symptoms | Diet for comfort; protein is limited to ease the kidneys' work | No dialysis schedule | Support from family, the kidney team and, later, palliative or hospice care |
+| **Comprehensive conservative care** | Regular clinic visits focused on symptoms | Eat for comfort and strength, with a dietitian's help; older or frail people may need more protein, not less | No dialysis schedule | Support from family, the kidney team and, later, palliative or hospice care |
 
 Sources for the table: [NIDDK: choosing a treatment][NIDDK-choosing]; [NIDDK: hemodialysis][NIDDK-HD];
 [NIDDK: peritoneal dialysis][NIDDK-PD]; [NKF: home hemodialysis][NKF-HHD]; [NIDDK: transplant][NIDDK-Tx];
-[NIDDK: conservative management][NIDDK-conservative]; [NKF: travel][NKF-travel].
+[NIDDK: conservative management][NIDDK-conservative]; [NKF: travel][NKF-travel]. Protein for older or frail
+people: [KDIGO 2024][K24], practice point 3.3.1.5.
 
 **Infection risks differ.** For hemodialysis, a fistula or graft has a lower infection risk than a
 catheter in a vein ([KDOQI][Q19VA], statement 2.3). With PD, the main risk is an infection of the
@@ -57,8 +59,9 @@ See [Dialysis access](dialysis-access.md).
 
 ## What each option means for type 1 diabetes
 
-- **Hemodialysis:** glucose is often lowest during and after a session. Check before and after each
-  one, and ask for a written insulin plan for dialysis days ([JBDS–Renal Association][JBDS]).
+- **Hemodialysis:** glucose often falls during a session, and most lows come in the 24 hours after it.
+  Check before and after each one, and ask for a written insulin plan for dialysis days
+  ([JBDS–Renal Association][JBDS]; [JBDS 2022][JBDS22]).
 - **Peritoneal dialysis:** most PD fluids contain sugar, which you absorb, so insulin needs often
   change ([DaVita][DG25a]). One PD fluid (icodextrin) makes some glucose meters read falsely high; use
   a meter your team says is safe ([MHRA][MHRA]). Your PD plan should be built around your goals and
@@ -143,7 +146,7 @@ offer ([42 CFR 494.70][CFR494]).
 
 ## Sources
 
-- [KDIGO 2024 CKD guideline][K24]: practice points 2.2.2, 2.2.3, 5.4.1–5.4.3, 5.5.1–5.5.2; Table 41.
+- [KDIGO 2024 CKD guideline][K24]: practice points 2.2.2, 2.2.3, 3.3.1.5, 5.4.1–5.4.3, 5.5.1–5.5.2; Table 41.
 - [KDOQI 2019 vascular access guideline][Q19VA]: statements 1.1–1.2, 2.3, 6.1, 6.6, 6.8.
 - [KDIGO 2020 transplant candidate guideline][K20TX]: recommendations 1.1, 1.1.1, 1.4, 8.1.1.
 - [NIDDK: choosing a treatment][NIDDK-choosing]; [NIDDK: hemodialysis][NIDDK-HD];
@@ -151,6 +154,7 @@ offer ([42 CFR 494.70][CFR494]).
   [NIDDK: conservative management][NIDDK-conservative]; [NKF: home hemodialysis][NKF-HHD];
   [NKF: travel tips][NKF-travel].
 - [ISPD 2020 goal-directed PD][I20PD]; [MHRA: icodextrin and glucose meters][MHRA];
-  [JBDS–Renal Association guidance][JBDS]; [ADA Standards of Care 2026, sections 6][A26-6] and [9][A26-9];
+  [JBDS–Renal Association guidance][JBDS]; [JBDS 2022 dialysis guideline][JBDS22];
+  [ADA Standards of Care 2026, sections 6][A26-6] and [9][A26-9];
   [DaVita: PD diet][DG25a].
 - [Medicare: kidney disease education][MED-KDE]; [42 CFR 494: rules for US dialysis facilities][CFR494], § 494.70.

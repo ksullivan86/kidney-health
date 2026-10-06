@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, EX17, A26-5, A26-6, NKF-exercise, NKF-HDaccess, JBDS]
+fact_checked: 2026-10-06
+sources: [K24, EX17, A26-5, A26-6, NKF-exercise, NKF-HDaccess, JBDS, JBDS22]
 ---
 
 # Exercise and activity
@@ -61,11 +62,11 @@ planning: **check glucose before you start, check ketones if glucose is high, an
 |---|---|
 | Under 0.6 mmol/L | Light to moderate exercise is fine; keep checking glucose |
 | 0.6–1.4 mmol/L | Light exercise only, under 30 minutes, and follow your team's plan for high glucose |
-| **1.5 mmol/L or more** | **Do not exercise.** Start your [sick-day plan](../t1d/sick-days.md) |
+| **1.5 mmol/L or more** | **Do not exercise.** Start your [sick-day plan](../t1d/sick-days.md); at 1.6 or more, call your diabetes team now |
 | 3.0 mmol/L or more | Urgent: see [Get help now](../get-help-now.md) |
 
-**After a severe low** (one where you needed someone's help) in the last 24 hours, do not exercise
-([exercise consensus][EX17]).
+**After a severe low** in the last 24 hours (one where you needed someone's help, or glucose of
+50 mg/dL (2.8 mmol/L) or less), do not exercise ([exercise consensus][EX17]).
 
 ## What to do
 
@@ -79,8 +80,8 @@ planning: **check glucose before you start, check ketones if glucose is high, an
       ([ADA 2026 §6][A26-6]; [Treating a low](../t1d/treating-a-low.md)).
 - [ ] Ask your diabetes team for a written plan for insulin and food around exercise. This handbook
       never gives doses.
-- [ ] If you have fallen or feel unsteady, ask which exercises and how hard, and about balance and
-      strength training ([KDIGO 2024][K24], practice point 3.2.2.3).
+- [ ] If you have fallen or feel unsteady, ask how hard to exercise and which kind suits you: aerobic,
+      strength, or both ([KDIGO 2024][K24], practice point 3.2.2.3).
 - [ ] Ask before heavy weightlifting or long, hard competitions. The exercise consensus warns against
       these for some people with long-standing diabetes, especially with kidney failure
       ([exercise consensus][EX17]).
@@ -90,8 +91,9 @@ planning: **check glucose before you start, check ketones if glucose is high, an
 
 - **During hemodialysis:** some units have pedal bikes you can use during a session; ask
   ([NKF][NKF-exercise]).
-- **On dialysis days:** glucose is often lowest after a session ([JBDS–Renal Association][JBDS]).
-  Check before you exercise, and have a snack and glucose tablets with you.
+- **On dialysis days:** glucose often falls during a session, and most lows come in the 24 hours after
+  it ([JBDS–Renal Association][JBDS]; [JBDS 2022][JBDS22]). Check before you exercise, and have a snack
+  and glucose tablets with you.
 - **Fistula or graft arm:** do not carry heavy things or put heavy pressure on that arm, and do not wear
   tight sleeves, watches or bands over it ([NKF][NKF-HDaccess]). Ask your unit which arm exercises are safe.
 - **PD catheter:** ask your PD unit about lifting, sit-ups and swimming before you start; rules
@@ -124,7 +126,8 @@ Glucose tablets add no potassium, phosphorus or fluid.
 !!! danger "Call 911 (or your local emergency number)"
     Chest pain that does not settle when you stop and rest, severe breathlessness, fainting, or a low
     the person cannot treat themselves (give glucagon, then call). Blood ketones of 3.0 mmol/L or
-    more, or ketones with vomiting. Full list: [Get help now](../get-help-now.md).
+    more, or any ketones with vomiting so you cannot keep fluids down. Full list:
+    [Get help now](../get-help-now.md).
 
 !!! warning "Stop exercising and rest if…"
     You feel chest tightness, very short of breath, dizzy or light-headed, or your heart races or skips.
@@ -147,4 +150,5 @@ Glucose tablets add no potassium, phosphorus or fluid.
 - [Exercise in type 1 diabetes consensus (2017)][EX17]: panel 1 (glucose before exercise), ketones,
   recent severe hypoglycemia, cautions with complications.
 - [NKF: exercise and CKD][NKF-exercise]; [NKF: hemodialysis access][NKF-HDaccess].
-- [JBDS–Renal Association guidance][JBDS]: glucose after hemodialysis.
+- [JBDS–Renal Association guidance][JBDS]; [JBDS 2022 dialysis guideline][JBDS22]: glucose during and
+  after hemodialysis.

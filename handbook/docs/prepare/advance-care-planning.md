@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 sources: [K24, K15SC, NIDDK-conservative, MED-ACP, POLST, CFR494, Q19VA, A26-9]
 ---
 
@@ -20,9 +21,10 @@ if you became very ill and could not speak for yourself. It has two main parts: 
 proxy** (someone you trust to decide for you) and writing a **living will** (which treatments you
 would or would not want) ([Medicare][MED-ACP]). It is not only for the end of life. Your wishes about
 dialysis, transplant and hospital care can change as your kidneys change, so revisit the plan at each
-stage. KDIGO asks kidney teams to help with this planning, and to offer **supportive care**, which
-eases symptoms, alongside any treatment, including dialysis ([KDIGO 2024][K24], practice point 5.5.3
-and section 5.5).
+stage. KDIGO asks kidney teams to make advance care planning available, especially to people nearing
+the end of life or choosing conservative care, and describes **supportive care**, which eases
+symptoms, as something you can have at any stage alongside any treatment, including dialysis
+([KDIGO 2024][K24], practice point 5.5.3 and section 5.5).
 
 ## Your key documents
 
@@ -49,11 +51,12 @@ Part B deductible and coinsurance apply ([Medicare][MED-ACP]).
   and other problems, manages symptoms and supports your feelings and your family
   ([NIDDK][NIDDK-conservative]; [KDIGO 2024][K24], practice point 5.5.2).
 - It may suit people for whom dialysis may not lengthen life or make it better, such as some older
-  people with other serious illnesses ([NIDDK][NIDDK-conservative]). A KDIGO conference named better
-  symptom care, honest talk about the future, shared decisions and advance care planning as
-  priorities for people with advanced kidney disease ([KDIGO 2015 supportive care][K15SC]).
-- **With type 1 diabetes, insulin is always needed** ([ADA 2026 §9][A26-9], recommendation 9.1). A
-  comfort-focused plan changes the glucose goals, not the need for insulin. Ask your team to write
+  people with other serious illnesses ([NIDDK][NIDDK-conservative]). A KDIGO conference found that
+  people with advanced kidney disease, including those on dialysis, carry a heavy burden of symptoms
+  and that conservative and palliative care often fall short, and set out a plan to improve them
+  ([KDIGO 2015 supportive care][K15SC]).
+- **With type 1 diabetes, insulin is always needed**, because the body makes little or none of its own
+  ([ADA 2026 §9][A26-9]). A comfort-focused plan changes the glucose goals, not the need for insulin. Ask your team to write
   that plan down.
 
 ## What to do
@@ -122,4 +125,4 @@ directives and about its own policy on them. You also have the right to refuse o
 - [Medicare: advance care planning][MED-ACP]; [National POLST][POLST].
 - [42 CFR 494: rules for US dialysis facilities][CFR494], § 494.70(a)(5)–(6).
 - [KDOQI 2019 vascular access guideline][Q19VA]: statement 1.2 (yearly life-plan review).
-- [ADA Standards of Care 2026, section 9][A26-9]: recommendation 9.1.
+- [ADA Standards of Care 2026, section 9][A26-9]: insulin in type 1 diabetes (recommendation 9.1 and text).

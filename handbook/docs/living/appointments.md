@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 sources: [K24, AHRQ-Q, AHRQ-TB, NIDDK-managing, CFR494, TIR19, KER]
 ---
 
@@ -68,13 +69,14 @@ page gathers them by topic for printing.
 ## Your team and your rights (US dialysis units)
 
 - Your dialysis team must include you (if you wish), a nurse, a doctor, a social worker and a
-  dietitian. Together you make a **written plan of care**, which you are asked to sign, and it is
-  reviewed at least once a year ([42 CFR 494.80 and 494.90][CFR494]).
+  dietitian. Together you make a **written plan of care**, which you are asked to sign. It is reviewed
+  at least once a year if you are stable, and at least monthly if you are not, for example after long
+  or frequent hospital stays ([42 CFR 494.80 and 494.90][CFR494]).
 - A doctor, nurse practitioner, clinical nurse specialist or physician assistant must see you at least
   once a month ([42 CFR 494.90][CFR494]).
-- You have the right to information you can understand, to see your own results, and to make a
-  complaint, inside the unit or to outside bodies, without losing care. The unit must post the phone
-  numbers ([42 CFR 494.70][CFR494]).
+- You have the right to information you can understand, to be told about your own medical status as
+  recorded in your file, and to make a complaint, inside the unit or to your regional kidney network or
+  state agency, without losing care. The unit must post their phone numbers ([42 CFR 494.70][CFR494]).
 
 KDIGO also supports care by phone, video and apps alongside visits ([KDIGO 2024][K24], practice point
 5.3.3). Ask whether some visits can be remote.

@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 figures_as_of: 2026-10-06
 sources: [K20TX, OPTN, NIDDK-Tx, NKF-Tx, MED-ESRD, CMS26, UNOS-ML, A26-9, CFR494]
 ---
@@ -19,23 +20,25 @@ sources: [K20TX, OPTN, NIDDK-Tx, NKF-Tx, MED-ESRD, CMS26, UNOS-ML, A26-9, CFR494
 A kidney transplant is the treatment that gives most people the longest and fullest life, and a kidney
 from a **living donor, before dialysis**, is the best of all for those who can have one
 ([KDIGO 2020 transplant][K20TX], recommendation 1.4). Nobody is put on a waiting list automatically:
-first you are **referred**, then a transplant center **evaluates** you ([NKF][NKF-Tx]). Ask for a
-referral when your eGFR is under 30, at least 6–12 months before you might need dialysis
-([KDIGO 2020 transplant][K20TX], 1.1–1.1.1). With type 1 diabetes, ask to be referred to a center that
-does **pancreas-kidney transplants** (8.1.1). This page walks through the steps.
+first you are **referred**, then a transplant center **evaluates** you ([NKF][NKF-Tx]). KDIGO says
+everyone with an eGFR under 30 who is expected to reach kidney failure should be told about
+transplant and considered for it, and referred at least 6–12 months before dialysis is likely to be
+needed ([KDIGO 2020 transplant][K20TX], 1.1–1.1.1). So ask early. With type 1 diabetes, KDIGO suggests
+considering a **pancreas-kidney transplant** (8.1.1), so ask to be referred to a center that does
+them. This page walks through the steps.
 
 ## Your numbers
 
 | What | Number | Source |
 |---|---|---|
-| When to ask for a referral | eGFR under 30, and at least 6–12 months before dialysis would be needed | [KDIGO 2020][K20TX] 1.1, 1.1.1 |
+| When to ask about transplant | eGFR under 30 and expected to reach kidney failure; referral at least 6–12 months before dialysis would be needed | [KDIGO 2020][K20TX] 1.1, 1.1.1 |
 | Already on dialysis | Ask as soon as you are medically stable | [KDIGO 2020][K20TX] 1.1.2 |
-| When US waiting time starts | When you are registered with an eGFR of 20 or less, or from the date you started regular dialysis | [OPTN][OPTN] Policy 8 |
-| Pre-emptive transplant (adults) | Recommended when eGFR is under 10, or earlier with symptoms | [KDIGO 2020][K20TX] 1.4.1 |
+| When US waiting time starts | The earliest of: the date you are registered with an eGFR of 20 or less; the date your eGFR falls to 20 or less after you are registered; the date you started regular dialysis | [OPTN][OPTN] Policy 8.4.A |
+| Pre-emptive transplant (adults) | The transplant itself is recommended before dialysis, when eGFR is under 10 or earlier with symptoms; referral and work-up start long before | [KDIGO 2020][K20TX] 1.4.1 |
 | Time on the list | A few months to years | [NIDDK][NIDDK-Tx] |
 | How long a kidney lasts, on average | About 15–20 years from a living donor; 8–12 years from a deceased donor | [NKF][NKF-Tx] |
 | Medicare after a transplant | Coverage based on kidney failure ends 36 months after the transplant | [Medicare][MED-ESRD] |
-| Medicare immunosuppressive drug benefit (Part B-ID), 2026 | $121.60 a month (more with higher income), $283 yearly deductible | [Medicare][MED-ESRD]; [CMS][CMS26] |
+| Medicare immunosuppressive drug benefit (Part B-ID), 2026 | For people who had Medicare for kidney failure when they had the transplant and have no other cover for these medicines: $121.60 a month (more with higher income), a $283 yearly deductible, then 20 % of the cost | [Medicare][MED-ESRD]; [CMS][CMS26] |
 
 ## The steps
 
@@ -66,8 +69,8 @@ does **pancreas-kidney transplants** (8.1.1). This page walks through the steps.
 ## Type 1 diabetes: ask about the pancreas
 
 KDIGO suggests that people with type 1 diabetes and kidney failure be considered for a **simultaneous
-pancreas-kidney (SPK) transplant** where it is available, and referred to a center that does them
-([KDIGO 2020][K20TX], 8.1.1). The ADA keeps pancreas transplants for people with type 1 diabetes who
+pancreas-kidney (SPK) transplant** where it is available ([KDIGO 2020][K20TX], 8.1.1), so ask to be
+referred to a center that does them. The ADA keeps pancreas transplants for people with type 1 diabetes who
 are having, or have already had, a kidney transplant, or who have repeated DKA or severe lows. A
 working pancreas can bring glucose back to normal, but anti-rejection medicines are needed for life
 ([ADA 2026 §9][A26-9]). Not every center does pancreas transplants, so ask before you choose one.
@@ -96,7 +99,7 @@ date. You may pay for extra tests, travel and lodging, so check with your insure
 ## Examples
 
 **Referral before dialysis.** Your eGFR is 26. Your team refers you, and you are registered when your
-eGFR is 21. Your waiting time starts the month your eGFR reaches 20 ([OPTN][OPTN]). Meanwhile, a
+eGFR is 21. Your waiting time starts on the date a test shows your eGFR at 20 or less ([OPTN][OPTN]). Meanwhile, a
 friend is tested as a living donor, and the surgery is booked before you need dialysis.
 
 **Listed on dialysis.** You started dialysis 3 years ago but were never referred. You ask your unit,
@@ -138,7 +141,7 @@ your labs and phone number ([UNOS][UNOS-ML]).
 
 - [KDIGO 2020 transplant candidate guideline][K20TX]: recommendations 1.1, 1.1.1, 1.1.2, 1.1.3.2, 1.2,
   1.3.1, 1.4, 1.4.1, 4.1, 8.1.1, 10.4.1, 10.7.
-- [OPTN policies][OPTN]: Policy 8 (kidney waiting time).
+- [OPTN policies][OPTN]: Policy 8.4.A (kidney waiting time for adults).
 - [UNOS: multiple listing][UNOS-ML].
 - [NIDDK: kidney transplant][NIDDK-Tx]; [NKF: kidney transplant][NKF-Tx].
 - [ADA Standards of Care 2026, section 9][A26-9]: pancreas transplantation.

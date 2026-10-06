@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 sources: [AASM24, K24, K26A, A26-5, A26-6, A26-7, TIR19, NIDDK-hypo, DG55a]
 ---
 
@@ -15,18 +16,18 @@ sources: [AASM24, K24, K26A, A26-5, A26-6, A26-7, TIR19, NIDDK-hypo, DG55a]
 
 ## In short
 
-About half of people with kidney disease sleep poorly, and almost as many are bothered by itch
-([KDIGO 2024][K24], Figure 49). Common causes are **restless legs**, **itch**, **sleep apnea**,
+About half of people with kidney disease who are not on dialysis sleep poorly, and almost as many are
+bothered by itch ([KDIGO 2024][K24], Figure 49). Common causes are **restless legs**, **itch**, **sleep apnea**,
 **waking to pass urine**, worry, and with type 1 diabetes, **lows at night**. Most of these can be
 treated, so tell your team: KDIGO asks kidney teams to ask about symptoms at every visit, and the ADA
 asks diabetes teams to ask about sleep ([KDIGO 2024][K24], practice point 5.2.2.1;
-[ADA 2026 §5][A26-5]). For restless legs, the first step is a simple iron test
-([AASM 2024][AASM24]).
+[ADA 2026 §5][A26-5]). For restless legs, the first steps are a simple iron test and looking for things
+that make it worse ([AASM 2024][AASM24]).
 
 ## Your numbers
 
-**How common** ([KDIGO 2024][K24], Figure 49): tiredness about 70 % of people with CKD; poor sleep
-about 49 %; itch about 46 %.
+**How common** ([KDIGO 2024][K24], Figure 49): in people with CKD who are not on dialysis, tiredness
+about 70 %; poor sleep about 49 %; itch about 46 %.
 
 **Iron and restless legs** ([AASM 2024][AASM24]):
 
@@ -70,7 +71,9 @@ you are still. Moving eases it for a while ([AASM 2024][AASM24]).
 
 **What your team may do** ([AASM 2024][AASM24]; [KDIGO 2024][K24], Table 38):
 
-- **Check your iron** (ferritin and TSAT), ideally in the morning, and treat low iron.
+- **Check your iron** (ferritin and TSAT), ideally in the morning, and treat low iron. AASM advises
+  testing without iron pills or iron-rich food in the 24 hours before, so ask your team whether to
+  skip them before the test.
 - **Look for things that make it worse:** caffeine, alcohol, sedating antihistamines (ask your
   pharmacist whether a sleep or allergy aid contains one), some antidepressants and anti-sickness
   medicines, and untreated sleep apnea. A high phosphate level can also play a part.

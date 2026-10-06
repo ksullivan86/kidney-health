@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 sources: [Q19VA, NIDDK-HD, NKF-HDaccess, NIDDK-PD, AKF-bleed, I22P, CFR494]
 ---
 
@@ -35,8 +36,8 @@ the veins in your arms** from stage G3 on, and check your access every day.
 falling fast (more than 10 a year) ([KDOQI][Q19VA], statement 6.6).
 
 **If an access bleeds:** press firmly for **at least 10 minutes** before you check. If it is still
-bleeding after 10–15 minutes, or it is heavy or spurting, keep pressing and **call 911**
-([AKF][AKF-bleed]).
+bleeding after 10–15 minutes, starts again, or is heavy or spurting, keep pressing and **call 911**
+([AKF][AKF-bleed]; [NKF][NKF-HDaccess]).
 
 ## Protect your veins (from stage G3)
 
@@ -45,7 +46,8 @@ dialysis may be needed later. That means avoiding PICC lines (long IV lines put 
 and any needle stick that is not needed ([KDOQI][Q19VA], statement 6.10).
 
 - [ ] Ask your kidney team which arm may be used for a future access.
-- [ ] Say "I have kidney disease; please save my veins" before blood tests, drips and IVs.
+- [ ] Say "I have kidney disease; please save my veins" before blood tests, drips and IVs. NIDDK suggests
+      asking for a vein in the back of your hand ([NIDDK][NIDDK-HD]).
 - [ ] Ask staff to use the other arm, and ask for a different line if someone suggests a PICC.
 - [ ] Tell any doctor planning a heart procedure or a pacemaker that you may need a fistula; KDOQI
       lists these as other ways veins and arteries can be damaged ([KDOQI][Q19VA], statement 6.10).
@@ -59,8 +61,8 @@ and any needle stick that is not needed ([KDOQI][Q19VA], statement 6.10).
 - [ ] Wash the access with soap and warm water every day and before each treatment
       ([NIDDK][NIDDK-HD]; [NKF][NKF-HDaccess]).
 - [ ] Look for redness, warmth, swelling, pain or drainage ([NKF][NKF-HDaccess]).
-- [ ] **No** blood pressure cuff, blood draws or IVs on the access arm unless your dialysis team says it
-      is okay ([NKF][NKF-HDaccess]).
+- [ ] **No** blood pressure cuff on the access arm, and no blood draws or IVs in it unless your dialysis
+      team says it is okay ([NKF][NKF-HDaccess]).
 - [ ] **No** tight sleeves, watches or bracelets over the access; do not sleep on that arm; do not carry
       heavy bags on it ([NKF][NKF-HDaccess]).
 - [ ] If your team suggests exercises to help a new fistula grow, do the whole-arm exercises they show
@@ -69,10 +71,12 @@ and any needle stick that is not needed ([KDOQI][Q19VA], statement 6.10).
 
 ### Hemodialysis catheter
 
-- [ ] Follow your unit's rules for the dressing, showering and swimming. Ask before you get it wet.
-- [ ] Only dialysis staff should open or use the catheter.
-- [ ] Fever, chills or redness at the exit site means **call your unit the same day**: catheters carry
-      the highest infection risk ([NKF][NKF-HDaccess]).
+- [ ] Follow your unit's rules for the dressing, showering and swimming. Ask before you get it wet, and
+      tell the unit right away if the dressing gets wet, loose or dirty or comes off ([NKF][NKF-HDaccess]).
+- [ ] Only dialysis staff should open or use the catheter. Never open the caps yourself.
+- [ ] Fever, chills, or redness, swelling or drainage at the exit site means **call your unit right
+      away**, not at your next session: catheters carry the highest infection risk. With shaking chills,
+      confusion or a racing heart, call 911 ([NKF][NKF-HDaccess]; [Get help now](../get-help-now.md)).
 - [ ] Ask your team when a fistula or graft can replace it ([KDOQI][Q19VA], statement 2.6).
 
 ### PD catheter
@@ -95,7 +99,7 @@ a purring cat. One day it is gone. You call the unit at once instead of waiting 
 
 **A bleed at home.** After dialysis, your needle site starts bleeding at home. You sit down, press
 firmly on gauze with two fingers, and do not peek for 10 minutes. It has stopped. If it had not
-stopped after 10–15 minutes, you would keep pressing and call 911 ([AKF][AKF-bleed]).
+stopped after 10–15 minutes, or started again, you would keep pressing and call 911 ([AKF][AKF-bleed]).
 
 **Your rights in a US dialysis unit.** The care team must check your access and refer you for a new
 one in good time; this is part of your written plan of care ([42 CFR 494.90][CFR494]).
@@ -113,12 +117,14 @@ one in good time; this is part of your written plan of care ([42 CFR 494.90][CFR
 
 !!! danger "Call 911 (or your local emergency number)"
     Bleeding from a fistula or graft that is heavy, spurting, or has not stopped after 10–15 minutes of
-    firm pressure: keep pressing while you call ([AKF][AKF-bleed]). Also chest pain, severe
-    breathlessness, or fever with confusion or shaking chills. Full list: [Get help now](../get-help-now.md).
+    firm pressure: keep pressing while you call ([AKF][AKF-bleed]; [NKF][NKF-HDaccess]). Also chest pain,
+    severe breathlessness, or fever with confusion, shaking chills or a racing heart. Full list:
+    [Get help now](../get-help-now.md).
 
-!!! warning "Call your dialysis or PD unit today"
+!!! warning "Call your dialysis or PD unit right away (do not wait for your next session)"
     No buzz in your fistula or graft; redness, warmth, pus or pain at an access or exit site; fever or
-    chills with a catheter; cloudy PD fluid (keep the bag) ([NKF][NKF-HDaccess]; [ISPD 2022][I22P]).
+    chills with a catheter; a catheter that moves, cracks, leaks or comes out; cloudy PD fluid (keep the
+    bag) ([NKF][NKF-HDaccess]; [ISPD 2022][I22P]).
 
 ## Related pages
 

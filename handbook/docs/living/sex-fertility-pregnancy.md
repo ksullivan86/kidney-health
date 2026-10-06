@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [UKKA19, K24, REMS, FDA-MYCO26, CELLCEPT, K09TX, A26-15, NKF-pregnancy]
+fact_checked: 2026-10-06
+sources: [UKKA19, K24, REMS, FDA-MYCO26, CELLCEPT, K09TX, A26-15, A26-11, KER, NKF-pregnancy]
 ---
 
 # Sex, fertility and pregnancy
@@ -29,7 +30,8 @@ function falls, and periods often become irregular on dialysis, but **pregnancy 
 so use reliable contraception unless you are planning a pregnancy ([NKF][NKF-pregnancy];
 [UK Kidney Association][UKKA19], 3.1.1). Pregnancy is riskier at higher CKD stages, on dialysis and
 after a transplant, and some kidney and transplant medicines can harm a baby. With planning, many
-people have healthy pregnancies ([NKF][NKF-pregnancy]).
+people with early-stage kidney disease or a stable transplant have healthy pregnancies. On dialysis the
+risks to parent and baby are high, and pregnancy is usually advised against ([NKF][NKF-pregnancy]).
 
 ## Your numbers
 
@@ -41,7 +43,7 @@ people have healthy pregnancies ([NKF][NKF-pregnancy]).
 | After a transplant | Wait at least 1 year, with stable kidney function and little protein in the urine | [KDIGO 2009][K09TX], 25.2.1; [UK Kidney Association][UKKA19], 5.1.1 |
 | Mycophenolate (for example CellCept) | Must be stopped or switched before trying. The label requires acceptable birth control during treatment and for 6 weeks after stopping; UK guidance allows 3 months to switch and check that things are stable | [CellCept label][CELLCEPT], 8.3; [UK Kidney Association][UKKA19], 2.5 |
 | Men taking mycophenolate | The label recommends effective contraception during treatment and for at least 90 days after stopping, and no sperm donation | [CellCept label][CELLCEPT], 8.3 |
-| CKD stage | G1–G2 with normal blood pressure and little protein: a healthy pregnancy is often possible. G3–G5: the risk of complications is much greater | [NKF][NKF-pregnancy] |
+| CKD stage | G1–G2 with normal blood pressure and little protein: a healthy pregnancy is often possible. G3–G5: the risk of complications is much greater. Kidney failure: usually advised against | [NKF][NKF-pregnancy] |
 | Dialysis in pregnancy | Longer, more frequent hemodialysis; people on PD are usually moved to hemodialysis | [UK Kidney Association][UKKA19], 5.2.2, 5.2.4 |
 
 **Mycophenolate REMS:** in July 2026 the FDA ended the mycophenolate REMS program, but the label's
@@ -70,7 +72,15 @@ contraception and pregnancy to anyone who could become pregnant ([KDIGO 2024][K2
   people with diabetic kidney disease may stay on an ACE inhibitor until conception, with regular
   pregnancy tests ([UK Kidney Association][UKKA19], 3.3.5–3.3.6, 5.4.2). **Your teams decide the
   timing together. Do not stop on your own:** these medicines protect your kidneys.
-- **Statins** (cholesterol medicines): usually stopped before conception ([ADA 2026 §15][A26-15]).
+- **Finerenone (Kerendia)** and other MRAs: the ADA lists them with ACE inhibitors and ARBs as medicines
+  to stop before conception; finerenone has not been studied in human pregnancy and harmed unborn
+  animals ([ADA 2026 §15][A26-15], recommendation 15.25a; [Kerendia label][KER], section 8.1).
+- **SGLT2 inhibitors**, if you take one: the ADA lists them among kidney medicines not to use in
+  pregnancy ([ADA 2026 §11][A26-11], recommendation 11.10).
+- **GLP-1 receptor agonists** (sometimes used for weight): the ADA says to stop them before pregnancy;
+  semaglutide at least 2 months before ([ADA 2026 §15][A26-15]).
+- **Statins** (cholesterol medicines): usually stopped before conception ([ADA 2026 §15][A26-15],
+  recommendation 15.25b).
 - **Mycophenolate** and some other anti-rejection medicines: switched before pregnancy
   ([KDIGO 2009][K09TX], 25.2.2–25.2.3; [UK Kidney Association][UKKA19], 2.4–2.5).
 - **Every other medicine and supplement**, including any new kidney or diabetes medicine.
@@ -87,8 +97,8 @@ contraception and pregnancy to anyone who could become pregnant ([KDIGO 2024][K2
       ([ADA 2026 §15][A26-15], 15.11).
 - [ ] If you are at stage 4–5 and thinking about pregnancy, ask about treatment options for kidney
       failure as well ([UK Kidney Association][UKKA19], 3.3.7).
-- [ ] If you take an ACE inhibitor, ARB or mycophenolate and your period is late, take a pregnancy
-      test and call your prescriber the same day.
+- [ ] If you take an ACE inhibitor, ARB, finerenone, an SGLT2 inhibitor or mycophenolate and your
+      period is late, take a pregnancy test and call your prescriber the same day.
 
 ## Examples
 
@@ -123,8 +133,9 @@ medicine ([UK Kidney Association][UKKA19], 4.2.1, 4.2.5).
     gives you. Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your team the same day"
-    A positive pregnancy test while you take an ACE inhibitor, ARB, statin or anti-rejection medicine.
-    Do not stop the medicine yourself; ask what to do.
+    A positive pregnancy test while you take an ACE inhibitor, ARB, finerenone, an SGLT2 inhibitor, a
+    GLP-1 receptor agonist, a statin or an anti-rejection medicine. Do not stop the medicine yourself;
+    ask what to do.
 
 ## Related pages
 
@@ -139,8 +150,9 @@ medicine ([UK Kidney Association][UKKA19], 4.2.1, 4.2.5).
   3.3.1–3.3.7, 4.2.1, 4.2.5, 5.1.1, 5.2.2, 5.2.4, 5.4.2.
 - [KDIGO 2024 CKD guideline][K24]: practice point 4.1.4; Figure 49.
 - [KDIGO 2009 transplant recipient guideline][K09TX]: 25.1.1–25.1.2, 25.2.1–25.2.3, 25.2.6.
-- [ADA Standards of Care 2026, section 15][A26-15]: recommendations 15.2, 15.3, 15.11; medicines to
-  stop before conception.
+- [ADA Standards of Care 2026, section 15][A26-15]: recommendations 15.2, 15.3, 15.11, 15.25a–b;
+  medicines to stop before conception. [Section 11][A26-11]: recommendation 11.10.
+- [Kerendia (finerenone) prescribing information][KER]: section 8.1.
 - [CellCept (mycophenolate) prescribing information, 7/2026][CELLCEPT]: section 8.3;
   [FDA 2026: mycophenolate REMS removed][FDA-MYCO26]; [Mycophenolate REMS][REMS].
 - [NKF: pregnancy and kidney disease][NKF-pregnancy].

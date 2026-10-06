@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 sources: [A26-5, K24, "988", CFR494, NKF-PEERS]
 ---
 
@@ -29,10 +30,10 @@ medicines as options ([KDIGO 2024][K24], Table 38). If you ever think about harm
 
 | Check | How often |
 |---|---|
-| Diabetes distress (also offered to caregivers and family) | At least once a year, and when goals are not being met or life changes |
+| Diabetes distress (also offered to caregivers and family) | At least once a year, and again when treatment goals are not being met |
 | Depression | At least once a year; more often if you have had depression before |
 | Anxiety | At least once a year |
-| Fear of lows | At least once a year if you have frequent or severe lows |
+| Fear of lows | At least once a year, and when needed, if you are at high risk of lows |
 | Disordered eating, including skipping insulin to control weight | Screened with a validated questionnaire |
 
 **Where to get help:**

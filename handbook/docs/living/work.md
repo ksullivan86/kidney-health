@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-06
 figures_as_of: 2026-10-06
 sources: [EEOC, FMLA, SSA, SSA-6, NIDDK-choosing, JAN-DIAL, CFR494, NIDDK-hypo]
 ---
@@ -30,8 +31,8 @@ charity.
 
 | Rule | The numbers | Source |
 |---|---|---|
-| Americans with Disabilities Act: who must make accommodations | Employers with 15 or more employees | [EEOC][EEOC] |
-| Time limit to file a discrimination charge | 180 days from the event (300 days in some states) | [EEOC][EEOC] |
+| Americans with Disabilities Act: who must make accommodations | Private employers with 15 or more employees, and state and local governments; some state laws also cover smaller employers | [EEOC][EEOC] |
+| Time limit to file a discrimination charge | 180 days from the event (300 days where a state or local agency also enforces a disability law); federal employees: contact an EEO counselor within 45 days | [EEOC][EEOC] |
 | FMLA leave | Up to 12 workweeks of **unpaid**, job-protected leave in 12 months; can be taken a day or a few hours at a time when medically needed; your group health cover continues | [Department of Labor][FMLA] |
 | Who can use FMLA | Employer with 50 or more employees within 75 miles; you have worked there 12 months and at least 1,250 hours in the last year | [Department of Labor][FMLA] |
 | FMLA for family | Also covers caring for a spouse, child or parent with a serious health condition | [Department of Labor][FMLA] |
@@ -52,18 +53,20 @@ Examples from the EEOC and the Job Accommodation Network ([EEOC][EEOC]; [JAN][JA
 - Leave for treatment, recovery or diabetes training.
 
 You do not need special words. Tell your employer that you need a change at work because of a medical
-condition ([EEOC][EEOC]).
+condition. A family member, friend or health professional can also ask on your behalf ([EEOC][EEOC]).
 
 ## Telling your employer
 
-- **It is your choice.** You do not have to tell an employer that you have diabetes or kidney disease.
-  You can ask for an accommodation at any time after you are hired ([EEOC][EEOC]).
+- **It is your choice.** You do not have to tell an employer that you have diabetes or kidney disease,
+  unless you need an accommodation during hiring. You can ask for an accommodation during the hiring
+  process or at any time after you start, even if you did not mention it before ([EEOC][EEOC]).
 - To get an accommodation, you will need to say that you have a medical need. If the need is not
   obvious, your employer may ask for reasonable documentation, such as a note from your doctor
   ([EEOC][EEOC]).
 - Your employer must keep medical information private, and may not tell coworkers you have diabetes
   ([EEOC][EEOC]).
-- Before a job offer, employers may not ask about your health ([EEOC][EEOC]).
+- Before a job offer, employers may not ask about your health. After an offer, they may ask health
+  questions only if they ask everyone offered the same kind of job ([EEOC][EEOC]).
 
 ## Treatments that fit around work
 
