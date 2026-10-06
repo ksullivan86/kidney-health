@@ -97,6 +97,13 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
 
 ## For people using the app
 
+* **Where it is.** When the server offers AI to you, the **Add** view shows **AI meal ideas**, **Describe a
+  meal (AI)**, **Read a label (AI)** and (if your admin turned it on) **Plate photo (AI)**, with the
+  shared calls left today. Meal guidance can show AI ideas next to its own suggestions too. Each idea
+  card lists the foods with their warnings, the totals, what is left today after it, up to two
+  handbook links, the label "AI idea · provider · model · checked against your targets · not medical
+  advice", how many AI ideas the rules left out and why, and **Add to plan** (planned entries through
+  the ordinary log). If every idea is left out, the app's own ideas are shown instead.
 * **Turning it on.** Settings → **AI ideas** → **Use AI ideas** (off by default). The section says when
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
@@ -387,7 +394,7 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 * Connection tests: 5 per hour per person, 20 per hour per admin.
 * Each call allows at most one extra request: a retry after a 429 (honouring `Retry-After` up to 10 s),
   a 5xx or a connection error (after 1 s), or one repair turn after an answer that was not valid JSON.
-* Settings → Admin → AI usage (`GET /api/admin/ai-usage`) shows requests and tokens per person and
+* Settings → AI ideas → **AI usage** (admins; `GET /api/admin/ai-usage`) shows requests and tokens per person and
   provider. Admins never see what was sent.
 
 ### Retention and backups

@@ -716,6 +716,8 @@ app/static/
   js/mock/labs.js       demo /api/labs routes (M2 targets); js/mock/profile.js answers the v0.3 profile fields and suggestion
   js/pwa.js (M1), js/offline.js, js/scan.js (M2)
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
+  js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
+  js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
   js/mock/handbook.js   demo answer for GET /api/handbook (no handbook in the demo)
   js/main.js            boot
 ```
@@ -1576,10 +1578,44 @@ provider id, preset, model, host, latency, tokens and status only.
 `register_ai_status` feeds `GET /api/guidance/next-meal`'s `ai` block: `{available, provider_label}` is
 true when AI is on, the person opted in and a provider resolves (no quota, nothing sent).
 
+### Frontend (`js/views/ai.js` = `KH.ai`, `css/ai.css`; `docs/ai.md` "For people using the app")
+
+* **Settings → AI ideas** fills the `#set-ai-slot` that `js/views/settings.js` leaves for M2 (a
+  `MutationObserver` re-renders it whenever the Settings view is shown): "Use AI ideas", the provider
+  (each shared one with its policy line, or "My own provider and key"), share age band and sex,
+  preferences, calls left today, "My own AI provider" (preset, model, vision model, a public https
+  address for a custom server when allowed, the write-only key through `KH.views.settings.keyWidget`,
+  Test connection, Remove), "What you agreed to send" (Withdraw), "AI activity" (sent / received /
+  verdict while kept; "Delete my AI history"); for admins "AI providers (admin)": each provider with its
+  key status, badges and last test, Test connection, Edit, Delete; Add a shared provider (preset, name,
+  address, model, vision model, key, advanced options); `AI_PRIVATE_HOSTS` read-only; AI usage (counts).
+  The `ai.*` switches are in Admin → Server settings like every registry key.
+* **Add view**: `#ai-add-slot` shows the features `GET /api/ai/status` reports (AI meal ideas, Describe a
+  meal, Read a label, Plate photo) and the shared calls left; "AI ideas are off for you" with a link to
+  Settings when the person has not opted in; nothing when AI is off.
+* **Sheets** (`#sheet-ai`, `#sheet-ai-consent`, `#sheet-ai-sent` in `index.html`): every call goes through
+  `KH.ai.withConsent(purpose, send, preview)`: a `409 consent_required` opens the consent sheet (provider,
+  host, policy line, the dry run, "Show me the request before every AI call to this server" =
+  `skip_preview: false`), then `POST /api/ai/consent` and one retry; with `skip_preview` false the dry run
+  is shown first with a Send button. Pre-filter answers (cards) are shown instead and need no consent.
+  Photos are redrawn on the device (`createImageBitmap` → canvas, long edge ≤ 1600 px, JPEG 0.85, no EXIF)
+  and sent as the raw `image/jpeg` body. The label draft is editable, fields read by AI are marked "from
+  photo" or "estimated", and "Save as my food" uses `POST /api/foods` (then optionally `POST /api/log`).
+  Meal ideas, described meals and plate items are added with `POST /api/log/batch` only on a tap.
+* **For guidance's UI**: `KH.ai.mountIdeas(element, {date, meal})` renders the AI ideas block (button,
+  "What will be sent?", results) inside "What fits now" when `next-meal`'s `ai.available` is true;
+  `KH.ai.openIdeas({date, meal, trigger})` opens it in a sheet; `KH.ai.withConsent('text', () =>
+  KH.ai.api.nextMeal(body), () => KH.ai.api.nextMeal(body, true))` runs the other modes (`rerank`, `swap`
+  with `entry_id` or `food_id` + `servings`, `plan`).
+* Model output is set with `textContent` only; links only through `KH.learn.href` (handbook pages);
+  `tests/test_ai_ui.py` checks the routes it calls, the demo answer's shape and these rules.
+
 ### Parity (demo/preview mode)
 
 The `ai.*` keys are in `tests/data/settings_vectors.json` and `js/engine/settings.js`. Demo mode never
-calls a provider.
+calls a provider: `js/mock/ai.js` answers like a server with AI off (`GET /api/me/ai` → `enabled: false`;
+every `/api/ai/*` and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
+app.
 
 ## M3: the handbook at `/learn`
 
