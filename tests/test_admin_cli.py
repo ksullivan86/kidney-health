@@ -129,7 +129,7 @@ def test_check_and_restore_check(tmp_path, env):
     assert code == 0 and "no database yet" in out and "created on first start" in out
     path = make_v3ish_db(tmp_path / "data")
     code, out = run(["check"], env)
-    assert code == 0 and "ok: integrity_check" in out and "schema version 3" in out
+    assert code == 0 and "ok: integrity_check" in out and f"schema version {db.SCHEMA_VERSION}" in out  # every step applied
     code, out = run(["restore-check", str(path), "--revoke-sessions"], env)
     assert code == 0 and "revoked 1 session" in out
     conn = sqlite3.connect(path)

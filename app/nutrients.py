@@ -3,7 +3,8 @@
 Everything in this module is a pure function: no I/O, no database, no FastAPI.
 It is the single source of truth for nutrient keys, per-serving warning
 thresholds, daily status levels and the suggested-target starting points
-described in ARCHITECTURE.md.
+described in ARCHITECTURE.md. The suggested-target rules themselves live in
+:mod:`app.targets` (v0.3); :func:`suggest_targets` keeps the v0.2 signature on top of them.
 """
 from __future__ import annotations
 
@@ -11,6 +12,10 @@ import math
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping
+
+# Returned with every potassium suggestion (contract requirement); the note texts live in
+# app/target_rules.py, a data-only module (no import cycle).
+from .target_rules import POTASSIUM_NOTE  # noqa: F401  (re-exported: nutrients.POTASSIUM_NOTE)
 
 # --------------------------------------------------------------------------- #
 # Registry
@@ -452,70 +457,19 @@ def projected_meal_carb_alerts(
 
 
 # --------------------------------------------------------------------------- #
-# Suggested targets
+# Suggested targets (v0.2 signature; the rules live in app/targets.py since v0.3)
 # --------------------------------------------------------------------------- #
 
-# Starting points from ARCHITECTURE.md "Suggested targets", reconciled with
-# docs/research/targets_by_stage.json and docs/diet-guide.md section 7. Kept as data.
-CALORIES_PER_KG = 30.0  # KDOQI 25–35 kcal/kg
-CARB_FRACTION_OF_CALORIES = 0.45
-PROTEIN_G_PER_KG = {
-    # (dialysis) -> (min, max); non-dialysis also depends on stage, see below.
-    "hemodialysis": (1.0, 1.2),
-    "peritoneal": (1.0, 1.2),
-    "none_ckd3plus": (0.6, 0.8),  # CKD 3–5 with diabetes
-    "none_ckd1_2": (0.8, 1.0),  # not in the contract: RDA 0.8, avoid > 1.3 g/kg (KDIGO)
-}
-# Starting points (ARCHITECTURE.md "Suggested targets"): no guideline fixes a number;
-# restriction is only ordered when serum potassium runs high. These are the review
-# ceilings of docs/research/targets_by_stage.json (the fact-checked file wins).
-POTASSIUM_MG = {
-    "hemodialysis": 2500,
-    "peritoneal": 3500,
-    "1": 4000,  # informational: stages 1–2 are usually unrestricted
-    "2": 4000,
-    "3a": 4000,
-    "3b": 3500,
-    "4": 3000,
-    "5": 2500,
-}
-# Returned verbatim with every potassium suggestion (contract requirement).
-POTASSIUM_NOTE = "Only restrict potassium if your blood potassium is high; your care team sets the number."
-# 800–1000 mg when phosphate runs high (KDOQI 2003): 1000 for stages 1–4 and on dialysis
-# ("adjusted for protein needs"), 900 for stage 5 without dialysis. Reconciled with
-# docs/research/targets_by_stage.json (tests compare the two).
-PHOSPHORUS_MG = {"1": 1000, "2": 1000, "3a": 1000, "3b": 1000, "4": 1000, "5": 900}
-PHOSPHORUS_MG_DIALYSIS = {"hemodialysis": 1000, "peritoneal": 1000}
-SODIUM_MG = 2000
-CALCIUM_MG = 1000
-FLUID_ML = {"none": None, "hemodialysis": 1500, "peritoneal": 2000}
-
-# Every per-kg guideline figure (KDOQI 2020 3.0.1 energy, 3.1.x protein) is per kg of *ideal*
-# body weight. Without the person's sex the Hamwi/Devine formulas cannot be used, so the ideal
-# weight is taken sex-neutrally as the weight at the edge of the healthy BMI band for the
-# person's height: BMI 25 when they are above it, BMI 18.5 when below, their actual weight
-# in between. Without a height the actual weight is the only option, and the notes say so.
-IBW_BMI_MIN = 18.5
-IBW_BMI_MAX = 25.0
-
-
 def dosing_weight(weight_kg: float, height_cm: float | None) -> tuple[float, str]:
-    """``(weight used for per-kg targets, basis)``.
+    """``(reference weight in kg, basis)`` for per-kg targets; see :func:`app.targets.reference_weight`.
 
-    ``basis`` is ``"actual"`` (within the healthy BMI band, or no height), ``"ideal_bmi_25"`` or
-    ``"ideal_bmi_18.5"``. The returned weight is rounded to 0.1 kg.
+    ``basis`` is ``"actual"`` (healthy BMI band), ``"actual_no_height"``, ``"adjusted_above_bmi25"``
+    or ``"adjusted_below_bmi18_5"``; the weight is rounded half-up to 0.1 kg (note 05 §4.3).
     """
-    w = float(weight_kg)
-    if height_cm is None or not math.isfinite(float(height_cm)) or float(height_cm) <= 0:
-        return w, "actual"
-    h_m = float(height_cm) / 100.0
-    bmi = w / (h_m * h_m)
-    eps = 1e-9  # exactly BMI 25.0 / 18.5 counts as inside the band despite float noise
-    if bmi > IBW_BMI_MAX + eps:
-        return _half_up(IBW_BMI_MAX * h_m * h_m, 1), "ideal_bmi_25"
-    if bmi < IBW_BMI_MIN - eps:
-        return _half_up(IBW_BMI_MIN * h_m * h_m, 1), "ideal_bmi_18.5"
-    return w, "actual"
+    from .targets import reference_weight
+
+    ref = reference_weight(weight_kg, height_cm)
+    return ref.weight_kg, ref.basis
 
 
 def suggest_targets(
@@ -525,136 +479,19 @@ def suggest_targets(
     diabetes: str = "type1",
     height_cm: float | None = None,
 ) -> dict[str, Any]:
-    """Return ``{"targets": {...}, "notes": [...]}`` starting points for the care team to adjust.
+    """``{"targets": {...}, "notes": [...]}``: starting points for the care team to adjust.
 
-    Calories, protein and therefore carbohydrate are per kg of **ideal** body weight
-    (see :func:`dosing_weight`); with no ``height_cm`` the actual weight is used and the notes say so.
+    The v0.2 entry point, kept for existing callers: it builds :class:`app.targets.Inputs` from
+    these arguments alone (no age, sex, activity, labs or transplant) and applies the personalised
+    rules of note 05 §4.3 (``app.targets.suggest``). Raises ``ValueError`` for an input the rules
+    cannot use. ``GET /api/profile/suggested-targets`` uses :func:`app.targets.suggest_from_records`
+    with the whole profile and the person's lab results instead.
     """
-    if weight_kg is None or not math.isfinite(float(weight_kg)) or float(weight_kg) <= 0:
-        raise ValueError("weight_kg must be a positive number")
-    if height_cm is not None and (not math.isfinite(float(height_cm)) or float(height_cm) <= 0):
-        raise ValueError("height_cm must be a positive number")
-    if ckd_stage not in CKD_STAGES:
-        raise ValueError(f"ckd_stage must be one of {', '.join(CKD_STAGES)}")
-    if dialysis not in DIALYSIS_MODES:
-        raise ValueError(f"dialysis must be one of {', '.join(DIALYSIS_MODES)}")
-    if diabetes not in DIABETES_TYPES:
-        raise ValueError(f"diabetes must be one of {', '.join(DIABETES_TYPES)}")
+    from datetime import date
 
-    actual = float(weight_kg)
-    w, basis = dosing_weight(actual, height_cm)
-    on_dialysis = dialysis != "none"
-    notes: list[str] = []
+    from .targets import Inputs, suggest
 
-    if basis == "actual" and height_cm is None:
-        notes.append(
-            f"Weight basis: guidelines give calories and protein per kg of ideal body weight; without a saved "
-            f"height the actual weight ({actual:g} kg) is used. Add your height if you are over- or under-weight."
-        )
-    elif basis == "actual":
-        notes.append(
-            f"Weight basis: {actual:g} kg is within the healthy BMI range for {float(height_cm):g} cm, "
-            "so it is used as the ideal body weight."
-        )
-    else:
-        edge = "25" if basis == "ideal_bmi_25" else "18.5"
-        notes.append(
-            f"Weight basis: calories and protein are per kg of ideal body weight; for {float(height_cm):g} cm "
-            f"that is taken as {w:g} kg (BMI {edge}), not the actual {actual:g} kg (KDOQI 2020)."
-        )
-
-    calories = int(round(CALORIES_PER_KG * w))
-    notes.append(
-        f"Calories: {CALORIES_PER_KG:g} kcal/kg × {w:g} kg ideal body weight = {calories} kcal "
-        "(KDOQI 2020 3.0.1 range 25–35 kcal/kg)."
-    )
-
-    if on_dialysis:
-        p_min, p_max = PROTEIN_G_PER_KG[dialysis]
-        notes.append(
-            f"Protein: {p_min}–{p_max} g/kg ideal body weight for {dialysis} (KDOQI 2020 3.1.2/3.1.4); "
-            "losses during dialysis mean more protein is needed, not less."
-        )
-    elif ckd_stage in ("1", "2"):
-        p_min, p_max = PROTEIN_G_PER_KG["none_ckd1_2"]
-        notes.append(
-            f"Protein: {p_min}–{p_max} g/kg ideal body weight for CKD stage {ckd_stage}; guidelines only ask to avoid "
-            "high intakes (> 1.3 g/kg) this early."
-        )
-    else:
-        p_min, p_max = PROTEIN_G_PER_KG["none_ckd3plus"]
-        source = (
-            "non-dialysis CKD 3–5 with diabetes (KDOQI 2020 3.1.3)"
-            if diabetes != "none"
-            else "non-dialysis CKD 3–5 (KDOQI 2020 3.1.1 gives 0.55–0.6; KDIGO 2024 3.3.1.1 gives 0.8)"
-        )
-        notes.append(
-            f"Protein: {p_min}–{p_max} g/kg ideal body weight for {source}; "
-            "below 0.6 risks wasting and hypoglycaemia; guidelines recommend 0.8 and advise avoiding "
-            "more than 1.3 g/kg (KDIGO 2024)."
-        )
-    protein = {"min": int(round(p_min * w)), "max": int(round(p_max * w))}
-
-    if on_dialysis:
-        potassium = POTASSIUM_MG[dialysis]
-        notes.append(f"Potassium: {potassium} mg/day is a common {dialysis} starting point. {POTASSIUM_NOTE}")
-    else:
-        potassium = POTASSIUM_MG[ckd_stage]
-        if ckd_stage in ("1", "2"):
-            notes.append(
-                f"Potassium: {potassium} mg/day is informational only; stages 1–2 usually need no restriction. "
-                f"{POTASSIUM_NOTE}"
-            )
-        else:
-            notes.append(
-                f"Potassium: {potassium} mg/day is the starting point for stage {ckd_stage}; medicines "
-                f"(ACE inhibitors, ARBs, potassium binders) change it. {POTASSIUM_NOTE}"
-            )
-
-    phosphorus = PHOSPHORUS_MG_DIALYSIS[dialysis] if on_dialysis else PHOSPHORUS_MG[ckd_stage]
-    notes.append(
-        f"Phosphorus: {phosphorus} mg/day (guideline range 800–1000 mg); avoiding phosphate additives "
-        "matters more than the total because additive phosphorus is almost fully absorbed."
-    )
-
-    notes.append(f"Sodium: {SODIUM_MG} mg/day (KDIGO < 2000 mg, KDOQI < 2300 mg).")
-
-    fluid = FLUID_ML[dialysis]
-    if dialysis == "hemodialysis":
-        notes.append(
-            "Fluid: 1000 mL plus your 24-hour urine volume; 1500 mL assumes about 500 mL of urine. "
-            "Ask your dialysis unit for your personal allowance."
-        )
-    elif dialysis == "peritoneal":
-        notes.append(
-            "Fluid: about 2000 mL/day on peritoneal dialysis, individualised to residual kidney function. "
-            "Also subtract the glucose absorbed from dialysate (often 400+ kcal/day) from the calorie goal."
-        )
-    else:
-        notes.append("Fluid: no routine limit without dialysis (left untracked) unless your care team sets one.")
-
-    carbs = int(round(calories * CARB_FRACTION_OF_CALORIES / 4.0))
-    carbs_per_meal = max(15, int(round(carbs / 4.0 / 5.0)) * 5)
-    if diabetes == "none":
-        notes.append(f"Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day.")
-    else:
-        notes.append(
-            f"Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day, about {carbs_per_meal} g per meal "
-            "for carb counting; your insulin-to-carb ratio decides the real per-meal number."
-        )
-
-    notes.append(f"Calcium: {CALCIUM_MG} mg/day total including calcium-based phosphate binders.")
-    notes.append("These are starting points only — confirm every target with your nephrologist and renal dietitian.")
-
-    targets: dict[str, Any] = {
-        "calories_kcal": calories,
-        "protein_g": protein,
-        "carbs_g": carbs,
-        "carbs_per_meal_g": carbs_per_meal,
-        "sodium_mg": SODIUM_MG,
-        "potassium_mg": potassium,
-        "phosphorus_mg": phosphorus,
-        "calcium_mg": CALCIUM_MG,
-        "fluid_ml": fluid,
-    }
-    return {"targets": targets, "notes": notes}
+    inputs = Inputs(weight_kg=weight_kg, ckd_stage=ckd_stage, dialysis=dialysis, diabetes=diabetes, height_cm=height_cm)
+    # Without a birth month, transplant date or labs the date does not change the result.
+    result = suggest(inputs, date.today())
+    return {"targets": result.targets, "notes": result.notes}

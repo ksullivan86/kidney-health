@@ -154,7 +154,7 @@ def test_suggested_targets_from_profile(client):
     r = client.get("/api/profile/suggested-targets")
     assert r.status_code == 200
     body = r.json()
-    assert body["targets"]["protein_g"] == {"min": 42, "max": 56}
+    assert body["targets"]["protein_g"] == {"min": 56, "max": 56}  # type 1 diabetes at G3b: 0.8 g/kg (note 05 §5.3)
     assert body["targets"]["potassium_mg"] == 3500 and body["targets"]["phosphorus_mg"] == 1000
     assert body["targets"]["fluid_ml"] is None and body["targets"]["calories_kcal"] == 2100
     assert isinstance(body["notes"], list) and body["notes"]
@@ -956,14 +956,14 @@ def test_update_entry_keeps_grams_and_servings_consistent_after_the_food_is_repo
     assert u["grams"] is None and u["servings"] == 2 and u["nutrients"]["potassium_mg"] == 200
 
 
-def test_suggested_targets_use_the_saved_height_for_ideal_body_weight(client):
+def test_suggested_targets_use_the_saved_height_for_the_reference_weight(client):
     client.put("/api/profile", json={"weight_kg": 100, "height_cm": 170, "ckd_stage": "4", "dialysis": "none"})
     body = client.get("/api/profile/suggested-targets").json()
-    assert body["targets"]["calories_kcal"] == 2169 and body["targets"]["protein_g"] == {"min": 43, "max": 58}
-    assert any("ideal body weight" in note and "72.3 kg" in note for note in body["notes"])
+    assert body["targets"]["calories_kcal"] == 2380 and body["targets"]["protein_g"] == {"min": 63, "max": 63}
+    assert any("adjusted weight" in note and "79.2 kg" in note for note in body["notes"])
     client.put("/api/profile", json={"height_cm": None})
     body = client.get("/api/profile/suggested-targets").json()
-    assert body["targets"]["calories_kcal"] == 3000 and body["targets"]["protein_g"] == {"min": 60, "max": 80}
+    assert body["targets"]["calories_kcal"] == 3000 and body["targets"]["protein_g"] == {"min": 80, "max": 80}
     assert any("without a saved height" in note for note in body["notes"])
     # the 400 for a missing weight is plain language (no field names)
     client.put("/api/profile", json={"weight_kg": None})
