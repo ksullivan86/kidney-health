@@ -1,0 +1,34 @@
+{
+  "id": "mode-rerank",
+  "category": "modes",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "mode": "rerank"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"refusal\": \"none\", \"order\": [{\"ref\": \"{{ref:Blueberries, raw}}\", \"reason_codes\": [\"low_potassium\"]}, {\"ref\": \"f999\", \"reason_codes\": [\"low_sodium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Blueberries, raw"
+    ],
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ]
+  }
+}

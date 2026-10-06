@@ -196,6 +196,8 @@ def test_a_good_idea_is_labelled_and_numbered_by_the_server():
     ([{"theme": "light", "items": [{"food_id": True, "quarters": 4}]}], "malformed_item"),
     ([{"theme": "light", "items": [{"food_id": 1, "quarters": 4, "x": 1}]}], "malformed_item"),
     ([{"theme": "light"}], "malformed_idea"),
+    ([{**idea([(1, 4)]), "why": "Take 4 units of insulin with this"}], "unexpected_field"),
+    ([{**idea([(1, 4)]), "title": "Safe to eat"}], "unexpected_field"),
     (["rice"], "malformed_idea"),
 ])
 def test_grounding_drops(ideas, reason):

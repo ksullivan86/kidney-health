@@ -1,0 +1,39 @@
+{
+  "id": "hd-sodium-large-portion",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "5",
+      "dialysis": "hemodialysis"
+    },
+    "targets": "hd",
+    "entries": [
+      [
+        "breakfast",
+        "Orange juice",
+        1
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        1
+      ],
+      [
+        "lunch",
+        "Cheese, American, processed",
+        3
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Bread, white}}\",\"quarters\":12}],\"reason_codes\":[\"low_sodium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "high_portion_too_large"
+    ]
+  }
+}

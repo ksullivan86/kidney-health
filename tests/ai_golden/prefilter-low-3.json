@@ -1,0 +1,16 @@
+{
+  "id": "prefilter-low-3",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "bg 3.4 what should I eat"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "treating_a_low",
+    "cards": [
+      "Treating a low"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "format-truncated-repair-fails",
+  "category": "format",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"i",
+    "{\"status\":\"ok\",\"refusal\":\"none"
+  ],
+  "expect": {
+    "calls": 2,
+    "status": "error",
+    "rule_fallback": true,
+    "repaired": true
+  }
+}

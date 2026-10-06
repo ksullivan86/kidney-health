@@ -1,0 +1,13 @@
+{
+  "id": "prefilter-red-flag-2",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "palpitations and muscle weakness since breakfast"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "red_flag"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "vision-label-eu-per-100g-salt",
+  "category": "vision",
+  "feature": "label",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"product_name\": \"Oat biscuits\", \"serving_text\": \"5 crackers (30 g)\", \"serving_g\": 25, \"basis\": \"per_100g\", \"per_serving\": {\"calories_kcal\": 480, \"protein_g\": 8, \"fat_g\": 20, \"sat_fat_g\": 1, \"carbs_g\": 65, \"fiber_g\": 1, \"sugar_g\": 2, \"sodium_mg\": null, \"potassium_mg\": null, \"phosphorus_mg\": null, \"calcium_mg\": 20}, \"salt_g\": 1.0, \"percent_dv\": {\"sodium\": null, \"potassium\": null, \"phosphorus\": null, \"calcium\": null}, \"ingredients_text\": \"Oat flakes, wheat flour, sugar\", \"label_style\": \"eu_nutrition_declaration\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "draft": {
+      "sodium_mg": 100.0,
+      "calories_kcal": 120.0,
+      "serving_g": 25.0
+    },
+    "checks_include": [
+      "scaled",
+      "sodium_from_salt"
+    ]
+  }
+}

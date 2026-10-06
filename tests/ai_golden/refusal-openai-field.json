@@ -1,0 +1,33 @@
+{
+  "id": "refusal-openai-field",
+  "category": "refusal",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    {
+      "content": null,
+      "refusal": "I can't help with insulin dosing."
+    }
+  ],
+  "expect": {
+    "status": "refused",
+    "response_excludes": [
+      "insulin dosing"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "prefilter-low-fat-milk-is-a-food",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "low-fat milk and 2 slices of toast"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"items\": [{\"text\": \"low-fat milk\", \"search\": \"milk\", \"amount\": null, \"unit\": \"none\"}, {\"text\": \"2 slices of toast\", \"search\": \"bread\", \"amount\": 2, \"unit\": \"slice\"}]}"
+  ],
+  "expect": {
+    "calls": 1,
+    "status": "ok",
+    "items": 2
+  }
+}

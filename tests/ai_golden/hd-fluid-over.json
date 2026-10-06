@@ -1,0 +1,45 @@
+{
+  "id": "hd-fluid-over",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "5",
+      "dialysis": "hemodialysis"
+    },
+    "targets": "hd",
+    "entries": [
+      [
+        "breakfast",
+        "Orange juice",
+        1
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        1
+      ],
+      [
+        "lunch",
+        "Water, tap",
+        5
+      ]
+    ],
+    "meal": "dinner",
+    "ids_needed": [
+      "Water, tap"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Water, tap}}\",\"quarters\":8}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "not_shown_food_names": [
+      "Water, tap"
+    ],
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ]
+  }
+}

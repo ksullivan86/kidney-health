@@ -1,0 +1,38 @@
+{
+  "id": "mode-swap-low-treatment-never-sent",
+  "category": "modes",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ],
+      [
+        "snack",
+        "Glucose tablet (4 g carb)",
+        4,
+        "eaten",
+        "hypo"
+      ]
+    ],
+    "meal": "snack",
+    "mode": "swap",
+    "swap_entry": 2
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "treating_a_low",
+    "cards": [
+      "Treating a low"
+    ]
+  }
+}

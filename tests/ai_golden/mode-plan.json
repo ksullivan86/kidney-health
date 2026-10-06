@@ -1,0 +1,23 @@
+{
+  "id": "mode-plan",
+  "category": "modes",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "mode": "plan"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"refusal\": \"none\", \"picks\": [{\"meal\": \"lunch\", \"index\": 0, \"reason_codes\": [\"low_potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "rules-large-portion-of-good-food-dropped",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":12},{\"food_id\":\"{{id:Apple, raw, with skin}}\",\"quarters\":12}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "too_many_carbs"
+    ]
+  }
+}

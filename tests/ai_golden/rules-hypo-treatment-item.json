@@ -1,0 +1,39 @@
+{
+  "id": "rules-hypo-treatment-item",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "ids_needed": [
+      "Glucose tablet (4 g carb)"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Glucose tablet (4 g carb)}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ],
+    "not_shown_food_names": [
+      "Glucose tablet (4 g carb)"
+    ],
+    "payload_excludes": [
+      "Glucose tablet"
+    ]
+  }
+}

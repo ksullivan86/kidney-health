@@ -1,0 +1,21 @@
+{
+  "id": "vision-plate",
+  "category": "vision",
+  "feature": "plate",
+  "fixture": {
+    "image": "progressive.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"items\": [{\"name\": \"white rice\", \"search\": \"rice white\", \"grams_estimate\": 150, \"confidence\": \"high\"}, {\"name\": \"insulin pen\", \"search\": \"insulin\", \"grams_estimate\": null, \"confidence\": \"low\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "items": 1,
+    "dropped_reasons_include": [
+      "text_policy:blocklist"
+    ],
+    "response_excludes": [
+      "insulin pen"
+    ]
+  }
+}

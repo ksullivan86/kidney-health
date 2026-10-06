@@ -1,0 +1,33 @@
+{
+  "id": "format-reasoning-content",
+  "category": "format",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    {
+      "content": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\",\"low_sodium\"],\"handbook\":[\"potassium\"]}]}",
+      "reasoning_content": "secret chain of thought about insulin"
+    }
+  ],
+  "expect": {
+    "status": "ok",
+    "response_excludes": [
+      "chain of thought"
+    ]
+  }
+}

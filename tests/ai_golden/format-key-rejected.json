@@ -1,0 +1,31 @@
+{
+  "id": "format-key-rejected",
+  "category": "format",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    {
+      "status": 401
+    }
+  ],
+  "expect": {
+    "calls": 1,
+    "status": "error",
+    "rule_fallback": true
+  }
+}

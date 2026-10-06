@@ -1,0 +1,13 @@
+{
+  "id": "prefilter-red-flag-3",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "my dad had a seizure, what food"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "red_flag"
+  }
+}

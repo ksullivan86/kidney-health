@@ -1,0 +1,39 @@
+{
+  "id": "hd-potassium-large-portion",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "5",
+      "dialysis": "hemodialysis"
+    },
+    "targets": "hd",
+    "entries": [
+      [
+        "breakfast",
+        "Orange juice",
+        1
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        1
+      ],
+      [
+        "breakfast",
+        "Banana, raw",
+        1
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":12},{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":12}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "high_portion_too_large"
+    ]
+  }
+}

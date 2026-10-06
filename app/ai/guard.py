@@ -209,9 +209,16 @@ def label(provider_label: str, model: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
+IDEA_KEYS = frozenset({"theme", "items", "reason_codes", "handbook"})
+
+
 def _idea_items(raw: Any) -> tuple[list[dict[str, Any]] | None, str | None]:
+    """V2/V3 for one idea: the four schema keys only (a ``title`` or ``why`` the schema does not allow is
+    free text, so the idea is dropped, §9 A2), and items of integer ``food_id`` and ``quarters``."""
     if not isinstance(raw, Mapping):
         return None, "malformed_idea"
+    if set(raw) - IDEA_KEYS:
+        return None, "unexpected_field"
     items = raw.get("items")
     if not isinstance(items, list):
         return None, "malformed_idea"

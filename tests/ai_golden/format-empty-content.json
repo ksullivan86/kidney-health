@@ -1,0 +1,34 @@
+{
+  "id": "format-empty-content",
+  "category": "format",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    {
+      "content": ""
+    },
+    {
+      "content": ""
+    }
+  ],
+  "expect": {
+    "calls": 2,
+    "status": "error",
+    "rule_fallback": true
+  }
+}
