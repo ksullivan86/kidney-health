@@ -36,6 +36,21 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   Verified: `pytest tests/test_ai_netpolicy.py` (122 cases), smoke script
   `$SCRATCH/v030/ai/smoke.py` (dry run, 409 consent, call, audit, /api/me/ai, admin list).
 
+* Resumed 2026-10-06 (second attempt, after a usage-limit cut-off at 100caec): committed the route tests
+  (`tests/test_ai_routes.py`, e05eb92); `js/engine/settings.js` twin lists the ai.* and food.* keys
+  (030521f; node tests/js/run_vectors.mjs: settings 444 checks pass); daily background re-test of shared
+  providers + re-test after an env key change (key fingerprint in probe_json) + R12 CA-store self-check
+  (eddb33b). Verified: `pytest tests/test_ai_*.py tests/test_imagecheck.py tests/test_migration_m006.py`.
+
+## Next (in order)
+1. tests/test_vision_api.py (route level: 404 off, 415/413/422, metadata removed in the forwarded bytes,
+   vision/plate/agent switches, Hermes check before every photo, photo consent, quota, dry run, 502, draft,
+   plate checklist, isolation); tests/test_ai_prompts.py (payload snapshot, escaping, never-sent fields).
+2. scripts/ai_eval.py (manual live runner over the golden inputs; results to docs/dev/ai-eval/).
+3. docs/ai.md, ARCHITECTURE "M2 API: AI and photos" + ownership row, docs/network-allowlist.md,
+   compose overlay check, docs/barcode-and-photos.md Photos section, docs/privacy.md (A8), ROADMAP (R14, A2).
+4. Frontend: decide (contract: app/static/** is the frontend owner's); at least a precise handoff.
+
 ## Decisions
 * Consents are rows (`ai_consents`, FK to provider and user) rather than a list inside the `ai` settings
   object: they must only be written by the consent route (which shows the exact payload), must not be
@@ -51,5 +66,10 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * Upstream failure: next-meal/parse-meal answer 200 `{"status":"error","reason",...,"fallback"}` (Layer 0
   degrade, R1); vision routes answer 502 (no rule result to fall back to).
 * At most one extra request per call (one retry for 429/5xx/connect, or one repair turn), R6 "at most one".
+* Daily re-test (R4 step 5) runs as a FastAPI background task after a person's call to a shared provider whose
+  test is missing or ≥ 24 h old (at most one attempt per provider per hour; own connection; a server slot under a
+  pseudo-person; nobody's quota). No timer thread: AI egress still happens only because someone used AI.
+* The env provider's key is never stored; `probe_json.key_fp` (HMAC under SECRET_KEY) tells start-up that the
+  key changed, which clears the stored test.
 * Frontend (app/static/**: AI cards, consent sheet, settings slot, label/plate UI, mock twins) is the
   frontend owner's; handoff below. settings.js lacks the ai.* keys (as it lacks guidance/food.* keys already).
