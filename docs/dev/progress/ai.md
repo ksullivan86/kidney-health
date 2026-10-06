@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # ai (M2): optional AI + photo routes
 
@@ -50,14 +50,29 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   Branch coverage (scratch coverage install): guard.py 100 %, AI package 92 % overall.
   Label draft: `flags` empty (saving scans the confirmed ingredient text), `needs` lists name/serving_g when missing.
 
-## Next (in order)
-1. Frontend (decided: build it; M1 reserved `#set-ai-slot` for M2, R13 lists `app/static/ai.js`, nobody else owns AI UI):
-   new files `app/static/js/ai.js` (KH.ai), `app/static/css/ai.css`, `app/static/js/mock/ai.js` (demo: "available
-   in the installed app"); index.html: link/script tags, `#ai-add-slot` in the Add view, AI sheets; settings.js:
-   one-line hook in renderAi. Then Chromium checks (375/1280, light/dark), test_frontend_shell, preview build.
-2. Handbook pages app/ai.md + self-hosting/configuration.md AI section: drop "coming in v0.3", plate gives names
-   + rough weight (note 03 R9), link docs/ai.md; build the handbook strict.
-3. Final: full `python -m pytest`, node vectors, progress note "Status: complete".
+* Frontend (b8b31de, abf6a1e, 64660d3, bf103b7): `app/static/js/views/ai.js` (KH.ai), `css/ai.css`,
+  `js/mock/ai.js` (demo answers as a server with AI off), index.html sheets + `#ai-add-slot`, sw.js shell list.
+  Verified: tests/test_ai_ui.py (6), test_frontend_shell, preview build, Chromium by hand at 375 px light and
+  1280 px dark (signed in with AI on against a local fake provider on 8331, AI off, opted out, demo mode): no
+  console errors, consent → dry run → send, label draft, plate checklist.
+* Handbook (59ab599): app/ai.md, app/barcode-and-photo.md, self-hosting/configuration.md; strict mkdocs build OK,
+  handbook content tests pass.
+* Final checks (2026-10-06): full `python -m pytest` and `node tests/js/run_vectors.mjs` (see the Final section).
+
+## Handoffs
+* frontend-guidance: "What fits now" can use `KH.ai.mountIdeas(container)` / `KH.ai.openIdeas()` and
+  `KH.ai.withConsent(purpose, send, preview, trigger)`; the guidance `ai` block's status comes from
+  `register_ai_status` (app/ai/routes.py). b8b31de briefly committed their then-uncommitted guidance lines in
+  index.html/sw.js; abf6a1e took them out again (they committed them themselves in a479162).
+* README owner (M3): an "Optional AI" section linking docs/ai.md (note 04 §6 Phase 5).
+* Maintainer: the three live eval runs (`scripts/ai_eval.py --preset ollama|openai|hermes`, docs/dev/ai-eval/README.md);
+  no service was reachable here.
+
+## Not verified here
+* Live providers (Ollama, OpenAI, OpenRouter, Hermes): only fake transports and a local fake server were used.
+* Real Hermes `/v1/toolsets` answers (the probe follows the documented shape; tests use recorded shapes).
+* A real phone camera and HEIC conversion (Chromium file input with JPEG/PNG only).
+* The CA-store self-check inside the built container image (unit-tested with fake paths).
 
 ## Decisions
 * Consents are rows (`ai_consents`, FK to provider and user) rather than a list inside the `ai` settings
@@ -79,5 +94,15 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   pseudo-person; nobody's quota). No timer thread: AI egress still happens only because someone used AI.
 * The env provider's key is never stored; `probe_json.key_fp` (HMAC under SECRET_KEY) tells start-up that the
   key changed, which clears the stored test.
-* Frontend (app/static/**: AI cards, consent sheet, settings slot, label/plate UI, mock twins) is the
-  frontend owner's; handoff below. settings.js lacks the ai.* keys (as it lacks guidance/food.* keys already).
+* Frontend built by this role in new files (nobody else owned AI UI; M1 reserved `#set-ai-slot`); it hooks into
+  Settings and Add with MutationObservers instead of editing settings.js/add.js. The settings.js registry twin
+  has the ai.* and food.* keys (parity vectors).
+* PROMPT_VERSION 2026-10-06.2 (candidates use the full nutrient keys); the fingerprint pin fails if a prompt
+  changes without a version bump.
+
+## Final (2026-10-06, at 59ab599)
+* `python -m pytest -p no:cacheprovider -q`: 3093 passed, 0 failed, 0 skipped (no network; log in the scratch dir).
+* `node tests/js/run_vectors.mjs`: all suites pass (settings 444 checks incl. ai.* and food.* keys).
+* `pyflakes` on every AI-owned Python file: clean. No TODO/stub/skip in owned files.
+* Reproduce: `python -m pytest tests/test_ai_*.py tests/test_vision_api.py tests/test_imagecheck.py
+  tests/test_migration_m006.py tests/test_frontend_shell.py tests/test_preview_build.py`.
