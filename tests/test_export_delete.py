@@ -13,7 +13,8 @@ from conftest import ADMIN_PASSWORD, DAY, HTTPS_URL, USER_PASSWORD, TestClient, 
 
 FILES = {"export.json", "log.csv", "foods.csv", "meals.csv", "labs.csv", "README.txt"}
 JSON_KEYS = {"format", "version", "exported_at", "app_version", "user", "profile", "settings", "log_entries",
-             "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity"}
+             "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
+             "food_preferences"}
 
 
 def fill(client: TestClient) -> dict:

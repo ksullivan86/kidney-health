@@ -412,3 +412,22 @@ def test_a_new_custom_food_is_a_candidate_at_once(real):
     assert created.status_code == 201, created.text
     after = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch", "explain": "true"}).json()
     assert after["explain"]["eligible"] == before["explain"]["eligible"] + 1  # the vector cache saw the new revision
+
+
+def test_export_carries_the_guidance_data(real):
+    import io
+    import json as _json
+    import zipfile
+
+    set_targets(real)
+    rice = food_id(real, "Rice, white, long-grain, cooked")
+    real.put(f"/api/guidance/not-for-me/{rice}")
+    log(real, "Glucose tablet (4 g carb)", "snack", 4)
+    real.post("/api/meals", json={"name": "Rice bowl", "meal_hint": "lunch", "items": [{"food_id": rice, "servings": 1}]})
+    archive = zipfile.ZipFile(io.BytesIO(real.get("/api/me/export.zip").content))
+    data = _json.loads(archive.read("export.json"))
+    assert [(p["food_id"], p["preference"]) for p in data["food_preferences"]] == [(rice, "not_for_me")]
+    assert data["log_entries"][0]["purpose"] == "hypo"
+    assert data["meal_templates"][0]["meal_hint"] == "lunch"
+    assert "guidance" not in data["settings"] or isinstance(data["settings"]["guidance"], dict)
+    assert b"purpose" in archive.read("log.csv").splitlines()[0]

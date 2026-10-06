@@ -13,7 +13,11 @@
 
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
-     "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity"}
+     "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
+     "food_preferences"}
+
+``food_preferences`` (v0.3, schema step 5) lists the foods the person marked "Not for me" in meal
+guidance: ``[{food_id, name, preference, created_at}]``.
 """
 from __future__ import annotations
 
@@ -62,6 +66,14 @@ def _per_user_table(conn: sqlite3.Connection, table: str, user_id: int) -> list[
     if not table_exists(conn, table) or "user_id" not in table_columns(conn, table):
         return []
     return _rows(conn, f"SELECT * FROM {table} WHERE user_id = ? ORDER BY rowid", (int(user_id),))
+
+
+def _food_preferences(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """The person's "Not for me" foods (schema step 5); [] on an older schema."""
+    if not table_exists(conn, "food_preferences"):
+        return []
+    return _rows(conn, """SELECT p.food_id, f.name, p.preference, p.created_at FROM food_preferences p
+                          JOIN foods f ON f.id = p.food_id WHERE p.user_id = ? ORDER BY p.food_id""", (int(user_id),))
 
 
 def _lab_results(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
@@ -119,6 +131,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "lab_results": _lab_results(conn, uid),
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
         "activity": list_events(conn, actor_user_id=uid, actions=USER_VISIBLE_ACTIONS, limit=500),
+        "food_preferences": _food_preferences(conn, uid),
     }
 
 
