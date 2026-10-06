@@ -138,43 +138,41 @@ just report `fraction` against max and include `min` so the UI can show the rang
 
 ### Suggested targets (`nutrients.suggest_targets(weight_kg, ckd_stage, dialysis, diabetes, height_cm=None)`)
 
-Starting points only; the UI labels them "discuss with your care team". These are the
-**final, reconciled** numbers: they equal `docs/research/targets_by_stage.json` (the
-fact-checked file) and `docs/diet-guide.md` section 7, and `tests/test_nutrients.py`
-compares the code with the JSON row by row.
+*Rewritten in v0.3 (note 05; see "M2 API: targets and labs" at the end of this file and
+`docs/targets-and-labs.md`).* Starting points only; the UI labels them "discuss with your care team"
+and nothing is saved until the person saves the profile. The rules live in `app/targets.py` (pure,
+`today` injected) with every number, source and note text in `app/target_rules.py`;
+`nutrients.suggest_targets()` keeps its v0.2 signature and `{"targets", "notes"}` shape for existing
+callers and applies the same rules without the v0.3 inputs. `nutrients.dosing_weight()` returns the
+**reference weight** `(kg, basis)`: per kg means per kg of a sex-neutral reference weight (KDOQI 2020
+leaves the choice to the care team, 1.1.6): the actual weight between BMI 18.5 and 25 or without a
+height, else KDOQI Table 5's adjusted weights on the BMI-25 / BMI-18.5 weight (`adjusted_above_bmi25`,
+`adjusted_below_bmi18_5`, `actual`, `actual_no_height`), rounded to 0.1 kg. The first note always
+states the weight basis.
 
-**Per kg means per kg of ideal body weight** (KDOQI 2020 3.0.1, 3.1.x). The profile has no
-sex, so `nutrients.dosing_weight(weight_kg, height_cm)` takes the ideal weight sex-neutrally as
-the weight at the edge of the healthy BMI band for the person's height: BMI 25 when they are
-above it, BMI 18.5 when below, the actual weight in between. Without a height the actual weight
-is used. The first note returned always states which weight the numbers assume
-("Weight basis: …"), and `GET /api/profile/suggested-targets` passes the stored `height_cm`.
+Without the v0.3 inputs (`docs/research/targets_by_stage.json` holds these rows and
+`tests/test_nutrients.py` compares the code with it row by row):
 
 | stage / dialysis | protein g/kg (min–max) | potassium mg | phosphorus mg | sodium mg | fluid mL | kcal/kg | calcium mg |
 |---|---|---|---|---|---|---|---|
 | 1, 2 (no dialysis) | 0.8–1.0 | 4000 (informational) | 1000 | 2000 | null | 30 | 1000 |
-| 3a | 0.6–0.8 | 4000 | 1000 | 2000 | null | 30 | 1000 |
-| 3b | 0.6–0.8 | 3500 | 1000 | 2000 | null | 30 | 1000 |
-| 4 | 0.6–0.8 | 3000 | 1000 | 2000 | null | 30 | 1000 |
-| 5, no dialysis | 0.6–0.8 | 2500 | 900 | 2000 | null | 30 | 1000 |
+| 3a | 0.8 with diabetes (0.6–0.8 without) | 4000 | 1000 | 2000 | null | 30 | 1000 |
+| 3b | 0.8 with diabetes (0.6–0.8 without) | 3500 | 1000 | 2000 | null | 30 | 1000 |
+| 4 | 0.8 with diabetes (0.6–0.8 without) | 3000 | 1000 | 2000 | null | 30 | 1000 |
+| 5, no dialysis | 0.8 with diabetes (0.6–0.8 without) | 2500 | 900 | 2000 | null | 30 | 1000 |
 | hemodialysis | 1.0–1.2 | 2500 | 1000 | 2000 | 1500 (1000 + ~500 urine) | 30 | 1000 |
 | peritoneal | 1.0–1.2 | 3500 | 1000 | 2000 | 2000 | 30 | 1000 |
 
-* protein_g: `{"min": round(min_per_kg × kg), "max": round(max_per_kg × kg)}` (KDOQI 2020 3.1.2–3.1.4;
-  stages 1–2 use the 0.8 g/kg RDA floor with a 1.0 ceiling, KDIGO 2024: avoid > 1.3). The note for
-  non-dialysis stages 3–5 says that below 0.6 g/kg risks wasting and hypoglycaemia, that guidelines
-  recommend 0.8 and advise avoiding more than 1.3 g/kg (KDIGO 2024); it cites KDOQI 2020 3.1.3 with
-  diabetes and 3.1.1 / KDIGO 2024 3.3.1.1 without.
-* potassium_mg: no guideline fixes a number; restriction is ordered only when serum potassium runs
-  high, so these are review ceilings. The note returned with the suggestion must say: "Only restrict
-  potassium if your blood potassium is high; your care team sets the number."
-* phosphorus_mg: KDOQI 2003 800–1000 mg when phosphate runs high; 1000 at stages 1–4 and on either
-  dialysis ("adjusted for protein needs"), 900 at stage 5 before dialysis.
-* sodium_mg: 2000 (all stages; KDIGO 2024 < 2000, KDOQI < 2300).
-* fluid_ml: `null` (no limit) unless dialysis: hemodialysis 1000 + urine output ≈ 1500 default; peritoneal 2000.
-* calories_kcal: 30 kcal/kg (KDOQI 25–35). carbs_g: 45 % of calories / 4 = round(cal × 0.45 / 4);
-  carbs_per_meal_g: carbs / 4 rounded to 5 g (minimum 15).
-* calcium_mg: 1000 (max, including binders).
+* protein_g: `{"min", "max"}`, each bound `round_half_up(g_per_kg × reference weight)`; with diabetes at
+  stages 3a–5 without dialysis it is 0.8 g/kg (min = max, shown "about X g/day"), never lower (v0.3
+  item 10; ADA 2026 Rec 11.3, KDIGO 2022 Rec 3.1.1, KDIGO 2024 Rec 3.3.1.1). Notes cite the published
+  KDOQI 2020 numbering: protein 3.0.1–3.0.4, energy 3.1.1.
+* potassium_mg: review ceilings; every potassium note ends with "Only restrict potassium if your blood
+  potassium is high; your care team sets the number."
+* calories_kcal: kcal/kg × reference weight, rounded to 10 kcal. carbs_g: round_half_up(cal × 0.45 / 4);
+  carbs_per_meal_g: carbs / 4 rounded to 5 g (minimum 15). fiber_g: `{"min": round(14 × cal / 1000)}`
+  (min only: shown as progress toward a goal, never "over").
+* sodium_mg 2000; phosphorus_mg and calcium_mg as in the table; fluid_ml `null` (no limit) unless dialysis.
 
 ## Data model (SQLite)
 
@@ -293,7 +291,8 @@ reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api
 * `GET /api/profile` → Profile
 * `PUT /api/profile` body ProfileUpdate (any subset of fields) → Profile
 * `GET /api/profile/suggested-targets` → `{"targets": Targets, "notes": [string]}` computed
-  from the stored profile (400 if weight missing)
+  from the stored profile (400 if weight missing); v0.3 adds `rules`, `derived`, `missing_inputs`,
+  `alerts` and the 422 refusals ("M2 API: targets and labs")
 
 ```json
 Profile = {
@@ -941,3 +940,125 @@ days after the upgrade (`python -m app.admin purge-pre-v3-backup` does it now). 
 `pending_setup` admin and is claimed by first-run setup, `ADMIN_USERNAME` + `ADMIN_PASSWORD[_FILE]`,
 the deprecated `APP_PASSWORD` (imported once; user `ADMIN_USERNAME` or `admin`; must change it if it
 fails the policy) or `create-admin`.
+
+## M2 API: targets and labs
+
+Built in M2 (targets) from note 05 §4.2–§4.9 and its §10 fact-check. Code: `app/targets.py` (pure
+rules), `app/target_rules.py` (rule catalogue, numbers, note texts), `app/kidney_function.py` (CKD-EPI
+eGFR, G/A categories, the card), `app/units.py` (analytes, units, plausibility), `app/labs.py` (router),
+profile fields in `app/profile.py`, schema step `app/migrations/m004_targets_labs.py`. People-facing
+explanation: `docs/targets-and-labs.md`. Every route needs a signed-in person, reads and writes only
+that person's rows, and answers 404 for a result that is not theirs.
+
+### Profile fields (`GET`/`PUT /api/profile`)
+
+`Profile` gains (all optional; `PUT` merges; an empty string or `null` clears a field: back to `null`,
+or to the default for `sex` and the yes/no fields):
+
+```json
+Profile += {
+  "birth_month": "1971-03",            // YYYY-MM, not in the future, within 120 years
+  "sex": "unspecified",                // "female" | "male" | "unspecified" (used only in formulas)
+  "activity": null,                    // "inactive" | "low_active" | "active" | "very_active"; null = not chosen
+  "transplant_date": null,             // YYYY-MM-DD, not in the future; with dialysis "none" = transplant mode
+  "frail_or_sarcopenic": false,
+  "weight_6_months_ago_kg": null,      // 20–400
+  "pregnant_or_breastfeeding": false,
+  "hyperkalemia_history": false,
+  "urine_output_ml": null,             // 0–5000 (24 h)
+  "pd_uf_ml": null,                    // 0–4000 (net ultrafiltration per day)
+  "pd_dialysate_kcal": null            // 0–1000
+}
+```
+
+"Not in the future" allows one day ahead of the server's date (the client's time zone). Validation
+failures are the usual `400 {"detail": "<field>: <message>", "errors"}`.
+
+### `GET /api/profile/suggested-targets`
+
+* `400` without a weight (unchanged).
+* `422 {"detail": "<message>", "code": "out_of_scope_pregnancy" | "out_of_scope_under_18" |
+  "out_of_scope_early_transplant"}` (note 05 §4.5 texts; `detail` stays a string per this contract's
+  error shape, `code` is added). Under 18 counts from the **last** day of the birth month; the
+  transplant cut-off is 84 days.
+* otherwise (additive keys; v0.2 clients keep working):
+
+```json
+{
+  "targets": {"calories_kcal": 2280, "protein_g": {"min": 56, "max": 56}, "carbs_g": 257, "carbs_per_meal_g": 65,
+              "fiber_g": {"min": 32}, "sodium_mg": 2000, "potassium_mg": 3500, "phosphorus_mg": 1000,
+              "calcium_mg": 1000, "fluid_ml": null},          // calcium may be {"min","max"} at stages 1–2
+  "notes": ["Weight basis: …", "Calories: …", "…", "These are starting points only — …"],
+  "rules": [{"id": "E-1", "source": "NASEM 2023 DRI Energy Table S-1; KDOQI 2020 3.1.1", "grade": "DRI; 1C (range)",
+             "opinion": true, "opinion_note": "combining the energy equation with the kidney range",
+             "url": "https://doi.org/10.17226/26818"}],      // in application order S → W → N → E → P → K → PH → NA → CA → F → C → FB → L
+  "derived": {"mode": "ckd", "age": 55, "sex": "male", "activity": "inactive", "bmi": 22.9,
+              "reference_weight_kg": 70.0, "weight_basis": "actual", "eer_kcal": 2282, "eer_kcal_per_kg": 32.6,
+              "kcal_per_kg": 32.6, "nutrition_risk": [], "lab_rules_enabled": true,
+              "labs_used": {"potassium": {"value": 4.4, "unit": "mmol/L", "taken_on": "2026-10-01"}, "phosphate": null,
+                            "albumin": null, "bicarbonate": null, "uacr": null, "a1c": null}},
+  "missing_inputs": ["activity"],     // of height_cm, birth_month, sex, activity, urine_output_ml, pd_uf_ml, pd_dialysate_kcal
+  "alerts": [{"level": "urgent" | "emergency", "code": "potassium_very_high", "analyte": "potassium", "value": 6.3,
+              "taken_on": "2026-10-05", "message": "Potassium 6.3 mmol/L on 2026-10-05 is dangerously high. …"}]
+}
+```
+
+Labs used: the newest result of potassium, phosphate, albumin, bicarbonate, UACR and HbA1c, only while
+fresh (`targets.lab_fresh_days.*`: 90/90/180/180 days; UACR and HbA1c 365). Thresholds are judged on the
+shown value (one decimal). The potassium alert (≥ 6.0 mmol/L; `emergency` from 6.5) is returned even
+when `targets.lab_rules_enabled` is off.
+
+### `/api/labs`
+
+| Method and path | Body → response |
+|---|---|
+| `POST /api/labs` | `{analyte, value, unit, taken_on, note?}` → 201 `LabResult + {"alerts": [SafetyAlert]}`; 400 for an unknown analyte or unit, a value outside the plausible range (message names the entered unit and the converted value), a negative or non-finite value, a date after tomorrow or before 1900, a note over 500 characters, or an unknown field |
+| `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200 |
+| `DELETE /api/labs/{id}` | → 204; 404 when it is not yours or does not exist |
+| `GET /api/labs/kidney-function` | → `KidneyFunction` (below); never changes the saved stage |
+
+```json
+LabResult = {"id": 7, "analyte": "phosphate", "label": "Phosphate", "value": 6.0, "unit": "mg/dL",
+             "entered_value": 1.94, "entered_unit": "mmol/L", "display": "1.94 mmol/L = 6.0 mg/dL",
+             "taken_on": "2026-10-01", "note": "", "created_at": "…Z"}
+KidneyFunction = {
+  "egfr": {"value": 55, "method": "lab" | "ckd_epi_2021_cr_cys" | "ckd_epi_2021_cr" | "ckd_epi_2012_cys",
+           "method_label": "CKD-EPI 2021, creatinine", "category": "G3a",   // "G3aT" after a transplant; null if the two formulas disagree
+           "suggested_stage": "3a", "matches_profile": false, "female": null, "male": null,   // both set when sex is unspecified
+           "taken_on": "2026-10-01"} | null,
+  "albuminuria": {"value_mg_g": 26.5, "category": "A2", "label": "moderately increased",
+                  "entered_value": 3.0, "entered_unit": "mg/mmol", "taken_on": "2026-10-01"} | null,
+  "profile_stage": "3b", "mode": "ckd" | "transplant" | "hemodialysis" | "peritoneal",
+  "message": "Your eGFR on 2026-10-01 is 55 mL/min/1.73 m² (CKD-EPI 2021, creatinine), which is stage G3a. …"
+}
+```
+
+Analytes, canonical units, accepted units and plausible ranges: `app/units.py` (`potassium`,
+`phosphate`, `albumin`, `bicarbonate`, `uacr`, `creatinine`, `cystatin_c`, `egfr`, `a1c`). `value` is
+stored unrounded in the canonical unit; the API rounds it to the analyte's shown decimals. The card uses
+results of the last 365 days: newest date first, then lab eGFR > creatinine + cystatin C that day >
+creatinine > cystatin C; nothing on dialysis, in pregnancy or under 18; albuminuria in the entered unit.
+
+### Settings (registered in `app/settings_registry.py`)
+
+`targets.lab_rules_enabled` (instance, `true`), `targets.lab_fresh_days.{potassium,phosphate,albumin,
+bicarbonate}` (instance, 90/90/180/180, 1–365), `targets.default_activity` (instance, `inactive`),
+`user.units.labs` (`user_default`, `us` | `si`: the unit offered first; note 05 §4.9 lists it as a
+personal key, the admin default is added for servers outside the US).
+
+### Data, export and deletion
+
+Schema step 4 adds the profile columns to `user_profiles` and `lab_results (id, user_id → users ON
+DELETE CASCADE, analyte, value, entered_value, entered_unit, taken_on, note, created_at)` with index
+`lab_results_lookup (user_id, analyte, taken_on DESC, id DESC)`. The export archive carries the new
+profile fields in `export.json` → `profile`, every result in `export.json` → `lab_results`
+(`id, analyte, value, unit, entered_value, entered_unit, taken_on, note, created_at`, unrounded) and
+`labs.csv` (same columns, formula-escaped). Deleting the account deletes them.
+
+### Parity (demo/preview mode)
+
+The browser twins `js/engine/targets.js` and `js/engine/kidney_function.js` are checked against
+`tests/data/targets_vectors.json` and `tests/data/kidney_function_vectors.json` (generated by
+`tests/data/gen_targets_vectors.py` and `gen_kidney_function_vectors.py` from the Python modules;
+`tests/test_targets_vectors.py` fails when a file is stale). Inputs are plain JSON (profile, stored lab
+rows, settings, `today`); outputs include every note word for word.

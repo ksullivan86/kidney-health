@@ -16,6 +16,12 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   address), so people can sign out a lost phone;
 * everything the person enters: food log entries (eaten and planned), their own foods, saved meals,
   their profile (weight, height, kidney stage, dialysis, diabetes type, targets) and settings;
+* if the person chooses to add them (all optional): birth month (not the full date), the sex used in
+  medical formulas, activity level, transplant date, pregnancy or breastfeeding, frailty, past weight,
+  urine and dialysis volumes, and the lab results they type in (with the date taken). They are used
+  only to work out suggested targets and the kidney-function card, are never written to the server's
+  log, are part of the export, and are deleted with the account
+  ([Personalised targets and labs](targets-and-labs.md));
 * API keys the person chose to store, encrypted;
 * a per-day count of lookups made with a shared key (counts only, not what was looked up);
 * entries in the activity log about their account: sign-ins, failed sign-ins, password and key

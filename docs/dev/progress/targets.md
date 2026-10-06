@@ -70,8 +70,23 @@ DEFS gains the seven keys below (sorted by key: the targets.* ones after registr
     { key: 'targets.lab_rules_enabled', type: 'bool', default: true, scope: 'instance', env: null, label: "Let lab results change suggested targets", help: "Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning for a very high potassium result is always shown. Keep it off on public demo servers until a clinician has reviewed the lab rules." },
     { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: null, label: "Units for lab results", help: "us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, mmol/mol. Only the unit offered first changes; any unit can still be entered." },
 
+* Step 8: tests/data/gen_targets_vectors.py → targets_vectors.json (TV01–TV23 + 110 edge cases + 120 seeded random
+  + 64 v0.2-wrapper cases, tables; rules as catalogue keys to keep ~1 MB), gen_kidney_function_vectors.py →
+  kidney_function_vectors.json (unit table, conversions incl. refusals, eGFR, categories, ages, 24 cards),
+  tests/test_targets_vectors.py (staleness + coverage). `python3 tests/data/gen_*_vectors.py --check`.
+* Step 9: docs/targets-and-labs.md, docs/ROADMAP.md (C10, C11/§8, EKFC, MHDE, SARC-F/FRAIL), ARCHITECTURE.md
+  (v0.2 "Suggested targets" rewritten to the v0.3 rules; "M2 API: targets and labs" appended), docs/privacy.md
+  (new optional health data listed).
+
+## Not mine, flagged for others
+* Handbook (handbook owner / M3): handbook/docs/app/targets-and-warnings.md ("Suggested targets", "Personalized
+  targets (coming in v0.3)") and app/first-setup.md line ~68 still say "coming in v0.3" / "today's app shows
+  0.6–0.8"; the numbers there already match this implementation, only the tense needs flipping.
+* README "How targets and warnings work" (note 05 C9) and CHANGELOG (M3 integration).
+* docs/diet-guide.md becomes a handbook pointer (handbook integration task); no test needed a number change.
+
 ## Next
-Step 8: parity vectors (gen_targets_vectors.py, gen_kidney_function_vectors.py, staleness tests), then step 9 docs.
+Live smoke on port 8300 (uvicorn, curl), full `python -m pytest`, mark complete.
 
 ## Commands
 * `python3 -m pytest -q -p no:cacheprovider tests/test_targets.py tests/test_units.py tests/test_kidney_function.py tests/test_nutrients.py`
