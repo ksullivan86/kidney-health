@@ -41,6 +41,7 @@ const SHELL_URLS = [
   '/js/mock/core.js',
   '/js/mock/foods.js',
   '/js/mock/profile.js',
+  '/js/mock/labs.js',
   '/js/mock/log.js',
   '/js/mock/meals.js',
   '/js/mock/auth.js',

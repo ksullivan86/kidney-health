@@ -315,6 +315,11 @@
     profile: () => request('GET', '/api/profile'),
     saveProfile: (b) => request('PUT', '/api/profile', b),
     suggested: () => request('GET', '/api/profile/suggested-targets'),
+    // lab results and kidney function (ARCHITECTURE.md "M2 API: targets and labs")
+    labs: (params = {}) => request('GET', '/api/labs?' + qs(params)),
+    addLab: (b) => request('POST', '/api/labs', b),
+    deleteLab: (id) => request('DELETE', `/api/labs/${id}`),
+    kidneyFunction: () => request('GET', '/api/labs/kidney-function'),
     foods: (params) => request('GET', '/api/foods?' + qs(params)),
     categories: () => request('GET', '/api/foods/categories'),
     food: (id) => request('GET', `/api/foods/${id}`),

@@ -30,6 +30,13 @@ Sections
   10 accounts: the demo's /api/auth/status, /api/me, /api/me/settings and /api/me/keys answer with the
      same keys and value types as the server's (values differ: the demo is a demo admin); /api/handbook
      has the same keys and link groups (the demo serves no handbook)
+  11 personalised targets and labs (v0.3 M2): the "About you" profile fields and their validation, lab
+     entry with unit conversion and its validation, history filters, deletion, the kidney-function card
+     for several profiles, and the suggestion (targets, notes, rules, derived, alerts, 422 refusals with
+     their code) over a matrix of profiles x lab results x the targets.* settings
+
+``--sections 0,11`` runs only those sections (section 1 always runs first: the others need its food ids).
+Error answers are compared by status, detail and, when either side sends one, ``code``.
 
 Exit status 0 when every comparison matched, 1 otherwise. Report: <out>/report.json.
 The server, the static server and the browser are always stopped.
@@ -80,7 +87,7 @@ IGNORE = frozenset({"id", "created_at", "updated_at"})
 # --------------------------------------------------------------------------- #
 
 _MEDIUM_KEYS = {"message", "detail", "notes", "food_name", "serving_desc", "kidney_notes", "name", "note", "order"}
-_HIGH_STR_KEYS = {"level", "kidney_rating", "status", "flag", "nutrient", "assessment", "role", "date", "since", "next", "meal"}
+_HIGH_STR_KEYS = {"level", "kidney_rating", "status", "flag", "nutrient", "assessment", "role", "date", "since", "next", "meal", "code"}
 
 
 def _is_num(v: Any) -> bool:
@@ -165,9 +172,11 @@ class Recorder:
         if ok_s and ok_m:
             return self.compare(section, label, rs.get("body"), rm.get("body"), ignore)
         if not ok_s and not ok_m:
-            return self.compare(
-                section, label, {"status": rs["status"], "detail": rs.get("detail")}, {"status": rm["status"], "detail": rm.get("detail")}
-            )
+            err_s = {"status": rs["status"], "detail": rs.get("detail")}
+            err_m = {"status": rm["status"], "detail": rm.get("detail")}
+            if "code" in rs or "code" in rm:
+                err_s["code"], err_m["code"] = rs.get("code"), rm.get("code")
+            return self.compare(section, label, err_s, err_m)
         return self.compare(
             section,
             label,
@@ -211,6 +220,8 @@ class ServerSide:
             out["body"] = payload
         else:
             out["detail"] = payload.get("detail") if isinstance(payload, dict) else payload
+            if isinstance(payload, dict) and "code" in payload:  # e.g. the 422 refusals of suggested-targets
+                out["code"] = payload["code"]
         return out
 
 
@@ -222,7 +233,9 @@ HELPERS_JS = r"""
         const r = await window.__kdlMock.request(method, path, body === null ? undefined : body);
         return { status: 200, body: r === undefined ? null : r };
       } catch (e) {
-        return { status: (e && e.status) || 500, detail: (e && e.detail) || String(e), error: e && e.status ? null : String((e && e.stack) || e) };
+        const out = { status: (e && e.status) || 500, detail: (e && e.detail) || String(e), error: e && e.status ? null : String((e && e.stack) || e) };
+        if (e && e.extra && 'code' in e.extra) out.code = e.extra.code;
+        return out;
       }
     },
     async seq(calls) { const out = []; for (const c of calls) out.push(await this.call(c[0], c[1], c[2])); return out; },
@@ -231,6 +244,7 @@ HELPERS_JS = r"""
       const m = window.__kdlMock;
       m._entries = []; m._nextEntryId = 1;
       m._templates = []; m._nextTemplateId = 1;
+      m._labs = []; m._nextLabId = 1;
       m._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1',
         warn_fraction: 0.8, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: m._stamp() };
       return { foods: m._foods.length, custom: m._foods.filter((f) => f.source !== 'builtin').length, nextFoodId: m._nextFoodId, source: m.foodsSource };
@@ -955,6 +969,182 @@ class Harness:
                              ignore=frozenset())
 
 
+    def section11(self) -> None:
+        """Personalised targets and labs (note 05; ARCHITECTURE.md "M2 API: targets and labs")."""
+        today = date.today()
+        T = today.isoformat()
+        ago = lambda n: (today - timedelta(days=n)).isoformat()  # noqa: E731
+        month = lambda years: f"{today.year - years}-{today.month:02d}"  # noqa: E731
+        base = {"name": "Targets", "weight_kg": 70, "height_cm": 170, "ckd_stage": "4", "dialysis": "none", "diabetes": "type1",
+                "birth_month": None, "sex": None, "activity": None, "transplant_date": None, "frail_or_sarcopenic": None,
+                "weight_6_months_ago_kg": None, "pregnant_or_breastfeeding": None, "hyperkalemia_history": None,
+                "urine_output_ml": None, "pd_uf_ml": None, "pd_dialysate_kcal": None}
+
+        S = "11a profile fields"
+        self.put_profile(S, "baseline (every v0.3 field cleared)", base)
+        for label, body in [
+            ("every field set", {"birth_month": "1971-03", "sex": "female", "activity": "low_active", "transplant_date": "2019-05-02",
+                                 "frail_or_sarcopenic": True, "weight_6_months_ago_kg": 74.5, "pregnant_or_breastfeeding": False,
+                                 "hyperkalemia_history": True, "urine_output_ml": 800, "pd_uf_ml": 900, "pd_dialysate_kcal": 350}),
+            ("blank strings clear (sex back to unspecified, bools to false)", {"birth_month": "  ", "sex": "", "activity": "", "transplant_date": "",
+                                                                               "frail_or_sarcopenic": "", "urine_output_ml": " ", "hyperkalemia_history": None}),
+            ("strings are stripped and parsed", {"birth_month": " 1971-03 ", "transplant_date": " 2020-01-01 ", "urine_output_ml": " 800 ",
+                                                 "pd_dialysate_kcal": "1e3", "weight_6_months_ago_kg": "80.25"}),
+            ("lax booleans", {"frail_or_sarcopenic": "Yes", "hyperkalemia_history": "off", "pregnant_or_breastfeeding": 0}),
+            ("bool 1.0 and 1", {"frail_or_sarcopenic": 1.0, "hyperkalemia_history": 1}),
+            ("birth month bad format", {"birth_month": "1971-13"}),
+            ("birth month not a string", {"birth_month": 197103}),
+            ("birth month next year", {"birth_month": f"{today.year + 1}-01"}),
+            ("birth month 121 years ago", {"birth_month": f"{today.year - 121}-01"}),
+            ("birth month year 0", {"birth_month": "0000-01"}),
+            ("sex other", {"sex": "other"}),
+            ("sex with a space", {"sex": " male"}),
+            ("activity unknown", {"activity": "athlete"}),
+            ("transplant date not a calendar date", {"transplant_date": "2026-02-30"}),
+            ("transplant date in two days", {"transplant_date": (today + timedelta(days=2)).isoformat()}),
+            ("transplant date tomorrow (time-zone slack)", {"transplant_date": (today + timedelta(days=1)).isoformat()}),
+            ("transplant date before 1900", {"transplant_date": "1899-12-31"}),
+            ("transplant date wrong format", {"transplant_date": "01/02/2020"}),
+            ("transplant date a number", {"transplant_date": 20200101}),
+            ("bool maybe", {"frail_or_sarcopenic": "maybe"}),
+            ("bool padded", {"frail_or_sarcopenic": " true "}),
+            ("bool 2", {"frail_or_sarcopenic": 2}),
+            ("bool 1.5", {"frail_or_sarcopenic": 1.5}),
+            ("bool list", {"frail_or_sarcopenic": []}),
+            ("weight 6 months ago 19.9", {"weight_6_months_ago_kg": 19.9}),
+            ("weight 6 months ago 400.0001", {"weight_6_months_ago_kg": 400.0001}),
+            ("weight 6 months ago abc", {"weight_6_months_ago_kg": "abc"}),
+            ("urine -1", {"urine_output_ml": -1}),
+            ("urine 5001", {"urine_output_ml": 5001}),
+            ("uf 4001", {"pd_uf_ml": 4001}),
+            ("uf Infinity", {"pd_uf_ml": "Infinity"}),
+            ("dialysate 1001 + sex x + birth month x (order)", {"pd_dialysate_kcal": 1001, "sex": "x", "birth_month": "x"}),
+            ("v0.2 weight empty + v0.3 empty", {"weight_kg": "", "urine_output_ml": ""}),
+        ]:
+            self.put_profile(S, label, body)
+            self.both(S, f"GET /api/profile after {label}", "GET", "/api/profile")
+
+        S = "11b labs"
+        self.put_profile(S, "labs profile", {**base, "birth_month": "1976-10", "sex": "female"})
+        for label, body in [
+            ("potassium 4.6 mEq/L", {"analyte": "potassium", "value": 4.6, "unit": "mEq/L", "taken_on": ago(20), "note": " clinic "}),
+            ("potassium 6.3 urgent", {"analyte": "potassium", "value": 6.3, "unit": "mmol/L", "taken_on": ago(3)}),
+            ("potassium 6.5 emergency", {"analyte": "potassium", "value": 6.45, "unit": "mmol/L", "taken_on": ago(2)}),
+            ("potassium 5.94 (shown 5.9, no alert)", {"analyte": "potassium", "value": 5.94, "unit": "mmol/L", "taken_on": ago(1), "note": None}),
+            ("phosphate 1.94 mmol/L", {"analyte": "phosphate", "value": 1.94, "unit": "mmol/L", "taken_on": ago(4)}),
+            ("albumin 34 g/L", {"analyte": "albumin", "value": 34, "unit": "g/L", "taken_on": ago(30)}),
+            ("bicarbonate 21 meq/l", {"analyte": "bicarbonate", "value": 21, "unit": "meq/l", "taken_on": ago(30)}),
+            ("uacr 3.0 mg/mmol", {"analyte": "uacr", "value": 3.0, "unit": "mg/mmol", "taken_on": ago(30)}),
+            ("creatinine 106 umol/l", {"analyte": "creatinine", "value": 106, "unit": "umol/l", "taken_on": ago(10)}),
+            ("cystatin 1.6", {"analyte": "cystatin_c", "value": 1.6, "unit": "mg/L", "taken_on": ago(10)}),
+            ("egfr 58.4 ml/min/1.73m2", {"analyte": "egfr", "value": 58.4, "unit": "ml/min/1.73m2", "taken_on": ago(200)}),
+            ("a1c 53 mmol/mol", {"analyte": "a1c", "value": 53, "unit": "mmol/mol", "taken_on": ago(60)}),
+            ("strings stripped and parsed", {"analyte": "potassium", "value": "4.5", "unit": " mmol/L ", "taken_on": f" {ago(400)} "}),
+            ("uacr 0 mg/g", {"analyte": "uacr", "value": 0, "unit": "mg/g", "taken_on": ago(400)}),
+            ("taken tomorrow (time-zone slack)", {"analyte": "albumin", "value": 4.1, "unit": "g/dL", "taken_on": (today + timedelta(days=1)).isoformat()}),
+            # refused
+            ("unknown analyte", {"analyte": "sodium", "value": 140, "unit": "mmol/L", "taken_on": T}),
+            ("unit for another analyte", {"analyte": "potassium", "value": 4.2, "unit": "mg/dL", "taken_on": T}),
+            ("implausible in the canonical unit", {"analyte": "potassium", "value": 42, "unit": "mmol/L", "taken_on": T}),
+            ("implausible after conversion", {"analyte": "phosphate", "value": 15, "unit": "mmol/L", "taken_on": T}),
+            ("value true (lax: 1.0, implausible)", {"analyte": "potassium", "value": True, "unit": "mmol/L", "taken_on": T}),
+            ("negative", {"analyte": "potassium", "value": -1, "unit": "mmol/L", "taken_on": T}),
+            ("over the ceiling", {"analyte": "potassium", "value": 1000001, "unit": "mmol/L", "taken_on": T}),
+            ("NaN text", {"analyte": "potassium", "value": "NaN", "unit": "mmol/L", "taken_on": T}),
+            ("empty unit", {"analyte": "potassium", "value": 4.2, "unit": "", "taken_on": T}),
+            ("unit over 40 characters", {"analyte": "potassium", "value": 4.2, "unit": "x" * 41, "taken_on": T}),
+            ("in two days", {"analyte": "potassium", "value": 4.2, "unit": "mmol/L", "taken_on": (today + timedelta(days=2)).isoformat()}),
+            ("before 1900", {"analyte": "potassium", "value": 4.2, "unit": "mmol/L", "taken_on": "1899-10-01"}),
+            ("not a calendar date", {"analyte": "potassium", "value": 4.2, "unit": "mmol/L", "taken_on": "2026-02-30"}),
+            ("note over 500", {"analyte": "potassium", "value": 4.2, "unit": "mmol/L", "taken_on": T, "note": "x" * 501}),
+            ("unknown field", {"analyte": "potassium", "value": 4.2, "unit": "mmol/L", "taken_on": T, "extra": 1}),
+            ("every field wrong + extra (order)", {"extra": 1, "analyte": "x", "value": "abc", "unit": 5, "taken_on": 3, "note": 7}),
+            ("missing fields", {"value": 4.2}),
+            ("a list", [1, 2]),
+            ("no body", None),
+        ]:
+            self.both(S, f"POST /api/labs {label}", "POST", "/api/labs", body)
+        for q in ["", "?analyte=potassium", "?analyte=potassium&limit=1", "?limit=2", "?limit=5.0", "?analyte=", "?analyte=sodium",
+                  "?limit=0", "?limit=1001", "?limit=abc", "?analyte=x&limit=0"]:
+            self.both(S, f"GET /api/labs{q}", "GET", f"/api/labs{q}")
+        listed = self.server.call("GET", "/api/labs?analyte=cystatin_c")["body"]["labs"], self.mock.call("GET", "/api/labs?analyte=cystatin_c")["body"]["labs"]
+        if listed[0] and listed[1]:
+            path = lambda side: f"/api/labs/{listed[side][0]['id']}"  # noqa: E731
+            self.both(S, "DELETE /api/labs/{cystatin}", "DELETE", path)
+            self.both(S, "DELETE /api/labs/{cystatin} again -> 404", "DELETE", path)
+        else:
+            self.rec.note_failure(S, "cystatin result listed", f"server {len(listed[0])}, mock {len(listed[1])}")
+        for label, path in [("0", "/api/labs/0"), ("unknown id", "/api/labs/999999"), ("2**63", "/api/labs/9223372036854775808"),
+                            ("not a number", "/api/labs/abc"), ("kidney-function", "/api/labs/kidney-function")]:
+            self.both(S, f"DELETE /api/labs/{label}", "DELETE", path)
+        self.both(S, "GET /api/labs after delete", "GET", "/api/labs")
+        for label, body in [
+            ("female 49", {}), ("male", {"sex": "male"}), ("sex unspecified", {"sex": None}), ("no birth month", {"birth_month": None}),
+            ("transplant", {"transplant_date": "2019-01-01"}), ("hemodialysis", {"dialysis": "hemodialysis", "ckd_stage": "5"}),
+            ("pregnant", {"pregnant_or_breastfeeding": True}), ("17 years old", {"birth_month": month(17)}),
+            ("stage 3a", {"ckd_stage": "3a"}),
+        ]:
+            self.put_profile(S, f"kidney-function profile: {label}", {**base, "birth_month": "1976-10", "sex": "female", **body})
+            self.both(S, f"GET /api/labs/kidney-function [{label}]", "GET", "/api/labs/kidney-function")
+
+        S = "11c suggestions"
+        profiles = [
+            ("TV-like stage 4 adult", {}),
+            ("no height, no age", {"height_cm": None}),
+            ("older G3b female, low active", {"ckd_stage": "3b", "birth_month": "1952-04", "sex": "female", "activity": "low_active"}),
+            ("G2 male active", {"ckd_stage": "2", "birth_month": "1986-01", "sex": "male", "activity": "active", "diabetes": "none"}),
+            ("hemodialysis with urine", {"ckd_stage": "5", "dialysis": "hemodialysis", "urine_output_ml": 325, "birth_month": "1960-07"}),
+            ("peritoneal with dialysate", {"ckd_stage": "5", "dialysis": "peritoneal", "urine_output_ml": 800, "pd_uf_ml": 913,
+                                           "pd_dialysate_kcal": 350, "birth_month": "1976-05", "sex": "female"}),
+            ("peritoneal, dialysate floor", {"ckd_stage": "5", "dialysis": "peritoneal", "pd_dialysate_kcal": 1000, "diabetes": "none"}),
+            ("transplant G2, 6 years", {"ckd_stage": "2", "transplant_date": "2020-01-01", "birth_month": "1955-01"}),
+            ("transplant G4", {"ckd_stage": "4", "transplant_date": "2020-01-01"}),
+            ("nutrition risk", {"weight_kg": 50, "weight_6_months_ago_kg": 60, "frail_or_sarcopenic": True, "birth_month": "1950-01"}),
+            ("BMI 34.6", {"weight_kg": 100}),
+            ("high potassium history", {"hyperkalemia_history": True}),
+            ("refusal: pregnant", {"pregnant_or_breastfeeding": True}),
+            ("refusal: 17", {"birth_month": month(17)}),
+            ("refusal: transplant 30 days ago", {"transplant_date": ago(30)}),
+            ("transplant 84 days ago", {"transplant_date": ago(84)}),
+        ]
+        lab_sets = [
+            ("no labs", []),
+            ("normal labs", [("potassium", 4.4, "mmol/L", 5), ("phosphate", 3.6, "mg/dL", 5), ("albumin", 4.0, "g/dL", 5)]),
+            ("abnormal labs", [("potassium", 5.8, "mmol/L", 2), ("phosphate", 1.94, "mmol/L", 2), ("albumin", 32, "g/L", 2),
+                               ("bicarbonate", 17, "mmol/L", 2), ("uacr", 35, "mg/mmol", 2), ("a1c", 8.1, "%", 2)]),
+            ("very high potassium, stale phosphate", [("potassium", 6.6, "mmol/L", 1), ("phosphate", 5.5, "mg/dL", 120)]),
+        ]
+        for lab_label, labs in lab_sets:
+            self._clear_labs(S)
+            for analyte, value, unit, days in labs:
+                self.both(S, f"POST /api/labs [{lab_label}] {analyte}", "POST", "/api/labs",
+                          {"analyte": analyte, "value": value, "unit": unit, "taken_on": ago(days)})
+            for label, body in profiles:
+                self.put_profile(S, f"{label} [{lab_label}]", {**base, "birth_month": "1971-03", **body})
+                self.both(S, f"GET suggested-targets {label} [{lab_label}]", "GET", "/api/profile/suggested-targets")
+        # The admin settings of note 05 §4.9 (both sides are admins; signing in counts as entering the password).
+        self.put_profile(S, "settings profile", {**base, "birth_month": "1971-03"})
+        for label, patch in [
+            ("lab rules off", {"targets.lab_rules_enabled": False}),
+            ("potassium counts for 1 day", {"targets.lab_rules_enabled": None, "targets.lab_fresh_days.potassium": 1}),
+            ("default activity active", {"targets.lab_fresh_days.potassium": None, "targets.default_activity": "active"}),
+            ("restored", {"targets.default_activity": None}),
+        ]:
+            self.both(S, f"PATCH /api/admin/settings {label}", "PATCH", "/api/admin/settings", patch, ignore=frozenset({"settings"}))
+            self.both(S, f"GET suggested-targets [{label}]", "GET", "/api/profile/suggested-targets")
+        self.put_profile(S, "no weight", {"weight_kg": None})
+        self.both(S, "GET suggested-targets without a weight", "GET", "/api/profile/suggested-targets")
+        self._clear_labs(S)
+        self.put_profile(S, "restore", {**base, **self.PROFILE})
+
+    def _clear_labs(self, section: str) -> None:
+        """Delete every lab result on both sides (ids differ between the sides)."""
+        for side, caller in ((0, self.server), (1, self.mock)):
+            for row in caller.call("GET", "/api/labs?limit=1000")["body"]["labs"]:
+                r = caller.call("DELETE", f"/api/labs/{row['id']}")
+                if r["status"] != 204 and not (side == 1 and r["status"] == 200):
+                    self.rec.note_failure(section, f"clear labs side {side}", json.dumps(r))
+
 # --------------------------------------------------------------------------- #
 
 
@@ -965,6 +1155,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--static-port", type=int, default=STATIC_PORT, help=f"preview site port (default {STATIC_PORT})")
     ap.add_argument("--out", type=Path, default=OUT, help=f"work directory, wiped first (default {OUT})")
     ap.add_argument("--report", type=Path, default=None, help="report path (default <out>/report.json)")
+    ap.add_argument("--sections", default="", help="comma-separated sections to run, e.g. 0,11 (section 1 always runs; default: all)")
     args = ap.parse_args(argv)
     args.server_python = os.path.abspath(args.server_python)  # the server runs in REPO; keep venv symlinks
     configure(args.out.resolve(), args.port, args.static_port)
@@ -995,7 +1186,11 @@ def main(argv: list[str] | None = None) -> int:
                 h = Harness(ServerSide(admin), MockSide(page), rec)
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
-                         ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10)]
+                         ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
+                         ("11", h.section11)]
+                if args.sections:
+                    wanted = {"1", *args.sections.split(",")}
+                    steps = [(name, fn) for name, fn in steps if name in wanted]
                 for name, fn in steps:
                     t0 = time.time()
                     try:

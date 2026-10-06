@@ -12,7 +12,7 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
 2. JS twins: js/engine/targets.js (rewrite to app/targets.py), js/engine/kidney_function.js (units + eGFR + card);
    tests/js/run_vectors.mjs replays targets_vectors.json and kidney_function_vectors.json — DONE
 3. Mock routes: js/mock/profile.js (new fields, validation, 422 refusals, settings-driven suggestion), js/mock/labs.js
-   (POST/GET/DELETE /api/labs, GET /api/labs/kidney-function), export zip gets labs
+   (POST/GET/DELETE /api/labs, GET /api/labs/kidney-function) — DONE (the demo has no export zip at all)
 4. Profile UI: "About you" fields, conditional dialysis/transplant fields, suggestion diff, "Why this number?",
    refusal states, missing-input prompts, about-X protein, fibre min-only rendering
 5. Labs view (js/views/labs.js + css/labs.css): entry with unit picker and echo, history per analyte, eGFR card,
@@ -30,6 +30,17 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
   run_vectors.mjs: "targets vectors: 1859 checks passed", "kidney function vectors: 140 checks passed"; a mutation
   (POTASSIUM_LOW 3.4) made 6 checks fail. index.html loads kidney_function.js before targets.js; sw.js SHELL_URLS and
   tests/test_frontend_shell.py (engine order assertion) updated.
+
+* Step 3: js/mock/profile.js (v0.3 fields + pydantic-exact validation incl. blank→null, lax bools, past-date and
+  birth-month checks; suggestion via KH.targets.suggestFromRecords with the person's newest labs and the targets.*
+  settings; 422 {detail, code}), js/mock/labs.js (POST with LabCreate order + extra=forbid + conversion errors, GET with
+  analyte/limit validation, DELETE incl. non-numeric id 400, kidney-function from the last 365 days; rows scoped by user
+  id), seed.js gives Sam a birth month, activity and lab history (and the HD demo urine + labs), core.js KH.api gains
+  labs/addLab/deleteLab/kidneyFunction. Server messages probed first with $S/probe.py (cases1/2.json).
+  tools/e2e/parity.py: section 11 (11a profile fields, 11b labs, 11c suggestions over 16 profiles x 4 lab sets + the
+  targets.* settings), `--sections`, error `code` compared (high severity), demo reset clears labs.
+  `python3 tools/e2e/parity.py --port 8352 --static-port 8353 --out $S/parity --sections 0,11`: 696/696 checks,
+  24,481 leaves; a mutated 422 code made 12 checks fail.
 
 ## Decisions (and why)
 * halfUp with negative places (calories to 10 kcal) lives in targets.js (`halfUpTo`): rules.js's halfUp builds

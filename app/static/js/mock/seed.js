@@ -144,7 +144,25 @@
     const profile = hemodialysis
       ? { name: 'Sam', weight_kg: 70, height_cm: 170, ckd_stage: '5', dialysis: 'hemodialysis', diabetes: 'type1', warn_fraction: 0.8, dialysis_days: [0, 2, 4], week_start: 'monday' }
       : { name: 'Sam', weight_kg: 70, height_cm: 170, ckd_stage: '4', dialysis: 'none', diabetes: 'type1', warn_fraction: 0.8, dialysis_days: [], week_start: 'monday' };
+    // "About you" (note 05 §4.2): sex is left unset so the demo shows the "add it" prompt.
+    Object.assign(profile, { birth_month: '1971-03', activity: 'low_active' }, hemodialysis ? { urine_output_ml: 400 } : {});
     api._updateProfile(profile);
+    // Lab results, as typed from the person's blood tests (some in SI units, to show the conversion).
+    const labUser = api._currentUser().id;
+    const lab = (daysAgo, analyte, value, unit, note = '') => {
+      const date = addDays(today, -daysAgo);
+      api._insertLab(labUser, KH.kidney.convert(analyte, value, unit), date, note, api._stamp(new Date(Math.min(at(date, 17.3), cap))));
+    };
+    if (hemodialysis) {
+      lab(33, 'potassium', 5.1, 'mmol/L'); lab(33, 'phosphate', 6.2, 'mg/dL'); lab(33, 'albumin', 3.7, 'g/dL');
+      lab(5, 'potassium', 5.7, 'mmol/L', 'Pre-dialysis, Monday'); lab(5, 'phosphate', 1.87, 'mmol/L'); lab(5, 'albumin', 36, 'g/L');
+      lab(5, 'bicarbonate', 22, 'mmol/L'); lab(40, 'a1c', 7.3, '%');
+    } else {
+      lab(96, 'potassium', 5.3, 'mmol/L'); lab(96, 'creatinine', 2.3, 'mg/dL'); lab(96, 'egfr', 26, 'mL/min/1.73 m²');
+      lab(41, 'albumin', 39, 'g/L'); lab(41, 'a1c', 58, 'mmol/mol');
+      lab(12, 'potassium', 4.8, 'mmol/L', 'Clinic visit'); lab(12, 'phosphate', 1.58, 'mmol/L'); lab(12, 'bicarbonate', 21, 'mmol/L');
+      lab(12, 'creatinine', 212, 'µmol/L'); lab(12, 'egfr', 25, 'mL/min/1.73 m²'); lab(12, 'uacr', 25, 'mg/mmol');
+    }
     api._updateProfile({ targets: api._suggested().targets });
   }
 
