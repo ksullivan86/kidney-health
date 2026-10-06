@@ -871,7 +871,8 @@ KeyItem = {"provider": "usda", "label": "USDA FoodData Central",
            "user_keys_allowed": true, "effective": "own" | "shared" | "none"}
 export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
                "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
-               "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity"}
+               "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
+               "food_preferences"}   // food_preferences: v0.3 guidance "Not for me" foods (schema step 5)
 ```
 
 `last4` is shown only for keys of 20 characters or more. Keys are never returned, logged or
@@ -1062,3 +1063,147 @@ The browser twins `js/engine/targets.js` and `js/engine/kidney_function.js` are 
 `tests/data/gen_targets_vectors.py` and `gen_kidney_function_vectors.py` from the Python modules;
 `tests/test_targets_vectors.py` fails when a file is stale). Inputs are plain JSON (profile, stored lab
 rows, settings, `today`); outputs include every note word for word.
+
+## M2 API: guidance
+
+Built in M2 (guidance) from note 06 §4.1–§4.15 and §6, with the Layer-0 duties of note 04 R2 and G7.
+Code: the package `app/guidance/` — pure modules `rules`, `vectors`, `state`, `budget`, `score`, `fits`,
+`swaps`, `planner`, `insights`, `messages`, `topics`, `hypo`, `ai_bridge`; I/O in `context` (loads one
+person's data) and `api` (the routes); response shapes in `app/guidance/models.py` (package-owned; the
+log-side models are in `app/models.py`). Schema step 5 (`app/migrations/m005_guidance_log.py`). People-
+and contributor-facing explanation: `docs/guidance.md`. Every route needs a signed-in person, reads only
+that person's rows, writes nothing except the "Not for me" list, and answers 404 for a food or entry
+that is not theirs. Responses are `Cache-Control: no-store` like every `/api` route.
+
+### Routes (`/api/guidance`)
+
+| Method and path | Query / body → response |
+|---|---|
+| `GET /api/guidance/next-meal` | `meal` (required), `date` (default today), `limit` 1–20 (11), `explain` → `NextMeal` |
+| `GET /api/guidance/swaps` | `food_id` + `meal` + `servings` or `grams` (+ `date`), **or** `entry_id`; `purpose` `hypo`\|`none` (default: `hypo` for a `hypo_treatment` food, else the entry's); `explain` → `Swaps`. 400 without exactly one of `food_id`/`entry_id`; 404 for a food or entry that is not the person's |
+| `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off |
+| `POST /api/guidance/plan-day` | `{date, meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, explain?}` → `Plan`; computes only |
+| `GET /api/guidance/insights/day` | `date` → `{status, rules_version, date, insights: [Insight] (≤ 6), planned_excluded, notes}` |
+| `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
+| `GET /api/guidance/rules` | → `{rules_version, rules_hash, rules: {NAME: value}, notes: {NAME: basis}, topic_pages: {slug: {slug, title, url}}, tips}` |
+| `GET /api/guidance/not-for-me` | → `{rules_version, limit: 500, foods: [{food_id, name, category, created_at}]}` |
+| `PUT /api/guidance/not-for-me/{food_id}` | → the list (idempotent); 404 for a food the person cannot use; 409 at 500 foods |
+| `DELETE /api/guidance/not-for-me/{food_id}` | → 204; 404 when not on the list |
+
+Instead of a result, `next-meal`, `swaps`, `plan-day` and the insights answer 200
+`{"status": "no_targets" | "disabled", "rules_version", "message"}`: `no_targets` when the profile has no
+numeric potassium, phosphorus or sodium target and no `carbs_per_meal_g`; `disabled` when the instance
+setting `guidance.enabled` is off ("Meal guidance is switched off on this server.") or the person's
+`guidance.enabled` / `show_plan_builder` / `show_insights` is off. `explain=true` adds score components,
+`why_not` and `not_eligible` reason codes and evaluation counts (contributors; never shown by default).
+
+```json
+NextMeal = {"status": "ok", "rules_version": "2026-10-05.1", "date", "meal", "open_meals": [Meal],
+  "room": {"potassium_mg": NutrientRoom | null, "phosphorus_mg": …, "sodium_mg": …, "fluid_ml": …,
+           "carbs_g": {"goal", "in_meal", "gap", "tolerance", "hypo_excluded_g"} | null,
+           "protein_g": {"aim", "aim_min"} | null},
+  "room_text": "Left for dinner: 750 mg potassium · 167 mg phosphorus · 600 mg sodium · 60 g carbs to reach 60 g",
+  "meal_has": {"protein", "starch", "veg_fruit"},
+  "foods": [FoodPortion + {"score", "fit_text", "reasons": [{"code", "text"}], "handbook": [{"slug", "title", "url"}]}],
+  "saved_meals": [{"template_id" | null, "name", "source": "saved" | "usual", "scale", "score",
+                   "items": [{"food_id", "name", "servings"}], "totals", "note"}],
+  "tips": [{"code", "text", "handbook", "url"}], "notes": ["Suggestions compare foods with the targets your care team set. They are not medical advice."],
+  "ai": {"available", "provider_label"}, "targets": {"values": {…}, "profile_updated_at"}}
+NutrientRoom = {"room", "cap" | null, "share", "in_meal", "remaining_today", "allowance_today",
+                "level": "ok" | "caution" | "over", "basis": "day" | "week_average" | "interdialytic"}
+FoodPortion = {"food_id", "name", "group": "protein" | "starch" | "veg_fruit" | "extra",
+               "role": "protein" | "mixed" | "starch" | "veg_fruit" | "drink" | "extra", "servings",
+               "serving_desc", "grams", "portion_text": "¾ × 1 cup (158 g)", "nutrients": {12 keys},
+               "warnings": [Warning], "renal_rating": "green" | "yellow" | "red"}
+Swaps = {"status": "ok", "rules_version", "date", "meal", "mode": "normal" | "hypo" | "avoid",
+  "food": {"food_id", "name", "servings", "serving_desc", "nutrients"},
+  "triggers": [{"nutrient", "reasons": ["high_per_portion" | "over_meal_room" | "phosphate_additive" | …], "value", "room"}],
+  "match": "carbs" | "protein" | "serving" | null,
+  "swaps": [FoodPortion + {"same_category", "fits_meal", "score", "deltas", "text"}] (≤ 5),
+  "portion_option": {"servings", "fraction", "fits_meal", "nutrients", "text"} | null,
+  "tips": [Tip], "widened", "notes", "reason": "no_warning" | "no_swap_found" | null,
+  "card": LowCard | null (hypo mode), "entry_id": int | null}
+LowCard = {"title": "Treating a low", "lines": [str], "handbook": "treating-a-low", "url": "/learn/t1d/treating-a-low/"}
+Plan = {"status": "ok", "rules_version", "date", "variant",
+  "meals": [{"meal", "status": "ok" | "partial" | "no_fit", "source": "saved" | "usual" | "starter" | "built" | null,
+             "name", "template_id", "scale", "score", "items": [FoodPortion], "totals", "why": [str],
+             "room": Room, "reason", "message"?, "closest"? (no_fit), "apply_saved"? {"endpoint", "body"}}],
+  "protein_topup": [Meal], "day_after": {"projected_totals", "projected_status", "new_alerts": [Alert]},
+  "energy_note": {"kcal", "goal", "text", "foods": [FoodPortion], "handbook"} | null,
+  "apply": {"endpoint": "/api/log/batch", "entries": [{"date", "meal", "food_id", "servings", "status": "planned", "purpose": "none"}]},
+  "notes", "targets", "explain"?}
+Insight = {"id": "day.potassium_mg.over" | …, "severity": "warning" | "attention" | "info" | "good",
+           "nutrient" | null, "message", "numbers": {…}, "sources": [{"name", "short_name", "value", "share_pct"}],
+           "handbook": [{"slug", "title", "url"}]}
+```
+
+Handbook links use the `/learn/...` URLs of note 08 §4.10 (`app/guidance/topics.py`;
+`tests/guidance/test_topics.py` checks every URL is an existing page with that slug and title).
+
+### Log changes (`app/log.py`, `app/meals.py`)
+
+* `Entry` gains `purpose` (`"hypo"` | `null`) and `client_id` (`string` | `null`). `POST /api/log`,
+  `/quick`, `/batch` and `PUT /api/log/{id}` accept `purpose`: `"hypo"` (the entry treated a low) or
+  `"none"`; left out on a create, an entry of a `hypo_treatment` food (or a quick add flagged so) is
+  `"hypo"` (the entry sheet's pre-ticked "Used to treat a low"); left out or `null` on `PUT` keeps it.
+  `copy-day` keeps it. The CSV export gains a last column `purpose`.
+* **`client_id`** (offline outbox, note 02 R5): a UUID in its 36-character text form, stored lower-case,
+  unique per person (`log_client_id` partial index). `POST /api/log` and `/quick` answer a repeat with
+  the entry already created and **200** instead of 201 (`/quick` creates no second food); two people
+  may use the same id; a concurrent duplicate is resolved the same way.
+* **`POST /api/log/batch`** `{"entries": [LogCreate] (1–40)}` → **201** `{"entries": [Entry], "results":
+  [{"index", "id", "result": "created" | "existing"}]}` in request order, **200** when every item already
+  existed. Each item is validated exactly as `POST /api/log` (400 with `entries[i]…` in the message;
+  repeated `client_id`s in one batch are a 400), then each food must be visible (404 `entries[i]: food N
+  not found`). One transaction: the first failing item rolls the whole batch back. Items whose
+  `client_id` the person already used are not added again. The body is bounded by the 40 items and
+  `MAX_BODY_BYTES` (413).
+* Saved meals gain `meal_hint` (a `Meal` or `null`): `POST /api/meals` accepts it, `PUT` keeps the stored
+  one when the field is left out (a v0.2 client) and clears it on `null`, `POST /api/meals/from-log` sets
+  it to the source meal and leaves low-treatment entries out.
+
+### Schema step 5 (`m005_guidance_log.py`)
+
+`log_entries.purpose TEXT`, `log_entries.client_id TEXT` + `CREATE UNIQUE INDEX log_client_id ON
+log_entries(user_id, client_id) WHERE client_id IS NOT NULL`, `meal_templates.meal_hint TEXT`,
+`food_preferences (user_id → users, food_id → foods, both ON DELETE CASCADE; preference 'not_for_me';
+created_at; PRIMARY KEY (user_id, food_id))`, and `meta.foods_rev` bumped by `AFTER INSERT/UPDATE/DELETE`
+triggers on `foods` and `AFTER INSERT/DELETE` on `user_food_links` (the guidance vector cache key, so
+every write path invalidates it). Existing entries keep `purpose` empty. Note 06's `guidance_json`
+profile column is superseded by the settings registry (below).
+
+### Settings (registered in `app/settings_registry.py`)
+
+`guidance.enabled` (instance, `true`, env `GUIDANCE_ENABLED`), `guidance.pool_per_role` (instance, 200,
+20–2000, env `GUIDANCE_POOL_PER_ROLE`), `guidance.beam_width` (instance, 16, 1–64, env
+`GUIDANCE_BEAM_WIDTH`), and the person's object `guidance` (scope `user`): `{enabled: true,
+carb_tolerance_g: 10 (5–20), hypo_dose_g: 15 (5–30), exclude_categories: [] (≤ 50), show_plan_builder:
+true, show_insights: true, ai_enrich: false}`, unknown fields refused. "Not for me" foods are
+`food_preferences` rows (≤ 500), exported as `export.json` → `food_preferences`.
+
+### Targets
+
+Guidance reads the targets through one function, `app.guidance.context.load_profile`, which calls
+`app.profile.get_profile` — the profile the Today screen (`GET /api/log`) shows — so guidance and the
+day's status always use the same effective targets. `next-meal` and `plan-day` return them with
+`profile_updated_at` (note 06 R10).
+
+### Optional AI hook (note 06 §4.13, note 04 R2)
+
+`app/ai/` may use only `app.guidance.ai_bridge`: `candidates_for_ai(ctx, meal, mode)` (`rerank` |
+`ideas` | `swap` | `plan`; ≤ 40 candidate foods with refs, ≤ 5 familiar meals, the room, levels, allowed
+handbook slugs, `rules_hash`; never a low treatment), `validate_ai_items(ctx, meal, ideas)` (the same
+`check_meal()` and `score_meal()`; drops with `not_a_candidate`, `quarters_out_of_range`,
+`would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …), `validate_ai_plan(ctx, picks)` and
+`register_ai_status(provider)` (feeds `next-meal`'s `ai` block; a failing provider reads as unavailable).
+`app.guidance.hypo.prefilter(text, dose_g)` returns the "Treating a low" card that must be shown
+**instead of** calling AI when free text may describe a low (note 04 G7).
+
+### Parity (demo/preview mode)
+
+The browser twin (`js/engine/guidance.js` + `js/mock/guidance.js`, frontend builder) is checked against
+`tests/data/guidance_vectors.json`, generated by `tests/data/gen_guidance_vectors.py` from the pure
+engine (`tests/guidance/test_parity_vectors.py` fails when it is stale): plain-JSON inputs (a fixed food
+subset, the person's profile, preferences, day, history, saved meals, combos) and the engine's JSON
+answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, `day_insights`,
+`period_insights` and `prefilter`.

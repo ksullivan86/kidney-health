@@ -286,6 +286,7 @@ def rules() -> dict[str, Any]:
         "rules_version": R.RULES_VERSION,
         "rules_hash": R.rules_hash(),
         "rules": R.rules_table(),
+        "notes": R.rule_notes(),
         "topic_pages": T.TOPIC_PAGES,
         "tips": [{"code": t.code, "handbook": t.slug, "text": t.text} for t in T.ALL_TIPS],
     }

@@ -304,59 +304,136 @@ def target_min(target: Any) -> float | None:
     return value
 
 
+# Every tunable number of the engine with the reason it has that value (note 06 §4.3; F1–F10 are the
+# note's findings). ``rules_table()`` serves these through ``GET /api/guidance/rules`` and
+# ``scripts/guidance_rules_doc.py`` prints them into docs/guidance.md, so the docs cannot drift.
+RULE_DOCS: tuple[tuple[str, str], ...] = (
+    ("MEAL_WEIGHT", "Share of the day's remaining room per open slot; reproduces AKF's 600 mg per meal at 2,000 mg (F1)"),
+    ("MEAL_CAP_FRACTION", "Per-meal cap as a fraction of the day's target: 0.30 per main meal, 0.15 for all snacks (F1; phosphorus by analogy, F2)"),
+    ("CAP_KEYS", "Nutrients with a per-meal cap (fluid has a day allowance only)"),
+    ("NEGLIGIBLE", "Amounts that never count against a room; carbs: a \"free\" food has ≤ 5 g (UW Food Choice Lists, F4)"),
+    ("USAGE_WEIGHT", "How much using up each room costs in a score; potassium acts fastest (diet guide §2)"),
+    ("USAGE_WEIGHT_P_NOT_OK", "Phosphorus weight while this week's phosphorus is not ok"),
+    ("PORTIONS_MAIN", "Portions tried for protein, mixed, starch and vegetable/fruit foods (servings)"),
+    ("PORTIONS_SIDE", "Portions tried for drinks and extras: never two root beers (F10)"),
+    ("PORTIONS_BUILD", "Portions tried when ranking plan-day candidates"),
+    ("PORTIONS_BUILD_PROTEIN", "Portions tried for plan-day protein candidates"),
+    ("WEEK_LOOKBACK_DAYS", "Previous days that balance week-judged phosphorus (§3.3)"),
+    ("WEEK_CLAMP", "Phosphorus allowance today, as a fraction of the daily target, never outside this range (§3.3)"),
+    ("CARB_TOLERANCE_G", "Grams either side of the meal carb goal that count as on target (Smart 2009/2012, F4); a personal setting"),
+    ("CARB_TOLERANCE_RANGE", "Allowed range of the personal carb tolerance (g)"),
+    ("SNACK_CARB_GOAL", "Carb goal of the snack slot (NKF: 1–3 carb choices per snack, F4)"),
+    ("SNACK_CARB_MIN_G", "Smallest snack carb goal: one carb choice"),
+    ("HYPO_DOSE_G", "Carbs that treat a low (rule of 15, ADA 2026 Rec 6.15, F5); a personal setting from the diabetes team"),
+    ("HYPO_DOSE_RANGE", "Allowed range of the personal low-treatment amount (g; 5–10 g on automated insulin delivery)"),
+    ("HIGH_K_ENTRY_MG", "A \"high-potassium portion\" (the app's per-serving high); AKF/UW: not several in one day"),
+    ("PROTEIN_ROLE_MIN_G", "A protein portion has at least this much protein (NKF: 7 g = 1 oz of meat, F3)"),
+    ("STARCH_ROLE_MIN_CARBS_G", "A starch has at least one carb choice"),
+    ("P_PER_G_PROTEIN", "Phosphorus per gram of protein: good at or below, poor at or above (Noori 2010, F2)"),
+    ("K_PER_G_PROTEIN", "Potassium per gram of protein: good at or below, poor at or above (design choice: chicken breast 8, ground chicken 29)"),
+    ("PROTEIN_AIM_FLOOR_G", "Smallest protein aim used in a score (avoids dividing by tiny aims)"),
+    ("MIN_SHOW_SCORE", "Foods scoring below this are not shown as \"fits\""),
+    ("GROUP_LIMITS", "At most this many suggestions per group"),
+    ("CATEGORY_LIMIT", "At most this many suggestions per food category"),
+    ("DEFAULT_LIMIT", "Suggestions returned by default"),
+    ("MAX_LIMIT", "Most suggestions a request may ask for"),
+    ("BEAM_WIDTH", "Partial meals kept at each step of the plan builder (admin: GUIDANCE_BEAM_WIDTH; §3.4)"),
+    ("BEAM_WIDTH_RANGE", "Allowed range of the beam width"),
+    ("PER_ROLE", "Best candidates per role the plan builder combines"),
+    ("POOL_PER_ROLE", "Foods per role pre-ranked for the plan builder (admin: GUIDANCE_POOL_PER_ROLE; F8)"),
+    ("POOL_PER_ROLE_RANGE", "Allowed range of the pool size"),
+    ("FAMILIAR_MARGIN", "A saved, usual or starter meal wins if it scores at least the best built meal minus this"),
+    ("SLOT_HABIT_BONUS", "Bonus for a food eaten in this meal slot on enough recent days (F10: no pasta at breakfast)"),
+    ("SLOT_HABIT_MIN_DAYS", "Days in the last 14 a food must have been eaten in the slot for the bonus"),
+    ("OFTEN_MIN_DAYS", "Days in the last 14 for \"You often have this\""),
+    ("HISTORY_DAYS", "Days of history for habit, variety and the phosphorus week"),
+    ("USUAL_HISTORY_DAYS", "Days of history mined for usual meals"),
+    ("USUAL_MIN_ITEMS", "Fewest foods in a usual meal"),
+    ("USUAL_MAX_ITEMS", "Most foods in a usual meal"),
+    ("USUAL_MIN_DATES", "A usual meal was eaten on at least this many dates"),
+    ("SWAP_MIN_REDUCTION", "A swap lowers every nutrient that triggered it by at least this fraction"),
+    ("SWAP_CARB_MATCH", "A swap's carbs stay within max(min_g, fraction × original): the insulin arithmetic stays the same (F4)"),
+    ("SWAP_PROTEIN_MATCH", "A swap matched on protein stays within max(min_g, fraction × original)"),
+    ("SWAP_MATCH_CARBS_MIN_G", "Swaps match carbs when the original has at least this much"),
+    ("SWAP_MATCH_PROTEIN_MIN_G", "Otherwise they match protein when the original has at least this much"),
+    ("SWAP_MAX", "Swap ideas returned"),
+    ("SWAP_AI_MAX", "Rule swaps handed to the optional AI layer"),
+    ("PORTION_RANGE", "Every planned or swapped portion is between these servings"),
+    ("PORTION_MIN", "Smallest portion (servings)"),
+    ("PORTION_MAX", "Largest portion (servings)"),
+    ("PORTION_OPTION_FRACTIONS", "Smaller-portion fallbacks of a swap request (¾, then ½)"),
+    ("HYPO_SWAP_TRIGGER_MG", "In low-treatment mode the only trigger is potassium above this"),
+    ("HYPO_INSIGHT_K_MG", "A low treatment above this potassium makes the insight name a lower-potassium choice"),
+    ("HYPO_BEST_MAX_K_MG", "… when one of the person's low treatments has at most this much"),
+    ("INSIGHT_MAX", "Insights returned"),
+    ("SOURCE_MIN_SHARE", "A food is named as a source when it gave at least this share"),
+    ("SOURCE_MAX", "Sources listed per insight"),
+    ("MIN_LOGGED_DAYS", "Logged days needed for period insights"),
+    ("PERIOD_DEFAULT_DAYS", "Default insight period (the days ending yesterday)"),
+    ("PERIOD_MAX_DAYS", "Longest insight period"),
+    ("PERIOD_CHANGE_MIN", "A change against the previous period is reported from this fraction"),
+    ("MEAL_SHARE_MIN", "One meal slot giving at least this share of potassium or sodium is reported"),
+    ("PERIOD_HYPO_MIN", "Low treatments in a period from which the diabetes team may want to know"),
+    ("SAVED_MEAL_SCALES", "Sizes a saved, usual or starter meal is tried at"),
+    ("SAVED_MEALS_MAX", "Fitting saved and usual meals returned"),
+    ("AI_FOODS_MAX", "Candidate foods handed to the optional AI layer (note 04 R2)"),
+    ("AI_FOODS_PER_GROUP_MIN", "… at least this many per group when available"),
+    ("AI_MEALS_MAX", "Saved or usual meals handed to the AI layer"),
+    ("AI_PLAN_OPTIONS_MAX", "Options per slot the AI layer may pick from"),
+    ("AI_QUARTERS_RANGE", "An AI idea's portion in quarter servings (note 04 V3)"),
+    ("ENERGY_NOTE_FRACTION", "A plan below this share of the calorie goal gets the energy note (R2: under-eating)"),
+    ("ENERGY_LOW_INSIGHT_FRACTION", "A logged day below this share of the calorie goal gets the eating-enough insight"),
+    ("ENERGY_DENSE_MIN_KCAL", "An energy-dense, low-mineral food has at least this many kcal per serving"),
+    ("ENERGY_DENSE_MAX", "… and at most these minerals and carbs per serving"),
+    ("ENERGY_NOTE_FOODS", "Energy-dense foods named in the note"),
+    ("PROTEIN_TOPUP_STEP", "Servings added to a built meal's protein item when the day is below its protein minimum"),
+    ("PROTEIN_TOPUP_STEPS", "Most top-up steps per meal"),
+    ("REPAIR_STEP", "Servings taken off a built item when the plan would make a day-judged nutrient newly over"),
+    ("REPAIR_STEPS", "Most repair steps before the slot is marked partial"),
+    ("VARIANT_MAX", "Most \"Show another plan\" variants"),
+    ("UNKNOWN_PENALTY", "Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)"),
+    ("FREE_FOOD_CARBS_G", "A food with at most this many carbs is free once the meal's carbs are done"),
+    ("HIGH_GI_PENALTY_MIN_CARBS_G", "High-glycaemic foods cost a point from one carb choice"),
+    ("FILLS_CARBS_MIN_G", "\"Brings the meal to … carbs\" needs at least one carb choice"),
+    ("LOW_K_REASON_MG", "\"Low in potassium\" at or below this portion amount"),
+    ("LOW_P_REASON_MG", "\"Low in phosphorus\" at or below this portion amount"),
+    ("MAX_NAME_CHARS", "Food names in sentences are cut to this length (custom names are untrusted text)"),
+    ("RENAL_MEDIUM", "Per-portion \"medium\" thresholds of the renal rating (the app's warnings, ARCHITECTURE)"),
+    ("RENAL_HIGH", "Per-portion \"high\" thresholds (above this, rounded to whole mg)"),
+)
+
+# Names, keys and labels: structure, not numbers to tune (listed so the drift test sees every constant).
+STRUCTURAL: frozenset[str] = frozenset({
+    "RULES_VERSION", "MAIN_MEALS", "SNACK", "SLOT_ORDER", "K", "P", "NA", "FLUID", "CARBS", "PROTEIN", "KCAL",
+    "ROOM_KEYS", "RENAL_KEYS", "DAY_JUDGED", "INTERDIALYTIC_KEYS", "ROLES", "GROUP_OF_ROLE", "GROUPS", "GROUP_LABEL",
+    "CARB_FILL_ROLES", "PROTEIN_ROLES", "STARCH_ROLES", "MAIN_PORTION_ROLES", "MAIN_ROLE_STEPS", "STEP_ROLES",
+    "SNACK_ROLES", "INGREDIENT_FLAG", "SUPPLIES_CATEGORY", "BEVERAGES", "VEGETABLES", "LEACHING_STEMS", "SEVERITY_ORDER",
+    "NUTRIENT_PRIORITY", "RENAL_HIGH_CUT", "RENAL_MEDIUM_CUT", "RULE_DOCS", "STRUCTURAL",
+})
+
+_DERIVED = {"SNACK_CARB_GOAL": "targets.carbs_per_snack_g, else max(15, 5 × round(carbs_per_meal_g / 2 / 5))",
+            "PORTION_RANGE": [PORTION_MIN, PORTION_MAX]}
+
+
+def _plain(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if isinstance(value, (frozenset, set)):
+        return sorted(_plain(v) for v in value)
+    if isinstance(value, (tuple, list)):
+        return [_plain(v) for v in value]
+    return value
+
+
 def rules_table() -> dict[str, Any]:
-    """Every number of the engine as plain JSON (``GET /api/guidance/rules``, ``docs/guidance.md``)."""
-    return {
-        "MEAL_WEIGHT": dict(MEAL_WEIGHT),
-        "MEAL_CAP_FRACTION": dict(MEAL_CAP_FRACTION),
-        "CAP_KEYS": list(CAP_KEYS),
-        "NEGLIGIBLE": dict(NEGLIGIBLE),
-        "USAGE_WEIGHT": dict(USAGE_WEIGHT),
-        "USAGE_WEIGHT_P_NOT_OK": USAGE_WEIGHT_P_NOT_OK,
-        "PORTIONS_MAIN": list(PORTIONS_MAIN),
-        "PORTIONS_SIDE": list(PORTIONS_SIDE),
-        "WEEK_LOOKBACK_DAYS": WEEK_LOOKBACK_DAYS,
-        "WEEK_CLAMP": list(WEEK_CLAMP),
-        "CARB_TOLERANCE_G": CARB_TOLERANCE_G,
-        "CARB_TOLERANCE_RANGE": list(CARB_TOLERANCE_RANGE),
-        "SNACK_CARB_GOAL": "targets.carbs_per_snack_g, else max(15, 5 × round(carbs_per_meal_g / 2 / 5))",
-        "HYPO_DOSE_G": HYPO_DOSE_G,
-        "HYPO_DOSE_RANGE": list(HYPO_DOSE_RANGE),
-        "HIGH_K_ENTRY_MG": HIGH_K_ENTRY_MG,
-        "PROTEIN_ROLE_MIN_G": PROTEIN_ROLE_MIN_G,
-        "STARCH_ROLE_MIN_CARBS_G": STARCH_ROLE_MIN_CARBS_G,
-        "P_PER_G_PROTEIN": {"good_max": P_PER_G_PROTEIN[0], "poor_min": P_PER_G_PROTEIN[1]},
-        "K_PER_G_PROTEIN": {"good_max": K_PER_G_PROTEIN[0], "poor_min": K_PER_G_PROTEIN[1]},
-        "PROTEIN_AIM_FLOOR_G": PROTEIN_AIM_FLOOR_G,
-        "MIN_SHOW_SCORE": MIN_SHOW_SCORE,
-        "GROUP_LIMITS": dict(GROUP_LIMITS),
-        "CATEGORY_LIMIT": CATEGORY_LIMIT,
-        "DEFAULT_LIMIT": DEFAULT_LIMIT,
-        "MAX_LIMIT": MAX_LIMIT,
-        "BEAM_WIDTH": BEAM_WIDTH,
-        "PER_ROLE": PER_ROLE,
-        "POOL_PER_ROLE": POOL_PER_ROLE,
-        "FAMILIAR_MARGIN": FAMILIAR_MARGIN,
-        "SLOT_HABIT_BONUS": SLOT_HABIT_BONUS,
-        "SLOT_HABIT_MIN_DAYS": SLOT_HABIT_MIN_DAYS,
-        "HISTORY_DAYS": HISTORY_DAYS,
-        "USUAL_HISTORY_DAYS": USUAL_HISTORY_DAYS,
-        "SWAP_MIN_REDUCTION": SWAP_MIN_REDUCTION,
-        "SWAP_CARB_MATCH": {"min_g": SWAP_CARB_MATCH[0], "fraction": SWAP_CARB_MATCH[1]},
-        "SWAP_PROTEIN_MATCH": {"min_g": SWAP_PROTEIN_MATCH[0], "fraction": SWAP_PROTEIN_MATCH[1]},
-        "SWAP_MAX": SWAP_MAX,
-        "PORTION_RANGE": [PORTION_MIN, PORTION_MAX],
-        "PORTION_OPTION_FRACTIONS": list(PORTION_OPTION_FRACTIONS),
-        "INSIGHT_MAX": INSIGHT_MAX,
-        "SOURCE_MIN_SHARE": SOURCE_MIN_SHARE,
-        "MIN_LOGGED_DAYS": MIN_LOGGED_DAYS,
-        "PERIOD_MAX_DAYS": PERIOD_MAX_DAYS,
-        "SAVED_MEAL_SCALES": list(SAVED_MEAL_SCALES),
-        "ENERGY_NOTE_FRACTION": ENERGY_NOTE_FRACTION,
-        "ENERGY_LOW_INSIGHT_FRACTION": ENERGY_LOW_INSIGHT_FRACTION,
-        "RENAL_MEDIUM": dict(RENAL_MEDIUM),
-        "RENAL_HIGH": dict(RENAL_HIGH),
-    }
+    """Every number of the engine as plain JSON, in :data:`RULE_DOCS` order (``GET /api/guidance/rules``)."""
+    module = globals()
+    return {name: _plain(_DERIVED[name] if name in _DERIVED else module[name]) for name, _ in RULE_DOCS}
+
+
+def rule_notes() -> dict[str, str]:
+    """Why each number has its value (the "Basis" column of docs/guidance.md)."""
+    return dict(RULE_DOCS)
 
 
 def rules_hash() -> str:

@@ -401,6 +401,7 @@ class RulesResponse(_Out):
     rules_version: str
     rules_hash: str
     rules: dict[str, Any]
+    notes: dict[str, str]
     topic_pages: dict[str, HandbookPage]
     tips: list[dict[str, str]]
 
