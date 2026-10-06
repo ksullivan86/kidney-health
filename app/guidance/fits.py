@@ -26,7 +26,8 @@ from .score import (
     score_meal,
     today_stats,
 )
-from .state import FoodVec, GuidanceContext
+from .state import GuidanceContext
+from .vectors import FoodVec, protein_quality, renal_level
 
 
 # --------------------------------------------------------------------------- #
@@ -75,7 +76,7 @@ def food_core(f: FoodVec, q: float) -> dict[str, Any]:
         "portion_text": M.portion_text(q, f.serving_desc),
         "nutrients": round_nutrients(values),
         "warnings": warnings,
-        "renal_rating": R.renal_level(values[R.K], values[R.P], values[R.NA], f.additive),
+        "renal_rating": renal_level(values[R.K], values[R.P], values[R.NA], f.additive),
     }
 
 
@@ -164,10 +165,11 @@ def reasons_for(ev: Evaluation, scorer: Scorer, room: Room, standard: Evaluation
     if ap is not None and ap <= R.LOW_P_REASON_MG:
         candidates.append(("low_phosphorus", M.reason_text("low_phosphorus", p=M.fmt_int(ap)), _REASON_TOPIC["low_phosphorus"]))
     apr = amounts.get(R.PROTEIN)
-    if (f.role in R.PROTEIN_ROLES and apr is not None and apr >= R.PROTEIN_ROLE_MIN_G and ap is not None
-            and ap / apr <= R.P_PER_G_PROTEIN[0]):
+    quality = protein_quality(apr, ak, ap)
+    if f.role in R.PROTEIN_ROLES and quality["p_grade"] == "good":
         candidates.append(("protein_quality", M.reason_text("protein_quality", protein=M.fmt_g(apr),
-                                                           ratio=M.fmt_int(ap / apr)), _REASON_TOPIC["protein_quality"]))
+                                                           ratio=M.fmt_int(quality["p_per_g"])),
+                           _REASON_TOPIC["protein_quality"]))
     if habit.days_14.get(f.id, 0) >= R.OFTEN_MIN_DAYS:
         candidates.append(("you_eat_often", M.reason_text("you_eat_often"), None))
     if room.carbs is not None and ac is not None and room.gap <= room.tolerance and ac <= R.FREE_FOOD_CARBS_G:

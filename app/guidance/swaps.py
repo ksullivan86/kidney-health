@@ -23,7 +23,8 @@ from . import topics as T
 from .budget import Room, day_totals, meal_room
 from .fits import food_core, scaled
 from .score import habit_stats, static_term, today_stats
-from .state import FoodVec, GuidanceContext
+from .state import GuidanceContext
+from .vectors import FoodVec, is_high, renal_level
 
 _RENAL_SWAP_SCORE = {"green": 1.5, "yellow": 0.5, "red": -1.5}
 
@@ -56,7 +57,7 @@ def triggers_for(food: FoodVec, q: float, room: Room, mode: str) -> list[dict[st
     for key in (R.K, R.P, R.NA, R.FLUID):
         v = a[key]
         reasons: list[str] = []
-        if key != R.FLUID and R.is_high(key, v):
+        if key != R.FLUID and is_high(key, v):
             reasons.append("high_per_portion")
         if key == R.P and food.additive:
             reasons.append("phosphate_additive")
@@ -120,6 +121,8 @@ def _eligible_swap(f: FoodVec, original: FoodVec, ctx: GuidanceContext, mode: st
         return False
     if f.hypo and not original.beverage:
         return False
+    if mode == "avoid":  # every same-category food is a candidate (§4.6)
+        return f.category == original.category
     return (f.category == original.category) or (f.role == original.role)
 
 
@@ -158,7 +161,7 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
     base["match"] = match
     trigger_keys = [t["nutrient"] for t in triggers if t["nutrient"] in R.ROOM_KEYS]
     p_trigger = R.P in trigger_keys
-    orig_high = {k: R.is_high(k, orig[k]) or (k == R.P and food.additive) for k in R.RENAL_KEYS}
+    orig_high = {k: is_high(k, orig[k]) or (k == R.P and food.additive) for k in R.RENAL_KEYS}
     habit = habit_stats(ctx)
     today = today_stats(ctx.day)
     weights = dict(R.USAGE_WEIGHT)
@@ -196,13 +199,13 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
                     if new[key] is None and room.level_of(key) != "ok":
                         ok = False
                         break
-                    high = R.is_high(key, new[key]) or (key == R.P and cand.additive)
+                    high = is_high(key, new[key]) or (key == R.P and cand.additive)
                     if high and not orig_high[key]:
                         ok = False
                         break
             if not ok:
                 continue
-        level = R.renal_level(new[R.K], new[R.P], new[R.NA], cand.additive)
+        level = renal_level(new[R.K], new[R.P], new[R.NA], cand.additive)
         same_category = cand.category == food.category
         same_family = bool(cand.family) and cand.family == food.family
         fits = _fits_room(new, room)
@@ -259,7 +262,7 @@ def portion_option(food: FoodVec, servings: float, room: Room, triggers: Sequenc
         a = _amounts(food, q)
         if not _fits_room(a, room):
             continue
-        clears = all(not (k != R.FLUID and R.is_high(k, a[k])) for k in keys)
+        clears = all(not (k != R.FLUID and is_high(k, a[k])) for k in keys)
         if fraction == 0.75 and not clears:
             continue
         return {

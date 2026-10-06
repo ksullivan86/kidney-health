@@ -5,7 +5,8 @@ import fixtures as fx
 import pytest
 from app.guidance import messages as M
 from app.guidance import swaps
-from app.guidance.state import Prefs, make_food
+from app.guidance.state import Prefs
+from app.guidance.vectors import make_food
 
 
 def swap(fid, servings=1.0, purpose=None, meal="dinner", ctx=None):

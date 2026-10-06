@@ -18,7 +18,8 @@ from typing import Iterable, Mapping, Sequence
 
 from . import rules as R
 from .budget import INF, Room
-from .state import FoodVec, GuidanceContext
+from .state import GuidanceContext
+from .vectors import FoodVec, is_high, protein_quality, renal_level
 
 MealItem = tuple[FoodVec, float]
 
@@ -243,7 +244,7 @@ class Scorer:
             if f.additive:
                 base -= 3.0
         else:
-            level = R.renal_level(ak, ap, ana, f.additive)
+            level = renal_level(ak, ap, ana, f.additive)
             base = 3.0 if level == "green" else 1.0 if level == "yellow" else -3.0
         static = self.static(f)
         unknown_pen = R.UNKNOWN_PENALTY * len(unknown)
@@ -401,7 +402,7 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built") -> Me
                 return MealCheck(False, "ingredient")
             high_any = False
             for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)):
-                high = (v is not None and R.is_high(key, v * q)) or (key == R.P and f.additive)
+                high = (v is not None and is_high(key, v * q)) or (key == R.P and f.additive)
                 high_any = high_any or high
                 if high and room.level_of(key) != "ok":
                     return MealCheck(False, f"high_warning:{key}")
@@ -423,12 +424,11 @@ def is_poor(f: FoodVec, q: float) -> bool:
     ap = None if f.p is None else f.p * q
     ana = None if f.na is None else f.na * q
     if f.role in R.PROTEIN_ROLES and apr is not None and apr >= R.PROTEIN_ROLE_MIN_G:
-        if ap is not None and ap / apr >= R.P_PER_G_PROTEIN[1]:
+        quality = protein_quality(apr, ak, ap)
+        if quality["p_grade"] == "poor" or quality["k_grade"] == "poor":
             return True
-        if ak is not None and ak / apr >= R.K_PER_G_PROTEIN[1]:
-            return True
-        return R.is_high(R.NA, ana)
-    return R.renal_level(ak, ap, ana, f.additive) == "red"
+        return is_high(R.NA, ana)
+    return renal_level(ak, ap, ana, f.additive) == "red"
 
 
 def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysis: bool, scale: float = 1.0,

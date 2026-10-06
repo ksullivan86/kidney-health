@@ -324,17 +324,18 @@ def partial_text(meal: str, key: str) -> str:
 
 
 def treating_a_low_card(dose_g: int | float) -> dict[str, object]:
-    """The rule-based "Treating a low" card shown instead of any AI call (note 04 G7) and with hypo
-    options. Facts: ADA 2026 Rec 6.15/6.16, diet guide §4; the grams follow the person's setting."""
+    """The rule-based "Treating a low" card shown instead of any AI call (note 04 G7) and with low
+    treatments. Facts as in the handbook page ``t1d/treating-a-low`` and the diet guide §4 (ADA 2026
+    Rec 6.15/6.16); the grams are the person's own setting (``hypo_dose_g``, from their diabetes team)."""
     dose = fmt_g(float(dose_g))
     return {
         "title": "Treating a low",
         "lines": [
-            f"If your glucose is below 70 mg/dL (3.9 mmol/L), take {dose} g of fast carbs now, such as 4 glucose "
-            "tablets. Potassium never delays treating a low.",
-            "Check again in 15 minutes. If you are still below 70 mg/dL, take another "
-            f"{dose} g.",
-            "Skip chocolate, milk or peanut butter for the first treatment: fat and protein slow it down.",
+            f"If your glucose is below 70 mg/dL (3.9 mmol/L), take {dose} g of fast carbs now. Glucose tablets are "
+            "the best choice on a kidney diet; potassium never delays treating a low.",
+            f"Check again in 15 minutes. If you are still below 70 mg/dL, take another {dose} g.",
+            "Skip chocolate, milk or peanut butter for the first treatment: fat slows the rise in glucose, and "
+            "protein does not raise it.",
             "If someone cannot swallow safely, do not give food or drink: use their emergency glucagon if they "
             "have it and call your emergency number.",
             "Log the treatment afterwards and tick \"Used to treat a low\". It counts toward potassium, but never "

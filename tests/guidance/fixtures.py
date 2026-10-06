@@ -17,17 +17,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from app.guidance.state import (
-    Combo,
-    DayEntry,
-    FoodVec,
-    GuidanceContext,
-    HistoryEntry,
-    Prefs,
-    Profile,
-    SavedMeal,
-    make_food,
-)
+from app.guidance.state import Combo, DayEntry, GuidanceContext, HistoryEntry, Prefs, Profile, SavedMeal
+from app.guidance.vectors import FoodVec, make_food
 from app.nutrients import NUTRIENT_KEYS
 
 DATE = "2026-10-05"

@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, StringConstraints, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, field_validator
 
 Scope = Literal["instance", "user", "user_default"]
 SCOPES: tuple[str, ...] = ("instance", "user", "user_default")
@@ -282,5 +282,76 @@ register(
         label="Units for lab results",
         help="us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, "
         "g/L, mg/mmol, mmol/mol. Only the unit offered first changes; any unit can still be entered.",
+    ),
+)
+
+
+# --------------------------------------------------------------------------- #
+# Note 06 (meal guidance), §4.14 with note 07's key names. Owner: M2 guidance (read by
+# app/guidance/context.py and app/guidance/api.py). "Not for me" foods are rows of food_preferences
+# (schema step 5), not part of this object, so a deleted food disappears from the list by itself.
+# --------------------------------------------------------------------------- #
+
+CategoryName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class GuidancePreferences(BaseModel):
+    """The person's guidance settings (one object, note 07 §3.10)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True  # "Show meal guidance"
+    carb_tolerance_g: Annotated[int, Field(ge=5, le=20)] = 10  # "How close to my meal carb goal counts as on target"
+    hypo_dose_g: Annotated[int, Field(ge=5, le=30)] = 15  # "Carbs I take to treat a low (from my diabetes team)"
+    exclude_categories: Annotated[list[CategoryName], Field(max_length=50)] = []  # "Never suggest"
+    show_plan_builder: bool = True
+    show_insights: bool = True
+    ai_enrich: bool = False  # note 04: AI may re-rank and explain the rule results (opt-in)
+
+    @field_validator("exclude_categories")
+    @classmethod
+    def _unique(cls, value: list[str]) -> list[str]:
+        out: list[str] = []
+        for name in value:
+            if name not in out:
+                out.append(name)
+        return out
+
+
+register(
+    SettingDef(
+        key="guidance.enabled",
+        model=bool,
+        default=True,
+        scope="instance",
+        env="GUIDANCE_ENABLED",
+        label="Meal guidance",
+        help="Rule-based suggestions for the next meal, swap ideas, plan-the-day and insights. Works without AI.",
+    ),
+    SettingDef(
+        key="guidance.pool_per_role",
+        model=Annotated[int, Field(ge=20, le=2000)],
+        default=200,
+        scope="instance",
+        env="GUIDANCE_POOL_PER_ROLE",
+        label="Plan builder: foods considered per role",
+        help="Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.",
+    ),
+    SettingDef(
+        key="guidance.beam_width",
+        model=Annotated[int, Field(ge=1, le=64)],
+        default=16,
+        scope="instance",
+        env="GUIDANCE_BEAM_WIDTH",
+        label="Plan builder: search width",
+        help="Partial meals kept at each step. 8 is about 15 % faster and finds slightly worse meals.",
+    ),
+    SettingDef(
+        key="guidance",
+        model=GuidancePreferences,
+        default=GuidancePreferences(),
+        scope="user",
+        label="Meal guidance preferences",
+        help="carb_tolerance_g (5–20) and hypo_dose_g (5–30) come from your diabetes team.",
     ),
 )

@@ -41,7 +41,8 @@ from .score import (
     static_term,
     today_stats,
 )
-from .state import DayEntry, FoodVec, GuidanceContext, virtual_entry
+from .state import DayEntry, GuidanceContext, virtual_entry
+from .vectors import FoodVec
 
 _LEVEL_RANK = {"green": 0, "yellow": 1, "red": 2}
 
@@ -514,8 +515,11 @@ def plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_sa
     # New "over" alerts only: a plan that brings the day near (not over) a goal is what was asked for.
     was_over = {a["nutrient"] for a in build_projected_alerts(before) if a["level"] == "over"}
     new_alerts = [a for a in build_projected_alerts(after) if a["level"] == "over" and a["nutrient"] not in was_over]
+    # A planned meal is never a low treatment, even when a saved meal holds apple juice: "none" stops
+    # POST /api/log/batch from defaulting a hypo_treatment food to purpose "hypo".
     entries = [
-        {"date": ctx.date, "meal": p.meal, "food_id": f.id, "servings": R.round_to(q, 3), "status": "planned"}
+        {"date": ctx.date, "meal": p.meal, "food_id": f.id, "servings": R.round_to(q, 3), "status": "planned",
+         "purpose": "none"}
         for p in plans if p.items for f, q in p.items
     ]
     meals_json = []

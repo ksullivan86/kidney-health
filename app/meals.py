@@ -118,6 +118,7 @@ def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
         "id": row["id"],
         "name": row["name"],
         "note": row["note"],
+        "meal_hint": row["meal_hint"] if "meal_hint" in row.keys() else None,  # schema step 5
         "items": items,
         "totals": round_nutrients(totals),
         "kidney_rating": worst_rating(i["kidney_rating"] for i in items),
@@ -135,11 +136,14 @@ def resolve_items(conn: sqlite3.Connection, user_id: int, items: Iterable[MealIt
     return out
 
 
-def insert_template(conn: sqlite3.Connection, *, user_id: int, name: str, note: str | None, items: list[dict[str, Any]]) -> int:
+def insert_template(conn: sqlite3.Connection, *, user_id: int, name: str, note: str | None, items: list[dict[str, Any]],
+                    meal_hint: str | None = None) -> int:
+    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``."""
     now = utcnow()
     cur = conn.execute(
-        "INSERT INTO meal_templates (user_id, name, note, items_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (int(user_id), name, note, json.dumps(items), now, now),
+        """INSERT INTO meal_templates (user_id, name, note, items_json, meal_hint, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (int(user_id), name, note, json.dumps(items), meal_hint, now, now),
     )
     return int(cur.lastrowid)
 
@@ -158,19 +162,21 @@ def list_meals(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) ->
 @router.post("", response_model=MealTemplate, status_code=201)
 def create_meal(body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     items = resolve_items(conn, user.id, body.items)
-    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items)
+    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal_hint)
     conn.commit()
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
 
 @router.post("/from-log", response_model=MealTemplate, status_code=201)
 def meal_from_log(body: MealFromLog, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Save that day's entries of one meal (eaten and planned) as a template."""
-    rows = fetch_entries(conn, user.id, body.date, body.date, meal=body.meal)
+    """Save that day's entries of one meal (eaten and planned) as a template for that meal slot
+    (``meal_hint``). Entries that treated a low (``purpose = 'hypo'``) are not part of the meal."""
+    rows = [r for r in fetch_entries(conn, user.id, body.date, body.date, meal=body.meal)
+            if ("purpose" not in r.keys() or r["purpose"] != "hypo")]
     if not rows:
         raise HTTPException(status_code=400, detail=f"nothing logged for {body.meal} on {body.date}")
     items = [{"food_id": r["food_id"], "servings": float(r["servings"])} for r in rows]
-    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items)
+    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal)
     conn.commit()
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
@@ -182,11 +188,14 @@ def get_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends
 
 @router.put("/{meal_id}", response_model=MealTemplate)
 def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    get_template_or_404(conn, user.id, meal_id)
+    row = get_template_or_404(conn, user.id, meal_id)
     items = resolve_items(conn, user.id, body.items)
+    # A client that does not send meal_hint (a v0.2 screen) keeps the stored one; null clears it.
+    meal_hint = body.meal_hint if "meal_hint" in body.model_fields_set else row["meal_hint"]
     conn.execute(
-        "UPDATE meal_templates SET name = ?, note = ?, items_json = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-        (body.name, body.note, json.dumps(items), utcnow(), meal_id, user.id),
+        """UPDATE meal_templates SET name = ?, note = ?, items_json = ?, meal_hint = ?, updated_at = ?
+           WHERE id = ? AND user_id = ?""",
+        (body.name, body.note, json.dumps(items), meal_hint, utcnow(), meal_id, user.id),
     )
     conn.commit()
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))

@@ -4,7 +4,8 @@ from __future__ import annotations
 import fixtures as fx
 from app.guidance import budget, fits
 from app.guidance.score import Counter, Scorer, habit_stats, today_stats
-from app.guidance.state import Prefs, make_food
+from app.guidance.state import Prefs
+from app.guidance.vectors import make_food
 
 
 def dinner(**kw):

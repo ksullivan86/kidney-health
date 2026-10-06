@@ -18,7 +18,8 @@ from . import messages as M
 from . import rules as R
 from . import topics as T
 from .fits import short_names
-from .state import DayEntry, FoodVec, GuidanceContext, HistoryEntry, Prefs, Profile
+from .state import DayEntry, GuidanceContext, HistoryEntry, Prefs, Profile
+from .vectors import FoodVec
 from .swaps import candidate_portion
 
 _WEEKDAY = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")

@@ -39,11 +39,28 @@ Sex = Literal["female", "male", "unspecified"]
 Activity = Literal["inactive", "low_active", "active", "very_active"]
 Analyte = Literal["potassium", "phosphate", "albumin", "bicarbonate", "uacr", "creatinine", "cystatin_c", "egfr", "a1c"]
 
+# v0.3 guidance and offline outbox (note 06 §4.11, note 02 R5). ``purpose`` in a request: "hypo" (the
+# entry treats a low) or "none" (it does not); left out, a food flagged ``hypo_treatment`` defaults to
+# "hypo". ``Entry.purpose`` is "hypo" or null.
+PurposeIn = Literal["hypo", "none"]
+EntryPurpose = Literal["hypo"]
+MAX_LOG_BATCH = 40  # POST /api/log/batch items (note 06 §4.10)
+_CLIENT_ID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
 # int | float keeps integers (mg, mL) as integers in JSON instead of coercing to 422.0.
 Number = int | float
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _FLAG_RE = re.compile(r"^[a-z0-9_]{1,40}$")
+
+
+def validate_client_id(value: str | None) -> str | None:
+    """An offline-outbox id: a UUID in its 36-character text form (note 02 R5), stored lower-case."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not _CLIENT_ID_RE.match(value):
+        raise ValueError("must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e")
+    return value.lower()
 
 
 def validate_date(value: str) -> str:
@@ -297,11 +314,37 @@ class LogCreate(BaseModel):
     grams: float | None = Field(default=None, gt=0, le=MAX_GRAMS, allow_inf_nan=False)
     note: str | None = Field(default=None, max_length=500)
     status: EntryStatus = "eaten"
+    purpose: PurposeIn | None = None  # v0.3: left out → "hypo" for a hypo_treatment food
+    client_id: str | None = None  # v0.3 offline outbox: a repeat answers 200 with the existing entry
 
     @field_validator("date")
     @classmethod
     def _date(cls, v: str) -> str:
         return validate_date(v)
+
+    @field_validator("client_id")
+    @classmethod
+    def _client_id(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
+
+
+class LogBatch(BaseModel):
+    """``POST /api/log/batch`` (note 06 §4.10): 1–40 entries, each validated exactly as ``POST /api/log``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    entries: list[LogCreate] = Field(min_length=1, max_length=MAX_LOG_BATCH)
+
+    @model_validator(mode="after")
+    def _distinct_client_ids(self) -> "LogBatch":
+        seen: dict[str, int] = {}
+        for index, entry in enumerate(self.entries):
+            if entry.client_id is None:
+                continue
+            if entry.client_id in seen:
+                raise ValueError(f"entries[{index}].client_id repeats entries[{seen[entry.client_id]}].client_id")
+            seen[entry.client_id] = index
+        return self
 
 
 class LogUpdate(BaseModel):
@@ -313,6 +356,7 @@ class LogUpdate(BaseModel):
     grams: float | None = Field(default=None, gt=0, le=MAX_GRAMS, allow_inf_nan=False)
     note: str | None = Field(default=None, max_length=500)
     status: EntryStatus | None = None
+    purpose: PurposeIn | None = None  # v0.3: left out or null keeps the stored purpose
 
     @field_validator("date")
     @classmethod
@@ -333,11 +377,18 @@ class QuickAdd(BaseModel):
     flags: list[str] = Field(default_factory=list)
     note: str | None = Field(default=None, max_length=500)
     status: EntryStatus = "eaten"
+    purpose: PurposeIn | None = None  # v0.3: left out → "hypo" when ``flags`` has hypo_treatment
+    client_id: str | None = None  # v0.3: a repeat answers 200 and creates no second food
 
     @field_validator("date")
     @classmethod
     def _date(cls, v: str) -> str:
         return validate_date(v)
+
+    @field_validator("client_id")
+    @classmethod
+    def _client_id(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("nutrients")
     @classmethod
@@ -363,8 +414,18 @@ class Entry(BaseModel):
     nutrients: dict[str, Number | None]
     warnings: list[Warning]
     kidney_rating: Rating
+    purpose: EntryPurpose | None = None  # v0.3: "hypo" = used to treat a low
+    client_id: str | None = None  # v0.3: the offline outbox id it was created with
     created_at: str
     updated_at: str
+
+
+class LogBatchResult(BaseModel):
+    """Per-item results of ``POST /api/log/batch`` in request order: ``created`` or ``existing``
+    (an earlier request with the same ``client_id`` created it)."""
+
+    entries: list[Entry]
+    results: list[dict[str, Any]]
 
 
 class MarkEaten(BaseModel):
@@ -535,6 +596,7 @@ class MealTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     note: str | None = Field(default=None, max_length=1000)
     items: list[MealItemIn] = Field(min_length=1)
+    meal_hint: Meal | None = None  # v0.3 (note 06 §4.11): the slot it is for; left out on PUT keeps it
 
     @field_validator("note")
     @classmethod
@@ -556,6 +618,7 @@ class MealTemplate(BaseModel):
     id: int
     name: str
     note: str | None
+    meal_hint: Meal | None = None  # v0.3
     items: list[MealItem]
     totals: dict[str, Number | None]
     kidney_rating: Rating

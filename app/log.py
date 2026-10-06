@@ -1,8 +1,17 @@
 """Food log: entries (eaten or planned) with nutrient snapshots, day / range / period
-summaries, mark-eaten, copy-day, CSV export and quick add.
+summaries, mark-eaten, copy-day, CSV export, quick add and (v0.3) batch add.
 
 Every query is scoped by the signed-in person's ``user_id`` (note 07 §4.10); an entry id that
 belongs to someone else answers 404, exactly like one that does not exist.
+
+v0.3 (note 06 §4.11, note 02 R5):
+
+* ``purpose``: ``"hypo"`` marks an entry that treated a low. It still counts toward every total
+  (the person really ate it), but guidance leaves it out of the meal's carbohydrate and never
+  suggests a smaller treatment. A request may send ``"hypo"`` or ``"none"``; left out, an entry of a
+  ``hypo_treatment`` food defaults to ``"hypo"`` (the entry sheet's pre-ticked "Used to treat a low").
+* ``client_id``: the offline outbox's UUID. ``POST /api/log``, ``/quick`` and ``/batch`` answer a
+  repeat with the entry already created (200 instead of 201), so a replay never logs twice.
 """
 from __future__ import annotations
 
@@ -17,12 +26,14 @@ from fastapi.responses import StreamingResponse
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
-from .foods import fetch_food, get_food_or_404, insert_food, parse_flags, raw_nutrients
+from .foods import fetch_food, fetch_user_food, insert_food, parse_flags, raw_nutrients
 from .models import (
     CopyDay,
     CopyDayResult,
     DaySummary,
     Entry,
+    LogBatch,
+    LogBatchResult,
     LogCreate,
     LogUpdate,
     MarkEaten,
@@ -73,7 +84,10 @@ CSV_COLUMNS: tuple[str, ...] = (
     "id", "date", "meal", "status", "food_id", "food_name", "servings", "grams", "note",
     *NUTRIENT_KEYS,
     "created_at", "updated_at",
+    "purpose",  # v0.3: "hypo" for a low treatment, else empty
 )
+HYPO_PURPOSE = "hypo"
+HYPO_FLAG = "hypo_treatment"
 
 
 # --------------------------------------------------------------------------- #
@@ -127,9 +141,33 @@ def row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
         "nutrients": round_nutrients(nutrients),
         "warnings": warnings,
         "kidney_rating": kidney_rating(warnings),
+        "purpose": _column(row, "purpose"),
+        "client_id": _column(row, "client_id"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
+
+
+def _column(row: sqlite3.Row, name: str) -> Any:
+    """``row[name]``, or ``None`` on a database without the column (before schema step 5)."""
+    return row[name] if name in row.keys() else None
+
+
+def resolve_purpose(food: sqlite3.Row, requested: str | None) -> str | None:
+    """The stored purpose of a new entry: ``"hypo"``/``"none"`` as asked; left out, ``"hypo"`` for a
+    ``hypo_treatment`` food (note 06 §4.11), else ``None``."""
+    if requested == HYPO_PURPOSE:
+        return HYPO_PURPOSE
+    if requested == "none":
+        return None
+    return HYPO_PURPOSE if HYPO_FLAG in parse_flags(food["flags_json"]) else None
+
+
+def fetch_entry_by_client_id(conn: sqlite3.Connection, user_id: int, client_id: str | None) -> sqlite3.Row | None:
+    """The person's entry created with ``client_id`` (the offline outbox's id), if any."""
+    if not client_id:
+        return None
+    return conn.execute(_ENTRY_SELECT + " WHERE e.user_id = ? AND e.client_id = ?", (int(user_id), client_id)).fetchone()
 
 
 def fetch_entry(conn: sqlite3.Connection, user_id: int, entry_id: int) -> sqlite3.Row | None:
@@ -202,17 +240,23 @@ def insert_entry(
     grams: float | None,
     note: str | None,
     status: str = "eaten",
+    purpose: str | None = None,
+    client_id: str | None = None,
 ) -> int:
+    """Insert one entry with its nutrient snapshot; the caller commits. A ``client_id`` the person
+    already used raises ``sqlite3.IntegrityError`` (index ``log_client_id``)."""
     if status not in ENTRY_STATUSES:
         raise ValueError(f"status must be one of {', '.join(ENTRY_STATUSES)}")
+    if purpose not in (None, HYPO_PURPOSE):
+        raise ValueError("purpose must be 'hypo' or None")
     snapshot = scale_nutrients(raw_nutrients(food), servings)
     now = utcnow()
     cur = conn.execute(
         f"""INSERT INTO log_entries (user_id, date, meal, food_id, food_name, servings, grams, note, status,
-                {_NUTRIENT_COLS}, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?)""",
+                {_NUTRIENT_COLS}, purpose, client_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?)""",
         (int(user_id), date, meal, food["id"], food["name"], servings, grams, note, status,
-         *[snapshot[k] for k in NUTRIENT_KEYS], now, now),
+         *[snapshot[k] for k in NUTRIENT_KEYS], purpose, client_id, now, now),
     )
     return int(cur.lastrowid)
 
@@ -385,7 +429,7 @@ def csv_row(row: sqlite3.Row) -> list[Any]:
         row["note"],
     ]
     values += [round_value(key, row[key]) for key in NUTRIENT_KEYS]
-    values += [row["created_at"], row["updated_at"]]
+    values += [row["created_at"], row["updated_at"], _column(row, "purpose")]
     return values
 
 
@@ -417,9 +461,14 @@ def export_csv(user: CurrentUser, start: str | None = None, end: str | None = No
     )
 
 
-@router.post("/quick", response_model=Entry, status_code=201)
-def quick_add(body: QuickAdd, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Create a custom food from manually entered nutrients, then log it."""
+@router.post("/quick", response_model=Entry, status_code=201, responses={200: {"model": Entry, "description": "Repeat of a client_id: the entry already created"}})
+def quick_add(body: QuickAdd, user: CurrentUser, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Create a custom food from manually entered nutrients, then log it. A repeated ``client_id``
+    answers 200 with the entry already created and creates no second food."""
+    existing = fetch_entry_by_client_id(conn, user.id, body.client_id)
+    if existing is not None:
+        response.status_code = 200
+        return row_to_entry(existing)
     food_id = insert_food(
         conn,
         source="custom",
@@ -431,10 +480,13 @@ def quick_add(body: QuickAdd, user: CurrentUser, conn: sqlite3.Connection = Depe
         flags=body.flags,
     )
     food = fetch_food(conn, food_id)
-    entry_id = insert_entry(
-        conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=body.servings, grams=None,
-        note=body.note, status=body.status,
-    )
+    try:
+        entry_id = insert_entry(
+            conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=body.servings, grams=None,
+            note=body.note, status=body.status, purpose=resolve_purpose(food, body.purpose), client_id=body.client_id,
+        )
+    except sqlite3.IntegrityError:
+        return _replayed(conn, user.id, body.client_id, response)  # a concurrent request with the same id won
     conn.commit()
     return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
@@ -479,7 +531,7 @@ def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depend
         created.append(
             insert_entry(
                 conn, user_id=user.id, date=body.to_date, meal=row["meal"], food=food, servings=servings, grams=grams,
-                note=row["note"], status=body.status,
+                note=row["note"], status=body.status, purpose=_column(row, "purpose"),
             )
         )
     conn.commit()
@@ -487,14 +539,80 @@ def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depend
     return {"created": len(entries), "entries": entries}
 
 
-@router.post("", response_model=Entry, status_code=201)
-def create_entry(body: LogCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    food = get_food_or_404(conn, user.id, body.food_id)
+def _replayed(conn: sqlite3.Connection, user_id: int, client_id: str | None, response: Response) -> dict[str, Any]:
+    """After an ``IntegrityError`` on insert: the entry a concurrent request created with the same
+    ``client_id`` (200), or the error again when that is not what happened."""
+    conn.rollback()
+    existing = fetch_entry_by_client_id(conn, user_id, client_id)
+    if existing is None:
+        raise HTTPException(status_code=409, detail="the entry could not be saved; try again")
+    response.status_code = 200
+    return row_to_entry(existing)
+
+
+def _insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where: str = "") -> int:
+    """Validate visibility (404) and insert one ``POST /api/log`` item; the caller commits."""
+    food = fetch_user_food(conn, user_id, body.food_id)
+    if food is None:
+        raise HTTPException(status_code=404, detail=f"{where}food {body.food_id} not found")
     servings, grams = resolve_servings(food, body.servings, body.grams)
-    entry_id = insert_entry(
-        conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams,
-        note=body.note, status=body.status,
+    return insert_entry(
+        conn, user_id=user_id, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams,
+        note=body.note, status=body.status, purpose=resolve_purpose(food, body.purpose), client_id=body.client_id,
     )
+
+
+@router.post("/batch", response_model=LogBatchResult, status_code=201,
+             responses={200: {"model": LogBatchResult, "description": "Every item was a repeat of its client_id"}})
+def create_batch(body: LogBatch, user: CurrentUser, response: Response,
+                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Add 1–40 entries in one transaction ("Use this plan", the offline outbox; note 06 §4.10).
+
+    Each item is validated exactly as ``POST /api/log`` (body rules, then the food must be visible).
+    All or nothing: the first failing item (``entries[i]: …``) rolls the whole batch back. Items whose
+    ``client_id`` the person already used are not added again; their result is ``existing``. 201 when
+    at least one entry was created, 200 when every item already existed.
+    """
+    for attempt in range(2):
+        results: list[tuple[int, str]] = []
+        try:
+            for index, item in enumerate(body.entries):
+                existing = fetch_entry_by_client_id(conn, user.id, item.client_id)
+                if existing is not None:
+                    results.append((int(existing["id"]), "existing"))
+                    continue
+                results.append((_insert_logged(conn, user.id, item, where=f"entries[{index}]: "), "created"))
+        except sqlite3.IntegrityError:
+            conn.rollback()  # a concurrent request used one of the client_ids: the retry sees it as existing
+            if attempt:
+                raise HTTPException(status_code=409, detail="the entries could not be saved; try again") from None
+            continue
+        except Exception:
+            conn.rollback()
+            raise
+        conn.commit()
+        break
+    if not any(state == "created" for _, state in results):
+        response.status_code = 200
+    entries = [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id, _ in results]
+    return {
+        "entries": entries,
+        "results": [{"index": i, "id": entry_id, "result": state} for i, (entry_id, state) in enumerate(results)],
+    }
+
+
+@router.post("", response_model=Entry, status_code=201,
+             responses={200: {"model": Entry, "description": "Repeat of a client_id: the entry already created"}})
+def create_entry(body: LogCreate, user: CurrentUser, response: Response,
+                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    existing = fetch_entry_by_client_id(conn, user.id, body.client_id)
+    if existing is not None:
+        response.status_code = 200
+        return row_to_entry(existing)
+    try:
+        entry_id = _insert_logged(conn, user.id, body)
+    except sqlite3.IntegrityError:
+        return _replayed(conn, user.id, body.client_id, response)
     conn.commit()
     return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
@@ -511,6 +629,9 @@ def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite
     meal = data.get("meal") or row["meal"]
     status = data.get("status") or row["status"]
     note = data["note"] if "note" in data else row["note"]
+    purpose = _column(row, "purpose")
+    if data.get("purpose") is not None:
+        purpose = HYPO_PURPOSE if data["purpose"] == HYPO_PURPOSE else None
 
     servings = float(row["servings"])
     grams = row["grams"]
@@ -526,8 +647,8 @@ def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite
         servings, grams = resolve_servings(food, None, grams)
 
     snapshot = scale_nutrients(raw_nutrients(food), servings)
-    sets = ["date = ?", "meal = ?", "status = ?", "food_name = ?", "servings = ?", "grams = ?", "note = ?"]
-    params: list[Any] = [date, meal, status, food["name"], servings, grams, note]
+    sets = ["date = ?", "meal = ?", "status = ?", "food_name = ?", "servings = ?", "grams = ?", "note = ?", "purpose = ?"]
+    params: list[Any] = [date, meal, status, food["name"], servings, grams, note, purpose]
     for key in NUTRIENT_KEYS:
         sets.append(f"{key} = ?")
         params.append(snapshot[key])

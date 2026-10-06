@@ -34,7 +34,8 @@ from .fits import (
 )
 from .planner import plan_day
 from .score import Counter, Scorer, check_meal, habit_stats, meal_totals, score_meal, today_stats
-from .state import FoodVec, GuidanceContext
+from .state import GuidanceContext
+from .vectors import FoodVec, renal_level
 from .swaps import find_swaps
 
 log = logging.getLogger("kidney_health.guidance")
@@ -121,7 +122,7 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
         foods.append({
             "ref": f"f{i}", "food_id": f.id, "name": M.safe_name(f.name), "untrusted": f.source in UNTRUSTED_SOURCES,
             "group": f.group, "portion": q, "per_portion": _per_portion(f, q),
-            "renal_rating": R.renal_level(a[R.K], a[R.P], a[R.NA], f.additive),
+            "renal_rating": renal_level(a[R.K], a[R.P], a[R.NA], f.additive),
             "fit_text": M.fit_text(a, tracked, room.carbs is not None),
             "reasons": [r["code"] for r in reasons],
         })
