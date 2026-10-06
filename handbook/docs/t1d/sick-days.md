@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, HC24, NHSK, NHS-DKA, ADAK, A26-6, CDC-SICK, CDC-DKA, JBDS22, FARXIGA, NIDDK-Tx, FDC]
+fact_checked: 2026-10-05
+sources: [K24, HC24, NHSK, NHS-DKA, ADAK, A26-6, CDC-SICK, CDC-DKA, JBDS22, FARXIGA, NIDDK-Tx, K09TX, FDC]
 ---
 
 # Sick days with type 1 diabetes and CKD
@@ -47,17 +48,19 @@ which of your medicines to pause, and exactly when to restart them ([ADA 2026 §
 | Blood ketones | What to do |
 |---|---|
 | under 0.6 mmol/L | normal; keep checking glucose |
-| 0.6–1.5 mmol/L | follow your sick-day plan; check again in 2 hours |
+| 0.6–1.5 mmol/L | follow your sick-day plan; check again in 2 hours. If you are also ill, call your team |
 | 1.6–2.9 mmol/L | **call your diabetes team now**. If you cannot reach them quickly, or you are vomiting, go to the emergency department |
 | 3.0 mmol/L or more | **emergency: call 911 or go to the emergency department** |
 
 Sources: [NHS][NHS-DKA]; [ADA][ADAK] (the American Diabetes Association advises emergency care at
 1.6 mmol/L or more). DKA is confirmed with blood ketones of 3.0 mmol/L or more and acid in the blood
-([2024 consensus][HC24]).
+([2024 consensus][HC24]). UK dialysis guidance also says that blood ketones above 3.0 mmol/L need
+medical assessment straight away ([JBDS 2022][JBDS22]).
 
-**Urine strips** are less exact. A small (+) result is roughly 0.6–1.5 mmol/L
-([NHS ketone advice][NHSK]). Treat **++ or more** like 3.0 mmol/L and get emergency help: the 2024
-consensus counts urine ketones of 2+ or more toward DKA ([2024 consensus][HC24]). A blood ketone meter
+**Urine strips** are less exact. NHS advice reads + as roughly 0.6–1.5 mmol/L, ++ as roughly
+1.5–3.0 and +++ as above 3.0 ([NHS ketone advice][NHSK]). This handbook treats **++ or more** like
+3.0 mmol/L and says get emergency help, because the 2024 consensus counts urine ketones of 2+ or more
+toward DKA ([2024 consensus][HC24]). A blood ketone meter
 is better: in a trial, blood checks halved hospital and emergency visits compared with urine strips
 ([ADA 2026 §6][A26-6]).
 
@@ -96,7 +99,7 @@ in type 1 diabetes.
 | ACE inhibitor or ARB | can lower blood pressure, strain the kidneys and raise potassium | "Should I pause it while I am vomiting? When do I restart?" |
 | Diuretic (water pill) | removes more fluid when you are already low | the same question |
 | NSAID (ibuprofen, naproxen) | harms the kidneys; best avoided anyway | "What can I take for fever or pain instead?" ([Medicines to avoid](../medicines/avoid.md)) |
-| SGLT2 inhibitor (off-label in type 1) | raises the risk of DKA, even with normal glucose ([Farxiga label][FARXIGA]) | "Do I stop it as soon as I feel ill? Check ketones even if glucose is normal?" |
+| SGLT2 inhibitor (not established in type 1; see [Kidney-protecting medicines](kidney-protecting-medicines.md)) | raises the risk of DKA, even with normal glucose ([Farxiga label][FARXIGA]) | "Do I stop it as soon as I feel ill? Check ketones even if glucose is normal?" |
 | **Insulin** | **never on the stop list** | "How do I adjust my insulin when I am ill?" |
 
 KDIGO adds two warnings. There is little evidence that sick-day rules prevent kidney injury, and
@@ -111,17 +114,18 @@ are per serving from USDA FoodData Central, as in the app's food list ([USDA][FD
 
 | Food or drink | Carbohydrate | Potassium | Fluid |
 |---|---|---|---|
-| Cranberry juice cocktail, ½ cup | 17 g | 18 mg | 110 mL |
-| Apple juice, ½ cup | 14 g | 125 mg | 110 mL |
-| Ginger ale or lemon-lime soda, regular, 4 oz | 11–13 g | 1 mg | 110 mL |
-| Gelatin dessert, regular, ½ cup | 19 g | 1 mg | about 115 mL (counts as fluid) |
-| Ice pop, 1 | 10 g | 8 mg | about 40 mL |
+| Cranberry juice cocktail, ½ cup | 17 g | 18 mg | 120 mL |
+| Apple juice, ½ cup | 14 g | 125 mg | 120 mL |
+| Ginger ale or lemon-lime soda, regular, 4 oz | 11–13 g | 1 mg | 120 mL |
+| Gelatin dessert, regular, ½ cup | 19 g | 1 mg | 120 mL (counts as fluid) |
+| Ice pop, 1 (1¾ fl oz) | 10 g | 8 mg | about 50 mL |
 | Applesauce, unsweetened, ½ cup | 14 g | 90 mg | small |
 | Saltine crackers, 5 | 11 g | 23 mg | none (141 mg sodium) |
 | White bread or toast, 1 slice | 14 g | 37 mg | none (142 mg sodium) |
 | Glucose tablets, 4 | 16 g | 0 mg | none |
 
-When glucose is high, sugar-free drinks may suit you better; they still count toward a fluid limit.
+Fluid is counted by volume, the cautious way ([Fluid](../eat/fluid.md)). When glucose is high,
+sugar-free drinks may suit you better; they still count toward a fluid limit.
 If glucose is low, treat the low first ([Treating a low](treating-a-low.md)).
 
 **On a fluid limit (dialysis, or stage G4–G5 with swelling):** general advice says "drink plenty"
@@ -133,8 +137,9 @@ See [Fluid](../eat/fluid.md).
 **On dialysis:** do not skip a session because you feel unwell. Call the unit. Missed sessions can
 make DKA symptoms worse ([JBDS 2022][JBDS22]).
 
-**After a transplant:** if you cannot keep your anti-rejection medicines down, or you have a fever,
-call your transplant center the same day ([NIDDK][NIDDK-Tx]).
+**After a transplant:** if you cannot keep your anti-rejection medicines down, call your transplant
+center the same day, because missed doses risk rejection ([KDIGO 2009 transplant][K09TX], chapter 11).
+Call them too for a fever over 100 °F (37.8 °C) ([NIDDK][NIDDK-Tx]).
 
 ## Your sick-day kit
 
@@ -178,6 +183,7 @@ Ana has stage G4 kidney disease, takes an ACE inhibitor and has a fluid limit.
 !!! danger "Call 911 (or your local emergency number) or go to the emergency department"
     - Blood ketones **3.0 mmol/L or more**, or urine ketones ++ or more ([NHS][NHS-DKA]; [2024 consensus][HC24]).
     - Ketones **1.6 mmol/L or more** and you cannot reach your team quickly, or you are vomiting ([ADA][ADAK]).
+    - Any ketones with vomiting so you cannot keep fluids down ([NHS][NHS-DKA]; [CDC][CDC-DKA]).
     - You cannot keep liquids down for more than 4 hours, or vomiting or bad diarrhea lasts more than
       6 hours ([CDC][CDC-SICK]).
     - Glucose stays at 300 mg/dL (16.7 mmol/L) or above, deep or fast breathing, fruity breath,
@@ -202,5 +208,5 @@ See [Get help now](../get-help-now.md) for every warning sign.
 - [CDC: managing sick days][CDC-SICK]; [CDC: diabetic ketoacidosis][CDC-DKA].
 - [JBDS 2022 guidance on diabetes and dialysis][JBDS22]: DKA on dialysis.
 - [Farxiga (dapagliflozin) prescribing information][FARXIGA]: ketoacidosis in type 1 diabetes.
-- [NIDDK: kidney transplant][NIDDK-Tx].
+- [NIDDK: kidney transplant][NIDDK-Tx]; [KDIGO 2009 transplant recipient guideline][K09TX]: chapter 11.
 - [USDA FoodData Central][FDC]: carbohydrate, potassium and fluid per serving.

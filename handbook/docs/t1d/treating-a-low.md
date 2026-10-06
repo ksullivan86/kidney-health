@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [A26-6, DG55a, NIDDK-hypo, DG24b, DG4, FDC, DG27, JBDS, JBDS22]
 ---
 
@@ -33,7 +34,7 @@ Everyone on insulin should have glucagon, and the people around them should know
     |---|---|---|
     | Level 1 | below 70 mg/dL | treat now with 15 g |
     | Level 2 | below 54 mg/dL | treat now with 15 g; tell your team |
-    | Level 3 | any low where you need someone else's help | glucagon, then call 911 |
+    | Level 3 | any low where you need someone else's help | a helper treats it; if you cannot swallow safely: glucagon, then call 911 |
 
 === "International"
 
@@ -41,7 +42,7 @@ Everyone on insulin should have glucagon, and the people around them should know
     |---|---|---|
     | Level 1 | below 3.9 mmol/L | treat now with 15 g |
     | Level 2 | below 3.0 mmol/L | treat now with 15 g; tell your team |
-    | Level 3 | any low where you need someone else's help | glucagon, then call your emergency number |
+    | Level 3 | any low where you need someone else's help | a helper treats it; if you cannot swallow safely: glucagon, then call your emergency number |
 
 ([ADA 2026 §6][A26-6].) Kidney disease makes lows more likely, because failing kidneys clear less
 insulin and make less glucose ([Pecoits-Filho 2016][DG55a]).
@@ -49,7 +50,9 @@ insulin and make less glucose ([Pecoits-Filho 2016][DG55a]).
 ## What to do: the rule of 15
 
 - [ ] Glucose below 70 mg/dL (3.9 mmol/L) and you can swallow: take **15 g of fast carbohydrate**
-      (5–10 g if you use an automated insulin delivery system) ([ADA 2026 §6][A26-6]).
+      ([ADA 2026 §6][A26-6]). On an automated insulin delivery system, ADA says 5–10 g is typical,
+      **but take the full 15 g** if the low came with exercise or after a meal bolus that was too big
+      for what you ate, and follow the amount your team has written down for you.
 - [ ] Do not use high-fat or high-protein foods (chocolate, milk, peanut butter) for the first
       treatment: they slow it down.
 - [ ] **Recheck in 15 minutes.** Still low? Take another 15 g.
@@ -71,7 +74,7 @@ emergency. Never under-treat, and never use "sugar-free" sweets (sugar alcohols)
 |---|---|---|---|---|
 | Glucose tablets, 4 × 4 g (Dex4) | 16 | 0 | 0 | **First choice**: exact, fastest, no potassium, phosphorus or sodium ([Dex4][DG24b]) |
 | Glucose gel, 1 tube | 15 | about 0 | 0 | Same; keep one at the bedside |
-| Table sugar, 1 tbsp (4 tsp, about 17 g) | 13 | 0 | 0 | Clean and cheap |
+| Table sugar, 1 tbsp (3 tsp) | 13 | 0 | 0 | Clean and cheap; NIDDK lists 1 tbsp as a 15 g treatment, and 4 tsp gives about 17 g ([NIDDK][NIDDK-hypo]) |
 | Hard candy, 3 pieces | 18 | 1 | 0 | Check the label; not "sugar-free" |
 | Jelly beans, 15 small | 15 | about 6 | 0 | |
 | Honey, 1 tbsp | 17 | 11 | 1 | Fine |
@@ -94,11 +97,11 @@ Values per serving, USDA FoodData Central ([FDC][FDC]); see also [DaVita][DG27].
 "a glass". Over a day with two or three lows, tablets vs orange juice is several hundred milligrams
 of potassium.
 
-**On a fluid limit:** glucose tablets and gel add no fluid; 4 oz of juice adds about 110 mL
+**On a fluid limit:** glucose tablets and gel add no fluid; 4 oz of juice adds about 120 mL
 ([Fluid](../eat/fluid.md)).
 
-**On hemodialysis:** lows are most likely in the hours after a session ([JBDS–Renal
-Association][JBDS]). UK guidance says to
+**On hemodialysis:** glucose often falls during a session, and lows are most likely in the hours
+after it ([JBDS–Renal Association][JBDS]; [JBDS 2022][JBDS22]). UK guidance says to
 check glucose before and after each session, to keep a low treatment within reach on the way to and
 from the unit, and to choose one that fits your fluid, potassium and phosphate limits
 ([JBDS 2022][JBDS22], recommendations 5A.2–5A.4). See
@@ -116,7 +119,8 @@ from the unit, and to choose one that fits your fluid, potassium and phosphate l
 
 1. Please prescribe glucagon (nasal or ready-to-use) and show my family how to use it.
 2. My lows are more frequent since my kidney function changed: should my insulin plan change?
-3. Should I treat with 15 g or less because I use an automated insulin delivery system?
+3. I use an automated insulin delivery system: how many grams should I take for a low, and when
+   should I take the full 15 g?
 4. Can I keep glucose tablets at the dialysis unit, and what should staff do if I go low there?
 5. Should I be screened for not feeling my lows (impaired awareness)?
 
@@ -137,7 +141,9 @@ from the unit, and to choose one that fits your fluid, potassium and phosphate l
 
 ## Sources
 
-- [ADA Standards of Care 2026, section 6][A26-6]: hypoglycaemia levels; recommendations 6.11, 6.15, 6.16.
+- [ADA Standards of Care 2026, section 6][A26-6]: hypoglycaemia levels; recommendations 6.11, 6.15, 6.16;
+  15 g for most people and 5–10 g on automated insulin delivery, except with exercise or an
+  overestimated meal bolus.
 - [NIDDK: low blood glucose][NIDDK-hypo]; [NIDDK: healthy eating for adults with CKD][DG4] (juice choices).
 - [ADA Consumer Guide: Dex4 tablets][DG24b]; [DaVita: kidney-friendly foods for low blood sugar][DG27].
 - [Pecoits-Filho 2016][DG55a]: why lows are more common with kidney disease.

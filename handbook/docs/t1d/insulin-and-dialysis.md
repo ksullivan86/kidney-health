@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [JBDS, JBDS22, MHRA, EXTRANEAL, AK22, K09TX, PROGRAF, A26-6, A26-7, A26-9, K22, DEXCOM-G7, LIBRE-ISI, I22P]
 ---
 
@@ -18,7 +19,7 @@ sources: [JBDS, JBDS22, MHRA, EXTRANEAL, AK22, K09TX, PROGRAF, A26-6, A26-7, A26
 ## In short
 
 Dialysis and transplant medicines change your glucose from day to day. On **hemodialysis**, glucose
-is often lowest after a session, and lows in the next day are common. On **peritoneal dialysis (PD)**,
+often falls during a session, and most lows happen in the 24 hours after it. On **peritoneal dialysis (PD)**,
 sugar from the dialysis fluid raises glucose, and one PD fluid (icodextrin) makes some meters read
 falsely high. After a **transplant**, steroids and tacrolimus push glucose up. In every case your
 diabetes team changes the insulin plan; your job is to check at the right times, carry fast sugar,
@@ -47,7 +48,7 @@ use a safe meter, and share your readings ([JBDS 2022][JBDS22]; [ADA–KDIGO 202
     | Before and after every session | check glucose |
     | Before the session, glucose under 126 mg/dL | the unit gives 20–30 g of slow carbohydrate at the start |
     | Low during or after a session | treat with 15 g of fast carbohydrate chosen for your fluid and potassium limits; recheck in 15 minutes |
-    | The 24 hours after a session | the most likely time for a low |
+    | The 24 hours after a session | the most likely time for a low: in one study, 3 in 4 lows came within 24 hours of a session |
 
 === "International"
 
@@ -56,7 +57,7 @@ use a safe meter, and share your readings ([JBDS 2022][JBDS22]; [ADA–KDIGO 202
     | Before and after every session | check glucose |
     | Before the session, glucose under 7.0 mmol/L | the unit gives 20–30 g of slow carbohydrate at the start |
     | Low during or after a session | treat with 15 g of fast carbohydrate chosen for your fluid and potassium limits; recheck in 15 minutes |
-    | The 24 hours after a session | the most likely time for a low |
+    | The 24 hours after a session | the most likely time for a low: in one study, 3 in 4 lows came within 24 hours of a session |
 
 Sources: [JBDS 2022][JBDS22], recommendations 5A.1–5A.5; [JBDS–Renal Association][JBDS]. US units
 follow their own policies, so ask yours.
@@ -86,12 +87,13 @@ practice point 6.5).
 to the PD bags ([JBDS 2022][JBDS22], practice points 6.8–6.9).
 
 !!! danger "Icodextrin (Extraneal) and glucose meters"
-    Icodextrin, a PD fluid used for one long dwell a day, makes meters that use **GDH-PQQ, GDO or some
-    GDH-FAD** strips read **falsely high**. A falsely high reading can hide a real low, and insulin
-    given for a false high has caused coma and death. Use only a **glucose-specific** meter your PD unit
-    approves. The error can last **at least two weeks** after the last icodextrin bag. CGM systems "may
-    or may not be compatible", so ask before you rely on one ([Extraneal label][EXTRANEAL];
-    [MHRA][MHRA]; [JBDS 2022][JBDS22]). Tell every hospital and paramedic that you use icodextrin.
+    Icodextrin, a PD fluid used for one long dwell a day, makes meters that use **GDH-PQQ, GDO or
+    GDH-FAD** strips read **falsely high**. A falsely high reading can hide a real low, and extra
+    insulin given for a false high can cause a severe low, coma or death ([MHRA][MHRA]). Use only a
+    **glucose-specific** meter your PD unit approves. False readings can last **up to two weeks** after
+    the last icodextrin bag. CGM systems "may or may not be compatible", so ask before you rely on one
+    ([Extraneal label][EXTRANEAL]; [JBDS 2022][JBDS22]). Tell every hospital and paramedic that you use
+    icodextrin.
 
 UK guidance also says meters using glucose oxidase or GDH-PQQ should not be used by anyone on
 dialysis ([JBDS 2022][JBDS22], recommendation 2.7). Check the strip box or ask your pharmacist which
@@ -118,10 +120,10 @@ kind you have.
 
 | Point | What it means for you |
 |---|---|
-| Dexcom (G7) and Abbott (Libre 3 Plus, 2 Plus) say their systems have not been tested on dialysis, and readings may be wrong ([Dexcom G7 user guide][DEXCOM-G7]; [Abbott][LIBRE-ISI]) | Many people still use one with their team's agreement. Check with a meter when a reading does not match how you feel |
+| Dexcom (G7) and Abbott (Libre 3 Plus, 2 Plus) say **not to use** their systems if you are on dialysis, because they have not been tested in people on dialysis and readings may be wrong ([Dexcom G7 user guide][DEXCOM-G7]; [Abbott][LIBRE-ISI]) | UK guidance still suggests offering CGM on dialysis in some cases (below), so use one only with your team's agreement. Check with a meter when a reading does not match how you feel |
 | CGM trails blood glucose, and the lag is longer with kidney failure ([JBDS–Renal Association][JBDS]) | A CGM can be late to show a fast fall during or after dialysis |
-| Start a new sensor on a non-dialysis day ([JBDS–Renal Association][JBDS]) | Avoids the big glucose swings of a session |
-| Some medicines and supplements disturb sensors, for example hydroxyurea, high amounts of acetaminophen (some sensors) and high-dose vitamin C (Libre) ([ADA 2026 §7][A26-7], recommendation 7.20; [Dexcom G7 user guide][DEXCOM-G7]; [Abbott][LIBRE-ISI]) | Tell your team about every medicine and supplement |
+| Start a new sensor on a non-dialysis day ([JBDS–Renal Association][JBDS]) | Avoids the big glucose swings of a session. The 2016 advice was written when sensors needed fingerstick calibration; ask whether it still applies to yours |
+| Some medicines and supplements disturb sensors and make readings look higher than they are: hydroxyurea; acetaminophen (paracetamol) above the label's daily maximum with Dexcom, or at any amount with the Medtronic Guardian 4; high-dose vitamin C with Libre; and mannitol or sorbitol, given into a vein or in a PD fluid, with the Eversense 365 ([ADA 2026 §7][A26-7], recommendation 7.20 and Table 7.4; [Dexcom G7 user guide][DEXCOM-G7]; [Abbott][LIBRE-ISI]) | Tell your team about every medicine and supplement |
 | UK guidance suggests real-time CGM for people on dialysis who have repeated lows or do not feel them ([JBDS 2022][JBDS22], recommendation 2.9) | Ask about one if that is you |
 
 More on reading the reports: [CGM reports](../labs/cgm-metrics.md).
@@ -175,11 +177,11 @@ More on reading the reports: [CGM reports](../labs/cgm-metrics.md).
 ## Sources
 
 - [JBDS 2022 guidance on diabetes and dialysis][JBDS22]: recommendations 2.7, 2.9, 3B.5, 5A.1–5A.5;
-  peritoneal dialysis practice points 6.5 and 6.8–6.10.
+  peritoneal dialysis practice points 6.5 and 6.8–6.10; 75 % of lows within 24 hours of hemodialysis.
 - [JBDS–Renal Association 2016][JBDS]: dialysate glucose, CGM lag, sensor start day.
 - [Extraneal (icodextrin) prescribing information][EXTRANEAL]; [MHRA: icodextrin and false glucose readings][MHRA].
 - [ADA–KDIGO 2022 consensus report][AK22]; [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.2.
 - [ISPD 2022 peritonitis guideline][I22P]: antibiotics before colonoscopy or gynaecology procedures.
 - [KDIGO 2009 transplant recipient guideline][K09TX]: chapter 15; [Prograf (tacrolimus) prescribing information][PROGRAF].
-- [ADA Standards of Care 2026][A26-6] sections 6, [7][A26-7] (recommendation 7.20) and [9][A26-9].
+- [ADA Standards of Care 2026][A26-6] sections 6, [7][A26-7] (recommendation 7.20, Table 7.4) and [9][A26-9].
 - [Dexcom G7 user guide][DEXCOM-G7]; [Abbott FreeStyle Libre safety information][LIBRE-ISI].
