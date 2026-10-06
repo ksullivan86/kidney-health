@@ -49,17 +49,82 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   UsdaError), `map_usda_record` (labelNutrients incl. "postassium", cleaned text, additive scan, mL servings),
   `usda_find_by_gtin` (≤3 searches, exact gtinUpc). Tests: tests/test_usda_branded.py.
 
-## In progress
-* m007-dependent work lives in a scratch clone until the AI builder's m006 exists in the main tree:
-  `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/barcode/wt`
-  (has a LOCAL STUB app/migrations/m006_ai.py — never copy that file). Port with
-  `cd wt && git diff -- <files>` + copy of new files; files: app/migrations/m007_barcode.py, app/barcode.py,
-  app/foods.py (Provenance, row_to_food fields, custom food scan, usda upsert), app/models.py (gtin,
-  ingredients_text, Food fields, BarcodeLookup/Result), app/log.py (quick add gtin, CSV source/source_license),
-  app/account.py (CSV/README), app/settings_registry.py (4 food.* keys), app/config.py (OFF_BASE_URL),
-  app/admin.py (remap-barcodes, purge-barcode-cache), app/main.py (router), tests/test_api.py (CSV header),
-  tests/data/settings_vectors.json (regenerate), new tests test_barcode_api.py, test_migration_m007.py.
-  All green in the clone except the settings JS twin (frontend-owned settings.js lacks the new keys).
+* Docs and checks (commits e554193, 70a9f77, 18cc31a): docs/barcode-and-photos.md (barcode part + "Photos"
+  section left for the AI builder), docs/research/fact-check.md §5 (potassium-additive rule: Parpia 2018,
+  Sherman 2009, Picard 2019, KDIGO 2024 Fig 33), docs/ROADMAP.md barcode items (dietitian sign-off of the
+  medium level, OFF API 3.5+ move, OFF dump, Tesseract, server zxing, OFF usage form), docs/network-allowlist.md
+  rows (USDA branded + world.openfoodfacts.org), handbook app/barcode-and-photo.md + self-hosting/configuration.md
+  (strict mkdocs build passed), scripts/check_off_live.py (0 problems against live and staging) and the weekly
+  warn-only .github/workflows/off-live-check.yml (actionlint + zizmor clean), §9.3 guard test (product text never
+  reaches AI prompts; tests/test_off_mapping.py). k8s NetworkPolicy / Cilium already list world.openfoodfacts.org.
+
+## In progress: waiting for the AI builder's m006
+* Everything that needs schema step 7 is finished and tested on the local branch **`barcode-m007-pending`**
+  (in this repository; also checked out in the scratch clone
+  `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/barcode/wt`,
+  which has an untracked LOCAL STUB app/migrations/m006_ai.py — never copy that file). It is rebased on 11a35e9.
+  `discover()` refuses a gap in the numbering and `migrate()` skips any step at or below the stored version, so
+  m007 must not land before m006 (a database migrated to 7 would never run 6).
+* Port, once `app/migrations/m006_ai.py` is committed by the AI builder:
+  `git diff HEAD...barcode-m007-pending > patch && git apply --3way patch` (re-read each shared file first:
+  app/foods.py, app/models.py, app/log.py, app/account.py, app/settings_registry.py, app/config.py, app/admin.py,
+  app/main.py, tests/test_api.py, tests/test_isolation.py, tests/barcode_support.py,
+  tests/data/gen_settings_vectors.py), regenerate `python3 tests/data/gen_settings_vectors.py`, add the
+  "M2 API: barcode" section to ARCHITECTURE.md (text ready in the scratch dir: arch_section.md; also the Flags
+  list/warning rule, FOOD_SOURCES, Food fields and CSV columns), run `python -m pytest` and
+  `node tests/js/run_vectors.mjs`, commit, then `git branch -D barcode-m007-pending`.
+* Contents of the branch: m007 (foods gtin/source_url/source_license/retrieved_at/ingredients_text/additives_json/
+  quality_json, barcode_cache), app/barcode.py (POST /api/foods/barcode, cache, chain, merge, store, link,
+  refresh, remap), Provenance + custom-food additive scan in app/foods.py, BarcodeLookup/BarcodeResult/Food fields
+  in app/models.py, quick add gtin/ingredients + CSV source/source_license (app/log.py), export foods.csv/README
+  (app/account.py), 4 food.* keys (app/settings_registry.py), OFF_BASE_URL (app/config.py), remap-barcodes and
+  purge-barcode-cache (app/admin.py), router (app/main.py); tests test_barcode_api.py (~40),
+  test_migration_m007.py, test_barcode_settings.py, isolation + CSV header updates. In the clone the full suite
+  passes except the two settings-twin tests below.
+
+## Handoffs
+* **Frontend (settings.js; I may not edit it):** `test_settings_ui.py::test_engine_registry_lists_every_server_key`
+  and the settings part of `node tests/js/run_vectors.mjs` fail until `app/static/js/engine/settings.js` has the
+  4 new keys (plus the guidance keys from guidance.md). Paste after the `food.off_enabled` DEFS entry:
+  ```js
+      { key: 'food.barcode_negative_ttl_hours', type: 'int', min: 1, max: 720, default: 24, scope: 'instance', env: 'BARCODE_NEGATIVE_TTL_HOURS',
+        label: 'Remember barcodes that were not found for (hours)',
+        help: 'A barcode that Open Food Facts or USDA did not know is not asked again for this long.' },
+      { key: 'food.off_contact', type: 'str', minLength: 3, maxLength: 200, pattern: '^[\\x20-\\x27\\x2a-\\x5b\\x5d-\\x7e]+$',
+        default: 'https://github.com/ksullivan86/kidney-health', scope: 'instance', env: 'OFF_CONTACT',
+        label: 'Contact sent to Open Food Facts',
+        help: 'Goes into the User-Agent of every lookup, as Open Food Facts asks of API users. An admin email address is better than '
+          + 'the default project address. Letters, digits and punctuation only (no round brackets or backslash).' },
+      { key: 'food.off_rate_per_minute', type: 'int', min: 1, max: 15, default: 10, scope: 'instance', env: 'OFF_RATE_PER_MINUTE',
+        label: 'Open Food Facts lookups per minute (whole server)',
+        help: 'Open Food Facts allows 15 product lookups a minute from one address and may block an address that sends more. '
+          + 'Everyone on this server shares this budget; products already looked up do not count.' },
+      { key: 'food.usda_branded_barcode', type: 'bool', default: true, scope: 'instance', env: 'USDA_BRANDED_BARCODE',
+        label: 'Also look barcodes up in USDA FoodData Central',
+        help: "Uses the person's USDA key or the shared one, when Open Food Facts does not know a product, has no nutrition facts "
+          + 'for it, or lacks potassium or sodium for a US product.' },
+  ```
+  and in `validate()`, `case 'str'`, after the maxLength check:
+  ```js
+          if (def.pattern != null && !new RegExp(def.pattern).test(v)) return { error: `String should match pattern '${def.pattern}'` };
+  ```
+  (checked in the clone: with these lines no `food.*` vector fails; the vectors now carry `pattern` and 9 pattern cases).
+* **Frontend device (scan.js, About page):** R11 attribution under the product name and on the About page; build the
+  product link only from `attribution.url` when it starts with `https://`; show `quality[].message` and "not listed"
+  for `null` potassium/phosphorus; 404 → Quick add with `gtin` and `name`; consent switch `food.off_consent`.
+* **AI builder:** label/plate photo text that the model reads must go through `app.textclean.clean_text`; never put
+  `ingredients_text`, product names or other provider text into a prompt as instructions (§9.3; guarded by
+  `tests/test_off_mapping.py::test_product_text_never_reaches_an_ai_prompt_unmarked`).
+* **M3 integration (README, §6 item 18):** feature list line for barcode lookups (Open Food Facts opt-in, USDA
+  branded), configuration rows for OFF_ENABLED, OFF_CONTACT, OFF_RATE_PER_MINUTE, BARCODE_NEGATIVE_TTL_HOURS,
+  USDA_BRANDED_BARCODE and OFF_BASE_URL (env only), and README line 169 "(and, later, Open Food Facts or AI)".
+
+## Incident to report (Open Food Facts)
+* While verifying the "add a product" URL on 2026-10-06 a manual GET of
+  `https://world.openfoodfacts.org/cgi/product.pl?type=search_or_add&action=process&code=0099999999990` created an
+  empty anonymous product 0099999999990 (en:empty) on Open Food Facts. The recorded 404 fixture predates it.
+  It needs deletion by an OFF moderator (report via the OFF Slack #moderation or contact@openfoodfacts.org).
+  The app itself only links to `action=display`, which does not create anything.
 
 ## Decisions (and why)
 * No shared SSRF transport existed (note 04's app/ai/transport.py is the AI builder's and AI-specific), so
