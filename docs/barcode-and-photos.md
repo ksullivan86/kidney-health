@@ -184,7 +184,73 @@ You can also add the product to Open Food Facts for everyone: the answer carries
 
 ## Photos
 
-*This section belongs to the optional photo features (a photo of a nutrition label read by AI, a photo
-of a plate) built with the AI layer (note 03 R8–R9, note 04). Their owner documents here what a photo
-does, what leaves the device and which provider sees it.* Until then: the barcode **photo** above is read
-on your device and never uploaded.
+Two optional photo features use the AI layer ([`ai.md`](ai.md)): **Read a label** turns a photo of a
+nutrition label into a draft custom food, and **Plate photo** names the foods on a plate. Both are off
+unless your admin set up an AI provider with a vision model; plate photos are also off by default
+(`ai.vision_plate_enabled`). The barcode **photo** above is different: it is read on your device and
+never uploaded.
+
+### What leaves your device and the server
+
+* **On your device** the app redraws the photo as a JPEG at most 1600 pixels on its long side, which
+  removes the location and camera data (EXIF) and turns HEIC photos into JPEG.
+* **The server does not trust that step** (any signed-in person could send a file directly). It accepts
+  only a raw `image/jpeg` body of at most `MAX_IMAGE_BYTES` (4 MiB), checks the JPEG structure without
+  decoding the picture (one frame, 8-bit, 16–2048 pixels per side, at most 4:1 and 4 megapixels),
+  **removes every metadata segment (EXIF, XMP, ICC, comments) and anything after the end of the
+  picture**, and forwards only those rewritten bytes (`app/imagecheck.py`). Oversized or malformed
+  pictures are refused before anything is sent: a 52800×44 picture crashed a popular local model server
+  in a public proof of concept, and a 4 MiB JPEG can declare 65535×65535 pixels.
+* **The AI provider** receives the photo as a `data:image/jpeg;base64,…` part of one request, with the
+  task text; never a link to it. Which provider and host: the consent sheet for **photos** says, and you
+  agree to photos separately from meal ideas.
+* **Nothing is kept**: photos are never written to disk, stored or logged. Your AI activity keeps the
+  photo's SHA-256 fingerprint, size and dimensions only.
+* A Hermes agent receives photos only if the admin allowed it (`AI_VISION_ALLOW_AGENT`) **and** its tool
+  check passes right before each photo (text printed on a package could try to instruct an agent).
+
+### Read a label
+
+1. In **Add**, choose **Read a label (AI)** and take or pick a photo of the Nutrition Facts panel (and
+   the ingredient list, if it fits).
+2. The AI copies the printed values only (`null` for anything not printed). The server then:
+   * scales a per-100 g or per-100 ml label to one serving when the serving weight is printed (or keeps
+     it per 100 g and says so);
+   * works out sodium from salt (salt ÷ 2.5) and, on US labels, potassium, phosphorus, sodium or calcium
+     from the % Daily Value (FDA daily values 4700, 1250, 2300 and 1300 mg) — **marked "estimated"**;
+   * checks plausibility: the calories against fat, carbohydrate and protein (within 20 % + 20 kcal),
+     grams that add up to more than the serving, mineral values that are implausible for one serving
+     (often mg read as g);
+   * scans the ingredient text with the app's own rules (not the AI) and tells you what it found;
+   * says "Potassium is not on this label; it is saved as unknown, not zero" when it is missing.
+3. You get a **draft** with every value the AI read marked "from photo". **Check each one against the
+   label.** Nothing is saved until you tap **Save**; saving is the ordinary "add a custom food", which
+   scans the ingredient text **you confirmed** for phosphate and potassium additives.
+
+### Plate photo
+
+* The AI names the foods it sees and guesses a weight and how sure it is. It **never** gives nutrient
+  numbers: each name is matched to foods in **your** food list (three at most), and the servings are
+  worked out from the guessed weight.
+* A fixed banner says: *"AI estimate from a photo. In studies, portion estimates were off by about a
+  third and too small for big plates. Weigh or measure when it matters, and do not dose insulin from
+  this alone."* (Fridolfsson et al. 2025, mean absolute error about 36 % for weight; note 03 F8.)
+* Items the AI is unsure about start unticked. Nothing is logged until you tap **Add**; entries are
+  added as **planned** by default.
+
+### How far to trust it
+
+AI can misread a label (350 mg as 35 mg, a missing potassium line); the plausibility checks catch some
+of that, not all. Studies found large language models unreliable at estimating renal nutrients
+themselves, which is why the app lets AI copy and name, never estimate (note 04 F7). For carbohydrate
+counting with insulin, weigh or measure.
+
+### For operators
+
+`AI_VISION_MODEL` (empty = photos off), `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`, off),
+`ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`, off), `AI_VISION_TIMEOUT_S` (120 s), `MAX_IMAGE_BYTES`
+(4 MiB). Photos count toward the shared daily AI limit. Suggested local models: `qwen3-vl:8b` (6.1 GB) or
+`qwen3-vl:4b` (3.3 GB) on Ollama, `gemma4:12b-it-qat` as an alternative (all Apache-2.0); not
+`llama3.2-vision` as a default (its licence excludes the EU for the multimodal models). The API is
+`POST /api/vision/label` and `POST /api/vision/plate` ([`ARCHITECTURE.md`](../ARCHITECTURE.md), "M2 API:
+AI and photos"); tests are `tests/test_vision_api.py` and `tests/test_imagecheck.py`.

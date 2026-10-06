@@ -15,9 +15,11 @@ fonts and scripts are served by the app, and offline mode works with no internet
 
 The app makes **no outbound request until you turn a feature on**. Every outbound call is HTTPS on
 port 443, made by the server (never the browser) through the app's SSRF-checked transport
-(`app/egress.py` for USDA and Open Food Facts: the address is resolved and checked on every request,
-private and metadata addresses are refused, redirects are not followed); API keys travel in headers,
-never in URLs.
+(`app/egress.py` for USDA and Open Food Facts, `app/ai/transport.py` for AI providers: the address is
+resolved and checked on every request, private and metadata addresses are refused unless an operator
+listed them, redirects are not followed); API keys travel in headers, never in URLs. AI providers are
+listed below; what they receive and the AI address rules (`AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
+`AI_HTTP_PROXY`) are in [`ai.md`](ai.md).
 
 | Host | Port | Needed when | Default |
 |---|---|---|---|

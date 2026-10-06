@@ -25,10 +25,17 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
 * API keys the person chose to store, encrypted;
 * a per-day count of lookups made with a shared key (counts only, not what was looked up);
 * entries in the activity log about their account: sign-ins, failed sign-ins, password and key
-  changes, exports.
+  changes, exports;
+* if the optional AI is on and the person uses it ([ai.md](ai.md)): the providers they agreed to send
+  data to, their own AI provider (its key encrypted), a per-day count of AI calls and tokens, and their
+  **AI activity**: what each call sent and received (kept 30 days by default, then only the time,
+  provider and outcome; photos are never stored, only their fingerprint and size). The person sees and
+  can delete their AI activity in Settings; admins see only the counts.
 
-Nothing is sent anywhere unless a feature that needs the internet is used (USDA lookups, and later
-barcode or AI features the admin turns on), and then only what that lookup needs.
+Nothing is sent anywhere unless a feature that needs the internet is used (USDA lookups, barcode
+lookups or the optional AI the admin turns on), and then only what that feature needs. The AI sends
+nothing until the person opts in and agrees to the destination shown, and never sends their name,
+account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 
 ## Who can see it
 
@@ -44,11 +51,13 @@ barcode or AI features the admin turns on), and then only what that lookup needs
 ## Deleting your account
 
 Settings → Account → Delete account removes your account and everything that belongs to it from the
-database at once (log, foods, saved meals, profile, settings, keys, sessions, usage counts). The
+database at once (log, foods, saved meals, profile, settings, keys, sessions, usage counts, AI
+provider, consents and AI activity). The
 database overwrites deleted records where it can. What deletion cannot reach:
 
 * **backups** made before the deletion keep your data until they expire (ask the person running the
-  server how long they keep them);
+  server how long they keep them); that includes AI activity that was still kept when the backup was
+  made;
 * the one-time copy made when the server was upgraded to version 0.3 (`kidney.db.pre-v3.bak`), which
   holds the data logged before that upgrade and is deleted automatically 30 days after it;
 * the activity log keeps a line saying that account number N was deleted (no name, no health data).
@@ -60,4 +69,7 @@ Export your data first if you want to keep it.
 * Encrypt and rotate backups (restic, borg or age), keep them private (`0600`), and keep
   `SECRET_KEY` outside the data volume and its backups (see [accounts.md](accounts.md)).
 * Tell the people you invite what this page says, especially the two points under "Admins".
+* If you turn the optional AI on, what people send goes to the provider you chose; a model you run
+  yourself (Ollama) keeps it in the house, and you can read it. Keep `ai.audit_retention_days` short if
+  your backups are kept long.
 * Use HTTPS once more than one person has an account ([https.md](https.md)).

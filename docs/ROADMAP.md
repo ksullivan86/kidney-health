@@ -38,3 +38,14 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * On-device label OCR with Tesseract.js 7 behind an accuracy gate (≥ 30 real labels, ≥ 95 % exact fields), with its own Trusted Types policy — note 03 §3.4 and R8 ("v0.4 experiment").
 * Server-side barcode decoding (`zxing-cpp`) for API-only clients — note 03 §3.3 ("Keep as a documented option").
 * Fill in Open Food Facts' API usage form for the project and document an admin contact for `OFF_CONTACT` — note 03 §6 item 19 (an owner action; the app already sends the identifying User-Agent).
+
+## Optional AI (note 04)
+
+* Read-only tool calling (for example `search_foods(q)` run by the server, at most 3 calls) for presets whose connection test confirms tool support — note 04 R14 ("Deferred (v0.4+)").
+* kidney-health as an MCP server for Hermes Agent (streamable HTTP, a per-person bearer token, read-only tools returning rule-checked results only) — note 04 R14 and §3.3 H5.
+* Streaming status events ("contacting model… checking…") for perceived latency — note 04 R14.
+* A free-text "ask" box, only after the golden set grows a large safety section and live evaluations show ≥ 99 % correct refusals — note 04 R14.
+* Model-written titles and reasons again, behind the golden-set gates, with NFKC, `Cc`/`Cf` removal, a confusable skeleton, an expanded term list (`shot`, `inject`, `pen`, `skip`, `delay`, `extra`, binder brand names) and a "worded by AI" label — note 04 §9 A2 ("Free text returns in v0.4 only behind the golden-set gates").
+* The three reference live evaluations (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes Agent) committed under `docs/dev/ai-eval/` before a model is listed as recommended in `docs/ai.md` — note 04 §6 Phase 5 (a maintainer action: the v0.3.0 build had no Ollama server, OpenAI key or Hermes Agent to run them against).
+* Re-check whether Hermes Agent's `GET /v1/toolsets` lists tools of configured MCP servers, and tighten the tool check if it does — note 04 §9 A1 (b) and §7.
+
