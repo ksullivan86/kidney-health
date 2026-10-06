@@ -84,7 +84,8 @@ differ, the note says to ask), or frailty ticked (KDIGO 2024 PP 3.3.1.5).
 
 **Energy.** With age and height: the NASEM 2023 estimated energy requirement (Table S-1, by sex, age,
 height, the reference weight and activity; the mean of both equations for "unspecified"), turned into
-kcal per kg and **kept inside 25–35 kcal/kg** (KDOQI 2020 3.1.1, 1C) (E-1). Otherwise 30 kcal/kg
+kcal per kg and **kept inside 25–35 kcal/kg** (KDOQI 2020 3.1.1, 1C) (E-1). NASEM's adult equations are
+for ages 19 and over; at 18 the app uses them too, and the 25–35 kcal/kg range bounds the result. Otherwise 30 kcal/kg
 (E-2). With nutrition risk, at least 30 kcal/kg (E-3; ESPEN 2022 R1). On peritoneal dialysis the
 calories absorbed from the dialysis fluid are subtracted, never below 20 kcal/kg (E-4).
 

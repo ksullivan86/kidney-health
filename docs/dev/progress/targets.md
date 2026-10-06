@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # targets (M2): personalised targets, labs, eGFR
 
@@ -46,7 +46,12 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * Project wording added where the spec's text could not be used as is (all marked in target_rules.py):
   E-4.floor, E-4 insulin sentence only with diabetes, E-PD.missing (PD without dialysate kcal: v0.2 had this hint),
   PH-2.none (transplant G1–G3b), K-0/PH-0 labs-off variants, kidney-function messages other than G-1.
-* Lab dates up to one day after the server's date count as fresh (time zones); see labs API for validation.
+* Lab dates up to one day after the server's date count as fresh (time zones); the same one-day slack applies to
+  "not in the future" validation of taken_on, transplant_date and birth_month.
+* Errors: refusals are 422 `{"detail": message, "code": code}` (ARCHITECTURE keeps `detail` a string; note 05 said
+  `detail: {code, message}`); lab validation failures are 400 like every other validation error (note 05 said 422).
+* `user.units.labs` registered as `user_default` (note 05 says user) so a non-US admin can default to SI.
+* NASEM adult EER equations also used at age 18 (bounded by 25–35 kcal/kg); documented.
 
 * Steps 5–7: models.py (Sex/Activity/Analyte, ProfileUpdate fields with ""→null, validate_birth_month,
   validate_past_date with one day of time-zone slack, Profile fields, SuggestedRange/AppliedRule/SafetyAlert,
@@ -85,8 +90,15 @@ DEFS gains the seven keys below (sorted by key: the targets.* ones after registr
 * README "How targets and warnings work" (note 05 C9) and CHANGELOG (M3 integration).
 * docs/diet-guide.md becomes a handbook pointer (handbook integration task); no test needed a number change.
 
-## Next
-Live smoke on port 8300 (uvicorn, curl), full `python -m pytest`, mark complete.
+## Final verification (2026-10-06)
+* Live: uvicorn on 127.0.0.1:8300 with a fresh DATA_DIR; curl sign-in, PUT profile (TV06 inputs), POST labs
+  (5.8 mmol/L K, 1.97 mmol/L phosphate → "1.97 mmol/L = 6.1 mg/dL"), GET suggested-targets = TV06 exactly,
+  kidney-function card on dialysis, anonymous 401, missing X-Requested-With 403; server log has no lab values and
+  no tracebacks; server stopped.
+* `python -m pytest`: everything passes except the two JS-twin parity tests named in "Handoff to the frontend
+  builder" (settings.js lacks the 7 new registry keys; app/static is not mine).
+* `python3 tests/data/gen_{targets,kidney_function,settings}_vectors.py --check` current;
+  `scripts/build_handbook.py --check` (handbook venv) current; ruff (line length 140) clean on my files.
 
 ## Commands
 * `python3 -m pytest -q -p no:cacheprovider tests/test_targets.py tests/test_units.py tests/test_kidney_function.py tests/test_nutrients.py`

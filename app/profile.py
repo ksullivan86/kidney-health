@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -188,7 +188,7 @@ def target_settings(conn: sqlite3.Connection, store: SettingsStore) -> dict[str,
     }
 
 
-def today() -> Any:
+def today() -> date:
     """The server's local date ("today" of note 05 §4.2); one function so tests can move it."""
     return datetime.now().date()
 

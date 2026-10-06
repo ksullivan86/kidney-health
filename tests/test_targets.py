@@ -6,10 +6,11 @@ rule order, the H1 diabetes floor, M1, M2, M5) plus every threshold edge of the 
 """
 from __future__ import annotations
 
+import calendar
 import itertools
 import json
 import random
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -210,17 +211,22 @@ def test_properties_over_a_fixed_random_sample():
     assert len(seen_rules) >= 45, sorted(seen_rules)
 
 
-def test_m5_any_birth_month_whose_18th_birthday_could_still_be_ahead_is_refused():
-    for today in (date(2026, 10, 1), date(2026, 10, 5), date(2026, 10, 31), date(2026, 2, 28), date(2026, 12, 31)):
-        same_month_18_years_ago = f"{today.year - 18}-{today.month:02d}"
-        last_day_of_that_month_birthday_ahead = today.day < 28 or today.month == 2
-        if last_day_of_that_month_birthday_ahead or today.day < 31:
-            with pytest.raises(T.OutOfScope) as info:
-                run({"birth_month": same_month_18_years_ago}, today=today)
-            assert info.value.code == "out_of_scope_under_18"
-        previous = date(today.year - 18, today.month, 1).replace(day=1)
-        month_before = f"{previous.year - (previous.month == 1)}-{(previous.month - 2) % 12 + 1:02d}"
-        assert run({"birth_month": month_before}, today=today)["derived"]["age"] == 18
+@pytest.mark.parametrize("today", [date(2026, 10, 1), date(2026, 10, 5), date(2026, 10, 30), date(2026, 10, 31),
+                                   date(2026, 2, 28), date(2027, 2, 28), date(2026, 12, 31), date(2026, 4, 30)])
+def test_m5_any_birth_month_whose_18th_birthday_could_still_be_ahead_is_refused(today):
+    """Born in this month 18 years ago: refused until the month's last possible birthday has passed."""
+    year = today.year - 18
+    last_day = calendar.monthrange(year, today.month)[1]  # 2008-02 has a 29th
+    birth_month = f"{year}-{today.month:02d}"
+    if today.day < last_day:
+        with pytest.raises(T.OutOfScope) as info:
+            run({"birth_month": birth_month}, today=today)
+        assert info.value.code == "out_of_scope_under_18"
+    else:
+        assert run({"birth_month": birth_month}, today=today)["derived"]["age"] == 18
+    # one month earlier is always old enough
+    earlier = date(year, today.month, 1) - timedelta(days=1)
+    assert run({"birth_month": earlier.isoformat()[:7]}, today=today)["derived"]["age"] == 18
 
 
 def test_m5_end_of_month_birthday():
