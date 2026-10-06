@@ -18,7 +18,6 @@ from fastapi.exceptions import RequestValidationError
 from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
 from . import labs  # M2 targets: /api/labs
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
-from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -102,7 +101,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meals.router)
     app.include_router(meals.plan_router)
     app.include_router(labs.router)
-    app.include_router(guidance_api.router)
     app.include_router(guidance_api.router)
     app.include_router(handbook.router)
 
