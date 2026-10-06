@@ -20,3 +20,23 @@ Rules that every change must keep:
 * **Migrations** are append-only steps in `app/migrations/`; never edit a released step.
 * **Docs.** Update `ARCHITECTURE.md`, the relevant `docs/` page and the handbook when behaviour a
   person can see changes.
+
+## Long-running agent work: checkpoint as you go
+
+Agent runs can be cut off at any moment (usage limits, restarts). Files you wrote survive; your
+working memory does not. So, for any task longer than a few minutes:
+
+1. **Progress note.** Keep `docs/dev/progress/<your-role>.md` up to date after every sub-step:
+   done (and how it was verified), in progress, next steps, decisions and their reasons, commands
+   that reproduce your checks. Write it so a fresh agent could continue without re-reading
+   everything.
+2. **Checkpoint commits of your own files only.** After each sub-step that leaves the tree in a
+   sensible state, commit just the paths you own, then push:
+   `git add <your paths> docs/dev/progress/<your-role>.md && git commit -m "WIP(<your-role>): <step>" -- <your paths> docs/dev/progress/<your-role>.md && git push -q origin HEAD`.
+   Never `git add -A` or `git commit -a`: other agents work in the same tree at the same time.
+   If git reports `index.lock`, wait a few seconds and retry. Never rewrite history.
+3. **When you start**, read `docs/dev/progress/<your-role>.md`, `git log --oneline -15` and
+   `git status` first: a previous attempt may have left work to continue. If your prompt names a
+   previous attempt's transcript (`agent-*.jsonl`), read its last tool calls and messages to see
+   where it stopped.
+4. When your task is fully done, mark the progress note "Status: complete" in its first line.
