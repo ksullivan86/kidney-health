@@ -1255,7 +1255,8 @@ answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, 
 `period_insights` and `prefilter`. The engine is `js/engine/guidance/*.js` (one file per Python module,
 `KH.guidanceEngine`); `tools/e2e/parity.py` section 12 compares every guidance route, `POST /api/log/batch`,
 `purpose`/`client_id` and `meal_hint` with a real server, and `tests/test_guidance_ui.py` keeps the demo's
-texts, limits and starter-meal copy equal to the server's.
+texts, limits and starter-meal copy equal to the server's. `tools/e2e/guidance_perf.py` holds the twin to
+note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `docs/guidance.md`).
 
 ### Frontend (`js/views/guidance.js`, `KH.guidance`; note 06 §4.16)
 
