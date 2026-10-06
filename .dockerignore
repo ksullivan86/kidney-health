@@ -6,6 +6,7 @@
 
 !app/
 !data/foods.json
+!data/combos.json
 !LICENSE
 !requirements.lock
 

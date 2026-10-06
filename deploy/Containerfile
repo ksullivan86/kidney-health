@@ -3,6 +3,7 @@
 # Spec: docs/dev/research/01-rootless-and-security.md §5.1 and §10.
 #
 # Build from the REPOSITORY ROOT. The root .dockerignore is an allowlist: only app/, data/foods.json,
+# data/combos.json (meal-guidance starter meals),
 # LICENSE, requirements.lock and handbook/ reach the build context (never deploy/secrets/):
 #   podman build --format docker -f deploy/Containerfile -t kidney-health:local .
 #   docker build -f deploy/Containerfile -t kidney-health:local .
@@ -45,6 +46,7 @@ RUN python -m venv --without-pip /opt/venv \
       --no-deps --require-hashes --only-binary=:all: -r requirements.lock
 COPY app/ /opt/app/app/
 COPY data/foods.json /opt/app/data/foods.json
+COPY data/combos.json /opt/app/data/combos.json
 COPY LICENSE /opt/app/LICENSE
 # Byte-compile once (the runtime rootfs is read-only), then normalise modes whatever the checkout's
 # umask was: directories 0755, files 0644 (executables 0755), nothing group- or world-writable.

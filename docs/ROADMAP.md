@@ -20,3 +20,12 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * Migrate from MkDocs + Material to Zensical once a Zensical ≥ 0.1 release passes the CI canary (`handbook-zensical`) and the `/learn` browser check, before Material's security fixes end (November 2026 at the earliest) — note 08 §4.1 and §6 risk 2.
 * Owner decisions before publishing: enable GitHub Pages (`HANDBOOK_PAGES=true`, needs a public repository or GitHub Pro/Team), then set `HANDBOOK_PUBLIC_URL` and the image's documentation label to the Pages URL — note 08 §4.8 "Owner setup", §7 Phase 0 and Phase 4.
 * Clinical sign-off of every handbook page by the named reviewers (draft banners stay until then) — note 08 §4.9 and §7 Phase 4; ARCHITECTURE.md v0.3 decision 11.
+
+## Meal guidance (note 06)
+
+* Curated `typical_meals` tags on foods (breakfast foods at breakfast) beyond the slot-habit bonus — note 06 F10 ("deferred to v0.4").
+* Vegetarian and pescatarian patterns (per-food diet tags) in the guidance settings — note 06 §4.14 ("deferred to v0.4").
+* AI-written insights (v0.3 insights are rule-only; insights and low-treatment options are never sent to AI) — note 06 §3.6 and §4.13.
+* Dialysis-day eating patterns beyond the interdialytic allowance — note 06 §5 R12 ("revisit in v0.4").
+* An offline MILP experiment to measure how far the beam-search plans are from optimal — note 06 §3.1 option C ("could be an offline experiment").
+* Clinical review (renal dietitian, diabetes educator) of the per-meal caps, score weights, tip texts and the "Treating a low" card — note 06 §5 R1/R6/R11 and §8 open questions (default carb tolerance, `purpose` defaulting to "hypo", starter combos).

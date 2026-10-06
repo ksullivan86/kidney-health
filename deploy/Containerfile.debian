@@ -31,6 +31,7 @@ RUN python -m venv --without-pip /opt/venv \
       --no-deps --require-hashes --only-binary=:all: -r requirements.lock
 COPY app/ /opt/app/app/
 COPY data/foods.json /opt/app/data/foods.json
+COPY data/combos.json /opt/app/data/combos.json
 COPY LICENSE /opt/app/LICENSE
 RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
  && chmod -R u=rwX,go=rX /opt/venv /opt/app \

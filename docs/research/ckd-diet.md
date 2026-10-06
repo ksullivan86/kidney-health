@@ -188,7 +188,7 @@ These are *per serving* (usually ½ cup, 1 medium fruit, 1 oz cheese, 3 oz meat)
 | Phosphorus | — | any "phos" additive = **flag as high** regardless of mg | | | | NKF, NIDDK [4][5][20] |
 | Phosphorus (P:protein) | — | **< 10 mg/g** desirable | 10–< 14 mg/g | ≥ 14–16 mg/g (higher mortality) | | Noori 2010 [13][14] |
 | **Sodium** | sodium-free < 5 mg; very low ≤ 35 mg | **≤ 140 mg** (FDA "low"; ≤ 5 % DV ≈ ≤ 115 mg) | 141–400 mg (NKF "≤ 240 mg and less than calories") | **≥ 460 mg (≥ 20 % DV)** | ≥ 600 mg/meal item | FDA [34][37]; NKF [38]; AKF [19] |
-| **Per meal** | | | | Na or K > 600 mg per meal = review | | Renal diet education materials [47] |
+| **Per meal** | | | | K > 600–700 mg or Na > 600 mg per meal = review | | AKF Kidney Kitchen; Satellite Healthcare [47] |
 
 Suggested tracker logic: classify each logged food on all three nutrients; show a green/amber/red chip; count high-K and high-P servings per day (most programs allow ≤ 1–2 "high" servings/day when restricted); flag any "phos" or "potassium chloride" ingredient string as red regardless of mg; apply the 0.5 leaching multiplier only when the user marks the item as boiled/double-boiled small-cut.
 
@@ -332,7 +332,7 @@ Field notes for the application:
 44. **Severe symptomatic hypermagnesemia associated with over-the-counter laxatives in a patient with renal failure.** Case Rep Nephrol. 2014. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3914018/
 45. StatPearls. **Hypermagnesemia** (CKD as principal risk; Mg antacids/laxatives). https://www.ncbi.nlm.nih.gov/books/NBK549811/
 46. American Kidney Fund, Kidney Kitchen. **Phosphorus Food Guide** (low ≤ 100 mg; medium 101–199 mg; high ≥ 200 mg per serving; ★ ≥ 250 mg K). https://kitchen.kidneyfund.org/wp-content/uploads/2021/08/Phosphorus-Guide.pdf
-47. Renal diet education materials using ≤ 200 mg Na or K per serving / ≤ 600 mg per meal (e.g., University of Michigan renal nutrition handout). https://medicine.umich.edu/sites/default/files/content/downloads/Holewinski.pdf
+47. Per-meal rules of thumb (replaces a University of Michigan handout whose URL has redirected to the medical school's home page since 2026-10-05, design note 06 F1): American Kidney Fund, Kidney Kitchen, **Where do I find meal plans for low potassium?** (C. Feibig, RD), "600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800 – 2200mg", https://kitchen.kidneyfund.org/?p=86324 ; Satellite Healthcare, **Food labels**, sodium "less than 600 mg per meal and less than 200 mg for a snack", https://www.satellitehealthcare.com/living-with-dialysis/eating-smart/food-labels (both accessed 2026-10-05).
 48. NSW Agency for Clinical Innovation, **Haemodialysis diet specification** (menu-item cut-offs incl. < 300 mg phosphate per hot main dish). https://aci.health.nsw.gov.au/projects/diet-specifications/adult/renal/haemodialysis
 49. American Kidney Fund, Kidney Kitchen. **Double-cook potatoes (video tip).** https://kitchen.kidneyfund.org/guides-and-videos/tip-double-cook-potatoes-cc/
 50. KDIGO hyperkalaemia epidemiology source: Kovesdy CP, et al. Serum potassium and adverse outcomes across the range of kidney function: a CKD Prognosis Consortium meta-analysis. Eur Heart J. 2018;39:1535–1542 (cited in [2]).
