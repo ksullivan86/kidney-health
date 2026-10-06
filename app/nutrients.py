@@ -47,8 +47,9 @@ NUTRIENTS: tuple[Nutrient, ...] = (
 NUTRIENT_KEYS: tuple[str, ...] = tuple(n.key for n in NUTRIENTS)
 NUTRIENT_BY_KEY: dict[str, Nutrient] = {n.key: n for n in NUTRIENTS}
 
-# Profile targets may also carry a per-meal carbohydrate goal (type 1 carb counting).
-TARGET_KEYS: tuple[str, ...] = NUTRIENT_KEYS + ("carbs_per_meal_g",)
+# Profile targets may also carry a per-meal carbohydrate goal (type 1 carb counting) and, optionally,
+# a goal for the snack slot (meal guidance; default max(15, carbs_per_meal_g / 2 rounded to 5 g)).
+TARGET_KEYS: tuple[str, ...] = NUTRIENT_KEYS + ("carbs_per_meal_g", "carbs_per_snack_g")
 
 MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner", "snack")
 CKD_STAGES: tuple[str, ...] = ("1", "2", "3a", "3b", "4", "5")
@@ -64,6 +65,7 @@ FLAGS: tuple[str, ...] = (
     "hypo_treatment",
     "low_potassium_fruit",
     "processed",
+    "ingredient",  # only ever added to other food (flour, salt, oil): meal guidance never suggests it alone
 )
 
 _INTEGER_UNITS = {"mg", "mL"}

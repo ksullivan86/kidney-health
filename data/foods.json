@@ -1,5 +1,5 @@
 {
- "version": "2026-10-05.2",
+ "version": "2026-10-06.1",
  "source": "USDA FoodData Central, SR Legacy (April 2018 release), https://fdc.nal.usda.gov/ - public domain. Nutrients are per the listed household serving, scaled from the USDA per-100 g values. Entries with a negative fdc_id are not USDA records; their values come from product labels.",
  "foods": [
   {
@@ -3019,7 +3019,9 @@
     "calcium_mg": 5,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -3518,7 +3520,9 @@
     "calcium_mg": 3,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -3541,7 +3545,9 @@
     "calcium_mg": 3,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -7473,7 +7479,8 @@
     "fluid_ml": 0
    },
    "flags": [
-    "high_gi"
+    "high_gi",
+    "ingredient"
    ],
    "kidney_notes": null
   },
@@ -7871,7 +7878,9 @@
     "calcium_mg": 0,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": "A quarter teaspoon is ~580 mg sodium, over a quarter of a 2000 mg day; season with herbs, pepper, lemon, vinegar and garlic instead."
   },
   {
@@ -7945,7 +7954,8 @@
     "fluid_ml": 0
    },
    "flags": [
-    "phosphate_additive"
+    "phosphate_additive",
+    "ingredient"
    ],
    "kidney_notes": "Standard baking powder is sodium acid pyrophosphate or monocalcium phosphate: ~455 mg phosphorus (almost fully absorbed) and ~365 mg sodium per tsp, roughly 40-75 mg phosphorus per slice of a 12-serving cake; use a low-sodium, phosphate-free baking powder."
   },
@@ -8268,7 +8278,9 @@
     "calcium_mg": 0,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -8291,7 +8303,9 @@
     "calcium_mg": 0,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -8315,7 +8329,8 @@
     "fluid_ml": 0
    },
    "flags": [
-    "processed"
+    "processed",
+    "ingredient"
    ],
    "kidney_notes": null
   },
@@ -8339,7 +8354,9 @@
     "calcium_mg": 1,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -8362,7 +8379,9 @@
     "calcium_mg": 4,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -8408,7 +8427,9 @@
     "calcium_mg": 10,
     "fluid_ml": 0
    },
-   "flags": [],
+   "flags": [
+    "ingredient"
+   ],
    "kidney_notes": null
   },
   {
@@ -9176,7 +9197,8 @@
    "flags": [
     "processed"
    ],
-   "kidney_notes": "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap."
+   "kidney_notes": "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap.",
+   "role": "veg_fruit"
   },
   {
    "fdc_id": 170699,

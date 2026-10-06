@@ -23,7 +23,7 @@ def test_registry_has_the_twelve_contract_keys_in_order():
     assert n.NUTRIENT_BY_KEY["protein_g"].role == "range"
     assert n.NUTRIENT_BY_KEY["carbs_g"].label == "Carbohydrate"
     assert n.NUTRIENT_BY_KEY["fluid_ml"].unit == "mL"
-    assert n.TARGET_KEYS[-1] == "carbs_per_meal_g"
+    assert n.TARGET_KEYS[-2:] == ("carbs_per_meal_g", "carbs_per_snack_g")
 
 
 def test_round_value_integers_for_mg_and_ml_one_decimal_otherwise():

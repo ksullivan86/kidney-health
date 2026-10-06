@@ -33,7 +33,7 @@
   ];
   const NUT = Object.fromEntries(NUTRIENTS.map((n) => [n.key, n]));
   const NUTRIENT_KEYS = NUTRIENTS.map((n) => n.key);
-  const TARGET_KEYS = [...NUTRIENT_KEYS, 'carbs_per_meal_g'];
+  const TARGET_KEYS = [...NUTRIENT_KEYS, 'carbs_per_meal_g', 'carbs_per_snack_g']; // twin of nutrients.TARGET_KEYS
   const MEALS = [
     { key: 'breakfast', label: 'Breakfast' },
     { key: 'lunch', label: 'Lunch' },
@@ -53,6 +53,7 @@
     { key: 'hypo_treatment', label: 'Hypo treatment', hint: 'Fast carbs, low potassium', kind: 'good' },
     { key: 'low_potassium_fruit', label: 'Low-potassium fruit', hint: '', kind: 'good' },
     { key: 'processed', label: 'Processed', hint: 'Usually higher sodium / additives', kind: '' },
+    { key: 'ingredient', label: 'Ingredient', hint: 'Only added to other food (flour, oil); never suggested on its own', kind: '' },
   ];
   const FLAG = Object.fromEntries(FLAGS.map((f) => [f.key, f]));
   // How each nutrient is judged over a period (mirrors app/periods.py; the server's value wins when present).

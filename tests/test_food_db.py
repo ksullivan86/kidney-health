@@ -99,3 +99,25 @@ def test_glycaemic_index_alone_does_not_make_condiments_or_white_bread_red(foods
 def test_liquids_count_as_fluid(foods):
     assert "counts_as_fluid" in foods["Gravy, beef, canned"]["flags"]
     assert 40 <= foods["Gravy, beef, canned"]["nutrients"]["fluid_ml"] <= 58
+
+
+INGREDIENTS = {
+    "Flour, all-purpose", "Salt, table", "Baking powder (phosphate type)", "Black pepper, ground", "Vinegar, cider",
+    "Vinegar, balsamic", "Olive oil", "Canola oil", "Sugar, brown", "Margarine, stick", "Butter, salted",
+    "Butter, unsalted",
+}
+
+
+def test_ingredients_are_flagged_so_meal_guidance_never_suggests_them_alone(foods):
+    """Note 06 F9/§4.11: flour, salt, oils, butter … are only ever added to other food."""
+    flagged = {name for name, f in foods.items() if "ingredient" in f["flags"]}
+    assert flagged == INGREDIENTS
+
+
+def test_role_overrides_are_valid_and_rare(foods):
+    """Note 06 §4.11: an optional curated ``role`` corrects the derived meal-guidance role."""
+    from app.guidance.rules import ROLES
+
+    overridden = {name: f["role"] for name, f in foods.items() if "role" in f}
+    assert overridden == {"Coleslaw, fast food": "veg_fruit"}
+    assert set(overridden.values()) <= set(ROLES)

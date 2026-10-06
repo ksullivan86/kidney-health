@@ -10,6 +10,7 @@ Each entry is a dict consumed by ``scripts/build_food_db.py``:
         "serving_g": 118,            # grams in one serving (from food_portion.csv when available)
         "flags": [],                 # subset of FLAGS (ARCHITECTURE.md, exact strings)
         "kidney_notes": "...",       # one practical sentence for limit/avoid foods, else None
+        "role": "veg_fruit",         # optional: meal-guidance role override (one of ROLES), rarely needed
     }
 
 Items that SR Legacy does not carry (glucose tablets, salt substitute, ...) use
@@ -26,6 +27,12 @@ Flag meanings (see ARCHITECTURE.md "Per-serving thresholds"):
   hypo_treatment      - ~15 g fast carbs that are also low in potassium/phosphorus
   low_potassium_fruit - renal-diet "safe" fruit in the listed portion
   processed           - packaged / restaurant food, sodium and additives likely
+  ingredient          - only ever added to other food (flour, salt, oil, butter, vinegar ...): meal
+                        guidance never suggests it on its own (docs/dev/research/06-meal-guidance.md F9)
+
+Meal-guidance roles (``role``): the guidance engine derives a role from the category and the numbers
+(app/guidance/rules.py ``role_of``); ``role`` overrides it for the few foods the rule gets wrong
+(coleslaw is a vegetable side, not an "extra").
 """
 
 CATEGORIES = [
@@ -51,7 +58,11 @@ FLAGS = [
     "hypo_treatment",
     "low_potassium_fruit",
     "processed",
+    "ingredient",
 ]
+
+# Must equal app/guidance/rules.py ROLES (tests/guidance/test_data.py checks it).
+ROLES = ["protein", "mixed", "starch", "veg_fruit", "drink", "extra"]
 
 # Short aliases keep the table below readable.
 FRUIT = "Fruits"
@@ -74,10 +85,11 @@ AVOID = "avoid_ckd"
 HYPO = "hypo_treatment"
 LOWK = "low_potassium_fruit"
 PROC = "processed"
+ING = "ingredient"
 
 
-def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None):
-    return {
+def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None, role=None):
+    entry = {
         "fdc_id": fdc_id,
         "name": name,
         "category": category,
@@ -86,6 +98,9 @@ def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None):
         "flags": list(flags),
         "kidney_notes": notes,
     }
+    if role is not None:
+        entry["role"] = role
+    return entry
 
 
 def manual(manual_id, name, category, serving_desc, serving_g, nutrients, flags=(), notes=None):
@@ -308,7 +323,7 @@ CURATED_FOODS = [
     f(172749, "Crackers, whole-wheat", GRAIN, "6 crackers", 28, [],
       "Whole-grain crackers are higher in phosphorus and potassium; saltines or rice cakes are the swap."),
     f(170250, "Rice cakes, plain, unsalted", GRAIN, "2 cakes", 18, []),
-    f(168894, "Flour, all-purpose", GRAIN, "1/4 cup", 31, []),
+    f(168894, "Flour, all-purpose", GRAIN, "1/4 cup", 31, [ING]),
 
     # ---------------------------------------------------- Dairy & Alternatives
     f(171265, "Milk, whole", DAIRY, "1 cup", 244, [FL],
@@ -347,8 +362,8 @@ CURATED_FOODS = [
     f(171255, "Half and half", DAIRY, "1 tbsp", 15, []),
     f(170859, "Heavy whipping cream", DAIRY, "1 tbsp", 15, []),
     f(171257, "Sour cream", DAIRY, "1 tbsp", 12, []),
-    f(173410, "Butter, salted", DAIRY, "1 tbsp", 14.2, []),
-    f(173430, "Butter, unsalted", DAIRY, "1 tbsp", 14.2, []),
+    f(173410, "Butter, salted", DAIRY, "1 tbsp", 14.2, [ING]),
+    f(173430, "Butter, unsalted", DAIRY, "1 tbsp", 14.2, [ING]),
     f(171261, "Non-dairy creamer, liquid", DAIRY, "1 tbsp", 15, [PA, PROC],
       "Most non-dairy creamers contain dipotassium phosphate; a splash of real half and half is the lower-phosphorus choice."),
     f(171942, "Rice milk, unsweetened", DAIRY, "1 cup", 240, [FL],
@@ -638,7 +653,7 @@ CURATED_FOODS = [
       "About 17 g fast carbs with negligible potassium: usable to treat a low."),
     f(169655, "Sugar, granulated", SWEET, "1 tbsp", 12.6, [HYPO, GI],
       "A tablespoon is ~13 g pure glucose/fructose with no minerals: a hypo treatment in a pinch."),
-    f(168833, "Sugar, brown", SWEET, "1 tsp, packed", 4.6, [GI]),
+    f(168833, "Sugar, brown", SWEET, "1 tsp, packed", 4.6, [GI, ING]),
     f(169661, "Maple syrup", SWEET, "1 tbsp", 20, [GI],
       "Low in minerals but ~13 g sugar per tbsp; sugar-free syrup is the everyday swap."),
     f(168838, "Pancake syrup", SWEET, "1 tbsp", 20, [GI, PROC]),
@@ -667,7 +682,7 @@ CURATED_FOODS = [
       "Mostly sugar with little potassium: fast carbs that can treat a low, but not a fruit serving."),
 
     # ----------------------------------------------------- Condiments & Sauces
-    f(173468, "Salt, table", COND, "1/4 tsp", 1.5, [],
+    f(173468, "Salt, table", COND, "1/4 tsp", 1.5, [ING],
       "A quarter teaspoon is ~580 mg sodium, over a quarter of a 2000 mg day; season with herbs, pepper, lemon, vinegar and garlic instead."),
     manual(1, "Salt substitute (potassium chloride, e.g. NoSalt, Nu-Salt)", COND, "1/4 tsp", 1.4,
            {"potassium_mg": 610},
@@ -677,7 +692,7 @@ CURATED_FOODS = [
            {"sodium_mg": 290, "potassium_mg": 350},
            [AVOID],
            "AVOID with kidney disease: 'lite' salt is half potassium chloride (~350 mg potassium per 1/4 tsp) and still a quarter of the day's sodium; use herbs and spices."),
-    f(172804, "Baking powder (phosphate type)", COND, "1 tsp", 4.6, [PA],
+    f(172804, "Baking powder (phosphate type)", COND, "1 tsp", 4.6, [PA, ING],
       "Standard baking powder is sodium acid pyrophosphate or monocalcium phosphate: ~455 mg phosphorus (almost fully absorbed) and ~365 mg sodium per tsp, roughly 40-75 mg phosphorus per slice of a 12-serving cake; use a low-sodium, phosphate-free baking powder."),
     f(174277, "Soy sauce", COND, "1 tbsp", 16, [PROC],
       "~880 mg sodium in one tablespoon (almost half a day's limit); use a teaspoon, dilute with water, or try lemon and ginger."),
@@ -699,13 +714,13 @@ CURATED_FOODS = [
       "Bottled Italian is ~290 mg sodium per 2 tbsp; mix your own with olive oil, vinegar, garlic and herbs."),
     f(169055, "Caesar dressing", COND, "2 tbsp", 30, [PROC],
       "Parmesan and anchovy make Caesar dressing salty (~360 mg per 2 tbsp); use half the amount or an oil-and-lemon dressing."),
-    f(171413, "Olive oil", COND, "1 tbsp", 13.5, []),
-    f(172336, "Canola oil", COND, "1 tbsp", 14, []),
-    f(172346, "Margarine, stick", COND, "1 tbsp", 14, [PROC]),
-    f(173469, "Vinegar, cider", COND, "1 tbsp", 14.9, []),
-    f(172241, "Vinegar, balsamic", COND, "1 tbsp", 16, []),
+    f(171413, "Olive oil", COND, "1 tbsp", 13.5, [ING]),
+    f(172336, "Canola oil", COND, "1 tbsp", 14, [ING]),
+    f(172346, "Margarine, stick", COND, "1 tbsp", 14, [PROC, ING]),
+    f(173469, "Vinegar, cider", COND, "1 tbsp", 14.9, [ING]),
+    f(172241, "Vinegar, balsamic", COND, "1 tbsp", 16, [ING]),
     f(167747, "Lemon juice, fresh", COND, "1 tbsp", 15.2, []),
-    f(170931, "Black pepper, ground", COND, "1 tsp", 2.3, []),
+    f(170931, "Black pepper, ground", COND, "1 tsp", 2.3, [ING]),
     f(174523, "Barbecue sauce", COND, "2 tbsp", 34, [GI, PROC],
       "~350 mg sodium and ~11 g sugar per 2 tbsp, with tomato potassium; a tablespoon brushed on is enough."),
     f(174524, "Salsa", COND, "2 tbsp", 36, [PROC],
@@ -767,7 +782,8 @@ CURATED_FOODS = [
     f(169269, "Potato salad, home-style", PREP, "1/2 cup", 125, [],
       "Potatoes, egg and salt: ~320 mg potassium and ~660 mg sodium per 1/2 cup; use leached potatoes or swap for a pasta or cabbage slaw salad."),
     f(170300, "Coleslaw, fast food", PREP, "3/4 cup", 116, [PROC],
-      "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap."),
+      "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap.",
+      role="veg_fruit"),
     f(170699, "Mashed potatoes, fast food", PREP, "1/2 cup", 121, [PROC],
       "Instant mashed potatoes with gravy: ~350 mg potassium and ~370 mg sodium per 1/2 cup; rice or a roll is the side swap."),
     f(170698, "French fries, fast food", PREP, "1 medium", 117, [PROC],
