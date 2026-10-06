@@ -229,3 +229,15 @@ def test_custom_food_without_owner_is_refused_by_the_database(pair):
     with pytest.raises(sqlite3.IntegrityError, match="user_id is required"):
         conn.execute("UPDATE log_entries SET user_id = NULL")
     conn.close()
+
+
+def test_barcode_lookup_never_matches_another_persons_custom_food(pair):
+    """Note 03 §9 B8: "the user's own custom foods first" must never become "anyone's custom food"."""
+    a, b, _ = pair
+    mine = a.post("/api/foods", json={**CUSTOM, "name": "A's own cola", "gtin": "049000028911"}).json()
+    own = a.post("/api/foods/barcode", json={"code": "049000028911"})
+    assert own.status_code == 200 and own.json()["food"]["id"] == mine["id"] and own.json()["source"] == "local"
+    r = b.post("/api/foods/barcode", json={"code": "049000028911"})
+    assert r.status_code != 200 and "food" not in r.json(), r.text
+    assert "A's own cola" not in r.text and f'"id": {mine["id"]}' not in r.text
+    assert b.get(f"/api/foods/{mine['id']}").status_code == 404

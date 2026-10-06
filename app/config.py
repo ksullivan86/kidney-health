@@ -32,6 +32,10 @@ Keys (defaults in brackets):
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
   ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``
+* ``OFF_BASE_URL`` [``https://world.openfoodfacts.org``]: the Open Food Facts server barcode lookups
+  ask (staging ``https://world.openfoodfacts.net`` or a self-hosted Product Opener). Env only, never a
+  runtime setting (note 03 §9 B5): ``https://`` (plain ``http://`` only for localhost), no path. A
+  host other than the default may resolve to a private address (the operator chose it).
 * ``HANDBOOK_DIR`` [``/app/learn`` in the image, else ``<repo>/handbook/site``]: the built handbook
   served at ``/learn`` (``/learn`` answers 404 when it has no ``index.html``);
   ``HANDBOOK_PUBLIC_URL`` [unset]: the published copy (GitHub Pages), where the app's Learn links
@@ -103,6 +107,8 @@ class Settings:
     # tests stay hermetic); load_settings() fills in HANDBOOK_DIR or DEFAULT_HANDBOOK_DIR.
     handbook_dir: Path | None = None
     handbook_public_url: str | None = None  # normalised to end with "/"
+    # Open Food Facts server for barcode lookups (note 03 R10, §9 B5); env only.
+    off_base_url: str = "https://world.openfoodfacts.org"
 
     # Identity (note 07 §4.3). Enforced by app/auth; parsed and validated here.
     auth_mode: str = "local"
@@ -359,6 +365,15 @@ def _check_handbook_public_url(raw: str) -> str:
     return normalize_origin(raw.strip()) + path
 
 
+def _check_off_base_url(raw: str) -> str:
+    from .off import check_base_url
+
+    try:
+        return check_base_url(raw)
+    except ValueError as exc:
+        raise ConfigError(f"OFF_BASE_URL {exc} (got {raw!r}).") from None
+
+
 def _check_allowed_host(entry: str) -> str:
     value = entry.strip().lower().rstrip(".")
     if value == "*":
@@ -446,6 +461,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         foods_json=Path(env.get("FOODS_JSON") or DEFAULT_FOODS_JSON),
         handbook_dir=Path(_raw(env, "HANDBOOK_DIR") or DEFAULT_HANDBOOK_DIR),
         handbook_public_url=_raw(env, "HANDBOOK_PUBLIC_URL"),
+        off_base_url=_raw(env, "OFF_BASE_URL") or "https://world.openfoodfacts.org",
         auth_mode=_choice(env, "AUTH_MODE", "local", AUTH_MODES),
         admin_username=_raw(env, "ADMIN_USERNAME"),
         admin_password=admin_password,
@@ -494,7 +510,9 @@ def normalize(settings: Settings) -> Settings:
     proxies = tuple(dict.fromkeys(_check_trusted_proxy(p) for p in settings.trusted_proxies))
     public = _check_public_url(settings.public_url) if settings.public_url else None
     handbook = _check_handbook_public_url(settings.handbook_public_url) if settings.handbook_public_url else None
-    return replace(settings, allowed_hosts=allowed, trusted_proxies=proxies, public_url=public, handbook_public_url=handbook)
+    off_base = _check_off_base_url(settings.off_base_url)
+    return replace(settings, allowed_hosts=allowed, trusted_proxies=proxies, public_url=public, handbook_public_url=handbook,
+                   off_base_url=off_base)
 
 
 def _validate(s: Settings) -> list[str]:
@@ -513,6 +531,7 @@ def _validate(s: Settings) -> list[str]:
         _check_public_url(s.public_url)
     if s.handbook_public_url:
         _check_handbook_public_url(s.handbook_public_url)
+    _check_off_base_url(s.off_base_url)
     for name in ("trusted_proxy_user_header", "trusted_proxy_groups_header", "trusted_proxy_name_header"):
         _check_header_name(name.upper(), getattr(s, name))
 

@@ -19,6 +19,7 @@ from . import auth, crypto, foods, log as log_router, meals, profile, pwa, secur
 from . import labs  # M2 targets: /api/labs
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
+from . import barcode  # M2 barcode: POST /api/foods/barcode
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
@@ -103,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(labs.router)
     app.include_router(guidance_api.router)
     app.include_router(handbook.router)
+    app.include_router(barcode.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

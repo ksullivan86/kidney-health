@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from . import additives, credentials, egress
 from .gtin import loose_gtin14, usda_candidates
+from .off import quality_items
 from .textclean import clean_label, clean_text
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
@@ -165,6 +166,15 @@ def stored_food_values(
     return serving, {key: round_value(key, values[key]) for key in NUTRIENT_KEYS}
 
 
+def parse_list(text: str | None) -> list[str]:
+    """A stored JSON list of strings (``additives_json``, ``quality_json``); anything else is ``[]``."""
+    try:
+        value = json.loads(text or "[]")
+    except json.JSONDecodeError:
+        return []
+    return [str(v) for v in value if isinstance(v, (str, int))] if isinstance(value, list) else []
+
+
 def row_to_food(row: sqlite3.Row) -> dict[str, Any]:
     flags = parse_flags(row["flags_json"])
     nutrients = raw_nutrients(row)
@@ -184,6 +194,13 @@ def row_to_food(row: sqlite3.Row) -> dict[str, Any]:
         "hidden": bool(row["hidden"]),
         "warnings": warnings,
         "kidney_rating": kidney_rating(warnings),
+        # v0.3 barcodes (schema step 7, note 03 R6)
+        "gtin": row["gtin"],
+        "source_url": row["source_url"],
+        "source_license": row["source_license"],
+        "quality": quality_items(parse_list(row["quality_json"])),
+        "additives": parse_list(row["additives_json"]),
+        "ingredients_text": row["ingredients_text"],
     }
 
 
@@ -252,6 +269,34 @@ def link_food(conn: sqlite3.Connection, user_id: int, food_id: int) -> None:
     )
 
 
+@dataclass(frozen=True)
+class Provenance:
+    """The barcode and provenance columns of a food row (schema step 7, note 03 R6)."""
+
+    gtin: str | None = None
+    source_url: str | None = None
+    source_license: str | None = None
+    retrieved_at: str | None = None
+    ingredients_text: str | None = None
+    additives: tuple[str, ...] = ()
+    quality: tuple[str, ...] = ()
+
+    def columns(self) -> dict[str, Any]:
+        return {
+            "gtin": self.gtin, "source_url": self.source_url, "source_license": self.source_license,
+            "retrieved_at": self.retrieved_at, "ingredients_text": self.ingredients_text,
+            "additives_json": json.dumps(list(self.additives)), "quality_json": json.dumps(list(self.quality)),
+        }
+
+    @classmethod
+    def of_row(cls, row: Mapping[str, Any]) -> "Provenance":
+        return cls(
+            gtin=row["gtin"], source_url=row["source_url"], source_license=row["source_license"],
+            retrieved_at=row["retrieved_at"], ingredients_text=row["ingredients_text"],
+            additives=tuple(parse_list(row["additives_json"])), quality=tuple(parse_list(row["quality_json"])),
+        )
+
+
 def insert_food(
     conn: sqlite3.Connection,
     *,
@@ -267,6 +312,7 @@ def insert_food(
     kidney_notes: str | None = None,
     hidden: bool = False,
     owner_user_id: int | None = None,
+    provenance: Provenance | None = None,
 ) -> int:
     """Insert a food. ``custom`` rows need ``owner_user_id`` (a trigger refuses them otherwise)."""
     if source == "custom" and owner_user_id is None:
@@ -274,15 +320,18 @@ def insert_food(
     flag_list = list(flags)
     serving_g, values = stored_food_values(nutrients, flag_list, serving_g)
     now = utcnow()
+    extra = (provenance or Provenance()).columns()
     cur = conn.execute(
         f"""INSERT INTO foods (name, brand, category, source, fdc_id, serving_desc, serving_g,
-                {_NUTRIENT_COLS}, flags_json, kidney_notes, hidden, owner_user_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?, ?, ?)""",
+                {_NUTRIENT_COLS}, flags_json, kidney_notes, hidden, owner_user_id, created_at, updated_at,
+                {", ".join(extra)})
+            VALUES (?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?, ?, ?, {", ".join("?" for _ in extra)})""",
         (
             name, brand, category, source, fdc_id, serving_desc, float(serving_g),
             *[values[k] for k in NUTRIENT_KEYS],
             json.dumps(flag_list), kidney_notes, int(hidden),
             None if source in ("builtin", *SHARED_SOURCES) else owner_user_id, now, now,
+            *extra.values(),
         ),
     )
     return int(cur.lastrowid)
@@ -302,6 +351,7 @@ def update_food_row(
     kidney_notes: str | None = None,
     hidden: bool | None = None,
     fdc_id: Any = ...,  # Ellipsis = leave unchanged
+    provenance: Provenance | None = None,  # None = leave the barcode columns unchanged
 ) -> None:
     flag_list = list(flags)
     serving_g, values = stored_food_values(nutrients, flag_list, serving_g)
@@ -318,6 +368,10 @@ def update_food_row(
     if fdc_id is not ...:
         sets.append("fdc_id = ?")
         params.append(fdc_id)
+    if provenance is not None:
+        for column, value in provenance.columns().items():
+            sets.append(f"{column} = ?")
+            params.append(value)
     params.append(food_id)
     conn.execute(f"UPDATE foods SET {', '.join(sets)} WHERE id = ?", params)
 
@@ -805,6 +859,25 @@ def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
     )
 
 
+def usda_provenance(mapped: UsdaMapped, *, retrieved_at: str | None = None) -> Provenance:
+    """The provenance columns of a FoodData Central row (public domain; attribution requested)."""
+    return Provenance(
+        gtin=mapped.gtin14, source_url=USDA_HOME_URL, source_license=USDA_LICENSE, retrieved_at=retrieved_at or utcnow(),
+        ingredients_text=mapped.ingredients_text, additives=tuple(mapped.additives), quality=tuple(mapped.quality),
+    )
+
+
+def upsert_usda_food(conn: sqlite3.Connection, fdc_id: int, kwargs: Mapping[str, Any], provenance: Provenance) -> int:
+    """The one shared ``usda`` row for ``fdc_id``: updated in place when it exists, else inserted."""
+    existing = conn.execute(
+        "SELECT id FROM foods WHERE source = 'usda' AND fdc_id = ? AND owner_user_id IS NULL ORDER BY id LIMIT 1", (fdc_id,)
+    ).fetchone()
+    if existing is not None:
+        update_food_row(conn, existing["id"], hidden=False, provenance=provenance, **kwargs)
+        return int(existing["id"])
+    return insert_food(conn, source="usda", fdc_id=fdc_id, provenance=provenance, **kwargs)
+
+
 def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
     """Map a FoodData Central ``/food/{id}`` record to ``insert_food`` keyword arguments."""
     return map_usda_record(data, fdc_id).kwargs
@@ -902,15 +975,8 @@ def usda_import(body: UsdaImport, request: Request, user: CurrentUser, conn: sql
     data = _usda_get(f"/food/{body.fdc_id}", {}, cred.api_key, guard=guard_id(cred, user.id), own_key=cred.scope == "own")
     if not isinstance(data, Mapping):
         raise HTTPException(status_code=502, detail="USDA returned an unexpected record")
-    parsed = usda_record_to_food(data, body.fdc_id)
-    existing = conn.execute(
-        "SELECT id FROM foods WHERE source = 'usda' AND fdc_id = ? AND owner_user_id IS NULL ORDER BY id LIMIT 1", (body.fdc_id,)
-    ).fetchone()
-    if existing is not None:
-        food_id = existing["id"]
-        update_food_row(conn, food_id, hidden=False, **parsed)
-    else:
-        food_id = insert_food(conn, source="usda", fdc_id=body.fdc_id, **parsed)
+    mapped = map_usda_record(data, body.fdc_id)
+    food_id = upsert_usda_food(conn, body.fdc_id, mapped.kwargs, usda_provenance(mapped))
     link_food(conn, user.id, food_id)
     conn.commit()
     return row_to_food(fetch_food(conn, food_id))
@@ -921,8 +987,25 @@ def get_food(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends
     return row_to_food(get_food_or_404(conn, user.id, food_id))
 
 
+def scan_custom_food(
+    name: str, flags: Iterable[str], kidney_notes: str | None, ingredients_text: str | None
+) -> tuple[list[str], str | None, str | None, list[str]]:
+    """Run the additive scan (note 03 R5, R8) over a hand-entered food.
+
+    Returns ``(flags, kidney_notes, ingredients_text, additives)``: the person's flags plus
+    ``phosphate_additive`` / ``potassium_additive`` / ``avoid_ckd`` when the ingredient list (or the
+    name, for a salt substitute) calls for them, so typing "sodium phosphate" sets the flag. The
+    person's own notes win; a salt substitute without notes gets the standard warning text.
+    """
+    ingredients = clean_text(ingredients_text, max_len=additives.MAX_INGREDIENTS_CHARS, keep_newlines=True)
+    scan = additives.scan([], ingredients, name)
+    merged = list(dict.fromkeys([*flags, *scan.flags]))
+    return merged, kidney_notes or scan.kidney_notes, ingredients, scan.additives
+
+
 @router.post("", response_model=Food, status_code=201)
 def create_food(body: FoodCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    flags, notes, ingredients, found = scan_custom_food(body.name, body.flags, body.kidney_notes, body.ingredients_text)
     food_id = insert_food(
         conn,
         source="custom",
@@ -933,8 +1016,9 @@ def create_food(body: FoodCreate, user: CurrentUser, conn: sqlite3.Connection = 
         serving_desc=body.serving_desc,
         serving_g=body.serving_g,
         nutrients=body.nutrients,
-        flags=body.flags,
-        kidney_notes=body.kidney_notes,
+        flags=flags,
+        kidney_notes=notes,
+        provenance=Provenance(gtin=body.gtin, ingredients_text=ingredients, additives=tuple(found)),
     )
     conn.commit()
     return row_to_food(fetch_food(conn, food_id))
@@ -953,6 +1037,16 @@ def update_food(food_id: int, body: FoodCreate, user: CurrentUser, conn: sqlite3
             status_code=409,
             detail="Shared foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy",
         )
+    # A client that does not send gtin / ingredients_text (v0.2) keeps the stored ones.
+    sent = body.model_fields_set
+    kept = Provenance.of_row(row)
+    ingredients_in = body.ingredients_text if "ingredients_text" in sent else kept.ingredients_text
+    flags, notes, ingredients, found = scan_custom_food(body.name, body.flags, body.kidney_notes, ingredients_in)
+    provenance = Provenance(
+        gtin=body.gtin if "gtin" in sent else kept.gtin,
+        source_url=kept.source_url, source_license=kept.source_license, retrieved_at=kept.retrieved_at,
+        ingredients_text=ingredients, additives=tuple(found),
+    )
     update_food_row(
         conn,
         food_id,
@@ -962,8 +1056,9 @@ def update_food(food_id: int, body: FoodCreate, user: CurrentUser, conn: sqlite3
         serving_desc=body.serving_desc,
         serving_g=body.serving_g,
         nutrients=body.nutrients,
-        flags=body.flags,
-        kidney_notes=body.kidney_notes,
+        flags=flags,
+        kidney_notes=notes,
+        provenance=provenance,
     )
     conn.commit()
     return row_to_food(fetch_food(conn, food_id))
@@ -971,7 +1066,11 @@ def update_food(food_id: int, body: FoodCreate, user: CurrentUser, conn: sqlite3
 
 @router.post("/{food_id}/copy", response_model=Food, status_code=201)
 def copy_food(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """An editable custom copy. It keeps the barcode (so the next scan finds the copy first), the
+    ingredient list and the attribution of the data it came from (ODbL needs it); the quality notes
+    belong to the provider's data and are not copied."""
     row = get_food_or_404(conn, user.id, food_id)
+    kept = Provenance.of_row(row)
     new_id = insert_food(
         conn,
         source="custom",
@@ -985,6 +1084,10 @@ def copy_food(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depend
         nutrients=raw_nutrients(row),
         flags=parse_flags(row["flags_json"]),
         kidney_notes=row["kidney_notes"],
+        provenance=Provenance(
+            gtin=kept.gtin, source_url=kept.source_url, source_license=kept.source_license,
+            retrieved_at=kept.retrieved_at, ingredients_text=kept.ingredients_text, additives=kept.additives,
+        ),
     )
     conn.commit()
     return row_to_food(fetch_food(conn, new_id))

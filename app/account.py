@@ -34,7 +34,8 @@ from .db import table_columns, table_exists, utcnow
 
 EXPORT_FORMAT = "kidney-health-export"
 EXPORT_VERSION = 1
-FOOD_CSV_FIELDS = ("id", "name", "brand", "category", "source", "fdc_id", "serving_desc", "serving_g")
+FOOD_CSV_FIELDS = ("id", "name", "brand", "category", "source", "fdc_id", "serving_desc", "serving_g",
+                   "gtin", "source_license", "source_url")  # v0.3 barcodes: the ODbL notice travels with the data
 README = """\
 Kidney Health export
 ====================
@@ -51,6 +52,11 @@ This archive holds everything this server stores about your account, in two form
 What is NOT in it: your password, your sign-in sessions and any API keys you stored (not even part
 of them). The person who runs the server keeps backups of the whole database; deleting your account
 does not reach those backups until they expire.
+
+Where a food's data came from is in the "source" and "source_license" columns. Rows marked ODbL-1.0
+contain information from Open Food Facts (https://world.openfoodfacts.org), which is made available
+under the Open Database License (https://opendatacommons.org/licenses/odbl/1-0/). Rows marked CC0-1.0
+come from USDA FoodData Central (public domain).
 
 The numbers are what the app recorded. They are not medical advice; talk to your kidney team or
 dietitian about your targets.
@@ -144,10 +150,7 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
     data = export_data(conn, uid, app_version=app_version)
 
     entries = fetch_entries(conn, uid)
-    sources = {r["id"]: r["source"] for r in conn.execute(
-        "SELECT DISTINCT f.id, f.source FROM foods f JOIN log_entries e ON e.food_id = f.id WHERE e.user_id = ?", (uid,)
-    )}
-    log_csv = _csv((*CSV_COLUMNS, "source"), (csv_row(r) + [sources.get(r["food_id"], "")] for r in entries))
+    log_csv = _csv(CSV_COLUMNS, (csv_row(r) for r in entries))  # source and source_license are columns since v0.3
 
     food_rows = []
     for food in [*data["custom_foods"], *(

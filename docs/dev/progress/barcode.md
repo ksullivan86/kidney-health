@@ -58,29 +58,20 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   warn-only .github/workflows/off-live-check.yml (actionlint + zizmor clean), §9.3 guard test (product text never
   reaches AI prompts; tests/test_off_mapping.py). k8s NetworkPolicy / Cilium already list world.openfoodfacts.org.
 
-## In progress: waiting for the AI builder's m006
-* Everything that needs schema step 7 is finished and tested on the local branch **`barcode-m007-pending`**
-  (in this repository; also checked out in the scratch clone
-  `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/barcode/wt`,
-  which has an untracked LOCAL STUB app/migrations/m006_ai.py — never copy that file). It is rebased on 11a35e9.
-  `discover()` refuses a gap in the numbering and `migrate()` skips any step at or below the stored version, so
-  m007 must not land before m006 (a database migrated to 7 would never run 6).
-* Port, once `app/migrations/m006_ai.py` is committed by the AI builder:
-  `git diff HEAD...barcode-m007-pending > patch && git apply --3way patch` (re-read each shared file first:
-  app/foods.py, app/models.py, app/log.py, app/account.py, app/settings_registry.py, app/config.py, app/admin.py,
-  app/main.py, tests/test_api.py, tests/test_isolation.py, tests/barcode_support.py,
-  tests/data/gen_settings_vectors.py), regenerate `python3 tests/data/gen_settings_vectors.py`, add the
-  "M2 API: barcode" section to ARCHITECTURE.md (text ready in the scratch dir: arch_section.md; also the Flags
-  list/warning rule, FOOD_SOURCES, Food fields and CSV columns), run `python -m pytest` and
-  `node tests/js/run_vectors.mjs`, commit, then `git branch -D barcode-m007-pending`.
-* Contents of the branch: m007 (foods gtin/source_url/source_license/retrieved_at/ingredients_text/additives_json/
-  quality_json, barcode_cache), app/barcode.py (POST /api/foods/barcode, cache, chain, merge, store, link,
-  refresh, remap), Provenance + custom-food additive scan in app/foods.py, BarcodeLookup/BarcodeResult/Food fields
-  in app/models.py, quick add gtin/ingredients + CSV source/source_license (app/log.py), export foods.csv/README
-  (app/account.py), 4 food.* keys (app/settings_registry.py), OFF_BASE_URL (app/config.py), remap-barcodes and
-  purge-barcode-cache (app/admin.py), router (app/main.py); tests test_barcode_api.py (~40),
-  test_migration_m007.py, test_barcode_settings.py, isolation + CSV header updates. In the clone the full suite
-  passes except the two settings-twin tests below.
+## Schema step 7 and the route (ported 2026-10-06 18:45 UTC, after the AI builder committed m006 in 671ca1d)
+* Ported from the local branch `barcode-m007-pending` (rebased on 11a35e9; `git apply` of
+  `git diff HEAD...barcode-m007-pending`, working tree only, no conflicts; the LOCAL STUB m006 of the scratch
+  clone was never copied). Contents: m007 (foods gtin/source_url/source_license/retrieved_at/ingredients_text/
+  additives_json/quality_json, barcode_cache), app/barcode.py (POST /api/foods/barcode, cache, chain, merge, store,
+  link, refresh, remap), Provenance + custom-food additive scan in app/foods.py, BarcodeLookup/BarcodeResult/Food
+  fields in app/models.py, quick add gtin/ingredients + CSV source/source_license (app/log.py), export
+  foods.csv/README (app/account.py), 4 food.* keys (app/settings_registry.py), OFF_BASE_URL (app/config.py),
+  remap-barcodes and purge-barcode-cache (app/admin.py), router (app/main.py); tests test_barcode_api.py (~40),
+  test_migration_m007.py, test_barcode_settings.py, isolation + CSV header updates; settings vectors carry a
+  string key's `pattern` (gen_settings_vectors.py). ARCHITECTURE.md: "M2 API: barcode", potassium row of the
+  thresholds table, Flags paragraph, Food fields line.
+* Verified in the main tree with the AI builder's real m006: `python -m pytest` exit 0 with the two settings-twin
+  tests deselected (they fail only on settings.js, below); `gen_settings_vectors.py --check` current.
 
 ## Handoffs
 * **Frontend (settings.js; I may not edit it):** `test_settings_ui.py::test_engine_registry_lists_every_server_key`

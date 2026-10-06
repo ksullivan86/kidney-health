@@ -26,7 +26,7 @@ from fastapi.responses import StreamingResponse
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
-from .foods import fetch_food, fetch_user_food, insert_food, parse_flags, raw_nutrients
+from .foods import Provenance, fetch_food, fetch_user_food, insert_food, parse_flags, raw_nutrients, scan_custom_food
 from .models import (
     CopyDay,
     CopyDayResult,
@@ -73,7 +73,8 @@ _STATUS_ORDER_SQL = "CASE e.status WHEN 'eaten' THEN 0 ELSE 1 END"
 _NUTRIENT_COLS = ", ".join(NUTRIENT_KEYS)
 _NUTRIENT_PLACEHOLDERS = ", ".join("?" for _ in NUTRIENT_KEYS)
 _ENTRY_SELECT = """
-    SELECT e.*, f.flags_json AS food_flags_json, f.kidney_notes AS food_kidney_notes
+    SELECT e.*, f.flags_json AS food_flags_json, f.kidney_notes AS food_kidney_notes,
+           f.source AS food_source, f.source_license AS food_source_license
     FROM log_entries e
     JOIN foods f ON f.id = e.food_id
 """
@@ -85,6 +86,9 @@ CSV_COLUMNS: tuple[str, ...] = (
     *NUTRIENT_KEYS,
     "created_at", "updated_at",
     "purpose",  # v0.3: "hypo" for a low treatment, else empty
+    # v0.3 barcodes (note 03 R6): where the food's data came from, and its licence. "ODbL-1.0" is the
+    # Open Database License notice for Open Food Facts data leaving the app (a Produced Work, ODbL §4.3).
+    "source", "source_license",
 )
 HYPO_PURPOSE = "hypo"
 HYPO_FLAG = "hypo_treatment"
@@ -430,6 +434,7 @@ def csv_row(row: sqlite3.Row) -> list[Any]:
     ]
     values += [round_value(key, row[key]) for key in NUTRIENT_KEYS]
     values += [row["created_at"], row["updated_at"], _column(row, "purpose")]
+    values += [_column(row, "food_source"), _column(row, "food_source_license")]
     return values
 
 
@@ -469,6 +474,7 @@ def quick_add(body: QuickAdd, user: CurrentUser, response: Response, conn: sqlit
     if existing is not None:
         response.status_code = 200
         return row_to_entry(existing)
+    flags, notes, ingredients, found = scan_custom_food(body.name, body.flags, None, body.ingredients_text)
     food_id = insert_food(
         conn,
         source="custom",
@@ -477,7 +483,9 @@ def quick_add(body: QuickAdd, user: CurrentUser, response: Response, conn: sqlit
         serving_desc=body.serving_desc,
         serving_g=body.serving_g,
         nutrients=body.nutrients,
-        flags=body.flags,
+        flags=flags,
+        kidney_notes=notes,
+        provenance=Provenance(gtin=body.gtin, ingredients_text=ingredients, additives=tuple(found)),
     )
     food = fetch_food(conn, food_id)
     try:

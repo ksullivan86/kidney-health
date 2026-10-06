@@ -9,7 +9,8 @@ Produced by the server's own code, ``app/settings_registry.py`` and ``app/settin
 ``app/static/js/engine/settings.js`` (the registry table the Settings view and the demo API use):
 
 * ``registry``: every key with its scope, default, env lock, label, help and type details (taken
-  from the key's pydantic JSON schema), which the JS table must equal;
+  from the key's pydantic JSON schema, including a string key's ``pattern``), which the JS table
+  must equal;
 * ``validation_cases``: ``SettingDef.validate`` on good and bad JSON values (value or error text);
 * ``precedence_cases``: a ``SettingsStore`` over a fresh schema-v3 database with the given env
   locks, instance rows and personal rows (some stored values deliberately invalid, which fall
@@ -50,6 +51,8 @@ def registry_vectors() -> list[dict]:
             item.update(type="int", min=schema.get("minimum"), max=schema.get("maximum"))
         elif schema.get("type") == "string":
             item.update(type="str", minLength=schema.get("minLength"), maxLength=schema.get("maxLength"))
+            if schema.get("pattern"):  # e.g. food.off_contact (it goes into a User-Agent header)
+                item["pattern"] = schema["pattern"]
         else:  # an object setting (M2: ai, guidance): the JS table describes it itself
             item.update(type="object")
         out.append(item)
@@ -62,6 +65,9 @@ VALUES = {
     "str": ["My server", "  padded name  ", "", "   ", "x" * 80, "x" * 81, 5, None],
     "choice": [None, 5, "nope"],
 }
+# Extra strings for a key with a pattern: the JS twin checks it after the length (as pydantic does).
+PATTERN_VALUES = ["admin@example.org", "Mum's server, mum@example.org", "a(b)c", "back\\slash", "x\r\nX-Evil: 1",
+                  "tab\there", "café@example.org", "  ab(  ", "ok@example.org\n"]
 
 
 def validation_vectors() -> list[dict]:
@@ -71,6 +77,8 @@ def validation_vectors() -> list[dict]:
         values = list(VALUES.get(item["type"], []))
         if item["type"] == "choice":
             values = [*item["options"], item["options"][0].upper(), *values]
+        if item.get("pattern"):
+            values += PATTERN_VALUES
         for value in values:
             try:
                 out.append({"key": d.key, "input": value, "value": d.to_python_json(d.validate(value))})

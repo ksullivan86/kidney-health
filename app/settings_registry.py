@@ -219,6 +219,57 @@ register(
     ),
 )
 
+# The other barcode keys (note 03 R10; M2 barcode). OFF_BASE_URL is env-only (app/config.py), never a
+# runtime setting: an admin-editable upstream would be an SSRF path and a way to feed made-up nutrient
+# values to every person on the server (note 03 §9 B5).
+# Printable ASCII without parentheses or backslash: it is written into the User-Agent header as
+# "KidneyHealth/<version> (<contact>)", so no control character can reach the header.
+OffContact = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200, pattern=r"^[\x20-\x27\x2a-\x5b\x5d-\x7e]+$")
+]
+
+register(
+    SettingDef(
+        key="food.off_contact",
+        model=OffContact,
+        default="https://github.com/ksullivan86/kidney-health",
+        scope="instance",
+        env="OFF_CONTACT",
+        label="Contact sent to Open Food Facts",
+        help="Goes into the User-Agent of every lookup, as Open Food Facts asks of API users. An admin email address "
+        "is better than the default project address. Letters, digits and punctuation only (no round brackets or backslash).",
+    ),
+    SettingDef(
+        key="food.off_rate_per_minute",
+        model=Annotated[int, Field(ge=1, le=15)],
+        default=10,
+        scope="instance",
+        env="OFF_RATE_PER_MINUTE",
+        label="Open Food Facts lookups per minute (whole server)",
+        help="Open Food Facts allows 15 product lookups a minute from one address and may block an address that "
+        "sends more. Everyone on this server shares this budget; products already looked up do not count.",
+    ),
+    SettingDef(
+        key="food.barcode_negative_ttl_hours",
+        model=Annotated[int, Field(ge=1, le=720)],
+        default=24,
+        scope="instance",
+        env="BARCODE_NEGATIVE_TTL_HOURS",
+        label="Remember barcodes that were not found for (hours)",
+        help="A barcode that Open Food Facts or USDA did not know is not asked again for this long.",
+    ),
+    SettingDef(
+        key="food.usda_branded_barcode",
+        model=bool,
+        default=True,
+        scope="instance",
+        env="USDA_BRANDED_BARCODE",
+        label="Also look barcodes up in USDA FoodData Central",
+        help="Uses the person's USDA key or the shared one, when Open Food Facts does not know a product, has no "
+        "nutrition facts for it, or lacks potassium or sodium for a US product.",
+    ),
+)
+
 
 # --------------------------------------------------------------------------- #
 # Note 05 (personalised targets and labs), §4.9. Owner: M2 targets (app/targets.py reads them through

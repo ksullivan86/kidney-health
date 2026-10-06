@@ -561,7 +561,7 @@ def test_csv_export(client):
     header, body = rows[0], rows[1:]
     assert header[:9] == ["id", "date", "meal", "status", "food_id", "food_name", "servings", "grams", "note"]
     assert header[9:21] == list(NUTRIENT_KEYS)
-    assert header[21:] == ["created_at", "updated_at", "purpose"]  # v0.3: "hypo" marks a low treatment
+    assert header[21:] == ["created_at", "updated_at", "purpose", "source", "source_license"]  # v0.3: "hypo" marks a low treatment; provenance (note 03 R6)
     assert len(body) == 3
     assert [row[1] for row in body] == ["2026-10-04", "2026-10-05", "2026-10-07"]
     banana_row = dict(zip(header, body[0]))

@@ -102,7 +102,7 @@ Returned as `warnings` on every food and log entry. Levels: `"medium"`, `"high"`
 
 | nutrient        | medium           | high                       | basis |
 |-----------------|------------------|----------------------------|-------|
-| potassium_mg    | 101–200 mg       | > 200 mg                   | renal dietitian low/medium/high potassium food convention |
+| potassium_mg    | 101–200 mg, or flagged `potassium_additive` with potassium not listed (`null`) | > 200 mg | renal dietitian low/medium/high potassium food convention; additive potassium is ~90 % absorbed (contract item 9) |
 | phosphorus_mg   | 101–150 mg       | > 150 mg, or any food flagged `phosphate_additive` | NKF guidance; additive phosphorus is ~90–100 % absorbed |
 | sodium_mg       | 141–400 mg       | > 400 mg                   | FDA "low sodium" ≤ 140 mg; 20 % DV ≈ 460 mg |
 | carbs_g         | 15–30 g ("1–2 carb choices"), or flagged `high_gi` with < 15 g | > 30 g, or flagged `high_gi` with ≥ 15 g | type 1 carb counting; the GI upgrade needs one carb choice to act on (per-portion glycaemic load), so a condiment's 4 g is a note, not a red |
@@ -111,7 +111,11 @@ Returned as `warnings` on every food and log entry. Levels: `"medium"`, `"high"`
 Flags (strings, set in curated data or by the user on custom foods):
 `phosphate_additive`, `high_gi`, `counts_as_fluid`, `avoid_ckd` (e.g. star fruit),
 `hypo_treatment` (fast carbs that are also low potassium, e.g. glucose tablets),
-`low_potassium_fruit`, `processed`.
+`low_potassium_fruit`, `processed`, and (v0.3) `potassium_additive`: set by the additive scan
+(`app/additives.py`) on scanned and hand-entered foods that list a potassium salt such as potassium
+chloride (E508) or potassium lactate (E326). With potassium unknown it gives the `medium` warning
+"Contains a potassium additive; potassium not listed"; with potassium listed the normal thresholds
+apply ("M2 API: barcode").
 
 Flags must agree with the serving they are shown next to (`scripts/build_food_db.py` and
 `tests/test_food_db.py` enforce it): a `low_potassium_fruit` serving stays ≤ 200 mg potassium
@@ -341,6 +345,9 @@ Food = {
 }
 FoodCreate = { "name", "brand"?, "category"?, "serving_desc", "serving_g", "nutrients": {...subset...}, "flags"?: [], "kidney_notes"? }
 ```
+
+v0.3 adds `source: "off"`, the `Food` fields `gtin`, `source_url`, `source_license`, `quality`, `additives`,
+`ingredients_text`, and `gtin` / `ingredients_text` on `FoodCreate` and `POST /api/log/quick` ("M2 API: barcode").
 
 ### Log
 * `GET /api/log?date=YYYY-MM-DD` → DaySummary
@@ -1239,6 +1246,145 @@ engine (`tests/guidance/test_parity_vectors.py` fails when it is stale): plain-J
 subset, the person's profile, preferences, day, history, saved meals, combos) and the engine's JSON
 answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, `day_insights`,
 `period_insights` and `prefilter`.
+
+## M2 API: barcode
+
+Built in M2 (barcode) from note 03 R1–R6, R10, R11, §6 and its §9 security review (incl. §9.3), with
+contract items 8 and 9. Code: `app/gtin.py` (normalise, classify), `app/additives.py` (E-number
+tiers, ingredient scan), `app/textclean.py` (NFKC, `Cf`/`Cc`/`Cs` removal, whitespace, caps; used for
+every provider text before it is stored or scanned), `app/off.py` (client, token bucket, trimming,
+mapping, quality, API 3.5+ parser; the ODbL §4.6 method file), `app/egress.py` (the SSRF-checked
+transport for USDA and Open Food Facts), USDA branded and provenance in `app/foods.py`, the route in
+`app/barcode.py`, schema step `app/migrations/m007_barcode.py`. People and operators:
+`docs/barcode-and-photos.md`. The photo routes (note 03 R8–R9) belong to the AI layer.
+
+### `POST /api/foods/barcode` (signed in)
+
+Body `BarcodeLookup = {"code": "049000028911", "format": "ean_13" | "ean_8" | "upc_a" | "upc_e" |
+"unknown" (default), "refresh": false}` (unknown fields refused; `code` 1–64 characters, spaces and
+hyphens ignored). Order: normalise → classify → the person's own custom food with that GTIN → a shared
+food the person already has (linked) → per-person limit (60/hour, `429`) → Open Food Facts (if
+`food.off_enabled` **and** the person's `food.off_consent`; the shared `barcode_cache` first) → USDA
+FoodData Central Branded (if a USDA key is usable for the person and `food.usda_branded_barcode`, when
+OFF has no answer, no nutrition facts, or lacks potassium or sodium on a US/CA label) → merge → store one
+shared read-only row (`off` per GTIN, or the `usda` row of the record) → link it to the person.
+
+```json
+BarcodeResult = {"food": Food, "gtin": "00049000028911", "source": "off" | "usda" | "local",
+                 "attribution": Attribution | null,      // the primary source; null for a person's own food without provenance
+                 "attributions": [Attribution],          // every source the stored values came from
+                 "quality": [QualityNote]}               // = food.quality
+Attribution = {"text": "Product data © Open Food Facts contributors, ODbL",
+               "url": "https://world.openfoodfacts.org/product/0049000028911", "license": "ODbL-1.0"}
+            | {"text": "Product data: USDA FoodData Central (public domain, CC0)", "url": "https://fdc.nal.usda.gov/", "license": "CC0-1.0"}
+QualityNote = {"code": "crowd_sourced" | "potassium_unknown" | "phosphorus_unknown" | "sodium_from_salt" | "carbs_available"
+                       | "prepared_values" | "ml_as_g" | "no_serving" | "energy_mismatch" | "implausible" | "no_nutrition"
+                       | "filled_from_usda" | "filled_from_off", "message": "..."}
+```
+
+* **Always `200`** for a found product, cached or not; `source: "local"` only for the person's own
+  custom food. A shared row or a cached product is given only when the person could fetch it now (the
+  provider is on and usable for them) or already has it: no "someone scanned this" oracle (§9 B7);
+  another person's custom food is never matched (§9 B8).
+* `400 {"detail", "reason": "check_digit" | "format" | "restricted" | "isbn" | "issn" | "coupon" |
+  "reserved", "gtin"?}`: before any lookup, not counted against the limit. `restricted` = GS1
+  restricted-circulation prefixes 020–029, 040–049, 200–299 (and GTIN-8 000–099, 200–299; indicator 9);
+  `reserved` = GTIN-8 977–999.
+* `404 {"detail", "gtin", "name": null | "<product name>", "contribute_url", "checked": {"off", "usda"}}`:
+  `name` is set when Open Food Facts knows the product without nutrition facts; `contribute_url` is the
+  Open Food Facts "add a product" page for the code.
+* `429` with `Retry-After` and `retry_after`: the per-person limit, the server-wide Open Food Facts bucket
+  (`food.off_rate_per_minute`; never a silent queue), Open Food Facts' own 429 (the bucket pauses 60 s),
+  or the USDA key's hourly guard.
+* `502 {"detail", "gtin", "checked"}`: a provider failed (timeout, refused address, HTTP error, invalid
+  or oversize answer) and no other answer exists. Upstream bodies are never echoed.
+* `503 {"detail", "reason": "lookups_off" | "off_consent_required" | <USDA key reason>, "gtin", "checked"}`:
+  no provider is on or usable for this person.
+* `refresh: true` asks the providers again only if the cached product is at least a day old; on a
+  person's own custom food it has no effect.
+
+### Open Food Facts client (`app/off.py`)
+
+`GET {OFF_BASE_URL}/api/v3.4/product/{off_code}?fields=<note 03 R3 list>` (API 3.5+ also asks for
+`nutrition`), `User-Agent: KidneyHealth/<version> (<food.off_contact>)`, `Accept: application/json`,
+`Accept-Encoding: gzip`; 8 s timeout, no redirects, 1 MiB decoded cap, one retry after 2 s on 503, never
+a retry on 404, JSON only. `off_code` is 13 digits (8 for EAN-8). Mapping: `<n>_serving` when the label
+is per serving, else `<n>_100g` × serving; prepared values only when nothing as sold exists; kJ ÷ 4.184;
+sodium from salt ÷ 2.5; absent → `null`; plausibility per 100 g (sodium ≤ 40 g except salts, potassium ≤
+10 g, phosphorus ≤ 5 g, macros ≤ 100 g, energy ≤ 950 kcal, model bounds); energy mismatch > 25 % and
+> 40 kcal; category by an ordered tag map; flags from `app/additives.py` plus `counts_as_fluid` (mL
+serving), `processed` (NOVA 4), `high_gi` (`en:sweetened-beverages` with ≥ 5 g sugars/100 mL); never
+`hypo_treatment` or `low_potassium_fruit`. `source_url` is built from a constant
+(`https://world.openfoodfacts.org/product/<off_code>`), never copied from a payload (§9 B4).
+
+### USDA FoodData Central Branded by barcode (`app/foods.py`)
+
+`usda_find_by_gtin`: `GET /foods/search?query=<form>&dataType=Branded&pageSize=10` for the 12-, 13- and
+14-digit forms (`app.gtin.usda_candidates`), stopping at the first result whose `gtinUpc` padded to 14
+digits equals the GTIN-14, then `GET /food/{fdcId}`. Same key resolution, daily quota (one per lookup)
+and hourly guard (`guard_id`) as the other USDA routes; 2 MiB decoded cap. `map_usda_record` prefers
+`labelNutrients` per serving (`potassium` or the API's `postassium`), else scales `foodNutrients`; it
+also runs the additive scan, so `POST /api/foods/usda/import` sets additive flags too. Merge (both
+found): nutrients from USDA when the OFF label is US/CA (or its country is unknown), else from OFF; a
+`null` is filled from the other source through per-gram values (never mixing prepared and as-sold
+values), noted `filled_from_<src>:<key>`; flags and additives are the union.
+
+### Foods and log changes
+
+* `FOOD_SOURCES` gains `off`; `FLAGS` gains `potassium_additive` (rule in "Per-serving thresholds").
+  `off` rows are shared and read-only like `usda` rows (`PUT` → 409, copy to edit; `DELETE` removes only
+  the caller's link).
+* `Food` gains `gtin` (GTIN-14 or `null`), `source_url`, `source_license` (`ODbL-1.0`, `CC0-1.0`,
+  `CC0-1.0 AND ODbL-1.0`, or `null`), `quality: [QualityNote]`, `additives: ["e338", "potassium lactate", …]`
+  (why an additive flag was set) and `ingredients_text`.
+* `FoodCreate` (`POST`/`PUT /api/foods`) and `POST /api/log/quick` accept `gtin` (8, 12, 13 or 14 digits,
+  valid check digit; stored as GTIN-14; 400 otherwise) and `ingredients_text` (≤ 4,000 characters). On
+  save the additive scan adds `phosphate_additive` / `potassium_additive` / `avoid_ckd` (with the
+  salt-substitute note when no notes were given). A `PUT` that leaves `gtin` or `ingredients_text` out
+  keeps the stored value. `POST /api/foods/{id}/copy` keeps `gtin`, `ingredients_text`, `additives`,
+  `source_url` and `source_license` (the ODbL notice travels with copied data), not `quality`.
+* CSV (`/api/log/export.csv` and the export archive's `log.csv`) gains the last columns `source` and
+  `source_license`; the archive's `foods.csv` gains `gtin`, `source_license`, `source_url`, and its
+  README carries the ODbL notice.
+
+### Schema step 7 (`m007_barcode.py`)
+
+`foods.gtin`, `source_url`, `source_license`, `retrieved_at`, `ingredients_text`, `additives_json`
+(`NOT NULL DEFAULT '[]'`), `quality_json` (`NOT NULL DEFAULT '[]'`; stored codes may name a nutrient:
+`implausible:sodium_mg`); index `foods_gtin` (partial, `gtin IS NOT NULL`) and unique `foods_off_gtin`
+(one `off` row per GTIN); `barcode_cache (gtin CHECK length 14, provider 'off'|'usda', status
+'found'|'not_found'|'no_nutrition', payload_json, fetched_at, PRIMARY KEY (gtin, provider)) WITHOUT
+ROWID` with a partial index on negative rows. The cache holds trimmed product data only (never who
+scanned); found rows stay until a refresh, negative rows expire after
+`food.barcode_negative_ttl_hours` and are purged daily. `python -m app.admin remap-barcodes` re-maps
+cached products into the shared rows without the network; `purge-barcode-cache` purges now.
+
+### Settings (registered in `app/settings_registry.py`) and configuration
+
+`food.off_enabled` (instance, `false`, `OFF_ENABLED`; M1), `food.off_consent` (user, `false`; M1),
+`food.off_contact` (instance, the project URL, `OFF_CONTACT`; printable ASCII without round brackets or backslash: it goes
+into the User-Agent), `food.off_rate_per_minute` (instance, 10, 1–15, `OFF_RATE_PER_MINUTE`),
+`food.barcode_negative_ttl_hours` (instance, 24, 1–720, `BARCODE_NEGATIVE_TTL_HOURS`),
+`food.usda_branded_barcode` (instance, `true`, `USDA_BRANDED_BARCODE`). **`OFF_BASE_URL`** is env only
+(`app/config.py`, never a runtime setting, §9 B5): `https://` (plain `http://` only for localhost), no
+path, query or credentials; a host other than the default may resolve to a private address.
+
+### Outbound HTTP (`app/egress.py`)
+
+`CheckedTransport` resolves the host on every request and checks every address (IPv4 inside IPv6
+unwrapped: mapped, 6to4, Teredo, NAT64, compatible): unspecified, multicast, reserved, link-local, cloud
+metadata (169.254.169.254, 169.254.170.2, fd00:ec2::254, 100.100.100.200) and the Kubernetes API
+service address are always refused; private, loopback, CGNAT and ULA only for an operator-chosen host;
+it connects to the checked IP with the original `Host` and SNI. Clients never follow redirects. When the
+standard `HTTPS_PROXY`/`ALL_PROXY` variables name a proxy (honouring `NO_PROXY`), requests go to the proxy
+and pinning is its job. `read_capped` counts decoded bytes.
+
+### Parity
+
+The browser rules twin (`js/engine/rules.js`) has the `potassium_additive` flag and warning; the
+vectors (`tests/data/rules_vectors.json`, generator `tests/data/gen_rules_vectors.py`) cover it. The new
+`food.*` settings are in `tests/data/settings_vectors.json` (a string key's `pattern` too, with cases
+that break it), which `js/engine/settings.js` must match (frontend).
 
 ## M3: the handbook at `/learn`
 

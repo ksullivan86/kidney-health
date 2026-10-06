@@ -136,6 +136,22 @@ def validate_nutrients(values: dict[str, Any] | None) -> dict[str, float | None]
     return out
 
 
+MAX_INGREDIENTS_CHARS = 4000  # note 03 R3: an ingredient list is capped at 4,000 characters
+
+
+def validate_gtin(value: str | None) -> str | None:
+    """A barcode typed or scanned for a food: 8, 12, 13 or 14 digits (spaces and hyphens ignored) with a
+    valid GS1 check digit, stored as a GTIN-14 (note 03 R2). Empty means none."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    from .gtin import GtinError, normalize
+
+    try:
+        return normalize(value, "unknown")
+    except GtinError as exc:
+        raise ValueError(str(exc)) from None
+
+
 def validate_flags(flags: list[str] | None) -> list[str]:
     """Normalise flags: strip, lower-case, de-duplicate, keep snake_case tokens."""
     if not flags:
@@ -241,6 +257,10 @@ class FoodCreate(BaseModel):
     nutrients: dict[str, Any] = Field(default_factory=dict)
     flags: list[str] = Field(default_factory=list)
     kidney_notes: str | None = Field(default=None, max_length=1000)
+    # v0.3 barcodes (note 03 R6, R8): the product's barcode, so the next scan finds this food, and its
+    # ingredient list, which the additive scan reads on save.
+    gtin: str | None = Field(default=None, max_length=32)
+    ingredients_text: str | None = Field(default=None, max_length=MAX_INGREDIENTS_CHARS)
 
     @field_validator("nutrients")
     @classmethod
@@ -252,10 +272,22 @@ class FoodCreate(BaseModel):
     def _flags(cls, v: list[str] | None) -> list[str]:
         return validate_flags(v)
 
-    @field_validator("brand", "category", "kidney_notes")
+    @field_validator("brand", "category", "kidney_notes", "ingredients_text")
     @classmethod
     def _empty_to_none(cls, v: str | None) -> str | None:
         return v or None
+
+    @field_validator("gtin")
+    @classmethod
+    def _gtin(cls, v: str | None) -> str | None:
+        return validate_gtin(v)
+
+
+class QualityNote(BaseModel):
+    """A data-quality note on a food from a provider (note 03 R3): ``code`` and the sentence shown."""
+
+    code: str
+    message: str
 
 
 class Food(BaseModel):
@@ -273,6 +305,13 @@ class Food(BaseModel):
     hidden: bool
     warnings: list[Warning]
     kidney_rating: Rating
+    # v0.3 barcodes (note 03 R6); absent on older clients' expectations, always sent by the server.
+    gtin: str | None = None
+    source_url: str | None = None
+    source_license: str | None = None
+    quality: list[QualityNote] = Field(default_factory=list)
+    additives: list[str] = Field(default_factory=list)
+    ingredients_text: str | None = None
 
 
 class FoodList(BaseModel):
@@ -297,6 +336,34 @@ class UsdaSearchResult(BaseModel):
 
 class UsdaImport(BaseModel):
     fdc_id: int = Field(gt=0, le=MAX_SQLITE_INT)
+
+
+BarcodeFormat = Literal["ean_13", "ean_8", "upc_a", "upc_e", "unknown"]
+
+
+class BarcodeLookup(BaseModel):
+    """``POST /api/foods/barcode`` (note 03 R6): the digits only, as the decoder reported them."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1, max_length=64)
+    format: BarcodeFormat = "unknown"
+    refresh: bool = False
+
+
+class Attribution(BaseModel):
+    text: str
+    url: str
+    license: str
+
+
+class BarcodeResult(BaseModel):
+    food: Food
+    gtin: str
+    source: Literal["off", "usda", "local"]
+    attribution: Attribution | None = None
+    attributions: list[Attribution] = Field(default_factory=list)
+    quality: list[QualityNote] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -379,6 +446,13 @@ class QuickAdd(BaseModel):
     status: EntryStatus = "eaten"
     purpose: PurposeIn | None = None  # v0.3: left out → "hypo" when ``flags`` has hypo_treatment
     client_id: str | None = None  # v0.3: a repeat answers 200 and creates no second food
+    gtin: str | None = Field(default=None, max_length=32)  # v0.3 barcodes: found by this barcode next time
+    ingredients_text: str | None = Field(default=None, max_length=MAX_INGREDIENTS_CHARS)  # v0.3: additive scan
+
+    @field_validator("gtin")
+    @classmethod
+    def _gtin(cls, v: str | None) -> str | None:
+        return validate_gtin(v)
 
     @field_validator("date")
     @classmethod
@@ -914,6 +988,9 @@ __all__ = [
     "AlbuminuriaResult",
     "Analyte",
     "AppliedRule",
+    "Attribution",
+    "BarcodeLookup",
+    "BarcodeResult",
     "Categories",
     "CopyDay",
     "CopyDayResult",
@@ -952,6 +1029,7 @@ __all__ = [
     "PROFILE_V03_FIELDS",
     "Profile",
     "ProfileUpdate",
+    "QualityNote",
     "QuickAdd",
     "Range",
     "RangeSummary",
@@ -968,6 +1046,7 @@ __all__ = [
     "validate_birth_month",
     "validate_date",
     "validate_flags",
+    "validate_gtin",
     "validate_nutrients",
     "validate_past_date",
     "validate_targets",

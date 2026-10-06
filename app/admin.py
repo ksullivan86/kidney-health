@@ -26,6 +26,11 @@ Commands:
 * ``purge-pre-v3-backup``: delete ``kidney.db.pre-v3.bak`` now (it is deleted automatically 30
   days after the upgrade).
 * ``vacuum``: rebuild the database file so deleted data leaves no traces on free pages.
+* ``remap-barcodes``: re-run the current Open Food Facts / USDA mapping (``app/off.py``,
+  ``app/foods.py``) over every cached barcode product and update the shared food rows, without the
+  network (note 03 R3). Run it after an upgrade that changes the mapping.
+* ``purge-barcode-cache``: delete the "not found" barcode cache entries older than
+  ``food.barcode_negative_ttl_hours`` now (the server does it daily).
 """
 from __future__ import annotations
 
@@ -603,6 +608,41 @@ def cmd_vacuum(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
     return EXIT_OK
 
 
+def _require_barcode_schema(conn: sqlite3.Connection) -> None:
+    from .db import table_exists
+
+    if not table_exists(conn, "barcode_cache"):
+        raise CliError("this database has no barcode cache yet (schema step 7); start the server once to upgrade it")
+
+
+def cmd_remap_barcodes(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    from .barcode import remap_cached
+
+    conn = open_existing(_db_path(args, settings))
+    try:
+        _require_barcode_schema(conn)
+        result = remap_cached(conn)
+    finally:
+        conn.close()
+    print(f"barcode products re-mapped: {result['updated']} food rows updated from {result['products']} cached products", file=out)
+    return EXIT_OK
+
+
+def cmd_purge_barcode_cache(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    from .barcode import purge_negative
+    from .settings_store import default_store
+
+    conn = open_existing(_db_path(args, settings))
+    try:
+        _require_barcode_schema(conn)
+        removed = purge_negative(conn, int(default_store().get(conn, "food.barcode_negative_ttl_hours")))
+        conn.commit()
+    finally:
+        conn.close()
+    print(f"barcode cache: {removed} expired 'not found' entries removed", file=out)
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------- #
 # Entry point
 # --------------------------------------------------------------------------- #
@@ -669,6 +709,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("vacuum", help="rebuild the database file (removes traces of deleted data)")
     p.set_defaults(func=cmd_vacuum)
+
+    p = sub.add_parser("remap-barcodes", help="re-map cached barcode products into the shared food rows (no network)")
+    p.set_defaults(func=cmd_remap_barcodes)
+
+    p = sub.add_parser("purge-barcode-cache", help="delete expired 'not found' barcode cache entries now")
+    p.set_defaults(func=cmd_purge_barcode_cache)
     return parser
 
 
