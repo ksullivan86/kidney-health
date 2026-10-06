@@ -1,0 +1,15 @@
+{
+ "recorded_at": "2026-10-06T17:18:34Z",
+ "request": {
+  "method": "GET",
+  "url": "https://api.nal.usda.gov/fdc/v1/foods/search?query=028400090858&dataType=Branded&pageSize=10"
+ },
+ "status": 429,
+ "content_type": "application/json",
+ "body": {
+  "error": {
+   "code": "OVER_RATE_LIMIT",
+   "message": "You have exceeded your rate limit. Try again later or contact us for assistance: https://api.nal.usda.gov:443"
+  }
+ }
+}

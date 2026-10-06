@@ -1,0 +1,525 @@
+{
+ "recorded_at": "2026-10-06T17:21:12Z",
+ "source": "Recorded from the FoodData Central web app's food endpoint (GET https://fdc.nal.usda.gov/portal-data/external/{fdcId}) because api.nal.usda.gov answered 429 OVER_RATE_LIMIT to DEMO_KEY. Same record; the web app names a nutrient amount \"value\" where the API's FoodNutrient uses \"amount\", and omits fdcId (the request URL carries it). The parser accepts both. Re-record with scripts/record_barcode_fixtures.py usda and a key.",
+ "request": {
+  "method": "GET",
+  "url": "https://api.nal.usda.gov/fdc/v1/food/2742723"
+ },
+ "status": 200,
+ "content_type": "application/json",
+ "body": {
+  "id": 2742723,
+  "foodClass": "Branded",
+  "description": "Diet Coke Fridge Pack Cans, 12 fl oz, 12 Pack",
+  "lastUpdated": "9/18/2025",
+  "foodNutrients": [
+   {
+    "type": "FoodNutrient",
+    "id": 34890585,
+    "nutrient": {
+     "id": 1008,
+     "number": "208",
+     "name": "Energy",
+     "nutrientUnit": {
+      "name": "kcal",
+      "aliases": []
+     },
+     "rank": 300,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Energy"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890582,
+    "nutrient": {
+     "id": 1003,
+     "number": "203",
+     "name": "Protein",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 600,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Protein"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890583,
+    "nutrient": {
+     "id": 1004,
+     "number": "204",
+     "name": "Total lipid (fat)",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 800,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Total lipid (fat)"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890584,
+    "nutrient": {
+     "id": 1005,
+     "number": "205",
+     "name": "Carbohydrate, by difference",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1110,
+     "isNutrientLabel": false,
+     "indentLevel": 2,
+     "shortestName": "Carbohydrate, by difference"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890586,
+    "nutrient": {
+     "id": 2000,
+     "number": "269",
+     "name": "Total Sugars",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1510,
+     "isNutrientLabel": false,
+     "indentLevel": 3,
+     "shortestName": "Total Sugars"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890592,
+    "nutrient": {
+     "id": 1235,
+     "number": "539",
+     "name": "Sugars, added",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1540,
+     "isNutrientLabel": false,
+     "indentLevel": 0,
+     "shortestName": "Sugars, added"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890587,
+    "nutrient": {
+     "id": 1089,
+     "number": "303",
+     "name": "Iron, Fe",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5400,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Iron, Fe"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890588,
+    "nutrient": {
+     "id": 1092,
+     "number": "306",
+     "name": "Potassium, K",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Potassium, K"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890589,
+    "nutrient": {
+     "id": 1093,
+     "number": "307",
+     "name": "Sodium, Na",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5800,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Sodium, Na"
+    },
+    "value": 11,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 2
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890591,
+    "nutrient": {
+     "id": 1162,
+     "number": "401",
+     "name": "Vitamin C, total ascorbic acid",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 6300,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Vitamin C, total ascorbic acid"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890590,
+    "nutrient": {
+     "id": 1114,
+     "number": "328",
+     "name": "Vitamin D (D2 + D3)",
+     "nutrientUnit": {
+      "name": "µg",
+      "conversionToMicroGram": 1,
+      "aliases": [
+       "mcg"
+      ]
+     },
+     "rank": 8700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Vitamin D (D2 + D3)"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890595,
+    "nutrient": {
+     "id": 1258,
+     "number": "606",
+     "name": "Fatty acids, total saturated",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 9700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Fatty acids, total saturated"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890594,
+    "nutrient": {
+     "id": 1257,
+     "number": "605",
+     "name": "Fatty acids, total trans",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 15400,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Fatty acids, total trans"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 34890593,
+    "nutrient": {
+     "id": 1253,
+     "number": "601",
+     "name": "Cholesterol",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 15700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Cholesterol"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   }
+  ],
+  "foodAttributes": [],
+  "foodType": "Branded",
+  "foodVersions": [
+   {
+    "id": 2742723,
+    "foodClass": "Branded",
+    "description": "Diet Coke Fridge Pack Cans, 12 fl oz, 12 Pack",
+    "lastUpdated": "9/18/2025",
+    "foodAttributes": [],
+    "foodType": "Branded",
+    "publicationDate": "9/18/2025",
+    "changes": "",
+    "totalRefuse": 0.0
+   }
+  ],
+  "modifiedDate": "8/28/2025",
+  "availableDate": "8/28/2025",
+  "marketCountry": "US",
+  "foodCode": "null",
+  "brandOwner": "Coca-Cola",
+  "subbrandName": "diet Coke",
+  "brandName": "Coca-Cola light/diet Coke",
+  "gtinUpc": "00049000028911",
+  "dataSource": "GDSN",
+  "ingredients": "CARBONATED WATER, CARAMEL COLOR, ASPARTAME, PHOSPHORIC ACID, POTASSIUM BENZOATE (TO PROTECT TASTE), NATURAL FLAVORS, CITRIC ACID, CAFFEINE.",
+  "servingSize": 355,
+  "servingSizeUnit": "MLT",
+  "householdServingFullText": "1 Can",
+  "gpcCategoryGroup": "Non Alcoholic Beverages - Ready to Drink",
+  "labelNutrients": {
+   "fat": {
+    "value": 0.0
+   },
+   "saturatedFat": {
+    "value": 0.0
+   },
+   "transFat": {
+    "value": 0.0
+   },
+   "cholesterol": {
+    "value": 0.0
+   },
+   "sodium": {
+    "value": 39.0
+   },
+   "carbohydrates": {
+    "value": 0.0
+   },
+   "sugars": {
+    "value": 0.0
+   },
+   "protein": {
+    "value": 0.0
+   },
+   "vitaminD": {
+    "value": 0.0
+   },
+   "iron": {
+    "value": 0.0
+   },
+   "potassium": {
+    "value": 0.0
+   },
+   "addedSugar": {
+    "value": 0.0
+   },
+   "calories": {
+    "value": 0.0
+   }
+  },
+  "packageWeight": "144.0 OZA",
+  "tradeChannels": [
+   "NO_TRADE_CHANNEL"
+  ],
+  "microbes": [],
+  "gpcClassCode": 50202300,
+  "preparationStateCode": "PREPARED",
+  "shortDescription": "dt Coke 12OZA AL CN 12",
+  "tradeChannelPretty": "NO_TRADE_CHANNEL",
+  "publicationDate": "9/18/2025",
+  "changes": "",
+  "totalRefuse": 0.0
+ }
+}

@@ -1,0 +1,797 @@
+{
+ "recorded_at": "2026-10-06T17:21:12Z",
+ "source": "Recorded from the FoodData Central web app's food endpoint (GET https://fdc.nal.usda.gov/portal-data/external/{fdcId}) because api.nal.usda.gov answered 429 OVER_RATE_LIMIT to DEMO_KEY. Same record; the web app names a nutrient amount \"value\" where the API's FoodNutrient uses \"amount\", and omits fdcId (the request URL carries it). The parser accepts both. Re-record with scripts/record_barcode_fixtures.py usda and a key.",
+ "request": {
+  "method": "GET",
+  "url": "https://api.nal.usda.gov/fdc/v1/food/1458203"
+ },
+ "status": 200,
+ "content_type": "application/json",
+ "body": {
+  "id": 1458203,
+  "foodClass": "Branded",
+  "description": "Lay's Classic Potato Chips 1.125 Ounce Plastic Bag",
+  "lastUpdated": "3/19/2021",
+  "foodNutrients": [
+   {
+    "type": "FoodNutrient",
+    "id": 18116294,
+    "nutrient": {
+     "id": 1008,
+     "number": "208",
+     "name": "Energy",
+     "nutrientUnit": {
+      "name": "kcal",
+      "aliases": []
+     },
+     "rank": 300,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Energy"
+    },
+    "value": 566,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116291,
+    "nutrient": {
+     "id": 1003,
+     "number": "203",
+     "name": "Protein",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 600,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Protein"
+    },
+    "value": 6.29,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116292,
+    "nutrient": {
+     "id": 1004,
+     "number": "204",
+     "name": "Total lipid (fat)",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 800,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Total lipid (fat)"
+    },
+    "value": 37.7,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 18
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116293,
+    "nutrient": {
+     "id": 1005,
+     "number": "205",
+     "name": "Carbohydrate, by difference",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1110,
+     "isNutrientLabel": false,
+     "indentLevel": 2,
+     "shortestName": "Carbohydrate, by difference"
+    },
+    "value": 53.5,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 6
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116296,
+    "nutrient": {
+     "id": 1079,
+     "number": "291",
+     "name": "Fiber, total dietary",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1200,
+     "isNutrientLabel": false,
+     "indentLevel": 3,
+     "shortestName": "Fiber, total dietary"
+    },
+    "value": 3.1,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 6
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116295,
+    "nutrient": {
+     "id": 2000,
+     "number": "269",
+     "name": "Total Sugars",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 1510,
+     "isNutrientLabel": false,
+     "indentLevel": 3,
+     "shortestName": "Total Sugars"
+    },
+    "value": 3.14,
+    "foodNutrientDerivation": {
+     "code": "LCSL",
+     "description": "Calculated from a less than value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116297,
+    "nutrient": {
+     "id": 1087,
+     "number": "301",
+     "name": "Calcium, Ca",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5300,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Calcium, Ca"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116298,
+    "nutrient": {
+     "id": 1089,
+     "number": "303",
+     "name": "Iron, Fe",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5400,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Iron, Fe"
+    },
+    "value": 2.26,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 4
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116299,
+    "nutrient": {
+     "id": 1090,
+     "number": "304",
+     "name": "Magnesium, Mg",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5500,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Magnesium, Mg"
+    },
+    "value": 50,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 4
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116300,
+    "nutrient": {
+     "id": 1092,
+     "number": "306",
+     "name": "Potassium, K",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Potassium, K"
+    },
+    "value": 1230,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 11
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116301,
+    "nutrient": {
+     "id": 1093,
+     "number": "307",
+     "name": "Sodium, Na",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5800,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Sodium, Na"
+    },
+    "value": 597,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 8
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116302,
+    "nutrient": {
+     "id": 1095,
+     "number": "309",
+     "name": "Zinc, Zn",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 5900,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Zinc, Zn"
+    },
+    "value": 0.94,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 2
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116305,
+    "nutrient": {
+     "id": 1162,
+     "number": "401",
+     "name": "Vitamin C, total ascorbic acid",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 6300,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Vitamin C, total ascorbic acid"
+    },
+    "value": 18.9,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 10
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116306,
+    "nutrient": {
+     "id": 1165,
+     "number": "404",
+     "name": "Thiamin",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 6400,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Thiamin"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 4
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116307,
+    "nutrient": {
+     "id": 1167,
+     "number": "406",
+     "name": "Niacin",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 6600,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Niacin"
+    },
+    "value": 3.77,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 6
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116308,
+    "nutrient": {
+     "id": 1175,
+     "number": "415",
+     "name": "Vitamin B-6",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 6800,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Vitamin B-6"
+    },
+    "value": 0.629,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 10
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116303,
+    "nutrient": {
+     "id": 1104,
+     "number": "318",
+     "name": "Vitamin A, IU",
+     "nutrientUnit": {
+      "name": "IU",
+      "aliases": []
+     },
+     "rank": 7500,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Vitamin A, IU"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116311,
+    "nutrient": {
+     "id": 1258,
+     "number": "606",
+     "name": "Fatty acids, total saturated",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 9700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Fatty acids, total saturated"
+    },
+    "value": 4.72,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 8
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116310,
+    "nutrient": {
+     "id": 1257,
+     "number": "605",
+     "name": "Fatty acids, total trans",
+     "nutrientUnit": {
+      "name": "g",
+      "conversionToMicroGram": 1000000,
+      "aliases": [
+       "% (w/w)",
+       "%"
+      ]
+     },
+     "rank": 15400,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Fatty acids, total trans"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCSA",
+     "description": "Calculated from an approximate value per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    }
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116309,
+    "nutrient": {
+     "id": 1253,
+     "number": "601",
+     "name": "Cholesterol",
+     "nutrientUnit": {
+      "name": "mg",
+      "conversionToMicroGram": 1000,
+      "aliases": []
+     },
+     "rank": 15700,
+     "isNutrientLabel": false,
+     "indentLevel": 1,
+     "shortestName": "Cholesterol"
+    },
+    "value": 0,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 0
+   },
+   {
+    "type": "FoodNutrient",
+    "id": 18116304,
+    "nutrient": {
+     "id": 1124,
+     "number": "340",
+     "name": "Vitamin E (label entry primarily)",
+     "nutrientUnit": {
+      "name": "IU",
+      "aliases": []
+     },
+     "rank": 999999,
+     "isNutrientLabel": false,
+     "indentLevel": 0,
+     "shortestName": "Vitamin E (label entry primarily)"
+    },
+    "value": 6,
+    "foodNutrientDerivation": {
+     "code": "LCCD",
+     "description": "Calculated from a daily value percentage per serving size measure",
+     "foodNutrientSource": {
+      "id": 9,
+      "code": "12",
+      "description": "Manufacturer's analytical; partial documentation"
+     }
+    },
+    "percentDailyValue": 6
+   }
+  ],
+  "foodAttributes": [
+   {
+    "id": 1714632,
+    "name": "Added Brand/Sub Brand Information",
+    "value": "10",
+    "foodAttributeType": {
+     "id": 998,
+     "name": "Update Log",
+     "description": "Changes that were made to this food"
+    }
+   }
+  ],
+  "foodType": "Branded",
+  "foodVersions": [
+   {
+    "id": 1458203,
+    "foodClass": "Branded",
+    "description": "Lay's Classic Potato Chips 1.125 Ounce Plastic Bag",
+    "lastUpdated": "3/19/2021",
+    "foodAttributes": [
+     {
+      "id": 1714632,
+      "name": "Added Brand/Sub Brand Information",
+      "value": "10",
+      "foodAttributeType": {
+       "id": 998
+      }
+     }
+    ],
+    "foodType": "Branded",
+    "publicationDate": "3/19/2021",
+    "changes": "Added Brand/Sub Brand Information",
+    "totalRefuse": 0.0
+   },
+   {
+    "id": 1166201,
+    "foodClass": "Branded",
+    "description": "Lay's Classic Potato Chips 1.125 Ounce Plastic Bag",
+    "lastUpdated": "2/26/2021",
+    "foodAttributes": [
+     {
+      "id": 1345479,
+      "name": "Added Brand/Sub Brand Information",
+      "value": "10",
+      "foodAttributeType": {
+       "id": 998
+      }
+     }
+    ],
+    "foodType": "Branded",
+    "publicationDate": "2/26/2021",
+    "changes": "Added Brand/Sub Brand Information",
+    "totalRefuse": 0.0
+   },
+   {
+    "id": 763558,
+    "foodClass": "Branded",
+    "description": "Lay's Classic Potato Chips 1.125 Ounce Plastic Bag",
+    "lastUpdated": "2/27/2020",
+    "foodAttributes": [
+     {
+      "id": 312580,
+      "name": "Nutrient Added",
+      "value": "5",
+      "foodAttributeType": {
+       "id": 998
+      }
+     },
+     {
+      "id": 312582,
+      "name": "Food Category",
+      "value": "1",
+      "foodAttributeType": {
+       "id": 998
+      }
+     }
+    ],
+    "foodType": "Branded",
+    "publicationDate": "2/27/2020",
+    "changes": "Food Category, Nutrient Added",
+    "totalRefuse": 0.0
+   },
+   {
+    "id": 351516,
+    "foodClass": "Branded",
+    "description": "Lay's Classic Potato Chips 1.125 Ounce Plastic Bag",
+    "lastUpdated": "4/1/2019",
+    "foodAttributes": [],
+    "foodType": "Branded",
+    "publicationDate": "4/1/2019",
+    "changes": "",
+    "totalRefuse": 0.0
+   }
+  ],
+  "modifiedDate": "11/23/2017",
+  "availableDate": "11/23/2017",
+  "marketCountry": "United States",
+  "foodCode": "null",
+  "brandOwner": "Pepsico Inc.",
+  "brandName": "Lay's",
+  "gtinUpc": "00028400161909",
+  "dataSource": "GDSN",
+  "ingredients": "Ingredients: Potatoes, Vegetable Oil (Sunflower, Corn and/or Canola Oil), and Salt.",
+  "servingSize": 31.799999237060547,
+  "servingSizeUnit": "g",
+  "householdServingFullText": "1 package",
+  "gpcCategoryGroup": "Snacks",
+  "labelNutrients": {
+   "fat": {
+    "value": 12.0
+   },
+   "saturatedFat": {
+    "value": 1.5
+   },
+   "transFat": {
+    "value": 0.0
+   },
+   "cholesterol": {
+    "value": 0.0
+   },
+   "sodium": {
+    "value": 190
+   },
+   "carbohydrates": {
+    "value": 17.0
+   },
+   "fiber": {
+    "value": 0.986
+   },
+   "sugars": {
+    "value": 0.999
+   },
+   "protein": {
+    "value": 2.0
+   },
+   "calcium": {
+    "value": 0.0
+   },
+   "iron": {
+    "value": 0.719
+   },
+   "potassium": {
+    "value": 391
+   },
+   "calories": {
+    "value": 180
+   }
+  },
+  "tradeChannels": [
+   "NO_TRADE_CHANNEL"
+  ],
+  "microbes": [],
+  "tradeChannelPretty": "NO_TRADE_CHANNEL",
+  "publicationDate": "3/19/2021",
+  "changes": "Added Brand/Sub Brand Information",
+  "totalRefuse": 0.0
+ }
+}

@@ -146,7 +146,8 @@ def test_potassium_salts_in_text(text: str, name: str | None) -> None:
     result = scan([], text, "x")
     assert "potassium_additive" in result.flags
     if name:
-        assert name in result.additives
+        # A known name is stored as its E-code (so a tag and the same name count once).
+        assert additives.NAME_TO_CODE.get(name, name) in result.additives
 
 
 @pytest.mark.parametrize("text", [
@@ -266,7 +267,7 @@ def test_huge_inputs_are_capped() -> None:
 def test_result_shape() -> None:
     result = scan(["en:e451i", "en:e326"], "water, sodium tripolyphosphate, potassium lactate", "Ham")
     assert result.flags == ("phosphate_additive", "potassium_additive")
-    assert result.additives == ["e451", "e326", "sodium tripolyphosphate", "potassium lactate"]
+    assert result.additives == ["e451", "e326"]  # the names in the list are the same two additives
     assert result.notes[0] == "Contains potassium lactate (E326), a potassium additive."
     assert all(len(a) <= additives.MAX_PHRASE_CHARS for a in result.additives)
 
@@ -283,3 +284,17 @@ def test_scan_time_is_bounded_on_adversarial_text() -> None:
     for text in samples:
         scan([], text, text[:200])
     assert time.perf_counter() - start < 2.0
+
+
+def test_names_and_tags_of_the_same_additive_count_once() -> None:
+    result = scan(["en:e338", "en:e212"], "carbonated water, phosphoric acid, potassium benzoate", "Cola")
+    assert result.additives == ["e338"]
+    assert result.notes == ["Contains phosphoric acid (E338), a phosphate additive.",
+                            "Contains potassium benzoate (E212): a small amount of potassium (no warning)."]
+
+
+def test_unknown_names_are_kept_as_words() -> None:
+    result = scan([], "pork, water, sodium erythorbate, potassium tripolyphosphate blend", "Ham")
+    assert "e451ii" in result.additives
+    result = scan([], "Kaliumchlorid, Zucker", "x")
+    assert result.additives == ["kaliumchlorid"]

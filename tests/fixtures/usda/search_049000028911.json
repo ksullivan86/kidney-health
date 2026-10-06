@@ -1,0 +1,30 @@
+{
+ "recorded_at": "2026-10-06T17:21:12Z",
+ "source": "Recorded from the FoodData Central web app's search endpoint (POST https://fdc.nal.usda.gov/portal-data/external/search, Branded, generalSearchInput = the barcode form) because api.nal.usda.gov answered 429 OVER_RATE_LIMIT to DEMO_KEY (tests/fixtures/usda/rate_limited.json). Same database and the documented SearchResultFood item shape; \"aggregations\" removed. Re-record with scripts/record_barcode_fixtures.py usda and a key.",
+ "request": {
+  "method": "GET",
+  "url": "https://api.nal.usda.gov/fdc/v1/foods/search?query=049000028911&dataType=Branded&pageSize=10"
+ },
+ "status": 200,
+ "content_type": "application/json",
+ "body": {
+  "totalHits": 0,
+  "currentPage": 1,
+  "totalPages": 0,
+  "pageList": [],
+  "foodSearchCriteria": {
+   "includeDataTypes": {
+    "Branded": true
+   },
+   "generalSearchInput": "049000028911",
+   "pageNumber": 1,
+   "numberOfResultsPerPage": 50,
+   "pageSize": 50,
+   "requireAllWords": false,
+   "foodTypes": [
+    "Branded"
+   ]
+  },
+  "foods": []
+ }
+}

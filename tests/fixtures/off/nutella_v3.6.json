@@ -1,0 +1,245 @@
+{
+ "recorded_at": "2026-10-06T17:18:20Z",
+ "request": {
+  "method": "GET",
+  "url": "https://world.openfoodfacts.org/api/v3.6/product/3017624010701?fields=code,product_name,product_name_en,generic_name,brands,quantity,serving_size,serving_quantity,serving_quantity_unit,nutrition_data_per,nutrition_data_prepared_per,no_nutrition_data,nutriments,ingredients_text,ingredients_text_en,additives_tags,categories_tags,countries_tags,nova_group,lang,last_modified_t,nutrition"
+ },
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "body": {
+  "code": "3017624010701",
+  "errors": [],
+  "product": {
+   "additives_tags": [],
+   "brands": "Ferrero",
+   "categories_tags": [
+    "en:breakfasts",
+    "en:spreads",
+    "en:sweet-spreads",
+    "fr:pates-a-tartiner",
+    "en:hazelnut-spreads",
+    "en:chocolate-spreads",
+    "en:cocoa-and-hazelnuts-spreads",
+    "de:Other"
+   ],
+   "code": "3017624010701",
+   "countries_tags": [
+    "en:france",
+    "en:united-kingdom"
+   ],
+   "generic_name": "",
+   "ingredients_text": "sugar, palm oil, hazelnuts, skimmed milk powder, fat reduced cocoa, emulsifier, vanillin",
+   "ingredients_text_en": "sugar, palm oil, hazelnuts (13%), skimmed milk powder (8.7%), fat reduced cocoa (7.4%), emulsifier: lecithins (soya), vanillin",
+   "lang": "de",
+   "last_modified_t": 1790963552,
+   "nutriments": {},
+   "nutrition": {
+    "aggregated_set": {
+     "nutrients": {
+      "added-sugars": {
+       "modifier": "~",
+       "source": "estimate",
+       "source_index": 1,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 0
+      },
+      "carbohydrates": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 57.5
+      },
+      "energy": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "kJ",
+       "value": 2228,
+       "value_computed": 2227.9
+      },
+      "energy-kcal": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "kcal",
+       "value": 539,
+       "value_computed": 533.3
+      },
+      "energy-kj": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "kJ",
+       "value": 2228,
+       "value_computed": 2227.9
+      },
+      "fat": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 30.9
+      },
+      "fruits-vegetables-legumes": {
+       "modifier": "~",
+       "source": "estimate",
+       "source_index": 1,
+       "source_per": "100g",
+       "unit": "%",
+       "value": 0
+      },
+      "fruits-vegetables-nuts": {
+       "modifier": "~",
+       "source": "estimate",
+       "source_index": 1,
+       "source_per": "100g",
+       "unit": "%",
+       "value": 0
+      },
+      "proteins": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 6.3
+      },
+      "salt": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 0.1075,
+       "value_computed": 0.1075
+      },
+      "saturated-fat": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 10.6
+      },
+      "sodium": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 0.043,
+       "value_computed": 0.043
+      },
+      "sugars": {
+       "source": "packaging",
+       "source_index": 0,
+       "source_per": "100g",
+       "unit": "g",
+       "value": 56.3
+      }
+     },
+     "per": "100g",
+     "preparation": "as_sold"
+    },
+    "input_sets": [
+     {
+      "last_updated_t": 1773353804,
+      "nutrients": {
+       "carbohydrates": {
+        "unit": "g",
+        "value": 57.5,
+        "value_string": "57.5"
+       },
+       "energy-kcal": {
+        "unit": "kcal",
+        "value": 539,
+        "value_computed": 533.3,
+        "value_string": "539"
+       },
+       "energy-kj": {
+        "unit": "kJ",
+        "value": 2228,
+        "value_computed": 2227.9,
+        "value_string": "2228"
+       },
+       "fat": {
+        "unit": "g",
+        "value": 30.9,
+        "value_string": "30.9"
+       },
+       "proteins": {
+        "unit": "g",
+        "value": 6.3,
+        "value_string": "6.3"
+       },
+       "salt": {
+        "unit": "g",
+        "value": 0.1075,
+        "value_computed": 0.1075,
+        "value_string": "0.1075"
+       },
+       "saturated-fat": {
+        "unit": "g",
+        "value": 10.6,
+        "value_string": "10.6"
+       },
+       "sodium": {
+        "unit": "g",
+        "value": 0.043,
+        "value_computed": 0.043,
+        "value_string": "0.043"
+       },
+       "sugars": {
+        "unit": "g",
+        "value": 56.3,
+        "value_string": "56.3"
+       }
+      },
+      "per": "100g",
+      "per_quantity": 100,
+      "per_unit": "g",
+      "preparation": "as_sold",
+      "source": "packaging"
+     },
+     {
+      "nutrients": {
+       "added-sugars": {
+        "modifier": "~",
+        "unit": "g",
+        "value": 0,
+        "value_string": "0"
+       },
+       "fruits-vegetables-legumes": {
+        "modifier": "~",
+        "unit": "%",
+        "value": 0,
+        "value_string": "0"
+       },
+       "fruits-vegetables-nuts": {
+        "modifier": "~",
+        "unit": "%",
+        "value": 0,
+        "value_string": "0"
+       }
+      },
+      "per": "100g",
+      "per_quantity": 100,
+      "per_unit": "g",
+      "preparation": "as_sold",
+      "source": "estimate",
+      "source_description": "Estimate from ingredients"
+     }
+    ]
+   },
+   "nutrition_data_per": "100g",
+   "product_name": "Nutella",
+   "product_name_en": "Nutella",
+   "quantity": "400.0 g"
+  },
+  "result": {
+   "id": "product_found",
+   "lc_name": "Product found",
+   "name": "Product found"
+  },
+  "status": "success",
+  "warnings": []
+ }
+}

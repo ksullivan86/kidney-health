@@ -1,0 +1,37 @@
+{
+ "recorded_at": "2026-10-06T17:18:26Z",
+ "request": {
+  "method": "GET",
+  "url": "https://world.openfoodfacts.org/api/v3.4/product/0099999999990?fields=code,product_name,product_name_en,generic_name,brands,quantity,serving_size,serving_quantity,serving_quantity_unit,nutrition_data_per,nutrition_data_prepared_per,no_nutrition_data,nutriments,ingredients_text,ingredients_text_en,additives_tags,categories_tags,countries_tags,nova_group,lang,last_modified_t"
+ },
+ "status": 404,
+ "content_type": "application/json; charset=utf-8",
+ "body": {
+  "code": "0099999999990",
+  "errors": [
+   {
+    "field": {
+     "id": "code",
+     "value": "0099999999990"
+    },
+    "impact": {
+     "id": "failure",
+     "lc_name": "Failure",
+     "name": "Failure"
+    },
+    "message": {
+     "id": "product_not_found",
+     "lc_name": "",
+     "name": ""
+    }
+   }
+  ],
+  "result": {
+   "id": "product_not_found",
+   "lc_name": "Product not found",
+   "name": "Product not found"
+  },
+  "status": "failure",
+  "warnings": []
+ }
+}

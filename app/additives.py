@@ -68,6 +68,52 @@ E_NAMES: dict[str, str] = {
     "e950": "acesulfame K", "e954iv": "potassium saccharin",
 }
 
+# Common ingredient-list names → E-code, so a name in the text and the same additive's tag count once
+# and the reason a flag was set is stored as a code where one exists. Keys are lower-case, single-spaced.
+NAME_TO_CODE: dict[str, str] = {
+    "phosphoric acid": "e338",
+    **dict.fromkeys(("sodium phosphate", "monosodium phosphate", "disodium phosphate", "trisodium phosphate"), "e339"),
+    **dict.fromkeys(("potassium phosphate", "monopotassium phosphate", "dipotassium phosphate", "tripotassium phosphate"), "e340"),
+    **dict.fromkeys(("calcium phosphate", "monocalcium phosphate", "dicalcium phosphate", "tricalcium phosphate"), "e341"),
+    "magnesium phosphate": "e343",
+    **dict.fromkeys(("sodium acid pyrophosphate", "disodium pyrophosphate", "tetrasodium pyrophosphate",
+                     "sodium pyrophosphate", "disodium diphosphate", "tetrasodium diphosphate"), "e450"),
+    **dict.fromkeys(("tetrapotassium pyrophosphate", "tetrapotassium diphosphate"), "e450v"),
+    **dict.fromkeys(("sodium triphosphate", "sodium tripolyphosphate", "pentasodium triphosphate"), "e451"),
+    **dict.fromkeys(("pentapotassium triphosphate", "potassium tripolyphosphate"), "e451ii"),
+    **dict.fromkeys(("sodium hexametaphosphate", "sodium polyphosphate", "sodium polyphosphates"), "e452"),
+    "potassium polyphosphate": "e452ii",
+    **dict.fromkeys(("sodium aluminum phosphate", "sodium aluminium phosphate"), "e541"),
+    "potassium lactate": "e326",
+    **dict.fromkeys(("potassium citrate", "tripotassium citrate", "monopotassium citrate"), "e332"),
+    **dict.fromkeys(("potassium acetate", "potassium diacetate"), "e261"),
+    "potassium chloride": "e508",
+    **dict.fromkeys(("potassium carbonate", "potassium bicarbonate", "potassium hydrogen carbonate"), "e501"),
+    "potassium malate": "e351",
+    **dict.fromkeys(("cream of tartar", "potassium bitartrate", "potassium tartrate", "dipotassium tartrate"), "e336"),
+    "potassium sodium tartrate": "e337",
+    "potassium adipate": "e357",
+    "potassium gluconate": "e577",
+    **dict.fromkeys(("monopotassium glutamate", "potassium glutamate"), "e622"),
+    "potassium hydroxide": "e525",
+    **dict.fromkeys(("potassium sulfate", "potassium sulphate"), "e515"),
+    "potassium alginate": "e402",
+    "potassium propionate": "e283",
+    "potassium sorbate": "e202",
+    "potassium benzoate": "e212",
+    **dict.fromkeys(("potassium metabisulfite", "potassium metabisulphite"), "e224"),
+    **dict.fromkeys(("potassium bisulfite", "potassium bisulphite", "potassium hydrogen sulfite",
+                     "potassium hydrogen sulphite"), "e228"),
+    "potassium nitrite": "e249",
+    "potassium nitrate": "e252",
+    "potassium ferrocyanide": "e536",
+    "potassium aluminium silicate": "e555", "potassium aluminum silicate": "e555",
+    "dipotassium guanylate": "e628",
+    "dipotassium inosinate": "e632",
+    **dict.fromkeys(("acesulfame k", "acesulfame potassium", "acesulfame-k", "acesulfame"), "e950"),
+    "potassium saccharin": "e954iv",
+}
+
 Kind = Literal["phosphate", "phosphate_trace", "potassium", "potassium_trace"]
 FLAG_ORDER: tuple[str, ...] = ("phosphate_additive", "potassium_additive", "avoid_ckd")
 
@@ -219,6 +265,7 @@ _ANION_FIRST_TRACE = re.compile(
     r"(?<![a-z])((?:sorb|benzo|metabisulf|metabisolf|nitrit|nitrat|iodur|iodat|iodid|ferrocian|ferrocyan|sulfit|solfit"
     rf"|silic|guanil|guanyl|inosin)[a-zà-ÿ]*\s+(?:de|di|du|d['’]|of)\s*{_K})(?![a-z])"
 )
+_ACID_AFTER = re.compile(r"\s+acid\b")
 _ALUMINIUM_BEFORE = re.compile(r"(?:aluminium|aluminum)\s*$")
 _OTHER_BULK = re.compile(r"(?<![a-z])(cream of tartar|salt substitute)(?![a-z])")
 _ACESULFAME = re.compile(r"(?<![a-z])(acesulfam(?:e)?(?:[\s\-]*(?:k|potassium))?)(?![a-z])")
@@ -261,7 +308,13 @@ def _scan_text(text: str) -> list[Finding]:
     found: list[Finding] = []
 
     def add(code: str | None, name: str, kind: Kind) -> None:
-        found.append(Finding(code, _phrase(name), kind, "text"))
+        phrase = _phrase(name)
+        code = code or NAME_TO_CODE.get(phrase)
+        if code is not None and kind in classify_code(code):
+            parts = split_code(code)
+            assert parts is not None
+            phrase = _code_name(*parts)  # one name per additive, whether it came from a tag or the text
+        found.append(Finding(code, phrase, kind, "text"))
 
     # 1. E-numbers written in the list.
     for m in _TEXT_E.finditer(text):
@@ -292,6 +345,8 @@ def _scan_text(text: str) -> list[Finding]:
         word = remaining[start:word_end]
         if any(ex in word for ex in _PHOSPHATE_EXCLUDED):
             continue
+        if word in ("phosphoric", "phosphorique", "fosforico", "fosfórico") and _ACID_AFTER.match(remaining, word_end):
+            word += " acid"
         cation = _CATIONS.search(remaining[max(0, start - 40):start])
         add(None, (cation.group(0).strip() + " " + word) if cation else word, "phosphate")
 

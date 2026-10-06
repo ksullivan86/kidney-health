@@ -36,9 +36,27 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   Note: `node tests/js/run_vectors.mjs` still fails on the *settings* vectors (settings.js lacks the targets
   and guidance keys; frontend-owned, pre-existing).
 
+* Step 3–4 (part): `app/egress.py` (SSRF-checked transport: resolve at request time, check every
+  address incl. IPv4-in-IPv6, deny metadata/link-local/reserved/k8s API, private only for an operator host,
+  pin IP + Host + SNI, env HTTPS_PROXY honoured; `read_capped` counts decoded bytes); `app/off.py` (request
+  builder, OffClient with 503 retry/429/redirect/HTML/oversize handling, TokenBucket, trim_product,
+  parse_nutrition_v35, map_product with quality codes, quality_items). Fixtures recorded 2026-10-06:
+  tests/fixtures/off/*.json (real, via proxy); tests/fixtures/usda: rate_limited.json real API 429 for DEMO_KEY,
+  search_*/food_* from the FDC web app endpoints (provenance in README). Tests: tests/test_egress.py,
+  tests/test_off_mapping.py (helpers: tests/barcode_support.py). Recorder: scripts/record_barcode_fixtures.py.
+
 ## In progress
 
 ## Decisions (and why)
+* No shared SSRF transport existed (note 04's app/ai/transport.py is the AI builder's and AI-specific), so
+  `app/egress.py` is a small generic one for fixed operator-set hosts; `usda_client()` uses it too.
+* `food.off_consent` (user, M1) is honoured: OFF is contacted only when the instance switch is on AND the
+  person consented. Shared off/usda rows matched by GTIN are returned only when the person could have
+  fetched them now or already linked them (no cross-user oracle, §9 B7).
+* Quality codes may carry a nutrient: `implausible:<key>`, `filled_from_<src>:<key>` (stored in quality_json).
+* OFF "add product" link verified 2026-10-06: `cgi/product.pl?type=search_or_add&action=display&code=` (the
+  spec's `type=add` is 404). FDC food pages have no stable public URL, so USDA attribution links to fdc.nal.usda.gov.
+* m007 waits for m006 (AI builder): discover() refuses a gap, so committing m007 first would break every start.
 
 ## Reproduce the checks
 ```
