@@ -21,6 +21,18 @@ patient-facing version of this page is the handbook's
 * **Nothing at all** leaves the server for barcodes until an admin turns a provider on: Open Food Facts
   is **off by default**, and USDA needs a key.
 
+### Three ways to enter a barcode
+
+* **Live scanning** with the camera needs **HTTPS** (or `localhost`): browsers give camera access only to
+  secure pages. See [`https.md`](https.md) to set it up.
+* **A photo of the barcode** works over plain HTTP too: the phone's camera app takes the picture and the
+  page reads the code from it on the device.
+* **Typing the digits** under the bars always works, also with a USB or Bluetooth scanner that types, and
+  with a screen reader.
+
+Every way ends the same: only the digits go to your server. A 12-, 13- or 8-digit code, a short UPC-E
+code and a 14-digit case code of the same product all find the same food.
+
 ### Turning lookups on
 
 | Who | What | Where |
