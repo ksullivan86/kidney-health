@@ -25,7 +25,7 @@ zero-width space or soft hyphen inside "phos​phate" cannot hide the word from 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable, Literal
 
 from .textclean import clean_label, clean_text
