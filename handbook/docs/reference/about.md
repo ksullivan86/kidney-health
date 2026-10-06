@@ -56,6 +56,9 @@ Every page shows a **draft** banner until a named reviewer signs it off in the p
 | Eating well | renal dietitian (RDN, ideally board-certified in renal nutrition) |
 | Stages, lab results, medicines, preparing for treatment, get help now | nephrologist or nephrology nurse practitioner or physician assistant |
 | Type 1 diabetes | diabetes specialist or CDCES |
+| Living well | nephrologist or nephrology nurse practitioner or physician assistant; ideally a kidney social worker for work, costs and benefits |
+| Using the app | the project maintainer, plus a renal dietitian for targets and warnings |
+| Self-hosting | the project maintainer |
 | Every patient page | one patient or caregiver, for clarity |
 
 Pages are reviewed every 12 months; each December after the new ADA Standards and any new KDIGO
@@ -68,6 +71,8 @@ for Medicare amounts.
 |---|---|---|---|
 | 2026-10-05 | all | – | First draft; structure and the eating pages migrated from the original diet guide. Not yet clinically reviewed. |
 | 2026-10-06 | Start here, Get help now, Wallet cards, Questions to ask, Understanding CKD (3 pages), Glossary, Units, Licences | – | Written and fact-checked against primary sources (KDIGO 2024 and 2022, ADA 2026, the 2024 hyperglycemic crises consensus, the Kerendia label and FINE-ONE, NIDDK, CDC, NHS). Not yet clinically reviewed. |
+| 2026-10-06 | Stages, lab results, eating well, type 1 diabetes, medicines, using the app, self-hosting | – | Fact-checked section by section against primary sources. Preparing for treatment and Living well have not yet had an independent fact-check. Not yet clinically reviewed. |
+| 2026-10-06 | all | – | Consistency pass: the same numbers and terms on every page, US spelling, every abbreviation in the glossary, cross-links, layout fixes for phones. Not yet clinically reviewed. |
 
 ## Questions for clinical reviewers
 

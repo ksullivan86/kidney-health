@@ -55,7 +55,7 @@ menus:
   - id: g1-g2
     short_title: Stages 1 and 2
     title: "7-day sample menu: stages 1 and 2"
-    description: "A plant-forward week for CKD stages 1 and 2 with type 1 diabetes: protein 56–70 g, sodium under 2,000 mg, at least 14 g fibre per 1,000 kcal, about 55 g carbohydrate at each main meal."
+    description: "A plant-forward week for CKD stages 1 and 2 with type 1 diabetes: protein 56–70 g, sodium under 2,000 mg, at least 14 g fiber per 1,000 kcal, about 55 g carbohydrate at each main meal."
     applies_to: [G1-G2]
     targets_row: {stage: "1", dialysis: none}       # stage 1 and stage 2 rows are the same
     carbs_per_meal_g: 55
@@ -72,7 +72,7 @@ menus:
       your blood tests run high. The goals are the ones that slow kidney disease: sodium under 2,000 mg,
       protein that is enough but not too much (56–70 g for a 70 kg adult, and never more than 1.3 g per
       kg), and a plant-forward pattern with vegetables, fruit, whole grains, beans and nuts. This week has
-      fish, poultry or lean beef at one meal on most days, one meat-free day, at least 14 g of fibre per
+      fish, poultry or lean beef at one meal on most days, one meat-free day, at least 14 g of fiber per
       1,000 kcal and about 55 g of carbohydrate at each main meal. Potassium and phosphorus are shown for information.
     swaps:
       - "**Beans and lentils** swap ½ cup for ½ cup: each has about 20 g carbohydrate and 7–9 g protein."
@@ -91,13 +91,13 @@ menus:
       - *src_fdc
       - *src_q20
       - "[KDIGO 2024 CKD guideline][K24]: sodium under 2 g a day (Rec 3.3.2.1); protein 0.8 g/kg and avoid more than 1.3 g/kg (PP 3.3.1.1); limit potassium only when it runs high (PP 3.11.5.2)."
-      - "[KDIGO 2022 diabetes in CKD guideline][K22]: a diet high in vegetables, fruits, whole grains, fibre and legumes (practice point 3.1.1)."
+      - "[KDIGO 2022 diabetes in CKD guideline][K22]: a diet high in vegetables, fruits, whole grains, fiber and legumes (practice point 3.1.1)."
       - *src_a11
-      - "[ADA Standards of Care 2026, section 5][A26-5]: at least 14 g fibre per 1,000 kcal (Rec 5.24) and consistent carbohydrate on fixed insulin plans (Rec 5.28)."
+      - "[ADA Standards of Care 2026, section 5][A26-5]: at least 14 g fiber per 1,000 kcal (Rec 5.24) and consistent carbohydrate on fixed insulin plans (Rec 5.28)."
       - *src_dg7
     days:
       - name: "Day 1"
-        note: "Plant-forward does not mean meat-free: one portion of fish or chicken a day fits, with beans, whole grains, nuts and fruit doing the rest. This day has about 41 g of fibre."
+        note: "Plant-forward does not mean meat-free: one portion of fish or chicken a day fits, with beans, whole grains, nuts and fruit doing the rest. This day has about 41 g of fiber."
         meals:
           - meal: breakfast
             items:
@@ -387,9 +387,9 @@ menus:
       stage 3 they are limited only if your blood tests run high. Drink to thirst: there is no fluid
       limit before dialysis unless your team sets one.
     swaps:
-      - "**Oatmeal for Cream of Wheat** (1 cup): about +125 mg potassium, +140 mg phosphorus and +2.7 g fibre. Fine at stage 3 when your potassium and phosphate results are in range."
-      - "**Whole-wheat for white bread:** about +45 mg potassium and +40 mg phosphorus per slice, with twice the fibre."
-      - "**Brown rice for white** (1 cup): about +120 mg potassium, +140 mg phosphorus and +2.6 g fibre."
+      - "**Oatmeal for Cream of Wheat** (1 cup): about +125 mg potassium, +140 mg phosphorus and +2.7 g fiber. Fine at stage 3 when your potassium and phosphate results are in range."
+      - "**Whole-wheat for white bread:** about +45 mg potassium and +40 mg phosphorus per slice, with twice the fiber."
+      - "**Brown rice for white** (1 cup): about +120 mg potassium, +140 mg phosphorus and +2.6 g fiber."
       - "**Fruit:** any ½ cup of applesauce, blueberries, strawberries, raspberries, grapes or canned pears or peaches can replace another, but check the carbohydrate: ½ cup of grapes is about 14 g, strawberries about 6 g."
       - "**Protein foods:** chicken, turkey, pork loin, cod and pot roast swap ounce for ounce for potassium; salmon and tilapia have more (about 330 mg per 3 oz)."
     make_it_yours:
@@ -965,8 +965,8 @@ menus:
               - {fdc_id: 169936, servings: 1.5}  # Pears, canned in juice: ¾ cup (186 g)
 
   - id: hemodialysis
-    short_title: In-centre hemodialysis
-    title: "7-day sample menu: in-centre hemodialysis"
+    short_title: In-center hemodialysis
+    title: "7-day sample menu: in-center hemodialysis"
     description: "A week of meals for hemodialysis three times a week with type 1 diabetes: 70–84 g protein, potassium under 2,500 mg, fluid under 1,500 mL including foods."
     applies_to: [HD, HHD]
     targets_row: {stage: "5", dialysis: hemodialysis}
@@ -1826,7 +1826,7 @@ menus:
               - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
       - name: "Day 5"
-        note: "Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food thermometer, not by colour."
+        note: "Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food thermometer, not by color."
         meals:
           - meal: breakfast
             items:

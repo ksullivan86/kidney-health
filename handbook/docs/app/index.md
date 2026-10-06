@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [README, ARCH, NOTE02, NOTE04, NOTE06, NOTE07, A26-6]
 ---
 
@@ -47,10 +48,11 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
 
 - **No insulin or medicine doses.** It shows carbohydrate in grams. It never turns grams into units,
   never suggests a dose and never tells you to change one ([architecture contract][ARCH]).
-- **It never blocks or warns against treating a low.** Glucose tablets and juice you log as a low
-  treatment get no carbohydrate warning. Treat a low first and log it later
+- **It never blocks or warns against treating a low.** Foods marked as low treatments (glucose
+  tablets, gel, measured juice or clear regular soda) get no carbohydrate warning. Treat a low first and
+  log it later
   ([ADA 2026][A26-6], section 6; [Treating a low](../t1d/treating-a-low.md)).
-- **Its targets are starting points.** "Suggest targets" fills in numbers from guidelines, labelled
+- **Its targets are starting points.** "Suggest targets" fills in numbers from guidelines, labeled
   "discuss with your care team". The numbers your nephrologist, diabetes team or renal dietitian give
   you always win.
 - **It does not read your lab results for you.** In v0.3 you can type in a few lab values so the

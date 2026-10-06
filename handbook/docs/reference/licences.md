@@ -63,7 +63,7 @@ When you print a page:
 - if you are not sure whether your use counts as non-commercial, read the licence deed and ask the
   project before you go ahead.
 
-Logos and text from other organisations (KDIGO, ADA, NKF, AKF and others) are **not** covered by our
+Logos and text from other organizations (KDIGO, ADA, NKF, AKF and others) are **not** covered by our
 licence. They stay with their owners; we only link to them.
 
 ## Sources

@@ -22,7 +22,7 @@ Nothing about kidney disease changes carb counting: rapid-acting insulin is stil
 of carbohydrate, and people on fixed insulin plans keep carbohydrate consistent "with respect to time
 and amount" ([ADA 2026 §5][A26-5], recommendations 5.27–5.28). What changes is the food. Kidney
 swaps (white rice for brown, white bread for whole-wheat, canned fruit for a banana) lower potassium
-and phosphorus but cut fibre and can make glucose rise faster, so **your insulin-to-carb ratio may
+and phosphorus but cut fiber and can make glucose rise faster, so **your insulin-to-carb ratio may
 need re-tuning with your diabetes team** ([KDIGO 2022][K22]; [PLADO][DG16a]).
 
 ## Your numbers
@@ -32,7 +32,7 @@ need re-tuning with your diabetes team** ([KDIGO 2022][K22]; [PLADO][DG16a]).
 | 1 carbohydrate choice | 15 g of carbohydrate ([NKF][DG7]) |
 | Per meal | typically 3–6 choices (45–90 g), set by your dietitian ([NKF][DG7]) |
 | Per snack | typically 1–3 choices (15–45 g) ([NKF][DG7]) |
-| Fibre | at least 14 g per 1,000 kcal ([ADA 2026 §5][A26-5], recommendation 5.24) |
+| Fiber | at least 14 g per 1,000 kcal ([ADA 2026 §5][A26-5], recommendation 5.24) |
 
 The app's starting carbohydrate goal is 45 % of your calories, split evenly over the meals; your
 diabetes team sets the real number. The [sample menus](menus/index.md) keep about 55 g at each main
@@ -67,7 +67,7 @@ lot: unsweetened almond milk has about 3 g of carbohydrate a cup, rice milk abou
 
 ## Swaps: what they cost or save
 
-| Swap | Carb g | Fibre g | Potassium mg | Phosphorus mg | What it costs or saves |
+| Swap | Carb g | Fiber g | Potassium mg | Phosphorus mg | What it costs or saves |
 |---|---|---|---|---|---|
 | White rice 1 cup → brown rice 1 cup | 45 → 52 | 0.6 → 3.2 | 55 → 174 | 68 → 208 | brown costs about 120 mg potassium and 140 mg phosphorus |
 | White bread 1 slice → whole-wheat | 14 → 14 | 0.8 → 1.9 | 37 → 81 | 28 → 68 | +45 mg potassium, +40 mg phosphorus per slice |
@@ -84,10 +84,10 @@ Per serving, USDA FoodData Central ([FDC][FDC]).
    KDIGO 2022 recommends a diet "high in vegetables, fruits, whole grains, fiber, legumes" for
    diabetes with CKD ([KDIGO 2022][K22], practice point 3.1.1; [Kalantar-Zadeh 2010][DG12];
    [Noori 2010][DG13a]). If your potassium and phosphate are in range, one or two whole-grain
-   servings a day is a fair trade for fibre and flatter glucose; decide it with your dietitian.
+   servings a day is a fair trade for fiber and flatter glucose; decide it with your dietitian.
 2. **Portion the starch, do not just swap it.** ⅔ cup of white rice is about 30 g of carbohydrate
    and keeps the count where your ratio expects it.
-3. **Get fibre from low-potassium produce:** berries, apples, green beans, cauliflower, cabbage,
+3. **Get fiber from low-potassium produce:** berries, apples, green beans, cauliflower, cabbage,
    cucumber, peppers, zucchini and onions ([NKF][DG22]). Berries and applesauce are the best value:
    low in potassium *and* low in carbohydrate per cup.
 
@@ -109,14 +109,14 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
   one, so your team may plan different carbohydrate or insulin for dialysis days ([JBDS 2022][JBDS22];
   [Dialysis days](dialysis-days.md)).
 - **Slow stomach emptying (gastroparesis).** If your glucose rises hours after meals, or you feel full
-  quickly, tell your team. Small, regular, low-fat and low-fibre meals are the usual advice
+  quickly, tell your team. Small, regular, low-fat and low-fiber meals are the usual advice
   ([JBDS][JBDS]).
 
 ## Labels and "diabetic" foods
 
 - Count **Total Carbohydrate × the servings you actually eat**, and check what "one serving" means
   first. Since the 2020 label rules, a package that holds one to two servings, such as a 20-oz soda or
-  a 15-oz can of soup, is labelled as **one** serving: the numbers already cover the whole bottle or
+  a 15-oz can of soup, is labeled as **one** serving: the numbers already cover the whole bottle or
   can, so do not multiply them. Bigger packages often show two columns, per serving and per package
   ([FDA][FDA-label]). A bowl of cereal is often 1½–2 label servings.
 - **Sugar alcohols are still carbohydrate.** One common method is to subtract half of the sugar
@@ -171,13 +171,13 @@ much insulin goes with 55 g. The app shows a carbohydrate total for each meal as
 - [ADA Standards of Care 2026, section 5][A26-5]: recommendations 5.24, 5.27–5.28.
 - [NKF: carbohydrate counting with CKD][DG7].
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 3.1.1.
-- [PLADO][DG16a]: plant-dominant eating and glycaemic load.
+- [PLADO][DG16a]: plant-dominant eating and glycemic load.
 - [Kalantar-Zadeh 2010][DG12]; [Noori 2010][DG13a]: phosphorus absorption.
 - [NKF: 40 low-potassium fruits and vegetables][DG22].
-- [FDA: changes to the Nutrition Facts label][FDA-label]: packages of one to two servings are labelled as one serving.
+- [FDA: changes to the Nutrition Facts label][FDA-label]: packages of one to two servings are labeled as one serving.
 - [Medtronic: net carbs vs total carbs][DG32b]; [DaVita: creamers and additives][DG30b]; [measured beverage phosphorus][DG25b].
 - [USDA FoodData Central][FDC].
 - [DaVita: peritoneal dialysis diet][DG25a]: calories from dialysis fluid.
 - [JBDS–Renal Association guidance][JBDS]: meals for gastroparesis; [JBDS 2022][JBDS22]: glucose on dialysis days.
 - [Project architecture contract][ARCH]: the app's meal carbohydrate total.
-- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NHS: diabetic ketoacidosis][NHS-DKA] and [ADA: DKA and ketones][ADAK]: ketone levels; [2024 hyperglycaemic crises consensus][HC24]: DKA signs.
+- [ADA Standards of Care 2026, section 6][A26-6]: severe lows and glucagon; [NHS: diabetic ketoacidosis][NHS-DKA] and [ADA: DKA and ketones][ADAK]: ketone levels; [2024 hyperglycemic crises consensus][HC24]: DKA signs.

@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, K17, NKFpain, NIDDK-managing, FDANaP, DG44, DG45, DG35b, DG20, DG5, EMA-PSE, ALKA, KER, A26-7]
+fact_checked: 2026-10-05
+sources: [K24, K17, NKFpain, NIDDK-managing, FDANaP, DG44, DG45, SALTSUB-LABELS, DG35b, DG5, EMA-PSE, DECONGEST-LABELS, FDA-PE, ALKA, KER, A26-7]
 ---
 
 # Medicines and products to avoid
@@ -21,7 +22,8 @@ Some everyday medicines and products are risky with kidney disease. Pain pills s
 some laxatives and enemas, magnesium antacids, salt substitutes and some cold medicines can harm the
 kidneys or build up minerals your kidneys can no longer remove. **Before you take anything new,
 including things bought off the shelf, tell the pharmacist or prescriber: "I have kidney disease,
-stage ___, and type 1 diabetes."** KDIGO asks people with kidney disease to do exactly that
+stage ___, and type 1 diabetes."** KDIGO encourages people with kidney disease to tell every
+prescriber, and to bring their latest eGFR result and a medicine list to appointments
 ([KDIGO 2024][K24], practice points 4.1.3 and 4.3.1.1). This page lists what to avoid and what to
 ask for instead.
 
@@ -31,16 +33,17 @@ Avoid these unless your kidney team has said yes for you.
 
 | Product | Common examples | Why it is risky with kidney disease | Ask about instead |
 |---|---|---|---|
-| **NSAID pain relievers** | ibuprofen (Advil, Motrin), naproxen (Aleve), high-dose aspirin; also hidden in many cold, flu and "PM" products | They cut blood flow to the kidneys and can cause sudden kidney injury; they also raise potassium and blood pressure ([NKF][NKFpain]; [KDIGO 2024][K24], Tables 26 and 31) | Acetaminophen (Tylenol, paracetamol) within the label limit is usually preferred; ask your team ([KDIGO 2024][K24], Table 31; [NKF][NKFpain]) |
-| **Sodium phosphate laxatives and enemas** | Fleet-type enemas, sodium phosphate "saline" laxatives | Can cause kidney injury from phosphate, dangerously high phosphate and death, especially with kidney disease or dehydration, or with diuretics, ACE inhibitors, ARBs or NSAIDs ([FDA][FDANaP]) | A laxative your team picks for you |
+| **NSAID pain relievers** | ibuprofen (Advil, Motrin), naproxen (Aleve), high-dose aspirin; also hidden in many cold, flu and "PM" products | They cut blood flow to the kidneys and can cause sudden kidney injury; they also raise potassium and blood pressure. NKF says people with kidney disease should avoid them, especially with an eGFR under 60 ([NKF][NKFpain]; [KDIGO 2024][K24], section 4.1 and Tables 26 and 31) | Acetaminophen (Tylenol, paracetamol) within the label limit is usually preferred; ask your team ([KDIGO 2024][K24], Table 31; [NKF][NKFpain]) |
+| **Sodium phosphate laxatives and enemas** | Fleet-type enemas, sodium phosphate "saline" laxatives | The FDA warns they can cause serious harm to the kidneys and heart, severe dehydration, dangerous changes in blood minerals, and death. The risk is highest with kidney disease, dehydration or age over 55, or with diuretics, ACE inhibitors, ARBs or NSAIDs ([FDA][FDANaP]) | A laxative your team picks for you |
 | **Magnesium laxatives and antacids** | milk of magnesia, magnesium citrate, Epsom salts, Maalox- or Mylanta-type antacids | Magnesium builds up when the kidneys fail and can reach dangerous levels ([case report][DG44]; [StatPearls][DG45]) | Ask which antacid or laxative is safe |
-| **Aluminium antacids** | aluminium hydroxide antacids | Aluminium builds up with kidney disease. KDIGO advises against long-term use of aluminium phosphate binders, the same compound, to prevent aluminium poisoning ([KDIGO 2017 CKD-MBD][K17], recommendation 4.1.7) | Ask your pharmacist |
+| **Aluminum antacids** | aluminum hydroxide antacids | Aluminum builds up with kidney disease. KDIGO advises against long-term use of aluminum phosphate binders, the same compound, to prevent aluminum poisoning ([KDIGO 2017 CKD-MBD][K17], recommendation 4.1.7) | Ask your pharmacist |
 | **Fizzy antacid and pain tablets** | Alka-Seltzer Original | Each tablet contains aspirin, which is an NSAID. Each tablet also holds 567 mg of sodium. The label says to ask a doctor first if you have kidney disease or a sodium limit ([Alka-Seltzer label][ALKA]) | Ask your pharmacist |
-| **Salt substitutes** | NoSalt, Nu-Salt, Lite Salt, "half salt" | They are potassium chloride. NoSalt lists 640 mg potassium per ¼ teaspoon; Morton Lite Salt lists 350 mg potassium plus 290 mg sodium ([Lite Salt label][DG35b]; [NKF][DG5]; [NKF][DG20]) | Herbs, spices, lemon, vinegar ([Sodium](../eat/sodium.md)) |
-| **Decongestant tablets** | pseudoephedrine (Sudafed), phenylephrine (Sudafed PE); also in many cold and allergy combinations | They can raise blood pressure. In Europe, pseudoephedrine must not be used with severe kidney disease or uncontrolled high blood pressure ([EMA][EMA-PSE]) | Ask your pharmacist for a kidney-safe cold remedy |
+| **Salt substitutes** | NoSalt, Nu-Salt, Lite Salt, "half salt" | They contain potassium chloride. NoSalt lists 640 mg potassium per ¼ teaspoon, and its label tells people with kidney disease to ask a doctor first; Morton Lite Salt lists 350 mg potassium plus 290 mg sodium ([NoSalt and Nu-Salt labels][SALTSUB-LABELS]; [Lite Salt label][DG35b]; [NKF][DG5]). The risk is higher with an ACE inhibitor, ARB or finerenone ([KDIGO 2024][K24], Table 26; [Kerendia label][KER], section 17) | Herbs, spices, lemon, vinegar ([Sodium](../eat/sodium.md)) |
+| **Decongestant tablets** | pseudoephedrine (Sudafed), phenylephrine (Sudafed PE); also in many cold and allergy combinations | Their labels say to ask a doctor first if you have high blood pressure, heart disease or diabetes ([Sudafed labels][DECONGEST-LABELS]). In Europe, pseudoephedrine must not be used with severe kidney disease or severe or uncontrolled high blood pressure ([EMA][EMA-PSE]). The FDA has proposed removing phenylephrine tablets from sale because they do not relieve a blocked nose ([FDA][FDA-PE]) | Ask your pharmacist for a kidney-safe cold remedy |
 
 !!! warning "Combination cold and flu products"
-    One bottle or packet can hold an NSAID, a decongestant and sugar all at once. Check the active
+    One bottle or packet can hold an NSAID, a decongestant and sugar all at once. For example, Sudafed
+    PE Head Congestion + Pain contains ibuprofen ([Sudafed labels][DECONGEST-LABELS]). Check the active
     ingredients for the word "NSAID", and ask the pharmacist before buying ([NKF][NKFpain]).
 
 ## Medicines that need a kidney check
@@ -91,7 +94,7 @@ Stage: ______ eGFR: ______ (date ______) On dialysis: yes / no Transplant: yes /
 Please check every medicine, including over-the-counter products, against my kidney function.
 
 I avoid: NSAIDs (ibuprofen, naproxen, high-dose aspirin) · sodium phosphate laxatives and enemas ·
-magnesium and aluminium products · potassium salt substitutes · decongestant tablets
+magnesium and aluminum products · potassium salt substitutes · decongestant tablets
 
 Allergies: ________________ My pharmacy: ________________
 
@@ -111,7 +114,11 @@ Kidney team: ________________ Diabetes team: ________________
 ## Get help now if…
 
 - After a laxative or enema: severe weakness, confusion, very slow breathing or fainting: **call 911**
-  (or your local emergency number).
+  (or your local emergency number). These can be signs of a dangerous magnesium level
+  ([StatPearls][DG45]).
+- After a sodium phosphate laxative or enema: dry mouth and thirst, much less urine, light-headedness
+  when you stand, drowsiness, or swelling of the ankles, feet or legs: call your team today, or get
+  urgent care if you cannot reach them ([FDA][FDANaP]).
 - After a new medicine: swelling of the lips, tongue or throat, or trouble breathing: **call 911**.
 - After a new medicine: much less urine than usual, new swelling, or muscle weakness: call your team
   today. See [Get help now](../get-help-now.md).
@@ -124,11 +131,12 @@ Kidney team: ________________ Diabetes team: ________________
 
 ## Sources
 
-- [KDIGO 2024 CKD guideline][K24]: practice points 4.1.2, 4.1.3, 4.2.1 and 4.3.1.1; Tables 25, 26 and 31.
+- [KDIGO 2024 CKD guideline][K24]: practice points 4.1.2, 4.1.3, 4.2.1 and 4.3.1.1; section 4.1; Tables 25, 26 and 31.
 - [NKF: pain medicines and kidney disease][NKFpain]; [NIDDK: managing CKD][NIDDK-managing].
 - [FDA: OTC sodium phosphate products][FDANaP].
-- [Hypermagnesaemia from OTC laxatives (case report)][DG44]; [StatPearls: hypermagnesemia][DG45].
-- [KDIGO 2017 CKD-MBD update][K17]: recommendation 4.1.7 (aluminium); [Alka-Seltzer Original label][ALKA].
-- [Morton Lite Salt label][DG35b]; [NKF: potassium][DG5]; [NKF: phosphorus][DG20].
-- [EMA: pseudoephedrine safety review][EMA-PSE].
-- [Kerendia (finerenone) prescribing information][KER]; [ADA Standards of Care 2026, section 7][A26-7].
+- [Hypermagnesemia from OTC laxatives (case report)][DG44]; [StatPearls: hypermagnesemia][DG45].
+- [KDIGO 2017 CKD-MBD update][K17]: recommendation 4.1.7 (aluminum); [Alka-Seltzer Original label][ALKA].
+- [NoSalt and Nu-Salt labels][SALTSUB-LABELS]; [Morton Lite Salt label][DG35b]; [NKF: potassium][DG5].
+- [Sudafed and Sudafed PE Drug Facts labels][DECONGEST-LABELS]; [EMA: pseudoephedrine safety review][EMA-PSE];
+  [FDA: oral phenylephrine proposed order][FDA-PE].
+- [Kerendia (finerenone) prescribing information][KER]: sections 7.1 and 17; [ADA Standards of Care 2026, section 7][A26-7].

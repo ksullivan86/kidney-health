@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [ARCH, FDC, FDC-API, FDA-label, DG38, NOTE02, NOTE06, A26-6]
 ---
 
@@ -89,12 +90,13 @@ database, including branded foods. Tap **Import** to copy one into your list. Im
 ## Low treatments
 
 !!! danger "Treat first, log later"
-    If your glucose is low, treat it straight away with 15 g of fast carbohydrate, check again after
-    15 minutes, and repeat if needed ([ADA 2026][A26-6], section 6;
-    [Treating a low](../t1d/treating-a-low.md)). Log it afterwards.
+    If your glucose is under 70 mg/dL (3.9 mmol/L), treat it straight away with 15 g of fast
+    carbohydrate, check again after 15 minutes, and repeat if you are still low ([ADA 2026][A26-6],
+    section 6; [Treating a low](../t1d/treating-a-low.md)). Log it afterwards.
 
-- Search `glucose` to find glucose tablets, gel and liquid shots, and measured juices marked
-  **hypo treatment**.
+- Search `glucose` to find glucose tablets, gel and liquid shots. Measured juices, lemon-lime soda,
+  ginger ale, hard candy, jelly beans, honey and sugar in a treatment-sized portion are marked as low
+  treatments too.
 - These foods get **no carbohydrate warning**: fast carbohydrate is the point. Their potassium, sodium
   and fluid still count, so you can see which treatment suits your kidneys best
   ([Targets and warnings](targets-and-warnings.md)).

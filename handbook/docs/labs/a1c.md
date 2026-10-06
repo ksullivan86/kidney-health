@@ -17,9 +17,9 @@ sources: [K22, A26-6, A26-11, A26-15, NGSP, NIDDK-A1C, JBDS, JBDS22, DG55a, DG55
 ## In short
 
 A1c (HbA1c) shows your average glucose over the last 2–3 months, by measuring how much glucose has
-stuck to the haemoglobin in your red blood cells ([NIDDK][NIDDK-A1C]). Up to stage G3b it works well.
+stuck to the hemoglobin in your red blood cells ([NIDDK][NIDDK-A1C]). Up to stage G3b it works well.
 At stages G4–G5 and on dialysis, KDIGO calls it unreliable ([KDIGO 2022][K22], practice point 2.1.2):
-anaemia and its treatment push it **down**, and acid build-up and some lab methods push it **up**. Then
+anemia and its treatment push it **down**, and acid build-up and some lab methods push it **up**. Then
 your CGM report is the better guide ([CGM metrics](cgm-metrics.md)). Never judge your safety from A1c
 alone: a "good" A1c can hide frequent lows.
 
@@ -72,13 +72,13 @@ if you are not at goal or your treatment changed ([KDIGO 2022][K22], practice po
 
 | Makes A1c read **lower** than your real average | Makes A1c read **higher** |
 |---|---|
-| Anaemia and red cells that live a shorter time ([KDIGO 2022][K22]) | Acid build-up and inflammation ([KDIGO 2022][K22], Figure 10) |
-| A recent blood transfusion ([KDIGO 2022][K22]; [ADA 2026 §6][A26-6]) | Carbamylated haemoglobin from waste build-up, on some lab methods ([JBDS–Renal Association][JBDS]; [Pecoits-Filho 2016][DG55a]) |
+| Anemia and red cells that live a shorter time ([KDIGO 2022][K22]) | Acid build-up and inflammation ([KDIGO 2022][K22], Figure 10) |
+| A recent blood transfusion ([KDIGO 2022][K22]; [ADA 2026 §6][A26-6]) | Carbamylated hemoglobin from waste build-up, on some lab methods ([JBDS–Renal Association][JBDS]; [Pecoits-Filho 2016][DG55a]) |
 | An ESA (EPO injection) or iron treatment ([KDIGO 2022][K22]) | Iron deficiency ([JBDS–Renal Association][JBDS]) |
 
-Recent blood loss, haemoglobin variants such as sickle cell trait, and pregnancy can also make A1c
+Recent blood loss, hemoglobin variants such as sickle cell trait, and pregnancy can also make A1c
 inaccurate ([NIDDK][NIDDK-A1C]; [ADA 2026 §6][A26-6]). UK guidance (2016) asked dialysis units to know
-which A1c method their lab uses, because some methods read carbamylated haemoglobin as A1c
+which A1c method their lab uses, because some methods read carbamylated hemoglobin as A1c
 ([JBDS–Renal Association][JBDS]).
 
 ## What to use instead
@@ -101,7 +101,7 @@ which A1c method their lab uses, because some methods read carbamylated haemoglo
 - [ ] At stage 4–5 or on dialysis, ask your team to judge your glucose mainly by CGM, not A1c alone.
 - [ ] Bring a 14-day CGM report to every visit ([CGM metrics](cgm-metrics.md)).
 - [ ] If you start an ESA or iron, or have a transfusion, expect A1c to read lower than your real
-      average for a while ([Haemoglobin and iron](haemoglobin-and-iron.md)).
+      average for a while ([Hemoglobin and iron](haemoglobin-and-iron.md)).
 - [ ] If your A1c looks "too good" but you have many lows or high readings, tell your team.
 - [ ] **For the log:** record meals, carbohydrate and the CGM pattern around them. In advanced kidney
       disease your team may set goals from CGM metrics such as time in range rather than A1c, and
@@ -131,7 +131,7 @@ which A1c method their lab uses, because some methods read carbamylated haemoglo
 2. What is my GMI, and how does it compare with my A1c?
 3. Should we use my CGM report, fructosamine or glycated albumin instead?
 4. What A1c or time-in-range goal is safe for me, given my risk of lows?
-5. Does my lab's A1c method read carbamylated haemoglobin?
+5. Does my lab's A1c method read carbamylated hemoglobin?
 
 ## Get help now if…
 
@@ -149,7 +149,7 @@ A1c is never urgent by itself. Lows and high glucose with ketones are.
 
 ## Related pages
 
-- [CGM metrics](cgm-metrics.md) · [Haemoglobin and iron](haemoglobin-and-iron.md) · [Reading your lab results](index.md)
+- [CGM metrics](cgm-metrics.md) · [Hemoglobin and iron](haemoglobin-and-iron.md) · [Reading your lab results](index.md)
 - [Type 1 diabetes and CKD](../t1d/index.md) · [Insulin and dialysis](../t1d/insulin-and-dialysis.md)
 
 ## Sources
@@ -165,6 +165,6 @@ A1c is never urgent by itself. Lows and high glucose with ketones are.
   58–68 mmol/mol (7.5–8.5 %).
 - [ADA: DKA and ketones][ADAK].
 - [Pecoits-Filho 2016][DG55a]. Further reading: [diaTribe: A1C and CKD][DG55b].
-- [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia and its treatment.
+- [KDIGO 2026 anemia in CKD guideline][K26A]: anemia and its treatment.
 - [International consensus on time in range (2019)][TIR19].
 - [Design note 05][NOTE05]: the app's A1c note.

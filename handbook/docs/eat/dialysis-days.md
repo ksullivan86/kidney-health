@@ -83,7 +83,7 @@ days in the profile, and compares them with your per-day target × days
 - [ ] Weigh yourself every morning and write it down.
 - [ ] Keep potassium and fluid at the low end on Saturday and Sunday (for a Monday–Wednesday–Friday
       schedule).
-- [ ] Never skip or shorten a session ([In-centre hemodialysis](../stages/hemodialysis-in-centre.md)).
+- [ ] Never skip or shorten a session ([In-center hemodialysis](../stages/hemodialysis-in-centre.md)).
 
 ## Pack a dialysis-day bag
 
@@ -138,7 +138,7 @@ team's limit, Saturday and Sunday are the days to cut back on fluid and salt.
 - [Cabrera 2015][DG28a]: weight gain between sessions.
 - [JBDS–Renal Association guidance][JBDS]: lows twice as common, glucose in the dialysis fluid, meals during dialysis.
 - [JBDS 2022 guidance][JBDS22]: glucose falls during a session (lowest around the third hour), 75 % of lows within 24 hours, snacks at the start and in the second hour.
-- [2024 hyperglycaemic crises consensus][HC24]: DKA signs, and lower ketone levels in DKA with kidney failure.
+- [2024 hyperglycemic crises consensus][HC24]: DKA signs, and lower ketone levels in DKA with kidney failure.
 - [DaVita: hemodialysis fluid intake][DG23]: 1,000 mL plus urine; 1 L of fluid is about 1 kg.
 - [ADA Consumer Guide: Dex4 tablets][DG24b].
 - [AKF: fistula and graft bleeds][AKF-bleed].

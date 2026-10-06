@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6]
 ---
 

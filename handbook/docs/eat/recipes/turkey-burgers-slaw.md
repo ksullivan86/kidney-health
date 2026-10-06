@@ -27,7 +27,7 @@ A fast-food cheeseburger and fries can carry more than 1,000 mg sodium and 900 m
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 415 kcal | 34 g | 27.6 g | 473 mg | 252 mg | 380 mg | none | 3.0 g |
 
@@ -59,7 +59,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 1. Make the slaw: mix the mayonnaise, vinegar, sugar and a pinch of pepper, then toss with the cabbage and carrot. Chill while you cook.
 2. Mix about 1 lb raw ground turkey with the onion, garlic powder, paprika and the rest of the pepper. Shape into 4 thin patties.
-3. Cook in a lightly oiled pan or on a grill over medium heat for 5–6 minutes a side, until the centre reaches 165 °F (74 °C).
+3. Cook in a lightly oiled pan or on a grill over medium heat for 5–6 minutes a side, until the center reaches 165 °F (74 °C).
 4. Serve each burger on a bun with lettuce and 1 tablespoon of ketchup, with a quarter of the slaw.
 
 ## Why it works for kidneys

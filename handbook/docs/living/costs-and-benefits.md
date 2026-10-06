@@ -47,7 +47,7 @@ national health system.
 
 | Situation | Medicare usually starts | Source |
 |---|---|---|
-| In-centre dialysis | The first day of the **fourth month** of dialysis | [Medicare][MED-ESRD] |
+| In-center dialysis | The first day of the **fourth month** of dialysis | [Medicare][MED-ESRD] |
 | Home dialysis training started in the first 3 months | As early as the **first month** of dialysis | [Medicare][MED-ESRD] |
 | Kidney transplant | The month you are admitted to a Medicare-certified hospital for the transplant (if it happens that month or within 2 months); if the transplant is delayed, 2 months before it | [Medicare][MED-ESRD] |
 
@@ -90,7 +90,7 @@ national health system.
 - **UK example:** Kidney Care UK offers grants to UK residents over 18 at CKD stage 4–5 or with a
   transplant who are in financial need, with a letter of support from a health professional
   ([Kidney Care UK][KCUK]).
-- Before travelling abroad, check that your travel insurance covers dialysis, your transplant and
+- Before traveling abroad, check that your travel insurance covers dialysis, your transplant and
   your diabetes ([Travel](travel.md)).
 
 ## What to do
@@ -107,7 +107,7 @@ national health system.
 
 ## Examples
 
-**Starting in-centre dialysis.** You start hemodialysis on 10 March 2026. Medicare usually starts on
+**Starting in-center dialysis.** You start hemodialysis on 10 March 2026. Medicare usually starts on
 1 June 2026, the first day of the fourth month ([Medicare][MED-ESRD]).
 
 **Starting home dialysis training.** You start dialysis on 10 March 2026 and begin home PD training in

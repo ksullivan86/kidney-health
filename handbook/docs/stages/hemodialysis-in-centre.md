@@ -1,6 +1,6 @@
 ---
-title: In-centre hemodialysis
-description: "Life on in-centre hemodialysis: the schedule, the long weekend gap, fluid, diet, access care, diabetes on dialysis days and an emergency plan."
+title: In-center hemodialysis
+description: "Life on in-center hemodialysis: the schedule, the long weekend gap, fluid, diet, access care, diabetes on dialysis days and an emergency plan."
 slug: hemodialysis-in-centre
 audience: [patient, caregiver]
 applies_to: [HD]
@@ -12,11 +12,11 @@ fact_checked: 2026-10-05
 sources: [NIDDK-HD, NIDDK-HD-eat, Q15HD, Q19VA, JBDS, JBDS22, AKF-bleed, HC24, DG19a, DG23, DG28a, DG53, DOPPS03, NKF-HDaccess, NKF-HHD, Q20, K22, DG26, DG20, K24, K17, K26A, CMSPREP, FDC, A26-6]
 ---
 
-# In-centre hemodialysis
+# In-center hemodialysis
 
 ## In short
 
-Most people on in-centre hemodialysis go **three times a week for about 4 hours**, on a fixed
+Most people on in-center hemodialysis go **three times a week for about 4 hours**, on a fixed
 Monday-Wednesday-Friday or Tuesday-Thursday-Saturday slot ([NIDDK][NIDDK-HD]). Between sessions,
 fluid, potassium and salt build up, so your diet changes: **protein goes up and fluid goes down**.
 The **long weekend gap** is the riskiest time of the week ([Foley 2011][DG53]). **Never skip or
@@ -44,7 +44,7 @@ and after and carry fast sugar ([JBDS–Renal Association][JBDS]).
 |---|---|
 | Calcium and phosphate | every 1–3 months |
 | PTH | every 3–6 months |
-| Haemoglobin, ferritin and TSAT | at least every 3 months |
+| Hemoglobin, ferritin and TSAT | at least every 3 months |
 | Kt/V (dialysis dose) and potassium | regularly, from blood taken before and after a session |
 
 Sources: [KDIGO 2017][K17] (recommendation 3.1.2); [KDIGO 2026 anemia][K26A]; [KDOQI 2015][Q15HD].

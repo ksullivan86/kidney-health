@@ -62,9 +62,9 @@ medicines as options ([KDIGO 2024][K24], Table 38). If you ever think about harm
 - [ ] Tell your team when diabetes or kidney care feels like too much. Your plan can often be made
       simpler.
 - [ ] If you are on dialysis in the US, meet your unit's social worker. Checking your emotional and
-      social needs, counselling and referrals are part of your written plan of care
+      social needs, counseling and referrals are part of your written plan of care
       ([42 CFR 494.80 and 494.90][CFR494]).
-- [ ] Ask for a referral to a counsellor or psychologist, ideally one who knows diabetes
+- [ ] Ask for a referral to a counselor or psychologist, ideally one who knows diabetes
       ([ADA 2026 §5][A26-5]).
 - [ ] Talk to someone who has been there: NKF PEERS, a local support group, or a patient group at
       your unit ([NKF][NKF-PEERS]).
@@ -81,7 +81,7 @@ simplifies your plan, a CGM replaces fingersticks, and you start seeing a psycho
 ([ADA 2026 §5][A26-5]).
 
 **Fear of lows.** Since a severe low at night, you keep your glucose high on purpose. You tell your
-team. They screen you for fear of hypoglycaemia, set a CGM alert, and help you work on the fear
+team. They screen you for fear of hypoglycemia, set a CGM alert, and help you work on the fear
 ([ADA 2026 §5][A26-5]).
 
 **A caregiver who is struggling.** Your partner is your care partner for home dialysis and is
@@ -116,7 +116,7 @@ exhausted. The ADA's distress screening covers caregivers and family members too
 ## Sources
 
 - [ADA Standards of Care 2026, section 5][A26-5]: psychosocial care (diabetes distress, depression,
-  anxiety, fear of hypoglycaemia, disordered eating, referral).
+  anxiety, fear of hypoglycemia, disordered eating, referral).
 - [KDIGO 2024 CKD guideline][K24]: Table 38 (managing depression in CKD).
 - [988 Suicide & Crisis Lifeline][988].
 - [42 CFR 494: rules for US dialysis facilities][CFR494]: §§ 494.80, 494.90, 494.140.

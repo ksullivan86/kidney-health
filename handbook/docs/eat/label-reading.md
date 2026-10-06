@@ -59,7 +59,7 @@ on the label; the portion is what you put on your plate, and the two often diffe
       and fewer milligrams of sodium than calories ([NKF label guide][DG38]).
 - [ ] **4. Carbohydrate.** Total Carbohydrate × the servings you actually eat. Check the serving
       first: a package of one to two servings, such as a 20-oz soda or a 15-oz can of soup, is now
-      labelled as **one** serving, so its numbers already cover the whole bottle or can; bigger packages
+      labeled as **one** serving, so its numbers already cover the whole bottle or can; bigger packages
       may show a second column for the whole package ([FDA][FDA-label]). A bowl of cereal is often 1½–2
       label servings. Sugar alcohols are still carbohydrate: one common method is to subtract half of
       them from Total Carbohydrate ([Medtronic][DG32b]); ask your diabetes team which method to use and
@@ -74,8 +74,8 @@ on the label; the portion is what you put on your plate, and the two often diffe
 ## Worked example: a can of chicken noodle soup
 
 These are typical USDA values for canned chicken noodle soup, prepared, per 1-cup serving
-([FDC][FDC]). A can of condensed soup is labelled as more than one serving, so a full bowl may well
-be 2 cups. (A ready-to-serve can of up to about 2 servings is labelled as one serving, so read the
+([FDC][FDC]). A can of condensed soup is labeled as more than one serving, so a full bowl may well
+be 2 cups. (A ready-to-serve can of up to about 2 servings is labeled as one serving, so read the
 serving line first: [FDA][FDA-label].)
 
 | Label line | Per serving (1 cup) | If you eat 2 cups | What it tells you |
@@ -115,7 +115,7 @@ and E450–E452 range, and potassium chloride is E508 ([design note 03][NOTE03])
 ## Ask your care team
 
 1. Which numbers on the label matter most for me right now: potassium, phosphorus, sodium?
-2. Is my favourite plant milk or creamer OK?
+2. Is my favorite plant milk or creamer OK?
 3. How should I count sugar alcohols with my CGM?
 4. Can a dietitian go through the labels of the foods I buy most?
 

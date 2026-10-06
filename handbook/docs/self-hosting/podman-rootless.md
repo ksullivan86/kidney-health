@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE01, DEPLOY, SECDOC, PODMAN-QUADLET, PODMAN-ROOTLESS]
 ---
 
@@ -129,6 +130,7 @@ Then tick the Podman checklist in the [operator security guide][SECDOC].
 ## Related pages
 
 - [Configuration](configuration.md) · [HTTPS for phones](https.md) · [Backups](backups.md) · [Upgrades](upgrades.md)
+- Using Docker instead: [Docker (rootless)](docker-rootless.md) · on a cluster: [Kubernetes](kubernetes.md)
 
 ## Sources
 

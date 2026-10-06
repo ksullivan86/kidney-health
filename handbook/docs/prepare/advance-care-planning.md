@@ -45,7 +45,7 @@ Part B deductible and coinsurance apply ([Medicare][MED-ACP]).
   sleep. It can be given at any stage and alongside dialysis or a transplant ([KDIGO 2024][K24],
   section 5.5).
 - **Comprehensive conservative care** is a planned choice not to have dialysis or a transplant. It is
-  **not "giving up" and not "no treatment"**. Your team keeps protecting your kidneys, treats anaemia
+  **not "giving up" and not "no treatment"**. Your team keeps protecting your kidneys, treats anemia
   and other problems, manages symptoms and supports your feelings and your family
   ([NIDDK][NIDDK-conservative]; [KDIGO 2024][K24], practice point 5.5.2).
 - It may suit people for whom dialysis may not lengthen life or make it better, such as some older

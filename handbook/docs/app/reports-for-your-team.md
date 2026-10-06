@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [ARCH, NOTE03, NOTE06, NOTE07, Q20, DG28a, DG53]
 ---
 
@@ -30,7 +31,7 @@ every entry ([architecture contract][ARCH]).
 
 For each nutrient with a target, the card shows:
 
-- the **average per logged day** against your target, coloured ok, near limit or over;
+- the **average per logged day** against your target, colored ok, near limit or over;
 - how many days were **over**, and the highest day;
 - the **change** from the period before (for example "−7 %");
 - how it is judged: potassium, sodium, fluid and carbohydrate **day by day**; phosphorus, protein,
@@ -59,8 +60,9 @@ and opens in Excel, Google Sheets, Numbers or LibreOffice.
 To make a daily total in a spreadsheet, filter `status` to **eaten** and add up by `date`. Planned rows
 are food you had not eaten when you exported.
 
-Food names that start with `=`, `+`, `-` or `@` get a leading apostrophe in the file, so a spreadsheet
-does not run them as formulas ([design note 03][NOTE03]).
+Text (food names, notes) that starts with `=`, `+`, `-`, `@`, a tab or a line break gets a leading
+apostrophe in the file, so a spreadsheet does not run it as a formula ([architecture contract][ARCH];
+[design note 03][NOTE03]).
 
 ## What to do before a visit
 

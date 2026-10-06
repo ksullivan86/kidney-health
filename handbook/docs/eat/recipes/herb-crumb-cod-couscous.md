@@ -27,7 +27,7 @@ Cod is one of the lower-potassium fish: about 207 mg in 3 oz cooked, against abo
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 363 kcal | 40 g | 25.9 g | 421 mg | 179 mg | 147 mg | none | 2.7 g |
 
@@ -67,7 +67,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 ## Why it works for kidneys
 
 - Fresh or frozen plain cod has about 66 mg sodium in 3 oz. Breaded frozen fish sticks often contain phosphate additives.
-- Garlic powder adds flavour with almost no sodium (under 1 mg per ½ teaspoon); garlic salt is mostly salt.
+- Garlic powder adds flavor with almost no sodium (under 1 mg per ½ teaspoon); garlic salt is mostly salt.
 - ¾ cup of couscous has about 70 mg potassium; a medium baked potato has about 930 mg.
 
 ## Make it fit you

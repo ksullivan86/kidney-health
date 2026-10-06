@@ -125,7 +125,7 @@ leaving about 670 mL for drinks with medicines and hot weather. See the [hemodia
 ## Related pages
 
 - [Sodium](sodium.md) · [Dialysis days](dialysis-days.md) · [Treating a low](../t1d/treating-a-low.md)
-- [Hemodialysis in a centre](../stages/hemodialysis-in-centre.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
+- [Hemodialysis in a center](../stages/hemodialysis-in-centre.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
 - [Hemodialysis sample menu](menus/hemodialysis.md) · In the app: [Targets and warnings](../app/targets-and-warnings.md)
 
 ## Sources

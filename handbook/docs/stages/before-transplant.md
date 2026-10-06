@@ -55,11 +55,11 @@ Source: [Medicare: kidney failure coverage][MED-ESRD]. Amounts change every year
 
 **Living donors.** A kidney from a living donor does not have to travel and the surgery can be
 planned ([NIDDK][NIDDK-Tx]). A living donor is someone with two healthy kidneys who chooses to give one
-([NKF][NKF-Tx]). Ask your transplant centre how its living donor programme works.
+([NKF][NKF-Tx]). Ask your transplant center how its living donor program works.
 
 **Type 1 diabetes and the pancreas.** KDIGO suggests that people with type 1 diabetes and kidney
 failure be considered for an SPK transplant where it is available (2A), and to be referred to a
-centre that does them ([KDIGO 2020 transplant][K20TX], 8.1.1). The ADA reserves pancreas transplants
+center that does them ([KDIGO 2020 transplant][K20TX], 8.1.1). The ADA reserves pancreas transplants
 for people with type 1 diabetes who are also having, or have had, a kidney transplant, or who have
 repeated DKA or severe lows. A successful pancreas transplant can bring glucose back to normal, but
 anti-rejection medicines are then needed for life ([ADA 2026 §9][A26-9]).
@@ -67,14 +67,14 @@ anti-rejection medicines are then needed for life ([ADA 2026 §9][A26-9]).
 **The evaluation.** A team with at least a transplant doctor, a surgeon and someone experienced in the
 emotional and social side decides whether a transplant is right for you
 ([KDIGO 2020 transplant][K20TX], 1.2). Expect heart, blood, infection and cancer checks. If you are
-turned down, you can ask another centre for a second opinion (1.3.1).
+turned down, you can ask another center for a second opinion (1.3.1).
 
 **Weight alone should not rule you out.** KDIGO suggests that candidates are not excluded only
 because of obesity ([KDIGO 2020 transplant][K20TX], 7.1.1).
 
 ## What to do: stay transplant-ready
 
-- [ ] Ask for a referral now if your eGFR is under 30, and ask whether the centre does SPK transplants.
+- [ ] Ask for a referral now if your eGFR is under 30, and ask whether the center does SPK transplants.
 - [ ] Tell family and friends that you are looking for a living donor, if you are comfortable doing so.
 - [ ] See a dentist and get any problems treated: KDIGO suggests a dental check before a transplant
       ([KDIGO 2020 transplant][K20TX], 10.4.1).
@@ -86,7 +86,7 @@ because of obesity ([KDIGO 2020 transplant][K20TX], 7.1.1).
 - [ ] Keep active and keep your glucose in range.
 - [ ] Take every medicine and keep every appointment: the team assesses adherence before listing
       ([KDIGO 2020 transplant][K20TX], 5.1).
-- [ ] Keep your phone charged and on, and your contact details up to date with the centre. When a
+- [ ] Keep your phone charged and on, and your contact details up to date with the center. When a
       deceased-donor kidney is offered, you must go to the hospital straight away ([NIDDK][NIDDK-Tx]).
 - [ ] Keep a bag packed with your medicine list, insulin, glucose meter or CGM supplies and glucose tablets.
 
@@ -100,16 +100,16 @@ time.
 **Already on dialysis.** You started dialysis 2 years ago and are listed today. Your waiting time
 counts from the date of your first regular dialysis, not from today ([OPTN][OPTN]).
 
-**The phone call.** It is 2 a.m. and the centre has a kidney. Take your packed bag. Check your glucose
+**The phone call.** It is 2 a.m. and the center has a kidney. Take your packed bag. Check your glucose
 before you leave and take fast sugar with you. Tell the team when you last ate and took insulin.
 
 ## Ask your care team
 
 1. Am I a candidate for a transplant? When should I be referred?
-2. Does the centre do simultaneous pancreas-kidney transplants? Would I be a candidate?
-3. How does the living donor programme work, and how can someone be tested?
+2. Does the center do simultaneous pancreas-kidney transplants? Would I be a candidate?
+3. How does the living donor program work, and how can someone be tested?
 4. Which tests do I need for the evaluation, and how long will it take?
-5. Can I be listed at more than one centre?
+5. Can I be listed at more than one center?
 6. How will my insulin be managed around the surgery?
 
 ## Get help now if…
@@ -120,7 +120,7 @@ before you leave and take fast sugar with you. Tell the team when you last ate a
     vomiting, deep fast breathing or fruity breath. On dialysis these signs count even under 3.0
     ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
-!!! warning "Call your transplant centre"
+!!! warning "Call your transplant center"
     If you are admitted to hospital, get a serious infection, or change your phone number or address
     while you are on the list, so your status can be kept up to date.
 
@@ -128,7 +128,7 @@ before you leave and take fast sugar with you. Tell the team when you last ate a
 
 - [Transplant referral](../prepare/transplant-referral.md) · [Choosing a treatment](../prepare/choosing-a-treatment.md)
 - [After a kidney transplant](after-transplant.md)
-- [Stage G4](g4.md) · [Stage G5 without dialysis](g5-without-dialysis.md) · [In-centre hemodialysis](hemodialysis-in-centre.md) · [Peritoneal dialysis](peritoneal-dialysis.md)
+- [Stage G4](g4.md) · [Stage G5 without dialysis](g5-without-dialysis.md) · [In-center hemodialysis](hemodialysis-in-centre.md) · [Peritoneal dialysis](peritoneal-dialysis.md)
 - [Costs and benefits](../living/costs-and-benefits.md) · [Caregivers](../living/caregivers.md)
 - In the app: [Reports for your care team](../app/reports-for-your-team.md)
 

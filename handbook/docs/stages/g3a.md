@@ -1,6 +1,6 @@
 ---
 title: Stage G3a
-description: "What changes at G3a: medicines checked against your eGFR, new blood tests for bones and anaemia, more lows, and a sick-day plan."
+description: "What changes at G3a: medicines checked against your eGFR, new blood tests for bones and anemia, more lows, and a sick-day plan."
 slug: g3a
 audience: [patient, caregiver]
 applies_to: [G3a]
@@ -18,7 +18,7 @@ sources: [K24, K17, K26A, AK22, JBDS, A26-6, A26-11, K22, NKFpain, NIDDK-whatis,
 
 G3a means your eGFR has been **45–59** for more than 3 months. Most people still feel well
 ([NIDDK][NIDDK-whatis]). Three things change now. **Medicines** need checking against your eGFR.
-**New blood tests** start for bones and anaemia. And **lows can become more common**, because the
+**New blood tests** start for bones and anemia. And **lows can become more common**, because the
 kidneys clear less insulin ([JBDS–Renal Association][JBDS]; [ADA–KDIGO 2022][AK22]). This is also the
 time to write a sick-day plan with your team.
 
@@ -45,7 +45,7 @@ Full table: [Eating well](../eat/index.md).
     | eGFR and UACR | 1–4 times a year | – |
     | Calcium and phosphate | every 6–12 months | phosphate 2.5–4.5 mg/dL |
     | PTH and alkaline phosphatase | PTH depends on your first result; both start at G3a | lab-specific |
-    | Haemoglobin | at least once a year | anaemia: under 13 g/dL (men), under 12 g/dL (women) |
+    | Hemoglobin | at least once a year | anemia: under 13 g/dL (men), under 12 g/dL (women) |
     | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium about 3.5–5.1 mEq/L |
 
 === "International"
@@ -55,12 +55,12 @@ Full table: [Eating well](../eat/index.md).
     | eGFR and UACR | 1–4 times a year | – |
     | Calcium and phosphate | every 6–12 months | phosphate 0.81–1.45 mmol/L |
     | PTH and alkaline phosphatase | PTH depends on your first result; both start at G3a | lab-specific |
-    | Haemoglobin | at least once a year | anaemia: under 130 g/L (men), under 120 g/L (women) |
+    | Hemoglobin | at least once a year | anemia: under 130 g/L (men), under 120 g/L (women) |
     | Potassium and creatinine | 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | potassium about 3.5–5.1 mmol/L |
 
 Sources: eGFR and UACR ([ADA 2026 §11][A26-11], recommendation 11.1b); calcium, phosphate, PTH and
 alkaline phosphatase ([KDIGO 2017][K17], recommendations 3.1.1–3.1.2); phosphate range
-([NKF][DG20]); haemoglobin
+([NKF][DG20]); hemoglobin
 ([KDIGO 2026 anemia][K26A]); potassium range ([MedlinePlus][MEDLINE-LOWK]); potassium after medicine
 changes ([KDIGO 2024][K24], practice point 3.6.2).
 
@@ -75,7 +75,7 @@ especially when eGFR is under 60 ([NKF][NKFpain]).
 
 **New blood tests.** Calcium, phosphate, PTH and alkaline phosphatase are checked from G3a, because
 failing kidneys upset the balance that keeps bones strong and blood vessels soft
-([KDIGO 2017][K17], recommendation 3.1.1). Haemoglobin is checked for anaemia
+([KDIGO 2017][K17], recommendation 3.1.1). Hemoglobin is checked for anemia
 ([KDIGO 2026 anemia][K26A]).
 
 **Potassium and phosphorus.** Limit them only if your blood levels are high. Then a renal dietitian
@@ -101,7 +101,7 @@ is never stopped: see [Sick days](../t1d/sick-days.md).
       ([Your medicine list](../medicines/your-medicine-list.md)).
 - [ ] Ask for a medicine review against your eGFR.
 - [ ] Clear NSAIDs out of the house, or label them "not for me" ([Medicines to avoid](../medicines/avoid.md)).
-- [ ] Ask when your calcium, phosphate, PTH and haemoglobin will first be checked.
+- [ ] Ask when your calcium, phosphate, PTH and hemoglobin will first be checked.
 - [ ] Ask whether you need any potassium or phosphorus limit, based on your last results.
 - [ ] Look at your CGM report for lows, especially at night, and bring it to your diabetes visit
       ([CGM metrics](../labs/cgm-metrics.md)).
@@ -129,7 +129,7 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 ## Ask your care team
 
 1. Which of my medicines need a different dose at my eGFR?
-2. When will you check my calcium, phosphate, PTH and haemoglobin, and what were the results?
+2. When will you check my calcium, phosphate, PTH and hemoglobin, and what were the results?
 3. Do I need any limit on potassium or phosphorus now?
 4. What is my KFRE? Should I see a nephrologist?
 5. Should my insulin plan change now that my kidneys clear less insulin?
@@ -145,7 +145,7 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
     ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
-    Vomiting, diarrhoea or not eating (start your sick-day plan); lows that keep happening or that you
+    Vomiting, diarrhea or not eating (start your sick-day plan); lows that keep happening or that you
     no longer feel coming; dizziness on standing after a new blood pressure medicine; a lab potassium
     of 6.0–6.4 mmol/L: KDIGO advises a repeat test within 24 hours, or checks and treatment in
     hospital **now** if you feel unwell ([KDIGO 2024][K24], Table 28; 6.5 or more: see
@@ -153,7 +153,7 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 
 ## Related pages
 
-- [eGFR and creatinine](../labs/egfr-and-creatinine.md) · [Phosphate, calcium and PTH](../labs/phosphate-calcium-pth.md) · [Haemoglobin and iron](../labs/haemoglobin-and-iron.md)
+- [eGFR and creatinine](../labs/egfr-and-creatinine.md) · [Phosphate, calcium and PTH](../labs/phosphate-calcium-pth.md) · [Hemoglobin and iron](../labs/haemoglobin-and-iron.md)
 - [How kidney disease changes type 1 diabetes](../t1d/index.md) · [Treating a low](../t1d/treating-a-low.md) · [Sick days](../t1d/sick-days.md)
 - [Medicines to avoid](../medicines/avoid.md) · [Supplements](../medicines/supplements.md)
 - [Eating well](../eat/index.md) · [Sample menu for stage 3](../eat/menus/g3.md)
@@ -164,7 +164,7 @@ creatinine is expected; a rise of more than 30 % needs review (practice point 3.
 - [KDIGO 2024 CKD guideline][K24]: recommendation 2.2.1; practice points 2.2.1, 3.6.2, 3.6.4,
   3.11.5.1–3.11.5.2, 4.1.3, 4.2.1, 4.3.1, 4.3.2; Table 28.
 - [KDIGO 2017 CKD-MBD guideline update][K17]: recommendations 3.1.1–3.1.2.
-- [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia definition and testing intervals.
+- [KDIGO 2026 anemia in CKD guideline][K26A]: anemia definition and testing intervals.
 - [ADA–KDIGO 2022 consensus report][AK22]; [JBDS–Renal Association guidance][JBDS]: insulin and lows in CKD.
 - [ADA Standards of Care 2026, section 6][A26-6]: recommendations 6.11, 6.15, 6.16.
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendations 11.1b, 11.3.

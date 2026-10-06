@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [CON20, GAD21, K24, FDANaP, DG45, A26-6, DEXCOM-G7, I22P]
 ---
 
@@ -41,12 +42,16 @@ eGFR is in mL/min/1.73 m². See [eGFR and creatinine](../labs/egfr-and-creatinin
 
 - The dye given into a vein for a CT scan is linked with kidney injury far less often than once
   thought, because older studies had no proper comparison groups ([ACR–NKF 2020][CON20]).
+- Diabetes adds to the risk when kidney function is already low, which is one more reason to tell
+  the team about both ([KDIGO 2024][K24], Table 33).
 - If your eGFR is under 30 and you are not on dialysis, or you have a sudden kidney injury, the team
   should give you saline through a drip around the scan ([ACR–NKF 2020][CON20]). If you have heart
   failure or a fluid limit, ask how they will balance that.
-- Before a **planned** scan, your team may pause some medicines for a few days, such as NSAIDs or
-  diuretics, and sometimes an ACE inhibitor or ARB ([KDIGO 2024][K24], section 4.4.1). Pause a
-  medicine only if they tell you to, and get the restart date in writing.
+- If your eGFR is under 30 or you have a sudden kidney injury, KDIGO suggests stopping medicines
+  that can harm the kidneys and are not essential, such as NSAIDs or diuretics, from 1–2 days before
+  until 2 days after the dye. Before a **planned** CT with dye, your team may also hold an ACE
+  inhibitor or ARB for 2 days ([KDIGO 2024][K24], section 4.4.1). Pause a medicine only if they tell
+  you to, and get the restart date in writing.
 - Pills and drinks such as N-acetylcysteine or vitamin C have **not** been shown to protect the
   kidneys ([KDIGO 2024][K24], section 4.4.1).
 - On dialysis: you do not need an extra session after the dye ([KDIGO 2024][K24], section 4.4.1). If
@@ -71,13 +76,14 @@ when a stent is placed. The team should assess your kidney risk with a scoring t
 
 ## Bowel preparations (colonoscopy)
 
-- **Avoid sodium phosphate preparations and enemas.** They can cause kidney injury from phosphate,
-  dangerously high phosphate and death, especially with kidney disease, dehydration, diuretics,
-  ACE inhibitors, ARBs or NSAIDs ([FDA][FDANaP]).
+- **Avoid sodium phosphate preparations and enemas.** The FDA warns they can cause serious harm to
+  the kidneys and heart, severe dehydration, dangerous changes in blood minerals, and death, with the
+  highest risk in people with kidney disease or dehydration, or who take diuretics, ACE inhibitors,
+  ARBs or NSAIDs ([FDA][FDANaP]).
 - **Magnesium-based laxatives** (such as magnesium citrate) can build up to dangerous levels when the
   kidneys fail ([StatPearls][DG45]). Ask which preparation is right for your kidneys.
 - **On peritoneal dialysis**, tell your PD unit before a colonoscopy: ISPD suggests antibiotics
-  beforehand ([ISPD 2022][I22P]).
+  beforehand and draining your PD fluid so your belly is empty for the procedure ([ISPD 2022][I22P]).
 - **On a fluid limit**, ask how the large drink volume of a preparation fits with your limit.
 
 ## Type 1 diabetes and fasting for a scan
@@ -88,9 +94,9 @@ when a stent is placed. The team should assess your kidney risk with a scoring t
 - Bring glucose tablets or gel and tell the staff you have type 1 diabetes. Clear liquids such as
   apple juice or regular ginger ale count toward your carbohydrate and fluid
   ([Treating a low](../t1d/treating-a-low.md)).
-- **CGM and MRI:** take off the Dexcom G7 sensor before an MRI. For a CT scan it can stay on if it is
-  outside the scanned area and covered ([Dexcom G7 user guide][DEXCOM-G7]). Ask about your own sensor
-  and pump before the day.
+- **CGM and MRI:** take off every part of the Dexcom G7 system before an MRI. For a CT scan the
+  sensor can stay on if it is kept out of the scanned area and covered with a lead apron
+  ([Dexcom G7 user guide][DEXCOM-G7]). Ask about your own sensor and pump before the day.
 
 ## What to do
 
@@ -141,8 +147,8 @@ when a stent is placed. The team should assess your kidney risk with a scoring t
 
 - [ACR–NKF 2020 iodinated contrast consensus][CON20].
 - [ACR–NKF 2021 gadolinium consensus][GAD21].
-- [KDIGO 2024 CKD guideline][K24]: section 4.4; practice points 4.4.1.1, 4.4.1.2 and 4.4.2.1.
+- [KDIGO 2024 CKD guideline][K24]: section 4.4 and Table 33; practice points 4.4.1.1, 4.4.1.2 and 4.4.2.1.
 - [FDA: OTC sodium phosphate products][FDANaP]; [StatPearls: hypermagnesemia][DG45].
-- [ISPD 2022 peritonitis guideline][I22P].
+- [ISPD 2022 peritonitis guideline][I22P]: colonoscopy (antibiotics; empty abdomen).
 - [ADA Standards of Care 2026, section 6][A26-6]: basal insulin when not eating.
 - [Dexcom G7 user guide][DEXCOM-G7]: MRI and CT.

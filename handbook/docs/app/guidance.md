@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE06, NOTE04, ARCH, AKF-meal, A26-5, A26-6, DG12, Q20, FDC]
 ---
 
@@ -36,9 +37,12 @@ other food ([architecture contract][ARCH]).
 ## How the rules decide
 
 **1. Room left for this meal.** For potassium, sodium and fluid the app takes your daily target, takes
-away what is eaten and planned, and shares the rest over the meals still open. One main meal never gets
-more than 30 % of the daily target (a snack slot 15 %). Dietitians use the same rule of thumb: about
-600–700 mg of potassium per meal on a 1,800–2,200 mg day ([AKF Kidney Kitchen][AKF-meal]).
+away what is eaten and planned, and shares the rest over the meals still open. For potassium,
+phosphorus and sodium, one main meal never gets more than 30 % of the daily target (all snacks together
+15 %); fluid has no per-meal cap. Dietitians use a similar rule of thumb: about 600–700 mg of potassium
+per meal on a 1,800–2,200 mg day ([AKF Kidney Kitchen][AKF-meal]). It is a rule of thumb, not a
+guideline number, so the app uses it only to choose ideas, never to warn you
+([design note 06][NOTE06]).
 
 **2. Phosphorus and protein use the week.** Phosphorus and protein are judged on the weekly average
 ([KDOQI 2020][Q20]), so the room for phosphorus comes from your last 6 days plus today, kept between 80 %
@@ -67,8 +71,10 @@ your own meals.
 
 ## Low treatments
 
-Low treatments count toward potassium, sodium and fluid (you really had them) but are left out of the
-meal carbohydrate check. If a treatment had a lot of potassium, the app may add:
+Treat a low first, with 15 g of fast carbohydrate when your glucose is under 70 mg/dL (3.9 mmol/L),
+and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). Low treatments count toward
+potassium, phosphorus, sodium and fluid (you really had them) but are left out of the meal
+carbohydrate check, and guidance never suggests a smaller dose. If a treatment had a lot of potassium, the app may add:
 "For your next low: Glucose gel (1 tube) gives 15 g carbs with 0 mg potassium."
 The suggested amount is never below your low-treatment dose (default 15 g, which you can set from 5 to
 30 g as your diabetes team advises) ([ADA 2026][A26-6], section 6; [Treating a low](../t1d/treating-a-low.md)).

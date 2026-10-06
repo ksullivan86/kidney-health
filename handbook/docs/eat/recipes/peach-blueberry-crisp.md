@@ -27,7 +27,7 @@ Fruit crisps are often made with oats and nuts, which add phosphorus and potassi
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 189 kcal | 29 g | 1.9 g | 152 mg | 31 mg | 7 mg | none | 2.2 g |
 

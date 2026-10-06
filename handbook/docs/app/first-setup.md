@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [NOTE05, NOTE07, ARCH, Q20, K24, A26-11, NIST-63B4]
+fact_checked: 2026-10-05
+sources: [NOTE05, NOTE07, ARCH, Q20, K24, A26-11, A26-5, NIST-63B4, MEDLINE-K]
 ---
 
 # First setup
@@ -64,12 +65,12 @@ Take the numbers to your next visit and ask your team to change them.
 
 | Target | Suggested | Why |
 |---|---|---|
-| Protein | about 56 g a day (0.8 g per kg) | with diabetes, never below 0.8 g/kg before dialysis ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24]) |
+| Protein | about 56 g a day (0.8 g per kg) | with diabetes, not below 0.8 g/kg before dialysis ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1). Coming in v0.3: today's app still shows a range of 42–56 g (0.6–0.8 g/kg); do not aim below 56 g unless your team prescribed it |
 | Potassium | 3,000 mg | a review ceiling: only restrict potassium if your blood potassium is high |
 | Phosphorus | 1,000 mg | |
 | Sodium | 2,000 mg | the same at every stage ([KDIGO 2024][K24], Rec 3.3.2.1) |
 | Calories | 2,100 kcal (30 per kg) | KDOQI's range is 25–35 kcal/kg ([KDOQI 2020][Q20], 3.1.1) |
-| Carbohydrate | 236 g a day, 60 g per meal | 45 % of calories, split over four meal slots |
+| Carbohydrate | 236 g a day, 60 g per meal | the app's default: 45 % of calories, split over four meal slots. There is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13) |
 | Fluid | not tracked | fluid limits start on dialysis |
 
 At a BMI above 25 (or below 18.5) the app uses an adjusted weight instead of your scale weight, and
@@ -101,12 +102,14 @@ sodium, potassium or phosphorus ([design note 05][NOTE05]).
 When a new lab result would change a suggestion, the app shows **Review suggested targets**. It never
 changes your saved targets by itself.
 
-!!! warning "When the app will not suggest targets"
-    The app gives **no** starting targets if you are pregnant or breastfeeding, younger than 18, or in
-    the first 12 weeks after a kidney transplant. Nutrition needs are very different then; your
-    nephrologist, transplant team or a specialist dietitian sets them
+!!! warning "Do not use Suggest targets if you are pregnant, under 18 or newly transplanted"
+    Nutrition needs are very different if you are pregnant or breastfeeding, younger than 18, or in
+    the first 12 weeks after a kidney transplant. Your nephrologist, transplant team or a specialist
+    dietitian sets your numbers then
     ([Sex, fertility and pregnancy](../living/sex-fertility-pregnancy.md);
-    [After a transplant](../stages/after-transplant.md)).
+    [After a transplant](../stages/after-transplant.md)). Coming in v0.3: the app asks about these and
+    refuses to suggest targets. **Today's app does not ask**, so it would still fill in numbers that do
+    not fit you: leave **Suggest targets** alone and use your team's numbers ([design note 05][NOTE05]).
 
 ## What to do
 
@@ -131,9 +134,15 @@ changes your saved targets by itself.
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Your lab potassium is **6.5 mmol/L or more**, or you have chest pain, a very slow or irregular pulse,
-    or sudden severe weakness ([KDIGO 2024][K24], Table 28). From v0.3 the **Labs** screen shows a red
-    banner for potassium of 6.0 or more. Full list: [Get help now](../get-help-now.md).
+    Your lab potassium is **6.5 mmol/L or more** ([KDIGO 2024][K24], Table 28), or you have fainting,
+    chest pain, a very slow, weak or irregular pulse, or sudden severe weakness, especially if your
+    potassium has been high ([MedlinePlus][MEDLINE-K]).
+
+!!! warning "Call your care team today"
+    A lab potassium of **6.0–6.4 mmol/L**: if you feel unwell, go to hospital **now** to be checked and
+    treated; if you feel well, call your team today for a repeat test within 24 hours
+    ([KDIGO 2024][K24], Table 28). Coming in v0.3: the **Labs** screen shows a red banner for potassium
+    of 6.0 or more. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 
@@ -145,4 +154,6 @@ changes your saved targets by itself.
 - [Design note 05: personalised targets][NOTE05] (fact-checked 2026-10-05): which factors change which target.
 - [Design note 07: accounts][NOTE07]; [NIST SP 800-63B-4][NIST-63B4]: password rules.
 - [Project architecture contract][ARCH]: profile fields and "Suggest targets".
-- [KDOQI 2020 nutrition guideline][Q20]; [KDIGO 2024 CKD guideline][K24]; [ADA Standards of Care 2026, section 11][A26-11].
+- [KDOQI 2020 nutrition guideline][Q20]; [KDIGO 2024 CKD guideline][K24]; [ADA Standards of Care 2026, section 11][A26-11]
+  (protein, Rec 11.3) and [section 5][A26-5] (no ideal carbohydrate share, Rec 5.13).
+- [MedlinePlus: high potassium level][MEDLINE-K]: warning signs.

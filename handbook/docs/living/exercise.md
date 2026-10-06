@@ -117,7 +117,7 @@ Glucose tablets add no potassium, phosphorus or fluid.
 2. What is my plan for insulin and snacks before and after exercise?
 3. Can I exercise during dialysis at my unit?
 4. Which arm exercises are safe with my fistula or graft? What about lifting with a PD catheter?
-5. Could I see a physical therapist or join an exercise programme?
+5. Could I see a physical therapist or join an exercise program?
 
 ## Get help now if…
 
@@ -145,6 +145,6 @@ Glucose tablets add no potassium, phosphorus or fluid.
 - [ADA Standards of Care 2026, section 5][A26-5]: physical activity, sitting and resistance exercise;
   exercise in CKD. [Section 6][A26-6]: treating lows.
 - [Exercise in type 1 diabetes consensus (2017)][EX17]: panel 1 (glucose before exercise), ketones,
-  recent severe hypoglycaemia, cautions with complications.
+  recent severe hypoglycemia, cautions with complications.
 - [NKF: exercise and CKD][NKF-exercise]; [NKF: hemodialysis access][NKF-HDaccess].
 - [JBDS–Renal Association guidance][JBDS]: glucose after hemodialysis.

@@ -17,7 +17,7 @@ sources: [K24, K26A, K17, K22, A26-11, NIDDK-tests, NIDDK-HD, CFR494, NKF-CKDEPI
 ## In short
 
 Blood and urine tests show how well your kidneys filter and whether problems that kidney disease
-causes, such as high potassium or anaemia, are starting. Each result has a number, a unit and the
+causes, such as high potassium or anemia, are starting. Each result has a number, a unit and the
 lab's normal range. One result is a snapshot. The **trend** over several tests tells you much more:
 KDIGO says an eGFR change of more than 20 % or a doubling of urine albumin is bigger than normal
 day-to-day noise and should be looked at ([KDIGO 2024][K24], practice points 2.1.3 and 2.1.5). Keep
@@ -27,7 +27,7 @@ your results in one place and bring them to every visit.
 
 | Part of the report | What it means | Example |
 |---|---|---|
-| Test name | Often shortened: K for potassium, Cr for creatinine, Hgb for haemoglobin, CO2 for bicarbonate | "Potassium, serum" |
+| Test name | Often shortened: K for potassium, Cr for creatinine, Hgb for hemoglobin, CO2 for bicarbonate | "Potassium, serum" |
 | Result | Your number | 5.3 |
 | Unit | What the number is counted in. The same test can use different units in different countries | mmol/L (the same number as mEq/L for potassium) |
 | Reference range | The range found in healthy people **at that lab**. Labs use different machines, so ranges differ a little | 3.5–5.1 |
@@ -71,13 +71,13 @@ medicine change or when a result is off.
 | Potassium | with each kidney check, and 2–4 weeks after a new or bigger dose of an ACE inhibitor or ARB | same | monthly on dialysis | [Blood potassium](blood-potassium.md) |
 | Calcium and phosphate | every 6–12 months | every 3–6 months | every 1–3 months | [Phosphate, calcium and PTH](phosphate-calcium-pth.md) |
 | PTH | depends on your first result | every 6–12 months | every 3–6 months | same |
-| Haemoglobin | at least once a year | at least twice a year | at least every 3 months; at least monthly at US dialysis units | [Haemoglobin and iron](haemoglobin-and-iron.md) |
+| Hemoglobin | at least once a year | at least twice a year | at least every 3 months; at least monthly at US dialysis units | [Hemoglobin and iron](haemoglobin-and-iron.md) |
 | A1c | twice a year; up to 4 times if not at goal or after a change | same, but less reliable | same, but unreliable | [A1c](a1c.md), [CGM metrics](cgm-metrics.md) |
 
 Sources: eGFR and UACR ([ADA 2026 §11][A26-11], recommendation 11.1b; [KDIGO 2024][K24], practice
 points 2.1.1–2.1.2); potassium after ACE inhibitors and ARBs ([KDIGO 2024][K24], practice point 3.6.2)
 and 4 weeks after starting finerenone ([Kerendia label][KER]); calcium, phosphate and PTH
-([KDIGO 2017][K17], recommendation 3.1.2); haemoglobin ([KDIGO 2026 anemia][K26A], Figure 5; US
+([KDIGO 2017][K17], recommendation 3.1.2); hemoglobin ([KDIGO 2026 anemia][K26A], Figure 5; US
 dialysis units: [42 CFR 494.90][CFR494]);
 A1c ([KDIGO 2022][K22], practice point 2.1.1); monthly tests on dialysis ([NIDDK][NIDDK-HD]).
 
@@ -87,7 +87,7 @@ A1c ([KDIGO 2022][K22], practice point 2.1.1); monthly tests on dialysis ([NIDDK
   and muscle mass differs by age and sex ([NKF][NKF-CKDEPI]). The same creatinine of 1.4 mg/dL at
   age 60 gives an eGFR of about 43 for a woman and 58 for a man. Normal creatinine is also lower in
   women ([MedlinePlus][MEDLINE-CREAT]).
-- **Anaemia: yes.** It starts below 13 g/dL in men and below 12 g/dL in women
+- **Anemia: yes.** It starts below 13 g/dL in men and below 12 g/dL in women
   ([KDIGO 2026 anemia][K26A]).
 - **Urine albumin: a little.** Women pass less creatinine, so their UACR reads a bit higher for the
   same albumin ([KDIGO 2024][K24], Table 16).
@@ -124,7 +124,7 @@ A1c ([KDIGO 2022][K22], practice point 2.1.1); monthly tests on dialysis ([NIDDK
 
 Fill in one row per test date. Use the units on your lab report and write them in the header.
 
-| Date | eGFR | UACR | Potassium | Phosphate | Calcium | PTH | Bicarbonate | Albumin | Haemoglobin | A1c or time in range |
+| Date | eGFR | UACR | Potassium | Phosphate | Calcium | PTH | Bicarbonate | Albumin | Hemoglobin | A1c or time in range |
 |---|---|---|---|---|---|---|---|---|---|---|
 | &nbsp; | | | | | | | | | | |
 | &nbsp; | | | | | | | | | | |
@@ -159,18 +159,18 @@ Fill in one row per test date. Use the units on your lab report and write them i
 - [eGFR and creatinine](egfr-and-creatinine.md) · [Urine albumin (UACR)](uacr.md)
 - [Blood potassium](blood-potassium.md) · [Phosphate, calcium and PTH](phosphate-calcium-pth.md) ·
   [Bicarbonate](bicarbonate.md) · [Serum albumin](albumin.md)
-- [Haemoglobin and iron](haemoglobin-and-iron.md) · [A1c](a1c.md) · [CGM metrics](cgm-metrics.md)
+- [Hemoglobin and iron](haemoglobin-and-iron.md) · [A1c](a1c.md) · [CGM metrics](cgm-metrics.md)
 - [Dialysis adequacy](dialysis-adequacy.md)
 - Related: [CKD stages](../ckd/stages.md) · [Units and conversions](../reference/units.md) ·
-  [Questions to ask](../reference/questions-to-ask.md)
+  [Glossary](../reference/glossary.md) · [Questions to ask](../reference/questions-to-ask.md)
 
 ## Sources
 
 - [KDIGO 2024 CKD guideline][K24]: practice points 1.2.2.4, 1.2.4.3, 2.1.1–2.1.5, 3.6.2, 3.6.4;
   Tables 16, 24, 25 and 28.
-- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly haemoglobin.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly hemoglobin.
 - [KDIGO 2017 CKD-MBD guideline update][K17]: recommendations 3.1.2 and 3.1.4.
-- [KDIGO 2026 anemia in CKD guideline][K26A]: anaemia definition and Figure 5.
+- [KDIGO 2026 anemia in CKD guideline][K26A]: anemia definition and Figure 5.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.1.
 - [ADA Standards of Care 2026, section 11][A26-11]: recommendation 11.1b.
 - [Kerendia (finerenone) prescribing information][KER].

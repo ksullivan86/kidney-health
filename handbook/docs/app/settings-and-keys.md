@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API]
 ---
 
@@ -82,13 +83,13 @@ Each setting comes from the first of these that has a value ([design note 07][NO
 3. **The admin's choice** for everyone on this server.
 4. **The app's default.**
 
-So if a switch is greyed out with "Set by the server", only the person who runs the server can change it
+So if a switch is grayed out with "Set by the server", only the person who runs the server can change it
 ([Configuration](../self-hosting/configuration.md)).
 
 ## Password and devices
 
 - **Change password**: needs your current password; at least 15 characters.
-- **Signed-in devices**: lists your sessions. **Sign out** one you do not recognise, or
+- **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
 - Sensitive actions (changing a password or key, exporting, deleting your account) ask for your password
   again if you entered it more than 10 minutes ago.

@@ -18,7 +18,7 @@ sources: [NKF-HHD, NIDDK-HD, Q15HD, MED-ESRD, DG23, CMSPREP, JBDS, NKF-HDaccess,
 ## In short
 
 With home hemodialysis you, usually with a trained care partner, run the dialysis machine at home
-after weeks of training ([NKF][NKF-HHD]; [NIDDK][NIDDK-HD]). You can dialyse on a standard schedule,
+after weeks of training ([NKF][NKF-HHD]; [NIDDK][NIDDK-HD]). You can dialyze on a standard schedule,
 for a short time on most days, or overnight while you sleep. More frequent sessions remove fluid more
 often, so the **daily fluid allowance is usually larger** ([DaVita][DG23]). You need space, supplies,
 and a plan for **power cuts and supply delays** ([CMS][CMSPREP]). With type 1 diabetes, check glucose
@@ -41,15 +41,15 @@ before and after every session, just as in a unit ([JBDS–Renal Association][JB
 | What | Number | Source |
 |---|---|---|
 | Training | 4½–6 hours a day, 5 days a week, for 3–8 weeks | [NIDDK][NIDDK-HD] |
-| Fluid | larger than in-centre, because fluid is removed more often; your unit sets it | [DaVita][DG23] |
-| Protein | 1.0–1.2 g/kg a day (70–84 g at 70 kg), as on in-centre dialysis | [KDOQI 2020][Q20]; [KDIGO 2022][K22] |
+| Fluid | larger than in-center, because fluid is removed more often; your unit sets it | [DaVita][DG23] |
+| Protein | 1.0–1.2 g/kg a day (70–84 g at 70 kg), as on in-center dialysis | [KDOQI 2020][Q20]; [KDIGO 2022][K22] |
 | Emergency supplies | keep spare supplies as your unit directs; 5–7 days of medicines, insulin, strips and glucose | [CMS][CMSPREP] |
-| Medicare start | can begin in the **first month** of dialysis if you start a home training programme in the first 3 months (otherwise the fourth month) | [Medicare][MED-ESRD] |
+| Medicare start | can begin in the **first month** of dialysis if you start a home training program in the first 3 months (otherwise the fourth month) | [Medicare][MED-ESRD] |
 
 ### Tests to expect
 
-The same blood tests as in-centre dialysis: calcium and phosphate every 1–3 months, PTH every 3–6
-months ([KDIGO 2017][K17]), haemoglobin and iron about every 3 months ([KDIGO 2026 anemia][K26A]), and
+The same blood tests as in-center dialysis: calcium and phosphate every 1–3 months, PTH every 3–6
+months ([KDIGO 2017][K17]), hemoglobin and iron about every 3 months ([KDIGO 2026 anemia][K26A]), and
 dialysis dose checks by your home unit. For schedules other than 3 times a week, KDOQI measures the
 dose over a whole week (standard Kt/V, target 2.3, minimum 2.1) ([KDOQI 2015][Q15HD], guideline 3.3).
 
@@ -64,7 +64,7 @@ more access problems, more strain on your care partner, and a faster loss of the
 make ([KDOQI 2015][Q15HD], guideline 2.4). Short sessions on most days can mean more access
 procedures and low blood pressure during dialysis (guideline 2.2).
 
-**A care partner.** Most programmes ask you to have a care partner, who trains with you
+**A care partner.** Most programs ask you to have a care partner, who trains with you
 ([NKF][NKF-HHD]). Ask your unit whether your partner must be there for every treatment.
 
 **Diet and fluid.** Ask your dietitian whether your potassium, phosphorus and fluid limits change on
@@ -75,7 +75,7 @@ your new schedule. Protein stays at 1.0–1.2 g/kg.
 - Check glucose before and after each session. Glucose is often lowest after dialysis.
 - Your insulin plan is set around your schedule by your team. Ask for it in writing for dialysis days
   and non-dialysis days.
-- If you dialyse overnight, agree with your team how your CGM low alert is set and who responds to it.
+- If you dialyze overnight, agree with your team how your CGM low alert is set and who responds to it.
 - Keep glucose tablets within reach of the machine and the bed.
 
 **Access care.** The same as in a unit: feel the thrill daily, no blood pressure cuffs or blood tests
@@ -84,10 +84,10 @@ on the access arm, and watch for signs of infection ([NKF][NKF-HDaccess]).
 ## What to do
 
 - [ ] Ask your unit whether your home has the space, water supply and electrics the machine needs.
-- [ ] Choose and train a care partner, if your programme asks for one.
+- [ ] Choose and train a care partner, if your program asks for one.
 - [ ] Register with your power and water companies for priority restoration ([CMS][CMSPREP]).
 - [ ] Keep a flashlight and batteries next to the machine ([CMS][CMSPREP]).
-- [ ] Ask your unit for a back-up unit, near home and further away, for times you cannot dialyse at home.
+- [ ] Ask your unit for a back-up unit, near home and further away, for times you cannot dialyze at home.
 - [ ] Keep a 5–7 day supply of medicines, insulin, strips and glucose, and in-date glucagon.
 - [ ] Set your dialysis days in the app so it totals fluid, potassium and sodium between sessions
       ([Targets and warnings](../app/targets-and-warnings.md)).
@@ -134,7 +134,7 @@ team in the morning.
 
 ## Related pages
 
-- [In-centre hemodialysis](hemodialysis-in-centre.md) (diet, access and diabetes details) · [Peritoneal dialysis](peritoneal-dialysis.md)
+- [In-center hemodialysis](hemodialysis-in-centre.md) (diet, access and diabetes details) · [Peritoneal dialysis](peritoneal-dialysis.md)
 - [Choosing a treatment](../prepare/choosing-a-treatment.md) · [Dialysis access](../prepare/dialysis-access.md)
 - [Insulin and dialysis](../t1d/insulin-and-dialysis.md) · [Dialysis days](../eat/dialysis-days.md) · [Fluid](../eat/fluid.md)
 - [Work](../living/work.md) · [Travel](../living/travel.md) · [Caregivers](../living/caregivers.md) · [Costs and benefits](../living/costs-and-benefits.md)

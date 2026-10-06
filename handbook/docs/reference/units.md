@@ -139,7 +139,7 @@ on dialysis A1c is less reliable, so a CGM report may be the better guide
 
 ## Sources
 
-- [KDIGO 2024 CKD guideline][K24]: conversion factors (creatinine, ACR, calcium, phosphate, urate);
+- [KDIGO 2024 CKD guideline][K24]: conversion factors (creatinine, UACR, calcium, phosphate, urate);
   recommendation 3.3.2.1.
 - [KDIGO 2022 diabetes in CKD guideline][K22]: conversion factors (glucose, HbA1c); recommendation
   3.1.1; practice point 2.1.2.

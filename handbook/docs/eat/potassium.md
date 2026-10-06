@@ -32,7 +32,7 @@ Blood potassium is the same number in mmol/L and mEq/L, so one table covers both
 | | Typical |
 |---|---|
 | Blood potassium | about 3.5–5.1 mmol/L (= mEq/L); your lab's range wins ([MedlinePlus][MEDLINE-LOWK]) |
-| High (hyperkalaemia) | above 5.0–5.5 mmol/L |
+| High (hyperkalemia) | above 5.0–5.5 mmol/L |
 | Call your team today | 6.0–6.4 mmol/L; if you feel unwell, get checked in hospital now ([KDIGO 2024][K24], Table 28) |
 | Emergency | 6.5 mmol/L or more ([KDIGO 2024][K24], Table 28) |
 | Food, when a limit is ordered | usually 2,000–3,000 mg a day; AKF suggests aiming for 2,500 mg and no more than 3,000 mg ([AKF][DG52]; [DaVita][DG26]) |
@@ -161,7 +161,7 @@ carbohydrate changes too (about 177 g against 161 g), so count each meal as usua
 
 !!! warning "Call your care team today"
     A result of **6.0–6.4 mmol/L**: if you feel unwell, go to hospital **now** to be checked and treated;
-    if you feel well, call your team today for a repeat test within 24 hours ([KDIGO 2024][K24], Table 28). Also call if vomiting or diarrhoea stops
+    if you feel well, call your team today for a repeat test within 24 hours ([KDIGO 2024][K24], Table 28). Also call if vomiting or diarrhea stops
     you eating or drinking. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages

@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [NKFherb, AKFherb, K24, NIDDK-managing, PROGRAF, FDAgrapefruit, LIBRE-ISI]
+fact_checked: 2026-10-05
+sources: [NKFherb, AKFherb, NKF-NUT15, K24, NIDDK-managing, PROGRAF, FDAgrapefruit, LIBRE-ISI, MEDLINE-K, DG45]
 ---
 
 # Supplements and herbal products
@@ -19,21 +20,22 @@ sources: [NKFherb, AKFherb, K24, NIDDK-managing, PROGRAF, FDAgrapefruit, LIBRE-I
 
 **No supplement without your nephrologist's OK, and kidney-specific ("renal") vitamins only if your
 team prescribes them.** "Natural" does not mean safe. Some herbs damage the kidneys. Others build up
-when the kidneys cannot clear them, interact with transplant or heart medicines, or hide potassium,
-phosphorus or magnesium ([NKF][NKFherb]; [AKF][AKFherb]). KDIGO asks care teams to review and limit
+when the kidneys cannot clear them, interact with your medicines, or hide potassium or phosphorus
+([NKF][NKFherb]; [AKF][AKFherb]; [NKF][NKF-NUT15]). KDIGO asks care teams to review and limit
 over-the-counter and herbal products for everyone with kidney disease ([KDIGO 2024][K24], practice
 point 4.1.3).
 
 ## Why supplements are riskier with kidney disease
 
-- **The kidneys clear them.** With less kidney function, products and their breakdown products stay
-  in the body longer ([NKF][NKFherb]).
+- **The kidneys clear them.** Some herbal products leave the body through the kidneys, so with kidney
+  disease they can build up to toxic levels ([NKF][NKFherb]).
 - **Some harm the kidneys directly.** Aristolochic acid, found in some traditional Chinese herbal
   remedies, causes serious kidney damage ([KDIGO 2024][K24], chapter 4).
 - **They are not checked like medicines.** Rules on what is in a supplement, and how pure it is,
   vary widely from country to country ([KDIGO 2024][K24], chapter 4). The label may not tell you
   everything.
-- **They interact with your medicines.** St John's wort lowers tacrolimus levels and can lead to
+- **They interact with your medicines.** They can make a medicine weaker or too strong
+  ([NKF][NKFherb]). For example, St John's wort lowers tacrolimus levels and raises the risk of
   rejection of a transplant ([Prograf label][PROGRAF]).
 
 ## Herbs and products to avoid
@@ -41,26 +43,30 @@ point 4.1.3).
 **NKF lists these as especially risky in kidney disease** ([NKF][NKFherb]):
 
 - alfalfa, aloe vera (taken by mouth), aristolochia, arnica, astragalus, bearberry (uva ursi),
-  cat's claw, chaparral, comfrey, creatine, goldenrod, horsetail, licorice root, nettle,
-  St John's wort and yohimbe.
+  cat's claw, chaparral, comfrey, creatine, goldenrod, horsetail, java tea leaf, licorice root,
+  nettle, Oregon grape root, parsley root, pennyroyal, rue, St John's wort and yohimbe.
 
-**The American Kidney Fund adds** barberry, java tea, Oregon grape root, parsley root, pennyroyal and
-others ([AKF][AKFherb]).
+**The American Kidney Fund adds** barberry, celery (*Apium graveolens*) supplements and huperzine
+([AKF][AKFherb]).
 
 **Star fruit** (carambola) is on KDIGO's list of products reported to harm the kidneys. Avoid it as a
 fruit, a juice or a supplement ([KDIGO 2024][K24], Figure 45; [Food lists](../eat/food-lists.md)).
 
 ## Hidden potassium, phosphorus and magnesium
 
-Some products carry minerals that your kidneys cannot clear ([NKF][NKFherb]):
+Some products carry minerals that build up when your kidneys cannot clear them:
 
-| Product | What it can hide |
-|---|---|
-| "Electrolyte" and hydration powders | potassium, phosphorus or magnesium |
-| "Green" and "superfood" powders | potassium, phosphorus or magnesium |
-| Kelp, noni and dandelion products | potassium, phosphorus or magnesium |
-| Many everyday multivitamins with minerals | potassium, phosphorus or magnesium |
-| Protein powders and shakes | check the label for phosphate additives ([Label reading](../eat/label-reading.md)) |
+| Product | What it can hide | Source |
+|---|---|---|
+| Labels that say "electrolyte support" or "high in minerals" | potassium | [NKF][NKFherb] |
+| "Green" and "superfood" powders | potassium and phosphorus | [NKF][NKFherb] |
+| Seaweed and algae products (kelp, dulse, spirulina, chlorella) and seed-based products | phosphorus; kelp and dulse also potassium | [NKF][NKFherb] |
+| Noni, dandelion, turmeric and coconut-water products | potassium | [NKF][NKFherb] |
+| Everyday vitamin and mineral pills bought off the shelf | phosphorus and potassium | [NKF][NKF-NUT15] |
+| Protein powders and shakes | check the label for phosphate additives | [Label reading](../eat/label-reading.md) |
+
+Check labels for magnesium too: it builds up to dangerous levels when the kidneys fail
+([StatPearls][DG45]; [Medicines to avoid](avoid.md)). Ask your team before using any of these products.
 
 Read the ingredient list as well as the numbers. Any ingredient with "phos" in the name is a phosphate
 additive ([Phosphate additives](../eat/phosphate-additives.md)).
@@ -83,7 +89,8 @@ liver, spleen purifier" that contained aloe vera, cascara sagrada, chaparral and
 
 ## If you have a transplant
 
-- Avoid **St John's wort**: it lowers tacrolimus levels ([Prograf label][PROGRAF]).
+- Avoid **St John's wort**: it has many interactions and lowers tacrolimus levels, which raises the
+  risk of rejection ([NKF][NKFherb]; [Prograf label][PROGRAF]).
 - Avoid **grapefruit and grapefruit juice** with tacrolimus. The FDA says Seville oranges, pomelos and
   tangelos may act the same way ([Prograf label][PROGRAF]; [FDA][FDAgrapefruit]).
 - Check every supplement, tea and herbal remedy with your transplant pharmacist first
@@ -96,8 +103,8 @@ liver, spleen purifier" that contained aloe vera, cascara sagrada, chaparral and
       bringing your list or your bottles to every visit ([NIDDK][NIDDK-managing]).
 - [ ] Add supplements to your [medicine list](your-medicine-list.md), with the brand name.
 - [ ] Use one pharmacy, so it can check for interactions ([NIDDK][NIDDK-managing]).
-- [ ] If your team prescribes a vitamin, ask for the exact product, because ordinary multivitamins can
-      carry minerals you need to limit ([NKF][NKFherb]).
+- [ ] If your team prescribes a vitamin, ask for the exact product, because ordinary vitamin and
+      mineral pills can carry minerals you need to limit ([NKF][NKF-NUT15]).
 - [ ] Ask before stopping anything your team prescribed.
 
 ## Examples
@@ -122,8 +129,9 @@ liver, spleen purifier" that contained aloe vera, cascara sagrada, chaparral and
 ## Get help now if…
 
 - After a new supplement: muscle weakness, a slow or irregular heartbeat, or much less urine: call your
-  team today, or **call 911** (or your local emergency number) if it is severe. These can be signs of
-  high potassium or kidney injury. See [Get help now](../get-help-now.md).
+  team today, or **call 911** (or your local emergency number) if you faint, feel very weak or your
+  heartbeat is very slow or irregular. These can be signs of high potassium or kidney injury
+  ([MedlinePlus][MEDLINE-K]). See [Get help now](../get-help-now.md).
 
 ## Related pages
 
@@ -133,9 +141,11 @@ liver, spleen purifier" that contained aloe vera, cascara sagrada, chaparral and
 
 ## Sources
 
-- [NKF: herbal supplements and kidney disease][NKFherb]; [AKF: herbal supplements and CKD][AKFherb].
+- [NKF: herbal supplements and kidney disease][NKFherb]; [AKF: herbal supplements and CKD][AKFherb];
+  [NKF: nutrition in kidney disease stages 1–5][NKF-NUT15].
 - [KDIGO 2024 CKD guideline][K24]: practice point 4.1.3; chapter 4 (aristolochic acid, creatine,
   vitamin C, supplement regulation); Figure 45; Table 8 (creatine and creatinine).
 - [NIDDK: managing CKD][NIDDK-managing].
 - [Prograf (tacrolimus) prescribing information][PROGRAF]; [FDA: grapefruit juice and some drugs don't mix][FDAgrapefruit].
 - [Abbott FreeStyle Libre safety information][LIBRE-ISI]: vitamin C and sensor readings.
+- [MedlinePlus: high potassium level][MEDLINE-K]; [StatPearls: hypermagnesemia][DG45].

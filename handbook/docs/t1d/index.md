@@ -166,17 +166,17 @@ asked you to; KDIGO does not support limiting potassium-rich foods in earlier ki
     glucose (Pecoits-Filho); both fall with eGFR. For T1D the ADA–KDIGO consensus states insulin doses
     "may need to be decreased … due to reduced insulin clearance" ([ADA–KDIGO 2022][AK22]); its phrase
     "a risk factor for hypoglycemia" refers to advanced CKD in T2D, and ADA 2026 Table 6.5 lists CKD
-    and kidney failure as hypoglycaemia risk factors for everyone ([ADA 2026 §6][A26-6]). Pecoits-Filho et al.
+    and kidney failure as hypoglycemia risk factors for everyone ([ADA 2026 §6][A26-6]). Pecoits-Filho et al.
     review older dose-adjustment guidance by GFR, differences between basal insulin analogues, and note
     that a restricted renal diet itself "reduces hepatic gluconeogenesis" ([Pecoits-Filho 2016][DG55a];
     the dose figures are deliberately not repeated in this patient handbook). Cardiovascular autonomic
     neuropathy (about two-thirds of people with advanced CKD in that series) blunts counter-regulation;
-    ADA 2026 asks for at least annual screening for impaired hypoglycaemia awareness (Rec 6.11)
+    ADA 2026 asks for at least annual screening for impaired hypoglycemia awareness (Rec 6.11)
     ([ADA 2026 §6][A26-6]; [Pecoits-Filho 2016][DG55a]). JBDS 2022 suggests real-time CGM for people on
-    dialysis with recurrent hypoglycaemia or lost awareness (Rec 2.9) and CGM-guided adjustment on
+    dialysis with recurrent hypoglycemia or lost awareness (Rec 2.9) and CGM-guided adjustment on
     dialysis and non-dialysis days (Rec 3B.5) ([JBDS 2022][JBDS22]). On the potassium side: insulin
-    deficiency and hyperglycaemia both raise serum potassium, diabetic nephropathy is the commonest
-    cause of hyporeninaemic hypoaldosteronism, and ACE inhibitors, ARBs and finerenone all raise
+    deficiency and hyperglycemia both raise serum potassium, diabetic nephropathy is the commonest
+    cause of hyporeninemic hypoaldosteronism, and ACE inhibitors, ARBs and finerenone all raise
     potassium, so a run of high readings, a missed basal dose or a new RAAS or MRA prescription are
     reasons to restore insulin first and to consider an earlier potassium check, particularly in people
     already on a potassium limit; KDIGO 2024 (section 3.11.5) does not endorse restricting foods

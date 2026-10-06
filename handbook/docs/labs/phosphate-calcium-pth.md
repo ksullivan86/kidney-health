@@ -76,8 +76,8 @@ checked ([KDIGO 2017][K17], recommendation 3.1.3). On hemodialysis, blood is tes
   4.1.3). Calcium comes from food, from calcium-based binders and supplements, and from vitamin D
   medicines, so all of these count. About half of blood calcium rides on albumin, so a low albumin makes
   total calcium look low ([MedlinePlus][MEDLINE-CA]). The albumin test method matters too: in a study
-  of about 500 people on hemodialysis, centres using one common method reported albumin about 6 g/L
-  lower than centres using another, and their "corrected" calcium came out higher
+  of about 500 people on hemodialysis, centers using one common method reported albumin about 6 g/L
+  lower than centers using another, and their "corrected" calcium came out higher
   ([de Roij van Zuijdewijn 2018][ALB18]; [Serum albumin](albumin.md)).
 - **PTH.** If PTH keeps rising, your team first looks for causes they can fix: high phosphate, low
   calcium, a high phosphate intake, and low vitamin D ([KDIGO 2017][K17], recommendation 4.2.1). On

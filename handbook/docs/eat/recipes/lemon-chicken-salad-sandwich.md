@@ -27,7 +27,7 @@ Deli chicken and turkey usually have added salt and phosphate. Leftover chicken 
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 375 kcal | 37 g | 23.6 g | 396 mg | 207 mg | 426 mg | none | 2.7 g |
 

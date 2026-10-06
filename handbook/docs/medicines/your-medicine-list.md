@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [K24, NIDDK-managing, AHRQ-Q, POISON]
+fact_checked: 2026-10-05
+sources: [K24, NIDDK-managing, AHRQ-Q, POISON, AK22]
 ---
 
 # Your medicine list
@@ -33,8 +34,9 @@ every change in your care** are the simplest protection ([KDIGO 2024][K24], prac
 - **Some medicines harm the kidneys.** Each year, about 1 in 5 people with stage G3–G5 kidney disease
   gets at least one medicine that may harm the kidneys, most often an NSAID pain reliever
   ([KDIGO 2024][K24], chapter 4). See [Medicines to avoid](avoid.md).
-- **Paused medicines get forgotten.** After an illness or an operation, the most common problem is a
-  medicine that was paused and never restarted ([KDIGO 2024][K24], practice points 4.3.2–4.3.3).
+- **Paused medicines get forgotten.** When medicines are paused for an illness, the problem reported
+  most often is a medicine that is never restarted. KDIGO warns this can cause harm, so every pause
+  needs a written restart plan ([KDIGO 2024][K24], practice points 4.3.2–4.3.3).
 - **You can spot problems early** if you know what each medicine is for and which side effects to
   report ([KDIGO 2024][K24], practice point 4.3.1.1).
 
@@ -45,7 +47,7 @@ every change in your care** are the simplest protection ([KDIGO 2024][K24], prac
 | Every visit | Bring the list, or all your bottles, pens and boxes ([NIDDK][NIDDK-managing]) |
 | A new prescription from any doctor | Ask: "Is this right for my kidney function?" |
 | Going into hospital, and leaving it | Compare the discharge list with your own, line by line. Ask about anything new, stopped or paused ([KDIGO 2024][K24], practice point 4.3.1) |
-| After a sick day or an operation | Check that every paused medicine has been restarted as planned. KDIGO suggests a medicine review within a month ([KDIGO 2024][K24]) |
+| After a sick day or an operation | Check that every paused medicine has been restarted as planned. KDIGO says a medicine review within a month may help ([KDIGO 2024][K24], section 4.3) |
 | Starting dialysis, or a transplant | Ask for a full review: many medicines change at these points |
 | At least once a year | A full review with your pharmacist or kidney team |
 
@@ -133,7 +135,9 @@ Please check every new medicine against my kidney function.
   1-800-222-1222** (US, free, 24 hours) ([America's Poison Centers][POISON]). If the person has
   collapsed, has a seizure, has trouble breathing or cannot be woken, **call 911**.
 - You took too much insulin, or insulin without food: check glucose often and treat any low at once
-  ([Treating a low](../t1d/treating-a-low.md)). Call 911 for a low the person cannot treat themselves.
+  ([Treating a low](../t1d/treating-a-low.md)). Call your diabetes team or Poison Help now for advice:
+  with kidney disease, insulin can keep working for longer than usual ([ADA–KDIGO 2022][AK22];
+  [America's Poison Centers][POISON]). Call 911 for a low the person cannot treat themselves.
 - You missed doses of anti-rejection medicine after a transplant: call your transplant center today.
   See [Get help now](../get-help-now.md).
 
@@ -147,7 +151,9 @@ Please check every new medicine against my kidney function.
 
 ## Sources
 
-- [KDIGO 2024 CKD guideline][K24]: chapter 4; practice points 4.2.1, 4.3.1, 4.3.1.1 and 4.3.2–4.3.3.
+- [KDIGO 2024 CKD guideline][K24]: chapter 4 (sections 4.1 and 4.3); practice points 4.2.1, 4.3.1,
+  4.3.1.1 and 4.3.2–4.3.3.
+- [ADA–KDIGO 2022 consensus][AK22]: insulin clearance falls in advanced kidney disease.
 - [NIDDK: managing CKD][NIDDK-managing]: medicine list, one pharmacy, bringing bottles.
 - [AHRQ: questions to ask your doctor][AHRQ-Q].
 - [America's Poison Centers: Poison Help][POISON].

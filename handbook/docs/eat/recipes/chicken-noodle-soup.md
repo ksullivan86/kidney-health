@@ -27,7 +27,7 @@ A cup of canned chicken noodle soup has about 830 mg sodium. Made at home with l
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 232 kcal | 22 g | 21.4 g | 463 mg | 214 mg | 129 mg | 349 mL | 1.9 g |
 

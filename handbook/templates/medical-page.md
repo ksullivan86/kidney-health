@@ -34,13 +34,13 @@ the one thing to do.
 
     | | Typical |
     |---|---|
-    | Blood potassium | 3.5–5.0 mEq/L |
+    | Blood potassium | about 3.5–5.1 mEq/L; your lab's range wins |
 
 === "International"
 
     | | Typical |
     |---|---|
-    | Blood potassium | 3.5–5.0 mmol/L |
+    | Blood potassium | about 3.5–5.1 mmol/L; your lab's range wins |
 
 ## What to do
 

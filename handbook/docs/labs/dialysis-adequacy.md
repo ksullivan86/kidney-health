@@ -56,7 +56,7 @@ Longer time (t) or better blood flow through your access raises it.
 weekly Kt/V of at least 1.7 on peritoneal dialysis, or meet another accepted standard of adequacy
 ([42 CFR 494.90][CFR494]).
 
-**How often.** If you are on hemodialysis, at home or in a centre, your blood is tested once a month
+**How often.** If you are on hemodialysis, at home or in a center, your blood is tested once a month
 ([NIDDK][NIDDK-HD]). On peritoneal dialysis your unit tests clearance and the peritoneal membrane from
 time to time; ask how often.
 
@@ -136,7 +136,7 @@ When dialysis is working, many people notice **more energy and a better appetite
 
 ## Related pages
 
-- [Hemodialysis in a centre](../stages/hemodialysis-in-centre.md) · [Home hemodialysis](../stages/home-hemodialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
+- [Hemodialysis in a center](../stages/hemodialysis-in-centre.md) · [Home hemodialysis](../stages/home-hemodialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
 - [Dialysis access](../prepare/dialysis-access.md) · [Fluid](../eat/fluid.md) · [Dialysis days](../eat/dialysis-days.md)
 - [Reading your lab results](index.md)
 

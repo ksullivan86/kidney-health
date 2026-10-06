@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE07, ARCH, GDPR]
 ---
 
@@ -17,6 +18,11 @@ Your food log is health information. The app keeps it on one server that your ad
 company's cloud, and it sends nothing out unless a feature that needs the internet is switched on
 ([design note 07][NOTE07]). This page says what is stored, who can see it, and how to take it with you
 or delete it.
+
+!!! note "Coming in v0.3"
+    Accounts, personal API keys, the activity log, AI and the export and delete buttons arrive with
+    version 0.3. Until then the server holds one shared profile and log, and the admin can protect it
+    with a single password ([design note 07][NOTE07]).
 
 ## What is stored, and where
 
@@ -36,13 +42,13 @@ or delete it.
 - **You**, after signing in.
 - **Other people on the same server cannot.** Every request is checked against your account, and asking
   for someone else's entry gives "not found" ([architecture contract][ARCH]).
-- **The admin** manages accounts but has **no screen to read your log** and cannot "become" you in the
-  app ([design note 07][NOTE07]). Two honest limits:
+- **The admin** manages accounts but has **no screen to read your log** and no button to "become" you
+  in the app ([design note 07][NOTE07]). Two honest limits:
     - The admin runs the server, so they can technically open the database file and any backup. Use a
       server run by someone you trust.
-    - An admin can issue a password-reset link for your account. If that happens, your other devices are
-      signed out, you see "Your password was reset by an admin on …" when you next sign in, and it shows
-      in your activity.
+    - An admin can issue a password-reset link for your account and so could sign in as you. It cannot
+      be done quietly: your devices are signed out, you see "Your password was reset by an admin on …"
+      when you next sign in, and it shows in your activity.
 - **Backups** made by the admin contain everyone's data until they expire.
 
 !!! warning "If the app says “No sign-in”"

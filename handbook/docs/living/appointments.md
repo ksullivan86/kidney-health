@@ -47,7 +47,7 @@ page gathers them by topic for printing.
 | eGFR 30–44 | [Stage G3b](../stages/g3b.md#ask-your-care-team) |
 | eGFR 15–29 | [Stage G4](../stages/g4.md#ask-your-care-team) |
 | eGFR under 15, no dialysis | [Stage G5 without dialysis](../stages/g5-without-dialysis.md#ask-your-care-team) |
-| In-centre hemodialysis | [In-centre hemodialysis](../stages/hemodialysis-in-centre.md#ask-your-care-team) |
+| In-center hemodialysis | [In-center hemodialysis](../stages/hemodialysis-in-centre.md#ask-your-care-team) |
 | Home hemodialysis | [Home hemodialysis](../stages/home-hemodialysis.md#ask-your-care-team) |
 | Peritoneal dialysis | [Peritoneal dialysis](../stages/peritoneal-dialysis.md#ask-your-care-team) |
 | Waiting for a transplant | [Before a transplant](../stages/before-transplant.md#ask-your-care-team) |
@@ -111,7 +111,7 @@ next time." The label asks for a potassium check 4 weeks after starting, and say
 
 !!! danger "Do not wait for your appointment"
     Chest pain, severe breathlessness, a low the person cannot treat (give glucagon, then call 911),
-    ketones of 3.0 mmol/L or more, or a lab potassium of 6.5 or more: call 911 now. Potassium
+    ketones of 3.0 mmol/L or more, or a lab potassium of 6.5 mmol/L or more: call 911 now. Potassium
     6.0–6.4, ketones 1.6–2.9, vomiting or a missed dialysis session: call your team today.
     Full list: [Get help now](../get-help-now.md).
 

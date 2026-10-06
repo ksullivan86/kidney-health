@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DEPLOY, NOTE01, NOTE07, SECDOC, SECURITYMD, PODMAN-QUADLET, ARCH]
 ---
 

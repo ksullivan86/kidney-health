@@ -322,9 +322,9 @@ For one person for 7 days of the [Stages 4 and 5, no dialysis](menus/g4-g5.md) m
 - [ ] Sherbet, orange: 1 cup (148 g)
 - [ ] Vanilla wafers: 24 wafers (90 g)
 
-## In-centre hemodialysis
+## In-center hemodialysis
 
-For one person for 7 days of the [In-centre hemodialysis](menus/hemodialysis.md) menu. Amounts are what the menu serves; buy a little more for cooking loss (raw meat and fish shrink by about a quarter when cooked).
+For one person for 7 days of the [In-center hemodialysis](menus/hemodialysis.md) menu. Amounts are what the menu serves; buy a little more for cooking loss (raw meat and fish shrink by about a quarter when cooked).
 
 **Meat, Poultry & Eggs**
 

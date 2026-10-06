@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
 fact_checked: 2026-10-05
-sources: [JBDS, JBDS22, MHRA, EXTRANEAL, AK22, K09TX, PROGRAF, A26-6, A26-7, A26-9, K22, DEXCOM-G7, LIBRE-ISI, I22P]
+sources: [JBDS, JBDS22, MHRA, EXTRANEAL, AK22, K09TX, PROGRAF, A26-6, A26-7, A26-9, K22, DEXCOM-G7, LIBRE-ISI, I22P, NIDDK-Tx]
 ---
 
 # Insulin and glucose on dialysis and after a transplant
@@ -37,7 +37,7 @@ use a safe meter, and share your readings ([JBDS 2022][JBDS22]; [ADA–KDIGO 202
 - A1c is less reliable on dialysis, so your team leans on meter and CGM readings
   ([KDIGO 2022][K22], practice point 2.1.2; [A1c](../labs/a1c.md)).
 
-## Hemodialysis (in-centre or at home)
+## Hemodialysis (in-center or at home)
 
 **Your numbers**
 
@@ -99,8 +99,8 @@ UK guidance also says meters using glucose oxidase or GDH-PQQ should not be used
 dialysis ([JBDS 2022][JBDS22], recommendation 2.7). Check the strip box or ask your pharmacist which
 kind you have.
 
-**Before a colonoscopy or gynaecology procedure**, tell your PD unit: ISPD suggests antibiotics first
-([ISPD 2022][I22P]). Plan your insulin for the fasting day with your diabetes team.
+**Before a colonoscopy or gynecology procedure**, tell your PD unit: ISPD suggests antibiotics first,
+and draining your PD fluid so your belly is empty for the procedure ([ISPD 2022][I22P]). Plan your insulin for the fasting day with your diabetes team.
 
 ## After a kidney transplant
 
@@ -164,12 +164,13 @@ More on reading the reports: [CGM reports](../labs/cgm-metrics.md).
 - A low the person cannot treat themselves: **give glucagon and call 911** (or your local emergency
   number).
 - Blood ketones 3.0 mmol/L or more, or ketones with vomiting ([Sick days](sick-days.md)).
-- On PD: cloudy fluid or belly pain, call your PD unit today. After a transplant: fever over 100 °F
-  (37.8 °C), call your transplant center. See [Get help now](../get-help-now.md).
+- On PD: cloudy fluid or belly pain, call your PD unit the same day and keep the bag
+  ([ISPD 2022][I22P]). After a transplant: fever over 100 °F (37.8 °C), call your transplant center
+  right away ([NIDDK][NIDDK-Tx]; [After a transplant](../stages/after-transplant.md)). See [Get help now](../get-help-now.md).
 
 ## Related pages
 
-- [Hemodialysis in a centre](../stages/hemodialysis-in-centre.md) ·
+- [Hemodialysis in a center](../stages/hemodialysis-in-centre.md) ·
   [Home hemodialysis](../stages/home-hemodialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md) ·
   [After a transplant](../stages/after-transplant.md)
 - [Treating a low](treating-a-low.md) · [Sick days](sick-days.md) · [CGM reports](../labs/cgm-metrics.md)
@@ -181,7 +182,9 @@ More on reading the reports: [CGM reports](../labs/cgm-metrics.md).
 - [JBDS–Renal Association 2016][JBDS]: dialysate glucose, CGM lag, sensor start day.
 - [Extraneal (icodextrin) prescribing information][EXTRANEAL]; [MHRA: icodextrin and false glucose readings][MHRA].
 - [ADA–KDIGO 2022 consensus report][AK22]; [KDIGO 2022 diabetes in CKD guideline][K22]: practice point 2.1.2.
-- [ISPD 2022 peritonitis guideline][I22P]: antibiotics before colonoscopy or gynaecology procedures.
-- [KDIGO 2009 transplant recipient guideline][K09TX]: chapter 15; [Prograf (tacrolimus) prescribing information][PROGRAF].
+- [ISPD 2022 peritonitis guideline][I22P]: antibiotics and an empty abdomen before colonoscopy or
+  gynecology procedures; cloudy fluid.
+- [KDIGO 2009 transplant recipient guideline][K09TX]: chapter 15; [Prograf (tacrolimus) prescribing information][PROGRAF];
+  [NIDDK: kidney transplant][NIDDK-Tx]: fever.
 - [ADA Standards of Care 2026][A26-6] sections 6, [7][A26-7] (recommendation 7.20, Table 7.4) and [9][A26-9].
 - [Dexcom G7 user guide][DEXCOM-G7]; [Abbott FreeStyle Libre safety information][LIBRE-ISI].

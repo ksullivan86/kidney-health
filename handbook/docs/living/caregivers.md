@@ -72,15 +72,15 @@ parent with a serious health condition, which can be taken in short blocks
 
 ## Dialysis days and access checks
 
-- **In-centre hemodialysis** is usually three sessions a week of about 4 hours, at set times
+- **In-center hemodialysis** is usually three sessions a week of about 4 hours, at set times
   ([NIDDK][NIDDK-HD]). Help them get there: missed or shortened sessions are risky
-  ([In-centre hemodialysis](../stages/hemodialysis-in-centre.md)).
+  ([In-center hemodialysis](../stages/hemodialysis-in-centre.md)).
 - **Lows after dialysis** are common. Pack glucose tablets and a snack for the trip home
   ([Insulin on dialysis](../t1d/insulin-and-dialysis.md)).
 - **Access checks:** the person should feel the buzz (thrill) of a fistula or graft every day. Call the
   unit if it stops. Help them avoid blood pressure cuffs, blood draws, tight sleeves and heavy bags on
   that arm ([NKF][NKF-HDaccess]).
-- **Home dialysis:** most home hemodialysis programmes ask for a trained care partner. You will be
+- **Home dialysis:** most home hemodialysis programs ask for a trained care partner. You will be
   trained alongside the person ([NKF][NKF-HHD]). Ask about back-up plans and respite.
 
 ## Medicines
@@ -124,7 +124,7 @@ turn her on her side and call 911. When she wakes and can swallow, you give her 
 ([glucagon instructions][GLUCAGON-KIT]; [NIDDK][NIDDK-hypo]).
 
 **Burnout.** You have been the home dialysis partner for a year and feel exhausted. You tell the
-unit's social worker, who arranges some in-centre sessions for respite and puts you in touch with a
+unit's social worker, who arranges some in-center sessions for respite and puts you in touch with a
 peer mentor ([NKF][NKF-PEERS]).
 
 ## Ask the care team

@@ -1,6 +1,6 @@
 ---
-title: Haemoglobin and iron
-description: "Anaemia in kidney disease: the thresholds by sex, the iron tests, how often they are checked, the treatment order, transfusions before a transplant, and why treatment changes A1c."
+title: Hemoglobin and iron
+description: "Anemia in kidney disease: the thresholds by sex, the iron tests, how often they are checked, the treatment order, transfusions before a transplant, and why treatment changes A1c."
 slug: haemoglobin-and-iron
 audience: [patient]
 applies_to: [all]
@@ -12,16 +12,16 @@ fact_checked: 2026-10-05
 sources: [K26A, K22, DG55a, JBDS, JBDS22, MEDLINE-GIB, CFR494]
 ---
 
-# Haemoglobin and iron
+# Hemoglobin and iron
 
 ## In short
 
-Haemoglobin (Hb, Hgb) is the protein in red blood cells that carries oxygen. Healthy kidneys make a
+Hemoglobin (Hb, Hgb) is the protein in red blood cells that carries oxygen. Healthy kidneys make a
 hormone, erythropoietin (EPO), that tells the bone marrow to make red cells. With kidney disease there
-is less EPO and iron is harder to use, so **anaemia** (low haemoglobin) is common: more than half of
+is less EPO and iron is harder to use, so **anemia** (low hemoglobin) is common: more than half of
 people at stages G4–G5 have it ([KDIGO 2026 anemia][K26A]). It can cause tiredness, shortness of
 breath, poor sleep, headaches and "brain fog". Treatment starts with finding and fixing causes, then
-iron, then sometimes an injection that replaces EPO (an ESA). Anaemia and its treatment also change
+iron, then sometimes an injection that replaces EPO (an ESA). Anemia and its treatment also change
 your **A1c**, so A1c can mislead ([KDIGO 2022][K22]).
 
 ## Your numbers
@@ -30,7 +30,7 @@ your **A1c**, so A1c can mislead ([KDIGO 2022][K22]).
 
     | Test | What the guideline uses |
     |---|---|
-    | Haemoglobin: anaemia | under 13 g/dL in men; under 12 g/dL in women |
+    | Hemoglobin: anemia | under 13 g/dL in men; under 12 g/dL in women |
     | Ferritin (iron stores) | ng/mL |
     | TSAT (iron available to make red cells) | % |
     | Low iron in body stores ("systemic iron deficiency") | TSAT under 20 % with ferritin under 100 ng/mL, or under 200 ng/mL on hemodialysis |
@@ -44,7 +44,7 @@ your **A1c**, so A1c can mislead ([KDIGO 2022][K22]).
 
     | Test | What the guideline uses |
     |---|---|
-    | Haemoglobin: anaemia | under 130 g/L in men; under 120 g/L in women |
+    | Hemoglobin: anemia | under 130 g/L in men; under 120 g/L in women |
     | Ferritin (iron stores) | µg/L (the same number as ng/mL) |
     | TSAT (iron available to make red cells) | % |
     | Low iron in body stores ("systemic iron deficiency") | TSAT under 20 % with ferritin under 100 µg/L, or under 200 µg/L on hemodialysis |
@@ -58,12 +58,12 @@ All from [KDIGO 2026 anemia][K26A] (definitions; recommendations 2.1, 2.3, 3.2.1
 point 2.2). Not on dialysis, the Hb at which to start an ESA depends on your symptoms and on the risks
 of transfusion and of the ESA itself (recommendation 3.2.2).
 
-**Sex and age.** The anaemia thresholds differ by sex. Other cut-offs by age or ethnicity have been
+**Sex and age.** The anemia thresholds differ by sex. Other cut-offs by age or ethnicity have been
 proposed, but the WHO thresholds above are the ones used in kidney studies ([KDIGO 2026 anemia][K26A]).
 
 **How often** ([KDIGO 2026 anemia][K26A], Figure 5 and practice points 2.5, 3.4.3.2–3.4.3.3):
 
-| Situation | Haemoglobin checked at least |
+| Situation | Hemoglobin checked at least |
 |---|---|
 | Stage G3 | once a year |
 | Stage G4 | twice a year |
@@ -71,7 +71,7 @@ proposed, but the WHO thresholds above are the ones used in kidney studies ([KDI
 | Taking iron | Hb, ferritin and TSAT every 3 months; every 1–3 months on hemodialysis |
 | Starting or changing an ESA | every 2–4 weeks, then at least every 3 months |
 
-Anaemia testing includes a full blood count, reticulocytes, ferritin and TSAT ([KDIGO 2026 anemia][K26A],
+Anemia testing includes a full blood count, reticulocytes, ferritin and TSAT ([KDIGO 2026 anemia][K26A],
 practice point 1.2.1).
 
 ## Causes your team looks for
@@ -87,7 +87,7 @@ Low EPO is not the only cause. KDIGO asks teams to fix correctable causes **befo
 - after a transplant, some anti-rejection and blood pressure medicines.
 
 A very low ferritin (under 45 ng/mL) suggests bleeding somewhere, and may lead to a referral to a gut,
-gynaecology or urology specialist ([KDIGO 2026 anemia][K26A], practice point 1.2.3).
+gynecology or urology specialist ([KDIGO 2026 anemia][K26A], practice point 1.2.3).
 
 ## The treatment order
 
@@ -107,9 +107,9 @@ gynaecology or urology specialist ([KDIGO 2026 anemia][K26A], practice point 1.2
 
 This handbook gives no doses: your team sets them.
 
-## Anaemia changes your A1c
+## Anemia changes your A1c
 
-Anaemia, transfusions, ESAs and iron all make A1c read **lower** than your real average glucose,
+Anemia, transfusions, ESAs and iron all make A1c read **lower** than your real average glucose,
 mostly at stages G4–G5 and on dialysis ([KDIGO 2022][K22]; [Pecoits-Filho 2016][DG55a]). Iron
 deficiency can make it read **higher** ([JBDS–Renal Association][JBDS]; [JBDS 2022][JBDS22]). After any
 of these changes,
@@ -142,7 +142,7 @@ judge your glucose by your CGM or meter, not A1c alone ([A1c](a1c.md); [CGM metr
 
 ## Ask your care team
 
-1. Is my haemoglobin low for my sex? What is causing it?
+1. Is my hemoglobin low for my sex? What is causing it?
 2. What are my ferritin and TSAT? Do I need iron, and tablets or IV?
 3. Would an ESA help my symptoms, and what are the risks for me?
 4. I might have a transplant. How do we avoid transfusions?
@@ -178,5 +178,5 @@ judge your glucose by your CGM or meter, not A1c alone ([A1c](a1c.md); [CGM metr
 - [Pecoits-Filho 2016: kidney disease and diabetes][DG55a].
 - [JBDS–Renal Association guidance on diabetes and haemodialysis][JBDS]; [JBDS 2022 guidance on
   diabetes and dialysis][JBDS22]: HbA1c and iron deficiency.
-- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly haemoglobin.
+- [42 CFR 494.90: rules for US dialysis units][CFR494]: monthly hemoglobin.
 - [MedlinePlus: gastrointestinal bleeding][MEDLINE-GIB].

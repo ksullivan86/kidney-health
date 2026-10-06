@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [SECDOC, SECURITYMD, NOTE01, NOTE07, NOTE08, DEPLOY, SIGSTORE-VERIFY, K8S-NETPOL, GDPR]
 ---
 

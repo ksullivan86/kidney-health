@@ -1,6 +1,6 @@
 ---
 title: Choosing a treatment for kidney failure
-description: "Compare in-centre and home hemodialysis, peritoneal dialysis, transplant and conservative care side by side, with a planning timeline and questions to ask."
+description: "Compare in-center and home hemodialysis, peritoneal dialysis, transplant and conservative care side by side, with a planning timeline and questions to ask."
 slug: choosing-a-treatment
 audience: [patient, caregiver]
 applies_to: [G4, G5]
@@ -16,7 +16,7 @@ sources: [K24, NIDDK-choosing, K20TX, I20PD, MED-KDE, Q19VA, NIDDK-HD, NIDDK-PD,
 
 ## In short
 
-When kidneys fail, there are three paths: a **kidney transplant**, **dialysis** (at a centre or at
+When kidneys fail, there are three paths: a **kidney transplant**, **dialysis** (at a center or at
 home), or **comprehensive conservative care** (care without dialysis). All three are real choices,
 and your kidney team should explain each one to you ([KDIGO 2024][K24], practice points 5.5.1–5.5.2).
 No option is best for everyone. The right one fits your health, your daily life and what matters
@@ -40,7 +40,7 @@ it later ([NIDDK][NIDDK-choosing]).
 
 | | Time it takes | Diet and fluid | Travel and work | What you need at home |
 |---|---|---|---|---|
-| **In-centre hemodialysis** | Usually 3 sessions a week, about 4 hours each, plus travel, at set times | The most limits on fluid, potassium, phosphorus and sodium | Book a unit at your destination weeks ahead; a fixed schedule makes work harder | Nothing; no care partner needed |
+| **In-center hemodialysis** | Usually 3 sessions a week, about 4 hours each, plus travel, at set times | The most limits on fluid, potassium, phosphorus and sodium | Book a unit at your destination weeks ahead; a fixed schedule makes work harder | Nothing; no care partner needed |
 | **Home hemodialysis** | Standard, short daily (5–7 days a week) or overnight; training takes 3–8 weeks | Often more relaxed, because fluid is removed more often | You choose the time, which makes work easier; you can travel with a machine or book a unit | Space for a machine and supplies; usually a trained care partner |
 | **Peritoneal dialysis (PD)** | By hand: at least 4 exchanges a day, 30–40 minutes each (CAPD). By machine: 3–5 exchanges overnight (APD). Training takes 1–2 weeks | Fluid limits are often less strict; sodium and phosphorus still limited | Supplies can be shipped to where you are going; overnight PD leaves the day free | Storage for boxes of fluid; a cycler for APD; no partner needed once trained |
 | **Kidney transplant** | Surgery, then frequent clinic visits at first; anti-rejection medicines every day for life | The fewest limits | Most like life before kidney failure once things settle | Your medicines and a phone that is always on while you wait |
@@ -78,7 +78,7 @@ See [Insulin on dialysis](../t1d/insulin-and-dialysis.md) for more.
 - [ ] Ask your kidney team for your eGFR trend and your 2-year KFRE, so you know how much time you have.
 - [ ] If you have Medicare, ask your doctor to refer you for kidney disease education sessions.
 - [ ] Ask for a transplant referral now if your eGFR is under 30 ([Transplant referral](transplant-referral.md)).
-- [ ] Visit a dialysis unit. Ask to talk with people who use home hemodialysis, PD and in-centre
+- [ ] Visit a dialysis unit. Ask to talk with people who use home hemodialysis, PD and in-center
       hemodialysis, and with someone who has had a transplant ([NIDDK][NIDDK-choosing]).
 - [ ] Write down what matters most to you: work, travel, family time, independence, or fewer hospital trips.
 - [ ] Bring a family member or friend to the education sessions. They may become your care partner.
@@ -95,12 +95,12 @@ testing. In case dialysis comes first, she chooses overnight PD, so her days sta
 catheter goes in a few weeks before she needs it.
 
 **Someone who wants others to run the machine.** A 60-year-old man lives alone and does not want
-supplies in his small flat. In-centre hemodialysis three mornings a week suits him. He asks the unit
+supplies in his small flat. In-center hemodialysis three mornings a week suits him. He asks the unit
 for an early slot so he can keep his part-time job.
 
 **An older person with other serious illnesses.** An 84-year-old woman with heart failure is tired
 and wants to stay at home with her family. After talking it through with her team, she chooses
-conservative care. Her team keeps treating her anaemia, itch and poor appetite, and she makes an
+conservative care. Her team keeps treating her anemia, itch and poor appetite, and she makes an
 advance care plan ([Advance care planning](advance-care-planning.md)).
 
 **Your rights at a US dialysis unit.** A US dialysis unit must tell you about every treatment,
@@ -133,7 +133,7 @@ offer ([42 CFR 494.70][CFR494]).
 - [Dialysis access](dialysis-access.md) · [Transplant referral](transplant-referral.md) ·
   [Advance care planning](advance-care-planning.md)
 - [Stage G4](../stages/g4.md) · [Stage G5 without dialysis](../stages/g5-without-dialysis.md) ·
-  [In-centre hemodialysis](../stages/hemodialysis-in-centre.md) ·
+  [In-center hemodialysis](../stages/hemodialysis-in-centre.md) ·
   [Home hemodialysis](../stages/home-hemodialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md) ·
   [Before a transplant](../stages/before-transplant.md)
 - [Costs and benefits](../living/costs-and-benefits.md) · [Working](../living/work.md) ·

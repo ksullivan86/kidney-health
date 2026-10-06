@@ -41,7 +41,7 @@ whatever you choose.
 |---|---|
 | Calcium and phosphate | every 1–3 months |
 | PTH | every 3–6 months |
-| Haemoglobin and iron | about every 3 months |
+| Hemoglobin and iron | about every 3 months |
 | Check for undernutrition (weight, appetite) | twice a year |
 | Potassium, bicarbonate, eGFR | often; your team sets the timing |
 
@@ -79,7 +79,7 @@ Tell your team about these at every visit, or sooner if they are new or getting 
 Comprehensive conservative care is planned, whole-person care for kidney failure **without
 dialysis**. It includes slowing kidney damage, active treatment of symptoms, shared decisions,
 advance care planning, and psychological, social, family and spiritual support
-([KDIGO 2015 supportive care][K15SC]). It also treats problems such as anaemia, and what you eat and
+([KDIGO 2015 supportive care][K15SC]). It also treats problems such as anemia, and what you eat and
 drink may help you feel better ([NIDDK][NIDDK-conservative]). People who want to focus on quality of
 life may choose it, especially those who are frail or have other serious illnesses
 ([NIDDK][NIDDK-conservative]). KDIGO asks for advance care planning support for people who choose it

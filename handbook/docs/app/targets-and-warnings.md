@@ -8,7 +8,8 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
-sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, FDC]
+fact_checked: 2026-10-05
+sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, A26-11, FDC, MEDLINE-K]
 ---
 
 # Targets and warnings
@@ -22,20 +23,20 @@ Every food and log entry gets `medium` or `high` warnings per serving:
 
 | Nutrient | Medium | High | Why |
 |---|---|---|---|
-| Potassium | 101–200 mg | over 200 mg | NKF's 200 mg "high" line ([NKF][DG5]) |
+| Potassium | 101–200 mg | over 200 mg | NKF calls a food with 200 mg or more per serving "high" ([NKF][DG5]); a food with exactly 200 mg shows yellow in the app |
 | Phosphorus | 101–150 mg | over 150 mg, **or any food with a phosphate additive** | additive phosphorus is almost fully absorbed and under-counted in databases ([NKF][DG20]; [Kalantar-Zadeh 2010][DG12]; [St-Jules 2017][DG15]) |
 | Sodium | 141–400 mg | over 400 mg | FDA "low sodium" is 140 mg or less ([FDA][DG34]) |
-| Carbohydrate | 15–30 g (1–2 carb choices) | over 30 g, or a high-glycaemic food with 15 g or more | type 1 carb counting |
+| Carbohydrate | 15–30 g (1–2 carb choices) | over 30 g, or a high-glycemic food with 15 g or more | type 1 carb counting |
 | Protein | 15–25 g | over 25 g | a large portion for a limited intake |
 
-- The high-glycaemic flag only raises a warning to "high" from one carb choice (15 g) up, so a
-  tablespoon of ketchup or one slice of white bread is not red for glycaemic index alone.
+- The high-glycemic flag only raises a warning to "high" from one carb choice (15 g) up, so a
+  tablespoon of ketchup or one slice of white bread is not red for glycemic index alone.
 - **Star fruit** always rates high, with a note explaining why.
 - **Hypo treatments** (glucose tablets, measured juice) get **no carbohydrate warning**: fast
   carbohydrate is the point of treating a low. Their potassium, phosphorus and sodium warnings still
   show, so the lowest-potassium rescue can be chosen. Low treatments are never blocked or warned
   against ([Treating a low](../t1d/treating-a-low.md)).
-- The colour: **red** if any warning is high, **yellow** if any is medium, otherwise **green**.
+- The color: **red** if any warning is high, **yellow** if any is medium, otherwise **green**.
 
 ## Your day
 
@@ -49,14 +50,14 @@ blocked or warned against.
 - **Potassium, sodium, fluid and carbohydrate** are judged **per day**.
 - **Phosphorus, protein, calories and calcium** are judged on the **weekly average**, compared with the
   previous period ([KDOQI 2020][Q20]).
-- With hemodialysis days set, potassium, sodium and fluid are also totalled **since the last session**
+- With hemodialysis days set, potassium, sodium and fluid are also totaled **since the last session**
   against your per-day target × days, so the long weekend gap is visible ([Cabrera 2015][DG28a];
   [Foley 2011][DG53]). See [Dialysis days](../eat/dialysis-days.md).
 
 ## Suggested targets
 
 "Suggest targets" in your profile fills in starting values from the same table as
-[Eating well](../eat/index.md#your-numbers), labelled "discuss with your care team":
+[Eating well](../eat/index.md#your-numbers), labeled "discuss with your care team":
 
 - **Weight basis:** "per kg" means per kg of a reference weight. With a saved height the app uses your
   weight when your BMI is in the healthy range and adjusts it towards that range when it is not;
@@ -67,13 +68,17 @@ blocked or warned against.
   hemodialysis) and 3,500 (peritoneal dialysis), always with the note *"Only restrict potassium if
   your blood potassium is high; your care team sets the number."*
 - **Phosphorus** 1,000 mg (stages 1–4 and both dialysis types), 900 mg at stage 5 before dialysis.
-- **Protein** 0.8–1.0 g/kg at stages 1–2; **0.8 g/kg at stages 3–5 with diabetes** ("about X g/day");
-  1.0–1.2 g/kg on dialysis ([design note 05][NOTE05]).
-- **Energy** 30 kcal/kg, with **carbohydrate** at 45 % of calories, split per meal.
+- **Protein** 0.8–1.0 g/kg at stages 1–2; 1.0–1.2 g/kg on dialysis. At stages 3–5 before dialysis,
+  today's app shows a range of 0.6–0.8 g/kg. **Coming in v0.3:** with diabetes it suggests 0.8 g/kg
+  ("about X g/day") and never less, because guidelines advise against going below 0.8 g/kg with
+  diabetes ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1; [design note 05][NOTE05]).
+  Until then, treat the lower number as something only your team can prescribe.
+- **Energy** 30 kcal/kg, with **carbohydrate** at 45 % of calories, split per meal. The 45 % is the app's
+  default: there is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13).
 - **Fluid** not tracked before dialysis; 1,500 mL on hemodialysis (1,000 mL plus an assumed 500 mL of
   urine) and 2,000 mL on peritoneal dialysis.
 
-## Personalised targets (coming in v0.3)
+## Personalized targets (coming in v0.3)
 
 Version 0.3 adds optional details in **Profile → About you** and a **Labs** screen. "Suggest targets"
 then starts from you rather than from a 70 kg example ([design note 05][NOTE05]). Which detail changes
@@ -113,12 +118,12 @@ Other v0.3 changes:
 
 - **Calories** use your age, sex, height and activity, kept inside KDOQI's 25–35 kcal per kg, and are
   rounded to 10 kcal ([KDOQI 2020][Q20], 3.1.1). Without age and height the app keeps 30 kcal/kg.
-- **Protein** goes up, not down, from age 65 or with signs of poor nutrition (low albumin, weight loss
-  over 5 % in 6 months, frailty): 0.8–1.0 g/kg at stages 3–5 before dialysis, 1.0–1.2 g/kg at stages
+- **Protein** goes up, not down, from age 65 or with signs of poor nutrition (albumin below 3.8 g/dL
+  (38 g/L), weight loss over 5 % in 6 months, a low BMI, or frailty): 0.8–1.0 g/kg at stages 3–5 before dialysis, 1.0–1.2 g/kg at stages
   1–2, and 1.2–1.3 g/kg on dialysis with nutrition risk ([design note 05][NOTE05]).
 - **Fluid** on hemodialysis is 1,000 mL plus your 24-hour urine output; on peritoneal dialysis, urine
   output plus the fluid your exchanges remove.
-- **Fibre** gets a goal of at least 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24).
+- **Fiber** gets a goal of at least 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24).
 - No starting targets during pregnancy or breastfeeding, under age 18, or in the first 12 weeks after a
   transplant.
 
@@ -140,7 +145,7 @@ What the app shows for some builtin foods, per serving ([USDA FoodData Central][
 | White bread, 1 slice (29 g) | 37 mg | 28 mg | 142 mg | 14 g | **yellow**: sodium 141–400 mg, quick-acting carbohydrate |
 | Cola, regular, 12 fl oz can | 18 mg | 33 mg | 11 mg | 38 g | **red**: phosphate additive, and over 30 g carbohydrate |
 | Apple juice, ½ cup, logged as a low treatment | 125 mg | 9 mg | 5 mg | 14 g | **yellow**: potassium only; no carbohydrate warning |
-| Glucose gel, 1 tube | 0 mg | 0 mg | 0 mg | 15 g | **green**: the lowest-potassium way to treat a low |
+| Glucose gel, 1 tube | 0 mg | 0 mg | 0 mg | 15 g | **green**: no potassium at all, like glucose tablets |
 
 A red rating is not a ban. It tells you to check the portion and the rest of your day. Rice is red only
 because of its carbohydrate, which you count for insulin; for your kidneys it is a low-potassium choice.
@@ -148,14 +153,15 @@ because of its carbohydrate, which you count for insulin; for your kidneys it is
 ## Get help now if…
 
 !!! danger "Call 911 (or your local emergency number)"
-    Your lab potassium is **6.5 mmol/L or more**, or you have chest pain, fainting, a very slow or
-    irregular pulse, or sudden severe weakness and your potassium has been high
-    ([KDIGO 2024][K24], Table 28).
+    Your lab potassium is **6.5 mmol/L or more** ([KDIGO 2024][K24], Table 28), or you have chest pain,
+    fainting, a very slow, weak or irregular pulse, or sudden severe weakness, especially if your
+    potassium has been high ([MedlinePlus][MEDLINE-K]).
 
 !!! warning "Call your care team today"
-    A potassium of **6.0–6.4 mmol/L**: KDIGO advises a repeat test within 24 hours, or care in hospital if
-    you feel unwell ([KDIGO 2024][K24], Table 28). The app's day status is about food, not blood levels;
-    a "green" day does not mean your blood potassium is safe. Full list: [Get help now](../get-help-now.md).
+    A potassium of **6.0–6.4 mmol/L**: if you feel unwell, go to hospital **now** to be checked and
+    treated; if you feel well, call your team today for a repeat test within 24 hours
+    ([KDIGO 2024][K24], Table 28). The app's day status is about food, not blood levels; a "green" day
+    does not mean your blood potassium is safe. Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 
@@ -166,10 +172,12 @@ because of its carbohydrate, which you count for insulin; for your kidneys it is
 ## Sources
 
 - [Project architecture contract][ARCH]: nutrient registry, thresholds, daily status, suggested targets.
-- [Design note 05][NOTE05]: personalised targets (v0.3).
+- [Design note 05][NOTE05]: personalized targets (v0.3).
 - [NKF: potassium][DG5]; [NKF: phosphorus][DG20]; [FDA: sodium in your diet][DG34].
 - [Kalantar-Zadeh 2010][DG12]; [St-Jules 2017][DG15].
 - [KDOQI 2020 nutrition guideline][Q20]; [Cabrera 2015][DG28a]; [Foley 2011][DG53].
-- [KDIGO 2024 CKD guideline][K24], Table 28 (action levels for high potassium).
-- [ADA Standards of Care 2026, section 5][A26-5], Rec 5.24 (fibre).
+- [KDIGO 2024 CKD guideline][K24], Table 28 (action levels for high potassium) and Rec 3.3.1.1 (protein);
+  [MedlinePlus: high potassium level][MEDLINE-K] (warning signs).
+- [ADA Standards of Care 2026, section 11][A26-11], Rec 11.3 (protein with diabetes and CKD).
+- [ADA Standards of Care 2026, section 5][A26-5], Rec 5.13 (no ideal carbohydrate share) and Rec 5.24 (fiber).
 - [USDA FoodData Central][FDC]: the food values in the examples.

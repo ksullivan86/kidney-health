@@ -28,7 +28,7 @@ the veins in your arms** from stage G3 on, and check your access every day.
 |---|---|---|---|
 | **Fistula** | Weeks to several months; your team checks how it is growing about 4–6 weeks after surgery | Lowest | [NIDDK][NIDDK-HD]; [KDOQI][Q19VA] 10.1 |
 | **Graft** | Often soon after surgery | Higher than a fistula; more clotting | [NIDDK][NIDDK-HD]; [NKF][NKF-HDaccess] |
-| **Catheter** (tunnelled under the skin) | Right away | Highest; meant as a bridge when possible | [KDOQI][Q19VA] 2.3, 2.6, 2.10 |
+| **Catheter** (tunneled under the skin) | Right away | Highest; meant as a bridge when possible | [KDOQI][Q19VA] 2.3, 2.6, 2.10 |
 | **PD catheter** | Placed at least 2 weeks before PD is needed; works best after 10–20 days of healing | Exit-site infection and peritonitis | [KDOQI][Q19VA] 6.8; [NIDDK][NIDDK-PD] |
 
 **When to plan:** KDOQI suggests referral for an access when your eGFR is **15–20**, or sooner if it is
@@ -122,7 +122,7 @@ one in good time; this is part of your written plan of care ([42 CFR 494.90][CFR
 
 ## Related pages
 
-- [Choosing a treatment](choosing-a-treatment.md) · [In-centre hemodialysis](../stages/hemodialysis-in-centre.md) ·
+- [Choosing a treatment](choosing-a-treatment.md) · [In-center hemodialysis](../stages/hemodialysis-in-centre.md) ·
   [Home hemodialysis](../stages/home-hemodialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
 - [Stage G4](../stages/g4.md) · [Exercise](../living/exercise.md) (access-arm cautions) ·
   [Wallet cards](../reference/wallet-card.md)

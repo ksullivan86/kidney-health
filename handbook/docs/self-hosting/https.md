@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [HTTPSDOC, NOTE02, MDN-SECURE, LE-LIFETIMES, TS-HTTPS, APPLE-TRUST, APPLE-TLS, RFC8375, SECDOC]
 ---
 

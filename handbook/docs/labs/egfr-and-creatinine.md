@@ -176,7 +176,7 @@ eGFR on its own is rarely urgent, but a fast fall can come with warning signs.
     6.5 mmol/L or more ([KDIGO 2024][K24], Table 28). See [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
-    Much less urine than usual, new swelling, or vomiting or diarrhoea so you cannot keep fluids down
+    Much less urine than usual, new swelling, or vomiting or diarrhea so you cannot keep fluids down
     (start your [sick-day plan](../t1d/sick-days.md)). Also call if a result shows eGFR fell by more
     than 20 % with no clear reason ([KDIGO 2024][K24], practice point 2.1.3).
 

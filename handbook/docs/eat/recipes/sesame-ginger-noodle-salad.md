@@ -16,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a]
 
 # Sesame-ginger noodle salad with chicken
 
-Takeout noodles can carry more than a day's sodium. This version gets its flavour from toasted sesame oil, fresh ginger, garlic and vinegar, and uses only 2 teaspoons of reduced-sodium soy sauce for two people. Cabbage, red pepper and cucumber add crunch and stay on the lower-potassium list.
+Takeout noodles can carry more than a day's sodium. This version gets its flavor from toasted sesame oil, fresh ginger, garlic and vinegar, and uses only 2 teaspoons of reduced-sodium soy sauce for two people. Cabbage, red pepper and cucumber add crunch and stay on the lower-potassium list.
 
 **Serves 2** · 20 minutes · Lower potassium · Lower phosphorus · Dialysis-friendly · Make ahead
 
@@ -27,7 +27,7 @@ Takeout noodles can carry more than a day's sodium. This version gets its flavou
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 442 kcal | 51 g | 22.0 g | 398 mg | 208 mg | 215 mg | none | 4.3 g |
 

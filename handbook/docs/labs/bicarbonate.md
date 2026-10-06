@@ -87,7 +87,7 @@ emergency department if you cannot reach them quickly or you are vomiting; 3.0 o
 care ([NHS][NHS-DKA]; [ADA][ADAK]; [Sick days](../t1d/sick-days.md)). With kidney failure, ketone
 readings in DKA can be lower than usual, so symptoms such as vomiting, belly pain, deep breathing or
 drowsiness count even when the meter reads under 3.0 ([2024 consensus][HC24], Table 4;
-[JBDS 2022][JBDS22]). A low bicarbonate does leave less buffer: ketoacidosis and diarrhoea both lower
+[JBDS 2022][JBDS22]). A low bicarbonate does leave less buffer: ketoacidosis and diarrhea both lower
 bicarbonate further ([MedlinePlus][MEDLINE-CO2]).
 
 ## What to do
@@ -136,7 +136,7 @@ bicarbonate further ([MedlinePlus][MEDLINE-CO2]).
 
 !!! warning "Call your care team today"
     Blood ketones **1.6–2.9 mmol/L** without vomiting: call your diabetes team now, not later in the
-    day ([NHS][NHS-DKA]). Also call for diarrhoea, or new swelling or higher blood pressure after
+    day ([NHS][NHS-DKA]). Also call for diarrhea, or new swelling or higher blood pressure after
     starting bicarbonate tablets ([KDIGO 2024][K24], practice point 3.10.2).
 
 ## Related pages

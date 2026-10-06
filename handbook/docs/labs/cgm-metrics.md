@@ -162,8 +162,9 @@ Most CGM apps can make an **AGP** (ambulatory glucose profile) report: a one-pag
 
 ## Related pages
 
-- [A1c](a1c.md) · [Haemoglobin and iron](haemoglobin-and-iron.md) · [Reading your lab results](index.md)
+- [A1c](a1c.md) · [Hemoglobin and iron](haemoglobin-and-iron.md) · [Reading your lab results](index.md)
 - [Treating a low](../t1d/treating-a-low.md) · [Insulin and dialysis](../t1d/insulin-and-dialysis.md) · [Peritoneal dialysis](../stages/peritoneal-dialysis.md)
+- [Sleep and night-time lows](../living/sleep.md)
 
 ## Sources
 

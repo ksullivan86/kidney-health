@@ -45,7 +45,7 @@ To convert, multiply g/dL by 10 to get g/L.
 
 **Lab methods differ.** Labs measure albumin in different ways. On hemodialysis the bromocresol green
 method tends to read high and the bromocresol purple method low. In a Dutch study of about 500 people on
-hemodialysis, centres using the purple method reported an average albumin of 34.5 g/L and centres using
+hemodialysis, centers using the purple method reported an average albumin of 34.5 g/L and centers using
 the green method 40.3 g/L ([de Roij van Zuijdewijn 2018][ALB18]). So a result that counts as "low" at
 one lab may count as "normal" at another. Ask which method your lab uses, and compare results from the
 same lab.
@@ -127,7 +127,7 @@ A low albumin is not an emergency on its own.
     flat. See [Get help now](../get-help-now.md).
 
 !!! warning "Call your care team today"
-    You are eating much less than usual, you have vomiting or diarrhoea (check your ketones and start
+    You are eating much less than usual, you have vomiting or diarrhea (check your ketones and start
     your [sick-day plan](../t1d/sick-days.md)), or you have new swelling or sudden weight gain.
 
 ## Related pages

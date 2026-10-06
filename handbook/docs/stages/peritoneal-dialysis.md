@@ -46,7 +46,7 @@ so your diabetes plan needs review.
 |---|---|
 | Calcium and phosphate | every 1–3 months |
 | PTH | every 3–6 months |
-| Haemoglobin and iron | about every 3 months |
+| Hemoglobin and iron | about every 3 months |
 | Dialysis clearance (Kt/V), blood pressure, fluid and nutrition | at clinic visits |
 
 There is **no single clearance number** that proves PD is enough. If your symptoms, nutrition and fluid
@@ -68,7 +68,7 @@ how you feel, not only lab numbers ([ISPD 2020][I20PD]).
   ([ISPD 2022][I22P]).
 - If you have pets, ask your unit which extra precautions to take: ISPD recommends them
   ([ISPD 2022][I22P]).
-- Tell your PD unit **before** a colonoscopy or a gynaecology procedure: ISPD suggests antibiotics
+- Tell your PD unit **before** a colonoscopy or a gynecology procedure: ISPD suggests antibiotics
   beforehand ([ISPD 2022][I22P]).
 - Low blood potassium may raise the risk of peritonitis, so do not cut potassium unless your blood
   test says so ([ISPD 2022][I22P]).

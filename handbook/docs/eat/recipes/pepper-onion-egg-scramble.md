@@ -16,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a]
 
 # Pepper and onion egg-white scramble on toast
 
-Egg whites give protein with almost no phosphorus: 6 whites have about 22 g protein and 30 mg phosphorus. One whole egg keeps the colour and flavour. This breakfast suits dialysis days, when you need more protein.
+Egg whites give protein with almost no phosphorus: 6 whites have about 22 g protein and 30 mg phosphorus. One whole egg keeps the color and flavor. This breakfast suits dialysis days, when you need more protein.
 
 **Serves 2** · 15 minutes · Lower potassium · Lower phosphorus · Dialysis-friendly · Vegetarian
 
@@ -27,7 +27,7 @@ Egg whites give protein with almost no phosphorus: 6 whites have about 22 g prot
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 370 kcal | 34 g | 23.0 g | 421 mg | 188 mg | 523 mg | none | 2.9 g |
 

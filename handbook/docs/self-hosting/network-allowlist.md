@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [ALLOWLIST, NOTE01, NOTE03, NOTE04, NOTE08, SECDOC, K8S-NETPOL, OFF-API, FDC-API]
 ---
 

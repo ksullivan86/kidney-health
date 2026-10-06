@@ -547,7 +547,7 @@ def _check_day(d: DayResult, limits: dict) -> None:
         d.problems.append(f"energy {tot['calories_kcal']:.0f} kcal outside {lo:.0f}–{hi:.0f}")
     fib = limits.get("fiber_per_1000_kcal")
     if fib and tot["fiber_g"] + 1e-9 < float(fib) * tot["calories_kcal"] / 1000:
-        d.problems.append(f"fibre {tot['fiber_g']:.1f} g under {fib:g} g per 1,000 kcal "
+        d.problems.append(f"fiber {tot['fiber_g']:.1f} g under {fib:g} g per 1,000 kcal "
                           f"({float(fib) * tot['calories_kcal'] / 1000:.1f} g)")
     clo, chi = limits["carbs_per_meal_g"]
     slo, shi = limits["snack_carbs_g"]
@@ -605,12 +605,12 @@ def render_menu_page(res: MenuResult, person: dict, last_checked: str, fact_chec
     out.append(f"| Carbohydrate | about {spec['carbs_per_meal_g']} g at each main meal (every meal "
                f"{clo:g}–{chi:g} g); snacks {lim['snack_carbs_g'][0]:g}–{lim['snack_carbs_g'][1]:g} g |")
     if lim.get("fiber_per_1000_kcal"):
-        out.append(f"| Fibre | at least {lim['fiber_per_1000_kcal']:g} g per 1,000 kcal |")
+        out.append(f"| Fiber | at least {lim['fiber_per_1000_kcal']:g} g per 1,000 kcal |")
     out.append("")
     if spec.get("rules"):
         out += ["Also: " + "; ".join(RULE_TEXT[r] for r in spec["rules"]) + ".", ""]
     out += ["## Week at a glance", "",
-            "| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fibre g |",
+            "| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fiber g |",
             "|---|---|---|---|---|---|---|---|---|"]
     for d in res.days:
         tt = d.totals
@@ -867,7 +867,7 @@ def render_recipe_page(res: RecipeResult, data: dict, last_checked: str) -> str:
            + spec["carb_note"].strip(), "",
            "## Per serving", "",
            '<div class="kh-numbers" markdown>', "",
-           "| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |",
+           "| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |",
            "|---|---|---|---|---|---|---|---|",
            f"| {fmt_int(per['calories_kcal'])} kcal | {fmt_int(per['carbs_g'])} g | {fmt_1(per['protein_g'])} g | "
            f"{fmt_int(per['potassium_mg'])} mg | {fmt_int(per['phosphorus_mg'])} mg | {fmt_int(per['sodium_mg'])} mg | "

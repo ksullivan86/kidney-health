@@ -16,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a]
 
 # Cinnamon-sugar popcorn
 
-Plain popcorn is a whole grain with fibre and very little potassium or sodium. Microwave popcorn usually comes salted; popping your own lets you skip the salt and choose the flavour. A serving is 3 cups.
+Plain popcorn is a whole grain with fiber and very little potassium or sodium. Microwave popcorn usually comes salted; popping your own lets you skip the salt and choose the flavor. A serving is 3 cups.
 
 **Serves 2** · 5 minutes · Lower potassium · Lower phosphorus · Vegetarian
 
@@ -27,7 +27,7 @@ Plain popcorn is a whole grain with fibre and very little potassium or sodium. M
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 162 kcal | 23 g | 3.2 g | 83 mg | 88 mg | 3 mg | none | 3.8 g |
 

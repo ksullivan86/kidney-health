@@ -23,7 +23,7 @@ some people, and treatment can slow it ([NIDDK][NIDDK-whatis]). Each page says w
 stage, the numbers that matter, what to do this week, and when to get help.
 
 These pages are written for **adults**. Children and teenagers with kidney disease should be cared
-for by a paediatric kidney team, and some adult advice, such as limiting protein, does not apply to
+for by a pediatric kidney team, and some adult advice, such as limiting protein, does not apply to
 them ([KDIGO 2024][K24], practice points 3.3.1.4 and 5.1.2).
 
 ## Find your page
@@ -47,7 +47,7 @@ mL/min/1.73 m². The stage is set by results that last **more than 3 months**, n
 
 | You are… | Your page |
 |---|---|
-| on hemodialysis at a dialysis centre | [In-centre hemodialysis](hemodialysis-in-centre.md) |
+| on hemodialysis at a dialysis center | [In-center hemodialysis](hemodialysis-in-centre.md) |
 | on hemodialysis at home (standard, short daily or overnight) | [Home hemodialysis](home-hemodialysis.md) |
 | on peritoneal dialysis (CAPD by hand, or APD with a night cycler) | [Peritoneal dialysis](peritoneal-dialysis.md) |
 | being assessed for, or waiting for, a kidney or pancreas-kidney transplant | [Before a kidney transplant](before-transplant.md) and your current stage or dialysis page |

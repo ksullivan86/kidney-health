@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE02, WEBKIT-26, CHROME-PWA, MDN-SECURE]
 ---
 

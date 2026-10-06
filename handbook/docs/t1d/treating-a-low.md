@@ -54,7 +54,7 @@ insulin and make less glucose ([Pecoits-Filho 2016][DG55a]).
       **but take the full 15 g** if the low came with exercise or after a meal bolus that was too big
       for what you ate, and follow the amount your team has written down for you.
 - [ ] Do not use high-fat or high-protein foods (chocolate, milk, peanut butter) for the first
-      treatment: they slow it down.
+      treatment: fat slows the rise in glucose, and protein does not raise it ([ADA 2026 §6][A26-6]).
 - [ ] **Recheck in 15 minutes.** Still low? Take another 15 g.
 - [ ] If your next meal is more than an hour away, have a snack once you are back in range
       ([NIDDK][NIDDK-hypo]).
@@ -135,13 +135,14 @@ from the unit, and to choose one that fits your fluid, potassium and phosphate l
 
 - [How kidney disease changes type 1 diabetes](index.md) · [Sick days](sick-days.md) ·
   [Insulin on dialysis](insulin-and-dialysis.md) · [CGM reports](../labs/cgm-metrics.md)
-- [Fluid](../eat/fluid.md) · [Potassium](../eat/potassium.md) · [Wallet cards](../reference/wallet-card.md)
+- [Fluid](../eat/fluid.md) · [Potassium](../eat/potassium.md) · [Wallet cards](../reference/wallet-card.md) ·
+  [Lows at night](../living/sleep.md#night-time-lows)
 - In the app: [Targets and warnings](../app/targets-and-warnings.md) (low treatments are never
   warned against or blocked) · [Logging food](../app/logging.md)
 
 ## Sources
 
-- [ADA Standards of Care 2026, section 6][A26-6]: hypoglycaemia levels; recommendations 6.11, 6.15, 6.16;
+- [ADA Standards of Care 2026, section 6][A26-6]: hypoglycemia levels; recommendations 6.11, 6.15, 6.16;
   15 g for most people and 5–10 g on automated insulin delivery, except with exercise or an
   overestimated meal bolus.
 - [NIDDK: low blood glucose][NIDDK-hypo]; [NIDDK: healthy eating for adults with CKD][DG4] (juice choices).

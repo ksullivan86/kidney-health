@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE08, MATERIAL, MKDOCS]
 ---
 
@@ -115,6 +116,9 @@ NKF, AKF, DaVita or the ADA, or adapt KDIGO tables and figures.
    against the sources, then sets `status: reviewed`, `reviewed_by` and `reviewed_on`; the draft
    banner then disappears.
 3. The review log on the About page gets a line.
+
+Handbook text is licensed CC BY-NC-SA 4.0 and the code PolyForm Noncommercial 1.0.0; see
+[Licences](../reference/licences.md). The full contributor guide is `handbook/README.md`.
 
 ## Sources
 

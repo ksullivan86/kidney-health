@@ -16,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a]
 
 # Cinnamon apple Cream of Wheat
 
-Cream of Wheat is one of the lowest-potassium and lowest-phosphorus hot cereals: a cup has about 40 mg potassium, against about 164 mg in a cup of oatmeal. Diced apple and cinnamon give it sweetness and a little fibre without the potassium of a banana.
+Cream of Wheat is one of the lowest-potassium and lowest-phosphorus hot cereals: a cup has about 40 mg potassium, against about 164 mg in a cup of oatmeal. Diced apple and cinnamon give it sweetness and a little fiber without the potassium of a banana.
 
 **Serves 2** · 10 minutes · Lower potassium · Lower phosphorus · Vegetarian
 
@@ -27,7 +27,7 @@ Cream of Wheat is one of the lowest-potassium and lowest-phosphorus hot cereals:
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 222 kcal | 38 g | 3.8 g | 103 mg | 45 mg | 18 mg | none | 3.1 g |
 

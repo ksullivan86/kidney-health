@@ -412,6 +412,33 @@ EMA-PSE:
   note: "Must not be used by people with severe or uncontrolled high blood pressure or severe acute or chronic kidney disease or kidney failure; rare risks of PRES and RCVS (reduced blood supply to the brain)."
 
 # ---------------------------------------------------------------- NKF topic pages
+NKF-NUT15:
+  cite: "National Kidney Foundation. Nutrition and kidney disease, stages 1–5 (not on dialysis) (last updated 18 March 2024)."
+  short: "NKF: nutrition in kidney disease stages 1–5"
+  url: https://www.kidney.org/kidney-topics/nutrition-and-kidney-disease-stages-1-5-not-dialysis
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Says over-the-counter vitamin and mineral supplements may contain too much phosphorus and potassium; check with your provider before any non-prescription product; avoid herbal supplements."
+FDA-PE:
+  cite: "US Food and Drug Administration. FDA proposes ending use of oral phenylephrine as OTC monograph nasal decongestant active ingredient after extensive review (press announcement, 7 November 2024)."
+  short: "FDA: oral phenylephrine proposed order"
+  url: https://www.fda.gov/news-events/press-announcements/fda-proposes-ending-use-oral-phenylephrine-otc-monograph-nasal-decongestant-active-ingredient-after
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Oral phenylephrine is not effective as a nasal decongestant; the proposal is based on effectiveness, not safety; still a proposed order on 2026-10-06 (products may still be sold); nasal sprays are not affected."
+DECONGEST-LABELS:
+  cite: "Kenvue. Drug Facts labels (DailyMed): Sudafed Sinus Congestion (pseudoephedrine), Sudafed PE Sinus Congestion (phenylephrine) and Sudafed PE Head Congestion + Pain (ibuprofen and phenylephrine)."
+  short: "Sudafed and Sudafed PE Drug Facts labels"
+  url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=c05d7e27-6821-468f-b27d-9c0b02a07b0f
+  also:
+    - https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=2ca08917-1a75-4365-8520-c083e6a4225a
+    - https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=76513fb2-7323-4f1f-8a10-92f8f603cf97
+  licence: "Product label: quote at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Both single-ingredient labels: ask a doctor before use if you have heart disease, high blood pressure, thyroid disease, diabetes or trouble urinating. The Head Congestion + Pain product combines an NSAID (ibuprofen) with phenylephrine and adds kidney disease to the ask-a-doctor list."
 NKF-eGFR:
   cite: "National Kidney Foundation. Estimated glomerular filtration rate (eGFR)."
   short: "NKF: eGFR"
@@ -1174,7 +1201,7 @@ DG40:
   dg: [40]
 DG44:
   cite: "Severe symptomatic hypermagnesemia associated with over-the-counter laxatives in a patient with renal failure. Case Rep Nephrol 2014."
-  short: "Hypermagnesaemia from OTC laxatives (case report)"
+  short: "Hypermagnesemia from OTC laxatives (case report)"
   url: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3914018/
   licence: "Open access: cite and paraphrase"
   checked: 2026-10-05

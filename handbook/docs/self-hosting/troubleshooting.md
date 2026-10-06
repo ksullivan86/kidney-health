@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [DEPLOY, SECDOC, HTTPSDOC, NOTE01, NOTE02, NOTE07, DOCKER-ROOTLESS, K8S-NETPOL]
 ---
 
@@ -31,7 +32,7 @@ On Kubernetes, use `kubectl -n kidney-health logs deploy/kidney-health` and
 
 | You see | Why | Fix |
 |---|---|---|
-| `400 Unknown host` | the browser used a host name the app does not know (DNS-rebinding defence) | set `PUBLIC_URL`, or add the name to `ALLOWED_HOSTS`; the log names the refused host. IP addresses and `localhost` always work |
+| `400 Unknown host` | the browser used a host name the app does not know (DNS-rebinding defense) | set `PUBLIC_URL`, or add the name to `ALLOWED_HOSTS`; the log names the refused host. IP addresses and `localhost` always work |
 | `403` on every save | the browser's origin does not match | set `PUBLIC_URL` to exactly the address bar's scheme, host and port, especially if your proxy rewrites `Host` |
 | `503 Setup required` | first-run setup is not done | use the setup code from the log ([Users and keys](users-and-keys.md)) |
 | Sign-in refused over HTTP | two or more accounts exist, so plain-HTTP sign-in from other machines is refused | set up HTTPS ([HTTPS for phones](https.md)) |

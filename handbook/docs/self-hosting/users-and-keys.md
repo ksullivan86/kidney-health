@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API]
 ---
 

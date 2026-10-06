@@ -1,6 +1,6 @@
 ---
 title: Travel
-description: "Travelling with kidney disease and type 1 diabetes: booking dialysis away from home, shipping PD supplies, getting through airport security with insulin, a pump and a CGM, insulin storage, time zones, insurance, and food safety after a transplant."
+description: "Traveling with kidney disease and type 1 diabetes: booking dialysis away from home, shipping PD supplies, getting through airport security with insulin, a pump and a CGM, insulin storage, time zones, insurance, and food safety after a transplant."
 slug: travel
 audience: [patient, caregiver]
 applies_to: [all]
@@ -47,17 +47,17 @@ hemodialysis users can travel with their machine or book a unit at the destinati
 
 **Peritoneal dialysis.** Ask your supplier to ship supplies to your destination so they are there
 when you arrive ([NIDDK][NIDDK-PD]). If you use a cycler, ask your PD unit whether to take it with
-you. CMS suggests that cycler users learn and practise exchanges by hand, in case the machine or the
+you. CMS suggests that cycler users learn and practice exchanges by hand, in case the machine or the
 power fails ([CMS][CMSPREP]).
 
-**Insurance.** Most state Medicaid programmes do not pay for treatment outside your home state
+**Insurance.** Most state Medicaid programs do not pay for treatment outside your home state
 ([NKF][NKF-travel]). Check with your plan before you book. Outside the US, Original Medicare usually
 does not pay, and Medicare drug plans do not cover medicines bought abroad; some Medigap policies
 cover emergency care abroad, and travel insurance is another option ([Medicare][MED-TRAVEL]).
 
 ## Flying with diabetes supplies (US)
 
-- **Tell the officer** you have diabetes and are carrying supplies. Insulin must be clearly labelled
+- **Tell the officer** you have diabetes and are carrying supplies. Insulin must be clearly labeled
   ([TSA][TSA]). A TSA notification card can help you explain quietly ([TSA][TSA-DIABETES]).
 - **You do not need to take off a pump or CGM.** Tell the officer where it is before screening. You
   can be screened by a body scanner, a metal detector or a pat-down, and you can ask for a pat-down
@@ -93,9 +93,9 @@ cover emergency care abroad, and travel insurance is another option ([Medicare][
 
 ## After a transplant
 
-- Talk to your transplant team before travelling abroad. They may suggest extra precautions or
+- Talk to your transplant team before traveling abroad. They may suggest extra precautions or
   medicines for where you are going ([USDA–FDA][FSTX]).
-- Keep to food-safety rules: avoid raw or undercooked meat, eggs and seafood, and unpasteurised milk
+- Keep to food-safety rules: avoid raw or undercooked meat, eggs and seafood, and unpasteurized milk
   and cheese ([USDA–FDA][FSTX]).
 - Sun protection matters even more after a transplant
   ([After a transplant](../stages/after-transplant.md)).
@@ -131,7 +131,7 @@ a cool bag out of the sun and never leave it in a hot car ([NIDDK][NIDDK-PD]; [F
     [Get help now](../get-help-now.md).
 
 !!! warning "Call your team (or a local doctor) today"
-    Vomiting or diarrhoea (start your [sick-day plan](../t1d/sick-days.md)); a missed dialysis session;
+    Vomiting or diarrhea (start your [sick-day plan](../t1d/sick-days.md)); a missed dialysis session;
     cloudy PD fluid (keep the bag); fever after a transplant.
 
 ## Related pages

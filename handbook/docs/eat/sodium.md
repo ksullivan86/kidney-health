@@ -56,7 +56,7 @@ thirst, so it decides how much fluid you gain between sessions ([DaVita][DG23]; 
 
 **Where it comes from.** More than 70 % of the sodium people eat comes from packaged and prepared food
 ([FDA][DG34]). The top sources in the US include deli-meat sandwiches, pizza, burritos and tacos, soups,
-savoury snacks, poultry, pasta dishes, burgers and egg dishes ([FDA][DG34]). Your taste for salt fades
+savory snacks, poultry, pasta dishes, burgers and egg dishes ([FDA][DG34]). Your taste for salt fades
 over time as you eat less, "so eventually, you may not even miss it" ([FDA][DG34]).
 
 ## Reading the label
@@ -79,7 +79,7 @@ sodium ([EU regulation 1169/2011][EU1169]).
 
 "NoSalt", "Nu-Salt", "Lite Salt", "half salt" and many "low-sodium" soups and broths are made with
 **potassium chloride**. NoSalt lists 640 mg potassium per ¼ teaspoon, and its label tells people with
-diabetes or kidney disease to ask a doctor first; Nu-Salt lists 530 mg per labelled serving
+diabetes or kidney disease to ask a doctor first; Nu-Salt lists 530 mg per labeled serving
 ([NoSalt and Nu-Salt labels][SALTSUB-LABELS]). Morton Lite Salt is half salt: 350 mg potassium *plus*
 290 mg sodium per ¼ teaspoon, with a label warning against use on sodium- or potassium-restricted diets
 without a doctor's approval ([Morton Lite Salt label][DG35b]). NKF lists salt substitutes and lite

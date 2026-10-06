@@ -53,7 +53,7 @@ that (recommendation 8.2). Your team also checks your anti-rejection medicine le
 
     | What | Number | Source |
     |---|---|---|
-    | Fever that needs a call to the centre | more than 100 °F | [NIDDK][NIDDK-Tx] |
+    | Fever that needs a call to the center | more than 100 °F | [NIDDK][NIDDK-Tx] |
     | A1c goal with diabetes after transplant | your own goal: KDIGO 2009 says to consider about 7.0–7.5 %, and not 6.0 % or lower, especially if you have lows; the newer KDIGO 2022 range is under 6.5 % to under 8.0 % | [KDIGO 2009][K09TX], 15.2.2; [KDIGO 2022][K22], 2.2.1 |
     | Wait before trying for a baby | at least 1 year, with stable kidney function and urine protein under 1 g a day | [KDIGO 2009][K09TX], 25.2.1 |
     | Skin check by a professional | once a year | [KDIGO 2009][K09TX], 18.4 |
@@ -63,7 +63,7 @@ that (recommendation 8.2). Your team also checks your anti-rejection medicine le
 
     | What | Number | Source |
     |---|---|---|
-    | Fever that needs a call to the centre | more than 37.8 °C | [NIDDK][NIDDK-Tx] |
+    | Fever that needs a call to the center | more than 37.8 °C | [NIDDK][NIDDK-Tx] |
     | HbA1c goal with diabetes after transplant | your own goal: KDIGO 2009 says to consider about 53–58 mmol/mol, and not 42 mmol/mol or lower, especially if you have lows; the newer KDIGO 2022 range is under 48 to under 64 mmol/mol | [KDIGO 2009][K09TX], 15.2.2; [KDIGO 2022][K22], 2.2.1 |
     | Wait before trying for a baby | at least 1 year, with stable kidney function and urine protein under 1 g a day | [KDIGO 2009][K09TX], 25.2.1 |
     | Skin check by a professional | once a year | [KDIGO 2009][K09TX], 18.4 |
@@ -105,9 +105,9 @@ report new spots (18.3).
 **Pregnancy.** Wait at least a year and plan it with your transplant team
 ([KDIGO 2009 transplant][K09TX], 25.2.1). **Mycophenolate** can cause miscarriage and birth defects.
 It must be stopped or replaced **before** trying to get pregnant (25.2.2). Women who could get
-pregnant need contraception counselling and must use acceptable birth control during treatment and for
+pregnant need contraception counseling and must use acceptable birth control during treatment and for
 6 weeks after stopping; men taking it, or their partners, are advised to use effective
-contraception during treatment and for at least 90 days after ([CellCept label][CELLCEPT]). In July 2026 the FDA ended the mycophenolate REMS programme, but these
+contraception during treatment and for at least 90 days after ([CellCept label][CELLCEPT]). In July 2026 the FDA ended the mycophenolate REMS program, but these
 label warnings still apply ([FDA][FDA-MYCO26]; [REMS][REMS]). This handbook does not give pregnancy
 advice beyond this: see [Sex, fertility and pregnancy](../living/sex-fertility-pregnancy.md), which
 refers you to specialists.
@@ -119,13 +119,13 @@ recipients ([USDA–FDA][FSTX]; [FoodSafety.gov][FOODSAFE]):
 
 | Avoid | Choose instead |
 |---|---|
-| unpasteurized (raw) milk, and soft cheeses made from it (such as some feta, brie or queso fresco) | pasteurized milk; hard or processed cheeses; soft cheeses clearly labelled "made from pasteurized milk" |
+| unpasteurized (raw) milk, and soft cheeses made from it (such as some feta, brie or queso fresco) | pasteurized milk; hard or processed cheeses; soft cheeses clearly labeled "made from pasteurized milk" |
 | raw or undercooked meat, poultry, eggs and seafood (such as sashimi and some sushi) | food cooked to a safe temperature: ground beef 160 °F (71 °C), poultry 165 °F (74 °C), seafood 145 °F (63 °C) |
 | hot dogs and deli meats straight from the pack | heated until steaming hot, or 165 °F (74 °C) |
 | raw sprouts (alfalfa, bean and others) | cooked sprouts |
 | refrigerated smoked fish | canned fish and seafood |
 
-Use a food thermometer: the colour of meat is not a reliable sign that it is safe ([USDA–FDA][FSTX]).
+Use a food thermometer: the color of meat is not a reliable sign that it is safe ([USDA–FDA][FSTX]).
 
 ## What to do
 
@@ -134,7 +134,7 @@ Use a food thermometer: the colour of meat is not a reliable sign that it is saf
 - [ ] Go to every blood test, even when you feel well.
 - [ ] Remove grapefruit, pomelo and St John's wort from your kitchen and cupboard.
 - [ ] Check with the transplant pharmacist before any new medicine, supplement or vaccine.
-- [ ] Take your temperature if you feel unwell, and call the centre if it is over 100 °F (37.8 °C).
+- [ ] Take your temperature if you feel unwell, and call the center if it is over 100 °F (37.8 °C).
 - [ ] Use sunscreen and a hat every day you are outside, and book a yearly skin check.
 - [ ] Follow the food safety table above; buy a food thermometer.
 - [ ] Check your glucose as your team asks, and report highs and lows.
@@ -142,12 +142,12 @@ Use a food thermometer: the colour of meat is not a reliable sign that it is saf
 
 ## Examples
 
-**A missed dose.** You realise at lunch that you forgot your morning dose. Do not double up on your
-own. Call the transplant centre or the on-call pharmacist now and do what they say. Ask for a written
+**A missed dose.** You realize at lunch that you forgot your morning dose. Do not double up on your
+own. Call the transplant center or the on-call pharmacist now and do what they say. Ask for a written
 missed-dose plan for next time.
 
 **A cold that will not go away.** It has been 10 days and you are still coughing. NIDDK lists "a cold
-or cough that won't go away" as a reason to call your transplant centre ([NIDDK][NIDDK-Tx]).
+or cough that won't go away" as a reason to call your transplant center ([NIDDK][NIDDK-Tx]).
 
 **A breakfast swap.** Grapefruit halves at the hotel buffet are out. Choose berries or an apple
 instead.
@@ -169,12 +169,12 @@ instead.
     3.0 mmol/L or more, or any ketones with vomiting, deep fast breathing or fruity breath
     ([2024 consensus][HC24]). Full list: [Get help now](../get-help-now.md).
 
-!!! warning "Call your transplant centre right away"
+!!! warning "Call your transplant center right away"
     A fever over 100 °F (37.8 °C); drainage from your scar; burning when you pass urine; a cold or cough
     that will not go away; or you just do not feel well. Anti-rejection medicines can hide the signs
     of an infection ([NIDDK][NIDDK-Tx]). Also new swelling or a rise in blood pressure, which can mean
     the kidney is not clearing salt and fluid ([NIDDK][NIDDK-Tx]); much less urine
-    ([KDIGO 2009 transplant][K09TX], 8.1); and vomiting or diarrhoea that stops you keeping your
+    ([KDIGO 2009 transplant][K09TX], 8.1); and vomiting or diarrhea that stops you keeping your
     medicines down, because missed doses risk rejection ([KDIGO 2009 transplant][K09TX], chapter 11).
 
 ## Related pages

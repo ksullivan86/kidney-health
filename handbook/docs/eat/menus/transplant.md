@@ -37,7 +37,7 @@ Also: no foods with phosphate additives; no grapefruit, pomelo or Seville orange
 
 ## Week at a glance
 
-| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fibre g |
+| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fiber g |
 |---|---|---|---|---|---|---|---|---|
 | Day 1 | 1,783 | 206 | 69.0 | 2,379 | 1,125 | 1,005 | 285 | 30.9 |
 | Day 2 | 1,802 | 211 | 68.7 | 2,654 | 1,182 | 749 | 345 | 29.4 |
@@ -202,7 +202,7 @@ Canned light tuna is fine after a transplant. Smoked fish from the fridge case (
 
 ## Day 5
 
-Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food thermometer, not by colour.
+Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food thermometer, not by color.
 
 <div class="kh-numbers" markdown>
 

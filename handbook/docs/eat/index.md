@@ -73,12 +73,12 @@ For a 70 kg adult with diabetes that means about **56 g of protein a day before 
     |---|---|---|---|---|---|
     | **Protein** g/kg | 0.8 (RDA); avoid > 1.3 ([KDIGO 2024][K24]) | **0.8 with diabetes**: KDIGO 2024 Rec 3.3.1.1 (2C), KDIGO 2022 Rec 3.1.1, ADA 2026 Rec 11.3 (A), which says going below 0.8 "is not recommended" with diabetes. KDOQI 2020 3.0.2 allows 0.6–0.8 only "under close clinical supervision" (opinion) ([KDOQI 2020][Q20]; [KDIGO 2022][K22]; [ADA 2026 §11][A26-11]) | as 3a–4 | **1.0–1.2** (KDOQI 2020 3.0.3–3.0.4; ADA 2026 Rec 11.3, B) | **1.0–1.2**, often the upper end ([KDIGO 2022][K22]) |
     | **Energy** kcal/kg | 25–35 | **25–35** (KDOQI 2020 3.1.1, 1C) | 25–35 | 25–35 | 25–35 *minus* about 400+ kcal absorbed from dialysis fluid ([DaVita][DG25a]) |
-    | **Sodium** mg | < 2,000–2,300 | **< 2,000** (KDIGO 2024 Rec 3.3.2.1, 2C); < 2,300 (KDOQI 6.5.1, 1B; NIDDK; ADA) ([NIDDK][DG4]) | < 2,000–2,300 | < 2,000–2,300 (NKF hemodialysis < 2,300) ([NKF][DG24a]) | < 2,000–2,300 by guideline; PD programmes often allow 3,000–4,000 ([DaVita][DG25a]) |
+    | **Sodium** mg | < 2,000–2,300 | **< 2,000** (KDIGO 2024 Rec 3.3.2.1, 2C); < 2,300 (KDOQI 6.5.1, 1B; NIDDK; ADA) ([NIDDK][DG4]) | < 2,000–2,300 | < 2,000–2,300 (NKF hemodialysis < 2,300) ([NKF][DG24a]) | < 2,000–2,300 by guideline; PD programs often allow 3,000–4,000 ([DaVita][DG25a]) |
     | **Potassium** mg | > 4,000 (no limit) ([AKF][DG52]) | No limit unless blood potassium is high; K/DOQI 2004 range **2,000–4,000**; when limited **2,000–3,000** (AKF: aim for 2,500, no more than 3,000) ([AKF][DG52]; [DaVita][DG26]) | < 3,000 (NEJM 2017); 2,000–3,000 when limited ([AKF][DG52]) | **2,000–3,000** (expert opinion 2,700–3,000) ([AKF][DG52]; [DaVita][DG26]) | **3,000–4,000** "liberal" ([DaVita][DG25a]; [AKF][DG52]) |
     | **Phosphorus** mg | Informational | Keep blood phosphate normal; **800–1,000** when phosphate > 4.6 mg/dL (K/DOQI 2003 4.1, opinion); avoid additives above all ([K/DOQI 2003][DG10]; [KDIGO 2017][K17]) | 800–1,000 when phosphate > 5.5 mg/dL (evidence) ([K/DOQI 2003][DG10]) | 800–1,000 "adjusted for protein needs", with binders at meals ([K/DOQI 2003][DG10]; [NKF][DG20]) | 800–1,000 adjusted for protein, with binders ([K/DOQI 2003][DG10]; [DaVita][DG25a]) |
     | **Calcium** mg (food + supplements + calcium binders) | about 1,000 | **800–1,000** if not on active vitamin D (KDOQI 6.2.1, 2B) | Avoid high calcium (6.2.2) | As CKD 5; limit calcium binders (KDIGO 2017 4.1.6) ([KDIGO 2017][K17]) | As CKD 5 |
     | **Fluid** mL | No limit | **No routine limit**; set for you if you have swelling ([AKF][DG19a]) | Set for you ([AKF][DG19a]) | **1,000 mL + your 24-hour urine** ([AKF][DG19a]; [DaVita][DG23]); NKF 1–2 L ([NKF][DG24a]) | **2–3 L**, set for you ([DaVita][DG25a]) |
-    | **Carbohydrate** | From your diabetes plan: 1 carb choice = 15 g; typically 3–6 choices per meal and 1–3 per snack, set by your dietitian ([NKF][DG7]); fibre ≥ 14 g per 1,000 kcal ([ADA 2026 §5][A26-5]) | same | same | same | same, counting dialysis-fluid glucose ([DaVita][DG25a]) |
+    | **Carbohydrate** | From your diabetes plan: 1 carb choice = 15 g; typically 3–6 choices per meal and 1–3 per snack, set by your dietitian ([NKF][DG7]); fiber ≥ 14 g per 1,000 kcal ([ADA 2026 §5][A26-5]) | same | same | same | same, counting dialysis-fluid glucose ([DaVita][DG25a]) |
 
 ## Which numbers count per day, and which per week
 
@@ -103,7 +103,7 @@ Not every number is judged the same way, and the app follows exactly this split
 ## Does age or sex change my numbers?
 
 Mostly not. Age and sex change how much **energy** (calories) you need, and they are part of the
-**eGFR** calculation and the **anaemia** thresholds. They do **not** change protein per kg,
+**eGFR** calculation and the **anemia** thresholds. They do **not** change protein per kg,
 sodium, potassium or phosphorus: those depend on your kidney function, your blood tests and your
 treatment ([design note 05][NOTE05]). Calcium needs differ by age and sex only when kidney function
 is near normal. The app's "Suggest targets" shows which of your details it used

@@ -21,6 +21,13 @@
   font-size: 0.9em;
 }
 
+/* ---------- navigation ---------- */
+/* Material shows an untitled "i" status icon beside every page whose front matter has `status:`.
+   Every page carries the draft banner instead, so the icon is noise in the menu. */
+.md-nav .md-status {
+  display: none;
+}
+
 /* ---------- draft banner and review line ---------- */
 .md-typeset .kh-draft {
   margin-top: 0;
@@ -49,6 +56,24 @@
   .md-typeset table:not([class]) td,
   .md-typeset table:not([class]) th {
     padding: 0.4em 0.5em;
+    /* Material's 5rem minimum makes 4- and 5-column tables scroll sideways on a phone */
+    min-width: 3.25rem;
+    hyphens: auto;
+  }
+}
+/* Wide tables still scroll sideways on a phone: show a soft shadow at the edge that has more
+   columns (scroll-shadow technique; CSS only, so it works under the hash-only CSP). */
+@media screen and (max-width: 44.9375em) {
+  .md-typeset__scrollwrap {
+    background:
+      linear-gradient(to right, var(--md-default-bg-color) 40%, transparent) left center / 1.5rem 100% no-repeat local,
+      linear-gradient(to left, var(--md-default-bg-color) 40%, transparent) right center / 1.5rem 100% no-repeat local,
+      linear-gradient(to right, var(--md-default-fg-color--lighter), transparent) left center / 0.6rem 100% no-repeat scroll,
+      linear-gradient(to left, var(--md-default-fg-color--lighter), transparent) right center / 0.6rem 100% no-repeat scroll;
+    background-color: var(--md-default-bg-color);
+  }
+  .md-typeset__scrollwrap table:not([class]) {
+    background-color: transparent;
   }
 }
 /* number columns in generated menu and target tables line up */

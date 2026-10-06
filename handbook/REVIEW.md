@@ -2,6 +2,114 @@
 
 Findings from adversarial fact-checks of the handbook, one section per checked area: the issue, page, correction, source and severity, then items a clinician must decide. Pages stay "draft" until a named clinician signs them off in front matter (ARCHITECTURE.md, v0.3 contract item 11).
 
+## Open clinical decisions: index (updated 2026-10-06)
+
+Every item a clinician still has to decide, grouped by topic. The numbers point to the "For a
+clinician to decide" list in each fact-check section below: **S** = Start here, Get help now, ckd/,
+reference/; **St** = stages/; **L** = labs/; **E** = eat/; **A** = app/ and self-hosting/;
+**T** = t1d/ and medicines/. Until each is decided, the pages keep their current, cautious wording and
+the draft banner. When you decide one, record the decision and your name in that section, change the
+pages, and tick it here.
+
+**Emergency tiers and red flags** (reviewer: nephrologist; t1d items: diabetes specialist or CDCES)
+
+- [ ] Fever with shaking chills after a transplant: 911, or the transplant center first; fever or
+      rigors with a tunneled hemodialysis catheter in the 911 tier? (S1)
+- [ ] Sepsis line on the wallet card and help card, "fever with confusion or a racing pulse" (S2)
+- [ ] Potassium tiers (6.0–6.4 call today, 6.5 or more 911) for people on dialysis, from KDIGO
+      Table 28's primary-care source (S4)
+- [ ] DKA on dialysis: a lower 911 ketone number than 3.0 mmol/L? Symptoms already count below it
+      (S5, St3, L4, T1)
+- [ ] Ketones 1.6–2.9 mmol/L: NHS tier (call the team now) or ADA (emergency care); make the two
+      `get-help-now` vomiting lines identical (T1, and note in the labs section)
+- [ ] Urine ketones ++ or more sent to emergency care (T2)
+- [ ] Access bleeding: the AKF 10–15 minute rule for 911; home hemodialysis needle-dislodgement
+      training first (St7)
+- [ ] Iron infusion reactions: tell the nurse during; 911 for breathing trouble, swelling or
+      faintness afterwards (L7)
+- [ ] A large extra dose of long-acting insulin: straight to the emergency department? (T9)
+- [ ] Peritonitis: "keep the bag" and the PD red flags come from the content plan's reading of ISPD
+      2022, whose full text was not re-checked (listed on the About page's reviewer questions)
+
+**Glucose, A1c and CGM** (reviewer: diabetes specialist or CDCES)
+
+- [ ] CGM goals at G4–G5 and on dialysis: lead with the high-risk target or the JBDS 2022 dialysis
+      hierarchy (S3, L1)
+- [ ] A1c goal on dialysis: state none, and the JBDS "over 9.5 %" line for a US audience (S7, L3)
+- [ ] A1c goal after a transplant: KDIGO 2009, KDIGO 2022 or ADA first (St5)
+- [ ] CGM use on dialysis given US labels say not to use them: "only with your team's agreement" (L2, T3)
+- [ ] Glucose checks and snacks during hemodialysis: show the JBDS 20–30 g rule or "ask your unit"
+      (St4, E5)
+- [ ] Low treatment on automated insulin delivery: 5–10 g (ADA) or default 15 g with CKD (T4); the
+      app's 5–30 g setting range (A3)
+- [ ] Sugar alcohols in carb counting: give the "subtract half" method at all? (E2)
+- [ ] Hypo treatment ranking with NIDDK's "no orange juice" vs "treat with whatever is to hand" (E4)
+
+**Food targets and the app's numbers** (reviewer: renal dietitian)
+
+- [ ] Protein at G1–G2 with type 1 diabetes: app range 0.8–1.0 g/kg or 0.8 g/kg (St1)
+- [ ] Protein 0.6–0.8 g/kg without diabetes at G3–G5: should the app show 0.6 at all? (A1)
+- [ ] Potassium review ceilings by stage (4,000 / 3,500 / 3,000 / 2,500 mg; 3,500 on PD) and the
+      wording "restrict only when blood potassium is high" (St2); the one-step relaxation at
+      3.5–5.0 mmol/L and the 3,000/2,500/2,000 mg ceilings above it (A2)
+- [ ] The potassium-additive warning is "medium", not "high", when potassium is not listed
+      (ARCHITECTURE v0.3 item 9; A5)
+- [ ] Per-meal caps (30 % per main meal, 15 % per snack) and the ±10 g carbohydrate tolerance (A4)
+- [ ] Low potassium on PD wording (St8)
+- [ ] Counting frozen desserts, gelatin and ice as fluid: by volume, by water content (as the app
+      does) or the unit's rule (E1); the food data changes if volume is chosen
+- [ ] Binders with snacks: "exactly as prescribed; ask about snacks and skipped meals" (E3)
+- [ ] Leached potato "about 130 mg per ½ cup": keep the number or say "about half" (E6)
+- [ ] Salt substitutes at G1–G2 with normal potassium: keep "not without your team's OK" (E7)
+- [ ] Acesulfame-K on the hidden-potassium list (E8)
+- [ ] Weight gain between hemodialysis sessions: show Cabrera's 3.5 % at all (St6)
+
+**Labs** (reviewer: nephrologist)
+
+- [ ] Bicarbonate: lead with KDIGO's "consider treatment under 18" or KDOQI's 24–26 (L5)
+- [ ] PD adequacy framing: weekly Kt/V of at least 1.7, and "do not push it higher if you are well" (L6)
+- [ ] Albumin cut-off by lab method (bromocresol green vs purple) for the app's nutrition-risk flag (L8)
+- [ ] Iron-start thresholds shown on the G3b page, or only "your team checks iron first" (St9)
+
+**Medicines** (reviewer: nephrologist; diabetes specialist for SGLT2 inhibitors and finerenone)
+
+- [ ] ACE inhibitor or ARB with A2 albuminuria and normal blood pressure in type 1 diabetes
+      (KDIGO 2024 Rec 3.6.3 vs KDIGO 2022 and ADA wording) (S6)
+- [ ] Finerenone in type 1 diabetes: "ask whether it fits you" at G1–G2, and whether to say in plain
+      words that approval rests on a 6-month UACR result (St10, T6)
+- [ ] SGLT2 inhibitor safety checklist for off-label use in type 1 diabetes: keep it? (T5)
+- [ ] Statin wording for ages 18–49 and on dialysis (T7)
+- [ ] Medicine holds around contrast scans against local radiology practice (T8)
+- [ ] Oral phenylephrine on the "avoid" list or "ask first" (T10)
+
+**Transplant rules that change** (reviewer: transplant nephrologist or coordinator)
+
+- [ ] OPTN waiting-time rule (policy 8.4.A): recheck at every review while kidney allocation moves to
+      continuous distribution (St11)
+
+**Sections not yet independently fact-checked**
+
+- [ ] `prepare/` (4 pages) and `living/` (9 pages) were written and source-checked by their writer
+      but have **no** adversarial fact-check section below (skipped in the 2026-10-06 run). They need
+      one before clinical review. Pages with prices, benefit amounts or laws carry `figures_as_of`
+      (living/costs-and-benefits, living/travel, living/work, prepare/choosing-a-treatment,
+      prepare/transplant-referral, stages/g4, stages/before-transplant, stages/after-transplant,
+      stages/home-hemodialysis); recheck them every November (Medicare amounts).
+
+**Sign-off status**
+
+- [ ] All 118 pages are `status: draft`; none has a named reviewer. Reviewer roles by section and
+      the sign-off steps are in `handbook/README.md` ("Clinical review and sign-off").
+
+**Open items for other owners** (not clinical decisions; details in each section's "notes for
+other owners"): the app still suggests 0.6–0.8 g/kg protein with diabetes until the M2 targets
+change ships (then remove the "Coming in v0.3" sentences in `app/first-setup` and
+`app/targets-and-warnings`); phosphate categorised after rounding mmol/L (A notes); every "coming in
+v0.3" marker on the app pages at release; `docs/diet-guide.md` and `docs/research/food-lists.md`
+still carry the soda-serving and orange-juice errors fixed in the handbook (E notes); KDOQI 2020
+statement numbers cited from the public-review copy need checking against the published text (L
+notes); the `FDANaP` archive link needs a browser check (T notes).
+
 ## Fact-check: Start here, Get help now, ckd/, reference/ (2026-10-05)
 
 Pages: `index.md`, `get-help-now.md`, `ckd/index.md`, `ckd/stages.md`,
@@ -428,3 +536,281 @@ Extension (no error): `recipes/index` now notes that USDA lists low-sodium bakin
    KDIGO 2024 notes salt-substitute trials in the general population. Confirm the blanket wording.
 8. **Hidden potassium list.** `label-reading` lists acesulfame-K among potassium additives; a can of diet
    soda carries only a few milligrams. Keep or drop?
+
+## Fact-check: app/ and self-hosting/ (2026-10-05)
+
+Pages: `app/index`, `first-setup`, `targets-and-warnings`, `logging`, `guidance`, `ai`,
+`barcode-and-photo`, `install`, `planning-and-menus`, `privacy`, `reports-for-your-team`,
+`settings-and-keys`; `self-hosting/index`, `security`, `network-allowlist`, `configuration`,
+`users-and-keys`, `https`, `backups`, `upgrades`, `podman-rootless`, `docker-rootless`, `kubernetes`,
+`troubleshooting`, `building-the-handbook`. Each page now has `fact_checked: 2026-10-05` in its front
+matter.
+
+How it was checked: every clinical statement and number was compared with its cited source, and every
+statement about what the app does was compared with the code that ships today (`app/nutrients.py`,
+`app/log.py`, `data/foods.json`, `docs/research/targets_by_stage.json`) and with the v0.3 contract
+(`ARCHITECTURE.md`) and design notes 03–07 for what is still being built. Sources read: KDIGO 2024 CKD
+(Table 28, Rec 3.3.1.1, 3.3.2.1; full PDF text), ADA Standards 2026 §5 (Rec 5.13, 5.24, 5.28;
+PMC12690188) and §11 (Rec 11.3 and the protein text; PMC12690176), KDOQI 2020 (published numbering:
+energy 3.1.1), NKF potassium page ("200 mg or more per serving"), NIST SP 800-63B-4 §3.1.1.2, the Open
+Food Facts API rate limits, the source notes for Fridolfsson 2025, León 2013 and Sherman and Mehta 2009,
+and, for the self-hosting pages, the shipped `deploy/quadlet`, `deploy/k8s`, `SECURITY.md`, the
+Kubernetes user-namespaces page (stable in 1.36), the Talos Flannel page (`kubeNetworkPoliciesEnabled`,
+Talos 1.13) and the Let's Encrypt lifetime announcement (64 days from 2027-02-10, 45 days from
+2028-02-16). Every builtin-food number on these pages (banana, rice, bread, cola, apple juice, glucose
+gel, baked potato, the gram and half-serving examples, the swap example) was recomputed from
+`data/foods.json`, and the meal-guidance example (800 mg potassium, 300 mg phosphorus, 600 mg sodium)
+from note 06 §4.4.
+
+Counts: **high 0, medium 3, low 13.** Self-hosting pages: no errors found.
+
+### Findings and corrections
+
+| # | Severity | Page | Issue | Correction | Source |
+|---|---|---|---|---|---|
+| 1 | medium | `app/first-setup`, `app/targets-and-warnings` | Both pages said "Suggest targets" gives 0.8 g/kg protein (about 56 g) at stages 3–5 with diabetes. The app that ships today (`app/nutrients.py`, `targets_by_stage.json`) still suggests 0.6–0.8 g/kg (42–56 g); the 0.8 floor is a v0.3 change (contract decision 10). A reader would see a lower number in the app than the handbook says is safe. | Marked "coming in v0.3"; the pages now say today's app shows 0.6–0.8 g/kg and not to aim below 0.8 g/kg (56 g in the example) unless the team prescribed it. Added KDIGO Rec 3.3.1.1. | A26-11 Rec 11.3 (A: "0.8 g/kg … as for the general population"; protein below 0.8 "is not recommended"); K24 Rec 3.3.1.1 (2C); ARCH v0.3 item 10; NOTE05 P-2 |
+| 2 | medium | `app/first-setup` | "The app gives **no** starting targets if you are pregnant or breastfeeding, younger than 18, or in the first 12 weeks after a kidney transplant" was written as current behaviour. Today's app has no such fields and fills in targets for everyone, including a new transplant recipient, whose protein needs are higher. | Box retitled "Do not use Suggest targets if you are pregnant, under 18 or newly transplanted": today's app does not ask, so leave Suggest targets alone and use the team's numbers; v0.3 refuses (marked "coming in v0.3"). | NOTE05 S-1 to S-3 (refusals); `living/sex-fertility-pregnancy`; `stages/after-transplant` |
+| 3 | medium | `app/targets-and-warnings`, `app/first-setup` | The "call your care team today" box for potassium 6.0–6.4 mmol/L said "KDIGO advises a repeat test within 24 hours, or care in hospital if you feel unwell". This puts the routine retest first and is softer than `eat/potassium`, `labs/blood-potassium` and `get-help-now`. `first-setup` had no 6.0–6.4 tier at all. | Both pages: "if you feel unwell, go to hospital **now** to be checked and treated; if you feel well, call your team today for a repeat test within 24 hours" (same words as `eat/potassium`). | K24 Table 28 (6.0–6.4: "assess and treat in hospital" if clinically unwell; "repeat within 24 hours" if unexpected) |
+| 4 | low | `app/first-setup`, `app/targets-and-warnings` | The 911 box cited KDIGO Table 28 for chest pain, a slow or irregular pulse and weakness. Table 28 gives potassium levels only; `first-setup` also left out fainting. | Symptoms now cite MedlinePlus; fainting and "weak" pulse added, matching `get-help-now`. | K24 Table 28; MEDLINE-K |
+| 5 | low | `app/targets-and-warnings` | "NKF's 200 mg 'high' line": NKF calls 200 mg **or more** per serving high; the app turns red only **above** 200 mg. | "NKF calls a food with 200 mg or more per serving 'high'; a food with exactly 200 mg shows yellow in the app." | DG5; `app/nutrients.py` THRESHOLDS |
+| 6 | low | `app/first-setup`, `app/targets-and-warnings` | Carbohydrate at 45 % of calories was given without a source. It is the app's own default (note 05 C-1, opinion). | Added: the 45 % is the app's default; there is no ideal share for everyone, so the diabetes team sets it. | A26-5 Rec 5.13 ("There is no ideal percentage of calories from carbohydrate, protein, or fat") |
+| 7 | low | `app/targets-and-warnings` | The v0.3 nutrition-risk list left out a low BMI and gave no albumin cut-off. | "albumin below 3.8 g/dL (38 g/L), weight loss over 5 % in 6 months, a low BMI, or frailty". | NOTE05 §4.3 (GLIM, ISRNM) |
+| 8 | low | `app/targets-and-warnings` | Glucose gel was called "the lowest-potassium way to treat a low"; glucose tablets and liquid shots are also 0 mg. | "no potassium at all, like glucose tablets". | `data/foods.json` |
+| 9 | low | `app/guidance` | The 30 % per main meal and 15 % snack cap was described for potassium, sodium and fluid. It applies to potassium, phosphorus and sodium; fluid has no per-meal cap. The page also did not say the cap is a rule of thumb. | Reworded; added that the cap is a dietitian rule of thumb, used only to choose ideas and never to warn. | NOTE06 §4.4, F1, R11; AKF-meal |
+| 10 | low | `app/guidance` | The low-treatment section did not say to treat first or give the threshold, and said treatments count toward "potassium, sodium and fluid" (phosphorus too). | Added "Treat a low first, with 15 g … under 70 mg/dL (3.9 mmol/L)"; phosphorus added; "guidance never suggests a smaller dose". | A26-6; `t1d/treating-a-low`; NOTE06 F5 |
+| 11 | low | `app/logging` | "Treat first" box had no glucose threshold; the list of foods marked as low treatments named only glucose products and juices. | Threshold under 70 mg/dL (3.9 mmol/L) added; list now matches the food data (juices, lemon-lime soda, ginger ale, hard candy, jelly beans, honey, sugar). | A26-6; `data/foods.json` (`hypo_treatment`) |
+| 12 | low | `app/index` | "Glucose tablets and juice **you log as** a low treatment get no carbohydrate warning" implied that any entry can be marked as a low treatment. That is v0.3 (`purpose`); today the flag belongs to the food. | "Foods marked as low treatments (glucose tablets, gel, measured juice or clear regular soda) get no carbohydrate warning." | `app/nutrients.py` `food_warnings`; NOTE06 |
+| 13 | low | `app/privacy` | "The admin … cannot 'become' you in the app" conflicts with note 07's security review: an admin-issued reset link lets the admin sign in as you, though not quietly. | "no button to 'become' you"; the reset bullet now says the admin could sign in as you and that it cannot be done quietly. | NOTE07 §9 N12 |
+| 14 | low | `app/privacy` | Accounts, personal keys, the activity log and AI history were described as present without a "coming in v0.3" marker. | Added a "Coming in v0.3" note: until then one shared profile and log, optionally behind a single password. | NOTE07; project README (`APP_PASSWORD`) |
+| 15 | low | `app/barcode-and-photo` | "Open Food Facts asks apps to keep to a few lookups per minute." The documented limit is 15 product reads a minute per IP address. | "allows each server 15 product lookups a minute". | OFF-API |
+| 16 | low | `app/reports-for-your-team` | CSV formula escaping was described for food names starting with `=`, `+`, `-` or `@`. It applies to every text cell (notes too) and also to a leading tab or line break. | Reworded; cites the architecture contract as well as note 03. | ARCH ("Changes to existing routes", CSV); `app/log.py`; NOTE03 B2 |
+
+**Checked and correct (no change):**
+
+* App rules against the code: per-serving thresholds (K 101–200/> 200, P 101–150/> 150, Na 141–400/
+  > 400, carbohydrate 15–30/> 30, protein 15–25/> 25), the high-GI rule from 15 g, no carbohydrate
+  warning for low-treatment foods, red/yellow/green, day status at 80 %/100 %, the potassium ladder
+  (4,000/3,500/3,000/2,500, PD 3,500), phosphorus 1,000/900, sodium 2,000, calcium 1,000, fluid
+  1,500 (HD) and 2,000 (PD), 30 kcal/kg, the per-meal carbohydrate (236 g → 60 g), 12 CSV nutrient
+  columns.
+* v0.3 rules against note 05: the potassium table by blood level (relax one step at 3.5–5.0, ≤ 3,000
+  at 5.1–5.5, ≤ 2,500 at 5.6–5.9, ≤ 2,000 plus alert at ≥ 6.0), the phosphate table (2.5 and 4.5 mg/dL
+  = 0.81 and 1.45 mmol/L), 90-day freshness, protein from 65 or with nutrition risk, fibre
+  14 g/1,000 kcal (ADA Rec 5.24, B), calories inside 25–35 kcal/kg (KDOQI 3.1.1) rounded to 10 kcal,
+  dialysis fluid from urine output, the "which details change which target" table.
+* ADA 2026 Rec 5.28 (consistent carbohydrate with fixed insulin doses, B); Rec 11.3 (0.8 g/kg, A);
+  KDIGO 2024 Rec 3.3.2.1 (sodium < 2 g); KDOQI 2020 energy 3.1.1 (published numbering).
+* NIST SP 800-63B-4 §3.1.1.2: 15 characters for a single-factor password, no composition rules, paste
+  and password managers allowed. USDA FDC: 1,000 requests an hour per key; `DEMO_KEY` 30 an hour and 50
+  a day. FDA: potassium mandatory, phosphorus voluntary on the label; "low sodium" 140 mg or less.
+* Additives: E338–E341 and E450–E452 phosphates, E508 and E326 potassium salts; salt = sodium × 2.5;
+  León 2013 (44 %), Sherman and Mehta 2009 (up to 930 mg/100 g; 8 of 25 unlisted), Kalantar-Zadeh 2010.
+  Fridolfsson 2025: about 36 % mean absolute error for the best models, large portions underestimated
+  (36 % of 60 g ≈ 20 g).
+* Meal guidance against note 06: up to 11 ideas, up to 5 swaps at least 25 % lower, carbohydrate
+  tolerance 10 g (5–20), low-treatment amount 15 g (5–30) never undercut, the "never" list, the dinner
+  example (800 mg potassium, 300 mg phosphorus, 600 mg sodium) and the swap (33 g vs 37 g carbs, 885 mg
+  less potassium, recomputed from `data/foods.json`).
+* AI against note 04: payload and "never sent" lists, ≤ 40 candidates, preferences ≤ 200 characters,
+  age in 10-year bands only on opt-in, hypo and red-flag pre-filters, 30 calls a day, 30-day history,
+  consent per host.
+* Accounts against note 07 and the M1 API: invite links 7 days, sessions 30 days (14 idle), re-entry of
+  the password after 10 minutes, activity kept 365 days, the pre-v3 backup deleted after 30 days,
+  200 shared USDA lookups a day, GDPR Articles 2(2)(c), 9, 15, 17 and 20.
+* Self-hosting against the shipped files: UID 10001, port 8000, `127.0.0.1` publishing, 512 MiB and
+  128 processes, `Network=pasta`, exec-form health check, `AutoUpdate=registry`, the k8s PVC (1 Gi),
+  Service (80 → 8000) and `TRUSTED_PROXIES=10.244.0.0/16`, `SECURITY.md` (doses and lows count as
+  security issues; Podman policy cannot match GitHub's workflow-URI certificates). External facts:
+  Kubernetes user namespaces stable in 1.36 (Linux 6.3, containerd 2.0); Talos Flannel enforces
+  NetworkPolicy only with `kubeNetworkPoliciesEnabled: true` (1.13+); Let's Encrypt 64-day (2027-02-10)
+  and 45-day (2028-02-16) defaults; Apple's 825-day limit for private-CA certificates; `home.arpa`
+  (RFC 8375).
+
+### Contradictions and notes for other owners (not edited here)
+
+* **M2 targets** (`app/nutrients.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`):
+  contract decision 10 says these were updated to the 0.8 g/kg floor for diabetes at G3a–G5; they still
+  say 0.6–0.8. When the change ships, remove the "today's app still shows 0.6–0.8" sentences in
+  `app/first-setup` and `app/targets-and-warnings` (search for "Coming in v0.3").
+* **M2 targets, phosphate in mmol/L:** note 05 categorises on the value rounded to one decimal in
+  mg/dL. A result of 1.46 mmol/L converts to 4.52 mg/dL, rounds to 4.5 and gets 1,000 mg, while the
+  handbook's table (and a reader) puts anything above 1.45 mmol/L at 800 mg. Categorise in the unit that
+  was entered, or round mmol/L to two decimals.
+* **M3 integration:** every "coming in v0.3" marker on the app pages (first-setup, targets-and-warnings,
+  logging, guidance, ai, barcode-and-photo, install, privacy, reports, settings-and-keys) needs updating
+  when v0.3 is released.
+
+### For a clinician to decide
+
+1. **Protein 0.6–0.8 g/kg without diabetes at G3–G5** (note 05 P-2n). The app will still suggest 0.6 g/kg
+   as the lower bound for people without diabetes, which KDOQI ties to close supervision. Should the app
+   show it at all?
+2. **Relaxing potassium by one step when blood potassium is 3.5–5.0 mmol/L**, and the 3,000/2,500/
+   2,000 mg ceilings at higher levels (note 05 K-2 to K-5, all marked opinion). Confirm.
+3. **Low-treatment amount setting 5–30 g.** ADA says 5–10 g is typical on automated insulin delivery
+   and 15 g otherwise. Is 5 g an acceptable lower limit for a setting the person changes?
+4. **Per-meal caps (30 % per main meal, 15 % for snacks)** and the ±10 g carbohydrate tolerance (5–20 g)
+   are dietitian rules of thumb and a paediatric study (note 06 F1, F4). Confirm for adults with CKD.
+5. **The potassium-additive medium warning** (contract item 9) when potassium is not listed: confirm
+   "medium", not "high".
+
+## Fact-check: t1d/ and medicines/ (2026-10-05)
+
+Pages: `t1d/index.md`, `t1d/treating-a-low.md`, `t1d/sick-days.md`, `t1d/insulin-and-dialysis.md`,
+`t1d/kidney-protecting-medicines.md`, `medicines/avoid.md`, `medicines/supplements.md`,
+`medicines/scans-and-contrast.md`, `medicines/your-medicine-list.md`. Each page now has
+`fact_checked: 2026-10-05` in its front matter. Done in two sittings (the first was cut off by a usage
+limit after the five t1d/ pages; the second finished medicines/ and re-read t1d/).
+
+How it was checked: every clinical number and every cited recommendation was compared with the source
+text. Sources read: KDIGO 2024 CKD (full PDF text: Rec 3.4.1, 3.6.1–3.6.4, 3.3.2.1; PP 3.6.1–3.6.7,
+4.1.1–4.4.2.1 with their rationale; section 3.11.5; Tables 8, 25, 26, 28, 31, 32 and 33; Figure 45),
+KDIGO 2022 diabetes in CKD, KDIGO 2017 CKD-MBD (Rec 4.1.7), KDIGO 2009 transplant (chapters 11 and 15),
+ADA Standards 2026 §6, §7 (Table 7.4), §9 and §11 (PMC full text), the ADA–KDIGO 2022 consensus, the
+2024 hyperglycaemic crises consensus (HC24, Table 4), the 2019 time-in-range consensus, the Kerendia
+label revised 9/2026 (sections 2, 5.1, 7.1, 8.1, 8.2, 14.2, 17), the FINE-ONE abstract (NEJM 2026),
+the Farxiga label, the Extraneal label (6/2025), MHRA, JBDS 2016 and JBDS 2022 (full guideline text),
+the Dexcom G7 user guide (Rev 005, 05/2026), Abbott FreeStyle Libre safety information, the Prograf
+label (Table 15), the ISPD 2022 peritonitis guideline (via its published summary; full text is
+paywalled), the ACR–NKF iodinated (2020) and gadolinium (2021) consensus abstracts, the FDA 2014
+sodium phosphate communication (fda.gov now returns 404; content confirmed through contemporary
+coverage of the communication), the FDA 2024 oral phenylephrine proposed order, DailyMed Drug Facts
+for Alka-Seltzer Original, Sudafed and Sudafed PE, NKF (herbal supplements; pain medicines; vitamins;
+nutrition in stages 1–5), AKF (herbal supplements), NIDDK (managing CKD; low blood glucose; kidney
+transplant), CDC (sick days; DKA), NHS (DKA; ketone testing advice), ADA (DKA and ketones), AHRQ
+(10 questions) and Pecoits-Filho 2016. Status checks on 2026-10-06: finerenone was approved by the FDA
+for CKD with type 1 diabetes on 2026-09-17 to reduce UACR (outcome benefit inferred from the type 2
+trials); no SGLT2 inhibitor or GLP-1 receptor agonist is approved for type 1 diabetes; ADA 2026 lists
+ACE inhibitors, ARBs, MRAs and SGLT2 inhibitors as contraindicated in pregnancy (Rec 11.10, grade B);
+the FDA order to remove oral phenylephrine is still a proposal.
+
+Counts: **high 1, medium 9, low 34.**
+
+### Findings and corrections
+
+| # | Severity | Page | Issue | Correction | Source |
+|---|---|---|---|---|---|
+| 1 | high | `t1d/treating-a-low` | "Take 15 g (5–10 g if you use an automated insulin delivery system)". ADA gives 5–10 g on AID only "in most situations", with exceptions when the low comes with physical activity or after a meal bolus that was much too big. As written, someone on AID could under-treat exactly the lows that need more. | "On an automated insulin delivery system, ADA says 5–10 g is typical, **but take the full 15 g** if the low came with exercise or after a meal bolus that was too big for what you ate, and follow the amount your team has written down for you." Question 3 and Sources updated. | A26-6 (Rec 6.15 and text) |
+| 2 | medium | `t1d/index` | After a failed pump site or a run of highs the page said to "be extra careful with potassium that day"; the clinician note said "stricter about dietary potassium that week". High potassium from missing insulin is corrected by insulin, and KDIGO does not endorse restricting foods naturally rich in potassium in earlier CKD, so this pushed food restriction without a blood result. | "Getting insulin back on board is what brings it down … fix the insulin first and follow your sick-day plan. Tell your team if you already have a potassium limit, have had high potassium before, or take an ACE inhibitor, ARB or finerenone: they may want a blood test. This is not a reason to cut fruit and vegetables if your team has not asked you to." Clinician note rewritten to match. | K24 Table 25, section 3.11.5; DG36 |
+| 3 | medium | `t1d/index` | CGM goals gave only the standard target (over 70 % in range, under 4 % low). Kidney disease is a reason for the older or high-risk target, and `ckd/diabetes-and-your-kidneys` and `labs/cgm-metrics` already show it. | Added "more than 50 % … under 1 % if you are older or at high risk of lows" to both unit tabs. | TIR19; A26-6 |
+| 4 | medium | `t1d/sick-days`, `t1d/index` | The 911 box did not cover ketones below 1.6 mmol/L with vomiting so you cannot keep fluids down, which NHS and CDC both treat as an emergency. `t1d/index` said "ketones with vomiting" without the fluids test. | Added "Any ketones with vomiting so you cannot keep fluids down" to the 911 box; `t1d/index` aligned. | NHS-DKA; CDC-DKA |
+| 5 | medium | `t1d/insulin-and-dialysis` | Icodextrin box: "GDH-PQQ, GDO or **some** GDH-FAD" strips; the error "can last **at least** two weeks"; "insulin given for a false high has caused coma and death" credited to the label. The label names GDH-FAD meters without "some" and says "up to two weeks"; the coma/death wording is MHRA's ("could result in"). "Some" could lead a reader to keep a GDH-FAD meter. | "GDH-PQQ, GDO or GDH-FAD … extra insulin given for a false high can cause a severe low, coma or death (MHRA) … False readings can last up to two weeks after the last icodextrin bag (Extraneal label)." | EXTRANEAL §5.1, §17; MHRA |
+| 6 | medium | `t1d/insulin-and-dialysis` | "Dexcom (G7) and Abbott … say their systems have not been tested on dialysis … Many people still use one." Both manufacturers say **do not use** the system if you are on dialysis. | States the "not to use" instruction and why, then that UK guidance still suggests CGM on dialysis in some cases, so use one only with the team's agreement and check with a meter when a reading does not match how you feel. | DEXCOM-G7; LIBRE-ISI; JBDS22 Rec 2.9 |
+| 7 | medium | `t1d/insulin-and-dialysis` | Interfering substances understated: "high amounts of acetaminophen (some sensors)". ADA Table 7.4: Dexcom above 4 g a day, Medtronic Guardian 4 at **any** dose; mannitol or sorbitol given intravenously **or in peritoneal dialysis solution** affect Eversense 365 (missing, and relevant on PD). | Row rewritten with each sensor and substance (no amounts that read as a dose). | A26-7 Rec 7.20, Table 7.4 |
+| 8 | medium | `t1d/kidney-protecting-medicines` | The pregnancy box covered only ACE inhibitors and ARBs, on a page that also recommends finerenone and discusses SGLT2 inhibitors. ADA 2026 lists MRAs and SGLT2 inhibitors as contraindicated in pregnancy; the Kerendia label reports harm in animal studies and no human data. | Box now covers finerenone (MRA) and SGLT2 inhibitors, contraception with "any of them", and cites ADA Rec 11.10 and Kerendia §8.1. | A26-11 Rec 11.10 and text; KER §8.1 |
+| 9 | medium | `medicines/supplements` | "Hide potassium, phosphorus or magnesium" and a table that gave "potassium, phosphorus or magnesium" for electrolyte powders, green powders, kelp/noni/dandelion and multivitamins, all cited to NKF. The NKF page never mentions magnesium, and nothing cited supported the multivitamin row. | Table rebuilt from NKF's own potassium and phosphorus lists (electrolyte-support labels → potassium; green powders → potassium and phosphorus; seaweed, algae and seed products → phosphorus, kelp and dulse also potassium; noni, dandelion, turmeric, coconut water → potassium). Off-the-shelf vitamin and mineral pills now cite NKF's stages 1–5 page ("may contain too much phosphorous and potassium"). Magnesium is cited to StatPearls. New source `NKF-NUT15`. | NKFherb; NKF-NUT15; DG45 |
+| 10 | medium | `medicines/your-medicine-list` | "You took too much insulin … check glucose often and treat any low at once" gave no step to get advice, although insulin keeps working longer with kidney disease. | Added: "Call your diabetes team or Poison Help now for advice: with kidney disease, insulin can keep working for longer than usual." | AK22; POISON |
+| 11 | low | `t1d/index` | Quoted the ADA–KDIGO phrase "a risk factor for hypoglycemia" as if about type 1 diabetes; in the report it refers to advanced CKD in type 2 diabetes. | Patient text keeps only the type 1 statement (doses "may need to be decreased" because of reduced insulin clearance); the clinician note explains the phrase and cites ADA Table 6.5 (CKD and kidney failure as risk factors for everyone). | AK22; A26-6 Table 6.5 |
+| 12 | low | `t1d/index` | "Healthy kidneys make about a fifth of the new glucose your body makes between meals." Pecoits-Filho: the kidneys contribute about 20 % of total body glucose through gluconeogenesis and tubular reabsorption. | "Healthy kidneys supply about a fifth of the body's glucose, partly by making new glucose." | DG55a |
+| 13 | low | `t1d/index` | The A1c goal (< 6.5 % to < 8.0 %) applies to people not on dialysis. | Row label "A1c goal (not on dialysis)". | K22 Rec 2.2.1 |
+| 14 | low | `t1d/index` | "Yearly urine and blood tests" at G1–G3a. Once CKD is present ADA advises 1–4 times a year. | "At least once a year, and 1–4 times a year once you have kidney disease". | A26-11 Rec 11.1a–b |
+| 15 | low | `t1d/index`, `t1d/treating-a-low`, `t1d/insulin-and-dialysis` | "Glucose is often lowest after a session" / "lows most likely in the hours after". Glucose falls during the session, and in JBDS data 3 in 4 lows came within 24 hours after it. | Wording aligned on all three pages; the 75 % figure added to the dialysis table. | JBDS; JBDS22 |
+| 16 | low | `t1d/index` | "Burnt-out diabetes … does not apply to type 1" had no source. | Cited to UK dialysis guidance. | JBDS22 |
+| 17 | low | `t1d/treating-a-low` | Level 3 row: "glucagon, then call 911" for every level 3 low. Level 3 means needing someone's help, which may be a helper giving carbohydrate. | "A helper treats it; if you cannot swallow safely: glucagon, then call 911". | A26-6 |
+| 18 | low | `t1d/treating-a-low` | "Table sugar, 1 tbsp (4 tsp, about 17 g) \| 13 g" contradicted itself (1 tbsp is 3 tsp, about 13 g). | "1 tbsp (3 tsp) \| 13"; NIDDK lists 1 tbsp as a 15 g treatment and 4 tsp gives about 17 g. | NIDDK-hypo; FDC |
+| 19 | low | `t1d/treating-a-low`, `t1d/sick-days` | Fluid volumes: 4 oz of juice "about 110 mL" (4 fl oz is 118 mL; the fluid page counts 120 mL); gelatin "about 115 mL"; ice pop "about 40 mL" (USDA portion 1¾ fl oz, about 52 mL). | 120 mL, 120 mL, about 50 mL; "fluid is counted by volume, the cautious way". | FDC; `eat/fluid` |
+| 20 | low | `t1d/sick-days` | Urine strips: only "+ ≈ 0.6–1.5" was given, so the jump from ++ to "emergency" looked like the NHS rule. NHS reads ++ as about 1.5–3.0. | Full NHS mapping given, and the handbook's stricter rule (++ or more → emergency, because HC24 counts 2+ toward DKA) is labelled as the handbook's choice. | NHSK; HC24 |
+| 21 | low | `t1d/sick-days` | SGLT2 row "off-label in type 1" read as an accepted use. | "Not established in type 1; see Kidney-protecting medicines". | FARXIGA; K24 research recs |
+| 22 | low | `t1d/sick-days` | "Cannot keep anti-rejection medicines down, or a fever: call the same day (NIDDK)". NIDDK covers the fever (over 100 °F) but not missed doses. | Split: missed doses risk rejection (KDIGO 2009 transplant, chapter 11); fever over 100 °F (37.8 °C) (NIDDK). | K09TX ch. 11; NIDDK-Tx |
+| 23 | low | `t1d/sick-days` | Ketones 0.6–1.5 with illness had no "call" step; JBDS 2022's dialysis rule was missing. | "If you are also ill, call your team"; "UK dialysis guidance also says that blood ketones above 3.0 mmol/L need medical assessment straight away". | NHS-DKA; JBDS22 |
+| 24 | low | `t1d/insulin-and-dialysis` | "Start a new sensor on a non-dialysis day" is 2016 advice from the fingerstick-calibration era. | Kept, with "ask whether it still applies to yours". | JBDS |
+| 25 | low | `t1d/kidney-protecting-medicines` | "SGLT2 inhibitors and GLP-1 receptor agonists … are not approved for type 1 diabetes" omitted that benefit and safety are not established. | "Their benefit and safety have not been established in type 1 diabetes, and none is approved to treat it." | K24; FARXIGA; OZEMPIC |
+| 26 | low | `t1d/kidney-protecting-medicines` | Finerenone below eGFR 25: "not started". Label: "initiation is not recommended". | Label wording. | KER §2.2 |
+| 27 | low | `t1d/kidney-protecting-medicines` | Blood pressure "usually under 130/80" left out the systolic < 120 goal (KDIGO, standardised office measurement; ADA "encouraged"). Raised in the first fact-check section. | Added, with the measurement condition. | K24 Rec 3.4.1; A26-11 Rec 11.5 |
+| 28 | low | `t1d/kidney-protecting-medicines` | High potassium "handled by lowering potassium, for example with diet changes" suggested self-directed food cuts. | "Other steps that lower potassium, such as diet changes your team suggests or a medicine that removes potassium". | K24 PP 3.6.3 |
+| 29 | low | `t1d/kidney-protecting-medicines` | FINE-ONE described without its population. Everyone took an ACE inhibitor or ARB, had eGFR 25–89 and UACR ≥ 200 mg/g, and people on SGLT2 inhibitors or GLP-1 receptor agonists were excluded. Finerenone is "usually" taken with an ACE inhibitor or ARB, not required. | Population added; "usually alongside". | F1; KER §14.2 |
+| 30 | low | `t1d/kidney-protecting-medicines` | SGLT2 inhibitors "now cause most cases of DKA with near-normal glucose". HC24: "in recent years … the majority of cases of euglycemic DKA". | "In recent years they have caused most cases …". | HC24 |
+| 31 | low | `t1d/kidney-protecting-medicines` | Statin line did not flag dialysis; the sodium line cited only the app page; the 911 and "call today" potassium lines had no source. | "If you are on dialysis, ask whether this applies to you"; sodium cited to K24 Rec 3.3.2.1 and K22 Rec 3.1.2; potassium tiers cited to K24 Table 28 and MedlinePlus; dizziness linked to low blood pressure (Kerendia label). | K22; K24; MEDLINE-K; KER |
+| 32 | low | `medicines/avoid` | Salt substitutes: the NoSalt figure (640 mg per ¼ tsp) had no source, and NKF's phosphorus page (DG20) was cited for a potassium claim. | Cited to the NoSalt and Nu-Salt labels, added the NoSalt label's kidney-disease warning and the higher risk with an ACE inhibitor, ARB or finerenone; DG20 removed. | SALTSUB-LABELS; DG35b; DG5; K24 Table 26; KER §17 |
+| 33 | low | `medicines/avoid` | Decongestants: "They can raise blood pressure" covered phenylephrine with only an EMA pseudoephedrine source, and missed that the FDA has proposed removing oral phenylephrine because it does not work. | Drug Facts: ask a doctor first with high blood pressure, heart disease or diabetes; EMA pseudoephedrine restriction (severe kidney disease, severe or uncontrolled hypertension); FDA proposal. New sources `DECONGEST-LABELS`, `FDA-PE`. The combination-product box now names a real example (Sudafed PE Head Congestion + Pain contains ibuprofen). | DECONGEST-LABELS; EMA-PSE; FDA-PE |
+| 34 | low | `medicines/avoid`, `medicines/scans-and-contrast` | Sodium phosphate products "can cause kidney injury from phosphate, dangerously high phosphate". The FDA communication says serious harm to the kidneys and heart, severe dehydration, changes in blood electrolytes and death, and lists age over 55 among the risk groups. | FDA wording and risk groups used on both pages. | FDANaP |
+| 35 | low | `medicines/avoid` | "KDIGO asks people with kidney disease to do exactly that" (tell the pharmacist). KDIGO "encourages" people with CKD to tell prescribers and suggests carrying the latest eGFR and a medicine list. | Reworded to match. | K24 PP 4.3.1.1 rationale |
+| 36 | low | `medicines/avoid` | "Get help now" had no FDA warning signs after a sodium phosphate product and no sources. | Added dry mouth and thirst, much less urine, light-headedness on standing, drowsiness, swelling → call the team today or get urgent care; magnesium-toxicity 911 signs cited to StatPearls. | FDANaP; DG45 |
+| 37 | low | `medicines/supplements` | Herb lists: NKF's list was incomplete, and "AKF adds … java tea, Oregon grape root, parsley root, pennyroyal", which are on NKF's list too. | NKF list completed (adds java tea leaf, Oregon grape root, parsley root, pennyroyal, rue); AKF additions are barberry, celery (*Apium graveolens*) supplements and huperzine. | NKFherb; AKFherb |
+| 38 | low | `medicines/supplements` | "Products and their breakdown products stay longer" is not NKF's wording; "avoid St John's wort" cited only the Prograf label (which advises dose changes, not avoidance); the 911 trigger was "if it is severe". | NKF: some herbs leave through the kidneys and can reach toxic levels, and can make medicines weaker or too strong; St John's wort: NKF (many interactions) plus Prograf Table 15 (lower levels, risk of rejection); 911 for fainting, severe weakness or a very slow or irregular heartbeat (MedlinePlus). | NKFherb; PROGRAF Table 15; MEDLINE-K |
+| 39 | low | `medicines/scans-and-contrast` | "Your team may pause some medicines for a few days, such as NSAIDs or diuretics". KDIGO: withdraw non-essential nephrotoxic medicines in people with AKI or eGFR < 30 for 24–48 h before and 48 h after contrast; consider holding RAASi ≥ 48 h before elective contrast CT in people at risk. | Specifics added; "pause only if they tell you to" kept. | K24 section 4.4.1 |
+| 40 | low | `medicines/scans-and-contrast` | Diabetes was not mentioned as a risk factor for contrast-associated kidney injury when GFR is reduced. | Added. | K24 Table 33 |
+| 41 | low | `medicines/scans-and-contrast`, `t1d/insulin-and-dialysis` | ISPD: only antibiotics before colonoscopy were mentioned; ISPD also suggests draining PD fluid so the abdomen is empty (2D). | Added on both pages. | I22P |
+| 42 | low | `medicines/scans-and-contrast` | Dexcom G7 for CT: "covered". The guide says covered **with a lead apron** and out of the scanned area; no G7 component may be worn in MRI. | Guide wording. | DEXCOM-G7 (contraindications; troubleshooting p. 125) |
+| 43 | low | `medicines/your-medicine-list` | "After an illness or an operation, the most common problem is a medicine … never restarted"; "KDIGO suggests a medicine review within a month". KDIGO: with sick-day rules "the most reported problem is failure to restart"; patients "may additionally benefit" from a review within a month. | Scoped and softened to match. | K24 PP 4.3.2–4.3.3 rationale |
+| 44 | low | `t1d/insulin-and-dialysis`, `t1d/treating-a-low` | Cloudy PD fluid "call today" without the keep-the-bag step or source; transplant fever uncited; "fat and protein slow it down" uncited. | "Call your PD unit the same day and keep the bag" (ISPD; matches `get-help-now`); fever over 100 °F cited to NIDDK; fat slows the rise and protein does not raise glucose (ADA). | I22P; NIDDK-Tx; A26-6 Rec 6.15 |
+
+**Checked and correct (no change):**
+
+* KDIGO 2024: Rec 3.6.3 (RASi with diabetes and A2–A3, whatever the blood pressure) and 3.6.4 (no
+  dual blockade); PP 3.6.2 (check 2–4 weeks), 3.6.4 (creatinine rise up to 30 % within 4 weeks), 3.6.5,
+  3.6.7, 4.1.2, 4.2.1, 4.3.1, 4.3.3, 4.4.1.1, 4.4.1.2, 4.4.2.1; 18–20 % of people at G3–G5 get a
+  potentially inappropriate nephrotoxic medicine each year; medication errors up to 37 % in
+  outpatients; NSAIDs, trimethoprim and finerenone in Table 26; NSAIDs, PPIs and trimethoprim in
+  Table 31; constipation in Table 25; creatine and vitamin C in section 4.1; star fruit and the CKLS
+  "purifier" in Figure 45; NSF not reported after 2012; NAC and ascorbic acid not consistently
+  protective; prophylactic pericontrast haemodialysis potentially harmful.
+* ADA 2026: Rec 6.11, 6.15, 6.16, 7.15, 7.20, 11.1a–b, 11.5, 11.6a, 11.6d, 11.7a–b (type 2 only), 11.8,
+  11.10; hypoglycaemia levels; ketone checks above 200 mg/dL; blood vs urine ketones (about 50 % fewer
+  admissions or ER visits); SGLT2 inhibitors 5–17 times the DKA risk in type 1; basal insulin never
+  stopped when not eating.
+* Kerendia 9/2026: indication for CKD with type 1 diabetes (to reduce UACR); do not start above
+  5.0 mEq/L; potassium at 4 weeks and after changes; grapefruit; itraconazole contraindicated;
+  erythromycin and verapamil need potassium monitoring; avoid breastfeeding until 1 day after;
+  angioedema; salt substitutes and potassium supplements (§17). FINE-ONE: 242 adults, 6 months, UACR
+  −34 % vs −12 % (25 % greater), hyperkalaemia 10.1 % vs 3.3 %, 2 stopped (1.7 %), eGFR −5.6 vs −2.7
+  with return toward baseline after stopping.
+* HC24: DKA criteria (BHB ≥ 3.0 mmol/L; urine 2+), about 10 % euglycaemic, lower BHB in kidney
+  failure (Table 4). JBDS 2022: Rec 2.7, 2.9, 3B.5, 5A.1 (< 7 mmol/L → 20–30 g), 5A.2–5A.5; PD up to
+  100–200 g glucose a day (400–800 kcal); PP 6.5, 6.8–6.10. JBDS 2016: lows about twice as common with
+  CKD; glucose-containing dialysate.
+* NHS ketone tiers; ADA "1.6 mmol/L or higher, seek emergency care"; CDC sick days (every 4 hours;
+  about 50 g carbohydrate every 4 hours; liquids not kept down > 4 hours; vomiting or diarrhoea > 6
+  hours) and DKA (glucose staying ≥ 300 mg/dL); NIDDK 15-15 rule and snack if the meal is over an
+  hour away.
+* ACR–NKF 2020 (saline for eGFR < 30 not on dialysis or AKI; consider at 30–44; none needed at ≥ 45)
+  and 2021 (0 NSF in 4,931 group II doses at eGFR < 30; delaying an MRI may do more harm; dialysis
+  change unlikely to be needed).
+* Alka-Seltzer Original (aspirin labelled NSAID; 567 mg sodium per tablet; ask a doctor with kidney
+  disease or a sodium-restricted diet); NKF pain page ("avoid NSAIDs, especially if eGFR < 60";
+  acetaminophen safe at recommended doses; look for "NSAID" on the label); NIDDK medicine list, one
+  pharmacy, bring bottles; AHRQ's three medicine questions; Poison Help 1-800-222-1222.
+* Arithmetic: creatinine rises 1.50 → 1.80 / 2.10 mg/dL (20 %, 40 %) and 133 → 159 / 186 µmol/L;
+  1.50 → 1.70 = 13 %; UACR 200 mg/g ≈ 23 mg/mmol; mg/dL ↔ mmol/L glucose conversions in all examples.
+
+### Contradictions and notes for other owners (not edited here)
+
+* `get-help-now.md`, `includes/help-card.md`, `t1d/sick-days.md`: all use the NHS ketone tiers
+  (1.6–2.9 mmol/L → call the team now; emergency if vomiting or the team cannot be reached quickly).
+  ADA's patient page says to seek emergency care at 1.6 mmol/L or more. Consistent across the handbook,
+  but see clinician item 1.
+* `sources.yml`: added `NKF-NUT15`, `FDA-PE` and `DECONGEST-LABELS`. `FDANaP` still points at an
+  Internet Archive copy that could not be opened from this environment; the 2014 facts were confirmed
+  from contemporary reports of the communication. Re-check the link in a browser.
+* The first fact-check section's two notes on `t1d/kidney-protecting-medicines` (systolic < 120 and the
+  statin wording) are handled by findings 27 and 31; the statin strength difference (KDIGO 2022
+  "recommend" vs KDIGO 2024 Rec 3.15.1.3 "suggest" at ages 18–49) is left for clinician item 7.
+
+### For a clinician to decide
+
+1. **Ketones 1.6–2.9 mmol/L.** NHS: contact the diabetes team now. ADA: seek emergency care at
+   1.6 mmol/L or more. The handbook uses the NHS tier, with the emergency department for vomiting or
+   when the team cannot be reached quickly. Confirm for a US readership, and for people on dialysis,
+   in whom HC24 reports lower ketone levels in DKA.
+2. **Urine ketones ++.** NHS reads ++ as about 1.5–3.0 mmol/L; the handbook sends ++ or more to
+   emergency care because HC24 counts 2+ toward DKA. Confirm the stricter rule.
+3. **CGM on dialysis.** Dexcom and Abbott say not to use their systems on dialysis; JBDS 2022 suggests
+   real-time CGM for people on dialysis with repeated or unfelt lows. Confirm "use one only with your
+   team's agreement" and whether the page should name a sensor labelled for dialysis if one exists.
+4. **Low treatment on automated insulin delivery.** Confirm the wording of finding 1, and whether people
+   with CKD on AID (more lows, longer insulin action) should be told to default to 15 g.
+5. **SGLT2 inhibitors in type 1 diabetes.** `kidney-protecting-medicines` gives a safety checklist "if
+   your team still prescribes one" (off-label). Confirm it should stay.
+6. **Finerenone in type 1 diabetes.** The approval rests on a 6-month UACR result, with outcome benefit
+   inferred from the type 2 trials, and combinations with SGLT2 inhibitors or GLP-1 receptor agonists
+   were not studied. Decide whether the page should say this in patient language.
+7. **Statins.** The page says KDIGO recommends a statin with diabetes and CKD and asks people on
+   dialysis to check whether it applies. Confirm the wording for ages 18–49 and for dialysis.
+8. **Medicines around contrast.** Confirm the KDIGO-based hold wording (non-essential nephrotoxic
+   medicines only at eGFR < 30 or AKI; ACE inhibitor or ARB possibly held 48 h before a planned
+   contrast CT) against local radiology practice.
+9. **Insulin overdose.** The page says to treat lows and call the diabetes team or Poison Help. Decide
+   whether a large extra dose of long-acting insulin should go straight to the emergency department.
+10. **Oral phenylephrine.** The FDA calls it ineffective but found no safety signal; US labels say to ask
+    a doctor first with high blood pressure, heart disease or diabetes. Confirm it belongs on the
+    "avoid" list rather than "ask first".

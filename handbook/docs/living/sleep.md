@@ -1,6 +1,6 @@
 ---
 title: "Sleep, restless legs and itch"
-description: "Why sleep is hard with kidney disease and type 1 diabetes, and what helps: restless legs (check iron first), itch, sleep apnoea, waking to pass urine, and night-time lows."
+description: "Why sleep is hard with kidney disease and type 1 diabetes, and what helps: restless legs (check iron first), itch, sleep apnea, waking to pass urine, and night-time lows."
 slug: sleep
 audience: [patient]
 applies_to: [all]
@@ -16,7 +16,7 @@ sources: [AASM24, K24, K26A, A26-5, A26-6, A26-7, TIR19, NIDDK-hypo, DG55a]
 ## In short
 
 About half of people with kidney disease sleep poorly, and almost as many are bothered by itch
-([KDIGO 2024][K24], Figure 49). Common causes are **restless legs**, **itch**, **sleep apnoea**,
+([KDIGO 2024][K24], Figure 49). Common causes are **restless legs**, **itch**, **sleep apnea**,
 **waking to pass urine**, worry, and with type 1 diabetes, **lows at night**. Most of these can be
 treated, so tell your team: KDIGO asks kidney teams to ask about symptoms at every visit, and the ADA
 asks diabetes teams to ask about sleep ([KDIGO 2024][K24], practice point 5.2.2.1;
@@ -44,8 +44,8 @@ about 49 %; itch about 46 %.
     | Adults with restless legs | ferritin 75 µg/L or less, or transferrin saturation (TSAT) under 20 % |
     | Restless legs with kidney failure | ferritin under 200 µg/L **and** TSAT under 20 % (iron given into a vein) |
 
-These thresholds are for restless legs. Your kidney team also checks iron for anaemia, with its own
-numbers ([KDIGO 2026 anemia][K26A]; [Haemoglobin and iron](../labs/haemoglobin-and-iron.md)).
+These thresholds are for restless legs. Your kidney team also checks iron for anemia, with its own
+numbers ([KDIGO 2026 anemia][K26A]; [Hemoglobin and iron](../labs/haemoglobin-and-iron.md)).
 
 **Night-time lows on a CGM report** ([time-in-range consensus][TIR19]):
 
@@ -73,7 +73,7 @@ you are still. Moving eases it for a while ([AASM 2024][AASM24]).
 - **Check your iron** (ferritin and TSAT), ideally in the morning, and treat low iron.
 - **Look for things that make it worse:** caffeine, alcohol, sedating antihistamines (ask your
   pharmacist whether a sleep or allergy aid contains one), some antidepressants and anti-sickness
-  medicines, and untreated sleep apnoea. A high phosphate level can also play a part.
+  medicines, and untreated sleep apnea. A high phosphate level can also play a part.
 - **Medicines:** gabapentin-type medicines are now a first choice. Older dopamine-type medicines
   (such as pramipexole, ropinirole and rotigotine) are no longer the standard choice, because over
   time they can make restless legs worse. With kidney failure, the AASM also suggests vitamin C.
@@ -88,10 +88,10 @@ you are still. Moving eases it for a while ([AASM 2024][AASM24]).
 - **Severe itch that nothing helps** can be a sign that kidney failure needs treatment, such as
   starting or adjusting dialysis ([KDIGO 2024][K24], Table 41).
 
-## Sleep apnoea and waking at night
+## Sleep apnea and waking at night
 
 - Loud snoring, stopping breathing in your sleep, gasping, morning headaches or falling asleep in
-  the day are reasons to ask for a sleep test. Untreated sleep apnoea also makes restless legs worse
+  the day are reasons to ask for a sleep test. Untreated sleep apnea also makes restless legs worse
   ([AASM 2024][AASM24]; [ADA 2026 §5][A26-5]).
 - Waking often to pass urine is worth raising. Your team can look for causes, including high
   glucose overnight ([ADA 2026 §5][A26-5]).
@@ -120,7 +120,7 @@ waking tired, irritable or confused ([NIDDK][NIDDK-hypo]).
 - [ ] Bring every medicine and sleep aid you take, including over-the-counter ones, to your next visit.
 - [ ] Keep a regular bedtime, a dark, cool room, and screens out of bed ([ADA 2026 §5][A26-5];
       [KDIGO 2024][K24], Table 38).
-- [ ] Moisturise dry skin every day.
+- [ ] Moisturize dry skin every day.
 - [ ] Turn on your CGM's low alert and keep glucose tablets within reach of the bed.
 
 ## Examples
@@ -140,7 +140,7 @@ make restless legs worse.
 1. Could my restless legs be from low iron? Can you check ferritin and TSAT?
 2. Do any of my medicines or sleep aids make restless legs or sleep worse?
 3. What can I do about itch? Is my dialysis or phosphate playing a part?
-4. Should I have a sleep test for sleep apnoea?
+4. Should I have a sleep test for sleep apnea?
 5. How should my CGM low alert be set at night?
 
 ## Get help now if…
@@ -157,7 +157,7 @@ make restless legs worse.
 ## Related pages
 
 - [Treating a low](../t1d/treating-a-low.md) · [CGM reports](../labs/cgm-metrics.md) ·
-  [Haemoglobin and iron](../labs/haemoglobin-and-iron.md) · [Phosphate and calcium](../labs/phosphate-calcium-pth.md)
+  [Hemoglobin and iron](../labs/haemoglobin-and-iron.md) · [Phosphate and calcium](../labs/phosphate-calcium-pth.md)
 - [Mood and stress](mental-health.md) · [Exercise](exercise.md) · [Medicines to avoid](../medicines/avoid.md)
 - In the app: [Logging food](../app/logging.md) (log night-time low treatments; they are never warned against)
 

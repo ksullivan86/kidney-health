@@ -33,8 +33,8 @@ Potassium is the same number in mmol/L and mEq/L, so there is one table for both
 | about 3.5–5.1 | the usual normal range (labs vary a little; your lab's range wins) | Keep doing what you do. If you have a potassium limit, keep it until your team changes it; if you have none, you do not need one while it stays normal |
 | 5.2–5.5 | above normal | Your team looks for the cause, may repeat the test and review food and medicines |
 | 5.6–5.9 | high | Tell your team promptly. KDIGO lists steps for any potassium over 5.5 (below) |
-| **6.0–6.4** | **moderate hyperkalaemia** (KDIGO) | **Call your team today.** If you feel unwell, get checked in hospital now; otherwise repeat the test within 24 hours |
-| **6.5 or more** | **severe hyperkalaemia** (KDIGO) | **Emergency: call 911 or go to the emergency department now** |
+| **6.0–6.4** | **moderate hyperkalemia** (KDIGO) | **Call your team today.** If you feel unwell, get checked in hospital now; otherwise repeat the test within 24 hours |
+| **6.5 or more** | **severe hyperkalemia** (KDIGO) | **Emergency: call 911 or go to the emergency department now** |
 
 Normal range from [MedlinePlus][MEDLINE-LOWK]; action levels from [KDIGO 2024][K24], Table 28 and
 Figure 32. KDIGO counts more than 5.0 as high when it describes how common high potassium is.
@@ -63,8 +63,8 @@ sudden collapse ([MedlinePlus][MEDLINE-K]). That is why the **lab number** matte
 ## False highs
 
 Sometimes the blood in the tube is high but the blood in your body is not. This is called
-pseudohyperkalaemia. Causes include a tight tourniquet, **clenching or pumping your fist** during the
-draw, red cells breaking open (a "haemolysed" sample) after a hard draw, rough handling or a delay
+pseudohyperkalemia. Causes include a tight tourniquet, **clenching or pumping your fist** during the
+draw, red cells breaking open (a "hemolyzed" sample) after a hard draw, rough handling or a delay
 before the sample is processed, and very high platelet or white-cell counts. Serum results also run a
 little higher than plasma results ([KDIGO 2024][K24], Table 25). Potassium also varies by 0.24–0.73
 mmol/L over a day. A surprise result is usually repeated, but **do not assume a high result is false**:
@@ -72,7 +72,7 @@ call as the table says.
 
 ## Low potassium
 
-Below about 3.5 mmol/L is low. Causes include water pills (diuretics), vomiting or diarrhoea, and low
+Below about 3.5 mmol/L is low. Causes include water pills (diuretics), vomiting or diarrhea, and low
 magnesium. Symptoms can be weakness, cramps, constipation and palpitations; a large drop can cause
 dangerous heart rhythms ([MedlinePlus][MEDLINE-LOWK]). People on **peritoneal dialysis** sometimes run
 low and need more potassium, not less ([DaVita][DG25a]). Both low and high potassium are linked with a
@@ -102,7 +102,7 @@ stopping the medicine ([KDIGO 2024][K24], practice point 3.6.3).
 - [ ] Keep a list of the medicines you take that raise potassium. Show it to every prescriber.
 - [ ] Avoid NSAIDs such as ibuprofen and naproxen unless your kidney team says otherwise
       ([Medicines to avoid](../medicines/avoid.md)).
-- [ ] Keep your bowels moving: fibre from low-potassium foods, fluid within your limit, and ask about a
+- [ ] Keep your bowels moving: fiber from low-potassium foods, fluid within your limit, and ask about a
       laxative if needed.
 - [ ] Keep glucose in range and never skip your basal (background) insulin. When you are ill, follow
       your [sick-day plan](../t1d/sick-days.md).
@@ -122,7 +122,7 @@ stopping the medicine ([KDIGO 2024][K24], practice point 3.6.3).
 - **A new medicine.** Three weeks after starting an ACE inhibitor, Rosa's potassium is 5.4. Her team
   looks at her food diary, finds a salt substitute and two glasses of orange juice a day, and swaps
   them. The ACE inhibitor stays, and the repeat is 4.9.
-- **A haemolysed sample.** Tom's result is 6.1 and the report says "haemolysed". He calls his team the
+- **A hemolyzed sample.** Tom's result is 6.1 and the report says "hemolyzed". He calls his team the
   same day. He feels well, so they repeat it within 24 hours: 4.8.
 - **An emergency.** On Monday morning, after the weekend gap, Jean feels weak and her pulse is slow
   and uneven. Her family calls 911. Her potassium is 7.0.
@@ -148,7 +148,7 @@ stopping the medicine ([KDIGO 2024][K24], practice point 3.6.3).
 !!! warning "Call your care team today"
     A potassium of **6.0–6.4 mmol/L**: if you feel unwell, get checked and treated in hospital; if you
     feel well, the test should be repeated within 24 hours ([KDIGO 2024][K24], Table 28). Also call for
-    vomiting or diarrhoea, and check your ketones. If you cannot keep liquids down for more than 4 hours,
+    vomiting or diarrhea, and check your ketones. If you cannot keep liquids down for more than 4 hours,
     or you have ketones with vomiting, that is an emergency ([CDC][CDC-SICK];
     [Sick days](../t1d/sick-days.md)). Full list: [Get help now](../get-help-now.md).
 

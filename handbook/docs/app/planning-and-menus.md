@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5]
 ---
 
@@ -36,7 +37,7 @@ or week will look like "if you eat what's planned", so you can swap a food while
 What changes on **Today**:
 
 - Each nutrient bar shows the eaten total, plus a lighter part for what is planned.
-- Under the eaten alerts you see, in grey, lines such as "If you eat what's planned, potassium reaches
+- Under the eaten alerts you see, in gray, lines such as "If you eat what's planned, potassium reaches
   104 % of today's limit (2,600 / 2,500 mg)".
 - Each meal shows "Planned: +32 g carbs" separately from what you have eaten.
 
@@ -47,7 +48,7 @@ if you ate more or less.
 
 **Plan** shows 7 days from your chosen week start (side by side on a computer, as cards on a phone). Each
 day shows projected potassium, phosphorus, sodium, protein, carbohydrate and fluid (when you have a fluid
-target), coloured by how close they are to your targets, and how many items are planned or eaten.
+target), colored by how close they are to your targets, and how many items are planned or eaten.
 
 - Tap a day to open it on **Today**.
 - **Last week** / **Next week** move through the weeks.
@@ -118,7 +119,7 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 ## If something goes wrong
 
 - **Planned food is counted as eaten.** It is not: eaten totals and alerts use eaten entries only; the
-  grey "if you eat what's planned" line and the lighter bar show the plan.
+  gray "if you eat what's planned" line and the lighter bar show the plan.
 - **The shopping list is empty.** It lists **planned** entries only, for the week on screen.
 - **A saved meal shows a hidden food.** You deleted that food; the meal still works with the stored
   numbers.

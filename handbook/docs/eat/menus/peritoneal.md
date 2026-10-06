@@ -38,7 +38,7 @@ Also: no foods with phosphate additives.
 
 ## Week at a glance
 
-| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fibre g |
+| Day | Energy kcal | Carb g | Protein g | Potassium mg | Phosphorus mg | Sodium mg | Fluid mL | Fiber g |
 |---|---|---|---|---|---|---|---|---|
 | Day 1 | 1,669 | 177 | 83.6 | 1,904 | 955 | 976 | 710 | 19.2 |
 | Day 2 | 1,745 | 186 | 76.1 | 2,126 | 918 | 878 | 710 | 15.8 |

@@ -138,7 +138,7 @@ label, the label wins.
     | Vegetables | Potato, boiled, unleached | ½ cup | **256** | 31 | 4 | 16 | 1.3 | leached/double-boiled ≈ 130 |
     | Grains | Brown rice, cooked | ½ cup | 87 | 104 | 4 | 26 | 2.8 | P (plant, poorly absorbed) |
     | Grains | Whole-wheat bread | 1 slice | 81 | 68 | 146 | 14 | 4.0 | two slices = medium P |
-    | Grains | Oatmeal, cooked | ½ cup | 73 | 83 | 1 | 14 | 2.7 | plain, not flavoured packets |
+    | Grains | Oatmeal, cooked | ½ cup | 73 | 83 | 1 | 14 | 2.7 | plain, not flavored packets |
     | Grains | Whole-wheat pasta, cooked | ½ cup | 56 | 74 | 2 | 18 | 3.5 | — |
     | Grains | Cheerios | 1 cup | 177 | 100 | 139 | 20 | 3.5 | ¾ cup is the portion |
     | Grains | Flour tortilla, refrigerated dough | 1 (6 in, 48 g) | 60 | 99 | 353 | 24 | 3.9 | Na, P; brands vary 4-fold |
@@ -247,7 +247,7 @@ Ask your pharmacist about your own medicines.
 
 1. Which "Avoid" foods are fine for me with my current labs?
 2. How many "Limit" foods can I have a day?
-3. Can you give me a list of my favourite foods that fit?
+3. Can you give me a list of my favorite foods that fit?
 
 ## Get help now if…
 

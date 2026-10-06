@@ -49,7 +49,7 @@ than "G3b A1" ([CKD stages](../ckd/stages.md)).
 times a year once you have CKD ([ADA 2026 §11][A26-11], recommendations 11.1a and 11.1b).
 
 **When a change is real:** UACR varies by more than 20 % between samples, so two of three samples
-taken over 3–6 months should be high before you are labelled with raised albuminuria
+taken over 3–6 months should be high before you are labeled with raised albuminuria
 ([ADA 2026 §11][A26-11]). Later on, a **doubling** is bigger than normal variation and should be
 looked at ([KDIGO 2024][K24], practice point 2.1.5).
 

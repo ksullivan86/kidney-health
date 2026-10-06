@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
@@ -34,7 +35,7 @@ the app with a message that names the variable; it never starts half-configured
 | Variable | Default | Purpose |
 |---|---|---|
 | `PUBLIC_URL` | unset | The address people type, scheme included, for example `https://food.home.example.net`. Its host passes the Host check, browsers' `Origin` must match it, and invite and reset links use it. **Set it whenever you use a host name.** |
-| `ALLOWED_HOSTS` | localhost, IP literals and the `PUBLIC_URL` host | Extra host names (comma list; `*.example.org` wildcards). Any other `Host` gets `400 Unknown host` (DNS-rebinding defence). |
+| `ALLOWED_HOSTS` | localhost, IP literals and the `PUBLIC_URL` host | Extra host names (comma list; `*.example.org` wildcards). Any other `Host` gets `400 Unknown host` (DNS-rebinding defense). |
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Addresses whose `X-Forwarded-For` and `-Proto` are believed. Depends on your engine ([Security](security.md)). `FORWARDED_ALLOW_IPS` is ignored. |
 | `MAX_BODY_BYTES` | 1 MiB | Largest JSON request. |
 | `MAX_IMAGE_BYTES` | 4 MiB | Largest photo upload (v0.3 photo features). |
@@ -145,7 +146,7 @@ Environment=AUTH_MODE=local
 
 - **The app exits at start with a message naming a variable**: fix that variable; the message says how.
 - **`SECRET_KEY_FILE points to ..., which does not exist`**: create the secret, or fix its file mode.
-- **A setting is greyed out in the app**: it is set here; change it here and restart.
+- **A setting is grayed out in the app**: it is set here; change it here and restart.
 - More: [Troubleshooting](troubleshooting.md).
 
 ## Related pages

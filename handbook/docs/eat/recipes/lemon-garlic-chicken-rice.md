@@ -16,7 +16,7 @@ sources: [FDC, DG47, DG5, DG46b, DG37a, FSTEMPS]
 
 # Lemon-garlic chicken with herbed rice and green beans
 
-A plain roast chicken breast becomes a full dinner with a lemon-garlic marinade, rice tossed with butter and parsley, and green beans. It uses no salt; lemon, garlic, oregano, paprika and black pepper carry the flavour. The portion is 3 oz of cooked chicken, the size of a deck of cards.
+A plain roast chicken breast becomes a full dinner with a lemon-garlic marinade, rice tossed with butter and parsley, and green beans. It uses no salt; lemon, garlic, oregano, paprika and black pepper carry the flavor. The portion is 3 oz of cooked chicken, the size of a deck of cards.
 
 **Serves 4** · 40 minutes · Lower potassium · Lower phosphorus · Dialysis-friendly · Freezes well
 
@@ -27,7 +27,7 @@ A plain roast chicken breast becomes a full dinner with a lemon-garlic marinade,
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 410 kcal | 41 g | 31.2 g | 397 mg | 271 mg | 68 mg | none | 2.9 g |
 

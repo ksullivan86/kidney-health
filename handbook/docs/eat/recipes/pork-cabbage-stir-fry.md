@@ -27,7 +27,7 @@ Stir-fry sauces from a jar are often very high in sodium. This sauce uses 1 tabl
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 374 kcal | 47 g | 23.3 g | 538 mg | 275 mg | 179 mg | none | 2.6 g |
 
@@ -65,7 +65,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 - Pork tenderloin has more potassium than chicken (about 360 mg per 3 oz), so this recipe uses 2½ oz a serving and lower-potassium vegetables to stay under 600 mg.
 - Pick plain pork, not "enhanced" or marinated pork, which has added sodium and phosphate.
-- The cornstarch thickens the sauce, so you need less soy sauce for the same flavour.
+- The cornstarch thickens the sauce, so you need less soy sauce for the same flavor.
 
 ## Make it fit you
 

@@ -44,7 +44,7 @@ people have healthy pregnancies ([NKF][NKF-pregnancy]).
 | CKD stage | G1–G2 with normal blood pressure and little protein: a healthy pregnancy is often possible. G3–G5: the risk of complications is much greater | [NKF][NKF-pregnancy] |
 | Dialysis in pregnancy | Longer, more frequent hemodialysis; people on PD are usually moved to hemodialysis | [UK Kidney Association][UKKA19], 5.2.2, 5.2.4 |
 
-**Mycophenolate REMS:** in July 2026 the FDA ended the mycophenolate REMS programme, but the label's
+**Mycophenolate REMS:** in July 2026 the FDA ended the mycophenolate REMS program, but the label's
 warnings about miscarriage and birth defects, pregnancy testing and contraception still apply
 ([FDA][FDA-MYCO26]; [REMS][REMS]; [CellCept label][CELLCEPT]).
 
@@ -80,7 +80,7 @@ contraception and pregnancy to anyone who could become pregnant ([KDIGO 2024][K2
 - [ ] If you could become pregnant, ask your teams about contraception that suits your medicines.
 - [ ] If you want a baby in the next year or two, say so **now**, so your teams can plan medicines,
       A1c, blood pressure and timing with you ([UK Kidney Association][UKKA19], 3.3.1).
-- [ ] Ask for a referral to a maternal-fetal medicine specialist for pre-pregnancy counselling.
+- [ ] Ask for a referral to a maternal-fetal medicine specialist for pre-pregnancy counseling.
 - [ ] Ask how pregnancy might affect your kidneys, and what the risks are for you and the baby
       ([UK Kidney Association][UKKA19], 3.3.2).
 - [ ] Ask whether you should use a CGM in pregnancy: the ADA recommends one for type 1 diabetes
@@ -112,7 +112,7 @@ medicine ([UK Kidney Association][UKKA19], 4.2.1, 4.2.5).
 2. Which contraception suits me with my medicines and my kidney function?
 3. What are the risks of pregnancy for my kidneys and for a baby at my stage?
 4. What should my A1c and blood pressure be before I try?
-5. Can you refer me to maternal-fetal medicine for pre-pregnancy counselling?
+5. Can you refer me to maternal-fetal medicine for pre-pregnancy counseling?
 6. Is there a treatment for my sexual problems that is safe with my kidneys?
 
 ## Get help now if…

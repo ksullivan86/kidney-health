@@ -70,7 +70,7 @@ condition ([EEOC][EEOC]).
 - **Home hemodialysis** lets you choose your treatment times, which makes working easier
   ([NIDDK][NIDDK-choosing]). Overnight home hemodialysis runs while you sleep.
 - **Automated PD** runs overnight on a cycler, so your day is free ([NIDDK][NIDDK-choosing]).
-- **In-centre hemodialysis** runs on a fixed schedule set by the unit. A US dialysis unit must give
+- **In-center hemodialysis** runs on a fixed schedule set by the unit. A US dialysis unit must give
   you information about scheduling options for working patients, including options it does not
   offer itself ([42 CFR 494.70][CFR494]).
 - **A transplant**, especially before dialysis, gives the most freedom once you recover
@@ -97,7 +97,7 @@ condition ([EEOC][EEOC]).
 
 ## Examples
 
-**An office worker starting in-centre dialysis.** You ask your employer to move your hours to start
+**An office worker starting in-center dialysis.** You ask your employer to move your hours to start
 at 11 a.m. on Monday, Wednesday and Friday after morning sessions, and to work late on Tuesdays and
 Thursdays. You put the request in writing with a letter from your nephrologist. This is the kind of
 schedule change the EEOC lists ([EEOC][EEOC]).

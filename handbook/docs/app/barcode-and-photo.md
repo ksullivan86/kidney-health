@@ -8,6 +8,7 @@ status: draft
 reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
+fact_checked: 2026-10-05
 sources: [NOTE03, NOTE04, ARCH, OFF-API, ODBL, FDC-API, DG12, LEON13, SHERMAN09, FRIDOLFSSON25, A26-6]
 ---
 
@@ -50,7 +51,7 @@ screen ([architecture contract][ARCH], v0.3 item 8). Its data is shared under th
 and the app shows "Product data © Open Food Facts contributors (ODbL)" on those foods
 ([Open Food Facts][OFF-API]; [ODbL][ODBL]). USDA data is public domain ([USDA API guide][FDC-API]).
 
-For a US-labelled product found in both, the app takes the numbers from USDA (they come from the
+For a US-labeled product found in both, the app takes the numbers from USDA (they come from the
 maker) and fills gaps from Open Food Facts ([design note 03][NOTE03]).
 
 ## Check before you save
@@ -118,8 +119,8 @@ many or too few. Weigh or measure when it matters.
   for HTTPS.
 - **The camera shows a black picture.** Use the photo button instead.
 - **"Barcode lookups are off."** Ask your admin to switch on Open Food Facts, or use Quick add.
-- **"Try again in a minute."** Open Food Facts asks apps to keep to a few lookups per minute, so the
-  server spaces them out ([Open Food Facts][OFF-API]).
+- **"Try again in a minute."** Open Food Facts allows each server 15 product lookups a minute, so
+  the server spaces them out ([Open Food Facts][OFF-API]).
 - **The product is wrong or the numbers look odd.** Compare with the package. If they differ, use
   **Enter from the label**; your own copy wins next time.
 

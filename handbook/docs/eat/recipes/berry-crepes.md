@@ -27,7 +27,7 @@ Pancake mixes and most baking powders contain phosphate additives, which your bo
 
 <div class="kh-numbers" markdown>
 
-| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fibre |
+| Energy | Carb | Protein | Potassium | Phosphorus | Sodium | Fluid | Fiber |
 |---|---|---|---|---|---|---|---|
 | 422 kcal | 44 g | 12.2 g | 267 mg | 184 mg | 237 mg | none | 2.9 g |
 
