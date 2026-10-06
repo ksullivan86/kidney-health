@@ -14,13 +14,15 @@ fonts and scripts are served by the app, and offline mode works with no internet
 ## 1. The running app (runtime egress)
 
 The app makes **no outbound request until you turn a feature on**. Every outbound call is HTTPS on
-port 443, made by the server (never the browser) through the app's SSRF-checked transport; API keys
-travel in headers, never in URLs.
+port 443, made by the server (never the browser) through the app's SSRF-checked transport
+(`app/egress.py` for USDA and Open Food Facts: the address is resolved and checked on every request,
+private and metadata addresses are refused, redirects are not followed); API keys travel in headers,
+never in URLs.
 
 | Host | Port | Needed when | Default |
 |---|---|---|---|
-| `api.nal.usda.gov` | 443 | A USDA FoodData Central key is set (`USDA_API_KEY_FILE`, or a key in Settings → Food data) | off |
-| `world.openfoodfacts.org` | 443 | Barcode lookups are on (`food.off_enabled`, Settings → Food data, or the first-run checkbox). `images.openfoodfacts.org` is **not** needed: the app shows no product images. | off |
+| `api.nal.usda.gov` | 443 | A USDA FoodData Central key is set (`USDA_API_KEY_FILE`, or a key in Settings → Food data): food search, import, and branded-food barcode lookups (`food.usda_branded_barcode`) | off |
+| `world.openfoodfacts.org` | 443 | Barcode lookups are on (`food.off_enabled`, Settings → Food data, or the first-run checkbox) **and** the person scanning agreed (`food.off_consent`); only the barcode digits are sent ([`barcode-and-photos.md`](barcode-and-photos.md)). The env-only `OFF_BASE_URL` can point at staging (`world.openfoodfacts.net`) or your own Product Opener instead. `images.openfoodfacts.org` is **not** needed: the app shows no product images. | off |
 | `api.openai.com` | 443 | AI with the `openai` preset | off (`AI_ENABLED=false`) |
 | `openrouter.ai` | 443 | AI with the `openrouter` preset | off |
 | `inference-api.nousresearch.com` | 443 | AI with the `nous_portal` preset | off |

@@ -29,3 +29,12 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * Dialysis-day eating patterns beyond the interdialytic allowance — note 06 §5 R12 ("revisit in v0.4").
 * An offline MILP experiment to measure how far the beam-search plans are from optimal — note 06 §3.1 option C ("could be an offline experiment").
 * Clinical review (renal dietitian, diabetes educator) of the per-meal caps, score weights, tip texts and the "Treating a low" card — note 06 §5 R1/R6/R11 and §8 open questions (default carb tolerance, `purpose` defaulting to "hypo", starter combos).
+
+## Barcodes, Open Food Facts and USDA branded foods (note 03)
+
+* Clinical decision on the potassium-additive rule: whether a potassium additive with **unknown** potassium should be `high` instead of `medium`, by the owner and a renal dietitian (sources in `docs/research/fact-check.md` §5) — note 03 R5 ("the owner and a renal dietitian decide") and §6 item 2; ARCHITECTURE v0.3 item 9.
+* Move to Open Food Facts API 3.5+ (`OFF_API_VERSION` in `app/off.py`; `parse_nutrition_v35` and the recorded `nutella_v3.6` fixture are ready) once OFF declares schema 1003+ stable — note 03 F1 ("keep a second parser … ready for when OFF declares schema 1003+ stable") and §5 risk table.
+* A local copy of the Open Food Facts dump for large public instances (not in the image; ODbL share-alike applies to redistribution) — note 03 §3.1 ("Optional later for big instances").
+* On-device label OCR with Tesseract.js 7 behind an accuracy gate (≥ 30 real labels, ≥ 95 % exact fields), with its own Trusted Types policy — note 03 §3.4 and R8 ("v0.4 experiment").
+* Server-side barcode decoding (`zxing-cpp`) for API-only clients — note 03 §3.3 ("Keep as a documented option").
+* Fill in Open Food Facts' API usage form for the project and document an admin contact for `OFF_CONTACT` — note 03 §6 item 19 (an owner action; the app already sends the identifying User-Agent).
