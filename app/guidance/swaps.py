@@ -127,8 +127,12 @@ def _eligible_swap(f: FoodVec, original: FoodVec, ctx: GuidanceContext, mode: st
 
 
 def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, purpose: str | None = None,
-               limit: int = R.SWAP_MAX) -> dict[str, Any]:
-    """Swap ideas for ``food`` × ``servings`` in ``meal`` (``ctx.day`` must not contain the entry itself)."""
+               limit: int = R.SWAP_MAX, explain: bool = False) -> dict[str, Any]:
+    """Swap ideas for ``food`` × ``servings`` in ``meal`` (``ctx.day`` must not contain the entry itself).
+
+    ``explain`` adds ``explain.rejected``: how many foods each rule turned away (``not_eligible``,
+    ``no_matching_portion``, ``not_lower``, ``phosphate_additive``, ``new_problem``) and how many passed.
+    """
     mode = resolve_mode(food, purpose)
     totals = day_totals(ctx.day)
     room = meal_room(ctx, meal, totals=totals)
@@ -167,11 +171,14 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
     weights = dict(R.USAGE_WEIGHT)
     weights.update(room.usage_weight)
     found: list[tuple[tuple, dict[str, Any]]] = []
+    rejected = {"not_eligible": 0, "no_matching_portion": 0, "not_lower": 0, "phosphate_additive": 0, "new_problem": 0}
     for cand in ctx.foods.values():
         if not _eligible_swap(cand, food, ctx, mode):
+            rejected["not_eligible"] += 1
             continue
         q = candidate_portion(cand, match, target, mode)
         if q is None:
+            rejected["no_matching_portion"] += 1
             continue
         new = _amounts(cand, q)
         ok = True
@@ -183,8 +190,10 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
                 break
             reduction += weights.get(key, 1.0) * (o - n) / o
         if not ok:
+            rejected["not_lower"] += 1
             continue
         if p_trigger and cand.additive:
+            rejected["phosphate_additive"] += 1
             continue
         if mode != "hypo":
             # A swap must not create a new problem: a nutrient over the room where the original was lower,
@@ -204,6 +213,7 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
                         ok = False
                         break
             if not ok:
+                rejected["new_problem"] += 1
                 continue
         level = renal_level(new[R.K], new[R.P], new[R.NA], cand.additive)
         same_category = cand.category == food.category
@@ -246,6 +256,8 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
             base["tips"].insert(0, T.tip_json(T.LEACHING_TIP))
     if not swaps:
         base["reason"] = "no_swap_found"
+    if explain:
+        base["explain"] = {"rejected": rejected, "passed": len(found)}
     return base
 
 

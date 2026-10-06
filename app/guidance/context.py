@@ -77,7 +77,8 @@ def has_targets(profile: Profile) -> bool:
     return any(R.target_max(t.get(k)) is not None for k in (R.K, R.P, R.NA, "carbs_per_meal_g"))
 
 
-def _pref(settings: Any, name: str, default: Any) -> Any:
+def setting_value(settings: Any, name: str, default: Any) -> Any:
+    """One field of the ``guidance`` settings object (a model instance or, from older code, a dict)."""
     if settings is None:
         return default
     if isinstance(settings, Mapping):
@@ -100,10 +101,10 @@ def not_for_me_ids(conn: sqlite3.Connection, user_id: int) -> frozenset[int]:
 def load_prefs(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> Prefs:
     settings = user_settings(conn, store, user_id)
     return Prefs(
-        carb_tolerance_g=float(_pref(settings, "carb_tolerance_g", R.CARB_TOLERANCE_G)),
-        hypo_dose_g=float(_pref(settings, "hypo_dose_g", R.HYPO_DOSE_G)),
+        carb_tolerance_g=float(setting_value(settings, "carb_tolerance_g", R.CARB_TOLERANCE_G)),
+        hypo_dose_g=float(setting_value(settings, "hypo_dose_g", R.HYPO_DOSE_G)),
         exclude_food_ids=not_for_me_ids(conn, user_id),
-        exclude_categories=frozenset(_pref(settings, "exclude_categories", ()) or ()),
+        exclude_categories=frozenset(setting_value(settings, "exclude_categories", ()) or ()),
     )
 
 

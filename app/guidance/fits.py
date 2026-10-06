@@ -35,6 +35,27 @@ from .vectors import FoodVec, protein_quality, renal_level
 # --------------------------------------------------------------------------- #
 
 
+def ineligible_reason(f: FoodVec, ctx: GuidanceContext) -> str | None:
+    """Why ``f`` is never a meal suggestion (§4.3), or ``None`` when it may be one: ``hidden``,
+    ``avoid_ckd``, ``hypo_treatment`` (low treatments are not food suggestions), ``ingredient``,
+    ``diabetes_supplies``, ``not_for_me`` or ``excluded_category`` (the person's choices)."""
+    if f.hidden:
+        return "hidden"
+    if f.avoid:
+        return "avoid_ckd"
+    if f.hypo:
+        return "hypo_treatment"
+    if f.ingredient:
+        return "ingredient"
+    if f.supplies:
+        return "diabetes_supplies"
+    if f.id in ctx.prefs.exclude_food_ids:
+        return "not_for_me"
+    if (f.category or "") in ctx.prefs.exclude_categories:
+        return "excluded_category"
+    return None
+
+
 def eligible_for_meals(f: FoodVec, ctx: GuidanceContext) -> bool:
     """§4.3: not hidden, not ``avoid_ckd``, not a low treatment, not an ingredient, not a diabetes
     supply, and not something the person marked "Not for me" or a category they never want."""
@@ -450,9 +471,12 @@ def what_fits(ctx: GuidanceContext, meal: str, limit: int = R.DEFAULT_LIMIT, exp
         "notes": [M.DISCLAIMER],
     }
     if explain:
+        not_eligible = {f.id: ineligible_reason(f, ctx) for f in ctx.foods.values()}
         result["explain"] = {
             "why_not": {str(fid): code for fid, code in sorted(why_not.items())},
+            "not_eligible": {str(fid): code for fid, code in sorted(not_eligible.items()) if code is not None},
             "evaluations": counter.foods,
+            "meal_evaluations": counter.meals,
             "eligible": len(ranked) + len(why_not),
         }
     return result
