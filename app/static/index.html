@@ -932,13 +932,6 @@
         <span class="hint" id="entry-status-hint"></span>
       </fieldset>
 
-      <label class="check entry-hypo" for="entry-hypo" id="entry-hypo-row" hidden>
-        <input type="checkbox" id="entry-hypo" aria-describedby="entry-hypo-hint">
-        <span class="check-text">Used to treat a low
-          <span class="hint" id="entry-hypo-hint">It counts toward potassium and the day's totals, never toward your meal carbs. Treating a low always comes first.</span>
-        </span>
-      </label>
-
       <div class="form-grid">
         <div class="field">
           <label for="entry-servings">Servings</label>
@@ -965,7 +958,16 @@
       </div>
 
       <div class="warnings" id="entry-warnings" aria-live="polite"></div>
-      <!-- Swap ideas, or "For your next low" (js/views/guidance.js) -->
+      <!-- Meal guidance (js/views/guidance.js). "Used to treat a low" sits under the warnings it changes (ticked,
+           they become a plain note: a low treatment is never warned against), so the warnings stay where they
+           were, above the fold on a phone. Then swap ideas, or "For your next low". -->
+      <div class="entry-hypo" id="entry-hypo-row" hidden>
+        <label class="check" for="entry-hypo">
+          <input type="checkbox" id="entry-hypo" aria-describedby="entry-hypo-hint">
+          <span class="check-text">Used to treat a low</span>
+        </label>
+        <span class="hint" id="entry-hypo-hint">Tick it when this food treated a low: it then counts toward the day's totals but never toward your meal carbs, and is not warned about.</span>
+      </div>
       <div class="entry-guidance" id="entry-guidance"></div>
 
       <div class="preview">

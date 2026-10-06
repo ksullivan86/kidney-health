@@ -882,6 +882,7 @@
   async function showToday(day) {
     await loadPrefs();
     const on = guidanceOn();
+    if (!on) $$('#meals .g-whatfits').forEach((b) => b.remove()); // drawn before the settings had loaded
     const actions = clear($('#guidance-today-actions'));
     const date = day.date;
     const isPast = date < todayStr();
@@ -905,7 +906,7 @@
   }
   function whatFitsButton(meal) {
     if (!guidanceOn()) return null;
-    return h('button', { class: 'link-btn', type: 'button', onclick: () => goWhatFits(meal) }, 'What fits');
+    return h('button', { class: 'link-btn g-whatfits', type: 'button', onclick: () => goWhatFits(meal) }, 'What fits');
   }
   // The client decides when the day is "done" (§4.16): a past day, or today with every main meal
   // logged as eaten, or after 19:00 local time. A future day has no insights.
@@ -958,9 +959,9 @@
   }
   function infoIcon() {
     return KH.s('svg', { class: 'rating g-info-icon', viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
-      KH.s('circle', { cx: 12, cy: 12, r: 11, fill: 'currentColor' }),
-      KH.s('rect', { x: 10.9, y: 10, width: 2.2, height: 7.5, rx: 1, fill: 'var(--surface)' }),
-      KH.s('circle', { cx: 12, cy: 6.9, r: 1.4, fill: 'var(--surface)' }));
+      KH.s('circle', { class: 'shape', cx: 12, cy: 12, r: 11 }),
+      KH.s('rect', { class: 'glyph', x: 10.9, y: 10, width: 2.2, height: 7.5, rx: 1 }),
+      KH.s('circle', { class: 'glyph', cx: 12, cy: 6.9, r: 1.4 }));
   }
   // "treated a low" badge for Today's entry rows.
   function lowBadge(entry) {

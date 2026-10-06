@@ -57,9 +57,12 @@
 .g-insight p { margin: 0; }
 .g-insight .rating { margin-top: 1px; }
 .g-insight-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.g-info-icon { color: var(--accent); }
+.g-info-icon .shape { fill: var(--accent); }
+.g-info-icon .glyph { fill: var(--surface); }
 
 /* ---------- the guidance sheet: plan, meal, low ---------- */
+/* Plan view: "Plan a day…" sits next to "Copy day…"; at 320 px the two wrap instead of overflowing. */
+.plan-actions { flex-wrap: wrap; justify-content: flex-end; }
 .g-plan-meals { margin-top: 2px; }
 .g-plan-options { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
 .g-plan-out { display: flex; flex-direction: column; gap: 12px; }
@@ -92,7 +95,12 @@
 .badge.low { color: var(--text); background: var(--accent-tint); text-transform: none; letter-spacing: 0; font-size: 0.72rem; }
 
 /* ---------- entry sheet ---------- */
-.entry-hypo { margin-top: -4px; flex-shrink: 0; } /* a flex item of the scrolling sheet body: never squeezed */
+.entry-hypo { flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; } /* a flex item of the scrolling sheet body: never squeezed */
+.entry-hypo .check { margin: 0; min-height: var(--tap); align-items: center; font-size: 0.95rem; font-weight: 600; }
+.entry-hypo .check input { margin: 0; }
+.entry-hypo .hint { margin: 0 0 0 28px; }
+/* Ticked, the note in the warnings block above says the same (browsers without :has keep the hint). */
+.entry-hypo:has(#entry-hypo:checked) .hint { display: none; }
 /* A low treatment is never warned against: the food's rating pill and warning flag chips are not shown. */
 #sheet-entry[data-hypo="true"] #sheet-entry-food .pill, #sheet-entry[data-hypo="true"] #sheet-entry-flags .flag-chip.warn { display: none; }
 .guidance-sheet .sheet-body > * { flex-shrink: 0; }
