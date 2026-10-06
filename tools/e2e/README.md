@@ -1,6 +1,6 @@
 # End-to-end harnesses
 
-Three browser harnesses that check the app the way a person uses it. They are slower than the
+Browser harnesses that check the app the way a person uses it. They are slower than the
 test suite (minutes, not seconds), need a Chromium, and are run by hand before a release or after a
 change to the frontend, the demo API or the server's routes. `python -m pytest` only checks that they
 still compile and can read the server's setup code (`tests/test_e2e_tools.py`).
@@ -11,6 +11,7 @@ still compile and can read the server's setup code (`tests/test_e2e_tools.py`).
 | `sandbox.py` | The preview fragment inside an emulated claude.ai Artifact host (strict CSP, sandboxed iframe, no storage): every view (Lab results included), the explained suggestion, Settings, sign out/in with the demo account, at phone and desktop sizes in four light/dark combinations; console errors, CSP violations, network requests, overflow, contrast, tap targets | none (static) | ~5 min |
 | `regress.py` | The installed app against a real server at 375×812 and 1280×800, light and dark: first-run setup in the page with the logged code, then Profile (suggested targets, about-you fields), Lab results (conversion echo, what it changed, potassium banner, delete), Today, Add, quick add, USDA message, Plan, saved meals, Trends, CSV, delete confirmations, plus probes (embedded data ignored, live warnings equal the server's) | real, fresh per config | ~4 min |
 | `learn.py` | The patient handbook at `/learn` (a built site, `--site`), served by the real app: start page, a stage page, the potassium page, unit tabs, the palette switch, search, the 404 page, "Back to the food log", sign-in, the header's Learn entry, a warning's handbook link and Settings → About, at 375×812 and 1280×800. Fails on any CSP or Trusted Types violation, page or console error, failed request, request to another origin or unexpected HTTP error. CI runs it in the `handbook` job | real, signed in as the first admin | ~1 min |
+| `guidance_perf.py` | The browser twin of the meal guidance engine (the demo answers `/api/guidance/*` in the page) in headless Chromium with the CPU slowed down 4× (`--rate`): cold, p50, p95 and max of every guidance route for the demo as shipped and for the benchmark size of note 06 §4.12 (1,975 foods, 60 days, 100 saved meals); fails when a route does not answer `ok` or a p95 is above `--max-p95` (200 ms, the note's request budget) | none (static) | ~1 min |
 | `khserver.py` | Shared helpers (not a harness): start `uvicorn app.main:app` with a fresh `DATA_DIR` and the image's flags, read the `FIRST-RUN SETUP` code from the log, a JSON client that sends the CSRF headers and keeps the session cookie, `first_admin()`, `invite_user()` | | |
 
 ## Requirements
@@ -33,16 +34,17 @@ Run from the repository root (or anywhere: the harnesses find the repository fro
 python tools/e2e/parity.py                     # exit 0 when every comparison matched
 python tools/e2e/regress.py --no-pytest        # add --only 375-light for one configuration
 python tools/e2e/sandbox.py --workers 4        # add --only top-phone-light-none for one walk
+python tools/e2e/guidance_perf.py              # add --rate 6 for a slower phone
 (cd handbook && mkdocs build) && python tools/e2e/learn.py --site handbook/site
 ```
 
-Options shared by all three:
+Options shared by the harnesses:
 
 * `--out DIR` — work directory for the server's data, logs, the built preview, screenshots and the
   report. Default: `<system temp dir>/kidney-health-e2e/<harness>/`. **`parity.py` wipes it first**;
   never point it at a directory you care about (it refuses paths inside `app/`, `data/` or `tests/`).
 * `--port N` — `parity.py` runs the server on 8061 and the preview site on 8062 (`--static-port`);
-  `regress.py` uses 8063, `learn.py` 8064; `sandbox.py` picks a free port unless given one. A harness stops if its
+  `regress.py` uses 8063, `learn.py` 8064, `guidance_perf.py` 8065; `sandbox.py` picks a free port unless given one. A harness stops if its
   port is already taken, so two can run at once with different ports.
 * `parity.py --server-python PATH` runs the server on another interpreter (for example the
   image's Python) while the harness itself stays on yours.
@@ -69,6 +71,7 @@ setup_required`. So:
   the demo has no server, so its words differ (the UI shows "needs the installed app").
 * `regress.py` prints `PASS` / `FAIL` / `INFO` lines; `<out>/report.json` and `<out>/shots/`.
 * `sandbox.py` groups issues by severity; `<out>/results.json` and `<out>/shots/`.
+* `guidance_perf.py` prints a table per data set and `FAIL` lines; `<out>/report.json`.
 
 When a parity check fails after a server change, fix the twin in `app/static/js/engine/*` or
 `app/static/js/mock/*` (and the vectors in `tests/data/` when an engine changed), not the harness.

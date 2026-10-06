@@ -292,6 +292,17 @@ with the image's Python and record the tables here; if a Pi 4 p95 is above 200 m
 `GUIDANCE_POOL_PER_ROLE` (120 cuts plan-day by about 30 %) and say so here. The Pi figures are an
 estimate (4–6× this VM) until then.
 
+**The demo / preview mode** answers the same routes in the browser (`js/mock/guidance.js` over the
+JavaScript twin `js/engine/guidance/*.js`), so there the person's own device does the work.
+`python3 tools/e2e/guidance_perf.py` times it in headless Chromium with the CPU slowed down 4× (a
+mid-range phone) and fails above the same 200 ms p95. Measured on 2026-10-06 (Chromium 141 on the VM
+above, 30 runs, p50 / p95 ms; the first call of a page also builds the food vectors):
+
+| Data | next-meal | swaps | plan-day (4 slots) | insights/day | insights/period | hypo-options | first call (max) |
+|---|---|---|---|---|---|---|---|
+| demo as shipped (395 foods) | 8.0 / 10.3 | 2.8 / 5.6 | 26.5 / 36.9 | 1.0 / 1.9 | 1.3 / 2.2 | 0.8 / 2.2 | 99 |
+| 1,975 foods, 60 days, 100 saved meals | 14.4 / 23.2 | 4.7 / 6.6 | 40.6 / 52.0 | 2.2 / 3.3 | 3.3 / 5.4 | 3.8 / 5.8 | 120 |
+
 ## Changing a rule
 
 1. Change the number in `app/guidance/rules.py` (with its basis in `RULE_DOCS`) and bump `RULES_VERSION`.
