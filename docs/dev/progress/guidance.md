@@ -48,15 +48,17 @@ Attempt 3 (this one) resumed from commit 908c00d; attempts 1–2 wrote the pure 
 * m005 + tests/guidance/test_migration_m005.py (populated v4 upgrade, idempotent, client_id
   uniqueness per person, cascades, foods_rev triggers). Commit 7c42ea3.
 
+* log.py purpose/client_id/batch + meals.py meal_hint + models + tests/guidance/test_log_api.py (17).
+  CSV gains a trailing `purpose` column (tests/test_api.py header assertion updated). Commit 5b0b90b.
+* settings keys (guidance.enabled/pool_per_role/beam_width + user object `guidance`), settings vectors
+  regenerated. JS twin app/static/js/engine/settings.js lacks them (frontend handoff, like targets).
+* vectors.py, context.py (VectorCache, load_profile = profile.get_profile, the Today source), api.py,
+  guidance/models.py (strict response models), not-for-me routes, router in main.py;
+  tests/guidance/test_api_guidance.py (39). Commits 27fc24b, 0e3f04b (main.py duplicate fix: the
+  handbook agent committed main.py with my lines in between; always re-check HEAD before staging).
+
 ## Next
 
-1. log.py: purpose/client_id on POST /api/log, /quick, PUT; POST /api/log/batch; models; meals.py
-   meal_hint (from-log sets it, CRUD accepts it); tests.
-2. vectors.py (FoodVec/build_vectors/protein_quality per §4.1 layout), avoid-mode pool = same
-   category, hypo card example dose-aware.
-3. context.py (VectorCache keyed (foods_rev, user_id); targets via profile.get_profile, the Today
-   screen's source), api.py, guidance/models.py, settings keys, main.py; API tests (auth coverage,
-   isolation, no_targets, explain, 400s, not-for-me).
 4. Remaining pure tests: vectors/renal property, score, planner (TV-P1..P7 + beam oracle), insights
    (TV-I1..I5), messages lint, topics (pages exist), ai_bridge, hypo prefilter, determinism.
 5. data/combos.json (review) + test; tests/data/guidance_vectors.json + generator + staleness test;
