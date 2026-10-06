@@ -170,7 +170,7 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
     today = today_stats(ctx.day)
     weights = dict(R.USAGE_WEIGHT)
     weights.update(room.usage_weight)
-    found: list[tuple[tuple, dict[str, Any]]] = []
+    found: list[tuple[tuple, tuple]] = []
     rejected = {"not_eligible": 0, "no_matching_portion": 0, "not_lower": 0, "phosphate_additive": 0, "new_problem": 0}
     for cand in ctx.foods.values():
         if not _eligible_swap(cand, food, ctx, mode):
@@ -225,6 +225,18 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
                  + min(1.0, max(0.0, static_term(cand, habit, today))) - (1.0 if cand.processed else 0.0)
                  - 0.1 * carb_diff)
         score = R.round_score(score)
+        k_amount = new[R.K] if new[R.K] is not None else float("inf")
+        if mode == "hypo":
+            p_amount = new[R.P] if new[R.P] is not None else float("inf")
+            fl = (new[R.FLUID] or 0.0) if R.FLUID in room.nutrients else 0.0
+            key_ = (k_amount, p_amount, fl, cand.name_fold, cand.id)
+        else:
+            key_ = (-score, k_amount, cand.name_fold, cand.id)
+        found.append((key_, (cand, q, new, same_category, fits, score)))
+    found.sort(key=lambda pair: pair[0])
+    # Warnings and texts only for the swaps that are returned (§4.12: never in the hot loop).
+    swaps: list[dict[str, Any]] = []
+    for _, (cand, q, new, same_category, fits, score) in found[:limit]:
         item = food_core(cand, q)
         deltas = {k: round_value(k, (new[k] or 0.0) - (orig[k] or 0.0)) for k in (R.CARBS, R.K, R.P, R.NA)}
         if mode == "hypo":
@@ -235,16 +247,7 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
             text = M.swap_text(match, cand.name, q, cand.serving_desc, new, orig,
                                {k: (new[k] or 0.0) - (orig[k] or 0.0) for k in trigger_keys}, trigger_keys)
         item.update({"same_category": same_category, "fits_meal": fits, "score": score, "deltas": deltas, "text": text})
-        k_amount = new[R.K] if new[R.K] is not None else float("inf")
-        if mode == "hypo":
-            p_amount = new[R.P] if new[R.P] is not None else float("inf")
-            fl = (new[R.FLUID] or 0.0) if R.FLUID in room.nutrients else 0.0
-            key_ = (k_amount, p_amount, fl, cand.name_fold, cand.id)
-        else:
-            key_ = (-score, k_amount, cand.name_fold, cand.id)
-        found.append((key_, item))
-    found.sort(key=lambda pair: pair[0])
-    swaps = [item for _, item in found[:limit]]
+        swaps.append(item)
     base["swaps"] = swaps
     base["widened"] = any(not s["same_category"] for s in swaps)
     if mode == "normal":

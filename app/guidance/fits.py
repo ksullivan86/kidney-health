@@ -287,8 +287,13 @@ def best_scale(items: Sequence[MealItem], room: Room, kind: str) -> tuple[float 
 
 
 def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: Sequence[MealItem], *, kind: str,
-                    name: str, template_id: int | None, counter: Counter | None = None) -> dict[str, Any] | None:
-    """A saved, usual or starter meal at its best scale, scored; ``None`` when no scale fits."""
+                    name: str, template_id: int | None, counter: Counter | None = None,
+                    detail: bool = True) -> dict[str, Any] | None:
+    """A saved, usual or starter meal at its best scale, scored; ``None`` when no scale fits.
+
+    ``detail=False`` (the planner, which compares many options and shows its own items) leaves out the
+    display fields (``items``, ``totals``, ``note``); ``_items`` and ``_k`` (shown potassium) are always set.
+    """
     if any(f.avoid for f, _ in items):
         return None
     scale, reason = best_scale(items, room, kind)
@@ -297,6 +302,17 @@ def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: 
     scaled_items = [(f, q * scale) for f, q in items]
     score = score_meal(scaled_items, room, today, ctx.profile.dialysis != "none", scale, counter)
     totals, _ = meal_totals(scaled_items)
+    option: dict[str, Any] = {
+        "template_id": template_id,
+        "name": name,
+        "source": kind,
+        "scale": scale,
+        "score": score,
+        "_items": scaled_items,
+        "_k": round_value(R.K, totals[R.K]) or 0,
+    }
+    if not detail:
+        return option
     limiting = None
     if reason and reason.startswith("would_exceed:"):
         key = reason.split(":", 1)[1]
@@ -304,18 +320,12 @@ def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: 
         if item is not None:
             limiting = (key, item.room, item.basis)
     goal = room.carbs.goal if room.carbs is not None else None
-    note = M.saved_meal_note(scale, totals[R.CARBS], room.gap, goal, room.meal, limiting)
-    return {
-        "template_id": template_id,
-        "name": name,
-        "source": kind,
-        "scale": scale,
-        "score": score,
+    option.update({
         "items": [{"food_id": f.id, "name": f.name, "servings": R.round_to(q, 3)} for f, q in scaled_items],
         "totals": totals_json(totals, room),
-        "note": note,
-        "_items": scaled_items,
-    }
+        "note": M.saved_meal_note(scale, totals[R.CARBS], room.gap, goal, room.meal, limiting),
+    })
+    return option
 
 
 def saved_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[int, str, list[MealItem]]]:

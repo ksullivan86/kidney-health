@@ -143,9 +143,11 @@ def beam_build(room: Room, scorer: Scorer, today: TodayStats, dialysis: bool, st
                     key = tuple((f.id, qq) for f, qq in items)
                     if key in children:
                         continue
-                    if not relaxed and not check_meal(items, room, "built").ok:
+                    totals = meal_totals(items)
+                    if not relaxed and not check_meal(items, room, "built", totals).ok:
                         continue
-                    children[key] = Built(items, score_meal(items, room, today, dialysis, counter=counter), _k(items))
+                    children[key] = Built(items, score_meal(items, room, today, dialysis, counter=counter, totals=totals),
+                                          totals[0][R.K])
         beam = _rank(list(beam) + list(children.values()))[:beam_width]
     finals = [fine_tune(b, room, today, dialysis, counter, relaxed) for b in beam if b.items]
     unique: dict[tuple, Built] = {}
@@ -229,12 +231,14 @@ def _familiar_options(ctx: GuidanceContext, slot: str, room: Room, today: TodayS
     options: list[dict[str, Any]] = []
     if use_saved:
         for template_id, name, items in saved_meals_for(ctx, slot):
-            opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter)
+            opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter,
+                                  detail=False)
             if opt is not None:
                 options.append(opt)
     if use_usual:
         for name, items in usual_meals_for(ctx, slot):
-            opt = familiar_option(ctx, room, today, items, kind="usual", name=name, template_id=None, counter=counter)
+            opt = familiar_option(ctx, room, today, items, kind="usual", name=name, template_id=None, counter=counter,
+                                  detail=False)
             if opt is not None:
                 options.append(opt)
     if use_starters:
@@ -245,10 +249,10 @@ def _familiar_options(ctx: GuidanceContext, slot: str, room: Room, today: TodayS
             if not items or any(f.hidden for f, _ in items):
                 continue
             opt = familiar_option(ctx, room, today, items, kind="starter", name=combo.name, template_id=None,
-                                  counter=counter)
+                                  counter=counter, detail=False)
             if opt is not None:
                 options.append(opt)
-    options.sort(key=lambda o: (-o["score"], o["totals"].get(R.K) or 0, o["name"].casefold()))
+    options.sort(key=lambda o: (-o["score"], o["_k"], o["name"].casefold()))
     return options
 
 

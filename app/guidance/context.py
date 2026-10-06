@@ -226,9 +226,10 @@ _ENTRY_COLS = ", ".join(f"e.{k} AS {k}" for k in NUTRIENT_KEYS)
 _FOOD_COLS = ", ".join(f"f.{k} AS f_{k}" for k in NUTRIENT_KEYS)
 
 
-def _entries(conn: sqlite3.Connection, user_id: int, start: str, end: str, eaten_only: bool) -> list[sqlite3.Row]:
-    sql = _ENTRY_SQL.format(cols=_ENTRY_COLS, food_cols=_FOOD_COLS, status="AND e.status = 'eaten'" if eaten_only else "")
-    return conn.execute(sql, (int(user_id), start, end)).fetchall()
+def _day_rows(conn: sqlite3.Connection, user_id: int, day: str) -> list[sqlite3.Row]:
+    """Every entry (eaten and planned) of one day, with the columns of its food."""
+    sql = _ENTRY_SQL.format(cols=_ENTRY_COLS, food_cols=_FOOD_COLS, status="")
+    return conn.execute(sql, (int(user_id), day, day)).fetchall()
 
 
 def _food_of(row: sqlite3.Row, foods: Mapping[int, FoodVec], overrides: Mapping[int, str]) -> FoodVec:
@@ -259,12 +260,33 @@ def day_entry(row: sqlite3.Row, food: FoodVec) -> DayEntry:
     )
 
 
-def history_entry(row: sqlite3.Row, food: FoodVec | None = None) -> HistoryEntry:
-    return HistoryEntry(
-        date=row["date"], meal=row["meal"], food_id=int(row["food_id"]), name=row["food_name"],
-        servings=float(row["servings"]), nutrients=_snapshot(row), purpose=row["purpose"],
-        flags=food.flags if food is not None else frozenset(parse_flags(row["f_flags_json"])),
-    )
+# History is the largest read of a request (60 days, up to ~3,000 rows): a narrow query read by
+# position, flags parsed once per distinct JSON text (§4.12).
+_HISTORY_SQL = f"""
+    SELECT e.date, e.meal, e.food_id, e.food_name, e.servings, e.purpose, f.flags_json,
+           {", ".join(f"e.{k}" for k in NUTRIENT_KEYS)}
+    FROM log_entries e JOIN foods f ON f.id = e.food_id
+    WHERE e.user_id = ? AND e.date >= ? AND e.date <= ? AND e.status = 'eaten'
+    ORDER BY e.date, CASE e.meal WHEN 'breakfast' THEN 0 WHEN 'lunch' THEN 1 WHEN 'dinner' THEN 2 ELSE 3 END,
+             e.created_at, e.id
+"""
+
+
+def load_history(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> tuple[HistoryEntry, ...]:
+    """The person's eaten entries of ``start``…``end`` (both inclusive), in log order."""
+    flags_cache: dict[str | None, frozenset[str]] = {}
+    out: list[HistoryEntry] = []
+    keys = NUTRIENT_KEYS
+    conn_rows = conn.execute(_HISTORY_SQL, (int(user_id), start, end))
+    conn_rows.row_factory = None  # plain tuples: read by position
+    for row in conn_rows:
+        flags_json = row[6]
+        flags = flags_cache.get(flags_json)
+        if flags is None:
+            flags = flags_cache[flags_json] = frozenset(parse_flags(flags_json))
+        out.append(HistoryEntry(date=row[0], meal=row[1], food_id=int(row[2]), name=row[3], servings=float(row[4]),
+                                nutrients=dict(zip(keys, row[7:])), purpose=row[5], flags=flags))
+    return tuple(out)
 
 
 def load_saved_meals(conn: sqlite3.Connection, user_id: int) -> tuple[SavedMeal, ...]:
@@ -341,14 +363,13 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
     """Everything one guidance request needs for ``user_id`` on ``day`` (every query scoped to the person)."""
     foods = cache.get(conn, user_id, foods_json)
     overrides = role_overrides(foods_json)
-    day_rows = _entries(conn, user_id, day, day, eaten_only=False)
+    day_rows = _day_rows(conn, user_id, day)
     entries = tuple(day_entry(r, _food_of(r, foods, overrides)) for r in day_rows)
     history: tuple[HistoryEntry, ...] = ()
     history60: tuple[HistoryEntry, ...] = ()
     if options.history or options.history60:
         span = R.USUAL_HISTORY_DAYS if options.history60 else R.HISTORY_DAYS
-        rows = _entries(conn, user_id, _days_before(day, span), _days_before(day, 1), eaten_only=True)
-        all_history = tuple(history_entry(r, foods.get(int(r["food_id"]))) for r in rows)
+        all_history = load_history(conn, user_id, _days_before(day, span), _days_before(day, 1))
         start14 = _days_before(day, R.HISTORY_DAYS)
         history = tuple(h for h in all_history if h.date >= start14) if options.history else ()
         history60 = all_history if options.history60 else ()
@@ -369,7 +390,7 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
 
 def load_period(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> tuple[HistoryEntry, ...]:
     """Eaten entries of ``start``…``end`` (period insights)."""
-    return tuple(history_entry(r) for r in _entries(conn, user_id, start, end, eaten_only=True))
+    return load_history(conn, user_id, start, end)
 
 
 def entry_for_swap(conn: sqlite3.Connection, user_id: int, entry_id: int) -> sqlite3.Row | None:

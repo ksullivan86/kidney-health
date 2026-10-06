@@ -12,6 +12,7 @@ Every score is rounded to 2 decimals (``rules.round_score``) before it is compar
 from __future__ import annotations
 
 from collections import defaultdict
+from math import floor as _floor
 from dataclasses import dataclass, field
 from datetime import date as _date, timedelta
 from typing import Iterable, Mapping, Sequence
@@ -303,18 +304,29 @@ class Scorer:
                 "carbs": carbs_term, "free_food": free, "high_gi": gi, "missing_group": missing_group,
                 "protein": protein_term, "slot_habit": habit, "high_potassium": high_k,
             }.items()}
-        return Evaluation(f, q, R.round_score(s), None, unknown, comp)
+        # R.round_score inlined (hot path): JavaScript Math.round of s × 100, exact at .5 (§4.12).
+        x = s * 100.0
+        fl = _floor(x)
+        return Evaluation(f, q, (fl + 1.0 if x - fl >= 0.5 else fl) / 100.0, None, unknown, comp)
 
     def best_portion(self, f: FoodVec, portions: Sequence[float], explain: bool = False) -> tuple[Evaluation | None, Evaluation]:
-        """``(best scored evaluation or None, the evaluation at one serving)``; ties → lower K, P, Na."""
+        """``(best scored evaluation or None, the evaluation at one serving)``; ties → lower K, P, Na.
+
+        Every hard filter is monotone in the portion (amounts scale with it; unknown values and additives
+        do not depend on it), so once a portion fails, larger ones are not evaluated: they would fail too.
+        """
         best: Evaluation | None = None
         best_key: tuple[float, float, float, float] | None = None
         standard: Evaluation | None = None
+        failed_at = float("inf")
         for q in portions:
+            if q > failed_at:
+                continue
             ev = self.evaluate(f, q, explain)
             if q == 1.0:
                 standard = ev
             if ev.score is None:
+                failed_at = q
                 continue
             key = _portion_key(ev)
             if best_key is None or key < best_key:
@@ -347,16 +359,42 @@ TOTAL_KEYS = (R.K, R.P, R.NA, R.FLUID, R.CARBS, R.PROTEIN, R.KCAL)
 
 
 def meal_totals(items: Iterable[MealItem]) -> tuple[dict[str, float], frozenset[str]]:
-    """``(totals, keys with an unknown value)``; unknown values count as 0 in the totals."""
-    totals = {k: 0.0 for k in TOTAL_KEYS}
+    """``(totals, keys with an unknown value)``; unknown values count as 0 in the totals.
+
+    Reads the vector's float attributes (not the nutrient mapping): it runs for every meal the
+    planner and the familiar-meal check consider (§4.12)."""
+    k = p = na = fl = c = pr = kcal = 0.0
     unknown: set[str] = set()
     for f, q in items:
-        for k in TOTAL_KEYS:
-            v = f.nutrients.get(k)
-            if v is None:
-                unknown.add(k)
-            else:
-                totals[k] += v * q
+        if f.k is None:
+            unknown.add(R.K)
+        else:
+            k += f.k * q
+        if f.p is None:
+            unknown.add(R.P)
+        else:
+            p += f.p * q
+        if f.na is None:
+            unknown.add(R.NA)
+        else:
+            na += f.na * q
+        if f.fluid is None:
+            unknown.add(R.FLUID)
+        else:
+            fl += f.fluid * q
+        if f.carbs is None:
+            unknown.add(R.CARBS)
+        else:
+            c += f.carbs * q
+        if f.protein is None:
+            unknown.add(R.PROTEIN)
+        else:
+            pr += f.protein * q
+        if f.kcal is None:
+            unknown.add(R.KCAL)
+        else:
+            kcal += f.kcal * q
+    totals = {R.K: k, R.P: p, R.NA: na, R.FLUID: fl, R.CARBS: c, R.PROTEIN: pr, R.KCAL: kcal}
     return totals, frozenset(unknown)
 
 
@@ -366,7 +404,8 @@ class MealCheck:
     reason: str | None = None
 
 
-def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built") -> MealCheck:
+def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
+               totals: tuple[dict[str, float], frozenset[str]] | None = None) -> MealCheck:
     """The single gate (§4.7): ``kind`` is ``built``, ``ai``, ``saved``, ``usual`` or ``starter``.
 
     Totals of potassium, phosphorus, sodium and fluid within room + negligible; unknown values only
@@ -378,7 +417,7 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built") -> Me
     """
     if not items:
         return MealCheck(False, "empty")
-    totals, unknown = meal_totals(items)
+    totals, unknown = totals if totals is not None else meal_totals(items)
     for key in (R.K, R.P, R.NA, R.FLUID):
         item = room.nutrients.get(key)
         if item is None:
@@ -440,11 +479,12 @@ def is_poor(f: FoodVec, q: float) -> bool:
 
 
 def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysis: bool, scale: float = 1.0,
-               counter: Counter | None = None) -> float:
-    """The meal score of §4.7, rounded to 2 decimals (TV-F7, TV-P1)."""
+               counter: Counter | None = None, totals: tuple[dict[str, float], frozenset[str]] | None = None) -> float:
+    """The meal score of §4.7, rounded to 2 decimals (TV-F7, TV-P1). ``totals`` may pass the
+    :func:`meal_totals` the caller already computed for :func:`check_meal`."""
     if counter is not None:
         counter.meals += 1
-    totals, _ = meal_totals(items)
+    totals, _ = totals if totals is not None else meal_totals(items)
     s = 10.0
     for key, item in room.nutrients.items():
         x = totals[key] / max(item.room, R.NEGLIGIBLE[key])
