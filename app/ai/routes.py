@@ -90,7 +90,7 @@ class AiState:
     store: SettingsStore
     client: C.ChatClient
     gate: C.ConcurrencyGate = field(default_factory=C.ConcurrencyGate)
-    last_purge: float = 0.0
+    last_purge: float | None = None  # monotonic time of the last retention purge (None: never)
     reprobe_attempts: dict[int, float] = field(default_factory=dict)  # provider id → monotonic time of the last try
     auto_reprobe: bool = True  # the daily background test (R4 step 5); tests that replay exact request sequences turn it off
 
@@ -129,7 +129,7 @@ def _client_for(request: Request) -> C.ChatClient:
 def housekeeping(conn: sqlite3.Connection, state: AiState, *, force: bool = False) -> None:
     """Daily retention purge (§9 A8), run at start-up and from AI request paths (no background threads)."""
     now = time.monotonic()
-    if not force and now - state.last_purge < PURGE_EVERY_S:
+    if not force and state.last_purge is not None and now - state.last_purge < PURGE_EVERY_S:
         return
     state.last_purge = now
     try:

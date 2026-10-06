@@ -705,3 +705,143 @@ def test_missing_ca_certificates_stop_an_https_env_provider(tmp_path, foods_json
     bundle.write_text("-----BEGIN CERTIFICATE-----\n")
     monkeypatch.setattr(transport, "CA_FILE_CANDIDATES", (str(bundle),))
     assert transport.ca_store_problem("linux") is None
+
+
+# --------------------------------------------------------------------------- #
+# Failure paths: nothing unchecked is shown, nothing falls back to another provider, errors are logged
+# --------------------------------------------------------------------------- #
+
+
+def test_a_judge_bug_shows_nothing_unchecked(ai_client, monkeypatch, caplog):
+    from app.ai import guard
+
+    ready(ai_client)
+
+    def broken(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(guard, "judge_ideas", broken)
+    with attach(ai_client.app, FakeProvider([ideas_answer()])):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    data = r.json()
+    assert r.status_code == 200 and data["status"] == "error" and data["reason"] == "judge_failed"
+    assert "ideas" not in data and "AI judge failed" in caplog.text
+
+
+def _corrupt_key(client: TestClient, where: str) -> None:
+    conn = sqlite3.connect(client.app.state.settings.db_path)
+    conn.execute(f"UPDATE ai_providers SET api_key_enc = X'00112233' WHERE {where}")
+    conn.commit()
+    conn.close()
+
+
+def test_an_unreadable_own_key_never_falls_back_to_the_shared_provider(ai_client):
+    ai_client.put("/api/me/ai/provider", json={"preset": "openai", "model": "gpt-6-luna", "api_key": OWN_KEY})
+    ai_client.patch("/api/me/ai", json={"provider": "own"})
+    ready(ai_client, consent=False)
+    _corrupt_key(ai_client, "scope = 'user'")
+    status = ai_client.get("/api/ai/status").json()
+    assert status["available"] is False and status["reason"] == "own_key_unreadable"
+    assert ai_client.get("/api/me/ai").json()["own"]["key"] == {"set": True, "status": "unreadable"}
+    provider = FakeProvider()
+    with attach(ai_client.app, provider):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert r.status_code == 503 and r.json()["reason"] == "own_key_unreadable" and provider.requests == []
+
+
+def test_an_unreadable_shared_key_switches_that_provider_off(ai_client, caplog):
+    r = ai_client.post("/api/admin/ai-providers", json={"preset": "openrouter", "model": "qwen/qwen3", "api_key": "sk-or-0123456789abcdefghijkl"})
+    pid = r.json()["id"]
+    ai_client.patch("/api/me/ai", json={"opt_in": True, "provider": f"shared:{pid}"})
+    _corrupt_key(ai_client, f"id = {pid}")
+    status = ai_client.get("/api/ai/status").json()
+    assert status["reason"] == "provider_disabled" and "cannot be decrypted" in caplog.text
+
+
+def test_a_prompt_budget_too_small_for_one_candidate_is_a_clear_503(ai_client):
+    r = ai_client.post("/api/admin/ai-providers", json={"preset": "openrouter", "model": "qwen/qwen3", "api_key": "sk-or-0123456789abcdefghijkl",
+                                                        "context_tokens": 1024, "max_tokens": 1000})
+    pid = r.json()["id"]
+    ai_client.put("/api/profile", json={"targets": TARGETS})
+    ai_client.patch("/api/me/ai", json={"opt_in": True, "provider": f"shared:{pid}"})
+    provider = FakeProvider()
+    with attach(ai_client.app, provider):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}, params={"dry_run": "true"})
+    assert r.status_code == 503 and r.json()["reason"] == "context_too_small" and "AI_CONTEXT_TOKENS" in r.json()["detail"]
+
+
+def test_candidates_are_trimmed_to_fit_the_prompt_budget(ai_client):
+    ai_client.put("/api/profile", json={"targets": TARGETS})
+    body = {"preset": "openrouter", "model": "qwen/qwen3", "api_key": "sk-or-0123456789abcdefghijkl", "max_tokens": 1500,
+            "context_tokens": 2_000_000}
+    pid = ai_client.post("/api/admin/ai-providers", json=body).json()["id"]
+    ai_client.patch("/api/me/ai", json={"opt_in": True, "provider": f"shared:{pid}"})
+
+    def dry() -> dict[str, Any]:
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}, params={"dry_run": "true"})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    def candidate_ids(sent: dict[str, Any]) -> list[int]:
+        text = sent["body"]["messages"][1]["content"]
+        return [c["id"] for c in json.loads(text.split("<data>\n", 1)[1].split("\n</data>")[0])["candidates"]]
+
+    full = dry()
+    assert full["trimmed_candidates"] == 0 and len(candidate_ids(full)) >= 2
+    estimate = int(len(json.dumps(full["body"], ensure_ascii=False)) / 3.5) + 1
+    body["context_tokens"] = max(1024, estimate + 1500 - 1)  # one token short of the full request
+    assert ai_client.put(f"/api/admin/ai-providers/{pid}", json=body).status_code == 200
+    small = dry()
+    assert small["trimmed_candidates"] >= 1
+    kept = candidate_ids(small)
+    assert kept and kept == candidate_ids(full)[: len(kept)]  # the lowest-ranked candidates go first
+
+
+def test_a_failing_retention_purge_is_logged_and_does_not_break_the_call(ai_client, monkeypatch, caplog):
+    ready(ai_client)
+
+    def failing(*args: Any, **kwargs: Any) -> Any:
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(K, "purge", failing)
+    ai_client.app.state.ai.last_purge = None
+    with attach(ai_client.app, FakeProvider([ideas_answer()])):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    assert r.status_code == 200 and "AI activity retention purge failed" in caplog.text
+
+
+def test_a_self_hosted_prompt_near_4096_tokens_warns_about_ollama_truncation(tmp_path, foods_json, caplog):
+    settings = ai_settings(tmp_path, foods_json, provider="ollama", api_key=None, model="qwen3-vl:8b", vision_model=None,
+                           private_hosts=("ollama:11434",))
+    with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        enable(c)
+        ready(c, consent=False)
+        pid = c.get("/api/ai/status").json()["provider"]["id"]
+        c.post("/api/ai/consent", json={"provider_id": pid, "purpose": "text"})
+        with attach(c.app, FakeProvider([chat(IDEAS, usage=(4090, 50))], address="10.89.0.5")):
+            r = c.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+        assert r.status_code == 200 and "OLLAMA_CONTEXT_LENGTH" in caplog.text
+
+
+def test_the_daily_test_skips_quietly_when_the_server_is_busy_or_the_key_is_unreadable(ai_client, caplog):
+    import anyio
+
+    pid = ready(ai_client)
+    app = ai_client.app
+    provider = probing_provider()
+    with attach(app, provider, reprobe=True):
+        app.state.ai.gate.enter(101, 2)  # both slots (ai.max_concurrency = 2) are taken
+        app.state.ai.gate.enter(102, 2)
+        try:
+            anyio.run(ai_routes.maintenance_probe, app, pid)
+        finally:
+            app.state.ai.gate.leave(101)
+            app.state.ai.gate.leave(102)
+    assert provider.requests == [] and _probed_at(ai_client, pid) is None
+    r = ai_client.post("/api/admin/ai-providers", json={"preset": "openrouter", "model": "qwen/qwen3", "api_key": "sk-or-0123456789abcdefghijkl"})
+    other = r.json()["id"]
+    _corrupt_key(ai_client, f"id = {other}")
+    with attach(app, provider, reprobe=True):
+        anyio.run(ai_routes.maintenance_probe, app, other)
+    assert provider.requests == [] and "its key cannot be decrypted" in caplog.text
