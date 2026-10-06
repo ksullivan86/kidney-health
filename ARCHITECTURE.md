@@ -669,7 +669,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 4 | `m004_targets_labs.py` | targets (M2) | note 05 §4.6 (profile columns on `user_profiles`, `lab_results`) |
 | 5 | `m005_guidance_log.py` | guidance (M2) | note 06 §4.11 (`log_entries.purpose`, `meal_templates.meal_hint`, food preferences) **and** note 02 R5 `log_entries.client_id` + unique index (offline outbox) |
 | 6 | `m006_ai.py` | ai (M2) | note 04 (AI provider settings, usage/quota and audit tables with `ON DELETE CASCADE`) |
-| 7 | `m007_barcode.py` | barcode-vision (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
+| 7 | `m007_barcode.py` | barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
 
 ## Backend file ownership
 
@@ -681,8 +681,8 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Handbook (parallel) | `handbook/**`, `scripts/build_handbook.py`, `tests/test_handbook_content.py` |
 | M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/nutrients.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
-| M2 ai | `app/ai/**`, `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, its tests and fixtures |
-| M2 barcode-vision | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/vision.py`, `app/imagecheck.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md`, their tests and fixtures |
+| M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
+| M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/README.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -1385,6 +1385,201 @@ The browser rules twin (`js/engine/rules.js`) has the `potassium_additive` flag 
 vectors (`tests/data/rules_vectors.json`, generator `tests/data/gen_rules_vectors.py`) cover it. The new
 `food.*` settings are in `tests/data/settings_vectors.json` (a string key's `pattern` too, with cases
 that break it), which `js/engine/settings.js` must match (frontend).
+
+## M2 API: AI and photos
+
+Built in M2 (ai) from note 04 R1, R3–R9, R11, R13 (with this contract's corrections: guidance is the
+package `app/guidance/`, AI calls it only through `app.guidance.ai_bridge`), its §6 checklist and §9
+security review, contract items 2 and 13, and note 03 R8, R9 and §9 B1, B10 for the photo routes.
+Code: the package `app/ai/` — `presets` (preset table), `netpolicy` (pure URL/IP policy,
+`AI_PRIVATE_HOSTS`/`AI_DENY_CIDRS` parsers), `transport` (pinned `httpx2` transport, decoded-byte cap,
+error categories, CA-store self-check), `client` (request bodies, parsing, JSON extraction, one
+retry or repair, concurrency gate, "Test connection" with the Hermes tool check), `prompts`
+(`SYSTEM_PROMPT`, `TASK_SYSTEM_PROMPT`, `PROMPT_VERSION`, the data block), `schemas` (wire schemas and
+answer models), `guard` (V1–V9, pure), `features` (prepare/judge for each feature, the G7/G8
+pre-filters, the label draft), `config` (provider rows, resolution, quota, consent, AI activity,
+retention), `routes` (the routers below, the call pipeline, the daily re-test); `app/vision.py` (photo
+routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
+(`app/migrations/m006_ai.py`). People and operators: `docs/ai.md`; photos also in
+`docs/barcode-and-photos.md` "Photos".
+
+### Switches and configuration (contract item 2: one registry, one credential resolver)
+
+* **Registry keys** (`app/settings_registry.py`, "Note 04"): `ai.enabled` (instance, `false`,
+  `AI_ENABLED`), `ai.user_keys_allowed` (`true`, `AI_ALLOW_USER_KEYS`), `ai.allow_user_base_url`
+  (`false`, `AI_ALLOW_USER_BASE_URL`), `ai.shared_daily_limit` (30, 0–100000, 0 = unlimited,
+  `AI_SHARED_DAILY_LIMIT`), `ai.max_concurrency` (2, 1–32, `AI_MAX_CONCURRENCY`), `ai.audit_retention_days`
+  (30, 0–365, `AI_AUDIT_RETENTION_DAYS`), `ai.vision_plate_enabled` (`false`, `AI_VISION_PLATE_ENABLED`),
+  `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), and the person's object `ai` (scope `user`):
+  `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200)}`
+  with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the eight `ai.*` instance
+  keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
+* **Environment only** (`app/config.py` `AiEnv`; never runtime-editable): `AI_PROVIDER` (a preset),
+  `AI_BASE_URL`, `AI_API_KEY[_FILE]` (`OPENAI_API_KEY[_FILE]` accepted when `AI_PROVIDER=openai`),
+  `AI_MODEL` (default `gpt-6-luna` for `openai`, required otherwise), `AI_VISION_MODEL` (empty = photo
+  features off), `AI_TIMEOUT_S` (preset read timeout), `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500,
+  64–32768), `AI_STRUCTURED_OUTPUT` (`auto` | `json_schema` | `json_object` | `prompt`), `AI_REASONING_EFFORT`,
+  `AI_CONTEXT_TOKENS` (8192 self-hosted/agent/custom, 32768 cloud), `AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
+  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB). A bad
+  value stops the start with a message naming the variable; `ALLOW_PRIVATE_AI_HOSTS` is refused (no alias,
+  no wildcard). An https env provider without CA certificates stops the start (R12 self-check).
+* **Presets** (`app/ai/presets.py`): `openai`, `openrouter`, `nous_portal` (cloud; a person may use them
+  with their own key), `ollama`, `lmstudio`, `llamacpp`, `vllm`, `litellm` (self-hosted), `hermes` (agent,
+  `http://host.containers.internal:8643/v1`, prompt-only JSON, tool check; contract item 13),
+  `openai_compatible` (custom). Each fixes the token field, structured mode, temperature, reasoning
+  effort, read timeout and extra body (OpenAI `store: false`; OpenRouter `provider: {data_collection:
+  "deny", require_parameters: true}` and `zdr` with `AI_OPENROUTER_ZDR`).
+* **Providers** are rows of `ai_providers`: the env provider (`locked = 1`, kept in step with the
+  environment at start-up; its key stays in the environment, `probe_json.key_fp` is an HMAC that tells a
+  changed key), admins' shared providers, and at most one per person (`scope = 'user'`). Keys are sealed
+  with `Keyring.seal(purpose="ai_provider:<id>", owner=<owner id or None>)` and shown only as
+  `{set, last4}` (last 4 for keys of ≥ 20 characters), `{set, source: "env", locked: true}` or
+  `{set, status: "unreadable"}`.
+* **Resolution** (`config.resolve`): the person's own provider when they chose `own` and it is usable and
+  allowed; else the shared provider they chose (`shared:<id>`) or the first usable shared one (if
+  `users.can_use_shared`); else none. A failing own provider **never** falls back to a shared one.
+
+### Routes
+
+Every `/api/ai/*` and `/api/vision/*` route needs a signed-in person and answers **`404 {"detail": "Not
+Found"}` while `ai.enabled` is off**, exactly as if it were not registered (checked per request after
+the identity check, so anonymous callers still get `401` and an admin can switch AI on without a
+restart). `/api/me/ai` is always there (Settings shows the "off" state); its probe needs AI on. Every
+query takes `user.id`; another person's provider, consent or AI activity is never visible (`404`).
+
+| Method and path | Body / query → response |
+|---|---|
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate}, prompt_version}` |
+| `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?}` (`?dry_run=true`) → `AiAnswer` |
+| `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
+| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
+| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos` (both when left out) → 204; 404 when there is none |
+| `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
+| `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
+| `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo, estimated, needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
+| `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
+| `GET /api/me/ai` | → `{enabled, settings, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], presets, consents, daily_limit, remaining_today}` |
+| `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences}` → the view above |
+| `PUT /api/me/ai/provider` *(re-auth)* | `{preset, model, base_url?, vision_model?, api_key?, remove_key?}` → the view; `403` when personal providers are off; `api_key` write-only |
+| `DELETE /api/me/ai/provider` *(re-auth)* | → 204 (`provider` falls back to `auto`) |
+| `POST /api/me/ai/probe` | → `{probe}`: Test connection for the person's own provider (5 per hour; counted in the usage) |
+| `GET /api/admin/ai-providers` | → `{providers: [Provider], presets, private_hosts, deny_cidrs, proxy, env_provider, writable}` |
+| `POST /api/admin/ai-providers` *(re-auth)* | `{preset, model, label?, base_url?, vision_model?, api_key?, timeout_s?, max_tokens?, context_tokens?, structured, reasoning_effort?, enabled}` → 201 `Provider` |
+| `PUT /api/admin/ai-providers/{id}` *(re-auth)* | same body (+ `remove_key`) → `Provider`; `409` for the env provider; a new host deletes its consents |
+| `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for the env provider |
+| `POST /api/admin/ai-providers/{id}/probe` *(re-auth)* | → `{probe, provider}` (20 per hour; may show the first 300 characters of an error body, shared providers only) |
+| `GET /api/admin/ai-usage` | `days` 1–366 (30) → `{days, usage: [{user_id, username, provider_id, key_scope, requests, prompt_tokens, completion_tokens}]}` (counts only, never content) |
+
+```json
+AiAnswer = {"status": "ok" | "refused" | "dropped_all" | "no_fit" | "error" | "not_a_label" | "unreadable" | "no_food" | "unsure",
+  "message"?, "reason"? (error: a coarse category), "fallback"? (the rule result: {note, meals, foods}),
+  "ideas"? | "order"? + "rest"? | "pick"? | "plan"? + "ai_picks"? | "items"? | "draft"?,
+  "dropped": [{"index", "reason"}], "claims_corrected", "repaired", "retried", "trimmed",
+  "feature", "mode", "provider": {"id", "label", "model", "host"}, "prompt_version", "audit_id", "notes"}
+Idea = {"source": "ai", "provider_label", "model", "checked": true,
+        "notice": "AI idea · {label} · {model} · checked against your targets · not medical advice",
+        "index", "theme": "light" | "hearty" | "familiar" | "new_idea", "title" (server template),
+        "reason_codes": [code] (1–3, checked against the recomputed numbers), "why" (server template),
+        "items": [FoodPortion], "totals", "score", "after": {nutrient: {"used", "left_today_after"}, "carbs_g": {"meal_after", "goal"}},
+        "handbook": [{"slug", "title", "url"}] (≤ 2), "handbook_dropped"}
+Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "vision_model", "timeout_s", "max_tokens",
+            "context_tokens", "structured", "reasoning_effort", "locked", "enabled", "disabled_reason", "key", "policy",
+            "kind", "photos", "probe": {"ok", "structured", "vision", "tools", "models", "warnings", "errors"} | null,
+            "probed_at", "created_at", "updated_at"}
+```
+
+* **Instead of calling AI**, next-meal answers like guidance (`{status: "no_targets" | "disabled"}`), and a
+  low treatment in swap mode or describe-a-meal text that may describe a low gets `{status:
+  "treating_a_low", cards: [LowCard], ai_called: false}` (G7); red-flag symptoms get `{status: "red_flag",
+  cards: [{title: "Get help now", …}], ai_called: false}` (G8).
+* **Errors:** `503 {"detail", "reason"}` when no provider serves the person (`not_opted_in`,
+  `not_configured`, `not_allowed`, `own_unavailable`, `own_key_unreadable`, `provider_disabled`,
+  `hermes_tools`, `hermes_check_failed`, `context_too_small`, `vision_not_configured`, `plate_disabled`,
+  `agent_not_allowed`); `409 {"detail", "consent_required": true, "consent": ConsentRequest}` before the first
+  call to a host for that purpose; `429 {"detail", "reason": "quota_exhausted" | "busy_person" |
+  "busy_server"}` with `Retry-After`; photo uploads `413` (over `MAX_IMAGE_BYTES`, declared or streamed),
+  `415 not_jpeg`, `422 truncated | malformed | unsupported | dimensions`. An upstream failure is `200`
+  with `status: "error"` and the rule `fallback` for the meal features, and `502 {"detail", "reason",
+  "audit_id"}` for photos. Reasons are coarse (`dns_failed`, `blocked_address`, `connect_failed`,
+  `timeout`, `http_401`, `http_403`, `http_404`, `http_429`, `http_4xx`, `http_5xx`, `invalid_response`,
+  `schema`, `no_json`, `empty`, `truncated`); upstream bodies are never echoed.
+* **Dry run** (`?dry_run=true`, R9): `{dry_run, feature, mode, destination, host, provider, method,
+  headers (key shown as "[your key, not shown]"), body (byte-identical to what is sent; images as
+  "[N base64 characters]"), image_bytes, images: [{image_sha256, bytes, width, height}],
+  trimmed_candidates}`; it sends nothing, takes no quota and writes no audit row.
+
+### The call pipeline (`app/ai/routes.py` `run_call`)
+
+Consent (per person, provider, purpose `text`/`photos`, destination host and `POLICY_VERSION`) → the
+Hermes tool check (≤ 5 minutes old for text, **before every photo**; a failed check sets
+`disabled_reason` until a check passes) → a concurrency slot (`ai.max_concurrency` on the server, one
+per person; refused at once with `429`) → the daily quota (`BEGIN IMMEDIATE`; shared keys only; probes
+and photos count) → the call (at most one extra request: a retry after 429/5xx/connect errors or one
+repair turn) → the judge (V3–V9; a judge error shows nothing) → an `ai_audit` row → a log line with
+metadata only. Shared providers whose last test is missing or a day old are tested again in a
+background task after the response (at most once an hour per provider; nobody's quota). AI routes are
+`async`; their database work runs in the thread pool.
+
+### Outbound HTTP (`app/ai/netpolicy.py`, `app/ai/transport.py`; note 04 R5, §9 A5)
+
+Base URLs: `https` (or `http` only for an `AI_PRIVATE_HOSTS` entry), no user info, query or fragment, a
+path of plain segments ending in `/v1` (≤ 100 characters), IDNA host, numeric hosts only as strict
+dotted quads. Every request resolves the host again and checks **every** address (IPv4 inside IPv6
+unwrapped, incl. NAT64 and IPv4-compatible): unspecified, multicast, broadcast, reserved, cloud metadata,
+the Kubernetes API, `AI_DENY_CIDRS` and this server's own port on loopback are always refused; private,
+loopback, CGNAT, ULA and link-local only for a shared provider listed in `AI_PRIVATE_HOSTS`; a person's own
+URL must be https on port 443 to public addresses (off when `AI_HTTP_PROXY` is set). The connection goes
+to the checked address with the original `Host` and SNI; redirects are errors; `trust_env=False`;
+`Accept-Encoding: identity` and a cap of `AI_MAX_RESPONSE_BYTES` decoded bytes; the answer must be JSON;
+total deadline = read timeout + 10 s. Images go only as `data:image/jpeg;base64,…`.
+
+### Prompts, answers and the guard
+
+The meal features send no free text to people (§9 A2): an idea is `{theme, items: [{food_id (enum of the
+candidates), quarters 1–12}] (1–5), reason_codes (enum, 1–3), handbook (enum of slugs, ≤ 2)}`; the server
+checks every claim against the recomputed numbers and writes the title and sentence from templates
+(`guard.THEME_TITLE`, `guard.REASON_TEXT`). The data block is compact, key-sorted JSON with `<`, `>`, `&`
+escaped, untrusted names cleaned (NFKC, no `Cc`/`Cf`, 80 characters); `ingredients_text` never enters a
+prompt. Model text that must be shown (describe-a-meal phrases and search terms, plate food names) passes
+`guard.name_policy` (no URLs, e-mail addresses or markup characters; the blocklist after homoglyph folding).
+`PROMPT_VERSION` (`2026-10-06.2`) changes with any change to prompts, wire schemas or guard wording
+(`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`).
+
+### Photos (`app/vision.py`, `app/imagecheck.py`; note 03 R8, R9, §9 B1, B10; note 04 §9 A4)
+
+One set of routes (`/api/vision/label`, `/api/vision/plate`, none under `/api/ai`). Off unless the
+provider has a vision model; plate photos off unless `ai.vision_plate_enabled`; a Hermes provider only
+with `ai.vision_allow_agent` **and** a passing tool check before every photo. The body is the raw JPEG
+(`Content-Type: image/jpeg`, no multipart): `MAX_IMAGE_BYTES` from `Content-Length` and while streaming
+(`app/security.py` gives `/api/vision` that limit), `FF D8 FF`, one SOF0/1/2 frame (8-bit, 1 or 3
+components), 16–2048 px per side, aspect ≤ 4:1, ≤ 4 megapixels; APP1–APP15, COM and bytes after EOI
+removed; only the rewritten bytes leave. Photos are never written to disk, stored or logged (the audit
+copy keeps SHA-256, size and dimensions).
+
+### Schema step 6 (`m006_ai.py`)
+
+`ai_providers` (scope/owner `CHECK`, `locked` only for shared, one per person, one env row,
+`AUTOINCREMENT`; `api_key_enc` sealed, `api_key_hint`, `probe_json`, `probed_at`, `disabled_reason`),
+`ai_consents (user_id, provider_id, purpose)` (both foreign keys cascade), `ai_usage (user_id, day,
+provider_id)` with `key_scope`, and `ai_audit`. Every user reference has `ON DELETE CASCADE`.
+
+### Data, export, deletion and retention
+
+`export.json` carries `ai_audit` (the person's rows), `ai_usage`, `ai_consents` and `ai_provider` (their
+own provider without its key: `key_set`). Deleting an account deletes all four. Bodies in `ai_audit` are
+cleared after `ai.audit_retention_days` (0 keeps metadata only), rows and usage after
+`audit.retention_days`; the purge runs at start-up and daily from AI requests. Logs carry feature,
+provider id, preset, model, host, latency, tokens and status only.
+
+### Guidance hook
+
+`register_ai_status` feeds `GET /api/guidance/next-meal`'s `ai` block: `{available, provider_label}` is
+true when AI is on, the person opted in and a provider resolves (no quota, nothing sent).
+
+### Parity (demo/preview mode)
+
+The `ai.*` keys are in `tests/data/settings_vectors.json` and `js/engine/settings.js`. Demo mode never
+calls a provider.
 
 ## M3: the handbook at `/learn`
 

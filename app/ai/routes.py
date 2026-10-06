@@ -356,7 +356,7 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
         "provider": {"id": prep.cfg.id, "label": prep.cfg.label, "model": prep.model, "host": prep.cfg.host},
         "prompt_version": PROMPT_VERSION,
         "audit_id": audit_id,
-        "notes": [gmessages.DISCLAIMER],
+        "notes": list(prep.notes),
     }
 
 

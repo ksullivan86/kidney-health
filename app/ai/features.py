@@ -28,6 +28,7 @@ from typing import Any, Callable, Mapping
 
 from ..additives import scan as scan_additives
 from ..guidance import hypo
+from ..guidance.messages import DISCLAIMER
 from ..guidance import rules as R
 from ..guidance.ai_bridge import candidates_for_ai
 from ..guidance.budget import open_slots
@@ -105,6 +106,7 @@ class Prepared:
     images: list[CheckedImage] = field(default_factory=list)
     fallback: dict[str, Any] | None = None
     trimmed: int = 0  # candidates removed to fit AI_CONTEXT_TOKENS
+    notes: list[str] = field(default_factory=list)  # fixed sentences shown under the answer
 
     @property
     def model(self) -> str:
@@ -195,7 +197,7 @@ def prepare_next_meal(ctx: GuidanceContext, cfg: ProviderConfig, *, meal: str, m
         bridge = {**bridge, "foods": bridge["foods"][:-1]}  # lowest-ranked first (rule order)
         trimmed += 1
     return Prepared(feature="next_meal", cfg=cfg, body=body, validator=validator, judge=judge, mode=mode,
-                    fallback=guard.fallback(bridge), trimmed=trimmed)
+                    fallback=guard.fallback(bridge), trimmed=trimmed, notes=[DISCLAIMER])
 
 
 def _meal_schema(mode: Mode, bridge: Mapping[str, Any], ctx: GuidanceContext, meal: str, cfg: ProviderConfig):
