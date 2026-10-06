@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # M1 integrator
 
@@ -48,13 +48,52 @@ Scratch: `$SCRATCH/m1/m1-integrate/` (`$SCRATCH` = the session scratchpad). No c
    declared size; behind `tlsproxy.py` the browser holds `__Host-kh_session` (Secure, HttpOnly, Lax),
    HSTS, SW on https.
 
-## In progress
+4. `tools/e2e/` harnesses: `khserver.py` (shared: Server with port check, guarded work-dir wipe
+   with a marker file, setup code from the log, Api with CSRF headers, first_admin, invite_user,
+   chromium_executable). `parity.py` (signed-in admin, httpx2, --port/--static-port/--out, section 10
+   accounts shape; USDA search compared by status only) → 5897/5897 after fixing the demo's
+   `/healthz` count (builtin only) in `app/static/js/mock/foods.js`. `regress.py` (setup in the page
+   via the logged code, API reads on a second session, HEAD-baseline probe dropped since app.js no
+   longer exists, USDA text check updated to the v0.3 reason message) → 413 passed. `sandbox.py`
+   (--out/--preview/--port, builds the preview, env vars carry paths into spawned workers) → 17 walks,
+   3 sweeps, probes, 0 issues. `README.md`. Tests: `tests/test_e2e_tools.py` (setup-line regex vs
+   `bootstrap.setup_line`, default password passes the policy, no machine paths/httpx, README lists
+   every harness, wipe guard); `tests/test_dependencies.py` also scans `tools/`.
+5. README.md rewritten for v0.3 (quick start with the setup code, rootless Podman/compose/Docker/k8s,
+   upgrading from v0.2, security summary, configuration, development + e2e, layout, licences);
+   CHANGELOG.md created (0.3.0 dev M1 entries, 0.2.0). ARCHITECTURE.md: layout lists CHANGELOG.md and
+   tools/e2e/, parity rule mentions tools/e2e/parity.py. Relative links checked.
 
-4. `tools/e2e/` harnesses (parity, sandbox, regress) + README.
+6. Final verification: `python -m pytest` 1216 passed, 1 skipped (M2 guidance topics), one
+   handbook UserWarning; node vectors 5153 + 136; preview rebuilt (694,093 bytes); parity 5897/5897;
+   regress 413 passed; sandbox 17 walks + 3 sweeps + probes, 0 issues. No servers left running;
+   the v0.2 worktree is removed.
 
-## Next
- 4. tools/e2e. 5. README + CHANGELOG.
+## Known issues / left for others
+
+* zizmor ran `--offline` only (online audits cannot authenticate through this sandbox's proxy).
+* The demo's mock routes have no Node unit test (loading `js/mock/*` needs `js/core.js`'s DOM
+  helpers); `tools/e2e/parity.py` is their check.
+* Untracked `tmp*/kidney.db` directories in the repository root predate this run (an older test
+  run with a relative temp dir); they are ignored by git and were left alone.
 
 ## Decisions
 
+* No commits (workflow prompt), although CLAUDE.md asks for checkpoint commits; another session
+  committed checkpoints (0b84bc6) that include some of these files.
+* USDA search in demo vs server: by design different words (contract: demo answers "available in
+  the installed app"), so parity compares the status only; the mock text was left unchanged (the UI
+  never shows it: without a `reason` it shows its own preview text).
+* Harness defaults write to `<tmp>/kidney-health-e2e/<harness>/`, never into the repository.
+* README keeps today's protein numbers (0.6–0.8 g/kg at G3–G5) and notes decision 10 (0.8 floor for
+  diabetes) as coming with M2 targets, with its sources.
+
 ## Reproduce
+
+```
+S=<scratch>; python -m pytest -q; node tests/js/run_vectors.mjs; python scripts/build_preview.py
+python tools/e2e/parity.py --out $S/p; python tools/e2e/regress.py --no-pytest --out $S/r
+python tools/e2e/sandbox.py --out $S/s
+# live scenarios (scratch scripts): live_local.py, live_tls.py (+ tlsproxy.py, tls.crt/key),
+# live_modes.py, live_v02.py (needs `git worktree add --detach $S/v02 8b8d4ec`), chromium_check.py
+```

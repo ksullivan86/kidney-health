@@ -11,7 +11,7 @@ def test_no_module_imports_httpx():
     pattern = re.compile(r"^\s*(import httpx\b(?!2)|from httpx\b(?!2))", re.M)
     offenders = [
         str(path.relative_to(REPO))
-        for folder in ("app", "tests", "scripts")
+        for folder in ("app", "tests", "scripts", "tools")
         for path in (REPO / folder).rglob("*.py")
         if pattern.search(path.read_text(encoding="utf-8"))
     ]

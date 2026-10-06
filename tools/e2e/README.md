@@ -1,0 +1,71 @@
+# End-to-end harnesses
+
+Three browser harnesses that check the app the way a person uses it. They are slower than the
+test suite (minutes, not seconds), need a Chromium, and are run by hand before a release or after a
+change to the frontend, the demo API or the server's routes. `python -m pytest` only checks that they
+still compile and can read the server's setup code (`tests/test_e2e_tools.py`).
+
+| File | What it checks | Server | Time |
+|---|---|---|---|
+| `parity.py` | The demo API in the preview build (`window.__kdlMock`) answers exactly like the real server: ~5,900 comparisons over foods, warnings, targets, logging, planning, saved meals, summaries, validation errors, custom foods, plus the shape of the accounts routes | real, signed in as the first admin | ~2 min |
+| `sandbox.py` | The preview fragment inside an emulated claude.ai Artifact host (strict CSP, sandboxed iframe, no storage): every view, Settings, sign out/in with the demo account, at phone and desktop sizes in four light/dark combinations; console errors, CSP violations, network requests, overflow, contrast, tap targets | none (static) | ~5 min |
+| `regress.py` | The installed app against a real server at 375×812 and 1280×800, light and dark: first-run setup in the page with the logged code, then Today, Add, quick add, USDA message, Plan, saved meals, Trends, CSV, Profile, delete confirmations, plus probes (embedded data ignored, live warnings equal the server's) | real, fresh per config | ~4 min |
+| `khserver.py` | Shared helpers (not a harness): start `uvicorn app.main:app` with a fresh `DATA_DIR` and the image's flags, read the `FIRST-RUN SETUP` code from the log, a JSON client that sends the CSRF headers and keeps the session cookie, `first_admin()`, `invite_user()` | | |
+
+## Requirements
+
+* The development requirements (`pip install -r requirements-dev.txt`) and Playwright for Python
+  (`pip install -r requirements-tools.txt`).
+* A Chromium for Playwright. The harnesses use, in order: `PLAYWRIGHT_CHROMIUM` (path to a `chrome`
+  binary), a browser under `PLAYWRIGHT_BROWSERS_PATH` or `/opt/pw-browsers`, else Playwright's own
+  download (`python -m playwright install chromium`).
+* Node is not needed (the JS parity vectors are `node tests/js/run_vectors.mjs`, run by CI).
+
+No network access is needed: the server runs with no USDA key and Open Food Facts off.
+
+## Running
+
+Run from the repository root (or anywhere: the harnesses find the repository from their own path).
+
+```bash
+python tools/e2e/parity.py                     # exit 0 when every comparison matched
+python tools/e2e/regress.py --no-pytest        # add --only 375-light for one configuration
+python tools/e2e/sandbox.py --workers 4        # add --only top-phone-light-none for one walk
+```
+
+Options shared by all three:
+
+* `--out DIR` — work directory for the server's data, logs, the built preview, screenshots and the
+  report. Default: `<system temp dir>/kidney-health-e2e/<harness>/`. **`parity.py` wipes it first**;
+  never point it at a directory you care about (it refuses paths inside `app/`, `data/` or `tests/`).
+* `--port N` — `parity.py` runs the server on 8061 and the preview site on 8062 (`--static-port`);
+  `regress.py` uses 8063; `sandbox.py` picks a free port unless given one. A harness stops if its
+  port is already taken, so two can run at once with different ports.
+* `parity.py --server-python PATH` runs the server on another interpreter (for example the
+  image's Python) while the harness itself stays on yours.
+
+Every server, static server and browser a harness starts is stopped when it ends, also on errors.
+
+## Accounts (v0.3)
+
+Every `/api` route needs a signed-in person, and before first-run setup the server answers `503
+setup_required`. So:
+
+* `parity.py` and the probes in `regress.py` finish setup through `POST /api/auth/setup` with the
+  code from the server log (user `parity` / `regress`, password `khserver.DEFAULT_PASSWORD`), and
+  send `X-Requested-With: kidney-health` and a same-origin `Origin` on every write.
+* `regress.py` finishes setup **in the page** for each configuration (setup screen → Today), then
+  opens a second session for its own direct API reads.
+* The preview needs no sign-in: the demo person is a signed-in demo admin.
+
+## Reading the results
+
+* `parity.py` prints a table per section and every mismatch with a severity (`high` for numbers,
+  levels, ratings and list lengths, `medium` for texts). The report is `<out>/report.json`. One
+  difference is by design and compared by status only: USDA search answers 503 on both sides, but
+  the demo has no server, so its words differ (the UI shows "needs the installed app").
+* `regress.py` prints `PASS` / `FAIL` / `INFO` lines; `<out>/report.json` and `<out>/shots/`.
+* `sandbox.py` groups issues by severity; `<out>/results.json` and `<out>/shots/`.
+
+When a parity check fails after a server change, fix the twin in `app/static/js/engine/*` or
+`app/static/js/mock/*` (and the vectors in `tests/data/` when an engine changed), not the harness.

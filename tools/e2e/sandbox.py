@@ -1183,6 +1183,7 @@ def run_sweep(args):
 
 
 def main():
+    global OUT, FRAGMENT_PATH, SHOTS, RESULTS
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="", help="comma-separated config names, e.g. top-phone-light-none")
     ap.add_argument("--no-sweep", action="store_true")
@@ -1193,7 +1194,6 @@ def main():
     ap.add_argument("--preview", type=Path, default=None, help="use this built fragment instead of building one")
     ap.add_argument("--port", type=int, default=0, help="port of the emulated host (default: any free port)")
     a = ap.parse_args()
-    global OUT, FRAGMENT_PATH, SHOTS, RESULTS
     OUT = a.out.resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     FRAGMENT_PATH, SHOTS, RESULTS = (a.preview.resolve() if a.preview else OUT / "preview.html"), OUT / "shots", OUT / "results.json"

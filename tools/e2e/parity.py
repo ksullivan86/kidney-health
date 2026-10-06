@@ -52,7 +52,7 @@ from typing import Any, Callable
 
 import httpx2
 
-from khserver import REPO, Api, Server, chromium_executable, first_admin, free_dir
+from khserver import REPO, Api, Server, chromium_executable, first_admin, free_dir, port_in_use
 
 HERE = Path(__file__).resolve().parent
 OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "parity"
@@ -282,6 +282,8 @@ def _wait_http(url: str, timeout: float = 60) -> None:
 def start_processes(server_python: str) -> Api:
     """Start the server (fresh DATA_DIR) and the static preview site; returns the admin's client."""
     global SERVER
+    if port_in_use(STATIC_PORT):
+        raise RuntimeError(f"port {STATIC_PORT} is already in use; pick another with --static-port")
     free_dir(OUT)
     SERVER = Server(SERVER_PORT, DATA_DIR, log_path=OUT / "server.log", python=server_python)
     SERVER.start()
@@ -803,7 +805,7 @@ class Harness:
             ("GET /api/foods/usda/search?q=apple", "GET", "/api/foods/usda/search?q=apple", None),
         ]
         for label, method, path, body in ext:
-            if path.startswith("/api/foods/usda/search"):
+            if isinstance(path, str) and path.startswith("/api/foods/usda/search"):
                 # Both answer 503, by design with different words: the server says how to add a key
                 # (reason "not_configured"); the demo has no server, and the UI shows its own
                 # "needs the installed app" text (ARCHITECTURE.md, "Frontend modules").

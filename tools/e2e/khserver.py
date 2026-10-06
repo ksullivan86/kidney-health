@@ -39,16 +39,36 @@ _CLEARED_ENV = (
 )
 
 
+MARKER = ".kidney-health-e2e"
+
+
 def free_dir(path: Path) -> Path:
-    """Empty ``path`` (created if missing). Refuses paths inside the repository's app/ or data/."""
+    """Empty ``path`` (created if missing) for a harness run.
+
+    Only a directory a harness made before (it holds the ``.kidney-health-e2e`` marker) or an empty
+    or missing one is wiped; the repository itself (except ``build/``), its parents and the home
+    directory are refused.
+    """
     path = path.resolve()
-    for protected in (REPO / "app", REPO / "data", REPO / "tests"):
-        if path == protected or protected in path.parents:
-            raise SystemExit(f"refusing to wipe {path}: pick a scratch directory")
+    if path in (REPO, Path.home(), Path(path.anchor)) or path in REPO.parents or path in Path.home().parents:
+        raise SystemExit(f"refusing to use {path} as a work directory: pick an empty scratch directory")
+    if REPO in path.parents and (REPO / "build") not in (path, *path.parents):
+        raise SystemExit(f"refusing to wipe {path} inside the repository (use build/... or a temp directory)")
     if path.exists():
+        if any(path.iterdir()) and not (path / MARKER).exists():
+            raise SystemExit(f"refusing to wipe {path}: it is not empty and was not made by a harness")
         shutil.rmtree(path)
     path.mkdir(parents=True)
+    (path / MARKER).write_text("work directory of tools/e2e; wiped on the next run\n", encoding="utf-8")
     return path
+
+
+def port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.5)
+        return sock.connect_ex((host, port)) == 0
 
 
 class Server:
@@ -70,6 +90,8 @@ class Server:
         return f"http://{self.host}:{self.port}"
 
     def start(self, timeout: float = 60) -> "Server":
+        if port_in_use(self.port):
+            raise RuntimeError(f"port {self.port} is already in use; stop that server or pick another port")
         env = {k: v for k, v in os.environ.items() if k not in _CLEARED_ENV}
         env.update(DATA_DIR=str(self.data_dir), PYTHONDONTWRITEBYTECODE="1", **self.extra_env)
         log = open(self.log_path, "w", encoding="utf-8")

@@ -64,6 +64,8 @@ deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRo
 .github/workflows/ci.yml    pytest 3.12+3.14, JS parity, linters, image smoke test + Grype gate (never pushes)
 .github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
 SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
+CHANGELOG.md                user-facing changes per version (v0.3)
+tools/e2e/                  browser harnesses run by hand: parity.py, sandbox.py, regress.py (+ khserver.py, README.md)
 pyproject.toml, requirements.txt, requirements-dev.txt, .gitignore
 ```
 
@@ -699,6 +701,8 @@ app/static/
 `index.html` in document order. **Parity rule:** every JS twin of server logic (`js/engine/*`,
 `js/mock/*`) is checked against the server by shared vector files in `tests/data/*.json`, run by
 pytest on the Python side and by `node tests/js/run_vectors.mjs` on the JS side (CI runs both).
+The mock routes as a whole are checked against a real, signed-in server by `tools/e2e/parity.py`
+(run by hand; see `tools/e2e/README.md`).
 In demo/preview mode the user is a signed-in demo admin; AI, Open Food Facts and USDA calls
 answer "available in the installed app" except for a few recorded barcode fixtures.
 
