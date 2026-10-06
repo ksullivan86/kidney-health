@@ -17,18 +17,61 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const KH = root.KH || (root.KH = {});
 
-  // type: 'bool' | 'int' (min/max) | 'str' (minLength/maxLength, stripped) | 'choice' (options) |
+  // type: 'bool' | 'int' (min/max) | 'str' (minLength/maxLength/pattern, stripped unless strip: false) | 'choice' (options) |
   //       'object' (a pydantic model with extra="forbid": `fields`, each a scalar type above or 'list' of one)
   const DEFS = [
+    // Optional AI (note 04 R4, §9 A5–A7; app/settings_registry.py "Note 04"). Providers and keys are rows of
+    // ai_providers, never settings: the person's `ai` object has no key field (§9 A6).
+    { key: 'ai', type: 'object', model: 'AiPreferences', scope: 'user', env: null,
+      default: { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '' },
+      fields: [
+        { name: 'opt_in', type: 'bool', default: false },
+        { name: 'provider', type: 'str', pattern: '^(auto|own|shared:[1-9][0-9]{0,17})$', strip: false, default: 'auto' },
+        { name: 'share_age_sex', type: 'bool', default: false },
+        { name: 'preferences', type: 'str', maxLength: 200, default: '' },
+      ],
+      label: 'AI ideas', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex and preferences (at most 200 characters).' },
+    { key: 'ai.allow_user_base_url', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_USER_BASE_URL',
+      label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
+    { key: 'ai.audit_retention_days', type: 'int', min: 0, max: 365, default: 30, scope: 'instance', env: 'AI_AUDIT_RETENTION_DAYS',
+      label: 'Keep what was sent to and received from AI for (days)', help: 'Each person sees their own AI activity in Settings. 0 keeps only the time, provider and outcome. Backups keep it until they expire.' },
+    { key: 'ai.enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_ENABLED',
+      label: 'Optional AI ideas', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
+    { key: 'ai.max_concurrency', type: 'int', min: 1, max: 32, default: 2, scope: 'instance', env: 'AI_MAX_CONCURRENCY',
+      label: 'AI calls at the same time (whole server)', help: 'Each person has at most one call running. Extra calls are told to try again in a few seconds.' },
+    { key: 'ai.shared_daily_limit', type: 'int', min: 0, max: 100000, default: 30, scope: 'instance', env: 'AI_SHARED_DAILY_LIMIT',
+      label: 'Shared AI calls per person per day', help: 'Counts meal ideas, described meals, photos and connection tests on shared providers. 0 means unlimited.' },
+    { key: 'ai.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: 'AI_ALLOW_USER_KEYS',
+      label: 'People may use their own AI key', help: 'For OpenAI, OpenRouter or Nous Portal. Their key is encrypted and never shown again.' },
+    { key: 'ai.vision_allow_agent', type: 'bool', default: false, scope: 'instance', env: 'AI_VISION_ALLOW_AGENT',
+      label: 'Allow photos to go to a Hermes agent', help: 'Off by default. Text printed on a package could try to instruct an agent; even when on, the app only uses a Hermes profile whose tool check passes.' },
+    { key: 'ai.vision_plate_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VISION_PLATE_ENABLED',
+      label: 'Plate photos (AI estimate of what is on a plate)', help: 'Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app says so on every result and never logs them without a tap.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
+    { key: 'food.barcode_negative_ttl_hours', type: 'int', min: 1, max: 720, default: 24, scope: 'instance', env: 'BARCODE_NEGATIVE_TTL_HOURS',
+      label: 'Remember barcodes that were not found for (hours)',
+      help: 'A barcode that Open Food Facts or USDA did not know is not asked again for this long.' },
     { key: 'food.off_consent', type: 'bool', default: false, scope: 'user', env: null,
       label: 'Send barcodes I scan to Open Food Facts',
       help: 'Your own choice, used only when the admin has turned Open Food Facts lookups on.' },
+    { key: 'food.off_contact', type: 'str', minLength: 3, maxLength: 200, pattern: '^[\\x20-\\x27\\x2a-\\x5b\\x5d-\\x7e]+$',
+      default: 'https://github.com/ksullivan86/kidney-health', scope: 'instance', env: 'OFF_CONTACT',
+      label: 'Contact sent to Open Food Facts',
+      help: 'Goes into the User-Agent of every lookup, as Open Food Facts asks of API users. An admin email address is better than '
+        + 'the default project address. Letters, digits and punctuation only (no round brackets or backslash).' },
     { key: 'food.off_enabled', type: 'bool', default: false, scope: 'instance', env: 'OFF_ENABLED',
       label: 'Look up barcodes with Open Food Facts',
       help: "Off by default. When on, a barcode that is not in this server's food list is looked up at world.openfoodfacts.org "
         + '(only the barcode number is sent). Product data is under the Open Database License.' },
+    { key: 'food.off_rate_per_minute', type: 'int', min: 1, max: 15, default: 10, scope: 'instance', env: 'OFF_RATE_PER_MINUTE',
+      label: 'Open Food Facts lookups per minute (whole server)',
+      help: 'Open Food Facts allows 15 product lookups a minute from one address and may block an address that sends more. '
+        + 'Everyone on this server shares this budget; products already looked up do not count.' },
+    { key: 'food.usda_branded_barcode', type: 'bool', default: true, scope: 'instance', env: 'USDA_BRANDED_BARCODE',
+      label: 'Also look barcodes up in USDA FoodData Central',
+      help: "Uses the person's USDA key or the shared one, when Open Food Facts does not know a product, has no nutrition facts "
+        + 'for it, or lacks potassium or sodium for a US product.' },
     // Meal guidance (note 06 §4.14; app/settings_registry.py GuidancePreferences). "Not for me" foods are not here:
     // they are rows of food_preferences (PUT/DELETE /api/guidance/not-for-me/{food_id}).
     { key: 'guidance', type: 'object', model: 'GuidancePreferences', scope: 'user', env: null,
@@ -135,9 +178,10 @@
       }
       case 'str': {
         if (typeof value !== 'string') return { error: 'Input should be a valid string' };
-        const v = value.trim();
+        const v = def.strip === false ? value : value.trim();
         if (def.minLength != null && v.length < def.minLength) return { error: `String should have at least ${def.minLength} character${def.minLength === 1 ? '' : 's'}` };
         if (def.maxLength != null && v.length > def.maxLength) return { error: `String should have at most ${def.maxLength} characters` };
+        if (def.pattern != null && !new RegExp(def.pattern).test(v)) return { error: `String should match pattern '${def.pattern}'` };
         return { value: v };
       }
       case 'choice':
