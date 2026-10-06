@@ -140,7 +140,10 @@ class Scorer:
         self.meal = room.meal
         n = room.nutrients
         self.tracked = tuple(k for k in R.ROOM_KEYS if k in n)
-        self.lim = {k: (n[k].room + R.NEGLIGIBLE[k]) if k in n else INF for k in R.ROOM_KEYS}
+        # A portion fails ``would_exceed`` above the meal's room + negligible, or above what is left of the
+        # day's own target for potassium, sodium and fluid (never tips the day into "over", §6.7).
+        self.lim = {k: min((n[k].room + R.NEGLIGIBLE[k]) if k in n else INF, room.day_left.get(k, INF))
+                    for k in R.ROOM_KEYS}
         self.lim_k, self.lim_p, self.lim_na, self.lim_fl = (self.lim[k] for k in (R.K, R.P, R.NA, R.FLUID))
         # Usage-term denominators and weights; ``None`` / 0 for a nutrient without a numeric target.
         self.denom = {k: max(n[k].room, R.NEGLIGIBLE[k]) for k in n}
@@ -367,7 +370,8 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built") -> Me
     """The single gate (§4.7): ``kind`` is ``built``, ``ai``, ``saved``, ``usual`` or ``starter``.
 
     Totals of potassium, phosphorus, sodium and fluid within room + negligible; unknown values only
-    while the day's level is ok; carbohydrate at most ``tolerance`` above the meal's gap; no
+    while the day's level is ok; carbohydrate at most ``tolerance`` above the meal's gap (negligible
+    carbohydrate always passes, as in the food filter); no
     ``avoid_ckd`` food; every portion ¼–3 servings. Built meals and AI ideas additionally never hold
     a low-treatment food, an ingredient, or a "high" portion of a nutrient that is not ok today, and
     AI ideas never hold more than 1 serving of a food with a "high" warning (note 04 V5).
@@ -387,7 +391,11 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built") -> Me
     if room.carbs is not None:
         if R.CARBS in unknown:
             return MealCheck(False, "unknown:carbs_g")
-        if totals[R.CARBS] - room.carbs.gap > room.carbs.tolerance:
+        # The food filter's rule for the whole meal: at most the gap (never below 0) plus the tolerance,
+        # and a meal with negligible carbohydrate (≤ 5 g) always passes, even when the meal is already at
+        # its goal (so a free food can follow a full meal; §4.5 "too_many_carbs").
+        carbs = totals[R.CARBS]
+        if carbs > _NEG_CARBS and carbs > max(room.carbs.gap, 0.0) + room.carbs.tolerance:
             return MealCheck(False, "too_many_carbs")
     strict = kind in ("built", "ai")
     for f, q in items:

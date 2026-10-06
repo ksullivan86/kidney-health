@@ -314,6 +314,19 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
         return chosen, options
     # Nothing fits: the closest built meal (no room check) at its best scale.
     relaxed = beam_build(room, scorer, today, dialysis, steps, width, counter, snack=snack, relaxed=True)
+    if not relaxed:
+        # No single food passed the hard filters: show the statically best food of each role instead,
+        # so the person still sees what is closest and why it does not fit.
+        roles = R.SNACK_ROLES if snack else R.MAIN_ROLE_STEPS
+        fallback: list[MealItem] = []
+        for role in roles:
+            pool = list(pools.get(role, [])) + (list(pools.get("mixed", [])) if role == "protein" else [])
+            if pool:
+                fallback.append((pool[0], 1.0))
+                if snack:
+                    break
+        if fallback:
+            relaxed = [Built(tuple(fallback), score_meal(fallback, room, today, dialysis, counter=counter), _k(fallback))]
     closest = None
     reason = None
     if relaxed:

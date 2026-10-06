@@ -74,6 +74,10 @@ class Room:
     meal_high_k: int  # non-hypo entries of the meal with > 200 mg potassium
     day_high_k: int  # same for the whole day
     usage_weight: Mapping[str, float] = field(default_factory=dict)
+    # Potassium, sodium and fluid still left today before the day's own target (not the per-meal
+    # room): one suggested food never tips a day that is not over into "over" (§6.7). +inf when the
+    # day is already over (nothing new to protect) or the nutrient has no target.
+    day_left: Mapping[str, float] = field(default_factory=dict)
 
     def room_of(self, key: str) -> float:
         item = self.nutrients.get(key)
@@ -236,6 +240,7 @@ def meal_room(ctx: GuidanceContext, meal: str, open_meals: Sequence[str] | None 
     hd = ctx.profile.dialysis == "hemodialysis" and bool(ctx.profile.dialysis_days)
     nutrients: dict[str, NutrientRoom] = {}
     weights: dict[str, float] = {}
+    day_left: dict[str, float] = {}
     for key in R.ROOM_KEYS:
         target = R.target_max(targets.get(key))
         if target is None:
@@ -262,6 +267,8 @@ def meal_room(ctx: GuidanceContext, meal: str, open_meals: Sequence[str] | None 
         if key == R.P and level != "ok":
             weight = R.USAGE_WEIGHT_P_NOT_OK
         weights[key] = weight
+        if key in R.DAY_JUDGED:
+            day_left[key] = target - proj if proj <= target else INF
 
     carbs: CarbRoom | None = None
     per_meal = R.target_max(targets.get("carbs_per_meal_g"))
@@ -293,4 +300,5 @@ def meal_room(ctx: GuidanceContext, meal: str, open_meals: Sequence[str] | None 
         meal_high_k=totals.meal_high_k.get(meal, 0),
         day_high_k=totals.day_high_k,
         usage_weight=weights,
+        day_left=day_left,
     )
