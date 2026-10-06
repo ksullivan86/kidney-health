@@ -1,0 +1,87 @@
+# syntax=docker/dockerfile:1
+# Kidney Health food log -- FALLBACK image on Debian (python:3.14-slim-trixie).
+# Spec: docs/dev/research/01-rootless-and-security.md §5.1 ("Containerfile.debian").
+#
+# Not published. CI builds it on pull requests that touch deploy/ or the lock files, so it keeps
+# working. Use it when Chainguard's free tier changes, when a wheel lags the Python that Chainguard's
+# :latest moved to, or when you need a shell inside the container for debugging:
+#   podman build --format docker -f deploy/Containerfile.debian -t kidney-health:debian .
+#
+# Differences from deploy/Containerfile, on purpose:
+#   * the runtime keeps Debian's /bin/sh and apt (the reason to choose it); pip is removed and every
+#     setuid/setgid bit is cleared, so there is still nothing to escalate with;
+#   * the Debian image carries ~56 High CVEs that Debian marks wont-fix (util-linux, login, perl-base,
+#     glibc), none in code the app uses (note 01 §3.3). The Grype gate is only-fixed, so it passes.
+# Everything else (root-owned code, /data 10001:0 0770, UID 10001, entrypoint flags) is identical.
+#
+# Both FROM lines must stay literal and identical so Dependabot bumps them together.
+
+# ---------------------------------------------------------------------------------------------------
+# Stage 1: builder
+# ---------------------------------------------------------------------------------------------------
+FROM docker.io/library/python:3.14-slim-trixie@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886b2d554ce40151 AS builder
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /build
+COPY requirements.lock ./
+RUN python -m venv --without-pip /opt/venv \
+ && python -m pip --python /opt/venv/bin/python install --no-cache-dir \
+      --no-deps --require-hashes --only-binary=:all: -r requirements.lock
+COPY app/ /opt/app/app/
+COPY data/foods.json /opt/app/data/foods.json
+COPY LICENSE /opt/app/LICENSE
+RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
+ && chmod -R u=rwX,go=rX /opt/venv /opt/app \
+ && mkdir -p /out/data \
+ && chmod 0770 /out/data
+
+# ---------------------------------------------------------------------------------------------------
+# Stage 2: handbook. PLACEHOLDER -- filled in by M3 integration exactly as in deploy/Containerfile
+# (note 08 §4.7). Until then an empty /out/learn, so /learn answers 404.
+# ---------------------------------------------------------------------------------------------------
+FROM docker.io/library/python:3.14-slim-trixie@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886b2d554ce40151 AS handbook
+WORKDIR /out/learn
+
+# ---------------------------------------------------------------------------------------------------
+# Stage 3: runtime
+# ---------------------------------------------------------------------------------------------------
+FROM docker.io/library/python:3.14-slim-trixie@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886b2d554ce40151
+
+LABEL org.opencontainers.image.title="kidney-health" \
+      org.opencontainers.image.description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings (Debian fallback build)" \
+      org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
+      org.opencontainers.image.url="https://github.com/ksullivan86/kidney-health" \
+      org.opencontainers.image.documentation="https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md" \
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0" \
+      org.opencontainers.image.base.name="docker.io/library/python:3.14-slim-trixie"
+
+# No pip at runtime, and no setuid/setgid binaries (su, mount, passwd, ...) left to escalate with.
+RUN python -m pip uninstall --no-cache-dir -y pip \
+ && find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
+ && rm -rf /root/.cache
+
+ENV PATH=/opt/venv/bin:/usr/local/bin:/usr/bin:/bin \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    DATA_DIR=/data \
+    HANDBOOK_DIR=/app/learn
+
+COPY --from=builder  --chown=0:0     /opt/venv  /opt/venv
+COPY --from=builder  --chown=0:0     /opt/app   /app
+COPY --from=handbook --chown=0:0     /out/learn /app/learn
+COPY --from=builder  --chown=10001:0 /out/data  /data
+
+WORKDIR /app
+USER 10001:10001
+EXPOSE 8000
+VOLUME ["/data"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["python", "-m", "app.healthcheck"]
+
+ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app"]
+CMD ["--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--no-server-header", \
+     "--timeout-graceful-shutdown", "10", "--limit-concurrency", "64"]

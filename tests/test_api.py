@@ -7,16 +7,15 @@ import json
 from datetime import date
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
-from fastapi.testclient import TestClient
 
 import app.foods as foods_module
 from app.config import Settings
 from app.main import create_app
 from app.nutrients import NUTRIENT_KEYS
 
-from conftest import DAY, FIXTURE_FOOD_COUNT, find_food, log_food, send_json
+from conftest import TestClient, DAY, FIXTURE_FOOD_COUNT, find_food, log_food, send_json
 
 
 # --------------------------------------------------------------------------- #
@@ -706,29 +705,29 @@ SEARCH_RESULT = {
 @pytest.fixture
 def usda_client(tmp_path, foods_json, monkeypatch):
     """TestClient with a USDA key whose outbound HTTP goes to an in-process mock."""
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(request)
         path = request.url.path
         if path == "/fdc/v1/foods/search":
-            return httpx.Response(200, json=SEARCH_RESULT)
+            return httpx2.Response(200, json=SEARCH_RESULT)
         if path == "/fdc/v1/food/173944":
-            return httpx.Response(200, json=SR_BANANA)
+            return httpx2.Response(200, json=SR_BANANA)
         if path == "/fdc/v1/food/171890":
-            return httpx.Response(200, json=SR_COFFEE)
+            return httpx2.Response(200, json=SR_COFFEE)
         if path == "/fdc/v1/food/777777":
-            return httpx.Response(200, json=BRANDED_CHIPS)
+            return httpx2.Response(200, json=BRANDED_CHIPS)
         if path == "/fdc/v1/food/500500":
-            return httpx.Response(500, text="upstream exploded")
+            return httpx2.Response(500, text="upstream exploded")
         if path == "/fdc/v1/food/403403":
-            return httpx.Response(403, json={"error": {"code": "API_KEY_INVALID"}})
+            return httpx2.Response(403, json={"error": {"code": "API_KEY_INVALID"}})
         if path == "/fdc/v1/food/666666":
-            raise httpx.ConnectError("boom", request=request)
-        return httpx.Response(404, json={"error": "not found"})
+            raise httpx2.ConnectError("boom", request=request)
+        return httpx2.Response(404, json={"error": "not found"})
 
-    def fake_client() -> httpx.Client:
-        return httpx.Client(base_url=foods_module.USDA_BASE_URL, transport=httpx.MockTransport(handler))
+    def fake_client() -> httpx2.Client:
+        return httpx2.Client(base_url=foods_module.USDA_BASE_URL, transport=httpx2.MockTransport(handler))
 
     monkeypatch.setattr(foods_module, "usda_client", fake_client)
     settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json, usda_api_key="TESTKEY")

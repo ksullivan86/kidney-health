@@ -1,0 +1,44 @@
+{#-
+  Kidney Health Handbook theme overrides (Material for MkDocs 9.7.x).
+  * Announce bar on every page: back to the app (LAN build only) and "Get help now".
+  * Draft banner driven by front matter: shown unless `status: reviewed` AND `reviewed_by` is set.
+  * Review line at the end of every page.
+  Keep inline scripts and inline style attributes out of this file: /learn is served with a
+  hash-only CSP (note 08 §4.6).
+-#}
+{% extends "base.html" %}
+
+{% block announce %}
+  <div class="kh-announce">
+    {% if config.extra.app_link %}
+      <a class="kh-announce__app" href="{{ config.extra.app_link }}">&larr; Back to the food log</a>
+      <span class="kh-announce__sep" aria-hidden="true">&middot;</span>
+    {% endif %}
+    <a class="kh-announce__help" href="{{ 'get-help-now/' | url }}"><strong>Get help now</strong></a>
+    <span class="kh-announce__note">Education, not medical advice. In an emergency call 911 (or your local number).</span>
+  </div>
+{% endblock %}
+
+{% block content %}
+  {% set meta = page.meta if page and page.meta else {} %}
+  {% set reviewed = meta.status == "reviewed" and meta.reviewed_by %}
+  {% if page and page.file and not reviewed %}
+    <div class="admonition warning kh-draft" role="note">
+      <p class="admonition-title">Draft: not yet reviewed by a clinician</p>
+      <p>Use this page to prepare questions for your care team. It does not replace their advice.
+      Your own targets and doses come from your nephrologist, diabetes team and renal dietitian.</p>
+    </div>
+  {% endif %}
+  {{ super() }}
+  {% if page and page.file %}
+    <p class="kh-reviewed">
+      {% if reviewed %}
+        Reviewed{% if meta.reviewed_on %} {{ meta.reviewed_on }}{% endif %} by {{ meta.reviewed_by }}.
+      {% else %}
+        Not yet reviewed by a clinician.
+      {% endif %}
+      {% if meta.last_checked %}Facts and sources last checked {{ meta.last_checked }}.{% endif %}
+      {% if meta.figures_as_of %}Prices and benefit amounts as of {{ meta.figures_as_of }}.{% endif %}
+    </p>
+  {% endif %}
+{% endblock %}

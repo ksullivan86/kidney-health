@@ -1,0 +1,53 @@
+/* Kidney Diet Log — Trends view: charts, table twin, period summary. */
+
+/* ---------- Trends ---------- */
+.trends-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.trends-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chart-legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: -4px 0 0; }
+.legend-key { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--lv); }
+.charts { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 720px) { .charts { grid-template-columns: 1fr 1fr; } }
+.chart-card .card-head { margin-bottom: 2px; }
+.chart-sub { color: var(--text-2); font-size: 0.85rem; display: flex; gap: 10px; flex-wrap: wrap; }
+.chart-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; } /* sideways slides read the bars */
+.chart-svg text { font-family: var(--font); fill: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-svg text.month { fill: var(--text-2); font-weight: 600; }
+.chart-svg .axis { stroke: var(--border); stroke-width: 1; }
+.chart-svg .target { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.chart-svg .target-min { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 2 4; }
+.chart-svg .bar { fill: var(--lv); }
+.chart-svg .hit { fill: transparent; cursor: pointer; }
+.chart-svg .hit:hover + .bar, .chart-svg .hit:focus-visible + .bar { opacity: 0.75; }
+.chart-svg .hit:focus-visible { outline: none; stroke: var(--focus); stroke-width: 2; }
+.chart-svg .nodata { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
+.chart-tip {
+  position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: var(--bg);
+  padding: 6px 10px; border-radius: 8px; font-size: 0.82rem; max-width: 240px; box-shadow: var(--shadow);
+}
+.chart-tip b { font-size: 0.95rem; }
+.inline-details > summary { cursor: pointer; color: var(--text-2); font-size: 0.85rem; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 6px; }
+.data-table th, .data-table td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
+.data-table td.num, .data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table .lvl { display: inline-flex; align-items: center; gap: 6px; }
+.data-table .lvl .swatch { width: 8px; height: 8px; }
+
+/* ---------- Trends: period summary ---------- */
+.period-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 720px) { .period-grid { grid-template-columns: 1fr 1fr; gap: 12px 24px; } }
+.period-row { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
+.period-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.period-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.strip-tag.weekly { color: var(--accent); background: var(--accent-tint); }
+.period-nums { font-size: 0.95rem; }
+.period-nums b { font-size: 1.1rem; }
+.period-foot { font-size: 0.8rem; color: var(--text-3); }
+.period-change { display: block; margin-top: 1px; }
+.period-change.good { color: var(--ok-text); font-weight: 600; }
+.period-change.bad { color: var(--over-text); font-weight: 600; }
+.period-inter { margin-top: 4px; }
+.period-inter .interdialytic { margin-top: 8px; }
+.period-notes { list-style: disc; padding-left: 18px; margin-top: 10px; color: var(--text-2); font-size: 0.82rem; line-height: 1.4; }
+.period-notes:empty { display: none; }
+.period-notes li + li { margin-top: 3px; }

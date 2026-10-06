@@ -5,13 +5,11 @@ import json
 import sqlite3
 from pathlib import Path
 
-from fastapi.testclient import TestClient
-
 from app import db
 from app.config import Settings
 from app.main import create_app
 
-from conftest import DAY
+from conftest import TestClient, DAY
 
 # The v0.1 schema verbatim: no log_entries.status, no profile.dialysis_days_json /
 # week_start, no meal_templates table.

@@ -1,2 +1,3 @@
--r requirements.txt
-pytest>=8,<9
+# Kept for one release so older instructions keep working (note 01 §7). The real list is the
+# hash-locked requirements-dev.lock (generated from requirements-dev.in by scripts/lock.sh).
+-r requirements-dev.lock

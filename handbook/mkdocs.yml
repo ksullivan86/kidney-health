@@ -1,0 +1,255 @@
+# Kidney Health Handbook: the LAN build served by the app at /learn/.
+# Spec: docs/dev/research/08-handbook-site.md §4.3. Build from inside handbook/:
+#   python scripts/build_handbook.py            (from the repo root: regenerate menus, tables, sources)
+#   cd handbook && NO_MKDOCS_2_WARNING=true mkdocs build --strict
+# GitHub Pages uses mkdocs.pages.yml, which inherits this file and changes only the site URL.
+site_name: Kidney Health Handbook
+site_description: Practical, sourced guidance for living with chronic kidney disease and type 1 diabetes.
+# LAN build: http://localhost/learn/ (no port; instant navigation needs the sitemap host to match,
+# note 08 F4). The image build sets HANDBOOK_SITE_URL to the same value.
+site_url: !ENV [HANDBOOK_SITE_URL, "http://localhost/learn/"]
+docs_dir: docs
+site_dir: site
+strict: true
+# Files starting with "_" are snippets included by other pages (eat/_targets-table.md), not pages.
+exclude_docs: |
+  _drafts/
+  _*.md
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: info
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
+watch:
+  - includes
+  - sources.yml
+
+theme:
+  name: material
+  custom_dir: overrides
+  language: en
+  font: false                       # system fonts; no Google Fonts request
+  logo: assets/icon.svg
+  favicon: assets/icon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant            # needs sitemap.xml and a matching host (note 08 F4); falls back gracefully
+    - navigation.instant.progress
+    - navigation.tabs               # Handbook · Using the app · Self-hosting · About
+    - navigation.sections
+    - navigation.indexes
+    - navigation.prune             # render only the visible part of the nav on each page (much smaller HTML)
+    - navigation.path               # breadcrumbs
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.tabs.link             # "US units" / "International" tabs stay in sync across pages
+    - content.tooltips              # abbreviation tooltips
+
+plugins:
+  - search:
+      lang: en                      # lunr runs in a web worker served from /learn; no internet needed
+  - privacy:
+      assets_fetch: false           # never download; with strict, any external image or script fails the build
+      assets_exclude:
+        - unpkg.com/*               # the theme bundle's own lazy URLs (mermaid, ResizeObserver polyfill); never loaded here
+      links_attr_map:
+        target: _blank
+      links_noopener: true
+# Not used on purpose: the offline plugin (file:// only), Mermaid, MathJax, repo_url (calls
+# api.github.com from the reader's browser), analytics, and any git-based plugin (no .git in the
+# image build).
+
+extra:
+  app_link: !ENV [HANDBOOK_APP_LINK, ""]    # "/" in the image build: "Back to the food log"; empty on Pages
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ksullivan86/kidney-health
+      name: Source code and corrections
+extra_css:
+  - stylesheets/extra.css
+copyright: >-
+  Education, not medical advice. Your care team sets your targets and doses.
+  Handbook text CC BY-NC-SA 4.0 ·
+  <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">licence</a> ·
+  <a href="https://github.com/ksullivan86/kidney-health">source</a>
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences            # no custom fences: no Mermaid
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.snippets:
+      # "." when building from handbook/ (the documented way); "handbook" when building from the repo root.
+      base_path: [".", "handbook"]
+      auto_append:
+        - includes/abbreviations.md
+        - includes/sources.md
+      check_paths: true
+
+nav:
+  - Handbook:
+      - Start here: index.md
+      - Get help now: get-help-now.md
+      - Wallet cards: reference/wallet-card.md
+      - Questions to ask: reference/questions-to-ask.md
+      - Understanding CKD:
+          - ckd/index.md
+          - ckd/stages.md
+          - ckd/diabetes-and-your-kidneys.md
+      - Your stage, day to day:
+          - stages/index.md
+          - stages/g1-g2.md
+          - stages/g3a.md
+          - stages/g3b.md
+          - stages/g4.md
+          - stages/g5-without-dialysis.md
+          - stages/hemodialysis-in-centre.md
+          - stages/home-hemodialysis.md
+          - stages/peritoneal-dialysis.md
+          - stages/before-transplant.md
+          - stages/after-transplant.md
+      - Lab results:
+          - labs/index.md
+          - labs/egfr-and-creatinine.md
+          - labs/uacr.md
+          - labs/blood-potassium.md
+          - labs/phosphate-calcium-pth.md
+          - labs/bicarbonate.md
+          - labs/albumin.md
+          - labs/haemoglobin-and-iron.md
+          - labs/a1c.md
+          - labs/cgm-metrics.md
+          - labs/dialysis-adequacy.md
+      - Eating well:
+          - eat/index.md
+          - eat/potassium.md
+          - eat/potassium-leaching.md
+          - eat/phosphorus.md
+          - eat/phosphate-additives.md
+          - eat/sodium.md
+          - eat/protein.md
+          - eat/eating-enough.md
+          - eat/fluid.md
+          - eat/carb-counting.md
+          - eat/label-reading.md
+          - eat/portions.md
+          - eat/dialysis-days.md
+          - eat/eating-out.md
+          - eat/grocery-shopping.md
+          - eat/food-lists.md
+          - Sample menus:
+              - eat/menus/index.md
+              - eat/menus/g1-g2.md
+              - eat/menus/g3.md
+              - eat/menus/g4-g5.md
+              - eat/menus/hemodialysis.md
+              - eat/menus/peritoneal.md
+              - eat/menus/transplant.md
+          - eat/grocery-lists.md
+          - Recipes:
+              - eat/recipes/index.md
+              - eat/recipes/cinnamon-apple-cream-of-wheat.md
+              - eat/recipes/pepper-onion-egg-scramble.md
+              - eat/recipes/berry-crepes.md
+              - eat/recipes/lemon-chicken-salad-sandwich.md
+              - eat/recipes/sesame-ginger-noodle-salad.md
+              - eat/recipes/chicken-noodle-soup.md
+              - eat/recipes/lemon-garlic-chicken-rice.md
+              - eat/recipes/herb-crumb-cod-couscous.md
+              - eat/recipes/turkey-burgers-slaw.md
+              - eat/recipes/pork-cabbage-stir-fry.md
+              - eat/recipes/cinnamon-popcorn.md
+              - eat/recipes/peach-blueberry-crisp.md
+      - Type 1 diabetes and CKD:
+          - t1d/index.md
+          - t1d/treating-a-low.md
+          - t1d/sick-days.md
+          - t1d/insulin-and-dialysis.md
+          - t1d/kidney-protecting-medicines.md
+      - Medicines and tests:
+          - medicines/avoid.md
+          - medicines/supplements.md
+          - medicines/scans-and-contrast.md
+          - medicines/your-medicine-list.md
+      - Preparing for treatment:
+          - prepare/choosing-a-treatment.md
+          - prepare/dialysis-access.md
+          - prepare/transplant-referral.md
+          - prepare/advance-care-planning.md
+      - Living well:
+          - living/exercise.md
+          - living/sleep.md
+          - living/mental-health.md
+          - living/work.md
+          - living/travel.md
+          - living/sex-fertility-pregnancy.md
+          - living/costs-and-benefits.md
+          - living/appointments.md
+          - living/caregivers.md
+  - Using the app:
+      - app/index.md
+      - app/install.md
+      - app/first-setup.md
+      - app/targets-and-warnings.md
+      - app/logging.md
+      - app/barcode-and-photo.md
+      - app/planning-and-menus.md
+      - app/guidance.md
+      - app/ai.md
+      - app/settings-and-keys.md
+      - app/reports-for-your-team.md
+      - app/privacy.md
+  - Self-hosting:
+      - self-hosting/index.md
+      - self-hosting/podman-rootless.md
+      - self-hosting/docker-rootless.md
+      - self-hosting/kubernetes.md
+      - self-hosting/https.md
+      - self-hosting/configuration.md
+      - self-hosting/users-and-keys.md
+      - self-hosting/backups.md
+      - self-hosting/upgrades.md
+      - self-hosting/security.md
+      - self-hosting/network-allowlist.md
+      - self-hosting/troubleshooting.md
+      - self-hosting/building-the-handbook.md
+  - About:
+      - reference/about.md
+      - reference/glossary.md
+      - reference/units.md
+      - reference/sources.md
+      - reference/licences.md

@@ -1,0 +1,13 @@
+# Handbook build and content-test dependencies (dev and CI only; never in the app runtime).
+# Pins follow docs/dev/research/08-handbook-site.md §4.1-§4.2, checked on PyPI 2026-10-05:
+#   mkdocs 1.6.1 (2024-08-30), mkdocs-material 9.7.7 (2026-07-17), pymdown-extensions 12.1 (2026-09-23).
+# Regenerate the lock from the repository root with:
+#   pip-compile --generate-hashes --strip-extras --allow-unsafe \
+#     --output-file handbook/requirements.lock handbook/requirements.in
+# Install with: pip install --require-hashes -r handbook/requirements.lock
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+pymdown-extensions==12.1
+pyyaml
+# runs tests/test_handbook_content.py in the handbook CI job
+pytest>=8,<9

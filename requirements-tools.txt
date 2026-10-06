@@ -1,0 +1,3 @@
+# Developer tools only: NOT needed to run the app or the test suite (CI does not install it).
+# scripts/build_icons.py renders app/static/icons/*.svg to the committed PNG icons.
+playwright==1.63.0

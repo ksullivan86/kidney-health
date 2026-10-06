@@ -1,0 +1,145 @@
+/* Kidney Health Handbook: additions to Material for MkDocs.
+   Served under a CSP with style-src 'self': keep every style in this file, never inline. */
+
+/* ---------- announce bar: back to the app, get help now ---------- */
+.kh-announce {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+.kh-announce a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.kh-announce__help strong {
+  font-weight: 700;
+}
+.kh-announce__note {
+  opacity: 0.85;
+  font-size: 0.9em;
+}
+
+/* ---------- draft banner and review line ---------- */
+.md-typeset .kh-draft {
+  margin-top: 0;
+}
+.md-typeset .kh-reviewed {
+  margin-top: 2.5em;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+}
+
+/* ---------- tables: readable on a phone ---------- */
+.md-typeset table:not([class]) {
+  font-size: 0.72rem;
+}
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: 0.5em 0.7em;
+  vertical-align: top;
+}
+@media screen and (max-width: 44.9375em) {
+  .md-typeset table:not([class]) {
+    font-size: 0.68rem;
+  }
+  .md-typeset table:not([class]) td,
+  .md-typeset table:not([class]) th {
+    padding: 0.4em 0.5em;
+  }
+}
+/* number columns in generated menu and target tables line up */
+.md-typeset .kh-numbers table td:nth-child(n+4) {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- key-number boxes ---------- */
+.md-typeset .kh-numbers-box {
+  border-left: 0.25rem solid var(--md-primary-fg-color);
+  padding: 0.25em 1em;
+  margin: 1em 0;
+  background: var(--md-code-bg-color);
+}
+
+/* ---------- printable wallet card (get-help-now) ---------- */
+.md-typeset .kh-wallet {
+  border: 2px solid var(--md-default-fg-color);
+  border-radius: 0.4rem;
+  padding: 0.6em 0.9em;
+  max-width: 36rem;
+  margin: 1em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.md-typeset .kh-wallet p,
+.md-typeset .kh-wallet li {
+  margin: 0.2em 0;
+}
+
+/* ---------- print ---------- */
+@media print {
+  .md-header,
+  .md-tabs,
+  .md-banner,
+  .md-sidebar,
+  .md-footer,
+  .md-top,
+  .md-source,
+  .md-search,
+  .headerlink {
+    display: none !important;
+  }
+  .md-main__inner {
+    margin: 0;
+  }
+  .md-content {
+    max-width: none;
+  }
+  .md-typeset {
+    font-size: 10.5pt;
+  }
+  .md-typeset table:not([class]) {
+    font-size: 9pt;
+  }
+  .md-typeset h2,
+  .md-typeset h3 {
+    break-after: avoid;
+  }
+  .md-typeset table,
+  .md-typeset .admonition,
+  .md-typeset details {
+    break-inside: avoid;
+  }
+  /* show where printed citations point */
+  .md-content a[href^="http"]::after {
+    content: " <" attr(href) ">";
+    font-size: 8pt;
+    word-break: break-all;
+  }
+  /* a wallet card prints at credit-card width: cut it out and fold */
+  .md-typeset .kh-wallet {
+    width: 85.6mm;
+    max-width: 85.6mm;
+    font-size: 7.5pt;
+    border-width: 1px;
+  }
+  .md-typeset .kh-wallet a[href^="http"]::after {
+    content: "";
+  }
+  /* tabs: print every tab, not only the selected one */
+  .md-typeset .tabbed-set > input,
+  .md-typeset .tabbed-labels {
+    display: none;
+  }
+  .md-typeset .tabbed-content > .tabbed-block {
+    display: block !important;
+  }
+  /* details blocks print open */
+  .md-typeset details:not([open]) > :not(summary) {
+    display: block;
+  }
+}

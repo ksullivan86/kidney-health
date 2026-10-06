@@ -1,0 +1,20 @@
+/* Kidney Diet Log — Profile view. */
+
+/* ---------- Profile ---------- */
+.profile-form { display: flex; flex-direction: column; gap: 12px; }
+.disclaimer {
+  margin-top: 8px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--text-2); font-size: 0.85rem; line-height: 1.45;
+}
+.targets-stale-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
+
+/* ---------- dialysis weekday checks ---------- */
+.weekday-checks { display: flex; gap: 6px; flex-wrap: wrap; }
+.wd-check { position: relative; }
+.wd-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.wd-check > span {
+  display: inline-flex; align-items: center; justify-content: center; min-width: var(--tap); min-height: var(--tap); padding: 0 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-weight: 600; font-size: 0.9rem; color: var(--text-2); cursor: pointer;
+}
+.wd-check input:checked + span { background: var(--accent-tint); color: var(--accent); border-color: var(--accent); }
+.wd-check input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }

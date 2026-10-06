@@ -1,0 +1,1506 @@
+# Handbook bibliography: one entry per source id.
+#
+# Pages cite sources with Markdown reference links, for example
+#   [KDIGO 2024 CKD guideline][K24], practice point 3.11.5.1
+# and list the same ids in their front matter (`sources: [K24, ...]`).
+# scripts/build_handbook.py turns this file into includes/sources.md (link definitions appended to
+# every page) and docs/reference/sources.md (the rendered bibliography).
+# tests/test_handbook_content.py fails when a page cites an id that is not defined here.
+#
+# Fields
+#   cite      full citation (authors, title, journal, year;volume:pages) or publisher and page title
+#   short     link text used as the hover title (optional; defaults to cite)
+#   url       primary URL (a DOI link where one exists)
+#   also      further URLs (optional)
+#   licence   what we may do with it. KDIGO is CC BY-NC-ND 4.0: cite and paraphrase, never adapt
+#             tables or figures. NKF, AKF, DaVita and ADA pages are copyrighted: link and paraphrase,
+#             never copy text, tables or recipes (docs/dev/research/08-handbook-site.md F10).
+#   checked   date the URL and the facts we cite from it were last checked (ISO date)
+#   kind      guideline | consensus | study | review | patient-info | government | label | data | project | tool
+#   dg        source number(s) in the original docs/diet-guide.md §8, kept for traceability
+#   note      anything a writer or reviewer must know (optional)
+#
+# Ids follow docs/dev/research/08-handbook-site.md §5.13. Diet-guide sources without a named id keep
+# "DG<n>"; where one diet-guide entry held two different works they are split as DG<n>a / DG<n>b.
+
+# ---------------------------------------------------------------- KDIGO and KDOQI guidelines
+K24:
+  cite: "Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group. KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. Kidney Int 2024;105(4S):S117–S314."
+  short: "KDIGO 2024 CKD guideline"
+  url: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only; do not adapt tables or figures"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [2]
+K22:
+  cite: "KDIGO Diabetes Work Group. KDIGO 2022 Clinical Practice Guideline for Diabetes Management in Chronic Kidney Disease. Kidney Int 2022;102(5S):S1–S127."
+  short: "KDIGO 2022 diabetes in CKD guideline"
+  url: https://kdigo.org/wp-content/uploads/2023/12/KDIGO-2022-Diabetes-Guideline.pdf
+  also:
+    - https://kdigo.org/guidelines/diabetes-ckd/
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only; do not adapt tables or figures"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [3]
+  note: "The 2026 update was still a draft on 2026-10-05 (public review closed 2026-04-13); the 2022 guideline remains current."
+K26A:
+  cite: "Babitt JL, et al. Executive summary of the KDIGO 2026 Clinical Practice Guideline for Anemia in Chronic Kidney Disease. Kidney Int 2026;109:44–56."
+  short: "KDIGO 2026 anemia in CKD guideline"
+  url: https://kdigo.org/wp-content/uploads/2026/01/KDIGO-2026-Anemia-in-CKD-Guideline-Executive-Summary.pdf
+  also:
+    - https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2026-Anemia-in-CKD-Guideline.pdf
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only; do not adapt tables or figures"
+  checked: 2026-10-05
+  kind: guideline
+K17:
+  cite: "KDIGO CKD-MBD Update Work Group. KDIGO 2017 Clinical Practice Guideline Update for the Diagnosis, Evaluation, Prevention, and Treatment of Chronic Kidney Disease–Mineral and Bone Disorder (CKD-MBD). Kidney Int Suppl 2017;7(1):1–59."
+  short: "KDIGO 2017 CKD-MBD guideline update"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6340919
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only; do not adapt tables or figures"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [11]
+K20TX:
+  cite: "Chadban SJ, et al. KDIGO Clinical Practice Guideline on the Evaluation and Management of Candidates for Kidney Transplantation. Transplantation 2020;104(4S1):S11–S103; summary Transplantation 2020;104(4):708–714."
+  short: "KDIGO 2020 transplant candidate guideline"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7147399/
+  licence: "Publisher copyright (KDIGO guideline): cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+K09TX:
+  cite: "KDIGO Transplant Work Group. KDIGO Clinical Practice Guideline for the Care of Kidney Transplant Recipients. Am J Transplant 2009;9(Suppl 3):S1–S155."
+  short: "KDIGO 2009 transplant recipient guideline"
+  url: https://kdigo.org/guidelines/transplant-recipient/
+  licence: "Publisher copyright (KDIGO guideline): cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+K20NOM:
+  cite: "Levey AS, et al. Nomenclature for kidney function and disease: report of a KDIGO Consensus Conference. Kidney Int 2020;97:1117–1129."
+  short: "KDIGO 2020 nomenclature report"
+  url: https://doi.org/10.1016/j.kint.2020.02.010
+  also:
+    - https://kdigo.org/conferences/nomenclature/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+K15SC:
+  cite: "Davison SN, et al. Executive summary of the KDIGO Controversies Conference on Supportive Care in Chronic Kidney Disease. Kidney Int 2015;88:447–459."
+  short: "KDIGO 2015 supportive care conference"
+  url: https://doi.org/10.1038/ki.2015.110
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+Q20:
+  cite: "Ikizler TA, et al. KDOQI Clinical Practice Guideline for Nutrition in CKD: 2020 Update. Am J Kidney Dis 2020;76(3 Suppl 1):S1–S107."
+  short: "KDOQI 2020 nutrition guideline"
+  url: https://doi.org/10.1053/j.ajkd.2020.05.006
+  also:
+    - https://www.kidney.org/sites/default/files/Nutrition_GL%2BSubmission_101719_Public_Review_Copy.pdf
+  licence: "© National Kidney Foundation (Elsevier): cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [1]
+  note: "Cite the published numbering: protein statements 3.0.1–3.0.4, energy 3.1.1 (the 2019 public-review draft numbered them 3.1.x and 3.0.1). The published text says kg body weight, chosen by the clinician (1.1.6)."
+Q19VA:
+  cite: "Lok CE, et al. KDOQI Clinical Practice Guideline for Vascular Access: 2019 Update. Am J Kidney Dis 2020;75(4 Suppl 2):S1–S164."
+  short: "KDOQI 2019 vascular access guideline"
+  url: https://doi.org/10.1053/j.ajkd.2019.12.001
+  licence: "© National Kidney Foundation (Elsevier): cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+Q15HD:
+  cite: "National Kidney Foundation. KDOQI Clinical Practice Guideline for Hemodialysis Adequacy: 2015 Update. Am J Kidney Dis 2015;66:884–930."
+  short: "KDOQI 2015 hemodialysis adequacy guideline"
+  url: https://doi.org/10.1053/j.ajkd.2015.07.015
+  licence: "© National Kidney Foundation (Elsevier): cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+DG10:
+  cite: "National Kidney Foundation. K/DOQI Clinical Practice Guidelines for Bone Metabolism and Disease in Chronic Kidney Disease (2003), Guidelines 4.1–4.3, 5.5."
+  short: "K/DOQI 2003 bone metabolism guideline"
+  url: https://www.kidney.org/sites/default/files/docs/boneguidelines.pdf
+  licence: "© National Kidney Foundation: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [10]
+
+# ---------------------------------------------------------------- dialysis and transplant societies
+I20PD:
+  cite: "Brown EA, et al. International Society for Peritoneal Dialysis practice recommendations: prescribing high-quality goal-directed peritoneal dialysis. Perit Dial Int 2020;40:244–253."
+  short: "ISPD 2020 goal-directed PD recommendations"
+  url: https://doi.org/10.1177/0896860819895364
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+I22P:
+  cite: "Li PKT, et al. ISPD peritonitis guideline recommendations: 2022 update on prevention and treatment. Perit Dial Int 2022;42:110–153."
+  short: "ISPD 2022 peritonitis guideline"
+  url: https://doi.org/10.1177/08968608221080586
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+JBDS:
+  cite: "Frankel AH, et al. Management of adults with diabetes on the haemodialysis unit: summary of guidance from the Joint British Diabetes Societies and the Renal Association. Br J Diabetes 2016;16:69–77."
+  short: "JBDS–Renal Association guidance on diabetes and haemodialysis"
+  url: https://bjd-abcd.com/index.php/bjd/article/view/134
+  also:
+    - https://www.rightdecisions.scot.nhs.uk/nhs-borders-clinical-guidelines/diabetes-and-endocrinology/management-of-adults-with-diabetes-on-dialysis-jbds-ip-national-guidance-external-link
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+UKKA19:
+  cite: "Wiles K, et al. Clinical practice guideline on pregnancy and renal disease. BMC Nephrol 2019;20:401."
+  short: "UK Kidney Association 2019 pregnancy guideline"
+  url: https://doi.org/10.1186/s12882-019-1560-2
+  licence: "CC BY 4.0 (open access)"
+  checked: 2026-10-05
+  kind: guideline
+AASM24:
+  cite: "Winkelman JW, et al. Treatment of restless legs syndrome and periodic limb movement disorder: an American Academy of Sleep Medicine clinical practice guideline. J Clin Sleep Med, published online 2024-09-26."
+  short: "AASM 2024 restless legs guideline"
+  url: https://doi.org/10.5664/jcsm.11390
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: guideline
+CON20:
+  cite: "Davenport MS, et al. Use of intravenous iodinated contrast media in patients with kidney disease: consensus statements from the American College of Radiology and the National Kidney Foundation. Radiology 2020;294:660–668."
+  short: "ACR–NKF 2020 iodinated contrast consensus"
+  url: https://doi.org/10.1148/radiol.2019192094
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+GAD21:
+  cite: "Weinreb JC, et al. Use of intravenous gadolinium-based contrast media in patients with kidney disease: consensus statements from the American College of Radiology and the National Kidney Foundation. Radiology 2021;298:28–35."
+  short: "ACR–NKF 2021 gadolinium consensus"
+  url: https://doi.org/10.1148/radiol.2020202903
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+
+# ---------------------------------------------------------------- diabetes standards and consensus
+A26-5:
+  cite: "American Diabetes Association Professional Practice Committee. 5. Facilitating Positive Health Behaviors and Well-being: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S89–S131."
+  short: "ADA Standards of Care 2026, section 5"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690188
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [8]
+A26-6:
+  cite: "American Diabetes Association Professional Practice Committee. 6. Glycemic Goals, Hypoglycemia, and Hyperglycemic Crises: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S132–S149."
+  short: "ADA Standards of Care 2026, section 6"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690178
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [9]
+A26-11:
+  cite: "American Diabetes Association Professional Practice Committee. 11. Chronic Kidney Disease and Risk Management: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S246–S260."
+  short: "ADA Standards of Care 2026, section 11"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690176
+  also:
+    - https://pmc.ncbi.nlm.nih.gov/articles/PMC11635029
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-05
+  kind: guideline
+  dg: [9]
+  note: "Protein is Rec 11.3 in 2026 (it was Rec 11.8 in the 2025 edition, PMC11635029)."
+A26-7:
+  cite: "American Diabetes Association Professional Practice Committee. 7. Diabetes Technology: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S150–S165."
+  short: "ADA Standards of Care 2026, section 7"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690173
+  also:
+    - https://diabetesjournals.org/care/issue/49/Supplement_1
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-05
+  kind: guideline
+A26-15:
+  cite: "American Diabetes Association Professional Practice Committee. 15. Management of Diabetes in Pregnancy: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S321–S338."
+  short: "ADA Standards of Care 2026, section 15"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690181
+  also:
+    - https://diabetesjournals.org/care/issue/49/Supplement_1
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-05
+  kind: guideline
+AK22:
+  cite: "de Boer IH, et al. Diabetes Management in Chronic Kidney Disease: A Consensus Report by the American Diabetes Association (ADA) and Kidney Disease: Improving Global Outcomes (KDIGO). Diabetes Care 2022;45:3075–3090."
+  short: "ADA–KDIGO 2022 consensus report"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9870667
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+  dg: [54]
+HC24:
+  cite: "Umpierrez GE, et al. Hyperglycemic crises in adults with diabetes: a consensus report. Diabetes Care 2024;47(8):1257–1275."
+  short: "2024 hyperglycemic crises consensus (ADA, EASD, JBDS, AACE, DTS)"
+  url: https://doi.org/10.2337/dci24-0032
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+TIR19:
+  cite: "Battelino T, et al. Clinical targets for continuous glucose monitoring data interpretation: recommendations from the International Consensus on Time in Range. Diabetes Care 2019;42:1593–1603."
+  short: "International consensus on time in range (2019)"
+  url: https://doi.org/10.2337/dci19-0028
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+EX17:
+  cite: "Riddell MC, et al. Exercise management in type 1 diabetes: a consensus statement. Lancet Diabetes Endocrinol 2017;5:377–390."
+  short: "Exercise in type 1 diabetes consensus (2017)"
+  url: https://doi.org/10.1016/S2213-8587(17)30014-1
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: consensus
+NHSK:
+  cite: "NHS London Procurement Partnership. Ketone testing in type 1 diabetes: patient advice for primary care (October 2018)."
+  short: "NHS ketone testing advice"
+  url: https://www.england.nhs.uk/london/wp-content/uploads/sites/8/2019/07/NHSLPP-ketone-testing-type-1-px-advice-for-primary-care-Oct18-v1.0.pdf
+  licence: "Open Government Licence v3.0 unless stated otherwise"
+  checked: 2026-10-05
+  kind: patient-info
+ADAK:
+  cite: "American Diabetes Association. Diabetic ketoacidosis (DKA) and ketones."
+  short: "ADA: DKA and ketones"
+  url: https://diabetes.org/living-with-diabetes/dka
+  licence: "© American Diabetes Association: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NGSP:
+  cite: "NGSP. IFCC standardization of HbA1c (NGSP–IFCC master equation)."
+  short: "NGSP: HbA1c units"
+  url: https://ngsp.org/ifccngsp.asp
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: government
+
+# ---------------------------------------------------------------- medicines, labels and safety notices
+KER:
+  cite: "Bayer HealthCare. Kerendia (finerenone) tablets: US prescribing information, revised 9/2026."
+  short: "Kerendia (finerenone) prescribing information"
+  url: https://labeling.bayerhealthcare.com/html/products/pi/Kerendia_PI.pdf
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-05
+  kind: label
+F1:
+  cite: "Heerspink HJL, Birkenfeld AL, Cherney DZI, et al. Finerenone in Type 1 Diabetes and Chronic Kidney Disease (FINE-ONE). N Engl J Med 2026;394(10):947–957."
+  short: "FINE-ONE trial (NEJM 2026)"
+  url: https://doi.org/10.1056/NEJMoa2512854
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  note: "DOI confirmed on Crossref 2026-10-05 (published 2026-03-05)."
+MHRA:
+  cite: "Medicines and Healthcare products Regulatory Agency. Drug Safety Update: Extraneal (icodextrin) and products that contain (or are metabolised to) maltose, xylose or galactose: false blood glucose readings."
+  short: "MHRA: icodextrin and false glucose readings"
+  url: https://www.gov.uk/drug-safety-update/extraneal-and-products-that-contain-or-are-metabolised-to-maltose-xylose-or-galactose-false-blood-glucose-readings
+  licence: "Open Government Licence v3.0"
+  checked: 2026-10-05
+  kind: government
+FDANaP:
+  cite: "US Food and Drug Administration. FDA Drug Safety Communication: FDA warns of possible harm from exceeding recommended dose of over-the-counter sodium phosphate products to treat constipation (2014)."
+  short: "FDA: OTC sodium phosphate products"
+  url: https://web.archive.org/web/20260201200911/https://www.fda.gov/drugs/drug-safety-and-availability/fda-drug-safety-communication-fda-warns-possible-harm-exceeding-recommended-dose-over-counter-sodium
+  also:
+    - https://www.fda.gov/drugs/drug-safety-and-availability/fda-drug-safety-communication-fda-warns-possible-harm-exceeding-recommended-dose-over-counter-sodium
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  dg: [43]
+  note: "The fda.gov page returned 404 on 2026-10-05; the link is the Internet Archive copy of 2026-02-01. Replace it if FDA republishes the communication."
+REMS:
+  cite: "Mycophenolate REMS (Risk Evaluation and Mitigation Strategy) program."
+  short: "Mycophenolate REMS"
+  url: https://www.mycophenolaterems.com/
+  licence: "Link only"
+  checked: 2026-10-06
+  kind: government
+  note: "Changed in 2026: the site says the FDA discontinued the REMS on 2026-07-29 (approval letter FDA-MYCO26, 2026-07-31). The label (CELLCEPT, 7/2026) keeps the embryofetal-toxicity boxed warning and the contraception counselling. Pages should say 'the label requires', not 'the REMS requires'."
+NKFpain:
+  cite: "National Kidney Foundation. Pain medicines and kidney disease."
+  short: "NKF: pain medicines and kidney disease"
+  url: https://www.kidney.org/kidney-topics/pain-medicines-and-kidney-disease
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKFherb:
+  cite: "National Kidney Foundation. Herbal supplements and kidney disease."
+  short: "NKF: herbal supplements and kidney disease"
+  url: https://www.kidney.org/kidney-topics/herbal-supplements-and-kidney-disease
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [41]
+AKFherb:
+  cite: "American Kidney Fund. Herbal supplements and chronic kidney disease (CKD)."
+  short: "AKF: herbal supplements and CKD"
+  url: https://www.kidneyfund.org/treatments/medicines-kidney-disease/herbal-supplements-and-chronic-kidney-disease-ckd
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [42]
+
+# ---------------------------------------------------------------- NKF topic pages
+NKF-eGFR:
+  cite: "National Kidney Foundation. Estimated glomerular filtration rate (eGFR)."
+  short: "NKF: eGFR"
+  url: https://www.kidney.org/kidney-topics/estimated-glomerular-filtration-rate-egfr
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKF-HDaccess:
+  cite: "National Kidney Foundation. Hemodialysis access."
+  short: "NKF: hemodialysis access"
+  url: https://www.kidney.org/kidney-topics/hemodialysis-access
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKF-HHD:
+  cite: "National Kidney Foundation. Home hemodialysis."
+  short: "NKF: home hemodialysis"
+  url: https://www.kidney.org/kidney-topics/home-hemodialysis
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKF-Tx:
+  cite: "National Kidney Foundation. Kidney transplant."
+  short: "NKF: kidney transplant"
+  url: https://www.kidney.org/kidney-topics/kidney-transplant
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKF-exercise:
+  cite: "National Kidney Foundation. Exercise and chronic kidney disease."
+  short: "NKF: exercise and CKD"
+  url: https://www.kidney.org/kidney-topics/exercise-and-chronic-kidney-disease
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+NKF-pregnancy:
+  cite: "National Kidney Foundation. Pregnancy and kidney disease."
+  short: "NKF: pregnancy and kidney disease"
+  url: https://www.kidney.org/kidney-topics/pregnancy-and-kidney-disease
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+
+# ---------------------------------------------------------------- NIDDK (US government)
+NIDDK-CKD:
+  cite: "National Institute of Diabetes and Digestive and Kidney Diseases. Chronic kidney disease (CKD)."
+  short: "NIDDK: chronic kidney disease"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-tests:
+  cite: "NIDDK. Tests and diagnosis of chronic kidney disease."
+  short: "NIDDK: CKD tests and diagnosis"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/tests-diagnosis
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-managing:
+  cite: "NIDDK. Managing chronic kidney disease."
+  short: "NIDDK: managing CKD"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/managing
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-HD:
+  cite: "NIDDK. Hemodialysis."
+  short: "NIDDK: hemodialysis"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/hemodialysis
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-HD-eat:
+  cite: "NIDDK. Eating and nutrition for hemodialysis."
+  short: "NIDDK: eating and nutrition on hemodialysis"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/hemodialysis/eating-nutrition
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-PD:
+  cite: "NIDDK. Peritoneal dialysis."
+  short: "NIDDK: peritoneal dialysis"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/peritoneal-dialysis
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-Tx:
+  cite: "NIDDK. Kidney transplant."
+  short: "NIDDK: kidney transplant"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/kidney-transplant
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-conservative:
+  cite: "NIDDK. Conservative management of kidney failure."
+  short: "NIDDK: conservative management"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/conservative-management
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-choosing:
+  cite: "NIDDK. Choosing a treatment for kidney failure."
+  short: "NIDDK: choosing a treatment for kidney failure"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidney-failure/choosing-treatment
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-hypo:
+  cite: "NIDDK. Low blood glucose (hypoglycemia)."
+  short: "NIDDK: low blood glucose"
+  url: https://www.niddk.nih.gov/health-information/diabetes/overview/preventing-problems/low-blood-glucose-hypoglycemia
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-DKD:
+  cite: "NIDDK. Diabetic kidney disease."
+  short: "NIDDK: diabetic kidney disease"
+  url: https://www.niddk.nih.gov/health-information/diabetes/overview/preventing-problems/diabetic-kidney-disease
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+NIDDK-copyright:
+  cite: "NIDDK. Copyright and reuse of NIDDK health information."
+  short: "NIDDK: copyright"
+  url: https://www.niddk.nih.gov/copyright
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+NIDDK-kidneys:
+  cite: "NIDDK. Your kidneys and how they work (last reviewed June 2018)."
+  short: "NIDDK: your kidneys and how they work"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/kidneys-how-they-work
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-06
+  kind: government
+  note: "Source of 'about a half cup of blood every minute' and the list of kidney jobs (wastes, acid, water, salts and minerals, hormones for blood pressure, red blood cells and bones)."
+NIDDK-CKDwhat:
+  cite: "NIDDK. What is chronic kidney disease? (last reviewed February 2025)."
+  short: "NIDDK: what is CKD?"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/what-is-chronic-kidney-disease
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-06
+  kind: government
+  note: "More than 35 million US adults (more than 1 in 7) have CKD; most have no symptoms early; advanced, long-lasting CKD typically can't be reversed."
+
+# ---------------------------------------------------------------- urgent symptoms (get-help-now) and everyday reference
+NHS-DKA:
+  cite: "NHS (England). Diabetic ketoacidosis (page last reviewed 8 June 2023)."
+  short: "NHS: diabetic ketoacidosis"
+  url: https://www.nhs.uk/conditions/diabetic-ketoacidosis/
+  licence: "Crown copyright (NHS website): link and paraphrase"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Blood ketones: under 0.6 mmol/L normal; 0.6–1.5 test again in 2 hours; 1.6–3 at risk of DKA, speak to your diabetes team; over 3 call 999 or go to A&E. Urine ketones over 2+ are high."
+CDC-DKA:
+  cite: "Centers for Disease Control and Prevention. Diabetic ketoacidosis (page last reviewed 15 May 2024)."
+  short: "CDC: diabetic ketoacidosis"
+  url: https://www.cdc.gov/diabetes/about/diabetic-ketoacidosis.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Check glucose every 4–6 hours and ketones when sick or glucose is 250 mg/dL or above; go to the emergency room or call 911 for glucose staying at 300 mg/dL or above, fruity breath, vomiting with no food or drink kept down, trouble breathing, or several DKA symptoms."
+CDC-SEPSIS:
+  cite: "Centers for Disease Control and Prevention. About sepsis (page last reviewed 17 August 2026)."
+  short: "CDC: about sepsis"
+  url: https://www.cdc.gov/sepsis/about/index.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+CDC-STROKE:
+  cite: "Centers for Disease Control and Prevention. Signs and symptoms of stroke (page last reviewed 19 May 2026)."
+  short: "CDC: stroke signs and symptoms"
+  url: https://www.cdc.gov/stroke/signs-symptoms/index.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+MEDLINE-K:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). High potassium level (reviewed 1 October 2025)."
+  short: "MedlinePlus: high potassium level"
+  url: https://medlineplus.gov/ency/article/001179.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+MEDLINE-PE:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Pulmonary edema (reviewed 27 January 2026)."
+  short: "MedlinePlus: pulmonary edema"
+  url: https://medlineplus.gov/ency/article/000140.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+AKF-bleed:
+  cite: "American Kidney Fund. Dialysis fistula and graft bleeds: what are they and how can they be prevented and treated? (15 August 2025)."
+  short: "AKF: fistula and graft bleeds"
+  url: https://www.kidneyfund.org/article/dialysis-fistula-and-graft-bleeds-what-are-they-and-how-can-they-be-prevented-and-treated
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Firm pressure with two fingers for at least 10 minutes before checking; if bleeding continues after 10–15 minutes or starts again, keep pressing and call 911."
+NKF-CKDEPI:
+  cite: "National Kidney Foundation. CKD-EPI creatinine equation (2021): estimates GFR from serum creatinine, age and sex, without a race variable."
+  short: "NKF: CKD-EPI 2021 equation"
+  url: https://www.kidney.org/professionals/ckd-epi-creatinine-equation-2021
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+MEDLINE-BUN:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). BUN – blood test (reviewed 19 May 2025)."
+  short: "MedlinePlus: BUN blood test"
+  url: https://medlineplus.gov/ency/article/003474.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+GLUCAGON-KIT:
+  cite: "Fresenius Kabi. Glucagon Emergency Kit for Low Blood Sugar: instructions for use and prescribing information (approved 9/2019)."
+  short: "Glucagon Emergency Kit instructions for use"
+  url: https://www.glucagonemergencykit.com/wp-content/uploads/2019/12/Glucagon_IFU_191122.pdf
+  licence: "Product label: quote at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "After glucagon: turn the person on their side (they may vomit), call for emergency medical help right away, feed them when awake and able to swallow."
+CFR-LABEL:
+  cite: "US Code of Federal Regulations, 21 CFR 101.9(b)(5)(viii): household measures for nutrition labeling (teaspoon 5 mL, tablespoon 15 mL, cup 240 mL, 1 fl oz 30 mL, 1 oz 28 g)."
+  short: "21 CFR 101.9: label household measures"
+  url: https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+
+# ---------------------------------------------------------------- benefits, work, travel and support (US unless stated)
+MED-ESRD:
+  cite: "Medicare.gov. End-stage renal disease (ESRD)."
+  short: "Medicare: kidney failure coverage"
+  url: https://www.medicare.gov/basics/end-stage-renal-disease
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+MED-KDE:
+  cite: "Medicare.gov. Kidney disease education."
+  short: "Medicare: kidney disease education"
+  url: https://www.medicare.gov/coverage/kidney-disease-education
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+MED-INS:
+  cite: "Medicare.gov. Insulin."
+  short: "Medicare: insulin coverage"
+  url: https://www.medicare.gov/coverage/insulin
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+CMS26:
+  cite: "Centers for Medicare & Medicaid Services. 2026 Medicare Parts A & B premiums and deductibles (fact sheet)."
+  short: "CMS: 2026 Medicare premiums and deductibles"
+  url: https://www.cms.gov/newsroom/fact-sheets/2026-medicare-parts-b-premiums-deductibles
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Amounts change every year; recheck each November."
+OPTN:
+  cite: "Organ Procurement and Transplantation Network. OPTN Policies (Policy 8: Kidney; Policy 11: Pancreas)."
+  short: "OPTN policies"
+  url: https://optn.transplant.hrsa.gov/policies-bylaws/policies/
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+TSA:
+  cite: "Transportation Security Administration. What can I bring? Medical."
+  short: "TSA: medical items"
+  url: https://www.tsa.gov/travel/security-screening/whatcanibring/medical
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+ADA-travel:
+  cite: "American Diabetes Association. What can I bring with me on the plane?"
+  short: "ADA: flying with diabetes supplies"
+  url: https://diabetes.org/tools-support/know-your-rights/what-can-i-bring-with-me-on-plane
+  licence: "© American Diabetes Association: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+EEOC:
+  cite: "US Equal Employment Opportunity Commission. Diabetes in the workplace and the ADA."
+  short: "EEOC: diabetes in the workplace"
+  url: https://www.eeoc.gov/laws/guidance/diabetes-workplace-and-ada
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+FMLA:
+  cite: "US Department of Labor, Wage and Hour Division. Family and Medical Leave Act."
+  short: "US Department of Labor: FMLA"
+  url: https://www.dol.gov/agencies/whd/fmla
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+SSA:
+  cite: "Social Security Administration. Disability benefits."
+  short: "SSA: disability benefits"
+  url: https://www.ssa.gov/benefits/disability/
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+HIPP:
+  cite: "American Kidney Fund. Health Insurance Premium Program (HIPP)."
+  short: "AKF: Health Insurance Premium Program"
+  url: https://www.kidneyfund.org/get-assistance/health-insurance-premium-program
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+KCUK:
+  cite: "Kidney Care UK. Patient support grants (financial support)."
+  short: "Kidney Care UK: patient grants"
+  url: https://kidneycareuk.org/get-support/patient-grants/
+  licence: "© Kidney Care UK: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+"988":
+  cite: "988 Suicide & Crisis Lifeline (US)."
+  short: "988 Suicide & Crisis Lifeline"
+  url: https://988lifeline.org/
+  licence: "Link only"
+  checked: 2026-10-05
+  kind: patient-info
+FDAmenu:
+  cite: "US Food and Drug Administration. Menu labeling requirements."
+  short: "FDA: menu labeling requirements"
+  url: https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/menu-labeling-requirements
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+FOODSAFE:
+  cite: "FoodSafety.gov. People with weakened immune systems."
+  short: "FoodSafety.gov: weakened immune systems"
+  url: https://www.foodsafety.gov/people-at-risk/people-with-weakened-immune-systems
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+AKFkitchen:
+  cite: "American Kidney Fund. Kidney Kitchen (recipes and guides)."
+  short: "AKF Kidney Kitchen"
+  url: https://kitchen.kidneyfund.org/
+  licence: "© American Kidney Fund: inspiration only; never copy recipes"
+  checked: 2026-10-05
+  kind: patient-info
+AHRQ-Q:
+  cite: "Agency for Healthcare Research and Quality. Questions are the answer."
+  short: "AHRQ: questions to ask your doctor"
+  url: https://www.ahrq.gov/questions/index.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  note: "Returns 403 to automated checkers; works in a browser."
+PEMAT:
+  cite: "Agency for Healthcare Research and Quality. The Patient Education Materials Assessment Tool (PEMAT) and user's guide."
+  short: "AHRQ: PEMAT"
+  url: https://www.ahrq.gov/health-literacy/patient-education/pemat.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: tool
+  note: "Returns 403 to automated checkers; works in a browser."
+CCI:
+  cite: "Centers for Disease Control and Prevention. The CDC Clear Communication Index."
+  short: "CDC Clear Communication Index"
+  url: https://www.cdc.gov/ccindex/index.html
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: tool
+
+# ---------------------------------------------------------------- food data
+FDC:
+  cite: "US Department of Agriculture, Agricultural Research Service. FoodData Central, SR Legacy (April 2018)."
+  short: "USDA FoodData Central (SR Legacy)"
+  url: https://fdc.nal.usda.gov/
+  also:
+    - https://fdc.nal.usda.gov/download-datasets
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: data
+  dg: [51]
+  note: "All per-serving nutrient values in the handbook and in data/foods.json. FDC IDs per food are in docs/research/food-lists.md, Appendix 1."
+
+# ---------------------------------------------------------------- docs/diet-guide.md sources without a named id
+DG4:
+  cite: "NIDDK. Healthy eating for adults with chronic kidney disease."
+  short: "NIDDK: healthy eating for adults with CKD"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/healthy-eating-adults-chronic-kidney-disease
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-05
+  kind: government
+  dg: [4]
+DG5:
+  cite: "National Kidney Foundation. Potassium and your CKD diet."
+  short: "NKF: potassium and your CKD diet"
+  url: https://www.kidney.org/kidney-topics/potassium-your-ckd-diet
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [5]
+DG6:
+  cite: "Bethke PC, Jansky SH. The effects of boiling and leaching on the content of potassium and other minerals in potatoes. J Food Sci 2008;73(5):H80–H85."
+  short: "Bethke and Jansky 2008: leaching potatoes"
+  url: https://pubmed.ncbi.nlm.nih.gov/18576999/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [6]
+DG7:
+  cite: "National Kidney Foundation. Carbohydrate counting with chronic kidney disease."
+  short: "NKF: carbohydrate counting with CKD"
+  url: https://www.kidney.org/kidney-topics/carbohydrate-counting-chronic-kidney-disease
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [7]
+DG12:
+  cite: "Kalantar-Zadeh K, et al. Understanding sources of dietary phosphorus in the treatment of patients with chronic kidney disease. Clin J Am Soc Nephrol 2010;5:519–530."
+  short: "Kalantar-Zadeh 2010: sources of dietary phosphorus"
+  url: https://pubmed.ncbi.nlm.nih.gov/20093346/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [12]
+DG13a:
+  cite: "Noori N, et al. Organic and inorganic dietary phosphorus and its management in chronic kidney disease. Iran J Kidney Dis 2010;4:89–100."
+  short: "Noori 2010: organic and inorganic phosphorus"
+  url: https://pubmed.ncbi.nlm.nih.gov/20404416/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [13]
+DG13b:
+  cite: "International Society of Renal Nutrition and Metabolism commentary on the KDOQI 2020 nutrition guideline."
+  short: "ISRNM commentary on KDOQI 2020"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9303594
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [13]
+DG14a:
+  cite: "Noori N, et al. Association of dietary phosphorus intake and phosphorus to protein ratio with mortality in hemodialysis patients. Clin J Am Soc Nephrol 2010;5:683–692."
+  short: "Noori 2010: phosphorus intake and mortality on hemodialysis"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2849686
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [14]
+DG14b:
+  cite: "American Kidney Fund. Quick tips: dining out at fast casual or fast food restaurants."
+  short: "AKF: dining out tips"
+  url: https://www.kidneyfund.org/article/quick-tips-dining-out-fast-casual-or-fast-food-restaurants
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [14]
+DG15:
+  cite: "St-Jules DE, et al. Examining the proportion of dietary phosphorus from plants, animals, and food additives excreted in urine. J Ren Nutr 2017;27:78–83."
+  short: "St-Jules 2017: phosphorus sources excreted in urine"
+  url: https://escholarship.org/uc/item/0nd4b0xx
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [15]
+DG16a:
+  cite: "Kalantar-Zadeh K, et al. Plant-dominant low-protein diet for conservative management of chronic kidney disease (PLADO). Nutrients 2020;12:1931."
+  short: "PLADO (Nutrients 2020)"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7400005/
+  licence: "CC BY 4.0 (open access)"
+  checked: 2026-10-05
+  kind: review
+  dg: [16]
+DG16b:
+  cite: "US Food and Drug Administration. Daily Value on the Nutrition and Supplement Facts labels."
+  short: "FDA: Daily Values"
+  url: https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  dg: [16]
+DG17:
+  cite: "National Kidney Foundation. Why you should avoid eating starfruit."
+  short: "NKF: avoid star fruit"
+  url: https://www.kidney.org/kidney-topics/why-you-should-avoid-eating-starfruit
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [17]
+DG18:
+  cite: "Review of phosphate additives in the Western diet (PMC6419782)."
+  short: "Phosphate additives in the Western diet (review)"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6419782/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [18]
+DG19a:
+  cite: "American Kidney Fund, Kidney Kitchen. Fluids."
+  short: "AKF Kidney Kitchen: fluids"
+  url: https://kitchen.kidneyfund.org/fluids-and-kidney-disease/
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [19]
+DG19b:
+  cite: "American Kidney Fund, Kidney Kitchen. Kidney disease stages 3, 4 and 5 (not on dialysis)."
+  short: "AKF Kidney Kitchen: stages 3–5 not on dialysis"
+  url: https://kitchen.kidneyfund.org/eating-healthy-with-kidney-disease/kidney-disease-stages-3-4-5-not-on-dialysis/
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [19]
+DG20:
+  cite: "National Kidney Foundation. Phosphorus and your CKD diet."
+  short: "NKF: phosphorus and your CKD diet"
+  url: https://www.kidney.org/kidney-topics/phosphorus-and-your-ckd-diet
+  also:
+    - https://www.kidney.org/sites/default/files/if_you_need_to_limit_phosphorus.pdf
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [20]
+DG21:
+  cite: "National Kidney Foundation. Low-phosphorus cheese."
+  short: "NKF: low-phosphorus cheese"
+  url: https://www.kidney.org/kidney-topics/low-phosphorus-cheese
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [21]
+DG22:
+  cite: "National Kidney Foundation. 40 low potassium fruits and vegetables to add to your grocery list."
+  short: "NKF: 40 low-potassium fruits and vegetables"
+  url: https://www.kidney.org/news-stories/40-low-potassium-fruits-and-vegetables-to-add-to-your-grocery-list
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [22]
+DG23:
+  cite: "DaVita. Hemodialysis and fluid intake: how much to drink?"
+  short: "DaVita: hemodialysis fluid intake"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/hemodialysis-and-fluid-intake-how-much-to-drink/
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [23]
+DG24a:
+  cite: "National Kidney Foundation. Hemodialysis and your diet."
+  short: "NKF: hemodialysis and your diet"
+  url: https://www.kidney.org/kidney-topics/hemodialysis-and-your-diet
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [24]
+DG24b:
+  cite: "American Diabetes Association Consumer Guide. Dex4 glucose tablets (4 g dextrose per tablet)."
+  short: "ADA Consumer Guide: Dex4 tablets"
+  url: https://consumerguide.diabetes.org/products/fast-acting-glucose-products/dex4-tablets
+  licence: "© American Diabetes Association: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [24]
+DG25a:
+  cite: "DaVita. Peritoneal dialysis diet considerations."
+  short: "DaVita: peritoneal dialysis diet"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/peritoneal-dialysis-diet-considerations/
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [25]
+DG25b:
+  cite: "Di Iorio B, et al. Nutr Diet Suppl 2012;4:55–59, reproducing measured beverage phosphorus (Murphy-Gutekunst, J Ren Nutr 2005, as tabulated by Kalantar-Zadeh 2010)."
+  short: "Measured phosphorus in colas and other drinks"
+  url: https://www.dovepress.com/article/download/11303
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [25]
+DG26:
+  cite: "DaVita. How to determine if a food is high or low potassium."
+  short: "DaVita: high or low potassium foods"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/how-to-determine-if-a-food-is-high-or-low-potassium
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [26]
+DG27:
+  cite: "DaVita. Kidney-friendly foods to correct hypoglycemia."
+  short: "DaVita: kidney-friendly foods for low blood sugar"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/kidney-friendly-foods-to-correct-hypoglycemia/
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [27]
+DG28a:
+  cite: "Cabrera C, et al. A retrospective, longitudinal study estimating the association between interdialytic weight gain and cardiovascular events and death in hemodialysis patients. BMC Nephrol 2015;16:113."
+  short: "Cabrera 2015: interdialytic weight gain"
+  url: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4510887/
+  licence: "CC BY 4.0 (open access)"
+  checked: 2026-10-05
+  kind: study
+  dg: [28]
+DG28b:
+  cite: "National Kidney Foundation. Milk alternatives."
+  short: "NKF: milk alternatives"
+  url: https://www.kidney.org/kidney-topics/milk-alternatives
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [28]
+DG29:
+  cite: "University of Florida IFAS Extension. CKD: potassium and your diet (FS287)."
+  short: "UF/IFAS: potassium and your diet"
+  url: https://ask.ifas.ufl.edu/publication/FS287
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [29]
+DG30a:
+  cite: "Picard K, et al. Handouts for low-potassium diets disproportionately restrict fruits and vegetables. J Ren Nutr 2021;31:210–214 (source of KDIGO 2024 Figure 33)."
+  short: "Picard 2021: potassium absorption by food source"
+  url: https://doi.org/10.1053/j.jrn.2020.07.001
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [30]
+DG30b:
+  cite: "DaVita. Food Facts Friday: coffee creamers."
+  short: "DaVita: coffee creamers"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/food-facts-friday-coffee-creamers
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [30]
+DG31:
+  cite: "Wickham E. Phosphorus content in commonly consumed beverages. J Ren Nutr 2014;24(1):e1–e4."
+  short: "Wickham 2014: phosphorus in beverages"
+  url: https://doi.org/10.1053/j.jrn.2013.10.002
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [31]
+  note: "DOI confirmed on Crossref 2026-10-05."
+DG32a:
+  cite: "DaVita. Low potassium potatoes for your kidney diet: no soaking required."
+  short: "DaVita: low-potassium potatoes"
+  url: https://www.davita.com/diet-nutrition/kidney-diet-tips/low-potassium-potatoes-for-your-kidney-diet-no-soaking-required/
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [32]
+DG32b:
+  cite: "Medtronic Diabetes. Net carbs vs. total carbs."
+  short: "Medtronic: net carbs vs total carbs"
+  url: https://www.minimed.com/en-us/loop-blog/net-carbs-vs-total-carbs-counts
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [32]
+DG33:
+  cite: "American Association of Kidney Patients, National Kidney Foundation and Academy of Nutrition and Dietetics. Letter on the FDA proposal to permit salt substitutes in standardized foods (2023)."
+  short: "AAKP letter on salt substitutes (2023)"
+  url: https://aakp.org/re-fda-proposal-to-permit-salt-substitutes-to-reduce-sodium-in-standardized-foods/
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [33]
+DG34:
+  cite: "US Food and Drug Administration. Sodium in your diet."
+  short: "FDA: sodium in your diet"
+  url: https://www.fda.gov/food/nutrition-education-resources-materials/sodium-your-diet
+  licence: "Public domain (US government work)"
+  checked: 2026-10-05
+  kind: government
+  dg: [34]
+DG35a:
+  cite: "Harvard Health Publishing. Watch out for the 'salty six' (summary of the American Heart Association list)."
+  short: "Harvard Health: the salty six"
+  url: https://web.archive.org/web/20241012195307/https://www.health.harvard.edu/heart-health/watch-out-for-the-salty-six
+  also:
+    - https://www.health.harvard.edu/heart-health/watch-out-for-the-salty-six
+  licence: "© Harvard Health Publishing: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [35]
+  note: "The Harvard Health page returned 404 on 2026-10-05; the link is the Internet Archive copy of 2024-10-12."
+DG35b:
+  cite: "Morton Salt. Morton Lite Salt product label (290 mg sodium and 350 mg potassium per 1/4 teaspoon)."
+  short: "Morton Lite Salt label"
+  url: https://www.mortonsalt.com/shop/low-no-sodium/morton-lite-salt/
+  licence: "Product label: quote at most one sentence"
+  checked: 2026-10-05
+  kind: label
+  dg: [35]
+DG36:
+  cite: "Sousa AGP, et al. Hyporeninemic hypoaldosteronism and diabetes mellitus: pathophysiology assumptions, clinical aspects and implications for management. World J Diabetes 2016;7:101–111."
+  short: "Sousa 2016: hyporeninaemic hypoaldosteronism in diabetes"
+  url: https://www.wjgnet.com/1948-9358/full/v7/i5/101.htm
+  licence: "CC BY-NC 4.0 (open access)"
+  checked: 2026-10-05
+  kind: review
+  dg: [36]
+DG37a:
+  cite: "Institute of Medicine. Front-of-package nutrition rating systems: FDA nutrient content claim definitions (NCBI Bookshelf NBK209851)."
+  short: "FDA nutrient content claim definitions"
+  url: https://www.ncbi.nlm.nih.gov/books/NBK209851/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: government
+  dg: [37]
+DG37b:
+  cite: "DaVita. Alcohol and chronic kidney disease."
+  short: "DaVita: alcohol and CKD"
+  url: https://www.davita.com/diet-nutrition/articles/alcohol-and-chronic-kidney-disease/
+  licence: "© DaVita: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [37]
+DG38:
+  cite: "National Kidney Foundation. Your guide to the new and improved Nutrition Facts label."
+  short: "NKF: reading the Nutrition Facts label"
+  url: https://www.kidney.org/kidney-topics/your-guide-to-new-and-improved-nutrition-facts-label
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [38]
+DG39:
+  cite: "de Oliveira ES, Aguiar AS. Why eating star fruit is prohibited for patients with chronic kidney disease? J Bras Nefrol 2015;37:241–247."
+  short: "de Oliveira 2015: star fruit in CKD"
+  url: https://pubmed.ncbi.nlm.nih.gov/26154645/
+  licence: "Open access: cite and paraphrase"
+  checked: 2026-10-05
+  kind: review
+  dg: [39]
+DG40:
+  cite: "Star fruit (caramboxin) intoxication in kidney disease: case series and review (PMC7735120)."
+  short: "Star fruit intoxication case series"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7735120
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [40]
+DG44:
+  cite: "Severe symptomatic hypermagnesemia associated with over-the-counter laxatives in a patient with renal failure. Case Rep Nephrol 2014."
+  short: "Hypermagnesaemia from OTC laxatives (case report)"
+  url: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3914018/
+  licence: "Open access: cite and paraphrase"
+  checked: 2026-10-05
+  kind: study
+  dg: [44]
+DG45:
+  cite: "StatPearls. Hypermagnesemia (NCBI Bookshelf NBK549811)."
+  short: "StatPearls: hypermagnesemia"
+  url: https://www.ncbi.nlm.nih.gov/books/NBK549811/
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: review
+  dg: [45]
+DG46a:
+  cite: "American Kidney Fund, Kidney Kitchen. Potassium food guide (low ≤ 150 mg, medium 151–250 mg, high ≥ 251 mg per serving)."
+  short: "AKF potassium food guide"
+  url: https://kitchen.kidneyfund.org/wp-content/uploads/2024/06/Potassium-Guide.pdf
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [46]
+DG46b:
+  cite: "American Kidney Fund, Kidney Kitchen. Phosphorus food guide (low ≤ 100 mg, medium 101–199 mg, high ≥ 200 mg per serving)."
+  short: "AKF phosphorus food guide"
+  url: https://kitchen.kidneyfund.org/wp-content/uploads/2021/08/Phosphorus-Guide.pdf
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [46]
+DG47:
+  cite: "University of Michigan. Renal diet education materials (≤ 600 mg sodium or potassium per meal)."
+  short: "University of Michigan renal diet handout"
+  url: https://medicine.umich.edu/sites/default/files/content/downloads/Holewinski.pdf
+  licence: "Link and paraphrase"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [47]
+DG48:
+  cite: "National Kidney Foundation. Dining out with confidence."
+  short: "NKF: dining out with confidence"
+  url: https://www.kidney.org/sites/default/files/dining_out_with_confidence_1.pdf
+  licence: "© National Kidney Foundation: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [48]
+DG49:
+  cite: "American Kidney Fund, Kidney Kitchen. Tip: double-cook potatoes."
+  short: "AKF: double-cook potatoes"
+  url: https://kitchen.kidneyfund.org/guides-and-videos/tip-double-cook-potatoes-cc/
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [49]
+DG50:
+  cite: "Kovesdy CP, et al. Serum potassium and adverse outcomes across the range of kidney function: a CKD Prognosis Consortium meta-analysis. Eur Heart J 2018;39:1535–1542."
+  short: "Kovesdy 2018: serum potassium and outcomes"
+  url: https://doi.org/10.1093/eurheartj/ehy100
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [50]
+  note: "DOI confirmed on Crossref 2026-10-05."
+DG52:
+  cite: "American Kidney Fund. Potassium and kidney disease (professional handout), reproducing K/DOQI 2004 and Kalantar-Zadeh & Fouque (NEJM 2017) stage ranges."
+  short: "AKF: potassium and kidney disease (professional)"
+  url: https://www.kidneyfund.org/sites/default/files/media/documents/potassium-and-kidney-disease_0.pdf
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [52]
+DG53:
+  cite: "Foley RN, et al. Long interdialytic interval and mortality among patients receiving hemodialysis. N Engl J Med 2011;365:1099–1107."
+  short: "Foley 2011: the long interdialytic interval"
+  url: https://pubmed.ncbi.nlm.nih.gov/21992122/
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-05
+  kind: study
+  dg: [53]
+DG55a:
+  cite: "Pecoits-Filho R, et al. Interactions between kidney disease and diabetes: dangerous liaisons. Diabetol Metab Syndr 2016;8:50."
+  short: "Pecoits-Filho 2016: kidney disease and diabetes"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4964290/
+  licence: "CC BY 4.0 (open access)"
+  checked: 2026-10-05
+  kind: review
+  dg: [55]
+DG55b:
+  cite: "diaTribe. Your A1C may not be reliable if you have chronic kidney disease."
+  short: "diaTribe: A1C and CKD"
+  url: https://diatribe.org/understanding-diabetes/your-a1c-may-not-be-reliable-if-you-have-chronic-kidney-disease
+  licence: "© diaTribe: link and paraphrase only"
+  checked: 2026-10-05
+  kind: patient-info
+  dg: [55]
+
+# ---------------------------------------------------------------- stage hubs (docs/stages/): dialysis, transplant and emergencies
+NIDDK-whatis:
+  cite: "NIDDK. What is chronic kidney disease in adults?"
+  short: "NIDDK: what is chronic kidney disease?"
+  url: https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/what-is-chronic-kidney-disease
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-06
+  kind: government
+  note: "Quoted: most people in the early stages have no symptoms; blood and urine tests are the only way to know; CKD can lead to kidney failure in some people."
+A26-9:
+  cite: "American Diabetes Association Professional Practice Committee. 9. Pharmacologic Approaches to Glycemic Treatment: Standards of Care in Diabetes—2026. Diabetes Care 2026;49(Suppl 1):S183–S215."
+  short: "ADA Standards of Care 2026, section 9"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12690185
+  also:
+    - https://doi.org/10.2337/dc26-S009
+  licence: "© American Diabetes Association: educational, not-for-profit use with citation, unaltered; cite and paraphrase"
+  checked: 2026-10-06
+  kind: guideline
+  note: "Rec 9.1 (insulin for type 1); pancreas transplantation reserved for type 1 diabetes with simultaneous or prior kidney transplant, or recurrent DKA or severe hypoglycaemia; successful transplant 'can normalize glucose levels'; lifelong immunosuppression."
+DOPPS03:
+  cite: "Saran R, et al. Nonadherence in hemodialysis: associations with mortality, hospitalization, and practice patterns in the DOPPS. Kidney Int 2003;64(1):254–262."
+  short: "DOPPS 2003: skipped and shortened sessions"
+  url: https://doi.org/10.1046/j.1523-1755.2003.00064.x
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "Skipping one or more sessions a month: mortality RR 1.30, hospitalisation RR 1.13 (abstract, Europe PMC; DOI confirmed on Crossref 2026-10-06)."
+CMSPREP:
+  cite: "Centers for Medicare & Medicaid Services. Preparing for Emergencies: A Guide for People on Dialysis (version 2.3, June 2026)."
+  short: "CMS: preparing for emergencies on dialysis"
+  url: https://esrd.ipro.org/wp-content/uploads/2026/06/CMSPreparingforEmergencies_508-062026.pdf
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Hosted by IPRO ESRD Network. Home HD: register with water and power companies, flashlight, back-up unit; PD: 5–7 days of supplies, learn manual CAPD if on a cycler; 5–7 days of medicines and insulin; 3-day emergency diet; try to get dialysis within 3 days of the last treatment."
+PROGRAF:
+  cite: "Astellas Pharma US. Prograf (tacrolimus) US prescribing information, revised 8/2023."
+  short: "Prograf (tacrolimus) prescribing information"
+  url: https://www.astellas.com/us/system/files/prograf_7.pdf
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Avoid grapefruit (2.1, 7.2); St John's wort lowers tacrolimus levels (7.2); new-onset diabetes (5.4); hyperkalaemia (5.7); hypomagnesaemia (adverse reactions); avoid live vaccines (5.14); limit sun and UV light (5.2)."
+CELLCEPT:
+  cite: "Genentech. CellCept (mycophenolate mofetil) US prescribing information, revised 7/2026."
+  short: "CellCept (mycophenolate) prescribing information"
+  url: https://www.gene.com/download/pdf/cellcept_prescribing.pdf
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Boxed warning on embryofetal toxicity kept after the REMS ended; contraceptive counselling and acceptable contraception during treatment and for 6 weeks after stopping (8.3); effective contraception advised for male patients (8.3)."
+FDA-MYCO26:
+  cite: "US Food and Drug Administration. Supplement approval letter for CellCept (NDA 050722/S-056 and related), 31 July 2026: the Mycophenolate REMS is no longer required."
+  short: "FDA 2026: mycophenolate REMS removed"
+  url: "https://www.accessdata.fda.gov/drugsatfda_docs/appletter/2026/050722Orig1s056,S058;050723Orig1s056,s058;050758Orig1s054,s056;050759Orig1s063,s065correctedltr.pdf"
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "REMS Modification Notification letter 2 June 2026; labeling approved 31 July 2026; mycophenolaterems.com says the programme was discontinued on 29 July 2026."
+FDAgrapefruit:
+  cite: "US Food and Drug Administration. Grapefruit juice and some drugs don't mix (consumer update, updated 2021-07-01)."
+  short: "FDA: grapefruit juice and some drugs don't mix"
+  url: https://www.fda.gov/consumers/consumer-updates/grapefruit-juice-and-some-drugs-dont-mix
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Seville oranges, pomelos and tangelos might have the same effect as grapefruit juice; names organ-transplant rejection drugs."
+EXTRANEAL:
+  cite: "Vantive US Healthcare. Extraneal (icodextrin) peritoneal dialysis solution: US prescribing information, revised 6/2025 (DailyMed)."
+  short: "Extraneal (icodextrin) prescribing information"
+  url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=d5b85158-b0d6-4855-9d07-8d1b3ad9ab71
+  licence: "Product label: quote the label at most one sentence; never reproduce dosing"
+  checked: 2026-10-06
+  kind: label
+  note: "Use glucose-specific meters and strips; GDH-PQQ, GDO and some GDH-FAD methods read falsely high, up to two weeks after stopping; CGM systems 'may or may not be compatible'; false highs have led to missed lows and inappropriate insulin."
+FSTX:
+  cite: "US Department of Agriculture and US Food and Drug Administration. Food Safety for Transplant Recipients: a need-to-know guide for bone marrow and solid organ transplant recipients (booklet)."
+  short: "USDA–FDA: food safety for transplant recipients"
+  url: https://health.ucdavis.edu/transplant/PDFs/posttransplant/Food%20Safety%20For%20Transplant%20Recipients.pdf
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "The FDA's own download link now returns 404; this is a transplant centre's copy of the unchanged booklet. Safe temperatures: ground beef 160 °F, poultry 165 °F, seafood 145 °F; reheat hot dogs and deli meats to 165 °F or steaming hot."
+
+# ---------------------------------------------------------------- lab results (docs/labs/): reference ranges, assays and devices
+MEDLINE-CREAT:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Creatinine blood test (reviewed 13 July 2025)."
+  short: "MedlinePlus: creatinine blood test"
+  url: https://medlineplus.gov/ency/article/003475.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Normal: men 0.7–1.3 mg/dL (62–115 µmol/L), women 0.5–0.95 mg/dL (44–84 µmol/L); varies with size and muscle mass; cimetidine, famotidine, cefoxitin and trimethoprim can affect the result."
+MEDLINE-CO2:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). CO2 blood test (reviewed 19 May 2025)."
+  short: "MedlinePlus: CO2 (bicarbonate) blood test"
+  url: https://medlineplus.gov/ency/article/003469.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Normal 23–29 mEq/L (mmol/L). Other names: bicarbonate, HCO3-, total CO2, TCO2. Low levels: kidney disease, ketoacidosis, diarrhea, among others."
+MEDLINE-LOWK:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Low blood potassium (reviewed 19 May 2025)."
+  short: "MedlinePlus: low blood potassium"
+  url: https://medlineplus.gov/ency/article/000479.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Normal 3.5–5.1 mEq/L (mmol/L). Causes include diuretics, vomiting or diarrhea, chronic kidney disease, low magnesium; symptoms include weakness, cramps, constipation, palpitations; a large drop can cause abnormal heart rhythms."
+MEDLINE-CA:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Calcium blood test (reviewed 6 November 2025)."
+  short: "MedlinePlus: calcium blood test"
+  url: https://medlineplus.gov/ency/article/003477.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Normal 8.8–10.3 mg/dL (2.20–2.58 mmol/L); about half of blood calcium is bound to proteins, mainly albumin, so low albumin lowers the total calcium result."
+MEDLINE-ALB:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Albumin blood (serum) test (reviewed 13 February 2025)."
+  short: "MedlinePlus: albumin blood test"
+  url: https://medlineplus.gov/ency/article/003480.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Normal 3.4–5.4 g/dL (34–54 g/L). Low with kidney disease, liver disease, poor intake or absorption, inflammatory bowel conditions; high with dehydration or a tourniquet left on too long."
+MEDLINE-GIB:
+  cite: "MedlinePlus Medical Encyclopedia (US National Library of Medicine). Gastrointestinal bleeding (reviewed 24 January 2025)."
+  short: "MedlinePlus: gastrointestinal bleeding"
+  url: https://medlineplus.gov/ency/article/003133.htm
+  licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Call emergency services for black, tarry stools, a lot of blood in the stool, vomiting blood or coffee-ground material, or dizziness from bleeding."
+NIDDK-A1C:
+  cite: "NIDDK. The A1C test and diabetes."
+  short: "NIDDK: the A1C test"
+  url: https://www.niddk.nih.gov/health-information/diagnostic-tests/a1c-test
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos; some images are licensed"
+  checked: 2026-10-06
+  kind: government
+  note: "Normal below 5.7 %; prediabetes 5.7–6.4 %; diabetes 6.5 % or above. Kidney failure, iron-deficiency anemia, recent blood loss or transfusion and hemoglobin variants can make A1C unreliable."
+ISRNM08:
+  cite: "Fouque D, et al. A proposed nomenclature and diagnostic criteria for protein–energy wasting in acute and chronic kidney disease (ISRNM). Kidney Int 2008;73:391–398."
+  short: "ISRNM 2008: protein-energy wasting criteria"
+  url: https://doi.org/10.1038/sj.ki.5002585
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-06
+  kind: consensus
+  note: "Serum albumin under 3.8 g/dL (bromocresol green method); unintended weight loss over 5 % in 3 months or over 10 % in 6 months. Criteria table re-checked via its reproduction in PMC4222262 (design note 05 fact-check)."
+ALB18:
+  cite: "de Roij van Zuijdewijn CLM, et al. Role of albumin assay on calcium levels and prescription of phosphate binders in chronic hemodialysis patients. Nephron 2018;140(3):211–217."
+  short: "de Roij van Zuijdewijn 2018: albumin assays on hemodialysis"
+  url: https://doi.org/10.1159/000492238
+  also:
+    - https://pmc.ncbi.nlm.nih.gov/articles/PMC6262677
+  licence: "Publisher copyright (free full text in PMC): cite and paraphrase only"
+  checked: 2026-10-06
+  kind: study
+  note: "521 hemodialysis patients: albumin 34.5 g/L with the bromocresol purple method vs 40.3 g/L with bromocresol green (different centres)."
+DEXCOM-G7:
+  cite: "Dexcom. Dexcom G7 Continuous Glucose Monitoring System user guide (AW00078-10 Rev 005, 05/2026)."
+  short: "Dexcom G7 user guide"
+  url: https://dexcompdf.s3.us-west-2.amazonaws.com/en-us/G7-CGM-Users-Guide.pdf
+  also:
+    - https://www.dexcom.com/en-us/safety-information
+  licence: "Product labeling: quote at most one sentence; link and paraphrase"
+  checked: 2026-10-06
+  kind: label
+  note: "Safety statement: don't use if you are on dialysis or critically ill; performance hasn't been evaluated in these populations and readings may be inaccurate. Use a meter when readings don't match symptoms; hydroxyurea makes readings falsely high."
+LIBRE-ISI:
+  cite: "Abbott. FreeStyle Libre systems: important safety information (US)."
+  short: "Abbott FreeStyle Libre safety information"
+  url: https://www.freestyle.abbott/us-en/safety-information.html
+  licence: "Product labeling: quote at most one sentence; link and paraphrase"
+  checked: 2026-10-06
+  kind: label
+  note: "Libre 3 Plus / 2 Plus: don't use if you are on dialysis or critically ill (not evaluated in these groups); high-dose vitamin C can falsely raise readings; use a blood glucose meter when the reading doesn't match how you feel."
+
+# ---------------------------------------------------------------- this project (for "Using the app", "Self-hosting" and "About")
+# The repository is public, but these files reach the main branch only when the v0.3 work merges;
+# until then the links 404.
+ARCH:
+  cite: "kidney-health project. ARCHITECTURE.md: architecture and API contract (including the v0.3 contract)."
+  short: "Project architecture contract"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/ARCHITECTURE.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+README:
+  cite: "kidney-health project. README.md."
+  short: "Project README"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/README.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE01:
+  cite: "kidney-health design note 01: rootless containers and security."
+  short: "Design note 01"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/01-rootless-and-security.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE02:
+  cite: "kidney-health design note 02: home-screen install (PWA) and HTTPS."
+  short: "Design note 02"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/02-ios-pwa.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE03:
+  cite: "kidney-health design note 03: barcode scanning, Open Food Facts and label photos."
+  short: "Design note 03"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/03-barcode-and-photo.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE04:
+  cite: "kidney-health design note 04: optional AI."
+  short: "Design note 04"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/04-optional-ai.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE05:
+  cite: "kidney-health design note 05: personalised daily targets."
+  short: "Design note 05"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/05-personalized-targets.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE06:
+  cite: "kidney-health design note 06: rule-based meal guidance."
+  short: "Design note 06"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/06-meal-guidance.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE07:
+  cite: "kidney-health design note 07: accounts, settings and secrets."
+  short: "Design note 07"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/07-accounts-settings-secrets.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+NOTE08:
+  cite: "kidney-health design note 08: the patient handbook site."
+  short: "Design note 08"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+DEPLOY:
+  cite: "kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes."
+  short: "Deployment guide"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+ALLOWLIST:
+  cite: "kidney-health project. docs/network-allowlist.md: outbound domains."
+  short: "Network allowlist"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/network-allowlist.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-05
+  kind: project
+MATERIAL:
+  cite: "Material for MkDocs 9.7.7 (MIT licence)."
+  short: "Material for MkDocs"
+  url: https://squidfunk.github.io/mkdocs-material/
+  licence: "MIT"
+  checked: 2026-10-05
+  kind: tool
+MKDOCS:
+  cite: "MkDocs 1.6.1 (BSD-2-Clause licence)."
+  short: "MkDocs"
+  url: https://www.mkdocs.org/
+  licence: "BSD-2-Clause"
+  checked: 2026-10-05
+  kind: tool
+CCBYNCSA:
+  cite: "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)."
+  short: "CC BY-NC-SA 4.0"
+  url: https://creativecommons.org/licenses/by-nc-sa/4.0/
+  licence: "CC BY 4.0 (licence deed)"
+  checked: 2026-10-05
+  kind: project
+
+# ---------------------------------------------------------------- added for eat/ (2026-10-06)
+FSTEMPS:
+  cite: "FoodSafety.gov (US Department of Health and Human Services). Safe minimum internal temperatures (chart)."
+  short: "FoodSafety.gov: safe minimum internal temperatures"
+  url: https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures
+  also:
+    - https://extension.umaine.edu/food-health/2024/03/01/internal-temperatures/
+  licence: "Public domain (US government work)"
+  checked: 2026-10-06
+  kind: government
+  note: "Poultry including ground 165 °F (74 °C); ground meats 160 °F; beef, pork, veal and lamb steaks, chops and roasts 145 °F with a 3-minute rest; fish 145 °F or until opaque and flaky; eggs until yolk and white are firm; leftovers and casseroles 165 °F. foodsafety.gov returns 403 to automated checkers; the University of Maine Extension page reproduces the same chart."
+MEDLINE-PORTION:
+  cite: "MedlinePlus (US National Library of Medicine). Portion size (patient instructions; reviewed 2024-07-24)."
+  short: "MedlinePlus: portion size"
+  url: https://medlineplus.gov/ency/patientinstructions/000337.htm
+  licence: "A.D.A.M. encyclopedia content on MedlinePlus: link and paraphrase only"
+  checked: 2026-10-06
+  kind: government
+  note: "Meat or poultry: palm of the hand or a deck of cards; 3 oz fish: a checkbook; cheese: a pair of dice; ½ cup rice, pasta or snacks: a rounded handful or a tennis ball; 1 cup chopped raw fruit or vegetables: a woman's fist or a baseball; 2 tbsp peanut butter: a ping-pong ball; ¼ cup nuts or dried fruit: a golf ball."
+NIDDK-portions:
+  cite: "NIDDK. Just enough for you: about food portions (last reviewed July 2021)."
+  short: "NIDDK: about food portions"
+  url: https://www.niddk.nih.gov/health-information/weight-management/just-enough-food-portions
+  licence: "Public domain (NIDDK): reuse with attribution; no NIH or NIDDK logos"
+  checked: 2026-10-06
+  kind: government
+  note: "A portion is how much you choose to eat at one time; a serving is the amount on the Nutrition Facts label, and the two may not match."
+AKF-thirst:
+  cite: "American Kidney Fund. Five tips to beat the heat while maintaining your kidney-friendly fluid plan (2022-08-11)."
+  short: "AKF: tips for a fluid plan"
+  url: https://www.kidneyfund.org/article/five-tips-beat-heat-while-maintaining-your-kidney-friendly-fluid-plan
+  licence: "© American Kidney Fund: link and paraphrase only"
+  checked: 2026-10-06
+  kind: patient-info
+  note: "Avoid salty foods; drink slowly from smaller cups; chill or freeze fruit; chew gum or suck sugar-free hard candy; ask about medicines that cause dry mouth."

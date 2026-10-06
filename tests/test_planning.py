@@ -515,7 +515,8 @@ def test_shopping_list_is_emptied_by_marking_eaten(client):
 
 
 def test_new_endpoints_are_registered(client):
-    paths = client.get("/openapi.json").json()["paths"]
+    # /openapi.json is not served unless ENABLE_API_DOCS=true (note 01 §5.5); read the schema directly.
+    paths = client.app.openapi()["paths"]
     for path in (
         "/api/log/summary", "/api/log/mark-eaten", "/api/log/copy-day",
         "/api/meals", "/api/meals/from-log", "/api/meals/{meal_id}", "/api/meals/{meal_id}/apply",

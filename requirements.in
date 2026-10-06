@@ -1,0 +1,10 @@
+# Runtime dependencies (direct only). Do not install from this file: regenerate the lock with
+#   scripts/lock.sh                (pip-compile --generate-hashes --strip-extras, Python 3.14)
+# and install with
+#   pip install --require-hashes --no-deps --only-binary=:all: -r requirements.lock
+fastapi>=0.142,<1
+uvicorn>=0.54,<1          # no [standard] extras (note 01 §5.1): the pure-Python h11 server is enough
+h11>=0.16.0               # request-smuggling fix (note 01 §5.1)
+pydantic>=2.13,<3
+httpx2>=2.13,<3           # outbound HTTP (USDA; note 04 F14), replaces httpx; also Starlette's TestClient
+cryptography==50.0.2      # Apache-2.0 OR BSD-3-Clause. Fernet secrets + Argon2id passwords (note 07 §4.2)

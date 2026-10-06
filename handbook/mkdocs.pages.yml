@@ -1,0 +1,9 @@
+# GitHub Pages build of the handbook (public copy). Same content and settings as mkdocs.yml;
+# only the site URL differs, and there is no "Back to the food log" link (no app on Pages).
+#   cd handbook && HANDBOOK_SITE_URL=<pages base_url>/ NO_MKDOCS_2_WARNING=true \
+#     mkdocs build --strict -f mkdocs.pages.yml
+# The Pages workflow sets HANDBOOK_SITE_URL from actions/configure-pages (note 08 §4.8).
+INHERIT: mkdocs.yml
+site_url: !ENV [HANDBOOK_SITE_URL, "https://ksullivan86.github.io/kidney-health/"]
+extra:
+  app_link: ""

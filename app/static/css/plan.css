@@ -1,0 +1,76 @@
+/* Kidney Diet Log — Plan view: week grid, saved meals, shopping list. */
+
+/* ---------- Plan view ---------- */
+.plan-actions { display: flex; align-items: center; gap: 8px; margin-top: -8px; }
+.plan-legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: -4px 0 0; }
+.plan-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 720px) { .plan-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; } }
+.plan-day {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-width: 0;
+}
+.plan-day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.plan-day.past { background: var(--surface-2); }
+.plan-day.past .plan-day-open { opacity: 0.9; }
+.plan-day-open {
+  flex: 1; width: 100%; text-align: left; border: 0; background: none; padding: 10px 12px 6px; border-radius: var(--radius) var(--radius) 0 0;
+  display: flex; flex-direction: column; gap: 8px; min-height: var(--tap); color: var(--text);
+}
+.plan-day-open:hover { background: var(--surface-2); }
+.plan-day-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.plan-day-date { display: flex; align-items: baseline; gap: 6px; }
+.plan-wd { font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.plan-dnum { font-size: 1.25rem; font-weight: 700; }
+.plan-day-badges { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.plan-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; padding: 3px 8px 3px 6px; border-radius: 999px;
+  background: var(--lv-tint); color: var(--lv-text); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.plan-chip .swatch { width: 8px; height: 8px; border-radius: 50%; }
+.plan-chip-k { font-weight: 600; }
+.plan-chip b { color: var(--text); font-weight: 600; }
+.plan-counts { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-2); }
+.plan-counts .count { display: inline-flex; align-items: center; gap: 4px; }
+.plan-counts .count svg { width: 15px; height: 15px; }
+.plan-counts .count.eaten svg { color: var(--ok-text); }
+.plan-day-foot { display: flex; justify-content: space-between; gap: 4px; padding: 0 6px 2px; border-top: 1px solid var(--border); margin-top: auto; }
+.plan-day-foot .link-btn { min-height: var(--tap); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; }
+.plan-day-foot .link-btn svg { width: 16px; height: 16px; }
+@media (min-width: 720px) {
+  .plan-day-open { padding: 8px 8px 6px; gap: 6px; }
+  .plan-chips { flex-direction: column; align-items: stretch; gap: 4px; }
+  .plan-chip { justify-content: space-between; padding: 2px 7px 2px 6px; }
+  .plan-dnum { font-size: 1.1rem; }
+  .plan-day-foot { flex-direction: column; align-items: stretch; padding: 0 4px 2px; }
+  .plan-day-foot .link-btn { min-height: 40px; justify-content: center; font-size: 0.8rem; }
+  .badge.today, .badge.dialysis { font-size: 0.7rem; padding: 1px 5px; }
+}
+
+/* ---------- saved meals ---------- */
+.saved-meals { margin-top: 4px; }
+.saved-meal { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
+.saved-meal-main { display: grid; grid-template-columns: 28px 1fr; column-gap: 12px; align-items: start; }
+.saved-meal-main .row-nums { justify-content: flex-start; max-width: none; margin-top: 4px; }
+.saved-meal-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-left: 40px; }
+.saved-meal-actions .btn { min-height: 40px; padding: 0 12px; font-size: 0.9rem; }
+.saved-meal-actions .btn svg { width: 18px; height: 18px; }
+.saved-meal-actions .link-btn { min-height: 40px; }
+.danger-link { color: var(--over-text); }
+@media (min-width: 720px) {
+  .saved-meal { flex-direction: row; align-items: center; justify-content: space-between; }
+  .saved-meal-main { flex: 1; }
+  .saved-meal-actions { margin-left: 0; flex: none; }
+}
+
+/* ---------- shopping list ---------- */
+.shopping-list { margin-top: 4px; }
+.shop-item { padding: 2px 0; }
+.shop-check { min-height: var(--tap); align-items: center; }
+.shop-check input { margin-top: 0; width: 22px; height: 22px; }
+.shop-check .check-text { padding-top: 0; }
+.shop-name { font-weight: 600; }
+.shop-item.done .shop-name { text-decoration: line-through; color: var(--text-3); }
+.shop-item.done .hint { color: var(--text-3); }
+.shopping-foot { display: flex; justify-content: flex-end; margin: 4px -8px -6px 0; }
+.shopping-foot:has(> [hidden]) { display: none; }

@@ -22,7 +22,7 @@ The UI must say that targets come from the person's care team.
 * Frontend: static `index.html` + `app.js` + `style.css` served by FastAPI.
   **No build step, no CDN, no external requests from the browser.** Works offline on a LAN.
 * One container image. All state lives in `DATA_DIR` (default `/data`) as `kidney.db`.
-* Tests: `pytest` with `httpx` (FastAPI `TestClient`).
+* Tests: `pytest` with `httpx2` (Starlette `TestClient`; v0.3 moved the app from `httpx` to `httpx2`).
 
 ## Repository layout and file ownership
 
@@ -275,6 +275,13 @@ Categories (exact strings): `Fruits`, `Vegetables`, `Grains & Breads`,
 
 Errors: `{"detail": "message"}` with 400/404/409/503.
 
+v0.3 request rules (`app/security.py`, note 01 §5.5 and §10, note 07 §4.8): an unknown `Host` is
+`400 {"detail": "Unknown host"}` (localhost, IP literals, the `PUBLIC_URL` host and `ALLOWED_HOSTS`
+pass); every unsafe `/api` request (POST/PUT/PATCH/DELETE) must send `X-Requested-With:
+kidney-health` and a same-origin `Origin`/`Sec-Fetch-Site`, and cross-site or same-site `/api`
+reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
+`Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true`.
+
 ### Health
 * `GET /healthz` → `{"status":"ok","foods": <count>}`
 
@@ -372,8 +379,8 @@ it exposes only the food count. Otherwise no auth (LAN use behind a reverse prox
 ### Validation errors
 Request validation failures return **400** with `{"detail": "<message>", "errors": [...]}`
 (not FastAPI's default 422), so every error has the `detail` string shape above. `errors`
-carries only `type`, `loc`, `msg` and `input` (a non-finite `input` is echoed as text), so the
-400 itself can always be serialised.
+carries only `type`, `loc` and `msg`: since v0.3 the offending `input` (and `ctx`) is **never**
+echoed, because it could be a password, API key or setup code (note 07 §9 N4).
 
 ### Numeric bounds (`app/models.py`)
 Every numeric request field rejects the JSON literals `NaN` / `Infinity` and has a ceiling, so
@@ -550,7 +557,8 @@ aggregating **planned** entries in the range by food (servings summed; `grams = 
   (custom, USDA and builtin alike; `data/foods.json` is already rounded), so a client that scales
   a food's shown values gets the numbers and warnings the saved entry gets.
 * `python -m pytest` must pass with no network.
-* `uvicorn app.main:app --host 0.0.0.0 --port 8000` runs the server; `DATA_DIR` default
+* `uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-proxy-headers` runs the server (v0.3: the app applies
+  `X-Forwarded-*` itself, only from `TRUSTED_PROXIES`, so uvicorn must not); `DATA_DIR` default
   `./data-local` when running outside a container (gitignored), `/data` in the image.
 
 ---

@@ -8,7 +8,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-import httpx
+import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from .config import Settings
@@ -440,9 +440,9 @@ def search_foods(
 # --------------------------------------------------------------------------- #
 
 
-def usda_client() -> httpx.Client:
+def usda_client() -> httpx2.Client:
     """HTTP client for FoodData Central (tests monkeypatch this)."""
-    return httpx.Client(
+    return httpx2.Client(
         base_url=USDA_BASE_URL,
         timeout=USDA_TIMEOUT_S,
         headers={"User-Agent": "kidney-health/0.1 (self-hosted food log)"},
@@ -459,7 +459,7 @@ def _usda_get(path: str, params: Mapping[str, Any], api_key: str) -> Any:
     try:
         with usda_client() as client:
             resp = client.get(path, params=params, headers={"X-Api-Key": api_key})
-    except httpx.HTTPError as exc:
+    except httpx2.HTTPError as exc:
         log.warning("USDA request failed: %s", exc)
         raise HTTPException(status_code=502, detail=f"USDA request failed: {exc.__class__.__name__}") from exc
     if resp.status_code == 404:

@@ -1,0 +1,569 @@
+/* Kidney Diet Log — core: DOM helpers, icons, the API client, shared state, toasts, theme,
+   view router, sheets (dialogs) and the in-page confirmation. Vanilla ES2020, no dependencies,
+   no HTML string sinks (the page runs under a strict CSP with Trusted Types; build DOM with
+   KH.h / KH.s and textContent only).
+
+   Everything hangs off window.KH. Load order (index.html): js/engine/*.js, core.js, js/mock/*.js,
+   js/views/*.js, pwa.js, main.js. Talks only to same-origin /api/... (see ARCHITECTURE.md);
+   ?mock=1 or window.KDL_PREVIEW runs against the in-page demo API (js/mock/*). */
+(() => {
+  'use strict';
+  const KH = window.KH || (window.KH = {});
+  const { NUT, MEAL_LABEL, fmtNum, pct } = KH.rules;
+
+  // Demo mode runs an in-page copy of the server (no backend): `?mock=1` while developing, or
+  // window.KDL_PREVIEW === true in the self-contained preview built by scripts/build_preview.py
+  // (the preview's host does not pass a query string to the page).
+  const PREVIEW = window.KDL_PREVIEW === true;
+  const QUERY = (() => { try { return String(location.search || ''); } catch (e) { return ''; } })();
+  const MOCK = PREVIEW || /[?&]mock=1(?:&|$)/.test(QUERY);
+  const MOCK_HD = MOCK && /[?&]hd=1(?:&|$)/.test(QUERY); // demo profile on hemodialysis (Mon/Wed/Fri)
+  const THEME_KEY = 'kdl-theme';
+  const SHOP_KEY = 'kdl-shop'; // shopping-list checkboxes live only in this browser
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // ---------------------------------------------------------------------------
+  // UI orderings and labels
+  // ---------------------------------------------------------------------------
+  const KEY_NUMBERS = ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'];
+  const ROW_NUMBERS = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'];
+  const STATUS_ORDER = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'fluid_ml', 'calories_kcal', 'calcium_mg'];
+  const TREND_ORDER = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'carbs_g', 'fluid_ml', 'calories_kcal', 'calcium_mg'];
+  const PLAN_CHIPS = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'carbs_g', 'fluid_ml'];
+  const STRIP_KEYS = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g'];
+  const INTERDIALYTIC_KEYS = ['potassium_mg', 'sodium_mg', 'fluid_ml'];
+  const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // 0 = Monday, as in the contract
+  const WEEKDAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const RATING_LABEL = {
+    green: 'Green: generally kidney-friendly',
+    yellow: 'Yellow: moderate, watch the portion',
+    red: 'Red: high, needs careful consideration',
+  };
+  const LEVEL_TEXT = { ok: 'OK', caution: 'Near limit', over: 'Over limit' };
+  const LEVEL_RATING = { ok: 'green', caution: 'yellow', over: 'red', medium: 'yellow', high: 'red' };
+
+  // ---------------------------------------------------------------------------
+  // Small helpers
+  // ---------------------------------------------------------------------------
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  function setAttrs(el, attrs) {
+    if (!attrs) return el;
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.setAttribute('class', v);
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'style') el.style.cssText = String(v); // CSSOM, not a style attribute: allowed by style-src 'self'
+      else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    return el;
+  }
+  function appendChildren(el, children) {
+    for (const c of children.flat(Infinity)) {
+      if (c == null || c === false) continue;
+      el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  function h(tag, attrs, ...children) {
+    return appendChildren(setAttrs(document.createElement(tag), attrs), children);
+  }
+  function s(tag, attrs, ...children) {
+    return appendChildren(setAttrs(document.createElementNS(SVG_NS, tag), attrs), children);
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+
+  function localISO(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  function todayStr() { return localISO(new Date()); }
+  function parseDate(str) { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); }
+  function addDays(str, n) { const d = parseDate(str); d.setDate(d.getDate() + n); return localISO(d); }
+  function fmtDateLong(str) {
+    const d = parseDate(str);
+    const t = todayStr();
+    if (str === t) return `Today, ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    if (str === addDays(t, -1)) return `Yesterday, ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    if (str === addDays(t, 1)) return `Tomorrow, ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  }
+  function fmtDateShort(str) {
+    return parseDate(str).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function fmtMonthDay(str) { return parseDate(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+  function fmtRange(start, end) { return `${fmtMonthDay(start)} – ${fmtMonthDay(end)}`; }
+  function weekdayMon(str) { return (parseDate(str).getDay() + 6) % 7; } // 0 = Monday … 6 = Sunday
+  function weekStartOf(str, weekStart) {
+    const back = weekStart === 'sunday' ? parseDate(str).getDay() : weekdayMon(str);
+    return addDays(str, -back);
+  }
+  function daysBetween(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
+  function defaultStatusFor(date) { return date > todayStr() ? 'planned' : 'eaten'; }
+  function fmtChange(pctValue) {
+    if (pctValue == null || !Number.isFinite(Number(pctValue))) return null;
+    const n = Math.round(Number(pctValue) * 10) / 10;
+    if (Math.abs(n) < 0.05) return 'no change';
+    return `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 1 })} %`;
+  }
+  function defaultMealForNow() {
+    const hr = new Date().getHours();
+    if (hr < 10) return 'breakfast';
+    if (hr < 14) return 'lunch';
+    if (hr < 17) return 'snack';
+    if (hr < 21) return 'dinner';
+    return 'snack';
+  }
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+  function qs(params) {
+    const u = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v != null && v !== '') u.set(k, v);
+    return u.toString();
+  }
+  function numOrNull(v) {
+    if (v == null) return null;
+    const str = String(v).trim();
+    if (str === '') return null;
+    const n = Number(str);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Icons
+  // ---------------------------------------------------------------------------
+  function ratingIcon(ratingOrLevel, opts = {}) {
+    const r = LEVEL_RATING[ratingOrLevel] || ratingOrLevel || 'green';
+    const label = opts.label || RATING_LABEL[r];
+    const svg = s('svg', { class: `rating ${r}`, viewBox: '0 0 24 24', focusable: 'false' });
+    if (opts.decorative) svg.setAttribute('aria-hidden', 'true');
+    else { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label); svg.append(s('title', {}, label)); }
+    if (r === 'green') {
+      svg.append(s('circle', { class: 'shape', cx: 12, cy: 12, r: 11 }));
+      svg.append(s('path', { class: 'glyph', d: 'M6.8 12.6l1.7-1.7 2.6 2.6 5.4-5.4 1.7 1.7-7.1 7.1z' }));
+    } else if (r === 'yellow') {
+      svg.append(s('path', { class: 'shape', d: 'M12 2.2 23 21.5H1z' }));
+      svg.append(s('rect', { class: 'glyph', x: 10.9, y: 9, width: 2.2, height: 6.2, rx: 1 }));
+      svg.append(s('circle', { class: 'glyph', cx: 12, cy: 18.2, r: 1.35 }));
+    } else {
+      svg.append(s('path', { class: 'shape', d: 'M7.6 1.5h8.8l6.1 6.1v8.8l-6.1 6.1H7.6l-6.1-6.1V7.6z' }));
+      svg.append(s('rect', { class: 'glyph', x: 10.9, y: 6, width: 2.2, height: 7.5, rx: 1 }));
+      svg.append(s('circle', { class: 'glyph', cx: 12, cy: 16.8, r: 1.45 }));
+    }
+    return svg;
+  }
+  function levelPill(level, text) {
+    return h('span', { class: `pill level-${level}` }, ratingIcon(level, { decorative: true }), text || LEVEL_TEXT[level] || level);
+  }
+  function plusIcon() {
+    return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+      s('path', { d: 'M12 5v14M5 12h14', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+  }
+  function dashedIcon() {
+    return s('svg', { class: 'rating dashed', viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+      s('circle', { cx: 12, cy: 12, r: 9.5, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-dasharray': '3.5 3' }));
+  }
+  function checkIcon() {
+    return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+      s('path', { d: 'M5 12.5l4.5 4.5L19 7.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  }
+  function closeIcon() {
+    return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+      s('path', { d: 'M6 6l12 12M18 6L6 18', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Toast
+  // ---------------------------------------------------------------------------
+  const toastEl = $('#toast');
+  let toastTimer = null;
+  function toast(message, type = '') {
+    toastEl.textContent = message;
+    toastEl.className = `toast show ${type}`.trim();
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), type === 'error' ? 6000 : 3200);
+  }
+  function toastError(err) {
+    if (err && err.handled) return; // already explained to the person (e.g. KH.auth.onUnauthorized)
+    console.error(err);
+    toast(err && (err.detail || err.message) ? String(err.detail || err.message) : 'Something went wrong', 'error');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Auth hook. A 401 from the API calls KH.auth.onUnauthorized(err); this stub only says so.
+  // The sign-in view (js/views/auth.js, M1 accounts) replaces it with the in-app sign-in.
+  // ---------------------------------------------------------------------------
+  const auth = KH.auth || {};
+  if (typeof auth.onUnauthorized !== 'function') {
+    auth.onUnauthorized = function onUnauthorized() {
+      toast('You are signed out. Reload the page to sign in again.', 'error');
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // API layer
+  // ---------------------------------------------------------------------------
+  function errorDetail(data, res) {
+    const d = data && data.detail;
+    if (Array.isArray(d)) return d.map((x) => (x && x.msg ? `${(x.loc || []).slice(-1)[0] || ''}: ${x.msg}` : JSON.stringify(x))).join('; ');
+    if (typeof d === 'string') return d;
+    if (d && typeof d === 'object') return JSON.stringify(d);
+    return res ? `${res.status} ${res.statusText || 'error'}` : 'Request failed';
+  }
+  async function request(method, path, body) {
+    const mock = KH.mock && KH.mock.instance;
+    if (mock) return mock.request(method, path, body);
+    const headers = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    // Every write carries the app's own header: the server's CSRF check refuses cross-site
+    // form posts, which cannot set it (note 07; plain-HTTP LANs send no Sec-Fetch-Site).
+    if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = 'kidney-health';
+    let res;
+    try {
+      res = await fetch(path, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+      });
+    } catch (e) {
+      const err = new Error('Cannot reach the server. Check your connection.');
+      err.status = 0; err.detail = err.message; throw err;
+    }
+    // Read even an empty 204 body: an unread one is reported as net::ERR_ABORTED in DevTools.
+    if (res.status === 204) { try { await res.text(); } catch (e) { /* nothing to read */ } return null; }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text.slice(0, 200) }; }
+    if (!res.ok) {
+      const err = new Error(errorDetail(data, res));
+      err.status = res.status; err.detail = err.message; err.data = data;
+      if (res.status === 401) {
+        err.handled = true;
+        try { KH.auth.onUnauthorized(err); } catch (e) { console.error(e); }
+      }
+      throw err;
+    }
+    return data;
+  }
+  const api = {
+    profile: () => request('GET', '/api/profile'),
+    saveProfile: (b) => request('PUT', '/api/profile', b),
+    suggested: () => request('GET', '/api/profile/suggested-targets'),
+    foods: (params) => request('GET', '/api/foods?' + qs(params)),
+    categories: () => request('GET', '/api/foods/categories'),
+    food: (id) => request('GET', `/api/foods/${id}`),
+    deleteFood: (id) => request('DELETE', `/api/foods/${id}`),
+    usdaSearch: (q) => request('GET', '/api/foods/usda/search?' + qs({ q })),
+    usdaImport: (fdc_id) => request('POST', '/api/foods/usda/import', { fdc_id }),
+    day: (date) => request('GET', '/api/log?' + qs({ date })),
+    addEntry: (b) => request('POST', '/api/log', b),
+    updateEntry: (id, b) => request('PUT', `/api/log/${id}`, b),
+    deleteEntry: (id) => request('DELETE', `/api/log/${id}`),
+    quick: (b) => request('POST', '/api/log/quick', b),
+    range: (start, end) => request('GET', '/api/log/range?' + qs({ start, end })),
+    summary: (start, end) => request('GET', '/api/log/summary?' + qs({ start, end })),
+    markEaten: (b) => request('POST', '/api/log/mark-eaten', b),
+    copyDay: (b) => request('POST', '/api/log/copy-day', b),
+    exportUrl: (start, end) => '/api/log/export.csv?' + qs({ start, end }),
+    meals: () => request('GET', '/api/meals'),
+    createMeal: (b) => request('POST', '/api/meals', b),
+    updateMeal: (id, b) => request('PUT', `/api/meals/${id}`, b),
+    deleteMeal: (id) => request('DELETE', `/api/meals/${id}`),
+    mealFromLog: (b) => request('POST', '/api/meals/from-log', b),
+    applyMeal: (id, b) => request('POST', `/api/meals/${id}/apply`, b),
+    shopping: (start, end) => request('GET', '/api/plan/shopping?' + qs({ start, end })),
+  };
+
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+  const state = {
+    view: 'today',
+    date: todayStr(),
+    profile: null,
+    day: null,
+    dayLoadedFor: null,
+    categories: [],
+    category: '',
+    query: '',
+    trendsDays: 14,
+    trends: null,
+    summary: null,
+    addMealHint: null,
+    addStatusHint: null,
+    lastFocus: null,
+    meals: null,          // saved meals cache (MealTemplate[])
+    planStart: null,      // first day of the visible Plan week
+    plan: null,           // { start, end, days: [...] }
+    shopping: null,       // { start, end, items: [...] }
+    targetsStale: null,   // { from, to } profiles: stage/dialysis changed since the targets were set
+  };
+
+  // Shared caches. Profile: Today, Plan and Profile; saved meals: Add, Today and Plan.
+  async function loadProfile(force = false) {
+    if (state.profile && !force) return state.profile;
+    state.profile = await api.profile();
+    return state.profile;
+  }
+  async function loadMeals(force = false) {
+    if (state.meals && !force) return state.meals;
+    const res = await api.meals();
+    state.meals = res.meals || [];
+    return state.meals;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Theme
+  // ---------------------------------------------------------------------------
+  const root = document.documentElement;
+  function storedTheme() { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } }
+  // A page that embeds this one (the preview's host) may set data-theme itself; with no stored
+  // choice of ours, "Match device" keeps that value instead of removing it.
+  const HOST_THEME = (() => {
+    const t = root.getAttribute('data-theme');
+    return storedTheme() === 'auto' && (t === 'light' || t === 'dark') ? t : null;
+  })();
+  function effectiveTheme() {
+    const t = root.getAttribute('data-theme');
+    if (t === 'light' || t === 'dark') return t;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function syncThemeControls(mode) {
+    const eff = effectiveTheme();
+    $('#theme-toggle').setAttribute('aria-label', eff === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    const sel = $('#pf-theme'); if (sel && mode) sel.value = mode;
+    $$('meta[name="theme-color"]').forEach((mtag) => mtag.setAttribute('content', eff === 'dark' ? '#111417' : '#f4f5f7'));
+  }
+  function applyTheme(mode) {
+    if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+    else if (HOST_THEME) root.setAttribute('data-theme', HOST_THEME);
+    else root.removeAttribute('data-theme');
+    try { if (mode === 'auto') localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, mode); } catch (e) { /* storage unavailable */ }
+    syncThemeControls(mode);
+  }
+  $('#theme-toggle').addEventListener('click', () => applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'));
+  $('#pf-theme').addEventListener('change', (e) => applyTheme(e.target.value));
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onScheme = () => syncThemeControls(null);
+    if (mq.addEventListener) mq.addEventListener('change', onScheme); else if (mq.addListener) mq.addListener(onScheme);
+  }
+  // Keep the toggle's label right when the host switches data-theme while the page is open.
+  if (window.MutationObserver) new MutationObserver(() => syncThemeControls(null)).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------------------------------------------------------------------------
+  // Tabs / views. Each js/views/<name>.js registers what showing it loads.
+  // ---------------------------------------------------------------------------
+  const VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
+  const viewLoaders = {};
+  function registerView(name, onShow) { viewLoaders[name] = onShow; }
+  function showView(name, { focusTab = false } = {}) {
+    if (!VIEWS.includes(name)) name = 'today';
+    state.view = name;
+    for (const v of VIEWS) {
+      const panel = $(`#view-${v}`);
+      const tab = $(`#tab-${v}`);
+      const active = v === name;
+      panel.hidden = !active;
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    }
+    if (focusTab) $(`#tab-${name}`).focus();
+    try { if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`); } catch (e) { /* sandboxed frame: the view still switches */ }
+    window.scrollTo({ top: 0 });
+    const load = viewLoaders[name];
+    if (load) load();
+  }
+  // Open a given date in the Today view (used by the Plan grid and the week strip).
+  function openDay(date) {
+    state.date = date;
+    showView('today');
+  }
+  $$('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => showView(tab.dataset.view));
+    tab.addEventListener('keydown', (e) => {
+      const i = VIEWS.indexOf(tab.dataset.view);
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const next = VIEWS[(i + (e.key === 'ArrowRight' ? 1 : VIEWS.length - 1)) % VIEWS.length];
+        showView(next, { focusTab: true });
+      } else if (e.key === 'Home') { e.preventDefault(); showView(VIEWS[0], { focusTab: true }); }
+      else if (e.key === 'End') { e.preventDefault(); showView(VIEWS[VIEWS.length - 1], { focusTab: true }); }
+    });
+  });
+  window.addEventListener('hashchange', () => {
+    const name = location.hash.replace('#', '');
+    if (VIEWS.includes(name) && name !== state.view) showView(name);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sheets (dialogs)
+  // ---------------------------------------------------------------------------
+  // Forms run their handler from the submit button's click (Enter in a field clicks the default
+  // button too): a sandboxed frame without allow-forms never fires "submit", so the app does not
+  // depend on it. The handler's preventDefault() stops the native submission either way.
+  function onSubmit(form, handler) {
+    form.addEventListener('submit', handler);
+    $$('button[type="submit"]', form).forEach((b) => b.addEventListener('click', handler));
+  }
+
+  // ---------------------------------------------------------------------------
+  // In-page confirmation. window.confirm() is never shown in a home-screen web app or a
+  // sandboxed frame, so destructive actions ask inside the page: the confirm row takes the
+  // place of `host` (a sheet footer or an actions row), names what will be deleted, and gets
+  // focus on its confirm button; Cancel or Escape puts the host back and refocuses the trigger.
+  // ---------------------------------------------------------------------------
+  let confirmSeq = 0;
+  function dismissConfirm(host, refocus = false) {
+    if (host && host._confirmRow) host._confirmRow._close(refocus);
+  }
+  function inlineConfirm(host, trigger, { message, confirmText = 'Delete', onConfirm }) {
+    dismissConfirm(host);
+    const msgId = `confirm-msg-${++confirmSeq}`;
+    const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Cancel');
+    const ok = h('button', { class: 'btn danger-solid', type: 'button' }, confirmText);
+    const row = h('div', { class: `confirm-row${host.classList.contains('sheet-foot') ? ' sheet-foot' : ''}`, role: 'group', 'aria-labelledby': msgId },
+      h('p', { class: 'confirm-msg', id: msgId }, message),
+      h('div', { class: 'confirm-actions' }, cancel, ok));
+    const close = (refocus) => {
+      if (host._confirmRow !== row) return;
+      host._confirmRow = null;
+      row.remove();
+      host.hidden = false;
+      if (refocus && trigger && document.contains(trigger) && !trigger.hidden) { try { trigger.focus(); } catch (e) { /* ignore */ } }
+    };
+    row._close = close;
+    host._confirmRow = row;
+    host.hidden = true;
+    host.after(row);
+    cancel.addEventListener('click', () => close(true));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+    });
+    ok.addEventListener('click', async () => {
+      ok.disabled = true; cancel.disabled = true;
+      let done = false;
+      try { done = (await onConfirm()) !== false; } catch (err) { toastError(err); }
+      if (done) close(false);
+      else if (host._confirmRow === row) { ok.disabled = false; cancel.disabled = false; ok.focus(); }
+    });
+    setTimeout(() => { if (document.contains(ok)) ok.focus(); }, 0);
+    return row;
+  }
+
+  function setupDialog(dlg) {
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    $$('[data-close]', dlg).forEach((b) => b.addEventListener('click', () => dlg.close()));
+    dlg.addEventListener('close', () => {
+      $$('.sheet-foot', dlg).forEach((foot) => dismissConfirm(foot));
+      const f = dlg._returnFocus;
+      dlg._returnFocus = null;
+      if (f && document.contains(f)) { try { f.focus(); } catch (e) { /* ignore */ } }
+    });
+  }
+  function openDialog(dlg, trigger, focusEl) {
+    dlg._returnFocus = trigger || document.activeElement;
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    const target = focusEl || $('input, select, button:not([data-close])', dlg);
+    if (target) setTimeout(() => target.focus({ preventScroll: true }), 30);
+    $('.sheet-body', dlg).scrollTop = 0;
+  }
+  function renderWarnings(container, warnings, { emptyText } = {}) {
+    clear(container);
+    if (!warnings.length) {
+      container.append(h('div', { class: 'warning level-ok' }, ratingIcon('ok', { label: 'No warnings' }),
+        h('div', {}, h('span', { class: 'w-level' }, 'No warnings. '), emptyText || 'Nothing in this amount crosses a per-serving threshold.')));
+      return;
+    }
+    for (const w of warnings) {
+      const lvl = w.level === 'high' ? 'over' : 'caution';
+      container.append(h('div', { class: `warning level-${lvl}` }, ratingIcon(lvl, { label: w.level === 'high' ? 'High' : 'Moderate' }),
+        h('div', {}, h('span', { class: 'w-level' }, w.level === 'high' ? 'High. ' : 'Moderate. '), w.message)));
+    }
+  }
+
+  // Segmented radio groups (meal, eaten / planned) shared by the sheets.
+  function selectedMeal(groupEl) { const r = $('input:checked', groupEl); return r ? r.value : defaultMealForNow(); }
+  function setMeal(groupEl, meal) { const r = $(`input[value="${meal}"]`, groupEl); if (r) r.checked = true; }
+  function selectedStatus(groupEl) { const r = $('input:checked', groupEl); return r && r.value === 'planned' ? 'planned' : 'eaten'; }
+  function setStatus(groupEl, status) { const r = $(`input[value="${status === 'planned' ? 'planned' : 'eaten'}"]`, groupEl); if (r) r.checked = true; }
+
+  function isPlanned(e) { return e.status === 'planned'; }
+
+  // Unrounded, like the server's entry snapshot (food × servings); the display rounds and the
+  // warnings evaluator rounds exactly as app/nutrients.py does.
+  function scaledNutrients(perServing, servings) {
+    const out = {};
+    for (const n of KH.rules.NUTRIENTS) {
+      const v = perServing ? perServing[n.key] : null;
+      out[n.key] = v == null ? null : Number(v) * servings;
+    }
+    return out;
+  }
+
+  // Where would the day's totals land after adding `scaled` to `meal`? For a planned entry the base is the
+  // projected total (eaten + planned); for an eaten entry it is the eaten total. `editing` is subtracted first.
+  function impactOn(day, scaled, meal, { editing = null, status = 'eaten' } = {}) {
+    const out = [];
+    const wf = (state.profile && state.profile.warn_fraction) || 0.8;
+    const planned = status === 'planned' && day.projected_status;
+    const statusMap = planned ? day.projected_status : day.status || {};
+    const suffix = planned ? ' with everything planned' : '';
+    const editVal = (key) => {
+      if (!editing || !editing.nutrients) return 0;
+      if (planned || !isPlanned(editing)) return editing.nutrients[key] || 0; // projected totals include every entry; eaten totals only eaten ones
+      return 0;
+    };
+    for (const [key, st] of Object.entries(statusMap)) {
+      if (!NUT[key] || !st.target) continue;
+      const base = (st.value || 0) - editVal(key);
+      const projected = base + (scaled[key] || 0);
+      const fraction = projected / st.target;
+      if (fraction < wf) continue;
+      const level = fraction > 1 ? 'over' : 'caution';
+      const contribution = (scaled[key] || 0) / st.target;
+      // Only worth saying when this food changes the level or adds a meaningful share (>= 5 %) of the target.
+      if (st.level === level && contribution < 0.05) continue;
+      if (!(scaled[key] > 0)) continue;
+      out.push({ level, message: `${NUT[key].label} would reach ${fmtNum(projected, key)} / ${fmtNum(st.target, key)} ${NUT[key].unit} (${pct(fraction)} %)${suffix}` });
+    }
+    const perMeal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
+    if (perMeal && day.meals && day.meals[meal]) {
+      let mealBase = day.meals[meal].carbs_g || 0;
+      if (planned && day.planned_meals && day.planned_meals[meal]) mealBase += day.planned_meals[meal].carbs_g || 0;
+      const base = mealBase - (editing && editing.meal === meal ? editVal('carbs_g') : 0);
+      const projected = base + (scaled.carbs_g || 0);
+      const fraction = projected / perMeal;
+      if (fraction >= wf && scaled.carbs_g > 0) {
+        out.push({ level: fraction > 1 ? 'over' : 'caution', message: `${MEAL_LABEL[meal]} carbohydrate would be ${fmtNum(projected, 'carbs_g')} / ${perMeal} g (${pct(fraction)} %)${suffix}` });
+      }
+    }
+    return out;
+  }
+
+  Object.assign(KH, {
+    flags: { PREVIEW, MOCK, MOCK_HD },
+    keys: { THEME_KEY, SHOP_KEY },
+    ui: {
+      KEY_NUMBERS, ROW_NUMBERS, STATUS_ORDER, TREND_ORDER, PLAN_CHIPS, STRIP_KEYS, INTERDIALYTIC_KEYS, WEEKDAYS, WEEKDAYS_LONG,
+      RATING_LABEL, LEVEL_TEXT, LEVEL_RATING,
+      ratingIcon, levelPill, plusIcon, dashedIcon, checkIcon, closeIcon,
+      renderWarnings, selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn,
+    },
+    util: {
+      localISO, todayStr, parseDate, addDays, fmtDateLong, fmtDateShort, fmtMonthDay, fmtRange, weekdayMon, weekStartOf,
+      daysBetween, defaultStatusFor, fmtChange, defaultMealForNow, debounce, qs, numOrNull,
+    },
+    $, $$, h, s, clear,
+    api, request, auth, state, toast, toastError, loadProfile, loadMeals,
+    theme: { stored: storedTheme, effective: effectiveTheme, apply: applyTheme, sync: syncThemeControls },
+    router: { VIEWS, register: registerView, show: showView, openDay },
+    sheets: { setup: setupDialog, open: openDialog, onSubmit },
+    confirm: { inline: inlineConfirm, dismiss: dismissConfirm },
+    views: KH.views || {},
+  });
+})();

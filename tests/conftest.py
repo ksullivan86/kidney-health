@@ -1,16 +1,39 @@
-"""Shared fixtures: a tiny builtin food database and TestClients with a temporary DATA_DIR."""
+"""Shared fixtures: a tiny builtin food database and TestClients with a temporary DATA_DIR.
+
+Use :class:`TestClient` from this module (``from conftest import TestClient``), not FastAPI's: it
+talks to ``http://localhost`` (the Host allowlist refuses Starlette's default ``testserver``) and
+sends ``X-Requested-With: kidney-health`` like the app's own ``fetch()`` wrapper, so unsafe
+``/api`` requests pass the CSRF check. Security tests that need a bare client pass ``headers={}``
+explicitly or use :data:`BareTestClient`.
+"""
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Mapping
 
-import httpx
+import httpx2
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient as BareTestClient
 
 from app.config import Settings
 from app.main import create_app
+
+CSRF_HEADERS = {"X-Requested-With": "kidney-health"}
+BASE_URL = "http://localhost"
+
+
+class TestClient(BareTestClient):
+    """Starlette's TestClient with the app's own request conventions (Host, X-Requested-With)."""
+
+    __test__ = False
+
+    def __init__(self, app: Any, base_url: str = BASE_URL, headers: Mapping[str, str] | None = None, **kwargs: Any) -> None:
+        merged = dict(CSRF_HEADERS)
+        if headers is not None:
+            merged = dict(headers) if not headers else {**merged, **headers}
+        super().__init__(app, base_url=base_url, headers=merged, **kwargs)
+
 
 DAY = "2026-10-05"
 
@@ -131,7 +154,7 @@ def log_food(client: TestClient, query: str, meal: str = "breakfast", servings: 
     return response.json()
 
 
-def send_json(client: TestClient, method: str, path: str, body: Any) -> httpx.Response:
+def send_json(client: TestClient, method: str, path: str, body: Any) -> httpx2.Response:
     """Send ``body`` as raw JSON text. Unlike ``client.request(json=...)`` (which refuses NaN and
     Infinity), this uses the stdlib encoder's permissive default so tests can post the JSON
     literals ``Infinity`` / ``NaN`` that real clients can send."""

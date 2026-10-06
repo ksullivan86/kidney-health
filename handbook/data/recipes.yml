@@ -1,0 +1,565 @@
+# Original recipes for the handbook (handbook/docs/eat/recipes/). Written for this project: never
+# copied or adapted from NKF, AKF, DaVita or ADA recipes (docs/dev/research/08-handbook-site.md F10).
+#
+# Each ingredient is an fdc_id and the grams used for the whole recipe. Most are builtin foods in
+# data/foods.json (so a serving can be logged in the app); herbs, spices and a few extras that are not in
+# the app's list are under `extra_foods`, with their per-100 g values copied from USDA FoodData Central
+# SR Legacy (April 2018, the same release as data/foods.json). Meat and fish are COOKED weights, using the
+# app's cooked foods, so the numbers match what you log.
+#
+# scripts/build_handbook.py turns this file into handbook/docs/eat/recipes/<id>.md and _overview.md and
+# fails (exit 1) unless every recipe:
+#   * uses only known fdc_ids and no food flagged avoid_ckd or phosphate_additive;
+#   * stays at or under the sodium line per serving (600 mg for a meal, 140 mg for a snack or dessert);
+#   * meets the line for every tag it carries (see RECIPE_LIMITS in the script and the recipes index page).
+# Print every recipe's per-serving numbers with: python scripts/build_handbook.py --totals
+#
+# Ingredient options: `counts_as_fluid: false` when milk or water is cooked into a solid food (crepe batter),
+# so it does not count toward a fluid limit.
+
+last_checked: 2026-10-06
+applies_to: [all]
+sources: [FDC, DG47, DG5, DG46b, DG37a]
+source_lines:
+  - "[USDA FoodData Central (SR Legacy)][FDC]: every ingredient value, through the app's food list and the SR Legacy records listed in `handbook/data/recipes.yml`."
+  - "[University of Michigan renal diet handout][DG47]: about 600 mg of sodium or potassium per meal as a review line."
+  - "[NKF: potassium and your CKD diet][DG5]: 200 mg or more of potassium in a serving is high; [AKF phosphorus food guide][DG46b]: 100 mg or less of phosphorus is low."
+  - "[FDA claim definitions][DG37a]: \"low sodium\" means 140 mg or less per serving."
+
+extra_foods:
+  - fdc_id: 171325
+    name: "Garlic powder"
+    sr: "Spices, garlic powder"
+    per_100g: {calories_kcal: 331, carbs_g: 72.73, protein_g: 16.55, fat_g: 0.73, fiber_g: 9, potassium_mg: 1193, phosphorus_mg: 414, sodium_mg: 60, calcium_mg: 79, fluid_ml: 0}
+  - fdc_id: 171327
+    name: "Onion powder"
+    sr: "Spices, onion powder"
+    per_100g: {calories_kcal: 341, carbs_g: 79.12, protein_g: 10.41, fat_g: 1.04, fiber_g: 15.2, potassium_mg: 985, phosphorus_mg: 322, sodium_mg: 73, calcium_mg: 384, fluid_ml: 0}
+  - fdc_id: 171329
+    name: "Paprika"
+    sr: "Spices, paprika"
+    per_100g: {calories_kcal: 282, carbs_g: 53.99, protein_g: 14.14, fat_g: 12.89, fiber_g: 34.9, potassium_mg: 2280, phosphorus_mg: 314, sodium_mg: 68, calcium_mg: 229, fluid_ml: 0}
+  - fdc_id: 171328
+    name: "Oregano, dried"
+    sr: "Spices, oregano, dried"
+    per_100g: {calories_kcal: 265, carbs_g: 68.92, protein_g: 9, fat_g: 4.28, fiber_g: 42.5, potassium_mg: 1260, phosphorus_mg: 148, sodium_mg: 25, calcium_mg: 1597, fluid_ml: 0}
+  - fdc_id: 171320
+    name: "Cinnamon, ground"
+    sr: "Spices, cinnamon, ground"
+    per_100g: {calories_kcal: 247, carbs_g: 80.59, protein_g: 3.99, fat_g: 1.24, fiber_g: 53.1, potassium_mg: 431, phosphorus_mg: 64, sodium_mg: 10, calcium_mg: 1002, fluid_ml: 0}
+  - fdc_id: 170938
+    name: "Thyme, dried"
+    sr: "Spices, thyme, dried"
+    per_100g: {calories_kcal: 276, carbs_g: 63.94, protein_g: 9.11, fat_g: 7.43, fiber_g: 37, potassium_mg: 814, phosphorus_mg: 201, sodium_mg: 55, calcium_mg: 1890, fluid_ml: 0}
+  - fdc_id: 171322
+    name: "Dill weed, dried"
+    sr: "Spices, dill weed, dried"
+    per_100g: {calories_kcal: 253, carbs_g: 55.82, protein_g: 19.96, fat_g: 4.36, fiber_g: 13.6, potassium_mg: 3308, phosphorus_mg: 543, sodium_mg: 208, calcium_mg: 1784, fluid_ml: 0}
+  - fdc_id: 169231
+    name: "Ginger root, fresh"
+    sr: "Ginger root, raw"
+    per_100g: {calories_kcal: 80, carbs_g: 17.77, protein_g: 1.82, fat_g: 0.75, fiber_g: 2, potassium_mg: 415, phosphorus_mg: 34, sodium_mg: 13, calcium_mg: 16, fluid_ml: 0}
+  - fdc_id: 170416
+    name: "Parsley, fresh"
+    sr: "Parsley, fresh"
+    per_100g: {calories_kcal: 36, carbs_g: 6.33, protein_g: 2.97, fat_g: 0.79, fiber_g: 3.3, potassium_mg: 554, phosphorus_mg: 58, sodium_mg: 56, calcium_mg: 138, fluid_ml: 0}
+  - fdc_id: 173471
+    name: "Vanilla extract"
+    sr: "Vanilla extract"
+    per_100g: {calories_kcal: 288, carbs_g: 12.65, protein_g: 0.06, fat_g: 0.06, fiber_g: 0, potassium_mg: 148, phosphorus_mg: 6, sodium_mg: 9, calcium_mg: 11, fluid_ml: 0}
+  - fdc_id: 169698
+    name: "Cornstarch"
+    sr: "Cornstarch"
+    per_100g: {calories_kcal: 381, carbs_g: 91.27, protein_g: 0.26, fat_g: 0.05, fiber_g: 0.9, potassium_mg: 3, phosphorus_mg: 13, sodium_mg: 9, calcium_mg: 2, fluid_ml: 0}
+  - fdc_id: 171016
+    name: "Sesame oil"
+    sr: "Oil, sesame, salad or cooking"
+    per_100g: {calories_kcal: 884, carbs_g: 0, protein_g: 0, fat_g: 100, fiber_g: 0, potassium_mg: 0, phosphorus_mg: 0, sodium_mg: 0, calcium_mg: 0, fluid_ml: 0}
+  - fdc_id: 170005
+    name: "Scallions (green onions), raw"
+    sr: "Onions, spring or scallions (includes tops and bulb), raw"
+    per_100g: {calories_kcal: 32, carbs_g: 7.34, protein_g: 1.83, fat_g: 0.19, fiber_g: 2.6, potassium_mg: 276, phosphorus_mg: 37, sodium_mg: 16, calcium_mg: 72, fluid_ml: 0}
+  - fdc_id: 170932
+    name: "Red pepper flakes or cayenne"
+    sr: "Spices, pepper, red or cayenne"
+    per_100g: {calories_kcal: 318, carbs_g: 56.63, protein_g: 12.01, fat_g: 17.27, fiber_g: 27.2, potassium_mg: 2014, phosphorus_mg: 293, sodium_mg: 30, calcium_mg: 148, fluid_ml: 0}
+
+recipes:
+  # ------------------------------------------------------------------ breakfasts
+  - id: cinnamon-apple-cream-of-wheat
+    course: breakfast
+    title: Cinnamon apple Cream of Wheat
+    description: "A warm, low-potassium breakfast cereal with apple, cinnamon and a little brown sugar: about 38 g carbohydrate per bowl."
+    serves: 2
+    time: "10 minutes"
+    tags: [lower-potassium, lower-phosphorus, vegetarian]
+    intro: >-
+      Cream of Wheat is one of the lowest-potassium and lowest-phosphorus hot cereals: a cup has about 40 mg
+      potassium, against about 164 mg in a cup of oatmeal. Diced apple and cinnamon give it sweetness and a
+      little fibre without the potassium of a banana.
+    carb_note: >-
+      For a breakfast of about 55 g, add a slice of white toast with unsalted butter (about 14 g). Your own
+      amount comes from your diabetes team.
+    ingredients:
+      - {fdc_id: 171657, grams: 502, text: "2 cups cooked Cream of Wheat, made with water and no salt (about ⅓ cup dry)"}
+      - {fdc_id: 171688, grams: 91, text: "½ medium apple, cored and diced small"}
+      - {fdc_id: 173430, grams: 14.2, text: "1 tbsp unsalted butter"}
+      - {fdc_id: 168833, grams: 9.2, text: "2 tsp packed brown sugar"}
+      - {fdc_id: 171320, grams: 2.6, text: "1 tsp ground cinnamon"}
+      - {fdc_id: 173471, grams: 1, text: "¼ tsp vanilla extract (optional)"}
+    steps:
+      - "Melt the butter in a small pan over medium heat. Add the apple and cinnamon and cook for 3–4 minutes, stirring, until the apple is soft."
+      - "Cook the Cream of Wheat in water as the package says, but leave out the salt."
+      - "Stir in the vanilla, then spoon the apples on top and sprinkle with the brown sugar."
+    kidney_notes:
+      - "Cooking with water instead of milk saves about 170 mg potassium and 110 mg phosphorus per half cup of milk you would have used."
+      - "Leaving out the salt the package suggests keeps sodium under 20 mg a bowl."
+    variations:
+      - "**More protein:** add 2 scrambled egg whites on the side (about 7 g protein and 10 mg phosphorus)."
+      - "**Other fruit:** ½ cup of blueberries or canned pears (drained) instead of the apple; check the carbohydrate."
+      - "**Less carbohydrate:** use half the brown sugar, or a sweetener such as sucralose."
+
+  - id: pepper-onion-egg-scramble
+    course: breakfast
+    title: Pepper and onion egg-white scramble on toast
+    description: "A high-protein, low-phosphorus breakfast of egg whites with one whole egg, red pepper and onion on buttered toast."
+    serves: 2
+    time: "15 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly, vegetarian]
+    intro: >-
+      Egg whites give protein with almost no phosphorus: 6 whites have about 22 g protein and 30 mg
+      phosphorus. One whole egg keeps the colour and flavour. This breakfast suits dialysis days, when you
+      need more protein.
+    carb_note: >-
+      Most of the carbohydrate is in the toast. For about 55 g, add ½ cup of canned pineapple in juice
+      (about 20 g).
+    ingredients:
+      - {fdc_id: 172183, grams: 198, text: "6 large egg whites (or about ¾ cup carton whites without added phosphate)"}
+      - {fdc_id: 171287, grams: 100, text: "2 large eggs"}
+      - {fdc_id: 170108, grams: 75, text: "½ cup chopped red bell pepper"}
+      - {fdc_id: 170000, grams: 40, text: "¼ cup chopped onion"}
+      - {fdc_id: 171413, grams: 9, text: "2 tsp olive oil"}
+      - {fdc_id: 171328, grams: 0.5, text: "½ tsp dried oregano"}
+      - {fdc_id: 170931, grams: 0.6, text: "¼ tsp black pepper"}
+      - {fdc_id: 174924, grams: 116, text: "4 slices white bread, toasted"}
+      - {fdc_id: 173430, grams: 9.5, text: "2 tsp unsalted butter"}
+    steps:
+      - "Whisk the egg whites, eggs, oregano and black pepper in a bowl. Do not add salt."
+      - "Heat the oil in a non-stick pan over medium heat. Cook the pepper and onion for 4–5 minutes until soft."
+      - "Pour in the eggs and stir gently until they are set and no liquid egg is left."
+      - "Butter the toast and serve the eggs on top or on the side."
+    kidney_notes:
+      - "Red pepper and onion are among the lower-potassium vegetables at ½ cup; spinach or tomato would add 200–400 mg."
+      - "Most of the sodium (about 285 mg a serving) comes from the bread. A lower-sodium bread brings it down."
+      - "Check carton egg whites: pick one with no phosphate in the ingredient list."
+    variations:
+      - "**Before dialysis:** use 4 whites and 1 egg for 2 people (about 13 g protein a serving) if your team set a lower protein target."
+      - "**Different vegetables:** green pepper, zucchini or a few mushrooms swap for the red pepper."
+      - "**Warmth without salt:** a pinch of red pepper flakes or a few drops of hot sauce (count its sodium)."
+
+  - id: berry-crepes
+    course: breakfast
+    title: Berry crepes with cream cheese
+    description: "Thin crepes made without baking powder, filled with blueberries and cream cheese: about 44 g carbohydrate per serving."
+    serves: 2
+    time: "20 minutes"
+    tags: [lower-potassium, lower-phosphorus, vegetarian]
+    intro: >-
+      Pancake mixes and most baking powders contain phosphate additives, which your body absorbs almost
+      completely. Crepes need no baking powder at all: flour, egg and unsweetened almond milk make a thin
+      batter that cooks in a minute. This makes 4 crepes, 2 per person.
+    carb_note: >-
+      For about 55 g, add ½ cup more blueberries (11 g) or a clementine (9 g).
+    ingredients:
+      - {fdc_id: 168894, grams: 62, text: "½ cup all-purpose flour"}
+      - {fdc_id: 171287, grams: 100, text: "2 large eggs"}
+      - {fdc_id: 174832, grams: 196, text: "¾ cup unsweetened almond milk (no phosphate in the ingredients)", counts_as_fluid: false}
+      - {fdc_id: 169655, grams: 12.6, text: "1 tbsp sugar"}
+      - {fdc_id: 173471, grams: 2.1, text: "½ tsp vanilla extract"}
+      - {fdc_id: 173430, grams: 14.2, text: "1 tbsp unsalted butter, for the pan"}
+      - {fdc_id: 173418, grams: 58, text: "4 tbsp cream cheese, softened"}
+      - {fdc_id: 171711, grams: 148, text: "1 cup blueberries, fresh or frozen and thawed"}
+      - {fdc_id: 171320, grams: 0.5, text: "a pinch of cinnamon"}
+    steps:
+      - "Whisk the flour, eggs, almond milk, sugar and vanilla until smooth. Let the batter rest for 10 minutes if you have time."
+      - "Heat a non-stick pan over medium heat and rub it with a little butter. Pour in a quarter of the batter and tilt the pan so it covers the bottom thinly."
+      - "Cook for about 1 minute until the edges lift, flip, and cook 30 seconds more. Repeat to make 4 crepes."
+      - "Mix the cream cheese with the cinnamon. Spread 1 tablespoon on each crepe, add a quarter of the berries, and fold or roll."
+    kidney_notes:
+      - "No baking powder means no added phosphate: baking powders, even low-sodium ones, usually contain a phosphate."
+      - "Cream cheese has far less phosphorus than other cheeses: about 16 mg per tablespoon."
+      - "The almond milk is cooked into the crepes, so it does not count toward a fluid limit."
+    variations:
+      - "**Other fruit:** strawberries or raspberries swap cup for cup and have less carbohydrate."
+      - "**Freeze:** stack cooled crepes between sheets of baking paper, freeze, and warm them in a dry pan."
+      - "**Rice milk instead of almond milk:** fine if the label has no phosphate; it adds about 9 g carbohydrate to the recipe."
+
+  # ------------------------------------------------------------------ lunches
+  - id: lemon-chicken-salad-sandwich
+    course: lunch
+    title: Lemon chicken salad sandwich with grapes
+    description: "Home-cooked chicken mixed with mayonnaise, lemon, celery, grapes and dill on white bread: a deli-style lunch without the deli sodium."
+    serves: 2
+    time: "10 minutes, with leftover chicken"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly, make-ahead]
+    intro: >-
+      Deli chicken and turkey usually have added salt and phosphate. Leftover chicken you cooked yourself has
+      about 64 mg sodium in 3 oz, against about 510 mg in 2 oz of sliced deli turkey. Lemon and dill do the
+      work that salt would.
+    carb_note: >-
+      For about 55 g, add a small apple (about 21 g) or ½ cup of canned pineapple (about 20 g).
+    ingredients:
+      - {fdc_id: 171477, grams: 113, text: "4 oz cooked chicken breast, diced (about 1 cup)"}
+      - {fdc_id: 171009, grams: 27.6, text: "2 tbsp mayonnaise"}
+      - {fdc_id: 167747, grams: 10, text: "2 tsp lemon juice"}
+      - {fdc_id: 169988, grams: 20, text: "½ stalk celery, finely chopped"}
+      - {fdc_id: 174683, grams: 76, text: "½ cup red or green grapes, halved"}
+      - {fdc_id: 171322, grams: 0.5, text: "½ tsp dried dill"}
+      - {fdc_id: 170931, grams: 0.6, text: "¼ tsp black pepper"}
+      - {fdc_id: 174924, grams: 116, text: "4 slices white bread"}
+      - {fdc_id: 169247, grams: 47, text: "1 cup shredded romaine, or 4 leaves"}
+    steps:
+      - "Mix the mayonnaise, lemon juice, dill and pepper in a bowl."
+      - "Stir in the chicken, celery and grapes."
+      - "Spread on 2 slices of bread, top with lettuce and the other slices, and cut in half."
+    kidney_notes:
+      - "Home-cooked chicken instead of deli meat saves several hundred milligrams of sodium and avoids phosphate additives."
+      - "Grapes are a lower-potassium fruit at ½ cup (about 144 mg)."
+      - "Keep the filling cold and eat it within 3–4 days."
+    variations:
+      - "**Before dialysis:** use 3 oz chicken for 2 sandwiches if your protein target is lower; add a little more lettuce and cucumber."
+      - "**Wrap instead of bread:** a large lettuce leaf cuts the carbohydrate to about 9 g per serving; count the change for insulin."
+      - "**Apple instead of grapes:** ½ small apple, diced."
+
+  - id: sesame-ginger-noodle-salad
+    course: lunch
+    title: Sesame-ginger noodle salad with chicken
+    description: "Cold pasta with shredded chicken, cabbage, red pepper and cucumber in a sesame, ginger and vinegar dressing with just 2 tsp of reduced-sodium soy sauce."
+    serves: 2
+    time: "20 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly, make-ahead]
+    intro: >-
+      Takeout noodles can carry more than a day's sodium. This version gets its flavour from toasted sesame
+      oil, fresh ginger, garlic and vinegar, and uses only 2 teaspoons of reduced-sodium soy sauce for two
+      people. Cabbage, red pepper and cucumber add crunch and stay on the lower-potassium list.
+    carb_note: >-
+      Most of it is in the pasta and the honey. Add ½ cup of
+      strawberries (6 g) to reach about 55 g.
+    ingredients:
+      - {fdc_id: 169737, grams: 248, text: "2 cups cooked spaghetti or other pasta, cooled (about 4 oz dry)"}
+      - {fdc_id: 171477, grams: 85, text: "3 oz cooked chicken breast, shredded"}
+      - {fdc_id: 169975, grams: 70, text: "1 cup finely shredded cabbage"}
+      - {fdc_id: 170108, grams: 75, text: "½ cup red bell pepper, in thin strips"}
+      - {fdc_id: 168409, grams: 52, text: "½ cup cucumber, in thin sticks"}
+      - {fdc_id: 170005, grams: 12, text: "2 tbsp sliced scallions (green onions)"}
+      - {fdc_id: 171016, grams: 13.6, text: "1 tbsp toasted sesame oil"}
+      - {fdc_id: 172336, grams: 14, text: "1 tbsp canola oil"}
+      - {fdc_id: 173469, grams: 29.8, text: "2 tbsp cider or rice vinegar"}
+      - {fdc_id: 172473, grams: 9.5, text: "2 tsp reduced-sodium soy sauce"}
+      - {fdc_id: 169640, grams: 14, text: "2 tsp honey"}
+      - {fdc_id: 169231, grams: 2, text: "1 tsp grated fresh ginger"}
+      - {fdc_id: 169230, grams: 3, text: "1 clove garlic, grated"}
+    steps:
+      - "Whisk the sesame oil, canola oil, vinegar, soy sauce, honey, ginger and garlic in a large bowl."
+      - "Add the cold pasta and toss to coat."
+      - "Add the chicken, cabbage, pepper, cucumber and scallions and toss again."
+      - "Eat straight away or chill for up to a day. Stir before serving."
+    kidney_notes:
+      - "Two teaspoons of reduced-sodium soy sauce add about 340 mg sodium to the whole bowl; a tablespoon of regular soy sauce would add about 880 mg."
+      - "Plain pasta has almost no sodium if you cook it without salt."
+      - "Keep it cold if you pack it for work: put an ice pack in the bag."
+    variations:
+      - "**Rice noodles** instead of pasta: similar carbohydrate, less protein and phosphorus."
+      - "**Vegetarian:** use 6 oz firm tofu, pressed and cubed, instead of the chicken: about the same potassium, but about 5 g less protein a serving."
+      - "**More heat:** a pinch of red pepper flakes in the dressing."
+
+  - id: chicken-noodle-soup
+    course: lunch
+    title: Home-style chicken noodle soup
+    description: "A big pot of chicken soup with about 130 mg sodium per bowl instead of 800 or more from a can. Counts as fluid."
+    serves: 4
+    time: "35 minutes"
+    tags: [lower-potassium, lower-phosphorus, freezer]
+    intro: >-
+      A cup of canned chicken noodle soup has about 830 mg sodium. Made at home with low-sodium broth, herbs
+      and lemon, a big bowl (about 1½ cups) has about 130 mg. **Soup counts as fluid:** on a fluid limit, a
+      bowl uses about 350 mL of your allowance, so plan for it or have a smaller bowl.
+    carb_note: >-
+      That is not much for a meal. For a lunch of about 55 g, add 1 slice of white bread
+      (14 g) and ½ cup of canned pineapple in juice (20 g), or more pasta in the soup.
+    ingredients:
+      - {fdc_id: 171413, grams: 13.5, text: "1 tbsp olive oil"}
+      - {fdc_id: 170000, grams: 80, text: "½ cup chopped onion"}
+      - {fdc_id: 169988, grams: 40, text: "1 stalk celery, sliced"}
+      - {fdc_id: 170393, grams: 61, text: "1 medium carrot, sliced thin"}
+      - {fdc_id: 169230, grams: 6, text: "2 cloves garlic, chopped"}
+      - {fdc_id: 171609, grams: 960, text: "4 cups low-sodium chicken broth (check the label for potassium chloride)"}
+      - {fdc_id: 173647, grams: 474, text: "2 cups water"}
+      - {fdc_id: 170938, grams: 0.5, text: "½ tsp dried thyme"}
+      - {fdc_id: 170931, grams: 0.6, text: "¼ tsp black pepper"}
+      - {fdc_id: 171477, grams: 170, text: "6 oz cooked chicken breast, diced (about 1½ cups)"}
+      - {fdc_id: 169737, grams: 186, text: "1½ cups cooked small pasta shapes or broken spaghetti, cooked without salt"}
+      - {fdc_id: 170416, grams: 7.6, text: "2 tbsp chopped fresh parsley"}
+      - {fdc_id: 167747, grams: 15.2, text: "1 tbsp lemon juice"}
+    steps:
+      - "Heat the oil in a large pot over medium heat. Cook the onion, celery and carrot for 5 minutes until soft. Add the garlic for 1 more minute."
+      - "Add the broth, water, thyme and pepper. Bring to a boil, then simmer for 15 minutes until the carrot is tender."
+      - "Add the chicken and cooked pasta and heat until steaming, about 5 minutes."
+      - "Turn off the heat and stir in the parsley and lemon juice. Taste before adding anything: lemon and pepper usually do the job of salt."
+    kidney_notes:
+      - "The potassium from the carrot and celery stays in the broth, so it counts even though they are boiled. One carrot for 4 bowls keeps it low."
+      - "Some low-sodium broths use potassium chloride instead of salt. Read the ingredient list and pick one without it."
+      - "Cook the pasta separately and add it at the end so it does not soak up the broth."
+    variations:
+      - "**On a fluid limit:** serve 1 cup of soup with extra chicken and pasta in the bowl, so you get the same food with less liquid."
+      - "**Freeze:** freeze the soup without the pasta for up to 3 months; add freshly cooked pasta when you reheat it."
+      - "**Rice instead of pasta:** ¾ cup cooked white rice for the pot."
+
+  # ------------------------------------------------------------------ dinners
+  - id: lemon-garlic-chicken-rice
+    sources: [FSTEMPS]
+    source_lines:
+      - "[FoodSafety.gov: safe minimum internal temperatures][FSTEMPS]: poultry 165 °F (74 °C); fish, and pork steaks, chops and roasts 145 °F (63 °C), pork with a 3-minute rest."
+    course: dinner
+    title: Lemon-garlic chicken with herbed rice and green beans
+    description: "Roast chicken breast with lemon, garlic and oregano, buttery parsley rice and green beans: a low-sodium dinner with about 40 g carbohydrate."
+    serves: 4
+    time: "40 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly, freezer]
+    intro: >-
+      A plain roast chicken breast becomes a full dinner with a lemon-garlic marinade, rice tossed with butter
+      and parsley, and green beans. It uses no salt; lemon, garlic, oregano, paprika and black pepper carry
+      the flavour. The portion is 3 oz of cooked chicken, the size of a deck of cards.
+    carb_note: >-
+      For about 55 g, add ¼ cup more rice (11 g) or ½ cup of canned peaches in juice for
+      dessert (14 g).
+    ingredients:
+      - {fdc_id: 171477, grams: 340, text: "12 oz cooked chicken breast (from about 1 lb raw)"}
+      - {fdc_id: 171413, grams: 27, text: "2 tbsp olive oil"}
+      - {fdc_id: 167747, grams: 45.6, text: "3 tbsp lemon juice (1 lemon)"}
+      - {fdc_id: 169230, grams: 9, text: "3 cloves garlic, crushed"}
+      - {fdc_id: 171328, grams: 1, text: "1 tsp dried oregano"}
+      - {fdc_id: 171329, grams: 1.2, text: "½ tsp paprika"}
+      - {fdc_id: 170931, grams: 1.2, text: "½ tsp black pepper"}
+      - {fdc_id: 168878, grams: 474, text: "3 cups cooked white rice, cooked without salt (about 1 cup dry)"}
+      - {fdc_id: 173430, grams: 14.2, text: "1 tbsp unsalted butter"}
+      - {fdc_id: 170416, grams: 7.6, text: "2 tbsp chopped fresh parsley"}
+      - {fdc_id: 169141, grams: 252, text: "2 cups green beans, fresh or frozen, boiled"}
+    steps:
+      - "Mix the oil, lemon juice, garlic, oregano, paprika and pepper. Coat about 1 lb of raw chicken breast in it and leave for 15 minutes (or overnight in the fridge)."
+      - "Heat the oven to 425 °F (220 °C). Roast the chicken on a lined tray for 20–25 minutes, until the thickest part reaches 165 °F (74 °C) on a food thermometer."
+      - "While it roasts, cook the rice without salt and stir in the butter and parsley. Boil or steam the green beans for 5–6 minutes and drain."
+      - "Let the chicken rest for 5 minutes, slice, and serve 3 oz with ¾ cup rice and ½ cup green beans."
+    kidney_notes:
+      - "Buy chicken that is not \"enhanced\" or \"injected with a solution\": that liquid adds sodium and phosphate."
+      - "White rice has about a third of the potassium and phosphorus of brown rice."
+      - "Green beans are one of the lowest-potassium vegetables, about 92 mg per ½ cup."
+    variations:
+      - "**Before dialysis:** serve 2 oz of chicken (about 18 g protein) and add ¼ cup rice if your team set a lower protein target."
+      - "**On dialysis:** 3–4 oz of chicken fits the higher protein target of 1.0–1.2 g per kg."
+      - "**Freeze:** freeze cooked, sliced chicken in portions for up to 3 months; it makes the chicken salad and soup recipes quicker."
+
+  - id: herb-crumb-cod-couscous
+    sources: [FSTEMPS]
+    source_lines:
+      - "[FoodSafety.gov: safe minimum internal temperatures][FSTEMPS]: poultry 165 °F (74 °C); fish, and pork steaks, chops and roasts 145 °F (63 °C), pork with a 3-minute rest."
+    course: dinner
+    title: Herb-crumb baked cod with lemon couscous and cucumber salad
+    description: "Mild white fish baked under buttery dill and garlic breadcrumbs, with couscous and a sweet-sour cucumber salad."
+    serves: 4
+    time: "30 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly]
+    intro: >-
+      Cod is one of the lower-potassium fish: about 207 mg in 3 oz cooked, against about 330 mg for salmon.
+      Fresh breadcrumbs made from white bread, butter, dill and garlic powder make a crisp topping without
+      the sodium of shop-bought seasoned crumbs.
+    carb_note: >-
+      Most of it comes from the couscous and the crumbs. For about 55 g, add ¼ cup more
+      couscous (9 g) and ½ cup of strawberries for dessert (6 g).
+    ingredients:
+      - {fdc_id: 171956, grams: 340, text: "4 cod fillets, about 12 oz cooked (about 1 lb raw)"}
+      - {fdc_id: 174924, grams: 58, text: "2 slices white bread, made into crumbs"}
+      - {fdc_id: 173430, grams: 28.4, text: "2 tbsp unsalted butter, melted"}
+      - {fdc_id: 171322, grams: 1, text: "1 tsp dried dill"}
+      - {fdc_id: 171325, grams: 1.6, text: "½ tsp garlic powder (not garlic salt)"}
+      - {fdc_id: 171329, grams: 1.2, text: "½ tsp paprika"}
+      - {fdc_id: 167747, grams: 30.4, text: "2 tbsp lemon juice"}
+      - {fdc_id: 169700, grams: 471, text: "3 cups cooked couscous, made without salt (about 1 cup dry)"}
+      - {fdc_id: 171413, grams: 13.5, text: "1 tbsp olive oil"}
+      - {fdc_id: 168409, grams: 208, text: "2 cups thinly sliced cucumber"}
+      - {fdc_id: 170000, grams: 40, text: "¼ cup thinly sliced onion"}
+      - {fdc_id: 173469, grams: 29.8, text: "2 tbsp cider vinegar"}
+      - {fdc_id: 169655, grams: 4.2, text: "1 tsp sugar"}
+      - {fdc_id: 170931, grams: 0.6, text: "¼ tsp black pepper"}
+    steps:
+      - "Make the salad first: toss the cucumber and onion with the vinegar, sugar and pepper and leave it in the fridge."
+      - "Heat the oven to 400 °F (200 °C). Mix the breadcrumbs, melted butter, dill, garlic powder and paprika."
+      - "Put the fish on a lined tray, sprinkle with 1 tablespoon of the lemon juice and press the crumbs on top."
+      - "Bake for 12–15 minutes, until the crumbs are golden and the fish flakes easily and reaches 145 °F (63 °C)."
+      - "Cook the couscous in water without salt, then fork in the olive oil and the rest of the lemon juice. Serve each fillet with ¾ cup couscous and ½ cup salad."
+    kidney_notes:
+      - "Fresh or frozen plain cod has about 66 mg sodium in 3 oz. Breaded frozen fish sticks often contain phosphate additives."
+      - "Garlic powder adds flavour with almost no sodium (under 1 mg per ½ teaspoon); garlic salt is mostly salt."
+      - "¾ cup of couscous has about 70 mg potassium; a medium baked potato has about 930 mg."
+    variations:
+      - "**Other fish:** haddock, pollock or tilapia work the same way; they have more potassium (about 300–330 mg per 3 oz)."
+      - "**Before dialysis:** 2 oz of fish per person, with a little more couscous, if your team set a lower protein target."
+      - "**Rice instead of couscous:** ¾ cup white rice has about the same carbohydrate."
+
+  - id: turkey-burgers-slaw
+    sources: [FSTEMPS]
+    source_lines:
+      - "[FoodSafety.gov: safe minimum internal temperatures][FSTEMPS]: poultry 165 °F (74 °C); fish, and pork steaks, chops and roasts 145 °F (63 °C), pork with a 3-minute rest."
+    course: dinner
+    title: Turkey burgers with tangy cabbage slaw
+    description: "Lean turkey burgers seasoned with onion, garlic and paprika on a bun, with a crunchy cabbage and carrot slaw instead of fries."
+    serves: 4
+    time: "30 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly, freezer]
+    intro: >-
+      A fast-food cheeseburger and fries can carry more than 1,000 mg sodium and 900 mg potassium. These
+      burgers use plain ground turkey with grated onion, garlic powder and paprika, and swap the fries for a
+      cabbage slaw. Low-sodium ketchup has about 3 mg sodium a tablespoon, against about 154 mg for
+      regular.
+    carb_note: >-
+      Most of it is in the bun. For about 55 g, add ½ cup of canned pineapple in juice
+      (20 g) or a small apple (about 21 g).
+    ingredients:
+      - {fdc_id: 174492, grams: 340, text: "4 turkey patties, 3 oz each when cooked (about 1 lb raw 93 % lean ground turkey)"}
+      - {fdc_id: 170000, grams: 40, text: "¼ cup grated onion"}
+      - {fdc_id: 171325, grams: 1.6, text: "½ tsp garlic powder"}
+      - {fdc_id: 171329, grams: 1.2, text: "½ tsp paprika"}
+      - {fdc_id: 170931, grams: 1.2, text: "½ tsp black pepper"}
+      - {fdc_id: 172796, grams: 176, text: "4 hamburger buns"}
+      - {fdc_id: 169381, grams: 68, text: "4 tbsp low-sodium ketchup"}
+      - {fdc_id: 169248, grams: 36, text: "4 lettuce leaves"}
+      - {fdc_id: 169975, grams: 210, text: "3 cups finely shredded cabbage"}
+      - {fdc_id: 170393, grams: 30, text: "½ medium carrot, grated"}
+      - {fdc_id: 171009, grams: 41.4, text: "3 tbsp mayonnaise"}
+      - {fdc_id: 173469, grams: 14.9, text: "1 tbsp cider vinegar"}
+      - {fdc_id: 169655, grams: 4.2, text: "1 tsp sugar"}
+    steps:
+      - "Make the slaw: mix the mayonnaise, vinegar, sugar and a pinch of pepper, then toss with the cabbage and carrot. Chill while you cook."
+      - "Mix about 1 lb raw ground turkey with the onion, garlic powder, paprika and the rest of the pepper. Shape into 4 thin patties."
+      - "Cook in a lightly oiled pan or on a grill over medium heat for 5–6 minutes a side, until the centre reaches 165 °F (74 °C)."
+      - "Serve each burger on a bun with lettuce and 1 tablespoon of ketchup, with a quarter of the slaw."
+    kidney_notes:
+      - "Plain ground turkey has no added salt. Pre-seasoned patties and turkey sausage often do."
+      - "Skip cheese: one slice of processed American cheese adds about 470 mg sodium and phosphate additives."
+      - "Cabbage is a lower-potassium vegetable, about 119 mg per raw cup."
+    variations:
+      - "**Before dialysis:** make 5 smaller patties from the same meat (about 2½ oz each) if your protein target is lower."
+      - "**Freeze:** freeze raw patties between sheets of baking paper; cook from frozen, a few minutes longer, to 165 °F."
+      - "**Lettuce wrap:** skip the bun to save about 22 g carbohydrate; count the change for insulin."
+
+  - id: pork-cabbage-stir-fry
+    sources: [FSTEMPS]
+    source_lines:
+      - "[FoodSafety.gov: safe minimum internal temperatures][FSTEMPS]: poultry 165 °F (74 °C); fish, and pork steaks, chops and roasts 145 °F (63 °C), pork with a 3-minute rest."
+    course: dinner
+    title: Pork and cabbage stir-fry with rice
+    description: "Strips of pork tenderloin stir-fried with cabbage, red pepper and onion in a ginger-garlic sauce, over white rice."
+    serves: 4
+    time: "30 minutes"
+    tags: [lower-potassium, lower-phosphorus, dialysis-friendly]
+    intro: >-
+      Stir-fry sauces from a jar are often very high in sodium. This sauce uses 1 tablespoon of
+      reduced-sodium soy sauce for 4 people, with ginger, garlic, honey and vinegar. Cabbage and red pepper
+      stay crisp and are lower-potassium choices than broccoli or spinach.
+    carb_note: >-
+      It comes from the rice, the honey and the vegetables. For about 55 g, add ¼ cup more rice
+      (11 g).
+    ingredients:
+      - {fdc_id: 168250, grams: 284, text: "10 oz pork tenderloin, cooked weight (about 14 oz raw), cut in thin strips"}
+      - {fdc_id: 172336, grams: 28, text: "2 tbsp canola oil"}
+      - {fdc_id: 169975, grams: 140, text: "2 cups sliced green cabbage"}
+      - {fdc_id: 170108, grams: 150, text: "1 cup red bell pepper strips"}
+      - {fdc_id: 170000, grams: 80, text: "½ cup sliced onion"}
+      - {fdc_id: 169230, grams: 6, text: "2 cloves garlic, chopped"}
+      - {fdc_id: 169231, grams: 6, text: "1 tbsp grated fresh ginger"}
+      - {fdc_id: 172473, grams: 14.2, text: "1 tbsp reduced-sodium soy sauce"}
+      - {fdc_id: 169640, grams: 21, text: "1 tbsp honey"}
+      - {fdc_id: 173469, grams: 14.9, text: "1 tbsp cider or rice vinegar"}
+      - {fdc_id: 169698, grams: 8, text: "1 tbsp cornstarch, mixed with 3 tbsp water"}
+      - {fdc_id: 168878, grams: 474, text: "3 cups cooked white rice, cooked without salt"}
+    steps:
+      - "Mix the soy sauce, honey, vinegar and cornstarch with 3 tablespoons of water."
+      - "Heat 1 tablespoon of oil in a large pan or wok over high heat. Stir-fry the raw pork strips for 3–4 minutes until no longer pink (145 °F, 63 °C), then lift them out."
+      - "Add the rest of the oil, then the onion, cabbage and pepper. Stir-fry for 3 minutes. Add the garlic and ginger for 1 minute more."
+      - "Return the pork, pour in the sauce and stir until it thickens and coats everything, about 1 minute. Serve over ¾ cup rice."
+    kidney_notes:
+      - "Pork tenderloin has more potassium than chicken (about 360 mg per 3 oz), so this recipe uses 2½ oz a serving and lower-potassium vegetables to stay under 600 mg."
+      - "Pick plain pork, not \"enhanced\" or marinated pork, which has added sodium and phosphate."
+      - "The cornstarch thickens the sauce, so you need less soy sauce for the same flavour."
+    variations:
+      - "**Chicken instead of pork:** the same weight of chicken breast or thigh; it lowers potassium a little."
+      - "**More vegetables:** bean sprouts, snow peas or water chestnuts are lower-potassium stir-fry choices."
+      - "**On dialysis:** use 12 oz cooked pork for 4 (3 oz each) if your team wants more protein; potassium rises to about 600 mg a serving, the top of the line."
+
+  # ------------------------------------------------------------------ snacks and desserts
+  - id: cinnamon-popcorn
+    course: snack
+    title: Cinnamon-sugar popcorn
+    description: "Air-popped popcorn with a little melted butter, cinnamon and sugar: a low-sodium, low-potassium snack with about 24 g carbohydrate."
+    serves: 2
+    time: "5 minutes"
+    tags: [lower-potassium, lower-phosphorus, vegetarian]
+    intro: >-
+      Plain popcorn is a whole grain with fibre and very little potassium or sodium. Microwave popcorn
+      usually comes salted; popping your own lets you skip the salt and choose the flavour. A serving is
+      3 cups.
+    carb_note: >-
+      Count it for insulin like any snack; your team tells you whether
+      a snack needs its own insulin.
+    ingredients:
+      - {fdc_id: 167959, grams: 48, text: "6 cups air-popped popcorn (about ¼ cup kernels)"}
+      - {fdc_id: 173430, grams: 14.2, text: "1 tbsp unsalted butter, melted"}
+      - {fdc_id: 169655, grams: 8.4, text: "2 tsp sugar"}
+      - {fdc_id: 171320, grams: 1.3, text: "½ tsp ground cinnamon"}
+    steps:
+      - "Pop the kernels in an air popper, or in a covered pan with no oil, shaking it often."
+      - "Mix the sugar and cinnamon."
+      - "Drizzle the butter over the popcorn, toss, then sprinkle the cinnamon sugar and toss again."
+    kidney_notes:
+      - "Salted microwave popcorn has about 300 mg sodium in 3 cups; this has under 5 mg."
+      - "Popcorn is a whole grain, but it is lower in phosphorus than nuts or seeds: about 86 mg in 3 cups."
+    variations:
+      - "**Savoury:** skip the sugar and use garlic powder and black pepper, or a salt-free herb blend without potassium chloride."
+      - "**Less carbohydrate:** use sucralose in place of the sugar."
+
+  - id: peach-blueberry-crisp
+    course: dessert
+    title: Peach and blueberry crisp
+    description: "Canned peaches and blueberries under a buttery brown-sugar crumble, with no oats, nuts or baking powder: about 29 g carbohydrate per serving."
+    serves: 6
+    time: "45 minutes"
+    tags: [lower-potassium, lower-phosphorus, vegetarian, freezer]
+    intro: >-
+      Fruit crisps are often made with oats and nuts, which add phosphorus and potassium. This topping is just
+      flour, brown sugar, butter and cinnamon. Canned peaches in juice are lower in potassium than fresh
+      peaches per serving, and draining them removes some more.
+    carb_note: >-
+      It is a dessert, so count it with the meal or as a snack, the way your diabetes
+      plan says.
+    ingredients:
+      - {fdc_id: 169930, grams: 496, text: "2 cups canned peaches in juice, drained (one 29-oz can)"}
+      - {fdc_id: 171711, grams: 148, text: "1 cup blueberries, fresh or frozen"}
+      - {fdc_id: 169698, grams: 8, text: "1 tbsp cornstarch"}
+      - {fdc_id: 167747, grams: 15.2, text: "1 tbsp lemon juice"}
+      - {fdc_id: 171320, grams: 2.6, text: "1 tsp ground cinnamon"}
+      - {fdc_id: 168894, grams: 62, text: "½ cup all-purpose flour"}
+      - {fdc_id: 168833, grams: 41.4, text: "3 tbsp packed brown sugar"}
+      - {fdc_id: 173430, grams: 56.8, text: "4 tbsp unsalted butter, cold, in small pieces"}
+    steps:
+      - "Heat the oven to 375 °F (190 °C). Drain the peaches well and cut them into bite-size pieces."
+      - "Toss the peaches and blueberries with the cornstarch, lemon juice and half the cinnamon in a small baking dish."
+      - "Rub the flour, brown sugar, butter and the rest of the cinnamon together with your fingertips until it looks like coarse crumbs. Scatter over the fruit."
+      - "Bake for 30–35 minutes, until the topping is golden and the fruit bubbles. Cool for 10 minutes and cut into 6 portions."
+    kidney_notes:
+      - "The numbers count the peaches with their juice, so draining them makes the real potassium a little lower than shown."
+      - "No oats, nuts or baking powder means very little phosphorus: about 30 mg a serving."
+      - "NKF advises not drinking the liquid from canned fruit, because it holds some of the potassium."
+    variations:
+      - "**Other fruit:** canned pears in juice or fresh apples, peeled and sliced; check the carbohydrate."
+      - "**Freeze:** freeze single portions, then warm in the microwave."
+      - "**Less carbohydrate:** use 2 tablespoons of brown sugar in the topping."
