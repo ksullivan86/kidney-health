@@ -208,3 +208,15 @@ def test_usda_hourly_guard_pauses_a_key_close_to_its_limit(client, monkeypatch):
     assert client.get("/api/foods/usda/search", params={"q": "x"}).status_code == 200
     r = client.get("/api/foods/usda/search", params={"q": "x"})
     assert r.status_code == 429 and len(calls) == 1
+
+
+def test_usda_guard_is_keyed_by_whose_key_it_is_never_by_key_material():
+    from app.credentials import Credential
+
+    own = Credential(provider="usda", scope="own", source="user", fields={"api_key": OWN_KEY})
+    shared = Credential(provider="usda", scope="shared", source="db", fields={"api_key": SHARED_KEY})
+    assert foods_module.guard_id(own, 7) == "usda:user:7"
+    assert foods_module.guard_id(own, 8) == "usda:user:8"          # each person's own key is tracked separately
+    assert foods_module.guard_id(shared, 7) == foods_module.guard_id(shared, 8) == "usda:shared:db"
+    for cred in (own, shared):
+        assert cred.api_key not in foods_module.guard_id(cred, 7)

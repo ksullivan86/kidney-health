@@ -26,8 +26,8 @@ def _index_assets() -> tuple[list[str], list[str], list[str]]:
     index = (STATIC / "index.html").read_text(encoding="utf-8")
     head, body = index.split("</head>", 1)
     styles = re.findall(r'<link rel="stylesheet" href="([^"]+)">', head)
-    head_scripts = re.findall(r'<script src="([^"]+)"></script>', head)
-    body_scripts = [src for src, extra in re.findall(r'<script src="([^"]+)"([^>]*)></script>', body) if 'data-preview="omit"' not in extra]
+    head_scripts = re.findall(r'<script src="([^"]+)"[^>]*>\s*</script\b[^>]*>', head, re.I)
+    body_scripts = [src for src, extra in re.findall(r'<script src="([^"]+)"([^>]*)>\s*</script\b[^>]*>', body, re.I) if 'data-preview="omit"' not in extra]
     return styles, head_scripts, body_scripts
 
 

@@ -74,6 +74,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
+  // Only this app's own pages (same origin) may ask the worker to activate an update.
+  if (event.origin !== self.location.origin) return;
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 

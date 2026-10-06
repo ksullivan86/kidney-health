@@ -83,7 +83,9 @@ def is_straight_run(folded: str) -> bool:
 
 def breached(password: str) -> bool:
     """HIBP range lookup; False on any network problem (fail open, logged at INFO)."""
-    digest = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # noqa: S324 (the API's format)
+    # SHA-1 here is the Pwned Passwords range API's lookup format (k-anonymity: only the first five hex
+    # characters leave the server), not a way of storing or verifying passwords; those use Argon2id.
+    digest = hashlib.sha1(password.encode("utf-8"), usedforsecurity=False).hexdigest().upper()
     prefix, suffix = digest[:5], digest[5:]
     try:
         import httpx2

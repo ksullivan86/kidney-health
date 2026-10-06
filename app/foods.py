@@ -15,7 +15,6 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-import hashlib
 import threading
 import time
 
@@ -525,8 +524,9 @@ _usda_guard: dict[str, float] = {}
 _usda_guard_lock = threading.Lock()
 
 
-def _key_tag(api_key: str) -> str:
-    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:16]
+def guard_id(cred: credentials.Credential, user_id: int) -> str:
+    """Which key the hourly guard tracks: the shared key, or one person's own key (no key material)."""
+    return f"{cred.provider}:shared:{cred.source}" if cred.scope == "shared" else f"{cred.provider}:user:{user_id}"
 
 
 def usda_credential(request: Request, conn: sqlite3.Connection, user_id: int, can_use_shared: bool) -> credentials.Credential:
@@ -540,14 +540,14 @@ def usda_credential(request: Request, conn: sqlite3.Connection, user_id: int, ca
     if isinstance(result, credentials.Unavailable):
         raise ApiProblem(503, USDA_UNAVAILABLE.get(result.reason, "USDA lookups are not available"), reason=result.reason)
     with _usda_guard_lock:
-        until = _usda_guard.get(_key_tag(result.api_key), 0.0)
+        until = _usda_guard.get(guard_id(result, user_id), 0.0)
     if until > time.monotonic():
         raise ApiProblem(429, "USDA lookups are paused for a while (the key is close to its hourly limit). Try again later.",
                          headers={"Retry-After": str(int(until - time.monotonic()) + 1)})
     return result
 
 
-def _note_rate_limit(api_key: str, resp: httpx2.Response) -> None:
+def _note_rate_limit(guard: str, resp: httpx2.Response) -> None:
     raw = resp.headers.get("X-RateLimit-Remaining")
     try:
         remaining = int(raw) if raw is not None else None
@@ -555,18 +555,18 @@ def _note_rate_limit(api_key: str, resp: httpx2.Response) -> None:
         remaining = None
     if remaining is not None and remaining < USDA_GUARD_REMAINING:
         with _usda_guard_lock:
-            _usda_guard[_key_tag(api_key)] = time.monotonic() + USDA_GUARD_WINDOW_S
+            _usda_guard[guard] = time.monotonic() + USDA_GUARD_WINDOW_S
         log.warning("a USDA key has %d requests left this hour; pausing lookups with it for an hour", remaining)
 
 
-def _usda_get(path: str, params: Mapping[str, Any], api_key: str, *, own_key: bool = False) -> Any:
+def _usda_get(path: str, params: Mapping[str, Any], api_key: str, *, guard: str, own_key: bool = False) -> Any:
     try:
         with usda_client() as client:
             resp = client.get(path, params=params, headers={"X-Api-Key": api_key})
     except httpx2.HTTPError as exc:
         log.warning("USDA request failed: %s", exc.__class__.__name__)
         raise HTTPException(status_code=502, detail=f"USDA request failed: {exc.__class__.__name__}") from exc
-    _note_rate_limit(api_key, resp)
+    _note_rate_limit(guard, resp)
     if resp.status_code == 404:
         raise HTTPException(status_code=404, detail="USDA food not found")
     if resp.status_code in (401, 403):
@@ -723,7 +723,8 @@ def usda_search(request: Request, user: CurrentUser, q: str = Query("", max_leng
     if not query:
         raise HTTPException(status_code=400, detail="q is required")
     cred = usda_credential(request, conn, user.id, user.can_use_shared)
-    data = _usda_get("/foods/search", {"query": query, "pageSize": USDA_PAGE_SIZE}, cred.api_key, own_key=cred.scope == "own")
+    data = _usda_get("/foods/search", {"query": query, "pageSize": USDA_PAGE_SIZE}, cred.api_key,
+                     guard=guard_id(cred, user.id), own_key=cred.scope == "own")
     foods = []
     for item in (data or {}).get("foods") or []:
         fdc_id = item.get("fdcId")
@@ -746,7 +747,7 @@ def usda_import(body: UsdaImport, request: Request, user: CurrentUser, conn: sql
     """Fetch a FoodData Central record into the one shared ``usda`` row for that ``fdc_id`` and link
     it to the caller (another person's import of the same food is reused, never exposed)."""
     cred = usda_credential(request, conn, user.id, user.can_use_shared)
-    data = _usda_get(f"/food/{body.fdc_id}", {}, cred.api_key, own_key=cred.scope == "own")
+    data = _usda_get(f"/food/{body.fdc_id}", {}, cred.api_key, guard=guard_id(cred, user.id), own_key=cred.scope == "own")
     if not isinstance(data, Mapping):
         raise HTTPException(status_code=502, detail="USDA returned an unexpected record")
     parsed = usda_record_to_food(data, body.fdc_id)

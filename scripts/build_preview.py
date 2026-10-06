@@ -39,13 +39,13 @@ FOODS_JSON = ROOT / "data" / "foods.json"
 DEFAULT_OUT = ROOT / "build" / "kidney-diet-log.html"  # build/ is gitignored
 MAX_BYTES = 16 * 1024 * 1024  # the preview host's page size limit
 
-_HEAD_RE = re.compile(r"<head\b[^>]*>(.*?)</head\s*>", re.S | re.I)
-_BODY_RE = re.compile(r"<body\b[^>]*>(.*?)</body\s*>", re.S | re.I)
-_TITLE_RE = re.compile(r"<title>(.*?)</title>", re.S | re.I)
+_HEAD_RE = re.compile(r"<head\b[^>]*>(.*?)</head\b[^>]*>", re.S | re.I)
+_BODY_RE = re.compile(r"<body\b[^>]*>(.*?)</body\b[^>]*>", re.S | re.I)
+_TITLE_RE = re.compile(r"<title\b[^>]*>(.*?)</title\b[^>]*>", re.S | re.I)
 _DESCRIPTION_RE = re.compile(r"""<meta\s+name=["']description["']\s+content=["']([^"']*)["']\s*/?>""", re.I)
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 # A <link ...> or a whole <script ...>...</script>, in document order.
-_ASSET_RE = re.compile(r"<link\b[^>]*>|<script\b[^>]*>.*?</script\s*>", re.S | re.I)
+_ASSET_RE = re.compile(r"<link\b[^>]*>|<script\b[^>]*>.*?</script\b[^>]*>", re.S | re.I)
 _ATTR_RE = re.compile(r"""([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?""")
 
 

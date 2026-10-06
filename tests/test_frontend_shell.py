@@ -140,6 +140,9 @@ def test_service_worker_template_caches_exactly_the_shell() -> None:
     assert "url.searchParams.has('reauth')" in sw
     # an update waits for the person's Reload: skipWaiting only on the page's SKIP_WAITING message
     assert sw.count("self.skipWaiting()") == 1 and "if (event.data === 'SKIP_WAITING') self.skipWaiting();" in sw
+    # and only from this app's own pages: the message handler checks the sender's origin first
+    handler = sw[sw.index("addEventListener('message'"):]
+    assert handler.index("event.origin !== self.location.origin") < handler.index("self.skipWaiting()")
 
 
 def test_manifest() -> None:
