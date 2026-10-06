@@ -162,6 +162,11 @@ def test_slots_and_labelled_controls_exist() -> None:
     # "Used to treat a low": a labelled checkbox described by its hint
     box = PAGE.by_id["entry-hypo"]
     assert box["type"] == "checkbox" and "entry-hypo" in PAGE.label_for and box["aria-describedby"] == "entry-hypo-hint"
+    assert "entry-hypo-hint" in PAGE.by_id
+    # ... under the warnings it changes and above the ideas it switches, so the food's warnings stay where
+    # they were (above the fold on a phone: tools/e2e/sandbox.py checks the banana sheet at 375 x 812).
+    order = [INDEX.index(f'id="{x}"') for x in ("entry-note", "entry-warnings", "entry-hypo-row", "entry-guidance")]
+    assert order == sorted(order), "the entry sheet order is note, warnings, 'Used to treat a low', guidance"
     # Saved meals: "Meant for" offers every meal and "any"
     assert "meal-hint" in PAGE.label_for
     assert PAGE.options["meal-hint"] == ["", *get_args(models.Meal)]
@@ -216,8 +221,11 @@ def test_the_view_uses_no_html_sinks_and_marks_lists() -> None:
     assert "role: 'status'" in VIEW and "aria-live" in INDEX
     # A low treatment is shown as information, never as a warning, and is never sent to AI for a swap.
     assert "renderHypoNote" in VIEW and "res.mode === 'normal' ? aiSwapBlock" in VIEW
-    # Offline: the "Treating a low" card comes from the browser twin of the server's text.
+    # Offline: the "Treating a low" card comes from the browser twin of the server's text, and the last
+    # answers are kept in memory only (guidance answers are health data: never in browser storage).
     assert "GE.M.treatingALowCard(dose)" in VIEW
+    for storage in ("localStorage", "sessionStorage", "indexedDB", "caches."):
+        assert storage not in VIEW, storage
 
 
 def test_settings_view_lists_the_guidance_keys() -> None:

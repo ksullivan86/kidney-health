@@ -78,7 +78,7 @@ and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). If your prof
 diabetes, **Today** has a **Treating a low** button: it shows what to do and your own low-treatment
 foods at your dose, lowest potassium first, each with **Log it**. It works even with meal guidance
 switched off, and without a connection it still shows what to do. When you log a low treatment, keep
-**Used to treat a low** ticked (it is ticked for you for glucose tablets, glucose gel and the other
+**Used to treat a low** ticked (in the food sheet, under the food's numbers; it is ticked for you for glucose tablets, glucose gel and the other
 low-treatment foods; you can tick it for any food you used, and untick it when, say, apple juice was
 part of a meal). Low treatments count toward
 potassium, phosphorus, sodium and fluid (you really had them) but are left out of the meal

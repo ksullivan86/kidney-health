@@ -53,6 +53,14 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
   swaps 4, plan-day 38, insights 2; 1,975 foods + 60 days + 100 saved meals: what-fits 20, swaps 6, plan-day 45,
   insights day 3 / period 3, hypo 5; cold first call ≤ 120 ms. All far under the 200 ms p95 request budget.
 
+* Third attempt (after a container restart cut the sandbox run): the sandbox flagged two phone issues caused by
+  this role: (1) the "Used to treat a low" row above Servings pushed the banana sheet's first warning below the
+  footer (738 px > 711 px) → the row now sits under #entry-warnings (it changes them) and above #entry-guidance
+  (it switches them), 44 px tall, hint hidden while ticked (the hypo note says it); (2) "Plan a day…" + "Copy
+  day…" overflowed at 320 px → .plan-actions wraps. Info icon colours moved from SVG attributes (var()) to CSS
+  classes. Re-run: `sandbox.py --only top-phone-light-none` → 0 issues; `walk.py real` 4 configs → 0 issues.
+  tests/test_guidance_ui.py now also locks the entry-sheet order and "no browser storage" in the view.
+
 ## Handoffs / findings for other owners
 * SAFETY (guidance backend): What fits now suggests "Spirits (gin, rum, vodka, whiskey), 80 proof" as an extra (no carbs,
   no potassium). Alcohol raises the risk of hypoglycaemia in type 1 diabetes; suggest never offering alcoholic drinks
