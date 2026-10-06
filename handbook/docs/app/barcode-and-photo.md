@@ -41,13 +41,14 @@ The server looks in this order and stops at the first match:
 
 | Order | Source | Needs |
 |---|---|---|
-| 1 | Foods you already saved with this barcode | nothing |
-| 2 | Products someone on your server looked up before | nothing |
-| 3 | **Open Food Facts**, a free database that anyone can edit | the admin must switch it on |
+| 1 | Foods you already saved with this barcode, and products you scanned before | nothing |
+| 2 | Products someone on your server looked up before | the same as 3 or 4: you get them only if you could look them up yourself |
+| 3 | **Open Food Facts**, a free database that anyone can edit | the admin switches it on **and** you agree in **Settings → Food data** |
 | 4 | **USDA FoodData Central, branded foods** (US products) | a USDA key, shared by the admin or your own |
 
 **Open Food Facts is off until your admin switches it on** in **Settings** or on the first-run setup
-screen ([architecture contract][ARCH], v0.3 item 8). Its data is shared under the Open Database License,
+screen ([architecture contract][ARCH], v0.3 item 8), and then each person decides for their own scans
+with **"Send barcodes I scan to Open Food Facts"**. Its data is shared under the Open Database License,
 and the app shows "Product data © Open Food Facts contributors (ODbL)" on those foods
 ([Open Food Facts][OFF-API]; [ODbL][ODBL]). USDA data is public domain ([USDA API guide][FDC-API]).
 
@@ -119,6 +120,10 @@ many or too few. Weigh or measure when it matters.
   for HTTPS.
 - **The camera shows a black picture.** Use the photo button instead.
 - **"Barcode lookups are off."** Ask your admin to switch on Open Food Facts, or use Quick add.
+- **"Turn on 'Send barcodes I scan to Open Food Facts'"**: your admin switched lookups on, but they only
+  happen for you after you agree in **Settings → Food data**.
+- **"This is a store barcode for a weighed item."** Deli, meat and produce labels printed in the shop are
+  only unique inside that shop, so the app does not look them up. Use Quick add.
 - **"Try again in a minute."** Open Food Facts allows each server 15 product lookups a minute, so
   the server spaces them out ([Open Food Facts][OFF-API]).
 - **The product is wrong or the numbers look odd.** Compare with the package. If they differ, use

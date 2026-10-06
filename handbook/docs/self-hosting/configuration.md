@@ -97,6 +97,11 @@ Proxy mode refuses to start if `TRUSTED_PROXIES` contains `0.0.0.0/0` or `::/0`
 | `OFF_BASE_URL` | `https://world.openfoodfacts.org` | Env only (never editable in the app); `https://` required. |
 | `OFF_RATE_PER_MINUTE` | 10 (at most 15) | Server-wide lookup pace. |
 | `BARCODE_NEGATIVE_TTL_HOURS` | 24 | How long "not found" is remembered. |
+| `USDA_BRANDED_BARCODE` | `true` | Also look barcodes up in USDA FoodData Central (needs a USDA key). |
+
+Each of these except `OFF_BASE_URL` is also a server setting an admin can change in **Settings**; setting
+the variable locks it. Each person still decides whether their own scans go to Open Food Facts
+(**Settings → Food data**).
 
 ([design note 03][NOTE03])
 
