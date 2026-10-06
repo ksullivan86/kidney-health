@@ -17,7 +17,8 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const KH = root.KH || (root.KH = {});
 
-  // type: 'bool' | 'int' (min/max) | 'str' (minLength/maxLength, stripped) | 'choice' (options)
+  // type: 'bool' | 'int' (min/max) | 'str' (minLength/maxLength, stripped) | 'choice' (options) |
+  //       'object' (a pydantic model with extra="forbid": `fields`, each a scalar type above or 'list' of one)
   const DEFS = [
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
@@ -28,6 +29,27 @@
       label: 'Look up barcodes with Open Food Facts',
       help: "Off by default. When on, a barcode that is not in this server's food list is looked up at world.openfoodfacts.org "
         + '(only the barcode number is sent). Product data is under the Open Database License.' },
+    // Meal guidance (note 06 §4.14; app/settings_registry.py GuidancePreferences). "Not for me" foods are not here:
+    // they are rows of food_preferences (PUT/DELETE /api/guidance/not-for-me/{food_id}).
+    { key: 'guidance', type: 'object', model: 'GuidancePreferences', scope: 'user', env: null,
+      default: { enabled: true, carb_tolerance_g: 10, hypo_dose_g: 15, exclude_categories: [], show_plan_builder: true, show_insights: true, ai_enrich: false },
+      fields: [
+        { name: 'enabled', type: 'bool', default: true },
+        { name: 'carb_tolerance_g', type: 'int', min: 5, max: 20, default: 10 },
+        { name: 'hypo_dose_g', type: 'int', min: 5, max: 30, default: 15 },
+        { name: 'exclude_categories', type: 'list', item: { type: 'str', minLength: 1, maxLength: 100 }, maxItems: 50, unique: true, default: [] },
+        { name: 'show_plan_builder', type: 'bool', default: true },
+        { name: 'show_insights', type: 'bool', default: true },
+        { name: 'ai_enrich', type: 'bool', default: false },
+      ],
+      label: 'Meal guidance preferences', help: 'carb_tolerance_g (5–20) and hypo_dose_g (5–30) come from your diabetes team.' },
+    { key: 'guidance.beam_width', type: 'int', min: 1, max: 64, default: 16, scope: 'instance', env: 'GUIDANCE_BEAM_WIDTH',
+      label: 'Plan builder: search width', help: 'Partial meals kept at each step. 8 is about 15 % faster and finds slightly worse meals.' },
+    { key: 'guidance.enabled', type: 'bool', default: true, scope: 'instance', env: 'GUIDANCE_ENABLED',
+      label: 'Meal guidance', help: 'Rule-based suggestions for the next meal, swap ideas, plan-the-day and insights. Works without AI.' },
+    { key: 'guidance.pool_per_role', type: 'int', min: 20, max: 2000, default: 200, scope: 'instance', env: 'GUIDANCE_POOL_PER_ROLE',
+      label: 'Plan builder: foods considered per role',
+      help: 'Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.' },
     { key: 'instance.name', type: 'str', minLength: 1, maxLength: 80, default: 'Kidney Health', scope: 'instance', env: 'INSTANCE_NAME',
       label: 'Server name', help: "Shown on the sign-in page and in the app's title." },
     { key: 'providers.usda.daily_limit_per_user', type: 'int', min: 0, max: 100000, default: 200, scope: 'instance', env: 'USDA_SHARED_DAILY_LIMIT',
@@ -120,6 +142,36 @@
       }
       case 'choice':
         return def.options.includes(value) ? { value } : { error: choiceMessage(def.options) };
+      case 'list': {
+        if (!Array.isArray(value)) return { error: 'Input should be a valid list' };
+        const errors = [];
+        let out = [];
+        for (const item of value) {
+          const r = validate(def.item, item);
+          if (r.error) errors.push(r.error); else out.push(r.value);
+        }
+        if (errors.length) return { error: errors.join('; ') };
+        if (def.maxItems != null && out.length > def.maxItems) {
+          return { error: `List should have at most ${def.maxItems} item${def.maxItems === 1 ? '' : 's'} after validation, not ${out.length}` };
+        }
+        if (def.unique) out = out.filter((x, i) => out.indexOf(x) === i);
+        return { value: out };
+      }
+      case 'object': {
+        // pydantic: every field's errors in field order, then one per unknown key in input order, joined by "; ".
+        if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+          return { error: `Input should be a valid dictionary or instance of ${def.model}` };
+        }
+        const errors = [];
+        const out = {};
+        for (const f of def.fields) {
+          if (!Object.prototype.hasOwnProperty.call(value, f.name)) { out[f.name] = JSON.parse(JSON.stringify(f.default)); continue; }
+          const r = validate(f, value[f.name]);
+          if (r.error) errors.push(r.error); else out[f.name] = r.value;
+        }
+        for (const k of Object.keys(value)) if (!def.fields.some((f) => f.name === k)) errors.push('Extra inputs are not permitted');
+        return errors.length ? { error: errors.join('; ') } : { value: out };
+      }
       default:
         return { value };
     }

@@ -148,12 +148,13 @@
   }
   const INT_UNITS = new Set(['mg', 'mL']);
   function isIntUnit(key) { const n = NUT[key]; return !!n && INT_UNITS.has(n.unit); }
-  // nutrients.round_value: mg and mL to integers, everything else (kcal included) to 1 decimal.
+  // nutrients.round_value: mg and mL to integers, everything else (kcal included) to 1 decimal. The integer
+  // branch is Python's int(), which has no negative zero (-0.3 mg is 0, while -0.04 g stays -0.0).
   function roundValue(key, v) {
     if (v == null) return null;
     v = Number(v);
     if (!Number.isFinite(v)) return null;
-    return isIntUnit(key) ? halfUp(v, 0) : halfUp(v, 1);
+    return isIntUnit(key) ? halfUp(v, 0) + 0 : halfUp(v, 1);
   }
   function roundNutrients(values) {
     const out = {};
