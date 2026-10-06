@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 import sqlite3
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -21,7 +23,9 @@ import time
 import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from . import credentials
+from . import additives, credentials, egress
+from .gtin import loose_gtin14, usda_candidates
+from .textclean import clean_label, clean_text
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
 from .db import get_db, get_meta, set_meta, utcnow
@@ -55,6 +59,11 @@ FOODS_JSON_VERSION_KEY = "foods_json_version"
 USDA_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 USDA_TIMEOUT_S = 10.0
 USDA_PAGE_SIZE = 25
+USDA_MAX_RESPONSE_BYTES = 2 * 1024 * 1024  # decoded; note 03 §9 B6 (2 MiB for FoodData Central records)
+USDA_BRANDED_PAGE_SIZE = 10
+USDA_LICENSE = "CC0-1.0"
+USDA_HOME_URL = "https://fdc.nal.usda.gov/"  # FoodData Central has no stable public per-food page
+USDA_ATTRIBUTION_TEXT = "Product data: USDA FoodData Central (public domain, CC0)"
 
 MAX_SEARCH_QUERY_CHARS = 200
 MAX_SEARCH_WORDS = 10
@@ -503,11 +512,19 @@ def search_foods(
 
 
 def usda_client() -> httpx2.Client:
-    """HTTP client for FoodData Central (tests monkeypatch this)."""
+    """HTTP client for FoodData Central (tests monkeypatch this).
+
+    Goes through the SSRF-checked transport (:mod:`app.egress`): the address of ``api.nal.usda.gov`` is
+    resolved and checked on every request and redirects are never followed.
+    """
     return httpx2.Client(
         base_url=USDA_BASE_URL,
         timeout=USDA_TIMEOUT_S,
-        headers={"User-Agent": "kidney-health/0.1 (self-hosted food log)"},
+        follow_redirects=False,
+        trust_env=False,
+        transport=egress.CheckedTransport(),
+        headers={"User-Agent": "kidney-health/0.3 (self-hosted food log)", "Accept": "application/json",
+                 "Accept-Encoding": "gzip"},
     )
 
 
@@ -559,26 +576,57 @@ def _note_rate_limit(guard: str, resp: httpx2.Response) -> None:
         log.warning("a USDA key has %d requests left this hour; pausing lookups with it for an hour", remaining)
 
 
-def _usda_get(path: str, params: Mapping[str, Any], api_key: str, *, guard: str, own_key: bool = False) -> Any:
+class UsdaError(Exception):
+    """A FoodData Central call failed; ``status`` is what the API route answers (404, 429, 502, 503)."""
+
+    def __init__(self, status: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+
+
+def _usda_fetch(path: str, params: Mapping[str, Any], api_key: str, *, guard: str, own_key: bool = False) -> Any:
+    """GET a FoodData Central path and return its JSON, or raise :class:`UsdaError`.
+
+    The body is read with a cap of :data:`USDA_MAX_RESPONSE_BYTES` decoded bytes (note 03 §9 B6) and must
+    be JSON. A rejected own key is reported as such and never retried with the shared one (note 04).
+    """
     try:
-        with usda_client() as client:
-            resp = client.get(path, params=params, headers={"X-Api-Key": api_key})
+        with usda_client() as client, client.stream("GET", path, params=params, headers={"X-Api-Key": api_key}) as resp:
+            _note_rate_limit(guard, resp)
+            status = resp.status_code
+            content_type = resp.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            body = egress.read_capped(resp, USDA_MAX_RESPONSE_BYTES) if status == 200 and content_type == "application/json" else None
+    except egress.ResponseTooLarge:
+        log.warning("USDA answer was larger than %d bytes; refused", USDA_MAX_RESPONSE_BYTES)
+        raise UsdaError(502, "USDA returned an answer that is too large") from None
     except httpx2.HTTPError as exc:
         log.warning("USDA request failed: %s", exc.__class__.__name__)
-        raise HTTPException(status_code=502, detail=f"USDA request failed: {exc.__class__.__name__}") from exc
-    _note_rate_limit(guard, resp)
-    if resp.status_code == 404:
-        raise HTTPException(status_code=404, detail="USDA food not found")
-    if resp.status_code in (401, 403):
-        # A rejected own key is reported as such and never retried with the shared one (note 04).
+        raise UsdaError(502, f"USDA request failed: {exc.__class__.__name__}") from exc
+    if status == 404:
+        raise UsdaError(404, "USDA food not found")
+    if status in (401, 403):
         detail = "Your USDA key was rejected. Check it in Settings → Food data." if own_key else "USDA API key was rejected"
-        raise HTTPException(status_code=503, detail=detail)
-    if resp.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"USDA returned HTTP {resp.status_code}")
+        raise UsdaError(503, detail)
+    if status == 429:
+        raise UsdaError(429, "USDA says the key is over its rate limit. Try again later.")
+    if status >= 300:
+        raise UsdaError(502, f"USDA returned HTTP {status}")
+    if body is None:
+        raise UsdaError(502, "USDA did not answer with JSON")
     try:
-        return resp.json()
+        return json.loads(body)
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail="USDA returned invalid JSON") from exc
+        raise UsdaError(502, "USDA returned invalid JSON") from exc
+
+
+def _usda_get(path: str, params: Mapping[str, Any], api_key: str, *, guard: str, own_key: bool = False) -> Any:
+    """:func:`_usda_fetch` for the USDA routes: a failure becomes the matching HTTP error."""
+    try:
+        return _usda_fetch(path, params, api_key, guard=guard, own_key=own_key)
+    except UsdaError as exc:
+        headers = {"Retry-After": "3600"} if exc.status == 429 else None
+        raise HTTPException(status_code=exc.status, detail=exc.detail, headers=headers) from exc
 
 
 def _usda_category_str(value: Any) -> str | None:
@@ -593,16 +641,16 @@ def _usda_category_str(value: Any) -> str | None:
 def _usda_serving(data: Mapping[str, Any]) -> tuple[float, str]:
     """``(serving_g, serving_desc)``: first household portion, else branded serving size, else 100 g."""
     for portion in data.get("foodPortions") or []:
-        try:
-            grams = float(portion.get("gramWeight"))
-        except (TypeError, ValueError):
+        if not isinstance(portion, Mapping):
             continue
-        if grams <= 0:
+        grams = _finite(portion.get("gramWeight"))
+        if not grams or grams > 100_000:
             continue
         amount = portion.get("amount")
-        unit = str((portion.get("measureUnit") or {}).get("name") or "").strip()
-        modifier = str(portion.get("modifier") or "").strip()
-        description = str(portion.get("portionDescription") or "").strip()
+        measure = portion.get("measureUnit") if isinstance(portion.get("measureUnit"), Mapping) else {}
+        unit = clean_label(measure.get("name"), max_len=40) or ""
+        modifier = clean_label(portion.get("modifier"), max_len=60) or ""
+        description = clean_label(portion.get("portionDescription"), max_len=80) or ""
         parts: list[str] = []
         try:
             if amount:
@@ -618,27 +666,72 @@ def _usda_serving(data: Mapping[str, Any]) -> tuple[float, str]:
         label = " ".join(parts).strip() or "1 serving"
         return grams, f"{label} ({grams:g} g)"
 
-    serving_size = data.get("servingSize")
+    serving_size = _finite(data.get("servingSize"))
     unit = str(data.get("servingSizeUnit") or "").lower()
-    if serving_size and unit in ("g", "grm", "ml", "mlt"):
-        grams = float(serving_size)
-        household = str(data.get("householdServingFullText") or "").strip()
-        return grams, (f"{household} ({grams:g} g)" if household else f"{grams:g} g")
+    if serving_size and 0 < serving_size <= 100_000 and unit in ("g", "grm", "ml", "mlt"):
+        grams = serving_size
+        shown = "mL" if unit in ("ml", "mlt") else "g"  # millilitres are counted as grams (1 mL ≈ 1 g)
+        household = clean_label(data.get("householdServingFullText"), max_len=40)
+        return grams, (f"{household} ({grams:g} {shown})" if household else f"{grams:g} {shown}")
     return 100.0, "100 g"
 
 
-def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
-    """Map a FoodData Central ``/food/{id}`` record to ``insert_food`` keyword arguments."""
-    description = str(data.get("description") or f"USDA food {fdc_id}").strip()
-    brand = data.get("brandOwner") or data.get("brandName") or None
+# labelNutrients (per serving, as printed on a branded label) → registry key. The FoodData Central
+# OpenAPI spells potassium "postassium"; both spellings are accepted (note 03 F3).
+USDA_LABEL_NUTRIENTS: dict[str, str] = {
+    "calories": "calories_kcal", "protein": "protein_g", "fat": "fat_g", "saturatedFat": "sat_fat_g",
+    "carbohydrates": "carbs_g", "fiber": "fiber_g", "sugars": "sugar_g", "sodium": "sodium_mg",
+    "potassium": "potassium_mg", "postassium": "potassium_mg", "calcium": "calcium_mg",
+}
+
+
+@dataclass
+class UsdaMapped:
+    """A FoodData Central record mapped for ``insert_food`` plus the barcode fields (note 03 R4)."""
+
+    kwargs: dict[str, Any]
+    gtin14: str | None = None
+    ingredients_text: str | None = None
+    additives: list[str] = field(default_factory=list)
+    quality: list[str] = field(default_factory=list)
+
+
+def _finite(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number >= 0 else None
+
+
+def _label_value(item: Any) -> float | None:
+    return _finite(item.get("value")) if isinstance(item, Mapping) else _finite(item)
+
+
+def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
+    """Map a FoodData Central ``/food/{id}`` record (SR Legacy, Foundation or Branded).
+
+    * Text (description, brand, ingredients) is cleaned like Open Food Facts text (note 03 §9 B3).
+    * Serving: the first household portion, else the branded ``servingSize`` (g or mL), else 100 g.
+    * Branded records with ``labelNutrients`` use those per-serving label values (they are what the
+      package says); every other value is ``foodNutrients`` per 100 g scaled to the serving. A value
+      the record does not report is ``None``, never 0.
+    * The ingredient list goes through the additive scan, so ``phosphate_additive``,
+      ``potassium_additive`` and ``avoid_ckd`` are set for FDC data as for Open Food Facts.
+    """
+    description = clean_label(data.get("description"), max_len=200) or f"USDA food {fdc_id}"
+    brand = clean_label(data.get("brandOwner") or data.get("brandName"), max_len=200)
     usda_category = _usda_category_str(data.get("foodCategory")) or _usda_category_str(data.get("brandedFoodCategory"))
+    usda_category = clean_label(usda_category, max_len=100)
     category = USDA_CATEGORY_MAP.get(usda_category or "", usda_category)
 
     per_100g: dict[str, float] = {}
     for item in data.get("foodNutrients") or []:
         if not isinstance(item, Mapping):
             continue
-        nutrient = item.get("nutrient") or {}
+        nutrient = item.get("nutrient") if isinstance(item.get("nutrient"), Mapping) else {}
         candidates = (
             str(nutrient.get("number") or ""),
             str(nutrient.get("id") or ""),
@@ -648,21 +741,34 @@ def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
         key = next((USDA_NUTRIENT_NUMBERS[c] for c in candidates if c in USDA_NUTRIENT_NUMBERS), None)
         if key is None or key in per_100g:
             continue
-        amount = item.get("amount", item.get("value"))
-        if amount is None:
-            continue
-        try:
-            per_100g[key] = float(amount)
-        except (TypeError, ValueError):
-            continue
+        amount = _finite(item.get("amount", item.get("value")))
+        if amount is not None:
+            per_100g[key] = amount
 
     serving_g, serving_desc = _usda_serving(data)
+    quality: list[str] = []
+    if serving_desc == "100 g" and not data.get("foodPortions") and not data.get("servingSize"):
+        quality.append("no_serving")
+    unit = str(data.get("servingSizeUnit") or "").lower()
+    is_ml = unit in ("ml", "mlt") and not data.get("foodPortions")
+    if is_ml:
+        quality.append("ml_as_g")
     scale = serving_g / 100.0
     nutrients: dict[str, float | None] = {
         key: (per_100g[key] * scale if key in per_100g else None) for key in NUTRIENT_KEYS if key != "fluid_ml"
     }
+    labels = data.get("labelNutrients")
+    if isinstance(labels, Mapping) and data.get("servingSize") and not data.get("foodPortions"):
+        for label_key, key in USDA_LABEL_NUTRIENTS.items():
+            value = _label_value(labels.get(label_key))
+            if value is not None:
+                nutrients[key] = value
+
     flags: list[str] = []
-    is_beverage = category == "Beverages" or bool(usda_category and "beverage" in usda_category.lower())
+    ingredients = clean_text(data.get("ingredients"), max_len=additives.MAX_INGREDIENTS_CHARS, keep_newlines=True)
+    scan = additives.scan([], ingredients, description)
+    flags.extend(scan.flags)
+    is_beverage = is_ml or category == "Beverages" or bool(usda_category and "beverage" in usda_category.lower())
     if is_beverage:
         flags.append("counts_as_fluid")
         water = per_100g.get("fluid_ml")
@@ -670,22 +776,68 @@ def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
     else:
         nutrients["fluid_ml"] = 0.0
 
-    missing = [NUTRIENT_BY_KEY[k].label.lower() for k in ("potassium_mg", "phosphorus_mg") if k not in per_100g]
-    kidney_notes = (
-        f"USDA record does not report {' or '.join(missing)}; treat it as unknown, not zero."
-        if missing
-        else None
+    missing = [NUTRIENT_BY_KEY[k].label.lower() for k in ("potassium_mg", "phosphorus_mg") if nutrients.get(k) is None]
+    for k in ("potassium_mg", "phosphorus_mg"):
+        if nutrients.get(k) is None:
+            quality.append(k.split("_")[0] + "_unknown")
+    notes: list[str] = []
+    if scan.kidney_notes:
+        notes.append(scan.kidney_notes)
+    if missing:
+        notes.append(f"USDA record does not report {' or '.join(missing)}; treat it as unknown, not zero.")
+    notes.extend(n for n in scan.notes if not scan.kidney_notes)
+    kidney_notes = " ".join(notes)[:1000] or None
+    return UsdaMapped(
+        kwargs={
+            "name": description,
+            "brand": brand,
+            "category": category,
+            "serving_desc": serving_desc,
+            "serving_g": serving_g,
+            "nutrients": nutrients,
+            "flags": flags,
+            "kidney_notes": kidney_notes,
+        },
+        gtin14=loose_gtin14(data.get("gtinUpc")),
+        ingredients_text=ingredients,
+        additives=scan.additives,
+        quality=quality,
     )
-    return {
-        "name": description,
-        "brand": str(brand).strip() if brand else None,
-        "category": category,
-        "serving_desc": serving_desc,
-        "serving_g": serving_g,
-        "nutrients": nutrients,
-        "flags": flags,
-        "kidney_notes": kidney_notes,
-    }
+
+
+def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
+    """Map a FoodData Central ``/food/{id}`` record to ``insert_food`` keyword arguments."""
+    return map_usda_record(data, fdc_id).kwargs
+
+
+def usda_find_by_gtin(gtin14: str, api_key: str, *, guard: str, own_key: bool = False) -> tuple[int, dict[str, Any]] | None:
+    """Find a branded FoodData Central record for a GTIN-14 (note 03 R4): search each form of
+    :func:`app.gtin.usda_candidates` (at most three calls) and accept only a result whose ``gtinUpc``,
+    padded to 14 digits, equals ours exactly; then fetch that record. ``None`` when no form matches.
+    Raises :class:`UsdaError` on an upstream failure."""
+    for form in usda_candidates(gtin14):
+        data = _usda_fetch(
+            "/foods/search", {"query": form, "dataType": "Branded", "pageSize": USDA_BRANDED_PAGE_SIZE},
+            api_key, guard=guard, own_key=own_key,
+        )
+        foods = data.get("foods") if isinstance(data, Mapping) else None
+        for item in foods if isinstance(foods, list) else []:
+            if not isinstance(item, Mapping) or loose_gtin14(item.get("gtinUpc")) != gtin14:
+                continue
+            try:
+                fdc_id = int(item.get("fdcId"))
+            except (TypeError, ValueError):
+                continue
+            if not 0 < fdc_id < 2**63:
+                continue
+            record = _usda_fetch(f"/food/{fdc_id}", {}, api_key, guard=guard, own_key=own_key)
+            if not isinstance(record, Mapping):
+                raise UsdaError(502, "USDA returned an unexpected record")
+            if loose_gtin14(record.get("gtinUpc")) not in (None, gtin14):
+                log.warning("USDA record %s carries another barcode than its search result; ignored", fdc_id)
+                return None
+            return fdc_id, dict(record)
+    return None
 
 
 # --------------------------------------------------------------------------- #
