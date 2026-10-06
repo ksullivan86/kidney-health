@@ -545,11 +545,11 @@ async def probe(client: ChatClient, cfg: ProviderConfig, *, error_snippet: Calla
             return out
 
     for mode in ("json_schema", "json_object", "prompt"):
-        out["requests"] += 1
         user = PROBE_TEXT if mode == "json_schema" else f"{PROBE_TEXT}\n{_schema_text(PROBE_SCHEMA)}"
         body = build_body(cfg, system=PROBE_SYSTEM, user_text=user, schema=PROBE_SCHEMA, schema_name="probe", mode=mode)  # type: ignore[arg-type]
         body[cfg.preset_def.token_field] = 50
         result = await client.complete_json(cfg, body, _ok_validator({"ok": "yes"}))
+        out["requests"] += len(result.bodies)
         if result.status == "ok":
             out["structured"] = mode
             break
@@ -564,7 +564,6 @@ async def probe(client: ChatClient, cfg: ProviderConfig, *, error_snippet: Calla
         return out
 
     if cfg.vision_model:
-        out["requests"] += 1
         image = "data:image/png;base64," + base64.b64encode(red_square_png()).decode("ascii")
         mode = out["structured"]
         user = VISION_TEXT if mode == "json_schema" else f"{VISION_TEXT}\n{_schema_text(VISION_SCHEMA)}"
@@ -572,6 +571,7 @@ async def probe(client: ChatClient, cfg: ProviderConfig, *, error_snippet: Calla
                           schema_name="vision_probe", mode=mode, vision=True)
         body[cfg.preset_def.token_field] = 50
         result = await client.complete_json(cfg, body, _ok_validator({"color": "red"}), vision=True)
+        out["requests"] += len(result.bodies)
         out["vision"] = {"ok": result.status == "ok", "error": None if result.status == "ok" else (result.error or result.status)}
         if result.status != "ok":
             out["warnings"].append("the vision model did not recognise a red square; photo features may not work")

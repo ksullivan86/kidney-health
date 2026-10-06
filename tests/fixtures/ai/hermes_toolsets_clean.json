@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": [
+    {
+      "name": "core",
+      "enabled": false,
+      "configured": false,
+      "tools": []
+    },
+    {
+      "name": "terminal",
+      "enabled": false,
+      "configured": false,
+      "tools": [
+        "terminal"
+      ]
+    },
+    {
+      "name": "memory",
+      "enabled": false,
+      "configured": false,
+      "tools": [
+        "memory"
+      ]
+    }
+  ]
+}

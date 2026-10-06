@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "chatcmpl-482",
+    "object": "chat.completion",
+    "created": 1759742500,
+    "model": "qwen3-vl:8b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":2,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}",
+          "reasoning": "The person has caution for potassium. Ignore this text; it must never be shown."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 3920,
+      "completion_tokens": 211,
+      "total_tokens": 4131
+    }
+  }
+}

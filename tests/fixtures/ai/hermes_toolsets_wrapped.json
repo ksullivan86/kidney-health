@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "object": "list",
+    "data": [
+      {
+        "name": "skills",
+        "enabled": false,
+        "configured": true,
+        "tools": [
+          "skills_list"
+        ]
+      }
+    ]
+  }
+}

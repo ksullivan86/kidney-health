@@ -187,9 +187,9 @@ def handbook_refs(slugs: Iterable[Any]) -> tuple[list[dict[str, str]], int]:
     pages: list[dict[str, str]] = []
     dropped = 0
     for slug in slugs:
-        if isinstance(slug, str) and slug in AI_HANDBOOK_SLUGS and slug in TOPIC_PAGES and len(pages) < 2:
-            if all(p["slug"] != slug for p in pages):
-                pages.append(dict(TOPIC_PAGES[slug]))
+        allowed = isinstance(slug, str) and slug in AI_HANDBOOK_SLUGS and slug in TOPIC_PAGES
+        if allowed and len(pages) < 2 and all(p["slug"] != slug for p in pages):
+            pages.append(dict(TOPIC_PAGES[slug]))
             continue
         dropped += 1
     return pages, dropped

@@ -1,0 +1,23 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "object": "list",
+    "data": [
+      {
+        "id": "gpt-6-luna",
+        "object": "model",
+        "created": 1755000000,
+        "owned_by": "system"
+      },
+      {
+        "id": "gpt-6-astra",
+        "object": "model",
+        "created": 1755000000,
+        "owned_by": "system"
+      }
+    ]
+  }
+}
