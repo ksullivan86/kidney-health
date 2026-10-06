@@ -72,7 +72,10 @@ your own meals.
 ## Low treatments
 
 Treat a low first, with 15 g of fast carbohydrate when your glucose is under 70 mg/dL (3.9 mmol/L),
-and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). Low treatments count toward
+and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). When you log it, keep
+**Used to treat a low** ticked (it is ticked for you for glucose tablets, glucose gel and the other
+low-treatment foods; you can tick it for any food you used, and untick it when, say, apple juice was
+part of a meal). Low treatments count toward
 potassium, phosphorus, sodium and fluid (you really had them) but are left out of the meal
 carbohydrate check, and guidance never suggests a smaller dose. If a treatment had a lot of potassium, the app may add:
 "For your next low: Glucose gel (1 tube) gives 15 g carbs with 0 mg potassium."
@@ -91,7 +94,7 @@ what is left, and no more than 30 % of a day:
 You tap a baked potato with skin (1 medium: 37 g carbohydrate, 926 mg potassium). The sheet warns about
 potassium and offers swaps such as:
 
-> **Rice, white, cooked (¾ × 1 cup):** about the same carbs (33 g vs 37 g) and 885 mg less potassium
+> **Rice, white, long-grain, cooked (¾ × 1 cup):** about the same carbs (33 g vs 37 g) and 885 mg less potassium
 
 Because the carbohydrate is about the same, your usual meal plan still fits. You can take the swap,
 or keep the potato on another day and leach potatoes when you do
@@ -106,8 +109,10 @@ In **Settings → Meal guidance**:
 | Show meal guidance | on | hides every part when off |
 | How close to my meal carb goal counts as on target | 10 g | 5–20 g; ask your diabetes team |
 | Carbs I take to treat a low | 15 g | 5–30 g, from your diabetes team; used only for "for your next low" |
-| Never suggest | none | food groups to leave out, for example fish |
-| Not for me | none | single foods, added from any suggestion |
+| Show the plan builder | on | hides **Plan the rest of my day** when off |
+| Show insights | on | hides the insight notes when off |
+| Never suggest | none | food categories to leave out, for example Fish & Seafood |
+| Not for me | none | single foods (up to 500), added from any suggestion; they stay searchable and loggable |
 
 ## What to do
 
