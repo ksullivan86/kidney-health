@@ -662,7 +662,8 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 3 | `m003_accounts.py` | backend-core (M1) | note 07 §4.4 schema v3 (users, sessions, invites, user_profiles, `user_id` columns + triggers, settings tables, secrets, audit, login throttling) + automatic `kidney.db.pre-v3.bak` |
 | 4 | `m004_targets_labs.py` | targets (M2) | note 05 §4.6 (profile columns on `user_profiles`, `lab_results`) |
 | 5 | `m005_guidance_log.py` | guidance (M2) | note 06 §4.11 (`log_entries.purpose`, `meal_templates.meal_hint`, food preferences) **and** note 02 R5 `log_entries.client_id` + unique index (offline outbox) |
-| 6 | `m006_barcode_ai.py` | ai-barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) and note 04 (AI usage/audit tables with `ON DELETE CASCADE`) |
+| 6 | `m006_ai.py` | ai (M2) | note 04 (AI provider settings, usage/quota and audit tables with `ON DELETE CASCADE`) |
+| 7 | `m007_barcode.py` | barcode-vision (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
 
 ## Backend file ownership
 
@@ -674,7 +675,8 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Handbook (parallel) | `handbook/**`, `scripts/build_handbook.py`, `tests/test_handbook_content.py` |
 | M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/nutrients.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
-| M2 ai-barcode | `app/ai/**`, `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/vision.py`, `app/imagecheck.py`, `app/migrations/m006_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/ai.md`, `docs/barcode-and-photos.md`, their tests and fixtures |
+| M2 ai | `app/ai/**`, `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, its tests and fixtures |
+| M2 barcode-vision | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/vision.py`, `app/imagecheck.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md`, their tests and fixtures |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/README.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -756,6 +758,9 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   offline outbox; their UI and mock twins.
 * **M3 integration:** `/learn` mount and handbook build in the image, contributor docs, e2e
   harnesses in `tools/e2e/`, full review, preview rebuild, PR.
+
+M2 and M3 run as one build (owner's decision, 2026-10-06): one integration pass, one review,
+then a single **v0.3.0** release containing M1, M2, M3 and the handbook.
 
 ## M1 API
 
