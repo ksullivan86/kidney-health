@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # barcode (M2): barcode lookup, Open Food Facts, USDA branded, potassium_additive
 
@@ -129,6 +129,19 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * OFF "add product" link verified 2026-10-06: `cgi/product.pl?type=search_or_add&action=display&code=` (the
   spec's `type=add` is 404). FDC food pages have no stable public URL, so USDA attribution links to fdc.nal.usda.gov.
 * m007 waits for m006 (AI builder): discover() refuses a gap, so committing m007 first would break every start.
+
+## Final checks (2026-10-06, after the port)
+* `python -m pytest`: 2,713 collected, 2,711 pass; the 2 failures are only the settings.js twin
+  (`test_rules_vectors.py::test_js_engine_matches_vectors` settings part and
+  `test_settings_ui.py::test_engine_registry_lists_every_server_key`: the 4 food.* keys above and the guidance
+  keys, frontend-owned). The 568 barcode tests all pass.
+* `node tests/js/run_vectors.mjs`: rules 5,721 checks pass; settings 23 of 236 fail (same cause).
+* Live smoke on 127.0.0.1:8340 (main tree, real m006 + m007, live Open Food Facts through the proxy): 503
+  `off_consent_required` before consent; Diet Coke 200 (`off`, ODbL, phosphate_additive + counts_as_fluid,
+  potassium/phosphorus unknown) by UPC-A and EAN-13; Nutella 200 (sodium from salt); Lay's 200; 0099999999990
+  404 with `name` (see the incident); store code 400 `restricted`; log + CSV `source,source_license` =
+  `off,ODbL-1.0`; refresh 200. Server stopped.
+* ruff clean on every barcode file. Handbook strict build passed earlier (no handbook change since).
 
 ## Reproduce the checks
 ```
