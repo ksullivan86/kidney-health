@@ -430,10 +430,13 @@
   function safeUrl(url) { return /^https:\/\/[^\s"<>]+$/.test(String(url || '')) ? url : null; }
   function ruleMeta(rule) {
     const url = safeUrl(rule.url);
-    const source = url ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, rule.source, h('span', { class: 'sr-only' }, ' (opens in a new tab)')) : rule.source;
-    return h('p', { class: 'why-meta' },
-      h('span', { class: 'rule-id' }, `Rule ${rule.id}`), ' · Source: ', source, ` · Grade: ${rule.grade}`,
-      rule.opinion ? [' ', h('span', { class: 'badge opinion' }, 'Expert opinion'), rule.opinion_note ? h('span', { class: 'opinion-note' }, ` (${rule.opinion_note})`) : null] : null);
+    const source = url
+      ? h('a', { class: 'src-link', href: url, target: '_blank', rel: 'noopener noreferrer' }, `Source: ${rule.source}`, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
+      : h('span', {}, `Source: ${rule.source}`);
+    return h('div', { class: 'why-meta' },
+      h('p', {}, h('span', { class: 'rule-id' }, `Rule ${rule.id}`), ` · Grade: ${rule.grade}`,
+        rule.opinion ? [' ', h('span', { class: 'badge opinion' }, 'Expert opinion'), rule.opinion_note ? h('span', { class: 'opinion-note' }, ` (${rule.opinion_note})`) : null] : null),
+      h('p', {}, source));
   }
   function whyBlock(items) {
     return items.map(({ rule, note }) => h('div', { class: 'why-rule' }, note ? h('p', {}, note) : null, ruleMeta(rule)));
@@ -494,12 +497,13 @@
     // The inputs that would make it more personal.
     const missing = (res.missing_inputs || []).filter((k) => MISSING[k]);
     if (missing.length) {
-      box.append(h('p', { class: 'suggest-missing' }, 'For a more personal suggestion, add ',
-        missing.flatMap((k, i) => {
+      box.append(h('div', { class: 'suggest-missing' },
+        h('p', {}, 'For a more personal suggestion, add these, save the profile and suggest again:'),
+        h('div', { class: 'missing-btns' }, missing.map((k) => {
           const [words, id] = MISSING[k];
-          const btn = h('button', { class: 'link-btn inline', type: 'button', onclick: () => { const el = document.getElementById(id); revealField(el); el.focus(); } }, words);
-          return i === 0 ? [btn] : [i === missing.length - 1 ? ' and ' : ', ', btn];
-        }), ', save the profile and suggest again.'));
+          return h('button', { class: 'link-btn', type: 'button', onclick: () => { const el = document.getElementById(id); revealField(el); el.focus(); } },
+            words.charAt(0).toUpperCase() + words.slice(1));
+        }))));
     }
     if (end) box.append(h('p', { class: 'suggest-end' }, end));
     // How the numbers are worked out, and which details change them (the handbook, when there is one).

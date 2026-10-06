@@ -13,7 +13,8 @@ Emulates the claude.ai Artifact host as strictly as practical:
 * loads it top level AND inside an outer page's <iframe sandbox="allow-scripts"> (opaque origin:
   storage throws, alert/confirm/prompt suppressed, downloads and form submission blocked, no
   query string reaches the page);
-* walks the app (Today, Add, Plan, Trends, Profile, delete with in-page confirmation, banner) at
+* walks the app (Today, Add, Plan, Trends, Profile with the explained suggestion, Lab results, delete
+  with in-page confirmation, banner) at
   375x812 (touch, safe-area insets 47/34) and 1280x800, prefers-color-scheme light/dark and host
   data-theme dark/light, and records console errors, CSP violations, page errors, network
   requests other than the documents, horizontal overflow, elements outside the viewport,
@@ -511,7 +512,7 @@ class Run:
             self.F = page.main_frame
         else:
             self.F = page.wait_for_selector("iframe#app").content_frame()
-        self.F.wait_for_selector("#status-bars .stat, #view-plan:not([hidden]) .plan-day, #charts .chart-card, #view-profile:not([hidden]) #pf-weight, #food-results .row-btn, #view-settings:not([hidden]) #set-account-body .kv", timeout=10000)
+        self.F.wait_for_selector("#status-bars .stat, #view-plan:not([hidden]) .plan-day, #charts .chart-card, #view-profile:not([hidden]) #pf-weight, #food-results .row-btn, #view-settings:not([hidden]) #set-account-body .kv, #view-labs:not([hidden]) #labs-history .lab-row", timeout=10000)
         self.load_ms = int((time.time() - t0) * 1000)
 
     def finish(self):
@@ -772,6 +773,33 @@ class Run:
         self.checks("Profile", contrast=True)
         self.press("#btn-suggest", "Suggest targets", wait=self.wait_fn("() => !document.querySelector('#suggest-notes').hidden"))
         self.shot("profile-suggest")
+        self.press("#suggest-notes details.why > summary", "Why this number? (first target)", nth=0,
+                   wait=self.wait_fn("() => document.querySelector('#suggest-notes details.why').open"))
+        self.checks("Profile (suggestion explained)", contrast=True)
+
+        # ---- Lab results (note 05 §4.8): entry with the conversion echo, what it changed, banner, delete ----
+        self.press("#pf-open-labs", "Lab results", wait=self.wait_fn("() => !document.querySelector('#view-labs').hidden && document.querySelectorAll('#labs-history .lab-row').length > 0"))
+        self.shot("labs", full=True)
+        self.checks("Lab results", contrast=True)
+        F.locator("#lab-analyte").select_option("phosphate")
+        F.locator("#lab-unit").select_option("mmol/L")
+        F.locator("#lab-value").fill("1.94")
+        echo = self.text("#lab-echo")
+        if "1.94 mmol/L = 6.0 mg/dL" not in echo:
+            self.issue("labs", "The conversion is not echoed before saving", f"echo {echo!r}", "high")
+        self.press("#lab-save", "Save phosphate result", wait=self.wait_fn("() => !document.querySelector('#labs-review').hidden"))
+        self.shot("labs-review")
+        self.checks("Lab results (what it changed)", contrast=True)
+        F.locator("#lab-analyte").select_option("potassium")
+        F.locator("#lab-value").fill("6.6")
+        self.press("#lab-save", "Save potassium 6.6", wait=self.wait_fn("() => !!document.querySelector('#labs-alert .lab-alert.level-emergency')"))
+        self.shot("labs-alert")
+        self.checks("Lab results (emergency banner)", contrast=True)
+        self.press("#labs-history .labs-group[aria-label='Potassium'] .lab-row-actions button", "Delete potassium result (ask)", nth=0,
+                   wait=self.wait_fn("() => !!document.querySelector('#labs-history .confirm-row')"))
+        self.press("#labs-history .confirm-row .btn.danger-solid", "Confirm delete result",
+                   wait=self.wait_fn("() => !document.querySelector('#labs-alert .lab-alert.level-emergency')"))
+        self.press("#labs-back", "Back to Profile", wait=self.wait_fn("() => !document.querySelector('#view-profile').hidden && document.querySelector('#pf-weight').value === '70'"))
         F.locator("#pf-dialysis").select_option("hemodialysis")
         F.wait_for_function("() => !document.querySelector('#pf-dialysis-days-field').hidden", timeout=3000)
         for i in (0, 2, 4):
@@ -940,7 +968,7 @@ def sweep(port, ctx_kind, vp, scheme, host_theme):
         page.on("dialog", lambda d: (run.console.append(f"dialog: {d.type}"), d.dismiss()))
         clicked = 0
         try:
-            for view in ("today", "add", "plan", "trends", "profile", "settings"):
+            for view in ("today", "add", "plan", "trends", "profile", "labs", "settings"):
                 run.load(page, view)
                 page.wait_for_timeout(400)
                 labels = run.F.evaluate(LIST_BUTTONS_JS)
@@ -1146,7 +1174,7 @@ def probes(port):
             ctx = browser.new_context(viewport={"width": 320, "height": 640}, is_mobile=True, has_touch=True, device_scale_factor=2)
             page = ctx.new_page()
             r.page = page
-            for view in ("today", "add", "plan", "trends", "profile", "settings"):
+            for view in ("today", "add", "plan", "trends", "profile", "labs", "settings"):
                 r.load(page, view)
                 page.wait_for_timeout(500)
                 c = r.F.evaluate(CHECKS_JS, {"taps": False, "contrast": False})

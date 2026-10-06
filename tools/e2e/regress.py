@@ -205,6 +205,31 @@ READ_WARNINGS = """(sel) => Array.from(document.querySelectorAll(sel + ' > .warn
   const d = w.querySelector(':scope > div'); return (d ? d.textContent : w.textContent).trim(); })"""
 
 
+# The Profile targets editor (v0.3): single numbers, {min, max} ranges (protein, calcium) and the fiber goal.
+READ_TARGET_FORM = """() => {
+  const out = {};
+  for (const i of document.querySelectorAll('input[data-target]')) out[i.dataset.target] = i.value;
+  for (const i of document.querySelectorAll('input[data-range-min]')) out[i.dataset.rangeMin + '.min'] = i.value;
+  for (const i of document.querySelectorAll('input[data-range-max]')) out[i.dataset.rangeMax + '.max'] = i.value;
+  for (const i of document.querySelectorAll('input[data-target-goal]')) out[i.dataset.targetGoal + '.min'] = i.value;
+  return out; }"""
+
+
+def expected_target_form(form: dict, targets: dict) -> dict:
+    """What the editor shows for a suggestion: numbers as typed, ranges split into their boxes."""
+    out = {}
+    for field in form:
+        key, _, bound = field.partition(".")
+        v = targets.get(key)
+        if v is None:
+            out[field] = ""
+        elif isinstance(v, dict):
+            out[field] = "" if v.get(bound or "max") is None else str(v.get(bound or "max"))
+        else:
+            out[field] = "" if bound == "min" else str(v)
+    return out
+
+
 def ui_warnings(page, sel: str) -> list[str]:
     """Rendered warnings; the 'No warnings.' placeholder (shown when the list is empty) reads as []."""
     out = page.evaluate(READ_WARNINGS, sel)
@@ -420,30 +445,105 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         sugg = ri.value.json()
         check(A, "Suggest targets: GET suggested-targets 200", ri.value.status == 200, str(ri.value.status))
         page.wait_for_selector("#suggest-notes:not([hidden])")
-        form = page.evaluate("""() => Object.fromEntries(Array.from(document.querySelectorAll('input[data-target]')).map((i) => [i.dataset.target, i.value])
-                                   .concat([['protein_min', document.getElementById('tg-protein_min').value], ['protein_max', document.getElementById('tg-protein_max').value]]))""")
+        form = page.evaluate(READ_TARGET_FORM)
         t = sugg["targets"]
-        exp_form = {k: ("" if t.get(k) is None else str(t[k]) if not isinstance(t.get(k), dict) else str(t[k]["max"])) for k in form if k not in ("protein_min", "protein_max")}
-        exp_form["protein_min"] = str(t["protein_g"]["min"])
-        exp_form["protein_max"] = str(t["protein_g"]["max"])
+        exp_form = expected_target_form(form, t)
         norm = lambda d: {k: (str(float(v)) if v not in ("", None) else "") for k, v in d.items()}
         check(A, "Suggest targets fills the form with the server's numbers (not saved yet)", norm(form) == norm(exp_form), f"form={form} expected={exp_form}")
-        check(A, "Suggested targets for 70 kg / 175 cm / 3b match the contract",
-              t.get("potassium_mg") == 3500 and t.get("protein_g") == {"min": 42, "max": 56} and t.get("calories_kcal") == 2100
-              and t.get("carbs_g") == 236 and t.get("carbs_per_meal_g") == 60 and t.get("sodium_mg") == 2000 and t.get("phosphorus_mg") == 1000, str(t))
-        check(A, "Suggest does not auto-save", sget("/api/profile").json()["targets"] in ({}, {k: None for k in sget("/api/profile").json()["targets"]}),
-              str(sget("/api/profile").json()["targets"]))
+        check(A, "Suggested targets for 70 kg / 175 cm / 3b / type 1 match note 05 (0.8 g/kg protein floor, fiber goal)",
+              t == {"calories_kcal": 2100, "protein_g": {"min": 56, "max": 56}, "carbs_g": 236, "carbs_per_meal_g": 60, "fiber_g": {"min": 29},
+                    "sodium_mg": 2000, "potassium_mg": 3500, "phosphorus_mg": 1000, "calcium_mg": 1000, "fluid_ml": None}, str(t))
+        notes_text = page.inner_text("#suggest-notes")
+        n_why = page.locator("#suggest-notes details.why").count()
+        check(A, "Suggestion explains every target ('Why this number?' per target, protein 'about 56 g/day')",
+              n_why >= 9 and "about 56 g/day" in notes_text, f"{n_why} disclosures; {notes_text[:300]!r}")
+        page.locator("#suggest-notes details.why").first.click()
+        check(A, "'Why this number?' shows the rule, its source and grade",
+              "Rule E-2" in page.inner_text("#suggest-notes") and "Grade:" in page.inner_text("#suggest-notes"), page.inner_text("#suggest-notes")[:400])
+        check(A, "Missing inputs are offered (birth month, sex, activity)",
+              all(w in notes_text.lower() for w in ("your birth month", "the sex used in formulas", "your activity")), notes_text[-400:])
         shot(page, A, "03-profile-suggested")
         with page.expect_response(lambda r: is_api(r, "PUT", "/api/profile")) as ri:
             page.click("#btn-save-profile")
         body = json.loads(ri.value.request.post_data)
         prof = sget("/api/profile").json()
-        stored = {k: v for k, v in prof["targets"].items() if v is not None}
-        check(A, "Save profile with suggested targets: server stores them", ri.value.status == 200 and stored == {k: v for k, v in t.items() if v is not None},
+        # A range keeps its absent bound as null on the server ({"min": 29} reads back {"min": 29.0, "max": null}).
+        bare = lambda d: {k: ({b: x for b, x in v.items() if x is not None} if isinstance(v, dict) else v) for k, v in d.items() if v is not None}  # noqa: E731
+        stored = bare(prof["targets"])
+        check(A, "Save profile with suggested targets: server stores them", ri.value.status == 200 and stored == bare(t),
               f"stored={stored} suggested={t} body={body.get('targets')}")
         check(A, "Profile name / weight / height saved", prof["name"] == "Alex Regress" and prof["weight_kg"] == 70 and prof["height_cm"] == 175, str(prof))
         page.wait_for_function("() => document.getElementById('profile-saved').textContent.includes('Last saved')")
         check(A, "'Last saved' appears after saving", "Last saved" in page.inner_text("#profile-saved"))
+
+        # ---------------------------------------------------------------- 2b. about you (v0.3, note 05 §4.2)
+        page.fill("#pf-birth-month", "1960-05")
+        page.select_option("#pf-sex", "female")
+        page.check("#pf-act-low_active")
+        with page.expect_response(lambda r: is_api(r, "PUT", "/api/profile")) as ri:
+            page.click("#btn-save-profile")
+        body = json.loads(ri.value.request.post_data)
+        check(A, "About you: PUT carries birth month, sex and activity",
+              ri.value.status == 200 and body.get("birth_month") == "1960-05" and body.get("sex") == "female" and body.get("activity") == "low_active", str(body)[:300])
+        with page.expect_response(lambda r: is_api(r, "GET", "/api/profile/suggested-targets")) as ri:
+            page.click("#btn-suggest")
+        sugg2 = ri.value.json()
+        page.wait_for_selector("#suggest-notes:not([hidden])")
+        notes_text = page.inner_text("#suggest-notes")
+        check(A, "Age 66 raises protein to 0.8-1.0 g/kg and the change list says so",
+              sugg2["targets"]["protein_g"] == {"min": 56, "max": 70} and "about 56 g/day → 56–70 g/day" in notes_text, notes_text[:500])
+        check(A, "Opinion rules carry the 'Expert opinion' badge", page.locator("#suggest-notes .badge.opinion").count() >= 1)
+        shot(page, A, "03b-profile-personal", full=True)
+        go_tab(page, "today")  # leave without saving the second suggestion: the saved targets stay
+        go_tab(page, "profile")
+        page.wait_for_timeout(300)
+        check(A, "Unsaved suggestion is dropped when Profile is shown again", page.input_value("#tg-protein_min") == "56" and page.input_value("#tg-protein_max") == "56",
+              f"{page.input_value('#tg-protein_min')}–{page.input_value('#tg-protein_max')}")
+
+        # ---------------------------------------------------------------- 2c. lab results (note 05 §4.8)
+        page.click("#pf-open-labs")
+        page.wait_for_selector("#view-labs:not([hidden])")
+        page.wait_for_timeout(300)
+        page.select_option("#lab-analyte", "phosphate")
+        page.select_option("#lab-unit", "mmol/L")
+        page.fill("#lab-value", "1.94")
+        check(A, "Lab entry echoes the conversion before saving", "1.94 mmol/L = 6.0 mg/dL" in page.inner_text("#lab-echo"), page.inner_text("#lab-echo"))
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/labs")) as ri:
+            page.click("#lab-save")
+        lab = ri.value.json()
+        check(A, "Save result: POST /api/labs 201 stores 6.0 mg/dL", ri.value.status == 201 and lab["value"] == 6.0 and lab["entered_unit"] == "mmol/L", str(lab)[:200])
+        page.wait_for_selector("#labs-review:not([hidden])")
+        review = page.inner_text("#labs-review")
+        check(A, "What it changed: phosphorus 1,000 → 800 mg/day (never applied)", "Phosphorus: 1,000 mg/day → 800 mg/day" in review, review)
+        page.select_option("#lab-analyte", "creatinine")
+        page.select_option("#lab-unit", "mg/dL")
+        page.fill("#lab-value", "1.2")
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/labs")) as ri:
+            page.click("#lab-save")
+        page.wait_for_selector("#kf-body .kf-tile")
+        kf = sget("/api/labs/kidney-function").json()
+        check(A, "Kidney-function card shows the server's eGFR message", kf["message"] in page.inner_text("#kf-body") and kf["egfr"] is not None, f"{kf['message']!r}")
+        page.select_option("#lab-analyte", "potassium")
+        page.fill("#lab-value", "6.3")
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/labs")) as ri:
+            page.click("#lab-save")
+        alerts = ri.value.json().get("alerts", [])
+        page.wait_for_selector("#labs-alert .lab-alert.level-urgent")
+        check(A, "Potassium 6.3: the server's urgent alert is shown as a red banner",
+              alerts and alerts[0]["level"] == "urgent" and alerts[0]["message"] in page.inner_text("#labs-alert"), str(alerts)[:300])
+        ok, d = no_hscroll(page)
+        check(A, "no horizontal scroll on Lab results", ok, d)
+        shot(page, A, "03c-labs", full=True)
+        page.locator("#labs-history .labs-group[aria-label='Potassium'] .lab-row-actions button").first.click()
+        with page.expect_response(lambda r: is_api(r, "DELETE", r"/api/labs/\d+$", regex=True)) as ri:
+            page.locator("#labs-history .confirm-row .btn.danger-solid").click()
+        check(A, "Delete result: DELETE /api/labs/{id} 204 and the banner goes", ri.value.status == 204
+              and page.wait_for_function("() => !document.querySelector('#labs-alert .lab-alert')") is not None, str(ri.value.status))
+        page.click("#labs-back")
+        page.wait_for_selector("#view-profile:not([hidden])")
+        page.wait_for_selector("#targets-review:not([hidden])")
+        check(A, "Profile offers 'Review suggested targets' after the phosphate result", "Phosphorus" in page.inner_text("#targets-review"), page.inner_text("#targets-review"))
+        page.click("#targets-review-dismiss")
 
         # ---------------------------------------------------------------- 3. add four foods
         # (a) Milk, whole x 2.5 servings, breakfast: live warning preview must equal the saved entry's warnings

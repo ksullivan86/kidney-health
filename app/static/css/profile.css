@@ -74,3 +74,9 @@ input[type="month"] {
 .field label.choice .hint, .field label.check .hint { font-weight: 400; }
 .profile-form .card > .card-title { margin-bottom: 8px; }
 .why-short { display: block; font-size: 0.85rem; margin-top: 2px; }
+.why-meta p + p { margin-top: 0; }
+/* The source link of each rule is a full-size target on touch screens. */
+@media (pointer: coarse), (max-width: 719.98px) {
+  .why-meta a.src-link { display: inline-flex; align-items: center; min-height: var(--tap); }
+}
+.missing-btns { display: flex; flex-wrap: wrap; gap: 0 4px; margin-left: -8px; }

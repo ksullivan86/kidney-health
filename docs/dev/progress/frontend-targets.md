@@ -51,6 +51,15 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
   failed requests, horizontal scroll; screenshots in $S/walk/ reviewed (fixed: bold radio/check text, sex select
   truncation, triple error message, long change list on first suggestion).
 
+* Step 6 (part): tools/e2e/regress.py profile section updated to the v0.3 numbers (0.8 g/kg floor, fibre goal,
+  range/goal editor) plus 2b about-you round and 2c lab flow (echo, POST, what-it-changed, kidney card, K 6.3 banner,
+  delete, review prompt); `--only 375-light --port 8355`: every check PASS except the static `node run_vectors`
+  (guidance keys, not mine). tools/e2e/sandbox.py walks the explained suggestion and the Labs view, sweeps #labs:
+  20 walks/3 sweeps/probes, only issue left was in-sentence buttons (fixed: missing-input prompt is now buttons).
+  tests/test_targets_ui.py (8 static tests: labelled v0.3 controls, choices = server enums, conditional fields,
+  range/goal editor, labs analytes/learn pages, demo routes for every labs/profile route, mock field lists = models,
+  admin settings group).
+
 ## Decisions (and why)
 * Labs is a view without a tab (#labs, like Settings), opened from Profile's "Blood and urine tests" card, the
   suggestion's links and the potassium banner: six tabs do not fit 375 px with the guidance work also adding UI.

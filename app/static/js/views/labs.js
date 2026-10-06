@@ -87,7 +87,7 @@
     return h('div', { class: `lab-alert level-${alert.level}` },
       h('p', { class: 'lab-alert-title' }, alert.level === 'emergency' ? 'Emergency: very high potassium' : 'Urgent: very high potassium'),
       h('p', {}, alert.message),
-      h('p', { class: 'lab-alert-links' }, help, link ? [help ? ' · ' : null, h('button', { class: 'link-btn inline', type: 'button', onclick: () => router.show('labs') }, 'Lab results')] : null));
+      h('p', { class: 'lab-alert-links' }, help, link ? [help ? ' · ' : null, h('button', { class: 'link-btn', type: 'button', onclick: () => router.show('labs') }, 'Lab results')] : null));
   }
   // Profile's card: the newest result of each test, and the kidney-function line.
   function summary(data) {
@@ -257,7 +257,6 @@
       } else if (changes.length) {
         body.append(h('p', {}, 'It changes your suggested targets (your saved targets stay as they are until you save new ones in Profile):'),
           h('ul', {}, changes.map((c) => h('li', {}, c))));
-        state.targetsReview = { what: `new ${saved.label.toLowerCase()} result`, changes };
         go.hidden = false;
       } else {
         body.append(h('p', {}, 'It does not change your suggested targets.'));
@@ -268,6 +267,18 @@
     const more = learnLink(saved.analyte);
     if (more) body.append(h('p', { class: 'notes-learn' }, more));
     box.hidden = false;
+    noteReview(before, after, `new ${saved.label.toLowerCase()} result`);
+  }
+  // Profile's "Review suggested targets" prompt: every change since the suggestion that was current
+  // before the first unreviewed result (results added and deleted since then count together); it
+  // goes away when nothing differs any more, when targets are saved, or when it is dismissed.
+  function noteReview(before, after, what) {
+    if (!after.res || (after.res.derived && after.res.derived.lab_rules_enabled === false)) return;
+    const rv = state.targetsReview;
+    const baseline = rv && rv.baseline ? rv.baseline : before.res ? before.res.targets : null;
+    if (!baseline) return;
+    const changes = targetChanges({ targets: baseline }, after.res);
+    state.targetsReview = changes.length ? { baseline, what: rv ? 'new lab results' : what, changes } : null;
   }
   $('#labs-review-dismiss').addEventListener('click', () => { $('#labs-review').hidden = true; state.targetsReview = null; valueInp.focus(); });
   $('#labs-review-go').addEventListener('click', () => {
@@ -328,6 +339,7 @@
           onConfirm: async () => {
             await api.deleteLab(r.id);
             invalidate();
+            if (state.targetsReview) noteReview({}, await suggestionNow(), null);
             toast('Result deleted', 'ok');
             $('#labs-live').textContent = `Deleted ${r.label} ${r.display} from ${r.taken_on}.`;
             await refresh();
