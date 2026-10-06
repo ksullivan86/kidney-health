@@ -239,8 +239,11 @@ def test_containerfile_hardening(path):
     # Code and venv root-owned; only /data belongs to the app user (10001:0, 0770).
     assert re.search(r"COPY --from=builder\s+--chown=0:0\s+/opt/venv\s+/opt/venv", runtime)
     assert re.search(r"COPY --from=builder\s+--chown=0:0\s+/opt/app\s+/app", runtime)
-    assert re.search(r"COPY --from=builder\s+--chown=10001:0\s+/out/data\s+/data", runtime)
-    assert "chmod 0770 /out/data" in text and "go=rX" in text
+    # /data arrives as a directory *entry* of the staging tree so it keeps mode 0770 (a plain
+    # `COPY /out/data /data` would create /data as 0755 and break arbitrary-UID, GID-0 runs)
+    assert re.search(r"COPY --from=builder\s+--chown=10001:0\s+/out/rootfs/\s+/\s*$", runtime, re.M)
+    assert "chmod 0770 /out/rootfs/data" in text and "go=rX" in text
+    assert not re.search(r"COPY[^\n]*/out/(rootfs/)?data\s+/data", runtime)
     users = re.findall(r"^USER\s+(\S+)", runtime, re.M)
     assert users == ["10001:10001"]
     # Health check is the stdlib module in exec form (there is no shell in the image).

@@ -91,5 +91,18 @@ print("\n".join(bad[:20]))
 sys.exit(1 if bad else 0)
 ' || { echo "FAIL: paths above are writable by UID 10001" >&2; exit 1; }
 echo "ok   /app and /opt/venv are read-only for UID 10001"
+docker run --rm --user 10001:10001 --entrypoint python "$image" -c '
+import os, stat, sys
+root, data = os.stat("/"), os.stat("/data")
+bad = []
+if root.st_uid != 0 or os.access("/", os.W_OK):
+    bad.append("/ must stay owned by root and not writable by the app user")
+got = (data.st_uid, data.st_gid, oct(stat.S_IMODE(data.st_mode)))
+if got != (10001, 0, "0o770"):
+    bad.append(f"/data is {got}, want (10001, 0, 0o770): group 0 must be able to write it")
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+' || { echo "FAIL: filesystem ownership above" >&2; exit 1; }
+echo "ok   / is root-owned; /data is 10001:0 0770"
 echo "::endgroup::"
 echo "smoke test passed: $image"
