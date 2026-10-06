@@ -540,3 +540,24 @@ def test_quality_items() -> None:
     items = off.quality_items(["crowd_sourced", "implausible:sodium_mg", "filled_from_usda:potassium_mg", "from_the_future"])
     assert [i["code"] for i in items] == ["crowd_sourced", "implausible", "filled_from_usda"]
     assert items[1]["message"].endswith(": sodium.") and items[2]["message"].endswith(": potassium.")
+
+
+# --------------------------------------------------------------------------- #
+# Prompt injection from product data (§9.3)
+# --------------------------------------------------------------------------- #
+
+
+def test_product_text_never_reaches_an_ai_prompt_unmarked() -> None:
+    """Open Food Facts names are untrusted (anyone can edit them) and ingredient lists never go into an
+    AI prompt (note 03 §9.3, note 04 §9 A2/A3). The guidance bridge is the only door from food data to
+    the optional AI layer; any AI module added later is checked too."""
+    from pathlib import Path
+
+    from app.guidance import ai_bridge
+
+    assert "off" in ai_bridge.UNTRUSTED_SOURCES and "custom" in ai_bridge.UNTRUSTED_SOURCES
+    root = Path(__file__).resolve().parents[1] / "app"
+    prompt_code = [root / "guidance" / "ai_bridge.py", *sorted((root / "ai").glob("**/*.py"))]
+    for path in prompt_code:
+        text = path.read_text(encoding="utf-8")
+        assert "ingredients_text" not in text, f"{path.relative_to(root.parent)} must not put ingredient lists into prompts"
