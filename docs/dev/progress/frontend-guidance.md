@@ -14,7 +14,7 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
 2. settings.js: the 4 guidance keys + 'object'/'list' validation (GuidancePreferences) — DONE
 3. Mock: js/mock/guidance.js (all /api/guidance routes with the server's validation), log purpose/client_id/batch,
    meals meal_hint (demo has no export zip, so no food_preferences export) — DONE
-4. UI (NEXT): js/views/guidance.js + css/guidance.css: What fits now (Add + Today), swap disclosure in the entry sheet,
+4. UI (first pass DONE, polishing): js/views/guidance.js + css/guidance.css: What fits now (Add + Today), swap disclosure in the entry sheet,
    hypo card, "Used to treat a low" checkbox + purpose, plan sheet (Plan + Today), insights (Today + Trends),
    Not for me (row menu + Settings list), guidance prefs in Settings, offline message.
 5. e2e: parity.py section, sandbox, regress, Chromium walks, 4x throttle perf; docs; ARCHITECTURE module list.
@@ -38,7 +38,18 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
   `python3 tools/e2e/parity.py --sections 12 --port 8361 --static-port 8362 --out $S/parity` → all 12a–12i checks pass
   (section 1 fails only on the barcode fields gtin/source_url/... missing from js/mock/foods.js: barcode twin, not mine).
 
+* Step 4 first pass: js/views/guidance.js (KH.guidance) + css/guidance.css + index.html slots (#guidance-today,
+  #guidance-day-insights, #guidance-fits, #btn-plan-day, #guidance-period, #set-guidance, #entry-hypo-row,
+  #entry-guidance, #meal-hint, #sheet-guidance) + small hooks in add.js / today.js / trends.js / plan.js / settings.js.
+  Walk: `python3 $S/walk.py real` (server :8360, populated person; 375/1280 × light/dark): 0 console errors, 0 CSP/TT
+  violations, 0 failed requests, no overflow. Screenshots in $S/walk/real/<config>/.
+
 ## Handoffs / findings for other owners
+* SAFETY (guidance backend): What fits now suggests "Spirits (gin, rum, vodka, whiskey), 80 proof" as an extra (no carbs,
+  no potassium). Alcohol raises the risk of hypoglycaemia in type 1 diabetes; suggest never offering alcoholic drinks
+  (a role/flag in data/foods.json or an eligibility rule in app/guidance/rules.py).
+* Copy (guidance backend): M.NO_TARGETS says "Set your targets in Settings first" but targets are set in Profile;
+  the UI adds a "Set your targets in Profile" button under the server's text.
 * js/mock/foods.js lacks the v0.3 barcode food fields (gtin, source_url, source_license, quality, additives,
   ingredients_text): parity section 1 fails on every food (barcode frontend owner).
 * app/guidance/score.py:499 `max(0.0, dev) ** 2`: glibc pow differs from x*x by 1 ulp in ~0.08 % of inputs

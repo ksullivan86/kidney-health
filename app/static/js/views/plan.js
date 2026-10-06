@@ -341,9 +341,13 @@
     saveMealState.date = date; saveMealState.meal = meal;
     $('#savemeal-name').value = '';
     $('#savemeal-note').value = '';
-    $('#sheet-savemeal-sub').textContent = `${MEAL_LABEL[meal]} on ${fmtDateLong(date)} · ${entries.length} ${entries.length === 1 ? 'food' : 'foods'}`;
+    // The server leaves low treatments (purpose "hypo") out of a saved meal: say so instead of listing them.
+    const kept = entries.filter((e) => e.purpose !== 'hypo');
+    const lows = entries.length - kept.length;
+    $('#sheet-savemeal-sub').textContent = `${MEAL_LABEL[meal]} on ${fmtDateLong(date)} · ${kept.length} ${kept.length === 1 ? 'food' : 'foods'}`
+      + (lows ? ` (${lows} low ${lows === 1 ? 'treatment' : 'treatments'} left out)` : '');
     const ul = clear($('#savemeal-items'));
-    for (const e of entries) {
+    for (const e of kept) {
       ul.append(h('li', {}, ratingIcon(e.kidney_rating, { decorative: true }),
         h('span', { class: 'ci-name' }, e.food_name, isPlanned(e) ? h('span', { class: 'badge planned' }, 'planned') : null),
         h('span', { class: 'ci-amt muted' }, fmtServings(e.servings))));
@@ -381,6 +385,7 @@
     $('#sheet-meal-title').textContent = t ? 'Edit saved meal' : 'New saved meal';
     $('#meal-name').value = t ? t.name : '';
     $('#meal-note').value = t && t.note ? t.note : '';
+    $('#meal-hint').value = t && t.meal_hint ? t.meal_hint : ''; // v0.3: the meal it is meant for (meal guidance)
     $('#meal-delete').hidden = !t;
     $('#meal-search').value = '';
     clear($('#meal-search-results'));
@@ -446,7 +451,8 @@
     const name = $('#meal-name').value.trim();
     if (!name) { toast('Give the meal a name', 'error'); $('#meal-name').focus(); return; }
     if (!mealEd.items.length) { toast('Add at least one food', 'error'); $('#meal-search').focus(); return; }
-    const body = { name, note: $('#meal-note').value.trim() || null, items: mealEd.items.map((it) => ({ food_id: it.food_id, servings: it.servings })) };
+    const body = { name, note: $('#meal-note').value.trim() || null, meal_hint: $('#meal-hint').value || null,
+      items: mealEd.items.map((it) => ({ food_id: it.food_id, servings: it.servings })) };
     mealEd.busy = true; $('#meal-save').disabled = true;
     try {
       const t = mealEd.id != null ? await api.updateMeal(mealEd.id, body) : await api.createMeal(body);

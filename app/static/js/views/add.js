@@ -1,6 +1,7 @@
 /* Kidney Diet Log — Add view: food search with category chips, saved-meal shortcuts, and the
    sheets that log food: the entry sheet (add + edit, warnings before saving), Quick add and
-   the USDA search / import sheet. */
+   the USDA search / import sheet. Meal guidance (js/views/guidance.js, KH.guidance) adds "What fits
+   now" above the search and, in the entry sheet, "Used to treat a low" and swap ideas. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -20,6 +21,7 @@
   let searchRequest = 0;
 
   async function initAdd() {
+    if (KH.guidance) KH.guidance.add(); // reads state.addMealHint before a sheet consumes it
     if (!addInitialized) {
       addInitialized = true;
       try {
@@ -137,7 +139,8 @@
   $('#entry-meal').addEventListener('change', updateEntryCta);
   entryDate.addEventListener('change', updateStatusHint);
 
-  async function openEntrySheet(mode, { food, entry, meal, trigger }) {
+  // servings / status: prefilled by a suggestion (KH.guidance: What fits now, swap ideas).
+  async function openEntrySheet(mode, { food, entry, meal, trigger, servings = null, status = null }) {
     sheet.mode = mode; sheet.food = food || null; sheet.entry = entry || null;
     sheet.lastEdited = 'servings'; sheet.amountTouched = false; sheet.busy = false;
     entryDlg.dataset.mode = mode;
@@ -147,11 +150,11 @@
     sheet.perServing = food ? food.nutrients : perServingFromEntry(entry);
     renderSheetFood();
     setMeal($('#entry-meal'), entry ? entry.meal : meal || state.addMealHint || defaultMealForNow());
-    setStatus($('#entry-status'), entry ? entry.status || 'eaten' : state.addStatusHint || defaultStatusFor(state.date));
+    setStatus($('#entry-status'), entry ? entry.status || 'eaten' : status || state.addStatusHint || defaultStatusFor(state.date));
     state.addMealHint = null; state.addStatusHint = null;
     updateStatusHint();
     updateEntryCta();
-    entryServings.value = entry ? String(Math.round(entry.servings * 1000) / 1000) : '1';
+    entryServings.value = entry ? String(Math.round(entry.servings * 1000) / 1000) : servings != null ? String(Math.round(servings * 1000) / 1000) : '1';
     entryGrams.value = entry && entry.grams != null ? String(Math.round(entry.grams)) : '';
     entryNote.value = entry && entry.note ? entry.note : '';
     entryDate.value = entry ? entry.date : state.date;
@@ -159,6 +162,7 @@
     $('#entry-grams-hint').textContent = food ? `1 serving = ${fmtNum(food.serving_g, 'fluid_ml')} g` : 'Loading serving size…';
     $('#entry-delete-food').hidden = !(mode === 'add' && food && food.source !== 'builtin');
     if (food && !entryGrams.value) syncGramsFromServings();
+    if (KH.guidance) KH.guidance.entry.open({ mode, food, entry, onChange: updatePreview });
     updatePreview();
     sheets.open(entryDlg, trigger, entryServings);
     if (!food && entry) {
@@ -171,6 +175,7 @@
         $('#entry-grams-hint').textContent = `1 serving = ${fmtNum(f.serving_g, 'fluid_ml')} g`;
         if (!entryGrams.value) syncGramsFromServings();
         renderSheetFood();
+        if (KH.guidance) KH.guidance.entry.open({ mode, food: f, entry, onChange: updatePreview, refresh: true });
         updatePreview();
       } catch (e) {
         $('#entry-grams-hint').textContent = 'Serving size unavailable';
@@ -241,9 +246,17 @@
     if (sv === 1 && f && Array.isArray(f.warnings)) warnings = f.warnings;
     else warnings = evaluateWarnings(scaled, f ? f.flags : [], f ? f.kidney_notes : '', false);
     const box = $('#entry-warnings');
+    const G = KH.guidance ? KH.guidance.entry : null;
+    const impact = dayImpact(scaled, selectedMeal($('#entry-meal')));
+    if (G) {
+      G.update({ mode: sheet.mode, food: f, entry: sheet.entry, servings: sv, grams: Number(entryGrams.value) || null, lastEdited: sheet.lastEdited,
+        amountTouched: sheet.amountTouched, meal: selectedMeal($('#entry-meal')), status: selectedStatus($('#entry-status')),
+        date: sheet.mode === 'edit' && sheet.entry ? sheet.entry.date : state.date, warnings, impact });
+    }
+    // A low treatment is never warned against (note 06 F5): its numbers are shown as information.
+    if (G && G.isHypo()) { G.renderHypoNote(box, scaled); return; }
     renderWarnings(box, warnings);
     // Day impact: where would today's running totals land after this entry?
-    const impact = dayImpact(scaled, selectedMeal($('#entry-meal')));
     if (impact.length) {
       const list = h('div', { class: 'warnings impact' });
       for (const it of impact) {
@@ -277,6 +290,8 @@
       if (sheet.mode === 'add') {
         const body = { date: state.date, meal, food_id: sheet.food.id, servings: sv, note, status };
         if (grams != null) body.grams = grams;
+        const purpose = KH.guidance ? KH.guidance.entry.purpose('add') : undefined;
+        if (purpose) body.purpose = purpose;
         const created = await api.addEntry(body);
         entryDlg.close();
         const when = state.date !== todayStr() ? `, ${fmtDateLong(state.date)}` : '';
@@ -287,6 +302,8 @@
         const body = { meal, note, status };
         if (entryDate.value && /^\d{4}-\d{2}-\d{2}$/.test(entryDate.value)) body.date = entryDate.value;
         if (sheet.amountTouched) { body.servings = sv; body.grams = grams; }
+        const purpose = KH.guidance ? KH.guidance.entry.purpose('edit') : undefined;
+        if (purpose) body.purpose = purpose;
         await api.updateEntry(sheet.entry.id, body);
         entryDlg.close();
         toast('Entry updated', 'ok');
@@ -467,6 +484,14 @@
   usdaForm.addEventListener('submit', (e) => { e.preventDefault(); usdaSearch(); });
   $('#usda-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); usdaSearch(); } });
 
+  // Set the entry sheet's servings (a swap idea's "Use this amount").
+  function setServings(n) {
+    entryServings.value = String(Math.round(n * 1000) / 1000);
+    sheet.lastEdited = 'servings'; sheet.amountTouched = true;
+    syncGramsFromServings(); updatePreview();
+    entryServings.focus();
+  }
+
   router.register('add', () => initAdd());
-  KH.views.add = { initAdd, runSearch, renderSavedShortcuts, openEntrySheet };
+  KH.views.add = { initAdd, runSearch, renderSavedShortcuts, openEntrySheet, setServings };
 })();

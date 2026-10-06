@@ -1,0 +1,116 @@
+/* Kidney Diet Log — meal guidance (js/views/guidance.js): "What fits now" in Add, the Meal ideas and
+   insight cards on Today, period insights on Trends, the guidance sheet (plan the day, a meal that
+   fits, treating a low), swap ideas in the entry sheet, Settings → Meal guidance. Colours come from
+   the tokens in base.css, so light and dark follow the theme; every number is also in the text. */
+
+/* ---------- shared ---------- */
+.guidance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.guidance-actions .btn { flex: 1 1 auto; min-width: max-content; }
+.guidance-meal-pick { margin-bottom: 10px; }
+.guidance-body { display: flex; flex-direction: column; gap: 12px; }
+.guidance-body[aria-busy="true"], .g-plan-out[aria-busy="true"], .g-swaps[aria-busy="true"] { opacity: 0.7; }
+.g-idle { margin: 0; }
+.g-loading { margin: 0; }
+.g-room {
+  margin: 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface-2);
+  font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere;
+}
+.g-group { display: flex; flex-direction: column; gap: 4px; }
+.g-group-title { font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 0 0; }
+.g-notes p { margin: 0; }
+.g-learn { margin: 2px 0 0; display: flex; flex-wrap: wrap; gap: 0 14px; }
+.g-tip { background: var(--accent-tint); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.9rem; }
+.g-tip p { margin: 0; }
+.g-offline { margin: 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--caution-tint); color: var(--text); font-size: 0.9rem; }
+.g-unavailable { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.g-unavailable p { margin: 0; }
+
+/* ---------- a suggested food ---------- */
+.g-foods { display: flex; flex-direction: column; }
+.g-foods > li + li { border-top: 1px solid var(--border); }
+.g-food { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; padding: 10px 0; }
+.g-food-main { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.g-food-main .rating { margin-top: 2px; }
+.g-food-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.g-fit { font-size: 0.82rem; color: var(--text-2); }
+.g-reason { font-size: 0.85rem; color: var(--text); }
+.g-actions { display: flex; align-items: center; gap: 6px; }
+.g-act { min-height: var(--tap); padding: 0 12px; }
+.g-more { color: var(--text-2); }
+.g-more[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
+.g-menu {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.g-menu .hint { margin: 0; flex: 1 1 200px; }
+@media (max-width: 560px) {
+  .g-food { grid-template-columns: 1fr; }
+  .g-actions { padding-left: 34px; flex-wrap: wrap; }
+}
+.g-meal-chips { padding: 2px 0 4px; }
+.g-meal-chips .meal-chip { max-width: 280px; }
+
+/* ---------- insights (Today, Trends) ---------- */
+.g-insights { display: flex; flex-direction: column; gap: 8px; }
+.g-insight { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--lv-tint); font-size: 0.92rem; }
+.g-insight.level-info { --lv-tint: var(--surface-2); }
+.g-insight p { margin: 0; }
+.g-insight .rating { margin-top: 1px; }
+.g-insight-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.g-info-icon { color: var(--accent); }
+
+/* ---------- the guidance sheet: plan, meal, low ---------- */
+.g-plan-meals { margin-top: 2px; }
+.g-plan-options { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.g-plan-out { display: flex; flex-direction: column; gap: 12px; }
+.g-plan-out > .hint { margin: 0; }
+.g-plan-meal { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.g-plan-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.g-plan-title { font-size: 1rem; }
+.g-source { font-size: 0.8rem; color: var(--text-2); font-weight: 600; overflow-wrap: anywhere; }
+.g-portions { margin: 0; }
+.g-portions .rating { width: 18px; height: 18px; }
+.g-totals { margin: 0; font-size: 0.85rem; color: var(--text-2); }
+.g-why { list-style: disc; padding-left: 20px; margin: 0; font-size: 0.88rem; }
+.g-why li + li { margin-top: 2px; }
+.g-after { display: flex; flex-direction: column; gap: 8px; }
+.g-after-list { display: flex; flex-direction: column; gap: 4px; }
+.g-after-row { display: grid; grid-template-columns: minmax(96px, 1fr) auto auto; gap: 8px; align-items: center; font-size: 0.88rem; }
+.g-after-label { font-weight: 600; }
+@media (max-width: 420px) {
+  .g-after-row { grid-template-columns: 1fr auto; }
+  .g-after-row .tabular { grid-column: 1 / -1; grid-row: 2; color: var(--text-2); }
+}
+
+/* "Treating a low": information, never a warning (its colours are not the caution or over palette). */
+.g-low { display: flex; flex-direction: column; gap: 12px; }
+.g-lowcard { border-left: 4px solid var(--accent); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 10px 12px; }
+.g-lowcard h3 { font-size: 1rem; margin: 0 0 6px; }
+.g-lowcard-lines { list-style: disc; padding-left: 20px; margin: 0; font-size: 0.92rem; }
+.g-lowcard-lines li + li { margin-top: 4px; }
+.g-low-btn { border-color: var(--accent); }
+.badge.low { color: var(--text); background: var(--accent-tint); text-transform: none; letter-spacing: 0; font-size: 0.72rem; }
+
+/* ---------- entry sheet ---------- */
+.entry-hypo { margin-top: -4px; flex-shrink: 0; } /* a flex item of the scrolling sheet body: never squeezed */
+/* A low treatment is never warned against: the food's rating pill and warning flag chips are not shown. */
+#sheet-entry[data-hypo="true"] #sheet-entry-food .pill, #sheet-entry[data-hypo="true"] #sheet-entry-flags .flag-chip.warn { display: none; }
+.guidance-sheet .sheet-body > * { flex-shrink: 0; }
+.entry-guidance:empty { display: none; }
+.g-disclosure { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 12px; }
+.g-disclosure > summary { cursor: pointer; font-weight: 600; color: var(--accent); min-height: var(--tap); display: flex; align-items: center; }
+.g-disclosure[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.g-disclosure[open] { padding-bottom: 10px; }
+.g-swaps { display: flex; flex-direction: column; gap: 10px; }
+.g-portion { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.g-portion p { margin: 0; flex: 1 1 220px; font-size: 0.9rem; }
+.g-hypo-note { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--accent-tint); font-size: 0.9rem; }
+.g-hypo-note p { margin: 0; }
+.g-hypo-note p + p { margin-top: 4px; }
+
+/* ---------- Settings → Meal guidance ---------- */
+#set-guidance-body .checks { margin-top: 4px; }
+.g-nfm-list { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; }
+.g-nfm { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.g-nfm .row-main { flex: 1; }
+.g-nfm-list .empty-state, .g-nfm-count { padding: 10px 2px; }

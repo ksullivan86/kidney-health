@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="css/sheets.css">
 <link rel="stylesheet" href="css/pwa.css">
 <link rel="stylesheet" href="css/ai.css">
+<link rel="stylesheet" href="css/guidance.css">
 <link rel="stylesheet" href="css/touch.css">
 <script src="theme-init.js"></script>
 </head>
@@ -284,7 +285,25 @@
       <div id="status-bars" class="status-bars"></div>
     </section>
 
+    <!-- Meal guidance (js/views/guidance.js): what fits now, plan the day, treating a low -->
+    <section class="card guidance-today" id="guidance-today" aria-labelledby="guidance-today-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-today-h" class="card-title">Meal ideas</h2>
+        <span class="muted small" id="guidance-today-sub"></span>
+      </div>
+      <div class="guidance-actions" id="guidance-today-actions"></div>
+    </section>
+
     <div id="meals" class="meals"></div>
+
+    <!-- End-of-day insights (js/views/guidance.js): a past day, or today once the main meals are logged or after 19:00 -->
+    <section class="card guidance-insights" id="guidance-day-insights" aria-labelledby="guidance-day-insights-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-day-insights-h" class="card-title">How today went</h2>
+        <span class="muted small" id="guidance-day-insights-sub"></span>
+      </div>
+      <div id="guidance-day-insights-body"></div>
+    </section>
 
     <details class="card details-card" id="totals-details">
       <summary>All nutrient totals for the day</summary>
@@ -305,6 +324,24 @@
 
   <!-- ===================== ADD ===================== -->
   <section id="view-add" class="view" role="tabpanel" aria-labelledby="tab-add" hidden>
+    <!-- "What fits now" (js/views/guidance.js): foods and meals that fit what is left for the chosen meal -->
+    <section class="card guidance-fits" id="guidance-fits" aria-labelledby="guidance-fits-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-fits-h" class="card-title">What fits now</h2>
+        <button class="link-btn" type="button" id="guidance-fits-clear" hidden>Hide</button>
+      </div>
+      <fieldset class="field guidance-meal-pick">
+        <legend class="sr-only">Meal to find foods for</legend>
+        <div class="segmented meal-seg" id="guidance-fits-meal">
+          <input type="radio" name="gfmeal" id="gfm-breakfast" value="breakfast"><label for="gfm-breakfast">Breakfast</label>
+          <input type="radio" name="gfmeal" id="gfm-lunch" value="lunch"><label for="gfm-lunch">Lunch</label>
+          <input type="radio" name="gfmeal" id="gfm-dinner" value="dinner"><label for="gfm-dinner">Dinner</label>
+          <input type="radio" name="gfmeal" id="gfm-snack" value="snack"><label for="gfm-snack">Snack</label>
+        </div>
+      </fieldset>
+      <p class="sr-only" id="guidance-fits-status" role="status" aria-live="polite"></p>
+      <div id="guidance-fits-body" class="guidance-body"></div>
+    </section>
     <div class="search-row">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <label class="sr-only" for="food-search">Search foods</label>
@@ -354,6 +391,10 @@
     <div class="plan-actions">
       <button class="link-btn" type="button" id="week-this" hidden>Back to this week</button>
       <span class="spacer"></span>
+      <button class="btn secondary" type="button" id="btn-plan-day">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8.5 14.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Plan a day…
+      </button>
       <button class="btn secondary" type="button" id="btn-copy-day">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         Copy day…
@@ -410,6 +451,14 @@
         </a>
       </div>
     </div>
+    <!-- Period insights (js/views/guidance.js): the chosen number of days, ending yesterday -->
+    <section class="card guidance-insights" id="guidance-period" aria-labelledby="guidance-period-h" hidden>
+      <div class="card-head">
+        <h3 id="guidance-period-h" class="card-title">Insights</h3>
+        <span class="muted small" id="guidance-period-sub"></span>
+      </div>
+      <div id="guidance-period-body"></div>
+    </section>
     <section class="card period-card" id="period-summary" aria-labelledby="period-heading">
       <div class="card-head">
         <h3 id="period-heading" class="card-title">Period summary</h3>
@@ -810,6 +859,11 @@
       </div>
     </section>
 
+    <section class="card settings-section" id="set-guidance" data-title="Meal guidance" aria-labelledby="set-guidance-h">
+      <h2 class="card-title" id="set-guidance-h">Meal guidance</h2>
+      <div id="set-guidance-body" class="settings-body"></div>
+    </section>
+
     <section class="card settings-section" id="set-food" data-title="Food data" aria-labelledby="set-food-h">
       <h2 class="card-title" id="set-food-h">Food data</h2>
       <div id="set-food-body" class="settings-body"></div>
@@ -878,6 +932,13 @@
         <span class="hint" id="entry-status-hint"></span>
       </fieldset>
 
+      <label class="check entry-hypo" for="entry-hypo" id="entry-hypo-row" hidden>
+        <input type="checkbox" id="entry-hypo" aria-describedby="entry-hypo-hint">
+        <span class="check-text">Used to treat a low
+          <span class="hint" id="entry-hypo-hint">It counts toward potassium and the day's totals, never toward your meal carbs. Treating a low always comes first.</span>
+        </span>
+      </label>
+
       <div class="form-grid">
         <div class="field">
           <label for="entry-servings">Servings</label>
@@ -904,6 +965,8 @@
       </div>
 
       <div class="warnings" id="entry-warnings" aria-live="polite"></div>
+      <!-- Swap ideas, or "For your next low" (js/views/guidance.js) -->
+      <div class="entry-guidance" id="entry-guidance"></div>
 
       <div class="preview">
         <div class="preview-head">
@@ -1105,6 +1168,17 @@
           <label for="meal-note">Note</label>
           <input id="meal-note" type="text" maxlength="200" placeholder="Optional">
         </div>
+        <div class="field span-2">
+          <label for="meal-hint">Meant for</label>
+          <select id="meal-hint" aria-describedby="meal-hint-hint">
+            <option value="">Any main meal</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+          <span class="hint" id="meal-hint-hint">Meal ideas offer it for this meal (“Any main meal”: breakfast, lunch or dinner).</span>
+        </div>
       </div>
       <div class="field">
         <span class="label" id="meal-items-label">Foods in this meal</span>
@@ -1285,6 +1359,23 @@
   </form>
 </dialog>
 
+<!-- ===================== GUIDANCE SHEET (js/views/guidance.js fills it: plan the day, a meal that fits, treating a low) ===================== -->
+<dialog id="sheet-guidance" class="sheet guidance-sheet" aria-labelledby="sheet-guidance-title" aria-describedby="sheet-guidance-sub">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-guidance-title" class="sheet-title">Meal ideas</h2>
+        <div class="sheet-sub" id="sheet-guidance-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+
 <!-- ===================== AI SHEETS (js/views/ai.js fills them) ===================== -->
 <dialog id="sheet-ai" class="sheet" aria-labelledby="sheet-ai-title">
   <form method="dialog" class="sheet-form" novalidate>
@@ -1378,6 +1469,7 @@
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>
 <script src="js/views/ai.js"></script>
+<script src="js/views/guidance.js"></script>
 <script src="js/pwa.js" data-preview="omit"></script>
 <script src="js/main.js"></script>
 </body>

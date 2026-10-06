@@ -1056,6 +1056,7 @@
     ['Default for everyone', ['ui.theme', 'user.units.labs']],
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
+    ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
     ['Activity log', ['audit.retention_days']],
   ];
   const CHOICE_LABEL = {
@@ -1345,6 +1346,7 @@
     renderNav();
     renderAccount();
     renderPrefs();
+    if (KH.guidance) KH.guidance.renderSettings().catch((err) => console.warn('Meal guidance settings:', err)); // js/views/guidance.js
     renderAi();
     renderAbout();
     cache.myKeys = null;

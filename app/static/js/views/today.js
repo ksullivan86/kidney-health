@@ -1,5 +1,7 @@
 /* Kidney Diet Log — Today view: date navigation, alerts, daily status bars, meals with their
-   entries, all-nutrient totals and the "Last 7 days" strip (with "since last dialysis"). */
+   entries, all-nutrient totals and the "Last 7 days" strip (with "since last dialysis"). Meal
+   guidance (js/views/guidance.js) adds the Meal ideas card, a "What fits" link per meal, the
+   "treated a low" badge and the end-of-day insights. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -140,6 +142,8 @@
       const actions = h('div', { class: 'meal-actions' });
       actions.append(h('button', { class: 'link-btn meal-add', type: 'button', onclick: () => { state.addMealHint = meal.key; state.addStatusHint = null; router.show('add'); $('#food-search').focus(); } },
         plusIcon(), `Add to ${meal.label.toLowerCase()}`));
+      const fits = KH.guidance && day.date >= todayStr() ? KH.guidance.whatFitsButton(meal.key) : null;
+      if (fits) actions.append(fits);
       actions.append(h('button', { class: 'link-btn', type: 'button', onclick: (ev) => views().plan.openApplySheet({ date: day.date, meal: meal.key, trigger: ev.currentTarget }) }, 'Add saved meal'));
       if (plannedEntries.length) {
         actions.append(h('button', { class: 'link-btn', type: 'button', onclick: (ev) => markAllEaten(day.date, meal.key, ev.currentTarget) },
@@ -160,6 +164,7 @@
         counts.planned > 0 && projV != null && projV !== eatenV ? h('span', { class: 'ng-proj' }, ` → ${fmtNum(projV, n.key)}`) : null)));
     }
     $('#totals-details > summary').textContent = counts.planned > 0 ? 'All nutrient totals for the day (eaten → projected)' : 'All nutrient totals for the day';
+    if (KH.guidance) KH.guidance.today(day).catch((e) => console.warn('Meal guidance:', e));
   }
 
   // A goal with only a minimum (fibre, note 05 §4.8): progress toward it, never "over".
@@ -226,10 +231,10 @@
     for (const k of ROW_NUMBERS) {
       nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(e.nutrients[k], k)), ` ${NUT[k].unit}`));
     }
-    const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}` },
+    const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${e.purpose === 'hypo' ? ', used to treat a low' : ''}` },
       ratingIcon(e.kidney_rating),
       h('div', { class: 'row-main' },
-        h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null),
+        h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
         h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null)),
       nums);
     btn.addEventListener('click', () => views().add.openEntrySheet('edit', { entry: e, trigger: btn }));
