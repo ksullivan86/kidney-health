@@ -43,7 +43,7 @@ def _key(url: str | httpx2.URL) -> tuple[str, str, tuple[tuple[str, str], ...]]:
 
 
 class Replay(httpx2.MockTransport):
-    """Answers from recorded fixtures (and optional handlers); remembers every request."""
+    """Answers from recorded fixtures (then optional fallback handlers by URL prefix); remembers every request."""
 
     def __init__(self, *docs: dict[str, Any], handlers: dict[str, Callable[[httpx2.Request], httpx2.Response]] | None = None) -> None:
         self.requests: list[httpx2.Request] = []
@@ -55,14 +55,15 @@ class Replay(httpx2.MockTransport):
         self._docs[_key(doc["request"]["url"])] = doc
 
     def _handle(self, request: httpx2.Request) -> httpx2.Response:
+        """A recorded exchange for this URL, else the first handler whose prefix matches, else 599."""
         self.requests.append(request)
+        doc = self._docs.get(_key(request.url))
+        if doc is not None:
+            return response_for(doc)
         for prefix, handler in self._handlers.items():
             if str(request.url).startswith(prefix):
                 return handler(request)
-        doc = self._docs.get(_key(request.url))
-        if doc is None:
-            return httpx2.Response(599, text=f"no fixture for {request.url}")
-        return response_for(doc)
+        return httpx2.Response(599, text=f"no fixture for {request.url}")
 
     def hosts(self) -> list[str]:
         return [r.url.host for r in self.requests]

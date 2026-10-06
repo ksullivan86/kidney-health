@@ -45,7 +45,21 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   search_*/food_* from the FDC web app endpoints (provenance in README). Tests: tests/test_egress.py,
   tests/test_off_mapping.py (helpers: tests/barcode_support.py). Recorder: scripts/record_barcode_fixtures.py.
 
+* foods.py (committed d01663f): usda_client through egress, `_usda_fetch` (2 MiB decoded cap, JSON only,
+  UsdaError), `map_usda_record` (labelNutrients incl. "postassium", cleaned text, additive scan, mL servings),
+  `usda_find_by_gtin` (≤3 searches, exact gtinUpc). Tests: tests/test_usda_branded.py.
+
 ## In progress
+* m007-dependent work lives in a scratch clone until the AI builder's m006 exists in the main tree:
+  `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/barcode/wt`
+  (has a LOCAL STUB app/migrations/m006_ai.py — never copy that file). Port with
+  `cd wt && git diff -- <files>` + copy of new files; files: app/migrations/m007_barcode.py, app/barcode.py,
+  app/foods.py (Provenance, row_to_food fields, custom food scan, usda upsert), app/models.py (gtin,
+  ingredients_text, Food fields, BarcodeLookup/Result), app/log.py (quick add gtin, CSV source/source_license),
+  app/account.py (CSV/README), app/settings_registry.py (4 food.* keys), app/config.py (OFF_BASE_URL),
+  app/admin.py (remap-barcodes, purge-barcode-cache), app/main.py (router), tests/test_api.py (CSV header),
+  tests/data/settings_vectors.json (regenerate), new tests test_barcode_api.py, test_migration_m007.py.
+  All green in the clone except the settings JS twin (frontend-owned settings.js lacks the new keys).
 
 ## Decisions (and why)
 * No shared SSRF transport existed (note 04's app/ai/transport.py is the AI builder's and AI-specific), so
