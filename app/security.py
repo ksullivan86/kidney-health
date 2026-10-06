@@ -6,7 +6,9 @@ the outermost middleware comes first:
 
 1. :class:`SecurityHeadersMiddleware` - CSP and the other headers on **every** response, including
    the rejections below, 404s and unhandled 500s; ``Cache-Control: no-store`` on ``/api``; HSTS and
-   ``upgrade-insecure-requests`` only when the effective scheme is https.
+   ``upgrade-insecure-requests`` only when the effective scheme is https. One policy everywhere,
+   except the API docs (``ENABLE_API_DOCS``) and path prefixes given to :func:`install` as
+   ``path_policies`` (the handbook at ``/learn``, :mod:`app.handbook`).
 2. :class:`PeerCaptureMiddleware` - the real TCP peer in ``scope["state"]["peer"]``.
 3. :class:`HostAllowlistMiddleware` - DNS-rebinding defence: ``localhost``, any IP literal, the host
    of ``PUBLIC_URL`` and ``ALLOWED_HOSTS`` names; anything else is ``400 Unknown host``.
@@ -224,17 +226,35 @@ class SecurityState:
 
 
 class SecurityHeadersMiddleware:
-    """Adds the CSP and the other security headers to every HTTP response."""
+    """Adds the CSP and the other security headers to every HTTP response.
 
-    def __init__(self, app: ASGIApp, settings: Settings) -> None:
+    ``path_policies`` is a sequence of ``(prefix, policy)``: a request for ``prefix`` itself or for
+    anything below ``prefix + "/"`` gets ``policy`` instead of :data:`CONTENT_SECURITY_POLICY`. Every
+    other header is the same on every path.
+    """
+
+    def __init__(self, app: ASGIApp, settings: Settings, path_policies: Iterable[tuple[str, str]] = ()) -> None:
         self.app = app
         self.hsts_max_age = settings.hsts_max_age
         self.docs_enabled = settings.docs_enabled
+        self.path_policies = tuple(path_policies)
+        for prefix, _policy in self.path_policies:
+            if not prefix.startswith("/") or prefix.endswith("/") or is_api_path(prefix):
+                raise ValueError(f"path policy prefix {prefix!r} must start with '/', not end with '/' and not be under /api")
+
+    def policy_for(self, path: str) -> str:
+        """The Content-Security-Policy for ``path`` (before ``upgrade-insecure-requests``)."""
+        if self.docs_enabled and path in DOCS_PATHS:
+            return DOCS_CONTENT_SECURITY_POLICY
+        for prefix, policy in self.path_policies:
+            if path == prefix or path.startswith(prefix + "/"):
+                return policy
+        return CONTENT_SECURITY_POLICY
 
     def _apply(self, headers: MutableHeaders, scope: Scope) -> None:
         path = scope.get("path", "")
         https = effective_scheme(scope) == "https"
-        csp = DOCS_CONTENT_SECURITY_POLICY if (self.docs_enabled and path in DOCS_PATHS) else CONTENT_SECURITY_POLICY
+        csp = self.policy_for(path)
         if https:
             csp += "; upgrade-insecure-requests"
         headers["Content-Security-Policy"] = csp
@@ -592,8 +612,12 @@ class CsrfMiddleware:
         await self.app(scope, receive, send)
 
 
-def install(app: FastAPI, settings: Settings) -> SecurityState:
-    """Register the middleware stack (call after any inner middleware such as auth)."""
+def install(app: FastAPI, settings: Settings, *, path_policies: Iterable[tuple[str, str]] = ()) -> SecurityState:
+    """Register the middleware stack (call after any inner middleware such as auth).
+
+    ``path_policies``: ``(prefix, Content-Security-Policy)`` pairs for path prefixes that need their
+    own policy (see :class:`SecurityHeadersMiddleware`); everything else gets the app's policy.
+    """
     state = SecurityState()
     app.state.security = state
     # add_middleware puts the last one outermost.
@@ -602,7 +626,7 @@ def install(app: FastAPI, settings: Settings) -> SecurityState:
     app.add_middleware(TrustedProxyMiddleware, settings=settings, state=state)
     app.add_middleware(HostAllowlistMiddleware, settings=settings, state=state)
     app.add_middleware(PeerCaptureMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware, settings=settings)
+    app.add_middleware(SecurityHeadersMiddleware, settings=settings, path_policies=tuple(path_policies))
     return state
 
 

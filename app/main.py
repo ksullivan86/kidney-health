@@ -17,6 +17,8 @@ from fastapi.exceptions import RequestValidationError
 
 from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
 from . import labs  # M2 targets: /api/labs
+from .guidance import api as guidance_api  # M2 guidance: /api/guidance
+from . import handbook  # M3: the handbook at /learn and /api/handbook
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
@@ -90,7 +92,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Middleware: added innermost first (security.install adds the outer stack last).
     pwa.setup(app, settings)  # GET /sw.js (before the static mount) + gzip for static files
-    security.install(app, settings)
+    learn = handbook.setup(app, settings)  # the built handbook, or None (/learn is then 404)
+    security.install(app, settings, path_policies=handbook.csp_policies(learn))  # /learn's own CSP
 
     app.include_router(profile.router)
     app.include_router(foods.router)
@@ -98,6 +101,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meals.router)
     app.include_router(meals.plan_router)
     app.include_router(labs.router)
+    app.include_router(guidance_api.router)
+    app.include_router(handbook.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
@@ -105,6 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         count = conn.execute("SELECT COUNT(*) FROM foods WHERE hidden = 0 AND source = 'builtin'").fetchone()[0]
         return {"status": "ok", "foods": int(count)}
 
+    handbook.mount(app, learn)  # before the "/" mount
     pwa.mount_static(app, settings)
     return app
 

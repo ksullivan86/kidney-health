@@ -32,6 +32,10 @@ Keys (defaults in brackets):
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
   ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``
+* ``HANDBOOK_DIR`` [``/app/learn`` in the image, else ``<repo>/handbook/site``]: the built handbook
+  served at ``/learn`` (``/learn`` answers 404 when it has no ``index.html``);
+  ``HANDBOOK_PUBLIC_URL`` [unset]: the published copy (GitHub Pages), where the app's Learn links
+  point when this server has no built handbook (note 08 §4.6)
 
 The image runs uvicorn with ``--no-proxy-headers``: ``X-Forwarded-*`` are applied exactly once, by
 :mod:`app.security`, and only from ``TRUSTED_PROXIES``. ``FORWARDED_ALLOW_IPS`` is ignored.
@@ -49,6 +53,8 @@ from urllib.parse import urlsplit
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FOODS_JSON = REPO_ROOT / "data" / "foods.json"
 DEFAULT_STATIC_DIR = Path(__file__).resolve().parent / "static"
+# `mkdocs build` from handbook/ writes here; the image sets HANDBOOK_DIR=/app/learn instead.
+DEFAULT_HANDBOOK_DIR = REPO_ROOT / "handbook" / "site"
 DB_FILENAME = "kidney.db"
 SECRET_KEY_FILENAME = "secret.key"
 SECRET_KEY_MIN_LENGTH = 32
@@ -93,6 +99,10 @@ class Settings:
     app_password: str | None = field(default=None, repr=False)
     foods_json: Path = DEFAULT_FOODS_JSON
     static_dir: Path = DEFAULT_STATIC_DIR
+    # Patient handbook (note 08 §4.6). None = no handbook (the default for Settings built in code, so
+    # tests stay hermetic); load_settings() fills in HANDBOOK_DIR or DEFAULT_HANDBOOK_DIR.
+    handbook_dir: Path | None = None
+    handbook_public_url: str | None = None  # normalised to end with "/"
 
     # Identity (note 07 §4.3). Enforced by app/auth; parsed and validated here.
     auth_mode: str = "local"
@@ -331,6 +341,24 @@ def _check_public_url(raw: str) -> str:
     return normalize_origin(raw)
 
 
+def _check_handbook_public_url(raw: str) -> str:
+    """``HANDBOOK_PUBLIC_URL`` → ``https://host[:port]/path/`` (always ending in ``/``)."""
+    example = "https://ksullivan86.github.io/kidney-health/"
+    try:
+        parts = urlsplit(raw.strip())
+        _ = parts.port  # raises ValueError for a malformed port
+    except ValueError:
+        raise ConfigError(f"HANDBOOK_PUBLIC_URL is not a valid URL: {raw!r}. Use the handbook's address, such as {example}.") from None
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
+        raise ConfigError(f"HANDBOOK_PUBLIC_URL must be an http:// or https:// address, such as {example}, not {raw!r}.")
+    if parts.username is not None or parts.password is not None:
+        raise ConfigError("HANDBOOK_PUBLIC_URL must not contain a user name or password.")
+    if parts.query or parts.fragment or any(c.isspace() for c in raw.strip()):
+        raise ConfigError(f"HANDBOOK_PUBLIC_URL must be the handbook's base address without ?query or #fragment, not {raw!r}.")
+    path = parts.path if parts.path.endswith("/") else parts.path + "/"
+    return normalize_origin(raw.strip()) + path
+
+
 def _check_allowed_host(entry: str) -> str:
     value = entry.strip().lower().rstrip(".")
     if value == "*":
@@ -416,6 +444,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         usda_api_key=usda_key,
         app_password=app_password,
         foods_json=Path(env.get("FOODS_JSON") or DEFAULT_FOODS_JSON),
+        handbook_dir=Path(_raw(env, "HANDBOOK_DIR") or DEFAULT_HANDBOOK_DIR),
+        handbook_public_url=_raw(env, "HANDBOOK_PUBLIC_URL"),
         auth_mode=_choice(env, "AUTH_MODE", "local", AUTH_MODES),
         admin_username=_raw(env, "ADMIN_USERNAME"),
         admin_password=admin_password,
@@ -463,7 +493,8 @@ def normalize(settings: Settings) -> Settings:
     allowed = tuple(dict.fromkeys(_check_allowed_host(h) for h in settings.allowed_hosts))
     proxies = tuple(dict.fromkeys(_check_trusted_proxy(p) for p in settings.trusted_proxies))
     public = _check_public_url(settings.public_url) if settings.public_url else None
-    return replace(settings, allowed_hosts=allowed, trusted_proxies=proxies, public_url=public)
+    handbook = _check_handbook_public_url(settings.handbook_public_url) if settings.handbook_public_url else None
+    return replace(settings, allowed_hosts=allowed, trusted_proxies=proxies, public_url=public, handbook_public_url=handbook)
 
 
 def _validate(s: Settings) -> list[str]:
@@ -480,6 +511,8 @@ def _validate(s: Settings) -> list[str]:
     networks = [ipaddress.ip_network(_check_trusted_proxy(p), strict=False) for p in s.trusted_proxies]
     if s.public_url:
         _check_public_url(s.public_url)
+    if s.handbook_public_url:
+        _check_handbook_public_url(s.handbook_public_url)
     for name in ("trusted_proxy_user_header", "trusted_proxy_groups_header", "trusted_proxy_name_header"):
         _check_header_name(name.upper(), getattr(s, name))
 
