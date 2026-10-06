@@ -165,7 +165,8 @@
   });
 
   // ---- routes ----
-  route('*', '/healthz', function () { return { status: 'ok', foods: this._foods.filter((f) => !f.hidden).length }; });
+  // v0.3: the public health check counts only the shared builtin foods (nobody's own data).
+  route('*', '/healthz', function () { return { status: 'ok', foods: this._foods.filter((f) => !f.hidden && f.source === 'builtin').length }; });
   route('GET', '/api/foods', function ({ qp }) {
     const errors = [];
     const text = qp('q') || '';

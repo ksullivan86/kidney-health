@@ -1,6 +1,6 @@
 # frontend sign-in + settings (M1)
 
-Status: in progress
+Status: complete
 
 Scope: note 07 §4.5 (flows) and §4.17 (settings menu), note 02 R10 (This device), ARCHITECTURE.md
 "Frontend modules" and "M1 API". Ports 8140-8149. Scratch: `$SCRATCH/m1/frontend-signin-settings/`
@@ -75,4 +75,23 @@ Scope: note 07 §4.5 (flows) and §4.17 (settings menu), note 02 R10 (This devic
   origins (`app/security.py` sends COOP on every response). Harmless; the security owner may send it
   only over HTTPS.
 
-## Next
+## Resumed run (after the usage limit)
+
+* Last edits of the cut-off run were on disk: `core.js` ignores view hash changes while a sign-in
+  screen shows; `settings.css` aligns source lines under checkboxes.
+* Re-verified on the current tree: `node tests/js/run_vectors.mjs` (rules 5153 + settings 136 checks),
+  `node --check` on every script, `verify_real.py 8141` 55 passed / 0 failed with zero CSP
+  violations (console errors only the provoked 400/401/403/404/409/429 "Failed to load resource"),
+  preview rebuilt (`build/kidney-diet-log.html`, 693,974 bytes) and walked with the sandbox copy,
+  full `python -m pytest`: 1207 passed, 1 skipped. Sandbox: 17 walks + 3 sweeps + probes, 0 issues,
+  782 requests, 0 unexpected.
+
+Reproduce (scratch = `$SCRATCH/m1/frontend-signin-settings`):
+`cd $scratch && python3 verify_real.py 8141` (then `./stop.sh real`), `python3 verify_extra.py`,
+`python3 /home/user/kidney-health/scripts/build_preview.py --out sandbox/preview.html && cd sandbox && python3 sandbox.py --workers 3`.
+
+## Next (for later milestones, not this role's M1 task)
+
+* M2 fills `#set-ai-slot` (AI ideas) and adds a Meal guidance section; M2 barcode registers its
+  other `food.off_*` keys next to `food.off_enabled` / `food.off_consent`.
+* Sign-out's unsynced-entries warning activates when `KH.offline` (M2 outbox) exists.
