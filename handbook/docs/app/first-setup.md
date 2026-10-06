@@ -65,12 +65,13 @@ Take the numbers to your next visit and ask your team to change them.
 
 | Target | Suggested | Why |
 |---|---|---|
-| Protein | about 56 g a day (0.8 g per kg) | with diabetes, not below 0.8 g/kg before dialysis ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1). Coming in v0.3: today's app still shows a range of 42–56 g (0.6–0.8 g/kg); do not aim below 56 g unless your team prescribed it |
+| Protein | about 56 g a day (0.8 g per kg) | with diabetes, not below 0.8 g/kg before dialysis ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1) |
 | Potassium | 3,000 mg | a review ceiling: only restrict potassium if your blood potassium is high |
 | Phosphorus | 1,000 mg | |
 | Sodium | 2,000 mg | the same at every stage ([KDIGO 2024][K24], Rec 3.3.2.1) |
 | Calories | 2,100 kcal (30 per kg) | KDOQI's range is 25–35 kcal/kg ([KDOQI 2020][Q20], 3.1.1) |
 | Carbohydrate | 236 g a day, 60 g per meal | the app's default: 45 % of calories, split over four meal slots. There is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13) |
+| Fiber | at least 29 g a day | 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24); a goal to reach, never "over" |
 | Fluid | not tracked | fluid limits start on dialysis |
 
 At a BMI above 25 (or below 18.5) the app uses an adjusted weight instead of your scale weight, and
@@ -78,9 +79,12 @@ the first note says which weight it used ([design note 05][NOTE05]).
 
 ## Which details change your targets
 
-From v0.3, **Profile → About you** adds optional details: birth month, the sex used in medical formulas,
-activity level, frailty, weight 6 months ago, and "I have had high potassium". Lab results go in the new
-**Labs** screen. Each one changes only some targets ([design note 05][NOTE05]):
+**Profile → About you** has optional details: birth month, the sex used in medical formulas, height,
+weight 6 months ago, activity level, frailty, pregnancy, and "I have had high potassium". On dialysis
+**Kidneys and diabetes** also asks for your urine volume (and on peritoneal dialysis your ultrafiltration
+and the calories from the dialysis fluid); without dialysis it asks for a transplant date if you have one.
+Lab results go in **Lab results** (Profile → Blood and urine tests). Each detail changes only some targets
+([design note 05][NOTE05]):
 
 | Detail | Changes | Does not change |
 |---|---|---|
@@ -99,17 +103,18 @@ activity level, frailty, weight 6 months ago, and "I have had high potassium". L
 **Labs matter more than age or sex** for potassium and phosphorus. Sex never changes protein per kg,
 sodium, potassium or phosphorus ([design note 05][NOTE05]).
 
-When a new lab result would change a suggestion, the app shows **Review suggested targets**. It never
-changes your saved targets by itself.
+Each suggested number has a **Why this number?** link with the rule behind it, its source and grade; rules
+that are partly the app's own choice carry an **Expert opinion** badge. When a new lab result would change a
+suggestion, the app shows **Review suggested targets**. It never changes your saved targets by itself.
 
 !!! warning "Do not use Suggest targets if you are pregnant, under 18 or newly transplanted"
     Nutrition needs are very different if you are pregnant or breastfeeding, younger than 18, or in
     the first 12 weeks after a kidney transplant. Your nephrologist, transplant team or a specialist
     dietitian sets your numbers then
     ([Sex, fertility and pregnancy](../living/sex-fertility-pregnancy.md);
-    [After a transplant](../stages/after-transplant.md)). Coming in v0.3: the app asks about these and
-    refuses to suggest targets. **Today's app does not ask**, so it would still fill in numbers that do
-    not fit you: leave **Suggest targets** alone and use your team's numbers ([design note 05][NOTE05]).
+    [After a transplant](../stages/after-transplant.md)). Tick **Pregnant or breastfeeding**, add your
+    birth month, or add your transplant date in your profile: the app then shows why it does not suggest
+    targets and fills in no numbers. Type in your team's numbers instead ([design note 05][NOTE05]).
 
 ## What to do
 
@@ -119,8 +124,8 @@ changes your saved targets by itself.
       (1 cup = 240 mL; 32 oz is about 950 mL). The app has no field for your weight-gain limit:
       write that one in your notebook ([Fluid](../eat/fluid.md)).
 - [ ] On peritoneal dialysis, choose **Peritoneal** so the app uses PD starting points.
-- [ ] After a transplant, set **Dialysis** to None and the stage of your new kidney. (v0.3 adds a
-      transplant date.)
+- [ ] After a transplant, set **Dialysis** to None, add your **Kidney transplant date** and the stage of
+      your new kidney.
 - [ ] Update your weight and stage when they change, then check **Suggest targets** again.
 
 ## Ask your care team
@@ -141,8 +146,8 @@ changes your saved targets by itself.
 !!! warning "Call your care team today"
     A lab potassium of **6.0–6.4 mmol/L**: if you feel unwell, go to hospital **now** to be checked and
     treated; if you feel well, call your team today for a repeat test within 24 hours
-    ([KDIGO 2024][K24], Table 28). Coming in v0.3: the **Labs** screen shows a red banner for potassium
-    of 6.0 or more. Full list: [Get help now](../get-help-now.md).
+    ([KDIGO 2024][K24], Table 28). **Lab results** shows a red banner for a potassium of 6.0 or more.
+    Full list: [Get help now](../get-help-now.md).
 
 ## Related pages
 

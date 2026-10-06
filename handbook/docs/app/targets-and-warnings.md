@@ -69,20 +69,25 @@ blocked or warned against.
   your blood potassium is high; your care team sets the number."*
 - **Phosphorus** 1,000 mg (stages 1–4 and both dialysis types), 900 mg at stage 5 before dialysis.
 - **Protein** 0.8–1.0 g/kg at stages 1–2; 1.0–1.2 g/kg on dialysis. At stages 3–5 before dialysis,
-  today's app shows a range of 0.6–0.8 g/kg. **Coming in v0.3:** with diabetes it suggests 0.8 g/kg
-  ("about X g/day") and never less, because guidelines advise against going below 0.8 g/kg with
-  diabetes ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1; [design note 05][NOTE05]).
-  Until then, treat the lower number as something only your team can prescribe.
-- **Energy** 30 kcal/kg, with **carbohydrate** at 45 % of calories, split per meal. The 45 % is the app's
+  with diabetes it suggests 0.8 g/kg ("about X g/day") and never less, because guidelines advise against
+  going below 0.8 g/kg with diabetes ([ADA 2026][A26-11], Rec 11.3; [KDIGO 2024][K24], Rec 3.3.1.1;
+  [design note 05][NOTE05]). Without diabetes it shows 0.6–0.8 g/kg; going below 0.8 is only for people
+  their team supervises closely.
+- **Energy** 30 kcal/kg until you add your age, sex, height and activity (below), with **carbohydrate**
+  at 45 % of calories, split per meal. The 45 % is the app's
   default: there is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13).
 - **Fluid** not tracked before dialysis; 1,500 mL on hemodialysis (1,000 mL plus an assumed 500 mL of
   urine) and 2,000 mL on peritoneal dialysis.
 
-## Personalized targets (coming in v0.3)
+## Personalized targets
 
-Version 0.3 adds optional details in **Profile → About you** and a **Labs** screen. "Suggest targets"
-then starts from you rather than from a 70 kg example ([design note 05][NOTE05]). Which detail changes
-which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
+Optional details in **Profile → About you** and your results in **Lab results** (Profile → Blood and urine
+tests) make "Suggest targets" start from you rather than from a 70 kg example ([design note 05][NOTE05]).
+Which detail changes which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
+Under each suggested number, **Why this number?** shows the rule, its source and grade, and an **Expert
+opinion** badge where part of the rule is the app's own choice; nothing is saved until you tap
+**Save profile**. The app shows what would change compared with your saved targets, and after a new lab
+result it offers **Review suggested targets** without changing anything by itself.
 
 **Blood potassium** (a result from the last 90 days) moves the potassium review ceiling. "Default" is
 the stage number above, for example 3,000 mg at stage 4. Potassium is the same number in both unit
@@ -114,7 +119,7 @@ systems (mmol/L = mEq/L).
     | 0.81–1.45 mmol/L | 1,000 mg |
     | above 1.45 mmol/L | 800 mg |
 
-Other v0.3 changes:
+Other details that change the suggestion:
 
 - **Calories** use your age, sex, height and activity, kept inside KDOQI's 25–35 kcal per kg, and are
   rounded to 10 kcal ([KDOQI 2020][Q20], 3.1.1). Without age and height the app keeps 30 kcal/kg.

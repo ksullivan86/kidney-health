@@ -182,6 +182,57 @@ months, KDIGO 2024 PP 1.1.3.2) and **never changes the saved stage**.
 Albuminuria (KDIGO 2024 Table 3) uses the unit it was entered in: A1 below 30 mg/g (3 mg/mmol), A2 up to
 300 mg/g (30 mg/mmol), A3 above. Converting first would put 3.0 mg/mmol (26.5 mg/g) in A1 instead of A2.
 
+## In the app
+
+**Profile** (`js/views/profile.js`) has four cards:
+
+* **About you**: name, birth month (a month picker), height, weight (labelled *Dry weight (kg, after
+  dialysis)* on dialysis), weight 6 months ago, *Sex used in medical formulas* with the help text above,
+  *Activity on a usual day* (five radio choices: not chosen, then the four NASEM 2023 Table 7-1 levels
+  described in plain words) and three yes/no boxes (frailty or low muscle mass, pregnant or
+  breastfeeding, high potassium before or a potassium binder).
+* **Kidneys and diabetes**: stage (labelled *Transplant kidney stage* when a transplant date is set),
+  dialysis, diabetes, and only the fields that apply: the transplant date without dialysis; dialysis
+  days and urine volume on hemodialysis; urine volume, ultrafiltration and calories from dialysis fluid
+  on peritoneal dialysis.
+* **Blood and urine tests**: the newest result of each test, the kidney-function line, and *Lab results*
+  (opens the Labs view).
+* **Daily targets**: the editor (protein and calcium as minimum–maximum; the same number in both boxes
+  reads "about X"; fiber as "at least", a goal that is never "over"), *Warn at* and *Week starts on*.
+
+**Suggest targets** works from the *saved* profile: when the form differs from it the app asks the
+person to save first. The answer fills the editor (not saved) and shows, in order: a very-high-potassium
+alert if there is one; what would change compared with the saved targets, each with the first sentence
+of the deciding rule's note as the reason; how the numbers were worked out (weight basis, nutrition
+risk, age, sex, BMI, kcal/kg, activity and the lab results used); every target with a **Why this
+number?** disclosure listing each rule applied — its note, rule id, grade, an **Expert opinion** badge
+with what the opinion is, and a link to the source; the lab notes; buttons for the inputs that would make
+it more personal (`missing_inputs`); the "starting points only" reminder; handbook links. A refusal
+(pregnancy, under 18, first 12 weeks after a transplant) shows its message instead of numbers, and the
+saved targets stay. The refusals depend only on the saved profile, so the page recognises them with the
+browser copy of the rules before asking the server (which refuses on its own as well).
+
+**Lab results** (`#labs`, `js/views/labs.js`; no tab, opened from Profile): pick the test, type the
+result (a decimal comma is accepted), pick the unit (the first offered follows `user.units.labs`, set in
+Settings → Preferences) and the date. The converted value is shown while typing ("Will be saved as
+1.94 mmol/L = 6.0 mg/dL."), and a value outside the plausible range is explained before anything is
+sent. After saving, *What this result changed* compares the suggested targets before and after the result
+(for example "Phosphorus: 1,000 mg/day → 800 mg/day") and offers **Review suggested targets**, which runs
+the suggestion in Profile; Profile also shows a dismissible *Review suggested targets* notice listing every
+change since the last reviewed suggestion. Nothing is ever applied to the saved targets from here. A
+potassium of 6.0 mmol/L or more shows a red banner with the KDIGO 2024 Table 28 text (urgent; emergency
+from 6.5) right after saving and, on the Labs view and Profile, while it is the newest potassium result of
+the last 90 days. The *Kidney function* card shows the eGFR with its stage (or both formulas when sex is
+not set), the albuminuria category, and the server's message. *History* lists every result by test,
+newest first, with a filter and deletion (confirmed in the page).
+
+**Today** draws the fiber goal as progress toward "at least X g" (no "over" state) and a protein range
+whose minimum equals its maximum as "about X g".
+
+**Demo and preview**: `js/mock/profile.js` and `js/mock/labs.js` answer every route above with the
+browser copies of the rules (`js/engine/targets.js`, `js/engine/kidney_function.js`), and the sample
+person has a birth month, an activity level and a few months of results (some typed in SI units).
+
 ## Settings
 
 | Key | Who sets it | Default | Effect |
@@ -212,6 +263,11 @@ No admin route reads them.
 * Tests: `tests/test_targets.py` (spec vectors, properties, every threshold), `tests/test_units.py`,
   `tests/test_kidney_function.py`, `tests/test_targets_api.py` (API, settings, two people, export,
   deletion), `tests/test_targets_vectors.py` (parity files current), `tests/test_migration_m004.py`.
+* Frontend: `js/views/profile.js`, `js/views/labs.js` (also `KH.labs`, the helpers Profile uses),
+  `css/labs.css`; demo routes in `js/mock/profile.js` and `js/mock/labs.js`. `tests/test_targets_ui.py`
+  keeps the forms wired to the server's fields and enums; `python tools/e2e/parity.py --sections 11`
+  compares the demo with a real server (profile fields, labs, ~150 suggestions); `tools/e2e/regress.py`
+  and `tools/e2e/sandbox.py` walk the screens.
 * Schema: step 4 (`app/migrations/m004_targets_labs.py`) adds the profile columns to `user_profiles`
   and the `lab_results` table (`ON DELETE CASCADE` with the account). `activity` is nullable so "not
   chosen" can fall back to `targets.default_activity` and be listed in `missing_inputs`.

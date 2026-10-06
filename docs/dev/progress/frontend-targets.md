@@ -19,6 +19,10 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
    potassium banner, "Review suggested targets" prompt — DONE (first pass, walked)
 6. e2e: tools/e2e/parity.py routes, preview build + sandbox.py + regress.py, Chromium walks 375/1280 light/dark
 7. Docs: ARCHITECTURE frontend module list, docs/targets-and-labs.md (UI), handbook page if needed; final pytest
+   — docs DONE (ARCHITECTURE module list + "Frontend (M2 targets)" + parity paragraph; docs/targets-and-labs.md
+   "In the app" + maintainer pointers; handbook app/first-setup.md, app/targets-and-warnings.md, app/index.md: the
+   targets/labs parts no longer say "coming in v0.3"; strict mkdocs build, build_handbook --check, link test with
+   HANDBOOK_BUILT_SITE all pass). Other features' "coming in v0.3" notes are left to their owners / M3.
 
 ## Done (and how verified)
 * Step 1 (commit fcb8621): settings.js DEFS has the 7 keys; `node tests/js/run_vectors.mjs` settings section now fails only on

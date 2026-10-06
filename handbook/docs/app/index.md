@@ -56,9 +56,9 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
 - **Its targets are starting points.** "Suggest targets" fills in numbers from guidelines, labeled
   "discuss with your care team". The numbers your nephrologist, diabetes team or renal dietitian give
   you always win.
-- **It does not read your lab results for you.** In v0.3 you can type in a few lab values so the
-  starting targets fit you better ([First setup](first-setup.md)). Your team explains what the results
-  mean.
+- **It does not read your lab results for you.** You can type in a few lab values (**Profile → Lab
+  results**) so the starting targets fit you better ([First setup](first-setup.md)). Your team explains
+  what the results mean.
 - **It is not for emergencies.** It does not watch your glucose and it cannot call for help.
 
 !!! danger "Call 911 (or your local emergency number)"
@@ -97,8 +97,7 @@ Version 0.3 is being built now. Pages mark each feature that is not in your app 
 - logging while offline, synced when you are back on Wi-Fi ([design note 02][NOTE02]);
 - barcode scanning and label photos ([Barcodes and label photos](barcode-and-photo.md));
 - meal guidance: "what fits now", swaps, "plan the rest of my day" and insights ([design note 06][NOTE06]);
-- optional AI ideas ([Optional AI](ai.md));
-- targets that use your age, sex, activity and lab results ([First setup](first-setup.md)).
+- optional AI ideas ([Optional AI](ai.md)).
 
 ## If something goes wrong
 
