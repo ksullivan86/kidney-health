@@ -10,8 +10,8 @@
 !LICENSE
 !requirements.lock
 
-# The handbook stage (filled in by M3; docs/dev/research/08-handbook-site.md §4.7) builds /learn
-# from these sources. Its generated output and caches stay out.
+# The image's handbook stage (docs/dev/research/08-handbook-site.md §4.7) builds the site served at
+# /learn from these sources. A local build output and caches stay out.
 !handbook/
 handbook/site
 handbook/.cache

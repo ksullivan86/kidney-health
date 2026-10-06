@@ -28,7 +28,8 @@ Sections
   8 bulk: every builtin food logged at an odd amount, entry/day/summary parity (summation order)
   9 custom foods (create/edit/copy/hide/delete, grams re-derivation), target variants, LIKE metacharacters
   10 accounts: the demo's /api/auth/status, /api/me, /api/me/settings and /api/me/keys answer with the
-     same keys and value types as the server's (values differ: the demo is a demo admin)
+     same keys and value types as the server's (values differ: the demo is a demo admin); /api/handbook
+     has the same keys and link groups (the demo serves no handbook)
 
 Exit status 0 when every comparison matched, 1 otherwise. Report: <out>/report.json.
 The server, the static server and the browser are always stopped.
@@ -941,6 +942,17 @@ class Harness:
                 self.rec.compare(S, f"GET {path} status", rs["status"], rm["status"])
                 continue
             self.rec.compare(S, f"GET {path} shape", shape(rs["body"]), shape(rm["body"]), ignore=frozenset())
+
+        # GET /api/handbook: the demo has no handbook, so it answers like a server without one (url null,
+        # no Learn links); its link table is empty, so only the groups are compared, not their entries.
+        rs, rm = self.server.call("GET", "/api/handbook"), self.mock.call("GET", "/api/handbook")
+        if rs["status"] != 200 or rm["status"] != 200:
+            self.rec.compare(S, "GET /api/handbook status", rs["status"], rm["status"])
+        else:
+            top = lambda body: {k: shape(v) for k, v in body.items() if k != "links"}  # noqa: E731
+            self.rec.compare(S, "GET /api/handbook shape", top(rs["body"]), top(rm["body"]), ignore=frozenset())
+            self.rec.compare(S, "GET /api/handbook link groups", sorted(rs["body"]["links"]), sorted(rm["body"]["links"]),
+                             ignore=frozenset())
 
 
 # --------------------------------------------------------------------------- #

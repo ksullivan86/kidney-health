@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Progress: handbook-integration (M3, v0.3.0)
 
@@ -89,6 +89,26 @@ reading; they changed no files. Started 2026-10-06.
    - "coming in v0.3" for /learn removed (configuration.md, security.md, app/index.md, README layout).
    - ARCHITECTURE.md "M3: the handbook at /learn"; CHANGELOG; docs/ROADMAP.md (note 08 deferrals).
 
+6. Final verification (2026-10-06):
+   - Real site built with the handbook venv (`HANDBOOK_APP_LINK=/`, strict) into scratch/learn;
+     `tools/e2e/learn.py --site … --port 8321` (system Playwright) and from a CI-style venv
+     (`--system-site-packages` + tools/e2e/requirements.lock, --server-python python3): 50/50 PASS each,
+     375x812 + 1280x800: start page, stage g4, potassium (+unit tab), palette, search → result, 404,
+     Back to the food log → sign in → Learn entry → banana warning link → Settings About → Learn.
+     Zero CSP/Trusted Types violations, page/console errors, failed or outside requests.
+   - Ad-hoc Chromium: suggested-target notes links, header icon at both widths; demo preview: no Learn
+     link, About says "not part of this demo", no errors.
+   - smoke_http.py against uvicorn :8320 with the real site: all checks ok.
+   - hadolint (both Containerfiles + caddy) ok; actionlint ok; zizmor 1.30.1 offline: no findings;
+     SHA-pin grep ok; yaml_parse 29 files ok; shellcheck ok; node --check all JS ok.
+   - tools/e2e/parity.py (:8325/:8326): the new /api/handbook shape + link-group checks pass; the
+     other 940 diffs are M2 profile/settings twins (targets/guidance), not this role.
+   - `python3 -m pytest`: 1971 passed, 2 failed — tests/test_settings_ui.py::
+     test_engine_registry_lists_every_server_key and tests/test_rules_vectors.py::
+     test_js_engine_matches_vectors, both because app/static/js/engine/settings.js lacks the
+     targets.*/guidance/user.units.labs registry keys (targets + guidance roles; not touched here).
+   - Notes 02 and 06: /handbook/ URLs → /learn/ (note 08 §7 Phase 4 one-line edits).
+
 ## Decisions
 
 - HANDBOOK_PUBLIC_URL lives in config.py (deployment URL like PUBLIC_URL), not the settings registry.
@@ -106,6 +126,11 @@ reading; they changed no files. Started 2026-10-06.
   settings registry gained targets.*/guidance keys without the JS twin (engine/settings.js) and
   vectors being updated (targets/guidance roles). Recheck later.
 
-## Next
+## Not done here (owners elsewhere)
 
-6. E2E Chromium check, hadolint, actionlint, zizmor, SHA-pin check, full pytest.
+- Owner decisions: enable Pages (HANDBOOK_PAGES=true), then HANDBOOK_PUBLIC_URL + image documentation
+  label; clinical sign-off (docs/ROADMAP.md).
+- Guidance-owned citations of "diet-guide §N" (app/guidance/topics.py docstring, data/combos.json,
+  tests/guidance/test_data.py) left as they are; docs/diet-guide.md maps every old section.
+- Unverifiable here: the container image build and the CI runner (Google Chrome instead of Playwright's
+  Chromium; GitHub Pages deploy; lychee run) — run on CI.

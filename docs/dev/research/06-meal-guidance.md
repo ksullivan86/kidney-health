@@ -793,7 +793,7 @@ Plan-day is a `POST` because it takes an options body; it still writes nothing.
      "fit_text": "Fits: 45 g carbs · 55 mg potassium · 70 mg phosphorus · 0 mg sodium",
      "reasons": [{"code": "adds_missing_group", "text": "Adds the starch this dinner is missing"},
                  {"code": "fills_carbs", "text": "Brings dinner to 45 of your 60 g carbs"}],
-     "handbook": [{"slug": "carb-counting", "title": "Carb counting with renal swaps", "url": "/handbook/carb-counting/"}]},
+     "handbook": [{"slug": "carb-counting", "title": "Carb counting with renal swaps", "url": "/learn/eat/carb-counting/"}]},
     {"food_id": 4, "name": "Egg white, cooked", "group": "protein", "servings": 1, "score": 5.04, "...": "..."},
     {"food_id": 3, "name": "Chicken breast, roasted", "group": "protein", "servings": 0.5, "score": 4.80,
      "reasons": [{"code": "adds_missing_group", "text": "Adds the protein this dinner is missing"},
@@ -878,7 +878,7 @@ others:
  "sources": [{"short_name": "milk", "value": 1624, "share_pct": 23},
              {"short_name": "cheese", "value": 1524, "share_pct": 21},
              {"short_name": "chicken breast", "value": 1372, "share_pct": 19}],
- "handbook": [{"slug": "phosphorus", "title": "Phosphorus and the weekly average", "url": "/handbook/phosphorus/"}]}
+ "handbook": [{"slug": "phosphorus", "title": "Phosphorus and the weekly average", "url": "/learn/eat/phosphorus/"}]}
 ```
 
 Pydantic models go in `app/models.py` (`GuidanceRoom`, `GuidanceFood`, `NextMealResponse`, `SwapResponse`,
@@ -974,7 +974,7 @@ Vegetarian/pescatarian patterns need per-food diet tags and are deferred to v0.4
 Proposed slugs (the handbook note owns the final list; one mapping table here keeps rules, insights and
 AI citing the same pages): `potassium`, `potassium-leaching`, `phosphorus`, `phosphate-additives`,
 `sodium`, `fluid`, `protein`, `eating-enough`, `carb-counting`, `treating-a-low`, `dialysis-days`,
-`label-reading`, `eating-out`, `portions`. Each entry: `{slug, title, url: "/handbook/<slug>/"}`.
+`label-reading`, `eating-out`, `portions`. Each entry: `{slug, title, url: "/learn/<path>/"}` (paths: note 08 §4.10).
 A test fails if a slug used in `TIPS` or an insight template has no entry.
 
 ### 4.16 UI (frontend owner; behaviour only)

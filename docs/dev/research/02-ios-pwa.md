@@ -466,7 +466,7 @@ true). Its test should assert that.
 | Request | Strategy |
 |---|---|
 | Navigations to the app itself (`/`, `/index.html`) | Cache-first from the versioned shell, so `index.html`, `app.js` and `style.css` always come from the same release. **Bypass** (straight to the network) when the URL carries `?reauth=1`, so an auth proxy can redirect to its login page. |
-| Navigations to anything else (e.g. a future same-origin patient handbook under `/handbook/`) | **Not intercepted.** Never answer them with the app shell. Caching handbook pages for offline reading can come later as a separate runtime cache. |
+| Navigations to anything else (e.g. the same-origin patient handbook under `/learn/`, note 08 §4.10) | **Not intercepted.** Never answer them with the app shell. Caching handbook pages for offline reading can come later as a separate runtime cache. |
 | `/style.css`, `/app.js`, `/offline.js`, `/scan.js`, `/manifest.webmanifest`, `/icons/*`, `/apple-touch-icon.png` | Precached at install, cache-first |
 | `/vendor/**` | Runtime cache-first in `kdl-vendor-<version>`, filled only on first scan |
 | `/api/**`, `/healthz`, any non-GET, cross-origin | **Not intercepted**; the network decides. Personal data never enters Cache Storage. |
