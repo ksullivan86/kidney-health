@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # frontend-targets (M2): UI, demo twins and mock routes for personalised targets and labs
 
@@ -17,7 +17,7 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
    refusal states, missing-input prompts, about-X protein, fibre min-only rendering — DONE (first pass, walked)
 5. Labs view (js/views/labs.js + css/labs.css): entry with unit picker and echo, history per analyte, eGFR card,
    potassium banner, "Review suggested targets" prompt — DONE (first pass, walked)
-6. e2e: tools/e2e/parity.py routes, preview build + sandbox.py + regress.py, Chromium walks 375/1280 light/dark
+6. e2e: tools/e2e/parity.py routes, preview build + sandbox.py + regress.py, Chromium walks 375/1280 light/dark — DONE
 7. Docs: ARCHITECTURE frontend module list, docs/targets-and-labs.md (UI), handbook page if needed; final pytest
    — docs DONE (ARCHITECTURE module list + "Frontend (M2 targets)" + parity paragraph; docs/targets-and-labs.md
    "In the app" + maintainer pointers; handbook app/first-setup.md, app/targets-and-warnings.md, app/index.md: the
@@ -63,6 +63,24 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
   tests/test_targets_ui.py (8 static tests: labelled v0.3 controls, choices = server enums, conditional fields,
   range/goal editor, labs analytes/learn pages, demo routes for every labs/profile route, mock field lists = models,
   admin settings group).
+
+## Final verification (2026-10-06)
+* `node tests/js/run_vectors.mjs`: rules 5721, targets 1859, kidney function 140 checks pass; settings fails 19/232
+  only because settings.js lacks the 4 `guidance*` keys (guidance frontend role; see guidance.md handoff).
+* `python -m pytest`: everything passes except tests/test_rules_vectors.py::test_js_engine_matches_vectors and
+  tests/test_settings_ui.py::test_engine_registry_lists_every_server_key — the same guidance keys.
+* `tools/e2e/parity.py` (all sections, ports 8352/8353): sections 0, 1, 1b, 2, 2b, 3, 3b, 7, 11a/b/c all pass
+  (11: 290 checks); the failures in 4, 5, 6, 7b–7d, 8, 9, 10 are all the guidance fields the demo log/meals/settings do
+  not have yet (`purpose`, `client_id`, `meal_hint`, the CSV `purpose` column, the `guidance` setting).
+* `tools/e2e/regress.py --no-pytest --port 8355` (4 configs): 468 PASS; only FAIL is the static run_vectors check above.
+* `tools/e2e/sandbox.py --workers 4 --port 8356`: 17 walks, 3 sweeps, probes: 0 issues.
+* $S/walk.py server + ?mock=1 (375 light, 1280 dark): no console errors, CSP/TT violations, failed requests or
+  horizontal scroll; $S/hd.py (?mock=1&hd=1): clean. Screenshots reviewed in $S/walk/, $S/regress/shots/.
+* Handbook: strict mkdocs build, `scripts/build_handbook.py --check`, link test with HANDBOOK_BUILT_SITE: pass.
+* ruff on edited Python: no new findings (4 pre-existing).
+
+## Not verified here
+* Real phones (iOS Safari month/date pickers, VoiceOver/TalkBack reading order): emulated with Chromium only.
 
 ## Decisions (and why)
 * Labs is a view without a tab (#labs, like Settings), opened from Profile's "Blood and urine tests" card, the
