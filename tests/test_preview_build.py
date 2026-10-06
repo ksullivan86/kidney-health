@@ -5,6 +5,7 @@ import importlib.util
 import json
 import re
 import shutil
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -21,14 +22,39 @@ def _load_builder():
     return module
 
 
+class _AssetLister(HTMLParser):
+    """Collects stylesheet links and script sources in document order, split at </head>."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.in_head = True
+        self.styles: list[str] = []
+        self.head_scripts: list[str] = []
+        self.body_scripts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        a = dict(attrs)
+        if tag == "body":
+            self.in_head = False
+        elif tag == "link" and a.get("rel") == "stylesheet" and a.get("href"):
+            self.styles.append(a["href"])
+        elif tag == "script" and a.get("src"):
+            if self.in_head:
+                self.head_scripts.append(a["src"])
+            elif a.get("data-preview") != "omit":
+                self.body_scripts.append(a["src"])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "head":
+            self.in_head = False
+
+
 def _index_assets() -> tuple[list[str], list[str], list[str]]:
     """(stylesheets, head scripts, body scripts kept for the preview) as index.html lists them."""
-    index = (STATIC / "index.html").read_text(encoding="utf-8")
-    head, body = index.split("</head>", 1)
-    styles = re.findall(r'<link rel="stylesheet" href="([^"]+)">', head)
-    head_scripts = re.findall(r'<script src="([^"]+)"[^>]*>\s*</script\b[^>]*>', head, re.I)
-    body_scripts = [src for src, extra in re.findall(r'<script src="([^"]+)"([^>]*)>\s*</script\b[^>]*>', body, re.I) if 'data-preview="omit"' not in extra]
-    return styles, head_scripts, body_scripts
+    lister = _AssetLister()
+    lister.feed((STATIC / "index.html").read_text(encoding="utf-8"))
+    lister.close()
+    return lister.styles, lister.head_scripts, lister.body_scripts
 
 
 @pytest.fixture(scope="module")
