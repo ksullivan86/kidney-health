@@ -103,9 +103,11 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * **Frontend device (scan.js, About page):** R11 attribution under the product name and on the About page; build the
   product link only from `attribution.url` when it starts with `https://`; show `quality[].message` and "not listed"
   for `null` potassium/phosphorus; 404 → Quick add with `gtin` and `name`; consent switch `food.off_consent`.
-* **AI builder:** label/plate photo text that the model reads must go through `app.textclean.clean_text`; never put
-  `ingredients_text`, product names or other provider text into a prompt as instructions (§9.3; guarded by
-  `tests/test_off_mapping.py::test_product_text_never_reaches_an_ai_prompt_unmarked`).
+* **AI builder:** label/plate photo text that the model reads must go through `app.textclean.clean_text`; stored
+  `ingredients_text`, product names and other provider text are never instructions in a prompt (§9.3). The guard
+  `tests/test_off_mapping.py::test_product_text_never_reaches_an_ai_prompt_unmarked` scans
+  `app/guidance/ai_bridge.py` and `app/ai/**/*prompt*.py` for `ingredients_text` (narrowed on 2026-10-06 so the
+  read-label answer schema in `app/ai/schemas.py`, which is model output, is allowed).
 * **M3 integration (README, §6 item 18):** feature list line for barcode lookups (Open Food Facts opt-in, USDA
   branded), configuration rows for OFF_ENABLED, OFF_CONTACT, OFF_RATE_PER_MINUTE, BARCODE_NEGATIVE_TTL_HOURS,
   USDA_BRANDED_BARCODE and OFF_BASE_URL (env only), and README line 169 "(and, later, Open Food Facts or AI)".

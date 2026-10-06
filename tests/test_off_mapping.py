@@ -548,16 +548,18 @@ def test_quality_items() -> None:
 
 
 def test_product_text_never_reaches_an_ai_prompt_unmarked() -> None:
-    """Open Food Facts names are untrusted (anyone can edit them) and ingredient lists never go into an
-    AI prompt (note 03 §9.3, note 04 §9 A2/A3). The guidance bridge is the only door from food data to
-    the optional AI layer; any AI module added later is checked too."""
+    """Open Food Facts names are untrusted (anyone can edit them) and stored ingredient lists never go
+    into an AI prompt (note 03 §9.3, note 04 §9 A2/A3). The guidance bridge is the only door from food
+    data to the optional AI layer, and prompts are built in the AI layer's prompt modules (note 04 R13:
+    ``app/ai/prompts.py``); both are checked. Other AI modules may name ``ingredients_text``: the
+    read-label answer carries the ingredients the model read from a photo (model output, not input)."""
     from pathlib import Path
 
     from app.guidance import ai_bridge
 
     assert "off" in ai_bridge.UNTRUSTED_SOURCES and "custom" in ai_bridge.UNTRUSTED_SOURCES
     root = Path(__file__).resolve().parents[1] / "app"
-    prompt_code = [root / "guidance" / "ai_bridge.py", *sorted((root / "ai").glob("**/*.py"))]
+    prompt_code = [root / "guidance" / "ai_bridge.py", *sorted((root / "ai").glob("**/*prompt*.py"))]
     for path in prompt_code:
         text = path.read_text(encoding="utf-8")
         assert "ingredients_text" not in text, f"{path.relative_to(root.parent)} must not put ingredient lists into prompts"
