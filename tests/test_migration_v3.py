@@ -54,9 +54,9 @@ def schema_shape(conn: sqlite3.Connection) -> dict[str, object]:
 def test_v02_database_upgrades_to_accounts_with_everything_on_user_one(tmp_path):
     path = tmp_path / "kidney.db"
     build_v02_with_data(path)
-    assert db.init_db(path) == [3]
+    assert db.init_db(path) == list(range(3, db.SCHEMA_VERSION + 1))  # step 3 and every later one
     conn = db.connect(path)
-    assert db.get_schema_version(conn) == 3
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     user = conn.execute("SELECT id, role, status, username_norm FROM users").fetchall()
     assert [tuple(u) for u in user] == [(1, "admin", "pending_setup", "#setup")]
@@ -96,7 +96,7 @@ def test_pre_v3_backup_is_written_once_private_and_restorable(tmp_path):
 def test_v01_database_upgrades_all_the_way(tmp_path):
     path = tmp_path / "data" / "kidney.db"
     build_v01_database(path)
-    assert db.init_db(path) == [1, 2, 3]
+    assert db.init_db(path) == list(range(1, db.SCHEMA_VERSION + 1))
     conn = db.connect(path)
     assert {r[0] for r in conn.execute("SELECT user_id FROM log_entries")} == {1}
     assert conn.execute("SELECT owner_user_id FROM foods WHERE source = 'custom'").fetchone()[0] == 1

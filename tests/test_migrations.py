@@ -132,7 +132,7 @@ def test_v01_database_upgrades_on_startup_and_old_rows_read_back_as_eaten(tmp_pa
     assert "status" in db.table_columns(after, "log_entries")
     assert {"dialysis_days_json", "week_start"} <= db.table_columns(after, "profile")
     assert {"id", "name", "note", "items_json"} <= db.table_columns(after, "meal_templates")
-    assert db.get_schema_version(after) == db.SCHEMA_VERSION == 3
+    assert db.get_schema_version(after) == db.SCHEMA_VERSION >= 3
     rows = after.execute("SELECT id, status FROM log_entries ORDER BY id").fetchall()
     assert [(r["id"], r["status"]) for r in rows] == [(1, "eaten"), (2, "eaten"), (3, "planned")]
     assert {r[0] for r in after.execute("SELECT user_id FROM log_entries")} == {1}
@@ -141,11 +141,11 @@ def test_v01_database_upgrades_on_startup_and_old_rows_read_back_as_eaten(tmp_pa
 
 def test_migrations_are_idempotent_and_record_the_version(tmp_path):
     path = tmp_path / "kidney.db"
-    assert db.init_db(path) == [1, 2, 3]
+    assert db.init_db(path) == list(range(1, db.SCHEMA_VERSION + 1))
     assert db.init_db(path) == []
     conn = db.connect(path)
-    assert db.get_schema_version(conn) == 3
-    assert db.get_meta(conn, db.SCHEMA_VERSION_KEY) == "3"
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
+    assert db.get_meta(conn, db.SCHEMA_VERSION_KEY) == str(db.SCHEMA_VERSION)
     # the step list is ordered and ends at the advertised version
     assert [v for v, _, _ in db.MIGRATIONS] == sorted(v for v, _, _ in db.MIGRATIONS)
     assert db.MIGRATIONS[-1][0] == db.SCHEMA_VERSION
@@ -197,6 +197,6 @@ def test_partially_upgraded_database_gets_only_the_missing_columns(tmp_path, foo
         assert c.get("/api/profile").json()["week_start"] == "monday"
 
     conn = db.connect(settings.db_path)
-    assert db.get_schema_version(conn) == 3
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     assert {"dialysis_days_json", "week_start"} <= db.table_columns(conn, "profile")
     conn.close()
