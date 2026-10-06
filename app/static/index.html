@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="css/plan.css">
 <link rel="stylesheet" href="css/trends.css">
 <link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/labs.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/sheets.css">
@@ -426,25 +427,71 @@
 
   <!-- ===================== PROFILE ===================== -->
   <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
+    <!-- js/views/profile.js. "About you" and the treatment fields (note 05 §4.2, §4.8), the lab summary,
+         and the daily targets with "Suggest targets" (never auto-saved). -->
+    <div id="profile-lab-alert" class="lab-alerts" role="alert"></div>
     <form id="profile-form" class="profile-form" novalidate>
-      <section class="card">
-        <h2 class="card-title">About you</h2>
+      <section class="card" aria-labelledby="pf-about-h">
+        <h2 class="card-title" id="pf-about-h">About you</h2>
+        <p class="hint">All optional. These details make the suggested targets fit you better; they stay on this server.</p>
         <div class="form-grid">
           <div class="field span-2">
             <label for="pf-name">Name</label>
             <input id="pf-name" name="name" type="text" autocomplete="name" placeholder="Optional">
           </div>
           <div class="field">
-            <label for="pf-weight">Weight (kg)</label>
-            <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70">
+            <label for="pf-birth-month">Birth month</label>
+            <input id="pf-birth-month" name="birth_month" type="month" autocomplete="off" placeholder="YYYY-MM" aria-describedby="pf-birth-month-hint">
+            <span class="hint" id="pf-birth-month-hint">Year and month, for example 1971-03. Age changes calories, protein from 65 and calcium.</span>
           </div>
           <div class="field">
             <label for="pf-height">Height (cm)</label>
-            <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional">
+            <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional" aria-describedby="pf-height-hint">
+            <span class="hint" id="pf-height-hint">Lets the app adjust for a weight above or below the healthy range.</span>
           </div>
           <div class="field">
-            <label for="pf-stage">CKD stage</label>
-            <select id="pf-stage" name="ckd_stage">
+            <label for="pf-weight" id="pf-weight-label">Weight (kg)</label>
+            <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70" aria-describedby="pf-weight-hint">
+            <span class="hint" id="pf-weight-hint">Calories and protein are worked out from it.</span>
+          </div>
+          <div class="field">
+            <label for="pf-weight-6mo">Weight 6 months ago (kg)</label>
+            <input id="pf-weight-6mo" name="weight_6_months_ago_kg" type="number" inputmode="decimal" min="20" max="400" step="0.1" placeholder="Optional" aria-describedby="pf-weight-6mo-hint">
+            <span class="hint" id="pf-weight-6mo-hint">Losing more than 5 % without trying is a sign of malnutrition risk.</span>
+          </div>
+          <div class="field span-2">
+            <label for="pf-sex">Sex used in medical formulas</label>
+            <select id="pf-sex" name="sex" aria-describedby="pf-sex-help">
+              <option value="unspecified">Prefer not to say</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+            <span class="hint" id="pf-sex-help">Used only for formulas (kidney function, energy, calcium). Choose the sex your lab uses for your eGFR. If you take gender-affirming hormones, ask your clinician which to use. "Prefer not to say" uses an average and shows ranges.</span>
+          </div>
+          <fieldset class="field span-2 choice-list" id="pf-activity-field" aria-describedby="pf-activity-hint">
+            <legend>Activity on a usual day</legend>
+            <span class="hint" id="pf-activity-hint">Used for the calorie estimate (2023 Dietary Reference Intakes, Table 7-1).</span>
+            <label class="choice" for="pf-act-none"><input type="radio" name="activity" id="pf-act-none" value=""><span class="choice-text"><b>Not chosen</b><span class="hint">The app uses its default level until you choose.</span></span></label>
+            <label class="choice" for="pf-act-inactive"><input type="radio" name="activity" id="pf-act-inactive" value="inactive"><span class="choice-text"><b>Inactive</b><span class="hint">Daily living only: housework and getting around, about 30 minutes of walking in a day.</span></span></label>
+            <label class="choice" for="pf-act-low_active"><input type="radio" name="activity" id="pf-act-low_active" value="low_active"><span class="choice-text"><b>Low active</b><span class="hint">Daily living plus about an hour of brisk walking (60 to 80 minutes at 3 to 4 mph, 5 to 6.5 km/h).</span></span></label>
+            <label class="choice" for="pf-act-active"><input type="radio" name="activity" id="pf-act-active" value="active"><span class="choice-text"><b>Active</b><span class="hint">Daily living plus 30 to 50 minutes of walking and about an hour and a half of exercise such as cycling or doubles tennis.</span></span></label>
+            <label class="choice" for="pf-act-very_active"><input type="radio" name="activity" id="pf-act-very_active" value="very_active"><span class="choice-text"><b>Very active</b><span class="hint">Daily living plus more than 2 hours of hard exercise such as cycling, jogging or tennis.</span></span></label>
+          </fieldset>
+          <fieldset class="field span-2" id="pf-health-field">
+            <legend>Your health</legend>
+            <label class="check" for="pf-frail"><input type="checkbox" id="pf-frail" name="frail_or_sarcopenic"><span class="check-text">Frailty or low muscle mass (as told by your care team)<span class="hint">Moves protein and calories to the higher end.</span></span></label>
+            <label class="check" for="pf-pregnant"><input type="checkbox" id="pf-pregnant" name="pregnant_or_breastfeeding"><span class="check-text">Pregnant or breastfeeding<span class="hint">The app does not suggest targets then: your kidney and maternity teams set them.</span></span></label>
+            <label class="check" for="pf-hyperk"><input type="checkbox" id="pf-hyperk" name="hyperkalemia_history"><span class="check-text">I have had high potassium, or I take a potassium binder<span class="hint">Keeps the potassium limit from being relaxed when a result is normal.</span></span></label>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="pf-kidney-h">
+        <h2 class="card-title" id="pf-kidney-h">Kidneys and diabetes</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label for="pf-stage" id="pf-stage-label">CKD stage</label>
+            <select id="pf-stage" name="ckd_stage" aria-describedby="pf-stage-hint">
               <option value="1">Stage 1</option>
               <option value="2">Stage 2</option>
               <option value="3a">Stage 3a</option>
@@ -452,6 +499,7 @@
               <option value="4">Stage 4</option>
               <option value="5">Stage 5</option>
             </select>
+            <span class="hint" id="pf-stage-hint">The stage your nephrologist gave you.</span>
           </div>
           <div class="field">
             <label for="pf-dialysis">Dialysis</label>
@@ -469,33 +517,48 @@
               <option value="type2">Type 2</option>
             </select>
           </div>
-          <div class="field">
-            <label for="pf-warn">Warn at (% of limit)</label>
-            <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80">
-            <span class="hint">Status turns to "near limit" at this share of a daily target.</span>
-          </div>
-          <div class="field">
-            <label for="pf-week-start">Week starts on</label>
-            <select id="pf-week-start" name="week_start">
-              <option value="monday">Monday</option>
-              <option value="sunday">Sunday</option>
-            </select>
-            <span class="hint">Used by the Plan view grid and shopping list.</span>
+          <div class="field" id="pf-transplant-field">
+            <label for="pf-transplant-date">Kidney transplant date</label>
+            <input id="pf-transplant-date" name="transplant_date" type="date" aria-describedby="pf-transplant-hint">
+            <span class="hint" id="pf-transplant-hint">Only if you have a working kidney transplant. The stage above is then your transplant's stage.</span>
           </div>
           <fieldset class="field span-2" id="pf-dialysis-days-field" hidden>
             <legend>Dialysis days</legend>
             <div class="weekday-checks" id="pf-dialysis-days"></div>
             <span class="hint">Potassium, sodium and fluid accumulate between sessions; with days set, Today and Trends also total them since the last session.</span>
           </fieldset>
+          <div class="field" id="pf-urine-field" hidden>
+            <label for="pf-urine">Urine per day (mL)</label>
+            <input id="pf-urine" name="urine_output_ml" type="number" inputmode="numeric" min="0" max="5000" step="50" placeholder="Optional" aria-describedby="pf-urine-hint">
+            <span class="hint" id="pf-urine-hint">Your 24-hour urine volume; your fluid allowance adds to it.</span>
+          </div>
+          <div class="field" id="pf-uf-field" hidden>
+            <label for="pf-uf">Ultrafiltration per day (mL)</label>
+            <input id="pf-uf" name="pd_uf_ml" type="number" inputmode="numeric" min="0" max="4000" step="50" placeholder="Optional" aria-describedby="pf-uf-hint">
+            <span class="hint" id="pf-uf-hint">The net fluid your exchanges remove in 24 hours (your PD nurse or record book has it).</span>
+          </div>
+          <div class="field" id="pf-pdkcal-field" hidden>
+            <label for="pf-pdkcal">Calories from dialysis fluid (kcal/day)</label>
+            <input id="pf-pdkcal" name="pd_dialysate_kcal" type="number" inputmode="numeric" min="0" max="1000" step="10" placeholder="Optional" aria-describedby="pf-pdkcal-hint">
+            <span class="hint" id="pf-pdkcal-hint">The glucose your body absorbs from the fluid; ask your PD nurse. It is taken off food calories.</span>
+          </div>
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" aria-labelledby="pf-labs-h">
         <div class="card-head">
-          <h2 class="card-title">Daily targets</h2>
+          <h2 class="card-title" id="pf-labs-h">Blood and urine tests</h2>
+          <button class="btn secondary" type="button" id="pf-open-labs">Lab results</button>
+        </div>
+        <div id="pf-labs-summary" class="labs-summary"><p class="muted small">Add your latest blood test results: potassium and phosphate can change the suggested limits, and creatinine or eGFR shows which stage your kidney function suggests.</p></div>
+      </section>
+
+      <section class="card" aria-labelledby="pf-targets-h">
+        <div class="card-head">
+          <h2 class="card-title" id="pf-targets-h">Daily targets</h2>
           <button class="btn secondary" type="button" id="btn-suggest">Suggest targets</button>
         </div>
-        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, height, stage and dialysis setting (calories and protein are per kg of ideal body weight, so add your height if you are over- or under-weight); discuss them with your care team before using them.</p>
+        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points worked out from your <em>saved</em> profile and recent lab results (calories and protein are per kg of a reference weight; guidelines leave its choice to your care team). Discuss them with your care team before using them.</p>
         <div id="targets-stale" class="notes targets-stale" role="status" hidden>
           <div class="notes-title">Check your daily targets</div>
           <p id="targets-stale-msg"></p>
@@ -504,7 +567,17 @@
             <button class="link-btn" type="button" id="targets-stale-keep">Keep my targets</button>
           </div>
         </div>
-        <div id="suggest-notes" class="notes" tabindex="-1" hidden></div>
+        <div id="targets-review" class="notes targets-review" role="status" hidden>
+          <div class="notes-title">Review suggested targets</div>
+          <div id="targets-review-msg"></div>
+          <div class="targets-stale-actions">
+            <button class="btn secondary" type="button" id="targets-review-suggest">Review suggested targets</button>
+            <button class="link-btn" type="button" id="targets-review-dismiss">Dismiss</button>
+          </div>
+        </div>
+        <div id="suggest-refusal" class="notes suggest-refusal" tabindex="-1" hidden></div>
+        <div id="suggest-notes" class="notes suggest-result" tabindex="-1" hidden></div>
+        <p class="sr-only" id="suggest-live" aria-live="polite"></p>
         <div class="form-grid targets-grid">
           <div class="field">
             <label for="tg-potassium_mg">Potassium (mg)</label>
@@ -522,15 +595,16 @@
             <label for="tg-fluid_ml">Fluid (mL)</label>
             <input id="tg-fluid_ml" data-target="fluid_ml" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
           </div>
-          <div class="field span-2 range-field">
+          <div class="field span-2 range-field" role="group" aria-labelledby="tg-protein-label">
             <span class="label" id="tg-protein-label">Protein (g), minimum to maximum</span>
             <div class="range-inputs">
               <label class="sr-only" for="tg-protein_min">Protein minimum (g)</label>
-              <input id="tg-protein_min" data-target-min="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="min">
+              <input id="tg-protein_min" data-range-min="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="min">
               <span aria-hidden="true">to</span>
               <label class="sr-only" for="tg-protein_max">Protein maximum (g)</label>
-              <input id="tg-protein_max" data-target-max="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="max">
+              <input id="tg-protein_max" data-range-max="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="max">
             </div>
+            <span class="hint">The same number in both boxes means "about this much".</span>
           </div>
           <div class="field">
             <label for="tg-carbs_g">Carbohydrate per day (g)</label>
@@ -545,8 +619,32 @@
             <input id="tg-calories_kcal" data-target="calories_kcal" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
           </div>
           <div class="field">
-            <label for="tg-calcium_mg">Calcium (mg, incl. binders)</label>
-            <input id="tg-calcium_mg" data-target="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+            <label for="tg-fiber_g">Fiber, at least (g)</label>
+            <input id="tg-fiber_g" data-target-goal="fiber_g" type="number" inputmode="numeric" min="0" step="1" placeholder="not tracked" aria-describedby="tg-fiber-hint">
+            <span class="hint" id="tg-fiber-hint">A goal to reach, never "over".</span>
+          </div>
+          <div class="field span-2 range-field" role="group" aria-labelledby="tg-calcium-label">
+            <span class="label" id="tg-calcium-label">Calcium (mg, including binders), minimum to maximum</span>
+            <div class="range-inputs">
+              <label class="sr-only" for="tg-calcium_min">Calcium minimum (mg)</label>
+              <input id="tg-calcium_min" data-range-min="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="min (optional)">
+              <span aria-hidden="true">to</span>
+              <label class="sr-only" for="tg-calcium_max">Calcium maximum (mg)</label>
+              <input id="tg-calcium_max" data-range-max="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="max">
+            </div>
+          </div>
+          <div class="field">
+            <label for="pf-warn">Warn at (% of limit)</label>
+            <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80" aria-describedby="pf-warn-hint">
+            <span class="hint" id="pf-warn-hint">Status turns to "near limit" at this share of a daily target.</span>
+          </div>
+          <div class="field">
+            <label for="pf-week-start">Week starts on</label>
+            <select id="pf-week-start" name="week_start" aria-describedby="pf-week-start-hint">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+            <span class="hint" id="pf-week-start-hint">Used by the Plan view grid and shopping list.</span>
           </div>
         </div>
       </section>
@@ -555,6 +653,7 @@
         <button class="btn primary" type="submit" id="btn-save-profile">Save profile</button>
         <span id="profile-saved" class="muted small" aria-live="polite"></span>
       </div>
+      <div id="profile-form-error" class="form-error" role="alert"></div>
     </form>
 
     <section class="card profile-settings" aria-labelledby="profile-settings-heading">
@@ -570,6 +669,82 @@
 
     <footer class="disclaimer">
       <strong>Not medical advice.</strong> Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. The food database is reference data; check labels and portions. Food warnings are general renal-diet conventions, not a prescription.
+    </footer>
+  </section>
+
+  <!-- ===================== LAB RESULTS (js/views/labs.js; note 05 §4.8) =====================
+       Reached from Profile ("Lab results", #labs). Entry with a unit picker and the converted value
+       echoed before saving, the potassium safety banner, the kidney-function card and the history. -->
+  <section id="view-labs" class="view labs-view" aria-labelledby="labs-title" hidden>
+    <div class="labs-head">
+      <button class="link-btn labs-back" type="button" id="labs-back">Back to Profile</button>
+      <h2 id="labs-title" class="labs-title" tabindex="-1">Lab results</h2>
+      <p class="muted small">Type results from your blood and urine tests. Potassium and phosphate can change your suggested limits; nothing changes your saved targets until you save them in Profile.</p>
+    </div>
+    <div id="labs-alert" class="lab-alerts" role="alert"></div>
+
+    <section class="card" aria-labelledby="lab-add-h">
+      <h2 class="card-title" id="lab-add-h">Add a result</h2>
+      <form id="lab-form" class="lab-form" novalidate>
+        <div class="form-grid">
+          <div class="field span-2">
+            <label for="lab-analyte">Test</label>
+            <select id="lab-analyte" name="analyte"></select>
+          </div>
+          <div class="field">
+            <label for="lab-value">Result</label>
+            <input id="lab-value" name="value" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="e.g. 4.6" aria-describedby="lab-echo">
+          </div>
+          <div class="field">
+            <label for="lab-unit">Unit</label>
+            <select id="lab-unit" name="unit" aria-describedby="lab-unit-hint"></select>
+            <span class="hint" id="lab-unit-hint">Use the unit printed on your report.</span>
+          </div>
+          <div class="field">
+            <label for="lab-date">Date of the test</label>
+            <input id="lab-date" name="taken_on" type="date">
+          </div>
+          <div class="field">
+            <label for="lab-note">Note (optional)</label>
+            <input id="lab-note" name="note" type="text" maxlength="500" autocomplete="off" placeholder="e.g. before dialysis">
+          </div>
+        </div>
+        <p id="lab-echo" class="lab-echo" aria-live="polite"></p>
+        <div class="form-actions">
+          <button class="btn primary" type="submit" id="lab-save">Save result</button>
+        </div>
+        <div id="lab-form-error" class="form-error" role="alert"></div>
+      </form>
+    </section>
+
+    <section id="labs-review" class="notes labs-review" tabindex="-1" aria-labelledby="labs-review-h" hidden>
+      <h2 class="notes-title" id="labs-review-h">What this result changed</h2>
+      <div id="labs-review-body"></div>
+      <div class="targets-stale-actions">
+        <button class="btn secondary" type="button" id="labs-review-go" hidden>Review suggested targets</button>
+        <button class="link-btn" type="button" id="labs-review-dismiss">Dismiss</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="kf-h">
+      <h2 class="card-title" id="kf-h">Kidney function</h2>
+      <div id="kf-body" class="kf-body" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="labs-history-h">
+      <div class="card-head">
+        <h2 class="card-title" id="labs-history-h">History</h2>
+        <div class="field labs-filter">
+          <label for="labs-filter">Show</label>
+          <select id="labs-filter"><option value="">All tests</option></select>
+        </div>
+      </div>
+      <div id="labs-history"></div>
+    </section>
+    <p class="sr-only" id="labs-live" aria-live="polite"></p>
+
+    <footer class="disclaimer">
+      <strong>Not medical advice.</strong> Results are interpreted with general guideline thresholds; your lab's own reference ranges and your care team decide what a result means for you. If a result is very abnormal or you feel unwell, contact your care team or get urgent help.
     </footer>
   </section>
 
@@ -616,7 +791,16 @@
             <select id="set-units" disabled aria-describedby="set-units-hint">
               <option>Metric: g, mg, mL, kg, cm</option>
             </select>
-            <span class="hint" id="set-units-hint">Other units (lb, oz, mmol) are planned for a later version.</span>
+            <span class="hint" id="set-units-hint">Other units (lb, oz) are planned for a later version.</span>
+          </div>
+          <div class="field">
+            <label for="set-lab-units">Units for lab results</label>
+            <select id="set-lab-units" aria-describedby="set-lab-units-hint set-lab-units-source">
+              <option value="us">US: mg/dL, g/dL, mg/g, %</option>
+              <option value="si">SI: mmol/L, µmol/L, g/L, mg/mmol, mmol/mol</option>
+            </select>
+            <span class="hint" id="set-lab-units-hint">The unit offered first when you add a lab result; any unit on your report can still be chosen.</span>
+            <span class="setting-source" id="set-lab-units-source"></span>
           </div>
         </div>
         <p class="status-msg" id="set-prefs-status" role="status" aria-live="polite"></p>
@@ -1128,6 +1312,7 @@
 <script src="js/views/add.js"></script>
 <script src="js/views/plan.js"></script>
 <script src="js/views/trends.js"></script>
+<script src="js/views/labs.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>

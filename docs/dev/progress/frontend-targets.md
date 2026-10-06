@@ -14,9 +14,9 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
 3. Mock routes: js/mock/profile.js (new fields, validation, 422 refusals, settings-driven suggestion), js/mock/labs.js
    (POST/GET/DELETE /api/labs, GET /api/labs/kidney-function) — DONE (the demo has no export zip at all)
 4. Profile UI: "About you" fields, conditional dialysis/transplant fields, suggestion diff, "Why this number?",
-   refusal states, missing-input prompts, about-X protein, fibre min-only rendering
+   refusal states, missing-input prompts, about-X protein, fibre min-only rendering — DONE (first pass, walked)
 5. Labs view (js/views/labs.js + css/labs.css): entry with unit picker and echo, history per analyte, eGFR card,
-   potassium banner, "Review suggested targets" prompt
+   potassium banner, "Review suggested targets" prompt — DONE (first pass, walked)
 6. e2e: tools/e2e/parity.py routes, preview build + sandbox.py + regress.py, Chromium walks 375/1280 light/dark
 7. Docs: ARCHITECTURE frontend module list, docs/targets-and-labs.md (UI), handbook page if needed; final pytest
 
@@ -42,7 +42,28 @@ Ports 8350–8359. Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c
   `python3 tools/e2e/parity.py --port 8352 --static-port 8353 --out $S/parity --sections 0,11`: 696/696 checks,
   24,481 leaves; a mutated 422 code made 12 checks fail.
 
+* Steps 4–5 (first pass): index.html Profile rewritten (About you / Kidneys and diabetes / Blood and urine tests /
+  Daily targets with fibre goal and calcium range, review + refusal notices, form error alert), #view-labs added;
+  js/views/profile.js rewritten, js/views/labs.js (KH.labs helpers + view), css/labs.css, profile.css additions,
+  today.js goal-only (fibre) and "about X" (protein min=max) bars, core.js KH.forms field-error helpers + VIEWS 'labs'
+  + STATUS_ORDER fiber_g, settings.js lab-units preference + admin "Personalised targets and lab results" group.
+  Walk script $S/walk.py (server and ?mock=1, 375x812 light and 1280x800 dark): zero console errors, CSP violations,
+  failed requests, horizontal scroll; screenshots in $S/walk/ reviewed (fixed: bold radio/check text, sex select
+  truncation, triple error message, long change list on first suggestion).
+
 ## Decisions (and why)
+* Labs is a view without a tab (#labs, like Settings), opened from Profile's "Blood and urine tests" card, the
+  suggestion's links and the potassium banner: six tabs do not fit 375 px with the guidance work also adding UI.
+* The UI shows the suggestion grouped by target: each applied rule's note is paired with the rule by position
+  (every rule emits exactly one note, the last note is END; checked: notes.length === rules.length + 1, else the
+  notes are not paired). The change list's "Why:" is the deciding rule's first sentence (server text, not new copy).
+* Refusals (pregnancy, under 18, < 12 weeks after a transplant) are recognised with the parity-tested twin before
+  asking the server, so no request is made that can only return 422 (no console noise); the server still refuses.
+  Likewise the lab form runs the twin's conversion/plausibility check before POST (same message as the server).
+* Potassium banner: the server's alert right after a POST; otherwise the newest potassium while it is within the
+  default 90-day window (twin potassiumAlert). An admin-shortened window is not visible to non-admins, so the banner
+  may stay up longer than the suggestion's alert (safety-leaning).
+* UI label "Fiber" (registry spelling) although the server's notes say "Fibre".
 * halfUp with negative places (calories to 10 kcal) lives in targets.js (`halfUpTo`): rules.js's halfUp builds
   `e-${places}` which is invalid for places < 0, and rules.js is being edited by the barcode role at the same time.
 

@@ -113,7 +113,8 @@ def test_settings_view_sections_and_entry_points() -> None:
     assert '<nav class="tabs" aria-label="Views" data-signed-in hidden>' in INDEX
     assert 'id="profile-open-settings"' in INDEX
     assert "router.show('settings')" in (STATIC / "js" / "views" / "profile.js").read_text(encoding="utf-8")
-    assert "const VIEWS = [...TAB_VIEWS, 'settings'];" in (STATIC / "js" / "core.js").read_text(encoding="utf-8")
+    # Settings is a view without a tab (later views without a tab, such as Labs, follow it)
+    assert re.search(r"const VIEWS = \[\.\.\.TAB_VIEWS, 'settings'(?:, '[a-z]+')*\];", (STATIC / "js" / "core.js").read_text(encoding="utf-8"))
 
 
 # --------------------------------------------------------------------------- scripts

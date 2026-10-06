@@ -162,12 +162,32 @@
     $('#totals-details > summary').textContent = counts.planned > 0 ? 'All nutrient totals for the day (eaten → projected)' : 'All nutrient totals for the day';
   }
 
+  // A goal with only a minimum (fibre, note 05 §4.8): progress toward it, never "over".
+  function goalBar(key, st) {
+    const n = NUT[key] || { label: key, unit: '' };
+    const value = Number(st.value || 0);
+    const goal = Number(st.min);
+    const p = goal > 0 ? Math.round((value / goal) * 100) : 0;
+    const reached = value >= goal;
+    const wrap = h('div', { class: `stat level-ok goal-only${reached ? ' goal-reached' : ''}` },
+      h('div', { class: 'stat-label' }, n.label, levelPill('ok', reached ? 'Goal reached' : 'Goal')),
+      h('div', { class: 'stat-value' }, h('b', {}, fmtNum(value, key)), ` of at least ${fmtNum(goal, key)} ${n.unit}`));
+    const track = h('div', { class: 'stat-track', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': goal, 'aria-valuenow': value,
+      'aria-label': `${n.label}: ${fmtNum(value, key)} of a goal of at least ${fmtNum(goal, key)} ${n.unit}, ${p} percent${reached ? ', goal reached' : ''}` });
+    track.append(h('div', { class: `stat-fill${value ? '' : ' empty'}`, style: `width:${Math.max(0, Math.min(100, p))}%` }));
+    wrap.append(track, h('div', { class: 'stat-foot' }, reached ? `${p} % of goal · goal reached` : `${p} % of goal · ${fmtNum(goal - value, key)} ${n.unit} to go`));
+    return wrap;
+  }
+
   function statusBar(key, st, pst) {
+    if (st.target == null && st.min != null) return goalBar(key, st);
     const n = NUT[key] || { label: key, unit: '' };
     const level = st.level || 'ok';
     const p = pct(st.fraction);
-    const hasMin = st.min != null;
-    const targetText = hasMin ? `${fmtNum(st.min, key)}–${fmtNum(st.target, key)}` : fmtNum(st.target, key);
+    // A range whose minimum equals its maximum (protein "about 56 g", note 05 §4.8) reads as one number.
+    const about = st.min != null && st.target != null && Number(st.min) === Number(st.target);
+    const hasMin = st.min != null && !about;
+    const targetText = about ? `about ${fmtNum(st.target, key)}` : hasMin ? `${fmtNum(st.min, key)}–${fmtNum(st.target, key)}` : fmtNum(st.target, key);
     // Same word as the server's alerts: goal (calories, carbohydrate), maximum (ranges, info), limit.
     const isGoal = n.role === 'goal' || n.role === 'track';
     const levelWord = (lv) => (lv === 'over' && hasMin ? 'Over max' : lv === 'over' && isGoal ? 'Over goal' : lv === 'caution' && isGoal ? 'Near goal' : LEVEL_TEXT[lv]);
@@ -190,7 +210,7 @@
     track.append(h('div', { class: `stat-fill${st.value ? '' : ' empty'}`, style: `width:${Math.max(0, Math.min(100, p))}%` }));
     if (hasMin && st.target) track.append(h('div', { class: 'stat-min', style: `left:${Math.min(100, (st.min / st.target) * 100).toFixed(1)}%`, title: `Minimum ${fmtNum(st.min, key)} ${n.unit}` }));
     wrap.append(track);
-    const foot = [`${p} % of ${hasMin ? 'maximum' : ROLE_WORD[n.role] || 'limit'}`];
+    const foot = [`${p} % of ${hasMin ? 'maximum' : about ? 'target' : ROLE_WORD[n.role] || 'limit'}`];
     if (hasMin && st.value < st.min) foot.push(`below the ${fmtNum(st.min, key)} ${n.unit} minimum so far`);
     if (st.fraction > 1) foot.push(`${fmtNum(st.value - st.target, key)} ${n.unit} over`);
     else foot.push(`${fmtNum(st.target - st.value, key)} ${n.unit} left`);

@@ -577,7 +577,30 @@
       msg.textContent = `Weeks now start on ${sel.value === 'sunday' ? 'Sunday' : 'Monday'}.`;
     } catch (err) { if (!err.handled) toastError(err); sel.value = (state.profile && state.profile.week_start) || 'monday'; } finally { sel.disabled = false; }
   });
+  // Lab units (user.units.labs, note 05 §4.9): the unit the Labs view offers first.
+  function renderLabUnits() {
+    const sel = $('#set-lab-units');
+    const src = clear($('#set-lab-units-source'));
+    const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.labs'] : null;
+    if (!item) return;
+    sel.value = item.value === 'si' ? 'si' : 'us';
+    sel.disabled = item.editable === false;
+    src.className = `setting-source src-${item.source}`;
+    if (item.source === 'env') src.append(lockIcon());
+    src.append(h('span', {}, sourceText(item.source, null)));
+  }
+  $('#set-lab-units').addEventListener('change', async (e) => {
+    const sel = e.target;
+    const msg = $('#set-prefs-status');
+    sel.disabled = true;
+    try {
+      const res = await api.updateMySettings({ 'user.units.labs': sel.value });
+      cache.mySettings = res.settings;
+      msg.textContent = sel.value === 'si' ? 'Lab results now offer SI units first.' : 'Lab results now offer US units first.';
+    } catch (err) { if (!err.handled) toastError(err); } finally { sel.disabled = false; renderLabUnits(); }
+  });
   function renderPrefs() {
+    renderLabUnits();
     $('#set-theme').value = KH.theme.stored();
     $('#set-week-start').value = state.profile && state.profile.week_start === 'sunday' ? 'sunday' : 'monday';
     clear($('#set-prefs-status'));
@@ -1030,12 +1053,16 @@
   const GROUPS = [
     ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days']],
     ['Food data', ['food.off_enabled', 'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
-    ['Default for everyone', ['ui.theme']],
+    ['Default for everyone', ['ui.theme', 'user.units.labs']],
+    ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
+      'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Activity log', ['audit.retention_days']],
   ];
   const CHOICE_LABEL = {
     'registration.mode': { invite: 'Invite links (recommended)', closed: 'Closed: admins create accounts', open: 'Open: anyone who can reach the page (HTTPS only)' },
     'ui.theme': { system: 'Match each device', light: 'Light', dark: 'Dark' },
+    'user.units.labs': { us: 'US: mg/dL, g/dL, mg/g, %', si: 'SI: mmol/L, µmol/L, g/L, mg/mmol, mmol/mol' },
+    'targets.default_activity': { inactive: 'Inactive', low_active: 'Low active', active: 'Active', very_active: 'Very active' },
   };
   function valueText(key, value) {
     const def = REG.BY_KEY[key];
@@ -1328,6 +1355,7 @@
     cache.mySettings = settings.status === 'fulfilled' ? settings.value.settings : settings.reason;
     cache.myKeys = keys.status === 'fulfilled' ? keys.value : keys.reason;
     renderThemeSource();
+    renderLabUnits();
     renderFood();
     if (!state.profile) { try { await KH.loadProfile(); renderPrefs(); } catch (e) { /* Preferences shows Monday */ } }
   }

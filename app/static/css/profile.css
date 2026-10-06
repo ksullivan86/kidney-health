@@ -18,3 +18,59 @@
 }
 .wd-check input:checked + span { background: var(--accent-tint); color: var(--accent); border-color: var(--accent); }
 .wd-check input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- about you (v0.3, note 05 §4.2) ---------- */
+/* base.css styles the other input types; the birth month uses a month picker (text where unsupported). */
+input[type="month"] {
+  width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+.choice-list { gap: 2px; }
+.choice-list > .hint { margin: -4px 0 4px; }
+.choice { display: flex; align-items: flex-start; gap: 10px; min-height: var(--tap); padding: 6px 4px; border-radius: var(--radius-sm); cursor: pointer; }
+.choice:hover { background: var(--surface-2); }
+.choice input { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); }
+.choice .choice-text { display: flex; flex-direction: column; font-size: 0.92rem; color: var(--text); }
+.choice .choice-text b { font-weight: 600; }
+.choice .hint { margin-top: 1px; }
+#pf-health-field { gap: 2px; }
+.targets-grid .range-field .hint { margin-top: 2px; }
+.field-error + .hint { margin-top: 2px; }
+
+/* ---------- suggested targets: changes, "Why this number?", refusals ---------- */
+.suggest-result { display: flex; flex-direction: column; gap: 8px; }
+.suggest-result > p { margin: 0; }
+.suggest-h { font-size: 0.95rem; margin: 6px 0 0; }
+.suggest-changes { list-style: disc; padding-left: 18px; margin: 0; }
+.suggest-changes li + li { margin-top: 6px; }
+.why-short { color: var(--text-2); }
+.why-list { display: flex; flex-direction: column; gap: 6px; }
+.why-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.why-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+.why-value { font-variant-numeric: tabular-nums; }
+.why > summary { cursor: pointer; color: var(--accent); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.why[open] > summary { margin-bottom: 4px; }
+.why-rule { border-left: 3px solid var(--border); padding: 2px 0 2px 10px; margin: 6px 0; }
+.why-rule p { margin: 0; }
+.why-rule p + p { margin-top: 4px; }
+.why-meta { font-size: 0.8rem; color: var(--text-2); overflow-wrap: anywhere; }
+.why-meta a { color: var(--accent); }
+.rule-id { font-family: var(--mono); font-size: 0.78rem; }
+.badge.opinion { margin-left: 0; background: var(--caution-tint); color: var(--caution-text); text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
+.opinion-note { color: var(--text-2); }
+.derived { margin: 2px 0 0; }
+.suggest-missing { margin: 0; }
+.link-btn.inline { padding: 0 2px; min-height: 0; text-decoration: underline; text-underline-offset: 2px; }
+.suggest-end { font-weight: 600; }
+.suggest-refusal { background: var(--caution-tint); }
+.suggest-refusal p + p { margin-top: 6px; }
+.targets-review ul { margin-top: 4px; }
+@media (pointer: coarse), (max-width: 719.98px) {
+  .why > summary { min-height: var(--tap); }
+  .link-btn.inline { min-height: 0; display: inline; }
+}
+/* Radio and checkbox rows inside a .field read as body text, not as field labels (base: .field label). */
+.field label.choice, .field label.check { font-size: 0.92rem; font-weight: 500; color: var(--text); }
+.field label.choice .hint, .field label.check .hint { font-weight: 400; }
+.profile-form .card > .card-title { margin-bottom: 8px; }
+.why-short { display: block; font-size: 0.85rem; margin-top: 2px; }

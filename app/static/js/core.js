@@ -27,7 +27,7 @@
   // ---------------------------------------------------------------------------
   const KEY_NUMBERS = ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'];
   const ROW_NUMBERS = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'];
-  const STATUS_ORDER = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'fluid_ml', 'calories_kcal', 'calcium_mg'];
+  const STATUS_ORDER = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'fluid_ml', 'calories_kcal', 'calcium_mg', 'fiber_g'];
   const TREND_ORDER = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'carbs_g', 'fluid_ml', 'calories_kcal', 'calcium_mg'];
   const PLAN_CHIPS = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g', 'carbs_g', 'fluid_ml'];
   const STRIP_KEYS = ['potassium_mg', 'phosphorus_mg', 'sodium_mg', 'protein_g'];
@@ -436,9 +436,10 @@
   // ---------------------------------------------------------------------------
   // Tabs / views. Each js/views/<name>.js registers what showing it loads.
   // ---------------------------------------------------------------------------
-  // Tabbed views, then views without a tab (Settings: the header gear and Profile open it).
+  // Tabbed views, then views without a tab (Settings: the header gear and Profile open it; Labs:
+  // Profile's "Lab results" button).
   const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
-  const VIEWS = [...TAB_VIEWS, 'settings'];
+  const VIEWS = [...TAB_VIEWS, 'settings', 'labs'];
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
   function showView(name, { focusTab = false } = {}) {
@@ -500,6 +501,45 @@
   }
 
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Field errors (WCAG 3.3.1): the server's "<field>: <message>" parts shown under the field they
+  // name, linked with aria-describedby and marked aria-invalid, so the reason is in view when the
+  // field gets focus. Used by the Profile and Labs forms.
+  // ---------------------------------------------------------------------------
+  // "birth_month: must be …; sex: Input should be …" → [{field: 'birth_month', message: 'Must be …'}, …];
+  // a message without a field prefix comes back with field null. Splits only before "<field>: ".
+  function splitFieldErrors(detail) {
+    const parts = String(detail || '').split(/; (?=[a-z_][a-z0-9_]*(?:\.[a-z0-9_]+)*: )/);
+    return parts.filter(Boolean).map((part) => {
+      const m = /^([a-z_][a-z0-9_]*(?:\.[a-z0-9_]+)*): (.*)$/s.exec(part);
+      const message = m ? m[2] : part;
+      return { field: m ? m[1] : null, message: message.charAt(0).toUpperCase() + message.slice(1) };
+    });
+  }
+  function clearFieldErrors(root) {
+    $$('.field-error', root).forEach((el) => {
+      const input = document.getElementById(el.dataset.for || '');
+      if (input) {
+        const ids = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter((x) => x && x !== el.id);
+        if (ids.length) input.setAttribute('aria-describedby', ids.join(' ')); else input.removeAttribute('aria-describedby');
+        input.removeAttribute('aria-invalid');
+      }
+      el.remove();
+    });
+  }
+  // anchor: where the message goes (default: right after the input; a radio group passes its fieldset).
+  function fieldError(input, message, anchor = null) {
+    if (!input || !message) return;
+    const id = `${input.id}-error`;
+    const old = document.getElementById(id);
+    if (old) old.remove();
+    const el = h('p', { class: 'field-error', id, 'data-for': input.id }, message);
+    (anchor || input.closest('.range-inputs') || input).after(el);
+    const ids = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    if (!ids.includes(id)) input.setAttribute('aria-describedby', [...ids, id].join(' '));
+    input.setAttribute('aria-invalid', 'true');
+  }
+
   // In-page confirmation. window.confirm() is never shown in a home-screen web app or a
   // sandboxed frame, so destructive actions ask inside the page: the confirm row takes the
   // place of `host` (a sheet footer or an actions row), names what will be deleted, and gets
@@ -653,6 +693,7 @@
     router: { VIEWS, TAB_VIEWS, register: registerView, show: showView, openDay },
     sheets: { setup: setupDialog, open: openDialog, onSubmit },
     confirm: { inline: inlineConfirm, dismiss: dismissConfirm },
+    forms: { splitFieldErrors, fieldError, clearFieldErrors },
     views: KH.views || {},
   });
 })();
