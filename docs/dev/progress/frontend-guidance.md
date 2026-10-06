@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # frontend-guidance (M2/M3): guidance UI, demo twin, mock routes
 
@@ -14,10 +14,10 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
 2. settings.js: the 4 guidance keys + 'object'/'list' validation (GuidancePreferences) — DONE
 3. Mock: js/mock/guidance.js (all /api/guidance routes with the server's validation), log purpose/client_id/batch,
    meals meal_hint (demo has no export zip, so no food_preferences export) — DONE
-4. UI (first pass DONE, polishing): js/views/guidance.js + css/guidance.css: What fits now (Add + Today), swap disclosure in the entry sheet,
+4. UI — DONE: js/views/guidance.js + css/guidance.css: What fits now (Add + Today), swap disclosure in the entry sheet,
    hypo card, "Used to treat a low" checkbox + purpose, plan sheet (Plan + Today), insights (Today + Trends),
    Not for me (row menu + Settings list), guidance prefs in Settings, offline message.
-5. e2e: parity.py section, sandbox, regress, Chromium walks, 4x throttle perf; docs; ARCHITECTURE module list.
+5. e2e: parity.py section, sandbox, regress, Chromium walks, 4x throttle perf; docs; ARCHITECTURE module list — DONE.
 
 ## Done (and how verified)
 * Step 1: 9 plain scripts mirroring app/guidance one to one (KH.guidanceEngine; R, M, T, budget, score, fits, swaps,
@@ -61,6 +61,20 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
   classes. Re-run: `sandbox.py --only top-phone-light-none` → 0 issues; `walk.py real` 4 configs → 0 issues.
   tests/test_guidance_ui.py now also locks the entry-sheet order and "no browser storage" in the view.
 
+* Final checks (2026-10-06, third attempt):
+  - `python3 tools/e2e/parity.py --port 8361 --static-port 8362 --out $S/parity`: 6,455 checks; section 12 (a–i)
+    all 296 pass; the 455 failures are all the barcode food fields missing from js/mock/foods.js (handoff below).
+  - `sandbox.py --workers 3 --preview $S/preview.html --port 8365`: 17 walks + 3 sweeps + probes, 0 issues.
+  - `regress.py --no-pytest --port 8366`: 469 passed, 0 failed.
+  - `$S/walk.py real` (:8360) and `$S/walk.py preview` (:8363/8364): 4 configs each, 0 console errors, 0 CSP/TT
+    violations, 0 failed requests, no overflow (the wrapper page of the preview walk now has a favicon; its one
+    404 was /favicon.ico of the scratch wrapper, not the app). Screenshots looked at: entry sheet with the low
+    box, swaps (dark), plan sheet, What fits (1280), Trends insights (dark).
+  - `$S/ai_walk.py`: rerank, swap pick and plan pick hooks work with KH.ai stubbed; 0 issues.
+  - `tools/e2e/guidance_perf.py` (new, in the repo): 4x CPU, p95 ≤ 52 ms at 1,975 foods, cold ≤ 120 ms; budget 200.
+  - `node tests/js/run_vectors.mjs`: every section passes (guidance 45 checks).
+  - `python3 -m pytest`: 3,104 passed. Strict handbook build passes.
+
 ## Handoffs / findings for other owners
 * SAFETY (guidance backend): What fits now suggests "Spirits (gin, rum, vodka, whiskey), 80 proof" as an extra (no carbs,
   no potassium). Alcohol raises the risk of hypoglycaemia in type 1 diabetes; suggest never offering alcoholic drinks
@@ -71,8 +85,7 @@ Do not edit Python under app/. WIP commits end with " [skip ci]".
   ingredients_text): parity section 1 fails on every food (barcode frontend owner).
 * app/guidance/score.py:499 `max(0.0, dev) ** 2`: glibc pow differs from x*x by 1 ulp in ~0.08 % of inputs
   (measured), so the server's own result can depend on the C library; the twin uses x*x. Suggest `d = max(0.0, dev); d * d`.
-* settings.js still lacks ai.* (9 keys) and food.* (4 keys) registry entries (AI and barcode roles): run_vectors
-  settings section fails on them only.
+* (resolved) settings.js now has the ai.* and food.* keys; the settings vectors pass.
 
 ## Decisions
 * Engine namespace KH.guidanceEngine (KH.guidance is the view helper namespace).
