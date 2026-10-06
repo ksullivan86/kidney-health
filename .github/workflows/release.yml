@@ -69,6 +69,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       # Tags are only computed here; the publish job applies them after the scan.
       # GitHub reports the PolyForm licence as "Other", so the licence label is explicit.
+      # :latest moves on every non-prerelease v* tag (ARCHITECTURE.md decision 7), unless the
+      # repository variable HOLD_LATEST is "true". v0.2's Quadlet unit tracked :latest with
+      # AutoUpdate=registry and a shell HealthCmd that fails in the shell-less v0.3 image (a kill and
+      # restart loop on every auto-updating v0.2 host), so the owner may hold :latest on the last v0.2
+      # digest for a while after v0.3.0 (CHANGELOG.md, "Upgrading from 0.2").
       - name: Image metadata (tags, labels, annotations)
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -81,7 +86,7 @@ jobs:
             type=sha,prefix=sha-,format=short,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && vars.HOLD_LATEST != 'true' }}
           labels: |
             org.opencontainers.image.title=kidney-health
             org.opencontainers.image.description=Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings

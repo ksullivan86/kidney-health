@@ -55,12 +55,18 @@ class CliError(Exception):
 # --------------------------------------------------------------------------- #
 
 
-def open_existing(path: Path, *, readonly: bool = False) -> sqlite3.Connection:
-    """Open an existing database without ever creating one."""
+def open_existing(path: Path, *, readonly: bool = False, immutable: bool = False) -> sqlite3.Connection:
+    """Open an existing database without ever creating one.
+
+    ``immutable`` (read-only only) is for a backup file that nothing else writes: SQLite then needs no
+    ``-shm``/``-wal`` files next to it, so a file on a read-only mount or in a directory the app's user
+    cannot write still opens. It is ignored when a ``-wal`` file exists (its pages would be skipped).
+    """
     if not path.is_file():
         raise CliError(f"no database at {path}")
     mode = "ro" if readonly else "rw"
-    conn = sqlite3.connect(f"file:{path}?mode={mode}", uri=True)
+    extra = "&immutable=1" if readonly and immutable and not Path(f"{path}-wal").exists() else ""
+    conn = sqlite3.connect(f"file:{path}?mode={mode}{extra}", uri=True)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 5000")
     if not readonly:
@@ -106,7 +112,7 @@ def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
                 raise CliError("refusing to write a database to a terminal; redirect it: backup - > kidney.db")
             memory = sqlite3.connect(":memory:")
             source.backup(memory)
-            data = memory.serialize()
+            data = rollback_journal_header(memory.serialize())
             memory.close()
             stream.write(data)
             stream.flush()
@@ -126,6 +132,19 @@ def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
     finally:
         source.close()
     return EXIT_OK
+
+
+def rollback_journal_header(data: bytes) -> bytes:
+    """Mark a serialised database as rollback-journal mode (header bytes 18/19 = 1) instead of WAL (2).
+
+    A WAL-mode file can only be opened, even read-only, where SQLite may create ``-shm`` next to it;
+    a backup in rollback-journal mode opens anywhere (a read-only mount, a root-owned directory). The
+    app switches the restored database back to WAL when it opens it."""
+    if len(data) > 20 and data[:16] == b"SQLite format 3\x00" and data[18] == 2 and data[19] == 2:
+        data = bytearray(data)
+        data[18] = data[19] = 1
+        return bytes(data)
+    return data
 
 
 def _check_database(conn: sqlite3.Connection, settings: Settings | None, out: TextIO, *, current_version: int) -> list[str]:
@@ -149,6 +168,12 @@ def _check_database(conn: sqlite3.Connection, settings: Settings | None, out: Te
         if table_exists(conn, table):
             count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             print(f"info: {table}: {count} rows", file=out)
+    if table_exists(conn, "users") and conn.execute("SELECT 1 FROM users WHERE id = 1").fetchone() is None:
+        print(
+            "warning: user 1 is missing. That is fine with AUTH_MODE=local or proxy; with AUTH_MODE=none the "
+            "server creates it again, with no data, at its next start",
+            file=out,
+        )
     if settings is not None:
         try:
             loaded = _existing_key(settings)
@@ -164,6 +189,12 @@ def _check_database(conn: sqlite3.Connection, settings: Settings | None, out: Te
                 )
                 if report["unreadable"]:
                     problems.append(f"{report['unreadable']} stored secret(s) cannot be decrypted with SECRET_KEY")
+            elif table_exists(conn, "secrets"):
+                print(
+                    "info: no SECRET_KEY or SECRET_KEY_FILE given, so the stored API keys were not checked "
+                    "(pass the same secret the app uses to check them)",
+                    file=out,
+                )
     return problems
 
 
@@ -212,7 +243,7 @@ def cmd_restore_check(args: argparse.Namespace, settings: Settings, out: TextIO)
     from .db import _steps, table_exists
 
     path = Path(args.file)
-    conn = open_existing(path, readonly=not args.revoke_sessions)
+    conn = open_existing(path, readonly=not args.revoke_sessions, immutable=True)
     try:
         problems = _check_database(conn, settings, out, current_version=_steps()[-1].version)
         if args.revoke_sessions:
@@ -454,7 +485,6 @@ def cmd_reset_password(args: argparse.Namespace, settings: Settings, out: TextIO
     from .audit import audit
     from .auth import sessions, tokens
     from .auth.accounts import set_password
-    from .db import utcnow
 
     conn = _accounts_db(args, settings)
     try:
@@ -470,14 +500,14 @@ def cmd_reset_password(args: argparse.Namespace, settings: Settings, out: TextIO
             set_password(conn, user_id, password_hash)
             conn.execute("UPDATE users SET status = 'active' WHERE id = ? AND status IN ('locked', 'pending_setup')", (user_id,))
             removed = sessions.revoke_user_sessions(conn, user_id)
+            tokens.void_reset_links(conn, user_id)  # an older link must not undo this change
             _forget_failures(conn, settings, row["username_norm"])
             audit(conn, None, "user.password_changed", "user", user_id, via="cli")
             conn.commit()
             print(f"new password set for {row['username']!r}; {removed} session(s) signed out.", file=out)
             return EXIT_OK
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute("UPDATE auth_tokens SET used_at = ? WHERE purpose = 'reset' AND user_id = ? AND used_at IS NULL",
-                     (utcnow(), user_id))
+        tokens.void_reset_links(conn, user_id)
         token, token_row = tokens.create_token(conn, tokens.RESET, ttl=timedelta(hours=24), user_id=user_id)
         _forget_failures(conn, settings, row["username_norm"])
         audit(conn, None, "user.reset_link_issued", "user", user_id, via="cli")

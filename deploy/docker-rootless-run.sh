@@ -11,12 +11,21 @@
 #   SECRETS_DIR  where the secret files live [~/.config/kidney-health/secrets]
 #   HOST_PORT    port on 127.0.0.1           [8000]
 #   PUBLIC_URL   the URL people type, e.g. https://food.home.example.net   [unset]
+#   TRUSTED_PROXIES  addresses whose X-Forwarded-* the app believes      [127.0.0.1,::1]
+#                An HTTPS proxy on this host (Caddy, nginx, tailscale serve) reaches the app from
+#                the RootlessKit/bridge gateway, e.g. 172.17.0.1: set it to the address the app
+#                logs (docker logs kidney-health), or a second account cannot sign in. Safe because
+#                the port is published on 127.0.0.1 only (docs/security.md section 4).
+#
+# Running it again (for example with a new IMAGE) replaces the container; the data stays on the
+# kidney-health-data volume.
 set -euo pipefail
 
 IMAGE="${IMAGE:-ghcr.io/ksullivan86/kidney-health:0.3}"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/kidney-health/secrets}"
 HOST_PORT="${HOST_PORT:-8000}"
 PUBLIC_URL="${PUBLIC_URL:-}"
+TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1,::1}"
 
 # Refuse a rootful daemon: there, a container escape is root on the host.
 if ! docker info --format '{{json .SecurityOptions}}' | grep -q 'name=rootless'; then
@@ -39,11 +48,19 @@ chmod 0644 "$SECRETS_DIR/secret_key" "$SECRETS_DIR/usda_api_key"
 docker volume create kidney-health-data >/dev/null
 
 # --publish 127.0.0.1 only: rootless Docker does not propagate client source addresses by default,
-#   so every client would look like the RootlessKit gateway; keep TRUSTED_PROXIES at loopback.
+#   so every client (a same-host proxy too) looks like the RootlessKit gateway. Only local processes
+#   can reach 127.0.0.1, which is what makes trusting that gateway for a same-host proxy acceptable.
 # --read-only needs an explicit /tmp tmpfs on Docker. Memory and pids limits need cgroup v2 + systemd
 #   (otherwise Docker ignores them silently: check `docker info | grep -i cgroup`).
 # No --health-cmd: Docker would run it through /bin/sh, which the image does not have. The image's
 #   own HEALTHCHECK (exec form, python -m app.healthcheck) applies.
+# Re-running replaces the container (e.g. to pin a verified digest); the data is on the volume.
+if docker container inspect kidney-health >/dev/null 2>&1; then
+  echo "Replacing the existing kidney-health container (the data stays on the kidney-health-data volume)." >&2
+  docker stop kidney-health >/dev/null
+  docker rm kidney-health >/dev/null
+fi
+
 docker run --detach --name kidney-health --restart always \
   --user 10001:10001 \
   --read-only \
@@ -58,7 +75,7 @@ docker run --detach --name kidney-health --restart always \
   --mount "type=bind,src=${SECRETS_DIR}/usda_api_key,dst=/run/secrets/usda_api_key,readonly" \
   --env SECRET_KEY_FILE=/run/secrets/secret_key \
   --env USDA_API_KEY_FILE=/run/secrets/usda_api_key \
-  --env TRUSTED_PROXIES=127.0.0.1,::1 \
+  --env "TRUSTED_PROXIES=${TRUSTED_PROXIES}" \
   --env "PUBLIC_URL=${PUBLIC_URL}" \
   "$IMAGE"
 

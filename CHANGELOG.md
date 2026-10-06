@@ -13,6 +13,15 @@ section lists what has landed so far.
 
 **Upgrading from 0.2: read this first**
 
+* **A v0.2 host that auto-updates must be changed before v0.3.0 is tagged.** v0.2's Quadlet unit
+  uses `Image=ghcr.io/ksullivan86/kidney-health:latest`, `AutoUpdate=registry` and a plain-string
+  `HealthCmd=` that runs through `/bin/sh`. `:latest` moves to v0.3.0, whose image has no shell, so
+  the next `podman-auto-update` run would pull it under the old unit: the health check always fails,
+  `HealthOnFailure=kill` stops the container and systemd restarts it, every two minutes or so. Before
+  that happens, either install the v0.3 unit (`deploy/quadlet/`, `Image=...:0.3`, exec-form
+  `HealthCmd`) and follow "From v0.2 to v0.3" in `docs/deployment.md`, or pin the v0.2 image by
+  digest and stop `podman-auto-update.timer` until you upgrade. The release workflow can hold
+  `:latest` back (repository variable `HOLD_LATEST=true`) while hosts are moved.
 * Back up `kidney.db`. The first start migrates it in place (schema 2 → 3) and keeps a copy as
   `kidney.db.pre-v3.bak` (mode 0600), deleted automatically 30 days later
   (`python -m app.admin purge-pre-v3-backup` deletes it at once). All existing data becomes the
@@ -123,6 +132,39 @@ section lists what has landed so far.
 
 * `tools/e2e/`: browser harnesses for demo-vs-server parity, the sandboxed preview, and the
   installed app end to end, now signing in first ([tools/e2e/README.md](tools/e2e/README.md)).
+
+**Fixes from the M1 review**
+
+* Removing an admin contains them: demoting, disabling or deleting an admin deletes every unused
+  invite and reset/setup link they created; a password change (any route) or disabling voids the
+  account's open reset links; Admin → People lists open reset and setup links with who made them and
+  a Revoke button (`DELETE /api/admin/users/{id}/reset-link`), and flags one made for your own
+  account.
+* Sign-in floods: every refused sign-in (wrong password, name delay, HTTPS required) counts toward
+  the per-address block, one address may try 30 sign-ins a minute, the instance-wide budget is taken
+  only right before the hash, and the waits no longer hold worker threads (`/api/auth/login` is
+  async), so one client cannot lock everybody out or stall the app. IPv6 clients count per /64.
+* Two admins removing each other at once can no longer leave the server without an admin
+  (`BEGIN IMMEDIATE`); a reset link cannot be redeemed twice by racing requests; the "password reset
+  by an admin" notice at the next sign-in now actually appears.
+* `AUTH_MODE=none`: deleting "your account" is refused (it would have removed user 1 and broken the
+  server); a missing user 1 is recreated at start-up and reported by `app.admin check`.
+* Backups are written in rollback-journal mode and `restore-check` opens read-only files as
+  immutable, so the documented restore works on a read-only mount; the restore guide passes the
+  secret for the key check, revokes sessions on the volume and has a Kubernetes recipe
+  (`deploy/k8s/restore-pod.example.yaml`; the image has no `tar` for `kubectl cp`).
+* The page a setup or reset link opens shows the account's username; sign-in and setup errors
+  appear next to the field at fault (they used to scroll out of view on phones); the activity logs
+  name the account an admin action concerned, and a person's own activity lists only events about
+  their account; This device no longer calls `http://localhost` encrypted; smaller fixes (invite
+  lifetime from the server setting, paused invites while registration is closed, "Sign out all my
+  devices" goes to the sign-in screen, a notice after deleting your account, focus after sign-in).
+* Deployment docs: rootless Docker with a same-host HTTPS proxy must trust the gateway address
+  (otherwise a second account cannot sign in); podman-compose 1.5.0 or later; cosign 3 or later to
+  verify images (`scripts/verify-image.sh` checks); Cilium Gateway needs an `ingress`-entity policy;
+  `deploy/docker-rootless-run.sh` can be re-run and takes `TRUSTED_PROXIES`; Dependabot cannot update
+  the `*.lock` files, so `.github/workflows/refresh-locks.yml` refreshes them weekly with a 7-day
+  cooldown; `HOLD_LATEST` can keep `:latest` back at the v0.3.0 release.
 
 ### Still to come in 0.3
 

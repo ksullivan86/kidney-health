@@ -34,6 +34,7 @@
   };
   const HASH = { login: '#/login', setup: '#/setup', invite: '#/invite', reset: '#/reset' };
   const TOKEN_KEY = 'kdl-link-token';
+  const NOTICE_KEY = 'kdl-next-notice'; // one message for the sign-in screen after a reload
   const TOKEN_RE = /^[A-Za-z0-9._~-]{8,200}$/;
 
   let appStarted = false;   // KH.app.start() ran (for the person in appUserId)
@@ -85,14 +86,48 @@
     hidePasswords($('#view-auth'));
   }
 
-  // The error region: a sentence, plus the policy's other reasons when there are several.
+  // The error region: a sentence, plus the policy's other reasons when there are several. It sits
+  // at the top of the card (role="alert", so screen readers hear it at once); on a phone the field at
+  // fault is often further down, so the same reason is also shown under that field (fieldError).
   function setError(message, problems = null) {
     const box = $('#auth-error');
     clear(box);
-    if (!message) return;
+    if (!message) { clearFieldErrors(); return; }
     box.append(h('p', {}, message));
     const more = (problems || []).filter((p) => p !== message);
     if (more.length) box.append(h('ul', {}, more.map((p) => h('li', {}, p))));
+  }
+  function clearFieldErrors(root = $('#view-auth')) {
+    $$('.field-error', root).forEach((el) => {
+      const input = document.getElementById(el.dataset.for || '');
+      if (input) {
+        const ids = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter((x) => x && x !== el.id);
+        if (ids.length) input.setAttribute('aria-describedby', ids.join(' ')); else input.removeAttribute('aria-describedby');
+      }
+      el.remove();
+    });
+  }
+  // The reason next to the field, linked with aria-describedby (WCAG 3.3.1), so it is in view when the
+  // field gets focus.
+  function fieldError(input, message, problems = null) {
+    if (!input || !message) return;
+    const id = `${input.id}-error`;
+    const old = document.getElementById(id);
+    if (old) old.remove();
+    const more = (problems || []).filter((p) => p !== message);
+    const el = h('div', { class: 'field-error', id, 'data-for': input.id }, h('p', {}, message),
+      more.length ? h('ul', {}, more.map((p) => h('li', {}, p))) : null);
+    const anchor = input.closest('.pw-wrap') || input;
+    anchor.after(el);
+    const ids = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    if (!ids.includes(id)) input.setAttribute('aria-describedby', [...ids, id].join(' '));
+  }
+  // "username: Use 3 to 64 characters…" → "Use 3 to 64 characters…" when the answer names the field.
+  function withoutFieldPrefix(detail, field) {
+    const text = String(detail || '');
+    if (!field || !text.startsWith(`${field}: `)) return text;
+    const rest = text.slice(field.length + 2);
+    return rest.charAt(0).toUpperCase() + rest.slice(1);
   }
   function setNotice(message) {
     const box = $('#auth-notice');
@@ -100,14 +135,28 @@
     box.hidden = !message;
     if (message) box.append(h('p', {}, message));
   }
-  function markInvalid(form, field) {
+  function markInvalid(form, field, message = null, problems = null) {
     $$('input', form).forEach((i) => i.removeAttribute('aria-invalid'));
+    clearFieldErrors(form);
     if (!field) return null;
     const map = { username: 'username', password: 'password', new_password: 'password', current_password: 'current', code: 'code', token: null };
     const name = map[field];
-    const input = name ? $(`input[name="${name}"]`, form) || $(`input[autocomplete="new-password"]`, form) : null;
-    if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+    const input = name ? $(`input[name="${name}"]:not([readonly])`, form) || $(`input[autocomplete="new-password"]`, form) : null;
+    if (input) {
+      input.setAttribute('aria-invalid', 'true');
+      fieldError(input, message, problems);
+      input.focus();
+      // The reason sits under the field: bring both into view, clear of the sticky header.
+      const err = document.getElementById(`${input.id}-error`);
+      try { (err || input).scrollIntoView({ block: 'center' }); } catch (e) { /* old browsers */ }
+    }
     return input;
+  }
+  // An error that belongs to no field: make sure the alert at the top of the card is on screen.
+  function revealError() {
+    const box = $('#auth-error');
+    const r = box.getBoundingClientRect();
+    if (r.top < 64 || r.bottom > window.innerHeight) { try { box.scrollIntoView({ block: 'center' }); } catch (e) { /* old browsers */ } }
   }
   // Show an API error on the current screen. Returns true when it was shown.
   function showApiError(err, form, button) {
@@ -115,6 +164,7 @@
     if (err.status === 429) {
       const wait = Number(data.retry_after) || 30;
       setError(err.detail || `Too many attempts. Try again in ${wait} seconds.`);
+      revealError();
       if (button) countdown(button, wait);
       return true;
     }
@@ -122,10 +172,12 @@
       // The red note above explains it in full; the alert only says what happened.
       $('#auth-https').hidden = false;
       setError('Not signed in: this address uses plain HTTP. Open the app\'s https:// address.');
+      revealError();
       return true;
     }
-    setError(err.detail || 'Something went wrong. Try again.', data.problems);
-    markInvalid(form, data.field);
+    const message = withoutFieldPrefix(err.detail, data.field) || 'Something went wrong. Try again.';
+    setError(message, data.problems);
+    if (!markInvalid(form, data.field, message, data.problems)) revealError();
     return true;
   }
   // After a 429 the button waits out Retry-After (its text counts down; the alert said why once).
@@ -221,6 +273,12 @@
   }
   function showChange(user, opts = {}) {
     $('#chg-username').value = (user && user.username) || '';
+    // An admin (for example the owner of a server upgraded from v0.2, whose old APP_PASSWORD is too
+    // weak for today's rules) has no "admin" asking: say why instead.
+    $('#chg-intro').textContent = user && user.role === 'admin'
+      ? "Your current password does not meet this server's password rules (it was set before they applied, or another admin asked for a new one). Choose a new one to continue."
+      : 'Your admin asks you to choose a new password before you continue.';
+    $('#chg-who').textContent = user && user.username ? `Account: ${user.username}` : '';
     showScreen('change', opts);
   }
   function showSignedIn(user, kind) {
@@ -234,7 +292,7 @@
         const saved = linkToken;
         if (!(await signOut({ stay: true }))) return;
         linkToken = saved;
-        showScreen(kind);
+        await linkScreen(kind);
       });
     };
   }
@@ -266,12 +324,39 @@
     linkToken = null;
     try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* storage unavailable */ }
   }
-  function linkScreen(kind) {
+  let resetTarget = null; // { username, display_name, new_account } of the open reset/setup link
+  function resetIntro(info) {
+    if (info && info.new_account) {
+      return `Welcome to ${instanceName()}${info.display_name ? `, ${info.display_name}` : ''}. Your admin created an account for you: choose its password. You sign in with the username shown below.`;
+    }
+    return 'Choose a new password for your account. Every other device signed in to it is signed out.';
+  }
+  async function linkScreen(kind) {
     if (!linkToken || linkToken.kind !== kind || !linkToken.token) {
       showLogin({ error: 'This link is incomplete or damaged. Open the whole link again, or ask for a new one.' });
       return;
     }
     if (kind === 'invite') $('#register-intro').textContent = `You have been invited to ${instanceName()}. Choose a username and a password for your account.`;
+    if (kind === 'reset') {
+      // Whose account it is: an admin-created account's person has never seen the username.
+      resetTarget = null;
+      $('#reset-username').value = '';
+      $('#reset-username-field').hidden = true;
+      $('#reset-intro').textContent = resetIntro(null);
+      try {
+        resetTarget = await request('POST', '/api/auth/reset/info', { token: linkToken.token }, { quiet401: true });
+      } catch (err) {
+        if (err.status === 400) { forgetLinkToken(); showLogin({ error: err.detail || 'This link is not valid any more. Ask your admin for a new one.' }); return; }
+        if (err.status === 429) { showLogin({ error: err.detail }); return; }
+        // Anything else: the form still works; it just cannot show the name.
+      }
+      if (resetTarget) {
+        $('#reset-username').value = resetTarget.username;
+        $('#reset-username-field').hidden = false;
+        $('#reset-intro').textContent = resetIntro(resetTarget);
+      }
+      TITLES.reset = resetTarget && resetTarget.new_account ? 'Set up your account' : 'Choose a password';
+    }
     showScreen(kind);
   }
 
@@ -302,6 +387,27 @@
       router.show(resumeView || 'today');
     }
     if (KH.views.settings && KH.views.settings.onSignedIn) KH.views.settings.onSignedIn(user);
+    // The submit button that had focus is hidden now: give the keyboard a place in the app.
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body && !active.closest('[hidden]')) return;
+      const tab = $(`#tab-${state.view}`);
+      const target = tab && !tab.closest('[hidden]') ? tab : $(`#view-${state.view} h2`);
+      if (!target) return;
+      if (target.tagName === 'H2' && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      try { target.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    }, 60);
+  }
+  // A message for the sign-in screen after the page reloads (e.g. "your account was deleted").
+  function noticeAfterReload(message) {
+    try { sessionStorage.setItem(NOTICE_KEY, String(message)); } catch (e) { /* storage unavailable */ }
+  }
+  function takeReloadNotice() {
+    try {
+      const msg = sessionStorage.getItem(NOTICE_KEY);
+      sessionStorage.removeItem(NOTICE_KEY);
+      return msg || '';
+    } catch (e) { return ''; }
   }
   function afterSignIn(user, notice) {
     if (user.must_change_password) { showChange(user, { notice: notice || '' }); return; }
@@ -335,8 +441,9 @@
       return false;
     }
     if (!st.user) {
-      if (st.auth_mode === 'proxy') showProxyScreen();
-      else showLogin();
+      const notice = takeReloadNotice();
+      if (st.auth_mode === 'proxy') showProxyScreen({ notice });
+      else showLogin({ notice });
       return false;
     }
     if (st.user.must_change_password) { showChange(st.user); return false; }
@@ -359,7 +466,15 @@
   }
   function requireFields(form, pairs) {
     for (const [input, message] of pairs) {
-      if (!input.value.trim()) { setError(message); markInvalid(form, null); input.setAttribute('aria-invalid', 'true'); input.focus(); return false; }
+      if (!input.value.trim()) {
+        setError(message);
+        markInvalid(form, null);
+        input.setAttribute('aria-invalid', 'true');
+        fieldError(input, message);
+        input.focus();
+        try { input.scrollIntoView({ block: 'center' }); } catch (e) { /* old browsers */ }
+        return false;
+      }
     }
     return true;
   }
@@ -393,7 +508,7 @@
     if (!requireFields(form, checks)) return;
     if (!proxy) {
       const problem = newPasswordProblem($('#setup-password').value);
-      if (problem) { setError(problem); markInvalid(form, 'password'); return; }
+      if (problem) { setError(problem); markInvalid(form, 'password', problem); return; }
     }
     const body = { code: code.value.trim(), off_enabled: $('#setup-off').checked };
     if ($('#setup-display').value.trim()) body.display_name = $('#setup-display').value.trim();
@@ -417,7 +532,7 @@
     const form = $('#form-register');
     if (!requireFields(form, [[$('#reg-username'), 'Choose a username.'], [$('#reg-password'), 'Choose a password.']])) return;
     const problem = newPasswordProblem($('#reg-password').value);
-    if (problem) { setError(problem); markInvalid(form, 'password'); return; }
+    if (problem) { setError(problem); markInvalid(form, 'password', problem); return; }
     const body = { token: linkToken ? linkToken.token : '', username: $('#reg-username').value.trim(), password: $('#reg-password').value };
     if ($('#reg-display').value.trim()) body.display_name = $('#reg-display').value.trim();
     const btn = $('#reg-submit');
@@ -435,13 +550,16 @@
     const form = $('#form-reset');
     if (!requireFields(form, [[$('#reset-password'), 'Choose a password.']])) return;
     const problem = newPasswordProblem($('#reset-password').value);
-    if (problem) { setError(problem); markInvalid(form, 'password'); return; }
+    if (problem) { setError(problem); markInvalid(form, 'password', problem); return; }
     const btn = $('#reset-submit');
     await busy(btn, async () => {
       setError('');
       try {
         const res = await request('POST', '/api/auth/reset', { token: linkToken ? linkToken.token : '', password: $('#reset-password').value }, { quiet401: true });
-        afterSignIn(res.user, 'Password saved. Other devices signed in to this account were signed out.');
+        const fresh = resetTarget && resetTarget.new_account;
+        resetTarget = null;
+        afterSignIn(res.user, fresh ? `Your account is ready. Next time, sign in as ${res.user.username} with this password.`
+          : 'Password saved. Other devices signed in to this account were signed out.');
       } catch (err) { showApiError(err, form, btn); }
     });
   });
@@ -451,7 +569,7 @@
     const form = $('#form-change');
     if (!requireFields(form, [[$('#chg-current'), 'Enter your current password.'], [$('#chg-new'), 'Choose a new password.']])) return;
     const problem = newPasswordProblem($('#chg-new').value);
-    if (problem) { setError(problem); markInvalid(form, 'new_password'); return; }
+    if (problem) { setError(problem); markInvalid(form, 'new_password', problem); return; }
     const btn = $('#chg-submit');
     await busy(btn, async () => {
       setError('');
@@ -543,6 +661,19 @@
         const t = w.trigger;
         if (t && document.contains(t) && !t.disabled && !t.closest('[hidden]')) { try { t.focus(); } catch (e) { /* ignore */ } }
       }, 80);
+    } else if (w.done && w.trigger) {
+      // Done: the request is retried; once its control is usable again (and nothing else took the
+      // focus), put the keyboard back there instead of on the page body.
+      const t = w.trigger;
+      let tries = 0;
+      const back = () => {
+        tries += 1;
+        const active = document.activeElement;
+        if (active && active !== document.body && active !== t) return; // the action moved focus itself
+        if (t && document.contains(t) && !t.disabled && !t.closest('[hidden]')) { try { t.focus(); } catch (e) { /* ignore */ } return; }
+        if (tries < 100) setTimeout(back, 100);
+      };
+      setTimeout(back, 80);
     }
   });
   sheets.onSubmit($('#reauth-form'), async (e) => {
@@ -600,7 +731,7 @@
   setupPwToggles();
   Object.assign(KH.auth, {
     boot, signOut, reauth, onUnauthorized, onPasswordChangeRequired, onSetupRequired, loadStatus,
-    showScreen, setupPwToggles, enterApp,
+    showScreen, setupPwToggles, enterApp, noticeAfterReload,
   });
   KH.views.auth = { showScreen, parseHash };
 })();

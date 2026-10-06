@@ -1,7 +1,10 @@
-# EXAMPLE, not in kustomization.yaml. For clusters running Cilium: an FQDN-precise egress allowlist
-# that replaces the "any public address on 443" rule of networkpolicy.yaml, closing the residual
-# exfiltration path to arbitrary HTTPS hosts (docs/security.md). Keep networkpolicy.yaml's
-# default-deny and ingress rules; delete its 0.0.0.0/0 egress rule when you apply this.
+# EXAMPLE, not in kustomization.yaml. For clusters running Cilium, two policies:
+# 1. kidney-health-egress-fqdn: an FQDN-precise egress allowlist that replaces the "any public address
+#    on 443" rule of networkpolicy.yaml, closing the residual exfiltration path to arbitrary HTTPS
+#    hosts (docs/security.md). Keep networkpolicy.yaml's default-deny and ingress rules; delete its
+#    0.0.0.0/0 egress rule when you apply this.
+# 2. kidney-health-ingress-cilium-gateway: needed when Cilium's own Gateway API / Ingress serves the
+#    app (see the second document below).
 #   kubectl apply -f deploy/k8s/cilium-networkpolicy.example.yaml
 # The DNS rule must allow lookups through Cilium's DNS proxy, which is what makes toFQDNs work.
 apiVersion: cilium.io/v2
@@ -39,4 +42,30 @@ spec:
       toPorts:
         - ports:
             - port: "443"
+              protocol: TCP
+---
+# Cilium's Gateway API and Ingress run Envoy inside the Cilium agent, and their traffic carries the
+# reserved "ingress" identity, not a pod in a namespace. networkpolicy.yaml's namespaceSelector rule
+# therefore never matches it, and its default-deny drops the requests (the Gateway answers 403 or 503).
+# This allows exactly that identity on the app's port. Cilium documents the same pattern under
+# "Ingress and default-deny" (Documentation/network/servicemesh/default-deny-ingress-policy.rst).
+# Not needed with another Gateway implementation (Envoy Gateway, Traefik, ...): they are pods, which
+# the namespaceSelector rule covers.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kidney-health-ingress-cilium-gateway
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kidney-health
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8000"
               protocol: TCP

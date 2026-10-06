@@ -16,7 +16,8 @@ resources:
   - networkpolicy.yaml
   - httproute.yaml
   # Not included on purpose: secret.example.yaml (never commit secrets),
-  # ingress.example.yaml (Ingress instead of HTTPRoute), cilium-networkpolicy.example.yaml (Cilium).
+  # ingress.example.yaml (Ingress instead of HTTPRoute), cilium-networkpolicy.example.yaml (Cilium),
+  # restore-pod.example.yaml (one-off, for restoring a backup; docs/deployment.md).
 images:
   # Pin the release you verified, by tag AND digest (the digest wins; the tag is for humans):
   #   scripts/verify-image.sh 0.3.0        prints the verified digest, then:

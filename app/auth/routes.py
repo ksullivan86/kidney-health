@@ -13,6 +13,7 @@ from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from .. import settings_registry
 from ..audit import audit
@@ -50,8 +51,8 @@ from .models import (
 )
 from .policy import MAX_LENGTH
 from .proxy import trusted_subject
-from .schemas import LoginBody, ReauthBody, RegisterBody, ResetBody, SetupBody
-from .throttle import HARD_STOP, REAUTH_MAX_FAILURES
+from .schemas import LinkInfoBody, LoginBody, ReauthBody, RegisterBody, ResetBody, SetupBody
+from .throttle import HARD_STOP, REAUTH_MAX_FAILURES, ip_key
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -92,12 +93,18 @@ def start_session(request: Request, response: Response, conn: sqlite3.Connection
     touch_login(conn, user_id)
 
 
-def _reset_notice(conn: sqlite3.Connection, user_id: int, since: str | None) -> str | None:
-    """N12: tell the person when an admin-issued reset link changed their password since last sign-in."""
+def _reset_notice(conn: sqlite3.Connection, user_id: int) -> str | None:
+    """N12: tell the person when a reset link from an admin changed their password since their own
+    last sign-in. Redeeming a link signs its holder in without a ``login.succeeded`` event, so the
+    newest such event is the person's own last password sign-in; the notice shows once."""
+    target = str(int(user_id))
+    last = conn.execute(
+        "SELECT MAX(id) FROM audit_log WHERE action = 'login.succeeded' AND target_type = 'user' AND target_id = ?", (target,)
+    ).fetchone()[0]
     row = conn.execute(
         """SELECT at FROM audit_log WHERE action = 'user.password_changed' AND target_type = 'user' AND target_id = ?
-             AND details_json LIKE '%"via":"admin_reset_link"%' AND at > ? ORDER BY id DESC LIMIT 1""",
-        (str(int(user_id)), since or ""),
+             AND details_json LIKE '%"via":"admin_reset_link"%' AND id > ? ORDER BY id DESC LIMIT 1""",
+        (target, int(last or 0)),
     ).fetchone()
     if row is None:
         return None
@@ -147,58 +154,91 @@ def auth_status(request: Request, conn: sqlite3.Connection = Depends(get_db)) ->
 # --------------------------------------------------------------------------- #
 
 
-@router.post("/login")
-def login(body: LoginBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    ctx = auth_context(request)
-    _only_modes(ctx, "local")
-    ensure_setup_done(conn, ctx)
-    s = ctx.settings
-    th = ctx.throttle
-    ip = request_ip(request)
-    _ip_gate(ctx, ip)
-    if not th.global_acquire():
-        raise busy()
-    require_secure_enough(conn, s, request)
+def _login_checks(request: Request, conn: sqlite3.Connection, ctx: AuthContext, username: str, ip: str | None) -> tuple[Any, str | None, bytes]:
+    """The cheap checks before a sign-in may spend a slot of the instance-wide budget and a hash.
 
-    norm = normalize_username(body.username)
+    Every refusal here counts toward the address's per-IP failures, so one client cannot keep the
+    shared budget empty with requests that never reach the password check (note 07 §9 N3 a)."""
+    ensure_setup_done(conn, ctx)
+    th = ctx.throttle
+    _ip_gate(ctx, ip)
+    wait = th.ip_attempt(ip)
+    if wait:
+        th.ip_failure(ip)
+        raise too_many(wait)
+    try:
+        require_secure_enough(conn, ctx.settings, request)
+    except ApiProblem:
+        th.ip_failure(ip)
+        raise
+    norm = normalize_username(username)
     row = find_local_user(conn, norm) if valid_local_username(norm) else None
     device = th.device_nonce(th.read_device_cookie(request), int(row["id"])) if row is not None else None
     mac = th.name_mac(norm)
     if device is None:
         wait = th.username_wait(conn, mac)
         if wait:
+            th.ip_failure(ip)
             raise too_many(wait)
+    return row, device, mac
 
-    # Exactly one hash per attempt, whatever the account's state (§9 N9).
-    usable = row is not None and row["status"] == "active" and bool(row["password_hash"])
-    stored = row["password_hash"] if usable else passwords.dummy_hash()
-    ok = verify_password(body.password.get_secret_value(), stored) and usable
 
-    if not ok:
-        th.ip_failure(ip)
-        if device is not None:
-            th.device_failure(device)
-        else:
-            count = th.record_failure(conn, mac)
-            if row is not None and row["status"] == "active" and count >= HARD_STOP:
-                lock_account(conn, int(row["id"]), ip=ip)
-        if row is not None:
-            audit(conn, None, "login.failed", "user", int(row["id"]), ip=ip)
-        conn.commit()
-        raise ApiProblem(401, LOGIN_FAILED)
+def _login_failed(conn: sqlite3.Connection, ctx: AuthContext, row: Any, device: str | None, mac: bytes, ip: str | None) -> None:
+    th = ctx.throttle
+    th.ip_failure(ip)
+    if device is not None:
+        th.device_failure(device)
+    else:
+        count = th.record_failure(conn, mac)
+        if row is not None and row["status"] == "active" and count >= HARD_STOP:
+            lock_account(conn, int(row["id"]), ip=ip)
+    if row is not None:
+        audit(conn, None, "login.failed", "user", int(row["id"]), ip=ip)
+    conn.commit()
 
+
+def _login_succeeded(request: Request, response: Response, conn: sqlite3.Connection, ctx: AuthContext, row: Any,
+                     device: str | None, mac: bytes, ip: str | None, password: str, stored: str) -> dict[str, Any]:
+    th = ctx.throttle
     user_id = int(row["id"])
     if device is not None:
         th.device_success(device)
     th.forget(conn, mac)
     if passwords.needs_rehash(stored):
-        set_password(conn, user_id, hash_password(body.password.get_secret_value()), must_change=bool(row["must_change_password"]))
-    notice = _reset_notice(conn, user_id, row["last_login_at"])
+        set_password(conn, user_id, hash_password(password), must_change=bool(row["must_change_password"]))
+    notice = _reset_notice(conn, user_id)
     start_session(request, response, conn, ctx, user_id)
     audit(conn, user_id, "login.succeeded", "user", user_id, ip=ip)
     conn.commit()
     user = load_user(conn, user_id)
     return {"user": me_dict(user), "notice": notice}
+
+
+@router.post("/login")
+async def login(body: LoginBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Sign in. Database work runs in worker threads; the two waits (a slot of the instance-wide budget,
+    then a hashing slot, up to 5 s each) are awaited on the event loop, so a flood of sign-ins holds no
+    worker thread and every other route keeps answering."""
+    ctx = auth_context(request)
+    _only_modes(ctx, "local")
+    ip = request_ip(request)
+    row, device, mac = await run_in_threadpool(_login_checks, request, conn, ctx, body.username, ip)
+
+    # Exactly one hash per attempt, whatever the account's state (§9 N9).
+    usable = row is not None and row["status"] == "active" and bool(row["password_hash"])
+    stored = row["password_hash"] if usable else await run_in_threadpool(passwords.dummy_hash)
+    if not await ctx.throttle.global_acquire_async():
+        raise busy()
+    password = body.password.get_secret_value()
+    try:
+        ok = await passwords.verify_password_async(password, stored) and usable
+    except passwords.HashBusy:
+        raise busy() from None
+
+    if not ok:
+        await run_in_threadpool(_login_failed, conn, ctx, row, device, mac, ip)
+        raise ApiProblem(401, LOGIN_FAILED)
+    return await run_in_threadpool(_login_succeeded, request, response, conn, ctx, row, device, mac, ip, password, stored)
 
 
 @router.post("/logout")
@@ -306,7 +346,7 @@ def register(body: RegisterBody, request: Request, response: Response, conn: sql
     if invite is None:  # open registration: HTTPS always, 3 per address per hour
         if plain_http(request):
             raise ApiProblem(400, "HTTPS required to register on this server. See docs/https.md.", https_required=True)
-        ctx.limits.take("register", ip)
+        ctx.limits.take("register", ip_key(ip))  # an IPv6 client counts per /64
     require_secure_enough(conn, s, request, adding_account=True)
 
     typed, norm = check_local_username(body.username)
@@ -330,6 +370,35 @@ def register(body: RegisterBody, request: Request, response: Response, conn: sql
     return {"user": me_dict(load_user(conn, user_id))}
 
 
+def _reset_target(conn: sqlite3.Connection, ctx: AuthContext, raw_token: str, ip: str | None) -> tuple[sqlite3.Row, sqlite3.Row]:
+    """The open reset/setup token and its account, or a 400 that counts as a per-IP failure."""
+    token = tokens.find_token(conn, raw_token, tokens.RESET)
+    row = user_row(conn, int(token["user_id"])) if token is not None and token["user_id"] is not None else None
+    if token is None or row is None or row["status"] == "disabled" or row["auth_source"] != "local":
+        ctx.throttle.ip_failure(ip)
+        raise ApiProblem(400, LINK_INVALID, field="token")
+    return token, row
+
+
+@router.post("/reset/info")
+def reset_info(body: LinkInfoBody, request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Whose account a reset or account-setup link is for, so the page can show the username: when an
+    admin created the account, the person holding the link has never seen it. It tells the holder
+    nothing the link does not already give them (it can set the password and sign in)."""
+    ctx = auth_context(request)
+    _only_modes(ctx, "local")
+    ensure_setup_done(conn, ctx)
+    ip = request_ip(request)
+    _ip_gate(ctx, ip)
+    token, row = _reset_target(conn, ctx, body.token.get_secret_value(), ip)
+    return {
+        "username": row["username"],
+        "display_name": row["display_name"] or "",
+        "new_account": row["status"] == "pending_setup",
+        "expires_at": token["expires_at"],
+    }
+
+
 @router.post("/reset")
 def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     ctx = auth_context(request)
@@ -338,11 +407,7 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     s = ctx.settings
     ip = request_ip(request)
     _ip_gate(ctx, ip)
-    token = tokens.find_token(conn, body.token.get_secret_value(), tokens.RESET)
-    row = user_row(conn, int(token["user_id"])) if token is not None and token["user_id"] is not None else None
-    if token is None or row is None or row["status"] == "disabled" or row["auth_source"] != "local":
-        ctx.throttle.ip_failure(ip)
-        raise ApiProblem(400, LINK_INVALID, field="token")
+    token, row = _reset_target(conn, ctx, body.token.get_secret_value(), ip)
     require_secure_enough(conn, s, request, adding_account=row["status"] != "active")
     password = body.password.get_secret_value()
     try:
@@ -350,10 +415,16 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     except PasswordRejected as exc:
         raise password_problem(exc) from None
     user_id = int(row["id"])
-    set_password(conn, user_id, hash_password(password))
+    password_hash = hash_password(password)
+    # Claim the single-use link first (this write takes the database lock), so two requests racing
+    # with the same link cannot both set a password and sign in.
+    if not tokens.mark_used(conn, token["id"]):
+        conn.rollback()
+        raise ApiProblem(400, LINK_INVALID, field="token")
+    set_password(conn, user_id, password_hash)
     conn.execute("UPDATE users SET status = 'active' WHERE id = ? AND status IN ('locked', 'pending_setup')", (user_id,))
     sessions.revoke_user_sessions(conn, user_id)
-    tokens.mark_used(conn, token["id"])
+    tokens.void_reset_links(conn, user_id)  # any other open link for this account
     ctx.throttle.forget(conn, ctx.throttle.name_mac(row["username_norm"]))
     if row["status"] == "pending_setup":
         via = "account_setup"  # a new account created by an admin: the first password, not a reset

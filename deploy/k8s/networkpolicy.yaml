@@ -41,7 +41,10 @@ spec:
     - Egress
   ingress:
     - from:
-        # <-- the namespace of your Gateway API implementation or ingress controller
+        # <-- the namespace of your Gateway API implementation or ingress controller.
+        # Cilium's own Gateway/Ingress is not a pod in a namespace (its traffic has the reserved
+        # "ingress" identity), so this never matches it: also apply the second policy in
+        # cilium-networkpolicy.example.yaml (fromEntities: ingress).
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: gateway-system

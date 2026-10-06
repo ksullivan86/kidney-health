@@ -194,8 +194,19 @@ def touch_login(conn: sqlite3.Connection, user_id: int) -> None:
     conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (clock.now_iso(), int(user_id)))
 
 
+def begin_immediate(conn: sqlite3.Connection) -> None:
+    """Start a write transaction now (``BEGIN IMMEDIATE``), so a check and the write that depends on it
+    see the same data: two admins demoting, disabling or deleting each other at the same moment are
+    serialised, and the second one sees that the first already removed an admin. Anything the request's
+    dependencies left uncommitted (a session's ``last_seen_at``) is committed first."""
+    if conn.in_transaction:
+        conn.commit()
+    conn.execute("BEGIN IMMEDIATE")
+
+
 def would_remove_last_admin(conn: sqlite3.Connection, user_id: int) -> bool:
-    """True when ``user_id`` is an active admin and the only one."""
+    """True when ``user_id`` is an active admin and the only one. Call it inside
+    :func:`begin_immediate` when the write depends on the answer."""
     row = conn.execute("SELECT role, status FROM users WHERE id = ?", (int(user_id),)).fetchone()
     if row is None or row["role"] != "admin" or row["status"] != "active":
         return False

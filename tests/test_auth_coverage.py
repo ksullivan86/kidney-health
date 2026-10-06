@@ -21,6 +21,7 @@ PUBLIC = {
     ("post", "/api/auth/setup"),
     ("post", "/api/auth/register"),
     ("post", "/api/auth/reset"),
+    ("post", "/api/auth/reset/info"),
 }
 METHODS = ("get", "post", "put", "patch", "delete")
 
@@ -87,6 +88,7 @@ def test_public_routes_answer_without_a_session(anon_client):
     assert anon_client.post("/api/auth/setup", json={"code": "AAAA-AAAA-AAAA-AAAA"}).status_code == 409  # done already
     assert anon_client.post("/api/auth/register", json={"username": "x", "password": "y"}).status_code == 403
     assert anon_client.post("/api/auth/reset", json={"token": "a.b", "password": "y"}).status_code == 400
+    assert anon_client.post("/api/auth/reset/info", json={"token": "a.b"}).status_code == 400
 
 
 def test_invalid_bodies_still_get_401_not_400(anon_client):

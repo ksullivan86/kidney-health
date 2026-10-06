@@ -13,6 +13,11 @@
 #    and keep 0600. (Quadlet's Secret= does not have this problem; see deploy/quadlet/.)
 # 2. Optional, non-secret settings: cp deploy/.env.example deploy/.env and edit it.
 # 3. Start:   podman-compose -f deploy/compose.yaml up -d      (or: docker compose -f deploy/compose.yaml up -d)
+#    podman-compose must be 1.5.0 or later (`podman-compose version`; Ubuntu 24.04 and Debian 12/13
+#    package older ones: `pipx install 'podman-compose>=1.5'`, or use Quadlet, deploy/quadlet/).
+#    Older versions run the health check below through /bin/sh, which the image does not have (the
+#    container then always reports "unhealthy"), and ignore x-podman.relabel (SELinux then denies
+#    the secrets: `chcon -t container_file_t deploy/secrets/*` works around it).
 # 4. First run: the log prints a one-time setup code; open the app and enter it to create the admin:
 #      podman logs kidney-health 2>&1 | grep 'FIRST-RUN SETUP'
 #
@@ -99,7 +104,8 @@ services:
       - kidney-data:/data
 
     healthcheck:
-      # Same probe as the image HEALTHCHECK (Podman's OCI image format drops that one).
+      # Same probe as the image HEALTHCHECK (Podman's OCI image format drops that one). Exec form:
+      # podman-compose < 1.5.0 turns it into a /bin/sh command, which fails in this shell-less image.
       test: ["CMD", "python", "-m", "app.healthcheck"]
       interval: 30s
       timeout: 5s
@@ -107,7 +113,8 @@ services:
       retries: 3
 
 # File secrets are bind-mounted read-only at /run/secrets/<name>. x-podman.relabel: Z lets
-# podman-compose relabel them for SELinux (Fedora, RHEL); other engines ignore the x- key.
+# podman-compose (1.5.0 or later) relabel them for SELinux (Fedora, RHEL); other engines ignore the
+# x- key. Older podman-compose: `chcon -t container_file_t deploy/secrets/*` once.
 secrets:
   secret_key:
     file: ./secrets/secret_key          # relative to this file: deploy/secrets/ (git-ignored)

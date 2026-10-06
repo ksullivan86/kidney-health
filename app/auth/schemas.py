@@ -42,6 +42,10 @@ class ResetBody(_Body):
     password: SecretStr = Field(min_length=1, max_length=PASSWORD_FIELD_MAX)
 
 
+class LinkInfoBody(_Body):
+    token: SecretStr = Field(min_length=1, max_length=200)
+
+
 class ReauthBody(_Body):
     password: SecretStr = Field(min_length=1, max_length=PASSWORD_FIELD_MAX)
 

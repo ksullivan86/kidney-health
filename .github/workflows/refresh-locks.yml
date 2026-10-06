@@ -1,0 +1,80 @@
+# Weekly refresh of the hash-locked Python dependencies, as a pull request for a maintainer to review.
+# Spec: docs/dev/research/01-rootless-and-security.md §3.6, §5.4 (C-LOCK, C-DEPBOT).
+#
+# Why not Dependabot: it reads only requirement files ending in .txt or .in and never regenerates a
+# *.lock file (ARCHITECTURE.md decision 5 names the locks requirements.lock, requirements-dev.lock
+# and handbook/requirements.lock), so its pip ecosystem covers only /.github (requirements-lint.txt).
+#
+# Cooldown: pip only takes releases uploaded at least `cooldown_days` days ago (7 on the schedule),
+# so a compromised release has time to be noticed and yanked first. A security fix that cannot wait:
+# run this workflow by hand with cooldown_days 0, or `scripts/lock.sh --upgrade-package NAME` locally.
+# The weekly image scan (scheduled-scan.yml) reports fixable High/Critical findings in the meantime.
+#
+# A pull request opened with the workflow's own token starts no other workflow (GitHub's rule against
+# recursion): close and reopen it, or push to its branch, so CI runs before you merge.
+name: Refresh dependency locks
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"   # Mondays 04:23 UTC
+  workflow_dispatch:
+    inputs:
+      cooldown_days:
+        description: "Only take releases uploaded at least this many days ago (0 = the newest)"
+        type: string
+        default: "7"
+
+permissions: {}
+
+concurrency:
+  group: refresh-locks
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: pip-compile --upgrade
+    if: github.repository == 'ksullivan86/kidney-health'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write        # push the deps/refresh-locks branch
+      pull-requests: write   # open the pull request
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # scripts/lock.sh runs pip-compile in the pinned python:3.14 image (Docker is on the runner).
+      - name: Recompile the locks
+        env:
+          COOLDOWN_DAYS: ${{ inputs.cooldown_days || '7' }}
+        run: |
+          set -euo pipefail
+          case "$COOLDOWN_DAYS" in (*[!0-9]*|'') echo "cooldown_days must be a whole number" >&2; exit 1;; esac
+          PIP_UPLOADED_PRIOR_TO="P${COOLDOWN_DAYS}D" scripts/lock.sh --upgrade
+          git diff --stat -- requirements.lock requirements-dev.lock handbook/requirements.lock
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          COOLDOWN_DAYS: ${{ inputs.cooldown_days || '7' }}
+        run: |
+          set -euo pipefail
+          locks=(requirements.lock requirements-dev.lock handbook/requirements.lock)
+          if git diff --quiet -- "${locks[@]}"; then
+            echo "The locks are current; nothing to propose."
+            exit 0
+          fi
+          branch="deps/refresh-locks"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git commit --quiet -m "Refresh the hash-locked Python dependencies" -- "${locks[@]}"
+          git push --quiet --force "https://x-access-token:${GH_TOKEN}@${SERVER_URL#https://}/${GH_REPO}.git" "HEAD:refs/heads/${branch}"
+          body="pip-compile --upgrade with a ${COOLDOWN_DAYS}-day cooldown (scripts/lock.sh).
+          Review the version changes, then close and reopen this pull request so CI runs on it."
+          if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')" ]; then
+            gh pr create --head "$branch" --title "Refresh the hash-locked Python dependencies" --body "$body"
+          else
+            echo "The open pull request for ${branch} was updated."
+          fi

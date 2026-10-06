@@ -65,7 +65,7 @@ everyone look like the proxy.
 |---|---|
 | Rootless Podman (pasta), proxy on the same host | the container's **own** address, not `127.0.0.1`; every local process looks the same |
 | Rootless Podman with slirp4netns | `10.0.2.100` for every client: switch to pasta |
-| Rootless Docker (default) | the RootlessKit gateway for every client: keep the loopback default |
+| Rootless Docker (default) | the RootlessKit gateway for every client, a same-host proxy included: no proxy, keep the loopback default; with an HTTPS proxy on the same host, trust that gateway address (safe while the port is published on `127.0.0.1`) |
 | Proxy in the same compose network | the proxy container's address (the Caddy overlay pins it) |
 | Kubernetes | the Gateway pods' addresses: keep the range narrow |
 
@@ -81,7 +81,9 @@ GitHub-signed provenance and SBOM attestations ([security policy][SECURITYMD]).
 scripts/verify-image.sh 0.3.0      # checks signature and attestations, prints the digest to pin
 ```
 
-By hand, `cosign verify` checks that the signature came from this repository's release workflow, using
+By hand, `cosign verify` (cosign **3.0 or later**: older versions cannot see the bundle-format
+signatures the release workflow makes and report "no signatures found") checks that the signature came
+from this repository's release workflow, using
 `--certificate-identity-regexp` and `--certificate-oidc-issuer` ([Sigstore][SIGSTORE-VERIFY]); the exact
 lines are in the [security policy][SECURITYMD]. Podman cannot enforce these signatures at pull time, so
 verify first and then deploy **by digest**.

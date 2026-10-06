@@ -178,6 +178,9 @@ def backup_to(conn: sqlite3.Connection, dest: Path | str, *, mode: int = 0o600) 
     target = sqlite3.connect(str(dest))
     try:
         conn.backup(target)
+        # Rollback-journal mode, so the copy opens read-only anywhere (a WAL-mode file needs a -shm file
+        # next to it even for reading); the app switches a restored database back to WAL on open.
+        target.execute("PRAGMA journal_mode = DELETE").fetchall()
     except BaseException:
         target.close()
         dest.unlink(missing_ok=True)

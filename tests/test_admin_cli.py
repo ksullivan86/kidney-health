@@ -83,6 +83,41 @@ def test_backup_to_stdout(tmp_path):
     copy.close()
 
 
+def test_backups_are_rollback_journal_files_that_open_read_only_anywhere(tmp_path, env):
+    """A WAL-mode file needs a -shm file next to it even to be read, which fails on a read-only mount
+    or in a directory UID 10001 cannot write (the documented restore). Backups are written in
+    rollback-journal mode, and restore-check opens a read-only file as immutable."""
+    live = make_v3ish_db(tmp_path / "data")
+    assert live.read_bytes()[18:20] == b"\x02\x02"  # the live database is WAL
+    to_file = tmp_path / "file" / "kidney.db"
+    to_file.parent.mkdir()
+    assert run(["backup", str(to_file)], env)[0] == 0
+    proc = subprocess.run(
+        [sys.executable, "-m", "app.admin", "backup", "-"],
+        cwd=REPO, env={**os.environ, **env, "PYTHONPATH": str(REPO)}, capture_output=True, timeout=60,
+    )
+    piped = tmp_path / "piped" / "kidney.db"
+    piped.parent.mkdir()
+    piped.write_bytes(proc.stdout)
+    old_style = tmp_path / "old" / "kidney.db"  # a WAL-mode copy, as earlier versions wrote
+    old_style.parent.mkdir()
+    old_style.write_bytes(live.read_bytes())
+    for path in (to_file, piped):
+        assert path.read_bytes()[18:20] == b"\x01\x01", path
+    for path in (to_file, piped, old_style):
+        code, out = run(["restore-check", str(path)], env)
+        assert code == 0 and "ok: integrity_check" in out, out
+        assert sorted(p.name for p in path.parent.iterdir()) == ["kidney.db"], path  # no -shm/-wal created
+    # without the app's secret the key check is skipped, and it says so
+    assert "the stored API keys were not checked" in out
+    # the restored copy goes back to WAL once the app opens it
+    restored = tmp_path / "restored" / "kidney.db"
+    restored.parent.mkdir()
+    restored.write_bytes(to_file.read_bytes())
+    db.init_db(restored)
+    assert restored.read_bytes()[18:20] == b"\x02\x02"
+
+
 def test_backup_without_database_fails_cleanly(env):
     code, _ = run(["backup", "/tmp/never-written.db"], env)
     assert code == 1

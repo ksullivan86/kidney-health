@@ -92,7 +92,11 @@ A typo makes `daemon-reload` skip the unit **silently**; the `-dryrun` line catc
 
 ## Compose instead of Quadlet
 
-`deploy/compose.yaml` carries the same hardening for `podman-compose` (or Docker compose). Secrets are
+`deploy/compose.yaml` carries the same hardening for `podman-compose` (or Docker compose). It needs
+**podman-compose 1.5.0 or later**: older versions (Ubuntu 24.04 packages 1.0.6) run the health check
+through a shell the image does not have, so the container always shows `unhealthy`, and they skip the
+SELinux relabelling of the secrets (`chcon -t container_file_t deploy/secrets/*` works around that).
+`pipx install 'podman-compose>=1.5'` gets a current one; Quadlet has neither problem. Secrets are
 files in `deploy/secrets/`, settings go in `deploy/.env`. Because compose mounts secret files as bind
 mounts, they need mode `0644` inside a `0700` directory, or `podman unshare chown 10001:10001` on the
 files. With `restart: always`, enable `podman-restart.service` so the container comes back after a

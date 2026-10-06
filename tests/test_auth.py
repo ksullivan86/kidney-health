@@ -286,8 +286,8 @@ def test_every_login_runs_exactly_one_hash(anon_client, monkeypatch):
     from app.auth import passwords
 
     calls = []
-    original = passwords.verify_password
-    monkeypatch.setattr(passwords, "verify_password", lambda pw, stored: calls.append(stored) or original(pw, stored))
+    original = passwords._verify_unlocked  # what both the sync and the async verify run
+    monkeypatch.setattr(passwords, "_verify_unlocked", lambda pw, stored: calls.append(stored) or original(pw, stored))
     conn = db(anon_client)
     conn.execute(
         "INSERT INTO users (username, username_norm, status, created_at, updated_at) VALUES ('ghost', 'ghost', 'disabled', 'x', 'x')"
@@ -365,11 +365,13 @@ def test_device_cookie_is_void_after_ten_failures(anon_client):
 def test_hashing_overload_answers_503(anon_client, monkeypatch):
     from app.auth import passwords
 
-    def busy(*_a, **_k):
-        raise passwords.HashBusy()
-
-    monkeypatch.setattr(passwords, "verify_password", busy)
-    r = fail(anon_client)
+    monkeypatch.setattr(passwords, "GATE_TIMEOUT_S", 0.1)
+    held = [passwords._GATE.acquire(), passwords._GATE.acquire()]  # both hashing slots busy
+    try:
+        r = fail(anon_client)
+    finally:
+        for _ in held:
+            passwords._GATE.release()
     assert r.status_code == 503 and r.headers["retry-after"] == "1"
 
 
@@ -562,7 +564,11 @@ def test_admin_reset_link_unlocks_signs_out_and_is_noticed(two_clients):
     conn.close()
     fresh = TestClient(admin.app, base_url=HTTPS_URL)
     login = fresh.post("/api/auth/login", json={"username": "sam", "password": NEW_PASSWORD}).json()
-    assert login["notice"] is None  # the reset itself signed them in; the notice is for the next sign-in
+    # N12: the next password sign-in says an admin's link changed the password (whoever used it) ...
+    assert "reset with a link from an admin" in login["notice"]
+    # ... once
+    again = TestClient(admin.app, base_url=HTTPS_URL).post("/api/auth/login", json={"username": "sam", "password": NEW_PASSWORD})
+    assert again.json()["notice"] is None
     activity = fresh.get("/api/me/activity").json()["events"]
     assert any(e["action"] == "user.password_changed" and e["details"]["via"] == "admin_reset_link" for e in activity)
 
@@ -573,12 +579,16 @@ def test_reset_notice_shows_at_the_next_sign_in(two_clients):
     url = admin.post(f"/api/admin/users/{sam_id}/reset-link").json()["url"]
     admin_side = TestClient(admin.app, base_url=HTTPS_URL)  # e.g. the admin used the link themselves
     assert admin_side.post("/api/auth/reset", json={"token": url.split("/#/reset/")[1], "password": NEW_PASSWORD}).status_code == 200
-    conn = db(admin)
-    conn.execute("UPDATE users SET last_login_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (sam_id,))
-    conn.commit()
-    conn.close()
+    assert admin_side.get("/api/me").json()["username"] == "sam"  # the link signed its holder in
+    # no clock tricks: the reset's own sign-in does not hide the notice from Sam's next sign-in
     login = TestClient(admin.app, base_url=HTTPS_URL).post("/api/auth/login", json={"username": "sam", "password": NEW_PASSWORD})
     assert "reset with a link from an admin" in login.json()["notice"]
+    # a reset link Sam asked the CLI for (no admin) or a self-service change gives no notice
+    sam2 = TestClient(admin.app, base_url=HTTPS_URL)
+    sign_in(sam2, "sam", NEW_PASSWORD)
+    assert sam2.post("/api/me/password", json={"current_password": NEW_PASSWORD, "new_password": USER_PASSWORD}).status_code == 200
+    login = TestClient(admin.app, base_url=HTTPS_URL).post("/api/auth/login", json={"username": "sam", "password": USER_PASSWORD})
+    assert login.json()["notice"] is None
 
 
 def test_admin_creates_an_account_with_a_setup_link(https_client):

@@ -55,6 +55,7 @@ ACTIONS: set[str] = {
     "user.deleted",
     "user.updated",
     "user.reset_link_issued",
+    "user.reset_link_revoked",
     "user.password_changed",
     "user.must_change_password",
     "sessions.revoked",
@@ -76,6 +77,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "user.locked",
         "user.password_changed",
         "user.reset_link_issued",
+        "user.reset_link_revoked",
         "user.must_change_password",
         "sessions.revoked",
         "session.revoked_reauth",
@@ -170,14 +172,20 @@ def list_events(
     actor_user_id: int | None = None,
     actions: Iterable[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Newest first, paged by ``before`` (an id). ``actor_user_id`` + ``actions`` give a person's activity."""
+    """Newest first, paged by ``before`` (an id). ``actor_user_id`` + ``actions`` give a person's activity:
+    events about their own account (whoever acted, e.g. an admin's reset link for it) and what they did
+    themselves, except actions on another person's account (those belong in the admin log only)."""
     where, params = [], []
     if before is not None:
         where.append("id < ?")
         params.append(int(before))
     if actor_user_id is not None:
-        where.append("(actor_user_id = ? OR (target_type = 'user' AND target_id = ?))")
-        params.extend([int(actor_user_id), str(int(actor_user_id))])
+        uid = int(actor_user_id)
+        where.append(
+            "((target_type = 'user' AND target_id = ?)"
+            " OR (actor_user_id = ? AND (COALESCE(target_type, '') != 'user' OR target_id IS NULL OR target_id = ?)))"
+        )
+        params.extend([str(uid), uid, str(uid)])
     if actions is not None:
         names = sorted(set(actions))
         if not names:

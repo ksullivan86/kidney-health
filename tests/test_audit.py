@@ -34,6 +34,22 @@ def test_audit_rows_and_listing(conn):
     assert audit.list_events(conn, actions=[]) == []
 
 
+def test_personal_activity_is_about_the_own_account(conn):
+    """An admin's actions on someone else's account are not the admin's own account activity (M1 review);
+    an admin's action on this person's account is theirs."""
+    audit.audit(conn, 1, "user.reset_link_issued", "user", 2)        # admin 1 → account 2
+    audit.audit(conn, 1, "sessions.revoked", "user", 2, count=1)     # admin 1 → account 2
+    audit.audit(conn, 1, "login.succeeded", "user", 1)
+    audit.audit(conn, 1, "secret.set", "secret", "usda", provider="usda", scope="shared")
+    audit.audit(conn, None, "login.failed", "user", 1)
+    audit.audit(conn, 1, "sessions.revoked", None, None, count=3)    # e.g. the CLI's --all, by no one's account
+    conn.commit()
+    admin = [(r["action"], r["target_id"]) for r in audit.list_events(conn, actor_user_id=1, actions=audit.USER_VISIBLE_ACTIONS)]
+    assert admin == [("sessions.revoked", None), ("login.failed", "1"), ("secret.set", "usda"), ("login.succeeded", "1")]
+    sam = [(r["action"], r["actor_user_id"]) for r in audit.list_events(conn, actor_user_id=2, actions=audit.USER_VISIBLE_ACTIONS)]
+    assert sam == [("sessions.revoked", 1), ("user.reset_link_issued", 1)]
+
+
 def test_audit_log_is_append_only(conn):
     row_id = audit.audit(conn, 1, "settings.changed", key="instance.name", old="A", new="B")
     conn.commit()

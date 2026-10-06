@@ -68,8 +68,8 @@ The app is tested on iOS and iPadOS 26 and 27 and is expected to work from iOS 1
    phones **Add to Home screen**) ([Chrome Help][CHROME-PWA]).
 4. Open the app from its new icon.
 
-In the app, **Profile → Install on your phone** also shows an **Install app** button when Chrome
-allows it. (In v0.3 this panel moves to **Settings → This device**.)
+In the app, **Settings → This device → Install this app** also shows an **Install app** button when Chrome
+allows it.
 
 ## Computer
 
@@ -108,7 +108,7 @@ When the admin upgrades the server, the app notices the next time you open it an
 - **"My data is gone."** Check the address. The same app at a different address starts empty. Your log
   is still on the server; open the original address.
 - **It does not open without a connection.** Offline use needs HTTPS. Open the app once while
-  connected, then check **Profile → Install on your phone**: it says "Offline ready" when it can open
+  connected, then check **Settings → This device → Install this app**: it says "Offline ready" when it can open
   without a connection.
 - **The app keeps asking me to sign in.** The installed app has its own sign-in. Sign in once inside
   the app.

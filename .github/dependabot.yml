@@ -3,13 +3,13 @@
 # release has time to be noticed and yanked before it lands here (C-DEPBOT).
 version: 2
 updates:
-  # Python: requirements.in -> requirements.lock and requirements-dev.lock (pip-compile with
-  # --generate-hashes; Dependabot regenerates the hashes), the handbook build lock, and the CI
-  # lint tools in /.github.
+  # Python: only the CI lint tools in /.github (requirements-lint.txt, pinned with hashes).
+  # The hash-locked requirements.lock, requirements-dev.lock and handbook/requirements.lock are NOT
+  # covered here: Dependabot reads only requirement files ending in .txt or .in and never regenerates
+  # a *.lock file (its root job would fail on the requirements*.txt shims, which point at the locks).
+  # .github/workflows/refresh-locks.yml refreshes them weekly with a 7-day cooldown and opens a PR.
   - package-ecosystem: pip
     directories:
-      - "/"
-      - "/handbook"
       - "/.github"
     schedule:
       interval: weekly

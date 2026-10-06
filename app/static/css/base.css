@@ -220,10 +220,16 @@ svg { display: inline-block; vertical-align: middle; }
   :root { --tabbar-h: 0px; }
   .tabs { position: static; border: 0; background: none; padding: 0; }
   .tablist { gap: 4px; }
-  .tab { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: var(--tap); padding: 0 14px; font-size: 0.95rem; }
+  .tab { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: var(--tap); padding: 0 10px; font-size: 0.95rem; }
   .tab-icon { width: 20px; height: 20px; }
   .tab[aria-selected="true"] { background: var(--accent-tint); }
   .main { padding: 20px 24px 40px; }
+}
+
+/* Five tabs, the gear and the theme switch leave no room for the app's name between 720 and 960 px:
+   show the icon alone there rather than a name cut to "K…" (the page title still names the app). */
+@media (min-width: 720px) and (max-width: 959.98px) {
+  .brand-name { display: none; }
 }
 
 /* ---------- cards & lists ---------- */

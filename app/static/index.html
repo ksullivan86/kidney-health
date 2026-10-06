@@ -192,7 +192,12 @@
       </form>
 
       <form id="form-reset" class="auth-form" data-screen="reset" novalidate hidden>
-        <p class="auth-intro">Choose a password for your account. Every other device signed in to it is signed out.</p>
+        <p class="auth-intro" id="reset-intro">Choose a new password for your account. Every other device signed in to it is signed out.</p>
+        <div class="field" id="reset-username-field" hidden>
+          <label for="reset-username">Username</label>
+          <input id="reset-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" readonly aria-describedby="reset-username-hint">
+          <span class="hint" id="reset-username-hint">You sign in with this name. A password manager saves it together with the password.</span>
+        </div>
         <div class="field">
           <label for="reset-password">New password</label>
           <div class="pw-wrap">
@@ -206,7 +211,8 @@
       </form>
 
       <form id="form-change" class="auth-form" data-screen="change" novalidate hidden>
-        <p class="auth-intro">Your admin asks you to choose a new password before you continue.</p>
+        <p class="auth-intro" id="chg-intro">Your admin asks you to choose a new password before you continue.</p>
+        <p class="hint" id="chg-who"></p>
         <input id="chg-username" name="username" type="text" autocomplete="username" readonly hidden>
         <div class="field">
           <label for="chg-current">Current password</label>
@@ -626,7 +632,7 @@
       <div id="set-device-body" class="settings-body"></div>
       <!-- Note 02 R10: js/pwa.js fills and shows this in the installed app only (never in the demo or the preview). -->
       <div class="install-panel" id="install-panel" aria-labelledby="install-heading" hidden>
-        <h3 class="settings-subtitle" id="install-heading">Install on your phone</h3>
+        <h3 class="settings-subtitle" id="install-heading">Install this app</h3>
         <p class="install-state" id="install-state"></p>
         <div class="install-body" id="install-body"></div>
       </div>

@@ -35,6 +35,7 @@
     updateUser: (id, b) => request('PATCH', `/api/admin/users/${id}`, b),
     deleteUser: (id, b) => request('DELETE', `/api/admin/users/${id}`, b),
     resetLink: (id) => request('POST', `/api/admin/users/${id}/reset-link`),
+    revokeResetLink: (id) => request('DELETE', `/api/admin/users/${id}/reset-link`),
     revokeUser: (id) => request('POST', `/api/admin/users/${id}/revoke-sessions`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
@@ -417,6 +418,7 @@
         const r = await A.revokeOthers();
         toast(r.revoked === 1 ? 'Signed out 1 other device' : `Signed out ${r.revoked} other devices`, 'ok');
         await loadDevices();
+        const again = $('#set-devices button'); if (again) again.focus(); // this button is gone now
       }, { id: 'set-revoke-others' })));
     }
     box.append(h('p', { class: 'hint' }, 'Do not recognise a device? Sign it out, then change your password.'));
@@ -435,7 +437,11 @@
       } catch (err) { msg.textContent = ''; throw err; }
     }, { id: 'set-export' })), msg);
 
-    // Delete the account
+    // Delete the account (not in AUTH_MODE=none: every request is user 1 there, which must stay)
+    if (authMode() === 'none') {
+      wrap.append(h('p', { class: 'hint', id: 'set-delete-none' }, 'This server runs without sign-in, so there is no personal account to delete. Remove entries one by one, or ask whoever runs the server.'));
+      return wrap;
+    }
     const err = formError();
     const confirmId = 'set-delete-confirm';
     const local = hasLocalPassword();
@@ -461,6 +467,8 @@
       try {
         await A.deleteMe(local ? { password: pw, confirm: typed } : { confirm: typed });
         if (MOCK) { KH.auth.showScreen('login', { notice: 'The demo account was deleted. Reload the page to start the demo again.' }); return; }
+        // The page reloads (the server sent Clear-Site-Data); the sign-in screen then says what happened.
+        KH.auth.noticeAfterReload('Your account and all of its data were deleted from this server.');
         try { history.replaceState(null, '', '#/login'); } catch (e3) { /* sandboxed frame */ }
         window.location.reload();
       } catch (e2) {
@@ -477,6 +485,7 @@
     'user.invited': 'Invite or account created', 'invite.revoked': 'Invite revoked', 'user.registered': 'Account registered',
     'user.created_by_proxy': 'Account created by the sign-in proxy', 'user.role_changed': 'Role changed', 'user.disabled': 'Account disabled',
     'user.enabled': 'Account enabled', 'user.deleted': 'Account deleted', 'user.updated': 'Account updated', 'user.reset_link_issued': 'Password reset link created',
+    'user.reset_link_revoked': 'Password reset link revoked',
     'user.password_changed': 'Password changed', 'user.must_change_password': 'New password required', 'sessions.revoked': 'Devices signed out',
     'session.revoked_reauth': 'Signed out after wrong passwords', 'proxy.username_conflict': 'Sign-in proxy name clash', 'settings.changed': 'Setting changed',
     'secret.set': 'Key saved', 'secret.removed': 'Key removed', 'ai_provider.changed': 'AI provider changed', 'export.created': 'Data exported',
@@ -490,12 +499,24 @@
     if (ev.action === 'user.role_changed') return `${ROLE_LABEL[d.old] || d.old} → ${ROLE_LABEL[d.new] || d.new}`;
     if (ev.action === 'login.failed' && d.via === 'reauth') return 'when asked for the password again';
     if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
+    if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
+  }
+  // Whose account an admin action concerned (the audit row keeps ids only). A deleted account keeps its number.
+  function accountName(id) {
+    const u = (cache.users || []).find((x) => x.id === Number(id));
+    if (u) return u.display_name ? `${u.display_name} (${u.username})` : u.username;
+    return cache.users ? `deleted user #${id}` : `user #${id}`;
+  }
+  function targetOf(ev) {
+    if (ev.target_type !== 'user' || ev.target_id == null || String(ev.actor_user_id) === String(ev.target_id)) return null;
+    if (ev.actor_user_id == null) return null; // shown as "account …" in place of the actor
+    return accountName(ev.target_id);
   }
   function activityBlock() {
     const list = h('ul', { class: 'activity-list' }, h('li', { class: 'muted small' }, 'Loading…'));
     const details = h('details', { class: 'settings-details', id: 'set-activity' }, h('summary', {}, 'Recent sign-in activity'), list,
-      h('p', { class: 'hint' }, 'Sign-ins, password and key changes and exports on your account, newest first.'));
+      h('p', { class: 'hint' }, 'Sign-ins, password and key changes and exports on your account, newest first, including anything an admin did to it.'));
     let loaded = false;
     details.addEventListener('toggle', async () => {
       if (!details.open || loaded) return;
@@ -504,9 +525,12 @@
         const res = await A.activity();
         clear(list);
         if (!res.events.length) list.append(h('li', { class: 'muted small' }, 'Nothing yet.'));
+        const me = state.me ? state.me.id : null;
         for (const ev of res.events) {
           const extra = eventDetail(ev);
-          list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra ? h('span', { class: 'muted' }, ` · ${extra}`) : null),
+          // Only events about this account are listed; one an admin did to it says so.
+          const byAdmin = ev.actor_user_id != null && ev.actor_user_id !== me ? ' · by an admin' : '';
+          list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra || byAdmin ? h('span', { class: 'muted' }, `${extra ? ` · ${extra}` : ''}${byAdmin}`) : null),
             h('span', { class: 'act-when muted small' }, `${fmtDateTime(ev.at)}${ev.ip_prefix ? ` · ${ev.ip_prefix}` : ''}`)));
         }
       } catch (err) { loaded = false; clear(list); list.append(h('li', {}, failed(err))); }
@@ -629,8 +653,10 @@
     }
     const offAdmin = cache.adminSettings && !(cache.adminSettings instanceof Error) && cache.adminSettings['food.off_enabled'];
     if (offAdmin) {
-      body.append(h('p', { class: 'setting-status' }, `On this server Open Food Facts lookups are ${offAdmin.value ? 'on' : 'off'}. `,
-        sourceLine(offAdmin.source, offAdmin.locked_by_env, { admin: true }), offAdmin.locked_by_env ? null : ' Change it in Admin → Server settings.'));
+      const why = offAdmin.locked_by_env ? `Set by the server (${offAdmin.locked_by_env}), locked.`
+        : offAdmin.source === 'instance' ? 'An admin chose this (or the first-run setup did).' : 'That is the app default.';
+      body.append(h('p', { class: 'setting-status', id: 'set-off-server' }, `On this server Open Food Facts lookups are ${offAdmin.value ? 'on' : 'off'}. ${why}`,
+        offAdmin.locked_by_env ? null : ' Change it in Admin → Server settings.'));
     }
     body.append(h('p', { class: 'hint' }, 'Product data from Open Food Facts is © Open Food Facts contributors, under the Open Database License (ODbL). USDA FoodData Central data is in the public domain.'));
     if (MOCK) body.append(h('p', { class: 'hint' }, 'The preview never contacts USDA or Open Food Facts; these lookups work in the installed app.'));
@@ -674,12 +700,14 @@
       return;
     }
     const st = await KH.pwa.deviceStatus();
+    // isSecureContext is also true on http://localhost, which is not encrypted: ask the address.
+    const https = (() => { try { return window.location.protocol === 'https:'; } catch (e) { return false; } })();
     const storage = st.storage ? `${fmtBytes(st.storage.usage)} of about ${fmtBytes(st.storage.quota)}` : null;
     body.append(kv([
       ['This app', st.installed ? 'Installed: it opens from your home screen' : 'Open in the browser'],
       ['Works offline', OFFLINE_TEXT[st.offline] || st.offline],
       storage ? ['Storage used', `${storage}${st.persisted === true ? ' · kept by the browser' : st.persisted === false ? ' · the browser may clear it when space runs low' : ''}`] : null,
-      ['Connection', st.secure ? 'Encrypted (HTTPS)' : 'Not encrypted (plain HTTP)'],
+      ['Connection', https ? 'Encrypted (HTTPS)' : st.secure ? 'Not encrypted (plain HTTP on this computer; offline use still works)' : 'Not encrypted (plain HTTP)'],
       ['App version', st.updateReady ? `${APP_VERSION} (an update is ready: use Reload)` : APP_VERSION],
     ]));
     if (!st.secure) body.append(note('caution', h('p', {}, 'Offline use, camera scanning and reminders need HTTPS. Your admin can set it up with docs/https.md.')));
@@ -698,7 +726,13 @@
     row.append(clearBtn);
     body.append(row);
     KH.pwa.renderInstallPanel();
+    // Opened straight to #settings: the app may become ready for offline use a moment later; show
+    // the new state then instead of a stale "Not yet" (js/pwa.js says when; subscribed once).
+    if (!deviceWatch && typeof KH.pwa.onStateChange === 'function') {
+      deviceWatch = KH.pwa.onStateChange(() => { if (state.view === 'settings') renderDevice().catch(() => null); });
+    }
   }
+  let deviceWatch = null;
 
   // ---------------------------------------------------------------------------
   // Section: Admin
@@ -718,8 +752,8 @@
     body.append(subtitle('Usage, last 30 days', 'set-usage-h'), h('div', { id: 'set-usage' }, loading()));
     body.append(subtitle('Activity log', 'set-audit-h'), h('div', { id: 'set-audit' }, loading()));
     body.append(subtitle('About this server', 'set-server-about-h'), h('div', { id: 'set-server-about' }, loading()));
-    if (!none) loadPeople();
-    loadServerSettings();
+    adminSettingsReady = loadServerSettings();
+    peopleReady = none ? Promise.resolve() : loadPeople();
     loadSharedKeys();
     loadUsage();
     loadAudit();
@@ -727,11 +761,14 @@
   }
 
   // ---- People: accounts and invites
+  let adminSettingsReady = Promise.resolve();
+  let peopleReady = Promise.resolve(); // the activity log names accounts from the people list
   async function loadPeople(focusSel) {
     const box = $('#set-people');
     if (!box) return;
     let users, invites;
     try { [users, invites] = await Promise.all([A.users(), A.invites()]); } catch (err) { clear(box); box.append(failed(err)); return; }
+    await adminSettingsReady.catch(() => null); // the invite form needs registration.mode and the link lifetime
     cache.users = users.users;
     if (!document.contains(box)) return;
     clear(box);
@@ -753,11 +790,19 @@
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
+    const link = u.reset_link;
+    const linkText = link ? `${u.status === 'pending_setup' ? 'Setup link' : 'Password reset link'} open until ${fmtDateTime(link.expires_at)}`
+      + `${link.created_by != null ? `, created by ${state.me && link.created_by === state.me.id ? 'you' : accountName(link.created_by)}` : ', created with the command line'}` : null;
     const li = h('li', { class: 'user-row', id: `user-${u.id}` },
       h('div', { class: 'user-main' },
         h('span', { class: 'row-title' }, u.display_name || u.username, u.display_name ? h('span', { class: 'muted' }, ` (${u.username})`) : null),
         h('span', { class: 'user-badges' }, badges),
-        h('span', { class: 'row-sub' }, sub)));
+        h('span', { class: 'row-sub' }, sub),
+        linkText ? h('span', { class: 'row-sub open-link' }, linkText) : null));
+    if (self && link && link.created_by !== state.me.id) {
+      li.append(note('caution', h('p', {}, h('strong', {}, 'Someone created a password reset link for your account. '),
+        'Whoever holds it can set your password and sign in as you. If you did not ask for it, revoke it under Manage.')));
+    }
     li.append(userManage(u, self));
     return li;
   }
@@ -796,8 +841,14 @@
       actions.append(action('Create a password reset link', 'secondary', async () => {
         const r = await A.resetLink(u.id);
         clear(out);
-        out.append(linkBox(r.url, [`Send it to ${name} yourself. It works once, for 24 hours (until ${fmtDateTime(r.expires_at)}), and also unlocks a locked account.`,
+        out.append(linkBox(r.url, [`Send it to ${name} yourself. It works once, for 24 hours (until ${fmtDateTime(r.expires_at)}), and also unlocks a locked account. Their username is ${u.username}.`,
           'Anyone with this link can set the password and sign in as this person, so send it only to them.']));
+      }));
+    }
+    if (u.reset_link) {
+      actions.append(action(u.status === 'pending_setup' ? 'Revoke the setup link' : 'Revoke the reset link', 'secondary', async () => {
+        await A.revokeResetLink(u.id);
+        await done('Link revoked: it no longer works');
       }));
     }
     if (authLocal && u.has_password && !u.must_change_password && u.status === 'active') {
@@ -806,7 +857,7 @@
     actions.append(action(self ? 'Sign out all my devices' : 'Sign out of all devices', 'secondary', async () => {
       const r = await A.revokeUser(u.id);
       toast(r.revoked === 1 ? 'Signed out 1 device' : `Signed out ${r.revoked} devices`, 'ok');
-      if (self) return; // our own session too: the next request shows the sign-in screen
+      if (self) { await KH.auth.signOut(); return; } // this device too: show the sign-in screen now
       await loadPeople();
     }));
     if (!self && u.status === 'active') {
@@ -860,6 +911,7 @@
       const roleId = 'set-invite-role', noteId = 'set-invite-note', daysId = 'set-invite-days';
       const days = h('input', { id: daysId, type: 'number', inputmode: 'numeric', min: 1, max: 90, step: 1 });
       days.value = String(ttlDefault);
+      days.addEventListener('input', () => { days.dataset.touched = '1'; });
       const form = h('form', { class: 'settings-form invite-form', novalidate: true },
         h('div', { class: 'form-grid' },
           h('div', { class: 'field' }, h('label', { for: roleId }, 'Role'), selectEl(roleId, [['user', 'Member'], ['admin', 'Admin']], 'user')),
@@ -878,7 +930,8 @@
         btn.disabled = true;
         clear(err);
         try {
-          const body = { role: $(`#${roleId}`).value, ttl_days: n };
+          // Untouched: the server applies "Invite links expire after (days)" itself.
+          const body = days.dataset.touched ? { role: $(`#${roleId}`).value, ttl_days: n } : { role: $(`#${roleId}`).value };
           const noteText = $(`#${noteId}`).value.trim();
           if (noteText) body.note = noteText;
           const r = await A.createInvite(body);
@@ -921,7 +974,10 @@
           const r = await A.createUser(b);
           $(`#${userId}`).value = ''; $(`#${nameId}`).value = '';
           clear(out);
-          if (r.setup_url) out.append(linkBox(r.setup_url, [`Send it to ${r.user.display_name || r.user.username} yourself. It works once and expires ${fmtDateTime(r.expires_at)}.`]));
+          if (r.setup_url) {
+            out.append(linkBox(r.setup_url, [`Send it to ${r.user.display_name || r.user.username} yourself, with their username: ${r.user.username}. It works once and expires ${fmtDateTime(r.expires_at)}.`,
+              'The page it opens shows the username too, so their password manager saves both.']));
+          }
           else out.append(h('p', { class: 'status-msg' }, `${r.user.username} can now open the app through the sign-in proxy.`));
           const keep = out;
           await loadPeople();
@@ -934,33 +990,40 @@
     // Invite list
     if (!proxy) {
       const list = h('ul', { class: 'list invite-list', id: 'set-invite-list', 'aria-label': 'Invites' });
-      fillInviteList(list, invites);
-      wrap.append(h('h4', { class: 'settings-minor' }, 'Invites'), list);
+      fillInviteList(list, invites, mode === 'closed');
+      wrap.append(h('h4', { class: 'settings-minor', id: 'set-invites-h', tabindex: '-1' }, 'Invites'), list);
+      if (mode === 'closed' && invites.some((i) => i.state === 'open')) {
+        wrap.append(h('p', { class: 'hint' }, 'Registration is closed, so open invite links do not work at the moment. They work again if you switch Registration back to invite links (Server settings) before they expire; revoke any you no longer want.'));
+      }
     }
     return wrap;
   }
-  function fillInviteList(list, invites) {
+  function fillInviteList(list, invites, paused = false) {
     clear(list);
     if (!invites.length) { list.append(h('li', { class: 'muted small empty-state' }, 'No invites yet.')); return; }
     for (const inv of invites.slice(0, 15)) {
       const what = `${ROLE_LABEL[inv.role] || inv.role} invite${inv.note ? ` · ${inv.note}` : ''}`;
       const when = inv.state === 'open' ? `expires ${fmtDateTime(inv.expires_at)}` : inv.state === 'used' ? `used ${fmtDate(inv.used_at)}` : `expired ${fmtDate(inv.expires_at)}`;
-      const li = h('li', { class: `invite inv-${inv.state}` },
-        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, what), h('span', { class: 'row-sub' }, `${inv.state === 'open' ? 'Open' : inv.state === 'used' ? 'Used' : 'Expired'} · created ${fmtDate(inv.created_at)} · ${when}`)));
+      const stateText = inv.state === 'open' ? (paused ? 'Paused: registration is closed' : 'Open') : inv.state === 'used' ? 'Used' : 'Expired';
+      const li = h('li', { class: `invite inv-${inv.state}${paused && inv.state === 'open' ? ' inv-paused' : ''}` },
+        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, what), h('span', { class: 'row-sub' }, `${stateText} · created ${fmtDate(inv.created_at)} · ${when}`)));
       if (inv.state === 'open') {
         li.append(action('Revoke', 'secondary', async () => {
           await A.deleteInvite(inv.id);
           toast('Invite revoked: the link no longer works', 'ok');
-          await refreshInviteList();
+          await refreshInviteList(paused);
+          // The button is gone: keep the keyboard in the list.
+          const next = $('#set-invite-list button') || $('#set-invites-h');
+          if (next) next.focus();
         }, { 'aria-label': `Revoke ${what}` }));
       }
       list.append(li);
     }
   }
-  async function refreshInviteList() {
+  async function refreshInviteList(paused = false) {
     const list = $('#set-invite-list');
     if (!list) return;
-    try { fillInviteList(list, (await A.invites()).invites || []); } catch (err) { clear(list); list.append(h('li', {}, failed(err))); }
+    try { fillInviteList(list, (await A.invites()).invites || [], paused); } catch (err) { clear(list); list.append(h('li', {}, failed(err))); }
   }
 
   // ---- Server settings (instance keys; env locks are read-only)
@@ -1022,7 +1085,10 @@
         toast(value === null ? `${def.label}: back to the default` : `${def.label}: saved`, 'ok');
         renderServerSettings(control ? control.id : id);
         renderFood();
-        if (key === 'registration.mode' || key === 'instance.name') { KH.auth.loadStatus().catch(() => null); loadPeople(); }
+        if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
+          KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
+          loadPeople();
+        }
       } catch (e) {
         if (e.cancelled) { renderServerSettings(); return; }
         if (!e.handled) showFormError(err, e);
@@ -1128,20 +1194,20 @@
     if (!box) return;
     let res;
     try { res = await A.audit(before); } catch (err) { clear(box); box.append(failed(err)); return; }
+    await peopleReady.catch(() => null);
     let list = $('#set-audit-list');
     if (!before || !list) { clear(box); list = h('ul', { class: 'activity-list', id: 'set-audit-list' }); box.append(list); }
     const more = $('#set-audit-more');
     if (more) more.remove();
-    const names = new Map((cache.users || []).map((u) => [u.id, u.username]));
     if (!before && !res.events.length) list.append(h('li', { class: 'muted small' }, 'Nothing recorded yet.'));
     for (const ev of res.events) {
-      const nameOf = (id) => names.get(Number(id)) || `user ${id}`;
       // No actor: a failed sign-in or a server action; say whose account it concerned.
-      const who = ev.actor_user_id != null ? nameOf(ev.actor_user_id)
-        : ev.target_type === 'user' && ev.target_id != null ? `account ${nameOf(ev.target_id)}` : 'server';
-      const extra = eventDetail(ev);
-      list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra ? h('span', { class: 'muted' }, ` · ${extra}`) : null),
-        h('span', { class: 'act-when muted small' }, `${fmtDateTime(ev.at)} · ${who}${ev.ip_prefix ? ` · ${ev.ip_prefix}` : ''}`)));
+      const who = ev.actor_user_id != null ? accountName(ev.actor_user_id)
+        : ev.target_type === 'user' && ev.target_id != null ? `account ${accountName(ev.target_id)}` : 'server';
+      const target = targetOf(ev);
+      const extra = [target, eventDetail(ev)].filter(Boolean).map((x) => ` · ${x}`).join('');
+      list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra ? h('span', { class: 'muted' }, extra) : null),
+        h('span', { class: 'act-when muted small' }, `${fmtDateTime(ev.at)} · by ${who}${ev.ip_prefix ? ` · ${ev.ip_prefix}` : ''}`)));
     }
     if (res.events.length >= 30) {
       const last = res.events[res.events.length - 1].id;

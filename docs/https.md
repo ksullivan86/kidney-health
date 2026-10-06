@@ -107,7 +107,11 @@ for `https://<machine>.<tailnet>.ts.net` with no domain and no DNS work.
    uses the iPhone's VPN slot).
 
 `tailscale serve` connects from the host, so with rootless Podman the app sees the container's own
-address (see [`security.md`](security.md#4-proxy-trust-trusted_proxies-per-topology)). Do **not** use
+address, and with rootless Docker the RootlessKit/bridge gateway (for example `172.17.0.1`), not
+`127.0.0.1`. Put the address from the app's log in `TRUSTED_PROXIES` (see
+[`security.md`](security.md#4-proxy-trust-trusted_proxies-per-topology)); otherwise the app ignores
+`X-Forwarded-Proto: https`, and once a second account exists every sign-in fails with
+`https_required`. Do **not** use
 Tailscale **Funnel** (public internet) unless the app's own sign-in is on (`AUTH_MODE=local`, the
 default). For `AUTH_MODE=proxy` with Tailscale's identity headers, read the proxy section of
 [`deployment.md`](deployment.md#sign-in-modes) first: `tailscale serve` cannot add the proxy secret.

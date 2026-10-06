@@ -3,11 +3,17 @@
 Layers, checked in this order by the login route:
 
 1. **Per client IP** (memory): ``LOGIN_IP_MAX_FAILURES`` failures in 10 minutes block login, setup,
-   register, reset and re-auth from that address for 10 minutes. Skipped when the client address is
-   a configured proxy (``TRUSTED_PROXIES``) or a known rootless gateway, because then every client
-   shares it and one attacker would lock everybody out (§9 N3 a).
-2. **Instance-wide**: 60 attempts per minute; a request waits up to 5 s for a slot instead of being
-   refused at once.
+   register, reset and re-auth from that address for 10 minutes. On sign-in every refusal counts as a
+   failure (a wrong password, ``429`` for a name in its delay, ``400`` HTTPS required), and one
+   address may try at most :data:`IP_ATTEMPTS_PER_MINUTE` sign-ins a minute, so a single client
+   cannot keep the instance-wide budget empty. Addresses are keyed by their IPv6 /64 (an IPv6
+   client usually controls a whole /64; IPv4-mapped addresses count as IPv4). Skipped when the
+   client address is a configured proxy (``TRUSTED_PROXIES``) or a known rootless gateway, because
+   then every client shares it and one attacker would lock everybody out (§9 N3 a).
+2. **Instance-wide**: 60 attempts per minute, taken only after the cheap checks, right before the
+   password hash; a request waits up to 5 s for a slot instead of being refused at once. The wait is
+   awaited on the event loop (:meth:`TokenBucket.acquire_async`), so waiting sign-ins hold no worker
+   thread and every other route stays fast during a flood.
 3. **Per username** (SQLite ``login_failures``, keyed by an HMAC of the normalised name, never the
    typed text): failures 1–5 free, then ``30 s × 2^(n−6)`` capped at 15 minutes; while delayed the
    password is not checked (429). Success forgets the row. Rows idle for 24 h are pruned; the table
@@ -33,6 +39,7 @@ import time
 from datetime import timedelta
 from typing import TYPE_CHECKING, Callable
 
+import anyio
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -62,6 +69,7 @@ IDLE_PRUNE = timedelta(hours=24)
 
 IP_WINDOW_S = 600
 IP_BLOCK_S = 600
+IP_ATTEMPTS_PER_MINUTE = 30
 GLOBAL_PER_MINUTE = 60
 GLOBAL_WAIT_S = 5.0
 REAUTH_MAX_FAILURES = 5
@@ -69,6 +77,22 @@ REAUTH_MAX_FAILURES = 5
 # Addresses that stand for "every client" under rootless engines (note 01 §10 S2): slirp4netns's
 # host gateway and its rootlesskit port-forwarder source.
 GATEWAY_ADDRESSES = ("10.0.2.2", "10.0.2.100")
+
+
+def ip_key(ip: str | None) -> str:
+    """The key per-IP limits count under: an IPv6 address's /64 network (one client usually controls a
+    whole /64), an IPv4-mapped IPv6 address as plain IPv4, anything else as given."""
+    if not ip:
+        return ""
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return str(ip)
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped is not None:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return str(address)
 
 
 def delay_for(consecutive: int) -> int:
@@ -104,6 +128,7 @@ class TokenBucket:
             return (1 - self.tokens) / self.rate
 
     def acquire(self) -> bool:
+        """Blocking form (scripts and tests); routes use :meth:`acquire_async`."""
         deadline = time.monotonic() + self.wait_s
         while True:
             wait = self._take()
@@ -113,6 +138,18 @@ class TokenBucket:
             if remaining <= 0:
                 return False
             time.sleep(min(wait, remaining, 0.25))
+
+    async def acquire_async(self) -> bool:
+        """Like :meth:`acquire`, but waits on the event loop, so a queue of sign-ins holds no thread."""
+        deadline = time.monotonic() + self.wait_s
+        while True:
+            wait = self._take()
+            if wait == 0:
+                return True
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            await anyio.sleep(min(wait, remaining, 0.25))
 
 
 class Throttle:
@@ -125,6 +162,7 @@ class Throttle:
             ipaddress.ip_network(p, strict=False) for p in (*settings.trusted_proxies, *GATEWAY_ADDRESSES)
         )
         self.ip_failures = SlidingWindow(settings.login_ip_max_failures, IP_WINDOW_S)
+        self.ip_attempts = SlidingWindow(IP_ATTEMPTS_PER_MINUTE, 60)
         self._ip_blocked: dict[str, float] = {}
         self.global_bucket = TokenBucket()
         self._device_failures: dict[str, int] = {}
@@ -154,26 +192,37 @@ class Throttle:
     def ip_wait(self, ip: str | None) -> int:
         if self.ip_exempt(ip):
             return 0
+        key = ip_key(ip)
         now = clock.seconds()
         with self._lock:
-            until = self._ip_blocked.get(str(ip), 0.0)
+            until = self._ip_blocked.get(key, 0.0)
             if until <= now:
-                self._ip_blocked.pop(str(ip), None)
+                self._ip_blocked.pop(key, None)
                 return 0
             return max(1, int(until - now + 0.999))
 
     def ip_failure(self, ip: str | None) -> None:
         if self.ip_exempt(ip):
             return
-        count = self.ip_failures.add(str(ip))
+        key = ip_key(ip)
+        count = self.ip_failures.add(key)
         if count >= self.settings.login_ip_max_failures:
             with self._lock:
-                self._ip_blocked[str(ip)] = clock.seconds() + IP_BLOCK_S
-            self.ip_failures.reset(str(ip))
+                self._ip_blocked[key] = clock.seconds() + IP_BLOCK_S
+            self.ip_failures.reset(key)
+
+    def ip_attempt(self, ip: str | None) -> int:
+        """Count one sign-in attempt from ``ip``; seconds to wait when it is over its per-minute budget."""
+        if self.ip_exempt(ip):
+            return 0
+        return self.ip_attempts.hit(ip_key(ip))
 
     # ------------------------------------------------------------------ instance-wide
     def global_acquire(self) -> bool:
         return self.global_bucket.acquire()
+
+    async def global_acquire_async(self) -> bool:
+        return await self.global_bucket.acquire_async()
 
     # ------------------------------------------------------------------ per username (SQLite)
     def name_mac(self, username_norm: str) -> bytes:

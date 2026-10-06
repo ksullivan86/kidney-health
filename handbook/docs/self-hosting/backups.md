@@ -57,13 +57,22 @@ store, outside `/data` ([operator security guide][SECDOC]).
 
 ```bash
 podman run --rm --user 10001:10001 --entrypoint python \
+  --secret kidney-secret-key,type=mount,target=secret_key,uid=10001,mode=0400 \
+  -e SECRET_KEY_FILE=/run/secrets/secret_key \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
   ghcr.io/ksullivan86/kidney-health:0.3 -m app.admin restore-check /restore/kidney.db
 ```
 
 `restore-check` reports integrity, the schema version, the number of users, and whether stored keys
-decrypt with the current key. Do it now and then, not only when you need the backup
+decrypt with the current key. That last check needs the app's secret, which the `--secret` and
+`SECRET_KEY_FILE` lines pass in (compose and Docker keep it as a file: mount
+`deploy/secrets/secret_key` at `/run/secrets/secret_key` instead); without it the command says the
+keys were not checked. Do it now and then, not only when you need the backup
 ([deployment guide][DEPLOY]).
+
+The file can stay on a read-only (`:ro`) mount: `app.admin backup` writes its copies in SQLite's
+rollback-journal mode, and `restore-check` opens a read-only file as immutable, so SQLite never has
+to create a `-shm` file next to it.
 
 ## Restore
 
@@ -71,11 +80,15 @@ decrypt with the current key. Do it now and then, not only when you need the bac
    `podman-compose -f deploy/compose.yaml stop`; Kubernetes: scale to 0).
 2. Make the backup readable for UID 10001: `podman unshare chown 10001:0 FILE` (rootless Podman), or
    `chmod 0644` inside a `0700` directory (rootless Docker).
-3. Copy it **into** the volume through SQLite, which also handles the `-wal` and `-shm` files. The exact
-   one-off command for each engine is in the [deployment guide][DEPLOY].
-4. Start the app. Migrations run on start, so a backup restores into the **same or a newer** version,
+3. Copy it **into** the volume through SQLite, which also handles the `-wal` and `-shm` files. The
+   one-liner opens the backup with `file:/restore/kidney.db?mode=ro&immutable=1`, so it works on a
+   read-only mount even for a WAL-mode copy. The exact one-off command for each engine is in the
+   [deployment guide][DEPLOY]. On Kubernetes the image has no `tar`, so `kubectl cp` cannot copy into
+   it: the guide streams the file into a one-off restore pod (`deploy/k8s/restore-pod.example.yaml`).
+4. Optional: sign everyone out of the restored copy, with the app still stopped and the volume
+   mounted: `python -m app.admin revoke-sessions --all` (same `podman run` pattern as above).
+5. Start the app. Migrations run on start, so a backup restores into the **same or a newer** version,
    never an older one.
-5. Optional: `restore-check FILE --revoke-sessions` signs everyone out after a restore.
 
 ## The automatic pre-v0.3 backup
 

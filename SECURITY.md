@@ -55,7 +55,11 @@ The script does all of it and prints the digest to pin:
 scripts/verify-image.sh 0.3.0      # a release; or 0.3, edge, or sha256:<digest>
 ```
 
-By hand (cosign 2.4 or later, a current `gh` with the `attestation` command, and `crane` or `skopeo`):
+By hand (**cosign 3.0 or later**, a current `gh` with the `attestation` command, and `crane` or
+`skopeo`). The release workflow signs with cosign 3, which stores the signature as a Sigstore bundle
+attached to the image as an OCI 1.1 referrer; cosign 2.4 and 2.5 cannot find such signatures, and
+2.6 only with `--new-bundle-format=true`, so with an older cosign the check below reports "no
+signatures found" even for a genuine image:
 
 ```bash
 D=$(crane digest ghcr.io/ksullivan86/kidney-health:0.3.0)

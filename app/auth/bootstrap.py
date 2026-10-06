@@ -116,6 +116,27 @@ def _legacy_app_password(conn: sqlite3.Connection, ctx: AuthContext) -> bool:
     return True
 
 
+def ensure_user_one(conn: sqlite3.Connection) -> bool:
+    """``AUTH_MODE=none`` serves every request as user 1: recreate that row (empty, ``pending_setup``,
+    as schema step 3 made it) when it is gone, for example after it was deleted in local mode before
+    the switch. Returns True when it had to be created (no commit)."""
+    from ..db import utcnow
+    from ..migrations.m003_accounts import PLACEHOLDER_USERNAME_NORM
+
+    if conn.execute("SELECT 1 FROM users WHERE id = 1").fetchone() is not None:
+        return False
+    taken = conn.execute("SELECT 1 FROM users WHERE username_norm = ?", (PLACEHOLDER_USERNAME_NORM,)).fetchone()
+    norm = "#user-1" if taken else PLACEHOLDER_USERNAME_NORM
+    now = utcnow()
+    conn.execute(
+        """INSERT INTO users (id, username, username_norm, display_name, role, status, auth_source, created_at, updated_at)
+           VALUES (1, '', ?, '', 'admin', 'pending_setup', 'local', ?, ?)""",
+        (norm, now, now),
+    )
+    log.warning("AUTH_MODE=none: user 1 was missing, so it was created again (with no data)")
+    return True
+
+
 def startup(conn: sqlite3.Connection, ctx: AuthContext) -> None:
     s = ctx.settings
     passwords.configure(s.password_hash)
@@ -133,6 +154,7 @@ def startup(conn: sqlite3.Connection, ctx: AuthContext) -> None:
     expire_pre_v3_backup(conn)
 
     if s.auth_mode == "none":
+        ensure_user_one(conn)
         log.warning(
             "AUTH_MODE=none: there is no sign-in; anyone who can open this server can read and change all data"
         )

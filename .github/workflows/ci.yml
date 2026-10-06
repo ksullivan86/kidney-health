@@ -129,7 +129,8 @@ jobs:
             -schema-location default \
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             "$RUNNER_TEMP/rendered.yaml" \
-            deploy/k8s/secret.example.yaml deploy/k8s/ingress.example.yaml deploy/k8s/cilium-networkpolicy.example.yaml
+            deploy/k8s/secret.example.yaml deploy/k8s/ingress.example.yaml deploy/k8s/cilium-networkpolicy.example.yaml \
+            deploy/k8s/restore-pod.example.yaml
       - name: Compose files resolve (docker compose config)
         run: |
           set -euo pipefail

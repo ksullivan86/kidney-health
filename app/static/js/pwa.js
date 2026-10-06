@@ -1,5 +1,5 @@
 /* Kidney Diet Log — PWA shell (note 02 R4, R10; note 01 §5.5): service worker registration,
-   the "Update ready · Reload" toast, and the "Install on your phone" panel.
+   the "Update ready · Reload" toast, and the "Install this app" panel.
 
    * Registers /sw.js only in the installed app over a secure context (HTTPS, or localhost):
      never in the demo (?mock=1) or the preview build, which leaves this file out.
@@ -90,11 +90,18 @@
     registration.update().catch(() => { /* offline or server unreachable: try again later */ });
   }
 
+  // Settings → This device re-renders when the offline state changes (the first visit's worker
+  // takes control a moment after the page opened), so its rows never contradict the panel below.
+  const listeners = new Set();
+  function onStateChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+  function notify() { for (const fn of listeners) { try { fn(); } catch (e) { /* a listener's problem */ } } }
+
   async function register() {
     if (!canUseServiceWorker()) return null;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       // Only after the person tapped Reload; the first install's clients.claim() also fires this.
       if (reloadRequested) window.location.reload();
+      else { renderInstallPanel(); notify(); }
     });
     try {
       registration = await navigator.serviceWorker.register(serviceWorkerURL(), { scope: '/' });
@@ -105,12 +112,12 @@
     lastUpdateCheck = Date.now(); // register() has just fetched /sw.js
     watchForUpdates(registration);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
-    navigator.serviceWorker.ready.then(() => renderInstallPanel()).catch(() => {});
+    navigator.serviceWorker.ready.then(() => { renderInstallPanel(); notify(); }).catch(() => {});
     return registration;
   }
 
   // ---------------------------------------------------------------------------
-  // "Install on your phone" panel (Settings → This device, R10)
+  // "Install this app" panel (Settings → This device, R10)
   // ---------------------------------------------------------------------------
   function steps(...items) { return h('ol', { class: 'install-steps' }, items.map((t) => h('li', {}, t))); }
   function renderInstallPanel(container) {
@@ -213,5 +220,5 @@
     else window.addEventListener('load', () => { register(); }, { once: true });
   }
 
-  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, deviceStatus, clearOfflineData };
+  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, deviceStatus, clearOfflineData, onStateChange };
 })();

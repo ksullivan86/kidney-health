@@ -179,9 +179,16 @@ def export_filename(username: str) -> str:
 
 def delete_user(conn: sqlite3.Connection, user_id: int, *, actor_id: int | None, ip: str | None = None,
                 action: str = "account.deleted") -> None:
-    """Audit, delete the account and everything it owns (cascade), commit, checkpoint the WAL."""
+    """Audit, delete the account and everything it owns (cascade), commit, checkpoint the WAL.
+
+    Invites and reset/setup links the account created are deleted first: ``auth_tokens.created_by``
+    is ``ON DELETE SET NULL``, so after the delete nothing would tie them to the removed admin and they
+    would keep working (one could be a reset link for the remaining admin's account)."""
+    from .auth.tokens import void_issued_by
+
     uid = int(user_id)
-    audit(conn, actor_id, action, "user", uid, ip=ip)
+    voided = void_issued_by(conn, uid)
+    audit(conn, actor_id, action, "user", uid, ip=ip, **({"links_revoked": voided} if voided else {}))
     conn.execute("DELETE FROM users WHERE id = ?", (uid,))
     conn.commit()
     try:

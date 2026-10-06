@@ -201,8 +201,15 @@ kernel does not separate from root's user namespace.
 
 ## Compose (podman-compose or docker compose)
 
-[`deploy/compose.yaml`](../deploy/compose.yaml) carries the same hardening. Secrets are files in
-`deploy/secrets/` (git-ignored):
+[`deploy/compose.yaml`](../deploy/compose.yaml) carries the same hardening. With Podman it needs
+**podman-compose 1.5.0 or later** (`podman-compose version`). Older versions, which Ubuntu 24.04
+(1.0.6), Debian 12/13 and RHEL 8's EPEL package, run the exec-form health check through `/bin/sh`,
+which the image does not have, so the container always reports `unhealthy`; and they ignore
+`x-podman.relabel`, so on SELinux hosts the app cannot read its secrets (`SECRET_KEY_FILE: cannot
+read ... permission denied`). Install a current one (`pipx install 'podman-compose>=1.5'`) or use
+Quadlet (above). If you must stay on an older one: `chcon -t container_file_t deploy/secrets/*`
+fixes the secrets, and the `unhealthy` status is then cosmetic (the app still serves). Secrets are
+files in `deploy/secrets/` (git-ignored):
 
 ```bash
 install -d -m 0700 deploy/secrets
@@ -216,8 +223,8 @@ podman-compose -f deploy/compose.yaml up -d                   # or: docker compo
 Why `0644` inside a `0700` directory: compose mounts file secrets as bind mounts, and under a
 rootless engine your UID is container root, so a `0600` file you own is unreadable for UID 10001.
 The directory keeps other host users out. On Podman you can instead keep `0600` and run
-`podman unshare chown 10001:10001 deploy/secrets/*`. On SELinux hosts podman-compose relabels the
-secrets (`x-podman.relabel: Z`).
+`podman unshare chown 10001:10001 deploy/secrets/*`. On SELinux hosts podman-compose 1.5.0 or later
+relabels the secrets (`x-podman.relabel: Z`).
 
 With `restart: always`, enable `systemctl --user enable --now podman-restart.service` so Podman
 starts the container after a reboot, or use Quadlet. Optional overlays:
@@ -238,9 +245,20 @@ starts the container after a reboot, or use Quadlet. Optional overlays:
 
 Limits that matter here:
 
-* **Source addresses are not propagated by default**: every client appears to come from the
-  RootlessKit gateway. Keep publishing on `127.0.0.1` and `TRUSTED_PROXIES` at the loopback default
-  (details and the fix in [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology)).
+* **Source addresses are not propagated by default**: every client, including an HTTPS proxy on
+  the same host (Caddy or nginx on the host, `tailscale serve`), appears to come from the
+  RootlessKit/bridge gateway, for example `172.17.0.1`. Keep publishing on `127.0.0.1`. Without a
+  proxy, leave `TRUSTED_PROXIES` at the loopback default. **With a same-host HTTPS proxy, set
+  `TRUSTED_PROXIES` to the gateway address the app logs** (`docker logs kidney-health`; with the run
+  script: `TRUSTED_PROXIES=172.17.0.1 deploy/docker-rootless-run.sh`), otherwise the app does not
+  believe the proxy's `X-Forwarded-Proto: https`, and a second account cannot register or sign in
+  (`https_required`). Trusting the gateway is safe only because the port is published on
+  `127.0.0.1`, so only local processes reach it; in proxy mode also set `TRUSTED_PROXY_SECRET_FILE`.
+  The `compose.caddy.yaml` overlay avoids the question (container to container). Details in
+  [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology).
+* **Re-running the script** (for example to pin a verified digest with `IMAGE=...@sha256:...`)
+  replaces the running container: it stops and removes `kidney-health` first. The data stays on the
+  `kidney-health-data` volume.
 * `--memory` and `--pids-limit` need cgroup v2 with systemd; otherwise Docker ignores them silently.
 * No AppArmor; ports below 1024 need `net.ipv4.ip_unprivileged_port_start`.
 * Docker's `--health-cmd` always runs through `/bin/sh`, which the image does not have, so do not
@@ -321,8 +339,12 @@ kubectl -n kidney-health run np-test --rm -it --restart=Never \
 the pod out only to kube-dns and to **public** addresses on 443 (private, CGNAT, link-local and
 loopback ranges are excluded, so cloud metadata and the API server are unreachable). Kubelet probes
 come from the node and are not affected. With Cilium, replace the `0.0.0.0/0` rule with
-`cilium-networkpolicy.example.yaml` (exact host names). A LAN Ollama needs its own egress rule (a
-commented example is in the file) and an `AI_PRIVATE_HOSTS` entry.
+`cilium-networkpolicy.example.yaml` (exact host names). **Cilium's own Gateway API or Ingress** is
+not a pod in a namespace: its Envoy sends traffic with the reserved `ingress` identity, which the
+`namespaceSelector` rule never matches, so default-deny drops it (the Gateway answers 403 or 503).
+Apply the second policy in `cilium-networkpolicy.example.yaml` (`fromEntities: [ingress]` on port
+8000) in that case. A LAN Ollama needs its own egress rule (a commented example is in the file) and
+an `AI_PRIVATE_HOSTS` entry.
 
 ### 5. Check Pod Security, pin the digest
 
@@ -356,8 +378,9 @@ Then uncomment `hostUsers: false` in `deployment.yaml`.
 
 The image has no shell by design. Use `kubectl debug -it --profile=restricted --target=app POD
 --image=cgr.dev/chainguard/python:latest-dev`, or on Podman `podman cp` and
-`podman run --rm -it --volumes-from kidney-health cgr.dev/chainguard/python:latest-dev sh`. Most
-tasks have an `app.admin` command instead (below).
+`podman run --rm -it --entrypoint sh --user 10001:0 --volumes-from kidney-health cgr.dev/chainguard/python:latest-dev`
+(the `-dev` image's entrypoint is `python` and its default user cannot enter `/data`, hence
+`--entrypoint sh` and `--user 10001:0`). Most tasks have an `app.admin` command instead (below).
 
 ## Sign-in modes
 
@@ -398,15 +421,23 @@ Then:
   is why every shipped profile mounts `SECRET_KEY_FILE` instead. Restoring without the key loses
   only the stored API keys.
 * Check a backup now and then: `python -m app.admin restore-check FILE` reports integrity, the
-  schema version, the number of users and whether the stored keys decrypt with the current key.
+  schema version, the number of users and, when it is given the app's `SECRET_KEY_FILE`, whether
+  the stored keys decrypt with the current key (without it, it says the keys were not checked).
 
 **Restore** (the app must be stopped, so nothing writes during the copy). The backup file must be
 readable for UID 10001 inside the container: `podman unshare chown 10001:0 kidney-2026-10-01.db`
-(rootless Podman), or `chmod 0644` it inside a `0700` directory (rootless Docker).
+(rootless Podman), or `chmod 0644` it inside a `0700` directory (rootless Docker). `app.admin
+backup` writes the copy in SQLite's rollback-journal mode, and `restore-check` opens a read-only
+file as immutable, so the file can stay on a read-only (`:ro`) mount: SQLite needs no `-shm` file
+next to it. (A copy made some other way, for example from a volume snapshot, is in WAL mode; the
+one-liner in step 2 opens it with `immutable=1` for the same reason.)
 
 ```bash
-# 1. Check the backup with the same image (no shell needed; works on Docker too).
+# 1. Check the backup with the same image (no shell needed; works on Docker too). Pass the app's
+#    secret so restore-check can also say whether the stored API keys decrypt with it.
 podman run --rm --user 10001:10001 --entrypoint python \
+  --secret kidney-secret-key,type=mount,target=secret_key,uid=10001,mode=0400 \
+  -e SECRET_KEY_FILE=/run/secrets/secret_key \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
   ghcr.io/ksullivan86/kidney-health:0.3 -m app.admin restore-check /restore/kidney.db
 
@@ -415,14 +446,38 @@ systemctl --user stop kidney-health          # compose: podman-compose -f deploy
 podman run --rm --user 10001:10001 --entrypoint python \
   -v systemd-kidney-health:/data \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.3 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+  ghcr.io/ksullivan86/kidney-health:0.3 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+
+# 3. Optional: sign everybody out of the restored copy (sessions in the backup become valid again).
+podman run --rm --user 10001:10001 --entrypoint python -v systemd-kidney-health:/data \
+  ghcr.io/ksullivan86/kidney-health:0.3 -m app.admin revoke-sessions --all
 systemctl --user start kidney-health
 ```
 
-(The compose volume is `kidney-health_kidney-data`; Docker without compose: `kidney-health-data`.)
-Add `--revoke-sessions` to `restore-check` on a copy you restore if everyone should sign in again.
-On Kubernetes, scale the Deployment to 0, run the same two `python` commands in a one-off pod that
-mounts the PVC (restricted security context, UID 10001), then scale back to 1.
+(The compose volume is `kidney-health_kidney-data`; Docker without compose: `kidney-health-data`.
+Compose and Docker keep the secret as a file: replace the `--secret` line with
+`-v "$PWD/deploy/secrets/secret_key:/run/secrets/secret_key:ro,Z"`, without `,Z` on Docker.)
+Restoring a copy into a directory you can write instead (`restore-check --revoke-sessions FILE`)
+also works; it cannot work on a `:ro` mount, which is why step 3 runs on the volume.
+
+**Kubernetes.** The image has no `tar`, so `kubectl cp` cannot copy into it; stream the file
+through Python instead. Scale the app down, start the restore pod from
+[`deploy/k8s/restore-pod.example.yaml`](../deploy/k8s/restore-pod.example.yaml) (restricted security
+context, UID 10001, the PVC at `/data`, an `emptyDir` at `/tmp`), then:
+
+```bash
+kubectl -n kidney-health scale deploy/kidney-health --replicas=0
+kubectl -n kidney-health apply -f deploy/k8s/restore-pod.example.yaml
+kubectl -n kidney-health wait --for=condition=Ready pod/kidney-health-restore
+kubectl -n kidney-health exec -i kidney-health-restore -- python -c \
+  "import shutil,sys; shutil.copyfileobj(sys.stdin.buffer, open('/tmp/restore.db','wb'))" < kidney-2026-10-01.db
+kubectl -n kidney-health exec kidney-health-restore -- python -m app.admin restore-check /tmp/restore.db
+kubectl -n kidney-health exec kidney-health-restore -- python -c \
+  "import sqlite3; s=sqlite3.connect('file:/tmp/restore.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+kubectl -n kidney-health exec kidney-health-restore -- python -m app.admin revoke-sessions --all   # optional
+kubectl -n kidney-health delete pod kidney-health-restore
+kubectl -n kidney-health scale deploy/kidney-health --replicas=1
+```
 
 A backup restores into the same or a **newer** app version (migrations run on start); never into an
 older one.
@@ -438,6 +493,16 @@ older one.
 
 ### From v0.2 to v0.3
 
+0. **An auto-updating v0.2 host: act before v0.3.0 is released.** v0.2's Quadlet unit tracks
+   `:latest` with `AutoUpdate=registry`, `HealthOnFailure=kill` and a plain-string `HealthCmd=`
+   (run through `/bin/sh`). Once `:latest` points at v0.3, `podman-auto-update` pulls the shell-less
+   image under that unit; the restart succeeds, so nothing rolls back, and then the health check
+   fails, the container is killed and restarted, about every two minutes. Either do this upgrade
+   first (the steps below, with the v0.3 unit), or pin the running v0.2 image by digest
+   (`podman inspect kidney-health --format '{{.ImageDigest}}'` → `Image=...@sha256:...`) and
+   `systemctl --user disable --now podman-auto-update.timer` until you do. If a host is already in
+   the loop: `systemctl --user stop kidney-health`, install the v0.3 unit, `systemctl --user
+   daemon-reload`, start it.
 1. **Back up first** (`app.admin backup` does not exist in v0.2; with the old image, which still
    has a shell, copy the file: `podman exec kidney-health python -c "import sqlite3; s=sqlite3.connect('/data/kidney.db'); d=sqlite3.connect('/data/v02-backup.db'); s.backup(d)"` and
    `podman cp kidney-health:/data/v02-backup.db .`).
@@ -531,6 +596,13 @@ URL in the address bar (scheme, host and port), especially if your proxy rewrite
 
 **Sign-in refused over HTTP** – with two or more accounts the app refuses plain-HTTP sign-in from
 other machines. Set up HTTPS ([`https.md`](https.md)).
+
+**`https_required` although the browser shows HTTPS** – the app does not believe your proxy's
+`X-Forwarded-Proto: https`, because the address it connects from is not in `TRUSTED_PROXIES`. Typical
+with rootless Docker or rootless Podman and a proxy on the same host (Caddy, nginx, `tailscale
+serve`): the app sees a gateway or its own container address, not `127.0.0.1`. Put the address from
+the access log in `TRUSTED_PROXIES` ([`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology)).
+Admin → About shows whether the proxy is trusted.
 
 **Memory or pids limit ignored** – rootless engines need cgroup v2 with systemd (see
 [Before you start](#before-you-start)); `docker info`/`podman info` show the cgroup version.

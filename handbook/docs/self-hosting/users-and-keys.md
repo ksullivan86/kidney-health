@@ -68,14 +68,23 @@ from other machines ([HTTPS for phones](https.md)).
 - An admin can issue a password-reset link for anyone. That signs the person out everywhere and tells
   them at their next sign-in, and it appears in their activity, so it cannot be done quietly
   ([design note 07][NOTE07]).
+- Open reset and setup links are listed under each account in **Settings → Admin → People**, with
+  who created them, and can be revoked there. A link someone made for **your own** account is
+  flagged in your row.
+- Removing an admin contains them: demoting, disabling or deleting an admin also deletes every
+  unused invite and reset or setup link they created. A reset link also stops working once the
+  account's password is changed another way, or the account is disabled.
 
 ## Passwords and lock-outs
 
 - No email in v0.3, so no self-service reset. **Settings → Admin → Users → Reset link** (24 hours,
   single use), or `python -m app.admin reset-password USERNAME`. `--stdin` sets a password directly
   (break-glass; also unlocks a locked account).
-- Repeated wrong passwords slow that account down, then block the address for a while. After 100
-  failures in a row an account needs an admin reset.
+- Repeated wrong passwords slow that account down, then block the address for a while (refused
+  attempts of any kind count, and an IPv6 network counts as one address). After 100 failures in a
+  row an account needs an admin reset.
+- An account the admin creates gets a one-time setup link; the page it opens shows the username the
+  admin chose, so the person (and their password manager) knows what to sign in with.
 - `python -m app.admin list-users` and `revoke-sessions USERNAME` (or `--all`) help after a lost phone.
 
 ## Shared keys and quotas

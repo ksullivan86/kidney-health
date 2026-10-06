@@ -53,7 +53,7 @@ On Kubernetes, use `kubectl -n kidney-health logs deploy/kidney-health` and
 | People report | Fix |
 |---|---|
 | "My data is gone" | they opened a different address (name, port or scheme). The same app at another address starts empty; the data is still on the server ([design note 02][NOTE02]) |
-| The app does not open offline | offline needs trusted HTTPS; check the padlock and **Install on your phone** says "Offline ready" |
+| The app does not open offline | offline needs trusted HTTPS; check the padlock and **Settings → This device** says "Offline ready" |
 | "Update ready" never appears | close the app fully and reopen; if you set `PWA_ENABLED=false`, opening it once removes the old version |
 | The camera shows black | use the photo or type-in options for barcodes |
 | Asked to sign in again | an installed app keeps its own sign-in, separate from the browser's |

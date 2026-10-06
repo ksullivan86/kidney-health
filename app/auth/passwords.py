@@ -2,7 +2,9 @@
 
 * Argon2id at OWASP's m=19 MiB, t=2, p=1 (about 26 ms), stored as a PHC string.
 * At most two hashes run at once (:data:`_GATE`): ≤ 38 MiB, no memory DoS. A request that waits
-  more than 5 s raises :class:`HashBusy` (the routes answer 503 with ``Retry-After: 1``).
+  more than 5 s raises :class:`HashBusy` (the routes answer 503 with ``Retry-After: 1``). Sign-in
+  uses :func:`verify_password_async`, which waits for a slot on the event loop instead of in a worker
+  thread, so a flood of sign-ins cannot occupy the thread pool every other route needs.
 * Passwords are NFC-normalised before hashing (NIST SP 800-63B-4 §3.1.1.2); the whole password is
   hashed, never truncated.
 * ``PASSWORD_HASH=scrypt`` is only for builds of ``cryptography`` without Argon2id (OpenSSL < 3.2);
@@ -18,8 +20,10 @@ import hmac
 import os
 import re
 import threading
+import time
 import unicodedata
 
+import anyio
 from cryptography.exceptions import InvalidKey, UnsupportedAlgorithm
 from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
 
@@ -76,6 +80,18 @@ def _bytes(password: str) -> bytes:
 def _acquire() -> None:
     if not _GATE.acquire(timeout=GATE_TIMEOUT_S):
         raise HashBusy()
+
+
+GATE_POLL_S = 0.02
+
+
+async def _acquire_async() -> None:
+    """Take a hashing slot without blocking a thread: poll the same gate the sync callers use."""
+    deadline = time.monotonic() + GATE_TIMEOUT_S
+    while not _GATE.acquire(blocking=False):
+        if time.monotonic() >= deadline:
+            raise HashBusy()
+        await anyio.sleep(GATE_POLL_S)
 
 
 # --------------------------------------------------------------------------- #
@@ -137,22 +153,36 @@ def hash_password(password: str) -> str:
         _GATE.release()
 
 
+def _verify_unlocked(password: str, stored: str | None) -> bool:
+    data = _bytes(password)
+    if stored and stored.startswith("$argon2id$"):
+        try:
+            Argon2id.verify_phc_encoded(data, stored)
+            return True
+        except (InvalidKey, UnsupportedAlgorithm, ValueError):
+            return False
+    if stored and stored.startswith("$scrypt$"):
+        return _verify_scrypt(data, stored)
+    # No usable hash: still spend the time of one hash so timing does not tell.
+    _hash_unlocked(password)
+    return False
+
+
 def verify_password(password: str, stored: str | None) -> bool:
     """Constant-work check of ``password`` against a stored hash (False for None or malformed)."""
     _acquire()
     try:
-        data = _bytes(password)
-        if stored and stored.startswith("$argon2id$"):
-            try:
-                Argon2id.verify_phc_encoded(data, stored)
-                return True
-            except (InvalidKey, UnsupportedAlgorithm, ValueError):
-                return False
-        if stored and stored.startswith("$scrypt$"):
-            return _verify_scrypt(data, stored)
-        # No usable hash: still spend the time of one hash so timing does not tell.
-        _hash_unlocked(password)
-        return False
+        return _verify_unlocked(password, stored)
+    finally:
+        _GATE.release()
+
+
+async def verify_password_async(password: str, stored: str | None) -> bool:
+    """:func:`verify_password` for async routes: waits for a slot on the event loop, hashes in a thread."""
+    await _acquire_async()
+    try:
+        # Not cancellable: if the client goes away, the slot is released only once the hash is done.
+        return await anyio.to_thread.run_sync(_verify_unlocked, password, stored)
     finally:
         _GATE.release()
 

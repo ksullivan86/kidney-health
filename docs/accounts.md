@@ -15,7 +15,10 @@ API is in `ARCHITECTURE.md` ("M1 API").
 | `none` | One person on a trusted network who wants the v0.2 behaviour | No sign-in at all; everything belongs to user 1; the app shows a red banner |
 
 `none` means anyone who can open the page can read and change all data. Do not expose it beyond
-your own network.
+your own network. In `none` mode there is no personal account to delete (Settings hides it and the
+API answers `409`): every request is user 1, and the server would be unusable without it. If user 1
+is missing anyway (deleted in `local` mode before switching), the next start creates it again,
+empty, and `python -m app.admin check` warns about it.
 
 ## First start
 
@@ -62,6 +65,14 @@ Passwords are stored as Argon2id hashes. Sign-in delays grow after five wrong pa
 (30 s, doubling to 15 minutes); the device someone signed in from before is exempt. After 100 wrong
 passwords in a row the account is locked; an admin unlocks it with a reset link.
 
+One address (an IPv6 client counts per /64) is blocked for 10 minutes after
+`LOGIN_IP_MAX_FAILURES` refused sign-ins (20 by default; a wrong password, a "wait" answer for a
+name in its delay and "HTTPS required" all count) and may try at most 30 sign-ins a minute, so one
+client cannot use up the server-wide budget of 60 sign-ins a minute and lock everyone else out. The
+per-address limits do not apply to your proxy's own address (`TRUSTED_PROXIES`). Sign-ins that wait
+for that budget or for a hashing slot wait without holding a server thread, so the rest of the app
+stays responsive during a flood.
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Settings → Admin → Users & invites → Invite.
@@ -83,8 +94,15 @@ cookies are not separated by port.
 
 There is no e-mail. An admin opens Users, picks the person and chooses **Reset link** (valid 24
 hours, single use); completing it signs the person out everywhere and unlocks the account. The
-person sees "Your password was reset with a link from an admin" at their next sign-in, so a reset
-cannot happen silently.
+person sees "Your password was reset with a link from an admin" at their next password sign-in, so a
+reset cannot happen silently. The page the link opens shows the account's username (an account an
+admin created was never seen by its owner), so password managers save both.
+
+Open reset and setup links are listed with the account (Admin → People: "Password reset link open
+until …, created by …") and can be revoked there; a link someone created for **your** account is
+flagged in your own row. A link stops working when the account's password changes any other way,
+when the account is disabled, and when its creator stops being an admin: demoting, disabling or
+deleting an admin deletes every unused invite and reset or setup link they created.
 
 The only admin locked out: `python -m app.admin reset-password mum` prints a link (set `PUBLIC_URL`
 for a full address), or `printf '%s\n' "$NEW" | python -m app.admin reset-password mum --stdin` sets
@@ -146,12 +164,16 @@ their next sign-in). Say so to the people you invite; [privacy.md](privacy.md) h
 
 The audit log (Admin → Activity) records sign-ins, failed sign-ins on existing accounts, invites,
 role and status changes, password resets, setting changes (old and new values), key changes
-(provider only, never the key), exports and deletions. It never holds health data or typed
-usernames of unknown accounts, and keeps entries for 365 days (`AUDIT_RETENTION_DAYS`).
+(provider only, never the key), exports and deletions, each with who did it and which account it
+concerned. It never holds health data or typed usernames of unknown accounts, and keeps entries for
+365 days (`AUDIT_RETENTION_DAYS`). A person's own "Recent sign-in activity" lists only events about
+their account (including what an admin did to it), never an admin's actions on other accounts.
 
 ## Command reference
 
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
 `setup-code` · `revoke-sessions USER|--all` · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings
-list|get|set|unset`.
+list|get|set|unset`. `backup` writes its copy in SQLite's rollback-journal mode, and `restore-check`
+opens a read-only file as immutable, so a backup can be checked on a read-only mount
+([deployment.md](deployment.md#backups-and-restore)).

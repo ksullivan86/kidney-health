@@ -614,13 +614,21 @@ proxies, the image and CI; (5) the note that owns the feature.
    warns about `httpx`; note 04 F14). No `openai` SDK.
 5. **New runtime dependency:** only `cryptography` (note 07 §4.2). Locks with hashes via
    `pip-compile --generate-hashes` (`requirements.in` → `requirements.lock`, same for dev).
-   Install with `--require-hashes`.
+   Install with `--require-hashes`. Dependabot cannot read or regenerate `*.lock` files (it handles
+   only `.txt`/`.in` requirement files), so `.github/workflows/refresh-locks.yml` runs
+   `scripts/lock.sh --upgrade` weekly with a 7-day cooldown (`PIP_UPLOADED_PRIOR_TO=P7D`) and opens a
+   pull request; Dependabot's pip ecosystem covers only `/.github`.
 6. **Base image:** Chainguard Python pinned by digest for `deploy/Containerfile`, plus
    `deploy/Containerfile.debian` as the fallback (note 01 §5.1). CI tests on **Python 3.12 and
    the image's Python** (3.14 at the time of writing). The app must stay compatible with 3.11+.
 7. **Image tags:** pushes to `main` publish `:edge` and `:sha-<short>`; `v*` tags publish
    `:latest`, `:X.Y.Z`, `:X.Y`. Signing, SBOM and provenance per note 01 §5.4; attestation steps
-   that need a public repo are gated on `github.event.repository.private == false`.
+   that need a public repo are gated on `github.event.repository.private == false`. *(M1 review:)*
+   the repository variable `HOLD_LATEST=true` keeps `:latest` where it is on a `v*` tag. v0.2's
+   Quadlet unit tracked `:latest` with `AutoUpdate=registry` and a shell `HealthCmd`, which loops
+   (kill, restart) under the shell-less v0.3 image; **owner decision before tagging v0.3.0**: hold
+   `:latest` on the last v0.2 digest for a while, or rely on the upgrade warnings in CHANGELOG.md,
+   README.md and docs/deployment.md.
 8. **Open Food Facts** is **off by default** (`food.off_enabled=false`); the admin turns it on in
    Settings, and the first-run setup screen offers a checkbox for it.
 9. **`potassium_additive` flag** (note 03 R5): a **medium** warning ("contains a potassium
@@ -712,9 +720,13 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   between the first-run **setup** screen (setup code from the server log, the first admin, and the
   "Look up barcodes with Open Food Facts" box that sets `food.off_enabled`), **sign-in**, the
   **invite** and **reset** screens (`#/invite/<token>`, `#/reset/<token>`; the page moves the token
-  out of the address bar at once), the **new password** screen (`must_change_password`), the proxy
+  out of the address bar at once; the reset screen asks `POST /api/auth/reset/info` whose account it
+  is and shows the username in a read-only `autocomplete="username"` field, with welcome wording for
+  an account an admin created), the **new password** screen (`must_change_password`), the proxy
   "Sign in again" screen (`/?reauth=1`), and the app. Tabs and the header gear carry
-  `data-signed-in` and stay hidden until someone is signed in. `AUTH_MODE=none` shows a red banner;
+  `data-signed-in` and stay hidden until someone is signed in. An error about one field is also
+  shown under that field (`.field-error`, linked with `aria-describedby`; a `field: ` prefix in the
+  server's message is dropped), because the screen's alert region sits above the fold on a phone. `AUTH_MODE=none` shows a red banner;
   plain HTTP shows a yellow note, and `https_required` a red one.
 * **API hooks** (`js/core.js`, one error path for the server and the demo API): `401` → sign-in
   screen, then back to the same view (a different person → a fresh page); `403 reauth_required` →
@@ -760,7 +772,7 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   (no sign-in: every request is user 1, an admin; `GET /api/auth/status` says `"no_login": true` so
   the UI shows a red banner).
 * **Every `/api` route needs a signed-in, active person** except `GET /api/auth/status` and
-  `POST /api/auth/{login,setup,register,reset}`. Anonymous → `401 {"detail": "Sign in required"}`
+  `POST /api/auth/{login,setup,register,reset,reset/info}`. Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -786,12 +798,20 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   one being created); otherwise `400 {"detail": "HTTPS required…", "https_required": true}`. Open
   registration always needs HTTPS.
 * **Throttling**: per account name (5 free failures, then 30 s doubling to 15 min, `429` with
-  `Retry-After`), per client IP (`LOGIN_IP_MAX_FAILURES` in 10 min → 10-min block; skipped for
-  `TRUSTED_PROXIES` and rootless gateway addresses), 60 sign-ins per minute instance-wide (queued up
-  to 5 s, then `503`), 2 password hashes at a time (`503` + `Retry-After: 1`), 100 consecutive
-  failures lock the account (an admin reset link or the CLI unlocks it). Unknown, disabled and
-  locked accounts get the same answer after the same single hash. Other limits (`app/auth/ratelimit.py`):
-  open registration 3/hour per IP, key tests 10/hour, exports 10/hour.
+  `Retry-After`), per client IP (`LOGIN_IP_MAX_FAILURES` in 10 min → 10-min block; on sign-in every
+  refusal counts: a wrong password, the name-delay `429` and `400 https_required`; plus at most 30
+  sign-in attempts per minute; IPv6 addresses count per /64, IPv4-mapped ones as IPv4; skipped for
+  `TRUSTED_PROXIES` and rootless gateway addresses), 60 sign-ins per minute instance-wide (taken
+  only after those cheap checks, right before the hash; queued up to 5 s, then `503`), 2 password
+  hashes at a time (`503` + `Retry-After: 1`), 100 consecutive failures lock the account (an admin
+  reset link or the CLI unlocks it). `POST /api/auth/login` is an `async` route: both waits are
+  awaited on the event loop and only the database work and the hash run in worker threads, so a
+  sign-in flood never ties up the thread pool other routes need. Unknown, disabled and locked
+  accounts get the same answer after the same single hash. Other limits (`app/auth/ratelimit.py`):
+  open registration 3/hour per IP (per /64), key tests 10/hour, exports 10/hour.
+* **Last-admin rule**: the check and the write that depends on it run in one `BEGIN IMMEDIATE`
+  transaction (`PATCH`/`DELETE /api/admin/users/{id}`, `DELETE /api/me`), so two admins removing each
+  other at once leave one admin.
 * **Errors** keep the `{"detail": "…"}` shape and may add keys: `reauth_required`, `setup_required`,
   `password_change_required`, `https_required`, `retry_after`, `field`, `problems` (password policy
   messages), `reason` (USDA key resolution), `locked_by_env`.
@@ -807,10 +827,11 @@ Me = {"id": 1, "username": "mum", "display_name": "Mum", "role": "admin",
 |---|---|---|
 | `GET /api/auth/status` | public | → `{setup_required, auth_mode, registration ("invite"\|"closed"\|"open"\|"disabled"), insecure_http, https_required, password_min_length, password_max_length (128), instance_name, user: Me\|null, logout_url, no_login}` |
 | `POST /api/auth/setup` | public + setup code | `{code, username, display_name?, password, off_enabled?}` (proxy mode: `{code}`, identity from the header) → `{user: Me}`; claims user 1 (keeps the migrated data), signs in. 400 wrong/expired code, 409 already set up. 404 in none mode |
-| `POST /api/auth/login` | public | `{username, password}` → `{user: Me, notice}` + cookies; 401 `{"detail": "Username or password is incorrect"}`, 429, 400 HTTPS required. 404 in proxy/none mode |
+| `POST /api/auth/login` | public | `{username, password}` → `{user: Me, notice}` + cookies; 401 `{"detail": "Username or password is incorrect"}`, 429, 400 HTTPS required. 404 in proxy/none mode. `notice` (N12): "Your password was reset with a link from an admin on …" once, at the first password sign-in after an admin's reset link changed the password (compared with the newest `login.succeeded` audit event, not `last_login_at`, which the reset's own sign-in updates) |
 | `POST /api/auth/logout` | user | → `{ok: true, redirect?}` (proxy: `PROXY_LOGOUT_URL`); deletes the session, expires both cookie names, `Clear-Site-Data: "cache", "storage"` |
 | `POST /api/auth/register` | public + invite token (or open mode) | `{token?, username, display_name?, password}` → 201 `{user: Me}`, signed in. 403 closed/no invite, 400 bad token, 409 username taken |
-| `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; signs out every other session, clears `locked`, activates a new account |
+| `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; claims the single-use link first (two racing requests: one 200, one 400), signs out every other session, voids the account's other open links, clears `locked`, activates a new account |
+| `POST /api/auth/reset/info` | public + reset token | `{token}` → `{username, display_name, new_account, expires_at}` for the page the link opens (the owner of an admin-created account never saw its username); 400 (counts as a per-IP failure) when the link is not valid. 404 in proxy/none mode |
 | `POST /api/auth/reauth` | user (local) | `{password}` → `{ok: true, reauth_until}`; wrong → 403; 5 wrong in a row revoke the session (401) |
 
 Usernames (local): 3–64 of `a-z 0-9 . _ @ + -` after NFKC + casefold (stored as typed for display).
@@ -826,8 +847,8 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`). Tokens in links travel in the URL
 | Method and path | Auth | Body → response |
 |---|---|---|
 | `GET /api/me` · `PATCH /api/me` | user | → Me; PATCH `{display_name}` |
-| `DELETE /api/me` | user + password | `{password, confirm: "DELETE"}` → 204, cookies cleared, `Clear-Site-Data`; 409 for the last active admin. Deletes the account and everything it owns (cascade) |
-| `POST /api/me/password` | user (local) | `{current_password, new_password}` → `{user: Me}`; signs out other devices, renews this session |
+| `DELETE /api/me` | user + password | `{password, confirm: "DELETE"}` → 204, cookies cleared, `Clear-Site-Data`; 409 for the last active admin, and always 409 with `AUTH_MODE=none` (every request is user 1; start-up also recreates a missing user 1 in that mode). Deletes the account and everything it owns (cascade), after deleting the unused invites and links it created |
+| `POST /api/me/password` | user (local) | `{current_password, new_password}` → `{user: Me}`; signs out other devices, voids open reset links for the account, renews this session |
 | `GET /api/me/sessions` | user | → `{sessions: [{id, created_at, last_seen_at, expires_at, user_agent, ip_prefix, current}]}` |
 | `DELETE /api/me/sessions/{id}` | user | → 204 (404 if not one of yours) |
 | `POST /api/me/sessions/revoke-others` | user *(re-auth)* | → `{revoked: n}` |
@@ -836,7 +857,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`). Tokens in links travel in the URL
 | `PUT /api/me/keys/{provider}` | user *(re-auth)* | `{api_key, test?}` → KeyItem (+ `test: "ok"\|"rejected"\|"unreachable"`); 8–512 printable ASCII, no spaces; 403 when personal keys are off |
 | `DELETE /api/me/keys/{provider}` | user *(re-auth)* | → 204 |
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
-| `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events) |
+| `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
 
 ```json
@@ -856,11 +877,12 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 
 | Method and path | Body → response |
 |---|---|
-| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at}]}` |
+| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at, reset_link}]}`; `reset_link` is the open reset or setup link (`{id, created_by, created_at, expires_at}`, never the token) or `null` (also in the `user` of the POST/PATCH answers) |
 | `POST /api/admin/users` | `{username, display_name?, role}` → 201 `{user, setup_url, expires_at}`: a `pending_setup` account and a one-time link (`/#/reset/…`, `registration.invite_ttl_days`) where the person sets a password. Proxy mode: pre-creates the proxy identity (`setup_url: null`) |
-| `PATCH /api/admin/users/{id}` | any of `{role, status ("active"\|"disabled"), can_use_shared, must_change_password (true), display_name}` → `{user}`. 409 when it would leave no active admin, for disabling yourself, or enabling a locked/new account (use a reset link). A role change or disabling signs the person out |
-| `DELETE /api/admin/users/{id}` | `{confirm_username}` → 204 (cascade); 409 for yourself or the last admin |
-| `POST /api/admin/users/{id}/reset-link` | → `{url, expires_at}` (24 h, single use; also unlocks) |
+| `PATCH /api/admin/users/{id}` | any of `{role, status ("active"\|"disabled"), can_use_shared, must_change_password (true), display_name}` → `{user}`. 409 when it would leave no active admin, for disabling yourself, or enabling a locked/new account (use a reset link). A role change or disabling signs the person out. Demoting or disabling an admin deletes every unused invite and reset/setup link they created (audit detail `links_revoked`); disabling also voids the account's own open link |
+| `DELETE /api/admin/users/{id}` | `{confirm_username}` → 204 (cascade); 409 for yourself or the last admin. The person's unused invites and links are deleted first (`auth_tokens.created_by` is `ON DELETE SET NULL`) |
+| `POST /api/admin/users/{id}/reset-link` | → `{url, expires_at}` (24 h, single use; also unlocks; voids the account's older link) |
+| `DELETE /api/admin/users/{id}/reset-link` | → 204, voids the account's open reset or setup link (404 when there is none); audit `user.reset_link_revoked` |
 | `POST /api/admin/users/{id}/revoke-sessions` | → `{revoked: n}` |
 | `GET /api/admin/invites` · `POST /api/admin/invites` · `DELETE /api/admin/invites/{id}` | POST `{role, note?, ttl_days? (1–90)}` → 201 `{invite, url, expires_at}` (the URL is shown once); list → `{invites: [{id, role, note, created_by, created_at, expires_at, used_at, state}]}`; 409 when registration is `closed` or in proxy mode |
 | `GET /api/admin/settings` · `PATCH /api/admin/settings` | → `{settings: {key: {value, source, locked_by_env, scope}}}`; PATCH `{key: value \| null}`, audited with old and new values |
@@ -893,10 +915,13 @@ With `AUTH_MODE=none` the users and invites routes answer 404.
 ### Admin CLI (`python -m app.admin`)
 
 `create-admin USERNAME` (password on stdin; claims user 1 while setup is pending), `reset-password
-USERNAME [--stdin]` (prints a 24-hour link, or sets the password from stdin and unlocks),
-`list-users [--json]`, `setup-code`, `revoke-sessions USERNAME|--all`, `purge-pre-v3-backup`,
-`vacuum`, plus the platform's `backup`, `check`, `restore-check`, `rotate-secret-key`, `reencrypt`,
-`settings`.
+USERNAME [--stdin]` (prints a 24-hour link, or sets the password from stdin and unlocks; either way
+older links for the account stop working), `list-users [--json]`, `setup-code`, `revoke-sessions
+USERNAME|--all`, `purge-pre-v3-backup`, `vacuum`, plus the platform's `backup`, `check`,
+`restore-check`, `rotate-secret-key`, `reencrypt`, `settings`. `backup` (to a file or `-`) writes the
+copy in rollback-journal mode, so it opens read-only anywhere; `restore-check` opens a read-only file
+with `immutable=1` (unless a `-wal` file sits next to it) and says when it could not check the stored
+keys because no `SECRET_KEY[_FILE]` was given; `check` warns when user 1 is missing.
 
 ### Schema v3 summary (`m003_accounts.py`)
 

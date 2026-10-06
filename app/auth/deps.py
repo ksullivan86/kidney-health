@@ -34,7 +34,7 @@ PASSWORD_CHANGE_EXEMPT = frozenset({("POST", "/api/me/password"), ("POST", "/api
 def _none_mode_user(conn: sqlite3.Connection) -> User:
     row = user_row(conn, 1)
     if row is None:
-        raise ApiProblem(503, "User 1 is missing; run python -m app.admin check")
+        raise ApiProblem(503, "User 1 is missing; restart the server to create it again (AUTH_MODE=none)")
     return User(
         id=1,
         username=row["username"] or "local",

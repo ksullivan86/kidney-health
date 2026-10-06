@@ -19,6 +19,7 @@ from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
 from . import clock, sessions, tokens
 from .accounts import (
+    begin_immediate,
     check_local_username,
     create_user,
     user_admin_dict,
@@ -55,6 +56,21 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
     return row
 
 
+def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict[str, Any]] | None = None) -> dict[str, Any]:
+    """``user_admin_dict`` plus ``reset_link``: the open reset or account-setup link for the account
+    (``{id, created_by, created_at, expires_at}``, never the token), so an admin can see and revoke a
+    link that someone else issued, including one for their own account."""
+    if links is None:
+        links = tokens.open_reset_links(conn)
+    return {**user_admin_dict(row), "reset_link": links.get(int(row["id"]))}
+
+
+def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
+    """When ``uid`` stops being an active admin, the invites and links they created stop working."""
+    voided = tokens.void_issued_by(conn, uid)
+    return {"links_revoked": voided} if voided else {}
+
+
 # --------------------------------------------------------------------------- #
 # Users
 # --------------------------------------------------------------------------- #
@@ -64,7 +80,8 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
 def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     _no_accounts_in_none_mode(auth_context(request))
     rows = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
-    return {"users": [user_admin_dict(r) for r in rows]}
+    links = tokens.open_reset_links(conn)
+    return {"users": [_user_view(conn, r, links) for r in rows]}
 
 
 @router.post("/users", status_code=201)
@@ -86,7 +103,7 @@ def create_account(body: UserCreate, request: Request, admin: RecentAdmin, conn:
                               auth_source="proxy", external_subject=subject)
         audit(conn, admin.id, "user.invited", "user", user_id, ip=ip, role=body.role, via="proxy_account")
         conn.commit()
-        return {"user": user_admin_dict(_user_or_404(conn, user_id)), "setup_url": None, "expires_at": None}
+        return {"user": _user_view(conn, _user_or_404(conn, user_id)), "setup_url": None, "expires_at": None}
     typed, norm = check_local_username(body.username)
     if username_taken(conn, norm):
         raise ApiProblem(409, "That username is taken.", field="username")
@@ -96,7 +113,7 @@ def create_account(body: UserCreate, request: Request, admin: RecentAdmin, conn:
     audit(conn, admin.id, "user.invited", "user", user_id, ip=ip, role=body.role, via="account")
     conn.commit()
     return {
-        "user": user_admin_dict(_user_or_404(conn, user_id)),
+        "user": _user_view(conn, _user_or_404(conn, user_id)),
         "setup_url": tokens.link(public_base(request, ctx.settings), "reset", token),
         "expires_at": row["expires_at"],
     }
@@ -107,6 +124,7 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
                    conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     ctx = auth_context(request)
     _no_accounts_in_none_mode(ctx)
+    begin_immediate(conn)  # the last-admin check and the write see the same data
     row = _user_or_404(conn, user_id)
     uid = int(row["id"])
     ip = request_ip(request)
@@ -116,7 +134,8 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
         if data["role"] != "admin" and would_remove_last_admin(conn, uid):
             raise ApiProblem(409, "This is the only admin. Make someone else an admin first.")
         conn.execute("UPDATE users SET role = ?, updated_at = ? WHERE id = ?", (data["role"], utcnow(), uid))
-        audit(conn, admin.id, "user.role_changed", "user", uid, ip=ip, old=row["role"], new=data["role"])
+        voided = _void_admin_links(conn, uid) if row["role"] == "admin" else {}
+        audit(conn, admin.id, "user.role_changed", "user", uid, ip=ip, old=row["role"], new=data["role"], **voided)
         if uid == admin.id:
             start_session(request, response, conn, ctx, uid)  # rotate on privilege change
         else:
@@ -131,7 +150,8 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
                 raise ApiProblem(409, "This is the only admin. Make someone else an admin first.")
             conn.execute("UPDATE users SET status = 'disabled', updated_at = ? WHERE id = ?", (utcnow(), uid))
             sessions.revoke_user_sessions(conn, uid)
-            audit(conn, admin.id, "user.disabled", "user", uid, ip=ip)
+            tokens.void_reset_links(conn, uid)  # an old link must not work again once the account is enabled
+            audit(conn, admin.id, "user.disabled", "user", uid, ip=ip, **_void_admin_links(conn, uid))
         else:  # active
             if row["status"] != "disabled":
                 raise ApiProblem(409, "Only a disabled account can be enabled here. A locked or new account needs a reset link.")
@@ -151,7 +171,7 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
     if data.get("display_name") is not None:
         conn.execute("UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?", (clean_display(data["display_name"]), utcnow(), uid))
     conn.commit()
-    return {"user": user_admin_dict(_user_or_404(conn, uid))}
+    return {"user": _user_view(conn, _user_or_404(conn, uid))}
 
 
 @router.delete("/users/{user_id}", status_code=204, response_class=Response)
@@ -159,6 +179,7 @@ def delete_account(user_id: int, request: Request, admin: RecentAdmin, body: Use
                    conn: sqlite3.Connection = Depends(get_db)) -> Response:
     ctx = auth_context(request)
     _no_accounts_in_none_mode(ctx)
+    begin_immediate(conn)  # the last-admin check and the delete see the same data
     row = _user_or_404(conn, user_id)
     if int(row["id"]) == admin.id:
         raise ApiProblem(409, "Delete your own account from Settings → Account instead.")
@@ -182,13 +203,25 @@ def issue_reset_link(user_id: int, request: Request, admin: RecentAdmin, conn: s
         raise ApiProblem(409, "This account signs in through the proxy and has no password here.")
     if row["status"] == "disabled":
         raise ApiProblem(409, "Enable the account first.")
-    conn.execute("UPDATE auth_tokens SET used_at = ? WHERE purpose = 'reset' AND user_id = ? AND used_at IS NULL", (clock.now_iso(), int(row["id"])))
+    tokens.void_reset_links(conn, int(row["id"]))
     token, token_row = tokens.create_token(
         conn, tokens.RESET, ttl=timedelta(hours=RESET_LINK_HOURS), user_id=int(row["id"]), created_by=admin.id
     )
     audit(conn, admin.id, "user.reset_link_issued", "user", int(row["id"]), ip=request_ip(request))
     conn.commit()
     return {"url": tokens.link(public_base(request, ctx.settings), "reset", token), "expires_at": token_row["expires_at"]}
+
+
+@router.delete("/users/{user_id}/reset-link", status_code=204, response_class=Response)
+def revoke_reset_link(user_id: int, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    """Void the account's open reset or account-setup link (404 when there is none)."""
+    _no_accounts_in_none_mode(auth_context(request))
+    row = _user_or_404(conn, user_id)
+    if not tokens.void_reset_links(conn, int(row["id"])):
+        raise HTTPException(status_code=404, detail="no open link for this account")
+    audit(conn, admin.id, "user.reset_link_revoked", "user", int(row["id"]), ip=request_ip(request))
+    conn.commit()
+    return Response(status_code=204)
 
 
 @router.post("/users/{user_id}/revoke-sessions")

@@ -50,6 +50,11 @@ body.signed-out .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 
   padding: 8px 12px; font-size: 0.9rem; font-weight: 600;
 }
 .auth-error:empty, .form-error:empty { display: none; }
+/* The same reason next to the field at fault (linked with aria-describedby), so it is in view on a phone. */
+.field-error { color: var(--over-text); font-size: 0.85rem; font-weight: 600; margin: 4px 0 0; }
+.field-error p { margin: 0; }
+.field-error ul { list-style: disc; padding-left: 18px; margin: 2px 0 0; font-weight: 500; }
+#form-reset input[readonly] { background: var(--surface-2, transparent); }
 .auth-error p, .form-error p { margin: 0; }
 .auth-error ul, .form-error ul { list-style: disc; padding-left: 18px; margin: 4px 0 0; font-weight: 500; }
 

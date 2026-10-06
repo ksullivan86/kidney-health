@@ -213,3 +213,61 @@ def test_off_consent_is_a_personal_boolean(settings, value) -> None:
             assert r.status_code == 400 and "food.off_consent" in r.json()["detail"]
         r = c.patch("/api/me/settings", json={"food.off_enabled": True}, headers={"X-Requested-With": "kidney-health"})
         assert r.status_code == 403  # the server switch is the admin's
+
+
+# --------------------------------------------------------------------------- M1 review fixes
+
+MOCK_AUTH_JS = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
+
+
+def test_reset_screen_shows_whose_account_the_link_is_for() -> None:
+    """An admin-created account's owner never saw its username: the link page shows it (read-only,
+    autocomplete=username, so password managers save both) and uses welcome wording."""
+    form = _section('<form id="form-reset"', "</form>")
+    m = re.search(r'<input id="reset-username"[^>]*>', form)
+    assert m and 'autocomplete="username"' in m.group(0) and "readonly" in m.group(0)
+    assert 'id="reset-intro"' in form
+    assert "'/api/auth/reset/info'" in AUTH_JS and "new_account" in AUTH_JS
+    assert "sign in as ${res.user.username}" in AUTH_JS
+    # the demo answers the new public route like an expired link, as the server would
+    assert "'POST /api/auth/reset/info'" in MOCK_AUTH_JS and "route('POST', '/api/auth/reset/info'" in MOCK_AUTH_JS
+
+
+def test_field_errors_sit_next_to_the_field() -> None:
+    assert "function fieldError(" in AUTH_JS and "aria-describedby" in AUTH_JS
+    assert "function withoutFieldPrefix(" in AUTH_JS
+    assert ".field-error" in (STATIC / "css" / "auth.css").read_text(encoding="utf-8")
+
+
+def test_connection_row_asks_the_address_not_is_secure_context() -> None:
+    """isSecureContext is true on http://localhost, which is not encrypted."""
+    assert "window.location.protocol === 'https:'" in SETTINGS_JS
+    assert re.search(r"\['Connection', https \?", SETTINGS_JS)
+
+
+def test_admin_people_list_shows_and_revokes_open_links() -> None:
+    assert "u.reset_link" in SETTINGS_JS and "revokeResetLink" in SETTINGS_JS
+    assert "`/api/admin/users/${id}/reset-link`" in SETTINGS_JS
+    assert "Someone created a password reset link for your account" in SETTINGS_JS
+    assert "route('DELETE', userIdRoute('/reset-link')" in MOCK_AUTH_JS and "reset_link:" in MOCK_AUTH_JS
+    assert "_voidIssuedBy" in MOCK_AUTH_JS
+
+
+def test_activity_logs_name_the_target_account() -> None:
+    assert "function targetOf(" in SETTINGS_JS and "deleted user #" in SETTINGS_JS
+    assert "'user.reset_link_revoked'" in SETTINGS_JS and "'user.reset_link_revoked'" in MOCK_AUTH_JS
+
+
+def test_no_delete_form_without_sign_in() -> None:
+    assert "set-delete-none" in SETTINGS_JS
+
+
+def test_api_has_the_reset_link_routes(two_clients) -> None:
+    admin, sam = two_clients
+    sam_id = sam.get("/api/me").json()["id"]
+    assert admin.post(f"/api/admin/users/{sam_id}/reset-link").status_code == 200
+    users = {u["id"]: u for u in admin.get("/api/admin/users").json()["users"]}
+    assert set(users[sam_id]["reset_link"]) == {"id", "created_by", "created_at", "expires_at"}
+    assert users[1]["reset_link"] is None
+    assert admin.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 204
+    assert sam.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 403  # admins only

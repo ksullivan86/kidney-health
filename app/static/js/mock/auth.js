@@ -21,9 +21,11 @@
   const USERNAME_RE = /^[a-z0-9._@+-]{3,64}$/;
   const USERNAME_HELP = 'Use 3 to 64 characters: letters, digits and . _ @ + -';
   const DEMO_LINK_BASE = 'https://kidney.example';
-  const PUBLIC_AUTH = new Set(['GET /api/auth/status', 'POST /api/auth/login', 'POST /api/auth/setup', 'POST /api/auth/register', 'POST /api/auth/reset']);
+  const PUBLIC_AUTH = new Set(['GET /api/auth/status', 'POST /api/auth/login', 'POST /api/auth/setup', 'POST /api/auth/register', 'POST /api/auth/reset',
+    'POST /api/auth/reset/info']);
   const USER_VISIBLE_ACTIONS = new Set(['login.succeeded', 'login.failed', 'user.locked', 'user.password_changed', 'user.reset_link_issued',
-    'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created']);
+    'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created']);
+  const LINK_INVALID = 'This link is not valid any more. Ask your admin for a new one.';
   const APP_WORDS = ['kidneyhealth', 'kidney health', 'kidney-health', 'kidney_health', 'kidney health food log'];
   const SEQUENCES = ['abcdefghijklmnopqrstuvwxyz', '0123456789', 'qwertyuiopasdfghjklzxcvbnm', 'qwertzuiopasdfghjklyxcvbnm',
     'azertyuiopqsdfghjklmwxcvbn', '1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik9ol0p', 'qazwsxedcrfvtgbyhnujmikolp', '1234567890qwertyuiopasdfghjklzxcvbnm', '!@#$%^&*()'];
@@ -114,9 +116,24 @@
         must_change_password: !!u.must_change_password, created_at: u.created_at };
     },
     _adminUser(u) {
+      const link = u.reset_link && u.reset_link.expires_at > this._stamp() ? u.reset_link : null;
       return { id: u.id, username: u.username, display_name: u.display_name || '', role: u.role, status: u.status, auth_source: u.auth_source,
         can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
-        created_at: u.created_at, last_login_at: u.last_login_at };
+        created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null };
+    },
+    // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
+    _issueResetLink(u, adminId, ms) {
+      u.reset_link = { id: `demo-link-${randomToken(8)}`, created_by: adminId, created_at: this._stamp(), expires_at: this._stamp(new Date(Date.now() + ms)) };
+      return u.reset_link;
+    },
+    // tokens.void_issued_by: an admin who is demoted, disabled or deleted takes their links with them.
+    _voidIssuedBy(adminId) {
+      const a = this._authState();
+      let n = 0;
+      for (const x of a.users) if (x.reset_link && x.reset_link.created_by === adminId) { x.reset_link = null; n += 1; }
+      const before = a.invites.length;
+      a.invites = a.invites.filter((i) => i.used_at || i.created_by !== adminId);
+      return n + (before - a.invites.length);
     },
     // CurrentUser / AdminUser / RecentUser (app/auth/deps.py).
     _currentUser() {
@@ -239,7 +256,10 @@
     fail(400, 'HTTPS required to register on this server. See docs/https.md.', { https_required: true });
   });
   route('POST', '/api/auth/reset', function () {
-    fail(400, 'This link is not valid any more. Ask your admin for a new one.', { field: 'token' });
+    fail(400, LINK_INVALID, { field: 'token' });
+  });
+  route('POST', '/api/auth/reset/info', function () {
+    fail(400, LINK_INVALID, { field: 'token' });
   });
   route('POST', '/api/auth/reauth', function ({ body }) {
     this._currentUser();
@@ -274,6 +294,7 @@
     c.done();
     this._checkNewPassword(body.new_password, u);
     u.must_change_password = false;
+    u.reset_link = null; // an older reset link must not undo this change
     const a = this._authState();
     a.sessions = a.sessions.filter((s) => s.id === 'demo-this-browser'); // other devices are signed out
     a.reauthAt = Date.now();
@@ -320,7 +341,9 @@
     const limit = Math.max(1, Math.min(Number(qp('limit')) || 50, 200));
     const before = qp('before') != null ? Number(qp('before')) : null;
     const events = this._authState().events
-      .filter((e) => USER_VISIBLE_ACTIONS.has(e.action) && (e.actor_user_id === u.id || (e.target_type === 'user' && e.target_id === String(u.id))))
+      // app/audit.list_events: events about this account, and the person's own actions except those on another account.
+      .filter((e) => USER_VISIBLE_ACTIONS.has(e.action) && ((e.target_type === 'user' && e.target_id === String(u.id))
+        || (e.actor_user_id === u.id && (e.target_type !== 'user' || e.target_id == null || e.target_id === String(u.id)))))
       .filter((e) => before == null || e.id < before)
       .sort((x, y) => y.id - x.id).slice(0, limit);
     return { events };
@@ -354,9 +377,10 @@
     const u = { id: a.nextUserId++, username: typed, display_name: cleanDisplay(data.display_name), role: data.role, status: 'pending_setup',
       auth_source: 'local', can_use_shared: true, must_change_password: false, has_password: false, created_at: this._stamp(), last_login_at: null };
     a.users.push(u);
-    this._audit(admin.id, 'user.invited', 'user', u.id, { role: data.role, via: 'account' });
     const ttl = this._settingValue('registration.invite_ttl_days');
-    return { user: this._adminUser(u), setup_url: this._demoLink('reset'), expires_at: this._stamp(new Date(Date.now() + ttl * 86400000)) };
+    const link = this._issueResetLink(u, admin.id, ttl * 86400000);
+    this._audit(admin.id, 'user.invited', 'user', u.id, { role: data.role, via: 'account' });
+    return { user: this._adminUser(u), setup_url: this._demoLink('reset'), expires_at: link.expires_at };
   });
   route('PATCH', userIdRoute(''), function ({ id, body }) {
     const admin = this._requireAdmin();
@@ -373,7 +397,8 @@
     const data = c.done();
     if (data.role != null && data.role !== u.role) {
       if (data.role !== 'admin' && this._wouldRemoveLastAdmin(u.id)) fail(409, 'This is the only admin. Make someone else an admin first.');
-      this._audit(admin.id, 'user.role_changed', 'user', u.id, { old: u.role, new: data.role });
+      const voided = u.role === 'admin' ? this._voidIssuedBy(u.id) : 0;
+      this._audit(admin.id, 'user.role_changed', 'user', u.id, { old: u.role, new: data.role, ...(voided ? { links_revoked: voided } : {}) });
       u.role = data.role;
     }
     if (data.status != null && data.status !== u.status) {
@@ -382,7 +407,9 @@
         if (this._wouldRemoveLastAdmin(u.id)) fail(409, 'This is the only admin. Make someone else an admin first.');
         u.status = 'disabled';
         this._authState().sessions = this._authState().sessions.filter((s) => s.user_id !== u.id);
-        this._audit(admin.id, 'user.disabled', 'user', u.id);
+        u.reset_link = null;
+        const voided = this._voidIssuedBy(u.id);
+        this._audit(admin.id, 'user.disabled', 'user', u.id, voided ? { links_revoked: voided } : {});
       } else {
         if (u.status !== 'disabled') fail(409, 'Only a disabled account can be enabled here. A locked or new account needs a reset link.');
         u.status = 'active';
@@ -408,9 +435,10 @@
     if (!M.isDict(body) || norm(body.confirm_username) !== norm(u.username)) fail(400, "Type the account's username to confirm.", { field: 'confirm_username' });
     if (this._wouldRemoveLastAdmin(u.id)) fail(409, 'This is the only admin. Make someone else an admin first.');
     const a = this._authState();
+    const voided = this._voidIssuedBy(u.id);
     a.users = a.users.filter((x) => x.id !== u.id);
     a.sessions = a.sessions.filter((s) => s.user_id !== u.id);
-    this._audit(admin.id, 'user.deleted', 'user', u.id);
+    this._audit(admin.id, 'user.deleted', 'user', u.id, voided ? { links_revoked: voided } : {});
     return null;
   });
   route('POST', userIdRoute('/reset-link'), function ({ id }) {
@@ -418,8 +446,18 @@
     this._requireRecent();
     const u = targetUser(this, id);
     if (u.status === 'disabled') fail(409, 'Enable the account first.');
+    const link = this._issueResetLink(u, admin.id, 24 * 3600000);
     this._audit(admin.id, 'user.reset_link_issued', 'user', u.id);
-    return { url: this._demoLink('reset'), expires_at: this._stamp(new Date(Date.now() + 24 * 3600000)) };
+    return { url: this._demoLink('reset'), expires_at: link.expires_at };
+  });
+  route('DELETE', userIdRoute('/reset-link'), function ({ id }) {
+    const admin = this._requireAdmin();
+    this._requireRecent();
+    const u = targetUser(this, id);
+    if (!this._adminUser(u).reset_link) fail(404, 'no open link for this account');
+    u.reset_link = null;
+    this._audit(admin.id, 'user.reset_link_revoked', 'user', u.id);
+    return null;
   });
   route('POST', userIdRoute('/revoke-sessions'), function ({ id }) {
     const admin = this._requireAdmin();

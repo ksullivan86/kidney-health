@@ -45,16 +45,23 @@ Set `PUBLIC_URL` (the script reads it from the environment), then read the setup
 
 | Limit | What happens | What to do |
 |---|---|---|
-| **Client addresses are not passed through** | every client appears to come from the RootlessKit gateway ([Docker][DOCKER-ROOTLESS]) | publish on `127.0.0.1` only and leave `TRUSTED_PROXIES` at the loopback default. Trusting the gateway would mean trusting everyone |
+| **Client addresses are not passed through** | every client, an HTTPS proxy on the same host included, appears to come from the RootlessKit gateway, for example `172.17.0.1` ([Docker][DOCKER-ROOTLESS]) | publish on `127.0.0.1` only. Without a proxy, leave `TRUSTED_PROXIES` at the loopback default. With Caddy, nginx or `tailscale serve` on the same host, set `TRUSTED_PROXIES` to the gateway address the app logs: because the port is published on `127.0.0.1`, only local processes reach it. Without that, a second account cannot sign in (`https_required`) |
 | Resource limits need cgroup v2 | without it `--memory` and `--pids-limit` are **ignored silently** ([Docker][DOCKER-ROOTLESS]) | check `docker info` |
 | Ports below 1024 | not allowed by default | put HTTPS on 8443, or set `net.ipv4.ip_unprivileged_port_start` |
 | No AppArmor | one layer fewer | the user namespace, seccomp and dropped capabilities still apply |
 | Health checks | Docker's `--health-cmd` runs through `/bin/sh`, which the image does not have | do not pass one; the image's own exec-form `HEALTHCHECK` applies |
 | `--read-only` | Docker does not add a writable `/tmp` | always pair it with `--tmpfs /tmp` |
 
+Trusting the gateway would mean trusting everyone only if the port were published on a LAN address;
+on `127.0.0.1` it means trusting the processes on this machine, which is what a same-host proxy needs.
+In proxy sign-in mode also set `TRUSTED_PROXY_SECRET_FILE`. The Caddy compose overlay avoids the
+question (container to container). With the run script:
+`TRUSTED_PROXIES=172.17.0.1 deploy/docker-rootless-run.sh` (use the address from your log). Running
+the script again replaces the container; the data stays on its volume.
+
 You can make client addresses visible with RootlessKit 3.0 or later and `"userland-proxy": false`, or
-with `DOCKERD_ROOTLESS_ROOTLESSKIT_NET=pasta` and `..._PORT_DRIVER=implicit`. Only then is it safe to
-trust a specific proxy address ([operator security guide][SECDOC]).
+with `DOCKERD_ROOTLESS_ROOTLESSKIT_NET=pasta` and `..._PORT_DRIVER=implicit`
+([operator security guide][SECDOC]).
 
 ## Secret files
 
@@ -65,7 +72,8 @@ UID 10001. Use `0644` files inside a `0700` directory: other host users still ca
 ## Checklist
 
 - [ ] `docker info` shows `name=rootless` and cgroup v2.
-- [ ] Published on `127.0.0.1` only; `TRUSTED_PROXIES` at its default unless addresses are propagated.
+- [ ] Published on `127.0.0.1` only; `TRUSTED_PROXIES` at its default without a proxy, or the logged
+      gateway address when an HTTPS proxy on the same host connects to it.
 - [ ] Secret files `0644` in a `0700` directory; `SECRET_KEY_FILE` set.
 - [ ] `--read-only` with `--tmpfs /tmp`.
 - [ ] No Docker socket mounted into any container ([Security](security.md)).
@@ -76,6 +84,8 @@ UID 10001. Use `0644` files inside a `0700` directory: other host users still ca
   defaults above; the app detects a gateway address and skips per-address limits.
 - **`permission denied` on `/run/secrets/...`**: fix the file mode as above.
 - **The container restarts as unhealthy**: remove any `--health-cmd` you added.
+- **`https_required` although the browser shows HTTPS**: the app does not trust your same-host proxy;
+  put the gateway address from `docker logs kidney-health` in `TRUSTED_PROXIES`.
 - More: [Troubleshooting](troubleshooting.md).
 
 ## Related pages

@@ -124,6 +124,51 @@ def mark_used(conn: sqlite3.Connection, token_id: str) -> bool:
     return (cur.rowcount or 0) > 0
 
 
+def void_issued_by(conn: sqlite3.Connection, user_id: int) -> int:
+    """Delete every unused invite and reset/setup link that ``user_id`` created; returns how many.
+
+    Called when an admin is demoted, disabled or deleted, so links they handed out (or planted, for
+    example a reset link for another admin's account) stop working with them. It must run before
+    ``DELETE FROM users``: the foreign key then sets ``created_by`` to NULL and nothing would tie the
+    links to the removed admin any more.
+    """
+    cur = conn.execute(
+        "DELETE FROM auth_tokens WHERE created_by = ? AND used_at IS NULL AND purpose IN ('invite', 'reset')", (int(user_id),)
+    )
+    return int(cur.rowcount or 0)
+
+
+def void_reset_links(conn: sqlite3.Connection, user_id: int, *, except_id: str | None = None) -> int:
+    """Mark every unused reset or account-setup link for ``user_id``'s account used; returns how many.
+
+    Called when the account's password changes (by any route) and when the account is disabled, so
+    an older link cannot undo the change later.
+    """
+    cur = conn.execute(
+        "UPDATE auth_tokens SET used_at = ? WHERE purpose = 'reset' AND user_id = ? AND used_at IS NULL AND id != ?",
+        (clock.now_iso(), int(user_id), except_id or ""),
+    )
+    return int(cur.rowcount or 0)
+
+
+def open_reset_links(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
+    """The newest unused, unexpired reset or setup link per account: ``{user_id: link}`` (no token)."""
+    out: dict[int, dict[str, Any]] = {}
+    rows = conn.execute(
+        """SELECT id, user_id, created_by, created_at, expires_at FROM auth_tokens
+           WHERE purpose = 'reset' AND used_at IS NULL AND expires_at > ? AND user_id IS NOT NULL ORDER BY created_at""",
+        (clock.now_iso(),),
+    ).fetchall()
+    for row in rows:
+        out[int(row["user_id"])] = {
+            "id": row["id"],
+            "created_by": row["created_by"],
+            "created_at": row["created_at"],
+            "expires_at": row["expires_at"],
+        }
+    return out
+
+
 def link(base: str | None, kind: str, token: str) -> str:
     """``<base>/#/<kind>/<token>``; ``base`` is ``PUBLIC_URL`` or the request's own origin."""
     return f"{(base or '').rstrip('/')}/#/{kind}/{token}"

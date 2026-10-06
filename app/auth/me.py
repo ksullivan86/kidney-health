@@ -12,9 +12,10 @@ from .. import account, credentials
 from ..audit import USER_VISIBLE_ACTIONS, audit, list_events
 from ..db import get_db, utcnow
 from ..settings_store import InvalidSettingValue, SettingLocked, SettingNotEditable, SettingsUnavailable
-from . import clock, sessions
+from . import clock, sessions, tokens
 from .accounts import (
     PasswordRejected,
+    begin_immediate,
     check_new_password,
     hash_password,
     lock_account,
@@ -100,6 +101,7 @@ def change_password(body: PasswordChangeBody, request: Request, response: Respon
         raise password_problem(exc) from None
     set_password(conn, user.id, hash_password(new))
     sessions.revoke_user_sessions(conn, user.id)
+    tokens.void_reset_links(conn, user.id)  # an older reset link must not undo this change
     start_session(request, response, conn, ctx, user.id)  # rotate: a new id for this device
     audit(conn, user.id, "user.password_changed", "user", user.id, ip=request_ip(request), via="self")
     conn.commit()
@@ -111,12 +113,20 @@ def delete_me(request: Request, user: CurrentUser, body: DeleteMeBody = Body(...
               conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """Delete the account and everything it owns (needs the password and ``"confirm": "DELETE"``)."""
     ctx = auth_context(request)
+    if ctx.settings.auth_mode == "none":
+        # Every request is user 1 here, so deleting it would leave the server unusable (it answers 503
+        # until user 1 exists again). The data can be removed entry by entry, or the database replaced.
+        raise ApiProblem(
+            409,
+            "This server runs without sign-in (AUTH_MODE=none), so there is no personal account to delete.",
+        )
     if body.confirm != "DELETE":
         raise ApiProblem(400, 'Type DELETE to confirm.', field="confirm")
     if ctx.settings.auth_mode == "local":
         if body.password is None:
             raise ApiProblem(403, "Please enter your password again", reauth_required=True)
         check_own_password(request, conn, ctx, user, body.password.get_secret_value())
+    begin_immediate(conn)  # the last-admin check and the delete see the same data
     if would_remove_last_admin(conn, user.id):
         raise ApiProblem(409, "You are the only admin. Make someone else an admin first.")
     account.delete_user(conn, user.id, actor_id=user.id, ip=request_ip(request))

@@ -17,7 +17,8 @@
 #   4. prints the in-index buildx provenance summary when docker buildx is available.
 # Signatures and attestations exist only once the repository is public (release.yml gates them).
 #
-# Needs: cosign >= 2.4 (v3 recommended), a current gh with `gh attestation`, and one of crane, skopeo or
+# Needs: cosign >= 3.0 (release.yml signs with cosign 3: a Sigstore bundle stored as an OCI 1.1
+# referrer, which cosign 2.4/2.5 cannot find), a current gh with `gh attestation`, and one of crane, skopeo or
 # docker buildx. Private package: log in first (docker/podman login ghcr.io, and gh auth login).
 # Override for a fork: IMAGE_REPO=ghcr.io/you/kidney-health GITHUB_REPO=you/kidney-health
 set -euo pipefail
@@ -27,12 +28,21 @@ GITHUB_REPO="${GITHUB_REPO:-ksullivan86/kidney-health}"
 OIDC_ISSUER="https://token.actions.githubusercontent.com"
 WORKFLOW_PATH=".github/workflows/release.yml"
 
-usage() { sed -n '2,25p' "$0" >&2; exit 2; }
+usage() { sed -n '2,23p' "$0" >&2; exit 2; }
 [ $# -eq 1 ] || usage
 ref="$1"
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing tool: $1 ($2)" >&2; exit 2; }; }
 need cosign "https://docs.sigstore.dev/cosign/system_config/installation/"
 need gh "https://cli.github.com/"
+
+# cosign 2.x looks for the legacy sha256-<digest>.sig tag and reports "no signatures found" for the
+# bundle-format signatures release.yml makes, which would look like a forged image. Refuse it.
+cosign_version="$(cosign version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*v\{0,1\}\([0-9][0-9]*\)\..*/\1/p' | head -n 1)"
+if [ -z "$cosign_version" ] || [ "$cosign_version" -lt 3 ]; then
+  echo "cosign 3.0 or later is needed (found: $(cosign version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p' | head -n 1))." >&2
+  echo "Older versions cannot see the bundle-format signatures this project publishes." >&2
+  exit 2
+fi
 
 # Which git refs may have produced this image (the signing certificate records the ref).
 repo_re="${GITHUB_REPO//./\\.}"

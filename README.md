@@ -126,6 +126,12 @@ Verify a released image before you run it with `scripts/verify-image.sh` ([SECUR
 
 ### Upgrading from v0.2
 
+**If your v0.2 host auto-updates** (the v0.2 Quadlet unit: `Image=...:latest`, `AutoUpdate=registry`),
+change it before v0.3.0 is released: `:latest` will move to v0.3, whose image has no shell, and the old
+unit's shell `HealthCmd=` would kill and restart it every couple of minutes. Install the v0.3 unit from
+`deploy/quadlet/` (`Image=...:0.3`) or pin the v0.2 image by digest and stop
+`podman-auto-update.timer` until you upgrade ([docs/deployment.md](docs/deployment.md#from-v02-to-v03)).
+
 Back up `kidney.db`, then start v0.3 on the same data. The first start copies the database to
 `kidney.db.pre-v3.bak` (mode 0600, deleted automatically after 30 days), and all existing data
 becomes the first account's. If `APP_PASSWORD` was set, it is imported once as the password of the

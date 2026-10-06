@@ -156,6 +156,11 @@ def test_release_moves_tags_only_after_scan_and_gates_public_only_steps():
     assert "type=sha,prefix=sha-,format=short,enable=${{ github.ref == 'refs/heads/main' }}" in rel
     assert "type=semver,pattern={{version}}" in rel and "type=semver,pattern={{major}}.{{minor}}" in rel
     assert re.search(r"type=raw,value=latest,enable=\$\{\{ startsWith\(github\.ref, 'refs/tags/v'\)", rel)
+    # the owner can hold :latest on the v0.2 digest while auto-updating v0.2 hosts move (M1 review)
+    assert "vars.HOLD_LATEST != 'true' }}" in rel
+    for doc in ("CHANGELOG.md", "README.md", "docs/deployment.md"):
+        text = read(doc)
+        assert "AutoUpdate=registry" in text and "podman-auto-update.timer" in text, doc
     assert "latest=false" in rel
     scan = jobs["scan"]
     assert "needs: build" in scan and "GRYPE_PLATFORM" in scan
@@ -185,6 +190,26 @@ def test_dependabot_covers_pip_actions_and_base_images_with_cooldowns():
         assert f"package-ecosystem: {ecosystem}" in text
     assert text.count("cooldown:") == 3
     assert '"/deploy"' in text
+    # Dependabot only reads *.txt / *.in requirement files: pointing it at the *.lock directories makes
+    # the job fail on the requirements*.txt shims and leaves the locks stale (M1 review).
+    pip_block = text.split("package-ecosystem: pip", 1)[1].split("package-ecosystem:", 1)[0]
+    assert re.findall(r'^\s+- "([^"]+)"', pip_block, re.M) == ["/.github"]
+    assert "refresh-locks.yml" in text
+
+
+def test_hash_locks_are_refreshed_weekly_with_a_cooldown_by_pull_request():
+    wf = read(".github/workflows/refresh-locks.yml")
+    assert re.search(r"^\s+- cron: ", wf, re.M) and "workflow_dispatch:" in wf
+    assert 'PIP_UPLOADED_PRIOR_TO="P${COOLDOWN_DAYS}D" scripts/lock.sh --upgrade' in wf
+    assert "default: \"7\"" in wf and "inputs.cooldown_days || '7'" in wf
+    assert "gh pr create" in wf
+    jobs = job_blocks(wf)
+    assert set(jobs) == {"refresh"}
+    assert re.search(r"contents: write", jobs["refresh"]) and re.search(r"pull-requests: write", jobs["refresh"])
+    lock = read("scripts/lock.sh")
+    assert "handbook/requirements.lock handbook/requirements.in" in lock
+    assert re.search(r'PIP_VERSION="2[6-9]\.', lock)  # pip >= 26.0 understands --uploaded-prior-to
+    assert "-e PIP_UPLOADED_PRIOR_TO" in lock
 
 
 # --------------------------------------------------------------------------- image
@@ -384,7 +409,7 @@ def test_k8s_kustomization_and_network_policy():
     kust = read("deploy/k8s/kustomization.yaml")
     resources = re.findall(r"^  - (\S+\.yaml)$", kust, re.M)
     assert {"networkpolicy.yaml", "httproute.yaml", "deployment.yaml", "namespace.yaml"} <= set(resources)
-    assert not {"secret.example.yaml", "ingress.example.yaml", "cilium-networkpolicy.example.yaml"} & set(resources)
+    assert not {"secret.example.yaml", "ingress.example.yaml", "cilium-networkpolicy.example.yaml", "restore-pod.example.yaml"} & set(resources)
     assert not (REPO / "deploy/k8s/ingress.yaml").exists(), "ingress-nginx is retired: Ingress is only an example"
     assert 'newTag: "0.3"' in kust
     netpol = read("deploy/k8s/networkpolicy.yaml")
@@ -392,7 +417,34 @@ def test_k8s_kustomization_and_network_policy():
     for cidr in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "169.254.0.0/16"):
         assert f"- {cidr}" in netpol
     assert "port: 443" in netpol and "k8s-app: kube-dns" in netpol
-    assert "toFQDNs" in read("deploy/k8s/cilium-networkpolicy.example.yaml")
+    cilium = read("deploy/k8s/cilium-networkpolicy.example.yaml")
+    assert "toFQDNs" in cilium
+    # Cilium's Gateway/Ingress has the reserved "ingress" identity, which no namespaceSelector matches
+    assert re.search(r"fromEntities:\n\s+- ingress", cilium) and 'port: "8000"' in cilium
+    assert "cilium-networkpolicy.example.yaml" in netpol and "fromEntities" in netpol
+
+
+def test_k8s_restore_pod_is_restricted_and_documented():
+    """The image has no tar (kubectl cp cannot work), so the guide streams the backup into this pod."""
+    pod = read("deploy/k8s/restore-pod.example.yaml")
+    for needle in ("runAsNonRoot: true", "runAsUser: 10001", "allowPrivilegeEscalation: false", "readOnlyRootFilesystem: true",
+                   "claimName: kidney-health-data", "mountPath: /tmp", "type: RuntimeDefault", "automountServiceAccountToken: false"):
+        assert needle in pod, needle
+    assert re.search(r"drop:\n\s+- ALL", pod)
+    guide = read("docs/deployment.md")
+    assert "restore-pod.example.yaml" in guide and "kubectl -n kidney-health exec -i kidney-health-restore" in guide
+    assert "kubectl cp" not in guide.replace("so `kubectl cp` cannot", "")
+
+
+def test_restore_procedure_works_on_read_only_mounts():
+    """Docs restore steps: the one-liner opens the backup immutable, the key check gets the secret, and
+    sessions are revoked on the volume (a :ro mount cannot be written)."""
+    for path in ("docs/deployment.md", "handbook/docs/self-hosting/backups.md"):
+        text = read(path)
+        assert "mode=ro&immutable=1" in text, path
+        assert "SECRET_KEY_FILE=/run/secrets/secret_key" in text, path
+        assert "revoke-sessions --all" in text, path
+        assert not re.search(r"restore-check[^\n]*--revoke-sessions[^\n]*/restore/", text), path
 
 
 # --------------------------------------------------------------------------- docs
@@ -430,3 +482,43 @@ def test_every_yaml_file_parses():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore[union-attr]
     assert yaml and module.main(REPO) == 0
+
+
+# --------------------------------------------------------------------------- M1 review: deploy docs
+
+
+def test_rootless_docker_docs_trust_the_gateway_for_a_same_host_proxy():
+    """Under rootless Docker a same-host HTTPS proxy arrives from the RootlessKit gateway; keeping the
+    loopback default makes the app ignore X-Forwarded-Proto and refuse a second account."""
+    security = read("docs/security.md")
+    row = next(line for line in security.splitlines() if line.startswith("| Rootless **Docker**"))
+    assert "same host" in row and "https_required" in row and "127.0.0.1" in row
+    assert "TRUSTED_PROXY_SECRET_FILE" in row and "compose.caddy.yaml" in row
+    for doc in ("docs/deployment.md", "docs/https.md", "handbook/docs/self-hosting/docker-rootless.md"):
+        assert "172.17.0.1" in read(doc), doc
+    assert "https_required` although the browser shows HTTPS" in read("docs/deployment.md")
+    run = read("deploy/docker-rootless-run.sh")
+    assert 'TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1,::1}"' in run
+    assert '--env "TRUSTED_PROXIES=${TRUSTED_PROXIES}"' in run
+    # re-running the script (e.g. to pin a verified digest) replaces the container instead of failing
+    head, tail = run.split("\ndocker run", 1)
+    assert "docker stop kidney-health" in head and "docker rm kidney-health" in head
+
+
+def test_compose_docs_require_podman_compose_1_5():
+    for doc in ("deploy/compose.yaml", "docs/deployment.md", "handbook/docs/self-hosting/podman-rootless.md"):
+        text = read(doc)
+        assert re.search(r"podman-compose (must be )?1\.5\.0 or later|podman-compose 1\.5\.0 or later", text), doc
+        assert "chcon -t container_file_t deploy/secrets/*" in text, doc
+
+
+def test_verify_image_requires_cosign_3():
+    verify = read("scripts/verify-image.sh")
+    assert "cosign >= 3.0" in verify and '-lt 3' in verify
+    assert "cosign 3.0 or later" in read("SECURITY.md") and "cosign 2.4 or later" not in read("SECURITY.md")
+
+
+def test_podman_debug_command_overrides_the_python_entrypoint():
+    guide = read("docs/deployment.md")
+    assert "--entrypoint sh --user 10001:0 --volumes-from kidney-health" in guide
+    assert "latest-dev sh`" not in guide
