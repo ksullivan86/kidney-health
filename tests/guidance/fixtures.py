@@ -12,6 +12,9 @@ The synthetic foods carry no calories, so the energy note stays empty (§4.10 no
 """
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from app.guidance.state import (
@@ -135,3 +138,57 @@ def context(
         saved_meals=tuple(saved if saved is not None else (SAVED_MEAL,)),
         combos=tuple(combos),
     )
+
+
+# --------------------------------------------------------------------------- #
+# The real builtin food list (data/foods.json), as the database would hold it on a fresh install
+# (ids in file order), for TV-S7, TV-S8, TV-P3, TV-P4 and the performance tests.
+# --------------------------------------------------------------------------- #
+
+ROOT = Path(__file__).resolve().parents[2]
+FOODS_JSON = ROOT / "data" / "foods.json"
+
+
+@lru_cache(maxsize=1)
+def real_food_items() -> tuple[dict[str, Any], ...]:
+    return tuple(json.loads(FOODS_JSON.read_text(encoding="utf-8"))["foods"])
+
+
+def real_foods(copies: int = 1) -> dict[int, FoodVec]:
+    """``copies`` > 1 adds perturbed copies (names suffixed, numbers ×(1 ± a few %)) for the 2,000-food
+    performance tests (§4.12: "5 perturbed copies of foods.json")."""
+    out: dict[int, FoodVec] = {}
+    items = real_food_items()
+    next_id = 1
+    for copy in range(copies):
+        for index, item in enumerate(items):
+            factor = 1.0 + (((index * 7 + copy * 13) % 11) - 5) / 100.0 if copy else 1.0
+            values = {k: (None if v is None else float(v) * factor) for k, v in item["nutrients"].items()}
+            name = item["name"] if copy == 0 else f"{item['name']} (copy {copy})"
+            out[next_id] = make_food(
+                id=next_id, name=name, category=item["category"], serving_desc=item["serving_desc"],
+                serving_g=item["serving_g"], nutrients=values, flags=item.get("flags") or (),
+                fdc_id=item["fdc_id"] if copy == 0 else None, kidney_notes=item.get("kidney_notes"),
+                role_override=item.get("role"),
+            )
+            next_id += 1
+    return out
+
+
+def by_name(food_map: Mapping[int, FoodVec], name: str) -> FoodVec:
+    for f in food_map.values():
+        if f.name == name:
+            return f
+    raise KeyError(name)
+
+
+# note 06 TV-S7/TV-P3: suggest_targets(70, "4") as it was when the note was written (protein 0.6–0.8 g/kg;
+# v0.3 decision 10 later raised the floor to 0.8 g/kg, which test_planner checks separately).
+STAGE4_TARGETS: dict[str, Any] = {
+    "calories_kcal": 2100, "protein_g": {"min": 42, "max": 56}, "carbs_g": 236, "carbs_per_meal_g": 60,
+    "sodium_mg": 2000, "potassium_mg": 3000, "phosphorus_mg": 1000, "calcium_mg": 1000, "fluid_ml": None,
+}
+HD_TARGETS: dict[str, Any] = {
+    "calories_kcal": 2100, "protein_g": {"min": 70, "max": 84}, "carbs_g": 236, "carbs_per_meal_g": 60,
+    "sodium_mg": 2000, "potassium_mg": 2500, "phosphorus_mg": 1000, "calcium_mg": 1000, "fluid_ml": 1500,
+}

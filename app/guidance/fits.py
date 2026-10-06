@@ -326,6 +326,7 @@ def usual_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[str, list[Mea
         items = resolve_items(ctx, key)
         if not items or any(f.hidden for f, _ in items):
             continue
+        items.sort(key=lambda it: (R.ROLES.index(it[0].role), it[0].name_fold, it[0].id))  # protein, starch, veg…
         names = short_names([f.name for f, _ in items])
         out.append((M.usual_meal_name(meal, names), items))
     return out

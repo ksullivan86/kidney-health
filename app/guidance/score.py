@@ -22,6 +22,11 @@ from .state import FoodVec, GuidanceContext
 
 MealItem = tuple[FoodVec, float]
 
+_NEG_CARBS = R.NEGLIGIBLE[R.CARBS]
+_K_HIGH, _P_HIGH, _NA_HIGH = R.RENAL_HIGH_CUT[R.K], R.RENAL_HIGH_CUT[R.P], R.RENAL_HIGH_CUT[R.NA]
+_P_GOOD, _P_POOR = R.P_PER_G_PROTEIN
+_K_GOOD, _K_POOR = R.K_PER_G_PROTEIN
+
 
 # --------------------------------------------------------------------------- #
 # Habit and variety (the static term)
@@ -135,13 +140,21 @@ class Scorer:
         n = room.nutrients
         self.tracked = tuple(k for k in R.ROOM_KEYS if k in n)
         self.lim = {k: (n[k].room + R.NEGLIGIBLE[k]) if k in n else INF for k in R.ROOM_KEYS}
+        self.lim_k, self.lim_p, self.lim_na, self.lim_fl = (self.lim[k] for k in (R.K, R.P, R.NA, R.FLUID))
+        # Usage-term denominators and weights; ``None`` / 0 for a nutrient without a numeric target.
         self.denom = {k: max(n[k].room, R.NEGLIGIBLE[k]) for k in n}
         self.weight = dict(room.usage_weight)
+        self.dk, self.dp, self.dna, self.dfl = (self.denom.get(k) for k in (R.K, R.P, R.NA, R.FLUID))
+        self.wk, self.wp, self.wna, self.wfl = (self.weight.get(k, 0.0) for k in (R.K, R.P, R.NA, R.FLUID))
         self.not_ok = {k: (k in n and n[k].level != "ok") for k in R.ROOM_KEYS}
+        self.k_not_ok, self.p_not_ok, self.na_not_ok = self.not_ok[R.K], self.not_ok[R.P], self.not_ok[R.NA]
         self.carb_on = room.carbs is not None
         self.gap = room.gap
         self.tol = room.tolerance
         self.has = room.meal_has
+        self.has_protein = bool(room.meal_has["protein"])
+        self.has_starch = bool(room.meal_has["starch"])
+        self.has_veg = bool(room.meal_has["veg_fruit"])
         self.aim = (max(room.protein.aim, R.PROTEIN_AIM_FLOOR_G) if room.protein is not None else None)
         self.meal_high_k = room.meal_high_k
         self.day_high_k = room.day_high_k
@@ -158,126 +171,140 @@ class Scorer:
         return self.habit.slot_days.get((f.id, self.meal), 0) >= R.SLOT_HABIT_MIN_DAYS
 
     def evaluate(self, f: FoodVec, q: float, explain: bool = False) -> Evaluation:
+        """Score ``f`` at ``q`` servings, or return the first hard filter it fails (§4.5).
+
+        Hard filters in order: ``would_exceed:<k>`` (over the room + negligible), ``unknown:<k>``
+        (unknown while the day's level is not ok), ``too_many_carbs``, ``high_warning:<k>`` (a "high"
+        portion of a nutrient that is not ok today). This is the hot path (§4.12): plain floats only.
+        """
         self.counter.foods += 1
-        ak = None if f.k is None else f.k * q
-        ap = None if f.p is None else f.p * q
-        ana = None if f.na is None else f.na * q
-        afl = None if f.fluid is None else f.fluid * q
-        lim = self.lim
+        fk, fp, fna, ffl = f.k, f.p, f.na, f.fluid
+        ak = None if fk is None else fk * q
+        ap = None if fp is None else fp * q
+        ana = None if fna is None else fna * q
+        afl = None if ffl is None else ffl * q
         # 1. would_exceed
-        if ak is not None and ak > lim[R.K]:
+        if ak is not None and ak > self.lim_k:
             return Evaluation(f, q, None, "would_exceed:potassium_mg")
-        if ap is not None and ap > lim[R.P]:
+        if ap is not None and ap > self.lim_p:
             return Evaluation(f, q, None, "would_exceed:phosphorus_mg")
-        if ana is not None and ana > lim[R.NA]:
+        if ana is not None and ana > self.lim_na:
             return Evaluation(f, q, None, "would_exceed:sodium_mg")
-        if afl is not None and afl > lim[R.FLUID]:
+        if afl is not None and afl > self.lim_fl:
             return Evaluation(f, q, None, "would_exceed:fluid_ml")
         # 2. unknown values: blocked while the day's level is not ok, else a penalty
-        unknown: list[str] = []
-        for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)):
-            if v is None:
-                if self.not_ok[key]:
-                    return Evaluation(f, q, None, f"unknown:{key}")
-                unknown.append(key)
+        unknown: tuple[str, ...] = ()
+        if ak is None or ap is None or ana is None:
+            missing = []
+            for key, v in ((R.K, ak), (R.P, ap), (R.NA, ana)):
+                if v is None:
+                    if self.not_ok[key]:
+                        return Evaluation(f, q, None, f"unknown:{key}")
+                    missing.append(key)
+            unknown = tuple(missing)
         # 3. carbohydrate
-        ac = None if f.carbs is None else f.carbs * q
+        fc = f.carbs
+        ac = None if fc is None else fc * q
+        gap = self.gap
         if self.carb_on:
             if ac is None:
                 return Evaluation(f, q, None, "unknown:carbs_g")
-            if ac > R.NEGLIGIBLE[R.CARBS] and ac > max(self.gap, 0.0) + self.tol:
+            if ac > _NEG_CARBS and ac > (gap if gap > 0.0 else 0.0) + self.tol:
                 return Evaluation(f, q, None, "too_many_carbs")
         # 4. a "high" portion of a nutrient that is not ok today
-        if self.not_ok[R.K] and R.is_high(R.K, ak):
+        if self.k_not_ok and ak is not None and ak >= _K_HIGH:
             return Evaluation(f, q, None, "high_warning:potassium_mg")
-        if self.not_ok[R.P] and (f.additive or R.is_high(R.P, ap)):
+        if self.p_not_ok and (f.additive or (ap is not None and ap >= _P_HIGH)):
             return Evaluation(f, q, None, "high_warning:phosphorus_mg")
-        if self.not_ok[R.NA] and R.is_high(R.NA, ana):
+        if self.na_not_ok and ana is not None and ana >= _NA_HIGH:
             return Evaluation(f, q, None, "high_warning:sodium_mg")
 
-        comp: dict[str, float] | None = {} if explain else None
         role = f.role
-        apr = None if f.protein is None else f.protein * q
+        fpr = f.protein
+        apr = None if fpr is None else fpr * q
+        protein_role = role in R.PROTEIN_ROLES
         # base
-        if role in R.PROTEIN_ROLES and apr is not None and apr >= R.PROTEIN_ROLE_MIN_G:
+        if protein_role and apr is not None and apr >= R.PROTEIN_ROLE_MIN_G:
             base = 1.0
             if ap is not None:
                 ratio = ap / apr
-                if ratio <= R.P_PER_G_PROTEIN[0]:
+                if ratio <= _P_GOOD:
                     base += 1.0
-                elif ratio >= R.P_PER_G_PROTEIN[1]:
+                elif ratio >= _P_POOR:
                     base -= 1.5
             if ak is not None:
                 ratio = ak / apr
-                if ratio <= R.K_PER_G_PROTEIN[0]:
+                if ratio <= _K_GOOD:
                     base += 0.5
-                elif ratio >= R.K_PER_G_PROTEIN[1]:
+                elif ratio >= _K_POOR:
                     base -= 1.0
-            if R.is_high(R.NA, ana):
+            if ana is not None and ana >= _NA_HIGH:
                 base -= 3.0
             if f.additive:
                 base -= 3.0
         else:
             level = R.renal_level(ak, ap, ana, f.additive)
             base = 3.0 if level == "green" else 1.0 if level == "yellow" else -3.0
-        s = base
         static = self.static(f)
-        s += static
-        s -= R.UNKNOWN_PENALTY * len(unknown)
+        unknown_pen = R.UNKNOWN_PENALTY * len(unknown)
         portion = 0.5 * abs(q - 1.0)
-        s -= portion
         usage = 0.0
-        for key, a in ((R.K, ak), (R.P, ap), (R.NA, ana), (R.FLUID, afl)):
-            if a is not None and key in self.denom:
-                x = a / self.denom[key]
-                usage += self.weight[key] * x * x
-        s -= usage
+        if ak is not None and self.dk is not None:
+            x = ak / self.dk
+            usage += self.wk * x * x
+        if ap is not None and self.dp is not None:
+            x = ap / self.dp
+            usage += self.wp * x * x
+        if ana is not None and self.dna is not None:
+            x = ana / self.dna
+            usage += self.wna * x * x
+        if afl is not None and self.dfl is not None:
+            x = afl / self.dfl
+            usage += self.wfl * x * x
         carbs_term = free = gi = 0.0
         if self.carb_on and ac is not None:
-            if self.gap > self.tol and role in R.CARB_FILL_ROLES:
-                carbs_term = 2.0 * min(ac, self.gap) / self.gap
-            if self.gap <= self.tol and ac <= R.FREE_FOOD_CARBS_G:
+            if gap > self.tol and role in R.CARB_FILL_ROLES:
+                carbs_term = 2.0 * (ac if ac < gap else gap) / gap
+            if gap <= self.tol and ac <= R.FREE_FOOD_CARBS_G:
                 free = 1.0
         if f.high_gi and ac is not None and ac >= R.HIGH_GI_PENALTY_MIN_CARBS_G:
             gi = -1.0
-        s += carbs_term + free + gi
-        missing = 0.0
-        if role in R.PROTEIN_ROLES and not self.has["protein"]:
-            missing += 1.5
-        if role in R.STARCH_ROLES and not self.has["starch"] and (not self.carb_on or self.gap > 15.0):
-            missing += 1.5
-        if role == "veg_fruit" and not self.has["veg_fruit"]:
-            missing += 1.0
-        s += missing
+        missing_group = 0.0
+        if protein_role and not self.has_protein:
+            missing_group += 1.5
+        if role in R.STARCH_ROLES and not self.has_starch and (not self.carb_on or gap > 15.0):
+            missing_group += 1.5
+        if role == "veg_fruit" and not self.has_veg:
+            missing_group += 1.0
         protein_term = 0.0
-        if role in R.PROTEIN_ROLES and self.aim is not None and apr is not None:
+        if protein_role and self.aim is not None and apr is not None:
             a_ = self.aim
-            protein_term = 1.5 * min(apr, a_) / a_
+            protein_term = 1.5 * (apr if apr < a_ else a_) / a_
             if apr > a_:
                 d = (apr - a_) / a_
                 protein_term -= min(2.0, d * d)
-        s += protein_term
         habit = R.SLOT_HABIT_BONUS if self.slot_habit(f) else 0.0
-        s += habit
         high_k = 0.0
         if ak is not None and ak > R.HIGH_K_ENTRY_MG:
             if self.meal_high_k > 0:
                 high_k -= 2.0
             if self.day_high_k >= 2:
                 high_k -= 1.0
-        s += high_k
-        if comp is not None:
-            comp.update({
-                "base": base, "static": static, "unknown": -R.UNKNOWN_PENALTY * len(unknown), "portion": -portion,
-                "usage": -usage, "carbs": carbs_term, "free_food": free, "high_gi": gi, "missing_group": missing,
+        s = (base + static - unknown_pen - portion - usage + carbs_term + free + gi + missing_group + protein_term
+             + habit + high_k)
+        comp = None
+        if explain:
+            comp = {k: R.round_to(v, 4) for k, v in {
+                "base": base, "static": static, "unknown": -unknown_pen, "portion": -portion, "usage": -usage,
+                "carbs": carbs_term, "free_food": free, "high_gi": gi, "missing_group": missing_group,
                 "protein": protein_term, "slot_habit": habit, "high_potassium": high_k,
-            })
-            comp = {k: R.round_to(v, 4) for k, v in comp.items()}
-        return Evaluation(f, q, R.round_score(s), None, tuple(unknown), comp)
+            }.items()}
+        return Evaluation(f, q, R.round_score(s), None, unknown, comp)
 
     def best_portion(self, f: FoodVec, portions: Sequence[float], explain: bool = False) -> tuple[Evaluation | None, Evaluation]:
         """``(best scored evaluation or None, the evaluation at one serving)``; ties → lower K, P, Na."""
         best: Evaluation | None = None
+        best_key: tuple[float, float, float, float] | None = None
         standard: Evaluation | None = None
         for q in portions:
             ev = self.evaluate(f, q, explain)
@@ -285,8 +312,9 @@ class Scorer:
                 standard = ev
             if ev.score is None:
                 continue
-            if best is None or _portion_key(ev) < _portion_key(best):
-                best = ev
+            key = _portion_key(ev)
+            if best_key is None or key < best_key:
+                best, best_key = ev, key
         if standard is None:
             standard = self.evaluate(f, 1.0, explain)
         return best, standard

@@ -265,35 +265,36 @@ def portions_for(role: str) -> tuple[float, ...]:
     return PORTIONS_MAIN if role in MAIN_PORTION_ROLES else PORTIONS_SIDE
 
 
+# js_round(v) > H  ⇔  v ≥ H + 0.5 and js_round(v) ≥ M  ⇔  v ≥ M − 0.5 for integer thresholds (the
+# fractional part of a double near H is exact), so the hot path compares against these cuts.
+RENAL_HIGH_CUT: dict[str, float] = {k: v + 0.5 for k, v in RENAL_HIGH.items()}
+RENAL_MEDIUM_CUT: dict[str, float] = {k: v - 0.5 for k, v in RENAL_MEDIUM.items()}
+_K_HIGH, _P_HIGH, _NA_HIGH = RENAL_HIGH_CUT[K], RENAL_HIGH_CUT[P], RENAL_HIGH_CUT[NA]
+_K_MED, _P_MED, _NA_MED = RENAL_MEDIUM_CUT[K], RENAL_MEDIUM_CUT[P], RENAL_MEDIUM_CUT[NA]
+
+
 def renal_level(k: float | None, p: float | None, na: float | None, additive: bool) -> str:
     """``green`` / ``yellow`` / ``red`` from potassium, phosphorus and sodium of one portion (§4.3).
 
-    The guidance version of :func:`app.nutrients.kidney_rating`: amounts are rounded to whole
-    milligrams first (like the warnings, judged on the displayed value); any above "high" or a
-    phosphate additive → red; any at "medium" → yellow. Carbohydrate and protein warnings are left
-    out on purpose (F10: carbohydrate is handled by the meal goal). ``avoid_ckd`` foods never get
-    here (they are not eligible). Must equal the rating of ``food_warnings()`` restricted to
-    potassium, phosphorus, sodium and the additive flag (property test).
+    The guidance version of :func:`app.nutrients.kidney_rating`: amounts are judged rounded to whole
+    milligrams (like the warnings, on the displayed value); any above "high" or a phosphate additive
+    → red; any at "medium" → yellow. Carbohydrate and protein warnings are left out on purpose (F10:
+    carbohydrate is handled by the meal goal). ``avoid_ckd`` foods never get here (not eligible).
+    Equals the rating of ``food_warnings()`` restricted to potassium, phosphorus, sodium and the
+    additive flag (property test over every builtin food × portions ¼…3).
     """
-    level = "red" if additive else "green"
-    if level == "red":
-        return level
-    for key, value in ((K, k), (P, p), (NA, na)):
-        if value is None:
-            continue
-        shown = js_round(value) if value >= 0 else -js_round(-value)
-        if shown > RENAL_HIGH[key]:
-            return "red"
-        if shown >= RENAL_MEDIUM[key]:
-            level = "yellow"
-    return level
+    if additive:
+        return "red"
+    if (k is not None and k >= _K_HIGH) or (p is not None and p >= _P_HIGH) or (na is not None and na >= _NA_HIGH):
+        return "red"
+    if (k is not None and k >= _K_MED) or (p is not None and p >= _P_MED) or (na is not None and na >= _NA_MED):
+        return "yellow"
+    return "green"
 
 
 def is_high(key: str, value: float | None) -> bool:
     """The portion is above the per-serving "high" threshold for ``key`` (rounded like the warnings)."""
-    if value is None:
-        return False
-    return js_round(value) > RENAL_HIGH[key]
+    return value is not None and value >= RENAL_HIGH_CUT[key]
 
 
 def text_has_any(text: str, stems: Iterable[str]) -> bool:
