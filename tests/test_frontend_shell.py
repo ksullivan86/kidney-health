@@ -186,4 +186,5 @@ def test_icon_sources_and_build_script_agree() -> None:
         svg = (STATIC / "icons" / src).read_text(encoding="utf-8")
         assert svg.startswith("<svg") and "#2e7d32" in svg
     assert "playwright==" in (ROOT / "requirements-tools.txt").read_text(encoding="utf-8")
-    assert "playwright" not in (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").lower()
+    for dev in ("requirements-dev.in", "requirements-dev.lock"):
+        assert "playwright" not in (ROOT / dev).read_text(encoding="utf-8").lower()

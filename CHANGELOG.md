@@ -5,6 +5,20 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### For contributors
+
+* `requirements.txt` and `requirements-dev.txt`, kept through 0.3.0 so older instructions still worked,
+  are gone. Install from the hash-locked files instead:
+  `pip install --require-hashes --no-deps -r requirements-dev.lock` (or `requirements.lock` for the app
+  alone).
+* The constraints between lock files (dev on the runtime pins, the Zensical canary on the handbook
+  build, Playwright on dev) moved from `-c ….lock` lines in the `*.in` files to the pip-compile command
+  line in `scripts/lock.sh`; the locks themselves are unchanged. GitHub's Dependabot dependency graph
+  reads every `requirements*.txt` and `*.in` file and failed on lines naming a `*.lock` file, which it
+  never fetches. A test now keeps those files free of such lines.
+
 ## 0.3.0 — 2026-10-07
 
 Version 0.3 turns the single-person food log into a household app that is safe to run on a home

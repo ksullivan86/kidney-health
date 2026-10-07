@@ -70,7 +70,7 @@ docs/README.md, docs/maintainers.md, docs/ROADMAP.md   index of every doc; relea
 tools/e2e/                  harnesses run by hand: parity.py, sandbox.py, regress.py, device.py, journey.py (whole v0.3 story
                             on a real server), upgrade.py (v0.2 and v3 databases), learn.py, guidance_perf.py
                             (+ khserver.py, replay_app.py = the app with USDA answered from tests/fixtures/usda, README.md)
-pyproject.toml, requirements.txt, requirements-dev.txt, .gitignore
+pyproject.toml, requirements{,-dev}.in + .lock (hash-locked by scripts/lock.sh), .gitignore
 ```
 
 Owners (parallel build): **food-db** owns `scripts/`, `data/`; **backend** owns

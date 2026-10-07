@@ -51,8 +51,29 @@ def test_runtime_lock_contents():
     assert all(dev[name] == version for name, version in pins.items()), "dev lock must use the runtime pins"
 
 
-def test_requirements_in_has_no_uvicorn_extras_and_txt_points_at_the_lock():
+def test_requirements_in_has_no_uvicorn_extras():
     text = (REPO / "requirements.in").read_text(encoding="utf-8")
     assert re.search(r"^uvicorn(?!\[)", text, re.M) and "uvicorn[" not in text
-    assert "-r requirements.lock" in (REPO / "requirements.txt").read_text(encoding="utf-8")
-    assert "-r requirements-dev.lock" in (REPO / "requirements-dev.txt").read_text(encoding="utf-8")
+
+
+def test_no_requirement_file_points_at_a_lock_file():
+    """Dependabot's dependency graph reads every requirements*.txt and *.in file and follows -r/-c only
+    to .txt and .in files; a line naming a *.lock file makes its pip graph job fail. Constraints
+    between locks are passed to pip-compile by scripts/lock.sh instead."""
+    include = re.compile(r"^\s*(?:-r|-c|--requirement|--constraint)[\s=]+(\S+)", re.M)
+    files = [
+        path
+        for path in REPO.rglob("*")
+        if path.is_file()
+        and not any(part.startswith(".") and part != ".github" or part in {"node_modules", "venv"} for part in path.relative_to(REPO).parts[:-1])
+        and (path.suffix == ".in" or (path.suffix == ".txt" and "requirement" in path.name))
+    ]
+    assert any(path.name == "requirements-dev.in" for path in files)
+    offenders = [
+        f"{path.relative_to(REPO)}: {target}"
+        for path in files
+        for target in include.findall(path.read_text(encoding="utf-8"))
+        if not target.endswith((".txt", ".in"))
+    ]
+    assert offenders == []
+    assert not (REPO / "requirements.txt").exists() and not (REPO / "requirements-dev.txt").exists()

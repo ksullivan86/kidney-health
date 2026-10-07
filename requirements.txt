@@ -1,3 +1,0 @@
-# Kept for one release so older instructions keep working (note 01 §7). The real list is the
-# hash-locked requirements.lock (generated from requirements.in by scripts/lock.sh).
--r requirements.lock
