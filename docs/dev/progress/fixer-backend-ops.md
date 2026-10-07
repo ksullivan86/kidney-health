@@ -23,7 +23,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C11 | curated foods: raw eggs suggested | done |
 | C12 | X-KDL-Version header + shell/API check | done |
 | L1 | AI retention purge only with AI traffic | done (daily housekeeping task; test with AI off + fake clock) |
-| L2 | IDN AI base URL refused | todo |
+| L2 | IDN AI base URL refused | done (AI PinnedTransport + egress CheckedTransport use raw_host) |
 | L3 | K-2 'relaxed one step' when ladder == relaxed; N-1 age-70 cut-off | done |
 | L4 | check_meal lets AI ideas create a new day 'over' | todo |
 | L5 | G7 hypo pre-filter phrasings | todo |

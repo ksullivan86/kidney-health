@@ -55,6 +55,17 @@ def test_connects_to_the_checked_address_with_the_original_host_and_sni() -> Non
     assert sent.extensions["sni_hostname"] == "world.openfoodfacts.org"
 
 
+def test_an_internationalised_host_is_resolved_and_pinned_by_its_ascii_form() -> None:
+    asked: list[str] = []
+    capture = Capture()
+    t = CheckedTransport(resolver=lambda host, port: asked.append(host) or ["93.184.215.14"], direct=capture, use_env_proxy=False)
+    with httpx2.Client(transport=t) as client:
+        assert client.get("https://bücher.example/api").status_code == 200
+    assert asked == ["xn--bcher-kva.example"]
+    sent = capture.requests[0]
+    assert sent.headers["Host"] == "xn--bcher-kva.example" and sent.extensions["sni_hostname"] == "xn--bcher-kva.example"
+
+
 @pytest.mark.parametrize("addresses", [["10.0.0.5"], ["127.0.0.1"], ["169.254.169.254"], ["8.8.8.8", "192.168.0.1"], ["8.8.8.8", "::ffff:169.254.169.254"]])
 def test_every_resolved_address_must_be_allowed(addresses: list[str]) -> None:
     t, capture = transport(addresses)

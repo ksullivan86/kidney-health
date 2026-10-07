@@ -271,6 +271,35 @@ def test_requests_are_pinned_to_the_checked_address_with_host_and_sni():
     assert json.loads(request.content) == {"x": 1}
 
 
+def test_an_internationalised_base_url_is_pinned_by_its_ascii_form():
+    """Review L2: httpx2's ``url.host`` is the Unicode form, so every request to an IDN base URL was refused
+    as "outside the provider's base URL". The origin check, DNS and SNI now use the punycode."""
+    rec = Recorder()
+    asked: list[str] = []
+
+    def resolver(h, p):  # noqa: ANN001, ANN202
+        asked.append(h)
+        return ["93.184.215.14"]
+
+    result = _send("https://bücher.example/v1", recorder=rec, resolver=resolver)
+    assert result.data == {"ok": True} and asked == ["xn--bcher-kva.example"]
+    request = rec.requests[0]
+    assert request.url.host == "93.184.215.14"
+    assert request.headers["Host"] == "xn--bcher-kva.example"
+    assert request.extensions["sni_hostname"] == "xn--bcher-kva.example"
+    # Another IDN host is still outside the base URL.
+    base = N.parse_base_url("https://bücher.example/v1")
+    transport = PinnedTransport(base, "shared", POLICY, resolver=lambda h, p: ["93.184.215.14"], inner=Recorder().transport())
+
+    async def other():
+        async with httpx2.AsyncClient(transport=transport) as client:
+            await client.get("https://bücherei.example/v1/models")
+
+    with pytest.raises(AiTransportError) as info:
+        anyio.run(other)
+    assert info.value.category == "blocked_address"
+
+
 def test_dns_rebinding_each_request_is_checked_again():
     answers = iter([["93.184.215.14"], ["169.254.169.254"]])
     resolver = lambda h, p: next(answers)  # noqa: E731

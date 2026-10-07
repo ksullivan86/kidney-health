@@ -200,7 +200,7 @@ class CheckedTransport(httpx2.BaseTransport):
             proxy = env_proxy_for(url)
             if proxy:
                 return self._proxy_transport(proxy).handle_request(request)
-        host = url.host
+        host = url.raw_host.decode("ascii").lower()  # the IDNA form DNS and SNI use (``url.host`` is Unicode)
         port = url.port or DEFAULT_PORTS[url.scheme]
         address = self.checked_addresses(host, port)[0]
         if str(address) != host:

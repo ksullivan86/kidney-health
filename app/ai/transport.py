@@ -145,7 +145,10 @@ class PinnedTransport(httpx2.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         url = request.url
         port = url.port or (443 if url.scheme == "https" else 80)
-        if (url.scheme, url.host.lower(), port) != (self.base.scheme, self.base.host, self.base.port):
+        # The ASCII (IDNA) form: ``url.host`` is decoded Unicode ("bücher.example"), while the base URL keeps
+        # the punycode ("xn--bcher-kva.example") that DNS, the Host header and SNI use.
+        host = url.raw_host.decode("ascii").lower()
+        if (url.scheme, host, port) != (self.base.scheme, self.base.host, self.base.port):
             raise AiTransportError("blocked_address", "request outside the provider's base URL")
         try:
             check_host_name(self.base)
@@ -153,7 +156,7 @@ class PinnedTransport(httpx2.AsyncBaseTransport):
         except PolicyError as exc:
             raise AiTransportError(exc.category, str(exc)) from None
         try:
-            raw = await self._addresses(url.host, port)
+            raw = await self._addresses(host, port)
         except AiTransportError:
             # Behind AI_HTTP_PROXY the container may have no DNS for public names: the proxy resolves them.
             if self.policy.proxy and self.scope == "shared":
@@ -168,10 +171,10 @@ class PinnedTransport(httpx2.AsyncBaseTransport):
         if self.policy.proxy and public:
             return await self._proxy().handle_async_request(request)
         address = addresses[0]
-        if str(address) != url.host:
+        if str(address) != host:
             request.url = url.copy_with(host=str(address))
             if url.scheme == "https":
-                request.extensions = {**request.extensions, "sni_hostname": url.host}
+                request.extensions = {**request.extensions, "sni_hostname": host}
         return await self._direct().handle_async_request(request)
 
     async def aclose(self) -> None:
