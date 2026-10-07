@@ -173,8 +173,11 @@ delivery, which is why it is a personal setting "from my diabetes team"), lowest
 phosphorus and fluid, **never filtered by any budget**, with the rule-based card of the diet guide §4 and
 the handbook page `t1d/treating-a-low`. The same card is what `app/ai/` must show **instead of calling
 an AI** when free text may describe a low (`app.guidance.hypo.prefilter`: "low", "hypo", "shaky",
-"sweaty", "glucose < 70", a reading under 70 mg/dL or 3.9 mmol/L, …; "low-fat", "low sodium" and similar
-food words are not read as a low). The classifier errs toward showing the card.
+"sweaty", "dropped", "crashed", "fell", "need sugar", "glucose < 70", a reading under 70 mg/dL or
+3.9 mmol/L after a glucose word and its verb ("cgm says 3,4", "reading shows 61"), a bare "I'm at 58" or
+"at 3.2", "61 mg/dL", "58 mg", "3.4 mmol", …; "low-fat", "low sodium" and similar food words are not
+read as a low, nor are amounts, times and nutrients such as "sugar 2 tsp", "lunch at 12:30" or
+"60 mg sodium"). The classifier errs toward showing the card.
 
 ## Plan the rest of my day
 

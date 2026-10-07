@@ -26,7 +26,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L2 | IDN AI base URL refused | done (AI PinnedTransport + egress CheckedTransport use raw_host) |
 | L3 | K-2 'relaxed one step' when ladder == relaxed; N-1 age-70 cut-off | done |
 | L4 | check_meal lets AI ideas create a new day 'over' | done |
-| L5 | G7 hypo pre-filter phrasings | todo |
+| L5 | G7 hypo pre-filter phrasings | done |
 | L6 | OFF per-serving label without quantity stored as per 100 g | done |
 | L7 | additives: 'phosphorus' word flagged as additive | done |
 | L8 | label photo serving_desc/serving_g not marked from photo | todo |
@@ -106,6 +106,17 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   New vector "saved meal near the potassium limit" (before: scale 1.0, 55 mg with 30 mg left; now ½);
   `tests/guidance/test_ai_bridge.py::test_an_idea_never_creates_a_new_day_over_even_within_the_negligible_amount`;
   docs/guidance.md planner paragraph. Checks: tests/guidance + AI suites green, node vectors 55 guidance checks.
+
+* **L5** `app/guidance/hypo.py` + twin `js/engine/guidance/hypo.js`: past tenses and CGM wording in `_TERMS`
+  (dropped, crashed, tanked, plummet…, "<glucose word> fell/fallen/falling", "need (some/fast) sugar/glucose/carbs"
+  but not "sugar-free"); up to three linking verbs after a glucose word (says, reads, shows, is now, was at …);
+  bare "I'm at 58" / "at 3.2" / "down to 61" / "only 48" (30–69 or a decimal ≤ 3.9; whole numbers < 30 read as
+  times); numbers with a unit ("3.4 mmol", "61 mg/dL", whole 30–69 "mg" unless a nutrient is named next to it).
+  New shared `_NOT_A_READING` lookahead: kitchen/energy/time units after the number ("sugar 2 tsp", "rice at
+  50 g", "at 1.5 cups", "7pm") are amounts, not readings (this also removes an old false alarm, "sugar 1 tsp").
+  Tests: tests/guidance/test_hypo.py (+23 low phrasings, +22 non-low); 11 new prefilter vectors (incl. Arabic-Indic
+  digits). Parity fuzz (scratch `hypo_parity.mjs` + `hypo_texts.json`): 20,062 generated texts, 0 Python/JS
+  differences. Docs: docs/guidance.md, docs/ai.md G7 row.
 
 ## Handoffs (to fixer-frontend-docs)
 

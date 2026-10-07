@@ -381,7 +381,9 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
                                                                                          "2026-09-23")]}),
     ]
     for i, text in enumerate(("I'm low", "feeling shaky and sweaty", "glucose 3.4", "bg 62", "low-fat milk and toast",
-                              "2 eggs, toast with butter, tea", "")):
+                              "2 eggs, toast with butter, tea", "", "sugar dropped", "cgm says 3,4", "need sugar fast",
+                              "I'm at 58, what should I eat", "61 mg/dL", "soup with 60 mg sodium", "sodium 60 mg",
+                              "tea with sugar 2 tsp", "lunch at 12:30", "at 1.5 cups", "only ٤٨")):
         out.append((f"prefilter {i + 1}", base_input(), {"fn": "prefilter", "text": text}))
     return out
 

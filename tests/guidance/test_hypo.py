@@ -16,6 +16,11 @@ from app.guidance.budget import meal_room
     "sugar 2,9", "reading below 70", "glucose < 70", "CGM says dropping", "how do I treat a low?", "Hypoglycaemia",
     "LOW", "i am low", "BG: 54", "sugar is dropping", "I’m low",  # typographic apostrophe
     "jitter​s and sweating",  # a zero-width space is removed before matching
+    # Review L5: past tenses, CGM wording, bare numbers and numbers with a glucose unit.
+    "sugar dropped", "bg crashed", "it tanked after lunch", "plummeting", "my glucose fell", "levels falling",
+    "cgm says 3,4", "reading shows 61", "cgm is at 58", "sugar is now 3.1", "my sugar was at 59 before lunch",
+    "Dexcom shows 3.6 mmol/L", "need sugar fast", "need some glucose", "need fast carbs", "I'm at 58, what should I eat",
+    "down to 62", "only 48", "at 3.2", "61 mg/dL", "58 mg", "3.4 mmol", "bg 25 mg/dl",
 ])
 def test_text_that_may_describe_a_low_shows_the_card_and_no_ai(text):
     result = hypo.prefilter(text)
@@ -28,6 +33,11 @@ def test_text_that_may_describe_a_low_shows_the_card_and_no_ai(text):
 @pytest.mark.parametrize("text", [
     "2 eggs, toast with butter, tea", "low-fat milk", "low sodium soup", "a low carb wrap", "low-potassium bread",
     "chicken and rice", "bg 120", "glucose 7.2", "sugar 5", "", None, "lowest price bread", "slow cooker stew",
+    # amounts, times and nutrients are not readings (review L5 widened the reading patterns)
+    "lunch at 12:30", "had dinner at 6", "dinner at 7pm", "toast at 8 am", "tea at 3.30", "rice at 50 g",
+    "at 1.5 cups", "pasta at 2.5 servings", "at 45 minutes", "at 65,000 feet", "tea with sugar 2 tsp", "sugar 1 tsp",
+    "coffee with 2 sugars", "soup with 60 mg sodium", "60 mg of potassium", "sodium 60 mg", "iron 15 mg",
+    "250 mg calcium", "1,500 kcal", "sugar-free jelly", "need sugar-free syrup", "low carb fast food burger",
 ])
 def test_ordinary_meal_text_is_left_to_the_ai(text):
     assert hypo.prefilter(text) is None

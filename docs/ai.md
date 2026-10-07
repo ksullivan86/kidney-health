@@ -55,7 +55,7 @@ covered by the offline golden set (`tests/ai_golden/`, 66 cases).
 | G4 | **Never overrides a warning**: an idea that creates a new "over" is dropped; "high" foods only for nutrients that are OK today, at most one serving | The guidance engine's `check_meal` on every idea |
 | G5 | **Grounded**: food ids only from the candidate list (an `enum` in the schema), every number recomputed | `validate_ai_items` |
 | G6 | **No AI nutrient estimates**: labels are copied (you confirm), plate photos give names and a rough weight only | The plate answer has no nutrient field; numbers come from the matched food |
-| G7 | **Lows never go to AI**: low treatments are never candidates; text that may describe a low ("low", "hypo", "shaky", "sweaty", "glucose < 70" …) gets the rule-based "Treating a low" card **instead of** an AI call | `app.guidance.hypo.prefilter` |
+| G7 | **Lows never go to AI**: low treatments are never candidates; text that may describe a low ("low", "hypo", "shaky", "sweaty", "sugar dropped", "cgm says 3,4", "I'm at 58", "glucose < 70" …) gets the rule-based "Treating a low" card **instead of** an AI call | `app.guidance.hypo.prefilter` |
 | G8 | **Red-flag symptoms never go to AI**: "chest pain", "can't breathe", "confused", "faint", "seizure", "unconscious" … get a "Get help now" card (emergency numbers, treat a low first) | `features.prefilter` |
 | G9 | At most 2 handbook pages per idea, from a fixed list | Schema `enum` + the guard |
 | G10, A2 | **No free text from the model reaches you**: themes and reason codes from fixed lists, sentences written by the app's maintainers; a reason that is not true of the recomputed numbers is removed and counted | `guard.check_claims`, `guard.REASON_TEXT` |
