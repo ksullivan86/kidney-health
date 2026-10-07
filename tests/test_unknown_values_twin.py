@@ -35,7 +35,7 @@ SPREAD = {**FULL, "calories_kcal": 80, "protein_g": 0.9, "carbs_g": 8.6, "sodium
 QUICK = {key: None for key in NUTRIENT_KEYS} | {"carbs_g": 15, "sodium_mg": 120, "fluid_ml": 0}
 
 PROFILE = {"targets": {"potassium_mg": 3500, "phosphorus_mg": 1000, "sodium_mg": 2000, "protein_g": {"min": 50, "max": 60},
-                       "fiber_g": {"min": 25}, "carbs_per_meal_g": 60, "fluid_ml": 1500},
+                       "fiber_g": {"min": 25}, "carbs_per_meal_g": 60, "carbs_per_snack_g": 15, "fluid_ml": 1500},
            "warn_fraction": 0.8, "dialysis": "hemodialysis", "dialysis_days": [0, 2, 4]}
 
 # (date, meal, status, nutrients): a week with unknown values eaten, planned and on days of the previous period.
@@ -111,6 +111,8 @@ def test_the_spread_day_says_what_it_misses() -> None:
     assert js["meal_unknown"]["breakfast"] == {}
     assert js["status"]["potassium_mg"]["unknown"] == 2 and js["status"]["sodium_mg"]["unknown"] == 0
     assert js["totals"]["potassium_mg"] == 500  # only breakfast's: the spreads add nothing, and say so
+    # the snack's own carbohydrate goal (carbs_per_snack_g 15; two spreads are 17.2 g), twin of nutrients.meal_carb_alerts
+    assert [a["message"] for a in js["alerts"] if a["meal"] == "snack"] == ["Snack carbohydrate is over the snack goal: 17.2 / 15 g"]
 
 
 def test_period_summary_and_range_match_the_server() -> None:

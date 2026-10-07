@@ -65,6 +65,10 @@ pages, and tick it here.
 - [ ] The potassium-additive warning is "medium", not "high", when potassium is not listed
       (ARCHITECTURE v0.3 item 9; A5)
 - [ ] Per-meal caps (30 % per main meal, 15 % per snack) and the ±10 g carbohydrate tolerance (A4)
+- [ ] An "about" target (minimum = maximum, such as protein 56 g at 0.8 g/kg with diabetes): how far
+      above it still counts as on target? No cited guideline gives a tolerance, so the app keeps "over"
+      above the number (the plan builder's ½-serving protein top-up can end at 101 %) and words it
+      "Above target", never "Over limit" (v0.3.0 review L8; a tolerance needs a source before it ships)
 - [ ] Low potassium on PD wording (St8)
 - [ ] Counting frozen desserts, gelatin and ice as fluid: by volume, by water content (as the app
       does) or the unit's rule (E1); the food data changes if volume is chosen

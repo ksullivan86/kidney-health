@@ -80,7 +80,7 @@ Take the numbers to your next visit and ask your team to change them.
 | Phosphorus | 1,000 mg | |
 | Sodium | 2,000 mg | the same at every stage ([KDIGO 2024][K24], Rec 3.3.2.1) |
 | Calories | 2,100 kcal (30 per kg) | KDOQI's range is 25–35 kcal/kg ([KDOQI 2020][Q20], 3.1.1) |
-| Carbohydrate | 236 g a day, 60 g per meal | the app's default: 45 % of calories, split over four meal slots. There is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13) |
+| Carbohydrate | 236 g a day, 60 g per meal | the app's default: 45 % of calories, split over four meal slots. There is no ideal share for everyone, so your diabetes team sets yours ([ADA 2026][A26-5], Rec 5.13). **Carbohydrate per snack** is empty until you type your team's number |
 | Fiber | at least 29 g a day | 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24); a goal to reach, never "over" |
 | Fluid | not tracked | fluid limits start on dialysis |
 

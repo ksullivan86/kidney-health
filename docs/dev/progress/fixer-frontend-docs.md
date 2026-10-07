@@ -31,10 +31,10 @@ LOW (apply or justify):
 | L5 | Settings → AI ideas stale after admin switch | done |
 | L6 | ai.* switches under "Other" | done |
 | L7 | Trends ignores goal / about targets | done (with C1, d458205) |
-| L8 | "about X" protein treated as hard max in plan | pending |
+| L8 | "about X" protein treated as hard max in plan | partly done: wording; tolerance = clinical decision (REVIEW.md) |
 | L9 | GET /api/foods/builtin ETag deferred without spec | pending |
 | L10 | guidance AI buttons: no What will be sent? / dropped | done |
-| L11 | carbs_per_snack_g has no UI | pending |
+| L11 | carbs_per_snack_g has no UI | done |
 | L12 | iOS install tip after third visit | pending |
 | L13 | demo runs with lab rules on (note 05 C10) | done |
 | L14 | disabled Units placeholder promising a later version | done |
@@ -42,6 +42,28 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L11** (snack carbohydrate goal): Profile field `tg-carbs_per_snack_g` (data-target, hint) next to the per-meal
+  one; a suggestion fills only the targets it gives (`fillTargets(…, { onlyGiven: true })`), so it never blanks
+  the snack goal; Today's snack line and the entry sheet's impact use it; the server's meal carbohydrate alerts
+  use it for the snack ("over the snack goal": app/nutrients.py `_carb_goals`, app/log.py; twin rules.js
+  `mealCarbAlerts(…, snackTarget)`, mock/log.js). The plan sheet already showed it in the C5 targets line and the
+  room text. Tests: test_nutrients.py (snack goal alone, with per-meal, projected), test_unknown_values_twin.py
+  (PROFILE carries carbs_per_snack_g 15: the snack alert compared Python vs JS), test_targets_ui.py (static);
+  parity.py section 9 "snack carb goal" variant; journey.py: saved, survives a suggestion, Today "of 20 g"
+  (133/133). Docs: handbook app/guidance.md (+DG7), first-setup.md, docs/guidance.md, ARCHITECTURE Today.
+  Parity full run also caught two of my own regressions, fixed: section 3 compared suggestions while the demo
+  ships lab rules off (L13) → `lab_rules_at_default` runs before section 3; the demo's plan-day status model
+  lacked `unknown` (C1) → mock/guidance.js `statusModel`. Full parity 6527/6527.
+
+* **L8** (about-protein "Over limit"): reproduced on the server engine: `suggest_targets(70, "4")` → protein
+  56–56, plan-day ends at 56.7 g via the ½-serving protein top-up with a new "101 % of today's maximum" alert.
+  With min = max and ½-serving steps the planner cannot land exactly, so the only real fix is a tolerance for
+  "about" targets, which is a clinical number no cited guideline gives (CLAUDE.md: every number cited). Done:
+  "about" targets never read "limit": `KH.ui.ABOUT_LEVEL_TEXT` ("Near target" / "Above target") on Today's
+  bar, the plan sheet's "The day with this plan" and the Plan week chips; level and colour stay the server's.
+  Recorded as an open clinical decision in handbook/REVIEW.md ("Food targets"); handbook targets-and-warnings
+  says it. Test: test_targets_ui.py `test_an_about_target_is_never_called_a_limit`.
 
 * **L10** (guidance AI buttons): guidance.js `aiSentButton(body)` (dry run → `KH.ai.showSent`) beside "AI order"
   and "Ask AI to pick"; the plan's "What will be sent?" is a link above the plan (`#g-plan-ai-sent`; the foot
@@ -162,6 +184,9 @@ LOW (apply or justify):
   Docs: docs/guidance.md, handbook app/guidance.md, contract NutrientRoom/carbs shape.
 
 ## Coordination
+
+* 2026-10-07: `tests/test_food_db.py::test_ingredients_are_flagged_so_meal_guidance_never_suggests_them_alone` fails
+  since 058894c (raw whole egg became an ingredient); fixer-backend-ops' file, left to them.
 
 * The backend fixer (`fixer-backend-ops`) owns the server half of C1 (their C8: unknown K/P counted as 0 in
   `app/log.py`; their C6: insights). I build the UI on the shape they add to DaySummary / range / summary and

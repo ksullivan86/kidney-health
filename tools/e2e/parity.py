@@ -531,8 +531,24 @@ class Harness:
             path = "/api/foods?" + httpx2.QueryParams({"q": q}).__str__()
             self.both(S, f"{path}", "GET", path)
 
+    def lab_rules_at_default(self, S: str) -> None:
+        """The demo starts with targets.lab_rules_enabled off (note 05 C10: off on public demo instances) and a fresh
+        server with the registry default (on): compare them as shipped once, then put both at the default for the
+        suggestion matrices (sections 3 and 11)."""
+        if getattr(self, "_lab_rules_at_default", False):
+            return
+        self.both(S, "GET /api/admin/settings targets.lab_rules_enabled as shipped (demo off, server on)", "GET", "/api/admin/settings",
+                  ignore=frozenset({"settings"}))
+        shipped = (self.server.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"],
+                   self.mock.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"])
+        self.rec.compare(S, "lab rules as shipped: on for a server, off for the demo", [True, False], list(shipped), ignore=frozenset())
+        self.both(S, "PATCH /api/admin/settings lab rules back to the default", "PATCH", "/api/admin/settings",
+                  {"targets.lab_rules_enabled": None}, ignore=frozenset({"settings"}))
+        self._lab_rules_at_default = True
+
     def section3(self) -> None:
         S = "3 targets"
+        self.lab_rules_at_default(S)
         heights = [("no height, 70 kg", 70, None), ("170 cm, 70 kg", 70, 170), ("150 cm, 70 kg", 70, 150), ("190 cm, 60 kg", 60, 190)]
         for stage in ["1", "2", "3a", "3b", "4", "5"]:
             for dialysis in ["none", "hemodialysis", "peritoneal"]:
@@ -921,7 +937,9 @@ class Harness:
         variants = [
             ("warn 0.55, decimals", {"warn_fraction": 0.55, "targets": {"potassium_mg": 2345.6, "calories_kcal": 1999.95, "carbs_per_meal_g": {"min": 30, "max": 45}, "sodium_mg": 0}}),
             ("warn 1.0, min-only protein", {"warn_fraction": 1, "targets": {"protein_g": {"min": 40}, "carbs_per_meal_g": 20, "fluid_ml": 1}}),
-            ("week_start sunday, all null", {"week_start": "sunday", "targets": {k: None for k in ["calories_kcal", "protein_g", "carbs_g", "carbs_per_meal_g", "sodium_mg", "potassium_mg", "phosphorus_mg", "calcium_mg", "fluid_ml"]}}),
+            # the snack's own carbohydrate goal (note 06 §4.11; v0.3.0 review L11): Today and the alerts use it for the snack
+            ("snack carb goal", {"targets": {"carbs_per_meal_g": 60, "carbs_per_snack_g": 10}}),
+            ("week_start sunday, all null", {"week_start": "sunday", "targets": {k: None for k in ["calories_kcal", "protein_g", "carbs_g", "carbs_per_meal_g", "carbs_per_snack_g", "sodium_mg", "potassium_mg", "phosphorus_mg", "calcium_mg", "fluid_ml"]}}),
             ("info targets", {"targets": {"fat_g": 10, "sat_fat_g": 2.25, "fiber_g": 30, "sugar_g": 5, "calcium_mg": 50.5}}),
         ]
         for label, body in variants:
@@ -1046,15 +1064,7 @@ class Harness:
                 "urine_output_ml": None, "pd_uf_ml": None, "pd_dialysate_kcal": None}
 
         S = "11a profile fields"
-        # The demo starts with targets.lab_rules_enabled off (note 05 C10: off on public demo instances) and a fresh
-        # server with the registry default (on): compare it as shipped, then put both at the default for the matrix.
-        self.both(S, "GET /api/admin/settings targets.lab_rules_enabled as shipped (demo off, server on)", "GET", "/api/admin/settings",
-                  ignore=frozenset({"settings"}))
-        shipped = (self.server.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"],
-                   self.mock.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"])
-        self.rec.compare(S, "lab rules as shipped: on for a server, off for the demo", [True, False], list(shipped), ignore=frozenset())
-        self.both(S, "PATCH /api/admin/settings lab rules back to the default", "PATCH", "/api/admin/settings",
-                  {"targets.lab_rules_enabled": None}, ignore=frozenset({"settings"}))
+        self.lab_rules_at_default(S)
         self.put_profile(S, "baseline (every v0.3 field cleared)", base)
         for label, body in [
             ("every field set", {"birth_month": "1971-03", "sex": "female", "activity": "low_active", "transplant_date": "2019-05-02",

@@ -107,7 +107,7 @@
   function withNulls(obj, keys) { for (const k of keys) if (!(k in obj)) obj[k] = null; return obj; }
   function statusModel(status) {
     const out = {};
-    for (const [k, v] of Object.entries(status)) out[k] = { value: v.value, target: v.target, min: v.min === undefined ? null : v.min, fraction: v.fraction, level: v.level };
+    for (const [k, v] of Object.entries(status)) out[k] = { value: v.value, target: v.target, min: v.min === undefined ? null : v.min, fraction: v.fraction, level: v.level, unknown: v.unknown || 0 };
     return out;
   }
   function planModel(result) {

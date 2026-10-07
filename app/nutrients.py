@@ -430,25 +430,40 @@ def build_alerts(status: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
     return alerts
 
 
+def _carb_goals(carbs_per_meal_target: Any, snack_target: Any) -> dict[str, float]:
+    """The carbohydrate goal of each meal: the per-meal goal, and for the snack ``carbs_per_snack_g`` when set
+    (note 06 §4.11: a person's snack goal from their diabetes team; v0.3.0 review L11)."""
+    _, per_meal = target_bounds(carbs_per_meal_target)
+    _, snack = target_bounds(snack_target)
+    goals = {meal: float(per_meal) for meal in MEALS if per_meal}
+    if snack:
+        goals["snack"] = float(snack)
+    return goals
+
+
+def _goal_word(meal: str, snack_target: Any) -> str:
+    return "snack goal" if meal == "snack" and target_bounds(snack_target)[1] else "per-meal goal"
+
+
 def meal_carb_alerts(
     meals: Mapping[str, Mapping[str, float | None]],
     carbs_per_meal_target: Any,
+    snack_target: Any = None,
 ) -> list[dict[str, Any]]:
-    """``over`` alerts for meals whose carbohydrate exceeds the per-meal goal."""
-    _, hi = target_bounds(carbs_per_meal_target)
-    if not hi:
-        return []
+    """``over`` alerts for meals whose carbohydrate exceeds the per-meal goal (the snack: its own goal when set)."""
+    goals = _carb_goals(carbs_per_meal_target, snack_target)
     alerts: list[dict[str, Any]] = []
     for meal in MEALS:
+        hi = goals.get(meal)
         carbs = float((meals.get(meal) or {}).get("carbs_g") or 0.0)
-        if carbs > hi:
+        if hi and carbs > hi:
             alerts.append(
                 {
                     "level": "over",
                     "nutrient": "carbs_g",
                     "meal": meal,
                     "message": (
-                        f"{meal.capitalize()} carbohydrate is over the per-meal goal: "
+                        f"{meal.capitalize()} carbohydrate is over the {_goal_word(meal, snack_target)}: "
                         f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g"
                     ),
                 }
@@ -483,15 +498,16 @@ def build_projected_alerts(status: Mapping[str, Mapping[str, Any]]) -> list[dict
 def projected_meal_carb_alerts(
     meals: Mapping[str, Mapping[str, float | None]],
     carbs_per_meal_target: Any,
+    snack_target: Any = None,
 ) -> list[dict[str, Any]]:
-    """``over`` alerts for meals whose *projected* carbohydrate exceeds the per-meal goal."""
-    _, hi = target_bounds(carbs_per_meal_target)
-    if not hi:
-        return []
+    """``over`` alerts for meals whose *projected* carbohydrate exceeds the per-meal goal (the snack: its own
+    goal when set)."""
+    goals = _carb_goals(carbs_per_meal_target, snack_target)
     alerts: list[dict[str, Any]] = []
     for meal in MEALS:
+        hi = goals.get(meal)
         carbs = float((meals.get(meal) or {}).get("carbs_g") or 0.0)
-        if carbs > hi:
+        if hi and carbs > hi:
             alerts.append(
                 {
                     "level": "over",
@@ -499,7 +515,7 @@ def projected_meal_carb_alerts(
                     "meal": meal,
                     "message": (
                         f"If you eat what's planned, {meal} carbohydrate reaches "
-                        f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g (over the per-meal goal)"
+                        f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g (over the {_goal_word(meal, snack_target)})"
                     ),
                 }
             )

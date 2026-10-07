@@ -343,12 +343,12 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
     warn_fraction = profile["warn_fraction"]
     status = mark_unknown(daily_status(eaten, targets, warn_fraction), unknown)
     projected_status = mark_unknown(daily_status(projected, targets, warn_fraction), projected_unknown)
-    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"))
+    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"))
     projected_alerts: list[dict[str, Any]] = []
     if counts["planned"]:
         projected_meals = {meal: add_totals(dict(meals[meal]), planned_meals.get(meal, {})) for meal in meals}
         projected_alerts = build_projected_alerts(projected_status) + projected_meal_carb_alerts(
-            projected_meals, targets.get("carbs_per_meal_g")
+            projected_meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g")
         )
     return {
         "totals": round_nutrients(eaten),

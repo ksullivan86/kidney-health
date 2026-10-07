@@ -260,9 +260,12 @@ class Journey:
               and body["derived"]["activity"] == "low_active" and "Worked out for: age" in notes, json.dumps(body["derived"])[:300])
         check(area, "every target has 'Why this number?'", page.locator("#suggest-notes details.why").count() >= 8)
         check(area, "suggested, not saved: the form is filled and says so", "not saved yet" in notes)
+        # the diabetes team's snack carbohydrate goal (note 06 §4.11; v0.3.0 review L11): a field of its own
+        page.fill("#tg-carbs_per_snack_g", "20")
         with page.expect_response(lambda r: r.url.endswith("/api/profile") and r.request.method == "PUT") as saved:
             page.click("#btn-save-profile")
         targets = saved.value.json()["targets"]
+        check(area, "Carbohydrate per snack is saved with the targets", targets.get("carbs_per_snack_g") == 20, json.dumps(targets))
         self.state["targets_before_labs"] = targets
         check(area, "the suggested targets are saved when the person presses Save", targets["potassium_mg"] == body["targets"]["potassium_mg"]
               and targets["carbs_per_meal_g"] == body["targets"]["carbs_per_meal_g"], json.dumps(targets))
@@ -314,7 +317,19 @@ class Journey:
             page.click("#btn-save-profile")
         targets = saved.value.json()["targets"]
         check(area, "the new targets are saved", targets["potassium_mg"] == 2500 and targets["phosphorus_mg"] == 800, json.dumps(targets))
+        check(area, "a suggestion never blanks the snack carbohydrate goal (it does not suggest one)",
+              targets.get("carbs_per_snack_g") == 20, json.dumps(targets))
         self.shot(page, "03-profile-after-labs", full=True)
+        self.goto(page, "#today", "#view-today:not([hidden]) #meal-h-snack")
+        try:  # Today may first draw the day it already had, then the fresh answer
+            wait_js(page, "(() => { const h = document.querySelector('#meal-h-snack'); const c = h && h.closest('section').querySelector('.meal-carbs');"
+                    " return !!c && c.textContent.includes('of 20 g'); })()")
+        except Exception:  # noqa: BLE001 - the check below reports what is shown
+            pass
+        snack = page.locator("section.meal", has=page.locator("#meal-h-snack")).locator(".meal-carbs").inner_text()
+        lunch = page.locator("section.meal", has=page.locator("#meal-h-lunch")).locator(".meal-carbs").inner_text()
+        check(area, "Today: the snack is counted against its own goal, the meals against the per-meal goal",
+              "of 20 g" in snack and f"of {targets['carbs_per_meal_g']:g} g" in lunch, f"{snack!r} {lunch!r}")
         self.problems(area)
 
     # ---- 4. a logged day

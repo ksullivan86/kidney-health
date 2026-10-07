@@ -52,8 +52,9 @@ Every food and log entry gets `medium` or `high` warnings per serving:
 
 For each nutrient with a target the app shows **ok** below 80 % of the target (you can change the
 80 % in your profile), **caution** from 80 % to 100 %, and **over** above 100 %, plus an "if you eat
-what's planned" projection from planned entries. Hypo treatments are logged like any food and never
-blocked or warned against.
+what's planned" projection from planned entries. A target with the same minimum and maximum, such as
+protein "about 56 g", is a target, not a limit: it reads **Near target** or **Above target**. Hypo
+treatments are logged like any food and never blocked or warned against.
 
 ## Day or week?
 

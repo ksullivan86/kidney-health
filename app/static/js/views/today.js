@@ -109,9 +109,14 @@
 
     // Meals
     clear(mealsEl);
-    const perMeal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
+    const perMealGoal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
+    const snackGoal = day.targets && typeof day.targets.carbs_per_snack_g === 'number' ? day.targets.carbs_per_snack_g : null;
     const wf = (state.profile && state.profile.warn_fraction) || 0.8;
     for (const meal of MEALS) {
+      // The snack has its own carbohydrate goal when the person set one (nutrients.meal_carb_alerts does the same).
+      const snackOwn = meal.key === 'snack' && snackGoal != null;
+      const perMeal = snackOwn ? snackGoal : perMealGoal;
+      const goalWords = snackOwn ? 'snack carbohydrate goal' : 'meal carbohydrate target';
       const entries = (day.entries || []).filter((e) => e.meal === meal.key);
       const eatenEntries = entries.filter((e) => !isPlanned(e));
       const plannedEntries = entries.filter(isPlanned);
@@ -126,9 +131,9 @@
       const over = perMeal != null && carbs > perMeal;
       const near = perMeal != null && !over && carbs >= perMeal * wf;
       const carbsEl = h('span', { class: `meal-carbs${over ? ' over' : ''}`,
-        'aria-label': `Carbohydrate eaten ${atLeastWords(fmtNum(carbs, 'carbs_g'), carbsUnknown)} grams${perMeal != null ? ` of ${perMeal} gram meal target` : ''}`
+        'aria-label': `Carbohydrate eaten ${atLeastWords(fmtNum(carbs, 'carbs_g'), carbsUnknown)} grams${perMeal != null ? ` of ${perMeal} gram ${snackOwn ? 'snack goal' : 'meal target'}` : ''}`
           + (carbsUnknown ? `; ${foodsNotListing(carbsUnknown, 'carbs_g')}` : '') },
-        over ? ratingIcon('over', { label: 'Over meal carbohydrate target' }) : near ? ratingIcon('caution', { label: 'Near meal carbohydrate target' }) : null,
+        over ? ratingIcon('over', { label: `Over ${goalWords}` }) : near ? ratingIcon('caution', { label: `Near ${goalWords}` }) : null,
         `Carbs: ${atLeast(fmtNum(carbs, 'carbs_g'), carbsUnknown)} g`,
         perMeal != null ? h('span', { class: 'of' }, ` of ${perMeal} g`) : null,
         carbsUnknown ? h('span', { class: 'not-listed' }, ` ${notListed(carbsUnknown)}`) : null);
@@ -218,7 +223,8 @@
     const targetText = about ? `about ${fmtNum(st.target, key)}` : hasMin ? `${fmtNum(st.min, key)}–${fmtNum(st.target, key)}` : fmtNum(st.target, key);
     // Same word as the server's alerts: goal (calories, carbohydrate), maximum (ranges, info), limit.
     const isGoal = n.role === 'goal' || n.role === 'track';
-    const levelWord = (lv) => (lv === 'over' && hasMin ? 'Over max' : lv === 'over' && isGoal ? 'Over goal' : lv === 'caution' && isGoal ? 'Near goal' : LEVEL_TEXT[lv]);
+    const levelWord = (lv) => (about ? KH.ui.ABOUT_LEVEL_TEXT[lv] : lv === 'over' && hasMin ? 'Over max' : lv === 'over' && isGoal ? 'Over goal'
+      : lv === 'caution' && isGoal ? 'Near goal' : LEVEL_TEXT[lv]);
     // Foods that do not list this value: the total may be higher, so it is never "OK" and nothing is "left".
     const unk = Number(st.unknown || 0);
     const nothingKnown = unk > 0 && !Number(st.value); // every food so far leaves it out (or lists 0)

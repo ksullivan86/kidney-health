@@ -29,7 +29,7 @@
   const KH = window.KH;
   const { h, $, $$, clear, state, toast, toastError, router, sheets, request } = KH;
   const { NUT, MEALS, MEAL_LABEL, fmtNum } = KH.rules;
-  const { ratingIcon, levelPill, LEVEL_TEXT } = KH.ui;
+  const { ratingIcon, levelPill } = KH.ui;
   const { todayStr, addDays, fmtDateLong, fmtDateShort, fmtRange, defaultMealForNow, defaultStatusFor, qs } = KH.util;
   const GE = KH.guidanceEngine || null; // the browser twin (texts for the offline "Treating a low" card)
 
@@ -816,7 +816,7 @@
       rows.push(h('li', { class: 'g-after-row' },
         h('span', { class: 'g-after-label' }, NUT[k].label),
         h('span', { class: 'tabular' }, `${fmtNum(st.value, k)} of ${fmtNum(st.target, k)} ${NUT[k].unit} (${pctText})`),
-        levelPill(st.level || 'ok', LEVEL_TEXT[st.level || 'ok'])));
+        levelPill(st.level || 'ok', KH.ui.levelTextFor(st, st.level || 'ok'))));
     }
     if (rows.length) sec.append(list('g-after-list', rows));
     for (const a of (d && d.new_alerts) || []) {

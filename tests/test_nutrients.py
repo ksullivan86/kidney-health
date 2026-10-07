@@ -238,6 +238,19 @@ def test_meal_carb_alerts_only_when_over():
     assert n.meal_carb_alerts(meals, {"max": 80}) == []
 
 
+def test_a_snack_goal_replaces_the_per_meal_goal_for_the_snack():
+    """carbs_per_snack_g (note 06 §4.11) is the snack's own goal on Today and in its alerts (v0.3.0 review L11)."""
+    meals = {"breakfast": {"carbs_g": 70}, "lunch": {"carbs_g": 55}, "dinner": {}, "snack": {"carbs_g": 25}}
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, 60)] == ["breakfast"]  # 25 g is under the per-meal 60
+    alerts = n.meal_carb_alerts(meals, 60, 20)
+    assert [a["meal"] for a in alerts] == ["breakfast", "snack"]
+    assert alerts[1]["message"] == "Snack carbohydrate is over the snack goal: 25 / 20 g"
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, None, 20)] == ["snack"]  # a snack goal alone
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, 60, 30)] == ["breakfast"]
+    projected = n.projected_meal_carb_alerts(meals, None, {"max": 15})
+    assert [a["message"] for a in projected] == ["If you eat what's planned, snack carbohydrate reaches 25 / 15 g (over the snack goal)"]
+
+
 # --------------------------------------------------------------------------- #
 # Suggested targets
 # --------------------------------------------------------------------------- #

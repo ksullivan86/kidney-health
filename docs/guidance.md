@@ -101,8 +101,8 @@ Guidance first works out how much potassium, phosphorus, sodium and fluid are le
   4,000 mg review ceiling). No guideline gives a per-meal number; phosphorus uses the same structure
   by analogy.
 * **Carbohydrate** (type 1 or 2 diabetes with a meal goal): the gap to the meal's goal
-  (`carbs_per_meal_g`; the snack slot: `carbs_per_snack_g`, else half the meal goal rounded to 5 g, at
-  least 15 g), ± the person's tolerance (default 10 g: in children on intensive insulin a dose for 60 g
+  (`carbs_per_meal_g`; the snack slot: `carbs_per_snack_g`, set in Profile → *Carbohydrate per snack*,
+  else half the meal goal rounded to 5 g, at least 15 g; Today's snack line and its alert use the same goal), ± the person's tolerance (default 10 g: in children on intensive insulin a dose for 60 g
   covered 50–70 g meals; a 20 g error mattered — Smart et al. 2009/2012). Carbs of low treatments are
   shown separately (`hypo_excluded_g`).
 * **Protein**: the aim for the meal is its share of what is left of the day's range (middle and

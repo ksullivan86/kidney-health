@@ -42,6 +42,13 @@
   };
   // "unknown": a total under its limit that misses values some foods do not list, so it may be higher (never green).
   const LEVEL_TEXT = { ok: 'OK', caution: 'Near limit', over: 'Over limit', unknown: 'Not complete' };
+  // A range whose minimum equals its maximum is "about X" (protein 0.8 g/kg with diabetes, note 05 §4.8): it is a
+  // target, not a limit, so its levels read "Near target" / "Above target" (v0.3.0 review L8). The level itself
+  // (and its colour) stays the server's: how far above "about" still counts as on target is a clinical decision
+  // the app does not make (handbook/REVIEW.md, "Food targets").
+  const ABOUT_LEVEL_TEXT = { ok: 'OK', caution: 'Near target', over: 'Above target', unknown: 'Not complete' };
+  const isAboutTarget = (st) => !!st && st.min != null && st.target != null && Number(st.min) === Number(st.target);
+  const levelTextFor = (st, level) => (isAboutTarget(st) ? ABOUT_LEVEL_TEXT : LEVEL_TEXT)[level] || level;
   const LEVEL_RATING = { ok: 'green', caution: 'yellow', over: 'red', medium: 'yellow', high: 'red', unknown: 'unknown' };
 
   // ---------------------------------------------------------------------------
@@ -731,7 +738,8 @@
       out.push({ level, message: `${NUT[key].label} would reach ${atLeastWords(fmtNum(projected, key), unknown)} / ${fmtNum(st.target, key)} ${NUT[key].unit} (${pct(fraction)} %)${suffix}`
         + (unknown ? `; ${foodsNotListing(unknown, key)}` : '') });
     }
-    const perMeal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
+    const snackGoal = meal === 'snack' && day.targets && typeof day.targets.carbs_per_snack_g === 'number' ? day.targets.carbs_per_snack_g : null;
+    const perMeal = snackGoal != null ? snackGoal : day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
     if (perMeal && day.meals && day.meals[meal]) {
       let mealBase = day.meals[meal].carbs_g || 0;
       if (planned && day.planned_meals && day.planned_meals[meal]) mealBase += day.planned_meals[meal].carbs_g || 0;
@@ -750,7 +758,7 @@
     keys: { THEME_KEY, SHOP_KEY },
     ui: {
       KEY_NUMBERS, ROW_NUMBERS, STATUS_ORDER, TREND_ORDER, PLAN_CHIPS, STRIP_KEYS, INTERDIALYTIC_KEYS, WEEKDAYS, WEEKDAYS_LONG,
-      RATING_LABEL, LEVEL_TEXT, LEVEL_RATING,
+      RATING_LABEL, LEVEL_TEXT, ABOUT_LEVEL_TEXT, LEVEL_RATING, isAboutTarget, levelTextFor,
       ratingIcon, levelPill, plusIcon, dashedIcon, checkIcon, closeIcon, unknownOf, notListed, foodsNotListing, atLeast, atLeastWords,
       renderWarnings, selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn,
     },

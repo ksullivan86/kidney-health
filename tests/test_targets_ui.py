@@ -185,3 +185,42 @@ console.log(JSON.stringify({ off, reset }));
     # tools/e2e/parity.py section 11 compares the shipped values, then puts both sides at the default.
     parity = (ROOT / "tools" / "e2e" / "parity.py").read_text(encoding="utf-8")
     assert '"lab rules as shipped: on for a server, off for the demo", [True, False]' in parity
+
+
+def test_the_snack_carb_goal_can_be_set_and_is_used_on_today() -> None:
+    """carbs_per_snack_g (note 06 §4.11) had no field (v0.3.0 review L11). Profile has one next to the per-meal goal
+    (data-target, so it is read and filled like the others); a suggestion never blanks it (it does not suggest
+    one); Today's snack line and the entry sheet's impact compare the snack with it (the server's alerts do too:
+    tests/test_nutrients.py, the demo's twin: tests/test_unknown_values_twin.py)."""
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    field = re.search(r'<input id="tg-carbs_per_snack_g" ([^>]*)>', html)
+    assert field and 'data-target="carbs_per_snack_g"' in field.group(1) and 'aria-describedby="tg-snack-hint"' in field.group(1)
+    assert html.index('id="tg-carbs_per_meal_g"') < html.index('id="tg-carbs_per_snack_g"')
+    assert '<label for="tg-carbs_per_snack_g">Carbohydrate per snack (g)</label>' in html
+    profile = (STATIC / "js" / "views" / "profile.js").read_text(encoding="utf-8")
+    assert "fillTargets(res.targets || {}, { onlyGiven: true });" in profile
+    assert "if (onlyGiven && !(inp.dataset.target in targets)) continue;" in profile
+    today = (STATIC / "js" / "views" / "today.js").read_text(encoding="utf-8")
+    assert "const perMeal = snackOwn ? snackGoal : perMealGoal;" in today
+    core = (STATIC / "js" / "core.js").read_text(encoding="utf-8")
+    assert "day.targets.carbs_per_snack_g" in core
+
+
+def test_an_about_target_is_never_called_a_limit() -> None:
+    """A range whose minimum equals its maximum ("about 56 g" of protein, note 05 §4.8) is a target, not a limit
+    (v0.3.0 review L8: the plan's own day read "Protein 101 % Over limit"). Today's bar, the plan sheet's "The day
+    with this plan" and the Plan week chips say "Near target" / "Above target"; the level and its colour stay
+    the server's, because how far above "about" still counts as on target is a clinical decision
+    (handbook/REVIEW.md, "Food targets")."""
+    core = (STATIC / "js" / "core.js").read_text(encoding="utf-8")
+    assert "const ABOUT_LEVEL_TEXT = { ok: 'OK', caution: 'Near target', over: 'Above target', unknown: 'Not complete' };" in core
+    assert "Number(st.min) === Number(st.target)" in core and "isAboutTarget, levelTextFor" in core
+    today = (STATIC / "js" / "views" / "today.js").read_text(encoding="utf-8")
+    assert "about ? KH.ui.ABOUT_LEVEL_TEXT[lv]" in today
+    guidance = (STATIC / "js" / "views" / "guidance.js").read_text(encoding="utf-8")
+    after = guidance.split("function dayAfter(d)", 1)[1].split("\n  }\n", 1)[0]
+    assert "KH.ui.levelTextFor(st, st.level || 'ok')" in after and "LEVEL_TEXT[" not in after
+    plan = (STATIC / "js" / "views" / "plan.js").read_text(encoding="utf-8")
+    assert "KH.ui.levelTextFor(st, level)" in plan
+    review = (ROOT / "handbook" / "REVIEW.md").read_text(encoding="utf-8")
+    assert 'An "about" target (minimum = maximum' in review

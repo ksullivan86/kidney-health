@@ -109,11 +109,11 @@
       const projectedUnknown = mergeUnknown(unknown, plannedUnknown);
       const status = markUnknown(dailyStatus(eaten, p.targets, p.warn_fraction), unknown);
       const projectedStatus = markUnknown(dailyStatus(projected, p.targets, p.warn_fraction), projectedUnknown);
-      const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g)];
+      const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g, false, p.targets.carbs_per_snack_g)];
       let projectedAlerts = [];
       if (counts.planned) {
         const projectedMeals = Object.fromEntries(Object.keys(meals).map((m) => [m, addTotals({ ...meals[m] }, plannedMeals[m] || {})]));
-        projectedAlerts = [...buildAlerts(projectedStatus, true), ...mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true)];
+        projectedAlerts = [...buildAlerts(projectedStatus, true), ...mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true, p.targets.carbs_per_snack_g)];
       }
       return { totals: roundNutrients(eaten), planned_totals: roundNutrients(planned), projected_totals: roundNutrients(projected),
         status, projected_status: projectedStatus,

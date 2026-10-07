@@ -421,7 +421,9 @@ Mobile-first single page, five views switched client-side (no router library):
 1. **Today** (default): date picker (prev/next day), the day's status bars for each
    targeted nutrient (color by level), per-meal sections with entries, each entry
    showing servings, carbs, K, P, Na and its kidney_rating dot; tap to edit servings /
-   meal / delete. A prominent **meal carbohydrate total** for each meal (type 1).
+   meal / delete. A prominent **meal carbohydrate total** for each meal (type 1), against
+   `carbs_per_meal_g`; the snack against `carbs_per_snack_g` when set (Profile "Carbohydrate per
+   snack"; the alerts too: `nutrients.meal_carb_alerts` says "over the snack goal").
    Alerts banner at top when any level is `caution`/`over`.
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,

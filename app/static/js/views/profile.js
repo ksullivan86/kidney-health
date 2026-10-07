@@ -143,8 +143,11 @@
   // ---------------------------------------------------------------------------
   // Targets editor: single numbers, {min, max} ranges (protein, calcium) and the fibre goal ({min} only)
   // ---------------------------------------------------------------------------
-  function fillTargets(targets) {
+  // `onlyGiven`: leave the boxes of targets the answer does not include (a suggestion never sets the snack carb
+  // goal, which comes from the person's diabetes team) as they are.
+  function fillTargets(targets, { onlyGiven = false } = {}) {
     for (const inp of $$('input[data-target]')) {
+      if (onlyGiven && !(inp.dataset.target in targets)) continue;
       const v = targets[inp.dataset.target];
       inp.value = typeof v === 'number' ? v : v && typeof v === 'object' ? (v.max ?? v.min ?? '') : '';
     }
@@ -353,7 +356,7 @@
     $('#suggest-live').textContent = 'Working out suggested targets…';
     try {
       const res = await api.suggested();
-      fillTargets(res.targets || {});
+      fillTargets(res.targets || {}, { onlyGiven: true });
       $('#suggest-refusal').hidden = true;
       renderSuggestion(res, saved);
       state.targetsStale = null; // the suggestion for the saved setting is in the form now

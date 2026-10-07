@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-07
 fact_checked: 2026-10-05
-sources: [NOTE06, NOTE04, ARCH, AKF-meal, A26-5, A26-6, DG12, Q20, FDC]
+sources: [NOTE06, NOTE04, ARCH, AKF-meal, A26-5, A26-6, DG12, Q20, FDC, DG7]
 ---
 
 # Meal guidance
@@ -53,7 +53,10 @@ and 120 % of a normal day.
 
 **3. Carbohydrate stays near your meal goal.** A food or plan must keep the meal within **10 g** of your
 meal carbohydrate goal. If you take fixed insulin doses, consistent carbohydrate helps your glucose
-([ADA 2026][A26-5], Rec 5.28). You can set the 10 g between 5 and 20 g; ask your diabetes team.
+([ADA 2026][A26-5], Rec 5.28). You can set the 10 g between 5 and 20 g; ask your diabetes team. A snack
+uses **Profile → Carbohydrate per snack** when you set it; without it the app aims a snack at about half
+your meal goal, rounded to 5 g and never under 15 g, one carbohydrate choice ([NKF][DG7]). Today shows
+the snack against that goal too, and says when a snack goes over it.
 
 **4. Protein foods are judged per gram of protein.** Almost every meat is "red" by the per-serving
 rules. So for protein foods the app looks at how much phosphorus and potassium comes with each gram of
@@ -184,3 +187,4 @@ before you see it ([Optional AI](ai.md); [design note 04][NOTE04]).
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, sections 5 and 6][A26-5] ([section 6][A26-6]).
 - [Kalantar-Zadeh 2010][DG12]: phosphorus from additives.
 - [USDA FoodData Central][FDC]: food values in the example.
+- [NKF: carbohydrate counting with CKD][DG7]: one carbohydrate choice is 15 g.

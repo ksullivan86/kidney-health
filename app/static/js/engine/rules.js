@@ -423,16 +423,20 @@
     alerts.sort((a, b) => (a.level === 'over' ? 0 : 1) - (b.level === 'over' ? 0 : 1));
     return alerts;
   }
-  function mealCarbAlerts(meals, perMealTarget, projected = false) {
-    const [, hi] = targetBounds(perMealTarget);
-    if (!hi) return [];
+  // nutrients.meal_carb_alerts / projected_meal_carb_alerts: the per-meal goal, and for the snack its own goal
+  // (targets.carbs_per_snack_g) when set.
+  function mealCarbAlerts(meals, perMealTarget, projected = false, snackTarget = null) {
+    const [, perMeal] = targetBounds(perMealTarget);
+    const [, snack] = targetBounds(snackTarget);
     const alerts = [];
     for (const meal of MEAL_KEYS) {
+      const hi = meal === 'snack' && snack ? snack : perMeal;
+      const word = meal === 'snack' && snack ? 'snack goal' : 'per-meal goal';
       const carbs = Number((meals[meal] || {}).carbs_g || 0);
-      if (carbs > hi) {
+      if (hi && carbs > hi) {
         alerts.push({ level: 'over', nutrient: 'carbs_g', meal, message: projected
-          ? `If you eat what's planned, ${meal} carbohydrate reaches ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g (over the per-meal goal)`
-          : `${meal.charAt(0).toUpperCase()}${meal.slice(1)} carbohydrate is over the per-meal goal: ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g` });
+          ? `If you eat what's planned, ${meal} carbohydrate reaches ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g (over the ${word})`
+          : `${meal.charAt(0).toUpperCase()}${meal.slice(1)} carbohydrate is over the ${word}: ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g` });
       }
     }
     return alerts;
