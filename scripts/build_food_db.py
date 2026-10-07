@@ -145,7 +145,6 @@ def ensure_zip(cache_dir: Path) -> Path:
             shutil.copyfileobj(resp, out, 1 << 16)
         if not zipfile.is_zipfile(tmp_name):
             fail("downloaded file is not a zip archive (proxy or network problem?)")
-        os.chmod(tmp_name, 0o644)  # mkstemp creates 0600; make the cache shareable
         os.replace(tmp_name, target)
     finally:
         if os.path.exists(tmp_name):
