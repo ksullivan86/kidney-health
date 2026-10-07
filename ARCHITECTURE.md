@@ -65,6 +65,9 @@ deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRo
 .github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
 SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
 CHANGELOG.md                user-facing changes per version (v0.3)
+CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md   contributor rules and how-tos; Contributor Covenant 2.1; agents' short rules
+docs/README.md, docs/maintainers.md, docs/ROADMAP.md   index of every doc; release process and repo settings; deferred work
+.github/ISSUE_TEMPLATE/, .github/pull_request_template.md   issue forms (bug, feature, clinical correction) and the PR checklist
 tools/e2e/                  browser harnesses run by hand: parity.py, sandbox.py, regress.py (+ khserver.py, README.md)
 pyproject.toml, requirements.txt, requirements-dev.txt, .gitignore
 ```
@@ -692,7 +695,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
-| M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/README.md`, `tools/e2e/**` |
+| M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
 the listed additions; each M2 owner registers its router in `app/main.py` with one import line and
