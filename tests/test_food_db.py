@@ -104,6 +104,7 @@ INGREDIENTS = {
     "Flour, all-purpose", "Salt, table", "Baking powder (phosphate type)", "Black pepper, ground", "Vinegar, cider",
     "Vinegar, balsamic", "Olive oil", "Canola oil", "Sugar, brown", "Margarine, stick", "Butter, salted",
     "Butter, unsalted",
+    "Egg, whole, raw",  # review C11: a raw egg is cooked into something first, never suggested on its own
 }
 
 

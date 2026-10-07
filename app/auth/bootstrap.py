@@ -12,7 +12,8 @@ Run once by the app's lifespan after the database is migrated:
    * otherwise the deprecated ``APP_PASSWORD`` → user 1's password (``must_change_password`` when it
      fails today's policy);
    * otherwise a one-time **setup code** in the log at WARNING:
-     ``FIRST-RUN SETUP: open https://<this server>/#/setup and enter the code XXXX-XXXX-XXXX-XXXX``.
+     ``FIRST-RUN SETUP: open <PUBLIC_URL>/#/setup and enter the code XXXX-XXXX-XXXX-XXXX`` (without
+     ``PUBLIC_URL``: "this server's address followed by /#/setup", see :func:`setup_address`).
 """
 from __future__ import annotations
 

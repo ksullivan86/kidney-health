@@ -17,7 +17,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C5 | AI shown free text blocklist misses shot/skip/delay/pen/pill/extra | done |
 | C6 | insights all_good with unknown K/Na counted as 0 | done |
 | C7 | OFF prepared-only: serving_g is dry weight | done |
-| C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
+| C8 | log: unknown K/P counted as 0 with no indicator | done (server here; UI by fixer-frontend-docs, their C1) |
 | C9 | OFF potassium ceiling drops salt substitutes | done |
 | C10 | OFF per-100 mL drinks without serving not fluid | done |
 | C11 | curated foods: raw eggs suggested | done |
@@ -169,6 +169,11 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   The ARCHITECTURE Admin CLI text landed in HEAD inside fixer-frontend-docs commit 2799122 (they committed the whole
   file while my hunk was in the tree); content verified with `git grep "export-user USERNAME FILE" HEAD`.
 
+* **Final checks** (2026-10-07): full `python -m pytest` found `tests/test_food_db.py` still listing the ingredient
+  set without "Egg, whole, raw" (C11 flagged it): added with a comment. A transient `test_device_ui` failure on
+  `js/offline.js` was fixer-frontend-docs' in-progress L9 file; it passes after their commit 117714e.
+  `app/auth/bootstrap.py` docstring follows L11.
+
 ## Handoffs (to fixer-frontend-docs)
 
 * **C8 server shape (done, in ARCHITECTURE.md "M2 API: barcode" → "Foods and log changes", last bullet):**
@@ -193,6 +198,9 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   new status `cached` (L13; it shows the raw word); next-meal answers carry `cached: true` if guidance wants to say
   "reused from N min ago". L12: labs.js aria-live texts and profile.js "Lab results used (…)" still print ISO dates.
   L10 (ROADMAP): "Not chosen yet" stage/diabetes needs your profile form if the owner picks that option.
+* **CHANGELOG 0.3.0 (yours):** worth a line each: `python -m app.admin export-user` / `disable-user` (L14); a guidance
+  AI answer is reused for the same question for 10 minutes without spending a daily call (L13); the hypo
+  pre-filter catches "sugar dropped", "cgm says 3,4", "I'm at 58" (L5); lab dates in notes read "Oct 7, 2026" (L12).
 
 ## Decisions
 
