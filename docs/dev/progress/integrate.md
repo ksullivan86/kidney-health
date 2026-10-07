@@ -51,6 +51,16 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   usage/own provider, export and deletion between two people. tests/test_auth_coverage.py: V03_ROUTES (all 38 v0.3
   routes must exist and answer 401 anonymously).
 * Full `python -m pytest` after these changes: exit 0.
+* Step 3 (security cross-checks):
+  - Egress: grep found the HIBP breach check (app/auth/policy.py) using a plain httpx2.Client (default transport,
+    trust_env, redirects) → now `egress.CheckedTransport()`, no redirects, trust_env off (test_passwords asserts it).
+    New static guard tests/test_egress.py::test_every_outbound_client_in_the_app_uses_a_checked_transport (every
+    httpx2 client passes transport=; only egress.py and the loopback healthcheck use urllib).
+  - AI off by default sends nothing: tests/test_ai_routes.py::test_a_configured_provider_is_never_contacted_while_ai_is_off
+    (env provider configured, ai.enabled default: no DNS lookup at start-up or on any AI/photo/guidance route).
+    OFF off by default: already tests/test_barcode_api.py::test_off_by_default_nothing_leaves_the_server.
+  - Secrets: tests/test_secrets_v03.py (own and shared AI keys never in any answer, export, audit, log or the DB in
+    clear; last4 only for keys ≥ 20 characters).
 
 ## In progress
 

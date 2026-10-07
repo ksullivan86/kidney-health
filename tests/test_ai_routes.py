@@ -86,6 +86,35 @@ def test_ai_off_sends_nothing_and_settings_still_answer(client):
     assert client.post("/api/me/ai/probe").status_code == 404
 
 
+def test_a_configured_provider_is_never_contacted_while_ai_is_off(tmp_path, foods_json, monkeypatch):
+    """AI is off by default (contract item 8's sibling, note 04 §9): with an env provider configured but
+    ``ai.enabled`` left at its default, start-up and every AI, photo and guidance route send nothing: no
+    address of the provider is even looked up."""
+    import socket
+
+    from app.ai import transport
+
+    looked_up: list[str] = []
+
+    def no_lookup(host, *args, **kwargs):
+        looked_up.append(str(host))
+        raise socket.gaierror("no lookups in this test")
+
+    monkeypatch.setattr(transport.socket, "getaddrinfo", no_lookup)
+    with TestClient(create_app(ai_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        assert c.get("/api/admin/settings").json()["settings"]["ai.enabled"]["value"] is False
+        assert c.put("/api/profile", json={"targets": TARGETS}).status_code == 200
+        assert c.patch("/api/me/ai", json={"opt_in": True}).status_code == 200
+        for method, path in AI_ROUTES:
+            assert c.request(method.upper(), path, json={"meal": "dinner"}).status_code == 404, path
+        assert c.post("/api/me/ai/probe").status_code == 404
+        assert c.get("/api/me/ai").json()["enabled"] is False
+        fits = c.get("/api/guidance/next-meal", params={"meal": "dinner", "date": DAY}).json()
+        assert fits["status"] == "ok" and fits["ai"]["available"] is False
+    assert looked_up == []
+
+
 def test_switching_ai_on_needs_no_restart(client):
     assert client.get("/api/ai/status").status_code == 404
     enable(client)

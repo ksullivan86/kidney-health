@@ -197,6 +197,9 @@ def test_breached_uses_k_anonymity_and_ignores_network_errors(monkeypatch):
     assert policy.breached("hunter2 hunter2 hunter2") is True
     assert seen[1] == policy.HIBP_URL + digest[:5]  # only the first five hex digits leave the server
     assert seen[0]["headers"]["Add-Padding"] == "true"
+    from app.egress import CheckedTransport
+    assert isinstance(seen[0]["transport"], CheckedTransport)  # the SSRF-checked transport, like USDA and OFF
+    assert seen[0]["follow_redirects"] is False and seen[0]["trust_env"] is False
 
     class Down(FakeClient):
         def get(self, url):

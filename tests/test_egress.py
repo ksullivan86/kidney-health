@@ -137,3 +137,33 @@ def test_read_capped_counts_decoded_bytes() -> None:
             assert egress.read_capped(response, 400_000) == body
         with client.stream("GET", "https://x.org/") as response, pytest.raises(egress.ResponseTooLarge):
             egress.read_capped(response, 100_000)
+
+
+def test_every_outbound_client_in_the_app_uses_a_checked_transport() -> None:
+    """CLAUDE.md "Security": outbound HTTP goes through the SSRF-checked transport. Every ``httpx2.Client`` /
+    ``AsyncClient`` the app builds passes ``transport=`` (``egress.CheckedTransport`` for fixed hosts, the AI
+    layer's ``PinnedTransport`` for providers); no other HTTP client or raw socket is used, except the container
+    healthcheck, which talks to this server on loopback with proxies switched off."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "app"
+    clients, other = [], []
+    for path in sorted(root.rglob("*.py")):
+        rel = str(path.relative_to(root))
+        text = path.read_text(encoding="utf-8")
+        for match in re.finditer(r"httpx2\.(?:Async)?Client\(", text):
+            depth, end = 0, match.end() - 1
+            for end in range(match.end() - 1, len(text)):
+                depth += {"(": 1, ")": -1}.get(text[end], 0)
+                if depth == 0:
+                    break
+            call = text[match.start(): end + 1]
+            clients.append(rel)
+            assert "transport=" in call, f"{rel}: {call[:120]} has no checked transport"
+        for pattern in (r"\burllib\.request\b", r"\bhttp\.client\b", r"\bsocket\.(?:socket|create_connection)\(",
+                        r"^\s*import (?:requests|aiohttp|urllib3)\b"):
+            if re.search(pattern, text, re.M):
+                other.append(rel)
+    assert sorted(set(clients)) == ["ai/transport.py", "auth/policy.py", "foods.py", "off.py"], clients
+    assert sorted(set(other)) == ["egress.py", "healthcheck.py"], other  # proxy settings lookup; loopback probe

@@ -90,7 +90,12 @@ def breached(password: str) -> bool:
     try:
         import httpx2
 
-        with httpx2.Client(timeout=HIBP_TIMEOUT_S, headers={"Add-Padding": "true", "User-Agent": "kidney-health"}) as client:
+        from .. import egress
+
+        # Like every outbound request of the app: the SSRF-checked transport (resolve, check, pin; the
+        # operator's HTTPS_PROXY honoured), no redirects (CLAUDE.md "Security").
+        with httpx2.Client(timeout=HIBP_TIMEOUT_S, headers={"Add-Padding": "true", "User-Agent": "kidney-health"},
+                           follow_redirects=False, trust_env=False, transport=egress.CheckedTransport()) as client:
             response = client.get(HIBP_URL + prefix)
     except Exception as exc:  # network errors never block a password change
         log.info("password breach check skipped: %s", exc.__class__.__name__)
