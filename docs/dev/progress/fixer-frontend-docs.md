@@ -24,8 +24,8 @@ LOW (apply or justify):
 
 | id | finding | status |
 |---|---|---|
-| L1 | research notes still state pre-v0.3 protein rule | pending |
-| L2 | handbook SI phosphate table edges | pending |
+| L1 | research notes still state pre-v0.3 protein rule | done |
+| L2 | handbook SI phosphate table edges | done |
 | L3 | labs.js K alert window hard-coded 90 days | pending |
 | L4 | AI activity shows raw provider reply uncaptioned | pending |
 | L5 | Settings → AI ideas stale after admin switch | done |
@@ -42,6 +42,19 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L1** (research notes): `docs/research/ckd-diet.md`, `food-lists.md`, `t1d-and-ckd.md` and `fact-check.md`
+  carry a dated "Superseded in part by design note 05" banner; the protein rows say 0.8 g/kg with diabetes
+  (KDOQI 3.0.2's 0.6 only under close supervision), the KDOQI numbers are the published ones (3.0.1–3.0.4
+  protein, 3.1.1 energy), "ideal body weight"/IBW became body weight / reference weight. While there, the two
+  safety errors handbook/REVIEW.md listed for food-lists.md are fixed (a 20-oz soda is labelled as one serving;
+  juice or regular soda treats a low when it is all there is). handbook/REVIEW.md open items struck through
+  with what was done. Test: `tests/test_research_notes.py` (banner present; old wording absent outside the
+  banner; the patterns catch the review's quoted rows; REVIEW item closed).
+
+* **L2** (handbook SI phosphate table): International tab now 0.79 or below / 0.80–1.46 / 1.47 or above, with
+  a sentence on converting then rounding to one decimal. Test computes the edges from `app.units` and
+  `app.target_rules` (`tests/test_handbook_content.py::test_si_phosphate_table_gives_the_edges_the_app_uses`).
 
 * **Handoff from fixer-backend-ops (C7 UI, task #151)**: a product with only prepared values is logged in
   servings. `KH.off.weightKnown` (engine/off.js; twin of `foods.weight_known`, same codes and refusal text);

@@ -2,6 +2,16 @@
 
 **Status:** research document for the kidney-health tracker. Compiled 2026-10-05 from primary guideline texts (KDOQI 2020, KDIGO 2024, KDIGO 2022 Diabetes-in-CKD, KDIGO 2017 CKD-MBD, KDOQI 2003 Bone), the ADA Standards of Care, NIDDK, the National Kidney Foundation (NKF), the American Kidney Fund (AKF), the FDA, and peer-reviewed papers. Every number below is tied to a numbered reference in the [References](#references) section.
 
+> **Superseded in part by design note 05 (v0.3; banner added 2026-10-07).** Where this note and
+> [`docs/dev/research/05-personalized-targets.md`](../dev/research/05-personalized-targets.md) differ, the app
+> follows note 05: **protein with diabetes at G3a–G5 is 0.8 g/kg** (a floor as well as the target: ADA 2026
+> Rec 11.3, KDIGO 2022 Rec 3.1.1, KDIGO 2024 Rec 3.3.1.1; KDOQI 2020's 0.6 g/kg is for close supervision only,
+> note 05 F4 and fact-check H1); **KDOQI 2020 statement numbers are the published guideline's** (3.0.1–3.0.4
+> protein, 3.1.1 energy; this note first used the 2019 public-review draft's, note 05 F1); and grams per kg use a
+> **reference weight** (the person's weight, moved toward the healthy BMI range when outside it, note 05 §3.1 and §4.3),
+> not "ideal body weight": KDOQI 2020 leaves the choice of weight to the care team (1.1.6). The rows below are
+> corrected; `tests/test_research_notes.py` keeps the old wording out.
+
 > **This is not medical advice and is not a substitute for the person's nephrologist and renal dietitian.** Targets for potassium, phosphorus, protein, fluid and calories are *individualized* from the person's own labs (serum potassium, phosphate, bicarbonate, albumin, HbA1c), residual urine output, dialysis prescription, medications (RAS inhibitors, MRAs, SGLT2 inhibitors, binders, potassium binders, insulin) and nutritional status. KDIGO 2024 explicitly says to "use renal dietitians or accredited nutrition providers to educate people with CKD about dietary adaptations regarding sodium, phosphorus, potassium, and protein intake, tailored to their individual needs" (Practice Point 3.3.2) [2]. The numbers here are *starting points* for the tracker's thresholds that the care team should overwrite.
 
 ---
@@ -11,7 +21,7 @@
 - **CKD stages** (KDIGO GFR categories): G3a = eGFR 45–59, G3b = 30–44, G4 = 15–29, G5 = <15 mL/min/1.73 m². "5D" = stage 5 on dialysis (HD = hemodialysis, PD = peritoneal dialysis) [2].
 - **Evidence grades**: KDOQI/KDIGO use 1 (strong "we recommend") or 2 (weak "we suggest") plus quality A–D; "OPINION" or "Practice Point" = expert consensus without graded evidence [1][2]. ADA uses A/B/C/E [8].
 - **Diet guidelines do not differ between stages 3a and 3b**, and mostly not between 3 and 4 either. The guidelines set *one* range for "CKD 3–5 not on dialysis" and a second for dialysis. What changes with stage is **how likely a restriction is to be triggered** by labs: hyperkalemia prevalence rises from ~8.8 % at G3/A1 to ~34 % at G5/A3 in people with diabetes [2], and phosphate retention becomes common in stage 4–5. Stage-specific numbers in Section 2 and the JSON are therefore *program defaults that tighten as stage advances*, not separate guideline recommendations.
-- **Type 1 diabetes changes three things**: (a) the protein target is slightly more liberal than for non-diabetic CKD (KDOQI 0.6–0.8 g/kg vs 0.55–0.60) because very-low-protein diets worsen glycaemic control and risk hypoglycaemia [1][3]; (b) hypoglycaemia treatment should *prefer* low-potassium carbohydrate (glucose tablets, apple/cranberry juice rather than orange juice) but is **never delayed or under-dosed because of potassium** [5][27] (Section 2.9); (c) on PD, the dextrose dialysate adds ~400+ kcal/day of absorbed glucose that must be counted [25].
+- **Type 1 diabetes changes three things**: (a) the protein target is more liberal than for non-diabetic CKD (0.8 g/kg: ADA, KDIGO; KDOQI's 0.6–0.8 under close supervision, vs 0.55–0.60) because very-low-protein diets worsen glycaemic control and risk hypoglycaemia [1][3]; (b) hypoglycaemia treatment should *prefer* low-potassium carbohydrate (glucose tablets, apple/cranberry juice rather than orange juice) but is **never delayed or under-dosed because of potassium** [5][27] (Section 2.9); (c) on PD, the dextrose dialysate adds ~400+ kcal/day of absorbed glucose that must be counted [25].
 
 ---
 
@@ -31,32 +41,33 @@ Related: **metabolic acidosis** (serum bicarbonate < 18–22 mmol/L) accelerates
 
 ## 2. Daily targets by CKD stage and dialysis status
 
-### 2.1 Summary table (adult, ideal body weight; see 2.2–2.9 for sources and caveats)
+### 2.1 Summary table (adult, per kg of reference weight; see 2.2–2.9 for sources and caveats)
 
 | Nutrient | CKD 3a–4, not on dialysis | CKD 5, not on dialysis | Hemodialysis (5D-HD) | Peritoneal dialysis (5D-PD) |
 |---|---|---|---|---|
-| **Protein** (g/kg/day) | **With diabetes: 0.6–0.8** (KDOQI 3.1.3, OPINION) [1]; **0.8** (KDIGO 2024 3.3.1.1, 2C; KDIGO 2022 Diabetes 3.1.1, 2C; ADA 2025 Rec 11.8 = 2026 Rec 11.3, A) [2][3][8][9]. Non-diabetic: 0.55–0.60 (KDOQI 1A) [1]. Avoid > 1.3 [2]. | Same as 3a–4 [1][2] | **1.0–1.2** (KDOQI 3.1.2, 1C; 3.1.4 with diabetes, OPINION — consider higher if hypo-/hyperglycaemia) [1]; ADA 11.8 (B) [8]; KDIGO 2022 PP 3.1.2 [3] | **1.0–1.2** (KDOQI 3.1.2, OPINION); KDIGO 2022: "particularly peritoneal dialysis" 1.0–1.2 [1][3]; many programs use the upper end |
-| **Energy** (kcal/kg/day) | **25–35** (KDOQI 3.0.1, 1C) [1] | 25–35 [1] | 25–35 [1] | 25–35 **minus** dialysate dextrose calories (~400+ kcal/day absorbed) [1][25] |
+| **Protein** (g/kg/day) | **With diabetes: 0.8** (KDIGO 2024 3.3.1.1, 2C; KDIGO 2022 Diabetes 3.1.1, 2C; ADA 2025 Rec 11.8 = 2026 Rec 11.3, A) [2][3][8][9]; KDOQI 3.0.2 allows 0.6–0.8 under close supervision (OPINION) [1]. Non-diabetic: 0.55–0.60 (KDOQI 3.0.1, 1A) [1]. Avoid > 1.3 [2]. | Same as 3a–4 [1][2] | **1.0–1.2** (KDOQI 3.0.3, 1C; 3.0.4 with diabetes, OPINION — consider higher if hypo-/hyperglycaemia) [1]; ADA 11.8 (B) [8]; KDIGO 2022 PP 3.1.2 [3] | **1.0–1.2** (KDOQI 3.0.3, OPINION on PD); KDIGO 2022: "particularly peritoneal dialysis" 1.0–1.2 [1][3]; many programs use the upper end |
+| **Energy** (kcal/kg/day) | **25–35** (KDOQI 3.1.1, 1C) [1] | 25–35 [1] | 25–35 [1] | 25–35 **minus** dialysate dextrose calories (~400+ kcal/day absorbed) [1][25] |
 | **Sodium** (mg/day) | **< 2,000** (KDIGO 2024 3.3.2.1, 2C; KDIGO 2022 3.1.2, 2C) [2][3]; **< 2,300** (KDOQI 6.5.1, 1B; NIDDK; ADA) [1][4][8] | < 2,000–2,300 [1][2] | < 2,000–2,300 (NKF HD: < 2,300) [1][24] | < 2,000–2,300 by guideline [1][3]; PD programs often liberalise to 3,000–4,000 because PD removes Na well [25] |
 | **Potassium** (mg/day) | **No fixed restriction unless serum K is high**; adjust to keep serum K normal (KDOQI 6.4.1, OPINION) [1]; KDIGO: limit *bioavailable* K (processed foods) if history of hyperkalaemia (PP 3.11.5.2) [2]. Typical restricted diet when needed: **2,000–3,000** [26][29] | 2,000–3,000 when hyperkalaemic [26][29] | **2,000–3,000** typical; none for frequent home HD [24][26][29] | **3,000–4,000** ("liberal") typical [25] |
 | **Phosphorus** (mg/day) | Adjust to keep serum phosphate normal (KDOQI 6.3.1, 1B); consider source bioavailability (6.3.2) [1]. **800–1,000** when serum P > 4.6 mg/dL (KDOQI 2003 Guideline 4.1, OPINION) [10]; emphasis on **additive avoidance** over total [1][11] | 800–1,000 when P > 5.5 mg/dL (KDOQI 2003, EVIDENCE) [10] | 800–1,000, "adjusted for protein needs" [10][22]; binders with meals [20] | 800–1,000 adjusted for protein; binders with meals [10][25] |
 | **Calcium** (mg/day, total incl. diet + supplements + Ca-based binders) | **800–1,000** for CKD 3–4 not on active vitamin D (KDOQI 6.2.1, 2B) [1] | Adjust to avoid hypercalcaemia (KDOQI 6.2.2, OPINION) [1]; older ceiling: ≤ 2,000 total, ≤ 1,500 from binders (KDOQI 2003 5.5) [10]; KDIGO 2017: restrict Ca-based binder dose (4.1.6, 2B) [11] | As CKD 5 | As CKD 5 |
 | **Fluid** (mL/day) | **No routine limit**; AKF: restriction only if prescribed [19]. KDOQI 2020 has no fluid statement [1] | Individualised (oedema, hyponatraemia) [19] | **~1,000 mL + 24-h urine volume** (DaVita) [23]; AKF: 32 oz (~950 mL) + urine [19]; NKF: 1–2 L depending on urine [24] | **2–3 L** typical, individualised to residual function and ultrafiltration [25] |
 
-For a **70 kg** adult: protein 42–56 g/day (0.6–0.8) non-dialysis, 70–84 g/day (1.0–1.2) on dialysis; energy 1,750–2,450 kcal/day (25–35 kcal/kg). KDIGO's own table gives 56 g/day at 0.8 g/kg for 70 kg [2].
+For a **70 kg** adult: protein 56 g/day (0.8) non-dialysis with diabetes (42–56 g, 0.6–0.8, without), 70–84 g/day (1.0–1.2) on dialysis; energy 1,750–2,450 kcal/day (25–35 kcal/kg). KDIGO's own table gives 56 g/day at 0.8 g/kg for 70 kg [2].
 
 ### 2.2 Protein, in detail
 
 - **KDOQI 2020** (final publication, AJKD 2020;76(3 Suppl 1):S1–S107) [1]:
-  - 3.1.1 Non-diabetic CKD 3–5, metabolically stable: low-protein 0.55–0.60 g/kg IBW/day, *or* very-low-protein 0.28–0.43 g/kg + ketoacid analogues, to reduce ESKD/death (1A) and improve QoL (2C in the published guideline; the 2019 public-review draft said 1C).
-  - 3.1.2 Maintenance HD (1C) and PD (OPINION): 1.0–1.2 g/kg IBW/day.
-  - 3.1.3 CKD 3–5 **with diabetes**: **0.6–0.8 g/kg IBW/day** "to maintain a stable nutritional status and optimize glycemic control" (OPINION). (The 2019 public-review draft said 0.8–0.9; the published guideline and the ISRNM commentary give 0.6–0.8 [1][13].)
-  - 3.1.4 HD/PD **with diabetes**: 1.0–1.2 g/kg; "for patients at risk of hyper and/or hypoglycemia, higher levels of dietary protein intake may need to be considered to maintain glycemic control" (OPINION).
-  - 3.0.1 Energy 25–35 kcal/kg IBW/day for CKD 1–5D (1C).
+  - 3.0.1 Non-diabetic CKD 3–5, metabolically stable: low-protein 0.55–0.60 g/kg body weight/day, *or* very-low-protein 0.28–0.43 g/kg + ketoacid analogues, to reduce ESKD/death (1A) and improve QoL (2C in the published guideline; the 2019 public-review draft said 1C).
+  - 3.0.3 Maintenance HD (1C) and PD (OPINION): 1.0–1.2 g/kg body weight/day.
+  - 3.0.2 CKD 3–5 **with diabetes**: **0.6–0.8 g/kg body weight/day** under close clinical supervision "to maintain a stable nutritional status and optimize glycemic control" (OPINION). (The 2019 public-review draft said 0.8–0.9; the published guideline and the ISRNM commentary give 0.6–0.8 [1][13].)
+  - 3.0.4 HD/PD **with diabetes**: 1.0–1.2 g/kg; "for patients at risk of hyper and/or hypoglycemia, higher levels of dietary protein intake may need to be considered to maintain glycemic control" (OPINION).
+  - 3.1.1 Energy 25–35 kcal/kg body weight/day for CKD 1–5D (1C).
+  - 1.1.6 The weight used (ideal, usual, current, adjusted or BMI-based) is left to clinical judgement (OPINION).
 - **KDIGO 2024 CKD** [2]: Rec 3.3.1.1 "maintaining a protein intake of 0.8 g/kg body weight/d in adults with CKD G3–G5 (2C)"; PP 3.3.1.1 avoid > 1.3 g/kg; PP 3.3.1.2 very-low-protein 0.3–0.4 g/kg + ketoanalogues only under close supervision; PP 3.3.1.3 do not prescribe low/very-low protein in metabolically unstable people; PP 3.3.1.5 consider higher protein in frail/sarcopenic older adults.
 - **KDIGO 2022 Diabetes in CKD** [3]: Rec 3.1.1 0.8 g/kg/day for diabetes + CKD not on dialysis (2C); PP 3.1.2 HD "and particularly peritoneal dialysis" 1.0–1.2 g/kg/day. Rationale: limiting protein below 0.8 in a person with diabetes who is also limiting carbohydrate, fat and alcohol "may dramatically decrease caloric content of the diet" and cause unwanted weight loss.
 - **ADA Standards of Care, Section 11** (2025 Rec 11.8 and 2026 Rec 11.3 — renumbered, identical wording — both verified verbatim at PMC) [8][9]: "protein intake should be 0.8 g/kg body weight per day, as for the general population" (A); "For individuals on dialysis, protein intake of 1.0–1.2 g/kg/day should be considered, since protein energy wasting is a major problem for some individuals on dialysis" (B). ADA's stated reason for not going below 0.8 g/kg is that doing so "does not alter blood glucose levels, cardiovascular risk measures, or the course of GFR decline" [9]. Higher intakes (> 20 % of calories or > 1.3 g/kg/day) associated with albuminuria, faster eGFR loss and CV mortality [8].
-- **Reconciling for a T1D patient**: the three bodies agree on an upper bound of 0.8 g/kg (non-dialysis) and 1.0–1.2 (dialysis). KDOQI alone allows going down to 0.6 under dietitian supervision. A sensible tracker default is **0.6–0.8 g/kg/day**, flagging both < 0.6 (wasting risk) and > 1.0 (progression risk), and **1.0–1.2** on dialysis. Use ideal (not actual) body weight if the person is over- or under-weight [1].
+- **Reconciling for a T1D patient**: the three bodies agree on an upper bound of 0.8 g/kg (non-dialysis) and 1.0–1.2 (dialysis). KDOQI alone allows going down to 0.6 under dietitian supervision. The tracker suggests **0.8 g/kg/day** with diabetes (ADA says not to go below it; KDOQI's 0.6 is for close dietitian supervision), and **1.0–1.2** on dialysis, per kg of a reference weight that moves toward the healthy BMI range when the person is over- or under-weight (note 05 §4.3; KDOQI 1.1.6 leaves the weight to the care team) [1][9].
 
 ### 2.3 Sodium
 
@@ -96,7 +107,7 @@ For a **70 kg** adult: protein 42–56 g/day (0.6–0.8) non-dialysis, 70–84 g
 
 ### 2.8 Energy
 
-- KDOQI 3.0.1: **25–35 kcal/kg IBW/day** based on age, sex, activity, body composition, weight goals, CKD stage and inflammation (1C) [1]. PLADO uses 30–35 kcal/kg [16]. On PD, subtract absorbed dextrose (often 400+ kcal/day) [25]. **Default: 30 kcal/kg.**
+- KDOQI 3.1.1: **25–35 kcal/kg body weight/day** based on age, sex, activity, body composition, weight goals, CKD stage and inflammation (1C) [1]. PLADO uses 30–35 kcal/kg [16]. On PD, subtract absorbed dextrose (often 400+ kcal/day) [25]. **Default: 30 kcal/kg.**
 
 ### 2.9 Type 1 diabetes specifics
 
@@ -196,7 +207,7 @@ Suggested tracker logic: classify each logged food on all three nutrients; show 
 
 ## 7. Machine-readable starting targets (70 kg adult)
 
-Assumptions: ideal body weight 70 kg; type 1 diabetes; metabolically stable; no sodium-wasting nephropathy; serum potassium and phosphate not yet known (so potassium/phosphorus values are *review ceilings that tighten with stage*, per Sections 2.4–2.5, not prescriptions). Protein is g per kg **ideal** body weight per day (KDOQI) — multiply by 70 for grams. `fluid_ml` is `null` where guidelines set no routine limit; for hemodialysis the 1,000 mL base must have the person's 24-hour urine volume **added**. `calcium_mg` is total elemental calcium including supplements and calcium-based binders. Dialysis entries exist only for stage 5 because dialysis is by definition kidney failure; if the person is on dialysis use the matching dialysis entry regardless of the stage label. Sources per field: protein [1][2][3][8]; sodium [1][2][3]; potassium [1][2][25][26][29]; phosphorus [1][10][11][22]; calcium [1][10][11]; fluid [19][23][24][25]; calories [1].
+Assumptions: reference weight 70 kg; type 1 diabetes; metabolically stable; no sodium-wasting nephropathy; serum potassium and phosphate not yet known (so potassium/phosphorus values are *review ceilings that tighten with stage*, per Sections 2.4–2.5, not prescriptions). Protein is g per kg of reference weight per day — multiply by 70 for grams (with diabetes the app uses 0.8 for both bounds at G3a–G5: note 05 P-2d). `fluid_ml` is `null` where guidelines set no routine limit; for hemodialysis the 1,000 mL base must have the person's 24-hour urine volume **added**. `calcium_mg` is total elemental calcium including supplements and calcium-based binders. Dialysis entries exist only for stage 5 because dialysis is by definition kidney failure; if the person is on dialysis use the matching dialysis entry regardless of the stage label. Sources per field: protein [1][2][3][8]; sodium [1][2][3]; potassium [1][2][25][26][29]; phosphorus [1][10][11][22]; calcium [1][10][11]; fluid [19][23][24][25]; calories [1].
 
 ```json targets_by_stage
 [
@@ -286,7 +297,7 @@ Field notes for the application:
 
 ## References
 
-1. Ikizler TA, Burrowes JD, Byham-Gray LD, et al. **KDOQI Clinical Practice Guideline for Nutrition in CKD: 2020 Update.** Am J Kidney Dis. 2020;76(3 Suppl 1):S1–S107. Statement numbering and text verified against the NKF public-review copy (https://www.kidney.org/sites/default/files/Nutrition_GL%2BSubmission_101719_Public_Review_Copy.pdf) and the ISRNM commentary [13]; the diabetic protein range (0.6–0.8 g/kg) is as published in the final guideline. Press summary: https://www.kidney.org/news/national-kidney-foundation-releases-clinical-practice-guidelines-nutrition
+1. Ikizler TA, Burrowes JD, Byham-Gray LD, et al. **KDOQI Clinical Practice Guideline for Nutrition in CKD: 2020 Update.** Am J Kidney Dis. 2020;76(3 Suppl 1):S1–S107. Statement text first checked against the NKF public-review copy (https://www.kidney.org/sites/default/files/Nutrition_GL%2BSubmission_101719_Public_Review_Copy.pdf) and the ISRNM commentary [13]; the statement numbers above are the published guideline's (3.0.1–3.0.4 protein, 3.1.1 energy), which renumbered the draft's 3.1.x (design note 05 F1); the diabetic protein range (0.6–0.8 g/kg) is as published in the final guideline. Press summary: https://www.kidney.org/news/national-kidney-foundation-releases-clinical-practice-guidelines-nutrition
 2. KDIGO CKD Work Group. **KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease.** Kidney Int. 2024;105(4S):S117–S314. Full text: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf (Recs 3.3.1.1, 3.3.2.1; PPs 3.3.1, 3.3.2, 3.3.1.1–3.3.1.5, 3.10.1, 3.11.5.1–2; Table 24, Figures 19–20, 30, 33).
 3. KDIGO Diabetes Work Group. **KDIGO 2022 Clinical Practice Guideline for Diabetes Management in Chronic Kidney Disease.** Kidney Int. 2022;102(5S):S1–S127. https://kdigo.org/wp-content/uploads/2023/12/KDIGO-2022-Diabetes-Guideline.pdf (Recs 2.2.1, 3.1.1, 3.1.2; PPs 2.1.2–2.1.4, 3.1.1–3.1.5).
 4. NIDDK. **Healthy Eating for Adults with Chronic Kidney Disease.** https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/eating-nutrition

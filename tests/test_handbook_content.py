@@ -534,3 +534,34 @@ def test_advisory_checks_only_warn():
                 hard_reading.append(f"{rel} ({grade:.1f})")
     if hard_reading:
         warnings.warn("reading grade above 9 (aim for 8): " + ", ".join(hard_reading))
+
+
+def test_si_phosphate_table_gives_the_edges_the_app_uses() -> None:
+    """The handbook's mmol/L phosphate table matches what the app suggests at its edges (v0.3.0 review, L2).
+
+    The app converts mmol/L to mg/dL and judges the value rounded to one decimal (``app/units.py``,
+    ``app/targets.py`` PH-1..PH-3), so 0.80 mmol/L (2.48 → 2.5 mg/dL) already gets 1,000 mg and 1.46 mmol/L
+    (4.52 → 4.5) still does. Each row's numbers, at two decimals, must land in the row's category, and the next
+    0.01 must not."""
+    from app import target_rules as rules
+    from app.units import display_value, to_canonical
+
+    def category(mmol: float) -> str:
+        shown = display_value("phosphate", to_canonical("phosphate", mmol, "mmol/L"))
+        if shown < rules.PHOSPHATE_LOW:
+            return "no limit"
+        return f"{rules.PHOSPHORUS_NORMAL_MG:,} mg" if shown <= rules.PHOSPHATE_HIGH else f"{rules.PHOSPHORUS_HIGH_MG:,} mg"
+
+    text = (HANDBOOK / "docs" / "app" / "targets-and-warnings.md").read_text(encoding="utf-8")
+    tab = text.split('=== "International"', 1)[1].split("\nOther details", 1)[0]
+    rows = re.findall(r"^\s*\| ([0-9.–]+) mmol/L(?: or (below|above))? \| ([^|]+?) \|$", tab, re.M)
+    assert len(rows) == 3, rows
+    (low, _, low_cat), (mid, _, mid_cat), (high, _, high_cat) = rows
+    lo = float(low)
+    assert category(lo) == low_cat and category(round(lo + 0.01, 2)) != low_cat
+    a, b = (float(x) for x in mid.split("–"))
+    assert category(a) == mid_cat == category(b), (a, b, mid_cat)
+    assert category(round(a - 0.01, 2)) != mid_cat and category(round(b + 0.01, 2)) != mid_cat
+    hi = float(high)
+    assert category(hi) == high_cat and category(round(hi - 0.01, 2)) != high_cat
+    assert (low_cat, mid_cat, high_cat) == ("no limit", "1,000 mg", "800 mg")

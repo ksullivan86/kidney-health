@@ -125,9 +125,14 @@ systems (mmol/L = mEq/L).
 
     | Your blood phosphate | Suggested phosphorus |
     |---|---|
-    | below 0.81 mmol/L | no limit |
-    | 0.81–1.45 mmol/L | 1,000 mg |
-    | above 1.45 mmol/L | 800 mg |
+    | 0.79 mmol/L or below | no limit |
+    | 0.80–1.46 mmol/L | 1,000 mg |
+    | 1.47 mmol/L or above | 800 mg |
+
+    The app turns a result in mmol/L into mg/dL and rounds it to one decimal before it compares, so
+    the edges sit where the rounded value crosses 2.5 and 4.5 mg/dL: 0.80 mmol/L is 2.48 mg/dL, shown
+    as 2.5, and 1.46 mmol/L is 4.52 mg/dL, shown as 4.5. The Labs screen shows the converted value
+    while you type ("Will be saved as …").
 
 Other details that change the suggestion:
 

@@ -2,13 +2,23 @@
 
 Research notes behind `docs/diet-guide.md`. Written 2026-10-05 from the sources listed at the end; numbers in brackets are reference numbers.
 
+> **Superseded in part by design note 05 (v0.3; banner added 2026-10-07).** Where this note and
+> [`docs/dev/research/05-personalized-targets.md`](../dev/research/05-personalized-targets.md) differ, the app
+> follows note 05: **protein with diabetes at G3a–G5 is 0.8 g/kg** (a floor as well as the target: ADA 2026
+> Rec 11.3, KDIGO 2022 Rec 3.1.1, KDIGO 2024 Rec 3.3.1.1; KDOQI 2020's 0.6 g/kg is for close supervision only,
+> note 05 F4 and fact-check H1); **KDOQI 2020 statement numbers are the published guideline's** (3.0.1–3.0.4
+> protein, 3.1.1 energy; this note first used the 2019 public-review draft's, note 05 F1); and grams per kg use a
+> **reference weight** (the person's weight, moved toward the healthy BMI range when outside it, note 05 §3.1 and §4.3),
+> not "ideal body weight": KDOQI 2020 leaves the choice of weight to the care team (1.1.6). The rows below are
+> corrected; `tests/test_research_notes.py` keeps the old wording out.
+
 > **Who this is for and what it is not.** These notes are for one adult with chronic kidney disease (CKD, roughly stage G3b–G4, not on dialysis) who also has type 1 diabetes (T1D) and uses insulin. They are a reading guide for conversations with the person's **nephrologist, endocrinologist/diabetes team and renal dietitian** – not a replacement for them. Every guideline cited here says the same thing: targets for protein, potassium, phosphorus, sodium and fluid are individualised from the person's own lab results, and insulin doses are set by the prescriber [1][2][3][4][6]. Where guidance changes with CKD stage or dialysis, this is called out.
 
 ## The numbers the guidelines actually give
 
 | Nutrient | Non-dialysis CKD G3–G5 | With diabetes | On dialysis | Source |
 |---|---|---|---|---|
-| Protein | 0.8 g/kg/day (KDIGO 2024, 2C; ADA 2026 Rec 11.3, grade A); avoid >1.3 g/kg/day | KDOQI 2020: 0.6–0.8 g/kg/day for CKD 3–5 with diabetes (opinion); KDIGO 2022 and ADA: 0.8 g/kg/day; ADA says not to go below 0.8 g/kg because doing so "does not alter blood glucose levels, cardiovascular risk measures, or the course of GFR decline"; KDIGO 2022 adds that it risks a caloric deficit and weight loss in someone also limiting carbohydrate | 1.0–1.2 g/kg/day (KDIGO 2022 PP 3.1.2; ADA 11.3 grade B) | [1][2][3][5][6] |
+| Protein | 0.8 g/kg/day (KDIGO 2024, 2C; ADA 2026 Rec 11.3, grade A); avoid >1.3 g/kg/day | KDOQI 2020 3.0.2: 0.6–0.8 g/kg/day for CKD 3–5 with diabetes under close supervision (opinion); KDIGO 2022 and ADA: 0.8 g/kg/day; ADA says not to go below 0.8 g/kg because doing so "does not alter blood glucose levels, cardiovascular risk measures, or the course of GFR decline"; KDIGO 2022 adds that it risks a caloric deficit and weight loss in someone also limiting carbohydrate | 1.0–1.2 g/kg/day (KDIGO 2022 PP 3.1.2; ADA 11.3 grade B) | [1][2][3][5][6] |
 | Sodium | <2 g sodium/day (= <90 mmol, <5 g salt) – KDIGO 2024 Rec 3.3.2.1 (2C) | same (KDIGO 2022 Rec 3.1.2, 2C); ADA 2026: <2,300 mg/day "as clinically appropriate" | <2,300 mg/day (NKF hemodialysis diet) | [1][2][3][5][19] |
 | Potassium | No fixed number. KDOQI: adjust intake to keep serum potassium normal. KDIGO 2024 PP 3.11.5.2: limit foods rich in *bioavailable* potassium (e.g. processed foods) if there is a history of hyperkalaemia | ADA: "individualization of potassium intake may be necessary". Insulin deficiency itself raises potassium (section 5) | If told to restrict: AKF says aim 2,500 mg and no more than 3,000 mg/day; DaVita quotes 2,000–3,000 mg/day | [1][3][4][13][14] |
 | Phosphorus | No fixed number; adjust intake to keep serum phosphate normal (2.5–4.5 mg/dL). Avoid phosphate **additives**, which are absorbed ~90–100%; plant phosphorus is ~20–50% absorbed, animal ~40–60% (KDOQI 2020 text; Kalantar-Zadeh 2010) | same | Historically <800–1,000 mg/day; binders if diet is not enough | [4][13][15][16] |
@@ -222,8 +232,8 @@ Assumptions: ~75–80 kg adult, protein target 0.8 g/kg (≈60–64 g/day), carb
 
 Notes on the day:
 
-- **It is deliberately light on calories.** KDOQI 2020 energy guidance is 25–35 kcal/kg ideal body weight/day (Statement 3.0.1, 1C; ≈1,900–2,800 kcal for 75–80 kg) [4]; the Kalantar-Zadeh & Fouque NEJM 2017 table reproduced by AKF uses 30–35 kcal/kg [13]. At ~1,470 kcal this day is 400–500 kcal under even the KDOQI floor. The gap should be closed with fats (another tablespoon of olive oil, butter, mayonnaise, a second tablespoon of peanut butter) or more measured starch covered by insulin – not with more meat, which would push protein and phosphorus up. The sodium headroom (~1,100 mg) and potassium headroom (~900–1,400 mg, depending on the prescribed ceiling) also leave room for seasoning and a second vegetable.
-- **To fit a smaller person or KDOQI's 0.6–0.8 g/kg range**, shrink the meat portions (1 oz turkey, 1.5 oz chicken) – that alone removes ~12 g protein and ~90 mg phosphorus.
+- **It is deliberately light on calories.** KDOQI 2020 energy guidance is 25–35 kcal/kg body weight/day (Statement 3.1.1, 1C; ≈1,900–2,800 kcal for 75–80 kg) [4]; the Kalantar-Zadeh & Fouque NEJM 2017 table reproduced by AKF uses 30–35 kcal/kg [13]. At ~1,470 kcal this day is 400–500 kcal under even the KDOQI floor. The gap should be closed with fats (another tablespoon of olive oil, butter, mayonnaise, a second tablespoon of peanut butter) or more measured starch covered by insulin – not with more meat, which would push protein and phosphorus up. The sodium headroom (~1,100 mg) and potassium headroom (~900–1,400 mg, depending on the prescribed ceiling) also leave room for seasoning and a second vegetable.
+- **To fit a smaller person, or a lower amount your care team prescribes and supervises (KDOQI 3.0.2: 0.6–0.8 g/kg)**, shrink the meat portions (1 oz turkey, 1.5 oz chicken) – that alone removes ~12 g protein and ~90 mg phosphorus.
 - **Hypo treatment is on top of this.** Two 15 g lows treated with glucose tablets add 0 mg potassium; treated with 4 oz apple juice they add ~250 mg; with 4 oz orange juice ~500 mg – which is why the app should log hypo treatments as foods.
 - **If serum potassium is normal and the dietitian agrees**, swapping the Cream of Wheat for oatmeal (+134 mg K, +142 mg P, +2.7 g fibre per cup) or the white rice for brown is a defensible trade for glucose control; the log makes the cost visible.
 - **On dialysis this day would be wrong**: protein would need to rise to 1.0–1.2 g/kg (75–95 g), fluid would be capped (coffee, soda and canned-fruit liquid all count), and potassium and phosphorus limits would come from the dialysis unit's labs [2][5][17][19].

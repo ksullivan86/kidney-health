@@ -1534,8 +1534,8 @@ with lookups off on both sides.
   noreferrer`), "Barcode <digits>", the quality notes, "Additives found: …", the ingredient list; missing
   potassium/phosphorus read **"not listed"** (never 0). A food with values only as prepared is logged in servings:
   the entry sheet hides **Grams** and says why (`KH.off.weightKnown`, twin of `foods.weight_known`; the demo's log
-  and swaps refuse grams with the server's text, `tests/test_demo_servings_only.py` through `tests/js/demo_api.mjs`). 404 → *Enter from the label* (Quick add with the
-  barcode and the photo prompt) and the Open Food Facts contribute link; 503 `off_consent_required` → the
+  and swaps refuse grams with the server's text, `tests/test_demo_servings_only.py` through `tests/js/demo_api.mjs`).
+  404 → *Enter from the label* (Quick add with the barcode and the photo prompt) and the Open Food Facts contribute link; 503 `off_consent_required` → the
   consent panel (`PATCH /api/me/settings {"food.off_consent": true}` then the lookup again); 503 lookups off,
   429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward.
 * **Quick add** gains *Barcode* (optional, checked like the scan), *Ingredients* (optional; the browser

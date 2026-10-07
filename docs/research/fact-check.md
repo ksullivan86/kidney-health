@@ -2,6 +2,13 @@
 
 **Scope.** Adversarial review (2026-10-05) of `docs/research/ckd-diet.md`, `docs/research/t1d-and-ckd.md` and `docs/research/food-lists.md` for wrong numbers, wrong attributions, contradictions between the files, unsafe or missing advice, and unsourced claims. Every HIGH and MEDIUM issue below has been corrected in the draft files; LOW issues were also fixed where the fix was cheap, otherwise they are annotated in place.
 
+> **Superseded in part by design note 05 (v0.3; banner added 2026-10-07).** This is the record of the
+> 2026-10-05 check and is kept as it was. Two of its conclusions no longer hold: the KDOQI 2020 statement
+> numbers in row 10 are the 2019 public-review draft's (the published guideline has 3.0.1–3.0.4 for protein and
+> 3.1.1 for energy, note 05 F1), and the app no longer suggests 0.6–0.8 g/kg protein with diabetes: it suggests
+> 0.8 g/kg per kg of a reference weight (note 05 F4, fact-check H1; ARCHITECTURE.md v0.3 item 10). The three
+> notes it checked carry the same banner and corrected rows.
+
 > Reminder carried over from all three drafts: none of this is medical advice or a substitute for the person's nephrologist, endocrinologist/diabetes team and renal dietitian. Targets are individualised from the person's own labs and prescriptions.
 
 ## 1. What was checked and how

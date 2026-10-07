@@ -123,11 +123,18 @@ pages, and tick it here.
       the sign-off steps are in `handbook/README.md` ("Clinical review and sign-off").
 
 **Open items for other owners** (not clinical decisions; details in each section's "notes for
-other owners"): the app still suggests 0.6–0.8 g/kg protein with diabetes until the M2 targets
-change ships (then remove the "Coming in v0.3" sentences in `app/first-setup` and
-`app/targets-and-warnings`); phosphate categorised after rounding mmol/L (A notes); every "coming in
-v0.3" marker on the app pages at release; `docs/diet-guide.md` and `docs/research/food-lists.md`
-still carry the soda-serving and orange-juice errors fixed in the handbook (E notes); KDOQI 2020
+other owners"): ~~the app still suggests 0.6–0.8 g/kg protein with diabetes until the M2 targets
+change ships~~ done in v0.3.0: the app suggests 0.8 g/kg with diabetes, the "Coming in v0.3" sentences
+are gone, and the research notes behind it (`docs/research/ckd-diet.md`, `food-lists.md`,
+`t1d-and-ckd.md`, `fact-check.md`) carry a dated "superseded in part by design note 05" banner with the
+protein rows, KDOQI numbering and weight basis corrected (`tests/test_research_notes.py`);
+~~phosphate categorised after rounding mmol/L (A notes)~~ done: `app/targets-and-warnings` gives the
+mmol/L edges the app uses (0.79 / 0.80–1.46 / 1.47, `test_si_phosphate_table_gives_the_edges_the_app_uses`);
+~~every "coming in v0.3" marker on the app pages at release~~ done; ~~`docs/diet-guide.md` and
+`docs/research/food-lists.md` still carry the soda-serving and orange-juice errors fixed in the
+handbook (E notes)~~ done: `diet-guide.md` now points to the handbook, and `food-lists.md` says a
+20-oz soda is labelled as one serving and that juice or regular soda treats a low when it is all there
+is (2026-10-07); KDOQI 2020
 statement numbers cited from the public-review copy need checking against the published text (L
 notes); the `FDANaP` archive link needs a browser check (T notes); the `OPTN` link in `sources.yml`
 now redirects to HRSA's OPTN page (HRSA took over the site in December 2025), so update the URL and
