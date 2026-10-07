@@ -1,0 +1,13 @@
+# Issue chooser (https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository).
+# Security reports must never be public issues: the first link sends reporters to SECURITY.md, which
+# explains private vulnerability reporting.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (privately)
+    url: https://github.com/ksullivan86/kidney-health/blob/main/SECURITY.md
+    about: >-
+      Please do not open a public issue for a vulnerability, or for a way to make the app give a dose
+      or warn against treating a low. SECURITY.md explains how to report it privately.
+  - name: Documentation
+    url: https://github.com/ksullivan86/kidney-health/blob/main/docs/README.md
+    about: Every guide (deployment, HTTPS, accounts, privacy, AI, barcodes, guidance, targets) in one list.

@@ -1,0 +1,78 @@
+name: Bug report
+description: Something in the app, the handbook or the deployment files does not work as documented.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. Two things first:
+
+        * **Security problems are not reported here.** Follow [SECURITY.md](https://github.com/ksullivan86/kidney-health/blob/main/SECURITY.md) to report them privately.
+        * **Leave out personal and health data.** No names, lab results, food logs, addresses, tokens or keys in screenshots and logs. Made-up numbers that show the problem are fine.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About & privacy → App version, or the image tag and digest you run.
+      placeholder: "0.3.0 (ghcr.io/ksullivan86/kidney-health:0.3@sha256:…)"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How do you run it?
+      options:
+        - Rootless Podman (Quadlet)
+        - Compose (podman-compose or docker compose)
+        - Rootless Docker (deploy/docker-rootless-run.sh)
+        - Kubernetes
+        - From source (uvicorn)
+        - The demo or preview (no server)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      description: For problems in the app or the handbook. Say whether the app is installed on the home screen.
+      placeholder: "iPhone 16, iOS 27, installed; or Firefox 150 on Linux"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Add, scan …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server log lines (optional)
+      description: >-
+        From journalctl, podman logs or kubectl logs. The app redacts secrets from its logs, but check
+        for host names, addresses and user names you would rather not share.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: This is not a security vulnerability (those go to a private report, see SECURITY.md).
+          required: true
+        - label: I removed personal and health data from this report.
+          required: true

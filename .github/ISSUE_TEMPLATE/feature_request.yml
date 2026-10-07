@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest something the app, the handbook or the deployment files should do.
+title: "Feature: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [docs/ROADMAP.md](https://github.com/ksullivan86/kidney-health/blob/main/docs/ROADMAP.md) first: it lists what is already planned, with the design note behind each item.
+
+        This app supports people with kidney disease and type 1 diabetes. It will never calculate insulin or medicine doses and never warns against treating a low; requests that need either cannot be accepted.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+      description: Who runs into it, and when? A concrete situation helps most.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead? Other options you considered?
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who would use it?
+      multiple: true
+      options:
+        - The person logging their food
+        - A caregiver or family member
+        - A dietitian or clinician (through exports or shared screens)
+        - The person running the server
+        - Contributors and maintainers
+  - type: textarea
+    id: safety
+    attributes:
+      label: Health, privacy or security considerations
+      description: >-
+        Does it touch targets, warnings, lows, what leaves the server, or who can see whose data? Clinical
+        numbers need a source (guideline, label or study).
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Safety rules
+      options:
+        - label: It does not ask the app to give insulin or medicine doses.
+          required: true
+        - label: It does not delay, limit or warn against treating a low blood sugar.
+          required: true

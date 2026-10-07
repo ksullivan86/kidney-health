@@ -1,7 +1,28 @@
 # Roadmap: work the specifications defer to a later version
 
-One line per item, with the specification that defers it. Items leave this list when they ship (move
-them to CHANGELOG.md) or when the owner drops them. Each feature owner appends its own section.
+One line per item, with the specification that defers it (the design notes are in
+[`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
+[CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
+section. Last reviewed for the v0.3.0 release (2026-10-07).
+
+## Clinical review (before the draft banners can go)
+
+* Clinician review of every open decision indexed at the top of [`handbook/REVIEW.md`](../handbook/REVIEW.md) ("Open clinical decisions": emergency tiers and red flags, glucose and CGM goals, food targets and the app's numbers, the remaining sections), each decision recorded there with the reviewer's name and date and the pages changed to match; then the sign-off of the pages it unblocks (`status: reviewed`, `reviewed_by`, `reviewed_on`) — note 08 §4.9 and §7 Phase 4; ARCHITECTURE.md v0.3 decision 11. The reviewers per section are listed in [`handbook/README.md`](../handbook/README.md#clinical-review-and-sign-off).
+* The app-side rules waiting for the same review are listed under their features below (targets: note 05 C10; guidance: note 06 §5/§8; potassium additives: note 03 R5).
+
+## Accounts, sign-in and secrets (note 07)
+
+* OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID), choosing between Authlib 1.8 + itsdangerous and the project's own PKCE code (a new runtime dependency needs a contract decision) — note 07 F7, §3.1 and §6 "Later (v0.4)".
+* Passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
+* Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
+* Read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency) — note 07 §6 "Later (v0.4)".
+* Import of `export.json` into another instance (`POST /api/me/import`; the v0.3 export format was designed for it) — note 07 §4.14 and §6 "Later (v0.4)".
+* An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
+* One SQLite file per person (strongest isolation, deletion = removing a file) — note 07 §3.7 ("Revisit for v1.0").
+
+## Installable app (note 02)
+
+* Reminders through Web Push, opt-in and off by default (`PUSH_ENABLED`, VAPID key file, `pywebpush` 2.5.0 + `py-vapid` 1.9.4, generic bodies, never for lows: "use your CGM's alerts"), the push hosts in `docs/network-allowlist.md`, device tests on iOS 18.4+ and Chrome on Android — note 02 §3.6, R8 and §6 Phase 6 (v0.4).
 
 ## Personalised targets and labs (note 05)
 
@@ -20,6 +41,7 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * Migrate from MkDocs + Material to Zensical once a Zensical ≥ 0.1 release passes the CI canary (`handbook-zensical`) and the `/learn` browser check, before Material's security fixes end (November 2026 at the earliest) — note 08 §4.1 and §6 risk 2.
 * Owner decisions before publishing: enable GitHub Pages (`HANDBOOK_PAGES=true`, needs a public repository or GitHub Pro/Team), then set `HANDBOOK_PUBLIC_URL` and the image's documentation label to the Pages URL — note 08 §4.8 "Owner setup", §7 Phase 0 and Phase 4.
 * Clinical sign-off of every handbook page by the named reviewers (draft banners stay until then) — note 08 §4.9 and §7 Phase 4; ARCHITECTURE.md v0.3 decision 11.
+* Smaller handbook search index: prune the Lunr language support (about −0.9 MB of the image) — note 08 §6 risk 12 ("possible later").
 
 ## Meal guidance (note 06)
 
@@ -29,6 +51,7 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * Dialysis-day eating patterns beyond the interdialytic allowance — note 06 §5 R12 ("revisit in v0.4").
 * An offline MILP experiment to measure how far the beam-search plans are from optimal — note 06 §3.1 option C ("could be an offline experiment").
 * Clinical review (renal dietitian, diabetes educator) of the per-meal caps, score weights, tip texts and the "Treating a low" card — note 06 §5 R1/R6/R11 and §8 open questions (default carb tolerance, `purpose` defaulting to "hypo", starter combos).
+* Measure guidance on real hardware: `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and a Pi 5 with the image's Python, tables recorded in `docs/guidance.md` (lower `GUIDANCE_POOL_PER_ROLE` if a Pi 4 p95 is above 200 ms) — note 06 §4.12 and its "Re-verify" line (a maintainer action: the v0.3.0 build had no Raspberry Pi; the figures are estimates from an x86 VM).
 
 ## Barcodes, Open Food Facts and USDA branded foods (note 03)
 
@@ -52,5 +75,5 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 ## Scanning, label photos and the offline outbox in the browser (notes 02 R5/R7, 03 R7–R9)
 
 * `GET /api/foods/builtin` with an `ETag` equal to `data/foods.json`'s version, so a device refreshes its offline food list only when the list changes — note 02 R5 "Builtin foods" (a server route; v0.3.0's `js/offline.js` instead refreshes the list once a day through `GET /api/foods?category=…`, at most 200 per category, which covers today's 395 foods).
-* Manual checks on real devices before a release: iPhone over HTTP (photo and typed) and HTTPS (live camera, including the 4-second no-frame fallback for WebKit 282327), Android Chrome (native `BarcodeDetector`) and a desktop browser — note 03 §6 item 14 (a maintainer action: the v0.3.0 build had no phones; `tools/e2e/device.py` covers Chromium with a fake camera and a stand-in native detector).
+* Manual checks on real devices before a release: iPhone over HTTP (photo and typed) and HTTPS (live camera, including the 4-second no-frame fallback for WebKit 282327), Android Chrome (native `BarcodeDetector`) and a desktop browser; plus note 02's matrix (install, icon and name, status bar in light and dark, offline start and the outbox, update prompt) on an iPhone, an iPad, an Android phone and desktop Chrome and Safari, over the Tailscale and private-CA HTTPS tiers — note 03 §6 item 14 and note 02 §6 "Manual device test matrix (before the release tag)" (a maintainer action: the v0.3.0 build had no phones; `tools/e2e/device.py` covers Chromium with a fake camera and a stand-in native detector).
 * Offline edits and deletes of entries already on the server, and profile changes (v0.3 queues only new entries, quick adds and "mark eaten"; anything else says it needs a connection) — note 02 R5 "Queueable offline actions (v0.3)".
