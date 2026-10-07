@@ -12,6 +12,7 @@ from conftest import signed_in_client
 @pytest.mark.parametrize("key, default, env, scope", [
     ("food.off_enabled", False, "OFF_ENABLED", "instance"),
     ("food.off_consent", False, None, "user"),
+    ("food.scan_prefer_camera", True, None, "user"),  # note 03 R10 "Prefer live camera" (v0.3.0 review L15)
     ("food.off_contact", "https://github.com/ksullivan86/kidney-health", "OFF_CONTACT", "instance"),
     ("food.off_rate_per_minute", 10, "OFF_RATE_PER_MINUTE", "instance"),
     ("food.barcode_negative_ttl_hours", 24, "BARCODE_NEGATIVE_TTL_HOURS", "instance"),

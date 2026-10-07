@@ -334,3 +334,25 @@ def test_ios_home_screen_tip_shows_once_after_the_third_visit() -> None:
     assert "countVisit };" in pwa
     start = _function_body(main, "async function start(view)")
     assert start.index("router.show(") < start.index("KH.pwa.countVisit()")  # a signed-in visit, after the view shows
+
+
+def test_scan_starts_the_camera_when_the_person_prefers_it() -> None:
+    """Note 03 R10's per-person "Prefer live camera" (on, HTTPS only; v0.3.0 review L15): food.scan_prefer_camera.
+    The Scan sheet starts the live camera as it opens, in a secure context only (liveSupported), unless the
+    setting is off, it cannot be read, or the person already picked the camera, a photo or typed digits; every
+    path that starts or stops the camera keeps its existing rules (tracks stop on close). Settings → Food data has
+    the switch. device.py (live) checks both settings with Chromium's fake camera."""
+    scan = (STATIC / "js" / "scan.js").read_text(encoding="utf-8")
+    settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    opener = _function_body(scan, "function open({ trigger: from = null } = {})")
+    assert "if (canLive) {" in opener and "startCamera({ auto: mine })" in opener and "cameraPreferred()" in opener
+    pref = _function_body(scan, "async function cameraPreferred()")
+    assert "res.settings['food.scan_prefer_camera']" in pref and "return !item || item.value !== false;" in pref
+    assert "catch (e) { return false; }" in pref  # unreadable (offline): no automatic start
+    start = _function_body(scan, "async function startCamera({ auto = null } = {})")
+    assert "auto !== opening || chose || !dlg.open" in start
+    assert "for (const t of stream.getTracks()) t.stop(); return; } // closed or overtaken meanwhile" in start
+    for marker in ("chose = true; startCamera()", "$('#scan-file').addEventListener('click', () => { chose = true; });",
+                   "codeInput.addEventListener('input', () => { chose = true;"):
+        assert marker in scan, marker
+    assert "api.updateMySettings({ 'food.scan_prefer_camera': box.checked })" in settings and "id = 'set-scan-camera'" in settings

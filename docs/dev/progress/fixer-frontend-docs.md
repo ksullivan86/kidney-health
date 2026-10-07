@@ -38,10 +38,22 @@ LOW (apply or justify):
 | L12 | iOS install tip after third visit | done |
 | L13 | demo runs with lab rules on (note 05 C10) | done |
 | L14 | disabled Units placeholder promising a later version | done |
-| L15 | "Prefer live camera" setting missing | pending |
+| L15 | "Prefer live camera" setting missing | done |
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L15** ("Prefer live camera"): user key `food.scan_prefer_camera` (bool, default true; app/settings_registry.py,
+  JS twin in engine/settings.js in registry order, tests/data/settings_vectors.json regenerated: 456 checks).
+  scan.js: `open()` reads it (GET /api/me/settings; unreadable → no auto start) and, in a secure context only,
+  starts the camera with `startCamera({ auto: opening })`, which gives way when the person already chose the
+  camera, a photo or typed digits (`chose`), the sheet closed or reopened; a refused camera says how to switch
+  the setting off; focus moves to Stop when the camera button hides. Settings → Food data → Scanning toggle.
+  Tests: test_device_ui.py static, test_barcode_settings.py key; device.py live: on (default) → opening Scan
+  starts the fake camera and reads the code; off → the choice, camera button starts it; watchdog still fires.
+  Full device.py 148/149 on the first run (the one failure was my iostip reload cutting a request; fixed with
+  networkidle, then iostip 7/7 twice). Docs: docs/barcode-and-photos.md (flow + settings table), handbook
+  app/barcode-and-photo.md, ARCHITECTURE (settings, Scan bullet).
 
 * **L12** (iOS Home Screen tip): index.html `#install-tip` (an aside in the page flow, × to dismiss, hidden by
   default); pwa.js `countVisit()` (called by main.js `start()` after the first view, i.e. a signed-in visit):

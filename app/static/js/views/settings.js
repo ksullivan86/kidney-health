@@ -647,9 +647,33 @@
         body.append(h('p', { class: 'hint' }, 'A free key from api.data.gov (sign up with your email) allows 1,000 lookups an hour. Your own key is used first; the app never switches you to the shared key when yours stops working.'));
       }
     }
+    // Scanning: start the camera when the Scan sheet opens (note 03 R10, "Prefer live camera")
+    const settings = cache.mySettings;
+    if (settings && !(settings instanceof Error) && settings['food.scan_prefer_camera']) {
+      body.append(subtitle('Scanning', 'set-scan-h'));
+      const item = settings['food.scan_prefer_camera'];
+      const def = REG.BY_KEY['food.scan_prefer_camera'];
+      const id = 'set-scan-camera';
+      const box = h('input', { type: 'checkbox', id, 'aria-describedby': `${id}-help ${id}-src` });
+      box.checked = item.value !== false;
+      box.disabled = item.editable === false;
+      const msg = statusMsg(`${id}-msg`);
+      box.addEventListener('change', async () => {
+        box.disabled = true;
+        try {
+          const res = await api.updateMySettings({ 'food.scan_prefer_camera': box.checked });
+          cache.mySettings = res.settings;
+          msg.textContent = box.checked ? 'Saved: Scan starts the camera.' : 'Saved: Scan waits for you to choose the camera, a photo or typing.';
+          const src = $(`#${id}-src`); if (src) src.replaceWith(sourceLine(res.settings['food.scan_prefer_camera'].source, null, { id: `${id}-src` }));
+        } catch (err) { box.checked = !box.checked; if (!err.handled) toastError(err); } finally { box.disabled = cache.mySettings['food.scan_prefer_camera'].editable === false; }
+      });
+      body.append(h('div', { class: 'setting-row' },
+        h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, def ? def.label : 'Start the camera when I open Scan',
+          h('span', { class: 'hint', id: `${id}-help` }, 'Only on a secure (HTTPS) address, where the browser allows the camera. The browser asks first, and the camera stops when you close Scan.'))),
+        sourceLine(item.source, null, { id: `${id}-src` }), msg));
+    }
     // Open Food Facts
     body.append(subtitle('Barcode lookups: Open Food Facts', 'set-off-h'));
-    const settings = cache.mySettings;
     if (settings instanceof Error) body.append(failed(settings));
     else if (!settings) body.append(loading());
     else if (settings['food.off_consent']) {

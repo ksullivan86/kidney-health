@@ -217,6 +217,16 @@ register(
         label="Send barcodes I scan to Open Food Facts",
         help="Your own choice, used only when the admin has turned Open Food Facts lookups on.",
     ),
+    # Note 03 R10, user "Prefer live camera" (on, HTTPS only): js/scan.js reads it when the sheet opens.
+    SettingDef(
+        key="food.scan_prefer_camera",
+        model=bool,
+        default=True,
+        scope="user",
+        label="Start the camera when I open Scan",
+        help="On a secure (HTTPS) address the Scan sheet starts the live camera at once. Off: it waits for you"
+        " to choose the camera, a photo or typing the digits.",
+    ),
 )
 
 # The other barcode keys (note 03 R10; M2 barcode). OFF_BASE_URL is env-only (app/config.py), never a

@@ -985,7 +985,11 @@ M1 settings keys (`app/settings_registry.py`, instance scope; env lock in bracke
 `create-admin USERNAME` (password on stdin; claims user 1 while setup is pending), `reset-password
 USERNAME [--stdin]` (prints a 24-hour link, or sets the password from stdin and unlocks; either way
 older links for the account stop working), `list-users [--json]`, `setup-code`, `revoke-sessions
-USERNAME|--all`, `purge-pre-v3-backup`, `vacuum`, plus the platform's `backup`, `check`,
+USERNAME|--all`, `export-user USERNAME FILE|-` (that person's export `.zip`, as `GET /api/me/export.zip`; a new
+file with mode 0600, never overwritten; audited `export.created` via `cli`), `disable-user USERNAME` (as
+`PATCH /api/admin/users/{id}` `status: disabled`: never the only active admin; signs out the account's
+sessions, voids its reset links and, for an admin, the invites and links it issued; audited `user.disabled`
+via `cli`), `purge-pre-v3-backup`, `vacuum`, plus the platform's `backup`, `check`,
 `restore-check`, `rotate-secret-key`, `reencrypt`, `settings`. `backup` (to a file or `-`) writes the
 copy in rollback-journal mode, so it opens read-only anywhere; `restore-check` opens a read-only file
 with `immutable=1` (unless a `-wal` file sits next to it) and says when it could not check the stored
@@ -1486,6 +1490,8 @@ cached products into the shared rows without the network; `purge-barcode-cache` 
 ### Settings (registered in `app/settings_registry.py`) and configuration
 
 `food.off_enabled` (instance, `false`, `OFF_ENABLED`; M1), `food.off_consent` (user, `false`; M1),
+`food.scan_prefer_camera` (user, `true`; note 03 R10 "Prefer live camera": the Scan sheet starts the live camera as it
+opens, in a secure context only, unless the person already chose a photo or typed digits),
 `food.off_contact` (instance, the project URL, `OFF_CONTACT`; printable ASCII without round brackets or backslash: it goes
 into the User-Agent), `food.off_rate_per_minute` (instance, 10, 1–15, `OFF_RATE_PER_MINUTE`),
 `food.barcode_negative_ttl_hours` (instance, 24, 1–720, `BARCODE_NEGATIVE_TTL_HOURS`),
@@ -1525,7 +1531,8 @@ with lookups off on both sides.
 
 ### Frontend (`js/scan.js` = `KH.scan`, `css/device.css`; note 03 R7, R8 client side, R9, R11)
 
-* **Add view → Scan** (first action) opens `#sheet-scan`: *Camera* (live), *Photo of a barcode*, *Type the
+* **Add view → Scan** (first action) opens `#sheet-scan` (the live camera starting at once with `food.scan_prefer_camera`,
+  read from `GET /api/me/settings` at each opening; Settings → Food data → *Scanning*): *Camera* (live), *Photo of a barcode*, *Type the
   barcode* (digits or a USB/Bluetooth scanner; the check digit is checked in the browser with `KH.gtin`,
   errors under the field with `aria-describedby`/`aria-invalid`). Decoding is on the device only: the
   native `BarcodeDetector` when it supports `ean_13`, else the vendored ponyfill (`window.BarcodeDetectionAPI`,

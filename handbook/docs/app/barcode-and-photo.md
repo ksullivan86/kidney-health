@@ -23,7 +23,9 @@ numbers, and nothing is uploaded ([design note 03][NOTE03]).
 On **Add**, tap **Scan a barcode** and choose one:
 
 1. **Camera → Use the camera**: point it at the barcode. Hold still until it reads the same code twice;
-   the camera then stops by itself. Live scanning needs HTTPS ([Install the app](install.md)).
+   the camera then stops by itself. Live scanning needs HTTPS ([Install the app](install.md)). On HTTPS
+   the camera starts as soon as you open Scan; switch off **Start the camera when I open Scan** in
+   **Settings → Food data** if you would rather choose each time.
 2. **Photo of a barcode**: take or choose a picture; the phone reads the code. This also works over
    plain HTTP, and the photo never leaves your phone.
 3. **Type the barcode**: type the numbers under the lines and tap **Look up**. This also works with a

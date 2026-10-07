@@ -2,6 +2,8 @@
 
    * The Scan sheet (#sheet-scan, from Add → "Scan a barcode"): three ways to the same POST /api/foods/barcode.
      1. Camera: live, only in a secure context (HTTPS, or http://localhost) with getUserMedia; plain HTTP says why.
+        With the person's "Start the camera when I open Scan" (food.scan_prefer_camera, on by default; note 03 R10)
+        it starts as the sheet opens, unless they already chose a photo or typed digits.
         Two identical reads are needed, about 8 detections a second, every track stops when the sheet closes, the
         page is hidden or the view changes, and a camera that shows no frame within 4 s (WebKit bug 282327 in iOS
         home-screen apps) is closed with a pointer to the photo button.
@@ -185,6 +187,8 @@
   // Live camera
   // ---------------------------------------------------------------------------
   let live = null; // { stream, timer, watchdog, last, count, busy }
+  let opening = 0; // the sheet's current opening; an automatic start belongs to one
+  let chose = false; // the person picked a way themselves (camera, photo or typed digits) since the sheet opened
   function liveSupported() {
     return !PREVIEW && window.isSecureContext === true && !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
   }
@@ -220,12 +224,16 @@
     showCameraControls(false);
     if (message) say(message);
   }
-  async function startCamera() {
+  // `auto`: started because the sheet opened (food.scan_prefer_camera); it gives way to anything the person does.
+  async function startCamera({ auto = null } = {}) {
     if (live) return;
+    const gaveWay = () => auto !== null && (auto !== opening || chose || !dlg.open);
+    if (gaveWay()) return;
     clear(resultEl);
     let detector;
-    try { detector = await getDetector(); } catch (e) { say(e.message); return; }
-    if (!detector) { say(noDecoderText()); return; }
+    try { detector = await getDetector(); } catch (e) { if (!gaveWay()) say(e.message); return; }
+    if (!detector) { if (!gaveWay()) say(noDecoderText()); return; }
+    if (gaveWay()) return;
     say('Starting the camera…');
     let stream;
     try {
@@ -233,15 +241,18 @@
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
       });
     } catch (e) {
-      say(cameraError(e));
+      if (gaveWay()) return;
+      say(cameraError(e) + (auto !== null ? ' To stop the camera starting by itself, switch off "Start the camera when I open Scan" in Settings → Food data.' : ''));
       $('#scan-file').focus();
       return;
     }
-    if (!dlg.open) { for (const t of stream.getTracks()) t.stop(); return; } // closed while asking for permission
+    if (!dlg.open || gaveWay() || live) { for (const t of stream.getTracks()) t.stop(); return; } // closed or overtaken meanwhile
     live = { stream, timer: null, watchdog: null, last: null, count: 0, frames: 0 };
     const session = live;
     video.srcObject = stream;
+    const hadFocus = document.activeElement === $('#scan-camera');
     showCameraControls(true);
+    if (hadFocus) $('#scan-camera-stop').focus(); // the button that had focus is hidden now
     if (typeof video.requestVideoFrameCallback === 'function') {
       const onFrame = () => { if (live === session) { session.frames += 1; if (session.frames < 3) video.requestVideoFrameCallback(onFrame); } };
       video.requestVideoFrameCallback(onFrame);
@@ -279,7 +290,7 @@
     };
     session.timer = setTimeout(tick, DETECT_EVERY_MS);
   }
-  $('#scan-camera').addEventListener('click', () => { startCamera().catch((e) => { stopCamera(); toastError(e); }); });
+  $('#scan-camera').addEventListener('click', () => { chose = true; startCamera().catch((e) => { stopCamera(); toastError(e); }); });
   $('#scan-camera-stop').addEventListener('click', () => { stopCamera('Camera stopped.'); $('#scan-camera').focus(); });
   dlg.addEventListener('close', () => stopCamera());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && live) stopCamera('The camera stopped while the app was in the background. Tap “Use the camera” to start it again.'); });
@@ -289,7 +300,9 @@
   // ---------------------------------------------------------------------------
   // Photo input and typed digits
   // ---------------------------------------------------------------------------
+  $('#scan-file').addEventListener('click', () => { chose = true; });
   $('#scan-file').addEventListener('change', async (e) => {
+    chose = true;
     const input = e.currentTarget;
     const file = input.files && input.files[0];
     if (!file) return;
@@ -308,6 +321,7 @@
 
   function typedSubmit(e) {
     e.preventDefault();
+    chose = true;
     KH.forms.clearFieldErrors($('#scan-form'));
     const raw = codeInput.value.trim();
     if (!raw) { KH.forms.fieldError(codeInput, 'Enter the barcode number.', codeRow); codeInput.focus(); return; }
@@ -325,7 +339,7 @@
     lookup(raw, 'unknown', { typed: true }).catch(toastError);
   }
   sheets.onSubmit($('#scan-form'), typedSubmit);
-  codeInput.addEventListener('input', () => KH.forms.clearFieldErrors($('#scan-form')));
+  codeInput.addEventListener('input', () => { chose = true; KH.forms.clearFieldErrors($('#scan-form')); });
 
   // ---------------------------------------------------------------------------
   // Lookup and its answers
@@ -456,7 +470,22 @@
     const liveNote = $('#scan-live-note');
     liveNote.hidden = canLive;
     liveNote.textContent = canLive ? '' : liveNoteText();
+    opening += 1;
+    chose = false;
     sheets.open(dlg, from, canLive ? $('#scan-camera') : $('#scan-file'));
+    if (canLive) {
+      const mine = opening;
+      cameraPreferred().then((on) => { if (on) return startCamera({ auto: mine }); return null; })
+        .catch((e) => { stopCamera(); toastError(e); });
+    }
+  }
+  // The person's food.scan_prefer_camera (GET /api/me/settings; default on). Unreadable (offline): no automatic start.
+  async function cameraPreferred() {
+    try {
+      const res = await KH.api.mySettings();
+      const item = res && res.settings ? res.settings['food.scan_prefer_camera'] : null;
+      return !item || item.value !== false;
+    } catch (e) { return false; }
   }
   $('#btn-scan').addEventListener('click', (e) => open({ trigger: e.currentTarget }));
 

@@ -68,6 +68,9 @@
       label: 'Open Food Facts lookups per minute (whole server)',
       help: 'Open Food Facts allows 15 product lookups a minute from one address and may block an address that sends more. '
         + 'Everyone on this server shares this budget; products already looked up do not count.' },
+    { key: 'food.scan_prefer_camera', type: 'bool', default: true, scope: 'user', env: null,
+      label: 'Start the camera when I open Scan',
+      help: 'On a secure (HTTPS) address the Scan sheet starts the live camera at once. Off: it waits for you to choose the camera, a photo or typing the digits.' },
     { key: 'food.usda_branded_barcode', type: 'bool', default: true, scope: 'instance', env: 'USDA_BRANDED_BARCODE',
       label: 'Also look barcodes up in USDA FoodData Central',
       help: "Uses the person's USDA key or the shared one, when Open Food Facts does not know a product, has no nutrition facts "

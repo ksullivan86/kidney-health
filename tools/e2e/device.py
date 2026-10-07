@@ -581,10 +581,11 @@ def section_live(hx: Harness, state: dict[str, Any], pw: Any) -> None:
         state["page"] = page
         try:
             open_add(page, hx.base)
+            # "Start the camera when I open Scan" is on by default (note 03 R10): opening the sheet starts it.
             scan_sheet(page)
-            check(area, "the camera button shows in a secure context", page.is_visible("#scan-camera"))
-            page.click("#scan-camera")
             page.wait_for_selector("#scan-viewfinder:not([hidden])")
+            check(area, "with 'Start the camera when I open Scan' on (the default), opening Scan starts the camera",
+                  page.is_visible("#scan-camera-stop") and page.is_hidden("#scan-camera"))
             time.sleep(0.6)
             hx.shot(page, "live-viewfinder-375")
             page.wait_for_selector("#sheet-entry[open]")
@@ -601,13 +602,32 @@ def section_live(hx: Harness, state: dict[str, Any], pw: Any) -> None:
         state["page"] = page
         try:
             open_add(page, hx.base)
-            scan_sheet(page)
-            page.click("#scan-camera")
+            scan_sheet(page)  # the camera starts by itself (the default)
             wait_js(page, "document.querySelector('#scan-status').textContent.includes('did not show a picture')", 9000)
             check(area, "a camera with no picture closes after 4 s and points to the photo button",
                   page.is_hidden("#scan-viewfinder") and page.evaluate("document.activeElement && document.activeElement.id") == "scan-file")
         finally:
             no_problems(area + " / watchdog", watch)
+            ctx.close()
+        # The setting off: Scan waits for a choice; the camera button starts it.
+        hx.api("PATCH", "/api/me/settings", {"food.scan_prefer_camera": False})
+        ctx, watch = hx.context(browser=browser, width=375, height=812, touch=True, permissions=["camera"])
+        page = ctx.new_page()
+        state["page"] = page
+        try:
+            open_add(page, hx.base)
+            scan_sheet(page)
+            page.wait_for_timeout(1500)
+            check(area, "with the setting off, Scan opens on the choice: the camera button, no camera running",
+                  page.is_visible("#scan-camera") and page.is_hidden("#scan-viewfinder")
+                  and page.evaluate("document.querySelector('#scan-video').srcObject === null"))
+            page.click("#scan-camera")
+            page.wait_for_selector("#scan-viewfinder:not([hidden])")
+            check(area, "... and 'Use the camera' starts it", page.is_visible("#scan-camera-stop"))
+            page.keyboard.press("Escape")
+        finally:
+            hx.api("PATCH", "/api/me/settings", {"food.scan_prefer_camera": None})
+            no_problems(area + " / setting off", watch)
             ctx.close()
         # Plain HTTP (emulated): no camera button, the reason instead.
         ctx, watch = hx.context(browser=browser, width=375, height=812, touch=True, init=INSECURE)
@@ -818,6 +838,7 @@ def section_iostip(hx: Harness, state: dict[str, Any]) -> None:
                     page.reload()  # a new page load is a new visit (the same URL with a hash would not load again)
                 page.wait_for_selector("#view-today:not([hidden])")
                 wait_js(page, "localStorage.getItem('kdl-visits') === '%d'" % visit)
+                page.wait_for_load_state("networkidle")  # the next reload must not cut off this visit's requests
                 seen.append(page.evaluate(visible))
                 if visit == 3 and seen[-1]:
                     tip = page.inner_text("#install-tip")

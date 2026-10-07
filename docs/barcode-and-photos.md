@@ -39,7 +39,9 @@ In the app: **Add → Scan** opens the three ways in one sheet.
   reading the **same digits twice**, then stops the camera. The camera also stops when you close the
   sheet, switch apps or leave the page. If the camera sends no picture for 4 seconds, the sheet says so
   and offers the photo and typing instead. On a plain-HTTP address the camera button is replaced by why
-  (camera access needs HTTPS) and the photo route.
+  (camera access needs HTTPS) and the photo route. On HTTPS the camera starts as the sheet opens, unless
+  you switch off **Start the camera when I open Scan** (Settings → Food data, `food.scan_prefer_camera`,
+  personal, on by default) or pick a photo or type first; the browser asks for the camera the first time.
 * **Photo of a barcode**: the phone's own decoder reads it when the browser has one (Chrome on Android,
   for example); otherwise the app's built-in reader (about 1 MB, part of the app, downloaded from your
   server the first time it is needed and kept for offline use). Either way the photo stays on the device.
@@ -209,6 +211,7 @@ barcode reader and no camera: type the digits.
 | `food.barcode_negative_ttl_hours` (`BARCODE_NEGATIVE_TTL_HOURS`) | `24` (1–720) | How long "not found" is remembered |
 | `food.usda_branded_barcode` (`USDA_BRANDED_BARCODE`) | `true` | USDA branded lookups by barcode (needs a key) |
 | `food.off_consent` (personal) | `false` | Each person's agreement to send scans to Open Food Facts |
+| `food.scan_prefer_camera` (personal) | `true` | "Start the camera when I open Scan" (HTTPS only; note 03 R10 "Prefer live camera") |
 | `OFF_BASE_URL` (**env only**) | `https://world.openfoodfacts.org` | Staging (`https://world.openfoodfacts.net`) or your own Product Opener; `https://` only (plain `http://` only for localhost), no path |
 
 * **Network**: allow `world.openfoodfacts.org:443` (and `api.nal.usda.gov:443` for USDA) — see
