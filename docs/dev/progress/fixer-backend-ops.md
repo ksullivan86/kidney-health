@@ -20,7 +20,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
 | C9 | OFF potassium ceiling drops salt substitutes | done |
 | C10 | OFF per-100 mL drinks without serving not fluid | done |
-| C11 | curated foods: raw eggs suggested | todo |
+| C11 | curated foods: raw eggs suggested | parked (waits for fixer-frontend-docs' guidance commit) |
 | C12 | X-KDL-Version header + shell/API check | todo |
 | L1 | AI retention purge only with AI traffic | todo |
 | L2 | IDN AI base URL refused | todo |
@@ -98,6 +98,16 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * **docs/barcode-and-photos.md (yours):** mapping rules changed: potassium ≤ 60 g / phosphorus ≤ 32 g per 100 g,
   liquids (per 100 mL / beverages, not powders) count as fluid, prepared-only = servings only, per-serving
   without weight = enter from the label; additive scan ignores the bare element word "phosphorus".
+
+## Parked
+
+* **C11** ready in scratch (`foods.after.json`, `c11_curated.patch`): "Egg white, raw" → "Egg white, cooked" (+ note),
+  "Egg, whole, raw" gets `ingredient` (+ note); `python3 scripts/build_food_db.py --version 2026-10-07.2`
+  (cached SR zip, offline). Needs, in one commit: REAL_NAMES in tests/data/gen_guidance_vectors.py, regenerate
+  guidance + rules vectors, js/mock/foods.js name, tools/e2e/parity.py names, handbook menus via
+  scripts/build_handbook.py, tests that name the builtin. Parked because fixer-frontend-docs has uncommitted
+  changes in gen_guidance_vectors.py and the guidance engine (C1 room/unknowns); regenerating now would
+  commit their half-done work.
 
 ## Decisions
 
