@@ -867,7 +867,8 @@
     const keyStatus = own ? own.key : { set: false };
     const widget = KH.views.settings && KH.views.settings.keyWidget ? KH.views.settings.keyWidget({
       name: 'API key',
-      providerLabel: own ? own.label : 'The AI service',
+      // Read when a message is written, so it names the service chosen at that moment ("Saved, but OpenAI rejected …").
+      get providerLabel() { const p = presets.find((x) => x.name === presetSel.value); return own ? own.label : (p ? p.label : 'Your AI service'); },
       status: keyStatus,
       addText: 'Add your key',
       removeText: 'Remove your AI key? AI calls with your own provider stop until you add one.',

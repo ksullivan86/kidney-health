@@ -819,6 +819,40 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         logged = [e for e in hx.entries() if e["food_name"] == "Harness rye crackers"]
         food = hx.api("GET", f"/api/foods/{logged[0]['food_id']}") if logged else {}
         check(area, "logged; the saved food carries the additive scan", logged and "phosphate_additive" in food.get("flags", []), json.dumps(food)[:300])
+        # Settings → AI ideas: the activity lists both calls; a personal provider's key is write-only; a private
+        # address is refused for a personal provider (only the admin's AI_PRIVATE_HOSTS may be private).
+        page.goto(f"{hx.base}/#settings")
+        activity = page.locator("#set-ai-slot summary", has_text="AI activity").locator("xpath=..")
+        activity.locator("summary").first.click()
+        page.wait_for_selector("#set-ai-slot .ai-event")
+        rows = page.locator("#set-ai-slot .ai-event > summary").all_inner_texts()
+        check(area, "AI activity lists the meal ideas and the label call to the fake server",
+              len(rows) >= 2 and all(f"127.0.0.1:{fake.port}" in r or "127.0.0.1" in r for r in rows[:2]), json.dumps(rows[:4]))
+        own = page.locator("#set-ai-slot summary", has_text="My own AI provider").locator("xpath=..")
+        if not own.evaluate("(el) => el.open"):
+            own.locator("summary").first.click()
+        offered = own.locator("select").first.evaluate("(el) => [...el.options].map((o) => o.value)")
+        check(area, "a person is offered public services only (no address of their own unless the admin allows it)",
+              "openai" in offered and "openai_compatible" not in offered and "ollama" not in offered, json.dumps(offered))
+        own.locator("select").first.select_option("openai")
+        own.locator("button", has_text="Add your key").click()
+        secret = "sk-harness-write-only-0123456789abcdef"
+        own.locator("input[type=password]").fill(secret)
+        own.locator(".key-widget").get_by_role("button", name="Save", exact=True).click()  # not "Test and save": no outside call
+        page.wait_for_selector("#set-ai-slot .key-widget >> text=/Replace/")
+        said = page.inner_text(".toast")
+        check(area, "saving a key without the test makes no call (it says 'Key saved.')", said.strip() == "Key saved.", said)
+        me_ai = json.dumps(hx.api("GET", "/api/me/ai"))
+        check(area, "a personal key is write-only: never in the page or in GET /api/me/ai",
+              secret not in page.content() and secret not in me_ai and secret[-8:] not in me_ai, me_ai[:300])
+        hx.shot(page, "ai-own-provider-1280")
+        own = page.locator("#set-ai-slot summary", has_text="My own AI provider").locator("xpath=..")
+        if not own.evaluate("(el) => el.open"):
+            own.locator("summary").first.click()
+        own.locator("button", has_text="Remove my provider").click()
+        page.click("#set-ai-slot .confirm-row .btn.danger-solid")
+        page.wait_for_selector("#set-ai-slot button >> text=Save provider", state="attached")
+        check(area, "'Remove my provider' removes it and its key", hx.api("GET", "/api/me/ai").get("own") is None)
     finally:
         no_problems(area, watch)
         ctx.close()
@@ -989,7 +1023,11 @@ def main(argv: list[str] | None = None) -> int:
     (out / "shots").mkdir()
     env = {"AI_ENABLED": "true", "AI_PROVIDER": "openai_compatible", "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1",
            "AI_MODEL": "fake-text", "AI_VISION_MODEL": "fake-vision", "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port}",
-           "AI_SHARED_DAILY_LIMIT": "0"}
+           "AI_SHARED_DAILY_LIMIT": "0",
+           # No call may leave this machine: a proxy that does not exist for anything but the local servers.
+           "HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "ALL_PROXY": "http://127.0.0.1:9",
+           "https_proxy": "http://127.0.0.1:9", "http_proxy": "http://127.0.0.1:9", "all_proxy": "http://127.0.0.1:9",
+           "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"}
     server = khserver.Server(args.port, out / "data", log_path=out / "server.log", python=args.server_python, env=env)
     state: dict[str, Any] = {"page": None}
     try:
