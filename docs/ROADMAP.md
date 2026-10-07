@@ -19,6 +19,7 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 * Import of `export.json` into another instance (`POST /api/me/import`; the v0.3 export format was designed for it) — note 07 §4.14 and §6 "Later (v0.4)".
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
 * One SQLite file per person (strongest isolation, deletion = removing a file) — note 07 §3.7 ("Revisit for v1.0").
+* A "Not chosen yet" kidney stage and diabetes type for a new household account. The schema gives every new profile the single-user defaults (stage 3b, type 1 diabetes; `user_profiles` in note 07 §4.4), and the Profile form shows them preselected. Showing them as unchosen until the person saves needs a marker their first save sets (a schema step), an empty choice in the Profile form, and the same in the demo twin and the parity harness. Defaulting diabetes to "none" instead would hide the Treating a low card from a person with type 1 diabetes until they save, so the owner decides between the two — v0.3.0 review (UX, `app/migrations/m003_accounts.py`).
 
 ## Installable app (note 02)
 

@@ -31,7 +31,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L7 | additives: 'phosphorus' word flagged as additive | done |
 | L8 | label photo serving_desc/serving_g not marked from photo | done |
 | L9 | 'Server name' help text vs signed-in title | done |
-| L10 | new accounts default to stage 3b / type 1 | todo |
+| L10 | new accounts default to stage 3b / type 1 | deferred by spec (ROADMAP) |
 | L11 | first-run log line https://<this server> | todo |
 | L12 | ISO dates in server texts | todo |
 | L13 | AI 10-minute result cache | todo |
@@ -127,6 +127,12 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   privacy." (the places that really show it; the signed-in title stays the product name). Twin
   `js/engine/settings.js` (one-line outside-area change, needed for parity) + regenerated settings vectors; test
   `tests/test_settings_ui.py::test_server_name_help_says_only_where_the_name_is_shown`.
+
+* **L10** deferred to docs/ROADMAP.md (Accounts): note 07 §4.4 specifies `ckd_stage DEFAULT '3b'`, `diabetes DEFAULT
+  'type1'`. "Not chosen yet" needs a chosen-marker column (new schema step), Profile form empty option, demo twin and
+  parity.py changes, and fixer-frontend-docs has profile.js and parity.py open; diabetes "none" by default would hide
+  the Treating a low card from a person with T1D until they save (CLAUDE.md health-safety spirit), so it is an owner
+  decision, not a silent default change.
 
 ## Handoffs (to fixer-frontend-docs)
 
