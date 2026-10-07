@@ -61,6 +61,15 @@
   }
   function plural(n, word, pluralWord = null) { return `${n} ${n === 1 ? word : (pluralWord || `${word}s`)}`; }
   function sumOf(entries, key) { let s = 0; for (const e of entries) s += e.nutrients[key] || 0.0; return s; }
+  // Whether any entry has no value for key: its total is then a lower bound (never "within", never "less").
+  function anyUnknown(entries, key) { return entries.some((e) => e.nutrients[key] == null); }
+  function unknownNote(entries, keys) {
+    const missing = keys.filter((k) => anyUnknown(entries, k));
+    if (!missing.length) return null;
+    const foods = new Set(entries.filter((e) => missing.some((k) => e.nutrients[k] == null)).map((e) => (e.food_id != null ? e.food_id : e.name)));
+    const words = M.joinAnd(missing.map((k) => M.NUTRIENT_WORD[k])).split(' and ').join(' or ');
+    return [missing, foods.size, words];
+  }
 
   // ---- end of day --------------------------------------------------------------------------------
   function bestHypoFood(foods, prefs) {
@@ -156,8 +165,12 @@
         if (hypo.some((e) => (e.nutrients[R.K] || 0.0) > R.HYPO_INSIGHT_K_MG)) {
           const best = bestHypoFood(ctx.foods, ctx.prefs);
           if (best != null && best[2] <= R.HYPO_BEST_MAX_K_MG) {
-            msg += ` ${M.safeName(best[0].name)} would treat the same low with ${M.fmtInt(best[2])} mg potassium.`;
-            numbers.better_food_id = best[0].id;
+            // The portion that reaches the dose, always (F5: never read as an under-dose).
+            const [food, q, kBest] = best;
+            msg += ` ${M.safeName(food.name)} (${M.portionShort(q, food.serving_desc)}, ${M.fmtG((food.carbs || 0.0) * q)} g `
+              + `carbs) would treat the same low with ${M.fmtInt(kBest)} mg potassium.`;
+            numbers.better_food_id = food.id;
+            numbers.better_servings = R.roundTo(q, 2);
           }
         }
         out.push(insight('day.hypo.logged', 'info', R.CARBS, msg, numbers, [], ['treating-a-low']));
@@ -189,11 +202,9 @@
           `Protein was ${M.fmtG(protein)} g, above your ${M.fmtG(pMax)} g maximum. Protein is judged `
           + 'on the weekly average.', { value: R.roundTo(protein, 1), max: M.whole(pMax) }, [], ['protein']));
       }
-      const missingKeys = [R.K, R.P, R.NA].filter((k) => eaten.some((e) => e.nutrients[k] == null));
-      if (missingKeys.length) {
-        const foodsMissing = new Set(eaten.filter((e) => missingKeys.some((k) => e.nutrients[k] == null)).map((e) => e.food_id));
-        const words = M.joinAnd(missingKeys.map((k) => M.NUTRIENT_WORD[k])).split(' and ').join(' or ');
-        const n = foodsMissing.size;
+      const unknown = unknownNote(eaten, [R.K, R.P, R.NA]);
+      if (unknown != null) {
+        const [missingKeys, n, words] = unknown;
         out.push(insight('day.unknown', 'info', missingKeys[0], `${plural(n, 'food')} had no ${words} value, so today's total may be low.`,
           { count: n, nutrients: missingKeys }, [], ['label-reading']));
       }
@@ -213,7 +224,7 @@
         const within = [];
         for (const key of [R.K, R.P, R.NA, R.FLUID]) {
           const t = R.targetMax(targets[key]);
-          if (t != null && sumOf(eaten, key) <= t) within.push(M.NUTRIENT_WORD[key]);
+          if (t != null && !anyUnknown(eaten, key) && sumOf(eaten, key) <= t) within.push(M.NUTRIENT_WORD[key]);
         }
         if (within.length) {
           const verb = within.length > 1 ? 'all stayed' : 'stayed';
@@ -317,7 +328,7 @@
       const t = R.targetMax(targets[key]);
       if (t == null) continue;
       const overDays = logged.filter((d) => dayTotals.get(d)[key] > t);
-      if (!overDays.length) stayed.push(M.NUTRIENT_WORD[key]);
+      if (!overDays.length && !anyUnknown(allEntries, key)) stayed.push(M.NUTRIENT_WORD[key]);
       if (overDays.length < 2) continue;
       const sev = 2 * overDays.length >= n ? 'warning' : 'attention';
       const wd = overDays.map((d) => R.weekday(d));
@@ -390,10 +401,19 @@
       out.push(insight('period.additives', 'info', R.P, `Phosphate-additive foods were eaten on ${additiveDays.length} of ${n} days: ${listed}.`,
         { days: additiveDays.length, logged_days: n }, [], ['phosphate-additives']));
     }
+    const unknown = unknownNote(allEntries, [R.K, R.P, R.NA]);
+    if (unknown != null) {
+      const [missingKeys, foods, words] = unknown;
+      const unknownDays = logged.filter((d) => missingKeys.some((k) => anyUnknown(days.get(d), k))).length;
+      out.push(insight('period.unknown', 'info', missingKeys[0],
+        `${plural(foods, 'food')} had no ${words} value (on ${unknownDays} of ${n} days), so these totals and averages may be low.`,
+        { count: foods, days: unknownDays, logged_days: n, nutrients: missingKeys }, [], ['label-reading']));
+    }
     const prevDays = byDay(previous);
     if (prevDays.size >= R.MIN_LOGGED_DAYS) {
       for (const key of [R.K, R.P]) {
         if (R.targetMax(targets[key]) == null) continue;
+        if (anyUnknown(allEntries, key) || anyUnknown(previous, key)) continue;
         let s = 0;
         for (const v of prevDays.values()) s += sumOf(v, key);
         const prevAvg = s / prevDays.size;

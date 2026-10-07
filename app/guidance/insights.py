@@ -90,7 +90,24 @@ def _plural(n: int, word: str, plural: str | None = None) -> str:
 
 
 def _sum(entries: Iterable[Any], key: str) -> float:
+    """The known part of ``key`` over ``entries`` (an unknown value adds nothing: see :func:`_unknown`)."""
     return sum((e.nutrients.get(key) or 0.0) for e in entries)
+
+
+def _unknown(entries: Iterable[Any], key: str) -> bool:
+    """Whether any entry has no value for ``key``: its total is then only a lower bound, so no insight
+    may say it "stayed within" a limit or went down (note 06 R4: unknown is never treated as 0)."""
+    return any(e.nutrients.get(key) is None for e in entries)
+
+
+def _unknown_note(entries: Sequence[Any], keys: Sequence[str]) -> tuple[list[str], int, str] | None:
+    """``(missing keys, distinct foods, "potassium or sodium")`` for the entries without a value, or None."""
+    missing = [k for k in keys if _unknown(entries, k)]
+    if not missing:
+        return None
+    foods = {e.food_id if e.food_id is not None else e.name for e in entries if any(e.nutrients.get(k) is None for k in missing)}
+    words = M.join_and([M.NUTRIENT_WORD[k] for k in missing]).replace(" and ", " or ")
+    return missing, len(foods), words
 
 
 # --------------------------------------------------------------------------- #
@@ -215,8 +232,12 @@ def day_insights(ctx: GuidanceContext) -> dict[str, Any]:
             if any((e.nutrients.get(R.K) or 0.0) > R.HYPO_INSIGHT_K_MG for e in hypo):
                 best = best_hypo_food(ctx.foods, ctx.prefs)
                 if best is not None and best[2] <= R.HYPO_BEST_MAX_K_MG:
-                    msg += f" {M.safe_name(best[0].name)} would treat the same low with {M.fmt_int(best[2])} mg potassium."
-                    numbers["better_food_id"] = best[0].id
+                    # The portion that reaches the dose, always (F5: never read as an under-dose).
+                    food, q, k_best = best
+                    msg += (f" {M.safe_name(food.name)} ({M.portion_short(q, food.serving_desc)}, {M.fmt_g((food.carbs or 0.0) * q)} g "
+                            f"carbs) would treat the same low with {M.fmt_int(k_best)} mg potassium.")
+                    numbers["better_food_id"] = food.id
+                    numbers["better_servings"] = R.round_to(q, 2)
             out.append(insight("day.hypo.logged", "info", R.CARBS, msg, numbers, (), ["treating-a-low"]))
         # Several high-potassium portions (AKF/UW: not several high-K foods in one day).
         high = [e for e in eaten if not e.hypo and (e.nutrients.get(R.K) or 0.0) > R.HIGH_K_ENTRY_MG]
@@ -247,11 +268,9 @@ def day_insights(ctx: GuidanceContext) -> dict[str, Any]:
                                f"Protein was {M.fmt_g(protein)} g, above your {M.fmt_g(p_max)} g maximum. Protein is judged "
                                "on the weekly average.", {"value": R.round_to(protein, 1), "max": M.whole(p_max)}, (), ["protein"]))
         # Unknown values.
-        missing_keys = [k for k in (R.K, R.P, R.NA) if any(e.nutrients.get(k) is None for e in eaten)]
-        if missing_keys:
-            foods_missing = {e.food_id for e in eaten if any(e.nutrients.get(k) is None for k in missing_keys)}
-            words = M.join_and([M.NUTRIENT_WORD[k] for k in missing_keys]).replace(" and ", " or ")
-            n = len(foods_missing)
+        unknown = _unknown_note(eaten, (R.K, R.P, R.NA))
+        if unknown is not None:
+            missing_keys, n, words = unknown
             out.append(insight("day.unknown", "info", missing_keys[0],
                                f"{_plural(n, 'food')} had no {words} value, so today's total may be low.",
                                {"count": n, "nutrients": missing_keys}, (), ["label-reading"]))
@@ -270,12 +289,12 @@ def day_insights(ctx: GuidanceContext) -> dict[str, Any]:
                                    f"{M.fmt_int(kcal_goal)} kcal goal. Eating too little can cause muscle loss; fats such as "
                                    "olive oil add calories without potassium or phosphorus.",
                                    {"value": M.whole(kcal), "goal": M.whole(kcal_goal)}, (), ["eating-enough"]))
-        # All good.
+        # All good: only nutrients whose every value is known (a total missing values is a lower bound).
         if not any(i["severity"] in ("warning", "attention") for i in out):
             within = []
             for key in (R.K, R.P, R.NA, R.FLUID):
                 t = R.target_max(targets.get(key))
-                if t is not None and _sum(eaten, key) <= t:
+                if t is not None and not _unknown(eaten, key) and _sum(eaten, key) <= t:
                     within.append(M.NUTRIENT_WORD[key])
             if within:
                 verb = "all stayed" if len(within) > 1 else "stayed"
@@ -402,7 +421,7 @@ def period_insights(profile: Profile, prefs: Prefs, start: str, end: str, entrie
         if t is None:
             continue
         over_days = [d for d in logged if day_totals[d][key] > t]
-        if not over_days:
+        if not over_days and not _unknown(all_entries, key):
             stayed.append(M.NUTRIENT_WORD[key])
         if len(over_days) < 2:
             continue
@@ -479,11 +498,23 @@ def period_insights(profile: Profile, prefs: Prefs, start: str, end: str, entrie
         out.append(insight("period.additives", "info", R.P,
                            f"Phosphate-additive foods were eaten on {len(additive_days)} of {n} days: {listed}.",
                            {"days": len(additive_days), "logged_days": n}, (), ["phosphate-additives"]))
-    # Change against the previous period.
+    # Unknown values: the averages and totals above are lower bounds.
+    unknown = _unknown_note(all_entries, (R.K, R.P, R.NA))
+    if unknown is not None:
+        missing_keys, foods, words = unknown
+        unknown_days = sum(1 for d in logged if any(_unknown(days[d], k) for k in missing_keys))
+        out.append(insight("period.unknown", "info", missing_keys[0],
+                           f"{_plural(foods, 'food')} had no {words} value (on {unknown_days} of {n} days), so these "
+                           "totals and averages may be low.",
+                           {"count": foods, "days": unknown_days, "logged_days": n, "nutrients": missing_keys}, (),
+                           ["label-reading"]))
+    # Change against the previous period (not when either period misses values: "less" could just be "not listed").
     prev_days = _by_day(previous)
     if len(prev_days) >= R.MIN_LOGGED_DAYS:
         for key in (R.K, R.P):
             if R.target_max(targets.get(key)) is None:
+                continue
+            if _unknown(all_entries, key) or _unknown(previous, key):
                 continue
             prev_avg = sum(_sum(v, key) for v in prev_days.values()) / len(prev_days)
             if prev_avg <= 0:

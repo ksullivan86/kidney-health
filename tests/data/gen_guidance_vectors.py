@@ -348,6 +348,23 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
                                         "entries": tv_i2_entries(), "previous": []}),
         ("TV-I3 period with two logged days", base_input(food_set="all"), {"fn": "period_insights", "start": "2026-09-28",
                                                              "end": "2026-10-04", "entries": tv_i2_entries()[:16]}),
+        # v0.3.0 review: the better low treatment names the portion that reaches the dose (F5).
+        ("real list: low treated with juice, dose 20, gel not for me", real_input(
+            hypo_dose_g=20.0, targets=HD, dialysis="hemodialysis", exclude_food_ids=[rid("Glucose gel (15 g carb tube)")],
+            day=[entry(1, rid("Orange juice"), "snack", 2.0, purpose="hypo")]), {"fn": "day_insights"}),
+        ("real list: low treated with juice, dose 30", real_input(
+            hypo_dose_g=30.0, day=[entry(1, rid("Orange juice"), "snack", 2.0, purpose="hypo")]), {"fn": "day_insights"}),
+        # v0.3.0 review: a nutrient with unknown values is never "within" and never "less than before" (R4).
+        ("unknown potassium is never all good", base_input(diabetes="none", day=[
+            entry(1, 1, "lunch", override={"potassium_mg": None, "phosphorus_mg": None}), entry(2, 5, "dinner")], history=[]),
+         {"fn": "day_insights"}),
+        ("period with unknown potassium and sodium", base_input(food_set="all"), {
+            "fn": "period_insights", "start": "2026-09-28", "end": "2026-10-04",
+            "entries": [hist(d, 1, "lunch", override={"potassium_mg": None if d < "2026-10-01" else 500.0, "sodium_mg": None})
+                        for d in ("2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03",
+                                  "2026-10-04")],
+            "previous": [hist(d, 1, "lunch", override={"potassium_mg": 2000.0}) for d in ("2026-09-21", "2026-09-22",
+                                                                                         "2026-09-23")]}),
     ]
     for i, text in enumerate(("I'm low", "feeling shaky and sweaty", "glucose 3.4", "bg 62", "low-fat milk and toast",
                               "2 eggs, toast with butter, tea", "")):

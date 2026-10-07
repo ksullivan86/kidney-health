@@ -12,10 +12,10 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 |---|---|---|
 | C1 | vision: photo bodies read before consent/slot/quota (memory) | done |
 | C2 | targets E-1/E-3 calorie note contradicts target | done |
-| C3 | insights day.hypo.logged without portion | todo |
+| C3 | insights day.hypo.logged without portion | done |
 | C4 | AI guard low_* claims judged against half the room | todo |
 | C5 | AI shown free text blocklist misses shot/skip/delay/pen/pill/extra | todo |
-| C6 | insights all_good with unknown K/Na counted as 0 | todo |
+| C6 | insights all_good with unknown K/Na counted as 0 | done |
 | C7 | OFF prepared-only: serving_g is dry weight | todo |
 | C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
 | C9 | OFF potassium ceiling drops salt substitutes | todo |
@@ -56,6 +56,12 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   parity), vectors regenerated (`python3 tests/data/gen_targets_vectors.py`; `node tests/js/run_vectors.mjs`
   1859 targets checks). Tests: TV20 case, property "exactly one note starts with Calories: and states the target
   (or E-4's total)" over 1500 random profiles, K-2 parametrized by stage, GLIM age-70 wording.
+
+* **C3 + C6** `app/guidance/insights.py` + twin `js/engine/guidance/insights.js`: better low treatment prints
+  "(5 × 1 tablet, 20 g carbs)" and `numbers.better_servings`; `_unknown`/`_unknown_note`: day.all_good and
+  period.all_good skip nutrients with unknown values, new `period.unknown` info insight, `period.change.*` skipped
+  when either period misses values. 4 new vector cases (`gen_guidance_vectors.py`), tests in
+  `tests/guidance/test_insights.py` (doses 15/20/30 with and without gel/shot, unknown day/period/change).
 
 ## Handoffs (to fixer-frontend-docs)
 

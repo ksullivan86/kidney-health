@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import fixtures as fx
 from app.guidance import insights
+from app.guidance import messages as M
 from app.guidance.state import HistoryEntry, Prefs, Profile
 from app.guidance.vectors import make_food
 
@@ -35,7 +36,7 @@ def test_tv_i1_day_messages_word_for_word():
         "Lunch had 72 g and dinner 87 g of carbs, more than 10 g above your usual 60 g.")  # breakfast 54.6 g is within
     assert got["day.hypo.logged"]["message"] == (
         "You logged 2 low-glucose treatments (29 g carbs, 250 mg potassium). They are not counted in the meal carb "
-        "check. Glucose tablets, 4 would treat the same low with 0 mg potassium.")
+        "check. Glucose tablets, 4 (1 × 4 tablets, 16 g carbs) would treat the same low with 0 mg potassium.")
     assert got["day.high_k.count"]["message"] == (
         "You had 5 high-potassium portions today: orange juice, banana, chicken breast (2) and potato.")
     # Severity order (warning > attention > info > good), then nutrient priority.
@@ -196,3 +197,80 @@ def test_period_bounds_default_to_the_seven_days_ending_yesterday():
     assert insights.period_bounds(None, None, "2026-10-05") == ("2026-09-28", "2026-10-04", "2026-09-21", "2026-09-27")
     assert insights.period_bounds("2026-10-01", None, "2026-10-05")[:2] == ("2026-10-01", "2026-10-07")
     assert insights.period_bounds(None, "2026-10-01", "2026-10-05")[:2] == ("2026-09-25", "2026-10-01")
+
+
+# --------------------------------------------------------------------------- #
+# v0.3.0 review: the better low treatment names its portion; unknown values are never "within"
+# --------------------------------------------------------------------------- #
+
+
+def _hypo_day(foods, dose: float, exclude: frozenset[int] = frozenset()):
+    oj = next(f for f in foods.values() if f.name.startswith("Orange juice"))
+    ctx = fx.context(food_map=foods, day=(fx.entry(oj, "snack", 2.0, purpose="hypo"),), history=(),
+                     prefs=Prefs(hypo_dose_g=dose, exclude_food_ids=exclude), dialysis="hemodialysis",
+                     targets={**fx.TARGETS, "potassium_mg": 3000})
+    return by_id(insights.day_insights(ctx))["day.hypo.logged"]
+
+
+def test_the_better_low_treatment_names_the_portion_that_reaches_the_dose():
+    """Note 06 F5 (never under-dose): "Glucose gel would treat the same low" read as one tube."""
+    foods = fx.real_foods()
+    gel_and_shot = frozenset(f.id for f in foods.values() if f.hypo and ("gel" in f.name_fold or "shot" in f.name_fold))
+    for dose in (15, 20, 30):
+        for exclude in (frozenset(), gel_and_shot):
+            item = _hypo_day(foods, dose, exclude)
+            best = insights.best_hypo_food(foods, Prefs(hypo_dose_g=dose, exclude_food_ids=exclude))
+            assert best is not None
+            food, servings, _k = best
+            portion = f"{M.fmt_servings(servings)} × "
+            assert f"{food.name} ({portion}" in item["message"], item["message"]
+            carbs = (food.carbs or 0.0) * servings
+            assert carbs >= dose and f", {M.fmt_g(carbs)} g carbs) would treat the same low" in item["message"]
+            assert item["numbers"]["better_food_id"] == food.id and item["numbers"]["better_servings"] == servings
+    tablets = _hypo_day(foods, 20, gel_and_shot)["message"]
+    assert "Glucose tablet (4 g carb) (5 × 1 tablet, 20 g carbs) would treat the same low" in tablets
+
+
+def test_all_good_never_includes_a_nutrient_with_unknown_values():
+    fs = fx.foods()
+    label = make_food(id=41, name="Crackers from a label", category="Snacks", serving_desc="5 crackers (30 g)", serving_g=30,
+                      nutrients=fx.nutrients(19, 2, None, None, 230, 0), source="custom")
+    day = (fx.entry(label, "lunch"), fx.entry(label, "lunch"), fx.entry(label, "dinner"))
+    got = by_id(insights.day_insights(fx.context(food_map={**fs, 41: label}, day=day, history=(), diabetes="none")))
+    assert got["day.unknown"]["message"] == "1 food had no potassium or phosphorus value, so today's total may be low."
+    assert got["day.all_good"]["message"] == "Sodium stayed within your target today."  # not potassium, not phosphorus
+    nothing = make_food(id=42, name="Mystery soup", category="Soups", serving_desc="1 cup", serving_g=240,
+                        nutrients=fx.nutrients(10, 3, None, None, None, 0), source="custom")
+    got = by_id(insights.day_insights(fx.context(food_map={**fs, 42: nothing}, day=(fx.entry(nothing, "lunch"),), history=(),
+                                                 diabetes="none")))
+    assert "day.all_good" not in got and got["day.unknown"]["numbers"]["nutrients"] == ["potassium_mg", "phosphorus_mg", "sodium_mg"]
+
+
+def test_a_period_with_unknown_values_says_so_and_claims_nothing_for_them():
+    week = ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]
+
+    def row(d, k, na, food_id=50, name="Soda from a scan"):
+        return HistoryEntry(date=d, meal="lunch", food_id=food_id, name=name, servings=1,
+                            nutrients=fx.nutrients(30, 0, k, 10, na, 0), purpose=None)
+
+    entries = [row(d, None, None) for d in week]  # nothing known about potassium or sodium
+    r = insights.period_insights(Profile(targets=fx.TARGETS), Prefs(), week[0], week[-1], entries)
+    got = by_id(r)
+    assert "period.all_good" not in got
+    assert got["period.unknown"]["message"] == (
+        "1 food had no potassium or sodium value (on 7 of 7 days), so these totals and averages may be low.")
+    assert got["period.unknown"]["numbers"] == {"count": 1, "days": 7, "logged_days": 7,
+                                                "nutrients": ["potassium_mg", "sodium_mg"]}
+    # Sodium known every day, potassium missing on two: only sodium may be "within".
+    mixed = [row(d, 500 if d not in week[:2] else None, 300) for d in week]
+    got = by_id(insights.period_insights(Profile(targets=fx.TARGETS), Prefs(), week[0], week[-1], mixed))
+    assert got["period.all_good"]["message"] == "Sodium stayed within your limit on all 7 days you logged."
+    assert got["period.unknown"]["message"].endswith("(on 2 of 7 days), so these totals and averages may be low.")
+    # "Less than the week before" could just be "not listed": no change insight for that nutrient.
+    previous = [row(d, 2000, 300) for d in ("2026-09-21", "2026-09-22", "2026-09-23")]
+    got = by_id(insights.period_insights(Profile(targets=fx.TARGETS), Prefs(), week[0], week[-1], mixed, previous))
+    assert "period.change.potassium_mg" not in got
+    known = [row(d, 500, 300) for d in week]
+    got = by_id(insights.period_insights(Profile(targets=fx.TARGETS), Prefs(), week[0], week[-1], known, previous))
+    assert got["period.change.potassium_mg"]["message"] == "Potassium averaged 75 % less than the week before."
+    assert "period.unknown" not in got
