@@ -17,7 +17,7 @@ CONFIRMED (fix with root cause and a test):
 | C1 | unknown K/P counted as 0 (today.js:147 and every total) | pending |
 | C2 | handbook light-scheme links/header fail WCAG AA | done |
 | C3 | Settings → This device renders twice on first visit | done |
-| C4 | DG47 dead citation on 13 handbook pages | pending |
+| C4 | DG47 dead citation on 13 handbook pages | done |
 | C5 | guidance never shows which targets it used / when saved | pending |
 
 LOW (apply or justify): see the table below as each is done.
@@ -39,6 +39,15 @@ LOW (apply or justify): see the table below as each is done.
   drawer title. `tools/e2e/learn.py` now measures every visible text run (colour alpha, opacity, stacked
   backgrounds; waits for transitions to end) on 5 pages in both schemes: 60/60 pass on a build with
   `HANDBOOK_APP_LINK=/` (the image's flags). Before the CSS the same probe found 6 failing groups per page.
+
+* **C4** DG47 removed from `handbook/sources.yml`; the 600 mg per-meal line now cites `SAT-labels` (new:
+  Satellite Healthcare food-label guide, sodium "less than 600 mg per meal and less than 200 mg for a snack")
+  and `AKF-meal` (potassium "600-700mg ... per meal"), both fetched and quoted 2026-10-07, both `dg: [47]`.
+  Edited `data/recipes.yml` (generator input), `eat/recipes/index.md`, the RECIPE_LIMITS comment; regenerated
+  with `python scripts/build_handbook.py --write` (`--check` clean). REVIEW.md eat/ finding 36. Tests:
+  `test_retired_sources_stay_retired` (no page, data file or link include may cite DG47) and
+  `test_recipe_review_lines_cite_the_sources_that_state_them`. Strict build OK; `handbook/tools/check_links.py`
+  0 broken of 14,636; `tests/test_learn_links.py` against the built site passes.
 
 ## Coordination
 

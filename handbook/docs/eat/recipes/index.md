@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-06
 fact_checked: 2026-10-05
-sources: [FDC, DG47, DG5, DG46b, DG37a, DG34, DG20, DG18, FSTEMPS, AKFkitchen]
+sources: [FDC, SAT-labels, AKF-meal, DG5, DG46b, DG37a, DG34, DG20, DG18, FSTEMPS, AKFkitchen]
 ---
 
 # Recipes
@@ -43,8 +43,11 @@ your team set for you.
 
 Where the lines come from:
 
-- **600 mg per meal** of sodium or potassium is a review line used in renal diet teaching
-  ([University of Michigan][DG47]). Three meals at 600 mg plus snacks still fit a 2,000 mg sodium day.
+- **600 mg per meal** of sodium or potassium is a review line used in renal diet teaching: a dialysis
+  provider's label guide says less than 600 mg of sodium per meal ([Satellite Healthcare][SAT-labels]),
+  and a kidney charity's dietitian suggests 600–700 mg of potassium per meal on a low-potassium diet
+  ([AKF Kidney Kitchen][AKF-meal]); the recipes use the lower end. Three meals at 600 mg plus snacks
+  still fit a 2,000 mg sodium day.
 - **300 mg of phosphorus per meal** is a third of the 900 mg starting ceiling at stage 5
   ([Eating well](../index.md#your-numbers)).
 - For snacks, **200 mg potassium** is where NKF calls a serving "high" ([NKF][DG5]), **100 mg
@@ -103,7 +106,7 @@ Where the lines come from:
 ## Sources
 
 - [USDA FoodData Central (SR Legacy)][FDC]: every ingredient value.
-- [University of Michigan renal diet handout][DG47]: 600 mg of sodium or potassium per meal.
+- [Satellite Healthcare: food labels][SAT-labels]: less than 600 mg of sodium per meal; [AKF Kidney Kitchen: potassium per meal][AKF-meal]: 600–700 mg of potassium per meal.
 - [NKF: potassium and your CKD diet][DG5]; [NKF: phosphorus and your CKD diet][DG20]; [AKF phosphorus food guide][DG46b]; [review of phosphate additives][DG18].
 - [FDA claim definitions][DG37a]; [FDA: sodium in your diet][DG34].
 - [FoodSafety.gov: safe minimum internal temperatures][FSTEMPS].

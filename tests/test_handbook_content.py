@@ -222,6 +222,37 @@ def test_sources_yml_entries_are_complete():
         assert entry["kind"] in SOURCE_KINDS, f"sources.yml {sid}: unknown kind {entry['kind']}"
 
 
+# Sources taken out of the bibliography because the work is gone. A page, the generator data or sources.yml must
+# not bring one back; cite the replacement instead (handbook/REVIEW.md records each replacement).
+RETIRED_SOURCES = {
+    "DG47": "University of Michigan renal diet handout: medicine.umich.edu redirects to the medical school's home page "
+            "(then 403) since 2026-10-05; cite SAT-labels (sodium per meal) and AKF-meal (potassium per meal)",
+}
+
+
+def test_retired_sources_stay_retired():
+    sources = {k.lower() for k in _sources()}
+    for sid, why in RETIRED_SOURCES.items():
+        assert sid.lower() not in sources, f"sources.yml defines retired source {sid}: {why}"
+    data = [HANDBOOK / "data" / name for name in ("recipes.yml", "menus.yml") if (HANDBOOK / "data" / name).exists()]
+    for path in [*PAGES, *data, HANDBOOK / "includes" / "sources.md"]:
+        text = path.read_text(encoding="utf-8")
+        for sid, why in RETIRED_SOURCES.items():
+            assert not re.search(rf"(?<![\w-]){re.escape(sid)}(?![\w-])", text), f"{path.relative_to(ROOT)} cites retired {sid}: {why}"
+
+
+def test_recipe_review_lines_cite_the_sources_that_state_them():
+    """The 600 mg per-meal line for recipes (scripts/build_handbook.py RECIPE_LIMITS) is the number the two sources
+    give: Satellite Healthcare for sodium, AKF Kidney Kitchen for potassium (lower end of 600–700 mg)."""
+    build = _load_build_script()
+    meal = build.RECIPE_LIMITS["meal"]
+    sources = _sources()
+    assert meal["sodium_mg"] == 600 and "less than 600 mg per meal" in sources["SAT-labels"]["note"]
+    assert meal["potassium_mg"] == 600 and "600-700mg of potassium per meal" in sources["AKF-meal"]["note"]
+    recipes = yaml.safe_load((HANDBOOK / "data" / "recipes.yml").read_text(encoding="utf-8"))
+    assert {"SAT-labels", "AKF-meal"} <= set(recipes["sources"])
+
+
 @pytest.mark.parametrize("page", PAGES, ids=PAGE_IDS)
 def test_every_cited_id_exists_and_is_listed(page):
     meta, body = _split(page)

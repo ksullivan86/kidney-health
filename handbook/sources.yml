@@ -1231,14 +1231,6 @@ DG46b:
   checked: 2026-10-05
   kind: patient-info
   dg: [46]
-DG47:
-  cite: "University of Michigan. Renal diet education materials (≤ 600 mg sodium or potassium per meal)."
-  short: "University of Michigan renal diet handout"
-  url: https://medicine.umich.edu/sites/default/files/content/downloads/Holewinski.pdf
-  licence: "Link and paraphrase"
-  checked: 2026-10-05
-  kind: patient-info
-  dg: [47]
 DG48:
   cite: "National Kidney Foundation. Dining out with confidence."
   short: "NKF: dining out with confidence"
@@ -2006,9 +1998,19 @@ AKF-meal:
   also:
     - https://kitchen.kidneyfund.org/ask-a-dietitian/
   licence: "© American Kidney Fund: link and paraphrase only"
-  checked: 2026-10-06
+  checked: 2026-10-07
   kind: patient-info
-  note: "\"600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800–2200mg\"; avoid several high-potassium foods in one day."
+  dg: [47]
+  note: "\"600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800 – 2200mg of potassium per day\"; avoid several high-potassium foods in one day. With SAT-labels, replaces the University of Michigan handout (diet-guide source 47) whose address has redirected to the medical school's home page since 2026-10-05 (design note 06 §7 and F1)."
+SAT-labels:
+  cite: "Satellite Healthcare. Understanding labels on food packaging (Living with dialysis: eating smart)."
+  short: "Satellite Healthcare: food labels"
+  url: https://www.satellitehealthcare.com/living-with-dialysis/eating-smart/food-labels
+  licence: "© Satellite Healthcare: link and paraphrase only"
+  checked: 2026-10-07
+  kind: patient-info
+  dg: [47]
+  note: "Sodium: \"Target less than 600 mg per meal and less than 200 mg for a snack.\" Potassium: \"no more than 2000-3000mg of potassium each day\" for most people on dialysis (no per-meal potassium figure; that comes from AKF-meal)."
 HTTPSDOC:
   cite: "kidney-health project. docs/https.md: HTTPS for your homelab (four tiers for phones)."
   short: "HTTPS guide"

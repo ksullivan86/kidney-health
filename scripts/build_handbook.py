@@ -732,8 +732,9 @@ def render_grocery_lists(results: list[MenuResult], menus: dict, last_checked: s
 
 # Per-serving rules for recipes (handbook/data/recipes.yml), by course. Every recipe must stay under the
 # sodium line; the tags are checked against the potassium, phosphorus and protein lines.
-#   meal:  600 mg sodium or potassium per meal is the renal-diet review line (University of Michigan
-#          handout, DG47); 300 mg phosphorus is a third of the stage 5 starting ceiling of 900 mg a day.
+#   meal:  600 mg sodium or potassium per meal is the renal-diet review line (sodium: Satellite Healthcare,
+#          SAT-labels, "less than 600 mg per meal"; potassium: AKF Kidney Kitchen, AKF-meal, 600–700 mg per
+#          meal, lower end); 300 mg phosphorus is a third of the stage 5 starting ceiling of 900 mg a day.
 #   snack: 140 mg sodium is FDA "low sodium" (DG37a); 200 mg potassium is NKF's "high" line (DG5);
 #          100 mg phosphorus is AKF's "low" line (DG46b).
 RECIPE_LIMITS = {

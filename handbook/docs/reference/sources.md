@@ -409,8 +409,6 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: © American Kidney Fund: link and paraphrase only. Checked 2026-10-05. Diet-guide source 46.
 - **DG46b**: American Kidney Fund, Kidney Kitchen. Phosphorus food guide (low ≤ 100 mg, medium 101–199 mg, high ≥ 200 mg per serving). <https://kitchen.kidneyfund.org/wp-content/uploads/2021/08/Phosphorus-Guide.pdf>  
   Licence: © American Kidney Fund: link and paraphrase only. Checked 2026-10-05. Diet-guide source 46.
-- **DG47**: University of Michigan. Renal diet education materials (≤ 600 mg sodium or potassium per meal). <https://medicine.umich.edu/sites/default/files/content/downloads/Holewinski.pdf>  
-  Licence: Link and paraphrase. Checked 2026-10-05. Diet-guide source 47.
 - **DG48**: National Kidney Foundation. Dining out with confidence. <https://www.kidney.org/sites/default/files/dining_out_with_confidence_1.pdf>  
   Licence: © National Kidney Foundation: link and paraphrase only. Checked 2026-10-05. Diet-guide source 48.
 - **DG49**: American Kidney Fund, Kidney Kitchen. Tip: double-cook potatoes. <https://kitchen.kidneyfund.org/guides-and-videos/tip-double-cook-potatoes-cc/>  
@@ -442,7 +440,9 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
 - **POLST**: National POLST. About POLST (Portable Medical Orders). <https://polst.org/about/>  
   Licence: © National POLST: link and paraphrase only. Checked 2026-10-06. *A portable medical order for people who are seriously ill or frail, completed and signed by a health care professional after a conversation with the patient; part of advance care planning; state names include MOLST, POST, MOST and LST.*
 - **AKF-meal**: American Kidney Fund, Kidney Kitchen. Where do I find meal plans for low potassium? Ask a dietitian (C. Feibig, MS, RD, LD, CCTD). <https://kitchen.kidneyfund.org/?p=86324> Also: <https://kitchen.kidneyfund.org/ask-a-dietitian/>.  
-  Licence: © American Kidney Fund: link and paraphrase only. Checked 2026-10-06. *"600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800–2200mg"; avoid several high-potassium foods in one day.*
+  Licence: © American Kidney Fund: link and paraphrase only. Checked 2026-10-07. Diet-guide source 47. *"600-700mg of potassium per meal and 100-200mg per snack for a daily goal of 1800 – 2200mg of potassium per day"; avoid several high-potassium foods in one day. With SAT-labels, replaces the University of Michigan handout (diet-guide source 47) whose address has redirected to the medical school's home page since 2026-10-05 (design note 06 §7 and F1).*
+- **SAT-labels**: Satellite Healthcare. Understanding labels on food packaging (Living with dialysis: eating smart). <https://www.satellitehealthcare.com/living-with-dialysis/eating-smart/food-labels>  
+  Licence: © Satellite Healthcare: link and paraphrase only. Checked 2026-10-07. Diet-guide source 47. *Sodium: "Target less than 600 mg per meal and less than 200 mg for a snack." Potassium: "no more than 2000-3000mg of potassium each day" for most people on dialysis (no per-meal potassium figure; that comes from AKF-meal).*
 
 ## Food data
 
