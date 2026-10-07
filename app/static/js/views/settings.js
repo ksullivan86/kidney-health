@@ -773,13 +773,13 @@
     const https = (() => { try { return window.location.protocol === 'https:'; } catch (e) { return false; } })();
     const storage = st.storage ? `${fmtBytes(st.storage.usage)} of about ${fmtBytes(st.storage.quota)}` : null;
     out.append(kv([
-      ['This app', st.installed ? 'Installed: it opens from your home screen' : 'Open in the browser'],
+      ['This app', st.installed ? 'Installed: it opens from your home screen' : 'Not installed: it runs in the browser'],
       ['Works offline', OFFLINE_TEXT[st.offline] || st.offline],
       storage ? ['Storage used', `${storage}${st.persisted === true ? ' · kept by the browser' : st.persisted === false ? ' · the browser may clear it when space runs low' : ''}`] : null,
       ['Connection', https ? 'Encrypted (HTTPS)' : st.secure ? 'Not encrypted (plain HTTP on this computer; offline use still works)' : 'Not encrypted (plain HTTP)'],
       ['App version', st.updateReady ? `${APP_VERSION} (an update is ready: use Reload)` : APP_VERSION],
     ]));
-    if (!st.secure) out.append(note('caution', h('p', {}, 'Offline use, camera scanning and reminders need HTTPS. Your admin can set it up with docs/https.md.')));
+    if (!st.secure) out.append(note('caution', h('p', {}, 'Offline use and the live camera need HTTPS. Your admin can set it up with docs/https.md.')));
     // Entries waiting to sync, with Sync now, Retry, Discard (js/offline.js, note 02 R5).
     if (KH.offline) stops.push(await KH.offline.renderDevice(out));
     const row = h('div', { class: 'settings-actions' });

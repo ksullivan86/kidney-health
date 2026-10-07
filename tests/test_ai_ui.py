@@ -1,9 +1,9 @@
 """The AI frontend (``app/static/js/views/ai.js``, ``css/ai.css``, ``js/mock/ai.js``) against the server
 contract: the sheets and the Add view slot exist, every API call it makes is a real route with that
 method, the demo answer for ``GET /api/me/ai`` has the server's keys, model text is never put into
-the page as HTML, and the photo is redrawn on the device before upload. Browser behaviour itself was
-checked by hand in Chromium (see docs/dev/progress/ai.md); these tests keep the contract from
-drifting."""
+the page as HTML, and the photo is redrawn on the device before upload. Browser behaviour itself is
+checked in Chromium against a fake OpenAI-compatible server by ``tools/e2e/device.py --only ai`` and
+``tools/e2e/journey.py`` (label photo); these tests keep the contract from drifting."""
 from __future__ import annotations
 
 import re

@@ -93,7 +93,7 @@ guessing ([Security](security.md); [operator security guide][SECDOC]).
 ## Check on a phone
 
 - [ ] The padlock shows and there is no warning.
-- [ ] In the app, the install panel says "Offline ready: the app opens without a connection."
+- [ ] In the app, *Settings → This device* says "Works offline: Yes: the app opens without a connection."
 - [ ] Install it to the Home Screen, switch on Airplane Mode, and confirm it still opens
       ([Install the app](../app/install.md)).
 

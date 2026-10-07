@@ -6,8 +6,8 @@ starter meals; the browser engine's version and hash are the server's; the views
 server has; the page has a labelled control for every guidance setting and for "Used to treat a low";
 the scripts load in the order the engine needs; and the guidance view builds DOM without HTML sinks.
 The numbers are checked by ``tests/data/guidance_vectors.json`` (``node tests/js/run_vectors.mjs``),
-whole answers by ``tools/e2e/parity.py`` section 12, the flows by the Chromium walks (see
-``docs/dev/progress/frontend-guidance.md``).
+whole answers by ``tools/e2e/parity.py`` section 12, the flows in Chromium by ``tools/e2e/journey.py``
+(What fits now, Not for me, a swap, Plan the rest of my day) and ``tools/e2e/sandbox.py`` (the preview).
 """
 from __future__ import annotations
 

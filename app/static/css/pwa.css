@@ -30,7 +30,6 @@
 @media (pointer: coarse), (max-width: 719.98px) { .update-toast .btn { min-height: var(--tap); } }
 
 /* ---------- Install on your phone (Settings → This device) ---------- */
-.install-panel .install-state { color: var(--text-2); font-size: 0.9rem; }
 .install-body { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .install-body p { margin: 0; }
 .install-steps { list-style: decimal; padding-left: 22px; margin: 0; display: flex; flex-direction: column; gap: 4px; }

@@ -208,7 +208,9 @@ vm.runInContext(src, ctx);
 def test_a_newer_server_under_a_cached_shell_asks_the_worker_for_the_update(tmp_path):
     """The client half of X-KDL-Version: the page learns its shell's version from the controlling worker
     and, when an API answer names another one, fetches the new worker at once (its install shows the
-    "Update ready · Reload" toast). Real Chromium run: see docs/dev/progress/fixer-backend-ops.md."""
+    "Update ready · Reload" toast). Checked once in real Chromium for the v0.3.0 review: page on server A's
+    cached shell, server B started, one API call, the toast, Reload → shell B; with the previous client
+    code no toast appeared within 20 s."""
     import json
     import shutil
     import subprocess

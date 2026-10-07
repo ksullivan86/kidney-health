@@ -160,6 +160,6 @@ Deployment to the same host name.
 ## Check on the phone (every tier)
 
 1. The padlock shows and there is no warning.
-2. In the app, the install panel (*Settings → This device*) says "Offline ready: the app opens
-   without a connection." (over plain HTTP it says "Offline use needs HTTPS.").
+2. In the app, *Settings → This device* says "Works offline: Yes: the app opens without a
+   connection" (over plain HTTP it says "No: offline use needs HTTPS").
 3. Install it to the Home Screen, switch on Airplane Mode, and confirm that the app still opens.

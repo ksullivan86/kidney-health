@@ -2,8 +2,9 @@
 markup and scripts, the settings twin's parity vectors, and the two Open Food Facts keys the setup
 screen and Settings use (ARCHITECTURE v0.3 item 8).
 
-The browser behaviour itself is walked with Playwright against the real server and in the preview
-(see docs/dev/progress/frontend-signin-settings.md for the commands)."""
+The browser behaviour itself is walked with Playwright against the real server (``tools/e2e/regress.py``
+first-run setup, ``tools/e2e/journey.py`` and ``tools/e2e/device.py``) and in the preview
+(``tools/e2e/sandbox.py``: gear, invite link, own key, demo sign-out and sign-in)."""
 from __future__ import annotations
 
 import importlib.util
@@ -327,3 +328,27 @@ def test_the_ui_promises_no_unbuilt_feature() -> None:
         for phrase in ("later version", "coming soon", "coming in v0.", "not yet available", "planned for a later"):
             assert phrase not in text, f"{path.relative_to(ROOT)} says {phrase!r}"
     assert 'id="set-units"' not in INDEX
+
+
+def test_the_ui_never_mentions_reminders_before_they_exist() -> None:
+    """Reminders (Web Push) are v0.4 (note 02 R8, docs/ROADMAP.md "Installable app"); This device once said
+    "Offline use, camera scanning and reminders need HTTPS". No view may name a feature the app does not have."""
+    for path in [STATIC / "index.html", *(STATIC / "js").rglob("*.js")]:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("//"):
+                continue  # comments may say what a later version adds
+            assert not re.search(r"\b(reminders?|push notifications?)\b", line, re.I), f"{path.relative_to(ROOT)}: {line.strip()}"
+
+
+def test_this_device_says_once_whether_the_app_is_installed_and_works_offline() -> None:
+    """Settings → This device lists "This app" and "Works offline" (js/views/settings.js); the install panel below it
+    only says how to install (M1 review: it repeated both rows as a status line, and its HTTPS note repeated the
+    caution above it)."""
+    pwa = (STATIC / "js" / "pwa.js").read_text(encoding="utf-8")
+    settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    assert 'id="install-state"' not in INDEX and "#install-state" not in pwa
+    panel = pwa[pwa.index("function renderInstallPanel("):pwa.index("async function deviceStatus(")]
+    for repeated in ("Open in the browser", "Offline ready", "Offline use needs HTTPS", "need HTTPS"):
+        assert repeated not in panel, repeated
+    assert "['This app', st.installed ? 'Installed: it opens from your home screen' : 'Not installed: it runs in the browser']" in settings
+    assert "'Offline use and the live camera need HTTPS." in settings

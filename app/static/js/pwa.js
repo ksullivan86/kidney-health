@@ -157,16 +157,9 @@
     const panel = container || $('#install-panel');
     if (!panel || MOCK) return;
     const body = $('#install-body', panel) || panel;
+    // Whether the app is installed and works offline is said once, in the rows above the panel
+    // (Settings → This device: "This app", "Works offline"); the panel only says how to install it.
     const installed = isStandalone();
-    const offlineReady = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
-    const state = $('#install-state', panel);
-    if (state) {
-      const how = installed ? 'Installed as an app on this device.' : 'Open in the browser.';
-      const offline = !window.isSecureContext ? 'Offline use needs HTTPS.'
-        : offlineReady ? 'Offline ready: the app opens without a connection.'
-          : canUseServiceWorker() ? 'Getting ready to work offline…' : 'This browser cannot keep the app for offline use.';
-      state.textContent = `${how} ${offline}`;
-    }
     clear(body);
     if (installed) {
       body.append(h('p', {}, 'It opens from your home screen like any other app. Your log stays on your own server; this device keeps only the app itself.'));
@@ -190,8 +183,9 @@
         'In Safari on a Mac: File → "Add to Dock".'));
     }
     if (!window.isSecureContext) {
-      body.append(h('p', { class: 'install-note' }, 'Offline use and live camera scanning need HTTPS. Over plain HTTP the app still goes on your home screen, '
-        + `but only as a shortcut that needs the server. Your administrator can follow ${HTTPS_DOC} in the project documentation.`));
+      // The caution above the panel already says what plain HTTP cannot do (offline use, the live camera).
+      body.append(h('p', { class: 'install-note' }, 'Over plain HTTP the app still goes on your home screen, but only as a shortcut that '
+        + `needs the server. Your administrator can follow ${HTTPS_DOC} in the project documentation.`));
     }
     body.append(h('p', { class: 'hint' }, 'Install from the address you will keep using: the same app at a different address (another name, port or http/https) starts empty.'));
     panel.hidden = false;
