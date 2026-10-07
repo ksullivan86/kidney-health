@@ -941,64 +941,73 @@ def layout_problems(page: Page, root: str) -> list[str]:
 
 
 def section_shots(hx: Harness, state: dict[str, Any]) -> None:
-    for width, height, touch in ((375, 812, True), (1280, 800, False)):
-        for scheme in ("light", "dark"):
-            area = f"walk {width}x{height} {scheme}"
-            ctx, watch = hx.context(width=width, height=height, touch=touch, scheme=scheme, signed_in=False)
-            page = ctx.new_page()
-            state["page"] = page
-            tag = f"{width}-{scheme}"
-            try:
-                page.goto(f"{hx.base}/?mock=1#add")
-                page.wait_for_selector("#view-add:not([hidden]) #btn-scan")
-                hx.shot(page, f"walk-add-{tag}")
-                scan_sheet(page)
-                hx.shot(page, f"walk-scan-{tag}")
-                problems = layout_problems(page, "#sheet-scan")
-                check(area, "scan sheet: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
-                page.evaluate("KH.api.updateMySettings({ 'food.off_consent': true })")
-                page.fill("#scan-code", "3017624010701")
-                page.click("#scan-go")
-                page.wait_for_selector("#sheet-entry[open]")
-                hx.shot(page, f"walk-entry-provenance-{tag}")
-                problems = layout_problems(page, "#sheet-entry-provenance")
-                check(area, "entry sheet provenance lays out", not problems, "; ".join(problems[:8]))
-                page.keyboard.press("Escape")
-                page.click("#btn-quick")
-                page.wait_for_selector("#sheet-quick[open]")
-                photo = hx.out / "label-walk.png"
-                photo.write_bytes(png_gray(600, 800, barcode_image(CRACKERS, 600, 800, 3)))
-                page.set_input_files("#q-photo", str(photo))
-                page.wait_for_selector("#q-photo-view:not([hidden])")
-                page.click("[data-zoom='2']")
-                hx.shot(page, f"walk-quick-photo-{tag}")
-                problems = layout_problems(page, "#sheet-quick")
-                check(area, "Quick add with the photo: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
-                if width >= 900:
-                    beside = page.evaluate("(() => { const a = document.querySelector('#quick-photo').getBoundingClientRect();"
-                                           " const b = document.querySelector('.quick-fields').getBoundingClientRect(); return a.right <= b.left + 1; })()")
-                    check(area, "the photo sits beside the fields on a wide screen", beside)
-                page.keyboard.press("Escape")
-                watch.offline = True
-                ctx.set_offline(True)
-                page.evaluate("KH.api.quick({ date: KH.util.todayStr(), meal: 'snack', name: 'Waiting snack', nutrients: { carbs_g: 10 } })"
-                              ".then(() => KH.router.show('today'))")
-                page.wait_for_selector("#view-today:not([hidden]) .badge.pending")
-                hx.shot(page, f"walk-today-waiting-{tag}")
-                problems = layout_problems(page, ".topbar")
-                check(area, "header with the sync badge: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
-                page.click("#sync-badge")
-                page.wait_for_selector("#set-outbox .outbox-item")
-                page.locator("#set-device").scroll_into_view_if_needed()
-                hx.shot(page, f"walk-device-{tag}")
-                problems = layout_problems(page, "#set-device")
-                check(area, "Settings → This device lays out", not problems, "; ".join(problems[:8]))
-                ctx.set_offline(False)
-                watch.offline = False
-                wait_js(page, "KH.offline.counts().pending === 0")
-            finally:
-                no_problems(area, watch)
-                ctx.close()
+    """The new screens on the demo (``?mock=1``) and on the real server, signed in, at both sizes and themes."""
+    ensure_cola(hx)
+    for mode in ("demo", "server"):
+        for width, height, touch in ((375, 812, True), (1280, 800, False)):
+            for scheme in ("light", "dark"):
+                walk(hx, state, mode, width, height, touch, scheme)
+
+
+def walk(hx: Harness, state: dict[str, Any], mode: str, width: int, height: int, touch: bool, scheme: str) -> None:
+    area = f"walk {mode} {width}x{height} {scheme}"
+    demo = mode == "demo"
+    ctx, watch = hx.context(width=width, height=height, touch=touch, scheme=scheme, signed_in=not demo)
+    page = ctx.new_page()
+    state["page"] = page
+    tag = f"{mode}-{width}-{scheme}"
+    try:
+        page.goto(f"{hx.base}/{'?mock=1' if demo else ''}#add")
+        page.wait_for_selector("#view-add:not([hidden]) #btn-scan")
+        hx.shot(page, f"walk-add-{tag}")
+        scan_sheet(page)
+        hx.shot(page, f"walk-scan-{tag}")
+        problems = layout_problems(page, "#sheet-scan")
+        check(area, "scan sheet: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
+        if demo:
+            page.evaluate("KH.api.updateMySettings({ 'food.off_consent': true })")
+        page.fill("#scan-code", "3017624010701" if demo else COLA)
+        page.click("#scan-go")
+        page.wait_for_selector("#sheet-entry[open]")
+        hx.shot(page, f"walk-entry-provenance-{tag}")
+        problems = layout_problems(page, "#sheet-entry-provenance")
+        check(area, "entry sheet provenance lays out", not problems, "; ".join(problems[:8]))
+        page.keyboard.press("Escape")
+        page.click("#btn-quick")
+        page.wait_for_selector("#sheet-quick[open]")
+        photo = hx.out / "label-walk.png"
+        photo.write_bytes(png_gray(600, 800, barcode_image(CRACKERS, 600, 800, 3)))
+        page.set_input_files("#q-photo", str(photo))
+        page.wait_for_selector("#q-photo-view:not([hidden])")
+        page.click("[data-zoom='2']")
+        hx.shot(page, f"walk-quick-photo-{tag}")
+        problems = layout_problems(page, "#sheet-quick")
+        check(area, "Quick add with the photo: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
+        if width >= 900:
+            beside = page.evaluate("(() => { const a = document.querySelector('#quick-photo').getBoundingClientRect();"
+                                   " const b = document.querySelector('.quick-fields').getBoundingClientRect(); return a.right <= b.left + 1; })()")
+            check(area, "the photo sits beside the fields on a wide screen", beside)
+        page.keyboard.press("Escape")
+        watch.offline = True
+        ctx.set_offline(True)
+        page.evaluate("KH.api.quick({ date: KH.util.todayStr(), meal: 'snack', name: 'Waiting snack', nutrients: { carbs_g: 10 } })"
+                      ".then(() => KH.router.show('today'))")
+        page.wait_for_selector("#view-today:not([hidden]) .badge.pending")
+        hx.shot(page, f"walk-today-waiting-{tag}")
+        problems = layout_problems(page, ".topbar")
+        check(area, "header with the sync badge: no sideways scroll, 44 px targets", not problems, "; ".join(problems[:8]))
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item")
+        wait_js(page, "document.activeElement && document.activeElement.id === 'set-outbox-h'", 5000)
+        hx.shot(page, f"walk-device-{tag}")
+        problems = layout_problems(page, "#set-device")
+        check(area, "Settings → This device lays out (the badge took focus to the waiting list)", not problems, "; ".join(problems[:8]))
+        ctx.set_offline(False)
+        watch.offline = False
+        wait_js(page, "KH.offline.counts().pending === 0")
+    finally:
+        no_problems(area, watch)
+        ctx.close()
 
 
 # --------------------------------------------------------------------------- main
