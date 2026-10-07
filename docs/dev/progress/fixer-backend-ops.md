@@ -29,7 +29,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L5 | G7 hypo pre-filter phrasings | done |
 | L6 | OFF per-serving label without quantity stored as per 100 g | done |
 | L7 | additives: 'phosphorus' word flagged as additive | done |
-| L8 | label photo serving_desc/serving_g not marked from photo | todo |
+| L8 | label photo serving_desc/serving_g not marked from photo | done |
 | L9 | 'Server name' help text vs signed-in title | todo |
 | L10 | new accounts default to stage 3b / type 1 | todo |
 | L11 | first-run log line https://<this server> | todo |
@@ -117,6 +117,11 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   Tests: tests/guidance/test_hypo.py (+23 low phrasings, +22 non-low); 11 new prefilter vectors (incl. Arabic-Indic
   digits). Parity fuzz (scratch `hypo_parity.mjs` + `hypo_texts.json`): 20,062 generated texts, 0 Python/JS
   differences. Docs: docs/guidance.md, docs/ai.md G7 row.
+
+* **L8** `app/ai/features.py` `label_draft`: `from_photo` now lists `serving_desc` (read, or built from the read
+  weight) and `serving_g` (when read); a per-100 label without a serving puts both in `estimated` (100 g / 100 mL).
+  scan.js already tags those two inputs. Tests: tests/test_vision_api.py (main label test, no-weight test, new
+  `test_a_per_100_label_marks_the_100_g_serving_as_estimated`). ARCHITECTURE `/api/vision/label` row.
 
 ## Handoffs (to fixer-frontend-docs)
 

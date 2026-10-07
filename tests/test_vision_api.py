@@ -199,6 +199,8 @@ def test_the_label_answer_is_a_quick_add_draft_that_is_never_saved(vc):
     assert "potassium_mg" in data["estimated"] and "sodium_mg" not in data["estimated"]
     assert draft["flags"] == [] and "additive:phosphate" in {c["code"] for c in data["checks"]}  # the regex scan, not the model
     assert {"calories_kcal", "sodium_mg", "name", "ingredients_text"} <= set(data["from_photo"])
+    # Review L8: the serving every value depends on is marked like the nutrients (Quick add tags it).
+    assert {"serving_desc", "serving_g"} <= set(data["from_photo"]) and draft["serving_desc"] == "5 crackers (30 g)"
     assert data["provider"] == {"id": 1, "label": "OpenAI", "model": "gpt-6-luna", "host": "api.openai.com"}
     assert len(vc.get("/api/foods", params={"q": "crackers", "limit": 50}).json()["foods"]) == before  # nothing saved
     # Saving is the person's ordinary food create, which scans the ingredient text they confirmed.
@@ -214,6 +216,26 @@ def test_a_label_without_serving_weight_asks_for_it(vc):
     with attach(vc.app, FakeProvider([chat(answer)])):
         data = photo(vc, "/api/vision/label").json()
     assert data["needs"] == ["name", "serving_g"] and data["draft"]["serving_g"] is None
+    assert "serving_g" not in data["from_photo"] and "serving_g" not in data["estimated"]  # nothing to mark
+    assert "serving_desc" in data["from_photo"]  # "5 crackers (30 g)" was read
+
+
+def test_a_per_100_label_marks_the_100_g_serving_as_estimated(vc):
+    """Review L8: no serving was read from a per-100 g label, so the draft is per 100 g and the UI shows the
+    serving as "estimated", never as read from the photo."""
+    ready(vc)
+    answer = {**LABEL_ANSWER, "basis": "per_100g", "serving_g": None, "serving_text": None}
+    with attach(vc.app, FakeProvider([chat(answer)])):
+        data = photo(vc, "/api/vision/label").json()
+    assert data["draft"]["serving_g"] == 100.0 and data["draft"]["serving_desc"] == "100 g"
+    assert {"serving_desc", "serving_g"} <= set(data["estimated"])
+    assert not {"serving_desc", "serving_g"} & set(data["from_photo"]) and data["needs"] == []
+    assert "per_100" in {c["code"] for c in data["checks"]}
+    scaled = {**LABEL_ANSWER, "basis": "per_100g", "serving_g": 30, "serving_text": None}
+    with attach(vc.app, FakeProvider([chat(scaled)])):
+        data = photo(vc, "/api/vision/label").json()
+    assert data["draft"]["serving_desc"] == "1 serving (30 g)" and {"serving_desc", "serving_g"} <= set(data["from_photo"])
+    assert not {"serving_desc", "serving_g"} & set(data["estimated"])
 
 
 def test_the_dry_run_shows_the_request_without_the_photo_and_sends_nothing(vc):

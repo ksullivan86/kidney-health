@@ -373,6 +373,10 @@ def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
     serving_g = answer.serving_g
     serving_text = clean_text(answer.serving_text, max_len=60)
+    # The serving is the AI-read number every saved value depends on, so it is marked like the nutrients
+    # (review L8): "from photo" when read (a description built from the read weight counts), "estimated"
+    # when it falls back to 100 g / 100 mL below.
+    serving_read = bool(serving_g) or bool(serving_text)
     if answer.basis in ("per_100g", "per_100ml"):
         unit = "g" if answer.basis == "per_100g" else "ml"
         if serving_g:
@@ -382,6 +386,8 @@ def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
         else:
             serving_g = 100.0
             serving_text = f"100 {unit}"
+            serving_read = False
+            estimated += ["serving_desc", "serving_g"]
             checks.append({"code": "per_100", "message": f"No serving size was read, so the food is saved per 100 {unit}."})
     salt = answer.salt_g
     if values.get("sodium_mg") is None and salt is not None:
@@ -421,8 +427,11 @@ def label_draft(answer: schemas.LabelAnswer) -> dict[str, Any]:
         "kidney_notes": None,
         "ingredients_text": ingredients,
     }
+    if serving_read:
+        from_photo += ["serving_desc"] + (["serving_g"] if draft["serving_g"] is not None else [])
     needs = [field for field, missing in (("name", not draft["name"]), ("serving_g", draft["serving_g"] is None)) if missing]
-    return {"status": "ok", "draft": draft, "from_photo": from_photo + (["name"] if name else []) + (["ingredients_text"] if ingredients else []),
+    return {"status": "ok", "draft": draft,
+            "from_photo": from_photo + (["name"] if name else []) + (["ingredients_text"] if ingredients else []),
             "estimated": estimated, "needs": needs, "checks": checks, "notice": LABEL_NOTICE}
 
 

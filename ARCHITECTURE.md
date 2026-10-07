@@ -1657,7 +1657,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos` (both when left out) → 204; 404 when there is none |
 | `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
-| `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo, estimated, needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
+| `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
 | `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
 | `GET /api/me/ai` | → `{enabled, settings, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], presets, consents, daily_limit, remaining_today}` |
 | `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences}` → the view above |
