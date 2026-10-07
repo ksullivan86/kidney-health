@@ -62,6 +62,12 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   - Secrets: tests/test_secrets_v03.py (own and shared AI keys never in any answer, export, audit, log or the DB in
     clear; last4 only for keys ≥ 20 characters).
 
+* Step 2 finding (fixed): with Open Food Facts on, no personal agreement yet and a usable USDA key, a product only
+  Open Food Facts knows answered 404 "No product with this barcode in Open Food Facts or USDA" (Open Food Facts was
+  never asked, and the consent panel never appeared). app/barcode.py now answers 503 off_consent_required in that
+  case (the UI's consent panel), and a 404 names only the databases that answered "not found". Tests in
+  tests/test_barcode_api.py; ARCHITECTURE + docs/barcode-and-photos.md updated.
+
 ## In progress
 
 ## Cross-owner fixes (file, why, test)

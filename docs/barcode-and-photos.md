@@ -74,7 +74,10 @@ to agree in Settings) and offers **Enter from the label**. Your own foods with a
    someone taps refresh (at most once a day per product); "not found" is remembered for 24 hours.
 4. **USDA FoodData Central, Branded Foods** (with a USDA key), when Open Food Facts does not know the
    product, has no nutrition facts for it, or lacks potassium or sodium for a US product. The app tries the
-   12-, 13- and 14-digit forms of the barcode and accepts only an exact match.
+   12-, 13- and 14-digit forms of the barcode and accepts only an exact match. When USDA does not know a
+   product and Open Food Facts is on but you have not agreed to it yet, the app asks whether to look it
+   up there (it never says "not found" for a database it did not ask; a "not found" names the databases
+   that were asked).
 5. **Both found**: for a US product the numbers come from USDA (they come from the maker) and gaps are
    filled from Open Food Facts; otherwise the other way round. Every filled value is named in the notes.
    Flags from both ingredient lists are combined.

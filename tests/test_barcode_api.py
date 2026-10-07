@@ -73,6 +73,14 @@ def world(tmp_path, foods_json, monkeypatch) -> Iterator[World]:
 
 
 @pytest.fixture
+def world_only_usda(tmp_path, foods_json, monkeypatch) -> Iterator[World]:
+    """Open Food Facts off (the default), a shared USDA key."""
+    off_replay, usda_replay = _patch_upstreams(monkeypatch)
+    with signed_in_client(make_settings(tmp_path, foods_json, usda_api_key=USDA_KEY), base_url=HTTPS_URL) as c:
+        yield World(c, off_replay, usda_replay)
+
+
+@pytest.fixture
 def world_usda(tmp_path, foods_json, monkeypatch) -> Iterator[World]:
     """OFF on and agreed to, and a shared USDA key."""
     off_replay, usda_replay = _patch_upstreams(monkeypatch)
@@ -199,6 +207,38 @@ def test_not_found_and_the_negative_cache(world: World, fake_clock: FakeClock) -
     fake_clock.advance(hours=2)
     assert world.scan("0099999999990").status_code == 404
     assert len(world.off.requests) == 2
+
+
+def test_not_found_names_only_the_databases_asked(world: World) -> None:
+    body = world.scan("0099999999990").json()
+    assert body["detail"].startswith("No product with this barcode in Open Food Facts. Enter it from the label")
+
+
+def test_not_found_by_usda_alone_does_not_name_open_food_facts(world_only_usda: World) -> None:
+    body = world_only_usda.scan("0099999999990").json()
+    assert body["checked"] == {"off": "disabled", "usda": "not_found"}
+    assert body["detail"].startswith("No product with this barcode in USDA FoodData Central. Enter it from the label")
+    assert barcode.not_found_message({"off": "not_found", "usda": "not_found"}).startswith(
+        "No product with this barcode in Open Food Facts or USDA FoodData Central.")
+
+
+def test_open_food_facts_without_consent_is_offered_when_usda_does_not_know_it(tmp_path, foods_json, monkeypatch) -> None:
+    """Open Food Facts on, the person has not agreed yet, USDA usable but without the product: 503
+    off_consent_required (the UI offers Open Food Facts), never a 404 that says Open Food Facts was asked."""
+    off_replay, usda_replay = _patch_upstreams(monkeypatch)
+    with signed_in_client(make_settings(tmp_path, foods_json, usda_api_key=USDA_KEY), base_url=HTTPS_URL) as c:
+        enable_off(c, consent=False)
+        w = World(c, off_replay, usda_replay)
+        r = w.scan("3017624010701")  # Nutella: Open Food Facts knows it, USDA does not
+        assert r.status_code == 503 and r.json()["reason"] == "off_consent_required", r.text
+        assert r.json()["checked"] == {"off": "consent_required", "usda": "not_found"}
+        assert off_replay.requests == [] and usda_replay.requests  # USDA asked, Open Food Facts never without consent
+        assert c.patch("/api/me/settings", json={"food.off_consent": True}).status_code == 200
+        r = w.scan("3017624010701")
+        assert r.status_code == 200 and r.json()["source"] == "off"
+        # A product USDA knows still answers at once without the Open Food Facts agreement.
+        assert c.patch("/api/me/settings", json={"food.off_consent": False}).status_code == 200
+        assert w.scan("049000028911", "upc_a").status_code == 200
 
 
 def test_negative_cache_is_purged_daily(world: World, fake_clock: FakeClock) -> None:

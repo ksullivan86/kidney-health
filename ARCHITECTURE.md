@@ -1359,7 +1359,8 @@ QualityNote = {"code": "crowd_sourced" | "potassium_unknown" | "phosphorus_unkno
   restricted-circulation prefixes 020–029, 040–049, 200–299 (and GTIN-8 000–099, 200–299; indicator 9);
   `reserved` = GTIN-8 977–999.
 * `404 {"detail", "gtin", "name": null | "<product name>", "contribute_url", "checked": {"off", "usda"}}`:
-  `name` is set when Open Food Facts knows the product without nutrition facts; `contribute_url` is the
+  `detail` names only the databases that answered "not found"; `name` is set when Open Food Facts knows the
+  product without nutrition facts; `contribute_url` is the
   Open Food Facts "add a product" page for the code.
 * `429` with `Retry-After` and `retry_after`: the per-person limit, the server-wide Open Food Facts bucket
   (`food.off_rate_per_minute`; never a silent queue), Open Food Facts' own 429 (the bucket pauses 60 s),
@@ -1367,7 +1368,9 @@ QualityNote = {"code": "crowd_sourced" | "potassium_unknown" | "phosphorus_unkno
 * `502 {"detail", "gtin", "checked"}`: a provider failed (timeout, refused address, HTTP error, invalid
   or oversize answer) and no other answer exists. Upstream bodies are never echoed.
 * `503 {"detail", "reason": "lookups_off" | "off_consent_required" | <USDA key reason>, "gtin", "checked"}`:
-  no provider is on or usable for this person.
+  no provider is on or usable for this person, or (`off_consent_required`) Open Food Facts is on, the person has
+  not agreed to it yet and USDA (when usable) did not find the product: Open Food Facts is offered rather than
+  a 404 for a database that was never asked.
 * `refresh: true` asks the providers again only if the cached product is at least a day old; on a
   person's own custom food it has no effect.
 

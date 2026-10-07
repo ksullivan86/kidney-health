@@ -79,7 +79,8 @@ CLASS_MESSAGES: dict[str, str] = {
     "coupon": "This is a coupon or receipt barcode, not a food.",
     "reserved": "This barcode uses a number range that is not given to products.",
 }
-NOT_FOUND = "No product with this barcode in Open Food Facts or USDA. Enter it from the label; the app keeps the barcode for next time."
+NOT_FOUND = "No product with this barcode in {where}. Enter it from the label; the app keeps the barcode for next time."
+SOURCE_NAMES = {"off": "Open Food Facts", "usda": "USDA FoodData Central"}
 NO_NUTRITION = "Open Food Facts knows this product but has no nutrition facts for it. Enter them from the label."
 UNREACHABLE = "The food databases could not be reached just now. Try again in a minute, or enter the food from its label."
 LOOKUPS_OFF = ("Barcode lookups are switched off on this server. Enter the food from its label, or ask your admin to "
@@ -538,6 +539,12 @@ def _checked(o: OffOutcome, u: UsdaOutcome) -> dict[str, str]:
     return {"off": o.status, "usda": usda}
 
 
+def not_found_message(checked: dict[str, str]) -> str:
+    """The 404 sentence, naming only the databases that were really asked ("not found" from each)."""
+    asked = [SOURCE_NAMES[k] for k in ("off", "usda") if checked.get(k) == "not_found"]
+    return NOT_FOUND.format(where=" or ".join(asked) or "the food databases")
+
+
 @router.post(
     "/barcode",
     response_model=BarcodeResult,
@@ -600,9 +607,11 @@ def lookup(body: BarcodeLookup, request: Request, user: CurrentUser, conn: sqlit
     if "error" in statuses:
         raise ApiProblem(502, UNREACHABLE, gtin=gtin14, checked=checked)
     asked = off_outcome.status in ("not_found", "no_nutrition") or usda_outcome.status == "not_found"
+    if off_outcome.status == "consent_required":
+        # Open Food Facts is on but this person has not agreed to it yet, and USDA (if usable) did not find the
+        # product: offer Open Food Facts rather than claim it does not know the product (it was never asked).
+        raise ApiProblem(503, CONSENT_REQUIRED, reason="off_consent_required", gtin=gtin14, checked=checked)
     if not asked:
-        if off_outcome.status == "consent_required":
-            raise ApiProblem(503, CONSENT_REQUIRED, reason="off_consent_required", gtin=gtin14, checked=checked)
         usda_reason = usda_outcome.reason if usda_outcome.status == "unavailable" else None
         if off_outcome.status == "disabled" and usda_reason in (None, "not_configured"):
             raise ApiProblem(503, LOOKUPS_OFF, reason="lookups_off", gtin=gtin14, checked=checked)
@@ -610,7 +619,7 @@ def lookup(body: BarcodeLookup, request: Request, user: CurrentUser, conn: sqlit
         raise ApiProblem(503, detail, reason=usda_reason or "lookups_off", gtin=gtin14, checked=checked)
     name = off_outcome.mapped.name if off_outcome.status == "no_nutrition" and off_outcome.mapped else None
     raise ApiProblem(
-        404, NO_NUTRITION if name else NOT_FOUND, gtin=gtin14, name=name, checked=checked,
+        404, NO_NUTRITION if name else not_found_message(checked), gtin=gtin14, name=name, checked=checked,
         contribute_url=off.CONTRIBUTE_URL + off_code(gtin14),
     )
 

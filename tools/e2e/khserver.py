@@ -72,10 +72,16 @@ def port_in_use(port: int, host: str = "127.0.0.1") -> bool:
 
 
 class Server:
-    """``uvicorn app.main:app`` on 127.0.0.1:<port> with its own DATA_DIR and log file."""
+    """``uvicorn app.main:app`` on 127.0.0.1:<port> with its own DATA_DIR and log file.
+
+    ``app_spec`` runs another ASGI app object instead (``module:attribute``, importable from the
+    repository or from ``tools/e2e``), for example ``replay_app:app``: the real app with USDA FoodData
+    Central answered from the recorded fixtures (see ``replay_app.py``).
+    """
 
     def __init__(self, port: int, data_dir: Path, *, log_path: Path | None = None, env: dict[str, str] | None = None,
-                 python: str | None = None, repo: Path = REPO, fresh: bool = True, host: str = "127.0.0.1") -> None:
+                 python: str | None = None, repo: Path = REPO, fresh: bool = True, host: str = "127.0.0.1",
+                 app_spec: str = "app.main:app") -> None:
         self.port = port
         self.host = host
         self.data_dir = free_dir(data_dir) if fresh else data_dir
@@ -83,6 +89,7 @@ class Server:
         self.extra_env = dict(env or {})
         self.python = python or sys.executable
         self.repo = repo
+        self.app_spec = app_spec
         self.proc: subprocess.Popen | None = None
 
     @property
@@ -94,9 +101,11 @@ class Server:
             raise RuntimeError(f"port {self.port} is already in use; stop that server or pick another port")
         env = {k: v for k, v in os.environ.items() if k not in _CLEARED_ENV}
         env.update(DATA_DIR=str(self.data_dir), PYTHONDONTWRITEBYTECODE="1", **self.extra_env)
+        if self.app_spec != "app.main:app":  # a wrapper module next to this file (tools/e2e)
+            env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(Path(__file__).resolve().parent), env.get("PYTHONPATH")]))
         log = open(self.log_path, "w", encoding="utf-8")
         self.proc = subprocess.Popen(
-            [self.python, "-m", "uvicorn", "app.main:app", "--host", self.host, "--port", str(self.port),
+            [self.python, "-m", "uvicorn", self.app_spec, "--host", self.host, "--port", str(self.port),
              "--no-proxy-headers", "--no-server-header"],
             cwd=self.repo, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
         )
