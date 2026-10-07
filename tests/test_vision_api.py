@@ -393,3 +393,148 @@ def test_hermes_photos_need_the_agent_switch_and_a_tool_check_every_time(tmp_pat
         assert r.status_code == 503 and r.json()["reason"] == "hermes_tools" and provider.calls == 2
         view = c.get("/api/admin/ai-providers").json()["providers"]
         assert next(p for p in view if p["id"] == pid)["disabled_reason"] == "hermes_tools"
+
+
+# --------------------------------------------------------------------------- #
+# Memory: refusals that need no photo are answered before the body is read
+# --------------------------------------------------------------------------- #
+
+
+def raw_post(client: TestClient, path: str, body: bytes, *, chunk: int = 1024, stall_s: float = 0.0) -> tuple[int, dict[str, Any], int]:
+    """POST ``body`` straight into the ASGI app, in chunks pulled one ``receive()`` at a time, on the
+    TestClient's own event loop. Returns (status, JSON answer, bytes the app pulled). ``stall_s``
+    makes every chunk arrive that much later (a slow upload). The TestClient reads a body before the
+    app runs, so it cannot show whether a route read it; this can."""
+    import asyncio
+
+    pieces = [body[i:i + chunk] for i in range(0, len(body), chunk)] or [b""]
+    pulled = 0
+    status = 0
+    out = bytearray()
+
+    async def receive() -> dict[str, Any]:
+        nonlocal pulled
+        if not pieces:
+            await asyncio.sleep(3600)  # the client is still connected but sends nothing more
+        if stall_s:
+            await asyncio.sleep(stall_s)
+        piece = pieces.pop(0)
+        pulled += len(piece)
+        return {"type": "http.request", "body": piece, "more_body": bool(pieces)}
+
+    async def send(message: dict[str, Any]) -> None:
+        nonlocal status
+        if message["type"] == "http.response.start":
+            status = message["status"]
+        elif message["type"] == "http.response.body":
+            out.extend(message.get("body", b""))
+
+    cookie = "; ".join(f"{k}={v}" for k, v in client.cookies.items())
+    headers = [(b"host", b"localhost"), (b"content-type", b"image/jpeg"), (b"content-length", str(len(body)).encode()),
+               (b"x-requested-with", b"kidney-health"), (b"cookie", cookie.encode())]
+    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST", "scheme": "https",
+             "path": path, "raw_path": path.encode(), "query_string": b"", "root_path": "", "headers": headers,
+             "client": ("127.0.0.1", 50123), "server": ("localhost", 443)}
+
+    async def call() -> None:
+        await client.app(scope, receive, send)
+
+    client.portal.call(call)
+    return status, json.loads(bytes(out) or b"{}"), pulled
+
+
+def test_a_second_photo_from_the_same_person_is_refused_before_its_body_is_read(vc):
+    ready(vc)
+    me = vc.get("/api/me").json()["id"]
+    gate = vc.app.state.ai.gate
+    provider = FakeProvider([chat(LABEL_ANSWER)])
+    with attach(vc.app, provider):
+        gate.enter(me)  # the person's first photo is still being read or answered
+        try:
+            for path in ("/api/vision/label", "/api/vision/plate"):
+                if path.endswith("plate"):
+                    enable(vc, **{"ai.vision_plate_enabled": True})
+                status, data, pulled = raw_post(vc, path, LABEL_JPG)
+                assert (status, data["reason"], pulled) == (429, "busy_person", 0), data
+        finally:
+            gate.leave(me)
+        status, data, pulled = raw_post(vc, "/api/vision/label", LABEL_JPG)  # the slot is free again
+    assert status == 200 and data["status"] == "ok" and pulled == len(LABEL_JPG)
+    assert provider.calls == 1 and usage_rows(vc) == 1 and gate.active == 0
+
+
+def test_a_full_server_refuses_photos_before_their_bodies_are_read(vc):
+    ready(vc)
+    gate = vc.app.state.ai.gate
+    for other in (-101, -102):  # ai.max_concurrency is 2: two other calls are running
+        gate.enter(other)
+    try:
+        with attach(vc.app, FakeProvider()):
+            status, data, pulled = raw_post(vc, "/api/vision/label", LABEL_JPG)
+        assert (status, data["reason"], pulled) == (429, "busy_server", 0)
+    finally:
+        gate.leave(-101)
+        gate.leave(-102)
+
+
+def test_photos_without_consent_are_refused_before_their_bodies_are_read(vc):
+    ready(vc, purposes=("text",))  # opted in, agreed to text only
+    provider = FakeProvider()
+    with attach(vc.app, provider):
+        status, data, pulled = raw_post(vc, "/api/vision/label", LABEL_JPG)
+    assert (status, data["consent_required"], pulled) == (409, True, 0)
+    assert provider.requests == [] and vc.app.state.ai.gate.active == 0
+
+
+def test_a_busy_hermes_person_gets_no_tool_check(tmp_path, foods_json):
+    """The Hermes tool check runs inside the person's slot: a burst of photos makes at most one check."""
+    settings = settings_for(tmp_path, foods_json, private_hosts=("host.containers.internal:8643",))
+    with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        enable(c, **{"ai.vision_allow_agent": True})
+        pid = c.post("/api/admin/ai-providers", json={"preset": "hermes", "model": "kidney", "vision_model": "kidney",
+                                                      "api_key": "hermes-key-0123456789abcdefgh"}).json()["id"]
+        c.put("/api/profile", json={"targets": TARGETS})
+        c.patch("/api/me/ai", json={"opt_in": True, "provider": f"shared:{pid}"})
+        for purpose in ("photos", "text"):
+            assert c.post("/api/ai/consent", json={"provider_id": pid, "purpose": purpose}).status_code == 200
+        toolsets = [{"name": "core", "enabled": False, "configured": True, "tools": ["terminal"]}]
+        provider = FakeProvider(route=lambda req: {"status": 200, "body": toolsets} if req.url.path.endswith("/toolsets")
+                                else chat(LABEL_ANSWER), address="169.254.1.2")
+        me = c.get("/api/me").json()["id"]
+        c.app.state.ai.gate.enter(me)
+        try:
+            with attach(c.app, provider):
+                status, data, pulled = raw_post(c, "/api/vision/label", LABEL_JPG)
+        finally:
+            c.app.state.ai.gate.leave(me)
+        assert (status, data["reason"], pulled) == (429, "busy_person", 0) and provider.requests == []
+        # The text features take the same order: slot first, then the tool check.
+        c.app.state.ai.gate.enter(me)
+        try:
+            with attach(c.app, provider):
+                r = c.post("/api/ai/next-meal", json={"meal": "dinner", "date": "2026-10-05"})
+        finally:
+            c.app.state.ai.gate.leave(me)
+        assert r.status_code == 429 and r.json()["reason"] == "busy_person" and provider.requests == []
+
+
+def test_a_slow_upload_times_out_and_frees_the_slot(vc, monkeypatch):
+    from app import vision
+
+    ready(vc)
+    monkeypatch.setattr(vision, "PHOTO_READ_TIMEOUT_S", 0.2)
+    provider = FakeProvider()
+    with attach(vc.app, provider):
+        status, data, pulled = raw_post(vc, "/api/vision/label", LABEL_JPG, chunk=512, stall_s=0.1)
+    assert (status, data["reason"]) == (408, "upload_timeout") and 0 < pulled < len(LABEL_JPG)
+    assert "faster connection" in data["detail"]
+    assert provider.requests == [] and usage_rows(vc) == 0 and vc.app.state.ai.gate.active == 0
+
+
+def test_a_truncated_upload_is_checked_as_received(vc):
+    """A body shorter than its Content-Length (a client that gives up) is judged on what arrived."""
+    ready(vc)
+    with attach(vc.app, FakeProvider()):
+        status, data, pulled = raw_post(vc, "/api/vision/label", LABEL_JPG[:4000])
+    assert (status, data["reason"], pulled) == (422, "truncated", 4000) and vc.app.state.ai.gate.active == 0

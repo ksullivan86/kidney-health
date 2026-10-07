@@ -15,9 +15,11 @@ their database work runs in the thread pool on the request's own connection. Eve
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import sqlite3
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime, timedelta, timezone
 from typing import Annotated, Any, Literal
@@ -164,10 +166,43 @@ def _seconds_to_midnight() -> int:
 # --------------------------------------------------------------------------- #
 
 
-def _check_consent(conn: sqlite3.Connection, user: User, prep: F.Prepared) -> None:
-    if K.consent(conn, user.id, prep.cfg, prep.purpose) is None:  # type: ignore[arg-type]
+BUSY_TEXT = {
+    "person": "Your previous AI request is still running.",
+    "server": "The AI is busy with other requests. Try again in a few seconds.",
+}
+
+
+def check_consent(conn: sqlite3.Connection, user: User, cfg: C.ProviderConfig, purpose: str) -> None:
+    """409 ``consent_required`` (with what the person would agree to) unless they agreed to send
+    ``purpose`` (``text`` or ``photos``) to this provider."""
+    if K.consent(conn, user.id, cfg, purpose) is None:  # type: ignore[arg-type]
         raise ApiProblem(409, "Agree to send this to the AI provider first.", consent_required=True,
-                         consent=K.consent_request(prep.cfg, prep.purpose))  # type: ignore[arg-type]
+                         consent=K.consent_request(cfg, purpose))  # type: ignore[arg-type]
+
+
+def _check_consent(conn: sqlite3.Connection, user: User, prep: F.Prepared) -> None:
+    check_consent(conn, user, prep.cfg, prep.purpose)
+
+
+@contextlib.asynccontextmanager
+async def ai_slot(request: Request, conn: sqlite3.Connection, user_id: int) -> AsyncIterator[None]:
+    """Hold the person's single AI slot and one of the server's ``ai.max_concurrency`` slots for the
+    block. A busy slot is refused at once with 429 ``busy_person`` / ``busy_server`` and a
+    ``Retry-After``; nothing queues behind a slow model.
+
+    The photo routes enter it **before** reading the upload, so the bodies held in memory at any
+    moment are bounded by ``ai.max_concurrency`` rather than by the number of open connections."""
+    state = ai_state(request)
+    limit = int(await run_in_threadpool(state.store.get, conn, "ai.max_concurrency"))
+    try:
+        state.gate.enter(user_id, limit)
+    except C.Busy as busy:
+        raise ApiProblem(429, BUSY_TEXT[busy.scope], headers={"Retry-After": str(busy.retry_after)},
+                         reason=f"busy_{busy.scope}") from None
+    try:
+        yield
+    finally:
+        state.gate.leave(user_id)
 
 
 async def tool_gate(request: Request, conn: sqlite3.Connection, prep: F.Prepared, client: C.ChatClient) -> None:
@@ -297,27 +332,21 @@ def _server_port(request: Request) -> int | None:
 
 
 async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared,
-                   background: BackgroundTasks | None = None) -> dict[str, Any]:
-    """Consent → tool check → concurrency slot → quota → call → judge → audit. Never writes anything
+                   background: BackgroundTasks | None = None, *, slot_held: bool = False) -> dict[str, Any]:
+    """Consent → concurrency slot → tool check → quota → call → judge → audit. Never writes anything
     the person did not ask for; nothing AI-generated reaches the log or the food list (G12).
 
-    With ``background``, a shared provider that is due for its daily connection test gets one after
-    the response is sent (:func:`maintenance_probe`)."""
+    The Hermes tool check runs inside the slot, so a burst of requests from one person makes at most
+    one check. ``slot_held=True`` means the caller already holds the person's slot (:func:`ai_slot`;
+    the photo routes take it before reading the upload). With ``background``, a shared provider that
+    is due for its daily connection test gets one after the response is sent (:func:`maintenance_probe`)."""
     state = ai_state(request)
     client = _client_for(request)
     await run_in_threadpool(_check_consent, conn, user, prep)
-    await tool_gate(request, conn, prep, client)
-    try:
-        state.gate.enter(user.id, int(await run_in_threadpool(state.store.get, conn, "ai.max_concurrency")))
-    except C.Busy as busy:
-        detail = ("Your previous AI request is still running." if busy.scope == "person"
-                  else "The AI is busy with other requests. Try again in a few seconds.")
-        raise ApiProblem(429, detail, headers={"Retry-After": str(busy.retry_after)}, reason=f"busy_{busy.scope}") from None
-    try:
+    async with contextlib.nullcontext() if slot_held else ai_slot(request, conn, user.id):
+        await tool_gate(request, conn, prep, client)
         await run_in_threadpool(_take_quota, conn, state, user, prep.cfg)
         result = await client.complete_json(prep.cfg, prep.body, prep.validator, vision=prep.vision)
-    finally:
-        state.gate.leave(user.id)
     if result.status == "ok":
         try:
             verdict = await run_in_threadpool(prep.judge, result.parsed)
@@ -720,7 +749,6 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
         cfg = await run_in_threadpool(K.to_config, row, _keyring(request), state.settings, user_id=user.id)
     except InvalidToken:
         raise unavailable("own_key_unreadable" if row["scope"] == "user" else "provider_disabled") from None
-    await run_in_threadpool(_take_quota, conn, state, user, cfg, 1, not admin)
     snippets: list[str] = []
 
     def snippet(data: bytes) -> None:
@@ -729,15 +757,9 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
         snippets.append(redact(data.decode("utf-8", "replace"))[:300])
 
     client = _client_for(request)
-    try:
-        state.gate.enter(user.id, int(await run_in_threadpool(state.store.get, conn, "ai.max_concurrency")))
-    except C.Busy as busy:
-        raise ApiProblem(429, "The AI is busy. Try again in a few seconds.", headers={"Retry-After": str(busy.retry_after)},
-                         reason=f"busy_{busy.scope}") from None
-    try:
+    async with ai_slot(request, conn, user.id):  # a refused (busy) test spends no quota
+        await run_in_threadpool(_take_quota, conn, state, user, cfg, 1, not admin)
         result = await C.probe(client, cfg, error_snippet=snippet if admin and row["scope"] == "shared" else None)
-    finally:
-        state.gate.leave(user.id)
 
     if row["locked"]:
         result["key_fp"] = K.key_fingerprint(_keyring(request), state.settings.ai.api_key)

@@ -1658,7 +1658,8 @@ Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "visi
   `agent_not_allowed`); `409 {"detail", "consent_required": true, "consent": ConsentRequest}` before the first
   call to a host for that purpose; `429 {"detail", "reason": "quota_exhausted" | "busy_person" |
   "busy_server"}` with `Retry-After`; photo uploads `413` (over `MAX_IMAGE_BYTES`, declared or streamed),
-  `415 not_jpeg`, `422 truncated | malformed | unsupported | dimensions`. An upstream failure is `200`
+  `415 not_jpeg`, `422 truncated | malformed | unsupported | dimensions`, `408 upload_timeout` (the body
+  took longer than 60 s). An upstream failure is `200`
   with `status: "error"` and the rule `fallback` for the meal features, and `502 {"detail", "reason",
   "audit_id"}` for photos. Reasons are coarse (`dns_failed`, `blocked_address`, `connect_failed`,
   `timeout`, `http_401`, `http_403`, `http_404`, `http_429`, `http_4xx`, `http_5xx`, `invalid_response`,
@@ -1670,10 +1671,10 @@ Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "visi
 
 ### The call pipeline (`app/ai/routes.py` `run_call`)
 
-Consent (per person, provider, purpose `text`/`photos`, destination host and `POLICY_VERSION`) → the
-Hermes tool check (≤ 5 minutes old for text, **before every photo**; a failed check sets
-`disabled_reason` until a check passes) → a concurrency slot (`ai.max_concurrency` on the server, one
-per person; refused at once with `429`) → the daily quota (`BEGIN IMMEDIATE`; shared keys only; probes
+Consent (per person, provider, purpose `text`/`photos`, destination host and `POLICY_VERSION`) → a
+concurrency slot (`ai.max_concurrency` on the server, one per person; refused at once with `429`;
+`routes.ai_slot`) → the Hermes tool check inside the slot (≤ 5 minutes old for text, **before every
+photo**; a failed check sets `disabled_reason` until a check passes) → the daily quota (`BEGIN IMMEDIATE`; shared keys only; probes
 and photos count) → the call (at most one extra request: a retry after 429/5xx/connect errors or one
 repair turn) → the judge (V3–V9; a judge error shows nothing) → an `ai_audit` row → a log line with
 metadata only. Shared providers whose last test is missing or a day old are tested again in a
@@ -1714,7 +1715,11 @@ with `ai.vision_allow_agent` **and** a passing tool check before every photo. Th
 (`app/security.py` gives `/api/vision` that limit), `FF D8 FF`, one SOF0/1/2 frame (8-bit, 1 or 3
 components), 16–2048 px per side, aspect ≤ 4:1, ≤ 4 megapixels; APP1–APP15, COM and bytes after EOI
 removed; only the rewritten bytes leave. Photos are never written to disk, stored or logged (the audit
-copy keeps SHA-256, size and dimensions).
+copy keeps SHA-256, size and dimensions). **Nothing is read before the refusals that need no photo:**
+switches → headers (415/413) → photo consent (409) → the person's and a server AI slot (429) → only then
+the body, into one buffer within 60 s (408), held in that slot through the call; so the photos in memory
+are bounded by `ai.max_concurrency`, not by open connections (the shipped profiles cap the container at
+512 MiB).
 
 ### Schema step 6 (`m006_ai.py`)
 

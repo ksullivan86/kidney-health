@@ -67,7 +67,7 @@ def _bad(reason: str, message: str) -> ImageRejected:
     return ImageRejected(422, reason, message)
 
 
-def _check_frame(payload: bytes) -> tuple[int, int]:
+def _check_frame(payload: bytes | memoryview) -> tuple[int, int]:
     if len(payload) < 6:
         raise _bad("malformed", "The photo's frame header is cut short.")
     precision, height, width, components = struct.unpack(">BHHB", payload[:6])
@@ -86,7 +86,7 @@ def _check_frame(payload: bytes) -> tuple[int, int]:
     return width, height
 
 
-def _entropy_end(data: bytes, pos: int) -> int:
+def _entropy_end(data: bytes | bytearray, pos: int) -> int:
     """Index of the marker that ends the entropy-coded data starting at ``pos`` (stuffed ``FF 00``,
     restart markers and fill bytes are part of the data)."""
     n = len(data)
@@ -104,13 +104,17 @@ def _entropy_end(data: bytes, pos: int) -> int:
         return i
 
 
-def check_jpeg(data: bytes, *, max_bytes: int) -> CheckedImage:
-    """Check ``data`` and return the rewritten JPEG (:class:`ImageRejected` otherwise)."""
+def check_jpeg(data: bytes | bytearray, *, max_bytes: int) -> CheckedImage:
+    """Check ``data`` and return the rewritten JPEG (:class:`ImageRejected` otherwise).
+
+    ``data`` may be the upload buffer itself: the kept segments are sliced as memoryviews and joined
+    once, so the only copy made is the rewritten photo."""
     if len(data) > max_bytes:
         raise ImageRejected(413, "too_large", f"The photo is larger than {max_bytes // 1024} KiB.")
     if not data.startswith(JPEG_MAGIC):
         raise ImageRejected(415, "not_jpeg", "Send the photo as a JPEG (image/jpeg).")
-    out = bytearray(b"\xff\xd8")
+    view = memoryview(data)
+    parts: list[bytes | memoryview] = [b"\xff\xd8"]
     pos = 2
     n = len(data)
     frame: tuple[int, int] | None = None
@@ -130,7 +134,7 @@ def check_jpeg(data: bytes, *, max_bytes: int) -> CheckedImage:
         if marker == EOI:
             if frame is None or scans == 0:
                 raise _bad("malformed", "The photo has no picture data.")
-            out += b"\xff\xd9"
+            parts.append(b"\xff\xd9")
             if pos < n:
                 removed += 1  # bytes after the end marker (appended data) are dropped
             break
@@ -138,11 +142,11 @@ def check_jpeg(data: bytes, *, max_bytes: int) -> CheckedImage:
             raise _bad("malformed", "The photo's structure is not valid JPEG.")
         if pos + 2 > n:
             raise _bad("truncated", "The photo ends in the middle of a segment.")
-        length = struct.unpack(">H", data[pos:pos + 2])[0]
+        length = struct.unpack_from(">H", data, pos)[0]
         if length < 2 or pos + length > n:
             raise _bad("truncated", "The photo ends in the middle of a segment.")
-        segment = data[pos - 2:pos + length]  # FF xx + length + payload
-        payload = data[pos + 2:pos + length]
+        segment = view[pos - 2:pos + length]  # FF xx + length + payload
+        payload = view[pos + 2:pos + length]
         pos += length
         if marker in STRIP:
             removed += 1
@@ -151,19 +155,19 @@ def check_jpeg(data: bytes, *, max_bytes: int) -> CheckedImage:
             if frame is not None:
                 raise _bad("malformed", "The photo holds more than one picture.")
             frame = _check_frame(payload)
-            out += segment
+            parts.append(segment)
             continue
         if marker == SOS:
             if frame is None:
                 raise _bad("malformed", "The photo's picture data comes before its frame header.")
             end = _entropy_end(data, pos)
-            out += segment + data[pos:end]
+            parts.append(view[pos - 2 - length:end])  # the scan header and its entropy-coded data
             pos = end
             scans += 1
             continue
         if marker in KEEP:
-            out += segment
+            parts.append(segment)
             continue
         raise _bad("unsupported", "The photo uses a JPEG feature this app does not accept; take it again with the camera app.")
     assert frame is not None
-    return CheckedImage(bytes(out), frame[0], frame[1], removed, len(data))
+    return CheckedImage(b"".join(parts), frame[0], frame[1], removed, n)
