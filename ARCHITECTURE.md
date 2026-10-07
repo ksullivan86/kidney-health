@@ -863,6 +863,12 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
 * **Errors** keep the `{"detail": "…"}` shape and may add keys: `reauth_required`, `setup_required`,
   `password_change_required`, `https_required`, `retry_after`, `field`, `problems` (password policy
   messages), `reason` (USDA key resolution), `locked_by_env`.
+* **`X-KDL-Version`** (note 02 §5, §6 item 9): every `/api` response, errors included, carries the
+  shell version (`app/pwa.py` `ApiVersionMiddleware`; the same 12-hex hash as `/sw.js`). The page asks its
+  controlling worker for the version it was served from (`postMessage('VERSION')` → `{type: "kdl-version",
+  version}`), `KH.api` passes every answer's header to `KH.pwa.versionSeen`, and on a difference the page
+  fetches the new worker at once, whose install shows the "Update ready · Reload" toast. API changes stay
+  additive, so the old shell keeps working until the person reloads.
 
 ```json
 Me = {"id": 1, "username": "mum", "display_name": "Mum", "role": "admin",

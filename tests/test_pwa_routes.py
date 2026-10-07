@@ -147,3 +147,86 @@ def test_real_static_dir_template_if_present(client):
     assert r.status_code == 200 and "__VERSION__" not in r.text
     assert client.app.state.pwa.version in r.text
 
+
+
+def test_every_api_response_names_the_shell_version(tmp_path, foods_json, static):
+    """Note 02 §5/§6 item 9: X-KDL-Version (the /sw.js hash) on /api answers, errors and sign-in
+    refusals included, so a page running an older cached shell can ask for the update; not on the
+    shell, the worker or the health check."""
+    with app_client(tmp_path, foods_json, static) as c:
+        version = c.app.state.pwa.version
+        assert c.get("/api/profile").headers["x-kdl-version"] == version  # 401
+        assert c.get("/api/auth/status").headers["x-kdl-version"] == version
+        sign_in(c)
+        assert c.get("/api/profile").headers["x-kdl-version"] == version
+        assert c.get("/api/foods/999999").headers["x-kdl-version"] == version  # 404
+        r = c.post("/api/log", json={"date": "not a date"})
+        assert r.status_code == 400 and r.headers["x-kdl-version"] == version
+        assert c.get("/api/nope").headers["x-kdl-version"] == version
+        for path in ("/", "/sw.js", "/healthz", "/js/app.js", "/manifest.webmanifest"):
+            assert "x-kdl-version" not in c.get(path).headers, path
+        assert c.get("/sw.js").text.count(version) == 1  # the same value the cached shell's worker carries
+
+
+PWA_HARNESS = r"""
+const fs = require('fs'); const vm = require('vm');
+const src = fs.readFileSync(process.argv[2], 'utf8');
+const updates = []; const posted = []; const swListeners = {};
+const registration = { waiting: null, addEventListener() {}, update() { updates.push(Date.now()); return Promise.resolve(); } };
+const controller = { postMessage(m) { posted.push(m); } };
+const serviceWorker = {
+  controller, ready: new Promise(() => {}),
+  addEventListener(type, fn) { (swListeners[type] = swListeners[type] || []).push(fn); },
+  startMessages() {}, register: async () => registration,
+};
+const el = () => ({ hidden: true, append() {}, addEventListener() {} });
+const window = { isSecureContext: true, matchMedia: () => ({ matches: false }), addEventListener() {}, trustedTypes: undefined };
+const ctx = {
+  window, navigator: { serviceWorker, userAgent: 'node', maxTouchPoints: 0 }, document: { addEventListener() {} },
+  console, setTimeout, Date, Promise,
+};
+window.KH = { h: () => el(), $: () => null, clear() {}, flags: { MOCK: false } };
+ctx.KH = window.KH;
+vm.createContext(ctx);
+vm.runInContext(src, ctx);
+(async () => {
+  const KH = window.KH;
+  await KH.pwa.register();
+  const out = { asked: posted.slice() };
+  out.beforeKnown = KH.pwa.versionSeen('bbbbbbbbbbbb');  // the shell's version is not known yet: nothing
+  for (const fn of swListeners.message || []) fn({ data: { type: 'kdl-version', version: 'aaaaaaaaaaaa' } });
+  out.same = KH.pwa.versionSeen('aaaaaaaaaaaa');
+  out.missing = KH.pwa.versionSeen(null);
+  out.newer = KH.pwa.versionSeen('bbbbbbbbbbbb');
+  out.again = KH.pwa.versionSeen('bbbbbbbbbbbb');      // asked once per server version
+  out.updates = updates.length;
+  console.log(JSON.stringify(out));
+})();
+"""
+
+
+def test_a_newer_server_under_a_cached_shell_asks_the_worker_for_the_update(tmp_path):
+    """The client half of X-KDL-Version: the page learns its shell's version from the controlling worker
+    and, when an API answer names another one, fetches the new worker at once (its install shows the
+    "Update ready · Reload" toast). Real Chromium run: see docs/dev/progress/fixer-backend-ops.md."""
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.fail("node is required for the JavaScript checks (Node 18+)")
+    static = Path(pwa.__file__).resolve().parent / "static"
+    harness = tmp_path / "pwa_harness.js"
+    harness.write_text(PWA_HARNESS, encoding="utf-8")
+    run = subprocess.run([node, str(harness), str(static / "js" / "pwa.js")], capture_output=True, text=True, timeout=60)
+    assert run.returncode == 0, run.stderr
+    out = json.loads(run.stdout.strip().splitlines()[-1])
+    assert out["asked"] == ["VERSION"]
+    assert out["beforeKnown"] is False and out["same"] is False and out["missing"] is False
+    assert out["newer"] is True and out["again"] is False and out["updates"] == 1
+    # The wiring on the other two sides: every KH.api answer is passed on, and the worker answers 'VERSION'.
+    core = (static / "js" / "core.js").read_text(encoding="utf-8")
+    assert "KH.pwa.versionSeen(res.headers.get('X-KDL-Version'))" in core
+    sw = (static / "sw.js").read_text(encoding="utf-8")
+    assert "event.data === 'VERSION'" in sw and "type: 'kdl-version', version: VERSION" in sw

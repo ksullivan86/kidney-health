@@ -12,6 +12,10 @@
 * :func:`is_public_path` lists what needs no sign-in: the health check, the manifest, icons and
   ``/sw.js`` (iOS fetches the icon at install time, before any session exists).
 * :class:`StaticGZipMiddleware` gzips static responses (not ``/api``) of 1 KiB or more.
+* :class:`ApiVersionMiddleware` puts ``X-KDL-Version: <shell version>`` (the same hash as ``/sw.js``)
+  on every ``/api`` response (note 02 §5 and §6 item 9): a page running a cached shell that is
+  older than the server sees the difference and asks its service worker for the update, which shows
+  the "Update ready · Reload" toast (``js/core.js`` → ``KH.pwa.versionSeen``).
 """
 from __future__ import annotations
 
@@ -25,7 +29,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.staticfiles import StaticFiles
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .config import Settings
 
@@ -46,6 +50,7 @@ for _type, _ext in (
 SW_TEMPLATE = "sw.js"
 VERSION_PLACEHOLDER = "__VERSION__"
 VERSION_LENGTH = 12
+VERSION_HEADER = "X-KDL-Version"
 
 MANIFEST_PATH = "/manifest.webmanifest"
 MANIFEST_TYPE = "application/manifest+json"
@@ -181,12 +186,37 @@ class StaticGZipMiddleware:
         await self.gzip(scope, receive, send)
 
 
+class ApiVersionMiddleware:
+    """``X-KDL-Version`` on every ``/api`` response (errors included), so a cached shell can tell that
+    the server runs a newer release than the one it was loaded from (note 02 §5)."""
+
+    def __init__(self, app: ASGIApp, version: str) -> None:
+        self.app = app
+        self.header = (VERSION_HEADER.lower().encode("latin-1"), version.encode("latin-1"))
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope.get("path", "") if scope["type"] == "http" else ""
+        if scope["type"] != "http" or not (path == "/api" or path.startswith("/api/")):
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_version(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = [h for h in message.get("headers", []) if h[0].lower() != self.header[0]]
+                message = {**message, "headers": [*headers, self.header]}
+            await send(message)
+
+        await self.app(scope, receive, send_with_version)
+
+
 def setup(app: FastAPI, settings: Settings) -> PwaState:
-    """Compute the service worker once, register ``/sw.js`` (before the static mount) and gzip."""
+    """Compute the service worker once, register ``/sw.js`` (before the static mount), gzip, and the
+    ``X-KDL-Version`` header on API responses."""
     state = build_state(settings)
     app.state.pwa = state
     app.include_router(router)
     app.add_middleware(StaticGZipMiddleware)
+    app.add_middleware(ApiVersionMiddleware, version=state.version)
     return state
 
 

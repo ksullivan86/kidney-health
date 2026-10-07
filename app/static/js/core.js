@@ -334,6 +334,8 @@
     } finally {
       if (timer) clearTimeout(timer);
     }
+    // A newer server under a cached shell (note 02 §5): let the PWA layer fetch the update and show its toast.
+    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get('X-KDL-Version'));
     if (res.status === 204) return answered(method, path, body, null, opts);
     let data = null;
     let fromApp = true; // the app always answers JSON; a proxy in front of a stopped app answers HTML or nothing

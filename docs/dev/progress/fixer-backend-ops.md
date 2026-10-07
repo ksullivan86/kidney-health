@@ -21,7 +21,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C9 | OFF potassium ceiling drops salt substitutes | done |
 | C10 | OFF per-100 mL drinks without serving not fluid | done |
 | C11 | curated foods: raw eggs suggested | parked (waits for fixer-frontend-docs' guidance commit) |
-| C12 | X-KDL-Version header + shell/API check | todo |
+| C12 | X-KDL-Version header + shell/API check | done |
 | L1 | AI retention purge only with AI traffic | todo |
 | L2 | IDN AI base URL refused | todo |
 | L3 | K-2 'relaxed one step' when ladder == relaxed; N-1 age-70 cut-off | done |
@@ -78,6 +78,13 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   messages, DEMO_PRODUCTS block regenerated. Tests: test_off_mapping (5 salts warn high, ceilings, 6 liquid cases,
   3.5 per-100 mL, per-serving without weight 3.4 + 3.5), test_barcode_api (Kraft grams 400 on POST/PUT/batch/swaps,
   servings 50 g carbs, copy-day/edit keep servings, synthetic 404), test_additives (+8 cases), barcode vectors.
+
+* **C12** `app/pwa.py` `ApiVersionMiddleware` (X-KDL-Version = shell hash on every /api answer); smallest client
+  change (outside my area): `sw.js` answers 'VERSION', `js/pwa.js` `versionSeen` (+ asks the controller at
+  register and on controllerchange), `js/core.js` passes the header. Tests: test_pwa_routes (header on 200/401/
+  404/400/unknown, not on shell; Node vm harness for versionSeen). Real Chromium check (scratch
+  `version_check.py <scratch> <port>`): server A → page on cached shell → server B → one KH.api call → toast →
+  Reload → shell B; negative control with HEAD's client code: no toast within 20 s.
 
 ## Handoffs (to fixer-frontend-docs)
 

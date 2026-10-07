@@ -108,6 +108,8 @@ self.addEventListener('message', (event) => {
   // Only this app's own pages (same origin) may ask the worker to activate an update.
   if (event.origin !== self.location.origin) return;
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  // The page asks which release its shell came from, to compare with the server's X-KDL-Version.
+  if (event.data === 'VERSION' && event.source) event.source.postMessage({ type: 'kdl-version', version: VERSION });
 });
 
 self.addEventListener('fetch', (event) => {

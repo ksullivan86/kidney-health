@@ -8,7 +8,9 @@
      created once and allows exactly '/sw.js'. Never add a default policy.
    * Updates: a waiting worker shows the update toast; Reload posts SKIP_WAITING and the page
      reloads on controllerchange. registration.update() runs at start and when the page becomes
-     visible again, at most once an hour (a standalone app has no reload button).
+     visible again, at most once an hour (a standalone app has no reload button), and at once when
+     an API answer's X-KDL-Version differs from the version of the worker that served this shell
+     (versionSeen, called by KH.api; note 02 §5: a cached shell and a newer server).
    * The install panel is part of Settings → This device; renderInstallPanel(container) can render
      it anywhere. deviceStatus() and clearOfflineData() serve the rest of that section
      (js/views/settings.js), which has no service-worker code of its own (the preview build leaves
@@ -27,6 +29,8 @@
   let registration = null;
   let lastUpdateCheck = 0;
   let reloadRequested = false;
+  let shellVersion = null; // the controlling worker's VERSION: the release this page's shell came from
+  let mismatchSeen = null; // the server version an update was already asked for
   let installPrompt = null; // Chromium's beforeinstallprompt event, kept for the Install button
 
   function isStandalone() {
@@ -89,6 +93,21 @@
     lastUpdateCheck = Date.now();
     registration.update().catch(() => { /* offline or server unreachable: try again later */ });
   }
+  // KH.api passes every answer's X-KDL-Version. A different version than the shell's means the server was
+  // upgraded under a cached shell: fetch the new worker now (once per version); its install shows the toast.
+  function versionSeen(serverVersion) {
+    if (!serverVersion || !shellVersion || serverVersion === shellVersion || mismatchSeen === serverVersion) return false;
+    mismatchSeen = serverVersion;
+    if (registration) {
+      lastUpdateCheck = Date.now();
+      registration.update().catch(() => { /* offline or server unreachable: the hourly check tries again */ });
+    }
+    return true;
+  }
+  function askShellVersion() {
+    const controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (controller) controller.postMessage('VERSION');
+  }
 
   // Settings → This device re-renders when the offline state changes (the first visit's worker
   // takes control a moment after the page opened), so its rows never contradict the panel below.
@@ -98,10 +117,16 @@
 
   async function register() {
     if (!canUseServiceWorker()) return null;
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data && data.type === 'kdl-version' && typeof data.version === 'string') shellVersion = data.version;
+    });
+    if (typeof navigator.serviceWorker.startMessages === 'function') navigator.serviceWorker.startMessages();
+    askShellVersion();
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       // Only after the person tapped Reload; the first install's clients.claim() also fires this.
       if (reloadRequested) window.location.reload();
-      else { renderInstallPanel(); notify(); }
+      else { askShellVersion(); renderInstallPanel(); notify(); }
     });
     try {
       registration = await navigator.serviceWorker.register(serviceWorkerURL(), { scope: '/' });
@@ -221,5 +246,5 @@
     else window.addEventListener('load', () => { register(); }, { once: true });
   }
 
-  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, deviceStatus, clearOfflineData, onStateChange };
+  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, versionSeen, deviceStatus, clearOfflineData, onStateChange };
 })();
