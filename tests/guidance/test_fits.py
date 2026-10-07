@@ -57,9 +57,9 @@ def test_tv_f4_returned_order_and_portions():
     assert result["open_meals"] == ["dinner", "snack"]
     assert result["room"]["potassium_mg"] == {"room": 750, "cap": 750, "share": 800, "in_meal": 0,
                                               "remaining_today": 1200, "allowance_today": 2500, "level": "ok",
-                                              "basis": "day"}
+                                              "basis": "day", "unknown": 0}
     assert result["room"]["fluid_ml"] is None
-    assert result["room"]["carbs_g"] == {"goal": 60, "in_meal": 0, "gap": 60, "tolerance": 10, "hypo_excluded_g": 0}
+    assert result["room"]["carbs_g"] == {"goal": 60, "in_meal": 0, "gap": 60, "tolerance": 10, "hypo_excluded_g": 0, "unknown": 0}
     assert result["room"]["protein_g"] == {"aim": 9.3, "aim_min": 4.7}
     assert result["notes"] == ["Suggestions compare foods with the targets your care team set. They are not medical advice."]
 
@@ -195,3 +195,18 @@ def test_usual_meals_are_offered_from_history():
     usual = [m for m in fits.what_fits(ctx, "dinner")["saved_meals"] if m["source"] == "usual"]
     assert usual and usual[0]["name"] == "Your usual dinner: egg white, rice and green beans"
     assert usual[0]["template_id"] is None
+
+
+def test_room_with_values_not_listed_is_an_upper_bound() -> None:
+    """v0.3.0 review (C1): a food that lists no potassium (or carbohydrate) adds nothing to the day's total, so
+    the room built on it may be too large. The room counts such entries and the text says "at most" and why."""
+    from app.guidance import messages as M
+
+    room = {"potassium_mg": {"room": 750, "unknown": 1}, "phosphorus_mg": {"room": 230, "unknown": 0},
+            "sodium_mg": {"room": 600, "unknown": 0}, "fluid_ml": None,
+            "carbs_g": {"gap": 60.0, "goal": 60.0, "unknown": 1}}
+    assert M.room_line("dinner", room) == (
+        "Left for dinner: at most 750 mg potassium · 230 mg phosphorus · 600 mg sodium · at most 60 g carbs to reach 60 g. "
+        "Some foods logged today do not list potassium or carbs, so there may be less room")
+    complete = {k: (dict(v, unknown=0) if isinstance(v, dict) else v) for k, v in room.items()}
+    assert "at most" not in M.room_line("dinner", complete) and "do not list" not in M.room_line("dinner", complete)

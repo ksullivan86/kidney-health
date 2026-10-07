@@ -358,6 +358,14 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("unknown potassium is never all good", base_input(diabetes="none", day=[
             entry(1, 1, "lunch", override={"potassium_mg": None, "phosphorus_mg": None}), entry(2, 5, "dinner")], history=[]),
          {"fn": "day_insights"}),
+        # v0.3.0 review (C1): a room built on totals that miss values is an upper bound ("at most", unknown counts).
+        ("room with a spread that lists no potassium, phosphorus or carbs", base_input(day=[
+            entry(1, 13, "breakfast"), entry(2, 1, "lunch", override={"potassium_mg": None, "phosphorus_mg": None, "carbs_g": None}),
+            entry(3, 5, "dinner", status="planned", override={"potassium_mg": None})]),
+         {"fn": "meal_room", "meal": "dinner"}),
+        ("what fits dinner after foods that list no potassium", base_input(day=[
+            entry(1, 13, "breakfast"), entry(2, 1, "dinner", override={"potassium_mg": None, "carbs_g": None})]),
+         {"fn": "what_fits", "meal": "dinner"}),
         ("period with unknown potassium and sodium", base_input(food_set="all"), {
             "fn": "period_insights", "start": "2026-09-28", "end": "2026-10-04",
             "entries": [hist(d, 1, "lunch", override={"potassium_mg": None if d < "2026-10-01" else 500.0, "sodium_mg": None})

@@ -14,7 +14,7 @@ CONFIRMED (fix with root cause and a test):
 
 | id | finding | status |
 |---|---|---|
-| C1 | unknown K/P counted as 0 (today.js:147 and every total) | UI + twin done; guidance room text next |
+| C1 | unknown K/P counted as 0 (today.js:147 and every total) | done |
 | C2 | handbook light-scheme links/header fail WCAG AA | done |
 | C3 | Settings → This device renders twice on first visit | done |
 | C4 | DG47 dead citation on 13 handbook pages | done |
@@ -97,6 +97,13 @@ LOW (apply or justify):
   interdialytic vs the twin through Node, `tests/js/demo_log_twin.mjs`), parity.py section 5 adds an eaten
   no-K/P quick add, journey step 4 checks Today/Trends after the Nutella scan (130/130). Handbook logging.md,
   targets-and-warnings.md; contract paragraph under "Foods and log changes".
+
+* **C1 (guidance room text)** smallest change outside my area, in `app/guidance/` (budget.py DayTotals.unknown +
+  meal_carbs_unknown, NutrientRoom/CarbRoom.unknown; fits.room_json "unknown"; messages.room_line "at most …"
+  + "Some foods logged today do not list X, so there may be less room"; guidance/models.py) and the twin
+  (budget.js, fits.js, messages.js). Two new vector cases in tests/data/gen_guidance_vectors.py (54 checks);
+  tests/guidance/test_fits.py pinned shapes gain `unknown: 0` + `test_room_with_values_not_listed_is_an_upper_bound`.
+  Docs: docs/guidance.md, handbook app/guidance.md, contract NutrientRoom/carbs shape.
 
 ## Coordination
 

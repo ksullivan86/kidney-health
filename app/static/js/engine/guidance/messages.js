@@ -117,19 +117,29 @@
     unknown: (v) => `${v.Nutrient} is not listed for this food; check the label`,
   };
   function reasonText(code, values = {}) { return REASONS[code](values); }
+  // messages.room_line: a room built on a total that misses values some foods do not list is an upper bound.
   function roomLine(meal, room) {
     const parts = [];
+    const missing = [];
     for (const key of [R.K, R.P, R.NA, R.FLUID]) {
       const item = room[key];
-      if (R.isDict(item)) parts.push(`${fmtAmount(key, Number(item.room))} ${NUT[key].unit} ${NUTRIENT_WORD[key]}`);
+      if (!R.isDict(item)) continue;
+      let text = `${fmtAmount(key, Number(item.room))} ${NUT[key].unit} ${NUTRIENT_WORD[key]}`;
+      if (Number(item.unknown || 0) > 0) { text = `at most ${text}`; missing.push(NUTRIENT_WORD[key]); }
+      parts.push(text);
     }
     const carbs = room[R.CARBS];
     if (R.isDict(carbs)) {
       const gap = Number(carbs.gap), goal = Number(carbs.goal);
-      if (gap > 0) parts.push(`${fmtG(gap)} g carbs to reach ${fmtG(goal)} g`);
+      const unknown = Number(carbs.unknown || 0) > 0;
+      if (gap > 0) parts.push(`${unknown ? 'at most ' : ''}${fmtG(gap)} g carbs to reach ${fmtG(goal)} g`);
       else parts.push(`carbs at your ${fmtG(goal)} g goal`);
+      if (unknown) missing.push('carbs');
     }
-    return parts.length ? `Left for ${meal}: ${parts.join(' · ')}` : `No targets limit ${meal}`;
+    if (!parts.length) return `No targets limit ${meal}`;
+    let line = `Left for ${meal}: ${parts.join(' · ')}`;
+    if (missing.length) line += `. Some foods logged today do not list ${joinAnd(missing).replaceAll(' and ', ' or ')}, so there may be less room`;
+    return line;
   }
   function noFitText(meal, key, room, closest = '') {
     const unit = unitOf(key);

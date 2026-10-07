@@ -1176,7 +1176,7 @@ setting `guidance.enabled` is off ("Meal guidance is switched off on this server
 ```json
 NextMeal = {"status": "ok", "rules_version": "2026-10-05.1", "date", "meal", "open_meals": [Meal],
   "room": {"potassium_mg": NutrientRoom | null, "phosphorus_mg": …, "sodium_mg": …, "fluid_ml": …,
-           "carbs_g": {"goal", "in_meal", "gap", "tolerance", "hypo_excluded_g"} | null,
+           "carbs_g": {"goal", "in_meal", "gap", "tolerance", "hypo_excluded_g", "unknown"} | null,
            "protein_g": {"aim", "aim_min"} | null},
   "room_text": "Left for dinner: 750 mg potassium · 167 mg phosphorus · 600 mg sodium · 60 g carbs to reach 60 g",
   "meal_has": {"protein", "starch", "veg_fruit"},
@@ -1186,7 +1186,8 @@ NextMeal = {"status": "ok", "rules_version": "2026-10-05.1", "date", "meal", "op
   "tips": [{"code", "text", "handbook", "url"}], "notes": ["Suggestions compare foods with the targets your care team set. They are not medical advice."],
   "ai": {"available", "provider_label"}, "targets": {"values": {…}, "profile_updated_at"}}
 NutrientRoom = {"room", "cap" | null, "share", "in_meal", "remaining_today", "allowance_today",
-                "level": "ok" | "caution" | "over", "basis": "day" | "week_average" | "interdialytic"}
+                "level": "ok" | "caution" | "over", "basis": "day" | "week_average" | "interdialytic",
+                "unknown": int}   // entries of the day without this value: the room is then "at most" (room_text says why)
 FoodPortion = {"food_id", "name", "group": "protein" | "starch" | "veg_fruit" | "extra",
                "role": "protein" | "mixed" | "starch" | "veg_fruit" | "drink" | "extra", "servings",
                "serving_desc", "grams", "portion_text": "¾ × 1 cup (158 g)", "nutrients": {12 keys},

@@ -41,6 +41,9 @@ class NutrientRoom:
     room: float
     level: str  # ok | caution | over (projected vs allowance)
     basis: str  # day | week_average | interdialytic
+    # Entries of the day whose food does not list this value: ``projected`` misses them, so the true room
+    # may be smaller (note 06 R4: unknown is never treated as 0; v0.3.0 review).
+    unknown: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +53,7 @@ class CarbRoom:
     gap: float  # goal - in_meal
     tolerance: float
     hypo_excluded: float
+    unknown: int = 0  # entries of the meal (not low treatments) whose food does not list carbohydrate
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +193,9 @@ class DayTotals:
     meal_groups: Mapping[str, frozenset[str]]  # non-hypo
     meal_high_k: Mapping[str, int]
     day_high_k: int
+    # Entries without a value: per key over the day, and carbohydrate per meal (non-hypo); see NutrientRoom.unknown.
+    unknown: Mapping[str, int] = field(default_factory=dict)
+    meal_carbs_unknown: Mapping[str, int] = field(default_factory=dict)
 
 
 def day_totals(day: Iterable[DayEntry]) -> DayTotals:
@@ -200,6 +207,8 @@ def day_totals(day: Iterable[DayEntry]) -> DayTotals:
     groups: dict[str, set[str]] = {m: set() for m in R.SLOT_ORDER}
     meal_high = {m: 0 for m in R.SLOT_ORDER}
     day_high = 0
+    unknown = {k: 0 for k in keys}
+    carbs_unknown = {m: 0 for m in R.SLOT_ORDER}
     for e in day:
         used = meal_used.setdefault(e.meal, {k: 0.0 for k in keys})
         for k in keys:
@@ -207,10 +216,14 @@ def day_totals(day: Iterable[DayEntry]) -> DayTotals:
             if v is not None:
                 projected[k] += v
                 used[k] += v
+            else:
+                unknown[k] += 1
         c = e.nutrients.get(R.CARBS) or 0.0
         if e.hypo:
             hypo_carbs[e.meal] = hypo_carbs.get(e.meal, 0.0) + c
             continue
+        if e.nutrients.get(R.CARBS) is None:
+            carbs_unknown[e.meal] = carbs_unknown.get(e.meal, 0) + 1
         carbs[e.meal] = carbs.get(e.meal, 0.0) + c
         groups.setdefault(e.meal, set()).add(e.group)
         if e.role == "mixed":
@@ -221,6 +234,7 @@ def day_totals(day: Iterable[DayEntry]) -> DayTotals:
     return DayTotals(
         projected=projected, meal_used=meal_used, meal_carbs=carbs, meal_hypo_carbs=hypo_carbs,
         meal_groups={m: frozenset(g) for m, g in groups.items()}, meal_high_k=meal_high, day_high_k=day_high,
+        unknown=unknown, meal_carbs_unknown=carbs_unknown,
     )
 
 
@@ -262,7 +276,8 @@ def meal_room(ctx: GuidanceContext, meal: str, open_meals: Sequence[str] | None 
         in_meal = totals.meal_used.get(meal, {}).get(key, 0.0)
         room = max(0.0, min(cap - in_meal, share))
         level = level_for(proj, allowance, warn)
-        nutrients[key] = NutrientRoom(key, target, allowance, proj, remaining, share, cap, in_meal, room, level, basis)
+        nutrients[key] = NutrientRoom(key, target, allowance, proj, remaining, share, cap, in_meal, room, level, basis,
+                                      unknown=totals.unknown.get(key, 0))
         weight = R.USAGE_WEIGHT[key]
         if key == R.P and level != "ok":
             weight = R.USAGE_WEIGHT_P_NOT_OK
@@ -276,6 +291,7 @@ def meal_room(ctx: GuidanceContext, meal: str, open_meals: Sequence[str] | None 
         goal = per_meal if meal != R.SNACK else snack_carb_goal(targets, per_meal)
         in_meal = totals.meal_carbs.get(meal, 0.0)
         carbs = CarbRoom(goal=goal, in_meal=in_meal, gap=goal - in_meal, tolerance=float(ctx.prefs.carb_tolerance_g),
+                         unknown=totals.meal_carbs_unknown.get(meal, 0),
                          hypo_excluded=totals.meal_hypo_carbs.get(meal, 0.0))
 
     protein: ProteinRoom | None = None

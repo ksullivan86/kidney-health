@@ -48,12 +48,12 @@
       if (item == null) { out[key] = null; continue; }
       out[key] = { room: roundValue(key, item.room), cap: item.cap === Infinity ? null : roundValue(key, item.cap),
         share: roundValue(key, item.share), in_meal: roundValue(key, item.in_meal), remaining_today: roundValue(key, item.remaining),
-        allowance_today: roundValue(key, item.allowance), level: item.level, basis: item.basis };
+        allowance_today: roundValue(key, item.allowance), level: item.level, basis: item.basis, unknown: item.unknown || 0 };
     }
     if (room.carbs != null) {
       const c = room.carbs;
       out[R.CARBS] = { goal: roundValue(R.CARBS, c.goal), in_meal: roundValue(R.CARBS, c.in_meal), gap: roundValue(R.CARBS, c.gap),
-        tolerance: roundValue(R.CARBS, c.tolerance), hypo_excluded_g: roundValue(R.CARBS, c.hypo_excluded) };
+        tolerance: roundValue(R.CARBS, c.tolerance), hypo_excluded_g: roundValue(R.CARBS, c.hypo_excluded), unknown: c.unknown || 0 };
     } else out[R.CARBS] = null;
     out[R.PROTEIN] = room.protein != null
       ? { aim: roundValue(R.PROTEIN, room.protein.aim), aim_min: roundValue(R.PROTEIN, room.protein.aim_min) } : null;

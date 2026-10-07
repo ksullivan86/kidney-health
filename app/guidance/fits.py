@@ -126,6 +126,7 @@ def room_json(room: Room) -> dict[str, Any]:
             "allowance_today": round_value(key, item.allowance),
             "level": item.level,
             "basis": item.basis,
+            "unknown": item.unknown,
         }
     if room.carbs is not None:
         c = room.carbs
@@ -133,6 +134,7 @@ def room_json(room: Room) -> dict[str, Any]:
             "goal": round_value(R.CARBS, c.goal), "in_meal": round_value(R.CARBS, c.in_meal),
             "gap": round_value(R.CARBS, c.gap), "tolerance": round_value(R.CARBS, c.tolerance),
             "hypo_excluded_g": round_value(R.CARBS, c.hypo_excluded),
+            "unknown": c.unknown,
         }
     else:
         out[R.CARBS] = None

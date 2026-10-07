@@ -98,14 +98,20 @@
     const mealUsed = {}, carbs = {}, hypoCarbs = {}, groups = {}, mealHigh = {};
     for (const m of R.SLOT_ORDER) { mealUsed[m] = zeros(); carbs[m] = 0.0; hypoCarbs[m] = 0.0; groups[m] = new Set(); mealHigh[m] = 0; }
     let dayHigh = 0;
+    // budget.day_totals: entries without a value, per key over the day and carbohydrate per meal (non-hypo).
+    const unknown = {};
+    for (const k of TOTAL_KEYS) unknown[k] = 0;
+    const carbsUnknown = {};
+    for (const m of R.SLOT_ORDER) carbsUnknown[m] = 0;
     for (const e of day) {
       const used = mealUsed[e.meal] || (mealUsed[e.meal] = zeros());
       for (const k of TOTAL_KEYS) {
         const v = e.nutrients[k];
-        if (v != null) { projected[k] += v; used[k] += v; }
+        if (v != null) { projected[k] += v; used[k] += v; } else unknown[k] += 1;
       }
       const c = e.nutrients[R.CARBS] || 0.0;
       if (e.hypo) { hypoCarbs[e.meal] = (hypoCarbs[e.meal] || 0.0) + c; continue; }
+      if (e.nutrients[R.CARBS] == null) carbsUnknown[e.meal] = (carbsUnknown[e.meal] || 0) + 1;
       carbs[e.meal] = (carbs[e.meal] || 0.0) + c;
       (groups[e.meal] || (groups[e.meal] = new Set())).add(e.group);
       if (e.role === 'mixed') groups[e.meal].add('starch');
@@ -115,7 +121,7 @@
       }
     }
     return { projected, meal_used: mealUsed, meal_carbs: carbs, meal_hypo_carbs: hypoCarbs, meal_groups: groups,
-      meal_high_k: mealHigh, day_high_k: dayHigh };
+      meal_high_k: mealHigh, day_high_k: dayHigh, unknown, meal_carbs_unknown: carbsUnknown };
   }
 
   // The room for `meal` on ctx.date; `openMeals` overrides O(m) (the planner passes slots[i:]).
@@ -155,7 +161,8 @@
       const inMeal = (totals.meal_used[meal] || {})[key] || 0.0;
       const room = Math.max(0.0, Math.min(cap - inMeal, share));
       const level = levelFor(proj, allowance, warn);
-      nutrients[key] = { key, target, allowance, projected: proj, remaining, share, cap, in_meal: inMeal, room, level, basis };
+      nutrients[key] = { key, target, allowance, projected: proj, remaining, share, cap, in_meal: inMeal, room, level, basis,
+        unknown: (totals.unknown || {})[key] || 0 };
       let weight = R.USAGE_WEIGHT[key];
       if (key === R.P && level !== 'ok') weight = R.USAGE_WEIGHT_P_NOT_OK;
       weights[key] = weight;
@@ -168,7 +175,7 @@
       const goal = meal !== R.SNACK ? perMeal : snackCarbGoal(targets, perMeal);
       const inMeal = totals.meal_carbs[meal] || 0.0;
       carbs = { goal, in_meal: inMeal, gap: goal - inMeal, tolerance: Number(ctx.prefs.carb_tolerance_g),
-        hypo_excluded: totals.meal_hypo_carbs[meal] || 0.0 };
+        hypo_excluded: totals.meal_hypo_carbs[meal] || 0.0, unknown: (totals.meal_carbs_unknown || {})[meal] || 0 };
     }
 
     let protein = null;

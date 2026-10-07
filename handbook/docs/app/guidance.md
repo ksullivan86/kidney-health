@@ -107,6 +107,10 @@ what is left, and no more than 30 % of a day:
 > Using the targets in your profile, saved Oct 3, 2026, 2:15 PM: potassium 3,000 mg · phosphorus
 > 1,000 mg · sodium 2,000 mg · carbs per meal 60 g. **Check them in Profile**
 
+If a food you logged today does not list potassium (or another of these values), the line says
+**at most** for it and adds "Some foods logged today do not list potassium, so there may be less room":
+the app cannot count what the label does not give.
+
 The second line, also shown with every plan, says which targets the suggestions used and when you last
 saved them. If a number is old or wrong, fix it in **Profile** first: guidance follows your targets
 exactly, so a wrong target gives wrong suggestions.

@@ -192,21 +192,37 @@ def reason_text(code: str, **v: object) -> str:
 
 
 def room_line(meal: str, room: Mapping[str, object]) -> str:
-    """"Left for dinner: 750 mg potassium · 167 mg phosphorus · 600 mg sodium · 60 g carbs to reach 60 g"."""
+    """"Left for dinner: 750 mg potassium · 167 mg phosphorus · 600 mg sodium · 60 g carbs to reach 60 g".
+
+    A room built on a total that misses values some foods do not list (``unknown`` > 0) is an upper bound:
+    "at most 750 mg potassium", and one sentence names what is not listed (note 06 R4; v0.3.0 review)."""
     parts: list[str] = []
+    missing: list[str] = []
     for key in (R.K, R.P, R.NA, R.FLUID):
         item = room.get(key)
         if isinstance(item, Mapping):
-            parts.append(f"{fmt_amount(key, float(item['room']))} {NUTRIENT_BY_KEY[key].unit} {NUTRIENT_WORD[key]}")
+            text = f"{fmt_amount(key, float(item['room']))} {NUTRIENT_BY_KEY[key].unit} {NUTRIENT_WORD[key]}"
+            if int(item.get("unknown") or 0) > 0:
+                text = f"at most {text}"
+                missing.append(NUTRIENT_WORD[key])
+            parts.append(text)
     carbs = room.get(R.CARBS)
     if isinstance(carbs, Mapping):
         gap = float(carbs["gap"])
         goal = float(carbs["goal"])
+        unknown = int(carbs.get("unknown") or 0) > 0
         if gap > 0:
-            parts.append(f"{fmt_g(gap)} g carbs to reach {fmt_g(goal)} g")
+            parts.append(f"{'at most ' if unknown else ''}{fmt_g(gap)} g carbs to reach {fmt_g(goal)} g")
         else:
             parts.append(f"carbs at your {fmt_g(goal)} g goal")
-    return f"Left for {meal}: " + " · ".join(parts) if parts else f"No targets limit {meal}"
+        if unknown:
+            missing.append("carbs")
+    if not parts:
+        return f"No targets limit {meal}"
+    line = f"Left for {meal}: " + " · ".join(parts)
+    if missing:
+        line += f". Some foods logged today do not list {join_and(missing).replace(' and ', ' or ')}, so there may be less room"
+    return line
 
 
 def no_fit_text(meal: str, key: str, room: float, closest: str = "") -> str:

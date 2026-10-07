@@ -63,6 +63,7 @@ class NutrientRoom(_Out):
     allowance_today: Number
     level: RoomLevel
     basis: Literal["day", "week_average", "interdialytic"]
+    unknown: int = 0  # entries of the day whose food does not list this value (the room may be smaller)
 
 
 class CarbRoom(_Out):
@@ -71,6 +72,7 @@ class CarbRoom(_Out):
     gap: Number
     tolerance: Number
     hypo_excluded_g: Number
+    unknown: int = 0  # entries of the meal whose food does not list carbohydrate
 
 
 class ProteinRoom(_Out):

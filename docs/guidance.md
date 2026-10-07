@@ -86,6 +86,11 @@ Guidance first works out how much potassium, phosphorus, sodium and fluid are le
   is lower. Phosphorus is judged on the weekly average (KDOQI 2020), so its allowance is
   `target × (n + 1) − phosphorus of the n logged days among the previous 6`, kept between 0.8 and 1.2 ×
   the target: a heavy weekend never starves a day (protein needs phosphorus), unlogged days are ignored.
+* **Values not listed** (v0.3.0 review; note 06 R4): a food that lists no potassium (most scanned
+  products), phosphorus, sodium, fluid or carbohydrate adds nothing to the day's projection, so the room
+  built on it may be too large. Each room item counts those entries (`unknown`, and the meal's carbohydrate
+  `unknown`), and `room_text` says "at most 750 mg potassium · … · at most 60 g carbs to reach 60 g. Some
+  foods logged today do not list potassium or carbs, so there may be less room".
 * **Room** = `max(0, min(cap − already in the meal, share))`, where `share` is the remaining allowance
   split over the open slots by weight (0.30 per main meal, 0.15 for the snack slot) and `cap` is 0.30 of
   the daily target per main meal and 0.15 for the snack slot (fluid has no cap).
