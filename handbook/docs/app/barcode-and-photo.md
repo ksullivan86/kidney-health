@@ -56,11 +56,16 @@ maker) and fills gaps from Open Food Facts ([design note 03][NOTE03]).
 Community data can be wrong. The entry sheet shows:
 
 - **"Potassium: not listed"** or **"Phosphorus: not listed"** instead of 0 when the source has no number.
-  Unknown is not zero: your day's total will be too low.
+  Unknown is not zero: your day's totals then say "not listed" and **Not complete**, because they may be
+  higher.
 - **"Community data. Check it against the package"** on every Open Food Facts food.
 - A note when the calories do not add up, when sodium was worked out from "salt" (salt ÷ 2.5 = sodium),
   or when the values are for the "prepared" food.
 - The serving. If the source has no serving size, the app uses 100 g. Change the amount to what you ate.
+- For a food with values only **as prepared** (a boxed macaroni made with milk and butter), there is no
+  **Grams** box: the serving weight on the box is the dry product, so log it in **servings** ("1 cup
+  prepared" is one serving).
+- A drink sold by volume counts toward your fluid limit.
 
 ## The additive warnings
 

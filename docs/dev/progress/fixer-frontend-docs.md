@@ -30,7 +30,7 @@ LOW (apply or justify):
 | L4 | AI activity shows raw provider reply uncaptioned | pending |
 | L5 | Settings → AI ideas stale after admin switch | done |
 | L6 | ai.* switches under "Other" | done |
-| L7 | Trends ignores goal / about targets | pending |
+| L7 | Trends ignores goal / about targets | done (with C1, d458205) |
 | L8 | "about X" protein treated as hard max in plan | pending |
 | L9 | GET /api/foods/builtin ETag deferred without spec | pending |
 | L10 | guidance AI buttons: no What will be sent? / dropped | pending |
@@ -42,6 +42,19 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **Handoff from fixer-backend-ops (C7 UI, task #151)**: a product with only prepared values is logged in
+  servings. `KH.off.weightKnown` (engine/off.js; twin of `foods.weight_known`, same codes and refusal text);
+  the demo's POST/batch/PUT/copy-day/swaps refuse or drop grams like the server; the entry sheet hides Grams
+  and says why under the servings. Verified: `tests/test_demo_servings_only.py` (4 tests, through the new general
+  Node runner `tests/js/demo_api.mjs`, which replays requests against `MockApi`), `tools/e2e/device.py --only demo`
+  13/13 (Kraft 0021000658831: no grams field, logged `[[1, None]]`), barcode vectors 2034. Docs:
+  `docs/barcode-and-photos.md` "How the numbers are read" (the mapping rules the backend changed), handbook
+  app/barcode-and-photo.md, ARCHITECTURE barcode Frontend bullet. Left uncommitted: the egg/C11 edits in
+  mock/foods.js, parity.py, menus and vectors are fixer-backend-ops' work in progress.
+
+* **L7** (Trends goal/about targets): done with C1 in d458205 (`targetKind` goal/about/range/limit; the goal
+  line on the chart; fibre/protein minimums are goals, "about" is not a limit).
 
 * **C3** (settings.js `renderDevice`, offline.js `renderDevice`): each render builds into a detached fragment;
   only the newest (ticket) replaces `#set-device-body` after its last await; the outbox list's `draw()` builds

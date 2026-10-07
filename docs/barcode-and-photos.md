@@ -82,6 +82,24 @@ to agree in Settings) and offers **Enter from the label**. Your own foods with a
    filled from Open Food Facts; otherwise the other way round. Every filled value is named in the notes.
    Flags from both ingredient lists are combined.
 
+How the numbers are read (`app/off.py`; `ARCHITECTURE.md` "Open Food Facts client"):
+
+* A label **per serving** is used as it is; a label **per 100 g or 100 mL** is scaled to the serving weight.
+  A label per serving **without** a serving weight ("1 bar") cannot be scaled, so nothing is stored and the
+  answer says why: enter the food from the package label.
+* A product with **only "as prepared" values** (a boxed macaroni: made with milk and butter) keeps them per
+  serving, but its serving weight is the product **as sold** (70.9 g of dry pasta makes a 198 g cup). The
+  serving text ends "as sold, prepared" and the food is logged **in servings only**: the entry sheet has no
+  grams box for it, and the server refuses grams (`400 grams: … log it in servings, not grams`), so 198 g
+  can never count as 2.8 servings.
+* A **drink** (a serving in millilitres, a label per 100 mL, or the beverages category; not a drink powder)
+  counts toward a fluid limit: its fluid is the serving.
+* **Impossible values are left out** and named in the notes: per 100 g, potassium above 60 g or phosphorus
+  above 32 g (more than a food-grade salt can hold, so a salt substitute or cream of tartar keeps its
+  number), sodium above 40 g (except salts), any macronutrient above 100 g, energy above 950 kcal.
+* The **ingredient scan** flags named phosphate compounds and E-numbers; the bare word "phosphorus" (as in
+  "a source of phosphorus") is not an additive.
+
 The product is stored once on the server, read-only, and appears in your food search from then on.
 To change it, make an editable copy of it; the copy keeps the barcode (and the attribution) and is what
 you get next time.
@@ -93,7 +111,7 @@ you get next time.
   your day's total will be too low.
 * **Quality notes**, for example "Community data from Open Food Facts. Check it against the package",
   "Sodium was worked out from the salt figure (salt ÷ 2.5)", "Only the values for the prepared product
-  are listed", "No serving size is listed, so the values are for 100 g", "The calories do not match the
+  are listed …, so it is logged in servings, not grams", "No serving size is listed, so the values are for 100 g", "The calories do not match the
   protein, fat and carbohydrate listed", and "A value was impossible for a food and was left out".
 * **Additive flags** from the additive codes and the ingredient list (also in German, Dutch, French,
   Spanish, Italian and Portuguese):

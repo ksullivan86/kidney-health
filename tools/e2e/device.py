@@ -957,6 +957,7 @@ def section_demo(hx: Harness, state: dict[str, Any]) -> None:
         check(area, "quality notes are shown", "Potassium is not listed for this product" in prov, prov[:300])
         check(area, "potassium and phosphorus read 'not listed'", page.inner_text("#entry-preview-key").count("not listed") >= 2)
         hx.shot(page, "demo-entry-375")
+        check(area, "a product with weight-based values offers grams", page.is_visible("#entry-grams"))
         page.keyboard.press("Escape")
         scan_sheet(page)
         page.fill("#scan-code", CRACKERS)
@@ -990,6 +991,24 @@ def section_demo(hx: Harness, state: dict[str, Any]) -> None:
         page.goto(f"{hx.base}/?mock=1#settings")
         page.wait_for_selector("#set-ai-body")
         check(area, "AI in the demo: 'in the installed app'", "installed app" in page.inner_text("#set-ai-body"))
+        # Prepared values only (Kraft macaroni, recorded): logged in servings, the grams field gone and the reason given.
+        page.goto(f"{hx.base}/?mock=1#add")
+        page.wait_for_selector("#view-add:not([hidden]) #btn-scan")
+        page.evaluate("KH.api.updateMySettings({ 'food.off_consent': true })")
+        scan_sheet(page)
+        page.fill("#scan-code", "0021000658831")
+        page.click("#scan-go")
+        page.wait_for_selector("#sheet-entry[open]")
+        desc = page.inner_text("#entry-serving-desc")
+        check(area, "a prepared-only product is logged in servings: no grams field, the reason under the servings",
+              page.is_hidden("#entry-grams") and "Log it in servings" in desc and "as prepared" in desc, desc)
+        hx.shot(page, "demo-entry-servings-only-375")
+        food = page.inner_text(".sheet-food-name")
+        page.click("#entry-save")
+        page.wait_for_selector("#view-today:not([hidden])")
+        logged = page.evaluate(f"KH.api.day(KH.util.todayStr()).then((d) => d.entries.filter((e) => e.food_name === {json.dumps(food)})"
+                               ".map((e) => [e.servings, e.grams]))")
+        check(area, "it was logged by servings (1 serving, no grams)", logged == [[1, None]], json.dumps(logged))
     finally:
         no_problems(area, watch)
         ctx.close()

@@ -282,6 +282,8 @@
       if (existing) return [existing, 'existing'];
       const food = this._food(b.food_id);
       if (!food || !this._foodVisible(food)) fail(404, `${where}food ${b.food_id} not found`);
+      // log.resolve_servings: grams only for a food whose serving weight describes its values (no entries[i] prefix).
+      if (b.grams != null && !KH.off.weightKnown(food)) fail(400, KH.off.WEIGHT_UNKNOWN_DETAIL);
       const [servings, grams] = b.grams != null ? [b.grams / food.serving_g, b.grams] : [b.servings != null ? b.servings : 1, null];
       return [this._insertEntry({ date: b.date, meal: b.meal, food, servings, grams, note: b.note ?? null, status: b.status,
         purpose: resolvePurpose(food, b.purpose), clientId: b.client_id }), 'created'];
@@ -386,7 +388,9 @@
     for (const row of rows) {
       const food = this._food(row.food_id);
       if (!food) continue;
-      const [servings, grams] = row.grams != null ? [row.grams / food.serving_g, row.grams] : [row.servings, null];
+      // An old by-weight entry of a food whose weight is no longer usable is copied by servings.
+      const byWeight = row.grams != null && KH.off.weightKnown(food);
+      const [servings, grams] = byWeight ? [row.grams / food.serving_g, row.grams] : [row.servings, null];
       created.push(this._insertEntry({ date: b.to_date, meal: row.meal, food, servings, grams, note: row.note, status: b.status, purpose: row.purpose }));
     }
     const entries = created.map((r) => this._entryView(r));
@@ -406,10 +410,14 @@
       const note = 'note' in data ? data.note : row.note;
       const purpose = data.purpose == null ? row.purpose || null : data.purpose === HYPO_PURPOSE ? HYPO_PURPOSE : null;
       let servings = row.servings, grams = row.grams;
-      if (data.grams != null) [servings, grams] = [data.grams / food.serving_g, data.grams];
-      else if (data.servings != null) [servings, grams] = [data.servings, null];
+      const weightKnown = KH.off.weightKnown(food);
+      if (data.grams != null) {
+        if (!weightKnown) fail(400, KH.off.WEIGHT_UNKNOWN_DETAIL);
+        [servings, grams] = [data.grams / food.serving_g, data.grams];
+      } else if (data.servings != null) [servings, grams] = [data.servings, null];
       else if ('grams' in data) grams = null;
-      else if (grams != null) servings = grams / food.serving_g; // weight-based entry follows the food's serving size
+      else if (grams != null && weightKnown) servings = grams / food.serving_g; // weight-based entry follows the food's serving size
+      else if (grams != null) grams = null; // the food's weight is no longer usable: keep the servings, drop the grams
       Object.assign(row, { date, meal, status, food_name: food.name, servings, grams, note, purpose, nutrients: scaleNutrients(food.nutrients, servings), updated_at: this._stamp() });
       return this._entryView(row);
     }

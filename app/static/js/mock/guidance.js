@@ -255,7 +255,11 @@
     const food = ctx.foods.get(fid);
     if (food == null) fail(404, `food ${fid} not found`);
     if (a.entry_id == null) {
-      if (a.grams != null) amount = food.serving_g > 0 ? a.grams / food.serving_g : 1.0;
+      if (a.grams != null) {
+        const row = this._food(fid); // guidance.api.swaps: grams only when the serving weight describes the values
+        if (row && !KH.off.weightKnown(row)) fail(400, KH.off.WEIGHT_UNKNOWN_DETAIL);
+        amount = food.serving_g > 0 ? a.grams / food.serving_g : 1.0;
+      }
       else if (a.servings != null) amount = a.servings;
       if (wanted == null) wanted = food.hypo ? 'hypo' : 'none';
     }

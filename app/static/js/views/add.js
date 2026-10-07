@@ -166,6 +166,7 @@
     entryDate.value = entry ? entry.date : state.date;
     entryGrams.disabled = !food;
     $('#entry-grams-hint').textContent = food ? `1 serving = ${fmtNum(food.serving_g, 'fluid_ml')} g` : 'Loading serving size…';
+    applyWeightRule(food);
     $('#entry-delete-food').hidden = !(mode === 'add' && food && food.source !== 'builtin');
     if (food && !entryGrams.value) syncGramsFromServings();
     if (KH.guidance) KH.guidance.entry.open({ mode, food, entry, onChange: updatePreview });
@@ -179,6 +180,7 @@
         sheet.perServing = f.nutrients;
         entryGrams.disabled = false;
         $('#entry-grams-hint').textContent = `1 serving = ${fmtNum(f.serving_g, 'fluid_ml')} g`;
+        applyWeightRule(f);
         if (!entryGrams.value) syncGramsFromServings();
         renderSheetFood();
         if (KH.guidance) KH.guidance.entry.open({ mode, food: f, entry, onChange: updatePreview, refresh: true });
@@ -196,7 +198,9 @@
     clear(sub);
     const rating = f ? f.kidney_rating : sheet.entry.kidney_rating;
     sub.append(h('span', { class: 'sheet-food-name' }, name), f && f.brand ? ` (${f.brand})` : '', f ? ` · ${f.serving_desc}` : '', ' ', levelPill(rating, rating === 'red' ? 'High concern' : rating === 'yellow' ? 'Moderate' : 'Kidney-friendly'));
-    $('#entry-serving-desc').textContent = f ? `1 serving = ${f.serving_desc}` : '';
+    const servingsOnly = f && KH.off && !KH.off.weightKnown(f);
+    $('#entry-serving-desc').textContent = !f ? '' : servingsOnly
+      ? `1 serving = ${f.serving_desc}. Log it in servings: the values are for the product as prepared.` : `1 serving = ${f.serving_desc}`;
     const chips = clear($('#sheet-entry-flags'));
     for (const fl of (f && f.flags) || []) {
       const def = FLAG[fl];
@@ -207,8 +211,18 @@
     notes.textContent = f && f.kidney_notes ? f.kidney_notes : '';
     if (KH.scan) KH.scan.renderProvenance($('#sheet-entry-provenance'), f); else $('#sheet-entry-provenance').hidden = true;
   }
+  // A product with only prepared values (Open Food Facts) is logged in servings: its values are per serving as
+  // prepared, but its serving weight is the product as sold, so grams would count the wrong amount (the server
+  // refuses them: foods.weight_known). The grams field goes and the servings hint says why.
+  function applyWeightRule(food) {
+    const known = !food || !KH.off || KH.off.weightKnown(food);
+    sheet.servingsOnly = !known;
+    entryGrams.closest('.field').hidden = !known;
+    if (!known) { entryGrams.value = ''; sheet.lastEdited = 'servings'; }
+  }
   function servingsValue() { const v = Number(entryServings.value); return Number.isFinite(v) && v >= 0 ? v : 0; }
   function syncGramsFromServings() {
+    if (sheet.servingsOnly) return;
     if (sheet.food && sheet.food.serving_g) entryGrams.value = String(Math.round(servingsValue() * sheet.food.serving_g));
   }
   function syncServingsFromGrams() {

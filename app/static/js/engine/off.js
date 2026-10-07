@@ -68,6 +68,19 @@
     try { const u = new URL(String(value)); return u.protocol === 'https:' ? u.href : null; } catch (e) { return null; }
   }
 
+  // foods.weight_known / WEIGHT_UNKNOWN_CODES / WEIGHT_UNKNOWN_DETAIL: a product with only prepared values has
+  // nutrients per serving as prepared but a serving weight as sold (Kraft macaroni: 70.9 g dry makes a 198 g cup),
+  // so it is logged in servings only; the log refuses grams for it with this text. `quality` holds stored codes
+  // ("implausible:sodium_mg") on a demo food row or {code, message} items on a Food answer.
+  const WEIGHT_UNKNOWN_CODES = ['prepared_values', 'serving_weight_unknown'];
+  const WEIGHT_UNKNOWN_DETAIL = "grams: this product's values are for it as prepared, but its serving weight is the product "
+    + 'as sold, so log it in servings, not grams';
+  function weightKnown(food) {
+    const items = (food && food.quality) || [];
+    return !items.some((q) => WEIGHT_UNKNOWN_CODES.includes(String(q && typeof q === 'object' ? q.code : q).split(':')[0]));
+  }
+
   KH.off = { LICENSE, ATTRIBUTION_TEXT, LICENSE_URL, HOME_URL, PRODUCT_PAGE_PREFIX, CONTRIBUTE_URL, USDA_LICENSE, USDA_HOME_URL,
-    USDA_ATTRIBUTION_TEXT, METHOD_URL, QUALITY_MESSAGES, productPage, attribution, usdaAttribution, qualityItems, safeHttpsUrl };
+    USDA_ATTRIBUTION_TEXT, METHOD_URL, QUALITY_MESSAGES, productPage, attribution, usdaAttribution, qualityItems, safeHttpsUrl,
+    WEIGHT_UNKNOWN_CODES, WEIGHT_UNKNOWN_DETAIL, weightKnown };
 })();
