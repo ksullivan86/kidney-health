@@ -632,9 +632,11 @@ proxies, the image and CI; (5) the note that owns the feature.
    that need a public repo are gated on `github.event.repository.private == false`. *(M1 review:)*
    the repository variable `HOLD_LATEST=true` keeps `:latest` where it is on a `v*` tag. v0.2's
    Quadlet unit tracked `:latest` with `AutoUpdate=registry` and a shell `HealthCmd`, which loops
-   (kill, restart) under the shell-less v0.3 image; **owner decision before tagging v0.3.0**: hold
-   `:latest` on the last v0.2 digest for a while, or rely on the upgrade warnings in CHANGELOG.md,
-   README.md and docs/deployment.md.
+   (kill, restart) under the shell-less v0.3 image. **Owner decision (2026-10-06): no hold.**
+   `:latest` moves to v0.3.0 when it is tagged and `HOLD_LATEST` stays unset; v0.2 hosts are
+   protected by the upgrade warnings in CHANGELOG.md, README.md and docs/deployment.md (replace the
+   v0.2 `.container` file with the v0.3 one before the update). The variable remains for a future
+   release that needs a hold (`docs/maintainers.md`).
 8. **Open Food Facts** is **off by default** (`food.off_enabled=false`); the admin turns it on in
    Settings, and the first-run setup screen offers a checkbox for it.
 9. **`potassium_additive` flag** (note 03 R5): a **medium** warning ("contains a potassium
