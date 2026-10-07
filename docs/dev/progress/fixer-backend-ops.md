@@ -1,6 +1,6 @@
-# fixer-backend-ops progress
+Status: complete (2026-10-07; full `python -m pytest` exit 0, `node tests/js/run_vectors.mjs` all suites pass)
 
-Status: in progress (started 2026-10-07)
+# fixer-backend-ops progress
 
 Role: fix the v0.3.0 review findings in the backend/ops half of the tree (Python under app/,
 migrations, tests except tests/js, scripts except build_preview, deploy/, .github). Ports 8600-8619.
