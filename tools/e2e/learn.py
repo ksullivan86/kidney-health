@@ -13,6 +13,9 @@ finishes first-run setup through the API, then in headless Chromium at 375x812 (
 3. the dark/light palette switch;
 4. search: type "potassium", results appear (the lunr worker runs under the /learn CSP), open one;
 5. an unknown page: the site's own 404 page with status 404;
+   on the start, stage and potassium pages (light), the potassium and 404 pages (dark): every visible text run
+   meets WCAG 2.2 AA contrast (1.4.3: 4.5:1, or 3:1 from 24 px or 18.66 px bold), measured from the computed
+   text colour, its alpha and the opacity on the way, over the stacked background colours;
 6. "Back to the food log" → the app's sign-in screen → sign in → the header's Learn entry points at
    /learn/; a banana's potassium warning links to eat/potassium/ in a new tab; Settings → About &
    privacy links to the handbook; the Learn entry opens it in the same window.
@@ -53,6 +56,71 @@ document.addEventListener('securitypolicyviolation', (e) => {
                          line: e.lineNumber, sample: e.sample, page: location.href });
 });
 """
+
+# WCAG 2.2 AA text contrast (success criterion 1.4.3) of every visible text run on a page. Returns the number
+# measured and the failures, grouped by element and colours. Background images (gradients) are not part of the
+# measure: the handbook draws none under text.
+CONTRAST_JS = """() => {
+  // WCAG 2.2 AA text contrast (1.4.3) of every visible text run on the page: the text colour (with its alpha and
+  // the opacity of the element and its ancestors) over the background colours stacked under it.
+  const parse = (c) => {
+    const m = /^rgba?\(([^)]+)\)$/.exec(c || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat([1]);
+  const lum = (c) => {
+    const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+  };
+  const ratio = (a, b) => { const x = lum(a); const y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+  const label = (el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : ''}`;
+  const fails = new Map();
+  let measured = 0;
+  let unmeasured = 0;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.nodeValue.replace(/\s+/g, ' ').trim();
+    if (!text) continue;
+    const el = node.parentElement;
+    if (!el || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'OPTION'].includes(el.tagName)) continue;
+    if (el.closest('[hidden], [disabled]')) continue;
+    if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+    const rects = el.getClientRects();
+    if (!rects.length || ![...rects].some((r) => r.width > 1 && r.height > 1)) continue;
+    const cs = getComputedStyle(el);
+    let fg = parse(cs.color);
+    if (!fg) { unmeasured += 1; continue; }
+    // Background layers from the element up to the first opaque one, and the opacity on the way.
+    const layers = [];
+    let opacity = 1;
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+      const ns = getComputedStyle(n);
+      opacity *= Number(ns.opacity);
+      const bg = parse(ns.backgroundColor);
+      if (bg && bg[3] > 0) { layers.push(bg); if (bg[3] >= 1) break; }
+    }
+    let bg = [255, 255, 255, 1];
+    for (let i = layers.length - 1; i >= 0; i -= 1) bg = over(layers[i], bg);
+    const shown = over([fg[0], fg[1], fg[2], fg[3] * opacity], bg);
+    const size = parseFloat(cs.fontSize);
+    const bold = Number(cs.fontWeight) >= 700;
+    const large = size >= 24 || (size >= 18.66 && bold);
+    const need = large ? 3 : 4.5;
+    const r = ratio(shown, bg);
+    measured += 1;
+    if (r + 1e-9 < need) {
+      const key = `${label(el)} ${hex(shown)} on ${hex(bg)}`;
+      const seen = fails.get(key);
+      if (seen) seen.count += 1;
+      else fails.set(key, { where: label(el), text: text.slice(0, 40), ratio: Math.round(r * 100) / 100, need,
+                            fg: hex(shown), bg: hex(bg), size: Math.round(size * 10) / 10, bold, count: 1 });
+    }
+  }
+  return { measured, unmeasured, failures: [...fails.values()].sort((a, b) => a.ratio - b.ratio) };
+}"""
 
 RESULTS: list[dict[str, Any]] = []
 
@@ -128,6 +196,21 @@ def visible(page: Page, selector: str) -> Any:
     return None
 
 
+def contrast(page: Page, area: str, label: str) -> None:
+    """Check WCAG AA text contrast on the page as shown now (scheme, width and all), once running transitions
+    (a tooltip fading in after a click) have ended: their final colours are what a reader sees."""
+    page.evaluate("""() => Promise.race([
+        Promise.all(document.getAnimations()
+          .filter((a) => Number.isFinite(a.effect && a.effect.getComputedTiming().endTime))
+          .map((a) => a.finished.catch(() => null))),
+        new Promise((resolve) => setTimeout(resolve, 3000))])""")
+    got = page.evaluate(CONTRAST_JS)
+    worst = "; ".join(f"{f['where']} \"{f['text']}\" {f['fg']} on {f['bg']} = {f['ratio']}:1 (needs {f['need']}:1, "
+                      f"{f['size']} px{' bold' if f['bold'] else ''}, ×{f['count']})" for f in got["failures"][:8])
+    check(area, f"text contrast meets WCAG AA ({label}: {got['measured']} text runs)",
+          got["measured"] > 0 and not got["failures"], worst)
+
+
 def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, height: int, touch: bool) -> None:
     area = f"{name} {width}x{height}"
     watch = Watch(base)
@@ -156,11 +239,13 @@ def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, he
         check(area, "'Back to the food log' and 'Get help now' links", state["back"] and state["help"])
         check(area, "no horizontal page overflow", not state["overflow"])
         page.screenshot(path=str(shots / f"{name}-1-start.png"))
+        contrast(page, area, "start page, light")
 
         # 2. a stage page and the potassium page (with a unit tab switch)
         check(area, "stage page stages/g4/ answers 200", goto(page, f"{base}/learn/stages/g4/"))
         check(area, "stage page heading", "G4" in heading(page))
         page.screenshot(path=str(shots / f"{name}-2-stage.png"))
+        contrast(page, area, "stage page, light")
         check(area, "eat/potassium/ answers 200", goto(page, f"{base}/learn/eat/potassium/"))
         check(area, "potassium page heading", heading(page) == "Potassium", heading(page))
         tab = visible(page, ".tabbed-labels > label:nth-child(2)")
@@ -169,6 +254,7 @@ def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, he
             check(area, "a unit tab switches", page.evaluate(
                 "() => [...document.querySelectorAll('.tabbed-set')].some((s) => s.querySelectorAll('input')[1]?.checked)"))
         page.screenshot(path=str(shots / f"{name}-3-potassium.png"))
+        contrast(page, area, "potassium page, light")
 
         # 3. the palette switch
         before = page.get_attribute("body", "data-md-color-scheme")
@@ -179,6 +265,7 @@ def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, he
             page.wait_for_function("(b) => document.body.getAttribute('data-md-color-scheme') !== b", arg=before)
             check(area, "palette switch changes the colour scheme", page.get_attribute("body", "data-md-color-scheme") != before)
             page.screenshot(path=str(shots / f"{name}-4-dark.png"))
+            contrast(page, area, "potassium page, dark")
 
         # 4. search (lunr in a web worker, under the /learn CSP)
         opener = visible(page, "label.md-header__button[for='__search']")
@@ -200,6 +287,7 @@ def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, he
         check(area, "unknown page answers 404", goto(page, f"{base}/learn/no-such-page/", 404))
         check(area, "the 404 page is the handbook's", page.query_selector(".md-header") is not None)
         page.screenshot(path=str(shots / f"{name}-6-404.png"))
+        contrast(page, area, "404 page, dark")
 
         # 6. back to the app, sign in, and the app's way into the handbook
         goto(page, f"{base}/learn/")

@@ -15,7 +15,7 @@ CONFIRMED (fix with root cause and a test):
 | id | finding | status |
 |---|---|---|
 | C1 | unknown K/P counted as 0 (today.js:147 and every total) | pending |
-| C2 | handbook light-scheme links/header fail WCAG AA | pending |
+| C2 | handbook light-scheme links/header fail WCAG AA | done |
 | C3 | Settings → This device renders twice on first visit | done |
 | C4 | DG47 dead citation on 13 handbook pages | pending |
 | C5 | guidance never shows which targets it used / when saved | pending |
@@ -31,6 +31,14 @@ LOW (apply or justify): see the table below as each is done.
   (new section: three fresh profiles at `/#settings` with the service worker allowed) fails 6/9 on HEAD's code
   (copy via `git archive`) with exactly the review's symptoms and passes 9/9 after; `outbox` and `demo`
   sections still pass (36/36). Static guard: `tests/test_device_ui.py::test_settings_device_section_is_drawn_once_when_renders_overlap`.
+
+* **C2** (`handbook/docs/stylesheets/extra.css`): teal primary → teal 800 `#00695c` (white on it and it on
+  white 6.61:1; the header in both schemes and light links), light accent `#004d40` (hover/focus 9.8:1),
+  inactive tabs 85 % opacity (5.2:1) with the current tab underlined, the phone drawer's section title at full
+  foreground colour (was 4.4:1 light / 4.1:1 dark). The probe found more than the review: tabs 2.59:1 and the
+  drawer title. `tools/e2e/learn.py` now measures every visible text run (colour alpha, opacity, stacked
+  backgrounds; waits for transitions to end) on 5 pages in both schemes: 60/60 pass on a build with
+  `HANDBOOK_APP_LINK=/` (the image's flags). Before the CSS the same probe found 6 failing groups per page.
 
 ## Coordination
 

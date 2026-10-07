@@ -1,6 +1,35 @@
 /* Kidney Health Handbook: additions to Material for MkDocs.
    Served under a CSP with style-src 'self': keep every style in this file, never inline. */
 
+/* ---------- colour contrast: WCAG 2.2 AA (1.4.3) in both schemes ---------- */
+/* Material's teal (#009485) gives 3.77:1 for white text on the header and tabs and for teal links on
+   white; text under 18.66 px bold needs 4.5:1. Teal 800 gives 6.61:1 both ways. The dark scheme keeps
+   Material's own link colour (#00ccb8 on #1e2129, 7.9:1), set by a more specific palette rule.
+   tools/e2e/learn.py measures every visible text run in both schemes and fails below AA. */
+[data-md-color-primary=teal] {
+  --md-primary-fg-color: #00695c;
+  --md-primary-fg-color--light: #00796b;
+  --md-primary-fg-color--dark: #004d40;
+}
+/* Link hover and focus use the accent colour: Material's teal accent is 2.4:1 on white. */
+[data-md-color-scheme=default][data-md-color-accent=teal] {
+  --md-accent-fg-color: #004d40;
+}
+/* Inactive tabs are white at 70 % opacity (4.1:1 on teal 800): 85 % gives 5.2:1, and the current tab is
+   underlined so it does not rely on a small difference in brightness. */
+.md-tabs__link {
+  opacity: 0.85;
+}
+.md-tabs__item--active .md-tabs__link {
+  text-decoration: underline;
+  text-decoration-thickness: 0.1rem;
+  text-underline-offset: 0.3rem;
+}
+/* The phone drawer's section title is 54 % grey on a 7 % grey (4.4:1 light, 4.1:1 dark). */
+.md-nav--primary .md-nav__title:not([for=__drawer]) {
+  color: var(--md-default-fg-color);
+}
+
 /* ---------- announce bar: back to the app, get help now ---------- */
 .kh-announce {
   display: flex;
