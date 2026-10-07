@@ -239,6 +239,10 @@
     const extras = [...new Set(this._foods.filter((f) => !f.hidden && f.category).map((f) => f.category))].filter((c) => !FOOD_CATEGORIES.includes(c)).sort();
     return { categories: [...FOOD_CATEGORIES, ...extras] };
   });
+  // foods.builtin_foods: every builtin food, in import order (the demo never sends If-None-Match: no ETag here).
+  route('GET', '/api/foods/builtin', function () {
+    return { foods: this._foods.filter((f) => f.source === 'builtin' && !f.hidden).sort((a, b) => a.id - b.id).map((f) => this._foodView(f)) };
+  });
   // USDA lookups need the server's key: the demo validates like the server, then answers 503.
   route('GET', '/api/foods/usda/search', function ({ qp }) {
     if ((qp('q') || '').length > 200) failFields(['q: String should have at most 200 characters']);

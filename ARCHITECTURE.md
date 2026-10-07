@@ -333,6 +333,10 @@ Every target may be a number, `{"min","max"}`, or `null` (= not tracked).
   word must match; exact-prefix matches rank first. `q` is at most 200 characters (400 otherwise)
   and only the first 10 words are matched.
 * `GET /api/foods/categories` → `{"categories":[string]}`
+* `GET /api/foods/builtin` → `{"foods":[Food]}`: every builtin food that is not hidden, in id order, the same for
+  everyone, with `ETag: "<data/foods.json version>-<hash of the answer>"`; `If-None-Match` with it → **304** and no
+  body (note 02 §6 item 9, R5). Matched before `/api/foods/{id}`. `/api` stays `Cache-Control: no-store`: the device
+  keeps the list and its ETag in its own storage (`js/offline.js`)
 * `GET /api/foods/{id}` → Food
 * `POST /api/foods` body FoodCreate → Food (source forced to `custom`)
 * `PUT /api/foods/{id}` body FoodCreate → Food (409 if source is `builtin`; copy instead)
@@ -1577,8 +1581,9 @@ with lookups off on both sides.
   with a pending entry (`id: "pending:<client_id>"`, warnings from the rules twin), a `GET` of a saved path
   is answered from this device's copy (`/api/auth/status`, `/api/profile`, `/api/me`, `/api/handbook`,
   `/api/foods/categories`, `/api/meals`, `/api/log?date=` for 13 days back to 7 ahead, `/api/log/range`,
-  `/api/log/summary`), and food search from the foods this device has seen (refreshed daily, ≤ 200 per
-  category); `afterResponse` saves copies and merges waiting entries into the day (totals recomputed with the
+  `/api/log/summary`), and food search from the foods this device has seen (refreshed daily: the builtin list
+  from `GET /api/foods/builtin` with the last ETag, 304 while unchanged, builtin foods no longer listed dropped;
+  the person's own and scanned foods ≤ 200 per source); `afterResponse` saves copies and merges waiting entries into the day (totals recomputed with the
   mock's day maths).
 * **Sync:** on `online`, page show, visibility, every 30 s while something waits, and on start; one at a time
   (Web Locks `kdl-sync` across tabs). FIFO: consecutive entries go through `POST /api/log/batch` (≤ 40), a

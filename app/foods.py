@@ -8,6 +8,7 @@ is not visible answers 404, exactly like one that does not exist.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
@@ -970,6 +971,36 @@ def list_categories(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db
     ).fetchall()
     extras = sorted({r["category"] for r in rows} - set(CATEGORIES))
     return {"categories": [*CATEGORIES, *extras]}
+
+
+def builtin_food_list(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every builtin food that is not hidden, in import order (the same for everyone)."""
+    rows = conn.execute("SELECT * FROM foods WHERE source = 'builtin' AND hidden = 0 ORDER BY id").fetchall()
+    return [row_to_food(r) for r in rows]
+
+
+def builtin_etag(conn: sqlite3.Connection, foods: list[dict[str, Any]]) -> str:
+    """``"<data/foods.json version>-<hash of the answer>"``: the version says which list it is; the hash also changes
+    when a release changes the warnings worked out for the same foods."""
+    version = re.sub(r"[^A-Za-z0-9._-]", "", str(get_meta(conn, FOODS_JSON_VERSION_KEY) or "")) or "none"
+    body = json.dumps(FoodList(foods=foods).model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return f'"{version}-{hashlib.sha256(body.encode("ascii")).hexdigest()[:20]}"'
+
+
+@router.get("/builtin", response_model=FoodList, responses={304: {"description": "The list has not changed since the ETag sent"}})
+def builtin_foods(request: Request, response: Response, user: CurrentUser,
+                  conn: sqlite3.Connection = Depends(get_db)) -> Any:
+    """The whole builtin list in one answer, for a device's offline food search (note 02 §6 item 9, R5).
+    ``If-None-Match`` with the last ``ETag`` → 304 without a body, so a device asks every day for a few bytes and
+    downloads the list again only when it changed. ``/api`` answers stay ``Cache-Control: no-store``: the device
+    keeps the list and its ETag itself (js/offline.js)."""
+    foods = builtin_food_list(conn)
+    etag = builtin_etag(conn, foods)
+    sent = request.headers.get("if-none-match", "")
+    if sent.strip() == "*" or etag in {t.strip().removeprefix("W/") for t in sent.split(",")}:
+        return Response(status_code=304, headers={"ETag": etag})
+    response.headers["ETag"] = etag
+    return {"foods": foods}
 
 
 @router.get("/usda/search", response_model=UsdaSearchResult)

@@ -464,6 +464,8 @@ class Harness:
                 continue
             self.rec.compare(S, f"GET /api/foods/{{id}} {name}", sf, mf)
         self.n_builtin = len(server_by_name)
+        # The whole builtin list in one answer (note 02 §6 item 9; v0.3.0 review L9); the ETag is the server's only.
+        self.both(S, "GET /api/foods/builtin", "GET", "/api/foods/builtin", ignore=frozenset())
 
     def section1b(self) -> None:
         S = "1b evaluateWarnings"

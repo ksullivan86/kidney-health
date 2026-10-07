@@ -658,6 +658,15 @@ def wait_controlled(page: Page, base: str) -> None:
     raise RuntimeError("the service worker never took control")
 
 
+def idb(op: str, store: str, key: Any = None) -> str:
+    """A JavaScript expression over this origin's offline database ``kdl`` (js/offline.js): get, all or delete."""
+    call = {"get": f"s.get({json.dumps(key)})", "all": "s.getAll()", "delete": f"s.delete({json.dumps(key)})"}[op]
+    mode = "readwrite" if op == "delete" else "readonly"
+    return ("new Promise((res, rej) => { const o = indexedDB.open('kdl'); o.onerror = () => rej(o.error); o.onsuccess = () => {"
+            f" const s = o.result.transaction({json.dumps(store)}, '{mode}').objectStore({json.dumps(store)}); const q = {call};"
+            " q.onsuccess = () => res(q.result === undefined ? null : q.result); q.onerror = () => rej(q.error); }; })")
+
+
 def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
     area = "offline outbox"
     ctx, watch = hx.context(width=375, height=812, touch=True, service_workers="allow")
@@ -666,6 +675,20 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
     try:
         wait_controlled(page, hx.base)
         page.wait_for_selector("#view-today:not([hidden])")
+        # Offline food search keeps the builtin list from GET /api/foods/builtin (note 02 §6 item 9, v0.3.0 review L9):
+        # one download with its ETag, then 304 with no body while the list is unchanged.
+        uid = page.evaluate("KH.state.me.id")
+        wait_js(page, idb("get", "meta", f"builtin_etag:{uid}") + ".then((v) => !!(v && v.value))", 20000)
+        kept = page.evaluate(idb("all", "foods"))
+        builtin = hx.api("GET", "/api/foods/builtin")["foods"]
+        check(area, "the device keeps the whole builtin list from one GET /api/foods/builtin",
+              {f["id"] for f in builtin} <= {r["id"] for r in kept if r["user_id"] == uid and r["food"]["source"] == "builtin"})
+        page.evaluate(idb("delete", "meta", f"foods_full_sync:{uid}"))
+        with page.expect_response(lambda r: r.url.endswith("/api/foods/builtin"), timeout=20000) as again:
+            page.reload()
+        check(area, "the next daily refresh sends If-None-Match and gets 304 (no body) for an unchanged list",
+              again.value.status == 304 and bool(again.value.request.headers.get("if-none-match")), str(again.value.status))
+        wait_js(page, idb("get", "meta", f"foods_full_sync:{uid}") + ".then((v) => !!v)", 20000)  # the refresh finished
         open_add(page, hx.base)
         search(page, "apple raw")
         before = len(hx.entries())

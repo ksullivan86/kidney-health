@@ -170,7 +170,11 @@ def test_no_html_sinks_eval_or_other_origins(name: str) -> None:
         # Only links shown to people (Open Food Facts, USDA, the method file); the browser fetches none of them.
         assert url.startswith("https://"), f"{name}: {url} is not https"
         assert re.match(r"https://(world\.openfoodfacts\.org|fdc\.nal\.usda\.gov|github\.com|opendatacommons\.org)(/|$)", url), url
-    assert "fetch(" not in source or name == "js/scan.js", f"{name} fetches directly"
+    # Requests go through KH.request (sign-in, errors, X-KDL-Version); the exceptions: js/scan.js fetches its own
+    # decoder, and js/offline.js asks for the builtin list with If-None-Match, whose 304 KH.request has no use for.
+    fetches = re.findall(r"fetch\(([^,)]*)", source)
+    allowed = {"js/scan.js": None, "js/offline.js": ["'/api/foods/builtin'"]}.get(name, [])
+    assert allowed is None or fetches == allowed, f"{name} fetches directly: {fetches}"
 
 
 def test_scan_fetches_only_its_own_decoder() -> None:
@@ -356,3 +360,17 @@ def test_scan_starts_the_camera_when_the_person_prefers_it() -> None:
                    "codeInput.addEventListener('input', () => { chose = true;"):
         assert marker in scan, marker
     assert "api.updateMySettings({ 'food.scan_prefer_camera': box.checked })" in settings and "id = 'set-scan-camera'" in settings
+
+
+def test_offline_search_keeps_the_builtin_list_from_one_conditional_request() -> None:
+    """Note 02 §6 item 9 / R5 (v0.3.0 review L9): the daily refresh asks GET /api/foods/builtin with the ETag of
+    the last copy (cache: no-store, so the 304 reaches the app), keeps nothing new on 304, and on 200 drops builtin
+    foods the new list no longer has, then stores the new ETag per person. tools/e2e/device.py (outbox) sees the
+    304; tests/test_foods_builtin.py checks the server."""
+    body = _function_body(OFFLINE, "async function downloadBuiltin()")
+    assert "fetch('/api/foods/builtin', { headers, credentials: 'same-origin', cache: 'no-store' })" in body
+    assert "headers['If-None-Match'] = last.value" in body and "`builtin_etag:${userId()}`" in body
+    assert "if (res.status === 304) { await res.text(); return; }" in body
+    assert "r.food.source === 'builtin' && !keep.has(r.id)" in body and "store.put('meta', { key, value: etag })" in body
+    download = _function_body(OFFLINE, "async function downloadFoods()")
+    assert "await downloadBuiltin();" in download and "category" not in download

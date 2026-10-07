@@ -32,7 +32,7 @@ LOW (apply or justify):
 | L6 | ai.* switches under "Other" | done |
 | L7 | Trends ignores goal / about targets | done (with C1, d458205) |
 | L8 | "about X" protein treated as hard max in plan | partly done: wording; tolerance = clinical decision (REVIEW.md) |
-| L9 | GET /api/foods/builtin ETag deferred without spec | pending |
+| L9 | GET /api/foods/builtin ETag deferred without spec | done |
 | L10 | guidance AI buttons: no What will be sent? / dropped | done |
 | L11 | carbs_per_snack_g has no UI | done |
 | L12 | iOS install tip after third visit | done |
@@ -42,6 +42,19 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L9** (builtin list with ETag): implemented, not deferred (note 02 §6 item 9 asks for it in v0.3). Server
+  (app/foods.py, outside my area, minimal): `GET /api/foods/builtin` before `/{food_id}` → every non-hidden
+  builtin food in id order, `ETag "<foods.json version>-<sha256 of the answer, 20 hex>"` (the hash also catches a
+  release that changes warnings for the same list); `If-None-Match` (list, `W/`, `*`) → 304 without a body;
+  `/api` keeps `no-store`. Demo twin route in mock/foods.js (no ETag). offline.js `downloadBuiltin()`: one
+  conditional fetch (cache no-store; reads the empty 304 body; versionSeen), drops builtin foods no longer listed,
+  stores the ETag per person; replaces the per-category loop. Tests: tests/test_foods_builtin.py (5: list = what
+  the per-category search finds, ETag/304 incl. W/ and lists, ETag changes when a food is hidden, 401 signed out,
+  route order), test_device_ui.py static (+ the "no direct fetch" guard now allows exactly this one same-origin
+  fetch), parity section 1 compares the list (407/407 for sections 0–1), device.py outbox: ETag stored, whole list
+  kept, next refresh sends If-None-Match and gets 304 (19/19). ROADMAP line removed; ARCHITECTURE route + outbox
+  text; handbook app/install.md.
 
 * **L15** ("Prefer live camera"): user key `food.scan_prefer_camera` (bool, default true; app/settings_registry.py,
   JS twin in engine/settings.js in registry order, tests/data/settings_vectors.json regenerated: 456 checks).

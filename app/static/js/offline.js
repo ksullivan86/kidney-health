@@ -459,9 +459,31 @@
     }
     return { foods: rows.slice(0, limit).map((r) => clone(r.food)), offline: true };
   }
-  // Once a day, while connected: every food this person can use (builtin by category, their own, the shared ones they
-  // scanned), so search works offline. Without a server route for the whole list this is one request per group.
+  // Once a day, while connected: every food this person can use (the builtin list, their own, the shared ones they
+  // scanned), so search works offline. The builtin list comes from GET /api/foods/builtin with the ETag of the last
+  // copy: an unchanged list answers 304 with no body (note 02 §6 item 9, R5).
   let downloading = false;
+  async function downloadBuiltin() {
+    const key = `builtin_etag:${userId()}`;
+    const last = await store.get('meta', key);
+    const headers = { Accept: 'application/json' };
+    if (last && last.value) headers['If-None-Match'] = last.value;
+    // Not KH.request: it has no use for a 304. Same origin only; a newer server still shows the Reload toast.
+    const res = await fetch('/api/foods/builtin', { headers, credentials: 'same-origin', cache: 'no-store' });
+    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get('X-KDL-Version'));
+    if (res.status === 304) { await res.text(); return; } // read the empty body: an unread one shows as net::ERR_ABORTED
+    if (!res.ok) { const err = new Error(`GET /api/foods/builtin answered ${res.status}`); err.detail = err.message; throw err; }
+    const data = await res.json();
+    const uid = userId();
+    // A builtin food the new list no longer has (data/foods.json hides it) leaves offline search too.
+    const keep = new Set((data.foods || []).map((f) => f.id));
+    for (const r of await store.all('foods')) {
+      if (r.user_id === uid && r.food && r.food.source === 'builtin' && !keep.has(r.id)) await store.del('foods', [uid, r.id]);
+    }
+    await rememberFoods(data.foods || []);
+    const etag = res.headers.get('ETag');
+    if (etag) await store.put('meta', { key, value: etag });
+  }
   async function downloadFoods() {
     if (MOCK || downloading || userId() == null || offlineNow()) return;
     const meta = await store.get('meta', `foods_full_sync:${userId()}`);
@@ -469,8 +491,7 @@
     downloading = true;
     try {
       const get = (q) => KH.request('GET', `/api/foods?${util.qs({ ...q, limit: 200 })}`, undefined, { quiet401: true, noQueue: true });
-      const cats = await KH.request('GET', '/api/foods/categories', undefined, { quiet401: true, noQueue: true });
-      for (const category of (cats && cats.categories) || []) await rememberFoods((await get({ category, source: 'builtin' })).foods);
+      await downloadBuiltin();
       for (const source of ['custom', 'off', 'usda']) await rememberFoods((await get({ source })).foods);
       await store.put('meta', { key: `foods_full_sync:${userId()}`, value: nowIso() });
     } catch (e) {
