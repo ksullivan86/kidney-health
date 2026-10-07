@@ -81,7 +81,8 @@
     <!-- Offline outbox (js/offline.js): "Offline" and/or "N to sync"; opens Settings → This device -->
     <button id="sync-badge" class="sync-badge" type="button" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span id="sync-badge-text"></span>
+      <span id="sync-badge-text" class="sync-badge-long"></span>
+      <span id="sync-badge-short" class="sync-badge-short" aria-hidden="true"></span>
     </button>
     <p class="sr-only" id="sync-live" role="status" aria-live="polite"></p>
     <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">

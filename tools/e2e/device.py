@@ -404,6 +404,14 @@ def open_add(page: Page, base: str, hash_: str = "#add") -> None:
     page.wait_for_selector("#view-add:not([hidden]) #btn-scan")
 
 
+def search(page: Page, query: str) -> None:
+    """Type a search and wait for its own answer (the list shown before it, for an empty query, may already
+    hold a matching row; the search is debounced)."""
+    with page.expect_response(lambda r: "/api/foods?" in r.url and f"q={query.replace(' ', '+')}" in r.url):
+        page.fill("#food-search", query)
+    page.wait_for_selector("#food-results .row-btn")
+
+
 def scan_sheet(page: Page) -> None:
     page.click("#btn-scan")
     page.wait_for_selector("#sheet-scan[open]")
@@ -519,6 +527,18 @@ def section_native(hx: Harness, state: dict[str, Any]) -> None:
         ctx.close()
 
 
+# What the browser uploads to /api/vision/* (a Blob body: Chromium's DevTools does not report blob request bodies,
+# so the harness keeps a reference to it before it is sent).
+UPLOAD_SPY = """(() => {
+  const original = window.fetch;
+  window.__khUploads = [];
+  window.fetch = function (input, init) {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (url.includes('/api/vision/') && !url.includes('dry_run') && init && init.body instanceof Blob) window.__khUploads.push(init.body);
+    return original.apply(this, arguments);
+  };
+})();"""
+
 NO_FRAMES = """
 (() => {
   // A camera that starts and never shows a picture (WebKit bug 282327 in iOS home-screen apps).
@@ -608,20 +628,22 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         wait_controlled(page, hx.base)
         page.wait_for_selector("#view-today:not([hidden])")
         open_add(page, hx.base)
-        page.fill("#food-search", "apple raw")
-        page.wait_for_selector("#food-results .row-btn")
+        search(page, "apple raw")
         before = len(hx.entries())
         # 1. Log with the network off.
         watch.offline = True
         ctx.set_offline(True)
-        page.click("#food-results .row-btn >> nth=0")
+        page.click("#food-results .row-btn >> text=/apple/i >> nth=0")
         page.wait_for_selector("#sheet-entry[open]")
         food = page.inner_text(".sheet-food-name")
         page.click("#entry-save")
         page.wait_for_selector("#view-today:not([hidden]) .badge.pending")
         check(area, "offline: the entry is kept on this device and shown 'waiting to sync'", food in page.inner_text("#meals"))
-        check(area, "the header badge says offline and 1 to sync", page.inner_text("#sync-badge") .strip() == "Offline · 1 to sync",
-              page.inner_text("#sync-badge"))
+        badge = page.evaluate("[document.querySelector('#sync-badge-text').textContent, document.querySelector('#sync-badge-short').textContent,"
+                              " document.querySelector('#sync-badge').getAttribute('aria-label')]")
+        check(area, "the header badge says offline and 1 to sync (on a phone: '1', the full words for screen readers)",
+              badge[0] == "Offline · 1 to sync" and page.inner_text("#sync-badge").strip() == "1"
+              and badge[2].startswith("Your server cannot be reached. 1 entry is waiting to sync."), json.dumps(badge))
         # 2. Reload while offline: the service worker serves the app, the app starts from this device's copies.
         page.reload()
         page.wait_for_selector("#view-today:not([hidden]) .badge.pending")
@@ -652,8 +674,7 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         check(area, "Discard removes it and the badge goes", page.is_hidden("#sync-badge"))
         # 5. A batch the server stored but whose answer was lost: sent again, still one row.
         open_add(page, hx.base)
-        page.fill("#food-search", "blueberries")
-        page.wait_for_selector("#food-results .row-btn >> text=/blueberr/i")
+        search(page, "blueberries")
         watch.offline = True
         ctx.set_offline(True)
         page.click("#food-results .row-btn >> text=/blueberr/i >> nth=0")
@@ -701,6 +722,8 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         page.wait_for_selector("#sheet-unsynced[open]")
         check(area, "sign-out with an unsynced entry asks first", "Harness quick add" in page.inner_text("#sheet-unsynced"))
         hx.shot(page, "outbox-signout-375")
+        problems = layout_problems(page, "#sheet-unsynced")
+        check(area, "the sign-out sheet fits a phone (no cut-off buttons, 44 px targets)", not problems, "; ".join(problems[:8]))
         page.click("#sheet-unsynced >> text=Stay signed in")
         wait_js(page, "!document.querySelector('#sheet-unsynced').open")
         check(area, "'Stay signed in' keeps the session", page.is_visible("#set-signout"))
@@ -717,11 +740,9 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
     area = "AI cards and label photo (fake OpenAI-compatible server)"
     hx.api("PUT", "/api/profile", {"weight_kg": 70, "targets": {"potassium_mg": 2500, "phosphorus_mg": 1000, "sodium_mg": 2000,
                                                                 "carbs_per_meal_g": 60, "protein_g": {"min": 42, "max": 56}}})
-    ctx, watch = hx.context(width=1280, height=800)
+    ctx, watch = hx.context(width=1280, height=800, init=UPLOAD_SPY)
     page = ctx.new_page()
     state["page"] = page
-    uploads: list[bytes] = []
-    page.on("request", lambda r: uploads.append(r.post_data_buffer or b"") if "/api/vision/label" in r.url and "dry_run" not in r.url else None)
     try:
         page.goto(f"{hx.base}/#settings")
         page.wait_for_selector("#set-ai-slot input[type=checkbox]")
@@ -754,8 +775,11 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         check(area, "'What will be sent?' shows the destination and hides the key", f"127.0.0.1:{fake.port}" in sent, sent[:300])
         page.click("#sheet-ai-sent .sheet-foot >> text=Close")
         page.click("#sheet-ai .sheet-foot >> text=Close")
-        page.wait_for_selector("#guidance-fits .g-food, #guidance-fits [role=list]", state="attached")
-        check(area, "the rule-based 'What fits now' list is still there", page.is_visible("#guidance-fits"))
+        page.wait_for_selector("#guidance-fits:not([hidden])")
+        page.click("#guidance-fits-meal label >> nth=0")
+        page.wait_for_selector("#guidance-fits-body .g-food")
+        check(area, "the rule-based 'What fits now' list is still there, beside the AI button",
+              page.locator("#guidance-fits-body .g-food").count() >= 1 and page.is_visible("#ai-add-slot"))
         # Quick add: a large phone photo with EXIF, beside the form; AI reads it; the browser sends a small clean JPEG.
         big = hx.out / "label-big.jpg"
         jpeg_b64 = page.evaluate("""(() => { const c = document.createElement('canvas'); c.width = 3000; c.height = 2000;
@@ -778,7 +802,12 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         tags = page.locator("#sheet-quick .ai-tag").count()
         check(area, "the label draft filled Quick add, fields marked 'from photo'", tags >= 5, str(tags))
         check(area, "the ingredient list flags the phosphate additive before saving", "Phosphate additives" in page.inner_text("#q-ingredients-scan"))
-        sent_jpeg = uploads[-1] if uploads else b""
+        sent_b64 = page.evaluate("""(async () => {
+          const b = (window.__khUploads || []).at(-1); if (!b) return '';
+          const bytes = new Uint8Array(await b.arrayBuffer()); let s = '';
+          for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          return btoa(s); })()""")
+        sent_jpeg = base64.b64decode(sent_b64) if sent_b64 else b""
         size = jpeg_size(sent_jpeg) if sent_jpeg else None
         check(area, "the browser sent a JPEG with its long edge ≤ 1600 px", sent_jpeg[:3] == b"\xff\xd8\xff" and size and max(size) <= 1600, str(size))
         check(area, "the sent JPEG has no EXIF", sent_jpeg and not jpeg_has_exif(sent_jpeg))
@@ -806,6 +835,8 @@ def section_demo(hx: Harness, state: dict[str, Any]) -> None:
         page.click("#scan-go")
         page.wait_for_selector("#scan-result >> text=Look this up in Open Food Facts?")
         hx.shot(page, "demo-consent-375")
+        problems = layout_problems(page, "#scan-result")
+        check(area, "the consent panel fits a phone (no cut-off buttons, 44 px targets)", not problems, "; ".join(problems[:8]))
         page.click("#scan-result >> text=Send barcodes to Open Food Facts and look up")
         page.wait_for_selector("#sheet-entry[open]")
         link = page.locator("#sheet-entry-provenance a").first
@@ -824,8 +855,13 @@ def section_demo(hx: Harness, state: dict[str, Any]) -> None:
         check(area, "a barcode the demo does not know names the samples", "three sample products" in page.inner_text("#scan-result"))
         page.click("#scan-result >> text=Enter from the label")
         page.wait_for_selector("#sheet-quick[open]")
+        try:
+            wait_js(page, "document.activeElement && document.activeElement.id === 'q-photo'", 3000)
+        except Exception:  # noqa: BLE001 - the check below reports it
+            pass
         check(area, "'Enter from the label' opens Quick add with the barcode and the photo prompt",
-              page.input_value("#q-gtin") == CRACKERS and page.evaluate("document.activeElement.id") == "q-photo")
+              page.input_value("#q-gtin") == CRACKERS and page.evaluate("document.activeElement.id") == "q-photo",
+              f"{page.input_value('#q-gtin')} focus {page.evaluate('document.activeElement.id')}")
         page.keyboard.press("Escape")
         # The outbox against the demo API.
         watch.offline = True
@@ -862,6 +898,7 @@ def layout_problems(page: Page, root: str) -> list[str]:
         if (el.tagName === 'A' && getComputedStyle(el).display === 'inline') continue; // links in running text
         if (el.type === 'checkbox' || el.type === 'radio') continue; // their labels are the targets
         if (r.height < 43.5) out.push(`${el.tagName.toLowerCase()}#${el.id || ''}.${el.className || ''} is ${Math.round(r.height)} px tall`);
+        if (el.tagName === 'BUTTON' && el.scrollWidth > el.clientWidth + 1) out.push(`button "${el.textContent.trim()}" is cut off (${el.scrollWidth} > ${el.clientWidth})`);
       }
       return out;
     }""", root)
@@ -906,8 +943,8 @@ def section_shots(hx: Harness, state: dict[str, Any]) -> None:
                                            " const b = document.querySelector('.quick-fields').getBoundingClientRect(); return a.right <= b.left + 1; })()")
                     check(area, "the photo sits beside the fields on a wide screen", beside)
                 page.keyboard.press("Escape")
-                ctx.set_offline(True)
                 watch.offline = True
+                ctx.set_offline(True)
                 page.evaluate("KH.api.quick({ date: KH.util.todayStr(), meal: 'snack', name: 'Waiting snack', nutrients: { carbs_g: 10 } })"
                               ".then(() => KH.router.show('today'))")
                 page.wait_for_selector("#view-today:not([hidden]) .badge.pending")

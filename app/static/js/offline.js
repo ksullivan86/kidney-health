@@ -195,6 +195,8 @@
     if (counts.failed) parts.push(`${counts.failed} not saved`);
     if (counts.pending) parts.push(`${counts.pending} to sync`);
     $('#sync-badge-text').textContent = parts.join(' · ');
+    // Phones: the number waiting, or "Offline" when nothing waits (the aria-label says it in full).
+    $('#sync-badge-short').textContent = waiting ? String(waiting) : 'Offline';
     const long = [offline ? 'Your server cannot be reached.' : '', counts.pending ? `${counts.pending} ${counts.pending === 1 ? 'entry is' : 'entries are'} waiting to sync.` : '',
       counts.failed ? `${counts.failed} could not be saved: review ${counts.failed === 1 ? 'it' : 'them'}.` : ''].filter(Boolean).join(' ');
     badge.setAttribute('aria-label', `${long} Open Settings, This device.`);
@@ -207,12 +209,19 @@
     notify();
     return counts;
   }
+  // The badge opens Settings → This device. Settings draws its sections one by one, so wait for the outbox list,
+  // then bring it into view and move focus to its heading (scroll anchoring keeps it there while the rest loads).
   $('#sync-badge').addEventListener('click', () => {
     KH.router.show('settings');
-    setTimeout(() => {
-      const sec = $('#set-device');
-      if (sec) { sec.scrollIntoView({ block: 'start' }); const head = $('#set-device-h'); if (head) { head.tabIndex = -1; head.focus(); } }
-    }, 50);
+    const until = Date.now() + 4000;
+    const go = () => {
+      const head = $('#set-outbox-h');
+      if (!head) { if (Date.now() < until && state.view === 'settings') setTimeout(go, 80); return; }
+      head.tabIndex = -1;
+      head.scrollIntoView({ block: 'start' });
+      head.focus({ preventScroll: true });
+    };
+    setTimeout(go, 0);
   });
 
   // ---------------------------------------------------------------------------
@@ -299,19 +308,19 @@
   // Sync
   // ---------------------------------------------------------------------------
   let syncPromise = null;
+  // One sync at a time in this page (and, with Web Locks, across this person's tabs). The promise is cleared once
+  // it settles; checks that answer at once stay outside it, or the clearing would run before the assignment.
   function syncNow() {
     if (syncPromise) return syncPromise;
-    syncPromise = (async () => {
-      try {
-        if (userId() == null || offlineNow()) return { sent: 0 };
-        const run = () => syncRun();
-        if (navigator.locks && typeof navigator.locks.request === 'function') {
-          return await navigator.locks.request('kdl-sync', { ifAvailable: true }, (lock) => (lock ? run() : { sent: 0, busy: true }));
-        }
-        return await run();
-      } finally { syncPromise = null; }
-    })();
-    return syncPromise;
+    if (userId() == null || offlineNow()) return Promise.resolve({ sent: 0 });
+    const run = () => syncRun();
+    const p = navigator.locks && typeof navigator.locks.request === 'function'
+      ? navigator.locks.request('kdl-sync', { ifAvailable: true }, (lock) => (lock ? run() : { sent: 0, busy: true }))
+      : run();
+    syncPromise = p;
+    const done = () => { if (syncPromise === p) syncPromise = null; };
+    p.then(done, done);
+    return p;
   }
   // The item index a batch failure names: "entries.3.servings: …", "entries[3]: food 9 not found", "entries[1].client_id repeats …".
   function failedIndex(detail) {

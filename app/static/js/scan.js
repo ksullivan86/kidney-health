@@ -356,9 +356,9 @@
   }
 
   // The scanned or typed digits, for "Enter from the label" (the server stores them as a GTIN-14).
-  function enterFromLabel(gtin, name) {
+  function enterFromLabel(gtin, name, cls = 'primary') {
     const digits = lastCode ? lastCode.code : gtin || '';
-    return h('button', { class: 'btn primary', type: 'button', onclick: () => {
+    return h('button', { class: `btn ${cls}`, type: 'button', onclick: () => {
       dlg.close();
       KH.views.add.openQuick({ name: name || '', gtin: digits, trigger: $('#btn-scan'), photoFirst: true });
     } }, 'Enter from the label');
@@ -407,7 +407,7 @@
         h('p', {}, 'This server does not know this product yet. It can ask Open Food Facts, a free database of packaged foods. '
           + 'Only the barcode number is sent, from your server, and only for products it does not know yet.'),
         h('p', { class: 'hint' }, 'You can change this any time in Settings → Food data. Product data © Open Food Facts contributors, ODbL.'),
-        h('div', { class: 'settings-actions' }, agree, enterFromLabel(data.gtin)));
+        h('div', { class: 'settings-actions' }, agree, enterFromLabel(data.gtin, '', 'secondary')));
       return;
     }
     if (err.status === 429) {
