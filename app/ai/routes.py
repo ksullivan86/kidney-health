@@ -16,6 +16,7 @@ their database work runs in the thread pool on the request's own connection. Eve
 from __future__ import annotations
 
 import contextlib
+import copy
 import logging
 import sqlite3
 import time
@@ -43,10 +44,12 @@ from ..guidance import ai_bridge
 from ..guidance import api as guidance_api
 from ..guidance import context as guidance_context
 from ..guidance import messages as gmessages
+from ..guidance import rules as guidance_rules
 from ..models import MAX_SQLITE_INT, Meal
 from ..settings_store import SettingsStore
 from . import client as C
 from . import config as K
+from .cache import AnswerCache, CachedAnswer
 from . import features as F
 from . import presets as P
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
@@ -96,6 +99,7 @@ class AiState:
     last_purge: float | None = None  # monotonic time of the last retention purge (None: never)
     reprobe_attempts: dict[int, float] = field(default_factory=dict)  # provider id → monotonic time of the last try
     auto_reprobe: bool = True  # the daily background test (R4 step 5); tests that replay exact request sequences turn it off
+    answers: AnswerCache = field(default_factory=AnswerCache)  # note 06 §4.13: a meal's checked answer, 10 minutes
 
     @property
     def policy(self):  # noqa: ANN201 - NetPolicy
@@ -343,10 +347,60 @@ def _server_port(request: Request) -> int | None:
     return server[1] if isinstance(server, (tuple, list)) and len(server) > 1 else None
 
 
+def _cache_key(user: User, prep: F.Prepared) -> tuple[Any, ...] | None:
+    """The :class:`~app.ai.cache.AnswerCache` key for a guidance answer (note 06 §4.13); ``None`` for the
+    features that are never reused (parse-meal text, photos)."""
+    if prep.feature != "next_meal":
+        return None
+    return AnswerCache.key(user.id, prep.cfg.id, prep.cfg.scope, prep.feature, prep.mode, PROMPT_VERSION,
+                           guidance_rules.rules_hash(), prep.body)
+
+
+def _judge(prep: F.Prepared, parsed: Any) -> dict[str, Any]:
+    try:
+        return prep.judge(parsed)
+    except Exception:  # a judge bug must not show unchecked output: drop everything
+        log.exception("AI judge failed for %s", prep.feature)
+        return {"status": "error", "reason": "judge_failed", "message": "The AI answer could not be checked, so it is not shown."}
+
+
+def _answer(prep: F.Prepared, verdict: dict[str, Any], audit_id: int, *, cached: bool) -> dict[str, Any]:
+    return {
+        **verdict,
+        "feature": prep.feature,
+        "mode": prep.mode,
+        "provider": {"id": prep.cfg.id, "label": prep.cfg.label, "model": prep.model, "host": prep.cfg.host},
+        "prompt_version": PROMPT_VERSION,
+        "audit_id": audit_id,
+        "cached": cached,
+        "notes": list(prep.notes),
+    }
+
+
+def _reuse(conn: sqlite3.Connection, user: User, prep: F.Prepared, hit: CachedAnswer) -> dict[str, Any]:
+    """Note 06 §4.13: the same question within 10 minutes. Nothing is sent and no daily call is spent; the
+    kept answer is checked again by the rules on the current day, and the AI activity log gets a row with
+    metadata only (status ``cached``, the call it came from) so the person sees what was shown and why."""
+    verdict = _judge(prep, hit.fresh_copy())
+    if str(verdict.get("status", "ok")) in ("dropped_all", "no_fit") and prep.fallback is not None:
+        verdict["fallback"] = prep.fallback
+    verdict["trimmed"] = prep.trimmed
+    audit_id = K.write_audit(
+        conn, user.id, feature=f"{prep.feature}:{prep.mode}" if prep.mode else prep.feature, cfg=prep.cfg, model=prep.model,
+        prompt_version=PROMPT_VERSION, request=None, response_text=None,
+        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "trimmed")},
+                 "cached_from": hit.audit_id},
+        latency_ms=0, status="cached", keep_bodies=False,
+    )
+    conn.commit()
+    return _answer(prep, verdict, audit_id, cached=True)
+
+
 async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared,
                    background: BackgroundTasks | None = None, *, slot_held: bool = False) -> dict[str, Any]:
-    """Consent → concurrency slot → tool check → quota → call → judge → audit. Never writes anything
-    the person did not ask for; nothing AI-generated reaches the log or the food list (G12).
+    """Consent → (a kept answer for the same question, note 06 §4.13) → concurrency slot → tool check →
+    quota → call → judge → audit. Never writes anything the person did not ask for; nothing AI-generated
+    reaches the log or the food list (G12).
 
     The Hermes tool check runs inside the slot, so a burst of requests from one person makes at most
     one check. ``slot_held=True`` means the caller already holds the person's slot (:func:`ai_slot`;
@@ -355,16 +409,18 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     state = ai_state(request)
     client = _client_for(request)
     await run_in_threadpool(_check_consent, conn, user, prep)
+    cache_key = _cache_key(user, prep)
+    if cache_key is not None:
+        hit = state.answers.get(cache_key)
+        if hit is not None:
+            return await run_in_threadpool(_reuse, conn, user, prep, hit)
     async with contextlib.nullcontext() if slot_held else ai_slot(request, conn, user.id):
         await tool_gate(request, conn, prep, client)
         await run_in_threadpool(_take_quota, conn, state, user, prep.cfg)
         result = await client.complete_json(prep.cfg, prep.body, prep.validator, vision=prep.vision)
     if result.status == "ok":
-        try:
-            verdict = await run_in_threadpool(prep.judge, result.parsed)
-        except Exception:  # a judge bug must not show unchecked output: drop everything
-            log.exception("AI judge failed for %s", prep.feature)
-            verdict = {"status": "error", "reason": "judge_failed", "message": "The AI answer could not be checked, so it is not shown."}
+        # The judge gets its own copy, so the answer kept for reuse is the provider's, untouched.
+        verdict = await run_in_threadpool(_judge, prep, copy.deepcopy(result.parsed))
         status = str(verdict.get("status", "ok"))
         if status in ("dropped_all", "no_fit") and prep.fallback is not None:
             verdict["fallback"] = prep.fallback
@@ -381,6 +437,8 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     verdict["retried"] = result.retried
     verdict["trimmed"] = prep.trimmed
     audit_id = await run_in_threadpool(_finish, conn, state, user, prep, result, verdict, status)
+    if cache_key is not None and result.status == "ok" and status == "ok":
+        state.answers.put(cache_key, result.parsed, audit_id)
     if (background is not None and state.auto_reprobe and prep.cfg.scope == "shared"
             and await run_in_threadpool(_claim_reprobe, conn, state, prep.cfg.id)):
         background.add_task(maintenance_probe, request.app, prep.cfg.id, _server_port(request))
@@ -390,15 +448,7 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     if prep.cfg.preset_def.kind == "self_hosted" and 3900 <= result.usage.get("prompt_tokens", 0) <= 4096:
         log.warning("AI provider %s used %d prompt tokens: Ollama may be cutting prompts at 4096 tokens; set "
                     "OLLAMA_CONTEXT_LENGTH (docs/ai.md, Troubleshooting)", prep.cfg.id, result.usage["prompt_tokens"])
-    return {
-        **verdict,
-        "feature": prep.feature,
-        "mode": prep.mode,
-        "provider": {"id": prep.cfg.id, "label": prep.cfg.label, "model": prep.model, "host": prep.cfg.host},
-        "prompt_version": PROMPT_VERSION,
-        "audit_id": audit_id,
-        "notes": list(prep.notes),
-    }
+    return _answer(prep, verdict, audit_id, cached=False)
 
 
 # --------------------------------------------------------------------------- #
@@ -570,11 +620,12 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
 
 
 @router.delete("/consent/{provider_id}", status_code=204, response_class=Response)
-def withdraw_consent(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)], user: CurrentUser,
+def withdraw_consent(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)], request: Request, user: CurrentUser,
                      purpose: Literal["text", "photos"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     if not K.withdraw_consent(conn, user.id, provider_id, purpose):
         raise HTTPException(status_code=404, detail="no consent for this provider")
     conn.commit()
+    ai_state(request).answers.drop_user(user.id)  # no AI answer is shown again without consent
     return Response(status_code=204)
 
 
@@ -586,10 +637,11 @@ def my_ai_activity(user: CurrentUser, before: Annotated[int, Query(ge=1, le=MAX_
 
 
 @router.delete("/audit", status_code=204, response_class=Response)
-def delete_my_ai_activity(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    """"Delete my AI history" (R9 step 5). Usage counts stay (they hold no content)."""
+def delete_my_ai_activity(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    """"Delete my AI history" (R9 step 5), with the answers kept for reuse. Usage counts stay (they hold no content)."""
     conn.execute("DELETE FROM ai_audit WHERE user_id = ?", (user.id,))
     conn.commit()
+    ai_state(request).answers.drop_user(user.id)
     return Response(status_code=204)
 
 

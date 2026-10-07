@@ -922,3 +922,109 @@ def test_the_daily_test_skips_quietly_when_the_server_is_busy_or_the_key_is_unre
     with attach(app, provider, reprobe=True):
         anyio.run(ai_routes.maintenance_probe, app, other)
     assert provider.requests == [] and "its key cannot be decrypted" in caplog.text
+
+
+# --------------------------------------------------------------------------- #
+# The 10-minute reuse of a meal's answer (note 06 §4.13; v0.3.0 review L13)
+# --------------------------------------------------------------------------- #
+
+
+def _rerank_first_candidate(request) -> dict[str, Any]:
+    """A rerank answer naming the first candidate the app sent (so the rules accept it: status ok)."""
+    text = json.loads(request.content)["messages"][1]["content"]
+    first = json.loads(text.split("<data>\n", 1)[1].split("\n</data>")[0])["candidates"][0]
+    return chat({"status": "ok", "refusal": "none", "order": [{"ref": first["ref"], "reason_codes": ["low_potassium"]}]})
+
+
+def test_the_same_question_within_ten_minutes_reuses_the_checked_answer(ai_client):
+    ready(ai_client)
+    clock = [1000.0]
+    from app.ai.cache import AnswerCache
+
+    ai_client.app.state.ai.answers = AnswerCache(clock=lambda: clock[0])
+    body = {"meal": "dinner", "date": DAY, "mode": "rerank"}
+    with attach(ai_client.app, FakeProvider(route=_rerank_first_candidate)) as provider:
+        first = ai_client.post("/api/ai/next-meal", json=body).json()
+        assert first["status"] == "ok" and first["cached"] is False and provider.calls == 1
+        clock[0] += 599
+        again = ai_client.post("/api/ai/next-meal", json=body).json()
+        assert provider.calls == 1  # nothing sent again
+        assert again["cached"] is True and again["status"] == "ok" and again["order"] == first["order"]
+        assert again["provider"] == first["provider"] and again["audit_id"] != first["audit_id"]
+        assert ai_client.get("/api/me/ai").json()["remaining_today"] == 29  # one shared call spent, not two
+        events = ai_client.get("/api/ai/audit").json()["events"]
+        assert [e["status"] for e in events] == ["cached", "ok"]
+        assert events[0]["verdict_json"]["cached_from"] == first["audit_id"]
+        assert events[0]["request_json"] is None and events[0]["response_text"] is None  # nothing was sent or received
+        # Another meal, another mode or a dry run is another question.
+        assert ai_client.post("/api/ai/next-meal", json={**body, "meal": "lunch"}).json()["cached"] is False
+        assert provider.calls == 2
+        # After ten minutes the provider is asked again.
+        clock[0] += 2
+        assert ai_client.post("/api/ai/next-meal", json=body).json()["cached"] is False and provider.calls == 3
+
+
+def test_logging_food_changes_the_question_so_the_answer_is_not_reused(ai_client):
+    ready(ai_client)
+    body = {"meal": "dinner", "date": DAY, "mode": "rerank"}
+    with attach(ai_client.app, FakeProvider(route=_rerank_first_candidate)) as provider:
+        assert ai_client.post("/api/ai/next-meal", json=body).json()["cached"] is False
+        foods = ai_client.get("/api/foods", params={"limit": 50}).json()["foods"]
+        food = next(f for f in foods if (f["nutrients"].get("potassium_mg") or 0) > 0)
+        assert ai_client.post("/api/log", json={"date": DAY, "meal": "lunch", "food_id": food["id"], "servings": 1}).status_code == 201
+        assert ai_client.post("/api/ai/next-meal", json=body).json()["cached"] is False and provider.calls == 2
+        assert ai_client.post("/api/ai/next-meal", json=body).json()["cached"] is True and provider.calls == 2
+
+
+def test_fallbacks_are_not_kept_and_deleting_activity_or_consent_forgets_answers(ai_client):
+    pid = ready(ai_client)
+    body = {"meal": "dinner", "date": DAY}
+    with attach(ai_client.app, FakeProvider([ideas_answer(), ideas_answer()])) as provider:  # no idea: the rules' result
+        for _ in range(2):
+            assert ai_client.post("/api/ai/next-meal", json=body).json()["cached"] is False
+        assert provider.calls == 2  # asking again really asks again
+    rerank = {**body, "mode": "rerank"}
+    with attach(ai_client.app, FakeProvider(route=_rerank_first_candidate)) as provider:
+        ai_client.post("/api/ai/next-meal", json=rerank)
+        assert len(ai_client.app.state.ai.answers) == 1
+        assert ai_client.delete("/api/ai/audit").status_code == 204
+        assert len(ai_client.app.state.ai.answers) == 0
+        ai_client.post("/api/ai/next-meal", json=rerank)
+        assert provider.calls == 2 and len(ai_client.app.state.ai.answers) == 1
+        assert ai_client.delete(f"/api/ai/consent/{pid}", params={"purpose": "text"}).status_code == 204
+        assert len(ai_client.app.state.ai.answers) == 0
+        r = ai_client.post("/api/ai/next-meal", json=rerank)
+        assert r.status_code == 409 and provider.calls == 2  # no consent: nothing shown, nothing sent
+
+
+def test_answers_are_kept_per_person_provider_and_prompt_version():
+    from app.ai.cache import AnswerCache
+
+    cache = AnswerCache()
+    key = AnswerCache.key(1, 7, "shared", "next_meal", "rerank", "v", "h", {"messages": ["same body"]})
+    cache.put(key, {"order": ["f1"]}, 11)
+    assert cache.get(AnswerCache.key(2, 7, "shared", "next_meal", "rerank", "v", "h", {"messages": ["same body"]})) is None
+    assert cache.get(AnswerCache.key(1, 8, "shared", "next_meal", "rerank", "v", "h", {"messages": ["same body"]})) is None
+    assert cache.get(AnswerCache.key(1, 7, "shared", "next_meal", "rerank", "v2", "h", {"messages": ["same body"]})) is None
+    hit = cache.get(key)
+    assert hit is not None and hit.audit_id == 11
+    hit.fresh_copy()["order"].append("f2")  # a judge changing its copy changes nothing kept
+    assert cache.get(key).parsed == {"order": ["f1"]}
+    assert cache.drop_user(1) == 1 and cache.get(key) is None
+
+
+def test_the_answer_cache_is_bounded_and_expires():
+    from app.ai.cache import AnswerCache
+
+    now = [0.0]
+    cache = AnswerCache(ttl_s=600, max_entries=3, clock=lambda: now[0])
+    keys = [AnswerCache.key(1, 1, "shared", "next_meal", "ideas", "v", "h", {"n": i}) for i in range(4)]
+    for i, k in enumerate(keys):
+        now[0] = float(i)
+        cache.put(k, {"n": i}, i)
+    assert len(cache) == 3 and cache.get(keys[0]) is None  # the oldest went first
+    assert AnswerCache.key(1, 1, "s", "f", None, "v", "h", {"a": 1, "b": 2}) == AnswerCache.key(1, 1, "s", "f", None, "v", "h", {"b": 2, "a": 1})
+    now[0] = 601.0  # keys[1] was stored at 1.0: exactly 600 s old
+    assert cache.get(keys[1]) is None and cache.get(keys[2]) is not None
+    now[0] = 1000.0
+    assert len(cache) == 0

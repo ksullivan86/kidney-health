@@ -34,7 +34,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L10 | new accounts default to stage 3b / type 1 | deferred by spec (ROADMAP) |
 | L11 | first-run log line https://<this server> | done |
 | L12 | ISO dates in server texts | done |
-| L13 | AI 10-minute result cache | todo |
+| L13 | AI 10-minute result cache | done |
 | L14 | CLI export-user / disable-user | todo |
 
 ## Done (and how verified)
@@ -144,9 +144,19 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   else unchanged) used for every `{date}` in target notes (K-1…K-5, K-5.alert, PH-1…PH-3) and the kidney-function card
   (G-1, sex split). Twin `KH.kidney.displayDate` (kidney_function.js), used by targets.js. Targets and kidney-function
   vectors regenerated (node: 1859 / 140 checks). Tests: test_units (formatter + Node twin on edge cases), updated
-  message assertions in test_kidney_function, test_targets, test_targets_api. Pending: ARCHITECTURE.md line ~1064
-  example "on 2026-10-05" → "on Oct 5, 2026" (the file has fixer-frontend-docs' uncommitted edits; do it in the final
-  docs sync). UI-side ISO dates remain in labs.js aria-live texts and profile.js "Lab results used (…)" (frontend).
+  message assertions in test_kidney_function, test_targets, test_targets_api; ARCHITECTURE alert example (committed
+  with L13 once the file was clean). UI-side ISO dates remain in labs.js aria-live texts and profile.js "Lab results used (…)" (frontend).
+
+* **L13** `app/ai/cache.py` `AnswerCache` (in memory, TTL 600 s, ≤ 256 entries, thread-safe) on `AiState.answers`.
+  `run_call`: consent → kept answer? → slot → … Only `next_meal` answers whose verdict is `ok` are kept (fallbacks,
+  errors and refusals ask again). Key = (user, provider id, scope, feature, mode, PROMPT_VERSION, guidance rules hash,
+  SHA-256 of the exact body), so any log change that changes what would be sent is a new question (stronger than
+  "invalidate on log"). Kept: the provider's parsed answer; a hit re-runs the judge on a deep copy (current day), takes
+  no quota, writes a metadata-only AI activity row (status `cached`, `verdict.cached_from`), answers `cached: true`.
+  Forgotten on DELETE /api/ai/audit and consent withdrawal. golden `reset()` empties it per case (and so per
+  ai_eval run). Tests (tests/test_ai_routes.py): reuse within 10 min + expiry + other meal; logging food → new call;
+  fallbacks not kept; delete activity / withdraw consent forget; key per person/provider/prompt version; bounded +
+  expiry + key order. Docs: ARCHITECTURE AiAnswer `cached`, docs/ai.md Limits and quotas.
 
 ## Handoffs (to fixer-frontend-docs)
 
@@ -167,6 +177,11 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * **docs/barcode-and-photos.md (yours):** mapping rules changed: potassium ≤ 60 g / phosphorus ≤ 32 g per 100 g,
   liquids (per 100 mL / beverages, not powders) count as fluid, prepared-only = servings only, per-serving
   without weight = enter from the label; additive scan ignores the bare element word "phosphorus".
+
+* **Optional UI follow-ups (yours, not required for correctness):** AI activity `STATUS_TEXT` has no entry for the
+  new status `cached` (L13; it shows the raw word); next-meal answers carry `cached: true` if guidance wants to say
+  "reused from N min ago". L12: labs.js aria-live texts and profile.js "Lab results used (…)" still print ISO dates.
+  L10 (ROADMAP): "Not chosen yet" stage/diabetes needs your profile form if the owner picks that option.
 
 ## Decisions
 

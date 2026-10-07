@@ -1063,7 +1063,7 @@ failures are the usual `400 {"detail": "<field>: <message>", "errors"}`.
                             "albumin": null, "bicarbonate": null, "uacr": null, "a1c": null}},
   "missing_inputs": ["activity"],     // of height_cm, birth_month, sex, activity, urine_output_ml, pd_uf_ml, pd_dialysate_kcal
   "alerts": [{"level": "urgent" | "emergency", "code": "potassium_very_high", "analyte": "potassium", "value": 6.3,
-              "taken_on": "2026-10-05", "message": "Potassium 6.3 mmol/L on 2026-10-05 is dangerously high. …"}]
+              "taken_on": "2026-10-05", "message": "Potassium 6.3 mmol/L on Oct 5, 2026 is dangerously high. …"}]
 }
 ```
 
@@ -1680,7 +1680,10 @@ AiAnswer = {"status": "ok" | "refused" | "dropped_all" | "no_fit" | "error" | "n
   "message"?, "reason"? (error: a coarse category), "fallback"? (the rule result: {note, meals, foods}),
   "ideas"? | "order"? + "rest"? | "pick"? | "plan"? + "ai_picks"? | "items"? | "draft"?,
   "dropped": [{"index", "reason"}], "claims_corrected", "repaired", "retried", "trimmed",
-  "feature", "mode", "provider": {"id", "label", "model", "host"}, "prompt_version", "audit_id", "notes"}
+  "feature", "mode", "provider": {"id", "label", "model", "host"}, "prompt_version", "audit_id", "cached", "notes"}
+// "cached": true when next-meal reused the provider's answer to the same question from the last 10 minutes
+// (note 06 §4.13; app/ai/cache.py): nothing sent, no daily call spent, the rules checked it again on the current
+// day, and AI activity has a metadata-only row with status "cached" and verdict.cached_from = the original call.
 Idea = {"source": "ai", "provider_label", "model", "checked": true,
         "notice": "AI idea · {label} · {model} · checked against your targets · not medical advice",
         "index", "theme": "light" | "hearty" | "familiar" | "new_idea", "title" (server template),

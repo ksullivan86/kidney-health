@@ -395,6 +395,12 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 * `ai.max_concurrency` calls in flight on the server and one per person; extra calls get `429` with
   `Retry-After` at once instead of queueing behind a slow model.
 * Connection tests: 5 per hour per person, 20 per hour per admin.
+* The same guidance question within 10 minutes (`POST /api/ai/next-meal` with the same meal, mode and the
+  exact same data to send) reuses the last answer that passed the rules: nothing is sent and no daily call
+  is spent; the rules check it again, and AI activity shows a row "cached". Logging food changes what would
+  be sent, so it asks again. Answers that fell back to the app's own result are not kept. Kept answers live
+  in the server's memory only, per person, and are forgotten when the person deletes their AI activity or
+  withdraws consent (note 06 §4.13, `app/ai/cache.py`).
 * Each call allows at most one extra request: a retry after a 429 (honouring `Retry-After` up to 10 s),
   a 5xx or a connection error (after 1 s), or one repair turn after an answer that was not valid JSON.
 * Settings → AI ideas → **AI usage** (admins; `GET /api/admin/ai-usage`) shows requests and tokens per person and

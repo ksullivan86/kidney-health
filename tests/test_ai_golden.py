@@ -98,6 +98,10 @@ def reset(client: TestClient) -> None:
     finally:
         conn.close()
     client.app.state.settings_store.invalidate()
+    # Each case (and each run of scripts/ai_eval.py) is a new question: no answer kept from the last one (note 06 §4.13).
+    from app.ai.cache import AnswerCache
+
+    client.app.state.ai.answers = AnswerCache()
 
 
 def day_before(n: int) -> str:
