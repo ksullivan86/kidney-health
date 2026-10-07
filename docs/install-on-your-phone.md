@@ -41,6 +41,10 @@ the same check on the phone.
 5. Open the app from its new icon. The first time, it may ask you to sign in again: an app on
    the home screen keeps its own sign-in, separate from Safari's.
 
+On the third visit in the browser, an iPhone or iPad shows these steps once as a tip at the top of
+the page; dismiss it with ×. It is not shown again (the browser remembers it in its own storage), and
+the steps stay in **Settings → This device**.
+
 Supported: installable on iOS and iPadOS 17 and later; these steps are written for 26 and 27. The
 v0.3.0 release was checked in browser emulation, not yet on a real iPhone (CHANGELOG.md, "Known
 limitations"); if a step looks different on yours, please open an issue.

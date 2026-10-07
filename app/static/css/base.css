@@ -181,6 +181,20 @@ svg { display: inline-block; vertical-align: middle; }
 .preview-banner .icon-btn { color: var(--text-2); }
 @media (max-width: 911.98px) { .preview-banner { margin-left: 16px; margin-right: 16px; } }
 
+/* The iOS Home Screen tip (js/pwa.js countVisit, note 02 R10): in the page flow, never over it. */
+.install-tip {
+  max-width: 880px; margin: 8px auto 0; padding: 4px 4px 8px 14px;
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--surface-2, var(--accent-tint)); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.9rem; line-height: 1.45;
+}
+.install-tip-text { flex: 1; min-width: 0; }
+.install-tip-title { margin: 8px 0 4px; font-weight: 700; }
+.install-tip .install-steps { margin: 0 0 4px; padding-left: 1.3em; }
+.install-tip .hint { margin: 0; }
+.install-tip .icon-btn { color: var(--text-2); flex: none; }
+@media (max-width: 911.98px) { .install-tip { margin-left: 16px; margin-right: 16px; } }
+
 .main {
   max-width: 880px; margin: 0 auto;
   padding: 12px 16px calc(var(--tabbar-h) + 24px + env(safe-area-inset-bottom, 0px));

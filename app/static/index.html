@@ -106,6 +106,18 @@
   </button>
 </div>
 
+<!-- Note 02 R10: on an iPhone or iPad, once, after the third visit (js/pwa.js countVisit); never blocks the page. -->
+<aside class="install-tip" id="install-tip" aria-labelledby="install-tip-title" hidden>
+  <div class="install-tip-text">
+    <p class="install-tip-title" id="install-tip-title">Tip: add this app to your Home Screen</p>
+    <div id="install-tip-steps"></div>
+    <p class="hint">It then opens like an app. These steps are also in Settings → This device.</p>
+  </div>
+  <button class="icon-btn" type="button" id="install-tip-close" aria-label="Dismiss the Home Screen tip">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+</aside>
+
 <main id="main" class="main">
 
   <!-- ===================== SIGN-IN, FIRST-RUN SETUP, INVITE, RESET, NEW PASSWORD (js/views/auth.js) =====================

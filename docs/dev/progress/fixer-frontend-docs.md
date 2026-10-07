@@ -35,13 +35,22 @@ LOW (apply or justify):
 | L9 | GET /api/foods/builtin ETag deferred without spec | pending |
 | L10 | guidance AI buttons: no What will be sent? / dropped | done |
 | L11 | carbs_per_snack_g has no UI | done |
-| L12 | iOS install tip after third visit | pending |
+| L12 | iOS install tip after third visit | done |
 | L13 | demo runs with lab rules on (note 05 C10) | done |
 | L14 | disabled Units placeholder promising a later version | done |
 | L15 | "Prefer live camera" setting missing | pending |
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L12** (iOS Home Screen tip): index.html `#install-tip` (an aside in the page flow, × to dismiss, hidden by
+  default); pwa.js `countVisit()` (called by main.js `start()` after the first view, i.e. a signed-in visit):
+  counts loads in localStorage `kdl-visits` (try/catch), on visit ≥ 3 for platform ios and not standalone and
+  not yet offered: fills the same `IOS_STEPS` as the Settings panel, stores `kdl-install-tip=shown` (only shows
+  when storage works, so it can never nag), focus goes to the view heading on dismiss. CSS `.install-tip`
+  (base.css). Tests: test_device_ui.py static; device.py --only iostip (new section): iPhone UA shows it on
+  visit 3 only, steps text, layout at 375, dismiss + focus; desktop never: 7/7. Docs: docs/install-on-your-phone.md,
+  handbook app/install.md, ARCHITECTURE file layout.
 
 * **L11** (snack carbohydrate goal): Profile field `tg-carbs_per_snack_g` (data-target, hint) next to the per-meal
   one; a suggestion fills only the targets it gives (`fillTargets(…, { onlyGiven: true })`), so it never blanks

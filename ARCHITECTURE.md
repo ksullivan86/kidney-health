@@ -734,7 +734,9 @@ app/static/
   css/guidance.css      What fits now, the Meal ideas and insight cards, the guidance sheet, swap ideas, Settings → Meal guidance
   js/mock/guidance.js   demo /api/guidance/* routes over KH.guidanceEngine; js/mock/log.js answers POST /api/log/batch,
                         purpose and client_id; js/mock/meals.js answers meal_hint
-  js/pwa.js (M1)
+  js/pwa.js (M1)        KH.pwa: service worker, update toast, the install panel, and (note 02 R10) the iPhone/iPad Home
+                        Screen tip `#install-tip`, shown once after the third signed-in visit (`countVisit`; localStorage
+                        `kdl-visits` / `kdl-install-tip`, never health data)
   js/offline.js         KH.offline + KH.net (M2 offline outbox; see "M2: the offline outbox"): IndexedDB `kdl`, the
                         outbox, saved copies of recent days, the header sync badge, Settings → This device list, sign-out sheet
   js/scan.js, css/device.css   KH.scan (M2 barcode; see "M2 API: barcode" → Frontend): the Scan sheet (native

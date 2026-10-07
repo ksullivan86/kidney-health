@@ -312,3 +312,25 @@ def test_css_keeps_targets_and_motion_preferences() -> None:
     assert "min-height: var(--tap)" in CSS
     assert "prefers-reduced-motion" in CSS
     assert "!important" not in CSS
+
+
+def test_ios_home_screen_tip_shows_once_after_the_third_visit() -> None:
+    """Note 02 R10 (v0.3.0 review L12): besides Settings → This device, iPhone and iPad users get the Add to Home
+    Screen steps once, as a dismissible tip, after the third signed-in visit; it never blocks the page, and a
+    browser that refuses storage simply never shows it. tools/e2e/device.py --only iostip checks it in Chromium
+    with an iPhone user agent (shown on visit 3 only; never on a desktop)."""
+    pwa = (STATIC / "js" / "pwa.js").read_text(encoding="utf-8")
+    main = (STATIC / "js" / "main.js").read_text(encoding="utf-8")
+    tip = re.search(r'<aside class="install-tip" id="install-tip" ([^>]*)>', INDEX)
+    assert tip and 'aria-labelledby="install-tip-title"' in tip.group(1) and tip.group(1).rstrip().endswith("hidden")
+    assert 'id="install-tip-close" aria-label="Dismiss the Home Screen tip"' in INDEX
+    assert "role=\"dialog\"" not in INDEX.split('id="install-tip"', 1)[1].split("</aside>", 1)[0]
+    body = _function_body(pwa, "function countVisit()")
+    assert "if (MOCK) return;" in body and "platform() !== 'ios'" in body and "isStandalone()" in body
+    assert "visits < TIP_AFTER_VISITS" in body and "const TIP_AFTER_VISITS = 3;" in pwa
+    assert "store(TIP_KEY, 'shown');" in body  # once: never offered again
+    assert "try { return window.localStorage.getItem(key); } catch (e) { return null; }" in pwa
+    assert "steps(...IOS_STEPS)" in body and "body.append(steps(...IOS_STEPS));" in pwa  # the Settings panel's own steps
+    assert "countVisit };" in pwa
+    start = _function_body(main, "async function start(view)")
+    assert start.index("router.show(") < start.index("KH.pwa.countVisit()")  # a signed-in visit, after the view shows

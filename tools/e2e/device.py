@@ -67,7 +67,7 @@ OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device"
 PORT = 8066
 AI_PORT = 8067
 TIMEOUT_MS = 20_000
-SECTIONS = ("photo", "native", "live", "outbox", "firstvisit", "ai", "demo", "shots")
+SECTIONS = ("photo", "native", "live", "outbox", "firstvisit", "iostip", "ai", "demo", "shots")
 RESULTS: list[dict[str, Any]] = []
 TODAY = date.today().isoformat()
 
@@ -358,10 +358,11 @@ class Harness:
 
     def context(self, *, width: int = 1280, height: int = 800, scheme: str = "light", touch: bool = False, browser: Any = None,
                 signed_in: bool = True, init: str | None = None, permissions: list[str] | None = None,
-                service_workers: str = "block") -> tuple[Any, Watch]:
+                service_workers: str = "block", user_agent: str | None = None) -> tuple[Any, Watch]:
+        extra = {"user_agent": user_agent} if user_agent else {}
         ctx = (browser or self.browser).new_context(viewport={"width": width, "height": height}, color_scheme=scheme,
                                                     is_mobile=touch, has_touch=touch, service_workers=service_workers,
-                                                    permissions=permissions or [])
+                                                    permissions=permissions or [], **extra)
         ctx.set_default_timeout(TIMEOUT_MS)
         watch = Watch(self.base)
         watch.attach(ctx)
@@ -795,6 +796,46 @@ def section_firstvisit(hx: Harness, state: dict[str, Any]) -> None:
             ctx.close()
 
 
+IPHONE_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+             "Version/18.6 Mobile/15E148 Safari/604.1")
+
+
+def section_iostip(hx: Harness, state: dict[str, Any]) -> None:
+    """Note 02 R10 (v0.3.0 review L12): on an iPhone in the browser, the Home Screen steps show once, as a
+    dismissible tip, from the third signed-in visit; never on other devices; never again once shown."""
+    area = "iOS Home Screen tip after the third visit"
+    visible = "!document.querySelector('#install-tip').hidden"
+    for label, ua in (("iPhone", IPHONE_UA), ("desktop", None)):
+        ctx, watch = hx.context(width=375 if ua else 1280, height=812 if ua else 800, touch=bool(ua), user_agent=ua)
+        page = ctx.new_page()
+        state["page"] = page
+        try:
+            seen = []
+            for visit in range(1, 5):
+                if visit == 1:
+                    page.goto(f"{hx.base}/#today")
+                else:
+                    page.reload()  # a new page load is a new visit (the same URL with a hash would not load again)
+                page.wait_for_selector("#view-today:not([hidden])")
+                wait_js(page, "localStorage.getItem('kdl-visits') === '%d'" % visit)
+                seen.append(page.evaluate(visible))
+                if visit == 3 and seen[-1]:
+                    tip = page.inner_text("#install-tip")
+                    check(area, "iPhone: the tip gives the Add to Home Screen steps and where to find them again",
+                          '"Add to Home Screen"' in tip and "Settings → This device" in tip, tip[:200])
+                    problems = layout_problems(page, "#install-tip")
+                    check(area, "iPhone: the tip lays out at 375 px (in the page, not over it)", not problems, "; ".join(problems[:6]))
+                    hx.shot(page, "ios-tip-375")
+                    page.click("#install-tip-close")
+                    check(area, "iPhone: Dismiss hides it and focus moves to the page", page.evaluate(visible) is False
+                          and page.evaluate("document.activeElement && document.activeElement.closest('#main') !== null"))
+            want = [False, False, True, False] if ua else [False, False, False, False]
+            check(area, f"{label}: shown only on the third visit, then never again", seen == want, json.dumps(seen))
+        finally:
+            no_problems(f"{area} ({label})", watch)
+            ctx.close()
+
+
 def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
     area = "AI cards and label photo (fake OpenAI-compatible server)"
     hx.api("PUT", "/api/profile", {"weight_kg": 70, "targets": {"potassium_mg": 2500, "phosphorus_mg": 1000, "sodium_mg": 2000,
@@ -1191,6 +1232,7 @@ def main(argv: list[str] | None = None) -> int:
                         "live": lambda: section_live(hx, state, pw),
                         "outbox": lambda: section_outbox(hx, state),
                         "firstvisit": lambda: section_firstvisit(hx, state),
+                        "iostip": lambda: section_iostip(hx, state),
                         "ai": lambda: section_ai(hx, state, fake),
                         "demo": lambda: section_demo(hx, state),
                         "shots": lambda: section_shots(hx, state),

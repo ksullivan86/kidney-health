@@ -12,7 +12,9 @@
      an API answer's X-KDL-Version differs from the version of the worker that served this shell
      (versionSeen, called by KH.api; note 02 §5: a cached shell and a newer server).
    * The install panel is part of Settings → This device; renderInstallPanel(container) can render
-     it anywhere. deviceStatus() and clearOfflineData() serve the rest of that section
+     it anywhere. On an iPhone or iPad in the browser, the same steps also show once as a dismissible
+     tip at the top of the page after the third signed-in visit (countVisit, called by js/main.js;
+     the count and "shown" live in localStorage, and nothing breaks when storage is blocked). deviceStatus() and clearOfflineData() serve the rest of that section
      (js/views/settings.js), which has no service-worker code of its own (the preview build leaves
      this file out). */
 (() => {
@@ -24,6 +26,11 @@
   const SW_URL = '/sw.js';
   const UPDATE_EVERY_MS = 60 * 60 * 1000;
   const HTTPS_DOC = 'docs/https.md';
+  const VISITS_KEY = 'kdl-visits'; // signed-in page loads on this browser (note 02 R10)
+  const TIP_KEY = 'kdl-install-tip'; // "shown" once the iOS tip has been offered
+  const TIP_AFTER_VISITS = 3; // note 02 R10: "once as a dismissible tip after the third visit"
+  const IOS_STEPS = ['Open this page in Safari (Chrome on iPhone works too).', 'Tap Share, then "Add to Home Screen".',
+    'Keep "Open as Web App" switched on, then tap Add.'];
 
   let swPolicy = null;
   let registration = null;
@@ -174,8 +181,7 @@
       });
       body.append(h('p', {}, 'Add the app to this device so it opens in its own window, like an installed app.'), btn);
     } else if (platform() === 'ios') {
-      body.append(steps('Open this page in Safari (Chrome on iPhone works too).', 'Tap Share, then "Add to Home Screen".',
-        'Keep "Open as Web App" switched on, then tap Add.'));
+      body.append(steps(...IOS_STEPS));
     } else if (platform() === 'android') {
       body.append(steps('Open this page in Chrome.', 'Open the ⋮ menu and choose "Install app" (or "Add to Home screen").',
         'Open the app from its new icon.'));
@@ -224,6 +230,31 @@
     renderInstallPanel();
     return removed;
   }
+  // ---------------------------------------------------------------------------
+  // The iOS Home Screen tip (note 02 R10): iOS has no install prompt, so people who never open
+  // Settings would not learn the app can be installed. Shown once, never as a dialog.
+  // ---------------------------------------------------------------------------
+  function stored(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+  function store(key, value) { try { window.localStorage.setItem(key, value); } catch (e) { /* private mode or blocked: no tip */ } }
+  function countVisit() {
+    if (MOCK) return;
+    const visits = (parseInt(stored(VISITS_KEY), 10) || 0) + 1;
+    store(VISITS_KEY, String(visits));
+    if (visits < TIP_AFTER_VISITS || platform() !== 'ios' || isStandalone() || stored(TIP_KEY)) return;
+    const tip = $('#install-tip');
+    if (!tip) return;
+    store(TIP_KEY, 'shown');
+    if (stored(TIP_KEY) !== 'shown') return; // storage refused: it would come back on every visit
+    $('#install-tip-steps', tip).replaceChildren(steps(...IOS_STEPS));
+    $('#install-tip-close', tip).addEventListener('click', () => {
+      tip.hidden = true;
+      // Focus would otherwise fall to the top of the document: move it to the shown view's heading.
+      const focus = $('#main > section:not([hidden]) h1, #main > section:not([hidden]) h2') || $('#main');
+      if (focus) { if (!focus.hasAttribute('tabindex')) focus.setAttribute('tabindex', '-1'); focus.focus(); }
+    }, { once: true });
+    tip.hidden = false;
+  }
+
   // Note 02 R5: an app opened from the home screen asks the browser to keep its storage.
   function askPersistence() {
     try {
@@ -246,5 +277,5 @@
     else window.addEventListener('load', () => { register(); }, { once: true });
   }
 
-  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, versionSeen, deviceStatus, clearOfflineData, onStateChange };
+  KH.pwa = { init, register, renderInstallPanel, isStandalone, checkForUpdate, versionSeen, deviceStatus, clearOfflineData, onStateChange, countVisit };
 })();

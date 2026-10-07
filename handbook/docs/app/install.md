@@ -59,6 +59,9 @@ HTTPS ([HTTPS for phones](../self-hosting/https.md)).
 6. Open the app from its new icon. It may ask you to sign in once more: an app on the Home Screen keeps
    its own sign-in, separate from Safari's ([design note 02][NOTE02]).
 
+On your third visit in the browser, the app shows these steps once as a tip at the top of the page.
+Tap × to close it; it does not come back, and the steps stay in **Settings → This device**.
+
 These steps are written for iOS and iPadOS 26 and 27; installing works from iOS 17. If a button looks
 different on your phone, tell your admin so this page can be corrected.
 

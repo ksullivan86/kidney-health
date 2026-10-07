@@ -19,6 +19,8 @@
     if (KH.offline) KH.offline.start().catch((e) => console.warn('Offline outbox:', e));
     const initial = view || location.hash.replace('#', '');
     router.show(router.VIEWS.includes(initial) ? initial : 'today');
+    // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
+    if (KH.pwa && KH.pwa.countVisit) KH.pwa.countVisit();
   }
   KH.app = { start };
 
