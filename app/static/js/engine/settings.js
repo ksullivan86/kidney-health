@@ -94,7 +94,7 @@
       label: 'Plan builder: foods considered per role',
       help: 'Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.' },
     { key: 'instance.name', type: 'str', minLength: 1, maxLength: 80, default: 'Kidney Health', scope: 'instance', env: 'INSTANCE_NAME',
-      label: 'Server name', help: "Shown on the sign-in page and in the app's title." },
+      label: 'Server name', help: 'Shown on the sign-in, invite and password pages, and in Settings under About & privacy.' },
     { key: 'providers.usda.daily_limit_per_user', type: 'int', min: 0, max: 100000, default: 200, scope: 'instance', env: 'USDA_SHARED_DAILY_LIMIT',
       label: 'Shared USDA lookups per person per day', help: '0 means unlimited.' },
     { key: 'providers.usda.shared_enabled', type: 'bool', default: true, scope: 'instance', env: null,

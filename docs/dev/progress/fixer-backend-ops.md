@@ -30,7 +30,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L6 | OFF per-serving label without quantity stored as per 100 g | done |
 | L7 | additives: 'phosphorus' word flagged as additive | done |
 | L8 | label photo serving_desc/serving_g not marked from photo | done |
-| L9 | 'Server name' help text vs signed-in title | todo |
+| L9 | 'Server name' help text vs signed-in title | done |
 | L10 | new accounts default to stage 3b / type 1 | todo |
 | L11 | first-run log line https://<this server> | todo |
 | L12 | ISO dates in server texts | todo |
@@ -122,6 +122,11 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   weight) and `serving_g` (when read); a per-100 label without a serving puts both in `estimated` (100 g / 100 mL).
   scan.js already tags those two inputs. Tests: tests/test_vision_api.py (main label test, no-weight test, new
   `test_a_per_100_label_marks_the_100_g_serving_as_estimated`). ARCHITECTURE `/api/vision/label` row.
+
+* **L9** `instance.name` help → "Shown on the sign-in, invite and password pages, and in Settings under About &
+  privacy." (the places that really show it; the signed-in title stays the product name). Twin
+  `js/engine/settings.js` (one-line outside-area change, needed for parity) + regenerated settings vectors; test
+  `tests/test_settings_ui.py::test_server_name_help_says_only_where_the_name_is_shown`.
 
 ## Handoffs (to fixer-frontend-docs)
 

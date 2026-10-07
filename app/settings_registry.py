@@ -131,7 +131,7 @@ register(
         scope="instance",
         env="INSTANCE_NAME",
         label="Server name",
-        help="Shown on the sign-in page and in the app's title.",
+        help="Shown on the sign-in, invite and password pages, and in Settings under About & privacy.",
     ),
     SettingDef(
         key="registration.mode",

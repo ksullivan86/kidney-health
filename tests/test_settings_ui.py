@@ -148,6 +148,16 @@ def test_app_version_shown_in_settings_matches_the_server() -> None:
     assert m and m.group(1) == APP_VERSION
 
 
+def test_server_name_help_says_only_where_the_name_is_shown() -> None:
+    """Review L9: the help promised the name "in the app's title", but the signed-in title and header are fixed.
+    It now names the places that show it: sign-in, invite and password pages, and Settings > About & privacy."""
+    help_text = settings_registry.REGISTRY["instance.name"].help
+    assert "title" not in help_text and "About & privacy" in help_text
+    assert "$('#auth-instance').textContent = instanceName();" in AUTH_JS  # sign-in, setup and password pages
+    assert "You have been invited to ${instanceName()}" in AUTH_JS
+    assert "['Server', (state.authStatus || {}).instance_name" in SETTINGS_JS and "Section: About & privacy" in SETTINGS_JS
+
+
 # --------------------------------------------------------------------------- settings twin parity
 def _generator():
     spec = importlib.util.spec_from_file_location("gen_settings_vectors", ROOT / "tests" / "data" / "gen_settings_vectors.py")
