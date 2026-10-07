@@ -29,6 +29,8 @@ Flag meanings (see ARCHITECTURE.md "Per-serving thresholds"):
   processed           - packaged / restaurant food, sodium and additives likely
   ingredient          - only ever added to other food (flour, salt, oil, butter, vinegar ...): meal
                         guidance never suggests it on its own (docs/dev/research/06-meal-guidance.md F9)
+  alcohol             - an alcoholic drink: meal guidance never suggests it, because alcohol can cause
+                        delayed lows with insulin (ADA Standards of Care 2026 §5, recommendations 5.18-5.19)
 
 Meal-guidance roles (``role``): the guidance engine derives a role from the category and the numbers
 (app/guidance/rules.py ``role_of``); ``role`` overrides it for the few foods the rule gets wrong
@@ -60,6 +62,7 @@ FLAGS = [
     "low_potassium_fruit",
     "processed",
     "ingredient",
+    "alcohol",
 ]
 
 # Must equal app/guidance/rules.py ROLES (tests/guidance/test_data.py checks it).
@@ -87,6 +90,7 @@ HYPO = "hypo_treatment"
 LOWK = "low_potassium_fruit"
 PROC = "processed"
 ING = "ingredient"
+ALC = "alcohol"
 
 
 def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None, role=None):
@@ -581,15 +585,15 @@ CURATED_FOODS = [
       "Cocoa brings potassium and phosphorus and the mix adds sugar; keep it occasional."),
     f(170883, "Milkshake, chocolate, thick", BEV, "1 container, 10.6 oz", 300, [GI, FL, PROC],
       "Milk plus chocolate: ~670 mg potassium, ~380 mg phosphorus and ~60 g sugar; a small sherbet is the treat swap."),
-    f(168746, "Beer, regular", BEV, "1 can, 12 fl oz", 356, [FL],
+    f(168746, "Beer, regular", BEV, "1 can, 12 fl oz", 356, [FL, ALC],
       "Moderate potassium and phosphorus (~95 and ~50 mg per can) and it counts as fluid; alcohol also raises hypo risk with insulin."),
-    f(168749, "Beer, light", BEV, "1 can, 12 fl oz", 354, [FL],
+    f(168749, "Beer, light", BEV, "1 can, 12 fl oz", 354, [FL, ALC],
       "Lower carbs than regular beer but the same fluid and hypo caution with insulin."),
-    f(173190, "Wine, red", BEV, "1 glass, 5 fl oz", 147, [FL],
+    f(173190, "Wine, red", BEV, "1 glass, 5 fl oz", 147, [FL, ALC],
       "~190 mg potassium per glass; one glass is usually fine, and it counts toward fluid."),
-    f(174837, "Wine, white", BEV, "1 glass, 5 fl oz", 147, [FL],
+    f(174837, "Wine, white", BEV, "1 glass, 5 fl oz", 147, [FL, ALC],
       "Lower potassium than red (~105 mg per glass); counts toward fluid, and alcohol raises hypo risk."),
-    f(174815, "Spirits (gin, rum, vodka, whiskey), 80 proof", BEV, "1 jigger, 1.5 fl oz", 42, [FL],
+    f(174815, "Spirits (gin, rum, vodka, whiskey), 80 proof", BEV, "1 jigger, 1.5 fl oz", 42, [FL, ALC],
       "No potassium or phosphorus, but alcohol on insulin can cause delayed lows; mix with diet or clear soda, not cola."),
 
     # --------------------------------------------------------- Sweets & Snacks

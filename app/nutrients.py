@@ -67,6 +67,7 @@ FLAGS: tuple[str, ...] = (
     "low_potassium_fruit",
     "processed",
     "ingredient",  # only ever added to other food (flour, salt, oil): meal guidance never suggests it alone
+    "alcohol",  # v0.3: an alcoholic drink; meal guidance never suggests it (delayed lows with insulin: ADA 2026 §5, 5.18–5.19)
 )
 
 _INTEGER_UNITS = {"mg", "mL"}

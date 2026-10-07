@@ -116,6 +116,13 @@ Flags (strings, set in curated data or by the user on custom foods):
 chloride (E508) or potassium lactate (E326). With potassium unknown it gives the `medium` warning
 "Contains a potassium additive; potassium not listed"; with potassium listed the normal thresholds
 apply ("M2 API: barcode").
+Two flags only steer meal guidance and give no warning: `ingredient` (flour, oil, salt: only ever added to
+other food) and (v0.3) `alcohol` (beer, wine, spirits: with insulin, alcohol can cause lows hours later, ADA
+Standards of Care 2026 §5, 5.18–5.19). Guidance never suggests either on its own: not in What fits, swaps,
+built plans, the energy note, usual meals or AI ideas (a meal the person saved keeps its drink). The curated
+beers, wines and spirits carry `alcohol`; Open Food Facts products tagged `en:alcoholic-beverages` and USDA
+records with ≥ 0.4 g ethanol per 100 g (about 0.5 % by volume) or named "Alcoholic beverage, …" get it on
+import; anyone can set it on a custom food.
 
 Flags must agree with the serving they are shown next to (`scripts/build_food_db.py` and
 `tests/test_food_db.py` enforce it): a `low_potassium_fruit` serving stays ≤ 200 mg potassium
@@ -1371,7 +1378,8 @@ is per serving, else `<n>_100g` × serving; prepared values only when nothing as
 sodium from salt ÷ 2.5; absent → `null`; plausibility per 100 g (sodium ≤ 40 g except salts, potassium ≤
 10 g, phosphorus ≤ 5 g, macros ≤ 100 g, energy ≤ 950 kcal, model bounds); energy mismatch > 25 % and
 > 40 kcal; category by an ordered tag map; flags from `app/additives.py` plus `counts_as_fluid` (mL
-serving), `processed` (NOVA 4), `high_gi` (`en:sweetened-beverages` with ≥ 5 g sugars/100 mL); never
+serving), `processed` (NOVA 4), `high_gi` (`en:sweetened-beverages` with ≥ 5 g sugars/100 mL), `alcohol`
+(`en:alcoholic-beverages`); never
 `hypo_treatment` or `low_potassium_fruit`. `source_url` is built from a constant
 (`https://world.openfoodfacts.org/product/<off_code>`), never copied from a payload (§9 B4).
 
@@ -1382,7 +1390,8 @@ serving), `processed` (NOVA 4), `high_gi` (`en:sweetened-beverages` with ≥ 5 g
 digits equals the GTIN-14, then `GET /food/{fdcId}`. Same key resolution, daily quota (one per lookup)
 and hourly guard (`guard_id`) as the other USDA routes; 2 MiB decoded cap. `map_usda_record` prefers
 `labelNutrients` per serving (`potassium` or the API's `postassium`), else scales `foodNutrients`; it
-also runs the additive scan, so `POST /api/foods/usda/import` sets additive flags too. Merge (both
+also runs the additive scan, so `POST /api/foods/usda/import` sets additive flags too, and sets `alcohol` for
+≥ 0.4 g ethanol per 100 g (nutrient 221/1018) or an "Alcoholic beverage, …" name. Merge (both
 found): nutrients from USDA when the OFF label is US/CA (or its country is unknown), else from OFF; a
 `null` is filled from the other source through per-gram values (never mixing prepared and as-sold
 values), noted `filled_from_<src>:<key>`; flags and additives are the union.

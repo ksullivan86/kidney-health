@@ -16,7 +16,7 @@
 
   const DISCLAIMER = 'Suggestions compare foods with the targets your care team set. They are not medical advice.';
   const AI_FALLBACK = "The AI ideas did not fit your targets today, so these are the app's own.";
-  const NO_TARGETS = 'Set your targets in Settings first; guidance compares foods with the targets your care team gave you.';
+  const NO_TARGETS = 'Set your targets in Profile first; guidance compares foods with the targets your care team gave you.';
   const DISABLED = 'Meal guidance is switched off on this server.';
   const NEEDS_CONNECTION = 'Guidance needs a connection to your server.';
 

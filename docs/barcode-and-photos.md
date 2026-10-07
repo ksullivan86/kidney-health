@@ -107,6 +107,10 @@ you get next time.
   is about 90 % absorbed ([`docs/research/fact-check.md`](research/fact-check.md) §5). A missing additive
   is **not** proof there is none: 8 of 25 enhanced meat products in one study did not list theirs. The
   medium level is waiting for a renal dietitian's review ([`ROADMAP.md`](ROADMAP.md)).
+* **Alcoholic drinks** (Open Food Facts category `en:alcoholic-beverages`; USDA records with at least 0.4 g
+  ethanol per 100 g, about 0.5 % by volume, or named "Alcoholic beverage, …") get the `alcohol` flag: no
+  warning, but meal guidance never suggests them, because with insulin alcohol can cause lows hours later
+  ([`guidance.md`](guidance.md) "What guidance never does").
 * **Attribution** under the name: "Product data © Open Food Facts contributors, ODbL" with a link to the
   product page, or the USDA FoodData Central citation.
 

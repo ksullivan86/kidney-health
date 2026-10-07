@@ -187,8 +187,6 @@ def test_static_files_have_no_html_sinks():
 
 def test_static_html_has_no_inline_script():
     index = STATIC_DIR / "index.html"
-    if not index.exists():
-        pytest.skip("frontend not checked out")
     html = index.read_text(encoding="utf-8")
     inline = [m.group(0)[:60] for m in re.finditer(r"<script\b(?![^>]*\bsrc=)[^>]*>", html, re.I)]
     # the JSON data island of the preview build is not executable script; anything else is

@@ -20,8 +20,6 @@ FOODS_JSON = Path(__file__).resolve().parents[1] / "data" / "foods.json"
 
 @pytest.fixture(scope="module")
 def foods() -> dict[str, dict]:
-    if not FOODS_JSON.is_file():
-        pytest.skip("data/foods.json not checked out")
     doc = json.loads(FOODS_JSON.read_text(encoding="utf-8"))
     assert isinstance(doc.get("version"), str) and doc["version"]
     return {f["name"]: f for f in doc["foods"]}

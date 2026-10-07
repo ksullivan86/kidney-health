@@ -86,6 +86,12 @@ USDA_NUTRIENT_NUMBERS: dict[str, str] = {
     "255": "fluid_ml", "1051": "fluid_ml",
 }
 
+# "Alcohol, ethyl" (nutrient number 221, id 1018), g per 100 g. From 0.4 g (about 0.5 % alcohol by volume, the
+# usual "alcohol-free" line) a record is flagged ``alcohol``: meal guidance never suggests it (delayed lows with
+# insulin). SR Legacy and FNDDS also name such records "Alcoholic beverage, ...".
+USDA_ALCOHOL_NUMBERS: frozenset[str] = frozenset({"221", "1018"})
+USDA_ALCOHOL_MIN_G_PER_100G = 0.4
+
 # SR Legacy / Foundation food groups -> contract categories (unmapped names are kept verbatim).
 USDA_CATEGORY_MAP: dict[str, str] = {
     "Fruits and Fruit Juices": "Fruits",
@@ -782,6 +788,7 @@ def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
     category = USDA_CATEGORY_MAP.get(usda_category or "", usda_category)
 
     per_100g: dict[str, float] = {}
+    alcohol_100g: float | None = None
     for item in data.get("foodNutrients") or []:
         if not isinstance(item, Mapping):
             continue
@@ -792,6 +799,9 @@ def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
             str(item.get("nutrientNumber") or ""),
             str(item.get("nutrientId") or ""),
         )
+        if alcohol_100g is None and any(c in USDA_ALCOHOL_NUMBERS for c in candidates):
+            alcohol_100g = _finite(item.get("amount", item.get("value")))
+            continue
         key = next((USDA_NUTRIENT_NUMBERS[c] for c in candidates if c in USDA_NUTRIENT_NUMBERS), None)
         if key is None or key in per_100g:
             continue
@@ -829,6 +839,9 @@ def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
         nutrients["fluid_ml"] = water * scale if water is not None else serving_g
     else:
         nutrients["fluid_ml"] = 0.0
+    if (alcohol_100g is not None and alcohol_100g >= USDA_ALCOHOL_MIN_G_PER_100G) or description.casefold().startswith(
+            "alcoholic beverage"):
+        flags.append("alcohol")
 
     missing = [NUTRIENT_BY_KEY[k].label.lower() for k in ("potassium_mg", "phosphorus_mg") if nutrients.get(k) is None]
     for k in ("potassium_mg", "phosphorus_mg"):

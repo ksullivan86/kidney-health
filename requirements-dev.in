@@ -4,3 +4,6 @@
 -c requirements.lock
 -r requirements.in
 pytest>=8,<9
+# YAML parsing for the handbook content tests (front matter, sources.yml) and the deploy YAML checks, so
+# CI's test job runs them instead of skipping them.
+pyyaml>=6,<7

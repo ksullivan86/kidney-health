@@ -24,7 +24,7 @@ from . import rules as R
 DISCLAIMER = "Suggestions compare foods with the targets your care team set. They are not medical advice."
 AI_FALLBACK = "The AI ideas did not fit your targets today, so these are the app's own."
 NO_TARGETS = (
-    "Set your targets in Settings first; guidance compares foods with the targets your care team gave you."
+    "Set your targets in Profile first; guidance compares foods with the targets your care team gave you."
 )
 DISABLED = "Meal guidance is switched off on this server."
 NEEDS_CONNECTION = "Guidance needs a connection to your server."

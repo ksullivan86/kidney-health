@@ -438,7 +438,7 @@ def _energy_note(ctx: GuidanceContext, plans: Sequence[SlotPlan]) -> dict[str, A
         return None
     foods = [
         f for f in ctx.foods.values()
-        if not (f.hidden or f.avoid or f.hypo or f.supplies or f.id in ctx.prefs.exclude_food_ids)
+        if not (f.hidden or f.avoid or f.hypo or f.alcohol or f.supplies or f.id in ctx.prefs.exclude_food_ids)
         and f.kcal is not None and f.kcal >= R.ENERGY_DENSE_MIN_KCAL
         and all(v is not None and v <= R.ENERGY_DENSE_MAX[k] for k, v in
                 ((R.K, f.k), (R.P, f.p), (R.NA, f.na), (R.CARBS, f.carbs)))

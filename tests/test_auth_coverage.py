@@ -82,6 +82,39 @@ def test_every_api_route_requires_auth(anon_client):
     assert checked > 50
 
 
+# Every route the v0.3 contract adds (ARCHITECTURE.md "M2 API: targets and labs", "guidance", "barcode",
+# "AI and photos", "M3: the handbook at /learn"). The walk above finds routes generically; this list also
+# fails when one of them is missing or renamed, so the contract and the app cannot drift apart unnoticed.
+V03_ROUTES = {
+    ("get", "/api/profile/suggested-targets"),
+    ("post", "/api/labs"), ("get", "/api/labs"), ("delete", "/api/labs/{lab_id}"), ("get", "/api/labs/kidney-function"),
+    ("get", "/api/guidance/next-meal"), ("get", "/api/guidance/swaps"), ("get", "/api/guidance/hypo-options"),
+    ("post", "/api/guidance/plan-day"), ("get", "/api/guidance/insights/day"), ("get", "/api/guidance/insights/period"),
+    ("get", "/api/guidance/rules"), ("get", "/api/guidance/not-for-me"), ("put", "/api/guidance/not-for-me/{food_id}"),
+    ("delete", "/api/guidance/not-for-me/{food_id}"),
+    ("post", "/api/log/batch"),
+    ("post", "/api/foods/barcode"),
+    ("get", "/api/ai/status"), ("post", "/api/ai/next-meal"), ("post", "/api/ai/parse-meal"), ("post", "/api/ai/consent"),
+    ("delete", "/api/ai/consent/{provider_id}"), ("get", "/api/ai/audit"), ("delete", "/api/ai/audit"),
+    ("post", "/api/vision/label"), ("post", "/api/vision/plate"),
+    ("get", "/api/me/ai"), ("patch", "/api/me/ai"), ("put", "/api/me/ai/provider"), ("delete", "/api/me/ai/provider"),
+    ("post", "/api/me/ai/probe"),
+    ("get", "/api/admin/ai-providers"), ("post", "/api/admin/ai-providers"), ("put", "/api/admin/ai-providers/{provider_id}"),
+    ("delete", "/api/admin/ai-providers/{provider_id}"), ("post", "/api/admin/ai-providers/{provider_id}/probe"),
+    ("get", "/api/admin/ai-usage"),
+    ("get", "/api/handbook"),
+}
+
+
+def test_every_v03_route_exists_and_needs_a_session(anon_client):
+    ops = api_operations(anon_client.app)
+    assert V03_ROUTES <= ops, sorted(V03_ROUTES - ops)
+    assert not V03_ROUTES & PUBLIC
+    for method, path in sorted(V03_ROUTES):
+        r = anon_client.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
+        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+
+
 def test_public_routes_answer_without_a_session(anon_client):
     assert anon_client.get("/api/auth/status").status_code == 200
     assert anon_client.post("/api/auth/login", json={"username": "nobody", "password": "x"}).status_code == 401

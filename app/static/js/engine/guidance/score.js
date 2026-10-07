@@ -276,6 +276,7 @@
       if (strict) {
         if (f.hypo) return mealCheck(false, 'hypo_treatment');
         if (f.ingredient) return mealCheck(false, 'ingredient');
+        if (f.alcohol) return mealCheck(false, 'alcohol');
         let highAny = false;
         for (const [key, v] of [[R.K, f.k], [R.P, f.p], [R.NA, f.na]]) {
           const high = (v != null && R.isHigh(key, v * q)) || (key === R.P && f.additive);
@@ -319,8 +320,7 @@
       const totalP = tot[R.PROTEIN];
       const dev = (totalP - a) / a;
       if (dialysis) {
-        // score.py writes max(0, dev) ** 2: x * x here (Python's float ** may differ from x * x by one unit in
-        // the last place on some C libraries; the vectors pin the result).
+        // x * x on both sides (a float ** may differ from x * x by one unit in the last place on some C libraries).
         const up = Math.max(0.0, dev);
         s -= 6.0 * Math.max(0.0, -dev) + 0.5 * Math.min(2.0, up * up);
       } else {

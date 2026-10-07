@@ -39,6 +39,11 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 * **Never tips a day over.** A suggested food never takes potassium, sodium or fluid from "not over"
   to "over" for the day (on top of the per-meal room); a planned day that would go over is cut back
   (see "Plan the rest of my day").
+* **Never suggests alcohol.** With insulin, alcohol can cause lows hours later (ADA *Standards of Care
+  in Diabetes—2026*, Section 5, Recs 5.18–5.19), so a food flagged `alcohol` (the curated beers, wines and
+  spirits; Open Food Facts `en:alcoholic-beverages`; USDA records with ethanol; any custom food the person
+  flags) is never in What fits, a swap, a built plan, the energy note, a usual meal or an AI idea. It can
+  still be searched for and logged, and a meal the person saved keeps it.
 * **Never says "safe".** No "safe", "bad", "cheat", "unlimited", "don't worry"; every "high" or "low"
   comes with its number (CDC Clear Communication Index items 15–16).
 * **Never writes on its own.** Every guidance request computes only; "Use this plan" sends the plan
@@ -61,7 +66,7 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 | **The rules**: every number below, its basis, the handbook pages | Docs, contributors | `GET /api/guidance/rules` |
 
 When the profile has no numeric potassium, phosphorus or sodium target and no meal carbohydrate goal,
-every guidance answer is `{"status": "no_targets", "message": "Set your targets in Settings first; …"}`.
+every guidance answer is `{"status": "no_targets", "message": "Set your targets in Profile first; …"}`.
 
 The screens are described for people in the handbook (`handbook/docs/app/guidance.md`) and for
 contributors in ARCHITECTURE.md, "M2 API: guidance" → "Frontend". The app (`js/views/guidance.js`)
@@ -101,7 +106,8 @@ Guidance first works out how much potassium, phosphorus, sodium and fluid are le
 ## What fits now
 
 `fits.py` (§4.5). For every eligible food (not hidden, not `avoid_ckd`, not a low treatment, not an
-`ingredient` such as flour or oil, not a diabetes supply, not "Not for me", not an excluded category)
+`ingredient` such as flour or oil, not an `alcohol` drink, not a diabetes supply, not "Not for me", not an
+excluded category)
 at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
 
 1. **Hard filters**, the first failure is the reason code shown with `?explain=true`:
@@ -171,7 +177,7 @@ food words are not read as a low). The classifier errs toward showing the card.
 worked out with the items already placed in earlier slots. Options per slot, all passing the same
 `check_meal()` (room + negligible for potassium, phosphorus, sodium and fluid; carbohydrate at most the
 tolerance above the gap — a meal with ≤ 5 g of carbs always passes; no `avoid_ckd` food; portions ¼–3
-servings; built meals and AI ideas never hold a low treatment or an ingredient):
+servings; built meals and AI ideas never hold a low treatment, an ingredient or an alcoholic drink):
 
 1. saved meals for the slot, 2. usual meals, 3. starter combos from `data/combos.json` (the four meals
 of the diet guide's §6 sample day, mapped to builtin foods by USDA id; offered only when every food
@@ -268,6 +274,9 @@ provider is logged and reported as unavailable, so guidance always answers.
   "Glucose tablet (4 g carb)" would be left out at the default 15 g (3 tablets give 12 g) and offered as
   "2½ tablets" at 10 g. The
   portion still never gives less than the dose.
+* **Alcoholic drinks** (integration review, v0.3.0; rules version 2026-10-07.1): note 06 did not exclude
+  them, so the 80-proof spirits (no carbohydrate, no potassium) ranked as an "extra" and an energy-dense
+  idea. They are now excluded like ingredients; usual meals leave the drink out and keep the rest.
 * **Plan "why" lines** say "close to your goal" only within the person's carb tolerance, otherwise
   "17 g carbs, 13 g under your 30 g snack goal" (§4.15's string covered only the first case).
 
@@ -318,7 +327,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-06.1** (hash `6ef4fb557606f4e1`).
+Rules version **2026-10-07.1** (hash `8514c677136c30ea`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -425,7 +434,8 @@ American Kidney Fund Kidney Kitchen, "Where do I find meal plans for low potassi
 artificial sweeteners?" (per-meal potassium); Satellite Healthcare, "Food labels" (per-meal sodium);
 Kalantar-Zadeh et al., CJASN 2010, and Noori et al., IJKD 2010 and CJASN 2010 (phosphorus per gram of
 protein); National Kidney Foundation, "If you need to limit protein" (7 g = 1 oz); Mamerow et al., J Nutr
-2014 (spreading protein); ADA *Standards of Care in Diabetes—2026*, Sections 5 (Recs 5.27, 5.28) and 6
+2014 (spreading protein); ADA *Standards of Care in Diabetes—2026*, Sections 5 (Recs 5.18, 5.19 alcohol; 5.27,
+5.28) and 6
 (Recs 6.15, 6.16); Smart et al., Diabet Med 2009 and 2012 (carbohydrate precision); UW Medicine *Food
 Choice Lists* (free foods ≤ 5 g); CDC *Clear Communication Index* (numbers in text); the diet guide
 (`docs/diet-guide.md`) for the low-treatment table, leaching and the sample day.

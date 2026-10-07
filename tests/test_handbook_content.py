@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-yaml = pytest.importorskip("yaml")
+import yaml  # requirements-dev.lock and the handbook venv (a MkDocs dependency) both install PyYAML
 
 ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK = ROOT / "handbook"
@@ -302,8 +302,6 @@ def test_slugs_used_by_the_app_exist():
 
 def test_app_topic_pages_point_at_existing_pages():
     """app/guidance/topics.py (note 06 TOPIC_PAGES) links to /learn/<path>/; every path must exist."""
-    if not TOPICS_PY.exists():
-        pytest.skip("app/guidance/topics.py not written yet (M2 guidance)")
     text = TOPICS_PY.read_text(encoding="utf-8")
     paths = re.findall(r"/learn/([a-z0-9/_-]+?)/?[\"']", text)
     for path in paths:

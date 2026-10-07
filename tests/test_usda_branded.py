@@ -158,6 +158,21 @@ def test_diet_coke_branded() -> None:
     assert m.additives == ["e338"]
 
 
+@pytest.mark.parametrize(("data", "expected"), [
+    ({"description": "Lager", "foodNutrients": [{"nutrient": {"number": "221"}, "amount": 3.9}]}, True),
+    ({"description": "Lager", "foodNutrients": [{"nutrientId": 1018, "value": 0.4}]}, True),
+    ({"description": "Alcohol-free lager", "foodNutrients": [{"nutrient": {"number": "221"}, "amount": 0.3}]}, False),
+    ({"description": "Alcoholic beverage, wine, table, red", "foodNutrients": []}, True),
+    ({"description": "Grape juice", "foodNutrients": [{"nutrient": {"number": "221"}, "amount": float("nan")}]}, False),
+    ({"description": "Grape juice", "foodNutrients": [{"nutrient": {"number": "306"}, "amount": 104}]}, False),
+])
+def test_alcohol_flag_from_ethanol_or_the_description(data: dict, expected: bool) -> None:
+    """Meal guidance never suggests an alcoholic drink, so imported or scanned USDA records carry the flag."""
+    m = map_usda_record(data, 1)
+    assert ("alcohol" in m.kwargs["flags"]) is expected
+    assert "alcohol" not in m.kwargs["nutrients"]  # not a nutrient of the app
+
+
 def test_branded_text_is_cleaned() -> None:
     data = record(1633665)
     data["description"] = "LAY'S​‮ CHIPS" + "!" * 400

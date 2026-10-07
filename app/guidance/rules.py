@@ -26,7 +26,7 @@ import re
 from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-06.1"
+RULES_VERSION = "2026-10-07.1"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -168,6 +168,10 @@ STEP_ROLES: dict[str, frozenset[str]] = {
 SNACK_ROLES: tuple[str, ...] = ("veg_fruit", "starch", "extra", "drink")
 
 INGREDIENT_FLAG = "ingredient"
+# An alcoholic drink is never a suggestion: with insulin, alcohol can cause lows hours later (ADA Standards of
+# Care 2026 §5, recommendations 5.18-5.19; handbook eat/eating-out). The person may still log it and keep it
+# in a meal they saved themselves.
+ALCOHOL_FLAG = "alcohol"
 SUPPLIES_CATEGORY = "Diabetes supplies"
 BEVERAGES = "Beverages"
 VEGETABLES = "Vegetables"
@@ -434,7 +438,7 @@ STRUCTURAL: frozenset[str] = frozenset({
     "RULES_VERSION", "MAIN_MEALS", "SNACK", "SLOT_ORDER", "K", "P", "NA", "FLUID", "CARBS", "PROTEIN", "KCAL",
     "ROOM_KEYS", "RENAL_KEYS", "DAY_JUDGED", "INTERDIALYTIC_KEYS", "ROLES", "GROUP_OF_ROLE", "GROUPS", "GROUP_LABEL",
     "CARB_FILL_ROLES", "PROTEIN_ROLES", "STARCH_ROLES", "MAIN_PORTION_ROLES", "MAIN_ROLE_STEPS", "STEP_ROLES",
-    "SNACK_ROLES", "INGREDIENT_FLAG", "SUPPLIES_CATEGORY", "BEVERAGES", "VEGETABLES", "LEACHING_STEMS", "SEVERITY_ORDER",
+    "SNACK_ROLES", "INGREDIENT_FLAG", "ALCOHOL_FLAG", "SUPPLIES_CATEGORY", "BEVERAGES", "VEGETABLES", "LEACHING_STEMS", "SEVERITY_ORDER",
     "NUTRIENT_PRIORITY", "RENAL_HIGH_CUT", "RENAL_MEDIUM_CUT", "RULE_DOCS", "STRUCTURAL",
 })
 

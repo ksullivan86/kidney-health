@@ -38,7 +38,8 @@ from .vectors import FoodVec, protein_quality, renal_level
 def ineligible_reason(f: FoodVec, ctx: GuidanceContext) -> str | None:
     """Why ``f`` is never a meal suggestion (§4.3), or ``None`` when it may be one: ``hidden``,
     ``avoid_ckd``, ``hypo_treatment`` (low treatments are not food suggestions), ``ingredient``,
-    ``diabetes_supplies``, ``not_for_me`` or ``excluded_category`` (the person's choices)."""
+    ``alcohol`` (delayed lows with insulin), ``diabetes_supplies``, ``not_for_me`` or
+    ``excluded_category`` (the person's choices)."""
     if f.hidden:
         return "hidden"
     if f.avoid:
@@ -47,6 +48,8 @@ def ineligible_reason(f: FoodVec, ctx: GuidanceContext) -> str | None:
         return "hypo_treatment"
     if f.ingredient:
         return "ingredient"
+    if f.alcohol:
+        return "alcohol"
     if f.supplies:
         return "diabetes_supplies"
     if f.id in ctx.prefs.exclude_food_ids:
@@ -57,10 +60,11 @@ def ineligible_reason(f: FoodVec, ctx: GuidanceContext) -> str | None:
 
 
 def eligible_for_meals(f: FoodVec, ctx: GuidanceContext) -> bool:
-    """§4.3: not hidden, not ``avoid_ckd``, not a low treatment, not an ingredient, not a diabetes
-    supply, and not something the person marked "Not for me" or a category they never want."""
+    """§4.3: not hidden, not ``avoid_ckd``, not a low treatment, not an ingredient, not an alcoholic
+    drink, not a diabetes supply, and not something the person marked "Not for me" or a category they
+    never want."""
     return not (
-        f.hidden or f.avoid or f.hypo or f.ingredient or f.supplies
+        f.hidden or f.avoid or f.hypo or f.ingredient or f.alcohol or f.supplies
         or f.id in ctx.prefs.exclude_food_ids or (f.category or "") in ctx.prefs.exclude_categories
     )
 
@@ -340,10 +344,14 @@ def saved_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[int, str, lis
 
 def usual_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[str, list[MealItem]]]:
     """Usual meals (§4.7 option 2): sets of 2–6 ``(food, servings to ¼)`` eaten together in this slot
-    on at least 2 different dates of the last 60 days. Low treatments are not part of a meal."""
+    on at least 2 different dates of the last 60 days. Low treatments and alcoholic drinks are not part
+    of a suggested meal (the rest of the meal still counts)."""
     by_day: dict[str, dict[int, float]] = {}
     for h in ctx.history60:
         if h.meal != meal or h.hypo:
+            continue
+        f = ctx.foods.get(h.food_id)
+        if f is not None and f.alcohol:
             continue
         foods = by_day.setdefault(h.date, {})
         foods[h.food_id] = foods.get(h.food_id, 0.0) + h.servings

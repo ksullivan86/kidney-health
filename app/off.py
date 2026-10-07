@@ -108,6 +108,10 @@ CATEGORY_MAP: tuple[tuple[tuple[str, ...], str], ...] = (
 )
 SWEETENED_BEVERAGE_TAG = "en:sweetened-beverages"
 HIGH_GI_MIN_SUGARS_PER_100 = 5.0  # g per 100 mL (note 03 R3)
+# Beer, wine, spirits, ciders ...: flagged ``alcohol``, so meal guidance never suggests them (delayed lows with
+# insulin; app/guidance/rules.py ALCOHOL_FLAG). Open Food Facts files alcohol-free beers under their own
+# category, but a product tagged both ways is flagged anyway: leaving a drink out of suggestions is the safe side.
+ALCOHOLIC_BEVERAGES_TAG = "en:alcoholic-beverages"
 SALT_TAG = "en:salts"
 US_CA_TAGS = ("en:united-states", "en:canada")
 
@@ -682,6 +686,8 @@ def map_product(product: Mapping[str, Any], gtin14: str) -> Mapped:
     sugars_100 = None if nutrients.get("sugar_g") is None else nutrients["sugar_g"] * 100.0 / serving_g  # type: ignore[operator]
     if SWEETENED_BEVERAGE_TAG in categories and sugars_100 is not None and sugars_100 >= HIGH_GI_MIN_SUGARS_PER_100:
         flags.append("high_gi")
+    if ALCOHOLIC_BEVERAGES_TAG in categories:
+        flags.append("alcohol")
 
     for key in ("potassium_mg", "phosphorus_mg"):
         if nutrients.get(key) is None:

@@ -321,8 +321,6 @@ def test_suggest_targets_match_research_json():
     from pathlib import Path
 
     path = Path(__file__).resolve().parents[1] / "docs" / "research" / "targets_by_stage.json"
-    if not path.is_file():
-        pytest.skip("docs/research/targets_by_stage.json not checked out")
     rows = json.loads(path.read_text(encoding="utf-8"))
     assert len(rows) == 8
     weight = 70.0

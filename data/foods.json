@@ -1,5 +1,5 @@
 {
- "version": "2026-10-06.1",
+ "version": "2026-10-07.1",
  "source": "USDA FoodData Central, SR Legacy (April 2018 release), https://fdc.nal.usda.gov/ - public domain. Nutrients are per the listed household serving, scaled from the USDA per-100 g values. Entries with a negative fdc_id are not USDA records; their values come from product labels.",
  "foods": [
   {
@@ -6450,7 +6450,8 @@
     "fluid_ml": 327
    },
    "flags": [
-    "counts_as_fluid"
+    "counts_as_fluid",
+    "alcohol"
    ],
    "kidney_notes": "Moderate potassium and phosphorus (~95 and ~50 mg per can) and it counts as fluid; alcohol also raises hypo risk with insulin."
   },
@@ -6475,7 +6476,8 @@
     "fluid_ml": 336
    },
    "flags": [
-    "counts_as_fluid"
+    "counts_as_fluid",
+    "alcohol"
    ],
    "kidney_notes": "Lower carbs than regular beer but the same fluid and hypo caution with insulin."
   },
@@ -6500,7 +6502,8 @@
     "fluid_ml": 127
    },
    "flags": [
-    "counts_as_fluid"
+    "counts_as_fluid",
+    "alcohol"
    ],
    "kidney_notes": "~190 mg potassium per glass; one glass is usually fine, and it counts toward fluid."
   },
@@ -6525,7 +6528,8 @@
     "fluid_ml": 128
    },
    "flags": [
-    "counts_as_fluid"
+    "counts_as_fluid",
+    "alcohol"
    ],
    "kidney_notes": "Lower potassium than red (~105 mg per glass); counts toward fluid, and alcohol raises hypo risk."
   },
@@ -6550,7 +6554,8 @@
     "fluid_ml": 28
    },
    "flags": [
-    "counts_as_fluid"
+    "counts_as_fluid",
+    "alcohol"
    ],
    "kidney_notes": "No potassium or phosphorus, but alcohol on insulin can cause delayed lows; mix with diet or clear soda, not cola."
   },

@@ -565,7 +565,8 @@ def test_docs_exist_and_follow_the_v03_decisions():
 
 
 def test_every_yaml_file_parses():
-    yaml = pytest.importorskip("yaml")  # the CI lint job installs it; the test job does not need it
+    import yaml  # requirements-dev.lock installs PyYAML (the CI lint job installs it from .github/requirements-lint.txt)
+
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("yaml_parse", REPO / ".github" / "scripts" / "yaml_parse.py")

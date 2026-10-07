@@ -62,6 +62,7 @@ REAL_NAMES = (
     "Raspberries, raw", "Banana, raw", "Apple, raw, with skin", "Coleslaw, fast food", "Cauliflower, boiled",
     "Orange juice", "Apple juice", "Milk, 2% reduced fat", "Cola, regular", "Glucose tablet (4 g carb)",
     "Glucose gel (15 g carb tube)", "Olive oil", "Butter, unsalted", "Flour, all-purpose", "Star fruit (carambola)",
+    "Root beer", "Beer, regular", "Wine, red", "Spirits (gin, rum, vodka, whiskey), 80 proof",
 )
 REAL_ID0 = 101
 DATE = fx.DATE
@@ -286,6 +287,14 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
          {"fn": "what_fits", "meal": "dinner", "explain": True}),
         ("real list: lunch on an empty day", real_input(), {"fn": "what_fits", "meal": "lunch", "explain": True}),
         ("real list: breakfast, carb tolerance 5", real_input(carb_tolerance_g=5.0), {"fn": "what_fits", "meal": "breakfast"}),
+        # Alcoholic drinks are never suggested (delayed lows with insulin): not eligible, left out of usual meals.
+        ("real list: snack slot, alcohol not eligible", real_input(), {"fn": "what_fits", "meal": "snack", "limit": 20,
+                                                                       "explain": True}),
+        ("real list: usual dinner without the wine", real_input(history=[
+            h for d in ("2026-09-30", "2026-10-01", "2026-10-02") for h in (
+                hist(d, rid("Chicken breast, roasted, skinless"), "dinner"), hist(d, rid("Rice, white, long-grain, cooked"), "dinner"),
+                hist(d, rid("Green beans, boiled"), "dinner"), hist(d, rid("Wine, red"), "dinner"))]),
+         {"fn": "what_fits", "meal": "dinner"}),
         # §6.4 swaps
         ("TV-S1 banana", base_input(), {"fn": "find_swaps", "meal": "dinner", "food_id": 6, "servings": 1.0}),
         ("TV-S2 baked potato", base_input(), {"fn": "find_swaps", "meal": "dinner", "food_id": 2, "servings": 1.0,
@@ -304,6 +313,9 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
          {"fn": "find_swaps", "meal": "dinner", "food_id": rid("Potato, baked, with skin"), "servings": 1.0}),
         ("real list: TV-S8 processed cheese", real_input(),
          {"fn": "find_swaps", "meal": "dinner", "food_id": rid("Cheese, American, processed"), "servings": 1.0}),
+        ("real list: orange juice at dinner, no alcoholic swap", real_input(),
+         {"fn": "find_swaps", "meal": "dinner", "food_id": rid("Orange juice"), "servings": 1.0, "purpose": "none",
+          "explain": True}),
         ("hypo options, dose 15", base_input(), {"fn": "hypo_options"}),
         ("real list: hypo options, dose 20", real_input(hypo_dose_g=20.0), {"fn": "hypo_options"}),
         # §6.5 plan

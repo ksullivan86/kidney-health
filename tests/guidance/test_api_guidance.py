@@ -67,7 +67,7 @@ def test_next_meal_without_targets_says_so(real):
     assert r.status_code == 200
     body = r.json()
     assert body == {"status": "no_targets", "rules_version": R.RULES_VERSION,
-                    "message": "Set your targets in Settings first; guidance compares foods with the targets your care team gave you."}
+                    "message": "Set your targets in Profile first; guidance compares foods with the targets your care team gave you."}
 
 
 def test_next_meal_answers_with_the_contract_shape(real):

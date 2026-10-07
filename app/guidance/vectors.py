@@ -84,6 +84,7 @@ class FoodVec:
     hypo: bool
     avoid: bool
     ingredient: bool
+    alcohol: bool
     supplies: bool
     beverage: bool
     level1: str  # renal level at one serving (pre-ranking)
@@ -142,6 +143,7 @@ def make_food(
         hypo="hypo_treatment" in flag_set,
         avoid="avoid_ckd" in flag_set,
         ingredient=R.INGREDIENT_FLAG in flag_set,
+        alcohol=R.ALCOHOL_FLAG in flag_set,
         supplies=category == R.SUPPLIES_CATEGORY,
         beverage=category == R.BEVERAGES,
         level1=renal_level(values["potassium_mg"], values["phosphorus_mg"], values["sodium_mg"], additive),

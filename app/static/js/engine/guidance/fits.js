@@ -16,13 +16,14 @@
     if (f.avoid) return 'avoid_ckd';
     if (f.hypo) return 'hypo_treatment';
     if (f.ingredient) return 'ingredient';
+    if (f.alcohol) return 'alcohol';
     if (f.supplies) return 'diabetes_supplies';
     if (ctx.prefs.exclude_food_ids.has(f.id)) return 'not_for_me';
     if (ctx.prefs.exclude_categories.has(f.category || '')) return 'excluded_category';
     return null;
   }
   function eligibleForMeals(f, ctx) {
-    return !(f.hidden || f.avoid || f.hypo || f.ingredient || f.supplies
+    return !(f.hidden || f.avoid || f.hypo || f.ingredient || f.alcohol || f.supplies
       || ctx.prefs.exclude_food_ids.has(f.id) || ctx.prefs.exclude_categories.has(f.category || ''));
   }
   function eligibleFoods(ctx) { const out = []; for (const f of ctx.foods.values()) if (eligibleForMeals(f, ctx)) out.push(f); return out; }
@@ -211,6 +212,8 @@
     const byDay = new Map();
     for (const h of ctx.history60) {
       if (h.meal !== meal || h.hypo) continue;
+      const hf = ctx.foods.get(h.food_id);
+      if (hf != null && hf.alcohol) continue;  // alcohol is never part of a suggested meal
       let foods = byDay.get(h.date);
       if (!foods) byDay.set(h.date, (foods = new Map()));
       foods.set(h.food_id, (foods.get(h.food_id) || 0.0) + h.servings);

@@ -173,7 +173,7 @@
   function unavailable(res, { compact = false } = {}) {
     const box = h('div', { class: 'g-unavailable' });
     if (res && res.status === 'no_targets') {
-      box.append(h('p', {}, res.message), linkBtn('Set your targets in Profile', () => router.show('profile')));
+      box.append(h('p', {}, res.message), linkBtn('Open Profile', () => router.show('profile')));
     } else if (res && res.status === 'disabled') {
       box.append(h('p', {}, res.message));
       if (!(GE && res.message === GE.M.DISABLED) && !compact) box.append(linkBtn('Open Settings → Meal guidance', () => openSettingsSection()));

@@ -13,8 +13,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import pytest
-
 from app.nutrients import NUTRIENT_KEYS, food_warnings, kidney_rating
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,8 +69,8 @@ def test_hypo_treatment_vectors_never_warn_about_carbohydrate() -> None:
     assert w == [] and kidney_rating(w) == "green"
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_js_engine_matches_vectors() -> None:
+    assert shutil.which("node"), "Node.js 22 is needed for the JS parity vectors (CLAUDE.md, Parity): install it and run again"
     proc = subprocess.run(["node", str(ROOT / "tests" / "js" / "run_vectors.mjs")], capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "checks passed" in proc.stdout

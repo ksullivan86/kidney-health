@@ -21,10 +21,10 @@
   const GE = KH.guidanceEngine || (KH.guidanceEngine = {});
   const { NUTRIENT_KEYS } = KH.rules;
 
-  const RULES_VERSION = '2026-10-06.1';
+  const RULES_VERSION = '2026-10-07.1';
   // rules.rules_hash() of this RULES_VERSION (sha256 over the sorted JSON of the rules table, first 16 hex
   // digits). The runner checks it against the vectors and tests/test_guidance_ui.py against the server.
-  const RULES_HASH = '6ef4fb557606f4e1';
+  const RULES_HASH = '8514c677136c30ea';
 
   const MAIN_MEALS = ['breakfast', 'lunch', 'dinner'];
   const SNACK = 'snack';
@@ -138,6 +138,7 @@
   const MAIN_ROLE_STEPS = ['protein', 'starch', 'veg_fruit'];
   const SNACK_ROLES = ['veg_fruit', 'starch', 'extra', 'drink'];
   const INGREDIENT_FLAG = 'ingredient';
+  const ALCOHOL_FLAG = 'alcohol';  // never suggested: delayed lows with insulin (ADA 2026 §5, 5.18-5.19)
   const SUPPLIES_CATEGORY = 'Diabetes supplies';
   const BEVERAGES = 'Beverages';
   const VEGETABLES = 'Vegetables';
@@ -345,7 +346,8 @@
       flags: flagSet, kidney_notes, hidden: !!hidden, nutrients: values, role: r, group: groupOf(r), family: familyOf(name),
       name_fold: casefold(name), carbs, protein, k: values[K], p: values[P], na: values[NA], fluid: values[FLUID], kcal: values[KCAL],
       additive, processed: flagSet.has('processed'), high_gi: flagSet.has('high_gi'), hypo: flagSet.has('hypo_treatment'),
-      avoid: flagSet.has('avoid_ckd'), ingredient: flagSet.has(INGREDIENT_FLAG), supplies: category === SUPPLIES_CATEGORY,
+      avoid: flagSet.has('avoid_ckd'), ingredient: flagSet.has(INGREDIENT_FLAG), alcohol: flagSet.has(ALCOHOL_FLAG),
+      supplies: category === SUPPLIES_CATEGORY,
       beverage: category === BEVERAGES, level1: renalLevel(values[K], values[P], values[NA], additive),
     };
   }
@@ -514,7 +516,7 @@
   GE.R = {
     RULES_VERSION, RULES_HASH, MAIN_MEALS, SNACK, SLOT_ORDER, K, P, NA, FLUID, CARBS, PROTEIN, KCAL,
     ...CONSTANTS, ROOM_KEYS, RENAL_KEYS, DAY_JUDGED, INTERDIALYTIC_KEYS, ROLES, GROUP_OF_ROLE, GROUPS, GROUP_LABEL,
-    CARB_FILL_ROLES, PROTEIN_ROLES, STARCH_ROLES, MAIN_PORTION_ROLES, MAIN_ROLE_STEPS, SNACK_ROLES, INGREDIENT_FLAG,
+    CARB_FILL_ROLES, PROTEIN_ROLES, STARCH_ROLES, MAIN_PORTION_ROLES, MAIN_ROLE_STEPS, SNACK_ROLES, INGREDIENT_FLAG, ALCOHOL_FLAG,
     SUPPLIES_CATEGORY, BEVERAGES, VEGETABLES, LEACHING_STEMS, SEVERITY_ORDER, NUTRIENT_PRIORITY, RENAL_HIGH_CUT, RENAL_MEDIUM_CUT,
     RULE_DOCS,
     jsRound, roundTo, roundScore, roundToQuarter, ceilToStep, clamp, casefold, cmpStr, cmp, sortBy, maxBy, minBy, pySum,

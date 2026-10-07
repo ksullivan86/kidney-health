@@ -455,6 +455,18 @@ def test_high_gi_only_for_sweetened_beverages(sugars: float | None, expected: bo
     assert "high_gi" not in off.map_product(p, LAYS).flags
 
 
+def test_alcoholic_beverages_are_flagged_alcohol() -> None:
+    """Meal guidance never suggests an alcoholic drink (delayed lows with insulin), so the mapping marks one."""
+    p = base(**{"energy-kcal_100g": 43, "sugars_100g": 0})
+    p["serving_quantity_unit"], p["serving_quantity"] = "ml", 330
+    p["categories_tags"] = ["en:beverages", "en:alcoholic-beverages", "en:beers"]
+    m = off.map_product(p, LAYS)
+    assert "alcohol" in m.flags and "counts_as_fluid" in m.flags
+    assert "hypo_treatment" not in m.flags
+    p["categories_tags"] = ["en:beverages", "en:non-alcoholic-beverages", "en:alcohol-free-beers"]
+    assert "alcohol" not in off.map_product(p, LAYS).flags
+
+
 def test_processed_from_nova_4() -> None:
     p = base(**{"energy-kcal_100g": 100})
     p["nova_group"] = 4

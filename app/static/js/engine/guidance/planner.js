@@ -325,7 +325,7 @@
     if (kcal >= R.ENERGY_NOTE_FRACTION * goal) return null;
     let foods = [];
     for (const f of ctx.foods.values()) {
-      if (f.hidden || f.avoid || f.hypo || f.supplies || ctx.prefs.exclude_food_ids.has(f.id)) continue;
+      if (f.hidden || f.avoid || f.hypo || f.alcohol || f.supplies || ctx.prefs.exclude_food_ids.has(f.id)) continue;
       if (f.kcal == null || f.kcal < R.ENERGY_DENSE_MIN_KCAL) continue;
       const pairs = [[R.K, f.k], [R.P, f.p], [R.NA, f.na], [R.CARBS, f.carbs]];
       if (pairs.every(([k, v]) => v != null && v <= R.ENERGY_DENSE_MAX[k])) foods.push(f);

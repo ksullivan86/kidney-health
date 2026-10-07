@@ -82,7 +82,7 @@
     if (f.id === original.id || f.hidden || f.avoid || ctx.prefs.exclude_food_ids.has(f.id)) return false;
     if (ctx.prefs.exclude_categories.has(f.category || '')) return false;
     if (mode === 'hypo') return f.hypo;
-    if (f.ingredient || f.supplies) return false;
+    if (f.ingredient || f.alcohol || f.supplies) return false;
     if (f.hypo && !original.beverage) return false;
     if (mode === 'avoid') return f.category === original.category;
     return f.category === original.category || f.role === original.role;

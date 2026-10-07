@@ -412,7 +412,8 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
     while the day's level is ok; carbohydrate at most ``tolerance`` above the meal's gap (negligible
     carbohydrate always passes, as in the food filter); no
     ``avoid_ckd`` food; every portion ¼–3 servings. Built meals and AI ideas additionally never hold
-    a low-treatment food, an ingredient, or a "high" portion of a nutrient that is not ok today, and
+    a low-treatment food, an ingredient, an alcoholic drink, or a "high" portion of a nutrient that is
+    not ok today, and
     AI ideas never hold more than 1 serving of a food with a "high" warning (note 04 V5).
     """
     if not items:
@@ -447,6 +448,8 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
                 return MealCheck(False, "hypo_treatment")
             if f.ingredient:
                 return MealCheck(False, "ingredient")
+            if f.alcohol:
+                return MealCheck(False, "alcohol")
             high_any = False
             for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)):
                 high = (v is not None and is_high(key, v * q)) or (key == R.P and f.additive)
@@ -496,7 +499,8 @@ def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysi
         total_p = totals[R.PROTEIN]
         dev = (total_p - a) / a
         if dialysis:
-            s -= 6.0 * max(0.0, -dev) + 0.5 * min(2.0, max(0.0, dev) ** 2)
+            over = max(0.0, dev)
+            s -= 6.0 * max(0.0, -dev) + 0.5 * min(2.0, over * over)  # x * x, not ** 2: libm pow may differ by 1 ulp
         else:
             a_min = max(room.protein.aim_min, R.PROTEIN_AIM_FLOOR_G)
             s -= 4.0 * max(0.0, (a_min - total_p) / a_min) + 1.5 * min(2.0, dev * dev)

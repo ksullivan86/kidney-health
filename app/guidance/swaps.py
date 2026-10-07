@@ -122,7 +122,7 @@ def _eligible_swap(f: FoodVec, original: FoodVec, ctx: GuidanceContext, mode: st
         return False
     if mode == "hypo":
         return f.hypo
-    if f.ingredient or f.supplies:
+    if f.ingredient or f.alcohol or f.supplies:
         return False
     if f.hypo and not original.beverage:
         return False
