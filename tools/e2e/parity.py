@@ -39,6 +39,10 @@ Sections
      "Not for me") with their validation and the person's and admin's guidance settings, over a history
      with usual meals, saved meals with meal_hint and treated lows; the log's purpose and client_id
      (POST /api/log, /quick, /batch, PUT, copy-day, CSV) and POST /api/log/batch's all-or-nothing rule
+  13 barcodes (v0.3 M3, note 03): foods with a gtin and an ingredient list (the additive scan, the gtin rules,
+     PUT keeping them, copy, quick add) and POST /api/foods/barcode (the person's own foods by every barcode
+     form, refresh, lookups off, and every 400/422 with its reason); errors also compare reason, gtin,
+     checked, name and contribute_url
 
 ``--sections 0,11`` runs only those sections (section 1 always runs first: the others need its food ids).
 Error answers are compared by status, detail and, when either side sends one, ``code``.
@@ -171,7 +175,9 @@ class Recorder:
         sec["passed"] += 1
         return True
 
-    def compare_resp(self, section: str, label: str, rs: dict, rm: dict, ignore: frozenset = IGNORE) -> bool:
+    def compare_resp(self, section: str, label: str, rs: dict, rm: dict, ignore: frozenset = IGNORE,
+                     extras: tuple[str, ...] = ()) -> bool:
+        """``extras``: problem keys next to ``detail`` compared too (section 13: ``reason``, ``gtin``, ``checked`` ...)."""
         ok_s = 200 <= rs["status"] < 300
         ok_m = 200 <= rm["status"] < 300
         if ok_s and ok_m:
@@ -181,6 +187,10 @@ class Recorder:
             err_m = {"status": rm["status"], "detail": rm.get("detail")}
             if "code" in rs or "code" in rm:
                 err_s["code"], err_m["code"] = rs.get("code"), rm.get("code")
+            for key in extras:
+                xs, xm = rs.get("extra") or {}, rm.get("extra") or {}
+                if key in xs or key in xm:
+                    err_s[key], err_m[key] = xs.get(key), xm.get(key)
             return self.compare(section, label, err_s, err_m)
         return self.compare(
             section,
@@ -227,6 +237,8 @@ class ServerSide:
             out["detail"] = payload.get("detail") if isinstance(payload, dict) else payload
             if isinstance(payload, dict) and "code" in payload:  # e.g. the 422 refusals of suggested-targets
                 out["code"] = payload["code"]
+            if isinstance(payload, dict):
+                out["extra"] = {k: v for k, v in payload.items() if k not in ("detail", "code")}
         return out
 
 
@@ -240,6 +252,7 @@ HELPERS_JS = r"""
       } catch (e) {
         const out = { status: (e && e.status) || 500, detail: (e && e.detail) || String(e), error: e && e.status ? null : String((e && e.stack) || e) };
         if (e && e.extra && 'code' in e.extra) out.code = e.extra.code;
+        if (e && e.extra) out.extra = Object.fromEntries(Object.entries(e.extra).filter(([k]) => k !== 'code'));
         return out;
       }
     },
@@ -371,14 +384,15 @@ class Harness:
     def fid(self, name: str) -> int:
         return self.food_id[name]
 
-    def both(self, section: str, label: str, method: str, path: Any, body: Any = None, ignore: frozenset = IGNORE):
+    def both(self, section: str, label: str, method: str, path: Any, body: Any = None, ignore: frozenset = IGNORE,
+             extras: tuple[str, ...] = ()):
         ps = path(0) if callable(path) else path
         pm = path(1) if callable(path) else path
         bs = body(0) if callable(body) else body
         bm = body(1) if callable(body) else body
         rs = self.server.call(method, ps, bs)
         rm = self.mock.call(method, pm, bm)
-        self.rec.compare_resp(section, label, rs, rm, ignore)
+        self.rec.compare_resp(section, label, rs, rm, ignore, extras)
         return rs, rm
 
     def entry_path(self, key: str, suffix: str = "") -> Callable[[int], str]:
@@ -1463,6 +1477,67 @@ class Harness:
         self.compare_csv(S, f"/api/log/export.csv?start={B}&end={d(B, 1)}")
         self.put_profile(S, "restore", self.PROFILE)
 
+    # ------------------------------------------------------------------ #
+    BARCODE_EXTRAS = ("reason", "gtin", "checked", "name", "contribute_url", "retry_after")
+
+    def section13(self) -> None:
+        """Barcodes on foods and POST /api/foods/barcode (v0.3, note 03) over js/mock/barcode.js and js/engine/{gtin,
+        additives,textclean,off}.js. Open Food Facts and USDA are off on both sides (the demo's switch is turned off
+        here: its three recorded products are the demo's own), so lookups end at the person's own foods."""
+        self.mock.page.evaluate("() => { const m = window.__kdlMock; m._effectiveSetting('food.off_enabled', null);"
+                                " m._settings.env.OFF_ENABLED = 'false'; m._barcodeHits = []; }")
+        X = self.BARCODE_EXTRAS
+        D = "2026-09-14"
+        S = "13a foods with a barcode and ingredients"
+        base = {"name": "Parity rye crackers", "serving_desc": "5 crackers (30 g)", "serving_g": 30,
+                "nutrients": {"calories_kcal": 120, "carbs_g": 20, "protein_g": 3, "sodium_mg": 180}}
+        rs, rm = self.both(S, "POST /api/foods gtin + ingredients (additive scan)", "POST", "/api/foods", {
+            **base, "gtin": "4006381333931",
+            "ingredients_text": "Whole grain RYE flour, salt, sodium phosphate (E339), potassium chloride, E 450i; may contain sesame."})
+        cid = (rs["body"]["id"], rm["body"]["id"]) if rs["status"] < 300 and rm["status"] < 300 else None
+        if cid:
+            food = lambda suffix="": (lambda side: f"/api/foods/{cid[side]}{suffix}")  # noqa: E731
+            self.both(S, "GET the food", "GET", food())
+            self.both(S, "PUT without gtin/ingredients keeps them", "PUT", food(), {**base, "name": "Parity rye crackers (box)"})
+            self.both(S, "PUT new ingredients re-scans", "PUT", food(), {**base, "ingredients_text": "rye flour, water, salt"})
+            self.both(S, "POST /api/foods/{id}/copy keeps provenance", "POST", food("/copy"))
+            self.both(S, "GET /api/foods?q=parity rye", "GET", "/api/foods?q=parity%20rye")
+        for label, gtin in (("bad check digit", "4006381333932"), ("store code", "2012345678903"), ("letters", "40063813339ab"),
+                            ("too short", "1234"), ("ISBN", "9780306406157"), ("UPC-A as 12", "036000291452"),
+                            ("GTIN-8", "96385074"), ("separators", "4006381 333931"), ("empty", ""), ("null", None)):
+            self.both(S, f"POST /api/foods gtin {label}", "POST", "/api/foods", {**base, "name": f"Parity gtin {label}", "gtin": gtin},
+                      extras=X)
+        self.both(S, "POST /api/foods ingredients too long", "POST", "/api/foods",
+                  {**base, "name": "Parity long list", "ingredients_text": "salt, " * 700})
+        self.both(S, "POST /api/foods ingredients only control characters", "POST", "/api/foods",
+                  {**base, "name": "Parity control chars", "ingredients_text": "\u200b\u200b\u0007"})
+        self.both(S, "POST /api/log/quick with gtin + ingredients", "POST", "/api/log/quick", {
+            "date": D, "meal": "snack", "name": "Parity quick crackers", "serving_desc": "1 pack", "serving_g": 25,
+            "nutrients": {"carbs_g": 18, "sodium_mg": 150}, "gtin": "0012345678905",
+            "ingredients_text": "wheat flour, monopotassium phosphate, salt"})
+        self.both(S, "POST /api/log/quick with a bad gtin", "POST", "/api/log/quick", {
+            "date": D, "meal": "snack", "name": "Parity quick bad", "nutrients": {"carbs_g": 10}, "gtin": "0012345678906"}, extras=X)
+
+        S = "13b POST /api/foods/barcode"
+        look = lambda label, body: self.both(S, label, "POST", "/api/foods/barcode", body, extras=X)  # noqa: E731
+        look("the person's own food (EAN-13)", {"code": "4006381333931"})
+        look("the same with format ean_13", {"code": "4006381333931", "format": "ean_13"})
+        look("the same as GTIN-14 with a leading zero", {"code": "04006381333931"})
+        look("refresh=true on a person's own food", {"code": "4006381333931", "refresh": True})
+        look("refresh as the string 'true'", {"code": "4006381333931", "refresh": "true"})
+        look("the quick-add food by its UPC-A", {"code": "012345678905", "format": "upc_a"})
+        look("unknown retail code, lookups off", {"code": "5000112637922"})
+        look("unknown UPC-E", {"code": "01234565", "format": "upc_e"})
+        for label, body in (("missing code", {}), ("empty code", {"code": ""}), ("65 characters", {"code": "1" * 65}),
+                            ("letters", {"code": "ABC123"}), ("bad check digit", {"code": "4006381333932"}),
+                            ("restricted (store) code", {"code": "2012345678903"}), ("ISBN", {"code": "9780306406157"}),
+                            ("ISSN", {"code": "9771234567003"}), ("coupon", {"code": "9912345678904"}),
+                            ("unknown format", {"code": "4006381333931", "format": "qr_code"}),
+                            ("refresh not a boolean", {"code": "4006381333931", "refresh": "sometimes"}),
+                            ("extra field", {"code": "4006381333931", "source": "off"}), ("code as a number", {"code": 4006381333931}),
+                            ("body not an object", ["4006381333931"])):
+            look(f"invalid: {label}", body)
+
     def _guidance_calls(self, section: str, label: str, which: list[str]) -> None:
         G, f = self.G, self.fid
         calls = {
@@ -1519,7 +1594,7 @@ def main(argv: list[str] | None = None) -> int:
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
                          ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
-                         ("11", h.section11), ("12", h.section12)]
+                         ("11", h.section11), ("12", h.section12), ("13", h.section13)]
                 if args.sections:
                     wanted = {"1", *args.sections.split(",")}
                     steps = [(name, fn) for name, fn in steps if name in wanted]
