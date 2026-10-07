@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # docs-release (v0.3.0 release docs and metadata)
 
@@ -11,14 +11,17 @@ Ports 8390-8399 only (fact checks).
 1. [x] Version 0.3.0 (pyproject.toml, app/main.py APP_VERSION, js/views/settings.js APP_VERSION,
        tests/test_barcode_api.py User-Agent). Service worker version is hash-based: untouched.
 2. [x] ARCHITECTURE.md item 7: owner decision 2026-10-06 (no hold; HOLD_LATEST unset).
-3. [x] CHANGELOG.md 0.3.0 section (draft done; re-check the integrate agent's fixes before finishing and add them under "Security fixes from review" / Known limitations).
+3. [x] CHANGELOG.md "0.3.0 — 2026-10-07" (includes the integrate agent's fixes up to 7d0421c: alcohol flag, HIBP
+       through the checked transport). Later integrate fixes: add them under "Security fixes from review".
 4. [x] CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md, docs/README.md, docs/maintainers.md,
        docs/ROADMAP.md, .github/ISSUE_TEMPLATE/*, .github/pull_request_template.md.
 5. [x] README.md for v0.3.0 (barcode and AI handoffs: feature lines, config rows incl. OFF_* and USDA_BRANDED_BARCODE, "Optional: barcode lookups and AI" section linking docs/ai.md).
 6. [x] Handbook "Using the app" pages (handbook/docs/app/**): every "coming in v0.3" gone; self-hosting
        configuration headings and the building-the-handbook marker rule too; docs/install-on-your-phone.md no
        longer says "tested on 26 and 27" (no real device was used).
-7. [ ] Link check of touched Markdown; pytest; handbook checks.
+7. [x] Link check of touched Markdown (26 files, 0 problems); full pytest exit 0 (3,176 passed); node vectors
+       pass; handbook checks pass.
+8. [x] ARCHITECTURE.md layout and M3 ownership row name the new contributor/maintainer docs.
 
 ## Decisions
 
@@ -40,11 +43,6 @@ Ports 8390-8399 only (fact checks).
   python health check and k8s httpGet probes, so only the Quadlet unit loops.
 
 * `build/` is gitignored: the preview (`scripts/build_preview.py`) picks up the new APP_VERSION when it is next built; nothing to edit.
-
-## Next
-
-* Re-read `git log` for the integrate agent's fixes and fold them into CHANGELOG ("Security fixes from review",
-  safety: the `alcohol` flag) before finishing; final link check of every touched file; full pytest.
 
 ## Handoffs (not my files; for the integrate agent)
 
