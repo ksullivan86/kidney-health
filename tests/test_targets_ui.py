@@ -148,3 +148,40 @@ def test_admin_settings_list_every_targets_key_and_preferences_offer_lab_units()
     keys = [d.key for d in settings_registry.all_settings() if d.key.startswith("targets.")]
     assert keys and all(f"'{k}'" in group for k in keys)
     assert '<select id="set-lab-units"' in INDEX and "'user.units.labs': sel.value" in settings_js
+
+
+def test_the_demo_ships_with_lab_rules_off() -> None:
+    """Note 05 §7 C10: until the clinical review, public demo instances run with targets.lab_rules_enabled off. The
+    preview and ?mock=1 demo are the project's public demo (contract item 15): its admin starts with the switch off
+    (and may turn it on like any admin); the very-high-potassium alert does not depend on it."""
+    import json
+    import shutil
+    import subprocess
+
+    assert shutil.which("node"), "Node.js 22 is needed to run the demo's settings (CLAUDE.md, Parity)"
+    script = r"""
+const fs = require('fs'); const vm = require('vm'); const path = require('path');
+const root = process.argv[1];
+const ctx = vm.createContext({ console });
+vm.runInContext('globalThis.window = globalThis;', ctx);
+for (const rel of ['app/static/js/engine/rules.js', 'app/static/js/engine/settings.js', 'app/static/js/mock/core.js', 'app/static/js/mock/settings.js'])
+  vm.runInContext(fs.readFileSync(path.join(root, rel), 'utf8'), ctx, { filename: rel });
+const KH = vm.runInContext('globalThis.KH', ctx);
+const api = Object.create(KH.mock.MockApi.prototype);
+const off = api._effectiveSetting('targets.lab_rules_enabled', 1);
+api._settingsState().instance['targets.lab_rules_enabled'] = undefined;
+delete api._settingsState().instance['targets.lab_rules_enabled'];
+const reset = api._effectiveSetting('targets.lab_rules_enabled', 1);
+console.log(JSON.stringify({ off, reset }));
+"""
+    out = subprocess.run(["node", "-e", script, str(ROOT)], capture_output=True, text=True, timeout=60, check=True).stdout
+    got = json.loads(out)
+    assert got["off"]["value"] is False and got["off"]["source"] == "instance", got
+    assert got["reset"]["value"] is True, "back to the default (an admin's choice) the rules are on, as on a server"
+    assert settings_registry.REGISTRY["targets.lab_rules_enabled"].default is True  # a real server's default is unchanged
+    # The demo's suggestion reads the setting (and the alert is computed regardless, js/engine/targets.js).
+    assert "lab_rules_enabled: !!get('targets.lab_rules_enabled')" in JS["js/mock/profile.js"]
+    assert "The safety alert does not depend on targets.lab_rules_enabled" in JS["js/engine/targets.js"]
+    # tools/e2e/parity.py section 11 compares the shipped values, then puts both sides at the default.
+    parity = (ROOT / "tools" / "e2e" / "parity.py").read_text(encoding="utf-8")
+    assert '"lab rules as shipped: on for a server, off for the demo", [True, False]' in parity

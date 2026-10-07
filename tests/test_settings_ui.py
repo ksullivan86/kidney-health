@@ -272,3 +272,48 @@ def test_api_has_the_reset_link_routes(two_clients) -> None:
     assert users[1]["reset_link"] is None
     assert admin.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 204
     assert sam.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 403  # admins only
+
+
+# --------------------------------------------------------------------------- Admin → Server settings groups
+def _server_setting_groups() -> dict[str, list[str]]:
+    block = re.search(r"const GROUPS = \[(.*?)\n  \];", SETTINGS_JS, re.S)
+    assert block, "GROUPS not found in js/views/settings.js"
+    groups: dict[str, list[str]] = {}
+    for title, keys in re.findall(r"\['([^']+)', \[(.*?)\]\]", block.group(1), re.S):
+        groups[title] = re.findall(r"'([a-z0-9_.]+)'", keys)
+    return groups
+
+
+def test_every_server_setting_has_a_named_group() -> None:
+    """CONTRIBUTING ("Add a setting"): every admin-editable key belongs to a group in Admin → Server settings, so
+    nothing lands under "Other" in registry order (v0.3.0 review: the eight ai.* switches did)."""
+    grouped = [k for keys in _server_setting_groups().values() for k in keys]
+    assert len(grouped) == len(set(grouped)), "a key is listed in two groups"
+    editable = {k for k, d in settings_registry.REGISTRY.items() if d.admin_editable}
+    assert editable - set(grouped) == set(), f"not in any group (would show under 'Other'): {sorted(editable - set(grouped))}"
+    assert set(grouped) - set(settings_registry.REGISTRY) == set(), "GROUPS names a key the registry does not have"
+    ai = _server_setting_groups()["Optional AI"]
+    assert ai[0] == "ai.enabled", "the AI master switch comes first (Settings → AI ideas sends admins to it)"
+
+
+def test_an_ai_switch_change_refreshes_the_ai_panel_and_buttons() -> None:
+    """v0.3.0 review: after an admin switched "Optional AI ideas", Settings → AI ideas kept the old text until the
+    view was opened again. The save handler now asks js/views/ai.js to draw again (status cache dropped), and that
+    render keeps only its newest copy when two overlap."""
+    assert "if (key.startsWith('ai.') && KH.ai) {" in SETTINGS_JS
+    for call in ("KH.ai.forget()", "KH.ai.renderSettings()", "KH.ai.renderAddSlot()"):
+        assert call in SETTINGS_JS, call
+    ai_js = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
+    body = ai_js[ai_js.index("async function renderSettings()"):ai_js.index("function personalPart(me)")]
+    assert "const ticket = ++settingsRender;" in body and "if (current()) slot.replaceChildren(...parts);" in body
+    assert "slot.append(personalPart" not in body and "slot.append(await adminPart" not in body
+
+
+def test_the_ui_promises_no_unbuilt_feature() -> None:
+    """Quality bar (v0.3.0): no disabled placeholder control that promises "a later version" (the "Units: other units
+    (lb, oz) are planned" select had no spec behind it). Deferred work belongs in docs/ROADMAP.md, not in the UI."""
+    for path in [STATIC / "index.html", *(STATIC / "js").rglob("*.js")]:
+        text = path.read_text(encoding="utf-8").lower()
+        for phrase in ("later version", "coming soon", "coming in v0.", "not yet available", "planned for a later"):
+            assert phrase not in text, f"{path.relative_to(ROOT)} says {phrase!r}"
+    assert 'id="set-units"' not in INDEX

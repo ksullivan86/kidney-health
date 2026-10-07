@@ -20,7 +20,26 @@ CONFIRMED (fix with root cause and a test):
 | C4 | DG47 dead citation on 13 handbook pages | done |
 | C5 | guidance never shows which targets it used / when saved | done |
 
-LOW (apply or justify): see the table below as each is done.
+LOW (apply or justify):
+
+| id | finding | status |
+|---|---|---|
+| L1 | research notes still state pre-v0.3 protein rule | pending |
+| L2 | handbook SI phosphate table edges | pending |
+| L3 | labs.js K alert window hard-coded 90 days | pending |
+| L4 | AI activity shows raw provider reply uncaptioned | pending |
+| L5 | Settings → AI ideas stale after admin switch | done |
+| L6 | ai.* switches under "Other" | done |
+| L7 | Trends ignores goal / about targets | pending |
+| L8 | "about X" protein treated as hard max in plan | pending |
+| L9 | GET /api/foods/builtin ETag deferred without spec | pending |
+| L10 | guidance AI buttons: no What will be sent? / dropped | pending |
+| L11 | carbs_per_snack_g has no UI | pending |
+| L12 | iOS install tip after third visit | pending |
+| L13 | demo runs with lab rules on (note 05 C10) | done |
+| L14 | disabled Units placeholder promising a later version | done |
+| L15 | "Prefer live camera" setting missing | pending |
+| L16 | PEMAT self-score not recorded | pending |
 
 ## Done
 
@@ -56,6 +75,18 @@ LOW (apply or justify): see the table below as each is done.
   server's TARGET_KEYS_SHOWN, demo twin mirrors them), `tools/e2e/journey.py` step 4 (both places, the
   profile's potassium value, the Profile link): 125/125. Docs: docs/guidance.md, handbook app/guidance.md,
   ARCHITECTURE guidance Frontend bullets (only my hunks staged with `git apply --cached`).
+
+* **L5/L6** settings.js: GROUPS gains "Optional AI" (ai.enabled first); an `ai.*` save calls `KH.ai.forget()`,
+  `KH.ai.renderSettings()`, `KH.ai.renderAddSlot()`; ai.js `renderSettings` builds its parts and only the newest
+  render replaces the slot. Tests: `test_every_server_setting_has_a_named_group` (every admin-editable registry
+  key grouped), `test_an_ai_switch_change_refreshes_the_ai_panel_and_buttons`; journey step 1 no longer reloads
+  after switching AI on and checks the panel updated in place.
+* **L13** `js/mock/settings.js` starts with instance value `targets.lab_rules_enabled: false` (the registry key
+  has no env var, so not an env lock; the demo admin may switch it on); Labs' review note says so in the demo.
+  parity.py section 11 compares the shipped values (server on, demo off) then resets both to the default:
+  691/691. Test: `tests/test_targets_ui.py::test_the_demo_ships_with_lab_rules_off` (runs the mock in Node).
+* **L14** removed the disabled Units select (no spec defers lb/oz); contract line now "units for lab results";
+  `test_the_ui_promises_no_unbuilt_feature`.
 
 ## Coordination
 

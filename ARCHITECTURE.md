@@ -783,7 +783,7 @@ answer "available in the installed app" except for a few recorded barcode fixtur
 * **Settings view** (`#settings`, no tab; header gear and Profile → Open Settings;
   `js/views/settings.js`): Account (name, password, signed-in devices, export zip, delete account,
   recent activity, sign out), Preferences (theme saved as `ui.theme`, week start saved with the
-  profile, units placeholder), Food data (own USDA key, shared-key status, Open Food Facts
+  profile, units for lab results), Food data (own USDA key, shared-key status, Open Food Facts
   consent), AI ideas (placeholder `#set-ai-slot` for M2), This device (install, offline, storage,
   connection, version, clear offline data; `js/pwa.js` supplies the device state), Admin (admins:
   people, invites and one-time links, server settings, shared keys, usage, activity log, about this

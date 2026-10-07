@@ -221,8 +221,11 @@ class Journey:
         self.reauth_if_asked(page)
         wait_js(page, "document.querySelector('#adm-ai-enabled').checked && !document.querySelector('#adm-ai-enabled').disabled")
         check(area, "Admin → Server settings: Optional AI ideas switched on", admin.json("GET", "/api/admin/settings")["settings"]["ai.enabled"]["value"])
-        page.reload()
+        # No reload: Settings → AI ideas above draws again by itself (v0.3.0 review), once, with the opt-in box.
         page.wait_for_selector("#set-ai-slot input[type=checkbox]")
+        check(area, "Settings → AI ideas updates in place after the switch (no 'Off on this server', one copy)",
+              "Off on this server" not in page.inner_text("#set-ai-slot") and page.locator("#set-ai-slot .ai-admin").count() == 1,
+              page.inner_text("#set-ai-slot")[:200])
         if not page.is_checked("#set-ai-slot input[type=checkbox] >> nth=0"):
             page.click("#set-ai-slot label.check >> nth=0")
         page.wait_for_selector("#set-ai-slot >> text=AI ideas are on for you.")

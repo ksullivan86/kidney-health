@@ -1089,6 +1089,9 @@
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
+    // The master switch first: Settings → AI ideas sends admins here to turn it on.
+    ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
+      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.audit_retention_days']],
     ['Activity log', ['audit.retention_days']],
   ];
   const CHOICE_LABEL = {
@@ -1145,6 +1148,12 @@
         toast(value === null ? `${def.label}: back to the default` : `${def.label}: saved`, 'ok');
         renderServerSettings(control ? control.id : id);
         renderFood();
+        // An AI switch changes Settings → AI ideas above and the Add view's AI buttons: ask again, now.
+        if (key.startsWith('ai.') && KH.ai) {
+          if (typeof KH.ai.forget === 'function') KH.ai.forget();
+          KH.ai.renderSettings().catch((e2) => console.warn('AI settings:', e2));
+          if (typeof KH.ai.renderAddSlot === 'function') KH.ai.renderAddSlot().catch((e2) => console.warn('AI buttons:', e2));
+        }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
           loadPeople();

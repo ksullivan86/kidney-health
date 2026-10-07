@@ -1039,6 +1039,15 @@ class Harness:
                 "urine_output_ml": None, "pd_uf_ml": None, "pd_dialysate_kcal": None}
 
         S = "11a profile fields"
+        # The demo starts with targets.lab_rules_enabled off (note 05 C10: off on public demo instances) and a fresh
+        # server with the registry default (on): compare it as shipped, then put both at the default for the matrix.
+        self.both(S, "GET /api/admin/settings targets.lab_rules_enabled as shipped (demo off, server on)", "GET", "/api/admin/settings",
+                  ignore=frozenset({"settings"}))
+        shipped = (self.server.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"],
+                   self.mock.call("GET", "/api/admin/settings")["body"]["settings"]["targets.lab_rules_enabled"]["value"])
+        self.rec.compare(S, "lab rules as shipped: on for a server, off for the demo", [True, False], list(shipped), ignore=frozenset())
+        self.both(S, "PATCH /api/admin/settings lab rules back to the default", "PATCH", "/api/admin/settings",
+                  {"targets.lab_rules_enabled": None}, ignore=frozenset({"settings"}))
         self.put_profile(S, "baseline (every v0.3 field cleared)", base)
         for label, body in [
             ("every field set", {"birth_month": "1971-03", "sex": "female", "activity": "low_active", "transplant_date": "2019-05-02",

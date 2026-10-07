@@ -17,7 +17,8 @@ code is `app/targets.py` (rules), `app/target_rules.py` (every number, source an
 > never suggests insulin or medicine doses, never limits hypo treatments, and the optional AI layer may
 > explain these rules but never changes a number. The rules marked *opinion* have **not yet been
 > reviewed by a renal dietitian or nephrologist** (checklist C10 of note 05; see "Open clinical
-> review" below). Until they have, keep `targets.lab_rules_enabled` off on public demo servers.
+> review" below). Until they have, keep `targets.lab_rules_enabled` off on public demo servers; the
+> built-in demo (`?mock=1` and the preview) starts with it off for that reason (its admin can switch it on).
 
 ## What the person can enter
 

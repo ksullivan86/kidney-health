@@ -5,7 +5,10 @@
    instance value > default). The demo "server" locks one key the way an environment variable
    would: OFF_ENABLED=true, because its barcode lookups answer from three products recorded from Open
    Food Facts (js/mock/barcode.js) and never contact Open Food Facts; each person still has to agree
-   (food.off_consent) as on a real server. Keys are write-only
+   (food.off_consent) as on a real server. It also starts with one admin choice made: lab results do not
+   change suggested targets (targets.lab_rules_enabled off), because note 05 C10 asks public demo instances to
+   ship that way until a clinician has reviewed the lab rules; the very-high-potassium warning still shows, and
+   the demo admin can switch the rules on in Admin → Server settings like any admin. Keys are write-only
    as on the server: only "set", the last four characters of a key of 20 or more characters and
    the time are kept, never the key itself, and the demo never contacts USDA (no key test). */
 (() => {
@@ -16,6 +19,7 @@
   const { route, MockApi, fail } = M;
 
   const DEMO_ENV = { OFF_ENABLED: 'true' };
+  const DEMO_INSTANCE = { 'targets.lab_rules_enabled': false }; // note 05 §7 C10: off on public demo instances
   const LAST4_MIN_LENGTH = 20;
   const PROVIDERS = { usda: { label: 'USDA FoodData Central', prefix: 'providers.usda' } };
 
@@ -28,7 +32,7 @@
 
   Object.assign(MockApi.prototype, {
     _settingsState() {
-      if (!this._settings) this._settings = { env: { ...DEMO_ENV }, instance: {}, users: {}, own: {}, shared: null };
+      if (!this._settings) this._settings = { env: { ...DEMO_ENV }, instance: { ...DEMO_INSTANCE }, users: {}, own: {}, shared: null };
       return this._settings;
     },
     _settingsCtx(userId) {

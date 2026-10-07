@@ -752,13 +752,18 @@
   // ---------------------------------------------------------------------------
   const isAdmin = () => !!(state.me && state.me.role === 'admin');
 
+  // Renders overlap (the view is shown while an admin's AI switch change asks for a fresh one): each builds
+  // its parts first and only the newest, after its last await, replaces the slot, so nothing shows twice.
+  let settingsRender = 0;
   async function renderSettings() {
     const body = $('#set-ai-body');
     const slot = body && $('#set-ai-slot', body);
     if (!slot) return;
+    const ticket = ++settingsRender;
+    const current = () => ticket === settingsRender;
     for (const el of Array.from(body.children)) if (el !== slot) el.remove(); // the M1 placeholder text
     body.dataset.filled = '1';
-    clear(slot).append(h('p', { class: 'muted small' }, 'Loading…'));
+    if (!slot.childElementCount) slot.append(h('p', { class: 'muted small' }, 'Loading…')); // a refresh keeps what is shown until it is ready
     if (MOCK) {
       clear(slot).append(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
         h('p', {}, `Optional AI ideas run in the installed app, with a provider your admin sets up and only after you opt in. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI service.`));
@@ -766,18 +771,20 @@
     }
     let me;
     try { me = await api.me(); } catch (err) {
-      clear(slot).append(h('p', { class: 'form-error' }, `Could not load this: ${err.detail || err.message}`));
+      if (current()) clear(slot).append(h('p', { class: 'form-error' }, `Could not load this: ${err.detail || err.message}`));
       return;
     }
-    clear(slot);
+    if (!current()) return;
+    const parts = [];
     if (!me.enabled) {
-      slot.append(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Off on this server')),
-        h('p', {}, 'Optional AI help (meal ideas, describing a meal, reading a label from a photo) is switched off on this server. Nothing you log is sent to an AI service.'),
-        isAdmin() ? h('p', { class: 'hint' }, 'Admins: switch "Optional AI ideas" on in Admin → Server settings (or AI_ENABLED), and set up a provider below (docs/ai.md).') : null);
+      parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Off on this server')),
+        h('p', {}, 'Optional AI help (meal ideas, describing a meal, reading a label from a photo) is switched off on this server. Nothing you log is sent to an AI service.'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Optional AI ideas" on in Admin → Server settings (or AI_ENABLED), and set up a provider below (docs/ai.md).'));
     } else {
-      slot.append(personalPart(me));
+      parts.push(personalPart(me));
     }
-    if (isAdmin()) slot.append(await adminPart());
+    if (isAdmin()) parts.push(await adminPart());
+    if (current()) slot.replaceChildren(...parts);
   }
 
   function personalPart(me) {
