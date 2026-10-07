@@ -85,6 +85,12 @@ def test_script_types_src_and_case() -> None:
     assert handbook.inline_scripts(html) == ["a()", "b()", "c()", "{}", "e()"]
 
 
+def test_end_tags_with_whitespace_or_junk_still_end_the_script() -> None:
+    # Browsers end a script at "</script" followed by whitespace, "/" or ">", ignoring the rest of the tag.
+    assert handbook.inline_scripts("<script>a()</script\t\n bar>") == ["a()"]
+    assert handbook.inline_scripts("<script>a()</SCRIPT foo='x'><p>y</p><script>b()</script/>") == ["a()", "b()"]
+
+
 def test_hash_matches_the_browser_after_line_break_normalisation() -> None:
     assert handbook.script_hash("a()\r\nb()\rc()") == handbook.script_hash("a()\nb()\nc()") == sha256_source("a()\nb()\nc()")
 

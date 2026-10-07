@@ -133,7 +133,9 @@ def script_hash(text: str) -> str:
 
 # Candidate script elements: a cheap scan so that only these fragments go through the HTML parser
 # (about 20 times faster than parsing every page). A match inside a comment only adds a harmless hash.
-_SCRIPT_ELEMENT = re.compile(r"<script\b.*?</script\s*>", re.S | re.I)
+# An end tag may carry whitespace and junk before ">" ("</script\t\n foo>"); browsers still end the
+# script there, so the scan must too or that script would go unhashed and be blocked.
+_SCRIPT_ELEMENT = re.compile(r"<script\b.*?</script\b[^>]*>", re.S | re.I)
 
 
 def inline_scripts(html: str) -> list[str]:
