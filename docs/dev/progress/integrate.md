@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # integrate (M2 + M3, v0.3.0): one coherent, working app
 
@@ -108,13 +108,68 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   journey/upgrade/replay_app/device/learn/guidance_perf), "Non-goals" points to accounts, Stack names js/ and
   css/, "`usda` (and later `off`)", HIBP check through CheckedTransport, egress section lists every client and the
   test that enforces it. Tests that read ARCHITECTURE.md (17 files) pass.
+* Step 7 (preview): `python scripts/build_preview.py --out $SCRATCHPAD/preview/kidney-diet-log.html` → 1,403,623
+  bytes (1370.7 KiB). `python tools/e2e/sandbox.py --preview <that file> --out $S/sandbox-final --port 8380`: 17
+  walks + 3 sweeps + probes, 0 issues, 0 console messages / CSP violations, only the emulator's own document
+  requests (952 server requests, 0 unexpected). Looked at What fits now (phone dark) and the scanned-product entry
+  sheet (phone light): correct.
+* Final static checks (after all commits): node vectors (rules 5721, settings 444, targets 1859, kidney 140,
+  guidance 48, barcode 2028), node --check 49 files, TODO/FIXME/XXX/NotImplementedError/skip/xfail grep: none;
+  SHA-pin check, actionlint, hadolint (3 Containerfiles), shellcheck, zizmor --offline, kustomize + kubeconform
+  (12 valid): clean.
+* DG47 (handbook sources.yml, 14 recipe pages): still dead (medicine.umich.edu → 403) and the Wayback Machine has
+  no snapshot (`archived_snapshots: {}`); a replacement needs a fact-checked source for "≤ 600 mg sodium or
+  potassium per meal": handbook owner.
+
+## Final verification (HEAD after 48d45ef, no app code changed since journey/upgrade were first run)
+
+* pytest: Python 3.11.15 3189 passed; Python 3.12.3 venv with only requirements-dev.lock 3189 passed; 0 skipped,
+  0 xfail (one UserWarning: 6 sources.yml ids not cited, handbook owner).
+* parity.py (8381/8382) 6511/6511 in 32 sections; its only console line was Chromium's /favicon.ico 404 from the
+  harness's own http.server wrapper: fixed in tools/e2e/parity.py (inline empty icon), sections 0,1,14 rerun clean.
+* regress.py --no-pytest (8383) 485 passed, 0 failed; journey.py (8384–8386, handbook from the strict build)
+  122/122; upgrade.py (8387/8388) 71/71; sandbox.py on the preview 0 issues (step 7).
+* Handbook: build_handbook --check up to date, mkdocs --strict ok, check_links 119 pages 14,636 internal links 0
+  broken. No server left on 8380–8389.
 
 ## In progress
 
+(none)
+
 ## Cross-owner fixes (file, why, test)
+
+* app/auth/policy.py: breach check through CheckedTransport (tests/test_passwords.py, tests/test_egress.py).
+* app/barcode.py: 503 off_consent_required instead of 404 when Open Food Facts was never asked
+  (tests/test_barcode_api.py).
+* app/guidance/*, js twins, nutrients FLAGS, curated foods, data/foods.json: alcohol flag (tests/guidance/test_alcohol.py).
+* app/static/css/base.css, touch.css: Learn link tap targets (journey.py layout checks).
+* deploy/*, docs/deployment.md: v0.3 settings and egress (tests/test_compose_env.py).
 
 ## Decisions
 
+* compose passes the v0.3 keys as `${NAME:-}`: blank means unset, so nothing is locked unless deploy/.env sets
+  it and an admin still decides in Settings; secrets stay file-only.
+* Quadlet AI example uses a LAN address, never host.containers.internal to a 127.0.0.1 service or pasta:--map-gw.
+* DG47 not replaced: no archived copy; a new source needs a handbook fact-check.
+
 ## Not verified here
 
+* Image build (docker client without a daemon; Podman absent). Caddy overlay `compose config` needs its
+  deploy/caddy/caddy.env (not created here).
+* Owner observations above (Projected over vs plan tolerance, "Egg white, raw" as a planned protein, 6 uncited
+  sources, OFF product 0099999999990 needs a moderator).
+
 ## Commands
+
+```
+S=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/v030/integrate
+python -m pytest; $S/venv312ci/bin/python -m pytest; node tests/js/run_vectors.mjs
+python scripts/build_preview.py --out $SCRATCHPAD/preview/kidney-diet-log.html
+python tools/e2e/sandbox.py --preview $SCRATCHPAD/preview/kidney-diet-log.html --out $S/sandbox-final --port 8380
+python tools/e2e/parity.py --port 8381 --static-port 8382 --out $S/final/parity
+python tools/e2e/regress.py --no-pytest --port 8383 --out $S/final/regress
+python tools/e2e/journey.py --site $S/learn --port 8384 --ai-port 8385 --off-port 8386 --out $S/final/journey
+python tools/e2e/upgrade.py --port 8387 --out $S/final/upgrade
+(cd handbook && HANDBOOK_SITE_URL=http://localhost/learn/ HANDBOOK_APP_LINK=/ mkdocs build --strict -d $S/learn)
+python handbook/tools/check_links.py $S/learn --allow /
+```

@@ -333,7 +333,10 @@ def start_processes(server_python: str) -> Api:
     fragment = PREVIEW.read_text(encoding="utf-8")
     (SITE / "index.html").write_text(
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n</head>\n<body>\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        # An empty inline icon: otherwise Chromium asks this plain http.server for /favicon.ico, and its 404
+        # shows up as a "browser console" error that has nothing to do with the preview.
+        '<link rel="icon" href="data:,">\n</head>\n<body>\n'
         + fragment + "</body>\n</html>\n",
         encoding="utf-8",
     )
