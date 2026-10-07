@@ -6,7 +6,7 @@
   const KH = window.KH;
   const { h, s, $, $$, clear, api, state, toastError, router, sheets } = KH;
   const { NUT, ASSESSMENT, fmtNum, pct } = KH.rules;
-  const { TREND_ORDER, LEVEL_TEXT, levelPill } = KH.ui;
+  const { TREND_ORDER, LEVEL_TEXT, levelPill, unknownOf, foodsNotListing, atLeast, atLeastWords } = KH.ui;
   const { todayStr, addDays, parseDate, fmtDateShort, fmtMonthDay, fmtRange, fmtChange } = KH.util;
   const { MOCK } = KH.flags;
 
@@ -111,28 +111,34 @@
       // The tag names the period actually averaged: "weekly average" only for a 7-day range.
       const avgTag = sum.days === 7 ? 'weekly average' : `${sum.days}-day average`;
       const avgTitle = sum.days === 7 ? 'Judged on the weekly average' : `Judged on the ${sum.days}-day average`;
-      const level = nt.level || 'ok';
-      const avgText = nt.average == null ? '—' : fmtNum(nt.average, key);
+      // Days with foods that do not list the value: the average misses them, so it may be higher.
+      const unkDays = Number(nt.unknown_days || 0);
+      const level = unkDays && (nt.level || 'ok') === 'ok' ? 'unknown' : nt.level || 'ok';
+      const avgText = nt.average == null ? '—' : atLeast(fmtNum(nt.average, key), unkDays);
+      const avgWords = nt.average == null ? 'no data' : atLeastWords(fmtNum(nt.average, key), unkDays);
+      const unkText = unkDays ? `${unkDays} ${unkDays === 1 ? 'day' : 'days'} with foods that do not list ${n.label.toLowerCase()} (${nt.unknown_entries} ${nt.unknown_entries === 1 ? 'food' : 'foods'})` : '';
       const change = fmtChange(nt.change_pct);
       const dir = nt.change_pct == null ? '' : nt.change_pct > 0.05 ? 'up' : nt.change_pct < -0.05 ? 'down' : 'flat';
       // For limits a rise is bad news; for calories/protein it is neutral.
       const tone = nt.role === 'limit' ? (dir === 'up' ? 'bad' : dir === 'down' ? 'good' : '') : '';
       const row = h('div', { class: `period-row level-${level}`, role: 'group',
-        'aria-label': `${n.label}: average ${avgText} of ${fmtNum(nt.target, key)} ${n.unit} per day${nt.level ? `, ${LEVEL_TEXT[nt.level]}` : ''}, ${nt.days_over} days over${change ? `, ${change} versus the previous period` : ''}` });
+        'aria-label': `${n.label}: average ${avgWords} of ${fmtNum(nt.target, key)} ${n.unit} per day${nt.level ? `, ${LEVEL_TEXT[level]}` : ''}, ${nt.days_over} days over${change ? `, ${change} versus the previous period` : ''}${unkText ? `; ${unkText}` : ''}` });
       row.append(h('div', { class: 'period-top' },
         h('div', { class: 'period-name' }, n.label,
           h('span', { class: `strip-tag ${weekly ? 'weekly' : 'daily'}`, title: weekly ? avgTitle : 'Judged day by day' }, weekly ? avgTag : 'day by day')),
-        nt.level ? levelPill(nt.level, LEVEL_TEXT[nt.level]) : h('span', { class: 'muted small' }, 'no data')));
+        nt.level ? levelPill(level, LEVEL_TEXT[level]) : h('span', { class: 'muted small' }, 'no data')));
       row.append(h('div', { class: 'period-nums tabular' }, h('b', {}, avgText), h('span', { class: 'muted' }, ` / ${fmtNum(nt.target, key)} ${n.unit} per day`)));
       row.append(h('div', { class: 'strip-track' }, h('div', { class: 'strip-fill', style: `width:${Math.round(Math.max(0, Math.min(1, nt.fraction || 0)) * 100)}%` })));
       const facts = [];
-      if (nt.average != null) facts.push(`${pct(nt.fraction)} % of ${nt.role === 'goal' ? 'goal' : 'target'}`);
+      if (nt.average != null) facts.push(`${atLeast(String(pct(nt.fraction)), unkDays)} % of ${nt.role === 'goal' ? 'goal' : 'target'}`);
       facts.push(`${nt.days_over} ${nt.days_over === 1 ? 'day' : 'days'} over`);
+      if (unkDays) facts.push(`${unkDays} ${unkDays === 1 ? 'day' : 'days'} not complete`);
       if (nt.max_day) facts.push(`highest ${fmtMonthDay(nt.max_day.date)}: ${fmtNum(nt.max_day.value, key)}`);
       const foot = h('div', { class: 'period-foot' }, facts.join(' · '));
       if (change) foot.append(h('span', { class: `period-change ${tone}` }, `${change} vs previous ${sum.days} days`));
       else if (nt.average != null) foot.append(h('span', { class: 'period-change' }, `no data in the previous ${sum.days} days`));
       row.append(foot);
+      if (unkText) row.append(h('div', { class: 'period-foot not-listed' }, `${unkText[0].toUpperCase()}${unkText.slice(1)}: the average may be higher.`));
       grid.append(row);
     }
     body.append(grid);
@@ -142,7 +148,11 @@
     }
     for (const t of sum.notes || []) notes.append(h('li', {}, t));
   }
-  function hasData(day) { return !!(day.totals && Object.values(day.totals).some((v) => v)); }
+  // A day with eaten food, even when its foods list none of a value (counts from the server; older answers: any total).
+  function hasData(day) {
+    if (day.counts && typeof day.counts.eaten === 'number') return day.counts.eaten > 0;
+    return !!(day.totals && Object.values(day.totals).some((v) => v));
+  }
   function renderTrends() {
     const t = state.trends;
     if (!t) return;
@@ -157,58 +167,85 @@
     const width = Math.max(240, Math.floor((chartsEl.clientWidth - (chartsEl.clientWidth >= 700 ? 12 : 0)) / (chartsEl.clientWidth >= 700 ? 2 : 1)) - 34);
     for (const key of ordered) chartsEl.append(chartCard(key, t.days, width));
   }
+  // How a target reads (the Today rule, ARCHITECTURE.md "Frontend (M2 targets)"): a {min}-only target is a goal
+  // ("goal at least 29", progress, never "over"); a range with min === max is "about 55"; else "target 50–60" or "limit".
+  function targetKind(target, min) {
+    if (target == null && min != null) return 'goal';
+    if (target != null && min != null && Number(min) === Number(target)) return 'about';
+    if (target != null && min != null) return 'range';
+    return target != null ? 'limit' : 'none';
+  }
   function chartCard(key, days, width) {
     const n = NUT[key];
     const points = days.map((d) => {
       const st = (d.status && d.status[key]) || {};
-      return { date: d.date, value: d.totals ? d.totals[key] || 0 : 0, level: st.level || 'ok', target: st.target, min: st.min, has: hasData(d) };
+      const unknown = st.unknown != null ? Number(st.unknown) : unknownOf(d.unknown, key);
+      const level = unknown && (st.level || 'ok') === 'ok' ? 'unknown' : st.level || 'ok';
+      return { date: d.date, value: d.totals ? d.totals[key] || 0 : 0, level, target: st.target, min: st.min, unknown, has: hasData(d) };
     });
-    const last = [...points].reverse().find((p) => p.target != null) || {};
-    const target = last.target;
-    const min = last.min;
+    const last = [...points].reverse().find((p) => p.target != null || p.min != null) || {};
+    const kind = targetKind(last.target, last.min);
+    const target = kind === 'goal' ? null : last.target;
+    const goal = kind === 'goal' ? Number(last.min) : null;
+    const min = kind === 'range' ? last.min : null;
     const withData = points.filter((p) => p.has);
     const avg = withData.length ? withData.reduce((a, p) => a + p.value, 0) / withData.length : null;
+    const unknownDays = withData.filter((p) => p.unknown > 0).length;
     const overDays = withData.filter((p) => p.level === 'over').length;
+    const reachedDays = goal != null ? withData.filter((p) => p.value >= goal).length : 0;
+    const head = kind === 'goal' ? `goal at least ${fmtNum(goal, key)}` : kind === 'about' ? `about ${fmtNum(target, key)}`
+      : kind === 'range' ? `target ${fmtNum(min, key)}–${fmtNum(target, key)}` : kind === 'limit' ? `target ${fmtNum(target, key)}` : 'no target';
     const card = h('section', { class: 'card chart-card', 'aria-labelledby': `chart-h-${key}` });
     card.append(h('div', { class: 'card-head' }, h('h3', { class: 'card-title', id: `chart-h-${key}` }, `${n.label} (${n.unit})`),
-      h('span', { class: 'muted small tabular' }, target != null ? `target ${min != null ? `${fmtNum(min, key)}–` : ''}${fmtNum(target, key)}` : 'no target')));
+      h('span', { class: 'muted small tabular' }, head)));
+    const count = (k, word) => `${k} ${k === 1 ? 'day' : 'days'} ${word}`;
     card.append(h('div', { class: 'chart-sub' },
-      h('span', {}, avg != null ? `Average ${fmtNum(avg, key)} ${n.unit}` : 'No entries in this range'),
-      withData.length ? h('span', {}, `${overDays} ${overDays === 1 ? 'day' : 'days'} over`) : null));
-    card.append(barChart(key, points, target, min, width));
+      h('span', {}, avg != null ? `Average ${atLeast(fmtNum(avg, key), unknownDays)} ${n.unit}` : 'No entries in this range'),
+      withData.length ? h('span', {}, kind === 'goal' ? count(reachedDays, 'reached the goal') : count(overDays, kind === 'about' ? 'above' : 'over')) : null,
+      unknownDays ? h('span', { class: 'not-listed' }, `${count(unknownDays, 'not complete')}: some foods do not list ${n.label.toLowerCase()}`) : null));
+    card.append(barChart(key, points, { target, min, goal, kind }, width));
     // Table twin (values reachable without hover)
+    const base = goal != null ? goal : target;
     const table = h('table', { class: 'data-table' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Date'), h('th', { class: 'num' }, n.unit), h('th', { class: 'num' }, '% of target'), h('th', {}, 'Level'))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'Date'), h('th', { class: 'num' }, n.unit), h('th', { class: 'num' }, goal != null ? '% of goal' : '% of target'), h('th', {}, 'Level'))));
     const tb = h('tbody');
     for (const p of points) {
+      const levelCell = !p.has ? h('span', { class: 'muted' }, 'no entries')
+        : goal != null ? h('span', { class: 'lvl level-ok' }, h('i', { class: 'swatch' }), p.value >= goal ? 'Goal reached' : 'Below goal')
+          : h('span', { class: `lvl level-${p.level}` }, h('i', { class: 'swatch' }), LEVEL_TEXT[p.level]);
       tb.append(h('tr', {},
         h('td', {}, fmtDateShort(p.date)),
-        h('td', { class: 'num' }, p.has ? fmtNum(p.value, key) : '—'),
-        h('td', { class: 'num' }, p.has && target ? `${pct(p.value / target)} %` : '—'),
-        h('td', {}, p.has ? h('span', { class: `lvl level-${p.level}` }, h('i', { class: 'swatch' }), LEVEL_TEXT[p.level]) : h('span', { class: 'muted' }, 'no entries'))));
+        h('td', { class: 'num' }, p.has ? atLeast(fmtNum(p.value, key), p.unknown) : '—'),
+        h('td', { class: 'num' }, p.has && base ? `${atLeast(String(pct(p.value / base)), p.unknown)} %` : '—'),
+        h('td', {}, levelCell, p.has && p.unknown ? h('span', { class: 'muted small' }, ` (${foodsNotListing(p.unknown, key)})`) : null)));
     }
     table.append(tb);
     card.append(h('details', { class: 'inline-details' }, h('summary', {}, 'Show as table'), table));
     return card;
   }
-  function barChart(key, points, target, min, width) {
+  function barChart(key, points, { target, min, goal, kind }, width) {
     // Across a month boundary the day numbers restart at 1, so a second label line names the
     // month under the first labelled bar of each month (padB grows to make room for it).
     const spansMonths = new Set(points.map((p) => p.date.slice(0, 7))).size > 1;
     const padL = 46, padR = 10, padT = 14, padB = spansMonths ? 34 : 22, H = 128 + padB;
     const W = Math.max(220, width);
     const plotW = W - padL - padR, plotH = H - padT - padB;
-    const maxV = Math.max(target || 0, ...points.map((p) => p.value), 1);
-    const yMax = target ? Math.max(target * 1.25, maxV * 1.05) : maxV * 1.1;
+    const line = target || goal || 0; // the limit, "about" or goal line
+    const maxV = Math.max(line, ...points.map((p) => p.value), 1);
+    const yMax = line ? Math.max(line * 1.25, maxV * 1.05) : maxV * 1.1;
     const y = (v) => padT + plotH - (v / yMax) * plotH;
     const slot = plotW / points.length;
     const barW = Math.min(24, Math.max(3, slot - 4));
     const svg = s('svg', { class: 'chart-svg', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'group',
-      'aria-label': `${NUT[key].label} per day for the last ${points.length} days${target ? `, target ${fmtNum(target, key)} ${NUT[key].unit}` : ''}` });
+      'aria-label': `${NUT[key].label} per day for the last ${points.length} days${goal ? `, goal at least ${fmtNum(goal, key)} ${NUT[key].unit}`
+        : target ? `, ${kind === 'about' ? 'about' : 'target'} ${fmtNum(target, key)} ${NUT[key].unit}` : ''}` });
     // baseline + y labels
     svg.append(s('line', { class: 'axis', x1: padL, x2: W - padR, y1: y(0) + 0.5, y2: y(0) + 0.5 }));
     svg.append(s('text', { x: padL - 6, y: y(0) + 3, 'text-anchor': 'end' }, '0'));
-    if (target) {
+    if (goal) {
+      svg.append(s('line', { class: 'target goal', x1: padL, x2: W - padR, y1: y(goal), y2: y(goal) }));
+      svg.append(s('text', { x: padL - 6, y: y(goal) + 3.5, 'text-anchor': 'end' }, fmtNum(goal, key)));
+    } else if (target) {
       svg.append(s('line', { class: 'target', x1: padL, x2: W - padR, y1: y(target), y2: y(target) }));
       svg.append(s('text', { x: padL - 6, y: y(target) + 3.5, 'text-anchor': 'end' }, fmtNum(target, key)));
       if (min != null) {
@@ -223,8 +260,13 @@
       const x0 = padL + i * slot;
       const bx = x0 + (slot - barW) / 2;
       const bar = p.has ? roundedBar(bx, y(p.value), barW, y(0) - y(p.value), 4) : s('line', { class: 'nodata', x1: bx + 1, x2: bx + barW - 1, y1: y(0) - 1, y2: y(0) - 1 });
-      bar.setAttribute('class', p.has ? `bar level-${p.level}` : 'nodata');
-      const text = p.has ? `${fmtDateShort(p.date)}: ${fmtNum(p.value, key)} ${NUT[key].unit}${target ? ` (${pct(p.value / target)} % of target), ${LEVEL_TEXT[p.level]}` : ''}` : `${fmtDateShort(p.date)}: no entries`;
+      // A goal is progress, never a warning (as on Today); a day whose foods do not all list the value gets a dashed edge.
+      bar.setAttribute('class', p.has ? `bar level-${goal ? 'ok' : p.level}${p.unknown ? ' incomplete' : ''}` : 'nodata');
+      const amount = `${atLeastWords(fmtNum(p.value, key), p.unknown)} ${NUT[key].unit}`;
+      const judged = goal ? ` (${pct(p.value / goal)} % of goal${p.value >= goal ? ', reached' : ''})`
+        : target ? ` (${pct(p.value / target)} % of target), ${LEVEL_TEXT[p.level]}` : '';
+      const missing = p.unknown ? `; ${foodsNotListing(p.unknown, key)}` : '';
+      const text = p.has ? `${fmtDateShort(p.date)}: ${amount}${judged}${missing}` : `${fmtDateShort(p.date)}: no entries`;
       const hit = s('rect', { class: 'hit', x: x0, y: padT - 4, width: slot, height: plotH + 4, rx: 4, tabindex: 0, role: 'img', 'aria-label': text });
       hit.append(s('title', {}, text));
       const show = () => { bar.style.opacity = '0.7'; showTip(hit, text, p); };

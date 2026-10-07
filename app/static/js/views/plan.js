@@ -7,7 +7,7 @@
   const { h, $, $$, clear, api, state, toast, toastError, router, sheets, confirm } = KH;
   const { NUT, NUTRIENTS, MEALS, MEAL_LABEL, fmtNum, fmtServings, pct } = KH.rules;
   const { KEY_NUMBERS, ROW_NUMBERS, PLAN_CHIPS, WEEKDAYS, LEVEL_TEXT, ratingIcon, plusIcon, dashedIcon, checkIcon, closeIcon,
-    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn } = KH.ui;
+    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, foodsNotListing, atLeast, atLeastWords } = KH.ui;
   const { todayStr, parseDate, addDays, fmtDateLong, fmtMonthDay, fmtRange, weekdayMon, weekStartOf, defaultStatusFor, defaultMealForNow, debounce } = KH.util;
   const { SHOP_KEY } = KH.keys;
 
@@ -91,10 +91,14 @@
         any = true;
         const n = NUT[key];
         const val = st.value != null ? st.value : totals[key] || 0;
-        chips.append(h('span', { class: `plan-chip level-${st.level || 'ok'}`, role: 'img',
-          title: `${n.label}: projected ${fmtNum(val, key)} of ${fmtNum(st.target, key)} ${n.unit} (${pct(st.fraction)} %)`,
-          'aria-label': `${n.label} ${fmtNum(val, key)} of ${fmtNum(st.target, key)} ${n.unit}, ${LEVEL_TEXT[st.level || 'ok']}` },
-          h('i', { class: 'swatch', 'aria-hidden': 'true' }), h('span', { class: 'plan-chip-k' }, n.short), h('b', {}, fmtNum(val, key))));
+        // Foods that do not list the value: the total may be higher ("≥", never shown as OK).
+        const unk = st.unknown != null ? Number(st.unknown) : unknownOf(d.projected_unknown, key);
+        const level = unk && (st.level || 'ok') === 'ok' ? 'unknown' : st.level || 'ok';
+        const extra = unk ? `; ${foodsNotListing(unk, key)}` : '';
+        chips.append(h('span', { class: `plan-chip level-${level}`, role: 'img',
+          title: `${n.label}: projected ${atLeastWords(fmtNum(val, key), unk)} of ${fmtNum(st.target, key)} ${n.unit} (${pct(st.fraction)} %)${extra}`,
+          'aria-label': `${n.label} ${atLeastWords(fmtNum(val, key), unk)} of ${fmtNum(st.target, key)} ${n.unit}, ${LEVEL_TEXT[level]}${extra}` },
+          h('i', { class: 'swatch', 'aria-hidden': 'true' }), h('span', { class: 'plan-chip-k' }, n.short), h('b', {}, atLeast(fmtNum(val, key), unk))));
       }
       if (!any) chips.append(h('span', { class: 'muted small plan-empty' }, hasEntries ? 'No targets set' : isPast ? 'Nothing logged' : 'Nothing planned yet'));
       open.append(chips);

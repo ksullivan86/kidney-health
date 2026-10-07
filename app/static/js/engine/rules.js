@@ -354,6 +354,22 @@
     }
     return acc;
   }
+  // nutrients.count_unknown / merge_unknown / mark_unknown: addTotals skips an unknown value, so every total also
+  // says how many entries it misses ({key: entries}, only keys with a count). A total of 0 with a count is
+  // "not listed", never "none" (most scanned products list no potassium or phosphorus).
+  function countUnknown(acc, values) {
+    for (const key of NUTRIENT_KEYS) if (!values || values[key] == null) acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }
+  function mergeUnknown(...counts) {
+    const out = {};
+    for (const c of counts) for (const [key, n] of Object.entries(c || {})) out[key] = (out[key] || 0) + Number(n);
+    return out;
+  }
+  function markUnknown(status, unknown) {
+    for (const [key, item] of Object.entries(status)) item.unknown = Number((unknown || {})[key] || 0);
+    return status;
+  }
   function scaleNutrients(values, factor) {
     return Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, values[k] == null ? null : Number(values[k]) * factor]));
   }
@@ -437,6 +453,6 @@
     // warnings and ratings
     thresholdLevel, carbChoicesText, warningMessage, evaluateWarnings, ratingFromWarnings,
     // totals, daily status, alerts
-    emptyTotals, addTotals, scaleNutrients, targetBounds, statusLevel, dailyStatus, finiteFraction, buildAlerts, mealCarbAlerts, summaryTarget,
+    emptyTotals, addTotals, countUnknown, mergeUnknown, markUnknown, scaleNutrients, targetBounds, statusLevel, dailyStatus, finiteFraction, buildAlerts, mealCarbAlerts, summaryTarget,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

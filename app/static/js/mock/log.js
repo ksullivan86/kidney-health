@@ -10,8 +10,8 @@
   'use strict';
   const KH = window.KH;
   const { NUT, NUTRIENT_KEYS, MEAL_KEYS, ASSESSMENT, pyRound, pyRepr, pyFsum, sqliteSum, roundValue, roundNutrients, isIntUnit,
-    evaluateWarnings, ratingFromWarnings, emptyTotals, addTotals, scaleNutrients, statusLevel, dailyStatus, buildAlerts, mealCarbAlerts,
-    summaryTarget } = KH.rules;
+    evaluateWarnings, ratingFromWarnings, emptyTotals, addTotals, countUnknown, mergeUnknown, markUnknown, scaleNutrients, statusLevel,
+    dailyStatus, buildAlerts, mealCarbAlerts, summaryTarget } = KH.rules;
   const { todayStr, addDays, daysBetween, weekdayMon } = KH.util;
   const M = KH.mock;
   const { route, MockApi, Check, fail, failFields, MEAL_RANK, MAX_INTERDIALYTIC_DAYS } = M;
@@ -90,13 +90,25 @@
       const meals = Object.fromEntries(MEAL_KEYS.map((m) => [m, emptyTotals()]));
       const plannedMeals = Object.fromEntries(MEAL_KEYS.map((m) => [m, emptyTotals()]));
       const counts = { eaten: 0, planned: 0 };
+      // log.day_figures: every total says how many entries it misses (values not listed).
+      const unknown = {}, plannedUnknown = {};
+      const mealUnknown = Object.fromEntries(MEAL_KEYS.map((m) => [m, {}]));
+      const plannedMealUnknown = Object.fromEntries(MEAL_KEYS.map((m) => [m, {}]));
       for (const row of rows) {
-        if (row.status === 'planned') { addTotals(planned, row.nutrients); addTotals(plannedMeals[row.meal] || (plannedMeals[row.meal] = emptyTotals()), row.nutrients); counts.planned += 1; }
-        else { addTotals(eaten, row.nutrients); addTotals(meals[row.meal] || (meals[row.meal] = emptyTotals()), row.nutrients); counts.eaten += 1; }
+        if (row.status === 'planned') {
+          addTotals(planned, row.nutrients); addTotals(plannedMeals[row.meal] || (plannedMeals[row.meal] = emptyTotals()), row.nutrients);
+          countUnknown(plannedUnknown, row.nutrients); countUnknown(plannedMealUnknown[row.meal] || (plannedMealUnknown[row.meal] = {}), row.nutrients);
+          counts.planned += 1;
+        } else {
+          addTotals(eaten, row.nutrients); addTotals(meals[row.meal] || (meals[row.meal] = emptyTotals()), row.nutrients);
+          countUnknown(unknown, row.nutrients); countUnknown(mealUnknown[row.meal] || (mealUnknown[row.meal] = {}), row.nutrients);
+          counts.eaten += 1;
+        }
       }
       const projected = addTotals({ ...eaten }, planned);
-      const status = dailyStatus(eaten, p.targets, p.warn_fraction);
-      const projectedStatus = dailyStatus(projected, p.targets, p.warn_fraction);
+      const projectedUnknown = mergeUnknown(unknown, plannedUnknown);
+      const status = markUnknown(dailyStatus(eaten, p.targets, p.warn_fraction), unknown);
+      const projectedStatus = markUnknown(dailyStatus(projected, p.targets, p.warn_fraction), projectedUnknown);
       const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g)];
       let projectedAlerts = [];
       if (counts.planned) {
@@ -107,14 +119,17 @@
         status, projected_status: projectedStatus,
         meals: Object.fromEntries(Object.entries(meals).map(([m, v]) => [m, roundNutrients(v)])),
         planned_meals: Object.fromEntries(Object.entries(plannedMeals).map(([m, v]) => [m, roundNutrients(v)])),
-        alerts, projected_alerts: projectedAlerts, counts };
+        alerts, projected_alerts: projectedAlerts, counts,
+        unknown, planned_unknown: plannedUnknown, projected_unknown: projectedUnknown, meal_unknown: mealUnknown, planned_meal_unknown: plannedMealUnknown };
     },
     _day(date) {
       const rows = this._fetchEntries({ start: date, end: date });
       const f = this._dayFigures(rows);
       return { date, entries: rows.map((r) => this._entryView(r)), totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals,
         targets: this._profileView().targets, status: f.status, projected_status: f.projected_status, meals: f.meals, planned_meals: f.planned_meals,
-        alerts: f.alerts, projected_alerts: f.projected_alerts, counts: f.counts };
+        alerts: f.alerts, projected_alerts: f.projected_alerts, counts: f.counts,
+        unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown,
+        meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown };
     },
     _range(start, end) {
       start = this._dateParam(start, 'start'); end = this._dateParam(end, 'end');
@@ -125,7 +140,8 @@
       for (let d = start; d <= end; d = addDays(d, 1)) {
         const f = this._dayFigures(byDate.get(d) || []);
         days.push({ date: d, totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals, status: f.status,
-          projected_status: f.projected_status, counts: f.counts });
+          projected_status: f.projected_status, counts: f.counts,
+          unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown });
       }
       return { days };
     },
@@ -139,6 +155,19 @@
       }
       const out = {};
       for (const [date, rows] of groups) out[date] = Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, Number(sqliteSum(rows.map((r) => r.nutrients[k])) || 0)]));
+      return out;
+    },
+    // log.eaten_day_unknown: {date: {key: eaten entries without a value}}, only days and keys with a count.
+    _eatenDayUnknown(start, end) {
+      const out = {};
+      for (const e of this._entries) {
+        if (e.status !== 'eaten' || e.date < start || e.date > end) continue;
+        for (const k of NUTRIENT_KEYS) {
+          if (e.nutrients[k] != null) continue;
+          const day = out[e.date] || (out[e.date] = {});
+          day[k] = (day[k] || 0) + 1;
+        }
+      }
       return out;
     },
     _summary(start, end) {
@@ -157,6 +186,8 @@
       let fetchFrom = addDays(s, -days);
       if (interval && interval.since < fetchFrom) fetchFrom = interval.since;
       const dayTotals = this._eatenDayTotals(fetchFrom, e);
+      const dayUnknown = this._eatenDayUnknown(fetchFrom, e);
+      const unknownOn = (d, key) => Number((dayUnknown[d] || {})[key] || 0);
       const val = (d, key) => { const v = Number((dayTotals[d] || {})[key] || 0); return Number.isFinite(v) ? v : 0; };
       const avg = (vals) => (vals.length ? pyFsum(vals) / vals.length : null);
       const current = [], previous = [];
@@ -179,7 +210,9 @@
           days_over: values.filter((x) => x[1] > target).length,
           max_day: maxDay ? { date: maxDay[0], value: roundValue(key, maxDay[1]) } : null,
           previous_average: previousAverage == null ? null : roundValue(key, previousAverage), change_pct: changePct,
-          assessment: ASSESSMENT[key] || 'weekly_average' };
+          assessment: ASSESSMENT[key] || 'weekly_average',
+          unknown_entries: current.reduce((n, d) => n + unknownOn(d, key), 0),
+          unknown_days: current.filter((d) => unknownOn(d, key) > 0).length };
       }
       let interdialytic = null;
       if (interval) {
@@ -188,11 +221,12 @@
           const target = summaryTarget(targets[key]);
           if (target == null) continue;
           const window = [];
-          for (let d = interval.since; d <= interval.end; d = addDays(d, 1)) window.push(val(d, key));
+          let missing = 0;
+          for (let d = interval.since; d <= interval.end; d = addDays(d, 1)) { window.push(val(d, key)); missing += unknownOn(d, key); }
           const total = pyFsum(window);
           const limit = target * interval.days;
           const fraction = pyRound(total / limit, 2);
-          nut[key] = { total: roundValue(key, total), limit: roundValue(key, limit), fraction, level: statusLevel(fraction, wf) };
+          nut[key] = { total: roundValue(key, total), limit: roundValue(key, limit), fraction, level: statusLevel(fraction, wf), unknown_entries: missing };
         }
         interdialytic = { since: interval.since, days: interval.days, next: interval.next, nutrients: nut };
       }

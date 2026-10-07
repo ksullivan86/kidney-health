@@ -363,6 +363,26 @@ class Journey:
               str(self.off.requests))
         check(area, "the agreement is the person's setting", admin.json("GET", "/api/me/settings")["settings"]["food.off_consent"]["value"] is True)
         self.save_entry(page, "breakfast")
+        # The spread lists no potassium or phosphorus: every total says so and none looks complete (v0.3.0 review, C1).
+        day = admin.json("GET", f"/api/log?date={TODAY.isoformat()}")
+        check(area, "the day counts the spread's potassium and phosphorus as not listed",
+              day["unknown"].get("potassium_mg", 0) >= 1 and day["meal_unknown"]["breakfast"].get("phosphorus_mg", 0) >= 1
+              and day["status"]["potassium_mg"]["unknown"] >= 1, json.dumps({k: day[k] for k in ("unknown", "meal_unknown")}))
+        self.goto(page, "#today", "#view-today:not([hidden]) #status-bars .stat")
+        shown = page.evaluate("""() => {
+          const stat = [...document.querySelectorAll('#status-bars .stat')].find((el) => /^Potassium/.test(el.querySelector('.stat-label').textContent));
+          const meal = document.querySelector('#meal-h-breakfast').closest('.meal').querySelector('.meal-sum');
+          return { stat: stat ? stat.innerText : '', meal: meal ? meal.innerText : '' };
+        }""")
+        check(area, "Today: the potassium bar says '≥', 'Not complete' (or a warning) and why, and never 'mg left'",
+              ("≥" in shown["stat"] or "not listed" in shown["stat"]) and "does not list potassium" in shown["stat"] and "left" not in shown["stat"]
+              and ("Not complete" in shown["stat"] or "limit" in shown["stat"]), shown["stat"])
+        check(area, "Today: breakfast's line says potassium and phosphorus are not listed (never 'K 0')",
+              "not listed" in shown["meal"] and "K 0 " not in shown["meal"] + " ", shown["meal"])
+        self.shot(page, "04-today-not-listed")
+        self.goto(page, "#trends", "#view-trends:not([hidden]) #charts .chart-card")
+        chart = page.inner_text("#charts .chart-card:has(#chart-h-potassium_mg)")
+        check(area, "Trends: the potassium chart says the day is not complete", "not complete" in chart and "≥" in chart, chart[:300])
         # c) A label photo read by AI.
         self.goto(page, "#add", "#view-add:not([hidden]) #btn-quick")
         page.click("#btn-quick")

@@ -39,7 +39,9 @@ Every food and log entry gets `medium` or `high` warnings per serving:
   scanned food or one you typed in with **Quick add**. This rule is marked for review by a renal
   dietitian ([architecture contract][ARCH], v0.3 item 9; [Barcodes and label photos](barcode-and-photo.md)).
 - A missing value is never treated as 0: a food from a label or a barcode that does not list potassium or
-  phosphorus says "not listed", and the day's total may then be too low.
+  phosphorus says "not listed", and every total it is part of is shown as a lower bound ("≥ 55 mg",
+  "+ 1 not listed") with **Not complete** instead of **OK**, because the true total may be higher. A total
+  that is already near or over the limit keeps its warning: a missing value can only add to it.
 - **Hypo treatments** (glucose tablets, measured juice) get **no carbohydrate warning**: fast
   carbohydrate is the point of treating a low. Their potassium, phosphorus and sodium warnings still
   show, so the lowest-potassium rescue can be chosen. Low treatments are never blocked or warned

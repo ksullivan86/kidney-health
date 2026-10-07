@@ -17,6 +17,9 @@
 .chart-svg .target { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
 .chart-svg .target-min { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 2 4; }
 .chart-svg .bar { fill: var(--lv); }
+/* A day whose foods do not all list the value: its total may be higher (not shown by colour alone). */
+.chart-svg .bar.incomplete { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.chart-svg .target.goal { stroke-dasharray: 1 3; stroke-linecap: round; stroke-width: 2; }
 .chart-svg .hit { fill: transparent; cursor: pointer; }
 .chart-svg .hit:hover + .bar, .chart-svg .hit:focus-visible + .bar { opacity: 0.75; }
 .chart-svg .hit:focus-visible { outline: none; stroke: var(--focus); stroke-width: 2; }

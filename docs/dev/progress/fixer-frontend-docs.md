@@ -14,7 +14,7 @@ CONFIRMED (fix with root cause and a test):
 
 | id | finding | status |
 |---|---|---|
-| C1 | unknown K/P counted as 0 (today.js:147 and every total) | pending |
+| C1 | unknown K/P counted as 0 (today.js:147 and every total) | UI + twin done; guidance room text next |
 | C2 | handbook light-scheme links/header fail WCAG AA | done |
 | C3 | Settings → This device renders twice on first visit | done |
 | C4 | DG47 dead citation on 13 handbook pages | done |
@@ -88,6 +88,16 @@ LOW (apply or justify):
 * **L14** removed the disabled Units select (no spec defers lb/oz); contract line now "units for lab results";
   `test_the_ui_promises_no_unbuilt_feature`.
 
+* **C1 (UI + demo twin)** server shape by fixer-backend-ops (1216f15). Twin: `KH.rules.countUnknown/mergeUnknown/
+  markUnknown`; `js/mock/log.js` day figures, range, summary (`_eatenDayUnknown`, `unknown_entries/days`,
+  interdialytic). UI helpers in core.js (`unknownOf`, `notListed`, `foodsNotListing`, `atLeast(Words)`, level
+  `unknown` = "Not complete", grey icon). Today (bars, goal bar, meal head carbs, meal lines, entry rows,
+  all totals, 7-day strip, since-dialysis), Plan chips, Trends (days, table, averages, period card, dashed
+  bar edge), entry impact. Tests: `tests/test_unknown_values_twin.py` (Python day_figures / summarize_period /
+  interdialytic vs the twin through Node, `tests/js/demo_log_twin.mjs`), parity.py section 5 adds an eaten
+  no-K/P quick add, journey step 4 checks Today/Trends after the Nutella scan (130/130). Handbook logging.md,
+  targets-and-warnings.md; contract paragraph under "Foods and log changes".
+
 ## Coordination
 
 * The backend fixer (`fixer-backend-ops`) owns the server half of C1 (their C8: unknown K/P counted as 0 in
@@ -98,6 +108,12 @@ LOW (apply or justify):
   `unknown`, `planned_unknown`, `projected_unknown`, `meal_unknown`, `planned_meal_unknown` ({nutrient: n});
   status items `unknown: n`; range days the three maps; PeriodSummary nutrients `unknown_entries`,
   `unknown_days`; interdialytic `unknown_entries`; UI "+ n not listed"; the demo twin returns the same.
+
+* (2026-10-07, for fixer-backend-ops) C1's guidance room text ("Left for dinner: 1,050 mg potassium" built on
+  totals that skip unknowns) is not in your handoff list, so I will take it: `unknown` per room key on
+  `budget.DayTotals` / `NutrientRoom` and a room_text suffix, in `app/guidance/budget.py` + `messages.py` + the twin +
+  regenerated guidance vectors. Your C6 (insights) may add unknown counts to `budget.day_totals` too: if you do it
+  first, say so under your Handoffs and I will build on yours instead of adding a second count.
 
 ## Next steps
 

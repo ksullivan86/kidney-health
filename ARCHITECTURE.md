@@ -1439,6 +1439,14 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   `PeriodSummary.nutrients[key]` gains `unknown_entries` and `unknown_days` (logged days of the period with
   at least one such entry) and each interdialytic nutrient `unknown_entries`. The UI shows such a total
   with "+ n not listed" (never a bare `0` or `–`); the demo twin (`js/mock/log.js`) returns the same fields.
+  In detail (`KH.ui.unknownOf`, `notListed`, `foodsNotListing`, `atLeast` in `js/core.js`): a status bar reads
+  "≥ 55 / 3,500 mg" ("not listed" when nothing known), its level **Not complete** (`level-unknown`, grey, never
+  the green OK; caution and over keep their warning), no "… left", and "1 food does not list potassium, so the
+  total may be higher"; meal lines "K ≥ 55 (+ 1 not listed)" or "K not listed"; entry rows "not listed"; the
+  all-totals list, the 7-day strip, "since last dialysis", Trends (days, averages, the period card; a dashed bar
+  edge) and Plan's day chips the same; the entry sheet's impact says "would reach at least …". The twin uses
+  `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
+  `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 
 ### Schema step 7 (`m007_barcode.py`)
 

@@ -38,9 +38,11 @@
     green: 'Green: generally kidney-friendly',
     yellow: 'Yellow: moderate, watch the portion',
     red: 'Red: high, needs careful consideration',
+    unknown: 'Not complete: some foods do not list this value',
   };
-  const LEVEL_TEXT = { ok: 'OK', caution: 'Near limit', over: 'Over limit' };
-  const LEVEL_RATING = { ok: 'green', caution: 'yellow', over: 'red', medium: 'yellow', high: 'red' };
+  // "unknown": a total under its limit that misses values some foods do not list, so it may be higher (never green).
+  const LEVEL_TEXT = { ok: 'OK', caution: 'Near limit', over: 'Over limit', unknown: 'Not complete' };
+  const LEVEL_RATING = { ok: 'green', caution: 'yellow', over: 'red', medium: 'yellow', high: 'red', unknown: 'unknown' };
 
   // ---------------------------------------------------------------------------
   // Small helpers
@@ -148,6 +150,10 @@
       svg.append(s('path', { class: 'shape', d: 'M12 2.2 23 21.5H1z' }));
       svg.append(s('rect', { class: 'glyph', x: 10.9, y: 9, width: 2.2, height: 6.2, rx: 1 }));
       svg.append(s('circle', { class: 'glyph', cx: 12, cy: 18.2, r: 1.35 }));
+    } else if (r === 'unknown') {
+      svg.append(s('circle', { class: 'shape', cx: 12, cy: 12, r: 11 }));
+      svg.append(s('path', { class: 'glyph', d: 'M9.1 9.4a2.9 2.9 0 1 1 4.3 2.6c-.9.5-1.3 1-1.3 1.9v.6h-2.2v-.8c0-1.6.8-2.5 1.9-3.1a.8.8 0 1 0-1.2-.8z' }));
+      svg.append(s('circle', { class: 'glyph', cx: 11, cy: 17.6, r: 1.35 }));
     } else {
       svg.append(s('path', { class: 'shape', d: 'M7.6 1.5h8.8l6.1 6.1v8.8l-6.1 6.1H7.6l-6.1-6.1V7.6z' }));
       svg.append(s('rect', { class: 'glyph', x: 10.9, y: 6, width: 2.2, height: 7.5, rx: 1 }));
@@ -155,6 +161,21 @@
     }
     return svg;
   }
+  // Values a food does not list (most scanned products give no potassium or phosphorus). A total skips them, and
+  // the server says how many entries each total misses (ARCHITECTURE.md "Foods and log changes"): such a total
+  // is shown as "≥ 55" with "+ 1 not listed", never as a plain, complete number, and its "left" is not shown.
+  function unknownOf(counts, key) {
+    const n = Number(counts && counts[key]);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+  function notListed(n) { return `+ ${n} not listed`; }
+  function foodsNotListing(n, key) {
+    const word = (NUT[key] ? NUT[key].label : key).toLowerCase();
+    return `${n} ${n === 1 ? 'food does' : 'foods do'} not list ${word}`;
+  }
+  // "≥ 55" (and "at least 55" for screen readers) when values are missing, else "55".
+  function atLeast(text, n) { return n > 0 ? `≥ ${text}` : text; }
+  function atLeastWords(text, n) { return n > 0 ? `at least ${text}` : text; }
   function levelPill(level, text) {
     return h('span', { class: `pill level-${level}` }, ratingIcon(level, { decorative: true }), text || LEVEL_TEXT[level] || level);
   }
@@ -702,7 +723,11 @@
       // Only worth saying when this food changes the level or adds a meaningful share (>= 5 %) of the target.
       if (st.level === level && contribution < 0.05) continue;
       if (!(scaled[key] > 0)) continue;
-      out.push({ level, message: `${NUT[key].label} would reach ${fmtNum(projected, key)} / ${fmtNum(st.target, key)} ${NUT[key].unit} (${pct(fraction)} %)${suffix}` });
+      // The day's total misses foods that do not list this value (the entry being edited counts only once).
+      const editingUnknown = editing && editing.nutrients && editing.nutrients[key] == null && (planned || !isPlanned(editing)) ? 1 : 0;
+      const unknown = Math.max(0, Number(st.unknown || 0) - editingUnknown);
+      out.push({ level, message: `${NUT[key].label} would reach ${atLeastWords(fmtNum(projected, key), unknown)} / ${fmtNum(st.target, key)} ${NUT[key].unit} (${pct(fraction)} %)${suffix}`
+        + (unknown ? `; ${foodsNotListing(unknown, key)}` : '') });
     }
     const perMeal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
     if (perMeal && day.meals && day.meals[meal]) {
@@ -724,7 +749,7 @@
     ui: {
       KEY_NUMBERS, ROW_NUMBERS, STATUS_ORDER, TREND_ORDER, PLAN_CHIPS, STRIP_KEYS, INTERDIALYTIC_KEYS, WEEKDAYS, WEEKDAYS_LONG,
       RATING_LABEL, LEVEL_TEXT, LEVEL_RATING,
-      ratingIcon, levelPill, plusIcon, dashedIcon, checkIcon, closeIcon,
+      ratingIcon, levelPill, plusIcon, dashedIcon, checkIcon, closeIcon, unknownOf, notListed, foodsNotListing, atLeast, atLeastWords,
       renderWarnings, selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn,
     },
     util: {

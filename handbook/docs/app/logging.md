@@ -57,7 +57,11 @@ Use **Add → Quick add** for a packaged food that is not in the list.
 1. Enter the **name** and the **serving** as the label says it ("2 cakes") and its weight in grams.
 2. Copy the numbers **per serving** from the Nutrition Facts label.
 3. **Leave a box empty** when the label does not list that nutrient. Do not type 0: empty means
-   "unknown", and the app tells you a total may be low.
+   "unknown". The food's row then says **not listed**, and every total that misses it says so: the
+   bar on **Today** shows "≥ 55 / 3,500 mg" or "not listed" with **Not complete** (never a green
+   **OK**) and "1 food does not list potassium, so the total may be higher", the meal line reads
+   "K ≥ 55 (+ 1 not listed)", and **Trends**, **Plan** and the 7-day averages mark those days
+   "not complete".
 4. Copy the ingredient list into **Ingredients** (optional, but worth it). The app checks it as you
    type and shows "Phosphate additives" or "Potassium additives" when it finds one (for example sodium
    phosphate or potassium chloride); saving sets the same flags. You can also tick them yourself under

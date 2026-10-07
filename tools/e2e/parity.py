@@ -636,6 +636,13 @@ class Harness:
             self.entry_ids["quick"] = (rs["body"]["id"], rm["body"]["id"])
             self.both(S, "GET quick-added food", "GET", lambda side: f"/api/foods/{(rs, rm)[side]['body']['food_id']}")
         self.both(S, "GET /api/log?date=D+3 after quick add", "GET", f"/api/log?date={d(D, 3)}")
+        # A food that lists no potassium or phosphorus, eaten (most scanned products): every total says how many
+        # entries it misses, never a bare 0 (v0.3.0 review; ARCHITECTURE.md "Foods and log changes").
+        self.both(S, "POST /api/log/quick eaten, potassium and phosphorus not listed", "POST", "/api/log/quick", {
+            "date": d(D, 2), "meal": "snack", "name": "Hazelnut spread", "serving_desc": "1 tbsp (15 g)", "serving_g": 15,
+            "nutrients": {"calories_kcal": 80, "carbs_g": 8.6, "sugar_g": 8.4, "sodium_mg": 6, "protein_g": 0.9, "fat_g": 4.6}})
+        self.both(S, "GET /api/log?date=D+2 with values not listed", "GET", f"/api/log?date={d(D, 2)}")
+        self.both(S, "GET /api/log/range D..D+6 with values not listed", "GET", f"/api/log/range?start={D}&end={d(D, 6)}")
         self.both(S, "GET /api/plan/shopping D..D+6 (with quick-add food)", "GET", f"/api/plan/shopping?start={D}&end={d(D, 6)}")
         self.both(S, "DELETE entry (glucose)", "DELETE", self.entry_path("glucose"))
         self.both(S, "GET /api/log?date=D after delete", "GET", f"/api/log?date={D}")

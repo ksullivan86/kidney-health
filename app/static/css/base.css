@@ -277,16 +277,21 @@ svg { display: inline-block; vertical-align: middle; }
 .rating.red .shape { fill: var(--over); }
 .rating .glyph { fill: #fff; }
 .rating.yellow .glyph { fill: var(--caution-glyph); }
+.rating.unknown .shape { fill: var(--text-2); }
 
 .level-ok { --lv: var(--ok); --lv-text: var(--ok-text); --lv-tint: var(--ok-tint); }
 .level-caution { --lv: var(--caution); --lv-text: var(--caution-text); --lv-tint: var(--caution-tint); }
 .level-over { --lv: var(--over); --lv-text: var(--over-text); --lv-tint: var(--over-tint); }
+/* A total that misses values some foods do not list: neither "OK" green nor a warning colour. */
+.level-unknown { --lv: var(--text-2); --lv-text: var(--text); --lv-tint: var(--surface-2); }
 
 .pill {
   display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 600;
   padding: 2px 8px 2px 4px; border-radius: 999px; background: var(--lv-tint); color: var(--lv-text); white-space: nowrap;
 }
 .pill .rating { width: 16px; height: 16px; }
+/* "+ 1 not listed": a total that misses values some foods do not list (never a bare 0). */
+.not-listed { color: var(--text); font-weight: 600; }
 
 /* ---------- buttons ---------- */
 .btn {
