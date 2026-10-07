@@ -143,6 +143,29 @@ def test_stale_labs_do_not_change_targets(client):
     assert body["targets"]["potassium_mg"] == 3500 and "K-0" in [r["id"] for r in body["rules"]]
 
 
+@pytest.mark.parametrize("window, days_ago, alerted", [(30, 40, False), (30, 29, True), (180, 100, True), (90, 91, False)])
+def test_the_labs_list_alert_uses_the_suggestions_potassium_window(client, window, days_ago, alerted):
+    """GET /api/labs returns the potassium safety alert under targets.lab_fresh_days.potassium, the window
+    Suggest targets uses, so the Labs/Profile banner and the suggestion agree (v0.3.0 review L3: the browser
+    used a fixed 90 days)."""
+    assert client.patch("/api/admin/settings", json={"targets.lab_fresh_days.potassium": window}).status_code == 200
+    client.put("/api/profile", json={"weight_kg": 70, "ckd_stage": "4"})
+    add_lab(client, "potassium", 6.2, taken_on=date.fromordinal(TODAY.toordinal() - days_ago).isoformat())
+    add_lab(client, "phosphate", 4.0)  # newer, another test: it neither alerts nor hides potassium's
+    suggested = client.get("/api/profile/suggested-targets").json()
+    for params in ({}, {"analyte": "phosphate"}, {"limit": 1}):  # the filters never hide the alert
+        listed = client.get("/api/labs", params=params).json()
+        assert [(a["level"], a["value"]) for a in listed["alerts"]] == ([("urgent", 6.2)] if alerted else []), params
+        assert listed["alerts"] == suggested["alerts"], params
+
+
+def test_the_labs_list_alert_is_only_the_newest_potassium(client):
+    add_lab(client, "potassium", 6.6, taken_on="2026-09-20")
+    assert [a["level"] for a in client.get("/api/labs").json()["alerts"]] == ["emergency"]
+    add_lab(client, "potassium", 4.8, taken_on="2026-10-02")  # a newer normal result ends the alert
+    assert client.get("/api/labs").json()["alerts"] == []
+
+
 @pytest.mark.parametrize(
     "profile, code",
     [
@@ -320,6 +343,8 @@ def test_two_people_never_see_each_others_labs(two_clients):
     theirs = add_lab(sam, "potassium", 4.0)
     assert [x["id"] for x in admin.get("/api/labs").json()["labs"]] == [mine["id"]]
     assert [x["id"] for x in sam.get("/api/labs").json()["labs"]] == [theirs["id"]]
+    assert [a["value"] for a in admin.get("/api/labs").json()["alerts"]] == [6.2]
+    assert sam.get("/api/labs").json()["alerts"] == []  # the admin's very high potassium is not Sam's alert
     assert sam.delete(f"/api/labs/{mine['id']}").status_code == 404  # not yours = not found
     assert admin.get("/api/labs").json()["labs"][0]["id"] == mine["id"]
     # suggestions and the card use only your own results

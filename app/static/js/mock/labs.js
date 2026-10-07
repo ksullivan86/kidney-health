@@ -71,6 +71,14 @@
       }
     },
     _labView(row) { return K.rowToLab(row); },
+    // labs.current_alerts: the newest potassium's safety alert while it is fresh under
+    // targets.lab_fresh_days.potassium, the window the suggestions use (v0.3.0 review L3).
+    _labAlerts(userId) {
+      const windows = this._targetSettings().fresh_days;
+      const fresh = T.freshLabs(this._latestLabs(userId, ['potassium']), todayStr(), windows);
+      const alert = T.potassiumAlert(fresh.potassium || null);
+      return alert ? [alert] : [];
+    },
   });
 
   route('POST', '/api/labs', function ({ body }) {
@@ -99,7 +107,7 @@
     }
     if (errors.length) failFields(errors);
     const rows = this._labsOf(user.id).filter((r) => analyte == null || r.analyte === analyte).sort(newestFirst).slice(0, limit);
-    return { labs: rows.map((r) => this._labView(r)) };
+    return { labs: rows.map((r) => this._labView(r)), alerts: this._labAlerts(user.id) };
   });
   // labs.kidney_function: results of the last 365 days, the saved profile; never changes the stage.
   route('GET', '/api/labs/kidney-function', function () {

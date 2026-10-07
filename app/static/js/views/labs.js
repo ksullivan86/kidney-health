@@ -9,7 +9,8 @@
      suggested-targets twice); a change also raises the "Review suggested targets" prompt in Profile.
      Nothing is ever applied to the saved targets from here.
    * A red banner for a potassium of 6.0 mmol/L or more (KDIGO 2024 Table 28): the server's alert
-     right after saving, and for the newest potassium result while it counts (90 days).
+     right after saving, and for the newest potassium result while it counts (GET /api/labs `alerts`:
+     the server applies targets.lab_fresh_days.potassium, 90 days unless an admin changed it).
    * The kidney-function card (GET /api/labs/kidney-function): eGFR with its G category, the
      albuminuria category, and the server's "talk to your nephrologist" text. It never changes the
      saved stage.
@@ -46,7 +47,6 @@
   const TARGET_LABELS = [['calories_kcal', 'Calories'], ['protein_g', 'Protein'], ['carbs_g', 'Carbohydrate'], ['carbs_per_meal_g', 'Carbohydrate per meal'],
     ['fiber_g', 'Fibre'], ['sodium_mg', 'Sodium'], ['potassium_mg', 'Potassium'], ['phosphorus_mg', 'Phosphorus'], ['calcium_mg', 'Calcium'], ['fluid_ml', 'Fluid']];
   const FIELD_INPUT = { analyte: 'lab-analyte', value: 'lab-value', unit: 'lab-unit', taken_on: 'lab-date', note: 'lab-note' };
-  const ALERT_DAYS = T.DEFAULT_FRESH_DAYS.potassium; // how long a very high potassium keeps the banner up
 
   const cache = { data: null, loading: null, unitSystem: null };
   const label = (analyte) => (K.ANALYTES[analyte] ? K.ANALYTES[analyte].label : analyte);
@@ -65,7 +65,7 @@
     if (cache.data) return Promise.resolve(cache.data);
     if (!cache.loading) {
       cache.loading = Promise.all([api.labs({ limit: 1000 }), api.kidneyFunction()])
-        .then(([list, kf]) => { cache.data = { labs: list.labs || [], kf }; return cache.data; })
+        .then(([list, kf]) => { cache.data = { labs: list.labs || [], alerts: list.alerts || [], kf }; return cache.data; })
         .finally(() => { cache.loading = null; });
     }
     return cache.loading;
@@ -76,11 +76,11 @@
     for (const r of labs) if (r.analyte === analyte && (!best || r.taken_on > best.taken_on || (r.taken_on === best.taken_on && r.id > best.id))) best = r;
     return best;
   }
-  // The safety alert for the newest potassium result while it counts (the server's rule, twin in js/engine/targets.js).
-  function currentAlert(labs) {
-    const k = newestOf(labs || [], 'potassium');
-    if (!k || !K.isFresh(k.taken_on, todayStr(), ALERT_DAYS)) return null;
-    return T.potassiumAlert({ value: k.value, taken_on: k.taken_on });
+  // The safety alert for the newest potassium result while it counts. The server decides (GET /api/labs
+  // `alerts`, with the window the admin set in targets.lab_fresh_days.potassium), so this banner, Profile's
+  // card and Suggest targets always agree; the app never applies a window of its own.
+  function currentAlert(data) {
+    return (data && data.alerts && data.alerts[0]) || null;
   }
   function alertBanner(alert, { link = false } = {}) {
     const help = KH.learn ? KH.learn.link('pages', alert.level === 'emergency' ? 'get_help_now' : 'blood_potassium') : null;
@@ -365,7 +365,7 @@
   async function refresh() {
     try {
       const data = await load();
-      renderAlert(currentAlert(data.labs));
+      renderAlert(currentAlert(data));
       renderKidneyFunction(data.kf);
       renderHistory(data.labs);
     } catch (err) {

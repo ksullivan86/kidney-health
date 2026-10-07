@@ -1206,6 +1206,8 @@ class Harness:
         ]:
             self.both(S, f"PATCH /api/admin/settings {label}", "PATCH", "/api/admin/settings", patch, ignore=frozenset({"settings"}))
             self.both(S, f"GET suggested-targets [{label}]", "GET", "/api/profile/suggested-targets")
+            # the Labs/Profile banner: the newest potassium's alert under the same window (v0.3.0 review L3)
+            self.both(S, f"GET /api/labs alerts [{label}]", "GET", "/api/labs?analyte=phosphate")
         self.put_profile(S, "no weight", {"weight_kg": None})
         self.both(S, "GET suggested-targets without a weight", "GET", "/api/profile/suggested-targets")
         self._clear_labs(S)

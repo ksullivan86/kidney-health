@@ -222,8 +222,10 @@ sent. After saving, *What this result changed* compares the suggested targets be
 the suggestion in Profile; Profile also shows a dismissible *Review suggested targets* notice listing every
 change since the last reviewed suggestion. Nothing is ever applied to the saved targets from here. A
 potassium of 6.0 mmol/L or more shows a red banner with the KDIGO 2024 Table 28 text (urgent; emergency
-from 6.5) right after saving and, on the Labs view and Profile, while it is the newest potassium result of
-the last 90 days. The *Kidney function* card shows the eGFR with its stage (or both formulas when sex is
+from 6.5) right after saving and, on the Labs view and Profile, while it is the newest potassium result
+and still counts under `targets.lab_fresh_days.potassium` (90 days unless an admin changed it). The server
+decides (`GET /api/labs` returns it as `alerts`), with the same window as *Suggest targets*, so the banner
+and the suggestion never disagree. The *Kidney function* card shows the eGFR with its stage (or both formulas when sex is
 not set), the albuminuria category, and the server's message. *History* lists every result by test,
 newest first, with a filter and deletion (confirmed in the page).
 

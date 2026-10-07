@@ -26,7 +26,7 @@ LOW (apply or justify):
 |---|---|---|
 | L1 | research notes still state pre-v0.3 protein rule | done |
 | L2 | handbook SI phosphate table edges | done |
-| L3 | labs.js K alert window hard-coded 90 days | pending |
+| L3 | labs.js K alert window hard-coded 90 days | done |
 | L4 | AI activity shows raw provider reply uncaptioned | pending |
 | L5 | Settings → AI ideas stale after admin switch | done |
 | L6 | ai.* switches under "Other" | done |
@@ -42,6 +42,16 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L3** (potassium banner window): the server decides. `GET /api/labs` now returns `alerts` (app/labs.py
+  `current_alerts`: newest potassium, `fresh_labs` with `profile.target_settings` windows, `potassium_alert`;
+  whatever the filters); `LabList.alerts` in app/models.py. Outside my area, minimal: those two backend files
+  (+ tests/test_targets_api.py). Twin `_labAlerts` in js/mock/labs.js; views/labs.js `currentAlert(data)` reads
+  `data.alerts` (ALERT_DAYS constant gone), profile.js the same. Tests: test_targets_api.py (4 windows × 3
+  filter sets equal to the suggestion's alerts; newest only; two people), tests/test_demo_labs_alert.py (demo
+  through demo_api.mjs under the same 4 windows; static check), parity.py 11c compares GET /api/labs after
+  each admin settings change: section 11 695/695. Docs: docs/targets-and-labs.md, ARCHITECTURE (route table,
+  Lab results bullet).
 
 * **L1** (research notes): `docs/research/ckd-diet.md`, `food-lists.md`, `t1d-and-ckd.md` and `fact-check.md`
   carry a dated "Superseded in part by design note 05" banner; the protein rows say 0.8 g/kg with diabetes

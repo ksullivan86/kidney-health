@@ -8,7 +8,10 @@ a result that is not yours is a 404, like one that does not exist):
   6.0 mmol/L or more always returns the KDIGO 2024 Table 28 safety alert, whatever
   ``targets.lab_rules_enabled`` says. An unknown unit, an implausible value or a future date is a
   400 (the app's validation status; the message says what to fix).
-* ``GET /api/labs?analyte=&limit=`` → ``{labs: [...]}`` newest first (``taken_on``, then entry order).
+* ``GET /api/labs?analyte=&limit=`` → ``{labs: [...], alerts: [...]}`` newest first (``taken_on``, then entry
+  order). ``alerts`` holds the safety alert of the person's newest potassium while it is fresh under
+  ``targets.lab_fresh_days.potassium`` (whatever the filters), the window ``GET /api/profile/suggested-targets``
+  uses, so the Labs and Profile banners and the suggestion agree.
 * ``DELETE /api/labs/{id}`` → 204.
 * ``GET /api/labs/kidney-function`` → eGFR and albuminuria from the person's results
   (:func:`app.kidney_function.assess`); never changes the saved stage.
@@ -22,7 +25,7 @@ import sqlite3
 from datetime import date
 from typing import Any, Iterable, Sequence
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from . import units
 from .auth.deps import CurrentUser, current_user
@@ -30,7 +33,7 @@ from .db import get_db, utcnow
 from .kidney_function import KIDNEY_ANALYTES, assess
 from .models import MAX_SQLITE_INT, Analyte, KidneyFunction, LabCreate, LabCreated, LabList
 from . import profile as profile_module
-from .targets import Lab, mode_of, potassium_alert
+from .targets import Lab, fresh_labs, mode_of, potassium_alert
 
 router = APIRouter(prefix="/api/labs", tags=["labs"], dependencies=[Depends(current_user)])
 
@@ -124,9 +127,18 @@ def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = De
     return out
 
 
+def current_alerts(conn: sqlite3.Connection, user_id: int, request: Request) -> list[dict[str, Any]]:
+    """The safety alert of the newest potassium while it counts, with the suggestions' window."""
+    windows = profile_module.target_settings(conn, profile_module.settings_store(request))["fresh_days"]
+    fresh = fresh_labs(latest_results(conn, user_id, ("potassium",)), profile_module.today(), windows)
+    alert = potassium_alert(fresh.get("potassium"))
+    return [alert] if alert is not None else []
+
+
 @router.get("", response_model=LabList)
 def list_labs(
     user: CurrentUser,
+    request: Request,
     conn: sqlite3.Connection = Depends(get_db),
     analyte: Analyte | None = None,
     limit: int = Query(DEFAULT_LIST_LIMIT, ge=1, le=MAX_LIST_LIMIT),
@@ -138,7 +150,8 @@ def list_labs(
         params.append(analyte)
     sql += " ORDER BY taken_on DESC, id DESC LIMIT ?"
     params.append(limit)
-    return {"labs": [row_to_lab(r) for r in conn.execute(sql, params).fetchall() if r["analyte"] in units.ANALYTES]}
+    labs = [row_to_lab(r) for r in conn.execute(sql, params).fetchall() if r["analyte"] in units.ANALYTES]
+    return {"labs": labs, "alerts": current_alerts(conn, user.id, request)}
 
 
 @router.get("/kidney-function", response_model=KidneyFunction)

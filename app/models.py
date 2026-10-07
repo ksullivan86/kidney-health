@@ -964,6 +964,9 @@ class LabCreated(LabResult):
 
 class LabList(BaseModel):
     labs: list[LabResult]
+    # The safety alert of the newest potassium while it counts under targets.lab_fresh_days.potassium,
+    # the window the suggestions use, so the Labs banner and Suggest targets agree (v0.3.0 review L3).
+    alerts: list[SafetyAlert]
 
 
 class EgfrResult(BaseModel):

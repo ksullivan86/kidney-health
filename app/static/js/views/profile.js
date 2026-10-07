@@ -537,7 +537,7 @@
       clear(box);
       box.append(KH.labs.summary(data));
       const alertBox = clear($('#profile-lab-alert'));
-      const alert = KH.labs.currentAlert(data.labs);
+      const alert = KH.labs.currentAlert(data);
       if (alert) alertBox.append(KH.labs.alertBanner(alert, { link: true }));
     } catch (err) {
       if (err.handled) return;
