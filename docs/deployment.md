@@ -29,7 +29,7 @@ Contents:
 
 | Fact | Value |
 |---|---|
-| Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager) |
+| Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
 | Tags | `0.3` = the current 0.3.x release (**track this**); `0.3.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
 | Verify | `scripts/verify-image.sh 0.3.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
@@ -429,6 +429,19 @@ podman exec kidney-health python -m app.admin backup - > "kidney-$(date +%F).db"
 kubectl -n kidney-health exec deploy/kidney-health -- python -m app.admin backup - > "kidney-$(date +%F).db"
 chmod 0600 kidney-*.db
 ```
+
+For a host backup tool (restic, borg, Duplicati) that should copy finished files, never the live
+database, write timestamped copies into a separate mounted directory and keep the newest N:
+
+```bash
+# e.g. a nightly systemd user timer or a Kubernetes CronJob that runs `kubectl exec`
+podman exec kidney-health python -m app.admin backup --dir /backups --keep 14
+```
+
+Each run writes `/backups/kidney-YYYYMMDDTHHMMSSZ.db` (UTC, mode 0600) under a temporary name and
+renames it when complete, then deletes all but the newest 14 files of that name pattern (nothing else
+in the directory is touched). `/backups` is a second volume you mount into the container (writable by
+UID 10001); point the backup tool at that directory.
 
 Then:
 

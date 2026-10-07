@@ -6,6 +6,10 @@ Commands:
   the database to stdout, e.g. ``kubectl exec deploy/kidney-health -- python -m app.admin backup - >
   kidney.db``). Never overwrites a file. The copy contains every person's health data and the
   encrypted keys but **not** ``SECRET_KEY``; back that up separately.
+* ``backup --dir DIR [--keep N]``: the same copy as ``DIR/kidney-YYYYMMDDTHHMMSSZ.db`` (UTC; written
+  under a temporary name and renamed, so a file with that name is always complete), then, with
+  ``--keep``, deletes all but the newest N files of that name pattern in DIR (other files are never
+  touched). For a host backup tool that copies DIR, never the live database.
 * ``check``: validate the configuration and the database (integrity, schema version, secret key).
 * ``restore-check FILE [--revoke-sessions]``: the same checks against a backup before restoring it.
 * ``rotate-secret-key``: for the auto-generated ``$DATA_DIR/secret.key``: add a new key, re-encrypt
@@ -43,9 +47,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence, TextIO
 
@@ -112,12 +118,56 @@ def _audit(conn: sqlite3.Connection, action: str, **details: Any) -> None:
 # --------------------------------------------------------------------------- #
 
 
+BACKUP_NAME = re.compile(r"^kidney-\d{8}T\d{6}Z\.db$")
+
+
+def _backup_into_dir(source: sqlite3.Connection, directory: Path, keep: int | None, now: datetime | None = None) -> tuple[Path, list[Path]]:
+    """Write a timestamped backup into ``directory`` and prune old ones; returns (new file, deleted files)."""
+    from .db import backup_to
+
+    if not directory.is_dir():
+        raise CliError(f"{directory} is not a directory (create it, or mount the backup volume there)")
+    stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
+    dest = directory / f"kidney-{stamp}.db"
+    if dest.exists():
+        raise CliError(f"{dest} exists; backups are never overwritten (wait a second and run it again)")
+    partial = directory / f".{dest.name}.partial"
+    partial.unlink(missing_ok=True)  # a leftover of an interrupted run; never a finished backup
+    try:
+        backup_to(source, partial)
+        os.replace(partial, dest)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    deleted: list[Path] = []
+    if keep is not None:
+        backups = sorted(p for p in directory.iterdir() if p.is_file() and BACKUP_NAME.match(p.name))
+        for old in backups[:-keep]:
+            old.unlink(missing_ok=True)
+            deleted.append(old)
+    return dest, deleted
+
+
 def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     from .db import backup_to
 
+    if args.dir is None and args.file is None:
+        raise CliError("give a FILE, - for stdout, or --dir DIR")
+    if args.dir is not None and args.file is not None:
+        raise CliError("give either FILE or --dir DIR, not both")
+    if args.keep is not None and args.dir is None:
+        raise CliError("--keep needs --dir")
+    if args.keep is not None and args.keep < 1:
+        raise CliError("--keep must be at least 1")
     source = open_existing(_db_path(args, settings))
     try:
-        if args.file == "-":
+        if args.dir is not None:
+            dest, deleted = _backup_into_dir(source, Path(args.dir), args.keep)
+            target = "dir"
+            print(f"backup written to {dest} (mode 0600). SECRET_KEY is not in it; back that up separately.", file=out)
+            if deleted:
+                print(f"deleted {len(deleted)} older backup(s): " + ", ".join(p.name for p in deleted), file=out)
+        elif args.file == "-":
             stream = sys.stdout.buffer
             if sys.stdout.isatty():
                 raise CliError("refusing to write a database to a terminal; redirect it: backup - > kidney.db")
@@ -136,7 +186,7 @@ def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
             target = str(dest)
             print(f"backup written to {dest} (mode 0600). SECRET_KEY is not in it; back that up separately.", file=out)
         try:
-            _audit(source, "backup.created", target="stdout" if target == "stdout" else "file")
+            _audit(source, "backup.created", target=target if target in ("stdout", "dir") else "file")
             source.commit()
         except sqlite3.Error:
             pass
@@ -742,8 +792,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", help="database file (default: $DATA_DIR/kidney.db)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("backup", help="consistent copy of the database (FILE, or - for stdout)")
-    p.add_argument("file")
+    p = sub.add_parser("backup", help="consistent copy of the database (FILE, - for stdout, or --dir DIR)")
+    p.add_argument("file", nargs="?")
+    p.add_argument("--dir", help="write DIR/kidney-YYYYMMDDTHHMMSSZ.db instead of FILE")
+    p.add_argument("--keep", type=int, help="with --dir: keep only the newest N backups in DIR")
     p.set_defaults(func=cmd_backup)
 
     p = sub.add_parser("check", help="validate configuration and database")

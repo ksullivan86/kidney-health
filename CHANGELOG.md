@@ -7,6 +7,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people who run a server
+
+* `python -m app.admin backup --dir DIR --keep N` writes a timestamped copy
+  (`kidney-YYYYMMDDTHHMMSSZ.db`, UTC) into DIR and keeps only the newest N of them, so a backup tool on
+  the host (restic, borg, Duplicati) can copy a separate folder of finished files instead of the live
+  database. Plain `backup FILE` and `backup -` are unchanged.
+* Pulling the image without logging in needs the GHCR package to be public; a repository's visibility
+  does not carry over to its packages. Release notes now say so.
+
 ### For contributors
 
 * `requirements.txt` and `requirements-dev.txt`, kept through 0.3.0 so older instructions still worked,
