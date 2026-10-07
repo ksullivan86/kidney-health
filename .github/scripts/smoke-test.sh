@@ -105,5 +105,15 @@ print("\n".join(bad))
 sys.exit(1 if bad else 0)
 ' || { echo "FAIL: filesystem ownership above" >&2; exit 1; }
 echo "ok   / is root-owned; /data is 10001:0 0770"
+# Outbound https (USDA, Open Food Facts, AI providers) verifies TLS against the image's CA store; the app's own
+# start-up self-check (app/ai/transport.py ca_store_problem, note 04 R12) must find certificates in the image.
+docker run --rm --user 10001:10001 --entrypoint python "$image" -c '
+import sys
+from app.ai.transport import ca_store_problem
+problem = ca_store_problem()
+print(problem or "")
+sys.exit(1 if problem else 0)
+' || { echo "FAIL: no CA certificates for outbound TLS (see above)" >&2; exit 1; }
+echo "ok   CA certificates for outbound TLS"
 echo "::endgroup::"
 echo "smoke test passed: $image"

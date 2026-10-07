@@ -146,6 +146,16 @@ def test_ci_covers_the_required_checks():
     assert re.search(r"^    needs: \[test, lint, handbook\]$", image, re.M)
 
 
+
+def test_the_image_smoke_test_checks_the_ca_store_with_the_apps_own_self_check():
+    """Note 04 R12: outbound https (USDA, Open Food Facts, AI) needs CA certificates in the image. The smoke test runs
+    the app's start-up self-check inside the built image (as UID 10001) and fails when it finds none, so a base image
+    change that drops ca-certificates cannot ship. One source of truth: it imports the app's check, never a copy."""
+    smoke = read(".github/scripts/smoke-test.sh")
+    block = smoke[smoke.index("from app.ai.transport import ca_store_problem"):]
+    assert "sys.exit(1 if problem else 0)" in block.split("' ||", 1)[0]
+    assert "FAIL: no CA certificates" in block and 'echo "ok   CA certificates for outbound TLS"' in block
+
 def test_ci_builds_and_checks_the_handbook():
     """Note 08 §4.8: the handbook job (the image jobs need it) and the Zensical canary."""
     jobs = job_blocks(read(".github/workflows/ci.yml"))

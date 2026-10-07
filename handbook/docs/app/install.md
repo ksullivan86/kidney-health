@@ -124,8 +124,8 @@ When the admin upgrades the server, the app notices the next time you open it an
 - **"My data is gone."** Check the address. The same app at a different address starts empty. Your log
   is still on the server; open the original address.
 - **It does not open without a connection.** Offline use needs HTTPS. Open the app once while
-  connected, then check **Settings → This device → Install this app**: it says "Offline ready" when it can open
-  without a connection.
+  connected, then check **Settings → This device**: *Works offline* says "Yes: the app opens without a
+  connection" when it can.
 - **The app keeps asking me to sign in.** The installed app has its own sign-in. Sign in once inside
   the app.
 

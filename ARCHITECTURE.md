@@ -815,6 +815,14 @@ answer "available in the installed app" except for a few recorded barcode fixtur
 M2 and M3 run as one build (owner's decision, 2026-10-06): one integration pass, one review,
 then a single **v0.3.0** release containing M1, M2, M3 and the handbook.
 
+**Status (2026-10-07): v0.3.0 is complete.** Built, integrated, reviewed, and every confirmed review
+finding fixed with tests (CHANGELOG.md 0.3.0, "Fixes from the release review"). What this build could
+not verify (real phones, live AI providers, a Raspberry Pi, clinical sign-off) is listed under "Known
+limitations" there, the checks a maintainer runs before tagging are in `docs/maintainers.md`
+("Checks before the tag"), and everything deferred or left open, with its owner, is in
+`docs/ROADMAP.md`. The build agents' progress notes were condensed into those files and removed
+(`docs/dev/progress/README.md`).
+
 ## M1 API
 
 Built in M1 (backend-core accounts) from note 07 §4.4–§4.17 and its §9 security review, plus the
@@ -1639,7 +1647,7 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   `AI_CONTEXT_TOKENS` (8192 self-hosted/agent/custom, 32768 cloud), `AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
   `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB). A bad
   value stops the start with a message naming the variable; `ALLOW_PRIVATE_AI_HOSTS` is refused (no alias,
-  no wildcard). An https env provider without CA certificates stops the start (R12 self-check).
+  no wildcard). An https env provider without CA certificates stops the start (R12 self-check); CI's image smoke test runs the same check inside the built image.
 * **Presets** (`app/ai/presets.py`): `openai`, `openrouter`, `nous_portal` (cloud; a person may use them
   with their own key), `ollama`, `lmstudio`, `llamacpp`, `vllm`, `litellm` (self-hosted), `hermes` (agent,
   `http://host.containers.internal:8643/v1`, prompt-only JSON, tool check; contract item 13),

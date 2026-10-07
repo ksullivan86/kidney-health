@@ -39,7 +39,14 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * `ARCHITECTURE.md`, `docs/` and the handbook's "Using the app" pages describe what ships.
 2. **Checks before the tag** (the ones CI cannot do):
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
-     `device.py`, `guidance_perf.py` and `learn.py` ([tools/e2e/README.md](../tools/e2e/README.md));
+     `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
+     (needs a full clone) ([tools/e2e/README.md](../tools/e2e/README.md));
+   * the workflows that only run on a schedule, on a tag or after an owner setting, the first time they
+     matter: `refresh-locks.yml` once by hand (*Run workflow*; review the pull request it opens: its
+     `scripts/lock.sh` path was checked only by hand when it was written), `handbook-links.yml` once by
+     hand, and `handbook-pages.yml` after setting `HANDBOOK_PAGES`;
+   * the live AI evaluations before a model is recommended (`scripts/ai_eval.py`,
+     [docs/dev/ai-eval/README.md](dev/ai-eval/README.md));
    * the manual device matrix of note 02 ("Manual device test matrix"): an iPhone, an iPad, an Android
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
      plain HTTP (barcode photo, typed digits);

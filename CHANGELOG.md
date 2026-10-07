@@ -366,10 +366,29 @@ the code-review fixes affected only `:edge` builds.
 
 Found by the v0.3.0 review of the pre-release build; none affected a released version.
 
+**Numbers and safety**
+
 * **Values a food does not list are never shown as 0.** Today, Plan, Trends, the 7-day strip and the
   entry sheet say "≥ 55 mg · + 2 not listed" and "Not complete" when a logged food (often a scanned
   product) does not list potassium or phosphorus; meal ideas say "at most" and why. The server counts
-  them per day, meal, range and period.
+  them per day, meal, range and period. Insights no longer call a day or period "all good" for a
+  nutrient some foods do not list (a period insight says so instead), and compare two periods only
+  when both have the values.
+* **Guidance never suggests raw eggs.** The builtin "Egg white, raw" is now "Egg white" with a cooking
+  note, and "Egg, whole, raw" is a recipe ingredient that guidance never offers on its own
+  (`data/foods.json` 2026-10-07.2).
+* AI ideas, saved meals and usual meals are scaled down to what is left of the day, so they never tip
+  potassium, sodium or fluid over the day's limit.
+* The "better low treatment" insight says the portion it means ("5 × 1 tablet, 20 g carbs").
+* The low-glucose pre-filter (which answers with the "Treating a low" card instead of AI) catches more
+  phrasings: past tenses and CGM wording ("sugar dropped", "cgm says 3,4"), bare readings ("I'm at
+  58", "down to 61") and glucose units; kitchen amounts such as "sugar 2 tsp" are not readings.
+* Target notes: the calorie note always states the calorie target it explains; the potassium note no
+  longer says "relaxed one step" when nothing was relaxed; the low-BMI note names its age-70 cut-off.
+  Lab dates in notes, alerts and the kidney-function card read "Oct 7, 2026", like the history.
+
+**Targets and guidance in the app**
+
 * **Guidance says which targets it used** ("Using the targets in your profile, saved …", with a link to
   Profile) in What fits now and the plan.
 * **Snack carbohydrate goal:** Profile → *Carbohydrate per snack* (from your diabetes team); Today, its
@@ -377,20 +396,59 @@ Found by the v0.3.0 review of the pre-release build; none affected a released ve
 * "About" targets (the same minimum and maximum, such as protein "about 56 g") read *Near target* /
   *Above target*, never "limit".
 * The red very-high-potassium banner follows the admin's lab freshness setting, like the suggestion.
-* Products with values only "as prepared" are logged in servings (no grams field, and the reason).
-* AI: the AI activity list captions the provider's raw answer as unchecked and hides words the app
-  never shows; AI order, Ask AI to pick and Let AI choose each have *What will be sent?* and say which
-  picks the rules left out; a repeated question within 10 minutes is answered without a new call.
+
+**Barcodes and packaged foods**
+
+* With Open Food Facts switched on but your agreement not given yet, a product only Open Food Facts
+  knows now opens the agreement panel instead of answering "not found"; "not found" names only the
+  databases that answered so.
+* Products with values only "as prepared" are logged in servings (no grams field, and the reason); a
+  label given per serving without the serving's weight asks you to enter the food from the label
+  instead of storing the values as per 100 g.
+* Salt substitutes (potassium chloride) keep their real potassium value and warn high: the plausibility
+  limits are now 60 g potassium and 32 g phosphorus per 100 g. Drinks labelled per 100 mL count as
+  fluid. The bare word "phosphorus" in an ingredient list is no longer read as a phosphate additive.
 * Scanning starts the camera when Scan opens (HTTPS only; switch it off in Settings → Food data).
-  iPhone and iPad show the Home Screen steps once, after the third visit.
 * `GET /api/foods/builtin` with an ETag: a device refreshes its offline food list only when it changed.
-* Settings → This device no longer draws twice on a first visit; the AI switches have their own group
-  in Admin → Server settings and refresh the AI panel at once; the demo runs with lab rules off (note 05).
-* Handbook: link and header colours meet WCAG AA contrast in the light scheme; the dead DG47 citation is
-  replaced (American Kidney Fund Kidney Kitchen, Satellite Healthcare); the mmol/L phosphate table
-  gives the edges the app uses; lab dates read "Oct 7, 2026".
-* Admin CLI: `python -m app.admin export-user` and `disable-user`; the low-glucose pre-filter catches
-  more phrasings ("sugar dropped", "cgm says 3,4", "I'm at 58").
+
+**AI and photos**
+
+* Photo uploads are refused (AI off, too large, no consent, no free slot) before the photo is read, and
+  an upload slower than 60 seconds stops with `408 upload_timeout`: many uploads at once no longer
+  hold hundreds of megabytes.
+* The AI guard keeps a "low in potassium / phosphorus / sodium" reason only when every portion is low
+  by the app's own per-portion threshold, and never shows a wider list of words (shot, pen, skip or
+  delay, pills and medicines, binder brands, "extra", "more" or "double" as advice).
+* A label photo marks the serving as read from the photo, or as estimated when it falls back to 100 g.
+* The AI activity list captions the provider's raw answer as unchecked and hides words the app never
+  shows; AI order, Ask AI to pick and Let AI choose each have *What will be sent?* and say which picks
+  the rules left out; the same question within 10 minutes is answered again without a new call or a
+  daily call spent.
+* AI activity bodies are cleared on schedule by the app's daily housekeeping, also while AI is off or
+  unused; AI servers on internationalised domain names are checked, resolved and pinned by their ASCII
+  form.
+
+**Installable app, settings and admin**
+
+* Every API answer carries `X-KDL-Version`: a page still running an older cached app shell offers
+  *Update ready · Reload* after its first request.
+* iPhone and iPad show the Home Screen steps once, after the third visit.
+* Settings → This device no longer draws twice on a first visit, says once whether the app is
+  installed and works offline, and no longer mentions reminders (they come with Web Push in v0.4);
+  the AI switches have their own group in Admin → Server settings and refresh the AI panel at once;
+  the *Server name* help says where the name is shown; the demo runs with lab rules off (note 05).
+* The first-run setup line never prints an `https://` address the server cannot know (it uses
+  `PUBLIC_URL` when set).
+* Admin CLI: `python -m app.admin export-user` (the same zip as the web export) and `disable-user`.
+
+**Handbook and documentation**
+
+* Link and header colours meet WCAG AA contrast in the light scheme; Learn links are at least 24 px tall
+  (44 px on touch screens); the dead DG47 citation is replaced (American Kidney Fund Kidney Kitchen,
+  Satellite Healthcare); the mmol/L phosphate table gives the edges the app uses.
+* The research notes in `docs/research/` carry a "superseded in part by design note 05" banner, with
+  the protein rows (0.8 g/kg with diabetes), the published KDOQI numbering and the weight basis
+  corrected.
 
 ### Known limitations
 
@@ -407,6 +465,10 @@ Found by the v0.3.0 review of the pre-release build; none affected a released ve
 * **Not yet tried on real phones.** Installing, the live camera, photo decoding, HEIC photos and the
   offline outbox were checked in Chromium (fake camera, emulated offline), not on an iPhone or Android
   device. The live camera needs HTTPS; over plain HTTP use a photo of the barcode or type it.
+* **A meal alert has no tolerance yet.** A planned meal the plan calls "close to your goal" (within your
+  carbohydrate tolerance) can still show "Projected over" on Today by a fraction of a gram, and an "about"
+  target reads *Above target* just over its number: no cited guideline gives a tolerance, so it waits for
+  the clinical review (`handbook/REVIEW.md`, "Food targets").
 * **Offline is for new entries only.** Edits, deletions, profile and settings changes, barcode
   lookups, AI and new guidance answers need a connection (the "Treating a low" card still works);
   handbook pages at `/learn` are not kept for offline use.
