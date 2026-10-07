@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # frontend-device (M2/M3): scanning, label photos, AI cards check, offline outbox
 
@@ -63,16 +63,40 @@ Do not edit Python under app/. WIP commits end with " [skip ci]". Commit only my
   time.sleep while a route must answer (use page.wait_for_timeout / wait_js).
 
 ## Decisions
+* The offline food list is refreshed daily through `GET /api/foods?category=…` (≤ 200 per category) because the
+  note 02 R5 route `GET /api/foods/builtin` (ETag) is server work outside this role; listed in docs/ROADMAP.md.
+* Personal AI providers: the harness checks that only public presets are offered (custom addresses need the admin's
+  `ai.allow_user_base_url`), rather than saving a private address.
 * Additive scan twin in the browser (not in the contract's list before): Quick add shows what the server will flag
   before saving, and the demo stores the same flags as the server; kept in parity by vectors.
 * js/engine/off.js holds the quality sentences and attribution constants (one file per Python module, as guidance).
 * Demo: OFF "on" (env-locked) with three recorded products; consent still needed per person (shows the real flow).
 
-## Next
-* device.py sections ai, demo, shots; review screenshots; static pytest tests/test_device_ui.py; device.py in
-  tests/test_e2e_tools.py + tools/e2e/README.md; parity.py barcode/foods fields; build preview; sandbox; regress;
-  docs (ARCHITECTURE module list, docs/barcode-and-photos.md, install-on-your-phone, privacy, handbook, ROADMAP).
+* Step 8–11 (finished 2026-10-07):
+  * Bugs found by the walks and fixed: syncNow() kept a settled promise after an early return (offline demo never
+    synced again); the header badge covered the DEMO pill at 375 px (now the number on phones, full words in its
+    aria-label); sign-out sheet and consent buttons were cut off at 375 px; 32–36 px summary/link targets at 1280;
+    the badge's jump to Settings → This device lost its place while Settings loaded (now waits for the list and
+    focuses its heading); new-tab links were dead in the preview's sandboxed frame (addresses shown as text there,
+    wrapped at 320 px); key messages read "Saved, but The AI service…" (now the chosen service's name).
+  * Offline: changes that cannot be queued (edits, deletes, profile) now say they need a connection (note 02 R5).
+  * tools/e2e/device.py: 123 checks, all pass (photo WASM/native, fake-camera live scan + watchdog + plain-HTTP note,
+    outbox incl. lost answer and sign-out, AI cards + label upload ≤1600 px without EXIF + activity + write-only
+    personal key with no outside call (server proxy → 127.0.0.1:9), plate photo banner/unticked/planned, demo, walks
+    demo + real server 375/1280 light/dark). Every photo picker's button is now 44 px.
+  * tests/test_device_ui.py (22 static checks), device.py in tests/test_e2e_tools.py + tools/e2e/README.md.
+  * parity.py section 13 (foods gtin/ingredients, POST /api/foods/barcode incl. reason/gtin/checked): full run
+    6,497/6,497; mutation of a mock reason caught.
+  * Preview built with scripts/build_preview.py into $S/preview; sandbox.py: 17 walks + 3 sweeps + probes, 0 issues.
+  * regress.py on port 8375 with a clean tree: 469 passed, 0 failed. `python -m pytest` (3149 tests): passes;
+    `node tests/js/run_vectors.mjs`: all sections pass (barcode 2,028); `scripts/vendor_barcode.py --check`: pins match.
+  * Docs: ARCHITECTURE (module list, barcode "Frontend", "M2: the offline outbox"), docs/barcode-and-photos.md,
+    install-on-your-phone.md (#offline), privacy.md (on-device data), ROADMAP (builtin ETag route, manual device
+    checks, offline edits), handbook logging + barcode pages (mkdocs --strict builds).
 
 ## Reproduce
 * `node tests/js/run_vectors.mjs` (barcode section 2,028 checks); `python3 scripts/vendor_barcode.py --check`
 * `python3 tools/e2e/device.py --port 8370 --ai-port 8371 --out $S/dev [--only photo,native,live,outbox,ai,demo,shots]`
+* `python3 tools/e2e/parity.py --port 8372 --static-port 8373 --out $S/parity [--sections 13]`
+* `python3 scripts/build_preview.py --out $S/preview/kidney-diet-log.html && python3 tools/e2e/sandbox.py --preview $S/preview/kidney-diet-log.html --out $S/sandbox --port 8374`
+* `python3 tools/e2e/regress.py --no-pytest --port 8375 --out $S/regress`; `python -m pytest`
