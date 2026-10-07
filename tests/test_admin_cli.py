@@ -294,9 +294,11 @@ def test_list_users_setup_code_and_revoke_sessions(tmp_path, env, capsys):
     code, out = run(["list-users"], env)
     assert code == 0 and "(first-run setup pending)" in out
     code, out = run(["setup-code"], env)
-    assert code == 0 and "FIRST-RUN SETUP" in out
+    assert code == 0 and "FIRST-RUN SETUP: open this server's address followed by /#/setup (for example " in out
+    code, out = run(["setup-code"], {**env, "PUBLIC_URL": "https://kidney.example.org/"})
+    assert code == 0 and "FIRST-RUN SETUP: open https://kidney.example.org/#/setup and enter the code " in out
     conn = sqlite3.connect(path)
-    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE purpose = 'setup'").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE purpose = 'setup'").fetchone()[0] == 1  # the new code replaces the old
     conn.close()
     run_with_stdin(["create-admin", "mum"], env, GOOD_PASSWORD + "\n")
     code, _ = run(["setup-code"], env)

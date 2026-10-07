@@ -22,6 +22,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from ..audit import audit
+from ..config import Settings
 from ..db import database_file, get_meta, set_meta
 from . import clock, passwords, policy, sessions, tokens
 from .accounts import claim_first_admin
@@ -62,11 +63,21 @@ def expire_pre_v3_backup(conn: sqlite3.Connection, *, days: int = PRE_V3_BACKUP_
     return True
 
 
+def setup_address(settings: Settings) -> str:
+    """Where to open the setup screen, for the ``FIRST-RUN SETUP`` line (log and ``admin setup-code``).
+
+    With ``PUBLIC_URL`` it is that origin's ``/#/setup``. Without it the server cannot know its own address
+    or scheme (a from-source run on ``http://localhost:8000`` is common), so it says how to build the address
+    instead of printing an ``https://`` one that would fail there."""
+    if settings.public_origin:
+        return f"{settings.public_origin}/#/setup"
+    return "this server's address followed by /#/setup (for example http://localhost:8000/#/setup)"
+
+
 def setup_line(ctx: AuthContext, code: str) -> str:
-    base = ctx.settings.public_origin or "https://<this server>"
     return (
-        f"FIRST-RUN SETUP: open {base}/#/setup and enter the code {code} (valid {ctx.settings.setup_code_ttl_minutes} min; "
-        'restart or run "python -m app.admin setup-code" for a new one)'
+        f"FIRST-RUN SETUP: open {setup_address(ctx.settings)} and enter the code {code} "
+        f'(valid {ctx.settings.setup_code_ttl_minutes} min; restart or run "python -m app.admin setup-code" for a new one)'
     )
 
 

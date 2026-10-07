@@ -557,8 +557,9 @@ def cmd_setup_code(args: argparse.Namespace, settings: Settings, out: TextIO) ->
         conn.commit()
     finally:
         conn.close()
-    base = settings.public_origin or "https://<this server>"
-    print(f"FIRST-RUN SETUP: open {base}/#/setup and enter the code {code} (valid until {expires})", file=out)
+    from .auth.bootstrap import setup_address
+
+    print(f"FIRST-RUN SETUP: open {setup_address(settings)} and enter the code {code} (valid until {expires})", file=out)
     return EXIT_OK
 
 

@@ -32,7 +32,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L8 | label photo serving_desc/serving_g not marked from photo | done |
 | L9 | 'Server name' help text vs signed-in title | done |
 | L10 | new accounts default to stage 3b / type 1 | deferred by spec (ROADMAP) |
-| L11 | first-run log line https://<this server> | todo |
+| L11 | first-run log line https://<this server> | done |
 | L12 | ISO dates in server texts | todo |
 | L13 | AI 10-minute result cache | todo |
 | L14 | CLI export-user / disable-user | todo |
@@ -133,6 +133,12 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   parity.py changes, and fixer-frontend-docs has profile.js and parity.py open; diabetes "none" by default would hide
   the Treating a low card from a person with T1D until they save (CLAUDE.md health-safety spirit), so it is an owner
   decision, not a silent default change.
+
+* **L11** `app/auth/bootstrap.py` `setup_address(settings)` (used by the log line and `admin setup-code`): with
+  PUBLIC_URL its origin + `/#/setup`; without it "this server's address followed by /#/setup (for example
+  http://localhost:8000/#/setup)" instead of `https://<this server>`. Parsers unaffected (khserver `open .+? and enter
+  the code`, conftest `enter the code`). Tests: test_auth first-run test, test_admin_cli setup-code with and without
+  PUBLIC_URL. docs/accounts.md example + explanation.
 
 ## Handoffs (to fixer-frontend-docs)
 

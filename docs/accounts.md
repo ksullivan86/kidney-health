@@ -28,10 +28,12 @@ first account) and needs a first admin. Pick one way:
 1. **The setup code (default).** The server prints one line at WARNING level:
 
    ```
-   FIRST-RUN SETUP: open https://<this server>/#/setup and enter the code 7KQ2-M9XD-PL4R-T6WN (valid 60 min; ...)
+   FIRST-RUN SETUP: open https://food.home.example.net/#/setup and enter the code 7KQ2-M9XD-PL4R-T6WN (valid 60 min; ...)
    ```
 
-   Find it with `podman logs kidney-health 2>&1 | grep FIRST-RUN` (or `docker logs`, `kubectl logs`).
+   The address comes from `PUBLIC_URL`. Without it the line says "open this server's address followed
+   by /#/setup (for example http://localhost:8000/#/setup)", since the server cannot know its own
+   address or scheme. Find it with `podman logs kidney-health 2>&1 | grep FIRST-RUN` (or `docker logs`, `kubectl logs`).
    Open the page, enter the code, choose a username and a password. A new code is printed at every
    start while setup is pending, or run `python -m app.admin setup-code`.
 2. **From a secret file (GitOps, Kubernetes).** Set `ADMIN_USERNAME` and `ADMIN_PASSWORD_FILE`

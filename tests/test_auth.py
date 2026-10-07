@@ -49,7 +49,11 @@ def test_first_run_setup_with_the_logged_code(tmp_path, foods_json, caplog):
     settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json)
     with caplog.at_level(logging.WARNING, logger="kidney_health.auth"), TestClient(create_app(settings)) as c:
         code = setup_code_from_logs(caplog)
-        assert "FIRST-RUN SETUP: open https://<this server>/#/setup" in caplog.text
+        # Review L11: without PUBLIC_URL the server cannot know its address or scheme, so it never prints
+        # an https:// address that fails on a from-source http://localhost:8000 run.
+        assert ("FIRST-RUN SETUP: open this server's address followed by /#/setup "
+                "(for example http://localhost:8000/#/setup) and enter the code " + code) in caplog.text
+        assert "https://<this server>" not in caplog.text
         status = c.get("/api/auth/status").json()
         assert status["setup_required"] is True and status["auth_mode"] == "local" and status["password_min_length"] == 15
         body = {"code": "AAAA-BBBB-CCCC-DDDD", "username": "Mum", "display_name": "Mum", "password": ADMIN_PASSWORD}
