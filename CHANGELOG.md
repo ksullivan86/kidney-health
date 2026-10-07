@@ -222,6 +222,10 @@ environment can be changed in Settings → Admin → Server settings):
   another", and "Use this plan" adds them as planned entries.
 * **Insights** at the end of a day (Today) and for 7, 14 or 30 days (Trends), in plain words with
   numbers. Guidance computes only; nothing is written without a tap.
+* Guidance never suggests alcoholic drinks: with insulin, alcohol can cause a low hours later (ADA
+  Standards of Care 2026, §5). Builtin beers, wines and spirits carry a new `alcohol` flag, Open Food Facts
+  and USDA alcoholic products get it on import, and anyone can set it on a custom food; it changes no
+  warning, and a saved meal keeps its drink.
 * Settings → Meal guidance: carbohydrate tolerance, low-treatment amount, categories to leave out, and
   switches for the plan builder, insights and AI ideas. Admins can switch guidance off for the server.
 
@@ -337,6 +341,11 @@ the code-review fixes affected only `:edge` builds.
   is recreated at start-up and reported by `app.admin check`.
 * The service worker ignores messages that do not come from the app's own origin; the USDA hourly
   guard is keyed by whose key it is, so no key material is handled outside the request.
+* The optional breached-password check (`PASSWORD_BREACH_CHECK`) now goes through the same SSRF-checked
+  transport as every other outbound call (no redirects, no proxy variables), and a test fails if any
+  outbound client in the app is created without one.
+* Safety review: meal guidance and AI ideas no longer offer alcoholic drinks (the new `alcohol` flag,
+  above); the "no targets yet" message points to Profile, where targets are set.
 * Barcodes: a shared product or cached answer is given only to someone who could fetch it now or
   already has it (no "someone scanned this" oracle); another person's custom food is never matched;
   product links are built from a constant, never copied from a provider's answer; provider text is
