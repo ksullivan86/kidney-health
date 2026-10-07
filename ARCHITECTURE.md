@@ -1711,11 +1711,15 @@ total deadline = read timeout + 10 s. Images go only as `data:image/jpeg;base64,
 The meal features send no free text to people (§9 A2): an idea is `{theme, items: [{food_id (enum of the
 candidates), quarters 1–12}] (1–5), reason_codes (enum, 1–3), handbook (enum of slugs, ≤ 2)}`; the server
 checks every claim against the recomputed numbers and writes the title and sentence from templates
-(`guard.THEME_TITLE`, `guard.REASON_TEXT`). The data block is compact, key-sorted JSON with `<`, `>`, `&`
+(`guard.THEME_TITLE`, `guard.REASON_TEXT`). A `low_*` claim holds only when every portion is low by the
+guidance engine's own definition (potassium ≤ 100 mg, phosphorus ≤ 50 mg, sodium ≤ 140 mg) and the idea
+uses at most half of what is left today; the sentence prints the number ("Low in sodium (65 mg)"). The data block is compact, key-sorted JSON with `<`, `>`, `&`
 escaped, untrusted names cleaned (NFKC, no `Cc`/`Cf`, 80 characters); `ingredients_text` never enters a
 prompt. Model text that must be shown (describe-a-meal phrases and search terms, plate food names) passes
-`guard.name_policy` (no URLs, e-mail addresses or markup characters; the blocklist after homoglyph folding).
-`PROMPT_VERSION` (`2026-10-06.2`) changes with any change to prompts, wire schemas or guard wording
+`guard.name_policy` (no URLs, e-mail addresses or markup characters; the blocklist after homoglyph folding,
+including §9 A2's expanded terms: `shot`, `pen`, `skip`, `delay`, medicines and binder brand names, and
+`extra`/`more`/`double` used as advice).
+`PROMPT_VERSION` (`2026-10-07.1`) changes with any change to prompts, wire schemas or guard wording
 (`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`).
 
 ### Photos (`app/vision.py`, `app/imagecheck.py`; note 03 R8, R9, §9 B1, B10; note 04 §9 A4)

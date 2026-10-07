@@ -52,6 +52,12 @@ BLOCKED_TERMS = [
     "dosed", "dosing", "dosage", "pump", "pumps", "binder", "binders", "sevelamer", "lanthanum", "calcium acetate", "patiromer",
     "zirconium", "supplement", "supplements", "diagnose", "diagnosis", "lab result", "lab results", "safe to eat", "unlimited",
     "as much as", "don't worry", "dont worry", "no need to", "inject", "injection",
+    # §9 A2's expanded list (v0.3.0 review: describe-a-meal phrases and plate names are shown).
+    "shot", "shots", "pen", "pens", "skip", "skips", "skipped", "skipping", "delay", "delays", "delayed", "delaying",
+    "pill", "pills", "capsule", "medicine", "medication", "meds", "prescribed", "Renvela", "Renagel", "Fosrenol", "Velphoro",
+    "Auryxia", "PhosLo", "Lokelma", "Veltassa", "Kayexalate", "Xphozah", "tenapanor", "ferric citrate",
+    "eat extra", "have more", "eat 3 extra", "take two more", "two more", "3 extra", "double your", "is fine", "it's ok",
+    "that's safe",
 ]
 
 
@@ -75,7 +81,9 @@ def test_obfuscated_terms_are_caught(text):
 
 
 @pytest.mark.parametrize("text", ["Pumpkin soup", "Masala dosa", "Basil chicken", "Unity loaf", "Rationed rice", "Pasta with lentils",
-                                  "7-grain bread", "Supper salad"])
+                                  "7-grain bread", "Supper salad", "Extra virgin olive oil", "Extra-lean ground beef",
+                                  "Extra sharp cheddar", "Penne arrabbiata", "Skippy peanut butter", "Glucose tablets",
+                                  "Double chocolate cookie", "Fine sea salt", "Shortbread", "Pending order of rice"])
 def test_ordinary_food_names_pass(text):
     assert G.blocked(text) is None
     assert G.name_policy(text)[0] == text
@@ -99,8 +107,9 @@ def test_name_policy_cleans_and_caps():
 def test_server_templates_never_use_banned_words():
     texts = [G.REFUSED_TEXT, G.FALLBACK_TEXT, G.NO_FIT_TEXT, *G.REASON_TEXT.values(), *G.THEME_TITLE.values()]
     for text in texts:
-        assert not M.BANNED_PATTERN.search(text.format(meal="dinner")), text
-        assert G.blocked(text.format(meal="dinner")) is None, text
+        shown = text.format(meal="dinner", k="55", p="20", na="60")
+        assert not M.BANNED_PATTERN.search(shown), text
+        assert G.blocked(shown) is None, text
     assert set(G.REASON_TEXT) == set(REASON_CODES) and set(G.THEME_TITLE) == set(THEMES)
 
 
@@ -114,7 +123,8 @@ def test_true_reasons_and_claim_correction():
     room = meal_room(ctx, "dinner", totals=day_totals(ctx.day))
     rice, chicken = ctx.foods[1], ctx.foods[3]
     truth = G.true_reasons([(rice, 1.0)], room, often=())
-    assert {"low_potassium", "low_phosphorus", "adds_missing_group"} <= truth
+    assert {"low_potassium", "adds_missing_group"} <= truth
+    assert "low_phosphorus" not in truth  # 70 mg: above the engine's 50 mg "low in phosphorus"
     assert "adds_protein" not in truth and "you_eat_often" not in truth
     assert "adds_protein" in G.true_reasons([(chicken, 1.0)], room, often=())
     assert "you_eat_often" in G.true_reasons([(rice, 1.0)], room, often=[1])
@@ -157,9 +167,38 @@ def test_true_theme():
 
 
 def test_sentence():
-    assert G.sentence(["low_potassium", "fits_carb_goal"], "dinner") == \
-        "Low in potassium for what is left today; brings dinner close to your carbohydrate goal."
+    ctx = fx.context()
+    rice, beans = ctx.foods[1], ctx.foods[5]
+    assert G.sentence(["low_potassium", "fits_carb_goal"], "dinner", [(rice, 1.0), (beans, 2.0)]) == (
+        f"Low in potassium ({M.fmt_int(rice.k + 2 * beans.k)} mg) for what is left today; brings dinner close to your "
+        "carbohydrate goal.")
+    assert G.sentence(["low_sodium", "low_phosphorus"], "dinner", [(rice, 0.5)]) == (
+        f"Low in sodium ({M.fmt_int(rice.na * 0.5)} mg); low in phosphorus ({M.fmt_int(rice.p * 0.5)} mg).")
     assert G.sentence([], "lunch") == "Fits your targets for lunch."
+
+
+def test_a_portion_flagged_high_is_never_called_low():
+    """v0.3.0 review: chicken breast (220 mg K a portion, "High potassium" on the same card) read "Low in
+    potassium for what is left today" because the claim was judged against half the meal room (375 mg)."""
+    ctx, bridge = setup()
+    chicken = ctx.foods[3]
+    assert chicken.k * 1.0 > G.LOW_PORTION_MG["potassium_mg"]
+    result = G.judge_ideas({"status": "ok", "refusal": "none",
+                            "ideas": [idea([(3, 4)], codes=("low_potassium", "low_sodium"))]}, ctx, "dinner", bridge, **LABEL)
+    assert result["status"] == "ok"
+    shown = result["ideas"][0]
+    assert shown["reason_codes"] == ["low_sodium"] and result["claims_corrected"] == 1
+    assert shown["why"] == "Low in sodium (65 mg)."
+    high = [w["message"] for item in shown["items"] for w in item.get("warnings", []) if w["level"] == "high"]
+    assert "High potassium: 220 mg in this portion" in high  # the same card's warning, never contradicted
+    # The engine's own threshold: a 100 mg portion may be "low", 101 mg may not.
+    room = meal_room(ctx, "dinner", totals=day_totals(ctx.day))
+    edge = make_food(id=70, name="Edge", category="Vegetables", serving_desc="1 cup", serving_g=100,
+                     nutrients=fx.nutrients(5, 1, 100, 50, 140, 0))
+    assert {"low_potassium", "low_phosphorus", "low_sodium"} <= G.true_reasons([(edge, 1.0)], room, ())
+    assert not {"low_potassium", "low_phosphorus", "low_sodium"} & G.true_reasons([(edge, 1.01)], room, ())
+    # Two low portions: each must be low, and together at most half of what is left today.
+    assert "low_potassium" in G.true_reasons([(edge, 1.0), (edge, 1.0)], room, ())
 
 
 def test_handbook_refs_keep_allowed_slugs_only():

@@ -27,7 +27,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from ..textclean import clean_text
 
-PROMPT_VERSION = "2026-10-06.2"
+PROMPT_VERSION = "2026-10-07.1"
 
 SYSTEM_PROMPT = """\
 You are the optional "meal ideas" helper inside Kidney Health, a self-hosted food log used by a

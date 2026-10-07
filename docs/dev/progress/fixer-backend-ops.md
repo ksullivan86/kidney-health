@@ -13,8 +13,8 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C1 | vision: photo bodies read before consent/slot/quota (memory) | done |
 | C2 | targets E-1/E-3 calorie note contradicts target | done |
 | C3 | insights day.hypo.logged without portion | done |
-| C4 | AI guard low_* claims judged against half the room | todo |
-| C5 | AI shown free text blocklist misses shot/skip/delay/pen/pill/extra | todo |
+| C4 | AI guard low_* claims judged against half the room | done |
+| C5 | AI shown free text blocklist misses shot/skip/delay/pen/pill/extra | done |
 | C6 | insights all_good with unknown K/Na counted as 0 | done |
 | C7 | OFF prepared-only: serving_g is dry weight | todo |
 | C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
@@ -62,6 +62,13 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   period.all_good skip nutrients with unknown values, new `period.unknown` info insight, `period.change.*` skipped
   when either period misses values. 4 new vector cases (`gen_guidance_vectors.py`), tests in
   `tests/guidance/test_insights.py` (doses 15/20/30 with and without gel/shot, unknown day/period/change).
+
+* **C4 + C5** `app/ai/guard.py`: `low_*` true only when every portion ≤ engine threshold (`LOW_PORTION_MG`) and
+  ≤ ½ room; REASON_TEXT prints `{k}`/`{p}`/`{na}` (sentence(codes, meal, items)); BLOCKLIST adds §9 A2 terms
+  (shot, pen, skip/delay forms, pills/meds/prescri*, binder brands, extra/more/double as advice, "is fine/ok/safe");
+  "extra virgin", "penne", "Skippy", "glucose tablets" pass. PROMPT_VERSION 2026-10-07.1 (fingerprint recorded with
+  `KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). 3 golden cases added; tests in test_ai_guard.
+  Not verifiable here: a live evaluation (scripts/ai_eval.py) — no provider in this environment (ROADMAP item).
 
 ## Handoffs (to fixer-frontend-docs)
 

@@ -11,9 +11,13 @@
 * **V6 Text policy.** The meal features return no free text (§9 A2): an idea's ``theme`` and
   ``reason_codes`` are checked against the recomputed numbers (:func:`true_reasons`) and the sentence a
   person reads is written here from maintainer templates (:data:`REASON_TEXT`). A false claim is
-  removed and counted (``claims_corrected``). Model text that must be shown (food names and search
-  terms from photos or a described meal) goes through :func:`name_policy`: NFKC, ``Cc``/``Cf``
-  removed, homoglyphs folded, no URLs, e-mails or markup characters, and the :data:`BLOCKLIST`.
+  removed and counted (``claims_corrected``). A "low in …" claim holds only when every portion is low by
+  the guidance engine's own definition (potassium ≤ 100 mg, phosphorus ≤ 50 mg, sodium ≤ 140 mg per
+  portion) and the idea uses at most half of what is left today; its sentence prints the number.
+  Model text that must be shown (food names and search terms from photos or a described meal) goes
+  through :func:`name_policy`: NFKC, ``Cc``/``Cf`` removed, homoglyphs folded, no URLs, e-mails or
+  markup characters, and the :data:`BLOCKLIST` (which includes §9 A2's expanded terms: ``shot``,
+  ``pen``, ``skip``, ``delay``, ``extra``/``more`` as advice, binder brand names).
 * **V7 Handbook.** Only slugs from the allowed set, at most 2.
 * **V8 Outcome.** No idea left → the rule result with "The AI ideas did not fit your targets today, so
   these are the app's own." A refusal → G11's sentence.
@@ -42,11 +46,20 @@ FALLBACK_TEXT = M.AI_FALLBACK  # V8 (one wording for guidance and AI)
 NO_FIT_TEXT = "The AI found nothing that fits your targets for this meal, so these are the app's own ideas."
 NOTICE = "AI idea · {label} · {model} · checked against your targets · not medical advice"  # G13
 
-# V6 blocklist (R7 with word boundaries, so "pumpkin", "dosa" and "basil" pass; §9 A2 adds "inject").
+# V6 blocklist (R7 with word boundaries, so "pumpkin", "dosa", "basil", "penne" and "Skippy" pass). §9 A2's
+# expanded list is applied to every model text that is shown in v0.3 (describe-a-meal phrases and plate names;
+# packaging text is an injection source, §9.2): "shot", "pen", "skip", "delay", medicines and binder brand names,
+# and "extra"/"more"/"double" only as advice ("eat 3 extra bananas"), so "extra virgin olive oil" and
+# "extra-lean beef" still pass. "tablets" is not blocked: glucose tablets are a food here.
 BLOCKLIST = re.compile(
     r"\b(insulin\w*|bolus\w*|basal|units?|ratios?|corrections?|dos(?:e|es|ed|ing|age)|pumps?|binders?|sevelamer|lanthanum|"
     r"calcium acetate|patiromer|zirconium|supplements?|diagnos\w*|lab results?|safe to eat|unlimited|as much as|"
-    r"don'?t worry|no need to|inject\w*)\b",
+    r"don'?t worry|no need to|inject\w*|shots?|pens?|skip(?:s|ped|ping)?|delay(?:s|ed|ing)?|pills?|capsules?|"
+    r"medicines?|medications?|meds|prescri\w*|renvela|renagel|fosrenol|velphoro|auryxia|phoslo|phoslyra|lokelma|"
+    r"veltassa|kayexalate|xphozah|tenapanor|sucroferric|ferric citrate|"
+    r"(?:eat|have|take|drink|add|use)\s+(?:(?:\d+|an?|one|two|three|four|five|some|another)\s+)?(?:extra|more|double)|"
+    r"(?:\d+|one|two|three|four|five|six)\s+(?:extra|more)|double\s+(?:your|the|it|up)|"
+    r"(?:is|are|it'?s|that'?s)\s+(?:fine|ok(?:ay)?|safe))\b",
     re.IGNORECASE,
 )
 _URL = re.compile(r"(https?://|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|ru|cn|xyz|info|biz|app|dev|me)\b)", re.IGNORECASE)
@@ -63,16 +76,19 @@ _CONFUSABLES = str.maketrans({
 HEARTY_KCAL = 450.0  # an idea at or above this is "hearty", below it "light"
 THEME_TITLE = {"light": "A light {meal}", "hearty": "A hearty {meal}", "familiar": "A familiar {meal}",
                "new_idea": "Something new for {meal}"}
+# Every "low in" sentence prints its number (F6; CDC item 16): never "low" without the amount.
 REASON_TEXT = {
-    "low_potassium": "low in potassium for what is left today",
-    "low_phosphorus": "low in phosphorus",
-    "low_sodium": "low in sodium",
+    "low_potassium": "low in potassium ({k} mg) for what is left today",
+    "low_phosphorus": "low in phosphorus ({p} mg)",
+    "low_sodium": "low in sodium ({na} mg)",
     "fits_carb_goal": "brings {meal} close to your carbohydrate goal",
     "adds_protein": "adds a protein portion",
     "adds_missing_group": "adds what this {meal} is missing",
     "you_eat_often": "uses foods you often have",
 }
 LOW_SODIUM_PORTION_MG = 140.0  # FDA "low sodium" per serving
+# "Low in …" per portion, the guidance engine's own definitions (fits.py reasons; note 06 line 522).
+LOW_PORTION_MG = {R.K: R.LOW_K_REASON_MG, R.P: R.LOW_P_REASON_MG, R.NA: LOW_SODIUM_PORTION_MG}
 
 
 def fold(text: str) -> str:
@@ -113,22 +129,26 @@ def name_policy(text: Any, limit: int = 80) -> tuple[str | None, str | None]:
 def true_reasons(items: Sequence[tuple[FoodVec, float]], room: Room, often: Iterable[int]) -> set[str]:
     """The reason codes that hold for ``items`` in ``room`` (recomputed from the food rows)."""
     totals, unknown = meal_totals(items)
-    n = max(1, len(items))
     out: set[str] = set()
 
-    def low(key: str, per_item: float) -> bool:
+    def low(key: str) -> bool:
+        """Every portion is low by the engine's own definition (so a portion the card flags "high" never
+        reads "low"), and with a tracked target the idea uses at most half of what is left today."""
         if key in unknown:
+            return False
+        limit = LOW_PORTION_MG[key]
+        if any((_amount(f, key) or 0.0) * q > limit for f, q in items):
             return False
         item = room.nutrients.get(key)
         if item is not None:
             return item.room > 0 and totals[key] <= 0.5 * item.room
-        return totals[key] <= per_item * n
+        return True
 
-    if low(R.K, R.LOW_K_REASON_MG):
+    if low(R.K):
         out.add("low_potassium")
-    if low(R.P, R.LOW_P_REASON_MG):
+    if low(R.P):
         out.add("low_phosphorus")
-    if low(R.NA, LOW_SODIUM_PORTION_MG):
+    if low(R.NA):
         out.add("low_sodium")
     if room.carbs is not None and R.CARBS not in unknown:
         if abs(room.carbs.in_meal + totals[R.CARBS] - room.carbs.goal) <= room.carbs.tolerance:
@@ -147,6 +167,10 @@ def true_reasons(items: Sequence[tuple[FoodVec, float]], room: Room, often: Iter
     return out
 
 
+def _amount(f: FoodVec, key: str) -> float | None:
+    return {R.K: f.k, R.P: f.p, R.NA: f.na}[key]
+
+
 def true_theme(items: Sequence[tuple[FoodVec, float]], claimed: str, often: Iterable[int]) -> str:
     """``claimed`` when it is true of ``items``, else the theme that is."""
     often_ids = set(often)
@@ -161,9 +185,12 @@ def true_theme(items: Sequence[tuple[FoodVec, float]], claimed: str, often: Iter
     return "light" if kcal < HEARTY_KCAL else "hearty"
 
 
-def sentence(codes: Sequence[str], meal: str) -> str:
-    """The server-written "why" (no model text): "Low in sodium; adds a protein portion." """
-    parts = [REASON_TEXT[c].format(meal=meal) for c in codes if c in REASON_TEXT]
+def sentence(codes: Sequence[str], meal: str, items: Sequence[tuple[FoodVec, float]] = ()) -> str:
+    """The server-written "why" (no model text), with the idea's own numbers:
+    "Low in sodium (60 mg); adds a protein portion." """
+    totals, _ = meal_totals(items)
+    values = {"meal": meal, "k": M.fmt_int(totals[R.K]), "p": M.fmt_int(totals[R.P]), "na": M.fmt_int(totals[R.NA])}
+    parts = [REASON_TEXT[c].format(**values) for c in codes if c in REASON_TEXT]
     if not parts:
         return f"Fits your targets for {meal}."
     text = "; ".join(parts)
@@ -283,7 +310,7 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
             "theme": theme,
             "title": THEME_TITLE[theme].format(meal=meal),
             "reason_codes": codes,
-            "why": sentence(codes, meal),
+            "why": sentence(codes, meal, vec_items),
             "items": accepted["items"],
             "totals": accepted["totals"],
             "score": accepted["score"],
@@ -350,7 +377,7 @@ def judge_rerank(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping
         vec = [(ctx.foods[int(f["food_id"])], float(f["portion"]))]
         codes, corrected = check_claims(claimed, vec, room, often)
         corrected_total += corrected
-        order.append({"ref": ref, "food_id": int(f["food_id"]), "ai_rank": rank, "reason_codes": codes, "why": sentence(codes, meal)})
+        order.append({"ref": ref, "food_id": int(f["food_id"]), "ai_rank": rank, "reason_codes": codes, "why": sentence(codes, meal, vec)})
     rest = [{"ref": r, "food_id": int(f["food_id"])} for r, f in foods.items() if r not in {p[0] for p in picks}]
     if not order:
         return {"status": "dropped_all", "message": FALLBACK_TEXT, "order": [], "rest": rest, "dropped": dropped,
@@ -377,7 +404,7 @@ def judge_swap(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[s
         corrected_total += corrected
         shown.append({**label(provider_label, model), "ref": ref, "food_id": int(s["food_id"]), "name": s["name"],
                       "servings": s["servings"], "renal_rating": s.get("renal_rating"), "text": s.get("text"),
-                      "reason_codes": codes, "why": sentence(codes, meal)})
+                      "reason_codes": codes, "why": sentence(codes, meal, vec)})
     if not shown:
         return {"status": "dropped_all", "message": FALLBACK_TEXT, "pick": [], "dropped": dropped, "claims_corrected": 0}
     return {"status": "ok", "pick": shown, "dropped": dropped, "claims_corrected": corrected_total}
