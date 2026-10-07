@@ -696,22 +696,33 @@
   // ---------------------------------------------------------------------------
   // Settings → This device: the entries waiting to sync
   // ---------------------------------------------------------------------------
+  // Appends the list to `container` (Settings may pass a detached fragment it shows later) and keeps it
+  // current while it is on the page. Returns a function that stops the updates; Settings calls it when a
+  // newer render replaces the section. Draws can overlap (a change arrives while one waits for IndexedDB):
+  // each builds its content first and only the newest replaces the box, so nothing is listed twice.
   async function renderDevice(container) {
     const box = h('div', { class: 'outbox', id: 'set-outbox' });
     container.append(box);
+    let drawn = 0;
+    let shown = false;
+    let stopped = false;
     const draw = async () => {
-      clear(box);
+      const ticket = ++drawn;
       const items = await myItems();
+      if (ticket !== drawn || stopped) return; // a newer draw (or none at all) owns the box
+      if (box.isConnected) shown = true;
+      const parts = [];
       const where = MOCK ? 'In the demo they are kept in this page only.'
         : persistent ? 'They are kept in this browser’s storage until they reach your server.'
           : 'This browser cannot store them, so they are kept only while this page stays open.';
-      box.append(h('h3', { class: 'settings-subtitle', id: 'set-outbox-h' }, 'Entries waiting to sync'));
+      parts.push(h('h3', { class: 'settings-subtitle', id: 'set-outbox-h' }, 'Entries waiting to sync'));
       if (!items.length) {
-        box.append(h('p', {}, offline ? 'Nothing waits. Your server cannot be reached right now; new entries will wait here.' : 'Everything is synced.'));
+        parts.push(h('p', {}, offline ? 'Nothing waits. Your server cannot be reached right now; new entries will wait here.' : 'Everything is synced.'));
+        box.replaceChildren(...parts);
         return;
       }
       const failedN = items.filter((i) => i.state === 'failed').length;
-      box.append(h('p', {}, `${items.length} ${items.length === 1 ? 'entry has' : 'entries have'} not reached your server${failedN ? `; ${failedN} could not be saved` : ''}. ${where}`));
+      parts.push(h('p', {}, `${items.length} ${items.length === 1 ? 'entry has' : 'entries have'} not reached your server${failedN ? `; ${failedN} could not be saved` : ''}. ${where}`));
       const list = h('ul', { class: 'outbox-list', 'aria-labelledby': 'set-outbox-h' });
       for (const item of items) {
         const row = h('li', { class: `outbox-item${item.state === 'failed' ? ' failed' : ''}` });
@@ -747,10 +758,19 @@
         onConfirm: async () => { await discardAll(); await draw(); return true; },
       }));
       all.append(now, dropAll);
-      box.append(list, all);
+      parts.push(list, all);
+      box.replaceChildren(...parts);
     };
     await draw();
-    const off = onChange(() => { if (document.contains(box)) draw(); else off(); });
+    // Draw on every outbox change while the list is (or is about to be) on the page; once it has been
+    // shown and is gone (Settings re-rendered or the view changed), stop listening.
+    const off = onChange(() => {
+      if (box.isConnected) shown = true;
+      else if (shown) { stop(); return; }
+      draw();
+    });
+    function stop() { stopped = true; off(); }
+    return stop;
   }
   function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 

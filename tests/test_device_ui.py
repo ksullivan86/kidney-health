@@ -269,6 +269,29 @@ def test_settings_lists_the_food_data_keys_and_the_device_section() -> None:
     assert "Open Food Facts" in SETTINGS_VIEW and "ODbL" in SETTINGS_VIEW  # About → data sources (note 03 R11)
 
 
+def _function_body(source: str, signature: str) -> str:
+    """The text of a top-level function inside a view's IIFE (two-space indent), up to its closing brace."""
+    start = source.index(signature)
+    end = source.index("\n  }\n", start)
+    return source[start:end]
+
+
+def test_settings_device_section_is_drawn_once_when_renders_overlap() -> None:
+    """Review finding (v0.3.0): on a first visit js/pwa.js asks Settings → This device to draw again while the first
+    draw still waits for the device state, and both appended a full copy (two Clear buttons, duplicate ids). Each
+    draw now builds into a detached fragment and only the newest replaces the section after its last await
+    (tools/e2e/device.py ``firstvisit`` checks it in Chromium on fresh profiles)."""
+    body = _function_body(SETTINGS_VIEW, "async function renderDevice()")
+    assert "document.createDocumentFragment()" in body
+    assert "body.append(" not in body and "clear(body)" not in body, "renderDevice must not write to the page before its awaits end"
+    assert "ticket !== deviceRender" in body and body.count("body.replaceChildren(out)") == 1
+    assert "stops.push(await KH.offline.renderDevice(out))" in body  # the outbox list goes into the same fragment
+    outbox = _function_body(OFFLINE, "async function renderDevice(container)")
+    assert "ticket !== drawn" in outbox and "box.replaceChildren(...parts)" in outbox
+    assert "box.append(" not in outbox and "clear(box)" not in outbox, "the outbox list must be replaced in one step"
+    assert "return stop;" in outbox  # Settings stops a replaced list's live updates
+
+
 # --------------------------------------------------------------------------- #
 # The demo
 # --------------------------------------------------------------------------- #

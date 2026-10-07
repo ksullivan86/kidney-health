@@ -718,30 +718,46 @@
     unsupported: 'Not in this browser',
     off: 'Not yet: reload the page once',
   };
+  // Renders can overlap: Settings opens one, and js/pwa.js asks for another when the first visit's offline
+  // copy becomes ready (it can say so twice in a row: ready, then in control). Each render builds
+  // into a detached fragment and only the newest one, after all of its awaits, replaces the section, so the
+  // rows never appear twice and the ids (#set-clear-device, #set-outbox, #set-outbox-h) stay unique.
+  let deviceRender = 0;
+  let deviceStop = null; // stops the shown outbox list's live updates when a newer render replaces it
   async function renderDevice() {
     const body = $('#set-device-body');
-    clear(body);
+    const ticket = ++deviceRender;
+    const out = document.createDocumentFragment();
+    const stops = [];
+    const show = () => {
+      if (ticket !== deviceRender) { for (const stop of stops) stop(); return false; } // a newer render owns the section
+      if (deviceStop) deviceStop();
+      deviceStop = () => { for (const stop of stops) stop(); };
+      body.replaceChildren(out);
+      return true;
+    };
     if (!KH.pwa || MOCK) {
-      body.append(kv([['This app', PREVIEW ? 'A preview inside this page' : 'Demo mode (?mock=1)'], ['App version', APP_VERSION]]),
+      out.append(kv([['This app', PREVIEW ? 'A preview inside this page' : 'Demo mode (?mock=1)'], ['App version', APP_VERSION]]),
         h('p', {}, 'In the installed app this section shows whether the app is on your home screen and works offline, how much it stores on this device, and how to install it. The preview stores nothing on this device.'));
       // The outbox works against the demo too: while the browser is offline, entries wait in this page (js/offline.js).
-      if (KH.offline) await KH.offline.renderDevice(body);
+      if (KH.offline) stops.push(await KH.offline.renderDevice(out));
+      show();
       return;
     }
     const st = await KH.pwa.deviceStatus();
     // isSecureContext is also true on http://localhost, which is not encrypted: ask the address.
     const https = (() => { try { return window.location.protocol === 'https:'; } catch (e) { return false; } })();
     const storage = st.storage ? `${fmtBytes(st.storage.usage)} of about ${fmtBytes(st.storage.quota)}` : null;
-    body.append(kv([
+    out.append(kv([
       ['This app', st.installed ? 'Installed: it opens from your home screen' : 'Open in the browser'],
       ['Works offline', OFFLINE_TEXT[st.offline] || st.offline],
       storage ? ['Storage used', `${storage}${st.persisted === true ? ' · kept by the browser' : st.persisted === false ? ' · the browser may clear it when space runs low' : ''}`] : null,
       ['Connection', https ? 'Encrypted (HTTPS)' : st.secure ? 'Not encrypted (plain HTTP on this computer; offline use still works)' : 'Not encrypted (plain HTTP)'],
       ['App version', st.updateReady ? `${APP_VERSION} (an update is ready: use Reload)` : APP_VERSION],
     ]));
-    if (!st.secure) body.append(note('caution', h('p', {}, 'Offline use, camera scanning and reminders need HTTPS. Your admin can set it up with docs/https.md.')));
+    if (!st.secure) out.append(note('caution', h('p', {}, 'Offline use, camera scanning and reminders need HTTPS. Your admin can set it up with docs/https.md.')));
     // Entries waiting to sync, with Sync now, Retry, Discard (js/offline.js, note 02 R5).
-    if (KH.offline) await KH.offline.renderDevice(body);
+    if (KH.offline) stops.push(await KH.offline.renderDevice(out));
     const row = h('div', { class: 'settings-actions' });
     const clearBtn = h('button', { class: 'btn secondary', type: 'button', id: 'set-clear-device' }, 'Clear offline data on this device');
     clearBtn.addEventListener('click', async () => {
@@ -761,7 +777,8 @@
       });
     });
     row.append(clearBtn);
-    body.append(row);
+    out.append(row);
+    if (!show()) return;
     KH.pwa.renderInstallPanel();
     // Opened straight to #settings: the app may become ready for offline use a moment later; show
     // the new state then instead of a stale "Not yet" (js/pwa.js says when; subscribed once).

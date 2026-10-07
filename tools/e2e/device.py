@@ -27,6 +27,10 @@ the service worker and the camera are allowed):
                for me": the browser sends a JPEG ≤ 1600 px without EXIF, fields marked "from photo", logged.
 * ``demo``     ``/?mock=1``: the demo's three recorded products (consent, attribution link, quality notes), a
                barcode it does not know → "Enter from the label" with the number, the outbox against the demo API.
+* ``firstvisit`` three fresh browser profiles opened straight at ``/#settings`` with the service worker allowed:
+               while the first visit's worker takes control (js/pwa.js re-renders Settings → This device, possibly
+               twice), the section is drawn once: one "Works offline" row that ends on "Yes", one "Entries waiting to
+               sync" list, one "Clear offline data" button, no duplicate ids anywhere on the page.
 * ``shots``    the new screens at 375×812 and 1280×800, light and dark (scan sheet, entry sheet with provenance,
                Quick add with the photo beside the form, Today with a waiting entry, Settings → This device) with
                layout checks (no horizontal overflow, 44 px tap targets).
@@ -63,7 +67,7 @@ OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device"
 PORT = 8066
 AI_PORT = 8067
 TIMEOUT_MS = 20_000
-SECTIONS = ("photo", "native", "live", "outbox", "ai", "demo", "shots")
+SECTIONS = ("photo", "native", "live", "outbox", "firstvisit", "ai", "demo", "shots")
 RESULTS: list[dict[str, Any]] = []
 TODAY = date.today().isoformat()
 
@@ -742,6 +746,45 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         ctx.close()
 
 
+# Settings → This device as drawn on the page: rows, the outbox list, the button, and ids used more than once.
+DEVICE_SECTION_JS = """() => {
+  const body = document.querySelector('#set-device-body');
+  const rows = [...body.querySelectorAll('dt')].filter((dt) => dt.textContent.trim() === 'Works offline')
+    .map((dt) => (dt.nextElementSibling ? dt.nextElementSibling.textContent.trim() : ''));
+  const seen = new Map();
+  for (const el of document.querySelectorAll('[id]')) seen.set(el.id, (seen.get(el.id) || 0) + 1);
+  return { offlineRows: rows, clearButtons: document.querySelectorAll('#set-clear-device').length,
+           outboxes: document.querySelectorAll('#set-outbox').length, outboxHeads: document.querySelectorAll('#set-outbox-h').length,
+           duplicateIds: [...seen].filter(([, n]) => n > 1).map(([id, n]) => `${id} ×${n}`) };
+}"""
+
+
+def section_firstvisit(hx: Harness, state: dict[str, Any]) -> None:
+    """The review's repro (three out of three fresh profiles drew the section twice): open Settings first."""
+    area = "first visit: Settings → This device"
+    for attempt in range(1, 4):
+        ctx, watch = hx.context(width=375, height=812, touch=True, service_workers="allow")
+        page = ctx.new_page()
+        state["page"] = page
+        try:
+            page.goto(f"{hx.base}/#settings")
+            page.wait_for_selector("#view-settings:not([hidden]) #set-clear-device")
+            # The worker installs, claims this page (controllerchange) and js/pwa.js asks Settings to draw again.
+            wait_js(page, "!!(navigator.serviceWorker && navigator.serviceWorker.controller)")
+            wait_js(page, "(document.querySelector('#set-device-body') || {}).textContent.includes('Yes: the app opens without a connection')")
+            page.wait_for_timeout(1000)  # any render still waiting for IndexedDB or the storage estimate lands now
+            got = page.evaluate(DEVICE_SECTION_JS)
+            check(area, f"profile {attempt}: drawn once (one 'Works offline' row, now 'Yes'; one outbox list and heading; one Clear button)",
+                  got["offlineRows"] == ["Yes: the app opens without a connection"] and got["clearButtons"] == 1
+                  and got["outboxes"] == 1 and got["outboxHeads"] == 1, json.dumps(got))
+            check(area, f"profile {attempt}: no id is used twice on the page", not got["duplicateIds"], ", ".join(got["duplicateIds"]))
+            if attempt == 1:
+                hx.shot(page, "firstvisit-device-375")
+        finally:
+            no_problems(f"{area} {attempt}", watch)
+            ctx.close()
+
+
 def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
     area = "AI cards and label photo (fake OpenAI-compatible server)"
     hx.api("PUT", "/api/profile", {"weight_kg": 70, "targets": {"potassium_mg": 2500, "phosphorus_mg": 1000, "sodium_mg": 2000,
@@ -1086,6 +1129,7 @@ def main(argv: list[str] | None = None) -> int:
                         "native": lambda: section_native(hx, state),
                         "live": lambda: section_live(hx, state, pw),
                         "outbox": lambda: section_outbox(hx, state),
+                        "firstvisit": lambda: section_firstvisit(hx, state),
                         "ai": lambda: section_ai(hx, state, fake),
                         "demo": lambda: section_demo(hx, state),
                         "shots": lambda: section_shots(hx, state),
