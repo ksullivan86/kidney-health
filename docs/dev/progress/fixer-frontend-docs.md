@@ -33,7 +33,7 @@ LOW (apply or justify):
 | L7 | Trends ignores goal / about targets | done (with C1, d458205) |
 | L8 | "about X" protein treated as hard max in plan | pending |
 | L9 | GET /api/foods/builtin ETag deferred without spec | pending |
-| L10 | guidance AI buttons: no What will be sent? / dropped | pending |
+| L10 | guidance AI buttons: no What will be sent? / dropped | done |
 | L11 | carbs_per_snack_g has no UI | pending |
 | L12 | iOS install tip after third visit | pending |
 | L13 | demo runs with lab rules on (note 05 C10) | done |
@@ -42,6 +42,14 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L10** (guidance AI buttons): guidance.js `aiSentButton(body)` (dry run → `KH.ai.showSent`) beside "AI order"
+  and "Ask AI to pick"; the plan's "What will be sent?" is a link above the plan (`#g-plan-ai-sent`; the foot
+  keeps three buttons at 375 px); `aiDropped` shows `KH.ai.droppedNotes` (factored out of ai.js `answerHead`,
+  same wording) after each answer. CSS `.g-ai-buttons`, `.g-ai-plan-note`. Tests: test_guidance_ui.py static
+  check; device.py ai: the fake answers rerank with a ref the rules never offered; "What will be sent?" shows
+  the rerank request to 127.0.0.1:<port>, and "1 AI pick was left out … a food the rules had not offered":
+  24/24. Docs: handbook app/guidance.md, ARCHITECTURE Optional AI bullet.
 
 * **L4** (raw AI answer in AI activity): new `js/engine/aiguard.js` (KH.aiguard: `fold`, `blocked`,
   `maskForDisplay`; pattern and look-alike table verbatim from app/ai/guard.py), loaded after textclean.js

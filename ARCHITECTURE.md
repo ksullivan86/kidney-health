@@ -1331,6 +1331,8 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   field) and the "Not for me" list (**Suggest again**); Admin → Server settings groups `guidance.*`.
 * **Optional AI** (only with `ai_enrich` and AI available; `KH.ai.withConsent`): "AI order" (rerank) over the
   same list, "Ask AI to pick" under rule swaps (never for a low), "Let AI choose" in the plan ("AI's pick").
+  Each has its own "What will be sent?" (the same body with `dry_run`, shown by `KH.ai.showSent`; the plan's
+  sits above the plan as a link) and shows the dropped picks with their reasons (`KH.ai.droppedNotes`, G13).
 * **Offline**: the last answer of each kind is kept in memory with its time ("Saved at …"); without one,
   "Guidance needs a connection to your server." Nothing goes to browser storage. Lists carry
   `role="list"`, async results are announced through `role="status"` regions.

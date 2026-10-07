@@ -238,6 +238,12 @@ class FakeAi:
                                                             {"food_id": c[2]["id"], "quarters": c[2]["portion_quarters"]}],
                               "reason_codes": ["fits_carb_goal"], "handbook": []})
             return {"status": "ok", "refusal": "none", "ideas": ideas}
+        if text.startswith("TASK: rerank"):
+            # Two real refs in reverse order and one the rules never offered (left out: "not_a_candidate").
+            refs = [c["ref"] for c in data.get("candidates") or []]
+            return {"status": "ok", "refusal": "none",
+                    "order": [{"ref": r, "reason_codes": ["low_potassium"]} for r in refs[:2][::-1]]
+                    + [{"ref": "zz", "reason_codes": ["low_potassium"]}]}
         if text.startswith("TASK: identify_food"):
             return {"status": "ok", "items": [
                 {"name": "banana", "search": "banana", "grams_estimate": 118, "confidence": "high"},
@@ -835,6 +841,28 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         page.wait_for_selector("#guidance-fits-body .g-food")
         check(area, "the rule-based 'What fits now' list is still there, beside the AI button",
               page.locator("#guidance-fits-body .g-food").count() >= 1 and page.is_visible("#ai-add-slot"))
+        # "AI order" (note 04 R9 step 4, G13; v0.3.0 review L10): its own "What will be sent?", and the picks the
+        # rules left out are counted with the reason.
+        prefs = (hx.api("GET", "/api/me/settings")["settings"]["guidance"] or {}).get("value") or {}
+        hx.api("PATCH", "/api/me/settings", {"guidance": {**prefs, "ai_enrich": True}})
+        open_add(page, hx.base)
+        page.reload()  # the page keeps the person's guidance settings until it loads again
+        page.wait_for_selector("#view-add:not([hidden]) #btn-scan")
+        page.wait_for_selector("#guidance-fits:not([hidden])")
+        page.click("#guidance-fits-meal label >> nth=0")
+        page.wait_for_selector("#guidance-fits-body .g-ai-bar .g-ai-sent")
+        page.click("#guidance-fits-body .g-ai-bar .g-ai-sent")
+        page.wait_for_selector("#sheet-ai-sent[open]")
+        sent = page.inner_text("#sheet-ai-sent")
+        check(area, "'AI order' has its own 'What will be sent?' (the rerank request, destination shown, no key)",
+              f"127.0.0.1:{fake.port}" in sent and "rerank" in sent, sent[:300])
+        page.click("#sheet-ai-sent .sheet-foot >> text=Close")
+        page.click("#guidance-fits-body .g-ai-toggle")
+        page.wait_for_selector("#guidance-fits-body .g-ai-dropped")
+        dropped = page.inner_text("#guidance-fits-body .g-ai-dropped")
+        check(area, "'AI order' says how many picks the rules left out and why",
+              dropped.startswith("1 AI pick was left out by the app's rules") and "had not offered" in dropped, dropped)
+        hx.shot(page, "ai-order-dropped-1280")
         # Quick add: a large phone photo with EXIF, beside the form; AI reads it; the browser sends a small clean JPEG.
         big = hx.out / "label-big.jpg"
         jpeg_b64 = page.evaluate("""(() => { const c = document.createElement('canvas'); c.width = 3000; c.height = 2000;

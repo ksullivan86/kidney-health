@@ -466,6 +466,18 @@
     if (!answer || answer.status === 'ok') return null;
     return h('p', { class: 'g-offline', role: 'note' }, answer.message || 'The AI answer could not be used; these are the app’s own suggestions.');
   }
+  // What the rules left out of an AI answer, and why (note 04 G13; the same lines as the AI cards).
+  function aiDropped(answer, what) { return KH.ai && KH.ai.droppedNotes ? KH.ai.droppedNotes(answer, what) : []; }
+  // "What will be sent?" beside each AI button (note 04 R9 step 4): the dry run of the same request, shown in the
+  // AI sheet, even after the person agreed once and skips the preview.
+  function aiSentButton(body, errBox) {
+    const b = h('button', { class: 'btn secondary g-ai-sent', type: 'button' }, 'What will be sent?');
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try { await KH.ai.showSent(await KH.ai.api.nextMeal(typeof body === 'function' ? body() : body, true), { trigger: b }); } catch (err) { aiError(errBox, err); } finally { if (document.contains(b)) b.disabled = false; }
+    });
+    return b;
+  }
   function aiError(box, err) {
     if (err && (err.handled || err.cancelled)) return;
     clear(box).append(h('p', { class: 'form-error' }, `AI: ${(err && (err.detail || err.message)) || 'the request failed'}`));
@@ -501,10 +513,12 @@
           const t = $('.g-ai-toggle', fitsBody);
           if (t) t.focus();
           fitsStatus.textContent = `Shown in the AI's order (${fits.ai.provider}). The numbers and fit checks are the app's own.`;
-        } else msg.append(aiAnswerNote(answer));
+          const bar = $('.g-ai-bar .g-ai-msg', fitsBody);
+          if (bar) bar.append(...aiDropped(answer, ['AI pick was', 'AI picks were']));
+        } else msg.append(...[aiAnswerNote(answer), ...aiDropped(answer, ['AI pick was', 'AI picks were'])].filter(Boolean));
       } catch (err) { aiError(msg, err); } finally { if (document.contains(toggle)) toggle.disabled = false; }
     });
-    return h('div', { class: 'g-ai-bar' }, toggle,
+    return h('div', { class: 'g-ai-bar' }, h('div', { class: 'g-ai-buttons' }, toggle, aiSentButton({ meal, date, mode: 'rerank' }, msg)),
       h('p', { class: 'hint' }, on ? 'In the AI’s order. The numbers and fit checks are still the app’s own.'
         : 'Let AI put these foods in the order it suggests and say why. The numbers stay the app’s own.'), msg);
   }
@@ -515,11 +529,12 @@
       if (!st || !document.contains(box)) return;
       const out = h('div', { class: 'g-ai-msg' });
       const ask = h('button', { class: 'btn secondary', type: 'button' }, `Ask AI to pick · ${st.provider ? st.provider.label : 'AI'}`);
+      const swapBody = () => (c.mode === 'edit' && c.entry && !c.amountTouched ? { meal: c.meal, date: c.date, mode: 'swap', entry_id: c.entry.id }
+        : { meal: c.meal, date: c.date, mode: 'swap', food_id: c.food.id, servings: Math.min(20, c.servings > 0 ? c.servings : 1) });
       ask.addEventListener('click', async () => {
         ask.disabled = true;
         clear(out);
-        const body = c.mode === 'edit' && c.entry && !c.amountTouched ? { meal: c.meal, date: c.date, mode: 'swap', entry_id: c.entry.id }
-          : { meal: c.meal, date: c.date, mode: 'swap', food_id: c.food.id, servings: Math.min(20, c.servings > 0 ? c.servings : 1) };
+        const body = swapBody();
         try {
           const answer = await aiNextMeal(body, ask);
           if (!answer) return;
@@ -528,9 +543,10 @@
               h('div', { class: 'g-food-text' }, h('div', { class: 'row-title' }, h('span', { class: 'g-ai-badge' }, 'AI’s pick'), ` ${p.name}`),
                 p.text ? h('div', { class: 'g-reason' }, p.text) : null, p.why ? h('div', { class: 'g-ai-why' }, p.why) : null))))));
           } else out.append(aiAnswerNote(answer) || h('p', { class: 'hint' }, 'The AI did not pick a swap.'));
+          out.append(...aiDropped(answer, ['AI pick was', 'AI picks were']));
         } catch (err) { aiError(out, err); } finally { if (document.contains(ask)) ask.disabled = false; }
       });
-      box.append(ask, out);
+      box.append(h('div', { class: 'g-ai-buttons' }, ask, aiSentButton(swapBody, out)), out);
     });
     return (res.swaps || []).length ? box : null;
   }
@@ -552,10 +568,24 @@
           planState.aiPicks = answer.ai_picks || {};
           renderPlan(out, answer.plan, null);
           $('#g-plan-status').textContent = `The AI chose ${Object.keys(planState.aiPicks).length} of the meals; the app checked the whole day again.`;
-        } else { const n = aiAnswerNote(answer); if (n) out.prepend(n); }
+          out.prepend(...aiDropped(answer, ['AI choice was', 'AI choices were']));
+        } else out.prepend(...[aiAnswerNote(answer), ...aiDropped(answer, ['AI choice was', 'AI choices were'])].filter(Boolean));
       } catch (err) { const box = h('div'); aiError(box, err); out.prepend(box); } finally { if (document.contains(b)) b.disabled = false; }
     }, { id: 'g-plan-ai' });
     foot.insertBefore(b, foot.querySelector('.spacer'));
+    // "What will be sent?" for "Let AI choose" sits above the plan, not in the foot (three buttons fit at 375 px).
+    const out = $('#g-plan-out');
+    if (!out) return;
+    const msg = h('div', { class: 'g-ai-msg' });
+    const sent = h('button', { class: 'link-btn', type: 'button', id: 'g-plan-ai-sent' }, 'What will be sent?');
+    sent.addEventListener('click', async () => {
+      const res = planState.result;
+      if (!res || !res.meals.length) return;
+      sent.disabled = true;
+      clear(msg);
+      try { await KH.ai.showSent(await KH.ai.api.nextMeal({ meal: res.meals[0].meal, date: res.date, mode: 'plan' }, true), { trigger: sent }); } catch (err) { aiError(msg, err); } finally { if (document.contains(sent)) sent.disabled = false; }
+    });
+    out.before(h('p', { class: 'hint g-ai-plan-note' }, `“Let AI choose” sends the plan’s options to ${st.provider ? st.provider.label : 'the AI server'}. `, sent), msg);
   }
 
   // ---------------------------------------------------------------------------

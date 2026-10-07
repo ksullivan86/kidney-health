@@ -167,7 +167,9 @@ before you see it ([Optional AI](ai.md); [design note 04][NOTE04]).
 - With **Let AI re-order and explain suggestions** ticked in **Settings → Meal guidance**, you also get
   **AI order** (the same foods in the AI's order, each with its reason; tap again for the app's order),
   **Ask AI to pick** under swap ideas, and **Let AI choose** in the plan, which marks the meals it chose
-  **AI's pick**. Low treatments are never sent to AI.
+  **AI's pick**. Each has **What will be sent?**, which shows the exact request before anything leaves the
+  server, and each says how many AI picks the app's rules left out and why. Low treatments are never sent
+  to AI.
 
 ## Related pages
 

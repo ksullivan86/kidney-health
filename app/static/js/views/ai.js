@@ -294,12 +294,19 @@
     const out = [];
     if (answer.status === 'error') out.push(note('caution', h('p', {}, answer.message || 'The AI request failed.')));
     else if (answer.message) out.push(note('caution', h('p', {}, answer.message)));
-    const dropped = (answer.dropped || []).length;
+    return out.concat(droppedNotes(answer));
+  }
+  // G13: how many AI ideas or picks the rules left out and why, and how many claimed reasons they removed. The
+  // guidance views' AI order, AI pick and AI plan show the same lines (KH.ai.droppedNotes).
+  function droppedNotes(answer, what = null) {
+    const out = [];
+    const dropped = ((answer && answer.dropped) || []).length;
     if (dropped) {
-      const what = answer.feature === 'next_meal' ? (dropped === 1 ? 'AI idea was' : 'AI ideas were') : (dropped === 1 ? 'AI answer was' : 'AI answers were');
-      out.push(h('p', { class: 'hint' }, `${dropped} ${what} left out by the app's rules: ${[...new Set(answer.dropped.map((d) => dropText(d.reason)))].join('; ')}.`));
+      const noun = what || (answer.feature === 'next_meal' ? ['AI idea was', 'AI ideas were'] : ['AI answer was', 'AI answers were']);
+      out.push(h('p', { class: 'hint g-ai-dropped' }, `${dropped} ${noun[dropped === 1 ? 0 : 1]} left out by the app's rules: `
+        + `${[...new Set(answer.dropped.map((d) => dropText(d.reason)))].join('; ')}.`));
     }
-    if (answer.claims_corrected) out.push(h('p', { class: 'hint' }, `The app removed ${answer.claims_corrected} ${answer.claims_corrected === 1 ? 'reason' : 'reasons'} the AI gave that the numbers did not support.`));
+    if (answer && answer.claims_corrected) out.push(h('p', { class: 'hint' }, `The app removed ${answer.claims_corrected} ${answer.claims_corrected === 1 ? 'reason' : 'reasons'} the AI gave that the numbers did not support.`));
     return out;
   }
   function cardsBlock(answer) {
@@ -1128,5 +1135,5 @@
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
   KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAddSlot, withConsent, showSent, api, prepareJpeg,
-    uploadPhoto }; // uploadPhoto: js/scan.js reads a label photo into Quick add
+    uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();

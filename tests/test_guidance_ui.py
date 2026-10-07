@@ -252,3 +252,27 @@ def test_settings_view_lists_the_guidance_keys() -> None:
     fields = set(settings_registry.GuidancePreferences.model_fields)
     for field in fields:
         assert re.search(rf"\b{field}\b", VIEW), f"Settings → Meal guidance has no control for {field}"
+
+
+def _fn(source: str, name: str) -> str:
+    """The body of ``function name(`` up to the next top-level function of the view."""
+    start = source.index(f"function {name}(")
+    nxt = re.search(r"\n  (?:async )?function \w+\(", source[start + 10:])
+    return source[start: start + 10 + nxt.start()] if nxt else source[start:]
+
+
+def test_every_guidance_ai_button_has_what_will_be_sent_and_says_what_was_dropped() -> None:
+    """Note 04 R9 step 4 ("every AI button has What will be sent?") and G13 (the ideas dropped and why) for the
+    three guidance-owned AI modes (v0.3.0 review L10): AI order (rerank), Ask AI to pick (swap) and Let AI choose
+    (plan). Each dry run is the same request with ``dry_run`` (``KH.ai.api.nextMeal(body, true)``), shown in the
+    AI sheet; the dropped lines are ``KH.ai.droppedNotes``, the cards' own wording. tools/e2e/device.py (ai) clicks
+    AI order's on a real server with a fake provider that names a food the rules never offered."""
+    sent = _fn(VIEW, "aiSentButton")
+    assert "'What will be sent?'" in sent and "KH.ai.showSent(await KH.ai.api.nextMeal(" in sent and ", true)" in sent
+    order, swap, plan = _fn(VIEW, "aiOrderBar"), _fn(VIEW, "aiSwapBlock"), _fn(VIEW, "aiPlanButton")
+    assert "aiSentButton({ meal, date, mode: 'rerank' }" in order and "aiDropped(answer" in order
+    assert "aiSentButton(swapBody" in swap and "aiDropped(answer" in swap
+    assert "id: 'g-plan-ai-sent'" in plan and "mode: 'plan' }, true)" in plan and "aiDropped(answer" in plan
+    ai = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
+    assert "function droppedNotes(answer, what = null)" in ai and "droppedNotes };" in ai
+    assert "return out.concat(droppedNotes(answer));" in ai  # the AI cards use the same lines
