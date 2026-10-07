@@ -98,6 +98,31 @@ Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a
 * **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. Needs the sharing design first (note 07 §6), a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
 * **Direct patient-portal connection (SMART on FHIR, large; probably not).** Each EHR vendor (Epic, Oracle Health) requires registering the app and an OAuth flow per health system; for a self-hosted app each operator would have to register their own instance. The file imports above cover most of the value. This route covers MyChart (Epic's patient portal) and other EHR portals; the lab companies Quest and Labcorp are not EHRs and, as far as we know, offer no open patient API (check before designing), but their portals download PDF reports (the PDF item above) and results usually reach the doctor's EHR too. Paid aggregators (for example 1upHealth or Health Gorilla) would route health data through a third party, against the self-hosted design.
 
+### Rough cost of the owner's ideas
+
+Estimated 2026-10-07 for one agent working directly in a single session (as the small v0.3.0 follow-up PRs were), including re-reading the code and waiting for CI; expect ±50 %. A multi-agent build with separate review and fix rounds costs about 2–3× as much. "Owner" marks work only the maintainer can do (live model runs, vendor registration).
+
+| Item | Tokens | Agent time |
+|---|---|---|
+| "Not chosen yet" stage and diabetes type, plus the tolerance settings (Accounts and Meal guidance sections above) | 1–2M | 2–4 h |
+| Try the app on GitHub Pages | 0.5–1M | 1–2 h |
+| "Keep my data in this browser" demo mode | 2–4M | 4–8 h |
+| Lab results from a CSV file | 1–1.5M | 2–3 h |
+| Lab results from a patient-portal C-CDA file | 2–3M | 4–6 h |
+| Lab results from Apple Health clinical records | 1.5–2.5M | 3–5 h (less after C-CDA: same review-and-confirm screen) |
+| Weight from an Apple Health export | 1.5–2M | 3–4 h |
+| Blood pressure (new table, Trends chart, handbook page) | +2–3M | +4–6 h |
+| Live push from an iPhone Shortcut (mostly per-person API tokens) | 2–3M | 4–6 h |
+| Lab results from a PDF report (AI) | 2–3M | 4–6 h, plus owner live runs |
+| Direct patient-portal connection (SMART on FHIR) | 8–15M+ | several days, plus Epic registration (owner); not recommended |
+| Symptoms log | 2–3M | 4–6 h |
+| Visit prep (after the symptoms log) | 1–2M | 2–4 h |
+| Ask about my own data (AI) | 5–10M | 1–2 days, plus owner live runs |
+| Admin settings on their own page | 0.5–1M | 1–2 h |
+| Clinician accounts with notes (includes the read-only sharing it needs, about 4–6M) | 7–11M | 2–3 days |
+
+A cheap first batch (a possible v0.3.1): the "Not chosen yet" and tolerance item, the admin page, the Pages demo and the lab CSV import, about 3–5.5M tokens.
+
 ## Open items from the v0.3.0 build (no specification defers them)
 
 Left open when v0.3.0 was finished, with the reason; each needs the named owner, not code.
