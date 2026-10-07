@@ -91,7 +91,39 @@ Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a
 * **Weight (and later blood pressure) from an Apple Health export (medium).** An iPhone web app cannot read HealthKit directly, so: upload the `export.xml` from the export zip, parse it as a stream (the file can be hundreds of MB) and keep only body mass, and blood pressure once the app has a place to record it (a new table, Trends chart and handbook page). Glucose and insulin stay out: no dosing, and CGM apps keep their own alerts.
 * **Live push from an iPhone Shortcut (medium).** A Shortcut (or a Health automation) that sends the latest weight or blood pressure to the person's own server. Needs per-person API tokens with a narrow write-only scope (the app has session sign-in only today), rate limits, and docs for the Shortcut.
 * **Lab results from a PDF report (medium, needs AI).** Behind the optional AI (note 04), like label photos: the model proposes values, the person confirms each one, nothing is saved unconfirmed.
+* **Symptoms log (medium).** Record symptoms with a date and severity (for example swelling, itching, tiredness, cramps, nausea, breathlessness, poor appetite), shown on Today and Trends and in the export. Symptoms the handbook lists as red flags link to `get-help-now`; the app records and shows, it never suggests a cause. A new table (schema step), the demo twin and parity vectors.
+* **Visit prep (small to medium).** A printable one-page summary for an appointment: recent lab results and their trend, average sodium, potassium, phosphorus and protein against the targets, the symptoms log, and the person's own list of questions (the handbook's `living/appointments` page has the checklist). Print or save as PDF from the browser; nothing is sent anywhere.
+* **Ask about my own data (large, needs AI).** An "ask" box is only useful if the answer can see what the person has logged. Build it on two existing AI roadmap items (the read-only tool calling and the free-text "ask" box behind the golden-set gates): the model gets read-only tools over the person's own log, labs and targets, answers are checked by the same guard, and it never gives insulin or medication doses. Off by default, like every AI feature.
+* **Multi-day "running high" warning for planned food (small to medium).** Combine the last few days of eaten food with what is planned: warn when potassium, sodium or fluid was over the limit on 2 of the last 3 days (or across the hemodialysis interval) and the plan goes over again, and when planned days would take the 7-day phosphorus or protein average over target. Uses each person's own targets; never for carbohydrates or hypoglycaemia treatment; informs, never blocks. Planned in detail in [`docs/dev/plans/v0.3.1.md`](dev/plans/v0.3.1.md) item 4.
+* **Admin settings on their own page (small).** Today the admin section is hidden from members and every admin API checks the role on the server (`require_admin`), so members cannot reach it; but for an admin it sits at the bottom of Settings next to personal settings. Move people, server settings, shared keys, usage and the activity log to a separate Admin page in the menu, shown to admins only. (With `AUTH_MODE=none`, the single-user mode, whoever reaches the server is the admin; that is by design for a one-person install.)
+* **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. Needs the sharing design first (note 07 §6), a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
 * **Direct patient-portal connection (SMART on FHIR, large; probably not).** Each EHR vendor (Epic, Oracle Health) requires registering the app and an OAuth flow per health system; for a self-hosted app each operator would have to register their own instance. The file imports above cover most of the value. This route covers MyChart (Epic's patient portal) and other EHR portals; the lab companies Quest and Labcorp are not EHRs and, as far as we know, offer no open patient API (check before designing), but their portals download PDF reports (the PDF item above) and results usually reach the doctor's EHR too. Paid aggregators (for example 1upHealth or Health Gorilla) would route health data through a third party, against the self-hosted design.
+
+### Rough cost of the owner's ideas
+
+Estimated 2026-10-07 for one agent working directly in a single session (as the small v0.3.0 follow-up PRs were), including re-reading the code and waiting for CI; expect ±50 %. A multi-agent build with separate review and fix rounds costs about 2–3× as much. "Owner" marks work only the maintainer can do (live model runs, vendor registration).
+
+| Item | Tokens | Agent time |
+|---|---|---|
+| "Not chosen yet" stage and diabetes type, plus the tolerance settings (Accounts and Meal guidance sections above) | 1–2M | 2–4 h |
+| Try the app on GitHub Pages | 0.5–1M | 1–2 h |
+| "Keep my data in this browser" demo mode | 2–4M | 4–8 h |
+| Lab results from a CSV file | 1–1.5M | 2–3 h |
+| Lab results from a patient-portal C-CDA file | 2–3M | 4–6 h |
+| Lab results from Apple Health clinical records | 1.5–2.5M | 3–5 h (less after C-CDA: same review-and-confirm screen) |
+| Weight from an Apple Health export | 1.5–2M | 3–4 h |
+| Blood pressure (new table, Trends chart, handbook page) | +2–3M | +4–6 h |
+| Live push from an iPhone Shortcut (mostly per-person API tokens) | 2–3M | 4–6 h |
+| Lab results from a PDF report (AI) | 2–3M | 4–6 h, plus owner live runs |
+| Direct patient-portal connection (SMART on FHIR) | 8–15M+ | several days, plus Epic registration (owner); not recommended |
+| Symptoms log | 2–3M | 4–6 h |
+| Visit prep (after the symptoms log) | 1–2M | 2–4 h |
+| Ask about my own data (AI) | 5–10M | 1–2 days, plus owner live runs |
+| Admin settings on their own page | 0.5–1M | 1–2 h |
+| Multi-day "running high" warning for planned food | 1.5–2.5M | 3–5 h |
+| Clinician accounts with notes (includes the read-only sharing it needs, about 4–6M) | 7–11M | 2–3 days |
+
+The v0.3.1 batch (the "Not chosen yet" and tolerance item, the admin page, the multi-day warning, the Pages demo and the lab CSV import, about 4.5–8M tokens) is planned in [`docs/dev/plans/v0.3.1.md`](dev/plans/v0.3.1.md).
 
 ## Open items from the v0.3.0 build (no specification defers them)
 
