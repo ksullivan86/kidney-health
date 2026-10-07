@@ -72,6 +72,25 @@ spec:
             #   value: https://food.home.example.net
             # - name: AUTH_MODE
             #   value: local
+            # v0.3 features (deploy/.env.example explains each): meal guidance is on, everything that contacts
+            # the internet is OFF until switched on. The
+            # egress each one needs is already allowed by networkpolicy.yaml (public HTTPS); with Cilium,
+            # uncomment its host in cilium-networkpolicy.example.yaml. A value here LOCKS the setting in
+            # Settings → Admin; without it an admin switches it in the app.
+            # - name: OFF_ENABLED                 # world.openfoodfacts.org
+            #   value: "true"
+            # - name: OFF_CONTACT
+            #   value: admin@example.net
+            # - name: AI_ENABLED                  # plus AI_PROVIDER, AI_MODEL, ... (docs/ai.md)
+            #   value: "true"
+            # - name: AI_PROVIDER
+            #   value: openai
+            # - name: AI_MODEL
+            #   value: gpt-6-luna
+            # - name: AI_API_KEY_FILE             # add ai_api_key to the Secret (secret.example.yaml)
+            #   value: /run/secrets/kidney-health/ai_api_key
+            # A LAN AI server (Ollama, Hermes): AI_BASE_URL, AI_PRIVATE_HOSTS=<host:port>, and its own egress
+            # rule (the commented ipBlock example in networkpolicy.yaml).
           volumeMounts:
             - name: data
               mountPath: /data

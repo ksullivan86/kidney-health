@@ -86,6 +86,29 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=ALLOWED_HOSTS=food.home.example.net
 # Environment=AUTH_MODE=local
 
+# v0.3 features (deploy/.env.example explains each one). Meal guidance runs on the server and is on;
+# everything that contacts the internet is OFF until switched on, and outbound HTTPS starts only for what
+# you switch on (docs/network-allowlist.md): api.nal.usda.gov (a USDA key), world.openfoodfacts.org (Open
+# Food Facts on AND the scanning person agreed), your AI provider, api.pwnedpasswords.com
+# (PASSWORD_BREACH_CHECK). A line here LOCKS that setting in Settings → Admin;
+# without it an admin switches it in the app.
+# Environment=OFF_ENABLED=true
+# Environment=OFF_CONTACT=admin@example.net
+# Environment=GUIDANCE_ENABLED=true
+# Optional AI ideas (docs/ai.md has a recipe per provider). A cloud provider, its key as a secret:
+#   printf '%s' "$AI_KEY" | podman secret create kidney-ai-key -
+# Environment=AI_ENABLED=true
+# Environment=AI_PROVIDER=openai
+# Secret=kidney-ai-key,type=mount,target=ai_api_key,uid=10001,gid=10001,mode=0400
+# Environment=AI_API_KEY_FILE=/run/secrets/ai_api_key
+# Or a server on your LAN, bound to a LAN address (a host service on 127.0.0.1 stays unreachable, which is
+# good; never pasta:--map-gw, see docs/deployment.md), listed in AI_PRIVATE_HOSTS:
+# Environment=AI_PROVIDER=hermes
+# Environment=AI_BASE_URL=http://192.168.1.10:8643/v1
+# Environment=AI_MODEL=kidney
+# Environment=AI_PRIVATE_HOSTS=192.168.1.10:8643
+# Environment=PASSWORD_BREACH_CHECK=true
+
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does
 # not have, and the check would always fail.
 HealthCmd=["python", "-m", "app.healthcheck"]

@@ -85,6 +85,22 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   dinner has 60.6 g carbs for a 60 g goal, while the plan says "close to your goal" (guidance tolerance ±10 g vs the
   strict per-meal alert); the curated "Egg white, raw" is planned as a dinner protein (USDA raw values; a display name
   like "Egg white (cooked)" or a note would read better: food-db owner).
+* Step 4 (harnesses, commit 6d60952): parity.py section 14 (AI off: /api/me/ai shape and 10 AI/vision routes
+  compared by status + detail): 14/14; sandbox.py walks What fits now, a recorded barcode (3017624010701 with the
+  agreement), Plan the rest, Treating a low: 2 walks 0 issues; regress.py step 10b (What fits dinner, a typed barcode
+  of the person's own food answering `source: local` with the additive warning, Treating a low): 375-light 122/0.
+  tools/e2e/README.md lists journey.py, upgrade.py, replay_app.py with ports and how to read results.
+* Step 5 (deploy): compose.yaml passes the v0.3 keys through as `${NAME:-}` (an empty value = unset, so nothing is
+  locked unless deploy/.env sets it; proven by tests/test_compose_env.py, 5 tests, plus a TestClient run where
+  /api/admin/settings reported every key `source: default`), AI key only as a commented file secret; .env.example
+  explains each key; Quadlet and k8s deployment.yaml have commented examples (Quadlet AI example uses a LAN
+  address, not host.containers.internal on 127.0.0.1, which docs/deployment.md says stays unreachable);
+  secret.example.yaml lists ai_api_key; every profile names the egress hosts and points to
+  docs/network-allowlist.md (networkpolicy.yaml and the Cilium example already did). docs/deployment.md: the stale
+  "AI_* … once they ship" row replaced by PASSWORD_BREACH_CHECK, OFF_*, GUIDANCE_*, AI_* and the instance-setting
+  rows, plus an "Outbound connections" paragraph. Checks: `docker compose config --quiet` for compose.yaml and with
+  the Ollama overlay (dummy secrets created and removed), yaml parse, kustomize + kubeconform strict as CI (12 valid),
+  pytest tests/test_deploy.py tests/test_compose_env.py green.
 
 ## In progress
 

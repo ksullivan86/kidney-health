@@ -104,8 +104,18 @@ on every phone. The four options are in [`https.md`](https.md).
 Set these as environment variables (Quadlet `Environment=`, `deploy/.env` for compose, `env:` in
 Kubernetes). Every **secret** is given as a file through its `*_FILE` variable; setting both `NAME`
 and `NAME_FILE` is a start-up error, an empty file means "unset", and trailing newlines are ignored.
-Anything set here is **locked**: the Settings screen shows it as "set by server". The complete list
-with defaults is at the top of [`app/config.py`](../app/config.py).
+Anything set here is **locked**: the Settings screen shows it as "set by server"; an **empty** value
+counts as unset, so `deploy/.env` can leave a key blank and an admin still chooses in the app. The
+complete list with defaults is at the top of [`app/config.py`](../app/config.py) and in
+[`app/settings_registry.py`](../app/settings_registry.py).
+
+**Outbound connections.** Meal guidance and everything else in the app work with no internet access.
+Each feature that contacts the internet is off until you switch it on and then reaches one host only:
+USDA search (`api.nal.usda.gov`, when a USDA key is set), Open Food Facts (`world.openfoodfacts.org`),
+the AI provider you configure, and the breached-password check (`api.pwnedpasswords.com`). Every
+request goes through the app's address check (no private, loopback or metadata addresses unless
+listed). Firewall rules per host: [network-allowlist.md](network-allowlist.md); the Kubernetes
+NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same hosts.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -127,7 +137,11 @@ with defaults is at the top of [`app/config.py`](../app/config.py).
 | `DATA_DIR` | `/data` in the image | Where `kidney.db` lives. |
 | `HANDBOOK_DIR` | `/app/learn` in the image; `handbook/site` in a checkout | The built handbook served at `/learn/`. Without an `index.html` there, `/learn` answers 404 and the app's Learn links use `HANDBOOK_PUBLIC_URL`, or are hidden. The app reads the site once at start: restart it after rebuilding the handbook in place. |
 | `HANDBOOK_PUBLIC_URL` | unset | A published copy of the handbook (for example GitHub Pages), `http(s)://` only: where Learn links point when this server has no handbook, and the "public copy" link in Settings → About. |
-| `AI_*` | AI off | Optional AI features (v0.3 M2): `docs/ai.md` once they ship, and `deploy/compose.ai-ollama.yaml`. |
+| `PASSWORD_BREACH_CHECK` | `false` | Refuse new passwords found in the Have I Been Pwned list (only the first 5 characters of the password's SHA-1 leave the server, to `api.pwnedpasswords.com`). |
+| `OFF_ENABLED`, `OFF_CONTACT` | off; the project URL | Open Food Facts barcode lookups (only the barcode digits go to `world.openfoodfacts.org`, and only for people who agreed in Settings → Food data) and the contact sent in their `User-Agent`. `OFF_RATE_PER_MINUTE` (10, at most 15), `BARCODE_NEGATIVE_TTL_HOURS` (24) and `USDA_BRANDED_BARCODE` (`true`: with a USDA key, a barcode Open Food Facts does not know, or knows without nutrition facts, is looked up in USDA's branded foods) tune them. See [barcode-and-photos.md](barcode-and-photos.md). |
+| `GUIDANCE_ENABLED` | `true` | Rule-based meal guidance (What fits now, swaps, Plan the rest of my day, insights). It runs on the server and sends nothing out. `GUIDANCE_POOL_PER_ROLE` (200) and `GUIDANCE_BEAM_WIDTH` (16) make planning cheaper on a small server. See [guidance.md](guidance.md). |
+| `AI_ENABLED` and the other `AI_*` | AI off | Optional AI ideas. `AI_ENABLED` is the server-wide switch (also in Settings → Admin); the provider is env-only: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL`, `AI_API_KEY_FILE`, `AI_PRIVATE_HOSTS` for a server on your LAN. Each person still opts in. Full list and recipes: [ai.md](ai.md); a local Ollama: `deploy/compose.ai-ollama.yaml`. |
+| `INSTANCE_NAME`, `REGISTRATION_MODE`, `AUDIT_RETENTION_DAYS`, `USDA_SHARED_DAILY_LIMIT` | Kidney Health, `invite`, 365, 200 | Server settings an admin can also change in Settings → Admin → Server settings, unless set here. |
 
 `APP_PASSWORD` (v0.2's HTTP Basic auth) is **deprecated**: on the first v0.3 start with no admin
 it becomes the admin's password, then it is ignored. HTTP Basic is no longer accepted.

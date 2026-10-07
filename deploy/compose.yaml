@@ -87,6 +87,25 @@ services:
       # | none (no sign-in; single person on a trusted LAN only). See docs/deployment.md.
       AUTH_MODE: ${AUTH_MODE:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # ---- v0.3 features (deploy/.env.example explains each). Meal guidance runs on the server and is on;
+      # everything that contacts the internet is OFF until switched on, and outbound HTTPS starts only for
+      # what you switch on (docs/network-allowlist.md): api.nal.usda.gov (a USDA key),
+      # world.openfoodfacts.org (Open Food Facts on AND the scanning person agreed), your AI provider
+      # (AI_PROVIDER... AND "Optional AI ideas" on), api.pwnedpasswords.com (PASSWORD_BREACH_CHECK).
+      # A value set here LOCKS that setting in Settings → Admin; leave it empty to let an admin choose.
+      OFF_ENABLED: ${OFF_ENABLED:-}
+      OFF_CONTACT: ${OFF_CONTACT:-}
+      GUIDANCE_ENABLED: ${GUIDANCE_ENABLED:-}
+      AI_ENABLED: ${AI_ENABLED:-}
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_VISION_MODEL: ${AI_VISION_MODEL:-}
+      AI_PRIVATE_HOSTS: ${AI_PRIVATE_HOSTS:-}
+      HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
+      PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
+      # A cloud AI provider's key is a file secret like the others (never an env var):
+      # AI_API_KEY_FILE: /run/secrets/ai_api_key                # and add ai_api_key below
       # GitOps alternative to the setup code: create the first admin from a file secret.
       # ADMIN_USERNAME: you
       # ADMIN_PASSWORD_FILE: /run/secrets/admin_password      # and add admin_password below
@@ -95,6 +114,7 @@ services:
       - secret_key
       - usda_api_key
       # - admin_password
+      # - ai_api_key
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -124,6 +144,9 @@ secrets:
     x-podman.relabel: Z
   # admin_password:
   #   file: ./secrets/admin_password
+  #   x-podman.relabel: Z
+  # ai_api_key:                         # only for a cloud AI provider (docs/ai.md)
+  #   file: ./secrets/ai_api_key
   #   x-podman.relabel: Z
 
 volumes:
