@@ -111,9 +111,9 @@
   #sheet-unsynced-foot .btn.danger-solid { flex-basis: 100%; }
 }
 
-/* File inputs that read as buttons (scan a barcode photo, a label photo). */
-#scan-file::file-selector-button, #q-photo::file-selector-button {
+/* File inputs that read as buttons, 44 px tall (a barcode photo, a label photo, the AI photo sheets). */
+input[type=file].ai-file::file-selector-button {
   min-height: var(--tap); margin-right: 10px; padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
   background: var(--surface); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer;
 }
-#scan-file, #q-photo { max-width: 100%; color: var(--text-2); font-size: 0.9rem; }
+input[type=file].ai-file { max-width: 100%; color: var(--text-2); font-size: 0.9rem; }

@@ -230,6 +230,10 @@ class FakeAi:
                                                             {"food_id": c[2]["id"], "quarters": c[2]["portion_quarters"]}],
                               "reason_codes": ["fits_carb_goal"], "handbook": []})
             return {"status": "ok", "refusal": "none", "ideas": ideas}
+        if text.startswith("TASK: identify_food"):
+            return {"status": "ok", "items": [
+                {"name": "banana", "search": "banana", "grams_estimate": 118, "confidence": "high"},
+                {"name": "brown sauce", "search": "gravy", "grams_estimate": 30, "confidence": "low"}]}
         if text.startswith("TASK: read_label"):
             return {"status": "ok", "product_name": "Harness rye crackers", "serving_text": "5 crackers (30 g)", "serving_g": 30,
                     "basis": "per_serving",
@@ -819,6 +823,33 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         logged = [e for e in hx.entries() if e["food_name"] == "Harness rye crackers"]
         food = hx.api("GET", f"/api/foods/{logged[0]['food_id']}") if logged else {}
         check(area, "logged; the saved food carries the additive scan", logged and "phosphate_additive" in food.get("flags", []), json.dumps(food)[:300])
+        # Plate photo (note 03 R9): the fixed banner, foods matched to the person's own list, the unsure one unticked,
+        # "planned" by default, nothing logged until "Add selected".
+        before = len(hx.entries())
+        open_add(page, hx.base)
+        page.wait_for_selector("#ai-add-slot >> text=Plate photo (AI)")
+        page.click("#ai-add-slot >> text=Plate photo (AI)")
+        page.wait_for_selector("#sheet-ai[open] .ai-plate-banner")
+        check(area, "plate photo: the banner says portions are rough and not to dose insulin from it",
+              "do not dose insulin" in page.inner_text("#sheet-ai .ai-plate-banner"))
+        page.set_input_files("#sheet-ai input[type=file]", str(big))
+        page.click("#sheet-ai >> text=Find the foods")
+        try:
+            page.wait_for_selector("#sheet-ai-consent[open], #sheet-ai .ai-parse-item", timeout=TIMEOUT_MS)
+            if page.is_visible("#sheet-ai-consent[open]"):
+                page.click("#sheet-ai-consent >> text=Agree and send")
+        except Exception:  # noqa: BLE001 - the next wait reports it
+            pass
+        page.wait_for_selector("#sheet-ai .ai-parse-item")
+        items = page.locator("#sheet-ai .ai-parse-item")
+        ticks = [items.nth(i).locator("input[type=checkbox]").is_checked() for i in range(items.count())]
+        names = items.all_inner_texts()
+        check(area, "plate photo: foods matched to the food list, the unsure one starts unticked",
+              len(ticks) == 2 and ticks[0] and not ticks[1] and "banana" in names[0].lower(), json.dumps([ticks, [n[:60] for n in names]]))
+        check(area, "plate photo: entries are added as planned by default and nothing is logged yet",
+              page.is_checked("#sheet-ai input[type=radio][value=planned]") and len(hx.entries()) == before)
+        hx.shot(page, "ai-plate-1280")
+        page.click("#sheet-ai .sheet-foot >> text=Close")
         # Settings → AI ideas: the activity lists both calls; a personal provider's key is write-only; a private
         # address is refused for a personal provider (only the admin's AI_PRIVATE_HOSTS may be private).
         page.goto(f"{hx.base}/#settings")
@@ -826,8 +857,8 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         activity.locator("summary").first.click()
         page.wait_for_selector("#set-ai-slot .ai-event")
         rows = page.locator("#set-ai-slot .ai-event > summary").all_inner_texts()
-        check(area, "AI activity lists the meal ideas and the label call to the fake server",
-              len(rows) >= 2 and all(f"127.0.0.1:{fake.port}" in r or "127.0.0.1" in r for r in rows[:2]), json.dumps(rows[:4]))
+        check(area, "AI activity lists the meal ideas, label and plate calls to the fake server",
+              len(rows) >= 3 and all("127.0.0.1" in r for r in rows[:3]), json.dumps(rows[:4]))
         own = page.locator("#set-ai-slot summary", has_text="My own AI provider").locator("xpath=..")
         if not own.evaluate("(el) => el.open"):
             own.locator("summary").first.click()
@@ -1032,7 +1063,7 @@ def main(argv: list[str] | None = None) -> int:
     (out / "shots").mkdir()
     env = {"AI_ENABLED": "true", "AI_PROVIDER": "openai_compatible", "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1",
            "AI_MODEL": "fake-text", "AI_VISION_MODEL": "fake-vision", "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port}",
-           "AI_SHARED_DAILY_LIMIT": "0",
+           "AI_SHARED_DAILY_LIMIT": "0", "AI_VISION_PLATE_ENABLED": "true",
            # No call may leave this machine: a proxy that does not exist for anything but the local servers.
            "HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "ALL_PROXY": "http://127.0.0.1:9",
            "https_proxy": "http://127.0.0.1:9", "http_proxy": "http://127.0.0.1:9", "all_proxy": "http://127.0.0.1:9",
