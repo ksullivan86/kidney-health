@@ -65,6 +65,53 @@ def test_backup_to_file_is_consistent_private_and_never_overwrites(tmp_path, env
     conn.close()
 
 
+def test_backup_into_dir_names_by_time_and_keeps_the_newest(tmp_path, env):
+    from datetime import datetime, timezone
+
+    path = make_v3ish_db(tmp_path / "data")
+    out_dir = tmp_path / "backups"
+    out_dir.mkdir()
+    other = out_dir / "notes.txt"
+    other.write_text("not a backup")
+    source = db.connect(path)
+    try:
+        made = []
+        for day in (1, 2, 3):
+            dest, deleted = admin._backup_into_dir(source, out_dir, 2, now=datetime(2026, 10, day, 3, 0, tzinfo=timezone.utc))
+            made.append(dest)
+        assert [p.name for p in made] == ["kidney-20261001T030000Z.db", "kidney-20261002T030000Z.db", "kidney-20261003T030000Z.db"]
+        assert deleted == [made[0]]
+        with pytest.raises(admin.CliError):  # same second: never overwritten
+            admin._backup_into_dir(source, out_dir, 2, now=datetime(2026, 10, 3, 3, 0, tzinfo=timezone.utc))
+    finally:
+        source.close()
+    assert sorted(p.name for p in out_dir.iterdir()) == ["kidney-20261002T030000Z.db", "kidney-20261003T030000Z.db", "notes.txt"]
+    assert stat.S_IMODE(made[2].stat().st_mode) == 0o600
+    copy = sqlite3.connect(made[2])
+    assert copy.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    copy.close()
+
+
+def test_backup_dir_command(tmp_path, env):
+    path = make_v3ish_db(tmp_path / "data")
+    out_dir = tmp_path / "backups"
+    out_dir.mkdir()
+    code, out = run(["backup", "--dir", str(out_dir), "--keep", "3"], env)
+    assert code == 0 and "SECRET_KEY is not in it" in out
+    files = list(out_dir.iterdir())
+    assert len(files) == 1 and admin.BACKUP_NAME.match(files[0].name)
+    conn = db.connect(path)
+    events = audit.list_events(conn)
+    conn.close()
+    assert [r["action"] for r in events] == ["backup.created"]
+    assert run(["backup", "--dir", str(tmp_path / "missing")], env)[0] == 1
+    assert run(["backup", "--keep", "2", str(tmp_path / "x.db")], env)[0] == 1
+    assert run(["backup", "--dir", str(out_dir), "--keep", "0"], env)[0] == 1
+    assert run(["backup", "--dir", str(out_dir), str(tmp_path / "x.db")], env)[0] == 1
+    assert run(["backup"], env)[0] == 1
+    assert len(list(out_dir.iterdir())) == 1  # the refused runs wrote nothing
+
+
 def test_backup_to_stdout(tmp_path):
     make_v3ish_db(tmp_path / "data")
     proc = subprocess.run(

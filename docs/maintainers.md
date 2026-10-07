@@ -68,8 +68,18 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
 
    ```bash
    awk '/^## X\.Y\.Z /{p=1; next} /^## /{p=0} p' CHANGELOG.md > /tmp/notes.md
+   cat >> /tmp/notes.md <<'EOF'
+
+   ### Pulling the image
+
+   `ghcr.io/ksullivan86/kidney-health:X.Y.Z` (also `:X.Y` and `:latest`). Anonymous pulls work only while
+   the GHCR package is public: the repository's visibility does not carry over to the package (owner:
+   your profile → Packages → `kidney-health` → Package settings → Change visibility).
+   EOF
    gh release create vX.Y.Z --verify-tag --title "X.Y.Z" --notes-file /tmp/notes.md
    ```
+
+   In the web UI, paste the same changelog section and the "Pulling the image" paragraph.
 
 7. **Afterwards**: open `## Unreleased` in `CHANGELOG.md`; watch the next weekly image scan.
 

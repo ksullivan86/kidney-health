@@ -32,7 +32,11 @@ Then, every time:
 - [ ] Note where the backups go and how long you keep them: people who delete their account are still in
       older backups until those expire ([design note 07][NOTE07]).
 
-Run it daily from a systemd user timer or cron on the host.
+Run it daily from a systemd user timer or cron on the host. If a backup tool on the host copies the files
+for you, let the app write them into their own folder and keep the newest few: `python -m app.admin backup
+--dir /backups --keep 14` writes `kidney-` plus the date and time in UTC, and deletes only older files of
+that name. Mount `/backups` as a separate volume and point the backup tool there, never at the live
+database.
 
 ## The secret key is separate
 
