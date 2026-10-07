@@ -406,8 +406,7 @@
     }
     if (inputs.transplant_date != null) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(inputs.transplant_date)) throw new InvalidInput('transplant_date must be formatted YYYY-MM-DD');
-      const parsed = K.parseIsoDate(inputs.transplant_date);
-      if (parsed.error) throw new InvalidInput(parsed.error);
+      if (K.parseIsoDate(inputs.transplant_date).error) throw new InvalidInput('transplant_date is not a valid calendar date');
     }
     for (const name of ['weight_6_months_ago_kg', 'urine_output_ml', 'pd_uf_ml', 'pd_dialysate_kcal']) {
       const value = inputs[name];

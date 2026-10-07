@@ -208,7 +208,8 @@ def edge_cases() -> list[dict[str, Any]]:
     for name, extra in (("invalid weight", {"weight_kg": 0}), ("invalid stage", {"ckd_stage": "6"}), ("invalid sex", {"sex": "x"}),
                         ("invalid activity", {"activity": "athlete"}), ("invalid birth month", {"birth_month": "1970-13"}),
                         ("future birth month", {"birth_month": "2026-11"}), ("birth month over 120", {"birth_month": "1900-01"}),
-                        ("invalid transplant date", {"transplant_date": "01/02/2020"})):
+                        ("invalid transplant date", {"transplant_date": "01/02/2020"}),
+                        ("impossible transplant date", {"transplant_date": "2026-02-30"})):
         add(name, {**G3B, **extra})
     # missing inputs and age on a birthday boundary
     add("missing inputs PD", {**G3B, "ckd_stage": "5", "dialysis": "peritoneal"})

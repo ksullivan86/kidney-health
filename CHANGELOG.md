@@ -398,6 +398,8 @@ Found by the v0.3.0 review of the pre-release build; none affected a released ve
 * The red very-high-potassium banner follows the admin's lab freshness setting, like the suggestion.
 * The fiber target's note, Lab results and an Open Food Facts quality note say "fiber", like the rest of
   the app (they said "fibre").
+* An impossible transplant date (such as 2026-02-30) is refused in the app's own words on every Python
+  version (Python 3.14, the image's, words its date errors differently), and the demo says the same.
 
 **Barcodes and packaged foods**
 

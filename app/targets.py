@@ -235,7 +235,10 @@ def validate_inputs(inputs: Inputs, today: date) -> None:
     if inputs.transplant_date is not None:
         if not DATE_RE.match(inputs.transplant_date):
             raise ValueError("transplant_date must be formatted YYYY-MM-DD")
-        date.fromisoformat(inputs.transplant_date)  # ValueError for 2026-02-30
+        try:
+            date.fromisoformat(inputs.transplant_date)
+        except ValueError:  # 2026-02-30; the app's own words, as models.validate_date (CPython's changed in 3.14)
+            raise ValueError("transplant_date is not a valid calendar date") from None
     for name in ("weight_6_months_ago_kg", "urine_output_ml", "pd_uf_ml", "pd_dialysate_kcal"):
         value = getattr(inputs, name)
         if value is not None and (not math.isfinite(float(value)) or float(value) < 0):

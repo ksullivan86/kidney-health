@@ -746,7 +746,7 @@ def test_every_note_template_formats_without_leftover_placeholders():
         ({"birth_month": "1970-13"}, "birth_month must be formatted YYYY-MM"),
         ({"birth_month": "2026-11"}, "birth_month must not be in the future"),
         ({"birth_month": "1900-01"}, "birth_month must be within the last 120 years"),
-        ({"transplant_date": "2026-02-30"}, "day is out of range"),
+        ({"transplant_date": "2026-02-30"}, "transplant_date is not a valid calendar date"),
         ({"transplant_date": "01/02/2020"}, "transplant_date must be formatted YYYY-MM-DD"),
         ({"urine_output_ml": -5, "dialysis": "hemodialysis", "ckd_stage": "5"}, "urine_output_ml must be a non-negative number"),
     ],

@@ -44,14 +44,14 @@
     const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
     return [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
   }
-  // date.fromisoformat for YYYY-MM-DD: the day number, or the ValueError message Python raises.
+  // A YYYY-MM-DD calendar date: { day } (its day number), or { error } when it is not a real date. The callers
+  // word the error themselves, as the server does ("… is not a valid calendar date"), never in CPython's words,
+  // which changed in Python 3.14.
   function parseIsoDate(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
-    if (!m) return { error: `Invalid isoformat string: ${pyStrRepr(iso)}` };
+    if (!m) return { error: 'not formatted YYYY-MM-DD' };
     const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-    if (y < 1) return { error: `year ${y} is out of range` };
-    if (mo < 1 || mo > 12) return { error: 'month must be in 1..12' };
-    if (d < 1 || d > daysInMonth(y, mo)) return { error: 'day is out of range for month' };
+    if (y < 1 || mo < 1 || mo > 12 || d < 1 || d > daysInMonth(y, mo)) return { error: 'not a valid calendar date' };
     return { day: dayNumber(iso) };
   }
 
