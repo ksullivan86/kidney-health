@@ -7,15 +7,16 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE06, NOTE04, ARCH, AKF-meal, A26-5, A26-6, DG12, Q20, FDC]
 ---
 
 # Meal guidance
 
-!!! note "New in v0.3"
-    Meal guidance is switched on by default; you can hide it in **Settings → Meal guidance**.
+!!! note "Switched on by default"
+    Meal guidance is on unless your admin switched it off for the server; you can hide it for yourself in
+    **Settings → Meal guidance**. The **Treating a low** card stays either way.
 
 Meal guidance answers "what can I still eat today?" from your own targets, what you have already eaten
 and planned, and the foods you usually have. It uses fixed, written rules, **not AI**, so it works
@@ -65,6 +66,9 @@ your own meals.
 ### What it never does
 
 - It never suggests star fruit, foods with an "avoid" flag, or anything you marked **Not for me**.
+- It never suggests **alcoholic drinks** (beer, wine, spirits, or any food flagged **Alcoholic drink**):
+  with insulin, alcohol can cause a low hours later ([ADA 2026][A26-5], Recs 5.18–5.19). A saved meal of
+  yours keeps its drink, and you can still log one yourself.
 - It never offers glucose tablets or juice as a **meal**, and it never limits, delays or "swaps down" a
   low treatment.
 - It never mentions insulin, units, ratios, doses, medicines or lab values. Carbohydrate is always in

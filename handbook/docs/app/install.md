@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE02, WEBKIT-26, CHROME-PWA, MDN-SECURE]
 ---
@@ -38,8 +38,9 @@ cannot start without one ([MDN][MDN-SECURE]).
 |---|---|---|
 | Icon on the Home Screen, opens full screen | yes | yes on iPhone (iOS 26 and later); a shortcut elsewhere |
 | Opens without a connection to the server | yes | no |
+| Food you log without a connection waits and syncs later | yes | yes, but the app cannot be reopened until the server is back |
 | "Update ready" message after an upgrade | yes | no |
-| Live barcode scanning with the camera (coming in v0.3) | yes | no (taking a photo still works) |
+| Live barcode scanning with the camera | yes | no (a photo of the barcode or typing the digits still works) |
 | **Install app** button on Android and in desktop Chrome | yes | no |
 | Your password travels encrypted | yes | **no**: anyone on the Wi-Fi can read it |
 
@@ -58,7 +59,8 @@ HTTPS ([HTTPS for phones](../self-hosting/https.md)).
 6. Open the app from its new icon. It may ask you to sign in once more: an app on the Home Screen keeps
    its own sign-in, separate from Safari's ([design note 02][NOTE02]).
 
-The app is tested on iOS and iPadOS 26 and 27 and is expected to work from iOS 17.
+These steps are written for iOS and iPadOS 26 and 27; installing works from iOS 17. If a button looks
+different on your phone, tell your admin so this page can be corrected.
 
 ## Android
 
@@ -80,15 +82,26 @@ allows it.
 
 ## What works without a connection
 
-| Today | Coming in v0.3 |
+Once the app has been opened online from an `https://` address, it keeps working when the phone cannot
+reach your server (no signal, the server is down, a flight) ([design note 02][NOTE02]):
+
+| Works offline | Needs your server |
 |---|---|
-| The app opens from its icon with no connection, once it has been opened online over HTTPS. | **Add**, **Quick add** and **Mark eaten** work offline. Entries wait on the phone with a "waiting to sync" badge and are sent when you are back on Wi-Fi. |
-| Your log, targets and food list need the server. Without it you see an error instead of your day. | The last 14 days, your profile and your foods are kept on the phone so you can look things up. |
-| This handbook (**Learn**) needs a connection to your server. | Unchanged: print the pages you need away from home, such as [Wallet cards](../reference/wallet-card.md). |
+| The app opens from its icon. | Signing in for the first time on this device. |
+| **Add**, **Quick add** and **Mark eaten**: entries wait on the phone with a "waiting to sync" badge and are sent once, in order, when the server is back. | Editing or deleting an entry that is already on the server, and changing your profile or settings: the app says the change needs a connection. |
+| **Today**, the last two weeks and the coming week, from the copy saved the last time you looked (the screen says so). | Barcode lookups, USDA search, AI and new meal suggestions. |
+| Search among the foods this phone has seen (the builtin list is refreshed once a day while connected). | This handbook (**Learn**): print the pages you need away from home, such as the [Wallet cards](../reference/wallet-card.md). |
+| The **Treating a low** card. | |
+
+A badge at the top shows how many entries are waiting ("Offline · 2 to sync"; on a phone just the
+number). Tap it to open **Settings → This device**, where you can **Retry** or **Discard** an entry the
+server refused when it arrived (for example because the food was deleted meanwhile)
+([Logging food](logging.md#offline)).
 
 Your log lives on the server, not on the phone. Removing the icon or getting a new phone does not
-delete it. Only entries still "waiting to sync" (v0.3) live on the phone alone; the app warns you
-before you sign out if any are left ([design note 02][NOTE02]).
+delete it. Only entries still "waiting to sync" live on the phone alone, and only for the person who
+logged them; the app asks before you sign out if any are left, because signing out removes everything
+the app kept on the phone ([design note 02][NOTE02]).
 
 !!! danger "Lows come first, even offline"
     If your glucose is low and the app will not load, treat the low anyway and log it later. Nothing

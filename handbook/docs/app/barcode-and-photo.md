@@ -7,16 +7,12 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE03, NOTE04, ARCH, OFF-API, ODBL, FDC-API, DG12, LEON13, SHERMAN09, FRIDOLFSSON25, A26-6]
 ---
 
 # Barcodes and label photos
-
-!!! note "Coming in v0.3"
-    Everything on this page arrives with version 0.3. Until then, use **Quick add** and type the label
-    in ([Logging food](logging.md)).
 
 Scanning a barcode fills in a packaged food for you, so you do not have to type the label. A photo of
 the label helps when the barcode is not found: you see the picture next to the form while you copy the
@@ -24,14 +20,14 @@ numbers, and nothing is uploaded ([design note 03][NOTE03]).
 
 ## Three ways to enter a barcode
 
-On **Add**, choose one:
+On **Add**, tap **Scan a barcode** and choose one:
 
-1. **Scan**: point the camera at the barcode. Hold still until it reads the same code twice. Live
-   scanning needs HTTPS ([Install the app](install.md)).
-2. **Photo of the barcode**: take a picture; the phone reads the code. This also works over plain HTTP,
-   and the photo never leaves your phone.
-3. **Type the barcode**: type the numbers under the lines. This also works with a USB or Bluetooth
-   scanner and with a screen reader.
+1. **Camera → Use the camera**: point it at the barcode. Hold still until it reads the same code twice;
+   the camera then stops by itself. Live scanning needs HTTPS ([Install the app](install.md)).
+2. **Photo of a barcode**: take or choose a picture; the phone reads the code. This also works over
+   plain HTTP, and the photo never leaves your phone.
+3. **Type the barcode**: type the numbers under the lines and tap **Look up**. This also works with a
+   USB or Bluetooth scanner and with a screen reader.
 
 Your phone reads the code itself and sends **only the digits** to your server ([design note 03][NOTE03]).
 
@@ -124,7 +120,7 @@ many or too few. Weigh or measure when it matters.
 
 ## If something goes wrong
 
-- **"Live scanning needs HTTPS."** Use **Photo of the barcode** or **Type the barcode**, or ask the admin
+- **"Live scanning needs HTTPS."** Use **Photo of a barcode** or **Type the barcode**, or ask the admin
   for HTTPS.
 - **The camera shows a black picture.** Use the photo button instead.
 - **"Barcode lookups are off."** Ask your admin to switch on Open Food Facts, or use Quick add.

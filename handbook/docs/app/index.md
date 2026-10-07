@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [README, ARCH, NOTE02, NOTE04, NOTE06, NOTE07, A26-6]
 ---
@@ -27,12 +27,13 @@ that server is called the **admin** in these pages.
 |---|---|---|
 | Put the app on your phone's Home Screen | your browser's Share or Install menu | [Install the app](install.md) |
 | Sign in, set your stage and get starting targets | **Profile** → **Suggest targets** | [First setup](first-setup.md) |
+| Enter lab results and see your eGFR | **Profile** → **Lab results** | [Targets and warnings](targets-and-warnings.md#personalized-targets) |
 | See why a food is red, yellow or green | the warnings on every food | [Targets and warnings](targets-and-warnings.md) |
 | Log a meal, a snack or a drink | **Add** | [Logging food](logging.md) |
-| Scan a barcode or use a photo of a label | **Add** → scan or photo | [Barcodes and label photos](barcode-and-photo.md) |
+| Scan a barcode or use a photo of a label | **Add** → **Scan a barcode** or **Quick add** | [Barcodes and label photos](barcode-and-photo.md) |
 | Plan the week, reuse meals, make a shopping list | **Plan** | [Planning meals and using the menus](planning-and-menus.md) |
-| Ask "what fits in my dinner?" | meal guidance | [Meal guidance](guidance.md) |
-| Get optional AI ideas | settings for AI ideas | [Optional AI](ai.md) |
+| Ask "what fits in my dinner?" | **What fits now** on **Add**, **What fits** on **Today** | [Meal guidance](guidance.md) |
+| Get optional AI ideas | **Settings** → **AI ideas** | [Optional AI](ai.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |
 | See, export or delete your data | **Settings** → **Account** | [Privacy and your data](privacy.md) |
@@ -83,21 +84,22 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
 - Each person has their own account. Other people on the same server cannot see your log, and the
   admin's screens have no way to read it. The admin can still reach the database file itself, so pick
   an admin you trust ([design note 07][NOTE07]).
-- Nothing leaves the server until the admin turns on a feature that needs the internet: USDA search,
-  barcode lookups or AI. AI is also off for you until you switch it on ([design note 04][NOTE04]).
+- Nothing leaves the server until a feature that needs the internet is turned on: USDA search, barcode
+  lookups or AI. Barcode lookups in Open Food Facts and AI are also off for you until you agree
+  ([design note 04][NOTE04]).
 - You can download everything you logged, and you can delete your account
   ([Privacy and your data](privacy.md)).
 
-## Features coming in v0.3
+## New in version 0.3
 
-Version 0.3 is being built now. Pages mark each feature that is not in your app yet with
-**"coming in v0.3"**. They are:
-
-- sign-in with accounts, invites and the **Settings** screen ([design note 07][NOTE07]);
-- logging while offline, synced when you are back on Wi-Fi ([design note 02][NOTE02]);
-- barcode scanning and label photos ([Barcodes and label photos](barcode-and-photo.md));
-- meal guidance: "what fits now", swaps, "plan the rest of my day" and insights ([design note 06][NOTE06]);
-- optional AI ideas ([Optional AI](ai.md)).
+- Accounts for everyone in the household, invites, and the **Settings** screen ([design note 07][NOTE07]).
+- Logging while offline, synced once when you are back online ([Install the app](install.md)).
+- Barcode scanning and label photos ([Barcodes and label photos](barcode-and-photo.md)).
+- Starting targets that use your age, sex, activity and lab results, and a **Lab results** screen with
+  your eGFR ([First setup](first-setup.md); [Targets and warnings](targets-and-warnings.md)).
+- Meal guidance: "what fits now", swaps, "plan the rest of my day" and insights ([Meal guidance](guidance.md)).
+- Optional AI ideas, off unless your admin and you both switch them on ([Optional AI](ai.md)).
+- This handbook, opened from **Learn** in the app.
 
 ## If something goes wrong
 

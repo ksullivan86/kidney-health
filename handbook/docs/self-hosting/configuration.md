@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
@@ -88,7 +88,7 @@ the app with a message that names the variable; it never starts half-configured
 Proxy mode refuses to start if `TRUSTED_PROXIES` contains `0.0.0.0/0` or `::/0`
 ([design note 07][NOTE07]).
 
-## Food data (coming in v0.3)
+## Food data
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -105,7 +105,7 @@ the variable locks it. Each person still decides whether their own scans go to O
 
 ([design note 03][NOTE03])
 
-## AI (coming in v0.3)
+## AI
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -128,7 +128,7 @@ Also `AI_TIMEOUT_S`, `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500), `AI_ST
 Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in the repository's
 [AI guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/ai.md).
 
-## Meal guidance (coming in v0.3)
+## Meal guidance
 
 `GUIDANCE_ENABLED` (`true`), `GUIDANCE_POOL_PER_ROLE` (200), `GUIDANCE_BEAM_WIDTH` (16)
 ([design note 06][NOTE06]).

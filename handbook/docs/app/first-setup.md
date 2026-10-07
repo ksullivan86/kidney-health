@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE05, NOTE07, ARCH, Q20, K24, A26-11, A26-5, NIST-63B4, MEDLINE-K]
 ---
@@ -20,20 +20,30 @@ next to you.
 
 --8<-- "includes/starting-points.md"
 
-## 1. Sign in (coming in v0.3)
+## 1. Sign in
 
-Today the app has one profile and no sign-in screen. From v0.3 every person has an account
+Every person has their own account, with their own log, profile, targets and keys
 ([design note 07][NOTE07]):
 
-1. Your admin sends you an **invite link**. It works once and expires after 7 days.
-2. Open it on the device you will use most, and choose a user name and a password.
-3. The password must be **at least 15 characters**. Long is what makes it strong: a short sentence such
+1. Your admin sends you a link: an **invite link**, or a **setup link** for an account the admin already
+   made for you (the page then shows your user name). Each link works once and expires, after 7 days
+   unless your admin chose another time.
+2. Open it on the device you will use most, and choose a user name (for an invite) and a password.
+3. The password must be **at least 15 characters** (unless your admin chose another minimum). Long is what makes it strong: a short sentence such
    as `blue kettle on a sunny porch` is fine, and you do not need symbols or capitals
-   ([NIST SP 800-63B-4][NIST-63B4], section 3.1.1.2). A password manager and pasting are allowed.
-4. You stay signed in for up to 30 days, or 14 days if you do not open the app.
-5. On a shared computer, sign out when you finish (**Settings → Account**).
+   ([NIST SP 800-63B-4][NIST-63B4], section 3.1.1.2). The app refuses very common passwords, your user
+   name or name, and runs such as `aaaa…` or `12345…`. A password manager and pasting are allowed.
+4. You stay signed in for up to 30 days, or 14 days if you do not open the app. **Settings → Account**
+   lists the devices you are signed in on, and signs out any of them.
+5. On a shared computer, sign out when you finish (**Settings → Account → Sign out**).
 
-If you forget your password, ask the admin for a reset link. There is no email reset.
+Some changes, such as a new password, exporting your data or adding a key, ask for your password again
+if you have not typed it in the last 10 minutes. If you forget your password, ask the admin for a reset
+link; there is no email reset. If your admin set up sign-in through another service (for example
+Authelia or Tailscale), you sign in there instead and never set a password in the app.
+
+The person who installs the server creates the first account, the admin, with a one-time setup code
+from the server's log ([Self-hosting](../self-hosting/index.md)).
 
 ## 2. Fill in your profile
 

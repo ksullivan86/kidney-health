@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, A26-11, FDC, MEDLINE-K]
 ---
@@ -31,7 +31,15 @@ Every food and log entry gets `medium` or `high` warnings per serving:
 
 - The high-glycemic flag only raises a warning to "high" from one carb choice (15 g) up, so a
   tablespoon of ketchup or one slice of white bread is not red for glycemic index alone.
-- **Star fruit** always rates high, with a note explaining why.
+- **Star fruit** and potassium-chloride **salt substitutes** always rate high, with a note explaining why.
+- **Potassium additives:** a packaged food whose ingredients list a potassium additive, such as
+  potassium chloride or potassium lactate, but whose label gives no potassium number gets a **medium**
+  potassium warning: "contains a potassium additive; potassium not listed". When the label lists
+  potassium, the normal thresholds apply. The app finds these additives in the ingredient list of a
+  scanned food or one you typed in with **Quick add**. This rule is marked for review by a renal
+  dietitian ([architecture contract][ARCH], v0.3 item 9; [Barcodes and label photos](barcode-and-photo.md)).
+- A missing value is never treated as 0: a food from a label or a barcode that does not list potassium or
+  phosphorus says "not listed", and the day's total may then be too low.
 - **Hypo treatments** (glucose tablets, measured juice) get **no carbohydrate warning**: fast
   carbohydrate is the point of treating a low. Their potassium, phosphorus and sodium warnings still
   show, so the lowest-potassium rescue can be chosen. Low treatments are never blocked or warned
@@ -131,13 +139,6 @@ Other details that change the suggestion:
 - **Fiber** gets a goal of at least 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24).
 - No starting targets during pregnancy or breastfeeding, under age 18, or in the first 12 weeks after a
   transplant.
-
-**Potassium additives** (coming in v0.3, with barcode scanning): a packaged food whose ingredients list
-a potassium additive, such as potassium chloride or potassium lactate, but whose label gives no
-potassium number gets a **medium** potassium warning: "contains a potassium additive; potassium not
-listed". When the label lists potassium, the normal thresholds apply. This rule is marked for review by
-a renal dietitian ([architecture contract][ARCH], v0.3 item 9;
-[Barcodes and label photos](barcode-and-photo.md)).
 
 ## Examples
 

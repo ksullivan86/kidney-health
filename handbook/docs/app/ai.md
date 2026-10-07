@@ -7,16 +7,15 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6]
 ---
 
 # Optional AI
 
-!!! note "Coming in v0.3"
-    AI features arrive with version 0.3. They are **off** unless your admin switches them on, and
-    then off for you until you opt in.
+!!! note "Off until you choose it"
+    AI features are **off** unless your admin switches them on, and then off for you until you opt in.
 
 The app works fully without AI. AI is an extra layer that can re-rank meal ideas, turn a sentence such
 as "2 eggs, toast with butter, tea" into food searches, or read the numbers from a photo of a label
@@ -41,7 +40,7 @@ as "2 eggs, toast with butter, tea" into food searches, or read the numbers from
   "seizure", the app shows a **Get help now** card (call your emergency number; treat a low first)
   instead.
 - **AI never overrides a warning.** An idea that would push your day over a limit is dropped.
-- **No free text from AI in v0.3.** The reasons you read under an idea ("Low in potassium; fits your
+- **No free text from AI.** The reasons you read under an idea ("Low in potassium; fits your
   dinner carbohydrate goal") are written by the app's maintainers, not by the AI.
 - Every AI card says **"AI idea · provider · model · checked against your targets · not medical
   advice"**.
@@ -78,7 +77,10 @@ Your admin chooses which providers are offered. Typical ones:
 | **OpenRouter** | OpenRouter, then the model's host | "routed only to providers that do not collect data" ([OpenRouter][OPENROUTER-ROUTING]) |
 
 A model your admin runs at home keeps your data in the house and is the most private choice. If you
-have your own OpenAI or OpenRouter key, you may be able to add it in **Settings → AI ideas**
+have your own OpenAI, OpenRouter or Nous Portal key, you may be able to add it in **Settings → AI ideas →
+My own AI provider** (and, if your admin allows it, the address of another AI server that uses HTTPS).
+Your key is encrypted on the server and never shown again; changing it asks for your password. If your
+own provider fails, the app never sends your data to the shared one instead
 ([Settings and keys](settings-and-keys.md)).
 
 ## Where to find it

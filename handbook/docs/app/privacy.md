@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE07, ARCH, GDPR]
 ---
@@ -19,23 +19,19 @@ company's cloud, and it sends nothing out unless a feature that needs the intern
 ([design note 07][NOTE07]). This page says what is stored, who can see it, and how to take it with you
 or delete it.
 
-!!! note "Coming in v0.3"
-    Accounts, personal API keys, the activity log, AI and the export and delete buttons arrive with
-    version 0.3. Until then the server holds one shared profile and log, and the admin can protect it
-    with a single password ([design note 07][NOTE07]).
-
 ## What is stored, and where
 
 | What | Where | Notes |
 |---|---|---|
 | Your account: user name, display name, password **hash** | server | the password itself is never stored |
-| Profile and targets; from v0.3 lab results | server | |
-| Every log entry, your own foods, saved meals | server | |
+| Profile, targets and lab results | server | |
+| Every log entry, your own foods, saved meals, foods you marked "Not for me" | server | |
 | Settings, and your own API keys **encrypted** | server | keys are write-only ([Settings and keys](settings-and-keys.md)) |
 | Your activity: sign-ins, password and key changes, exports | server | kept for 365 days by default |
 | AI requests and answers, if you use AI | server | kept for 30 days by default; you can delete them ([Optional AI](ai.md)) |
 | The app's own files | your phone | for opening without a connection |
-| From v0.3: the last 14 days, your foods, and entries waiting to sync | your phone | removed when you sign out ([design note 02][NOTE02]) |
+| A copy of your recent days, your profile, the foods this phone has seen, and entries waiting to sync | your phone (only for you) | removed when you sign out or tap **Clear offline data on this device** ([design note 02][NOTE02]) |
+| Photos of a barcode or a label | your phone only | a barcode photo is read on the phone and never uploaded; a label photo is sent only if you ask AI to read it, and the server never keeps it ([Barcodes and label photos](barcode-and-photo.md)) |
 
 ## Who can see it
 
@@ -58,30 +54,32 @@ or delete it.
 
 ## What leaves the server
 
-Nothing, unless your admin switches a feature on ([design note 01][NOTE01]):
+Nothing, unless a feature that needs the internet is switched on: by your admin for the server, or by
+you when you add your own USDA or AI key ([design note 01][NOTE01]):
 
 | Feature | What is sent | To |
 |---|---|---|
 | USDA search | your search words | USDA FoodData Central |
-| Barcode lookups | the barcode digits only | Open Food Facts, then USDA ([design note 03][NOTE03]) |
-| AI ideas (you must also opt in) | stage, targets, today's totals, candidate foods; never your name, weight or exact age | the AI provider your admin set up ([design note 04][NOTE04]) |
+| Barcode lookups | the barcode digits only; Open Food Facts only after **you** agreed in **Settings → Food data** | Open Food Facts and USDA ([design note 03][NOTE03]) |
+| AI ideas and photos (you must opt in and agree to each destination) | stage, targets, today's totals, candidate foods, the text or photo you send; never your name, weight or exact age | the AI provider your admin set up, or your own ([design note 04][NOTE04]) |
 | Breached-password check | 5 characters of a scrambled form of your new password, never the password | Have I Been Pwned |
 
 The handbook (**Learn**) loads nothing from the internet either.
 
 ## Take your data with you
 
-- **Today:** **Trends → Export CSV** saves every entry for the days on screen
+- **Trends → Export CSV** saves every entry for the days on screen, for your dietitian
   ([Reports for your care team](reports-for-your-team.md)).
-- **Coming in v0.3:** **Settings → Account → Your data → Export** downloads one `.zip` file with
-  everything: profile, settings, every entry, your foods, saved meals, labs, AI history and activity, as
-  JSON and CSV, plus a `README.txt`. No passwords or keys are included. You may need to enter your
-  password again first ([design note 07][NOTE07]).
+- **Settings → Account → Your data → Export my data (.zip)** downloads one file with everything you
+  entered: profile, settings, every entry, your foods, saved meals, lab results, "Not for me" foods, AI
+  history and activity, as JSON and CSV, plus a `README.txt` that explains the files. No passwords,
+  sessions or keys are included. You may need to enter your password again first
+  ([design note 07][NOTE07]).
 
-## Delete your account (coming in v0.3)
+## Delete your account
 
 1. Export your data first if you may want it later.
-2. **Settings → Account → Your data → Delete account**.
+2. **Settings → Account → Your data → Delete my account**.
 3. Read the list of what will be deleted, enter your password and type `DELETE`.
 4. Everything linked to your account is removed from the live database at once, including AI history.
 
@@ -92,7 +90,8 @@ v0.3 is deleted 30 days after the upgrade ([design note 07][NOTE07]).
 ## Signing out
 
 **Sign out** ends your session and clears the app's stored data on that device. If entries are still
-waiting to sync (v0.3), the app warns you first, because they would be lost ([design note 02][NOTE02]).
+waiting to sync, the app asks first (**Try to sync now**, **Stay signed in** or **Sign out and lose
+them**), because they would be lost ([design note 02][NOTE02]).
 
 ## What to do
 

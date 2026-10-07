@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [ARCH, NOTE03, NOTE06, NOTE07, Q20, DG28a, DG53]
 ---
@@ -56,6 +56,8 @@ and opens in Excel, Google Sheets, Numbers or LibreOffice.
 | `food_name`, `servings`, `grams`, `note` | what and how much, plus your note |
 | `calories_kcal` … `fluid_ml` | the 12 nutrients for that entry, already multiplied by the servings |
 | `id`, `food_id`, `created_at`, `updated_at` | for the app; your dietitian can ignore them |
+| `purpose` | `hypo` when the entry treated a low (its carbohydrate is not part of a meal) |
+| `source`, `source_license` | where the food's numbers came from (builtin, custom, USDA, Open Food Facts) and their licence; Open Food Facts data is under the Open Database License, which the file must keep if you share it |
 
 To make a daily total in a spreadsheet, filter `status` to **eaten** and add up by `date`. Planned rows
 are food you had not eaten when you exported.
@@ -84,12 +86,17 @@ apostrophe in the file, so a spreadsheet does not run it as a formula ([architec
 
 More: [Questions to ask](../reference/questions-to-ask.md) and [Appointments](../living/appointments.md).
 
-!!! tip "Coming in v0.3"
-    - **Insights** above the charts on **Trends**, such as "Potassium was over your limit on 2 of 7 days
-      (Sat, Sun). The main sources were potatoes and orange juice." ([design note 06][NOTE06]).
-    - **Settings → Account → Your data → Export** downloads everything in one `.zip` file (JSON and CSV),
-      for your own records or to move to another server ([design note 07][NOTE07];
-      [Privacy and your data](privacy.md)). For your dietitian, the CSV above is easier.
+## Insights and the full export
+
+- **Insights** on **Trends** sum up the days you chose in plain words with numbers, such as
+  "Potassium was over your limit on 2 of 7 days (Sat, Sun). The main sources were potatoes and orange
+  juice." **Today** shows the same for a single day once breakfast, lunch and dinner are logged, or after
+  7 pm ([Meal guidance](guidance.md); [design note 06][NOTE06]). Low treatments are left out of the
+  carbohydrate insights.
+- **Settings → Account → Your data → Export my data (.zip)** downloads everything in one file (JSON and
+  CSV, lab results included), for your own records or to move to another server
+  ([design note 07][NOTE07]; [Privacy and your data](privacy.md)). For your dietitian, the CSV above is
+  easier.
 
 ## If something goes wrong
 

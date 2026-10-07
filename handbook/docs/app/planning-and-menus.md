@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5]
 ---
@@ -100,11 +100,12 @@ To put a menu day into your plan:
 The menus are built for a 70 kg example adult. Scale the protein foods and starches to your own targets,
 and ask your dietitian which days suit you.
 
-!!! tip "Coming in v0.3"
-    **Plan the rest of my day** builds the remaining meals from your saved meals, your usual meals and
-    the food list, within today's room for potassium, phosphorus, sodium and carbohydrate. You review it
-    and tap **Use this plan**; nothing is saved before that ([Meal guidance](guidance.md);
-    [design note 06][NOTE06]).
+!!! tip "Let the app plan the rest of the day"
+    **Plan → Plan a day…** (or **Plan the rest of my day** on **Today**) builds the remaining meals from
+    your saved meals, your usual meals and the food list, within the day's room for potassium,
+    phosphorus, sodium and carbohydrate. **Show another** gives a different option; you review it and tap
+    **Use this plan**, which adds the meals as planned food. Nothing is saved before that
+    ([Meal guidance](guidance.md); [design note 06][NOTE06]).
 
 ## Example: a dialysis week
 

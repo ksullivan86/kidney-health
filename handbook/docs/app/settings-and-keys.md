@@ -7,18 +7,14 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-07
 fact_checked: 2026-10-05
 sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API]
 ---
 
 # Settings and keys
 
-!!! note "Coming in v0.3"
-    The **Settings** screen (the gear icon) arrives with version 0.3. Until then, the theme and the
-    install panel are in **Profile**, and only the admin can add a USDA key.
-
-**Settings** holds everything that is not about your body or your targets; those stay in **Profile**.
+**Settings** (the gear icon at the top, or **Profile → Open Settings**) holds everything that is not about your body or your targets; those stay in **Profile**.
 Some features need a **key**: a password-like code from an outside service such as USDA or OpenAI. Keys
 can be shared by your admin or added by you ([design note 07][NOTE07]).
 
@@ -26,13 +22,14 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Signed-in devices**, **Your data** (export, delete account) |
-| **Food data** | your own USDA key, the shared key's status and today's remaining lookups, barcode lookups ([Barcodes and label photos](barcode-and-photo.md)) |
-| **AI ideas** | opt in, provider, consent, AI activity ([Optional AI](ai.md)) |
-| **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out ([Meal guidance](guidance.md)) |
-| **This device** | installed or not, "Offline ready", storage used, entries waiting to sync, **Sync now** ([Install the app](install.md)) |
+| **Account** | your name, user name, **Change password**, **Signed-in devices**, **Your data** (export, delete account), your recent sign-in activity, **Sign out** |
+| **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
+| **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
+| **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
+| **AI ideas** | opt in, provider, your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
+| **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | users and invites, sign-in and registration, shared keys, usage, activity, about this server |
-| **About & privacy** | what is stored, who can see it, disclaimers, licences ([Privacy and your data](privacy.md)) |
+| **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
 
 ## Shared keys and your own keys
 
@@ -88,7 +85,8 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
 
 ## Password and devices
 
-- **Change password**: needs your current password; at least 15 characters.
+- **Change password**: needs your current password; at least 15 characters (unless your admin chose
+  another minimum). Your other devices are signed out.
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
 - Sensitive actions (changing a password or key, exporting, deleting your account) ask for your password
