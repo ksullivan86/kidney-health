@@ -62,8 +62,17 @@ def replay_client() -> httpx2.Client:
                          headers={"User-Agent": "kidney-health/0.3 (self-hosted food log)", "Accept": "application/json"})
 
 
-foods.usda_client = replay_client  # before the app is built, so every route uses it
+def __getattr__(name: str) -> Any:
+    """``replay_app:app`` (what uvicorn asks for): the real app, unchanged except that every FoodData Central
+    request goes to :func:`handle`. Built on first access, so importing this module (the tests do) has no side
+    effects."""
+    if name != "app":
+        raise AttributeError(name)
+    foods.usda_client = replay_client
+    from app.main import app as real_app
 
-from app.main import app  # noqa: E402  (the real app, unchanged otherwise)
+    globals()["app"] = real_app
+    return real_app
 
-__all__ = ["app", "handle", "replay_client"]
+
+__all__ = ["handle", "replay_client"]  # and ``app``, built on first access

@@ -68,6 +68,24 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   case (the UI's consent panel), and a 404 names only the databases that answered "not found". Tests in
   tests/test_barcode_api.py; ARCHITECTURE + docs/barcode-and-photos.md updated.
 
+* Step 2 (real server + Chromium): new harness tools/e2e/journey.py (fake AI + fake Open Food Facts + USDA replayed by
+  tools/e2e/replay_app.py, built handbook): setup → AI on → profile → labs change targets with reasons → barcode (USDA,
+  then Open Food Facts after the agreement panel) → label photo (AI) → What fits now → Not for me → swap → Plan the rest →
+  offline ×2 synced exactly once → Trends insights → Learn links → second person isolation (incl. the first person's
+  waiting offline entry never sent as theirs) → export zip → account deletion (all rows gone) → screens at 375/1280
+  light/dark. Result: 122/122 PASS, zero console errors / CSP / failed requests. `python3 tools/e2e/journey.py --site
+  $S/learn --port 8380 --ai-port 8381 --off-port 8382 --out $S/journey`.
+  - Found + fixed on the way: Learn links (`.learn-more`) were 20 px tall: now ≥ 24 px everywhere (WCAG 2.2 2.5.8) and
+    44 px on touch/narrow screens (css/base.css, css/touch.css).
+* Upgrades: new harness tools/e2e/upgrade.py (git archive of 8b8d4ec = v0.2 and 9ef9151 = M1 schema v3, filled through
+  their own API, upgraded on a copy): 71/71 PASS (entries/totals/profile/meals/custom foods/CSV identical, new columns
+  empty, step 4–7 tables, integrity + FK checks, labs/suggestion/guidance/batch/export on old data; APP_PASSWORD import +
+  pre-v3 backup 0600; two people and a still-readable USDA key for v3).
+* Observations for owners (not changed): after "Use this plan" Today shows a red "Projected over" when the planned
+  dinner has 60.6 g carbs for a 60 g goal, while the plan says "close to your goal" (guidance tolerance ±10 g vs the
+  strict per-meal alert); the curated "Egg white, raw" is planned as a dinner protein (USDA raw values; a display name
+  like "Egg white (cooked)" or a note would read better: food-db owner).
+
 ## In progress
 
 ## Cross-owner fixes (file, why, test)

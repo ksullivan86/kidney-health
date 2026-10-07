@@ -14,7 +14,8 @@ from app.auth.bootstrap import setup_line
 
 REPO = Path(__file__).resolve().parent.parent
 E2E = REPO / "tools" / "e2e"
-HARNESSES = ("khserver.py", "parity.py", "regress.py", "sandbox.py", "learn.py", "guidance_perf.py", "device.py")
+HARNESSES = ("khserver.py", "parity.py", "regress.py", "sandbox.py", "learn.py", "guidance_perf.py", "device.py",
+             "journey.py", "upgrade.py", "replay_app.py")
 
 
 def load_khserver():
@@ -68,3 +69,39 @@ def test_work_directory_wipe_is_guarded(tmp_path):
     work = khserver.free_dir(tmp_path / "work")
     (work / "data.db").write_text("x")
     assert khserver.free_dir(work) == work and not (work / "data.db").exists()  # a harness directory is reused
+
+
+def test_replay_app_answers_usda_from_the_recorded_fixtures():
+    """journey.py runs the app as ``replay_app:app``: FoodData Central answered from tests/fixtures/usda."""
+    import sys
+
+    import httpx2
+
+    sys.path.insert(0, str(E2E))
+    try:
+        import replay_app
+    finally:
+        sys.path.remove(str(E2E))
+    base = "https://api.nal.usda.gov/fdc/v1"
+    found = replay_app.handle(httpx2.Request("GET", f"{base}/foods/search?query=00049000028911&dataType=Branded&pageSize=10"))
+    assert found.status_code == 200 and found.json()["foods"]
+    nothing = replay_app.handle(httpx2.Request("GET", f"{base}/foods/search?query=0099999999990&dataType=Branded&pageSize=10"))
+    assert nothing.status_code == 200 and nothing.json()["foods"] == []
+    assert replay_app.handle(httpx2.Request("GET", f"{base}/food/2742723")).status_code == 200
+    assert replay_app.handle(httpx2.Request("GET", f"{base}/food/1")).status_code == 404
+    client = replay_app.replay_client()
+    assert client.get("/food/2742723").json()["description"].startswith("Diet Coke")
+
+
+def test_upgrade_starting_points_exist():
+    """upgrade.py unpacks these commits with git archive; they must stay reachable in the history."""
+    import subprocess
+
+    spec = importlib.util.spec_from_file_location("upgrade_harness", E2E / "upgrade.py")
+    text = (E2E / "upgrade.py").read_text(encoding="utf-8")
+    starts = dict(re.findall(r'"(v0\.2|v3)": "([0-9a-f]{7,40})"', text))
+    assert set(starts) == {"v0.2", "v3"} and spec is not None
+    for rev in starts.values():
+        if subprocess.run(["git", "-C", str(REPO), "rev-parse", "--is-shallow-repository"], capture_output=True, text=True).stdout.strip() == "true":
+            break  # a shallow CI checkout has no old commits; the harness is run by hand on a full clone
+        assert subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{rev}^{{commit}}"]).returncode == 0, rev
