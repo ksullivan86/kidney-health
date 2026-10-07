@@ -524,7 +524,7 @@
     if (d.activity) parts.push(`activity: ${(KH.targets.ACTIVITY_LABELS || {})[d.activity] || d.activity}`);
     const used = Object.entries(d.labs_used || {}).filter(([, v]) => v);
     const labs = used.length
-      ? `Lab results used: ${used.map(([a, v]) => `${KH.kidney.ANALYTES[a].label.toLowerCase()} ${v.value} ${v.unit} (${v.taken_on})`).join(', ')}.`
+      ? `Lab results used: ${used.map(([a, v]) => `${KH.kidney.ANALYTES[a].label.toLowerCase()} ${v.value} ${v.unit} (${KH.kidney.displayDate(v.taken_on)})`).join(', ')}.`
       : 'No recent lab results were used.';
     return h('p', { class: 'muted small derived' }, parts.length ? `Worked out for: ${parts.join(', ')}. ` : '', labs);
   }

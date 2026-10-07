@@ -43,6 +43,12 @@ LOW (apply or justify):
 
 ## Done
 
+* **fixer-backend-ops' optional UI follow-ups and CHANGELOG ask:** AI activity names the new `cached` status
+  (ai.js STATUS_TEXT; test_ai_ui.py checks every status routes.py records has a text); lab dates in the Labs view's
+  spoken updates / delete label and in Profile's "Lab results used" read "Oct 7, 2026" (`KH.kidney.displayDate`;
+  test_targets_ui.py). L10 "Not chosen yet" stage/diabetes stays theirs/ROADMAP (only if the owner picks it).
+  CHANGELOG 0.3.0: new "Fixes from the release review" section (mine and the four lines they asked for).
+
 * **L16** (PEMAT self-score): recorded in docs/ROADMAP.md "Patient handbook" next to the Phase 4 clinical sign-off,
   citing note 08 §7 Phase 4 and §4.9, with the 10 pages named (the ones the app links: get-help-now,
   t1d/treating-a-low, eat/potassium, the seven labs pages). Reason: PEMAT is scored by readers (note 08 §4.9 puts

@@ -227,7 +227,7 @@
       valueInp.value = '';
       $('#lab-note').value = '';
       echo();
-      $('#labs-live').textContent = `Saved: ${saved.label} ${saved.display} on ${saved.taken_on}.`;
+      $('#labs-live').textContent = `Saved: ${saved.label} ${saved.display} on ${fmtDay(saved.taken_on)}.`;
       toast('Result saved', 'ok');
       renderAlert(saved.alerts && saved.alerts[0] ? saved.alerts[0] : null, true);
       const after = await suggestionNow();
@@ -334,7 +334,7 @@
       const list = h('ul', { class: 'list labs-list' });
       for (const r of rows) {
         const veryHigh = r.analyte === 'potassium' && Number(r.value) >= T.POTASSIUM_VERY_HIGH;
-        const del = h('button', { class: 'link-btn danger-link', type: 'button', 'aria-label': `Delete ${r.label} ${r.display} from ${r.taken_on}` }, 'Delete');
+        const del = h('button', { class: 'link-btn danger-link', type: 'button', 'aria-label': `Delete ${r.label} ${r.display} from ${fmtDay(r.taken_on)}` }, 'Delete');
         const actions = h('div', { class: 'lab-row-actions' }, del);
         del.addEventListener('click', (ev) => KH.confirm.inline(actions, ev.currentTarget, {
           message: `Delete ${r.label.toLowerCase()} ${r.display} from ${fmtDay(r.taken_on)}?`,
@@ -343,7 +343,7 @@
             invalidate();
             if (state.targetsReview) noteReview({}, await suggestionNow(), null);
             toast('Result deleted', 'ok');
-            $('#labs-live').textContent = `Deleted ${r.label} ${r.display} from ${r.taken_on}.`;
+            $('#labs-live').textContent = `Deleted ${r.label} ${r.display} from ${fmtDay(r.taken_on)}.`;
             await refresh();
             $('#labs-history-h').focus();
             return true;

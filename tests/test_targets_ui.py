@@ -224,3 +224,12 @@ def test_an_about_target_is_never_called_a_limit() -> None:
     assert "KH.ui.levelTextFor(st, level)" in plan
     review = (ROOT / "handbook" / "REVIEW.md").read_text(encoding="utf-8")
     assert 'An "about" target (minimum = maximum' in review
+
+
+def test_lab_dates_read_like_the_rest_of_the_app() -> None:
+    """Lab dates in the Labs view's spoken updates and in Profile's "Lab results used" read "Oct 7, 2026", never
+    the ISO form (the server's notes already do: units.display_date)."""
+    labs = (STATIC / "js" / "views" / "labs.js").read_text(encoding="utf-8")
+    profile = (STATIC / "js" / "views" / "profile.js").read_text(encoding="utf-8")
+    assert not re.search(r"\$\{(?:saved|r)\.taken_on\}", labs), "an ISO date is read out or labelled"
+    assert "(${v.taken_on})" not in profile and "KH.kidney.displayDate(v.taken_on)" in profile

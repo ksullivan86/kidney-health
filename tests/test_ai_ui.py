@@ -91,3 +91,15 @@ def test_consent_and_preview_flow_is_wired():
     assert "skip_preview: !showEach.checked" in AI_JS and "!given.skip_preview" in AI_JS
     # nothing is logged without a tap: every write goes through the ordinary routes from a button handler
     assert AI_JS.count("api.logBatch(") >= 3 and "api.createFood(" in AI_JS
+
+
+def test_ai_activity_names_every_status_the_server_records() -> None:
+    """AI activity printed the raw word for a status it had no text for; ``cached`` (the same question within 10
+    minutes answered without a new call, app/ai/routes.py) is the newest. ``error:<code>`` reads "failed (…)"."""
+    routes = (ROOT / "app" / "ai" / "routes.py").read_text(encoding="utf-8")
+    recorded = set(re.findall(r'\bstatus\s*=\s*"([a-z_]+)"', routes)) - {"error"}
+    texts = re.search(r"const STATUS_TEXT = \{(.*?)\};", AI_JS, re.S)
+    assert texts, "STATUS_TEXT not found"
+    known = set(re.findall(r"(\w+):", texts.group(1)))
+    assert recorded and recorded <= known, recorded - known
+    assert "cached: 'reused (the same question within 10 minutes; no new AI call)'" in AI_JS

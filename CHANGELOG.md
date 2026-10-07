@@ -362,6 +362,36 @@ the code-review fixes affected only `:edge` builds.
   `ingress`-entity policy; Dependabot cannot update the `*.lock` files, so a weekly workflow refreshes
   them with a 7-day cooldown.
 
+### Fixes from the release review
+
+Found by the v0.3.0 review of the pre-release build; none affected a released version.
+
+* **Values a food does not list are never shown as 0.** Today, Plan, Trends, the 7-day strip and the
+  entry sheet say "≥ 55 mg · + 2 not listed" and "Not complete" when a logged food (often a scanned
+  product) does not list potassium or phosphorus; meal ideas say "at most" and why. The server counts
+  them per day, meal, range and period.
+* **Guidance says which targets it used** ("Using the targets in your profile, saved …", with a link to
+  Profile) in What fits now and the plan.
+* **Snack carbohydrate goal:** Profile → *Carbohydrate per snack* (from your diabetes team); Today, its
+  alerts and meal ideas use it for the snack.
+* "About" targets (the same minimum and maximum, such as protein "about 56 g") read *Near target* /
+  *Above target*, never "limit".
+* The red very-high-potassium banner follows the admin's lab freshness setting, like the suggestion.
+* Products with values only "as prepared" are logged in servings (no grams field, and the reason).
+* AI: the AI activity list captions the provider's raw answer as unchecked and hides words the app
+  never shows; AI order, Ask AI to pick and Let AI choose each have *What will be sent?* and say which
+  picks the rules left out; a repeated question within 10 minutes is answered without a new call.
+* Scanning starts the camera when Scan opens (HTTPS only; switch it off in Settings → Food data).
+  iPhone and iPad show the Home Screen steps once, after the third visit.
+* `GET /api/foods/builtin` with an ETag: a device refreshes its offline food list only when it changed.
+* Settings → This device no longer draws twice on a first visit; the AI switches have their own group
+  in Admin → Server settings and refresh the AI panel at once; the demo runs with lab rules off (note 05).
+* Handbook: link and header colours meet WCAG AA contrast in the light scheme; the dead DG47 citation is
+  replaced (American Kidney Fund Kidney Kitchen, Satellite Healthcare); the mmol/L phosphate table
+  gives the edges the app uses; lab dates read "Oct 7, 2026".
+* Admin CLI: `python -m app.admin export-user` and `disable-user`; the low-glucose pre-filter catches
+  more phrasings ("sugar dropped", "cgm says 3,4", "I'm at 58").
+
 ### Known limitations
 
 * **The handbook is a draft.** Every page shows "Draft: not yet reviewed by a clinician" until a named

@@ -40,7 +40,8 @@
   };
   const UNIT_TEXT = { serving: ['serving', 'servings'], g: ['g', 'g'], ml: ['ml', 'ml'], cup: ['cup', 'cups'], tbsp: ['tbsp', 'tbsp'],
     tsp: ['tsp', 'tsp'], slice: ['slice', 'slices'], piece: ['piece', 'pieces'], oz: ['oz', 'oz'], fl_oz: ['fl oz', 'fl oz'] };
-  const STATUS_TEXT = { ok: 'checked', dropped_all: 'no idea fitted', no_fit: 'nothing fitted', refused: 'declined by the AI', invalid: 'answer not usable' };
+  const STATUS_TEXT = { ok: 'checked', dropped_all: 'no idea fitted', no_fit: 'nothing fitted', refused: 'declined by the AI', invalid: 'answer not usable',
+    cached: 'reused (the same question within 10 minutes; no new AI call)' };
   function dropText(code) {
     const [kind, key] = String(code).split(':');
     const label = key && NUT[key] ? NUT[key].label.toLowerCase() : key;
