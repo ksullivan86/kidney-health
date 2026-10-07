@@ -12,7 +12,7 @@
    redirect to its sign-in page.
 
    SHELL_URLS lists every file index.html loads (tests/test_frontend_shell.py keeps the two in
-   step); M2 adds js/offline.js and js/scan.js here when they exist. */
+   step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. */
 'use strict';
 
 const VERSION = '__VERSION__';
@@ -34,6 +34,7 @@ const SHELL_URLS = [
   '/css/pwa.css',
   '/css/ai.css',
   '/css/guidance.css',
+  '/css/device.css',
   '/css/touch.css',
   '/js/engine/rules.js',
   '/js/engine/kidney_function.js',
@@ -54,6 +55,7 @@ const SHELL_URLS = [
   '/js/engine/guidance/hypo.js',
   '/js/core.js',
   '/js/learn.js',
+  '/js/offline.js',
   '/js/mock/core.js',
   '/js/mock/foods.js',
   '/js/mock/barcode.js',
@@ -77,6 +79,8 @@ const SHELL_URLS = [
   '/js/views/settings.js',
   '/js/views/ai.js',
   '/js/views/guidance.js',
+  '/vendor/barcode-detector-3.2.2/ponyfill.iife.js',
+  '/js/scan.js',
   '/js/pwa.js',
   '/js/main.js',
   '/manifest.webmanifest',
@@ -118,9 +122,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.pathname.startsWith('/vendor/')) {
-    // Vendored decoders (M2 barcode scanning): fetched on first use, then cache-first.
+    // Vendored decoders (barcode scanning): the ponyfill comes with the shell; the 1 MB WebAssembly reader is
+    // fetched on the first scan that needs it, then kept in the vendor cache (cache-first, both caches).
     event.respondWith(caches.open(VENDOR).then(async (cache) => {
-      const hit = await cache.match(req);
+      const hit = (await cache.match(req)) || (await caches.match(req, { cacheName: SHELL }));
       if (hit) return hit;
       const res = await fetch(req);
       if (res.ok) cache.put(req, res.clone());

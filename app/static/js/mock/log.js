@@ -382,5 +382,9 @@
     return fail(404, 'Not Found');
   });
 
-  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose });
+  // The day figures (totals, status, alerts, projections) for any entry rows and targets: js/offline.js draws a
+  // day with the entries still waiting to sync with the same twin of app/log.py the demo uses.
+  function dayFigures(profile, rows) { return MockApi.prototype._dayFigures.call({ _profile: profile }, rows); }
+
+  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures });
 })();

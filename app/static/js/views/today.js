@@ -1,7 +1,9 @@
 /* Kidney Diet Log — Today view: date navigation, alerts, daily status bars, meals with their
    entries, all-nutrient totals and the "Last 7 days" strip (with "since last dialysis"). Meal
    guidance (js/views/guidance.js) adds the Meal ideas card, a "What fits" link per meal, the
-   "treated a low" badge and the end-of-day insights. */
+   "treated a low" badge and the end-of-day insights. Offline (js/offline.js), the day may be this
+   device's saved copy ("Saved at …") and entries waiting to sync carry a "waiting to sync" or "not
+   saved" badge; they are counted in the day and open Settings → This device instead of the editor. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -58,6 +60,12 @@
     const counts = day.counts || { eaten: (day.entries || []).filter((e) => !isPlanned(e)).length, planned: (day.entries || []).filter(isPlanned).length };
     // Alerts (eaten)
     clear(alertsEl);
+    const saved = KH.offline ? KH.offline.servedOffline(day) : null;
+    if (saved) {
+      const at = saved.fetched_at ? new Date(saved.fetched_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : null;
+      alertsEl.append(h('p', { class: 'offline-note', role: 'note' }, at ? `Offline: this is the copy this device saved ${at}. ` : 'Offline: this device has no copy of this day. ',
+        'Food you add now waits here and syncs when your server can be reached.'));
+    }
     for (const a of day.alerts || []) {
       const lvl = a.level === 'over' ? 'over' : 'caution';
       const more = KH.learn ? KH.learn.forWarning(a) : null; // the nutrient's handbook page
@@ -128,7 +136,10 @@
         card.append(h('p', { class: 'empty-state' }, 'Nothing logged.'));
       } else {
         const ul = h('ul', { class: 'list' });
-        for (const e of entries) ul.append(isPlanned(e) ? h('li', { class: 'entry-planned' }, entryRow(e), eatenButton(e)) : h('li', {}, entryRow(e)));
+        for (const e of entries) {
+          const waiting = e.pending ? ' entry-waiting' : '';
+          ul.append(isPlanned(e) ? h('li', { class: `entry-planned${waiting}` }, entryRow(e), e.pending ? null : eatenButton(e)) : h('li', { class: waiting.trim() || null }, entryRow(e)));
+        }
         card.append(ul);
       }
       const foot = h('div', { class: 'meal-foot' });
@@ -231,13 +242,21 @@
     for (const k of ROW_NUMBERS) {
       nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(e.nutrients[k], k)), ` ${NUT[k].unit}`));
     }
-    const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${e.purpose === 'hypo' ? ', used to treat a low' : ''}` },
+    // An entry still on this device (js/offline.js): it cannot be edited until it reaches the server.
+    const waiting = e.pending ? (e.failed ? 'not saved' : 'waiting to sync') : null;
+    const label = e.pending ? `${e.food_name}, ${amount}, ${waiting}: open This device` : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`;
+    const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': label },
       ratingIcon(e.kidney_rating),
       h('div', { class: 'row-main' },
-        h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
+        h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null,
+          waiting ? h('span', { class: `badge ${e.failed ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
         h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null)),
       nums);
-    btn.addEventListener('click', () => views().add.openEntrySheet('edit', { entry: e, trigger: btn }));
+    btn.addEventListener('click', () => {
+      if (!e.pending) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }
+      toast(e.failed ? 'This entry did not reach your server. Review it in Settings → This device.' : 'This entry is waiting to sync. You can change it once it has reached your server.');
+      $('#sync-badge').click();
+    });
     return btn;
   }
   function eatenButton(e) {
@@ -257,7 +276,8 @@
     try {
       const res = await api.markEaten(meal ? { date, meal } : { date });
       const n = res && typeof res.updated === 'number' ? res.updated : 0;
-      toast(n ? `${n} ${n === 1 ? 'entry' : 'entries'} marked as eaten` : 'Nothing was planned', 'ok');
+      if (res && res.pending) toast(`Saved on this device: ${n || 'planned'} ${n === 1 ? 'entry' : 'entries'} marked as eaten when your server can be reached`, 'ok');
+      else toast(n ? `${n} ${n === 1 ? 'entry' : 'entries'} marked as eaten` : 'Nothing was planned', 'ok');
       await loadDay();
     } catch (err) { toastError(err); if (btn) btn.disabled = false; }
   }

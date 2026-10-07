@@ -1,7 +1,11 @@
 /* Kidney Diet Log — Add view: food search with category chips, saved-meal shortcuts, and the
    sheets that log food: the entry sheet (add + edit, warnings before saving), Quick add and
    the USDA search / import sheet. Meal guidance (js/views/guidance.js, KH.guidance) adds "What fits
-   now" above the search and, in the entry sheet, "Used to treat a low" and swap ideas. */
+   now" above the search and, in the entry sheet, "Used to treat a low" and swap ideas. Barcodes
+   (js/scan.js, KH.scan) add where a food's data came from to the entry sheet, and Quick add's label
+   photo; Quick add takes the barcode and the ingredient list, which the additive scan reads (shown
+   before saving with the browser twin js/engine/additives.js; the server scans again on save).
+   Nutrients a label does not list read "not listed", never 0. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -69,6 +73,8 @@
       const res = await api.foods({ q, category: state.category, limit: 25 });
       if (reqId !== searchRequest) return;
       renderResults(res.foods || []);
+      // Offline, js/offline.js searches the foods this device has seen.
+      if (res.offline) resultsCount.textContent = `Offline: ${resultsCount.textContent ? `${resultsCount.textContent} ` : ''}saved on this device`;
     } catch (e) { if (reqId === searchRequest) toastError(e); }
   }
   searchInput.addEventListener('input', debounce(runSearch, 250));
@@ -199,6 +205,7 @@
     const notes = $('#sheet-entry-notes');
     notes.hidden = !(f && f.kidney_notes);
     notes.textContent = f && f.kidney_notes ? f.kidney_notes : '';
+    if (KH.scan) KH.scan.renderProvenance($('#sheet-entry-provenance'), f); else $('#sheet-entry-provenance').hidden = true;
   }
   function servingsValue() { const v = Number(entryServings.value); return Number.isFinite(v) && v >= 0 ? v : 0; }
   function syncGramsFromServings() {
@@ -233,12 +240,17 @@
     const sv = previewServings();
     const scaled = scaledNutrients(sheet.perServing, sv);
     $('#entry-preview-amount').textContent = `${fmtServings(sv)}${entryGrams.value ? ` · ${entryGrams.value} g` : ''}`;
+    // A value the label does not give is "not listed" (unknown), never 0 or a dash that reads as nothing (note 03 R7).
     const key = clear($('#entry-preview-key'));
     for (const k of KEY_NUMBERS) {
-      key.append(h('div', { class: 'kn' }, h('span', { class: 'kn-v' }, fmtNum(scaled[k], k)), h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+      const unknown = scaled[k] == null;
+      key.append(h('div', { class: `kn${unknown ? ' kn-unknown' : ''}` }, h('span', { class: 'kn-v' }, unknown ? 'not listed' : fmtNum(scaled[k], k)),
+        unknown ? null : h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
     }
     const all = clear($('#entry-preview-all'));
-    for (const n of NUTRIENTS) all.append(h('div', { class: 'ng' }, h('span', {}, n.label), h('b', {}, fmtWithUnit(scaled[n.key], n.key))));
+    for (const n of NUTRIENTS) {
+      all.append(h('div', { class: 'ng' }, h('span', {}, n.label), h('b', {}, scaled[n.key] == null ? 'not listed' : fmtWithUnit(scaled[n.key], n.key))));
+    }
 
     // Warnings: the server's per-serving warnings for exactly one serving, else re-evaluated for this amount.
     const f = sheet.food;
@@ -295,7 +307,9 @@
         const created = await api.addEntry(body);
         entryDlg.close();
         const when = state.date !== todayStr() ? `, ${fmtDateLong(state.date)}` : '';
-        toast(`${status === 'planned' ? 'Planned' : 'Added'} ${created.food_name || sheet.food.name} ${status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[meal].toLowerCase()}${when}`, 'ok');
+        // Offline (js/offline.js), the entry waits on this device and syncs when the server is reachable.
+        const verb = created && created.pending ? 'Saved on this device:' : status === 'planned' ? 'Planned' : 'Added';
+        toast(`${verb} ${created.food_name || sheet.food.name} ${status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[meal].toLowerCase()}${when}`, 'ok');
         state.dayLoadedFor = null;
         router.show('today');
       } else {
@@ -357,9 +371,14 @@
   const quickDlg = $('#sheet-quick');
   const quickForm = $('#quick-form');
   sheets.setup(quickDlg);
+  // The order of a nutrition label (note 03 R8): serving, calories, fat, sodium, carbohydrate, fibre, sugars,
+  // protein, potassium, phosphorus, calcium; fluid last (it is not on a label).
+  const LABEL_ORDER = ['calories_kcal', 'fat_g', 'sat_fat_g', 'sodium_mg', 'carbs_g', 'fiber_g', 'sugar_g', 'protein_g', 'potassium_mg',
+    'phosphorus_mg', 'calcium_mg', 'fluid_ml'];
   (function buildQuickForm() {
     const grid = $('#quick-nutrients');
-    for (const n of NUTRIENTS) {
+    const order = [...LABEL_ORDER, ...NUTRIENTS.map((n) => n.key).filter((k) => !LABEL_ORDER.includes(k))];
+    for (const n of order.map((k) => NUT[k]).filter(Boolean)) {
       const id = `qn-${n.key}`;
       grid.append(h('div', { class: 'field' },
         h('label', { for: id }, `${n.label} (${n.unit})`),
@@ -380,47 +399,84 @@
     return out;
   }
   function quickFlags() { return $$('#quick-flags input:checked').map((i) => i.dataset.flag); }
+  // What the server's additive scan will add on save (js/engine/additives.js, the browser twin).
+  function quickScan() {
+    if (!KH.additives) return { flags: [], notes: [], kidney_notes: null };
+    return KH.additives.scan([], $('#q-ingredients').value, $('#q-name').value);
+  }
   function updateQuickPreview() {
     const sv = Number($('#q-servings').value) || 1;
     const per = quickNutrients();
-    const flags = quickFlags();
+    const scan = quickScan();
+    const flags = [...new Set([...quickFlags(), ...scan.flags])];
     if (flags.includes('counts_as_fluid') && per.fluid_ml == null && $('#q-serving-g').value) per.fluid_ml = Number($('#q-serving-g').value);
     const scaled = scaledNutrients(per, sv);
-    const warnings = evaluateWarnings(scaled, flags, '', false);
+    const warnings = evaluateWarnings(scaled, flags, scan.kidney_notes || '', false);
     renderWarnings($('#quick-warnings'), warnings, { emptyText: 'Enter the label values to see per-serving warnings.' });
+    const scanEl = $('#q-ingredients-scan');
+    const marks = scan.flags.map((fl) => (FLAG[fl] ? FLAG[fl].label : fl));
+    scanEl.textContent = marks.length ? `Saving marks this food: ${marks.join(', ')}. ${scan.notes.filter((n) => !/no warning/.test(n)).join(' ')}`.trim() : '';
   }
-  $('#btn-quick').addEventListener('click', (e) => {
+  // Quick add, fresh; from a barcode that was not found, prefilled with its name and number (note 03 R7).
+  function openQuick({ name = '', gtin = '', trigger = null, photoFirst = false } = {}) {
     quickForm.reset();
+    KH.forms.clearFieldErrors(quickForm);
+    $('#q-name').value = name;
+    $('#q-gtin').value = gtin;
     $('#q-serving-desc').value = '1 serving';
     $('#q-serving-g').value = '100';
     $('#q-servings').value = '1';
     setMeal($('#quick-meal'), state.addMealHint || defaultMealForNow());
     setStatus($('#quick-status'), state.addStatusHint || defaultStatusFor(state.date));
+    if (KH.scan) KH.scan.quickOpened({ photoFirst });
     updateQuickPreview();
-    sheets.open(quickDlg, e.currentTarget, $('#q-name'));
-  });
+    sheets.open(quickDlg, trigger, photoFirst ? $('#q-photo') : $('#q-name'));
+  }
+  $('#btn-quick').addEventListener('click', (e) => openQuick({ trigger: e.currentTarget }));
   let quickBusy = false;
   sheets.onSubmit(quickForm, async (e) => {
     e.preventDefault();
     if (quickBusy) return;
+    KH.forms.clearFieldErrors(quickForm);
     const name = $('#q-name').value.trim();
-    if (!name) { toast('Give the food a name', 'error'); $('#q-name').focus(); return; }
+    if (!name) { KH.forms.fieldError($('#q-name'), 'Give the food a name.'); toast('Give the food a name', 'error'); $('#q-name').focus(); return; }
     const nutrients = quickNutrients();
-    if (!Object.keys(nutrients).length) { toast('Enter at least one nutrient value', 'error'); return; }
+    if (!Object.keys(nutrients).length) { toast('Enter at least one nutrient value', 'error'); $(`#qn-${LABEL_ORDER[0]}`).focus(); return; }
+    // The barcode is checked here for instant feedback (the server checks it again).
+    const gtinRaw = $('#q-gtin').value.trim();
+    if (gtinRaw && KH.gtin) {
+      try { KH.gtin.normalize(gtinRaw, 'unknown'); } catch (e) {
+        if (!(e instanceof KH.gtin.GtinError)) throw e;
+        KH.forms.fieldError($('#q-gtin'), e.message); $('#q-gtin').focus(); return;
+      }
+    }
     const flags = quickFlags();
     const servingG = numOrNull($('#q-serving-g').value) || 100;
     if (flags.includes('counts_as_fluid') && nutrients.fluid_ml == null) nutrients.fluid_ml = servingG;
     const body = { date: state.date, meal: selectedMeal($('#quick-meal')), name, serving_desc: $('#q-serving-desc').value.trim() || '1 serving',
       serving_g: servingG, nutrients, servings: Number($('#q-servings').value) || 1, flags, status: selectedStatus($('#quick-status')) };
+    if (gtinRaw) body.gtin = gtinRaw;
+    const ingredients = $('#q-ingredients').value.trim();
+    if (ingredients) body.ingredients_text = ingredients;
     quickBusy = true; $('#quick-save').disabled = true;
     try {
       const created = await api.quick(body);
       quickDlg.close();
       const when = state.date !== todayStr() ? `, ${fmtDateLong(state.date)}` : '';
-      toast(`${body.status === 'planned' ? 'Planned' : 'Logged'} ${created.food_name || name} ${body.status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[body.meal].toLowerCase()}${when}`, 'ok');
+      const verb = created && created.pending ? 'Saved on this device:' : body.status === 'planned' ? 'Planned' : 'Logged';
+      toast(`${verb} ${created.food_name || name} ${body.status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[body.meal].toLowerCase()}${when}`, 'ok');
       state.dayLoadedFor = null;
       router.show('today');
-    } catch (err) { toastError(err); }
+    } catch (err) {
+      const parts = KH.forms.splitFieldErrors(err.detail);
+      const fieldOf = { name: '#q-name', serving_desc: '#q-serving-desc', serving_g: '#q-serving-g', gtin: '#q-gtin', ingredients_text: '#q-ingredients' };
+      let shown = false;
+      for (const part of parts) {
+        const el = part.field && fieldOf[part.field] ? $(fieldOf[part.field]) : null;
+        if (el) { KH.forms.fieldError(el, part.message); if (!shown) el.focus(); shown = true; }
+      }
+      if (!shown || err.status !== 400) toastError(err);
+    }
     finally { quickBusy = false; $('#quick-save').disabled = false; }
   });
 
@@ -493,5 +549,5 @@
   }
 
   router.register('add', () => initAdd());
-  KH.views.add = { initAdd, runSearch, renderSavedShortcuts, openEntrySheet, setServings };
+  KH.views.add = { initAdd, runSearch, renderSavedShortcuts, openEntrySheet, setServings, openQuick };
 })();

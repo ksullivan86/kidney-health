@@ -248,40 +248,84 @@
     }
     throw err;
   }
-  // opts: { quiet401 } leaves a 401 to the caller (the sign-in screens), { retried } is internal.
+  // Offline support (js/offline.js sets KH.net; note 02 R5). The client works without it:
+  //   prepare(method, path, body) → body      adds a client_id to the writes the outbox can queue
+  //   timeoutFor(method, path) → ms | 0         an AbortController timeout (a private IP can hang for minutes)
+  //   offlineNow() → bool                       the demo API counts as unreachable while the browser is offline
+  //   onNetworkError(method, path, body, err, opts) → answer | undefined   a saved copy, or the write queued
+  //   onUnavailable(method, path, body, err, opts) → answer | undefined    the same for a 502/503/504 gateway answer
+  //   afterResponse(method, path, body, data, opts) → data                 saves copies, merges waiting entries
+  function networkError(timedOut = false) {
+    const err = new Error(timedOut ? 'The server did not answer in time. Check your connection.' : 'Cannot reach the server. Check your connection.');
+    err.status = 0; err.detail = err.message; err.offline = true;
+    return err;
+  }
+  async function unreachable(method, path, body, opts, err) {
+    const net = KH.net;
+    if (net && typeof net.onNetworkError === 'function' && !opts.noQueue) {
+      const answer = await net.onNetworkError(method, path, body, err, opts);
+      if (answer !== undefined) return answer;
+    }
+    throw err;
+  }
+  async function answered(method, path, body, data, opts) {
+    const net = KH.net;
+    return net && typeof net.afterResponse === 'function' ? net.afterResponse(method, path, body, data, opts) : data;
+  }
+  // opts: { quiet401 } leaves a 401 to the caller (the sign-in screens), { retried } is internal,
+  // { noQueue } is the outbox's own sync (never queued again, never answered from a saved copy).
   async function request(method, path, body, opts = {}) {
+    const net = KH.net;
+    if (net && typeof net.prepare === 'function' && !opts.noQueue) body = net.prepare(method, path, body);
     const retry = (o) => request(method, path, body, o);
     const mock = KH.mock && KH.mock.instance;
     if (mock) {
-      try { return await mock.request(method, path, body); } catch (e) {
+      if (net && typeof net.offlineNow === 'function' && net.offlineNow()) return unreachable(method, path, body, opts, networkError());
+      let data;
+      try { data = await mock.request(method, path, body); } catch (e) {
         if (!(KH.mock.ApiError && e instanceof KH.mock.ApiError)) throw e;
         return afterError(apiError(e.status, { detail: e.detail, ...(e.extra || {}) }, null), retry, opts);
       }
+      return answered(method, path, body, data, opts);
     }
     const headers = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     // Every write carries the app's own header: the server's CSRF check refuses cross-site
     // form posts, which cannot set it (note 07; plain-HTTP LANs send no Sec-Fetch-Site).
     if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = 'kidney-health';
+    const timeout = net && typeof net.timeoutFor === 'function' ? net.timeoutFor(method, path) : 0;
+    const ctrl = timeout && typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeout) : null;
     let res;
+    let text;
     try {
       res = await fetch(path, {
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
         credentials: 'same-origin',
+        signal: ctrl ? ctrl.signal : undefined,
       });
+      // Read even an empty 204 body: an unread one is reported as net::ERR_ABORTED in DevTools.
+      text = await res.text();
     } catch (e) {
-      const err = new Error('Cannot reach the server. Check your connection.');
-      err.status = 0; err.detail = err.message; throw err;
+      return unreachable(method, path, body, opts, networkError(!!(ctrl && ctrl.signal.aborted)));
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-    // Read even an empty 204 body: an unread one is reported as net::ERR_ABORTED in DevTools.
-    if (res.status === 204) { try { await res.text(); } catch (e) { /* nothing to read */ } return null; }
-    const text = await res.text();
+    if (res.status === 204) return answered(method, path, body, null, opts);
     let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text.slice(0, 200) }; }
-    if (!res.ok) return afterError(apiError(res.status, data, res), retry, opts);
-    return data;
+    let fromApp = true; // the app always answers JSON; a proxy in front of a stopped app answers HTML or nothing
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text.slice(0, 200) }; fromApp = false; }
+    if (!res.ok) {
+      // A gateway in front of a stopped app (502/503/504 that is not the app's own JSON) is "unreachable" too.
+      if ([502, 503, 504].includes(res.status) && (!fromApp || !text) && net && typeof net.onUnavailable === 'function' && !opts.noQueue) {
+        const answer = await net.onUnavailable(method, path, body, apiError(res.status, data, res), opts);
+        if (answer !== undefined) return answer;
+      }
+      return afterError(apiError(res.status, data, res), retry, opts);
+    }
+    return answered(method, path, body, data, opts);
   }
   // A file download (GET) through the same error handling: the browser saves the body under the
   // server's Content-Disposition name. Used for the data export (re-auth may be asked first).

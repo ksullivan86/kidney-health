@@ -587,12 +587,14 @@
   // ---------------------------------------------------------------------------
   // Sign-out (note 07 §4.5; note 02 R5: warn about unsynced entries, then clear this device)
   // ---------------------------------------------------------------------------
-  async function pendingOfflineCount() {
-    try { return KH.offline && typeof KH.offline.pendingCount === 'function' ? Number(await KH.offline.pendingCount()) || 0 : 0; } catch (e) { return 0; }
+  // Entries still waiting on this device (js/offline.js): the person decides first (sync, stay, or lose them).
+  async function mayLeaveUnsynced() {
+    try { return KH.offline && typeof KH.offline.beforeSignOut === 'function' ? await KH.offline.beforeSignOut() : true; } catch (e) { console.error(e); return true; }
   }
   // { stay: true } keeps this page (used before opening an invite link); otherwise the page
   // starts fresh. Returns true when signed out.
   async function signOut({ stay = false } = {}) {
+    if (!(await mayLeaveUnsynced())) return false;
     let res = null;
     try {
       res = await request('POST', '/api/auth/logout', undefined, { quiet401: true });

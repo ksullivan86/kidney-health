@@ -1,7 +1,7 @@
 /* Kidney Diet Log — boot: start the demo API when asked for, apply the theme, check who is
    signed in (js/views/auth.js shows the setup / sign-in / invite / reset screens when needed),
-   then load the profile and show the first view; finally hand over to the PWA shell (js/pwa.js,
-   absent in the preview build). */
+   then load the profile, start the offline outbox (js/offline.js) and show the first view; finally hand over to
+   the PWA shell (js/pwa.js, absent in the preview build). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -15,6 +15,8 @@
   async function start(view) {
     // The profile, and where the handbook links go (js/learn.js; it never throws), before the first view.
     await Promise.all([KH.loadProfile().catch(toastError), KH.learn ? KH.learn.load() : null]);
+    // Entries saved on this device while the server was unreachable sync now (js/offline.js, note 02 R5).
+    if (KH.offline) KH.offline.start().catch((e) => console.warn('Offline outbox:', e));
     const initial = view || location.hash.replace('#', '');
     router.show(router.VIEWS.includes(initial) ? initial : 'today');
   }

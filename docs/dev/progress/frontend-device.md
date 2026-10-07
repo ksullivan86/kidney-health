@@ -52,8 +52,15 @@ Do not edit Python under app/. WIP commits end with " [skip ci]". Commit only my
   60/hour, consent, 3 recorded products, demo 404), mock foods v0.3 Food fields, gtin + ingredients_text on
   POST/PUT /api/foods and /api/log/quick with the additive scan, shared rows read-only/linked; demo env
   OFF_ENABLED=true (was false) so the samples answer after consent; Settings → Food data demo hint names the samples.
-* tests/test_vendor.py is parked in $S/test_vendor.py.pending until js/scan.js, the index.html ponyfill tag and
-  the sw.js entry exist (its last two tests check them); restore it then.
+* tests/test_vendor.py restored (scan.js, the index.html ponyfill tag and sw.js entries exist now): passes.
+* Steps 4–7 (scan.js, Quick add photo/ingredients/gtin, entry sheet provenance, offline.js + core.js KH.net hooks,
+  badge, Today waiting entries + offline note, Settings → This device outbox, sign-out sheet, About data sources,
+  admin Food data keys): built. tools/e2e/device.py (ports 8370 app / 8371 fake AI) verified in Chromium:
+  `--only photo,native,live,outbox` all pass (photo WASM + native stand-in, fake camera y4m live scan on
+  http://localhost incl. 4 s watchdog and plain-HTTP note, outbox: offline log + offline reload from the SW +
+  reconnect synced once + refused item Retry/Discard + lost answer resent once ('existing') + sign-out sheet).
+  Harness lesson: Playwright route handlers only run while Python is inside a Playwright call, so never
+  time.sleep while a route must answer (use page.wait_for_timeout / wait_js).
 
 ## Decisions
 * Additive scan twin in the browser (not in the contract's list before): Quick add shows what the server will flag
@@ -61,5 +68,11 @@ Do not edit Python under app/. WIP commits end with " [skip ci]". Commit only my
 * js/engine/off.js holds the quality sentences and attribution constants (one file per Python module, as guidance).
 * Demo: OFF "on" (env-locked) with three recorded products; consent still needed per person (shows the real flow).
 
+## Next
+* device.py sections ai, demo, shots; review screenshots; static pytest tests/test_device_ui.py; device.py in
+  tests/test_e2e_tools.py + tools/e2e/README.md; parity.py barcode/foods fields; build preview; sandbox; regress;
+  docs (ARCHITECTURE module list, docs/barcode-and-photos.md, install-on-your-phone, privacy, handbook, ROADMAP).
+
 ## Reproduce
-(to be filled)
+* `node tests/js/run_vectors.mjs` (barcode section 2,028 checks); `python3 scripts/vendor_barcode.py --check`
+* `python3 tools/e2e/device.py --port 8370 --ai-port 8371 --out $S/dev [--only photo,native,live,outbox,ai,demo,shots]`

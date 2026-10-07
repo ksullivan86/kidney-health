@@ -109,6 +109,7 @@
       console.warn('Service worker registration failed; the app works without offline support.', e);
       return null;
     }
+    if (!registration) return null; // a browser (or test harness) that blocks service workers answers nothing
     lastUpdateCheck = Date.now(); // register() has just fetched /sw.js
     watchForUpdates(registration);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });

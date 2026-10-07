@@ -724,6 +724,8 @@
     if (!KH.pwa || MOCK) {
       body.append(kv([['This app', PREVIEW ? 'A preview inside this page' : 'Demo mode (?mock=1)'], ['App version', APP_VERSION]]),
         h('p', {}, 'In the installed app this section shows whether the app is on your home screen and works offline, how much it stores on this device, and how to install it. The preview stores nothing on this device.'));
+      // The outbox works against the demo too: while the browser is offline, entries wait in this page (js/offline.js).
+      if (KH.offline) await KH.offline.renderDevice(body);
       return;
     }
     const st = await KH.pwa.deviceStatus();
@@ -738,18 +740,26 @@
       ['App version', st.updateReady ? `${APP_VERSION} (an update is ready: use Reload)` : APP_VERSION],
     ]));
     if (!st.secure) body.append(note('caution', h('p', {}, 'Offline use, camera scanning and reminders need HTTPS. Your admin can set it up with docs/https.md.')));
-    if (KH.offline && typeof KH.offline.pendingCount === 'function') {
-      const n = Number(await KH.offline.pendingCount()) || 0;
-      body.append(h('p', {}, n ? `${n} ${n === 1 ? 'entry is' : 'entries are'} waiting to sync.` : 'Everything is synced.'),
-        n && typeof KH.offline.syncNow === 'function' ? action('Sync now', 'secondary', async () => { await KH.offline.syncNow(); await renderDevice(); }) : null);
-    }
+    // Entries waiting to sync, with Sync now, Retry, Discard (js/offline.js, note 02 R5).
+    if (KH.offline) await KH.offline.renderDevice(body);
     const row = h('div', { class: 'settings-actions' });
     const clearBtn = h('button', { class: 'btn secondary', type: 'button', id: 'set-clear-device' }, 'Clear offline data on this device');
-    clearBtn.addEventListener('click', () => confirm.inline(row, clearBtn, {
-      message: "Remove the app's offline copy from this device? Your log stays on the server; the app downloads itself again next time.",
-      confirmText: 'Clear',
-      onConfirm: async () => { await KH.pwa.clearOfflineData(); toast('Offline data cleared on this device', 'ok'); await renderDevice(); return true; },
-    }));
+    clearBtn.addEventListener('click', async () => {
+      const waiting = KH.offline ? Number(await KH.offline.pendingCount()) || 0 : 0;
+      confirm.inline(row, clearBtn, {
+        message: waiting
+          ? `Remove the app's offline copy from this device? ${waiting} ${waiting === 1 ? 'entry has' : 'entries have'} not reached your server and will be lost. Your log on the server stays.`
+          : "Remove the app's offline copy from this device? Your log stays on the server; the app downloads itself again next time.",
+        confirmText: waiting ? 'Clear and lose them' : 'Clear',
+        onConfirm: async () => {
+          if (KH.offline) await KH.offline.purge();
+          await KH.pwa.clearOfflineData();
+          toast('Offline data cleared on this device', 'ok');
+          await renderDevice();
+          return true;
+        },
+      });
+    });
     row.append(clearBtn);
     body.append(row);
     KH.pwa.renderInstallPanel();
@@ -1056,7 +1066,8 @@
   // ---- Server settings (instance keys; env locks are read-only)
   const GROUPS = [
     ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days']],
-    ['Food data', ['food.off_enabled', 'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
+    ['Food data', ['food.off_enabled', 'food.off_contact', 'food.off_rate_per_minute', 'food.barcode_negative_ttl_hours', 'food.usda_branded_barcode',
+      'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
     ['Default for everyone', ['ui.theme', 'user.units.labs']],
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
@@ -1287,17 +1298,35 @@
         h('li', {}, 'Your log, foods, saved meals, profile, targets and settings are stored on this server, not on the internet. Your account sees only its own data.'),
         h('li', {}, 'The person who runs this server can technically read all data on it. An admin can also create a password reset link for any account and sign in as that person; the activity log records it, and you are told at your next sign-in.'),
         h('li', {}, 'Keys are stored encrypted and are never shown again. Your export (Account → Your data) holds everything about you except passwords, sessions and keys.'),
-        h('li', {}, 'This device keeps only the app itself for offline use (and, later, entries waiting to sync); signing out clears it.')),
+        h('li', {}, 'This device keeps the app itself and, for offline use, a copy of your recent days, your profile and the foods you have seen, plus entries waiting to sync. Signing out clears it (it asks first when something has not synced).')),
       subtitle('Not medical advice'),
       h('p', {}, 'Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. Food warnings are general renal-diet conventions, not a prescription.'),
       subtitle('Learn: the patient handbook'),
       handbookAbout(),
+      subtitle('Data sources'),
+      dataSources(),
       subtitle('Licences'),
       h('ul', { class: 'about-list' },
         h('li', {}, 'App code: PolyForm Noncommercial License 1.0.0.'),
         h('li', {}, 'Handbook text: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0).'),
         h('li', {}, 'Food data from USDA FoodData Central: public domain (U.S. government work; CC0 1.0).'),
-        h('li', {}, 'Product data from Open Food Facts (when lookups are on): © Open Food Facts contributors, under the Open Database License (ODbL) 1.0; the app shows no product images.')));
+        h('li', {}, 'Product data from Open Food Facts (when lookups are on): © Open Food Facts contributors, under the Open Database License (ODbL) 1.0; the app shows no product images.'),
+        h('li', {}, 'Barcode reader used on devices without a built-in one: barcode-detector 3.2.2 and zxing-wasm 3.1.3 (MIT), built on ZXing-C++ (Apache License 2.0).')));
+  }
+
+  // Note 03 R11: the Open Food Facts notice (ODbL §4.3), how this app changes that data (§4.6: the mapping code), the
+  // USDA citation. External links open in a new tab, as user navigation.
+  function dataSources() {
+    const ext = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text, h('span', { class: 'sr-only' }, ' (opens in a new tab)'));
+    const O = KH.off;
+    return h('ul', { class: 'about-list' },
+      h('li', {}, 'Contains information from ', ext(O ? O.HOME_URL : 'https://world.openfoodfacts.org', 'Open Food Facts'),
+        ', which is made available here under the ', ext(O ? O.LICENSE_URL : 'https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License (ODbL)'),
+        '. How this app changes that data (serving sizes, sodium from salt, additive flags, quality notes): ',
+        ext(O ? O.METHOD_URL : 'https://github.com/ksullivan86/kidney-health/blob/main/app/off.py', 'app/off.py'), '.'),
+      h('li', {}, 'U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, ',
+        ext('https://fdc.nal.usda.gov/', 'fdc.nal.usda.gov'), ' (SR Legacy for the built-in foods; Branded Foods for barcodes and imports).'),
+      h('li', {}, 'Barcodes are read on your device; only the number goes to this server, which asks Open Food Facts (when your admin has turned it on and you agreed) and USDA (when a key is set up).'));
   }
 
   // Where the handbook is (js/learn.js asks the server): this server's copy at /learn, the public copy,

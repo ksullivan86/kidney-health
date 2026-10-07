@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="css/pwa.css">
 <link rel="stylesheet" href="css/ai.css">
 <link rel="stylesheet" href="css/guidance.css">
+<link rel="stylesheet" href="css/device.css">
 <link rel="stylesheet" href="css/touch.css">
 <script src="theme-init.js"></script>
 </head>
@@ -77,6 +78,12 @@
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 7c-1.6-1.5-4.4-2.3-9-2v13c4.6-.3 7.4.5 9 2 1.6-1.5 4.4-2.3 9-2V5c-4.6-.3-7.4.5-9 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 7v13" stroke="currentColor" stroke-width="1.9"/></svg>
       <span class="learn-text">Learn</span>
     </a>
+    <!-- Offline outbox (js/offline.js): "Offline" and/or "N to sync"; opens Settings → This device -->
+    <button id="sync-badge" class="sync-badge" type="button" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="sync-badge-text"></span>
+    </button>
+    <p class="sr-only" id="sync-live" role="status" aria-live="polite"></p>
     <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -349,6 +356,11 @@
     </div>
     <div id="category-chips" class="chips" role="group" aria-label="Filter by category"></div>
     <div class="add-actions">
+      <!-- Barcode scanning (js/scan.js): camera, photo of a barcode, or typed digits; only the digits leave the device -->
+      <button class="btn secondary" type="button" id="btn-scan">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 8v8M10 8v8M12.5 8v8M15 8v8M17 8v8" stroke="currentColor" stroke-width="1.6"/></svg>
+        Scan a barcode
+      </button>
       <button class="btn secondary" type="button" id="btn-quick">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         Quick add
@@ -912,6 +924,8 @@
     <div class="sheet-body">
       <div id="sheet-entry-flags" class="flag-chips"></div>
       <p id="sheet-entry-notes" class="food-notes" hidden></p>
+      <!-- Where the data came from (js/scan.js renderProvenance): attribution, quality notes, additives, ingredients -->
+      <div id="sheet-entry-provenance" class="provenance" hidden></div>
 
       <fieldset class="field">
         <legend>Meal</legend>
@@ -1004,7 +1018,31 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="sheet-body">
+    <div class="sheet-body quick-layout">
+      <!-- Note 03 R8: a photo of the label beside the form (nothing is uploaded), and "Read the label for me" when
+           the server offers AI to this person (js/scan.js). Above the fields on phones, beside them on wide screens. -->
+      <div class="quick-photo" id="quick-photo">
+        <div class="field">
+          <label for="q-photo">Use a photo of the label</label>
+          <input id="q-photo" class="ai-file" type="file" accept="image/*" aria-describedby="q-photo-hint">
+          <span class="hint" id="q-photo-hint">Shown here so you can copy the numbers. It stays on this device.</span>
+        </div>
+        <figure class="quick-photo-view" id="q-photo-view" hidden>
+          <div class="quick-photo-frame" id="q-photo-frame" tabindex="0" role="group" aria-label="Your label photo (scroll to see all of it when zoomed)">
+            <img id="q-photo-img" alt="Your photo of the nutrition label">
+          </div>
+          <figcaption class="quick-photo-tools">
+            <div class="zoom-seg" role="group" aria-label="Zoom the photo">
+              <button class="chip" type="button" data-zoom="1" aria-pressed="true">1×</button>
+              <button class="chip" type="button" data-zoom="2" aria-pressed="false">2×</button>
+              <button class="chip" type="button" data-zoom="3" aria-pressed="false">3×</button>
+            </div>
+            <button class="link-btn" type="button" id="q-photo-remove">Remove photo</button>
+          </figcaption>
+        </figure>
+        <div class="quick-photo-ai" id="q-photo-ai" hidden></div>
+      </div>
+      <div class="quick-fields">
       <div class="form-grid">
         <div class="field span-2">
           <label for="q-name">Food name <span class="req" aria-hidden="true">*</span></label>
@@ -1017,6 +1055,11 @@
         <div class="field">
           <label for="q-serving-g">Serving weight (g)</label>
           <input id="q-serving-g" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" value="100">
+        </div>
+        <div class="field span-2">
+          <label for="q-gtin">Barcode <span class="optional">(optional)</span></label>
+          <input id="q-gtin" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" aria-describedby="q-gtin-hint">
+          <span class="hint" id="q-gtin-hint">Saved with the food, so scanning it next time finds this food.</span>
         </div>
       </div>
 
@@ -1049,18 +1092,97 @@
         <div class="form-grid nutrient-inputs" id="quick-nutrients"></div>
       </fieldset>
 
+      <div class="field">
+        <label for="q-ingredients">Ingredients <span class="optional">(optional)</span></label>
+        <textarea id="q-ingredients" rows="3" maxlength="4000" aria-describedby="q-ingredients-hint q-ingredients-scan"></textarea>
+        <span class="hint" id="q-ingredients-hint">Copy the ingredient list from the package: saving checks it for phosphate and potassium additives.</span>
+        <p class="hint ingredients-scan" id="q-ingredients-scan" aria-live="polite"></p>
+      </div>
+
       <fieldset class="field">
         <legend>Flags</legend>
         <div class="checks" id="quick-flags"></div>
       </fieldset>
 
       <div class="warnings" id="quick-warnings" aria-live="polite"></div>
+      </div>
     </div>
     <div class="sheet-foot">
       <span class="spacer"></span>
       <button class="btn secondary" type="button" data-close>Cancel</button>
       <button class="btn primary" type="submit" id="quick-save">Log it</button>
     </div>
+  </form>
+</dialog>
+
+<!-- ===================== SCAN SHEET (js/scan.js; note 03 R7, note 02 R7) ===================== -->
+<dialog id="sheet-scan" class="sheet" aria-labelledby="sheet-scan-title" aria-describedby="sheet-scan-sub">
+  <form method="dialog" class="sheet-form" id="scan-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-scan-title" class="sheet-title">Scan a barcode</h2>
+        <div class="sheet-sub" id="sheet-scan-sub">The barcode is read on this device; only its number goes to your server.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <section class="scan-part" aria-labelledby="scan-live-h">
+        <h3 class="scan-h" id="scan-live-h">Camera</h3>
+        <div class="scan-viewfinder" id="scan-viewfinder" hidden>
+          <video id="scan-video" playsinline muted autoplay aria-label="Camera view: hold the barcode inside the frame"></video>
+          <div class="scan-aim" aria-hidden="true"></div>
+        </div>
+        <div class="scan-row" id="scan-camera-row">
+          <button class="btn primary" type="button" id="scan-camera">Use the camera</button>
+          <button class="btn secondary" type="button" id="scan-camera-stop" hidden>Stop the camera</button>
+        </div>
+        <p class="hint" id="scan-live-note" hidden></p>
+      </section>
+      <section class="scan-part" aria-labelledby="scan-photo-h">
+        <h3 class="scan-h" id="scan-photo-h">Photo of a barcode</h3>
+        <div class="field">
+          <label for="scan-file">Take or choose a photo</label>
+          <input id="scan-file" class="ai-file" type="file" accept="image/*" aria-describedby="scan-file-hint">
+          <span class="hint" id="scan-file-hint">The photo is read on this device and never uploaded. This works over plain HTTP too.</span>
+        </div>
+      </section>
+      <section class="scan-part" aria-labelledby="scan-type-h">
+        <h3 class="scan-h" id="scan-type-h">Type the barcode</h3>
+        <div class="field">
+          <label for="scan-code">Barcode number</label>
+          <div class="scan-type-row">
+            <input id="scan-code" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" maxlength="64" aria-describedby="scan-code-hint">
+            <button class="btn primary" type="submit" id="scan-go">Look up</button>
+          </div>
+          <span class="hint" id="scan-code-hint">The digits under the bars (usually 12 or 13). A USB or Bluetooth barcode scanner can type here too.</span>
+        </div>
+      </section>
+      <p class="status-msg" id="scan-status" role="status" aria-live="polite"></p>
+      <div class="scan-result" id="scan-result"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Close</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== OFFLINE: SIGN OUT WITH UNSYNCED ENTRIES (js/offline.js; note 02 R5) ===================== -->
+<dialog id="sheet-unsynced" class="sheet" aria-labelledby="sheet-unsynced-title" aria-describedby="sheet-unsynced-sub">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-unsynced-title" class="sheet-title">Entries not synced yet</h2>
+        <div class="sheet-sub" id="sheet-unsynced-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="sheet-unsynced-body"></div>
+    <div class="sheet-foot" id="sheet-unsynced-foot"></div>
   </form>
 </dialog>
 
@@ -1454,6 +1576,7 @@
 <script src="js/engine/guidance/hypo.js"></script>
 <script src="js/core.js"></script>
 <script src="js/learn.js"></script>
+<script src="js/offline.js"></script>
 <script src="js/mock/core.js"></script>
 <script src="js/mock/foods.js"></script>
 <script src="js/mock/barcode.js"></script>
@@ -1477,6 +1600,10 @@
 <script src="js/views/settings.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/guidance.js"></script>
+<!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
+     WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
+<script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>
+<script src="js/scan.js"></script>
 <script src="js/pwa.js" data-preview="omit"></script>
 <script src="js/main.js"></script>
 </body>

@@ -1110,5 +1110,6 @@
   whenShown('view-settings', () => { renderSettings().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAddSlot, withConsent, showSent, api, prepareJpeg };
+  KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+    uploadPhoto }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();
