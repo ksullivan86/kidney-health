@@ -101,6 +101,13 @@ contributor docs, handbook app pages and docs/ROADMAP.md at the same time: leave
   rows, plus an "Outbound connections" paragraph. Checks: `docker compose config --quiet` for compose.yaml and with
   the Ollama overlay (dummy secrets created and removed), yaml parse, kustomize + kubeconform strict as CI (12 valid),
   pytest tests/test_deploy.py tests/test_compose_env.py green.
+* Step 6 (ARCHITECTURE sync): every one of the 216 /api operations (openapi + route-tree walk from
+  tests/test_auth_coverage.py) is named in ARCHITECTURE.md and no documented /api path is missing from the app
+  (`$S/routes_vs_arch.py`); every registry key and env lock is documented (M1 keys were missing: added under
+  "/api/admin"). Fixed stale text: layout (app.js/style.css gone, config/db lines, tools/e2e harness list incl.
+  journey/upgrade/replay_app/device/learn/guidance_perf), "Non-goals" points to accounts, Stack names js/ and
+  css/, "`usda` (and later `off`)", HIBP check through CheckedTransport, egress section lists every client and the
+  test that enforces it. Tests that read ARCHITECTURE.md (17 files) pass.
 
 ## In progress
 

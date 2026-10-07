@@ -13,13 +13,14 @@ protein, fluid) and the ones a type 1 diabetic must count (carbohydrate per meal
 compares them to targets set with their dietitian, and warns when a single food or
 the day's running total needs careful consideration.
 
-Non-goals (v1): multi-user accounts, insulin dose calculation, medical advice.
+Non-goals (v1): multi-user accounts (v0.3 adds accounts for a household: "M1 API"), insulin dose
+calculation, medical advice.
 The UI must say that targets come from the person's care team.
 
 ## Stack
 
 * Python 3.12, FastAPI, Pydantic v2, SQLite (stdlib `sqlite3`, no ORM), uvicorn.
-* Frontend: static `index.html` + `app.js` + `style.css` served by FastAPI.
+* Frontend: static `index.html` + plain scripts and styles (v0.3: `js/`, `css/`; "Frontend modules") served by FastAPI.
   **No build step, no CDN, no external requests from the browser.** Works offline on a LAN.
 * One container image. All state lives in `DATA_DIR` (default `/data`) as `kidney.db`.
 * Tests: `pytest` with `httpx2` (Starlette `TestClient`; v0.3 moved the app from `httpx` to `httpx2`).
@@ -35,8 +36,8 @@ docs/deployment.md          Podman, Quadlet, Kubernetes (Talos) instructions
 docs/network-allowlist.md   egress domains the project needs
 app/__init__.py
 app/main.py                 FastAPI app factory, static mount, routers, startup load
-app/config.py               settings from env: DATA_DIR, USDA_API_KEY, APP_PASSWORD, FOODS_JSON
-app/db.py                   sqlite connection helper + schema (idempotent CREATE TABLE IF NOT EXISTS)
+app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
+app/db.py                   sqlite connection helper; runs the ordered steps in app/migrations/ ("Database migrations")
 app/models.py               Pydantic request/response models (shapes below)
 app/nutrients.py            PURE FUNCTIONS: nutrient registry, per-serving thresholds, daily status, suggested targets
 app/foods.py                food search/CRUD, builtin JSON import, USDA proxy
@@ -44,9 +45,7 @@ app/log.py                  log entries (eaten/planned), day/range/period summar
 app/periods.py              PURE FUNCTIONS (v0.2): period averages, previous period, interdialytic interval, week bounds
 app/meals.py                saved meals (templates), from-log, apply, shopping list (v0.2)
 app/profile.py              profile + targets (+ dialysis days, week start)
-app/static/index.html
-app/static/app.js
-app/static/style.css
+app/static/index.html       shell; v0.3 scripts in js/ and styles in css/ ("Frontend modules" below)
 data/foods.json             builtin food database (generated, committed)
 scripts/build_food_db.py    downloads USDA SR Legacy CSV zip and writes data/foods.json
 scripts/curated_foods.py    the curated list (fdc_id, display name, serving, category, flags)
@@ -68,7 +67,9 @@ CHANGELOG.md                user-facing changes per version (v0.3)
 CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md   contributor rules and how-tos; Contributor Covenant 2.1; agents' short rules
 docs/README.md, docs/maintainers.md, docs/ROADMAP.md   index of every doc; release process and repo settings; deferred work
 .github/ISSUE_TEMPLATE/, .github/pull_request_template.md   issue forms (bug, feature, clinical correction) and the PR checklist
-tools/e2e/                  browser harnesses run by hand: parity.py, sandbox.py, regress.py (+ khserver.py, README.md)
+tools/e2e/                  harnesses run by hand: parity.py, sandbox.py, regress.py, device.py, journey.py (whole v0.3 story
+                            on a real server), upgrade.py (v0.2 and v3 databases), learn.py, guidance_perf.py
+                            (+ khserver.py, replay_app.py = the app with USDA answered from tests/fixtures/usda, README.md)
 pyproject.toml, requirements.txt, requirements-dev.txt, .gitignore
 ```
 
@@ -885,7 +886,8 @@ Usernames (local): 3–64 of `a-z 0-9 . _ @ + -` after NFKC + casefold (stored a
 Passwords: 15–128 code points (`PASSWORD_MIN_LENGTH`, 8–64), NFC, no composition rules; refused when
 on the blocklist (10,000 most common NCSC entries ≥ 8 characters), equal to the username, display
 name or app/instance name, one repeated character or a straight keyboard/alphabet/digit run;
-optional HIBP check (`PASSWORD_BREACH_CHECK`). Tokens in links travel in the URL fragment:
+optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity range API through
+`app/egress.py`'s `CheckedTransport`, no redirects, `trust_env=False`). Tokens in links travel in the URL fragment:
 `/#/setup`, `/#/invite/<id>.<verifier>`, `/#/reset/<id>.<verifier>`; links are built from
 `PUBLIC_URL` (else the request's origin).
 
@@ -941,12 +943,18 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 
 With `AUTH_MODE=none` the users and invites routes answer 404.
 
+M1 settings keys (`app/settings_registry.py`, instance scope; env lock in brackets): `instance.name` (Kidney Health
+[`INSTANCE_NAME`]), `registration.mode` (`invite` | `closed` | `open` [`REGISTRATION_MODE`]),
+`registration.invite_ttl_days` (7), `audit.retention_days` (365 [`AUDIT_RETENTION_DAYS`]),
+`providers.usda.shared_enabled` (`true`), `providers.usda.user_keys_allowed` (`true`),
+`providers.usda.daily_limit_per_user` (200 [`USDA_SHARED_DAILY_LIMIT`]). An empty env value counts as unset.
+
 ### Changes to existing routes
 
 * All of `/api/profile`, `/api/foods`, `/api/log`, `/api/meals`, `/api/plan` act on the signed-in
   person. `Profile.id` is the user id. `GET /healthz` counts only builtin foods.
-* **Foods**: `builtin` rows are shared; `custom` rows belong to their owner; `usda` (and later
-  `off`) rows are shared but visible to a person only after they imported or scanned them.
+* **Foods**: `builtin` rows are shared; `custom` rows belong to their owner; `usda` and `off`
+  rows are shared but visible to a person only after they imported or scanned them.
   Search, categories and "recently logged first" use only visible foods and the caller's own log.
   `PUT /api/foods/{id}` on a `usda`/`off` row → **409** (copy first). `DELETE` on a shared row
   removes only the caller's link (404 if none); a custom food is hidden when the owner's entries or
@@ -1450,7 +1458,9 @@ metadata (169.254.169.254, 169.254.170.2, fd00:ec2::254, 100.100.100.200) and th
 service address are always refused; private, loopback, CGNAT and ULA only for an operator-chosen host;
 it connects to the checked IP with the original `Host` and SNI. Clients never follow redirects. When the
 standard `HTTPS_PROXY`/`ALL_PROXY` variables name a proxy (honouring `NO_PROXY`), requests go to the proxy
-and pinning is its job. `read_capped` counts decoded bytes.
+and pinning is its job. `read_capped` counts decoded bytes. Every outbound client in the app uses it (USDA
+`app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`) or, for AI,
+`app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 ### Parity
 
