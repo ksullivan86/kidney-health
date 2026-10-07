@@ -35,6 +35,8 @@
 .quality-notes { margin: 0; padding-left: 18px; color: var(--text-2); }
 .quality-notes li + li { margin-top: 2px; }
 .provenance .inline-details > summary { cursor: pointer; color: var(--accent); font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+/* Another site's address shown as text (the preview's frame cannot open new windows): long, so it wraps. */
+.ext-text { overflow-wrap: anywhere; }
 .ingredients-text { margin: 6px 0 0; color: var(--text-2); white-space: pre-line; overflow-wrap: anywhere; }
 .kn.kn-unknown .kn-v { font-size: 0.72rem; font-weight: 600; color: var(--text-2); line-height: 1.6; }
 
