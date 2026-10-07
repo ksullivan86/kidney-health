@@ -60,7 +60,7 @@ document.addEventListener('securitypolicyviolation', (e) => {
 # WCAG 2.2 AA text contrast (success criterion 1.4.3) of every visible text run on a page. Returns the number
 # measured and the failures, grouped by element and colours. Background images (gradients) are not part of the
 # measure: the handbook draws none under text.
-CONTRAST_JS = """() => {
+CONTRAST_JS = r"""() => {
   // WCAG 2.2 AA text contrast (1.4.3) of every visible text run on the page: the text colour (with its alpha and
   // the opacity of the element and its ancestors) over the background colours stacked under it.
   const parse = (c) => {

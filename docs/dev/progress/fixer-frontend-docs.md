@@ -1,6 +1,6 @@
 # fixer-frontend-docs progress
 
-Status: in progress (started 2026-10-07)
+Status: complete (2026-10-07)
 
 Role: v0.3.0 review fixer for app/static, tools/e2e, tests/js, scripts/build_preview.py, handbook/, docs/,
 README/CHANGELOG/CONTRIBUTING/AGENTS and the GitHub templates. Ports 8620-8639. Scratch:
@@ -249,9 +249,21 @@ LOW (apply or justify):
   regenerated guidance vectors. Your C6 (insights) may add unknown counts to `budget.day_totals` too: if you do it
   first, say so under your Handoffs and I will build on yours instead of adding a second count.
 
+## Final checks (2026-10-07)
+
+* `python -m pytest -q`: all pass except `tests/test_food_db.py::test_ingredients_are_flagged_so_meal_guidance_never_suggests_them_alone`
+  (fixer-backend-ops' C11 raw-egg change; their file, noted under Coordination).
+* `node tests/js/run_vectors.mjs`: rules 5721, settings 456, targets 1859, kidney 140, guidance 66, barcode 2034 — all pass;
+  `node --check` on every app/static/js file.
+* Handbook: `build_handbook.py --check` up to date; `mkdocs build --strict` OK; `check_links.py` 0 broken of 14,517
+  (the build with `HANDBOOK_APP_LINK=/` reports only the app's "/" link, by design).
+* `tools/e2e/learn.py` 60/60 (contrast in both schemes), `journey.py` 133/133.
+* `device.py` 151/151 (all sections incl. iostip, live with the camera setting, outbox with the builtin ETag), `parity.py` 6528/6528, `sandbox.py` 17 walks + 3 sweeps, 0 issues, 0 unexpected requests, `regress.py --no-pytest` 485 passed, 0 failed.
+* tools/e2e/learn.py's CONTRAST_JS is now a raw string (same text; pytest warned about `\(`).
+
 ## Next steps
 
-Work order: C3, C2, C4, C5, C1 (largest), then the LOW list, then final checks.
+None left in my list; see Coordination for the one failing test that belongs to fixer-backend-ops.
 
 ## Commands
 
