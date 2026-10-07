@@ -28,9 +28,12 @@
     phosphorus_unknown: 'Phosphorus is not listed for this product: treat it as unknown, not zero.',
     sodium_from_salt: 'Sodium was worked out from the salt figure (salt ÷ 2.5).',
     carbs_available: 'This label is not a US or Canadian one: its carbohydrate usually excludes fibre.',
-    prepared_values: 'Only the values for the prepared product are listed (as made by the package directions).',
+    prepared_values: 'Only the values for the prepared product are listed (as made by the package directions), and the '
+      + 'serving weight is the product as sold, so it is logged in servings, not grams.',
     ml_as_g: 'The serving is in millilitres; it is counted as grams (1 mL ≈ 1 g).',
     no_serving: 'No serving size is listed, so the values are for 100 g (or 100 mL).',
+    serving_weight_unknown: 'The label\'s values are per serving, but no serving weight is listed, so they cannot be '
+      + 'used. Enter the food from the package label.',
     energy_mismatch: 'The calories do not match the protein, fat and carbohydrate listed. One of them may be wrong.',
     implausible: 'A value was impossible for a food and was left out',
     no_nutrition: 'This product has no nutrition facts in Open Food Facts.',

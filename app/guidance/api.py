@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from ..auth.deps import CurrentUser, current_user
 from ..db import get_db, utcnow
-from ..foods import fetch_user_food
+from ..foods import WEIGHT_UNKNOWN_DETAIL, fetch_food, fetch_user_food, weight_known
 from ..models import MAX_GRAMS, MAX_SERVINGS, MAX_SQLITE_INT, Meal, validate_date
 from ..settings_store import SettingsStore, default_store
 from . import context as C
@@ -193,6 +193,9 @@ def swaps(
         raise HTTPException(status_code=404, detail=f"food {fid} not found")
     if entry_id is None:
         if grams is not None:
+            row = fetch_food(conn, fid)
+            if row is not None and not weight_known(row):
+                raise HTTPException(status_code=400, detail=WEIGHT_UNKNOWN_DETAIL)
             amount = grams / food.serving_g if food.serving_g > 0 else 1.0
         elif servings is not None:
             amount = servings

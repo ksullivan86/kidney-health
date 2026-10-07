@@ -81,7 +81,7 @@
         "brand": "Kraft",
         "category": "Grains & Breads",
         "source": "off",
-        "serving_desc": "1 serving (70.874 g) (prepared)",
+        "serving_desc": "1 serving (70.874 g) as sold, prepared",
         "serving_g": 70.9,
         "kidney_notes": "Contains triphosphates (E451), a phosphate additive. Contains calcium phosphates (E341), a phosphate additive. Contains sodium phosphates (E339), a phosphate additive.",
         "gtin": "00021000658831",

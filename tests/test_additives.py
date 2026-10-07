@@ -92,6 +92,9 @@ def test_kraft_tags() -> None:
     "Natriumphosphat",  # German
     "natriumfosfaat",  # Dutch
     "contains e 450 (i) and E-451",
+    "water, phosphorous acid",  # the element's acid is still an additive
+    "Wasser, Phosphorsäure",
+    "Phosphorus 250 mg, sodium phosphate",  # the element word does not hide a real phosphate
 ])
 def test_phosphate_words_and_codes(text: str) -> None:
     assert "phosphate_additive" in flags_of(text=text)
@@ -107,6 +110,12 @@ def test_phosphate_words_and_codes(text: str) -> None:
     "acetylated distarch phosphate, distarch phosphate, phosphated distarch phosphate",
     "riboflavin-5'-phosphate (color)",
     "sugar, water, citric acid",
+    # v0.3.0 review: the element named in pasted nutrition text is natural phosphorus, not an additive.
+    "Milk, vitamin D3. Phosphorus 250 mg per serving",
+    "lait entier, phosphore 120 mg",
+    "Vollmilch. Phosphor: 300 mg",
+    "latte, fosforo 90 mg",
+    "Phosphorous: 15% DV",
 ])
 def test_phosphate_exclusions_and_trace(text: str) -> None:
     assert "phosphate_additive" not in flags_of(text=text)

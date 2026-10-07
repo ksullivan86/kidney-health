@@ -181,6 +181,24 @@ def parse_list(text: str | None) -> list[str]:
     return [str(v) for v in value if isinstance(v, (str, int))] if isinstance(value, list) else []
 
 
+# Quality codes that mean the serving weight does not describe the stored values (app/off.py).
+WEIGHT_UNKNOWN_CODES = frozenset({"prepared_values", "serving_weight_unknown"})
+WEIGHT_UNKNOWN_DETAIL = ("grams: this product's values are for it as prepared, but its serving weight is the product "
+                         "as sold, so log it in servings, not grams")
+
+
+def weight_known(food: Mapping[str, Any]) -> bool:
+    """Whether grams can be turned into servings for ``food`` (a ``foods`` row or dict).
+
+    Not for an Open Food Facts product with only *prepared* values: its nutrients are per serving as
+    prepared, but its serving weight is the product as sold (Kraft macaroni: 70.9 g dry makes a 198 g
+    cup), so 198 g would count 2.8 servings, 140 g of carbohydrate instead of 50 (v0.3.0 review). The log
+    refuses grams for such a food (400) and keeps servings when it re-derives an entry."""
+    keys = food.keys() if hasattr(food, "keys") else ()
+    codes = parse_list(food["quality_json"]) if "quality_json" in keys else []
+    return not WEIGHT_UNKNOWN_CODES.intersection(c.split(":", 1)[0] for c in codes)
+
+
 def row_to_food(row: sqlite3.Row) -> dict[str, Any]:
     flags = parse_flags(row["flags_json"])
     nutrients = raw_nutrients(row)

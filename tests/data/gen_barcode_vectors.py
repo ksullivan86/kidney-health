@@ -146,6 +146,10 @@ def textclean_vectors(rng: random.Random) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 ADDITIVE_HAND = [  # (tags, text, name): the inputs of tests/test_additives.py and more
+    # v0.3.0 review: the element named in nutrition text is not an additive; its acid is.
+    ([], "Milk, vitamin D3. Phosphorus 250 mg per serving", "Milk"), ([], "lait, phosphore 120 mg", "x"),
+    ([], "Phosphor: 300 mg", "x"), ([], "fosforo 90 mg, fosfato di sodio", "x"), ([], "water, phosphorous acid", "x"),
+    ([], "Phosphorsäure, Wasser", "x"),
     ([], "chicken, water, sodium tripolyphosphate, salt", "x"), ([], "milk, dipotassium phosphate", "x"),
     ([], "flour, sodium acid pyrophosphate, baking soda", "x"), ([], "carbonated water, caramel color, phosphoric acid", "x"),
     ([], "cheese culture, sodium phosphate, salt", "x"), ([], "calcium phosphate, vitamin d", "x"),

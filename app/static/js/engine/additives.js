@@ -130,6 +130,8 @@
   const TEXT_E = new RegExp(`(?<![a-z0-9])e(?:${S}|-)?(\\d{3,4})(?:${S}*\\(?${S}*(iii|ii|iv|ix|vii|vi|v|i|[a-f])${S}*\\)?)?(?![a-z0-9])`, 'g');
   const PHOSPHATE_WORD = /(?:phosph|fosf)(?:at|or|it|aat)/g;
   const PHOSPHATE_EXCLUDED = ['phosphatid', 'phospholip', 'fosfolip', 'fosfatid'];
+  // The element as a nutrient name ("Phosphorus 250 mg") is not an additive; its acid still counts.
+  const PHOSPHORUS_ELEMENT = ['phosphorus', 'phosphorous', 'phosphore', 'phosphor', 'fosfor', 'fosforo', 'fosforu'];
   const PHOSPHATE_TRACE_PHRASES = new RegExp(
     `(?:(?:hydroxypropyl(?:ated)?|acetylated|phosphated)${S}+)*(?:di|mono)?(?:${S}|-)?starch${S}+phosphates?`
     + `|riboflavin(?:e)?(?:${S}|-)*(?:5['’]?(?:${S}|-)*)?(?:sodium${S}+)?(?:phosphate|fosfato|phosphat)`
@@ -228,6 +230,10 @@
       while (wordEnd < remaining.length && ALPHA.test(cpAt(remaining, wordEnd))) wordEnd += cpAt(remaining, wordEnd).length;
       let word = remaining.slice(start, wordEnd);
       if (PHOSPHATE_EXCLUDED.some((ex) => word.includes(ex))) continue;
+      if (PHOSPHORUS_ELEMENT.includes(word)) {
+        ACID_AFTER.lastIndex = wordEnd;
+        if (!ACID_AFTER.test(remaining)) continue;
+      }
       if (['phosphoric', 'phosphorique', 'fosforico', 'fosfórico'].includes(word)) {
         ACID_AFTER.lastIndex = wordEnd;
         if (ACID_AFTER.test(remaining)) word += ' acid';

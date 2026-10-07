@@ -82,6 +82,8 @@ CLASS_MESSAGES: dict[str, str] = {
 NOT_FOUND = "No product with this barcode in {where}. Enter it from the label; the app keeps the barcode for next time."
 SOURCE_NAMES = {"off": "Open Food Facts", "usda": "USDA FoodData Central"}
 NO_NUTRITION = "Open Food Facts knows this product but has no nutrition facts for it. Enter them from the label."
+NO_SERVING_WEIGHT = ("Open Food Facts lists this product's values per serving but not how much a serving weighs, so they "
+                     "cannot be used. Enter them from the label.")
 UNREACHABLE = "The food databases could not be reached just now. Try again in a minute, or enter the food from its label."
 LOOKUPS_OFF = ("Barcode lookups are switched off on this server. Enter the food from its label, or ask your admin to "
                "turn on Open Food Facts lookups in Settings.")
@@ -618,8 +620,10 @@ def lookup(body: BarcodeLookup, request: Request, user: CurrentUser, conn: sqlit
         detail = foods.USDA_UNAVAILABLE.get(usda_reason or "", LOOKUPS_OFF)
         raise ApiProblem(503, detail, reason=usda_reason or "lookups_off", gtin=gtin14, checked=checked)
     name = off_outcome.mapped.name if off_outcome.status == "no_nutrition" and off_outcome.mapped else None
+    no_weight = name is not None and "serving_weight_unknown" in off_outcome.mapped.quality  # type: ignore[union-attr]
     raise ApiProblem(
-        404, NO_NUTRITION if name else not_found_message(checked), gtin=gtin14, name=name, checked=checked,
+        404, (NO_SERVING_WEIGHT if no_weight else NO_NUTRITION) if name else not_found_message(checked), gtin=gtin14,
+        name=name, checked=checked,
         contribute_url=off.CONTRIBUTE_URL + off_code(gtin14),
     )
 

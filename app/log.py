@@ -26,7 +26,17 @@ from fastapi.responses import StreamingResponse
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
-from .foods import Provenance, fetch_food, fetch_user_food, insert_food, parse_flags, raw_nutrients, scan_custom_food
+from .foods import (
+    WEIGHT_UNKNOWN_DETAIL,
+    Provenance,
+    fetch_food,
+    fetch_user_food,
+    insert_food,
+    parse_flags,
+    raw_nutrients,
+    scan_custom_food,
+    weight_known,
+)
 from .models import (
     CopyDay,
     CopyDayResult,
@@ -247,8 +257,13 @@ def eaten_day_unknown(conn: sqlite3.Connection, user_id: int, start: str, end: s
 
 
 def resolve_servings(food: sqlite3.Row, servings: float | None, grams: float | None) -> tuple[float, float | None]:
-    """``grams`` wins when given (servings = grams / serving_g); default 1 serving."""
+    """``grams`` wins when given (servings = grams / serving_g); default 1 serving.
+
+    400 when ``grams`` is given for a food whose serving weight does not describe its values
+    (:func:`app.foods.weight_known`: Open Food Facts prepared-only values)."""
     if grams is not None:
+        if not weight_known(food):
+            raise HTTPException(status_code=400, detail=WEIGHT_UNKNOWN_DETAIL)
         return float(grams) / float(food["serving_g"]), float(grams)
     return (float(servings) if servings is not None else 1.0), None
 
@@ -577,9 +592,9 @@ def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depend
         food = fetch_food(conn, row["food_id"])
         if food is None:  # cannot happen with foreign keys on
             continue
-        if row["grams"] is not None:
+        if row["grams"] is not None and weight_known(food):
             servings, grams = resolve_servings(food, None, row["grams"])
-        else:
+        else:  # by servings (also an old by-weight entry of a food whose weight is no longer usable)
             servings, grams = float(row["servings"]), None
         created.append(
             insert_entry(
@@ -694,10 +709,12 @@ def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite
         servings, grams = float(data["servings"]), None
     elif "grams" in data:  # explicit null clears the weight, servings unchanged
         grams = None
-    elif grams is not None:
+    elif grams is not None and weight_known(food):
         # Weight-based entry, amount untouched: the servings follow the food's *current* serving
         # size (as copy-day does), so grams and servings agree after a food is re-portioned.
         servings, grams = resolve_servings(food, None, grams)
+    elif grams is not None:  # the food's weight is no longer usable: keep the servings, drop the grams
+        grams = None
 
     snapshot = scale_nutrients(raw_nutrients(food), servings)
     sets = ["date = ?", "meal = ?", "status = ?", "food_name = ?", "servings = ?", "grams = ?", "note = ?", "purpose = ?"]

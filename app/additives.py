@@ -235,6 +235,9 @@ _TEXT_E = re.compile(
 # starch phosphates and vitamin phosphates that are removed before the scan.
 _PHOSPHATE_WORD = re.compile(r"(?:phosph|fosf)(?:at|or|it|aat)")  # + Dutch/Finnish "fosfaat"
 _PHOSPHATE_EXCLUDED = ("phosphatid", "phospholip", "fosfolip", "fosfatid")
+# The element as a nutrient name ("Phosphorus 250 mg per serving" pasted into an ingredient field) is natural
+# phosphorus, not an additive (v0.3.0 review); its acid ("phosphorous acid") still counts.
+_PHOSPHORUS_ELEMENT = frozenset({"phosphorus", "phosphorous", "phosphore", "phosphor", "fosfor", "fosforo", "fosforu"})
 _PHOSPHATE_TRACE_PHRASES = re.compile(
     r"(?:(?:hydroxypropyl(?:ated)?|acetylated|phosphated)\s+)*(?:di|mono)?[\s\-]?starch\s+phosphates?"
     r"|riboflavin(?:e)?[\s\-]*(?:5['’]?[\s\-]*)?(?:sodium\s+)?(?:phosphate|fosfato|phosphat)"
@@ -344,6 +347,8 @@ def _scan_text(text: str) -> list[Finding]:
             word_end += 1
         word = remaining[start:word_end]
         if any(ex in word for ex in _PHOSPHATE_EXCLUDED):
+            continue
+        if word in _PHOSPHORUS_ELEMENT and not _ACID_AFTER.match(remaining, word_end):
             continue
         if word in ("phosphoric", "phosphorique", "fosforico", "fosfórico") and _ACID_AFTER.match(remaining, word_end):
             word += " acid"

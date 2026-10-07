@@ -180,12 +180,77 @@ def test_all_three_decoder_shapes_find_the_same_row(world: World) -> None:
 
 def test_prepared_values_and_eu_salt_labels(world: World) -> None:
     kraft = world.scan("0021000658831").json()
-    assert kraft["food"]["serving_desc"].endswith("(prepared)") and "prepared_values" in [q["code"] for q in kraft["quality"]]
+    assert kraft["food"]["serving_desc"] == "1 serving (70.874 g) as sold, prepared"
+    assert "prepared_values" in [q["code"] for q in kraft["quality"]]
     assert "phosphate_additive" in kraft["food"]["flags"]
     nutella = world.scan("3017624010701").json()
     codes = [q["code"] for q in nutella["quality"]]
     assert "sodium_from_salt" in codes and "carbs_available" in codes and "no_serving" in codes
     assert nutella["food"]["serving_desc"] == "100 g"
+
+
+def test_a_prepared_only_product_is_logged_in_servings_never_grams(world: World) -> None:
+    """Review C7: 198 g of prepared macaroni counted as 2.8 servings of a 70.9 g dry weight (140 g carbs)."""
+    kraft = world.scan("0021000658831").json()["food"]
+    day = "2026-10-05"
+    r = world.client.post("/api/log", json={"date": day, "meal": "dinner", "food_id": kraft["id"], "grams": 198})
+    assert r.status_code == 400 and r.json()["detail"].startswith("grams: ") and "log it in servings" in r.json()["detail"]
+    r = world.client.post("/api/log", json={"date": day, "meal": "dinner", "food_id": kraft["id"], "servings": 1})
+    assert r.status_code == 201
+    entry = r.json()
+    assert (entry["nutrients"]["carbs_g"], entry["nutrients"]["calories_kcal"], entry["grams"]) == (50, 350, None)
+    assert world.client.put(f"/api/log/{entry['id']}", json={"grams": 198}).status_code == 400
+    assert world.client.put(f"/api/log/{entry['id']}", json={"servings": 1.5}).json()["nutrients"]["carbs_g"] == 75
+    batch = world.client.post("/api/log/batch", json={"entries": [
+        {"date": day, "meal": "lunch", "food_id": kraft["id"], "grams": 100, "client_id": "c7-batch-1"}]})
+    assert batch.status_code == 400
+    # Guidance "what if" swaps by weight are refused the same way.
+    r = world.client.get("/api/guidance/swaps", params={"food_id": kraft["id"], "grams": 198, "meal": "dinner", "date": day})
+    assert r.status_code == 400 and "log it in servings" in r.json()["detail"]
+
+
+def _synthetic_off(world: World, code12: str, product: dict[str, Any]) -> str:
+    """Answer ``code12`` (a UPC-A without its check digit) with ``product``; returns the full UPC-A."""
+    from app import gtin as gtin_module
+
+    digits = code12 + str(gtin_module.check_digit(code12))
+    doc = json.loads(json.dumps(load("off", "kraft_mac_cheese_v3.4")))
+    doc["request"]["url"] = doc["request"]["url"].replace("0021000658831", "0" + digits)
+    doc["body"] = {"code": "0" + digits, "status": "success", "result": {"id": "product_found"},
+                   "product": {"code": "0" + digits, **product}}
+    world.off.add(doc)
+    return digits
+
+
+def test_a_per_serving_label_without_a_serving_weight_is_entered_from_the_label(world: World) -> None:
+    """Review L6: "1 bar" values must not be stored as per 100 g; the 404 names the product and says why."""
+    code = _synthetic_off(world, "01234567890", {
+        "product_name": "Protein bar", "serving_size": "1 bar", "nutrition_data_per": "serving",
+        "nutriments": {"energy-kcal_serving": 200, "proteins_serving": 20, "potassium_serving": 350}})
+    r = world.scan(code)
+    assert r.status_code == 404, r.text
+    body = r.json()
+    assert body["name"] == "Protein bar" and "per serving but not how much a serving weighs" in body["detail"]
+
+
+def test_an_entry_by_weight_whose_food_lost_its_weight_keeps_its_servings(world: World) -> None:
+    """A by-weight entry of a food that was later re-mapped as prepared-only: copy-day and edits keep the
+    servings instead of failing or re-deriving from a weight that no longer describes the values."""
+    import sqlite3 as _sqlite3
+
+    kraft = world.scan("0021000658831").json()["food"]
+    entry = world.client.post("/api/log", json={"date": "2026-10-05", "meal": "dinner", "food_id": kraft["id"],
+                                                "servings": 1}).json()
+    conn = _sqlite3.connect(world.client.app.state.settings.db_path)
+    conn.execute("UPDATE log_entries SET grams = 70.9 WHERE id = ?", (entry["id"],))  # as if logged by weight earlier
+    conn.commit()
+    conn.close()
+    r = world.client.post("/api/log/copy-day", json={"from_date": "2026-10-05", "to_date": "2026-10-06"})
+    assert r.status_code in (200, 201), r.text
+    copied = world.client.get("/api/log", params={"date": "2026-10-06"}).json()["entries"]
+    assert [(e["servings"], e["grams"]) for e in copied] == [(1, None)]
+    edited = world.client.put(f"/api/log/{entry['id']}", json={"note": "with peas"}).json()
+    assert (edited["servings"], edited["grams"]) == (1, None)
 
 
 # --------------------------------------------------------------------------- #

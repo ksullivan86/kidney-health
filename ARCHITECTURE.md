@@ -1356,7 +1356,8 @@ Attribution = {"text": "Product data © Open Food Facts contributors, ODbL",
                "url": "https://world.openfoodfacts.org/product/0049000028911", "license": "ODbL-1.0"}
             | {"text": "Product data: USDA FoodData Central (public domain, CC0)", "url": "https://fdc.nal.usda.gov/", "license": "CC0-1.0"}
 QualityNote = {"code": "crowd_sourced" | "potassium_unknown" | "phosphorus_unknown" | "sodium_from_salt" | "carbs_available"
-                       | "prepared_values" | "ml_as_g" | "no_serving" | "energy_mismatch" | "implausible" | "no_nutrition"
+                       | "prepared_values" | "ml_as_g" | "no_serving" | "serving_weight_unknown" | "energy_mismatch"
+                       | "implausible" | "no_nutrition"
                        | "filled_from_usda" | "filled_from_off", "message": "..."}
 ```
 
@@ -1390,12 +1391,18 @@ QualityNote = {"code": "crowd_sourced" | "potassium_unknown" | "phosphorus_unkno
 `nutrition`), `User-Agent: KidneyHealth/<version> (<food.off_contact>)`, `Accept: application/json`,
 `Accept-Encoding: gzip`; 8 s timeout, no redirects, 1 MiB decoded cap, one retry after 2 s on 503, never
 a retry on 404, JSON only. `off_code` is 13 digits (8 for EAN-8). Mapping: `<n>_serving` when the label
-is per serving, else `<n>_100g` × serving; prepared values only when nothing as sold exists; kJ ÷ 4.184;
-sodium from salt ÷ 2.5; absent → `null`; plausibility per 100 g (sodium ≤ 40 g except salts, potassium ≤
-10 g, phosphorus ≤ 5 g, macros ≤ 100 g, energy ≤ 950 kcal, model bounds); energy mismatch > 25 % and
-> 40 kcal; category by an ordered tag map; flags from `app/additives.py` plus `counts_as_fluid` (mL
-serving), `processed` (NOVA 4), `high_gi` (`en:sweetened-beverages` with ≥ 5 g sugars/100 mL), `alcohol`
-(`en:alcoholic-beverages`); never
+is per serving (3.4 `nutrition_data_per` or the 3.5+ aggregated set), else `<n>_100g` × serving; a
+per-serving label **without a serving weight** is `no_nutrition` with `serving_weight_unknown` (never stored
+as per 100 g; the 404 says why); prepared values only when nothing as sold exists, then the serving text
+ends "as sold, prepared" and the food takes **servings only** (`foods.weight_known`: grams → 400 on
+`POST`/`PUT /api/log`, `/api/log/batch` and guidance swaps; copy-day and edits keep the servings); kJ ÷
+4.184; sodium from salt ÷ 2.5; absent → `null`; plausibility per 100 g (sodium ≤ 40 g except salts,
+potassium ≤ 60 g and phosphorus ≤ 32 g, what a food-grade salt can hold, so salt substitutes and cream of
+tartar keep their number; macros ≤ 100 g, energy ≤ 950 kcal, model bounds); energy mismatch > 25 % and
+> 40 kcal; category by an ordered tag map; flags from `app/additives.py` plus `counts_as_fluid` with
+`fluid_ml` = the serving for a liquid (`off.is_liquid`: an mL serving, a label per 100 mL or
+`en:beverages`, not drink powders; the same test gives the "100 mL" serving text), `processed` (NOVA 4),
+`high_gi` (`en:sweetened-beverages` with ≥ 5 g sugars/100 mL), `alcohol` (`en:alcoholic-beverages`); never
 `hypo_treatment` or `low_potassium_fruit`. `source_url` is built from a constant
 (`https://world.openfoodfacts.org/product/<off_code>`), never copied from a payload (§9 B4).
 

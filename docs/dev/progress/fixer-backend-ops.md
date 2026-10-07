@@ -16,10 +16,10 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C4 | AI guard low_* claims judged against half the room | done |
 | C5 | AI shown free text blocklist misses shot/skip/delay/pen/pill/extra | done |
 | C6 | insights all_good with unknown K/Na counted as 0 | done |
-| C7 | OFF prepared-only: serving_g is dry weight | todo |
+| C7 | OFF prepared-only: serving_g is dry weight | done |
 | C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
-| C9 | OFF potassium ceiling drops salt substitutes | todo |
-| C10 | OFF per-100 mL drinks without serving not fluid | todo |
+| C9 | OFF potassium ceiling drops salt substitutes | done |
+| C10 | OFF per-100 mL drinks without serving not fluid | done |
 | C11 | curated foods: raw eggs suggested | todo |
 | C12 | X-KDL-Version header + shell/API check | todo |
 | L1 | AI retention purge only with AI traffic | todo |
@@ -27,8 +27,8 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L3 | K-2 'relaxed one step' when ladder == relaxed; N-1 age-70 cut-off | done |
 | L4 | check_meal lets AI ideas create a new day 'over' | todo |
 | L5 | G7 hypo pre-filter phrasings | todo |
-| L6 | OFF per-serving label without quantity stored as per 100 g | todo |
-| L7 | additives: 'phosphorus' word flagged as additive | todo |
+| L6 | OFF per-serving label without quantity stored as per 100 g | done |
+| L7 | additives: 'phosphorus' word flagged as additive | done |
 | L8 | label photo serving_desc/serving_g not marked from photo | todo |
 | L9 | 'Server name' help text vs signed-in title | todo |
 | L10 | new accounts default to stage 3b / type 1 | todo |
@@ -70,6 +70,15 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   `KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). 3 golden cases added; tests in test_ai_guard.
   Not verifiable here: a live evaluation (scripts/ai_eval.py) — no provider in this environment (ROADMAP item).
 
+* **C7, C9, C10, L6, L7** `app/off.py` (`is_liquid`, DRY_TAGS verified against the OFF categories taxonomy,
+  ceilings K 60 g / P 32 g per 100 g with the stoichiometry in the comment, "as sold, prepared" serving text,
+  `serving_weight_unknown` → no_nutrition), `app/foods.py` (`weight_known`, `WEIGHT_UNKNOWN_DETAIL`), `app/log.py`
+  (resolve_servings 400; copy-day/PUT keep servings), `app/guidance/api.py` (swaps by grams 400), `app/barcode.py`
+  (404 text NO_SERVING_WEIGHT), `app/additives.py` + JS twin (element word skipped unless "acid"), JS `off.js`
+  messages, DEMO_PRODUCTS block regenerated. Tests: test_off_mapping (5 salts warn high, ceilings, 6 liquid cases,
+  3.5 per-100 mL, per-serving without weight 3.4 + 3.5), test_barcode_api (Kraft grams 400 on POST/PUT/batch/swaps,
+  servings 50 g carbs, copy-day/edit keep servings, synthetic 404), test_additives (+8 cases), barcode vectors.
+
 ## Handoffs (to fixer-frontend-docs)
 
 * **C8 server shape (done, in ARCHITECTURE.md "M2 API: barcode" → "Foods and log changes", last bullet):**
@@ -83,6 +92,20 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   Still yours: the UI (today.js meal footers / rows / bars, trends), `js/mock/log.js` (+ summary/range),
   `rules.js` addTotals twin if you want one, handbook `app/logging.md:60`, `targets-and-warnings.md:42`.
 
+* **C7 UI (yours):** a food whose `quality` has `prepared_values` (or `serving_weight_unknown`) takes servings
+  only: hide the grams field and the "1 serving = N g" hint in the entry sheet (add.js:168), and make
+  `js/mock/log.js` answer grams for it with 400 `WEIGHT_UNKNOWN_DETAIL` (app/foods.py) for parity.
+* **docs/barcode-and-photos.md (yours):** mapping rules changed: potassium ≤ 60 g / phosphorus ≤ 32 g per 100 g,
+  liquids (per 100 mL / beverages, not powders) count as fluid, prepared-only = servings only, per-serving
+  without weight = enter from the label; additive scan ignores the bare element word "phosphorus".
+
 ## Decisions
+
+* C7: chose "servings only" over "store serving_g only when prepared_per == serving": the Kraft fixture says
+  `nutrition_data_prepared_per: 100g` although its values come from the per-serving label, so the flag cannot
+  tell the dry and prepared bases apart; disabling grams is right for both.
+* L6: chose `no_nutrition` (enter from the label) over keeping the values with a placeholder 100 g weight: the
+  placeholder would leak into the shopping list, guidance portions, AI prompts and CSV; the live OFF server
+  already drops such sets (rare).
 
 ## Commands

@@ -114,11 +114,19 @@ HIGH_GI_MIN_SUGARS_PER_100 = 5.0  # g per 100 mL (note 03 R3)
 ALCOHOLIC_BEVERAGES_TAG = "en:alcoholic-beverages"
 SALT_TAG = "en:salts"
 US_CA_TAGS = ("en:united-states", "en:canada")
+# Drink powders are tagged en:beverages too (en:dehydrated-beverages sits under both en:beverages and
+# en:dried-products-to-be-rehydrated in the OFF categories taxonomy, checked 2026-10-07): they are not a liquid.
+DRY_TAGS = ("en:dried-products-to-be-rehydrated", "en:dehydrated-beverages", "en:instant-beverages")
 
 # Plausibility per 100 g / 100 mL (note 03 R3), plus physical limits: no food holds more than 100 g
 # of a macronutrient per 100 g, or more energy than pure fat (about 900 kcal per 100 g).
+# Potassium and phosphorus are capped at what a food-grade salt can hold, not at what ordinary food holds
+# (v0.3.0 review): salt substitutes are potassium chloride (52.4 % K by mass; NoSalt lists 640 mg per 1.4 g,
+# 45.7 g/100 g), cream of tartar is potassium bitartrate (20.8 % K; USDA SR: 16.5 g/100 g) and potassium
+# carbonate is 56.6 % K, so 60 g/100 g; phosphoric acid is 31.6 % P and phosphate leavening salts 20–28 %,
+# so 32 g/100 g. Dropping a true value would turn the most dangerous products into "not listed".
 MAX_PER_100: dict[str, float] = {
-    "sodium_mg": 40_000.0, "potassium_mg": 10_000.0, "phosphorus_mg": 5_000.0, "calories_kcal": 950.0,
+    "sodium_mg": 40_000.0, "potassium_mg": 60_000.0, "phosphorus_mg": 32_000.0, "calories_kcal": 950.0,
     "protein_g": 100.0, "fat_g": 100.0, "sat_fat_g": 100.0, "carbs_g": 100.0, "fiber_g": 100.0, "sugar_g": 100.0,
     "calcium_mg": 40_000.0,
 }
@@ -132,9 +140,12 @@ QUALITY_MESSAGES: dict[str, str] = {
     "phosphorus_unknown": "Phosphorus is not listed for this product: treat it as unknown, not zero.",
     "sodium_from_salt": "Sodium was worked out from the salt figure (salt ÷ 2.5).",
     "carbs_available": "This label is not a US or Canadian one: its carbohydrate usually excludes fibre.",
-    "prepared_values": "Only the values for the prepared product are listed (as made by the package directions).",
+    "prepared_values": "Only the values for the prepared product are listed (as made by the package directions), and the "
+                       "serving weight is the product as sold, so it is logged in servings, not grams.",
     "ml_as_g": "The serving is in millilitres; it is counted as grams (1 mL ≈ 1 g).",
     "no_serving": "No serving size is listed, so the values are for 100 g (or 100 mL).",
+    "serving_weight_unknown": "The label's values are per serving, but no serving weight is listed, so they cannot be "
+                              "used. Enter the food from the package label.",
     "energy_mismatch": "The calories do not match the protein, fat and carbohydrate listed. One of them may be wrong.",
     "implausible": "A value was impossible for a food and was left out",
     "no_nutrition": "This product has no nutrition facts in Open Food Facts.",
@@ -572,6 +583,27 @@ def _category(tags: Iterable[str]) -> str | None:
     return None
 
 
+def _v35_per(product: Mapping[str, Any]) -> str | None:
+    """``per`` of the API 3.5+ ``nutrition.aggregated_set`` (``100g``, ``100ml``, ``serving``), or None."""
+    nutrition = product.get("nutrition")
+    aggregated = nutrition.get("aggregated_set") if isinstance(nutrition, Mapping) else None
+    if not isinstance(aggregated, Mapping):
+        return None
+    return str(aggregated.get("per") or "100g").lower()
+
+
+def is_liquid(product: Mapping[str, Any], categories: Iterable[str]) -> bool:
+    """A drink or other liquid: a serving in mL, a label per 100 mL, or a beverage that is not a powder.
+    The serving text ("100 mL") and the fluid count use this one test (review: a per-100 mL juice without a
+    serving quantity read "100 mL" but counted no fluid)."""
+    tags = set(categories)
+    if tags.intersection(DRY_TAGS):
+        return False
+    unit = str(product.get("serving_quantity_unit") or "").casefold()
+    per = str(product.get("nutrition_data_per") or _v35_per(product) or "").casefold()
+    return unit == "ml" or per == "100ml" or "en:beverages" in tags
+
+
 def _serving(product: Mapping[str, Any], liquid: bool) -> tuple[float, str, list[str]]:
     quality: list[str] = []
     quantity = _finite_number(product.get("serving_quantity"))
@@ -603,20 +635,27 @@ def map_product(product: Mapping[str, Any], gtin14: str) -> Mapped:
     ingredients = product.get("ingredients_text_en") or product.get("ingredients_text")
 
     nutriments: dict[str, Any] = dict(product.get("nutriments") or {})
+    v35 = False
     if not _has_any(nutriments, "") and not _has_any(nutriments, "_prepared"):
         nutriments = parse_nutrition_v35(product)  # API 3.5+ shape (empty `nutriments`)
+        v35 = True
 
-    unit = str(product.get("serving_quantity_unit") or "").casefold()
-    liquid = unit == "ml" or str(product.get("nutrition_data_per") or "") == "100ml" or "en:beverages" in categories
+    liquid = is_liquid(product, categories)
     serving_g, serving_desc, quality = _serving(product, liquid)
 
     infix = ""
     if not _has_any(nutriments, "") and _has_any(nutriments, "_prepared"):
         infix = "_prepared"
         quality.append("prepared_values")
-        serving_desc = f"{serving_desc[: MAX_SERVING_DESC_CHARS - len(' (prepared)')]} (prepared)"
+        # The nutrients are per serving *as prepared*, but the weight is the product as sold (a 70.9 g serving of
+        # dry macaroni makes a 198 g cup): say so, and the log refuses grams for it (foods.weight_known).
+        suffix = " as sold, prepared"
+        serving_desc = f"{serving_desc[: MAX_SERVING_DESC_CHARS - len(suffix)]}{suffix}"
     per_key = "nutrition_data_prepared_per" if infix else "nutrition_data_per"
-    per_serving_label = str(product.get(per_key) or "") == "serving"
+    per_serving_label = str(product.get(per_key) or "") == "serving" or (v35 and _v35_per(product) == "serving")
+    # Per-serving values without a serving weight cannot be stored as "per 100 g" (review L6): the product is
+    # treated as having no usable nutrition facts, and the person enters it from the label.
+    weight_unknown = per_serving_label and "no_serving" in quality
 
     def value(name: str) -> float | None:
         return _per_value(nutriments, name, infix, per_serving_label, serving_g)
@@ -662,9 +701,11 @@ def map_product(product: Mapping[str, Any], gtin14: str) -> Mapped:
             implausible.append(key)
     quality.extend(f"implausible:{key}" for key in implausible)
 
-    no_nutrition = str(product.get("no_nutrition_data") or "") == "on" or all(
+    no_nutrition = weight_unknown or str(product.get("no_nutrition_data") or "") == "on" or all(
         nutrients.get(k) is None for k in ("calories_kcal", "protein_g", "fat_g", "carbs_g")
     )
+    if weight_unknown:
+        quality.append("serving_weight_unknown")
 
     energy_parts = [nutrients.get(k) for k in ("calories_kcal", "carbs_g", "protein_g", "fat_g")]
     if all(v is not None for v in energy_parts):
@@ -676,7 +717,7 @@ def map_product(product: Mapping[str, Any], gtin14: str) -> Mapped:
 
     scan = additives.scan(product.get("additives_tags"), ingredients, name)
     flags = list(scan.flags)
-    if unit == "ml":
+    if liquid:  # the same test as the "100 mL" serving text (1 mL counted as 1 g)
         flags.append("counts_as_fluid")
         nutrients["fluid_ml"] = serving_g
     else:

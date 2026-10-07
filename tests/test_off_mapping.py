@@ -289,8 +289,11 @@ def test_diet_coke() -> None:
 
 def test_kraft_prepared_values_only() -> None:
     m = mapped("kraft_mac_cheese_v3.4", KRAFT)
-    assert m.serving_desc == "1 serving (70.874 g) (prepared)"
+    # The weight is the box's dry serving, the values are the prepared serving: the text says so, and the
+    # log takes this food in servings only (foods.weight_known; review C7).
+    assert m.serving_desc == "1 serving (70.874 g) as sold, prepared" and m.serving_g == pytest.approx(70.874)
     assert "prepared_values" in m.quality
+    assert "logged in servings, not grams" in off.QUALITY_MESSAGES["prepared_values"]
     n = rounded(m)
     assert (n["calories_kcal"], n["carbs_g"], n["protein_g"], n["sodium_mg"], n["potassium_mg"]) == (350, 50, 10, 710, 370)
     assert n["phosphorus_mg"] is None
@@ -405,8 +408,9 @@ def test_carbs_available_note_only_for_non_us_labels() -> None:
 
 @pytest.mark.parametrize("key, off_name, value, dropped", [
     ("sodium_mg", "sodium_100g", 45.0, True), ("sodium_mg", "sodium_100g", 39.0, False),
-    ("potassium_mg", "potassium_100g", 11.0, True), ("potassium_mg", "potassium_100g", 9.0, False),
-    ("phosphorus_mg", "phosphorus_100g", 6.0, True), ("phosphorus_mg", "phosphorus_100g", 4.0, False),
+    ("potassium_mg", "potassium_100g", 61.0, True), ("potassium_mg", "potassium_100g", 52.4, False),
+    ("potassium_mg", "potassium_100g", 11.0, False), ("phosphorus_mg", "phosphorus_100g", 33.0, True),
+    ("phosphorus_mg", "phosphorus_100g", 9.0, False), ("phosphorus_mg", "phosphorus_100g", 4.0, False),
     ("protein_g", "proteins_100g", 120.0, True), ("calories_kcal", "energy-kcal_100g", 1200.0, True),
     ("fat_g", "fat_100g", -3.0, True),
 ])
@@ -489,7 +493,8 @@ def test_salt_substitute_is_avoid_ckd() -> None:
     m = off.map_product(p, LAYS)
     assert m.flags[:3] == ["potassium_additive", "avoid_ckd"] or m.flags[:2] == ["potassium_additive", "avoid_ckd"]
     assert m.kidney_notes and m.kidney_notes.startswith("AVOID with kidney disease")
-    assert m.nutrients["potassium_mg"] is None and "implausible:potassium_mg" in m.quality  # 49 g/100 g > 10 g
+    # 49 g/100 g is what potassium chloride holds (52.4 % K): kept, so the warning has its number (review C9).
+    assert m.nutrients["potassium_mg"] == pytest.approx(49000.0) and "implausible:potassium_mg" not in m.quality
 
 
 def test_category_map_is_ordered() -> None:
@@ -575,3 +580,84 @@ def test_product_text_never_reaches_an_ai_prompt_unmarked() -> None:
     for path in prompt_code:
         text = path.read_text(encoding="utf-8")
         assert "ingredients_text" not in text, f"{path.relative_to(root.parent)} must not put ingredient lists into prompts"
+
+
+# --------------------------------------------------------------------------- #
+# v0.3.0 review: potassium salts keep their number; liquids count as fluid; per-serving labels need a weight
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("name, ingredients, k_100g, serving_g, serving_text, mg", [
+    # Label figures: NoSalt 640 mg per 1/4 tsp (1.4 g); Morton Lite Salt 350 mg per 1/4 tsp (1.4 g);
+    # cream of tartar USDA SR 16,500 mg/100 g (1 tsp = 3 g, 495 mg).
+    ("NoSalt Original", "Potassium chloride, potassium bitartrate, adipic acid", 45.7, 1.4, "1/4 tsp (1.4 g)", 640),
+    ("Lite Salt", "Salt, potassium chloride, calcium silicate, dextrose, potassium iodide", 25.0, 1.4, "1/4 tsp (1.4 g)", 350),
+    ("Cream of tartar", "Cream of tartar", 16.5, 3.0, "1 tsp (3 g)", 495),
+    ("Baking soda substitute", "Potassium bicarbonate", 39.0, 2.5, "1/2 tsp (2.5 g)", 975),
+    ("Herb seasoning blend", "Potassium chloride, onion, garlic, herbs", 30.0, 1.5, "1/4 tsp (1.5 g)", 450),
+])
+def test_potassium_salts_keep_their_potassium_and_warn_high(name, ingredients, k_100g, serving_g, serving_text, mg) -> None:
+    from app.nutrients import food_warnings, kidney_rating
+
+    p = {"product_name": name, "ingredients_text": ingredients, "serving_quantity": serving_g, "serving_quantity_unit": "g",
+         "serving_size": serving_text, "nutrition_data_per": "100g", "nutriments": {"potassium_100g": k_100g, "energy-kcal_100g": 0}}
+    m = off.map_product(p, LAYS)
+    assert m.nutrients["potassium_mg"] == pytest.approx(mg, rel=0.01)
+    assert not any(q.startswith("implausible") for q in m.quality) and "potassium_unknown" not in m.quality
+    warnings = food_warnings(m.nutrients, m.flags, m.kidney_notes)
+    k_levels = [w["level"] for w in warnings if w["nutrient"] == "potassium_mg"]
+    assert "high" in k_levels and kidney_rating(warnings) == "red"
+
+
+def test_values_above_what_any_salt_can_hold_are_still_dropped() -> None:
+    m = off.map_product(base(**{"energy-kcal_100g": 0, "potassium_100g": 75.0, "phosphorus_100g": 40.0}), LAYS)
+    assert m.nutrients["potassium_mg"] is None and m.nutrients["phosphorus_mg"] is None
+    assert {"implausible:potassium_mg", "implausible:phosphorus_mg"} <= set(m.quality)
+
+
+@pytest.mark.parametrize("product, liquid", [
+    ({"nutrition_data_per": "100ml", "categories_tags": ["en:beverages", "en:juices"]}, True),  # EU juice, no serving
+    ({"nutrition_data_per": "100g", "categories_tags": ["en:beverages"]}, True),
+    ({"nutrition_data_per": "100ml", "categories_tags": []}, True),  # a soup or drink labelled per 100 mL
+    ({"nutrition_data_per": "100g", "categories_tags": ["en:beverages"], "serving_quantity": 250, "serving_quantity_unit": "g",
+      "serving_size": "1 bottle (250 g)"}, True),
+    ({"nutrition_data_per": "100g", "categories_tags": ["en:beverages", "en:dried-products-to-be-rehydrated",
+                                                         "en:dehydrated-beverages"]}, False),  # a drink powder
+    ({"nutrition_data_per": "100g", "categories_tags": ["en:snacks"]}, False),
+])
+def test_a_liquid_counts_as_fluid_by_the_same_test_as_its_serving_text(product, liquid) -> None:
+    p = {"product_name": "Orange juice", "nutriments": {"energy-kcal_100g": 45, "carbohydrates_100g": 10}, **product}
+    m = off.map_product(p, NUTELLA)
+    assert ("counts_as_fluid" in m.flags) is liquid
+    serving = float(product.get("serving_quantity", 100))
+    assert m.nutrients["fluid_ml"] == (serving if liquid else 0.0)
+    if "serving_quantity" not in product:
+        assert m.serving_desc == ("100 mL" if liquid else "100 g")
+
+
+def test_a_v35_label_per_100ml_counts_as_fluid() -> None:
+    p = {"product_name": "Apple juice", "nutriments": {},
+         "nutrition": {"aggregated_set": {"per": "100ml", "preparation": "as_sold",
+                                          "nutrients": {"energy-kcal": {"value": 46, "unit": "kcal"},
+                                                        "carbohydrates": {"value": 11, "unit": "g"}}}}}
+    m = off.map_product(p, NUTELLA)
+    assert "counts_as_fluid" in m.flags and m.nutrients["fluid_ml"] == 100.0 and m.serving_desc == "100 mL"
+
+
+def test_per_serving_values_without_a_serving_weight_are_not_stored_as_per_100_g() -> None:
+    """Review L6: "1 bar" values must never become "per 100 g" (a 45 g bar would get 45 % of them)."""
+    p = {"product_name": "Protein bar", "serving_size": "1 bar", "nutrition_data_per": "serving",
+         "nutriments": {"energy-kcal_serving": 200, "proteins_serving": 20, "potassium_serving": 350, "phosphorus_serving": 200}}
+    m = off.map_product(p, LAYS)
+    assert m.status == "no_nutrition" and "serving_weight_unknown" in m.quality and "no_nutrition" in m.quality
+    assert "no serving weight is listed" in off.QUALITY_MESSAGES["serving_weight_unknown"]
+    # The API 3.5+ shape: an aggregated set per serving without a serving quantity.
+    v35 = {"product_name": "Protein bar", "nutriments": {},
+           "nutrition": {"aggregated_set": {"per": "serving", "preparation": "as_sold",
+                                            "nutrients": {"energy-kcal": {"value": 200, "unit": "kcal"},
+                                                          "proteins": {"value": 20, "unit": "g"}}}}}
+    assert off.map_product(v35, LAYS).status == "no_nutrition"
+    # With a serving weight the per-serving values are used as they are (3.4 and 3.5+).
+    v35["serving_quantity"], v35["serving_quantity_unit"] = 45, "g"
+    m = off.map_product(v35, LAYS)
+    assert m.status == "found" and m.serving_g == 45 and m.nutrients["calories_kcal"] == 200
