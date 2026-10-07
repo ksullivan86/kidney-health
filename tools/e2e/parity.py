@@ -607,7 +607,7 @@ class Harness:
         # saved meals
         rs, rm = self.both(S, "POST /api/meals", "POST", "/api/meals", {
             "name": "Parity breakfast", "note": "  weekday  ",
-            "items": [{"food_id": self.fid("Egg white, raw"), "servings": 2}, {"food_id": self.fid("Bread, white"), "servings": 1.5},
+            "items": [{"food_id": self.fid("Egg white"), "servings": 2}, {"food_id": self.fid("Bread, white"), "servings": 1.5},
                       {"food_id": self.fid("Cola, regular"), "servings": 0.5}, {"food_id": self.fid("Star fruit (carambola)"), "servings": 0.25}]})
         self.tpl_ids["bk"] = (rs["body"]["id"], rm["body"]["id"])
         rs, rm = self.both(S, "POST /api/meals/from-log D lunch", "POST", "/api/meals/from-log", {"date": D, "meal": "lunch", "name": "lunch from log", "note": ""})
@@ -684,7 +684,7 @@ class Harness:
             (d(E, -6), "lunch", "Potato, baked, with skin", {"servings": 1.5}, "eaten"),
             (d(E, -6), "dinner", "Orange juice", {"servings": 3}, "eaten"),
             (d(E, -6), "snack", "Cola, regular", {"servings": 2}, "eaten"),
-            (d(E, -4), "breakfast", "Egg white, raw", {"servings": 3}, "eaten"),
+            (d(E, -4), "breakfast", "Egg white", {"servings": 3}, "eaten"),
             (d(E, -4), "breakfast", "Bread, white", {"servings": 2}, "eaten"),
             (d(E, -4), "lunch", "Deli turkey breast, sliced", {"servings": 1.5}, "eaten"),
             (d(E, -4), "dinner", "Water, tap", {"grams": 500}, "eaten"),

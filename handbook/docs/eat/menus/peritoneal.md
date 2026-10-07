@@ -61,7 +61,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Breakfast** | Oatmeal, cooked (regular or quick oats) (plain, cooked in water) | 1 cup (234 g) | 28 | 5.9 | 164 | 180 | 9 | – |
 |  | Blueberries, raw | 1 cup (148 g) | 21 | 1.0 | 114 | 18 | 2 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw (scrambled with the egg) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled with the egg) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 |  | Half and half | ½ tbsp (8 g) | 0 | 0.3 | 10 | 7 | 5 | – |
 | | *Breakfast total* | | *51* | *17.2* | *539* | *318* | *164* | *236* |
@@ -97,7 +97,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 |---|---|---|---|---|---|---|---|---|
 | **Breakfast** | English muffin, plain | 1 muffin (57 g) | 26 | 4.4 | 75 | 76 | 264 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Cream cheese | 1 tbsp (15 g) | 1 | 0.9 | 19 | 16 | 46 | – |
 |  | Strawberries, raw | ½ cup, halves (76 g) | 6 | 0.5 | 116 | 18 | 1 | – |
 |  | Pears, canned in juice | ½ cup (124 g) | 16 | 0.4 | 119 | 15 | 5 | – |
@@ -137,7 +137,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Breakfast** | Grits, cooked (cooked without salt) | 1 cup (257 g) | 38 | 4.4 | 69 | 51 | 5 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Peaches, canned in juice | ½ cup (124 g) | 14 | 0.8 | 159 | 21 | 5 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 | | *Breakfast total* | | *53* | *15.3* | *482* | *188* | *160* | *236* |
@@ -176,7 +176,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Breakfast** | Cream of wheat, cooked (cooked without salt) | 1 cup (251 g) | 26 | 3.6 | 40 | 38 | 15 | – |
 |  | Raspberries, raw | ½ cup (62 g) | 7 | 0.7 | 93 | 18 | 1 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Bread, white (toasted) | 1 slice (29 g) | 14 | 2.6 | 37 | 28 | 142 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
@@ -216,7 +216,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 |  | Almond milk, unsweetened | ¾ cup (197 g) | 3 | 0.8 | 132 | 18 | 142 | 190 |
 |  | Blueberries, raw | ½ cup (74 g) | 11 | 0.5 | 57 | 9 | 1 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Bread, white (toasted) | 1 slice (29 g) | 14 | 2.6 | 37 | 28 | 142 | – |
 |  | Tea, black, brewed | 1 cup, 8 fl oz (237 g) | 1 | 0.0 | 88 | 2 | 7 | 236 |
 | | *Breakfast total* | | *54* | *15.3* | *479* | *172* | *595* | *426* |
@@ -255,7 +255,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Breakfast** | Bagel, plain | ½ bagel (50 g) | 26 | 5.3 | 53 | 49 | 209 | – |
 |  | Cream cheese | ½ tbsp (7 g) | 0 | 0.5 | 10 | 8 | 23 | – |
 |  | Egg, scrambled | 2 large (122 g) | 2 | 12.2 | 162 | 202 | 176 | – |
-|  | Egg white, raw | 2 large (66 g) | 0 | 7.2 | 108 | 10 | 110 | – |
+|  | Egg white | 2 large (66 g) | 0 | 7.2 | 108 | 10 | 110 | – |
 |  | Pineapple, canned in juice | ½ cup (125 g) | 20 | 0.5 | 152 | 8 | 1 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 | | *Breakfast total* | | *48* | *25.9* | *601* | *284* | *524* | *236* |
@@ -295,7 +295,7 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 |  | Bread, white (toasted) | 1 slice (29 g) | 14 | 2.6 | 37 | 28 | 142 | – |
 |  | Butter, unsalted | ½ tbsp (7 g) | 0 | 0.1 | 2 | 2 | 1 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 |  | Half and half | 1 tbsp (15 g) | 1 | 0.5 | 20 | 14 | 9 | – |
 | | *Breakfast total* | | *48* | *17.5* | *448* | *198* | *290* | *236* |

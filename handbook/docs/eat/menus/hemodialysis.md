@@ -61,7 +61,7 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 | **Breakfast** | Cream of wheat, cooked (cooked without salt) | 1 cup (251 g) | 26 | 3.6 | 40 | 38 | 15 | – |
 |  | Blueberries, raw | ½ cup (74 g) | 11 | 0.5 | 57 | 9 | 1 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw (scrambled with the egg) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled with the egg) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Bread, white (toasted) | 1 slice (29 g) | 14 | 2.6 | 37 | 28 | 142 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
@@ -102,7 +102,7 @@ Non-dialysis day.
 | **Breakfast** | Grits, cooked (cooked without salt) | ⅔ cup (171 g) | 25 | 2.9 | 46 | 34 | 3 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Peaches, canned in juice | 1 cup (248 g) | 29 | 1.6 | 318 | 42 | 10 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 | | *Breakfast total* | | *55* | *14.8* | *600* | *177* | *137* | *236* |
@@ -141,7 +141,7 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 |---|---|---|---|---|---|---|---|---|
 | **Breakfast** | English muffin, plain | 1 muffin (57 g) | 26 | 4.4 | 75 | 76 | 264 | – |
 |  | Egg, scrambled | 2 large (122 g) | 2 | 12.2 | 162 | 202 | 176 | – |
-|  | Egg white, raw | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Strawberries, raw | ½ cup, halves (76 g) | 6 | 0.5 | 116 | 18 | 1 | – |
 |  | Jam or preserves | 1½ tbsp (30 g) | 21 | 0.2 | 23 | 6 | 9 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
@@ -182,7 +182,7 @@ Non-dialysis day.
 |  | Almond milk, unsweetened | ½ cup (131 g) | 2 | 0.5 | 88 | 12 | 95 | 127 |
 |  | Blueberries, raw | ¾ cup (111 g) | 16 | 0.8 | 86 | 14 | 2 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (cooked) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 | | *Breakfast total* | | *55* | *14.0* | *452* | *137* | *458* | *363* |
 | **Lunch** | Hamburger or hot dog bun | 1 roll (44 g) | 22 | 4.3 | 54 | 44 | 217 | – |
@@ -225,7 +225,7 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 | **Breakfast** | Cream of wheat, cooked (cooked without salt) | 1¼ cups (314 g) | 33 | 4.5 | 50 | 48 | 19 | – |
 |  | Raspberries, raw | ½ cup (62 g) | 7 | 0.7 | 93 | 18 | 1 | – |
 |  | Egg, hard-boiled | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white (scrambled) | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Bread, white (toasted) | 1 slice (29 g) | 14 | 2.6 | 37 | 28 | 142 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
@@ -267,7 +267,7 @@ Non-dialysis day.
 | **Breakfast** | Bagel, plain | ½ bagel (50 g) | 26 | 5.3 | 53 | 49 | 209 | – |
 |  | Cream cheese | ½ tbsp (7 g) | 0 | 0.5 | 10 | 8 | 23 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Pineapple, canned in juice | ¾ cup (188 g) | 29 | 0.8 | 228 | 12 | 2 | – |
 |  | Coffee, brewed | 1 cup, 8 fl oz (237 g) | 0 | 0.3 | 116 | 7 | 5 | 236 |
 | | *Breakfast total* | | *57* | *16.5* | *542* | *182* | *382* | *236* |
@@ -308,13 +308,13 @@ Non-dialysis day in the long weekend gap: potassium and fluid stay at the low en
 | **Breakfast** | Grits, cooked (cooked without salt) | 1 cup (257 g) | 38 | 4.4 | 69 | 51 | 5 | – |
 |  | Butter, unsalted | 1 tbsp (14 g) | 0 | 0.1 | 3 | 3 | 2 | – |
 |  | Egg, scrambled | 1 large (61 g) | 1 | 6.1 | 81 | 101 | 88 | – |
-|  | Egg white, raw | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
+|  | Egg white | 1 large (33 g) | 0 | 3.6 | 54 | 5 | 55 | – |
 |  | Blueberries, raw | ¾ cup (111 g) | 16 | 0.8 | 86 | 14 | 2 | – |
 |  | Tea, black, brewed | 1 cup, 8 fl oz (237 g) | 1 | 0.0 | 88 | 2 | 7 | 236 |
 | | *Breakfast total* | | *56* | *15.0* | *381* | *176* | *159* | *236* |
 | **Lunch** | Bread, white | 2 slices (58 g) | 29 | 5.2 | 74 | 56 | 284 | – |
 |  | Egg, hard-boiled (egg salad) | 1 large (50 g) | 1 | 6.3 | 63 | 86 | 62 | – |
-|  | Egg white, raw (cooked, in the egg salad) | 2 large (66 g) | 0 | 7.2 | 108 | 10 | 110 | – |
+|  | Egg white (in the egg salad) | 2 large (66 g) | 0 | 7.2 | 108 | 10 | 110 | – |
 |  | Mayonnaise | 1½ tbsp (21 g) | 0 | 0.2 | 5 | 5 | 132 | – |
 |  | Lettuce, iceberg | 1 cup, shredded (72 g) | 2 | 0.6 | 102 | 14 | 7 | – |
 |  | Applesauce, unsweetened | ½ cup (122 g) | 14 | 0.2 | 90 | 6 | 2 | – |

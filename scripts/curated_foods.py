@@ -424,11 +424,15 @@ CURATED_FOODS = [
       "Very high sodium (~500 mg per oz) and concentrated phosphorus; unsalted popcorn or a hard-boiled egg white is the snack swap."),
     f(168626, "Beef liver, braised", MEAT, "3 oz", 85, [],
       "Organ meats are extremely high in phosphorus (~420 mg per 3 oz); choose lean muscle meat instead."),
-    f(171287, "Egg, whole, raw", MEAT, "1 large", 50, []),
+    # Raw eggs are never suggested (handbook: avoid raw or undercooked eggs, above all after a transplant):
+    # the whole raw egg is a recipe ingredient; the egg white row has no "raw" in its name, and a cooking note.
+    f(171287, "Egg, whole, raw", MEAT, "1 large", 50, [ING],
+      "For recipes: cook eggs until the white and yolk are firm (raw egg can carry Salmonella)."),
     f(173424, "Egg, hard-boiled", MEAT, "1 large", 50, [],
       "The yolk holds the phosphorus (~85 mg per egg); egg whites are the renal favourite and still give the protein."),
     f(172187, "Egg, scrambled", MEAT, "1 large", 61, []),
-    f(172183, "Egg white, raw", MEAT, "1 large", 33, []),
+    f(172183, "Egg white", MEAT, "1 large", 33, [],
+      "Values are USDA's for one large egg white weighed raw; cooking does not change them. Cook it until firm."),
     f(173462, "Egg substitute, liquid", MEAT, "1/4 cup", 60, []),
 
     # ---------------------------------------------------------- Fish & Seafood

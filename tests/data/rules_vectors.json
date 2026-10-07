@@ -1,6 +1,6 @@
 {
   "about": "Parity vectors for app/static/js/engine/rules.js, generated from app/nutrients.py by tests/data/gen_rules_vectors.py. Do not edit by hand: change the rules, then regenerate.",
-  "foods_version": "2026-10-07.1",
+  "foods_version": "2026-10-07.2",
   "servings": [0.5, 1, 2.5],
   "nutrient_keys": ["calories_kcal", "protein_g", "fat_g", "sat_fat_g", "carbs_g", "fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "phosphorus_mg", "calcium_mg", "fluid_ml"],
   "foods": [
@@ -186,10 +186,10 @@
     {"i":179,"fdc_id":170200,"name":"Corned beef, cooked","nutrients":{"calories_kcal":213.3,"protein_g":15.4,"fat_g":16.1,"sat_fat_g":5.4,"carbs_g":0.4,"fiber_g":0.0,"sugar_g":0.0,"sodium_mg":827,"potassium_mg":123,"phosphorus_mg":106,"calcium_mg":7,"fluid_ml":0},"flags":["processed"],"kidney_notes":null},
     {"i":180,"fdc_id":167536,"name":"Beef jerky","nutrients":{"calories_kcal":114.8,"protein_g":9.3,"fat_g":7.2,"sat_fat_g":3.0,"carbs_g":3.1,"fiber_g":0.5,"sugar_g":2.5,"sodium_mg":500,"potassium_mg":167,"phosphorus_mg":114,"calcium_mg":6,"fluid_ml":0},"flags":["processed"],"kidney_notes":null},
     {"i":181,"fdc_id":168626,"name":"Beef liver, braised","nutrients":{"calories_kcal":162.3,"protein_g":24.7,"fat_g":4.5,"sat_fat_g":2.5,"carbs_g":4.4,"fiber_g":0.0,"sugar_g":0.0,"sodium_mg":67,"potassium_mg":299,"phosphorus_mg":422,"calcium_mg":5,"fluid_ml":0},"flags":[],"kidney_notes":null},
-    {"i":182,"fdc_id":171287,"name":"Egg, whole, raw","nutrients":{"calories_kcal":71.5,"protein_g":6.3,"fat_g":4.8,"sat_fat_g":1.6,"carbs_g":0.4,"fiber_g":0.0,"sugar_g":0.2,"sodium_mg":71,"potassium_mg":69,"phosphorus_mg":99,"calcium_mg":28,"fluid_ml":0},"flags":[],"kidney_notes":null},
+    {"i":182,"fdc_id":171287,"name":"Egg, whole, raw","nutrients":{"calories_kcal":71.5,"protein_g":6.3,"fat_g":4.8,"sat_fat_g":1.6,"carbs_g":0.4,"fiber_g":0.0,"sugar_g":0.2,"sodium_mg":71,"potassium_mg":69,"phosphorus_mg":99,"calcium_mg":28,"fluid_ml":0},"flags":["ingredient"],"kidney_notes":null},
     {"i":183,"fdc_id":173424,"name":"Egg, hard-boiled","nutrients":{"calories_kcal":77.5,"protein_g":6.3,"fat_g":5.3,"sat_fat_g":1.6,"carbs_g":0.6,"fiber_g":0.0,"sugar_g":0.6,"sodium_mg":62,"potassium_mg":63,"phosphorus_mg":86,"calcium_mg":25,"fluid_ml":0},"flags":[],"kidney_notes":null},
     {"i":184,"fdc_id":172187,"name":"Egg, scrambled","nutrients":{"calories_kcal":90.9,"protein_g":6.1,"fat_g":6.7,"sat_fat_g":2.0,"carbs_g":1.0,"fiber_g":0.0,"sugar_g":0.8,"sodium_mg":88,"potassium_mg":81,"phosphorus_mg":101,"calcium_mg":40,"fluid_ml":0},"flags":[],"kidney_notes":null},
-    {"i":185,"fdc_id":172183,"name":"Egg white, raw","nutrients":{"calories_kcal":17.2,"protein_g":3.6,"fat_g":0.1,"sat_fat_g":0.0,"carbs_g":0.2,"fiber_g":0.0,"sugar_g":0.2,"sodium_mg":55,"potassium_mg":54,"phosphorus_mg":5,"calcium_mg":2,"fluid_ml":0},"flags":[],"kidney_notes":null},
+    {"i":185,"fdc_id":172183,"name":"Egg white","nutrients":{"calories_kcal":17.2,"protein_g":3.6,"fat_g":0.1,"sat_fat_g":0.0,"carbs_g":0.2,"fiber_g":0.0,"sugar_g":0.2,"sodium_mg":55,"potassium_mg":54,"phosphorus_mg":5,"calcium_mg":2,"fluid_ml":0},"flags":[],"kidney_notes":null},
     {"i":186,"fdc_id":173462,"name":"Egg substitute, liquid","nutrients":{"calories_kcal":28.8,"protein_g":6.0,"fat_g":0.0,"sat_fat_g":0.0,"carbs_g":1.2,"fiber_g":0.0,"sugar_g":1.2,"sodium_mg":119,"potassium_mg":128,"phosphorus_mg":43,"calcium_mg":44,"fluid_ml":0},"flags":[],"kidney_notes":null},
     {"i":187,"fdc_id":175168,"name":"Salmon, Atlantic, farmed, cooked","nutrients":{"calories_kcal":175.1,"protein_g":18.8,"fat_g":10.5,"sat_fat_g":2.0,"carbs_g":0.0,"fiber_g":0.0,"sugar_g":0.0,"sodium_mg":52,"potassium_mg":326,"phosphorus_mg":214,"calcium_mg":13,"fluid_ml":0},"flags":[],"kidney_notes":null},
     {"i":188,"fdc_id":173692,"name":"Salmon, sockeye, cooked","nutrients":{"calories_kcal":132.6,"protein_g":22.5,"fat_g":4.7,"sat_fat_g":0.8,"carbs_g":0.0,"fiber_g":0.0,"sugar_g":0.0,"sodium_mg":78,"potassium_mg":371,"phosphorus_mg":259,"calcium_mg":9,"fluid_ml":0},"flags":[],"kidney_notes":null},

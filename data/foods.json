@@ -1,5 +1,5 @@
 {
- "version": "2026-10-07.1",
+ "version": "2026-10-07.2",
  "source": "USDA FoodData Central, SR Legacy (April 2018 release), https://fdc.nal.usda.gov/ - public domain. Nutrients are per the listed household serving, scaled from the USDA per-100 g values. Entries with a negative fdc_id are not USDA records; their values come from product labels.",
  "foods": [
   {
@@ -4345,8 +4345,10 @@
     "calcium_mg": 28,
     "fluid_ml": 0
    },
-   "flags": [],
-   "kidney_notes": null
+   "flags": [
+    "ingredient"
+   ],
+   "kidney_notes": "For recipes: cook eggs until the white and yolk are firm (raw egg can carry Salmonella)."
   },
   {
    "fdc_id": 173424,
@@ -4396,7 +4398,7 @@
   },
   {
    "fdc_id": 172183,
-   "name": "Egg white, raw",
+   "name": "Egg white",
    "category": "Meat, Poultry & Eggs",
    "serving_desc": "1 large (33 g)",
    "serving_g": 33,
@@ -4415,7 +4417,7 @@
     "fluid_ml": 0
    },
    "flags": [],
-   "kidney_notes": null
+   "kidney_notes": "Values are USDA's for one large egg white weighed raw; cooking does not change them. Cook it until firm."
   },
   {
    "fdc_id": 173462,

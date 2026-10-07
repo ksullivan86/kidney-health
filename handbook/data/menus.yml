@@ -527,7 +527,7 @@ menus:
               - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -718,7 +718,7 @@ menus:
             items:
               - {fdc_id: 171657, servings: 1.25, note: "cooked without salt"}  # Cream of wheat, cooked: 1¼ cups (314 g)
               - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
@@ -752,7 +752,7 @@ menus:
             items:
               - {fdc_id: 171655, servings: 0.75, note: "cooked without salt"}  # Grits, cooked: ¾ cup (193 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 169930, servings: 2}  # Peaches, canned in juice: 1 cup (248 g)
               - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -786,7 +786,7 @@ menus:
           - meal: breakfast
             items:
               - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
               - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
               - {fdc_id: 169641, servings: 1.5}  # Jam or preserves: 1½ tbsp (30 g)
@@ -795,7 +795,7 @@ menus:
             items:
               - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
               - {fdc_id: 173424, servings: 1, note: "egg salad"}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "cooked, in the egg salad"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "in the egg salad"}  # Egg white: 1 large (33 g)
               - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
               - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
               - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
@@ -898,14 +898,14 @@ menus:
             items:
               - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
               - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 169126, servings: 1.5}  # Pineapple, canned in juice: ¾ cup (188 g)
               - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
             items:
               - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
               - {fdc_id: 172187, servings: 1, note: "fried rice"}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
               - {fdc_id: 170000, servings: 1}  # Onion, raw: ½ cup, chopped (80 g)
               - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
@@ -1017,7 +1017,7 @@ menus:
               - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
               - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white: 1 large (33 g)
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
@@ -1060,7 +1060,7 @@ menus:
               - {fdc_id: 171655, servings: 0.6667, note: "cooked without salt"}  # Grits, cooked: ⅔ cup (171 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 169930, servings: 2}  # Peaches, canned in juice: 1 cup (248 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -1101,7 +1101,7 @@ menus:
             items:
               - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
               - {fdc_id: 172187, servings: 2}  # Egg, scrambled: 2 large (122 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
               - {fdc_id: 169641, servings: 1.5}  # Jam or preserves: 1½ tbsp (30 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
@@ -1144,7 +1144,7 @@ menus:
               - {fdc_id: 174832, servings: 0.5}  # Almond milk, unsweetened: ½ cup (131 g)
               - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "cooked"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
             items:
@@ -1189,7 +1189,7 @@ menus:
               - {fdc_id: 171657, servings: 1.25, note: "cooked without salt"}  # Cream of wheat, cooked: 1¼ cups (314 g)
               - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
@@ -1233,7 +1233,7 @@ menus:
               - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
               - {fdc_id: 173418, servings: 0.5}  # Cream cheese: ½ tbsp (7 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 169126, servings: 1.5}  # Pineapple, canned in juice: ¾ cup (188 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -1276,14 +1276,14 @@ menus:
               - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
               - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
             items:
               - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
               - {fdc_id: 173424, servings: 1, note: "egg salad"}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 2, note: "cooked, in the egg salad"}  # Egg white, raw: 2 large (66 g)
+              - {fdc_id: 172183, servings: 2, note: "in the egg salad"}  # Egg white: 2 large (66 g)
               - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
               - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
               - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
@@ -1358,7 +1358,7 @@ menus:
               - {fdc_id: 173905, servings: 1, note: "plain, cooked in water"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
               - {fdc_id: 171711, servings: 2}  # Blueberries, raw: 1 cup (148 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white: 1 large (33 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
               - {fdc_id: 171255, servings: 0.5}  # Half and half: ½ tbsp (8 g)
           - meal: lunch
@@ -1395,7 +1395,7 @@ menus:
             items:
               - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 173418, servings: 1}  # Cream cheese: 1 tbsp (15 g)
               - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
               - {fdc_id: 169936, servings: 1}  # Pears, canned in juice: ½ cup (124 g)
@@ -1436,7 +1436,7 @@ menus:
               - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -1476,7 +1476,7 @@ menus:
               - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
               - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
@@ -1517,7 +1517,7 @@ menus:
               - {fdc_id: 174832, servings: 0.75}  # Almond milk, unsweetened: ¾ cup (197 g)
               - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
               - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
-              - {fdc_id: 172183, servings: 1}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -1557,7 +1557,7 @@ menus:
               - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
               - {fdc_id: 173418, servings: 0.5}  # Cream cheese: ½ tbsp (7 g)
               - {fdc_id: 172187, servings: 2}  # Egg, scrambled: 2 large (122 g)
-              - {fdc_id: 172183, servings: 2}  # Egg white, raw: 2 large (66 g)
+              - {fdc_id: 172183, servings: 2}  # Egg white: 2 large (66 g)
               - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
           - meal: lunch
@@ -1598,7 +1598,7 @@ menus:
               - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
               - {fdc_id: 173430, servings: 0.5, note: "unsalted"}  # Butter, unsalted: ½ tbsp (7 g)
               - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
-              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white, raw: 1 large (33 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
               - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
               - {fdc_id: 171255, servings: 1}  # Half and half: 1 tbsp (15 g)
           - meal: lunch

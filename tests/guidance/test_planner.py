@@ -287,5 +287,9 @@ def test_beam_is_within_half_a_point_of_exhaustive_search(real_foods):
             if oracle is not None:
                 gaps.append(oracle.score - beam[0].score)
     assert len(gaps) == 80
-    assert max(gaps) <= 0.5, max(gaps)
-    assert sorted(gaps)[len(gaps) // 2] <= 0.05  # median essentially 0
+    assert max(gaps) <= 0.5, max(gaps)  # note 06 §6: at most 0.5 below the oracle on these 40 seeded days
+    # The median is not a spec bound (the prototype's was 0). It moves with the breakfast sample, which is drawn
+    # from the eligible foods: when the whole raw egg became an ingredient (v0.3.0 review) it went from 0.02 to
+    # 0.08 here; on 160 seeds it is 0.07 (before) and 0.10 (after). Most built meals still equal the oracle.
+    assert sorted(gaps)[len(gaps) // 2] <= 0.1
+    assert sum(1 for g in gaps if g <= 1e-9) >= len(gaps) // 3

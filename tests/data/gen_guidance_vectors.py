@@ -55,7 +55,7 @@ from app.nutrients import NUTRIENT_KEYS, suggest_targets  # noqa: E402
 
 FORMAT = 1
 REAL_NAMES = (
-    "Chicken breast, roasted, skinless", "Egg white, raw", "Egg, scrambled", "Tofu, firm", "Cheese, cheddar",
+    "Chicken breast, roasted, skinless", "Egg white", "Egg, scrambled", "Tofu, firm", "Cheese, cheddar",
     "Cheese, mozzarella, part skim", "Cheese, American, processed", "Beef, chuck pot roast, braised",
     "Rice, white, long-grain, cooked", "Pasta, cooked", "Couscous, cooked", "Grits, cooked", "Cream of wheat, cooked",
     "Bread, white", "Potato, baked, with skin", "Corn flakes cereal", "Green beans, boiled", "Blueberries, raw",

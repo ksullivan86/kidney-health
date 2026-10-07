@@ -60,7 +60,8 @@ def test_combos_are_read_and_cached():
 
 def test_ingredients_and_role_overrides_in_the_food_list():
     flagged = sorted(f["name"] for f in FOODS.values() if "ingredient" in f["flags"])
-    assert len(flagged) == 12 and "Flour, all-purpose" in flagged and "Salt, table" in flagged
+    assert len(flagged) == 13 and "Flour, all-purpose" in flagged and "Salt, table" in flagged
+    assert "Egg, whole, raw" in flagged  # a recipe ingredient, never a suggestion (v0.3.0 review)
     overrides = {f["name"]: f["role"] for f in FOODS.values() if "role" in f}
     assert overrides == {"Coleslaw, fast food": "veg_fruit"}
     assert all(role in R.ROLES for role in overrides.values())

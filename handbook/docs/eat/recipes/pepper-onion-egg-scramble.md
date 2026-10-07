@@ -41,7 +41,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 | Ingredient | Amount | Grams |
 |---|---|---|
-| Egg white, raw | 6 large egg whites (or about ¾ cup carton whites without added phosphate) | 198 g |
+| Egg white | 6 large egg whites (or about ¾ cup carton whites without added phosphate) | 198 g |
 | Egg, whole, raw | 2 large eggs | 100 g |
 | Bell pepper, red, raw | ½ cup chopped red bell pepper | 75 g |
 | Onion, raw | ¼ cup chopped onion | 40 g |
@@ -74,7 +74,7 @@ Ingredients that are not in the app's food list (herbs, spices and a few others)
 
 Log one serving as these foods from the app's food list (grams per serving), or save them once as a meal ([Planning and menus](../../app/planning-and-menus.md)):
 
-- Egg white, raw: 99 g
+- Egg white: 99 g
 - Egg, whole, raw: 50 g
 - Bell pepper, red, raw: 38 g
 - Onion, raw: 20 g

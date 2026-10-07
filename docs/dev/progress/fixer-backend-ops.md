@@ -20,7 +20,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | C8 | log: unknown K/P counted as 0 with no indicator | server done; UI = frontend fixer |
 | C9 | OFF potassium ceiling drops salt substitutes | done |
 | C10 | OFF per-100 mL drinks without serving not fluid | done |
-| C11 | curated foods: raw eggs suggested | parked (waits for fixer-frontend-docs' guidance commit) |
+| C11 | curated foods: raw eggs suggested | done |
 | C12 | X-KDL-Version header + shell/API check | done |
 | L1 | AI retention purge only with AI traffic | todo |
 | L2 | IDN AI base URL refused | todo |
@@ -86,6 +86,18 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   `version_check.py <scratch> <port>`): server A → page on cached shell → server B → one KH.api call → toast →
   Reload → shell B; negative control with HEAD's client code: no toast within 20 s.
 
+* **C11** `scripts/curated_foods.py`: "Egg white, raw" → "Egg white" (+ cooking note; values per egg, same raw or
+  cooked), "Egg, whole, raw" gets `ingredient` (+ note) so guidance never suggests it; `data/foods.json` rebuilt
+  offline (`python3 scripts/build_food_db.py --version 2026-10-07.2`, cached SR zip; diff = those two rows);
+  guidance + rules vectors regenerated; demo `js/mock/foods.js`, `tools/e2e/parity.py`, handbook menus.yml
+  comments/notes and the generated menus, grocery lists and recipe (`scripts/build_handbook.py`) follow the name.
+  Tests: `tests/guidance/test_food_safety.py` (what-fits all meals + plan, stage 4 and HD, on the real list),
+  test_data ingredient count. `test_planner` beam test: the spec bound (max ≤ 0.5 on 40 seeded days) holds
+  (0.43); its extra median assertion moved 0.02 → 0.08 because the breakfast sample is drawn from eligible foods;
+  measured on 160 seeds: median 0.07 (HEAD) / 0.10 (now), max 0.81 (HEAD) / 0.52 (now). Median bound set to
+  0.1 with the measurement in a comment. Observation for the owner: at HEAD the beam is up to 0.81 below the
+  oracle on a larger sample (ROADMAP already lists the MILP measurement, note 06 §3.1 C).
+
 ## Handoffs (to fixer-frontend-docs)
 
 * **C8 server shape (done, in ARCHITECTURE.md "M2 API: barcode" → "Foods and log changes", last bullet):**
@@ -105,16 +117,6 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 * **docs/barcode-and-photos.md (yours):** mapping rules changed: potassium ≤ 60 g / phosphorus ≤ 32 g per 100 g,
   liquids (per 100 mL / beverages, not powders) count as fluid, prepared-only = servings only, per-serving
   without weight = enter from the label; additive scan ignores the bare element word "phosphorus".
-
-## Parked
-
-* **C11** ready in scratch (`foods.after.json`, `c11_curated.patch`): "Egg white, raw" → "Egg white, cooked" (+ note),
-  "Egg, whole, raw" gets `ingredient` (+ note); `python3 scripts/build_food_db.py --version 2026-10-07.2`
-  (cached SR zip, offline). Needs, in one commit: REAL_NAMES in tests/data/gen_guidance_vectors.py, regenerate
-  guidance + rules vectors, js/mock/foods.js name, tools/e2e/parity.py names, handbook menus via
-  scripts/build_handbook.py, tests that name the builtin. Parked because fixer-frontend-docs has uncommitted
-  changes in gen_guidance_vectors.py and the guidance engine (C1 room/unknowns); regenerating now would
-  commit their half-done work.
 
 ## Decisions
 
