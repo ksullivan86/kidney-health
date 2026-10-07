@@ -396,6 +396,8 @@ Found by the v0.3.0 review of the pre-release build; none affected a released ve
 * "About" targets (the same minimum and maximum, such as protein "about 56 g") read *Near target* /
   *Above target*, never "limit".
 * The red very-high-potassium banner follows the admin's lab freshness setting, like the suggestion.
+* The fiber target's note, Lab results and an Open Food Facts quality note say "fiber", like the rest of
+  the app (they said "fibre").
 
 **Barcodes and packaged foods**
 

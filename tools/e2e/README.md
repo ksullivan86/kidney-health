@@ -93,5 +93,10 @@ setup_required`. So:
 * `upgrade.py` prints `PASS` / `FAIL` lines per starting point; `<out>/report.json`; the old versions' sources,
   data directories and server logs stay in `<out>` for a look after a failure.
 
+When you write or change a harness: Playwright's route handlers (the fake camera, the recorded answers) run
+only while Python is inside a Playwright call, so wait with `page.wait_for_timeout` or `wait_js`, never
+`time.sleep`, while a route must answer. Under heavy parallel load (several harnesses and Chromium workers on
+four cores) a 20-second wait can still run out; re-run the one section with `--only` before suspecting the app.
+
 When a parity check fails after a server change, fix the twin in `app/static/js/engine/*` or
 `app/static/js/mock/*` (and the vectors in `tests/data/` when an engine changed), not the harness.

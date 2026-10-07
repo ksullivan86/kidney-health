@@ -775,7 +775,8 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   between the first-run **setup** screen (setup code from the server log, the first admin, and the
   "Look up barcodes with Open Food Facts" box that sets `food.off_enabled`), **sign-in**, the
   **invite** and **reset** screens (`#/invite/<token>`, `#/reset/<token>`; the page moves the token
-  out of the address bar at once; the reset screen asks `POST /api/auth/reset/info` whose account it
+  out of the address bar at once, into memory and this tab's `sessionStorage` so a reload keeps the link
+  usable, and drops it after use; the reset screen asks `POST /api/auth/reset/info` whose account it
   is and shows the username in a read-only `autocomplete="username"` field, with welcome wording for
   an account an admin created), the **new password** screen (`must_change_password`), the proxy
   "Sign in again" screen (`/?reauth=1`), and the app. Tabs and the header gear carry
@@ -800,7 +801,11 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   server) and About & privacy (licences). Every setting shows its source ("Set by the server
   (ENV), locked" / your choice / admin / app default). Keys are write-only: an empty password
   field, "Set · ends in 9xQz · updated Oct 3", Replace / Remove, never a value from the server.
-  The theme and Install panel moved here from Profile.
+  The key buttons are **Test and save** and **Save**: `PUT /api/me/keys/{p}` stores the key whatever
+  the test says, so a test-only button would mislead. The theme and Install panel moved here from Profile.
+  The sign-in screen never hints at an account name (an upgraded v0.2 server's admin is `admin` or
+  `ADMIN_USERNAME`; the server log, CHANGELOG and `docs/accounts.md` tell the operator): a public page
+  must not reveal who has an account.
 
 ## Milestones
 

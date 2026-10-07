@@ -139,7 +139,7 @@ QUALITY_MESSAGES: dict[str, str] = {
     "potassium_unknown": "Potassium is not listed for this product: treat it as unknown, not zero.",
     "phosphorus_unknown": "Phosphorus is not listed for this product: treat it as unknown, not zero.",
     "sodium_from_salt": "Sodium was worked out from the salt figure (salt ÷ 2.5).",
-    "carbs_available": "This label is not a US or Canadian one: its carbohydrate usually excludes fibre.",
+    "carbs_available": "This label is not a US or Canadian one: its carbohydrate usually excludes fiber.",
     "prepared_values": "Only the values for the prepared product are listed (as made by the package directions), and the "
                        "serving weight is the product as sold, so it is logged in servings, not grams.",
     "ml_as_g": "The serving is in millilitres; it is counted as grams (1 mL ≈ 1 g).",

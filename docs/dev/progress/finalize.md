@@ -36,8 +36,17 @@ Role: finalize the v0.3.0 build (ports 8640-8659; scratch
   docs/https.md + handbook self-hosting/https.md point at the "Works offline" row; 2 tests in
   tests/test_settings_ui.py. Test docstrings no longer point at progress notes (they get deleted).
 
+- "Fibre" -> "Fiber" in the FB-1 note (target_rules.py + targets.js), Labs label, OFF quality note
+  (off.py + off.js); targets + barcode vectors regenerated (--check current; node all pass); parity
+  re-run 6528/6528. The one builtin food note ("Bread, whole-wheat") waits for the next foods.json
+  release (ROADMAP open items).
+- ARCHITECTURE: sign-in token sessionStorage, key buttons, no account-name hint on the public page.
+  tools/e2e/README: Playwright route-handler/time.sleep lesson + load flakes. progress/README updated.
+- 24 condensed progress notes deleted (all but README.md and this one); nothing references them.
+
 ## In progress
-- sandbox.py on the rebuilt preview (8643, 2 workers).
+- Final round on the committed tree: regress, journey, learn, upgrade, guidance_perf, preview rebuild +
+  sandbox, pytest x2, vectors, node --check. Then the last commit deletes this note (no [skip ci]).
 
 ## Next
 1. Run every check (pytest python3 + venv312, vectors, node --check, handbook build/check/content/links,

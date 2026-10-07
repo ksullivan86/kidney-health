@@ -370,7 +370,7 @@ NOTES: dict[str, str] = {
     "C-1": "Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day.",
     "C-1.diabetes": "Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day, about {per_meal} g per meal for carb "
                     "counting; your insulin-to-carb ratio decides the real per-meal number.",
-    "FB-1": "Fibre: at least {fib} g/day (14 g per 1000 kcal, ADA 2026). When potassium is limited, get it from low-potassium "
+    "FB-1": "Fiber: at least {fib} g/day (14 g per 1000 kcal, ADA 2026). When potassium is limited, get it from low-potassium "
             "fruit, vegetables and grains.",
     "L-ALB": "Low albumin can also come from inflammation or protein lost in urine, not only from diet (KDOQI 2020 1.2.1). "
              "Labs measure albumin in different ways; ask your team whether this result counts as low for your lab.",

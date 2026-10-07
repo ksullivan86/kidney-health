@@ -159,7 +159,7 @@
     'F-4': 'Fluid: urine {u} mL + ultrafiltration {uf} mL = {fluid} mL/day, about what your body removes each day. Check it with your PD nurse.',
     'C-1': 'Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day.',
     'C-1.diabetes': 'Carbohydrate: 45 % of calories ÷ 4 kcal/g = {carbs} g/day, about {per_meal} g per meal for carb counting; your insulin-to-carb ratio decides the real per-meal number.',
-    'FB-1': 'Fibre: at least {fib} g/day (14 g per 1000 kcal, ADA 2026). When potassium is limited, get it from low-potassium fruit, vegetables and grains.',
+    'FB-1': 'Fiber: at least {fib} g/day (14 g per 1000 kcal, ADA 2026). When potassium is limited, get it from low-potassium fruit, vegetables and grains.',
     'L-ALB': 'Low albumin can also come from inflammation or protein lost in urine, not only from diet (KDOQI 2020 1.2.1). Labs measure albumin in different ways; ask your team whether this result counts as low for your lab.',
     'L-BIC22': 'Bicarbonate {b:.1f} mmol/L is below 22: acid builds up as kidneys fail. {fv}Your team may prescribe bicarbonate (KDOQI 2020 6.1.2).',
     'L-BIC22.fv': 'More fruit and vegetables lower the acid load (KDOQI 2020 6.1.1){k_caveat}. ',

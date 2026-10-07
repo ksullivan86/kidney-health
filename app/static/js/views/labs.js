@@ -45,7 +45,7 @@
     egfr: '/learn/labs/egfr-and-creatinine/', uacr: '/learn/labs/uacr/', a1c: '/learn/labs/a1c/',
   };
   const TARGET_LABELS = [['calories_kcal', 'Calories'], ['protein_g', 'Protein'], ['carbs_g', 'Carbohydrate'], ['carbs_per_meal_g', 'Carbohydrate per meal'],
-    ['fiber_g', 'Fibre'], ['sodium_mg', 'Sodium'], ['potassium_mg', 'Potassium'], ['phosphorus_mg', 'Phosphorus'], ['calcium_mg', 'Calcium'], ['fluid_ml', 'Fluid']];
+    ['fiber_g', 'Fiber'], ['sodium_mg', 'Sodium'], ['potassium_mg', 'Potassium'], ['phosphorus_mg', 'Phosphorus'], ['calcium_mg', 'Calcium'], ['fluid_ml', 'Fluid']];
   const FIELD_INPUT = { analyte: 'lab-analyte', value: 'lab-value', unit: 'lab-unit', taken_on: 'lab-date', note: 'lab-note' };
 
   const cache = { data: null, loading: null, unitSystem: null };
