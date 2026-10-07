@@ -14,7 +14,7 @@ Ports 8390-8399 only (fact checks).
 3. [x] CHANGELOG.md 0.3.0 section (draft done; re-check the integrate agent's fixes before finishing and add them under "Security fixes from review" / Known limitations).
 4. [x] CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md, docs/README.md, docs/maintainers.md,
        docs/ROADMAP.md, .github/ISSUE_TEMPLATE/*, .github/pull_request_template.md.
-5. [ ] README.md for v0.3.0.
+5. [x] README.md for v0.3.0 (barcode and AI handoffs: feature lines, config rows incl. OFF_* and USDA_BRANDED_BARCODE, "Optional: barcode lookups and AI" section linking docs/ai.md).
 6. [ ] Handbook "Using the app" pages (handbook/docs/app/**).
 7. [ ] Link check of touched Markdown; pytest; handbook checks.
 
