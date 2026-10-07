@@ -10,6 +10,7 @@ import calendar
 import itertools
 import json
 import random
+import re
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -303,7 +304,48 @@ def test_nutrition_risk_floor_is_30_kcal_per_kg():
     result = run({"weight_kg": 70, "height_cm": 170, "birth_month": "1961-05", "sex": "female", "frail_or_sarcopenic": True})
     assert "E-3" in rule_ids(result) and result["derived"]["kcal_per_kg"] == 30.0
     assert result["targets"]["calories_kcal"] == 2100
-    assert "Calories: 1920 kcal/day" in note(result, "Calories:")  # the estimate, before E-3 raised it
+    # The estimate is named as an estimate; the only "Calories:" note states the number suggested (review C2).
+    assert note(result, "Energy estimate:").startswith("Energy estimate: 1920 kcal/day for your age")
+    assert note(result, "Energy estimate:").endswith("The calories suggested are in the next note.")
+    assert note(result, "Calories:") == (
+        "Calories: 2100 kcal/day, raised to 30 kcal/kg × 70 kg because of the nutrition risk above (ESPEN 2022; "
+        "KDOQI 2020: 30–35 kcal/kg keeps protein balance)."
+    )
+
+
+def test_the_review_case_tv20_prints_the_target_not_the_estimate():
+    """66 kg, HD, 165 cm, female, born 1956-09, frail, anuric: 1980 kcal/day, not the 1810 kcal estimate."""
+    result = T.suggest_from_records({"weight_kg": 66, "height_cm": 165, "ckd_stage": "5", "dialysis": "hemodialysis",
+                                     "birth_month": "1956-09", "sex": "female", "frail_or_sarcopenic": True,
+                                     "urine_output_ml": 0}, [], date(2026, 10, 7))
+    assert result["targets"]["calories_kcal"] == 1980 and result["derived"]["kcal_per_kg"] == 30.0
+    assert note(result, "Calories:").startswith("Calories: 1980 kcal/day, raised to 30 kcal/kg × 66 kg")
+    assert note(result, "Energy estimate:").startswith("Energy estimate: 1810 kcal/day")
+    assert not any(n.startswith("Calories: 1810") for n in result["notes"])
+
+
+CALORIES_SHOWN = re.compile(r"^Calories: (?:30 kcal/kg × [0-9.]+ kg = )?(\d+) kcal/day")
+PD_FOOD = re.compile(r"(?:food calories are|so they are) (\d+) of (\d+) kcal")
+
+
+def test_the_calories_note_always_states_the_number_suggested():
+    """Property (review C2): exactly one note starts with "Calories:", and its figure is the calories
+    target, or on peritoneal dialysis with absorbed calories the total that E-4 then splits into food
+    calories (= the target). An estimate that a later rule changes never reads as "Calories: …"."""
+    checked = raised = 0
+    for profile, _labs, result in all_results(1500):
+        calories = result["targets"]["calories_kcal"]
+        shown = [n for n in result["notes"] if n.startswith("Calories:")]
+        assert len(shown) == 1, result["notes"]
+        total = int(CALORIES_SHOWN.match(shown[0]).group(1))
+        pd = next((PD_FOOD.search(n) for n in result["notes"] if PD_FOOD.search(n)), None)
+        if pd is not None:
+            assert (int(pd.group(1)), int(pd.group(2))) == (calories, total), result["notes"]
+        else:
+            assert total == calories, (profile, result["notes"])
+        raised += "E-3" in rule_ids(result)
+        checked += 1
+    assert checked > 1000 and raised > 20  # the floor case is exercised, not only the plain one
 
 
 def test_pd_dialysate_subtraction_floor_and_insulin_sentence():
@@ -442,6 +484,32 @@ def test_potassium_notes_and_alert_texts():
     )
     assert "review ceiling for hemodialysis" in note(run({"ckd_stage": "5", "dialysis": "hemodialysis"}), "Potassium")
     assert "for a kidney transplant at stage 2" in note(run({"ckd_stage": "2", "transplant_date": "2019-01-01"}), "Potassium")
+
+
+@pytest.mark.parametrize("profile, mg, relaxed", [
+    ({"ckd_stage": "1"}, 4000, False), ({"ckd_stage": "2"}, 4000, False), ({"ckd_stage": "3a"}, 4000, False),
+    ({"ckd_stage": "2", "transplant_date": "2019-01-01"}, 4000, False),
+    ({"ckd_stage": "3b"}, 4000, True), ({"ckd_stage": "4"}, 3500, True), ({"ckd_stage": "5"}, 3000, True),
+    ({"ckd_stage": "5", "dialysis": "hemodialysis"}, 3000, True), ({"ckd_stage": "5", "dialysis": "peritoneal"}, 4000, True),
+])
+def test_k2_says_relaxed_only_when_the_ceiling_moved(profile, mg, relaxed):
+    """Review L3: at stages 1–3a the relaxed step equals the ladder, so nothing is "relaxed one step"."""
+    with_lab = run(profile, {"potassium": 4.4})
+    text = note(with_lab, "Potassium")
+    assert k_rule_of(with_lab) == "K-2" and with_lab["targets"]["potassium_mg"] == mg
+    without = run(profile)["targets"]["potassium_mg"]
+    assert ("relaxed one step to" in text) is relaxed and (without != mg) is relaxed
+    if not relaxed:
+        assert f"stays at {mg} mg/day, already the highest step for " in text
+
+
+def test_low_bmi_from_age_70_names_the_glim_cut_off():
+    """Review L3: W-1 calls BMI 18.7 healthy, so N-1 must say why 22 is the cut-off for this person."""
+    older = run({"weight_kg": 48, "height_cm": 160, "birth_month": "1954-09", "sex": "female"})
+    assert "Nutrition risk: BMI 18.7 is below 22, the low-weight cut-off from age 70 (GLIM 2019). " in note(older, "Nutrition risk")
+    assert "is in the healthy BMI range (BMI 18.7)" in note(older, "Weight basis")  # W-1: the 18.5 floor
+    younger = run({"weight_kg": 50, "height_cm": 160, "birth_month": "1980-09", "sex": "female"})
+    assert "Nutrition risk: BMI 19.5 is below 20. " in note(younger, "Nutrition risk")  # under 70: no extra clause
 
 
 @pytest.mark.parametrize(

@@ -1429,6 +1429,16 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
 * CSV (`/api/log/export.csv` and the export archive's `log.csv`) gains the last columns `source` and
   `source_license`; the archive's `foods.csv` gains `gtin`, `source_license`, `source_url`, and its
   README carries the ODbL notice.
+* **Unknown values are counted, never shown as 0** (v0.3.0 review; note 03 R7, F1; note 06 R4). A total
+  adds only known values (`nutrients.add_totals`), so every total says how many entries it misses
+  (`nutrients.count_unknown`; maps are `{nutrient: entries}`, only nutrients with a count):
+  `DaySummary += {"unknown", "planned_unknown", "projected_unknown", "meal_unknown": {meal: {...}},
+  "planned_meal_unknown": {meal: {...}}}`; every `status` / `projected_status` item gains `"unknown": n`
+  (0 when all are known; the `level` is judged on what is known, so with `n > 0` the true total may be
+  higher); `/api/log/range` days gain `unknown`, `planned_unknown`, `projected_unknown`;
+  `PeriodSummary.nutrients[key]` gains `unknown_entries` and `unknown_days` (logged days of the period with
+  at least one such entry) and each interdialytic nutrient `unknown_entries`. The UI shows such a total
+  with "+ n not listed" (never a bare `0` or `–`); the demo twin (`js/mock/log.js`) returns the same fields.
 
 ### Schema step 7 (`m007_barcode.py`)
 

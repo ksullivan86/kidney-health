@@ -567,6 +567,8 @@ class NutrientStatus(BaseModel):
     min: Number | None = None
     fraction: float | None
     level: StatusLevel
+    # Entries whose value is unknown (not counted in ``value``; the true total may be higher).
+    unknown: int = Field(default=0, ge=0)
 
 
 class Alert(BaseModel):
@@ -590,6 +592,12 @@ class DaySummary(BaseModel):
     alerts: list[Alert]
     projected_alerts: list[Alert]
     counts: Counts
+    # {nutrient: entries without a value}, only nutrients with a count (the totals skip them).
+    unknown: dict[str, int] = Field(default_factory=dict)
+    planned_unknown: dict[str, int] = Field(default_factory=dict)
+    projected_unknown: dict[str, int] = Field(default_factory=dict)
+    meal_unknown: dict[str, dict[str, int]] = Field(default_factory=dict)
+    planned_meal_unknown: dict[str, dict[str, int]] = Field(default_factory=dict)
 
 
 class DayTotals(BaseModel):
@@ -600,6 +608,9 @@ class DayTotals(BaseModel):
     status: dict[str, NutrientStatus]
     projected_status: dict[str, NutrientStatus]
     counts: Counts
+    unknown: dict[str, int] = Field(default_factory=dict)
+    planned_unknown: dict[str, int] = Field(default_factory=dict)
+    projected_unknown: dict[str, int] = Field(default_factory=dict)
 
 
 class RangeSummary(BaseModel):
@@ -628,6 +639,8 @@ class PeriodNutrient(BaseModel):
     previous_average: Number | None
     change_pct: float | None
     assessment: Assessment
+    unknown_entries: int = 0  # eaten entries in the period without a value (not in total/average)
+    unknown_days: int = 0  # logged days of the period with at least one such entry
 
 
 class InterdialyticNutrient(BaseModel):
@@ -635,6 +648,7 @@ class InterdialyticNutrient(BaseModel):
     limit: Number
     fraction: float
     level: StatusLevel
+    unknown_entries: int = 0
 
 
 class Interdialytic(BaseModel):

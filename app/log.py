@@ -49,11 +49,14 @@ from .nutrients import (
     add_totals,
     build_alerts,
     build_projected_alerts,
+    count_unknown,
     daily_status,
     empty_totals,
     food_warnings,
     kidney_rating,
+    mark_unknown,
     meal_carb_alerts,
+    merge_unknown,
     projected_meal_carb_alerts,
     round_nutrients,
     round_value,
@@ -226,6 +229,23 @@ def eaten_day_totals(conn: sqlite3.Connection, user_id: int, start: str, end: st
     return {row["date"]: {key: float(row[key] or 0.0) for key in NUTRIENT_KEYS} for row in rows}
 
 
+def eaten_day_unknown(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> dict[str, dict[str, int]]:
+    """``{date: {key: n}}``: how many of ``user_id``'s *eaten* entries that day have no value for
+    ``key`` (only days and keys with a count). :func:`eaten_day_totals` cannot tell those apart from 0."""
+    counts = ", ".join(f"SUM({key} IS NULL) AS {key}" for key in NUTRIENT_KEYS)
+    rows = conn.execute(
+        f"""SELECT date, {counts} FROM log_entries
+            WHERE user_id = ? AND status = 'eaten' AND date >= ? AND date <= ? GROUP BY date""",
+        (int(user_id), start, end),
+    ).fetchall()
+    out: dict[str, dict[str, int]] = {}
+    for row in rows:
+        day = {key: int(row[key]) for key in NUTRIENT_KEYS if row[key]}
+        if day:
+            out[row["date"]] = day
+    return out
+
+
 def resolve_servings(food: sqlite3.Row, servings: float | None, grams: float | None) -> tuple[float, float | None]:
     """``grams`` wins when given (servings = grams / serving_g); default 1 serving."""
     if grams is not None:
@@ -271,28 +291,43 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
     ``totals`` / ``status`` / ``alerts`` are computed on eaten entries only (unchanged from
     v0.1). ``projected_alerts`` is empty when nothing is planned, so the UI never shows
     "If you eat what's planned…" for a day that has no plan.
+
+    A total skips entries whose value is unknown (``NULL``), so every total comes with how many
+    entries it misses: ``unknown`` / ``planned_unknown`` / ``projected_unknown`` and
+    ``meal_unknown`` / ``planned_meal_unknown`` (``{key: entries}``, only keys with a count), and
+    every status item has ``"unknown": n`` (its level is judged on what is known; with ``n > 0`` the
+    true total may be higher). A total of 0 with an unknown count means "not listed", never "none".
     """
     eaten = empty_totals()
     planned = empty_totals()
     meals = {meal: empty_totals() for meal in MEALS}
     planned_meals = {meal: empty_totals() for meal in MEALS}
+    unknown: dict[str, int] = {}
+    planned_unknown: dict[str, int] = {}
+    meal_unknown: dict[str, dict[str, int]] = {meal: {} for meal in MEALS}
+    planned_meal_unknown: dict[str, dict[str, int]] = {meal: {} for meal in MEALS}
     counts = {"eaten": 0, "planned": 0}
     for row in rows:
         raw = raw_nutrients(row)
         if row["status"] == "planned":
             add_totals(planned, raw)
             add_totals(planned_meals.setdefault(row["meal"], empty_totals()), raw)
+            count_unknown(planned_unknown, raw)
+            count_unknown(planned_meal_unknown.setdefault(row["meal"], {}), raw)
             counts["planned"] += 1
         else:
             add_totals(eaten, raw)
             add_totals(meals.setdefault(row["meal"], empty_totals()), raw)
+            count_unknown(unknown, raw)
+            count_unknown(meal_unknown.setdefault(row["meal"], {}), raw)
             counts["eaten"] += 1
     projected = add_totals(dict(eaten), planned)
+    projected_unknown = merge_unknown(unknown, planned_unknown)
 
     targets = profile["targets"]
     warn_fraction = profile["warn_fraction"]
-    status = daily_status(eaten, targets, warn_fraction)
-    projected_status = daily_status(projected, targets, warn_fraction)
+    status = mark_unknown(daily_status(eaten, targets, warn_fraction), unknown)
+    projected_status = mark_unknown(daily_status(projected, targets, warn_fraction), projected_unknown)
     alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"))
     projected_alerts: list[dict[str, Any]] = []
     if counts["planned"]:
@@ -311,6 +346,11 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
         "alerts": alerts,
         "projected_alerts": projected_alerts,
         "counts": counts,
+        "unknown": unknown,
+        "planned_unknown": planned_unknown,
+        "projected_unknown": projected_unknown,
+        "meal_unknown": meal_unknown,
+        "planned_meal_unknown": planned_meal_unknown,
     }
 
 
@@ -362,6 +402,9 @@ def get_range(user: CurrentUser, start: str | None = None, end: str | None = Non
                 "status": figures["status"],
                 "projected_status": figures["projected_status"],
                 "counts": figures["counts"],
+                "unknown": figures["unknown"],
+                "planned_unknown": figures["planned_unknown"],
+                "projected_unknown": figures["projected_unknown"],
             }
         )
         current += timedelta(days=1)
@@ -403,9 +446,11 @@ def get_summary(user: CurrentUser, start: str | None = None, end: str | None = N
     if interval is not None:
         fetch_from = min(fetch_from, to_date(interval["since"]))
     day_totals = eaten_day_totals(conn, user.id, fetch_from.isoformat(), end_d.isoformat())
+    day_unknown = eaten_day_unknown(conn, user.id, fetch_from.isoformat(), end_d.isoformat())
 
-    summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction)
-    summary["interdialytic"] = None if interval is None else interdialytic_block(interval, day_totals, targets, warn_fraction)
+    summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction, day_unknown=day_unknown)
+    summary["interdialytic"] = None if interval is None else interdialytic_block(interval, day_totals, targets, warn_fraction,
+                                                                                  day_unknown=day_unknown)
     summary["notes"] = summary_notes(profile["dialysis"], profile["dialysis_days"], interval)
     return summary
 

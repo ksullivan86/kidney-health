@@ -113,6 +113,36 @@ def add_totals(acc: dict[str, float], values: Mapping[str, float | None]) -> dic
     return acc
 
 
+def count_unknown(acc: dict[str, int], values: Mapping[str, float | None]) -> dict[str, int]:
+    """Count, in ``acc`` (in place), the nutrients ``values`` does not know: ``{key: entries}``.
+
+    :func:`add_totals` skips an unknown value, so a total alone cannot tell "none" from "not listed"
+    (most scanned foods have no potassium or phosphorus value). Only keys with a count are present."""
+    for key in NUTRIENT_KEYS:
+        if values.get(key) is None:
+            acc[key] = acc.get(key, 0) + 1
+    return acc
+
+
+def merge_unknown(*counts: Mapping[str, int]) -> dict[str, int]:
+    """The sum of several :func:`count_unknown` results (e.g. eaten + planned = projected)."""
+    out: dict[str, int] = {}
+    for count in counts:
+        for key, n in count.items():
+            out[key] = out.get(key, 0) + int(n)
+    return out
+
+
+def mark_unknown(status: dict[str, dict[str, Any]], unknown: Mapping[str, int]) -> dict[str, dict[str, Any]]:
+    """Set ``"unknown": n`` on every :func:`daily_status` item: how many entries' values its total
+    misses (0 when all are known). The level is kept (it is judged on what is known), but with
+    ``n > 0`` the total is incomplete: the true value may be higher, so the app must never show it
+    as a plain, complete figure."""
+    for key, item in status.items():
+        item["unknown"] = int(unknown.get(key, 0))
+    return status
+
+
 def scale_nutrients(values: Mapping[str, float | None], factor: float) -> dict[str, float | None]:
     """Multiply every known nutrient by ``factor``; unknown (``None``) stays ``None``."""
     return {

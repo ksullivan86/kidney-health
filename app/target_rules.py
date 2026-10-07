@@ -243,18 +243,25 @@ NOTES: dict[str, str] = {
     "N-1": "Nutrition risk: {reasons}. The app moves protein and calories to the higher end. Ask your renal dietitian for a "
            "nutrition assessment and whether oral nutrition supplements would help (KDOQI 2020 4.1.1).",
     "N-1.low_bmi": "BMI {bmi:.1f} is below {thr:g}",
+    # From age 70 the GLIM cut-off (22) is above the healthy-range floor (18.5) that W-1 names, so say why.
+    "N-1.low_bmi.older": "BMI {bmi:.1f} is below {thr:g}, the low-weight cut-off from age 70 (GLIM 2019)",
     "N-1.weight_loss": "you have lost {pct:.1f} % of your weight in 6 months",
     "N-1.low_albumin": "blood albumin {alb:.1f} g/dL is below 3.8",
     "N-1.frailty": "frailty or low muscle mass is marked in your profile",
     "E-1": "Calories: {kcal} kcal/day, the energy estimate for your age, sex, height, {ref:g} kg and activity "
            "(\"{activity_label}\") from the 2023 Dietary Reference Intakes ({kpk:.1f} kcal/kg), kept inside the kidney "
            "guideline range of 25–35 kcal/kg (KDOQI 2020 3.1.1).",
+    # E-1 when E-3 then raises the result: the estimate is not the suggestion, so it must not read "Calories: …".
+    "E-1.estimate": "Energy estimate: {kcal} kcal/day for your age, sex, height, {ref:g} kg and activity "
+                    "(\"{activity_label}\") from the 2023 Dietary Reference Intakes ({kpk:.1f} kcal/kg), kept inside the "
+                    "kidney guideline range of 25–35 kcal/kg (KDOQI 2020 3.1.1). The calories suggested are in the next note.",
     "E-1.clamped": " The estimate was {raw:.1f} kcal/kg, so it was set to {edge} kcal/kg.",
     "E-1.unspecified": " Sex is not set, so the average of the female and male equations is used.",
     "E-2": "Calories: 30 kcal/kg × {ref:g} kg = {kcal} kcal/day, the middle of the guideline range of 25–35 kcal/kg "
            "(KDOQI 2020 3.1.1). Add your birth month, sex, height and activity for a personal estimate.",
-    "E-3": "Calories were raised to 30 kcal/kg because of the nutrition risk above (ESPEN 2022; KDOQI 2020: 30–35 kcal/kg "
-           "keeps protein balance).",
+    # Project wording (v0.3.0 review): note 05 §4.5's E-3 text gave no figure, so E-1's estimate read as the target.
+    "E-3": "Calories: {kcal} kcal/day, raised to 30 kcal/kg × {ref:g} kg because of the nutrition risk above (ESPEN 2022; "
+           "KDOQI 2020: 30–35 kcal/kg keeps protein balance).",
     "E-4": "Peritoneal dialysis: {pdk} kcal/day absorbed from dialysis fluid was subtracted, so food calories are {kcal} of "
            "{total} kcal.",
     # Project wording for the 20 kcal/kg floor of E-4 (the subtraction would leave less).
@@ -298,6 +305,10 @@ NOTES: dict[str, str] = {
     "K-2": "Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, so the review ceiling is relaxed one step to "
            "{k_mg} mg/day. While it stays normal there is no need to cut fruit and vegetables (KDOQI 2020 6.4.1; KDIGO 2024). "
            "{potassium_note}",
+    # K-2 where the relaxed step equals the ladder (stages 1–3a, and a graft at those stages): nothing is relaxed.
+    "K-2.top": "Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, so the review ceiling stays at {k_mg} "
+               "mg/day, already the highest step for {stage_label}. While it stays normal there is no need to cut fruit and "
+               "vegetables (KDOQI 2020 6.4.1; KDIGO 2024). {potassium_note}",
     "K-2h": "Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, but you have had high potassium before or "
             "take a potassium binder, so the ceiling stays at {k_mg} mg/day; processed foods with potassium additives matter "
             "most (KDIGO 2024 PP 3.11.5.2). {potassium_note}",

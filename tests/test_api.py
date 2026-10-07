@@ -495,7 +495,7 @@ def test_day_summary_totals_meals_status_alerts_and_order(client):
     assert day["targets"]["potassium_mg"] == 1000 and day["targets"]["fluid_ml"] is None
     status = day["status"]
     assert set(status) == {"potassium_mg", "protein_g", "sodium_mg", "carbs_g"}  # null fluid and per-meal carbs excluded
-    assert status["potassium_mg"] == {"value": 858, "target": 1000, "min": None, "fraction": 0.86, "level": "caution"}
+    assert status["potassium_mg"] == {"value": 858, "target": 1000, "min": None, "fraction": 0.86, "level": "caution", "unknown": 0}
     assert status["protein_g"]["level"] == "caution" and status["protein_g"]["min"] == 42
     assert status["sodium_mg"]["level"] == "ok"
 

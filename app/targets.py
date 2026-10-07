@@ -322,7 +322,8 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
         threshold = R.LOW_BMI["from_70"] if age is not None and age >= R.GLIM_OLDER_AGE else R.LOW_BMI["under_70"]
         if bmi_shown < threshold:
             risk.append("low_bmi")
-            reasons.append(R.NOTES["N-1.low_bmi"].format(bmi=bmi_shown, thr=threshold))
+            key = "N-1.low_bmi.older" if threshold == R.LOW_BMI["from_70"] else "N-1.low_bmi"
+            reasons.append(R.NOTES[key].format(bmi=bmi_shown, thr=threshold))
     if inputs.weight_6_months_ago_kg is not None and float(inputs.weight_6_months_ago_kg) > 0:
         before = float(inputs.weight_6_months_ago_kg)
         pct = _half_up((before - actual) / before * 100.0, 1)
@@ -346,7 +347,8 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
         eer = eer_kcal(inputs.sex, activity, age, h, ref)
         eer_per_kg = eer / ref
         kpk = min(max(eer_per_kg, R.KCAL_PER_KG_MIN), R.KCAL_PER_KG_MAX)
-        note = R.NOTES["E-1"].format(
+        raised = bool(risk) and kpk < R.KCAL_PER_KG_RISK_FLOOR  # E-3 follows: this is only the estimate
+        note = R.NOTES["E-1.estimate" if raised else "E-1"].format(
             kcal=_calories(kpk * ref), ref=ref, activity_label=R.ACTIVITY_LABELS[activity], kpk=_half_up(kpk, 1)
         )
         if kpk != eer_per_kg:
@@ -362,7 +364,7 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
     b.apply(e_id, note)
     if risk and kpk < R.KCAL_PER_KG_RISK_FLOOR:
         kpk = R.KCAL_PER_KG_RISK_FLOOR
-        b.apply("E-3", R.NOTES["E-3"])
+        b.apply("E-3", R.NOTES["E-3"].format(kcal=_calories(kpk * ref), ref=ref))
     total = kpk * ref
     food = total
     pdk = inputs.pd_dialysate_kcal
@@ -441,7 +443,11 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
             b.apply("K-2h", R.NOTES["K-2h"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
         else:
             potassium = R.POTASSIUM_RELAXED[ladder_key]
-            b.apply("K-2", R.NOTES["K-2"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+            if potassium == ladder:  # stages 1–3a: the relaxed step is the ladder, so nothing was relaxed
+                b.apply("K-2", R.NOTES["K-2.top"].format(k=k, date=k_lab.taken_on, k_mg=potassium, stage_label=stage_label,
+                                                         potassium_note=R.POTASSIUM_NOTE))
+            else:
+                b.apply("K-2", R.NOTES["K-2"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
     elif k <= R.POTASSIUM_HIGH_MAX:
         potassium = min(ladder, R.POTASSIUM_CAPS["K-3"])
         b.apply("K-3", R.NOTES["K-3"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))

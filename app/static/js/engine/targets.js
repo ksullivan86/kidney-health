@@ -102,14 +102,16 @@
     'W-D': ' Enter your dry weight, measured after a dialysis session.',
     'N-1': 'Nutrition risk: {reasons}. The app moves protein and calories to the higher end. Ask your renal dietitian for a nutrition assessment and whether oral nutrition supplements would help (KDOQI 2020 4.1.1).',
     'N-1.low_bmi': 'BMI {bmi:.1f} is below {thr:g}',
+    'N-1.low_bmi.older': 'BMI {bmi:.1f} is below {thr:g}, the low-weight cut-off from age 70 (GLIM 2019)',
     'N-1.weight_loss': 'you have lost {pct:.1f} % of your weight in 6 months',
     'N-1.low_albumin': 'blood albumin {alb:.1f} g/dL is below 3.8',
     'N-1.frailty': 'frailty or low muscle mass is marked in your profile',
     'E-1': 'Calories: {kcal} kcal/day, the energy estimate for your age, sex, height, {ref:g} kg and activity ("{activity_label}") from the 2023 Dietary Reference Intakes ({kpk:.1f} kcal/kg), kept inside the kidney guideline range of 25–35 kcal/kg (KDOQI 2020 3.1.1).',
+    'E-1.estimate': 'Energy estimate: {kcal} kcal/day for your age, sex, height, {ref:g} kg and activity ("{activity_label}") from the 2023 Dietary Reference Intakes ({kpk:.1f} kcal/kg), kept inside the kidney guideline range of 25–35 kcal/kg (KDOQI 2020 3.1.1). The calories suggested are in the next note.',
     'E-1.clamped': ' The estimate was {raw:.1f} kcal/kg, so it was set to {edge} kcal/kg.',
     'E-1.unspecified': ' Sex is not set, so the average of the female and male equations is used.',
     'E-2': 'Calories: 30 kcal/kg × {ref:g} kg = {kcal} kcal/day, the middle of the guideline range of 25–35 kcal/kg (KDOQI 2020 3.1.1). Add your birth month, sex, height and activity for a personal estimate.',
-    'E-3': 'Calories were raised to 30 kcal/kg because of the nutrition risk above (ESPEN 2022; KDOQI 2020: 30–35 kcal/kg keeps protein balance).',
+    'E-3': 'Calories: {kcal} kcal/day, raised to 30 kcal/kg × {ref:g} kg because of the nutrition risk above (ESPEN 2022; KDOQI 2020: 30–35 kcal/kg keeps protein balance).',
     'E-4': 'Peritoneal dialysis: {pdk} kcal/day absorbed from dialysis fluid was subtracted, so food calories are {kcal} of {total} kcal.',
     'E-4.floor': 'Peritoneal dialysis: about {pdk} kcal/day is absorbed from dialysis fluid, but food calories are kept at 20 kcal/kg × {ref:g} kg, so they are {kcal} of {total} kcal. Ask your renal dietitian about this.',
     'E-4.insulin': ' That glucose also needs insulin; your diabetes team plans for it.',
@@ -129,6 +131,7 @@
     'K-0.labs_off': 'Potassium: {k_mg} mg/day is a review ceiling for {stage_label}, not a prescription; this server does not change it for blood test results. {potassium_note}',
     'K-1': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is low, so no potassium limit is set. Ask your care team whether to eat more potassium-rich foods or take a supplement (KDOQI 2020 6.4.2). {potassium_note}',
     'K-2': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, so the review ceiling is relaxed one step to {k_mg} mg/day. While it stays normal there is no need to cut fruit and vegetables (KDOQI 2020 6.4.1; KDIGO 2024). {potassium_note}',
+    'K-2.top': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, so the review ceiling stays at {k_mg} mg/day, already the highest step for {stage_label}. While it stays normal there is no need to cut fruit and vegetables (KDOQI 2020 6.4.1; KDIGO 2024). {potassium_note}',
     'K-2h': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is normal, but you have had high potassium before or take a potassium binder, so the ceiling stays at {k_mg} mg/day; processed foods with potassium additives matter most (KDIGO 2024 PP 3.11.5.2). {potassium_note}',
     'K-3': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is above normal (over 5.0), so the ceiling is {k_mg} mg/day. Check processed foods with potassium additives, salt substitutes and large portions first; your team may also review medicines (KDIGO 2024 Figure 32). {potassium_note}',
     'K-4': 'Potassium: your blood potassium ({k:.1f} mmol/L on {date}) is high (over 5.5), so the ceiling is {k_mg} mg/day. Tell your care team; they may change medicines or start a potassium binder. {potassium_note}',
@@ -467,7 +470,10 @@
     const reasons = [];
     if (bmiShown !== null) {
       const threshold = age !== null && age >= GLIM_OLDER_AGE ? LOW_BMI.from_70 : LOW_BMI.under_70;
-      if (bmiShown < threshold) { risk.push('low_bmi'); reasons.push(pyFormat(NOTES['N-1.low_bmi'], { bmi: bmiShown, thr: threshold })); }
+      if (bmiShown < threshold) {
+        risk.push('low_bmi');
+        reasons.push(pyFormat(NOTES[threshold === LOW_BMI.from_70 ? 'N-1.low_bmi.older' : 'N-1.low_bmi'], { bmi: bmiShown, thr: threshold }));
+      }
     }
     if (inputs.weight_6_months_ago_kg != null && Number(inputs.weight_6_months_ago_kg) > 0) {
       const before = Number(inputs.weight_6_months_ago_kg);
@@ -485,7 +491,8 @@
       eer = eerKcal(inputs.sex, activity, age, h, ref);
       eerPerKg = eer / ref;
       kpk = Math.min(Math.max(eerPerKg, KCAL_PER_KG_MIN), KCAL_PER_KG_MAX);
-      note = pyFormat(NOTES['E-1'], { kcal: calories(kpk * ref), ref, activity_label: ACTIVITY_LABELS[activity], kpk: halfUp(kpk, 1) });
+      const raised = risk.length > 0 && kpk < KCAL_PER_KG_RISK_FLOOR; // E-3 follows: this is only the estimate
+      note = pyFormat(NOTES[raised ? 'E-1.estimate' : 'E-1'], { kcal: calories(kpk * ref), ref, activity_label: ACTIVITY_LABELS[activity], kpk: halfUp(kpk, 1) });
       if (kpk !== eerPerKg) note += pyFormat(NOTES['E-1.clamped'], { raw: halfUp(eerPerKg, 1), edge: pyG(kpk) });
       if (inputs.sex === 'unspecified') note += NOTES['E-1.unspecified'];
       eId = 'E-1';
@@ -496,7 +503,10 @@
     }
     if (mode === 'peritoneal' && inputs.pd_dialysate_kcal == null) note += NOTES['E-PD.missing'];
     apply(eId, note);
-    if (risk.length && kpk < KCAL_PER_KG_RISK_FLOOR) { kpk = KCAL_PER_KG_RISK_FLOOR; apply('E-3', NOTES['E-3']); }
+    if (risk.length && kpk < KCAL_PER_KG_RISK_FLOOR) {
+      kpk = KCAL_PER_KG_RISK_FLOOR;
+      apply('E-3', pyFormat(NOTES['E-3'], { kcal: calories(kpk * ref), ref }));
+    }
     const total = kpk * ref;
     let food = total;
     const pdk = inputs.pd_dialysate_kcal;
@@ -562,7 +572,12 @@
       apply('K-1', pyFormat(NOTES['K-1'], kv({})));
     } else if (k <= POTASSIUM_NORMAL_MAX) {
       if (inputs.hyperkalemia_history) { potassium = ladder; apply('K-2h', pyFormat(NOTES['K-2h'], kv({ k_mg: potassium }))); }
-      else { potassium = POTASSIUM_RELAXED[ladderKey]; apply('K-2', pyFormat(NOTES['K-2'], kv({ k_mg: potassium }))); }
+      else {
+        potassium = POTASSIUM_RELAXED[ladderKey];
+        // Stages 1–3a: the relaxed step is the ladder, so nothing was relaxed.
+        if (potassium === ladder) apply('K-2', pyFormat(NOTES['K-2.top'], kv({ k_mg: potassium, stage_label: sLabel })));
+        else apply('K-2', pyFormat(NOTES['K-2'], kv({ k_mg: potassium })));
+      }
     } else if (k <= POTASSIUM_HIGH_MAX) {
       potassium = Math.min(ladder, POTASSIUM_CAPS['K-3']);
       apply('K-3', pyFormat(NOTES['K-3'], kv({ k_mg: potassium })));

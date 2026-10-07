@@ -107,7 +107,8 @@ def test_day_summary_separates_eaten_planned_and_projected(client):
     assert set(day["planned_totals"]) == set(day["projected_totals"]) == set(NUTRIENT_KEYS)
 
     assert day["status"]["potassium_mg"]["level"] == "ok" and day["status"]["potassium_mg"]["value"] == 422
-    assert day["projected_status"]["potassium_mg"] == {"value": 1062, "target": 1000, "min": None, "fraction": 1.06, "level": "over"}
+    assert day["projected_status"]["potassium_mg"] == {"value": 1062, "target": 1000, "min": None, "fraction": 1.06, "level": "over",
+                                                       "unknown": 0}
 
     assert day["meals"]["breakfast"]["carbs_g"] == 27.0 and day["meals"]["lunch"]["carbs_g"] == 0
     assert day["planned_meals"]["breakfast"]["fluid_ml"] == 240 and day["planned_meals"]["lunch"]["carbs_g"] == 27.0
@@ -144,7 +145,8 @@ def test_range_reports_planned_and_projected_per_day(client):
     assert days[1]["totals"]["potassium_mg"] == 0 and days[1]["status"]["potassium_mg"]["level"] == "ok"
     assert days[1]["planned_totals"]["potassium_mg"] == 422 and days[1]["projected_totals"]["potassium_mg"] == 422
     assert days[1]["projected_status"]["potassium_mg"]["level"] == "over"
-    assert set(days[2]) == {"date", "totals", "planned_totals", "projected_totals", "status", "projected_status", "counts"}
+    assert set(days[2]) == {"date", "totals", "planned_totals", "projected_totals", "status", "projected_status", "counts",
+                            "unknown", "planned_unknown", "projected_unknown"}
 
 
 def test_mark_eaten_for_a_meal_then_the_whole_day(client):
@@ -323,7 +325,7 @@ def test_summary_interdialytic_block_for_hemodialysis(client):
     iv = s["interdialytic"]
     assert (iv["since"], iv["days"], iv["next"]) == ("2026-10-02", 3, "2026-10-05")
     assert set(iv["nutrients"]) == {"potassium_mg", "sodium_mg", "fluid_ml"}
-    assert iv["nutrients"]["fluid_ml"] == {"total": 960, "limit": 4500, "fraction": 0.21, "level": "ok"}
+    assert iv["nutrients"]["fluid_ml"] == {"total": 960, "limit": 4500, "fraction": 0.21, "level": "ok", "unknown_entries": 0}
     assert iv["nutrients"]["potassium_mg"]["total"] == 422 and iv["nutrients"]["potassium_mg"]["limit"] == 6000
     assert iv["nutrients"]["sodium_mg"]["total"] == 7 + 14 + 7 + 1 and iv["nutrients"]["sodium_mg"]["limit"] == 6000
     assert NOTE_INTERDIALYTIC in s["notes"] and NOTE_NO_DIALYSIS_DAYS not in s["notes"]
@@ -333,7 +335,7 @@ def test_summary_interdialytic_block_for_hemodialysis(client):
     # ending on a dialysis day: intake that day counts toward the next session
     s = client.get("/api/log/summary", params={"start": "2026-09-29", "end": "2026-10-05"}).json()
     assert (s["interdialytic"]["since"], s["interdialytic"]["days"], s["interdialytic"]["next"]) == ("2026-10-05", 1, "2026-10-07")
-    assert s["interdialytic"]["nutrients"]["fluid_ml"] == {"total": 0, "limit": 1500, "fraction": 0.0, "level": "ok"}
+    assert s["interdialytic"]["nutrients"]["fluid_ml"] == {"total": 0, "limit": 1500, "fraction": 0.0, "level": "ok", "unknown_entries": 0}
 
     # a nutrient without a target drops out of the block
     client.put("/api/profile", json={"targets": {"fluid_ml": None}})

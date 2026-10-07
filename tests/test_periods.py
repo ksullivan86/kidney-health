@@ -102,7 +102,7 @@ def test_summarize_period_matches_contract_shape_and_maths():
     assert k == {
         "role": "limit", "target": 2500, "total": 6900, "average": 2300, "fraction": 0.92, "level": "caution",
         "days_over": 1, "max_day": {"date": "2026-10-01", "value": 3100},
-        "previous_average": 2500, "change_pct": -8.0, "assessment": "daily",
+        "previous_average": 2500, "change_pct": -8.0, "assessment": "daily", "unknown_entries": 0, "unknown_days": 0,
     }
     ph = s["nutrients"]["phosphorus_mg"]
     assert ph["total"] == 2700 and ph["average"] == 900 and ph["fraction"] == 0.9 and ph["level"] == "caution"
@@ -228,11 +228,11 @@ def test_interdialytic_block_totals_over_the_interval_against_target_times_days(
     assert set(block) == {"since", "days", "next", "nutrients"}
     assert (block["since"], block["days"], block["next"]) == ("2026-10-02", 3, MON)
     assert set(block["nutrients"]) == {"potassium_mg", "sodium_mg"}  # fluid untracked, protein not interdialytic
-    assert block["nutrients"]["potassium_mg"] == {"total": 6000, "limit": 7500, "fraction": 0.8, "level": "caution"}
-    assert block["nutrients"]["sodium_mg"] == {"total": 4000, "limit": 6000, "fraction": 0.67, "level": "ok"}
+    assert block["nutrients"]["potassium_mg"] == {"total": 6000, "limit": 7500, "fraction": 0.8, "level": "caution", "unknown_entries": 0}
+    assert block["nutrients"]["sodium_mg"] == {"total": 4000, "limit": 6000, "fraction": 0.67, "level": "ok", "unknown_entries": 0}
     # a fluid target brings fluid in
     block = p.interdialytic_block(iv, day_totals, {"fluid_ml": 1500}, 0.8)
-    assert block["nutrients"] == {"fluid_ml": {"total": 1000, "limit": 4500, "fraction": 0.22, "level": "ok"}}
+    assert block["nutrients"] == {"fluid_ml": {"total": 1000, "limit": 4500, "fraction": 0.22, "level": "ok", "unknown_entries": 0}}
 
 
 def test_summary_notes():
