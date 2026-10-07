@@ -1,0 +1,31 @@
+{
+  "id": "fallback-all-dropped",
+  "category": "fallback",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "ids_needed": [
+      "Banana, raw"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Banana, raw}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]},{\"theme\":\"light\",\"items\":[{\"food_id\":999999,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "rule_fallback": true
+  }
+}

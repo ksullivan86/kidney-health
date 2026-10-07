@@ -1,0 +1,41 @@
+{
+  "id": "mode-swap-planned-potato",
+  "category": "modes",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ],
+      [
+        "dinner",
+        "Potato, baked, with skin",
+        1,
+        "planned"
+      ]
+    ],
+    "meal": "dinner",
+    "mode": "swap",
+    "swap_entry": 2
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"refusal\": \"none\", \"pick\": [{\"ref\": \"s1\", \"reason_codes\": [\"low_potassium\"]}, {\"ref\": \"f1\", \"reason_codes\": [\"low_potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ],
+    "not_shown_food_names": [
+      "Potato, baked, with skin"
+    ]
+  }
+}

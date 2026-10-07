@@ -1,0 +1,46 @@
+{
+  "id": "rules-high-food-when-caution",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        2
+      ],
+      [
+        "breakfast",
+        "Orange juice",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "ids_needed": [
+      "Potato, baked, with skin"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Potato, baked, with skin}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "not_shown_food_names": [
+      "Potato, baked, with skin"
+    ],
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ]
+  }
+}

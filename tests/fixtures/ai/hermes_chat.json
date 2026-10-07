@@ -1,0 +1,27 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "chatcmpl-hermes-91c",
+    "object": "chat.completion",
+    "created": 1759742900,
+    "model": "kidney",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":2,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 5300,
+      "completion_tokens": 190,
+      "total_tokens": 5490
+    }
+  }
+}

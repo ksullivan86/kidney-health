@@ -1,5 +1,9 @@
 """Saved meals (templates): CRUD, build one from a logged meal, apply one to a day;
-plus the shopping list aggregated from planned entries (``/api/plan/shopping``)."""
+plus the shopping list aggregated from planned entries (``/api/plan/shopping``).
+
+Saved meals belong to one person (``meal_templates.user_id``); every food in one must be visible
+to that person (404 otherwise), and someone else's saved meal answers 404.
+"""
 from __future__ import annotations
 
 import json
@@ -8,8 +12,9 @@ from typing import Any, Iterable, Mapping
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
+from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
-from .foods import fetch_food, get_food_or_404, parse_flags, raw_nutrients
+from .foods import fetch_food, fetch_user_food, get_food_or_404, parse_flags, raw_nutrients
 from .log import fetch_entries, fetch_entry, insert_entry, parse_range, row_to_entry
 from .models import (
     MealApply,
@@ -23,8 +28,8 @@ from .models import (
 )
 from .nutrients import add_totals, empty_totals, food_warnings, kidney_rating, round_nutrients, scale_nutrients
 
-router = APIRouter(prefix="/api/meals", tags=["meals"])
-plan_router = APIRouter(prefix="/api/plan", tags=["plan"])
+router = APIRouter(prefix="/api/meals", tags=["meals"], dependencies=[Depends(current_user)])
+plan_router = APIRouter(prefix="/api/plan", tags=["plan"], dependencies=[Depends(current_user)])
 
 _RATING_RANK = {"green": 0, "yellow": 1, "red": 2}
 
@@ -58,15 +63,15 @@ def parse_items(items_json: str | None) -> list[dict[str, Any]]:
     return items
 
 
-def fetch_template(conn: sqlite3.Connection, meal_id: int) -> sqlite3.Row | None:
+def fetch_template(conn: sqlite3.Connection, user_id: int, meal_id: int) -> sqlite3.Row | None:
     try:
-        return conn.execute("SELECT * FROM meal_templates WHERE id = ?", (meal_id,)).fetchone()
+        return conn.execute("SELECT * FROM meal_templates WHERE id = ? AND user_id = ?", (meal_id, int(user_id))).fetchone()
     except OverflowError:  # id beyond SQLite's 64-bit INTEGER: no such row
         return None
 
 
-def get_template_or_404(conn: sqlite3.Connection, meal_id: int) -> sqlite3.Row:
-    row = fetch_template(conn, meal_id)
+def get_template_or_404(conn: sqlite3.Connection, user_id: int, meal_id: int) -> sqlite3.Row:
+    row = fetch_template(conn, user_id, meal_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"saved meal {meal_id} not found")
     return row
@@ -113,6 +118,7 @@ def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
         "id": row["id"],
         "name": row["name"],
         "note": row["note"],
+        "meal_hint": row["meal_hint"] if "meal_hint" in row.keys() else None,  # schema step 5
         "items": items,
         "totals": round_nutrients(totals),
         "kidney_rating": worst_rating(i["kidney_rating"] for i in items),
@@ -121,20 +127,23 @@ def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
     }
 
 
-def resolve_items(conn: sqlite3.Connection, items: Iterable[MealItemIn]) -> list[dict[str, Any]]:
-    """Validate every food id exists (404 otherwise) and normalise to the stored shape."""
+def resolve_items(conn: sqlite3.Connection, user_id: int, items: Iterable[MealItemIn]) -> list[dict[str, Any]]:
+    """Validate every food is visible to ``user_id`` (404 otherwise) and normalise to the stored shape."""
     out: list[dict[str, Any]] = []
     for item in items:
-        get_food_or_404(conn, item.food_id)
+        get_food_or_404(conn, user_id, item.food_id)
         out.append({"food_id": item.food_id, "servings": float(item.servings)})
     return out
 
 
-def insert_template(conn: sqlite3.Connection, *, name: str, note: str | None, items: list[dict[str, Any]]) -> int:
+def insert_template(conn: sqlite3.Connection, *, user_id: int, name: str, note: str | None, items: list[dict[str, Any]],
+                    meal_hint: str | None = None) -> int:
+    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``."""
     now = utcnow()
     cur = conn.execute(
-        "INSERT INTO meal_templates (name, note, items_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (name, note, json.dumps(items), now, now),
+        """INSERT INTO meal_templates (user_id, name, note, items_json, meal_hint, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (int(user_id), name, note, json.dumps(items), meal_hint, now, now),
     )
     return int(cur.lastrowid)
 
@@ -145,66 +154,71 @@ def insert_template(conn: sqlite3.Connection, *, name: str, note: str | None, it
 
 
 @router.get("", response_model=MealList)
-def list_meals(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    rows = conn.execute("SELECT * FROM meal_templates ORDER BY name COLLATE NOCASE, id").fetchall()
+def list_meals(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    rows = conn.execute("SELECT * FROM meal_templates WHERE user_id = ? ORDER BY name COLLATE NOCASE, id", (user.id,)).fetchall()
     return {"meals": [row_to_template(conn, r) for r in rows]}
 
 
 @router.post("", response_model=MealTemplate, status_code=201)
-def create_meal(body: MealTemplateCreate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    items = resolve_items(conn, body.items)
-    meal_id = insert_template(conn, name=body.name, note=body.note, items=items)
+def create_meal(body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    items = resolve_items(conn, user.id, body.items)
+    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal_hint)
     conn.commit()
-    return row_to_template(conn, fetch_template(conn, meal_id))
+    return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
 
 @router.post("/from-log", response_model=MealTemplate, status_code=201)
-def meal_from_log(body: MealFromLog, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Save that day's entries of one meal (eaten and planned) as a template."""
-    rows = fetch_entries(conn, body.date, body.date, meal=body.meal)
+def meal_from_log(body: MealFromLog, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Save that day's entries of one meal (eaten and planned) as a template for that meal slot
+    (``meal_hint``). Entries that treated a low (``purpose = 'hypo'``) are not part of the meal."""
+    rows = [r for r in fetch_entries(conn, user.id, body.date, body.date, meal=body.meal)
+            if ("purpose" not in r.keys() or r["purpose"] != "hypo")]
     if not rows:
         raise HTTPException(status_code=400, detail=f"nothing logged for {body.meal} on {body.date}")
     items = [{"food_id": r["food_id"], "servings": float(r["servings"])} for r in rows]
-    meal_id = insert_template(conn, name=body.name, note=body.note, items=items)
+    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal)
     conn.commit()
-    return row_to_template(conn, fetch_template(conn, meal_id))
+    return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
 
 @router.get("/{meal_id}", response_model=MealTemplate)
-def get_meal(meal_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    return row_to_template(conn, get_template_or_404(conn, meal_id))
+def get_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    return row_to_template(conn, get_template_or_404(conn, user.id, meal_id))
 
 
 @router.put("/{meal_id}", response_model=MealTemplate)
-def update_meal(meal_id: int, body: MealTemplateCreate, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    get_template_or_404(conn, meal_id)
-    items = resolve_items(conn, body.items)
+def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    row = get_template_or_404(conn, user.id, meal_id)
+    items = resolve_items(conn, user.id, body.items)
+    # A client that does not send meal_hint (a v0.2 screen) keeps the stored one; null clears it.
+    meal_hint = body.meal_hint if "meal_hint" in body.model_fields_set else row["meal_hint"]
     conn.execute(
-        "UPDATE meal_templates SET name = ?, note = ?, items_json = ?, updated_at = ? WHERE id = ?",
-        (body.name, body.note, json.dumps(items), utcnow(), meal_id),
+        """UPDATE meal_templates SET name = ?, note = ?, items_json = ?, meal_hint = ?, updated_at = ?
+           WHERE id = ? AND user_id = ?""",
+        (body.name, body.note, json.dumps(items), meal_hint, utcnow(), meal_id, user.id),
     )
     conn.commit()
-    return row_to_template(conn, fetch_template(conn, meal_id))
+    return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
 
 @router.delete("/{meal_id}", status_code=204, response_class=Response)
-def delete_meal(meal_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    get_template_or_404(conn, meal_id)
-    conn.execute("DELETE FROM meal_templates WHERE id = ?", (meal_id,))
+def delete_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    get_template_or_404(conn, user.id, meal_id)
+    conn.execute("DELETE FROM meal_templates WHERE id = ? AND user_id = ?", (meal_id, user.id))
     conn.commit()
     return Response(status_code=204)
 
 
 @router.post("/{meal_id}/apply", response_model=MealApplyResult, status_code=201)
-def apply_meal(meal_id: int, body: MealApply, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Log every item of the template on ``date``/``meal`` with the given status, scaled."""
-    row = get_template_or_404(conn, meal_id)
+    row = get_template_or_404(conn, user.id, meal_id)
     items = parse_items(row["items_json"])
     if not items:
         raise HTTPException(status_code=400, detail="this saved meal has no items")
     created: list[int] = []
     for item in items:
-        food = fetch_food(conn, item["food_id"])
+        food = fetch_user_food(conn, user.id, item["food_id"])
         if food is None:
             raise HTTPException(
                 status_code=404,
@@ -212,12 +226,12 @@ def apply_meal(meal_id: int, body: MealApply, conn: sqlite3.Connection = Depends
             )
         created.append(
             insert_entry(
-                conn, date=body.date, meal=body.meal, food=food, servings=item["servings"] * body.scale,
+                conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=item["servings"] * body.scale,
                 grams=None, note=None, status=body.status,
             )
         )
     conn.commit()
-    return {"entries": [row_to_entry(fetch_entry(conn, entry_id)) for entry_id in created]}
+    return {"entries": [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]}
 
 
 # --------------------------------------------------------------------------- #
@@ -226,8 +240,9 @@ def apply_meal(meal_id: int, body: MealApply, conn: sqlite3.Connection = Depends
 
 
 @plan_router.get("/shopping", response_model=ShoppingList)
-def shopping_list(start: str | None = None, end: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Planned entries in ``[start, end]`` aggregated by food, ordered by name."""
+def shopping_list(user: CurrentUser, start: str | None = None, end: str | None = None,
+                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The person's planned entries in ``[start, end]`` aggregated by food, ordered by name."""
     start_s, end_s = parse_range(start, end)
     rows = conn.execute(
         """
@@ -235,11 +250,11 @@ def shopping_list(start: str | None = None, end: str | None = None, conn: sqlite
                SUM(e.servings) AS servings, COUNT(DISTINCT e.date) AS days
         FROM log_entries e
         JOIN foods f ON f.id = e.food_id
-        WHERE e.status = 'planned' AND e.date >= ? AND e.date <= ?
+        WHERE e.user_id = ? AND e.status = 'planned' AND e.date >= ? AND e.date <= ?
         GROUP BY e.food_id
         ORDER BY f.name COLLATE NOCASE, e.food_id
         """,
-        (start_s, end_s),
+        (user.id, start_s, end_s),
     ).fetchall()
     items = []
     for row in rows:

@@ -1,0 +1,28 @@
+{
+  "id": "fallback-no-fit",
+  "category": "fallback",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"no_fit\",\"ideas\":[]}"
+  ],
+  "expect": {
+    "status": "no_fit",
+    "rule_fallback": true
+  }
+}

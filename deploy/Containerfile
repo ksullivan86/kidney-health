@@ -1,87 +1,144 @@
 # syntax=docker/dockerfile:1
-# Kidney Health food log -- OCI image for Podman, Docker and Kubernetes.
+# Kidney Health food log -- the published image (ghcr.io/ksullivan86/kidney-health).
+# Spec: docs/dev/research/01-rootless-and-security.md §5.1 and §10.
 #
-# Build from the REPOSITORY ROOT so app/, data/, LICENSE and requirements.txt are in
-# the build context (.dockerignore at the root trims everything else):
-#   podman build -f deploy/Containerfile -t kidney-health:local .
+# Build from the REPOSITORY ROOT. The root .dockerignore is an allowlist: only app/, data/foods.json,
+# data/combos.json (meal-guidance starter meals),
+# LICENSE, requirements.lock and handbook/ reach the build context (never deploy/secrets/):
+#   podman build --format docker -f deploy/Containerfile -t kidney-health:local .
 #   docker build -f deploy/Containerfile -t kidney-health:local .
-# Podman writes OCI-format images by default and drops the HEALTHCHECK below with a
-# warning; add `--format docker` to keep it. compose.yaml and the Quadlet unit declare
-# the same probe themselves, so this only matters for a bare `podman run`.
-# Multi-arch (linux/amd64 + linux/arm64) images are published to
-# ghcr.io/ksullivan86/kidney-health by .github/workflows/ci.yml. See docs/deployment.md.
+# (`--format docker` keeps the HEALTHCHECK below; Podman's default OCI format drops it. Compose,
+# Quadlet and Kubernetes declare the same probe themselves.)
+#
+# What this image guarantees (checked by the CI smoke test in .github/workflows/ci.yml):
+#   * runtime has no shell, no pip and no package manager (Chainguard python:latest);
+#   * application code and the venv are owned by root and not writable by the app user;
+#   * the only writable path is /data (owner 10001, group 0, mode 0770), so the image also runs
+#     read-only and under an arbitrary UID with GID 0 (OpenShift style);
+#   * dependencies are installed from the hash-locked requirements.lock, wheels only;
+#   * uvicorn runs with --no-proxy-headers: the app applies X-Forwarded-* itself, and only from
+#     TRUSTED_PROXIES (app/security.py).
+#
+# Base images: literal `FROM image:tag@sha256:` lines so Dependabot (docker ecosystem, directory
+# /deploy, group "base-images") bumps builder, handbook and runtime together. Chainguard's free tier
+# publishes only :latest and :latest-dev, so the digest is what pins the Python version (3.14 when
+# these digests were resolved on 2026-10-06). Re-resolve by hand with:
+#   crane digest cgr.dev/chainguard/python:latest-dev ; crane digest cgr.dev/chainguard/python:latest
+# The Debian fallback (deploy/Containerfile.debian) is built by CI on pull requests but not published.
 
-# ---------------------------------------------------------------------------
-# Stage 1: install the Python dependencies into a virtualenv. Keeps pip's build
-# artefacts and caches out of the runtime layer.
-# ---------------------------------------------------------------------------
-FROM python:3.12-slim AS builder
-
+# ---------------------------------------------------------------------------------------------------
+# Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
+# ---------------------------------------------------------------------------------------------------
+FROM cgr.dev/chainguard/python:latest-dev@sha256:a876b1000774bdd68322ac020cd813aaf42b52941ca812f4d2f0149059bd0e67 AS builder
+# Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
+# hadolint ignore=DL3002
+USER 0
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    PIP_ROOT_USER_ACTION=ignore \
     PYTHONDONTWRITEBYTECODE=1
+WORKDIR /build
+COPY requirements.lock ./
+# --require-hashes: every wheel must match a hash in the lock. --only-binary=:all:: no sdist build
+# backend ever runs here. --no-deps: the lock is complete, nothing is resolved at build time.
+RUN python -m venv --without-pip /opt/venv \
+ && python -m pip --python /opt/venv/bin/python install --no-cache-dir \
+      --no-deps --require-hashes --only-binary=:all: -r requirements.lock
+COPY app/ /opt/app/app/
+COPY data/foods.json /opt/app/data/foods.json
+COPY data/combos.json /opt/app/data/combos.json
+COPY LICENSE /opt/app/LICENSE
+# Byte-compile once (the runtime rootfs is read-only), then normalise modes whatever the checkout's
+# umask was: directories 0755, files 0644 (executables 0755), nothing group- or world-writable.
+RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
+ && chmod -R u=rwX,go=rX /opt/venv /opt/app \
+ && mkdir -p /out/rootfs/data \
+ && chmod 0770 /out/rootfs/data
 
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# ---------------------------------------------------------------------------------------------------
+# Stage 2: handbook (docs/dev/research/08-handbook-site.md §4.7). A throw-away stage that builds the
+# patient handbook (MkDocs + Material, hash-locked in handbook/requirements.lock) into /out/learn.
+# Only those plain files reach the runtime image: the toolchain stays here, so the runtime gains no
+# dependency. app/handbook.py serves the site at /learn with its own CSP (hashes of the theme's
+# inline scripts, computed at start-up). The generated pages (menus, tables, sources) are committed
+# and checked by CI (scripts/build_handbook.py --check), so nothing outside handbook/ is needed here.
+# Keep the FROM line identical to the builder's so Dependabot bumps all three together.
+# ---------------------------------------------------------------------------------------------------
+FROM cgr.dev/chainguard/python:latest-dev@sha256:a876b1000774bdd68322ac020cd813aaf42b52941ca812f4d2f0149059bd0e67 AS handbook
+# Root only in this throw-away stage (it creates /opt/hb and /out/learn).
+# hadolint ignore=DL3002
+USER 0
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /src/handbook
+COPY handbook/requirements.lock /tmp/handbook.lock
+# Same rules as the app's dependencies: every wheel matches a hash in the lock, no sdist is built,
+# nothing is resolved at build time.
+RUN python -m venv --without-pip /opt/hb \
+ && python -m pip --python /opt/hb/bin/python install --no-cache-dir \
+      --no-deps --require-hashes --only-binary=:all: -r /tmp/handbook.lock
+COPY handbook/ /src/handbook/
+# LAN build: site_url http://localhost/learn/ (no port, so instant navigation works behind a reverse
+# proxy on 443 or 80; note 08 F4) and the "Back to the food log" link to the app at /.
+ENV NO_MKDOCS_2_WARNING=true \
+    HANDBOOK_SITE_URL=http://localhost/learn/ \
+    HANDBOOK_APP_LINK=/
+# --strict: any warning fails the image build (broken links, external assets via the privacy plugin).
+# Source maps are dropped (1.3 MB nobody needs); sitemap.xml stays (instant navigation reads it).
+RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
+ && find /out/learn -type f -name '*.map' -exec rm -f {} + \
+ && test -f /out/learn/index.html \
+ && chmod -R u=rwX,go=rX /out/learn
 
-# Versions are pinned (as ranges) in requirements.txt, so hadolint DL3013 does not apply.
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# ---------------------------------------------------------------------------------------------------
+# Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
+# ---------------------------------------------------------------------------------------------------
+FROM cgr.dev/chainguard/python:latest@sha256:3de78d5699d76c56f74a4a47abcd81f22f5a16757eee9fac45837fb2ae3f0e06
 
-# ---------------------------------------------------------------------------
-# Stage 2: runtime image
-# ---------------------------------------------------------------------------
-FROM python:3.12-slim
-
-# OCI annotations. The licence id is the SPDX identifier of the repository LICENSE
-# (PolyForm Noncommercial 1.0.0: personal and noncommercial use only).
+# OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
+# SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
+# and the handbook text at /app/learn, CC BY-NC-SA 4.0 (handbook/LICENSE).
 LABEL org.opencontainers.image.title="kidney-health" \
       org.opencontainers.image.description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings" \
       org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
       org.opencontainers.image.url="https://github.com/ksullivan86/kidney-health" \
       org.opencontainers.image.documentation="https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md" \
-      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0 AND CC-BY-NC-SA-4.0" \
+      org.opencontainers.image.base.name="cgr.dev/chainguard/python:latest"
 
-# DATA_DIR is set explicitly: app/config.py only auto-detects Podman/Docker
-# (/run/.containerenv, /.dockerenv), not containerd under Kubernetes.
-ENV PATH="/opt/venv/bin:$PATH" \
+# PYTHONPATH makes `python -m app.admin` work from any working directory (kubectl exec, podman exec).
+# DATA_DIR is explicit: app/config.py only auto-detects Podman/Docker, not containerd.
+ENV PATH=/opt/venv/bin:/usr/bin:/bin \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DATA_DIR=/data
+    PYTHONPATH=/app \
+    DATA_DIR=/data \
+    HANDBOOK_DIR=/app/learn
 
-# Dedicated non-root user. uid/gid 10001 matches runAsUser/fsGroup in
-# deploy/k8s/deployment.yaml so volume ownership is consistent everywhere.
-RUN groupadd --system --gid 10001 app \
- && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home --shell /usr/sbin/nologin app \
- && mkdir -p /app /data \
- && chown -R app:app /app /data
+COPY --from=builder  --chown=0:0     /opt/venv  /opt/venv
+COPY --from=builder  --chown=0:0     /opt/app   /app
+# The built handbook: plain files, root-owned and read-only like the rest of /app.
+COPY --from=handbook --chown=0:0     /out/learn /app/learn
+# /data must keep mode 0770 (group 0 writable, for runs as an arbitrary UID with GID 0). COPY of a
+# directory copies its contents and creates the destination with default 0755, so copy the staging
+# tree's *entry* instead: /out/rootfs/data lands as /data with its own mode.
+COPY --from=builder  --chown=10001:0 /out/rootfs/ /
 
 WORKDIR /app
-
-COPY --from=builder /opt/venv /opt/venv
-
-# Application code, the builtin food database and the licence. app/config.py resolves
-# the default FOODS_JSON to <parent of app/>/data/foods.json, i.e. /app/data/foods.json.
-COPY --chown=app:app requirements.txt LICENSE ./
-COPY --chown=app:app app/ ./app/
-COPY --chown=app:app data/foods.json ./data/foods.json
-
-# Compile bytecode once at build time; the runtime user never needs to write to /app.
-RUN python -m compileall -q ./app
-
-USER app
-
-# All persistent state (kidney.db + WAL files). Mount a named volume or PVC here;
-# without one Podman/Docker create an anonymous volume that `podman rm -v` deletes.
-VOLUME ["/data"]
+# Keep UID 10001: every existing volume is owned by it. Never 65532 (the base image default).
+USER 10001:10001
 EXPOSE 8000
+# All persistent state (kidney.db + WAL files, and the auto-generated secret.key fallback).
+VOLUME ["/data"]
 
-# python:3.12-slim ships no curl/wget, so probe with the stdlib. /healthz is exempt
-# from APP_PASSWORD Basic auth, so this keeps working with auth enabled.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"]
+  CMD ["python", "-m", "app.healthcheck"]
 
-# --proxy-headers / --forwarded-allow-ips=* make scheme and client IP follow the
-# X-Forwarded-* headers set by a reverse proxy (ingress-nginx, Traefik, Caddy, Authelia).
-# Exec form: there is no shell, so the * is passed literally and must NOT be quoted.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+# The base image's ENTRYPOINT is the bare interpreter; replace it.
+ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app"]
+# --no-proxy-headers: X-Forwarded-* are applied once, by the app, only from TRUSTED_PROXIES (§5.5).
+# --limit-concurrency 64: answer 503 beyond 64 concurrent connections (§10 S9).
+CMD ["--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--no-server-header", \
+     "--timeout-graceful-shutdown", "10", "--limit-concurrency", "64"]

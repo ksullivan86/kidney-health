@@ -1,0 +1,106 @@
+/* Kidney Diet Log — sheets (dialogs) and what lives in them: entry, quick add, USDA, copy day,
+   saved-meal editor, apply, save as meal, CSV; the in-page confirmation row. */
+
+/* ---------- Sheets (dialogs) ---------- */
+.sheet {
+  border: 0; padding: 0; margin: 0; width: 100%; max-width: 100%;
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+  max-height: 92vh; max-height: 92dvh;
+  background: var(--surface); color: var(--text);
+  border-radius: 20px 20px 0 0; box-shadow: var(--shadow-lg);
+}
+.sheet::backdrop { background: rgba(10, 14, 20, 0.55); }
+.sheet-form { display: flex; flex-direction: column; max-height: 92vh; max-height: 92dvh; }
+.sheet-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+}
+.sheet-title { font-size: 1.1rem; }
+.sheet-sub { color: var(--text-2); font-size: 0.88rem; margin-top: 2px; }
+.sheet-body { padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+.sheet-foot {
+  display: flex; gap: 8px; align-items: center; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.sheet-foot .btn { min-width: 96px; }
+@media (max-width: 480px) { .sheet-foot .btn { min-width: 0; padding: 0 12px; } }
+@media (min-width: 720px) {
+  .sheet { inset: 0; margin: auto; width: 520px; max-width: calc(100vw - 32px); border-radius: 16px; max-height: 88vh; }
+  .sheet-form { max-height: 88vh; }
+}
+.sheet[data-mode="add"] .edit-only { display: none; }
+.sheet[data-mode="edit"] .add-only { display: none; }
+
+.flag-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.flag-chips:empty { display: none; }
+.flag-chip { font-size: 0.75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+.flag-chip.warn { background: var(--over-tint); color: var(--over-text); }
+.flag-chip.good { background: var(--ok-tint); color: var(--ok-text); }
+.food-notes { font-size: 0.88rem; color: var(--text-2); background: var(--surface-2); padding: 8px 10px; border-radius: var(--radius-sm); margin: 0; }
+
+.preview { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
+.preview-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.preview-title { font-size: 0.85rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.03em; }
+.key-numbers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 6px; }
+.kn { display: flex; flex-direction: column; align-items: center; text-align: center; background: var(--surface); border-radius: 8px; padding: 6px 2px; }
+.kn .kn-v { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1rem; }
+.kn .kn-u { font-size: 0.7rem; color: var(--text-3); }
+.kn .kn-l { font-size: 0.72rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
+
+.warnings { display: flex; flex-direction: column; gap: 8px; }
+.warning { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--lv-tint); font-size: 0.9rem; }
+.warning .rating { margin-top: 1px; }
+.warning .w-level { font-weight: 700; color: var(--lv-text); }
+.status-msg { color: var(--text-2); font-size: 0.9rem; min-height: 0; }
+.status-msg:empty { display: none; }
+.nutrient-inputs { grid-template-columns: 1fr 1fr; }
+@media (min-width: 480px) { .nutrient-inputs { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* ---------- status toggle & checks ---------- */
+.status-seg { grid-template-columns: 1fr 1fr; }
+.checks.four { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 480px) { .checks.four { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---------- sheets: meal editor, apply, save-as-meal ---------- */
+.meal-items { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; }
+.meal-items .empty-state { padding: 10px 2px; }
+.meal-item { display: grid; grid-template-columns: 24px 1fr 92px var(--tap); gap: 8px; align-items: center; padding: 6px 0; }
+.meal-item .rating { width: 20px; height: 20px; }
+.meal-item-sv { display: flex; align-items: center; gap: 4px; }
+.meal-item-sv input { width: 64px; min-height: 40px; padding: 4px 8px; text-align: center; }
+.compact-list { max-height: 260px; overflow-y: auto; border-radius: var(--radius-sm); }
+.compact-list:empty { display: none; }
+.compact-list .empty-state { padding: 8px 4px; }
+.row-btn.compact { padding: 6px 4px; min-height: var(--tap); grid-template-columns: 24px 1fr auto; }
+.row-btn.compact .rating { width: 20px; height: 20px; }
+.row-btn.compact .row-title { font-size: 0.92rem; }
+.add-word { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 600; font-size: 0.85rem; }
+.add-word svg { width: 16px; height: 16px; }
+.compact-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.compact-items li { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; min-height: 28px; }
+.compact-items .rating { width: 18px; height: 18px; }
+.compact-items .ci-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.compact-items .ci-amt { white-space: nowrap; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+#sheet-savemeal .compact-items { margin-bottom: 0; }
+
+/* ---------- in-page confirmation (replaces window.confirm) ---------- */
+.confirm-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 10px 12px; border-radius: var(--radius-sm); background: var(--over-tint); color: var(--text);
+}
+.confirm-row.sheet-foot {
+  border-radius: 0; border-top: 1px solid var(--border); background: var(--over-tint);
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.confirm-msg { flex: 1 1 200px; margin: 0; font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
+.confirm-actions { display: flex; gap: 8px; margin-left: auto; }
+.confirm-actions .btn { min-width: 0; }
+.saved-meal .confirm-row { margin-left: 40px; }
+@media (min-width: 720px) { .saved-meal .confirm-row { margin-left: 0; flex: 0 1 420px; } }
+
+/* ---------- CSV sheet (demo / preview) ---------- */
+.csv-note { margin: 0; }
+.csv-text {
+  min-height: 220px; resize: vertical; font-family: var(--mono); font-size: 0.78rem; line-height: 1.45;
+  white-space: pre; overflow: auto; background: var(--surface-2);
+}

@@ -1,0 +1,26 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": [
+    {
+      "name": "core",
+      "enabled": true,
+      "configured": true,
+      "tools": [
+        "read_file",
+        "write_file",
+        "terminal"
+      ]
+    },
+    {
+      "name": "web",
+      "enabled": true,
+      "configured": true,
+      "tools": [
+        "web_search"
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ Each entry is a dict consumed by ``scripts/build_food_db.py``:
         "serving_g": 118,            # grams in one serving (from food_portion.csv when available)
         "flags": [],                 # subset of FLAGS (ARCHITECTURE.md, exact strings)
         "kidney_notes": "...",       # one practical sentence for limit/avoid foods, else None
+        "role": "veg_fruit",         # optional: meal-guidance role override (one of ROLES), rarely needed
     }
 
 Items that SR Legacy does not carry (glucose tablets, salt substitute, ...) use
@@ -26,6 +27,14 @@ Flag meanings (see ARCHITECTURE.md "Per-serving thresholds"):
   hypo_treatment      - ~15 g fast carbs that are also low in potassium/phosphorus
   low_potassium_fruit - renal-diet "safe" fruit in the listed portion
   processed           - packaged / restaurant food, sodium and additives likely
+  ingredient          - only ever added to other food (flour, salt, oil, butter, vinegar ...): meal
+                        guidance never suggests it on its own (docs/dev/research/06-meal-guidance.md F9)
+  alcohol             - an alcoholic drink: meal guidance never suggests it, because alcohol can cause
+                        delayed lows with insulin (ADA Standards of Care 2026 §5, recommendations 5.18-5.19)
+
+Meal-guidance roles (``role``): the guidance engine derives a role from the category and the numbers
+(app/guidance/rules.py ``role_of``); ``role`` overrides it for the few foods the rule gets wrong
+(coleslaw is a vegetable side, not an "extra").
 """
 
 CATEGORIES = [
@@ -45,13 +54,19 @@ CATEGORIES = [
 
 FLAGS = [
     "phosphate_additive",
+    "potassium_additive",  # v0.3 (note 03 R5); no builtin food needs it today
     "high_gi",
     "counts_as_fluid",
     "avoid_ckd",
     "hypo_treatment",
     "low_potassium_fruit",
     "processed",
+    "ingredient",
+    "alcohol",
 ]
+
+# Must equal app/guidance/rules.py ROLES (tests/guidance/test_data.py checks it).
+ROLES = ["protein", "mixed", "starch", "veg_fruit", "drink", "extra"]
 
 # Short aliases keep the table below readable.
 FRUIT = "Fruits"
@@ -74,10 +89,12 @@ AVOID = "avoid_ckd"
 HYPO = "hypo_treatment"
 LOWK = "low_potassium_fruit"
 PROC = "processed"
+ING = "ingredient"
+ALC = "alcohol"
 
 
-def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None):
-    return {
+def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None, role=None):
+    entry = {
         "fdc_id": fdc_id,
         "name": name,
         "category": category,
@@ -86,6 +103,9 @@ def f(fdc_id, name, category, serving_desc, serving_g, flags=(), notes=None):
         "flags": list(flags),
         "kidney_notes": notes,
     }
+    if role is not None:
+        entry["role"] = role
+    return entry
 
 
 def manual(manual_id, name, category, serving_desc, serving_g, nutrients, flags=(), notes=None):
@@ -106,7 +126,8 @@ CURATED_FOODS = [
     # ------------------------------------------------------------------ Fruits
     f(171688, "Apple, raw, with skin", FRUIT, "1 medium", 182, [LOWK]),
     f(171695, "Applesauce, unsweetened", FRUIT, "1/2 cup", 122, [LOWK]),
-    # Berries and grapes are served at the 1/2 cup of docs/diet-guide.md section 3: a full cup of
+    # Berries and grapes are served at the 1/2 cup of the handbook's food lists (handbook/docs/eat/food-lists.md;
+    # formerly docs/diet-guide.md section 3): a full cup of
     # strawberries, blackberries or grapes is over 200 mg potassium, which would contradict the
     # low_potassium_fruit badge ("a large serving of a low-potassium food becomes a high one").
     f(171711, "Blueberries, raw", FRUIT, "1/2 cup", 74, [LOWK]),
@@ -308,7 +329,7 @@ CURATED_FOODS = [
     f(172749, "Crackers, whole-wheat", GRAIN, "6 crackers", 28, [],
       "Whole-grain crackers are higher in phosphorus and potassium; saltines or rice cakes are the swap."),
     f(170250, "Rice cakes, plain, unsalted", GRAIN, "2 cakes", 18, []),
-    f(168894, "Flour, all-purpose", GRAIN, "1/4 cup", 31, []),
+    f(168894, "Flour, all-purpose", GRAIN, "1/4 cup", 31, [ING]),
 
     # ---------------------------------------------------- Dairy & Alternatives
     f(171265, "Milk, whole", DAIRY, "1 cup", 244, [FL],
@@ -347,8 +368,8 @@ CURATED_FOODS = [
     f(171255, "Half and half", DAIRY, "1 tbsp", 15, []),
     f(170859, "Heavy whipping cream", DAIRY, "1 tbsp", 15, []),
     f(171257, "Sour cream", DAIRY, "1 tbsp", 12, []),
-    f(173410, "Butter, salted", DAIRY, "1 tbsp", 14.2, []),
-    f(173430, "Butter, unsalted", DAIRY, "1 tbsp", 14.2, []),
+    f(173410, "Butter, salted", DAIRY, "1 tbsp", 14.2, [ING]),
+    f(173430, "Butter, unsalted", DAIRY, "1 tbsp", 14.2, [ING]),
     f(171261, "Non-dairy creamer, liquid", DAIRY, "1 tbsp", 15, [PA, PROC],
       "Most non-dairy creamers contain dipotassium phosphate; a splash of real half and half is the lower-phosphorus choice."),
     f(171942, "Rice milk, unsweetened", DAIRY, "1 cup", 240, [FL],
@@ -367,8 +388,9 @@ CURATED_FOODS = [
     f(171475, "Chicken breast, batter-fried", MEAT, "3 oz", 85, [PROC],
       "Batter adds sodium and phosphate leavening; roasted or grilled chicken is the swap."),
     f(171117, "Ground chicken, cooked", MEAT, "3 oz", 85, []),
-    # 171496 (whole-bird breast, meat only) is the record docs/diet-guide.md section 3 quotes
-    # (K 212, P 196, Na 84, 26 g protein per 3 oz), so the guide's EAT row and the app agree.
+    # 171496 (whole-bird breast, meat only) is the record the handbook's food lists quote
+    # (handbook/docs/eat/food-lists.md; formerly docs/diet-guide.md section 3)
+    # (K 212, P 196, Na 84, 26 g protein per 3 oz), so the handbook's Eat row and the app agree.
     f(171496, "Turkey breast, roasted", MEAT, "3 oz", 85, []),
     f(174492, "Ground turkey, 93% lean, patty", MEAT, "3 oz", 85, []),
     f(174032, "Ground beef, 85% lean, patty", MEAT, "3 oz", 85, []),
@@ -402,11 +424,15 @@ CURATED_FOODS = [
       "Very high sodium (~500 mg per oz) and concentrated phosphorus; unsalted popcorn or a hard-boiled egg white is the snack swap."),
     f(168626, "Beef liver, braised", MEAT, "3 oz", 85, [],
       "Organ meats are extremely high in phosphorus (~420 mg per 3 oz); choose lean muscle meat instead."),
-    f(171287, "Egg, whole, raw", MEAT, "1 large", 50, []),
+    # Raw eggs are never suggested (handbook: avoid raw or undercooked eggs, above all after a transplant):
+    # the whole raw egg is a recipe ingredient; the egg white row has no "raw" in its name, and a cooking note.
+    f(171287, "Egg, whole, raw", MEAT, "1 large", 50, [ING],
+      "For recipes: cook eggs until the white and yolk are firm (raw egg can carry Salmonella)."),
     f(173424, "Egg, hard-boiled", MEAT, "1 large", 50, [],
       "The yolk holds the phosphorus (~85 mg per egg); egg whites are the renal favourite and still give the protein."),
     f(172187, "Egg, scrambled", MEAT, "1 large", 61, []),
-    f(172183, "Egg white, raw", MEAT, "1 large", 33, []),
+    f(172183, "Egg white", MEAT, "1 large", 33, [],
+      "Values are USDA's for one large egg white weighed raw; cooking does not change them. Cook it until firm."),
     f(173462, "Egg substitute, liquid", MEAT, "1/4 cup", 60, []),
 
     # ---------------------------------------------------------- Fish & Seafood
@@ -519,8 +545,8 @@ CURATED_FOODS = [
       "Sugar-free, but still phosphoric acid (~35 mg phosphorus per can, essentially all of it absorbed); diet lemon-lime or sparkling water is the swap."),
     f(173209, "Pepper-type soda, regular", BEV, "1 can, 12 fl oz", 368, [PA, GI, FL, PROC],
       "Contains phosphoric acid and ~40 g sugar; clear soda or sparkling water is the swap."),
-    # hypo_treatment foods are served at the rescue portion (~15 g fast carbs) of docs/diet-guide.md
-    # section 4, because the flag switches the carbohydrate warning off: a whole 12 oz can would
+    # hypo_treatment foods are served at the rescue portion (~15 g fast carbs) of the handbook's
+    # handbook/docs/t1d/treating-a-low.md (formerly docs/diet-guide.md section 4), because the flag switches the carbohydrate warning off: a whole 12 oz can would
     # otherwise hide 38 g of sugar from a type 1 diabetic.
     f(173205, "Lemon-lime soda, regular", BEV, "4 fl oz, 1/3 can", 123, [HYPO, GI, FL, PROC],
       "No phosphoric acid, so a clear soda is the renal choice for treating a low: 4 fl oz is about 13 g carbs. A whole 12 oz can is 3 servings and 38 g of sugar."),
@@ -563,15 +589,15 @@ CURATED_FOODS = [
       "Cocoa brings potassium and phosphorus and the mix adds sugar; keep it occasional."),
     f(170883, "Milkshake, chocolate, thick", BEV, "1 container, 10.6 oz", 300, [GI, FL, PROC],
       "Milk plus chocolate: ~670 mg potassium, ~380 mg phosphorus and ~60 g sugar; a small sherbet is the treat swap."),
-    f(168746, "Beer, regular", BEV, "1 can, 12 fl oz", 356, [FL],
+    f(168746, "Beer, regular", BEV, "1 can, 12 fl oz", 356, [FL, ALC],
       "Moderate potassium and phosphorus (~95 and ~50 mg per can) and it counts as fluid; alcohol also raises hypo risk with insulin."),
-    f(168749, "Beer, light", BEV, "1 can, 12 fl oz", 354, [FL],
+    f(168749, "Beer, light", BEV, "1 can, 12 fl oz", 354, [FL, ALC],
       "Lower carbs than regular beer but the same fluid and hypo caution with insulin."),
-    f(173190, "Wine, red", BEV, "1 glass, 5 fl oz", 147, [FL],
+    f(173190, "Wine, red", BEV, "1 glass, 5 fl oz", 147, [FL, ALC],
       "~190 mg potassium per glass; one glass is usually fine, and it counts toward fluid."),
-    f(174837, "Wine, white", BEV, "1 glass, 5 fl oz", 147, [FL],
+    f(174837, "Wine, white", BEV, "1 glass, 5 fl oz", 147, [FL, ALC],
       "Lower potassium than red (~105 mg per glass); counts toward fluid, and alcohol raises hypo risk."),
-    f(174815, "Spirits (gin, rum, vodka, whiskey), 80 proof", BEV, "1 jigger, 1.5 fl oz", 42, [FL],
+    f(174815, "Spirits (gin, rum, vodka, whiskey), 80 proof", BEV, "1 jigger, 1.5 fl oz", 42, [FL, ALC],
       "No potassium or phosphorus, but alcohol on insulin can cause delayed lows; mix with diet or clear soda, not cola."),
 
     # --------------------------------------------------------- Sweets & Snacks
@@ -638,7 +664,7 @@ CURATED_FOODS = [
       "About 17 g fast carbs with negligible potassium: usable to treat a low."),
     f(169655, "Sugar, granulated", SWEET, "1 tbsp", 12.6, [HYPO, GI],
       "A tablespoon is ~13 g pure glucose/fructose with no minerals: a hypo treatment in a pinch."),
-    f(168833, "Sugar, brown", SWEET, "1 tsp, packed", 4.6, [GI]),
+    f(168833, "Sugar, brown", SWEET, "1 tsp, packed", 4.6, [GI, ING]),
     f(169661, "Maple syrup", SWEET, "1 tbsp", 20, [GI],
       "Low in minerals but ~13 g sugar per tbsp; sugar-free syrup is the everyday swap."),
     f(168838, "Pancake syrup", SWEET, "1 tbsp", 20, [GI, PROC]),
@@ -667,7 +693,7 @@ CURATED_FOODS = [
       "Mostly sugar with little potassium: fast carbs that can treat a low, but not a fruit serving."),
 
     # ----------------------------------------------------- Condiments & Sauces
-    f(173468, "Salt, table", COND, "1/4 tsp", 1.5, [],
+    f(173468, "Salt, table", COND, "1/4 tsp", 1.5, [ING],
       "A quarter teaspoon is ~580 mg sodium, over a quarter of a 2000 mg day; season with herbs, pepper, lemon, vinegar and garlic instead."),
     manual(1, "Salt substitute (potassium chloride, e.g. NoSalt, Nu-Salt)", COND, "1/4 tsp", 1.4,
            {"potassium_mg": 610},
@@ -677,7 +703,7 @@ CURATED_FOODS = [
            {"sodium_mg": 290, "potassium_mg": 350},
            [AVOID],
            "AVOID with kidney disease: 'lite' salt is half potassium chloride (~350 mg potassium per 1/4 tsp) and still a quarter of the day's sodium; use herbs and spices."),
-    f(172804, "Baking powder (phosphate type)", COND, "1 tsp", 4.6, [PA],
+    f(172804, "Baking powder (phosphate type)", COND, "1 tsp", 4.6, [PA, ING],
       "Standard baking powder is sodium acid pyrophosphate or monocalcium phosphate: ~455 mg phosphorus (almost fully absorbed) and ~365 mg sodium per tsp, roughly 40-75 mg phosphorus per slice of a 12-serving cake; use a low-sodium, phosphate-free baking powder."),
     f(174277, "Soy sauce", COND, "1 tbsp", 16, [PROC],
       "~880 mg sodium in one tablespoon (almost half a day's limit); use a teaspoon, dilute with water, or try lemon and ginger."),
@@ -699,13 +725,13 @@ CURATED_FOODS = [
       "Bottled Italian is ~290 mg sodium per 2 tbsp; mix your own with olive oil, vinegar, garlic and herbs."),
     f(169055, "Caesar dressing", COND, "2 tbsp", 30, [PROC],
       "Parmesan and anchovy make Caesar dressing salty (~360 mg per 2 tbsp); use half the amount or an oil-and-lemon dressing."),
-    f(171413, "Olive oil", COND, "1 tbsp", 13.5, []),
-    f(172336, "Canola oil", COND, "1 tbsp", 14, []),
-    f(172346, "Margarine, stick", COND, "1 tbsp", 14, [PROC]),
-    f(173469, "Vinegar, cider", COND, "1 tbsp", 14.9, []),
-    f(172241, "Vinegar, balsamic", COND, "1 tbsp", 16, []),
+    f(171413, "Olive oil", COND, "1 tbsp", 13.5, [ING]),
+    f(172336, "Canola oil", COND, "1 tbsp", 14, [ING]),
+    f(172346, "Margarine, stick", COND, "1 tbsp", 14, [PROC, ING]),
+    f(173469, "Vinegar, cider", COND, "1 tbsp", 14.9, [ING]),
+    f(172241, "Vinegar, balsamic", COND, "1 tbsp", 16, [ING]),
     f(167747, "Lemon juice, fresh", COND, "1 tbsp", 15.2, []),
-    f(170931, "Black pepper, ground", COND, "1 tsp", 2.3, []),
+    f(170931, "Black pepper, ground", COND, "1 tsp", 2.3, [ING]),
     f(174523, "Barbecue sauce", COND, "2 tbsp", 34, [GI, PROC],
       "~350 mg sodium and ~11 g sugar per 2 tbsp, with tomato potassium; a tablespoon brushed on is enough."),
     f(174524, "Salsa", COND, "2 tbsp", 36, [PROC],
@@ -767,7 +793,8 @@ CURATED_FOODS = [
     f(169269, "Potato salad, home-style", PREP, "1/2 cup", 125, [],
       "Potatoes, egg and salt: ~320 mg potassium and ~660 mg sodium per 1/2 cup; use leached potatoes or swap for a pasta or cabbage slaw salad."),
     f(170300, "Coleslaw, fast food", PREP, "3/4 cup", 116, [PROC],
-      "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap."),
+      "Cabbage is renal-friendly, but fast-food slaw dressing adds ~250 mg sodium and sugar; homemade with vinegar is the swap.",
+      role="veg_fruit"),
     f(170699, "Mashed potatoes, fast food", PREP, "1/2 cup", 121, [PROC],
       "Instant mashed potatoes with gravy: ~350 mg potassium and ~370 mg sodium per 1/2 cup; rice or a roll is the side swap."),
     f(170698, "French fries, fast food", PREP, "1 medium", 117, [PROC],

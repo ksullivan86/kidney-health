@@ -1,0 +1,23 @@
+# Handbook pages the app links to, by slug (docs/dev/research/08-handbook-site.md §4.10).
+# ARCHITECTURE.md v0.3 item 12: links into the handbook use /learn/<path>/; app/guidance/topics.py
+# (note 06 TOPIC_PAGES) reads this list. tests/test_handbook_content.py checks that every slug
+# below is the `slug:` of the page at `path` (handbook/docs/<path>.md or <path>/index.md).
+# Add a row here before the app links to a new page; never rename a path without a redirect plan.
+potassium: eat/potassium
+potassium-leaching: eat/potassium-leaching
+phosphorus: eat/phosphorus
+phosphate-additives: eat/phosphate-additives
+sodium: eat/sodium
+fluid: eat/fluid
+protein: eat/protein
+eating-enough: eat/eating-enough
+carb-counting: eat/carb-counting
+treating-a-low: t1d/treating-a-low
+dialysis-days: eat/dialysis-days
+label-reading: eat/label-reading
+eating-out: eat/eating-out
+portions: eat/portions
+sick-days: t1d/sick-days
+get-help-now: get-help-now
+blood-potassium: labs/blood-potassium
+targets-and-warnings: app/targets-and-warnings

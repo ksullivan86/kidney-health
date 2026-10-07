@@ -1,0 +1,984 @@
+{
+ "about": "Note 05 §5.1 test vectors, copied verbatim from docs/dev/research/05-personalized-targets.md (hand-checked expected values; the fact-check reproduced them independently). tests/test_targets.py asserts app/targets.py against every one. Do not regenerate: change the note first.",
+ "today": "2026-10-05",
+ "vectors": [
+  {
+   "id": "TV01",
+   "input": {
+    "weight_kg": 70,
+    "ckd_stage": "3b"
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2100,
+     "protein_g": {
+      "min": 56,
+      "max": 56
+     },
+     "carbs_g": 236,
+     "carbs_per_meal_g": 60,
+     "fiber_g": {
+      "min": 29
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 70.0,
+    "weight_basis": "actual_no_height",
+    "age": null,
+    "nutrition_risk": [],
+    "rules": [
+     "W-2",
+     "E-2",
+     "P-2",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV02",
+   "input": {
+    "weight_kg": 70,
+    "ckd_stage": "3b",
+    "height_cm": 175,
+    "birth_month": "1971-03",
+    "sex": "male"
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2280,
+     "protein_g": {
+      "min": 56,
+      "max": 56
+     },
+     "carbs_g": 257,
+     "carbs_per_meal_g": 65,
+     "fiber_g": {
+      "min": 32
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 70.0,
+    "weight_basis": "actual",
+    "age": 55,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-2",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV03",
+   "input": {
+    "weight_kg": 62,
+    "ckd_stage": "3b",
+    "height_cm": 160,
+    "birth_month": "1954-06",
+    "sex": "female",
+    "activity": "low_active"
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1880,
+     "protein_g": {
+      "min": 50,
+      "max": 62
+     },
+     "carbs_g": 212,
+     "carbs_per_meal_g": 55,
+     "fiber_g": {
+      "min": 26
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 62.0,
+    "weight_basis": "actual",
+    "age": 72,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-2",
+     "P-5",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0o",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV04",
+   "input": {
+    "weight_kg": 95,
+    "ckd_stage": "4",
+    "height_cm": 165,
+    "birth_month": "1981-01",
+    "sex": "female",
+    "potassium": 5.3
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2090,
+     "protein_g": {
+      "min": 60,
+      "max": 60
+     },
+     "carbs_g": 235,
+     "carbs_per_meal_g": 60,
+     "fiber_g": {
+      "min": 29
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 74.8,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": 45,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-1",
+     "P-2",
+     "K-3",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV05",
+   "input": {
+    "weight_kg": 52,
+    "ckd_stage": "4",
+    "height_cm": 170,
+    "birth_month": "1946-02",
+    "sex": "male",
+    "frail_or_sarcopenic": true
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1730,
+     "protein_g": {
+      "min": 42,
+      "max": 52
+     },
+     "carbs_g": 195,
+     "carbs_per_meal_g": 50,
+     "fiber_g": {
+      "min": 24
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 52.4,
+    "weight_basis": "adjusted_below_bmi18_5",
+    "age": 80,
+    "nutrition_risk": [
+     "low_bmi",
+     "frailty"
+    ],
+    "rules": [
+     "W-4",
+     "N-1",
+     "E-1",
+     "P-2",
+     "P-5",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV06",
+   "input": {
+    "weight_kg": 85,
+    "ckd_stage": "5",
+    "dialysis": "hemodialysis",
+    "height_cm": 180,
+    "birth_month": "1966-09",
+    "sex": "male",
+    "urine_output_ml": 300,
+    "potassium": 5.8,
+    "phosphate": 6.1
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2430,
+     "protein_g": {
+      "min": 82,
+      "max": 98
+     },
+     "carbs_g": 273,
+     "carbs_per_meal_g": 70,
+     "fiber_g": {
+      "min": 34
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 2500,
+     "phosphorus_mg": 800,
+     "calcium_mg": 1000,
+     "fluid_ml": 1300
+    },
+    "reference_weight_kg": 82.0,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": 60,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-1",
+     "P-3",
+     "K-4",
+     "PH-3",
+     "NA-1",
+     "CA-2",
+     "F-2",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV07",
+   "input": {
+    "weight_kg": 60,
+    "ckd_stage": "5",
+    "dialysis": "peritoneal",
+    "height_cm": 158,
+    "birth_month": "1976-05",
+    "sex": "female",
+    "urine_output_ml": 800,
+    "pd_uf_ml": 900,
+    "pd_dialysate_kcal": 350,
+    "potassium": 3.2
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1490,
+     "protein_g": {
+      "min": 60,
+      "max": 72
+     },
+     "carbs_g": 168,
+     "carbs_per_meal_g": 40,
+     "fiber_g": {
+      "min": 21
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": null,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": 1700
+    },
+    "reference_weight_kg": 60.0,
+    "weight_basis": "actual",
+    "age": 50,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "E-4",
+     "P-3",
+     "K-1",
+     "PH-0",
+     "NA-1",
+     "CA-2",
+     "F-4",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV08",
+   "input": {
+    "weight_kg": 80,
+    "ckd_stage": "2",
+    "height_cm": 178,
+    "birth_month": "1986-04",
+    "sex": "male",
+    "transplant_date": "2024-09-15",
+    "phosphate": 2.2
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2600,
+     "protein_g": {
+      "min": 64,
+      "max": 79
+     },
+     "carbs_g": 293,
+     "carbs_per_meal_g": 75,
+     "fiber_g": {
+      "min": 36
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 4000,
+     "phosphorus_mg": null,
+     "calcium_mg": {
+      "min": 1000,
+      "max": 2500
+     },
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 79.4,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": 40,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-1",
+     "P-7",
+     "K-0",
+     "PH-1",
+     "NA-1",
+     "CA-3",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV09",
+   "input": {
+    "weight_kg": 80,
+    "ckd_stage": "3a",
+    "height_cm": 178,
+    "birth_month": "1986-04",
+    "sex": "male",
+    "transplant_date": "2026-08-24"
+   },
+   "expect": {
+    "error": "out_of_scope_early_transplant"
+   }
+  },
+  {
+   "id": "TV10",
+   "input": {
+    "weight_kg": 60,
+    "ckd_stage": "3a",
+    "height_cm": 165,
+    "birth_month": "1994-01",
+    "sex": "female",
+    "pregnant_or_breastfeeding": true
+   },
+   "expect": {
+    "error": "out_of_scope_pregnancy"
+   }
+  },
+  {
+   "id": "TV11",
+   "input": {
+    "weight_kg": 55,
+    "ckd_stage": "3a",
+    "height_cm": 165,
+    "birth_month": "2009-01",
+    "sex": "male"
+   },
+   "expect": {
+    "error": "out_of_scope_under_18"
+   }
+  },
+  {
+   "id": "TV12",
+   "input": {
+    "weight_kg": 58,
+    "ckd_stage": "2",
+    "diabetes": "none",
+    "height_cm": 158,
+    "birth_month": "1958-03",
+    "sex": "female",
+    "potassium": 4.4
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1690,
+     "protein_g": {
+      "min": 58,
+      "max": 70
+     },
+     "carbs_g": 190,
+     "carbs_per_meal_g": 50,
+     "fiber_g": {
+      "min": 24
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 4000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": {
+      "min": 1200,
+      "max": 2000
+     },
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 58.0,
+    "weight_basis": "actual",
+    "age": 68,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-1",
+     "P-5",
+     "K-2",
+     "PH-0",
+     "NA-1",
+     "CA-3",
+     "F-0o",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV13",
+   "input": {
+    "weight_kg": 68,
+    "ckd_stage": "5",
+    "height_cm": 172,
+    "birth_month": "1968-07",
+    "sex": "male",
+    "potassium": 4.6,
+    "phosphate": 4.0
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2200,
+     "protein_g": {
+      "min": 54,
+      "max": 54
+     },
+     "carbs_g": 248,
+     "carbs_per_meal_g": 60,
+     "fiber_g": {
+      "min": 31
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 68.0,
+    "weight_basis": "actual",
+    "age": 58,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-2",
+     "K-2",
+     "PH-2",
+     "NA-1",
+     "CA-2",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV14",
+   "input": {
+    "weight_kg": 70,
+    "ckd_stage": "3a",
+    "height_cm": 168,
+    "birth_month": "1976-10",
+    "activity": "active",
+    "albumin": 3.4
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2450,
+     "protein_g": {
+      "min": 56,
+      "max": 70
+     },
+     "carbs_g": 276,
+     "carbs_per_meal_g": 70,
+     "fiber_g": {
+      "min": 34
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 4000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 70.0,
+    "weight_basis": "actual",
+    "age": 50,
+    "nutrition_risk": [
+     "low_albumin"
+    ],
+    "rules": [
+     "W-1",
+     "N-1",
+     "E-1",
+     "P-2",
+     "P-5",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1",
+     "L-ALB"
+    ]
+   }
+  },
+  {
+   "id": "TV15",
+   "input": {
+    "weight_kg": 78,
+    "ckd_stage": "5",
+    "dialysis": "hemodialysis",
+    "height_cm": 176,
+    "birth_month": "1961-11",
+    "sex": "male",
+    "hyperkalemia_history": true,
+    "potassium": 4.7
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2300,
+     "protein_g": {
+      "min": 78,
+      "max": 93
+     },
+     "carbs_g": 259,
+     "carbs_per_meal_g": 65,
+     "fiber_g": {
+      "min": 32
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 2500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": 1500
+    },
+    "reference_weight_kg": 77.6,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": 64,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-1",
+     "P-3",
+     "K-2h",
+     "PH-0",
+     "NA-1",
+     "CA-2",
+     "F-1",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV16",
+   "input": {
+    "weight_kg": 70,
+    "ckd_stage": "4",
+    "height_cm": 170,
+    "birth_month": "1961-05",
+    "sex": "female",
+    "potassium": 6.3
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1920,
+     "protein_g": {
+      "min": 56,
+      "max": 70
+     },
+     "carbs_g": 216,
+     "carbs_per_meal_g": 55,
+     "fiber_g": {
+      "min": 27
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 2000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 70.0,
+    "weight_basis": "actual",
+    "age": 65,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-2",
+     "P-5",
+     "K-5",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ],
+    "alerts": [
+     {
+      "level": "urgent",
+      "code": "potassium_very_high"
+     }
+    ]
+   }
+  },
+  {
+   "id": "TV17",
+   "input": {
+    "weight_kg": 74,
+    "ckd_stage": "3b",
+    "height_cm": 178,
+    "birth_month": "1966-01",
+    "sex": "male",
+    "weight_6_months_ago_kg": 80
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2300,
+     "protein_g": {
+      "min": 59,
+      "max": 74
+     },
+     "carbs_g": 259,
+     "carbs_per_meal_g": 65,
+     "fiber_g": {
+      "min": 32
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 74.0,
+    "weight_basis": "actual",
+    "age": 60,
+    "nutrition_risk": [
+     "weight_loss"
+    ],
+    "rules": [
+     "W-1",
+     "N-1",
+     "E-1",
+     "P-2",
+     "P-5",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV18",
+   "input": {
+    "weight_kg": 76,
+    "ckd_stage": "3b",
+    "height_cm": 172,
+    "birth_month": "1971-08",
+    "sex": "female",
+    "potassium": 4.8,
+    "bicarbonate": 19.0,
+    "uacr": 450
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2060,
+     "protein_g": {
+      "min": 60,
+      "max": 60
+     },
+     "carbs_g": 232,
+     "carbs_per_meal_g": 60,
+     "fiber_g": {
+      "min": 29
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 4000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 74.5,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": 55,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-1",
+     "P-2",
+     "K-2",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1",
+     "L-BIC22",
+     "L-UACR-A3"
+    ]
+   }
+  },
+  {
+   "id": "TV19",
+   "input": {
+    "weight_kg": 82,
+    "ckd_stage": "4",
+    "height_cm": 181,
+    "potassium": 4.9
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2460,
+     "protein_g": {
+      "min": 66,
+      "max": 66
+     },
+     "carbs_g": 277,
+     "carbs_per_meal_g": 70,
+     "fiber_g": {
+      "min": 34
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3500,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 81.9,
+    "weight_basis": "adjusted_above_bmi25",
+    "age": null,
+    "nutrition_risk": [],
+    "rules": [
+     "W-3",
+     "E-2",
+     "P-2",
+     "K-2",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV20",
+   "input": {
+    "weight_kg": 66,
+    "ckd_stage": "5",
+    "dialysis": "hemodialysis",
+    "height_cm": 165,
+    "birth_month": "1956-02",
+    "sex": "female",
+    "urine_output_ml": 0,
+    "potassium": 4.5,
+    "albumin": 3.5
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1980,
+     "protein_g": {
+      "min": 79,
+      "max": 86
+     },
+     "carbs_g": 223,
+     "carbs_per_meal_g": 55,
+     "fiber_g": {
+      "min": 28
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": 1000
+    },
+    "reference_weight_kg": 66.0,
+    "weight_basis": "actual",
+    "age": 70,
+    "nutrition_risk": [
+     "low_albumin"
+    ],
+    "rules": [
+     "W-1",
+     "N-1",
+     "E-1",
+     "E-3",
+     "P-3",
+     "P-6",
+     "K-2",
+     "PH-0",
+     "NA-1",
+     "CA-2",
+     "F-2",
+     "C-1",
+     "FB-1",
+     "L-ALB"
+    ]
+   }
+  },
+  {
+   "id": "TV21",
+   "input": {
+    "weight_kg": 70,
+    "ckd_stage": "4",
+    "height_cm": 170,
+    "birth_month": "1955-03",
+    "sex": "male",
+    "transplant_date": "2018-05-01"
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 2080,
+     "protein_g": {
+      "min": 56,
+      "max": 70
+     },
+     "carbs_g": 234,
+     "carbs_per_meal_g": 60,
+     "fiber_g": {
+      "min": 29
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 1000,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 70.0,
+    "weight_basis": "actual",
+    "age": 71,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-7",
+     "K-0",
+     "PH-0",
+     "NA-1",
+     "CA-1",
+     "F-0",
+     "C-1",
+     "FB-1"
+    ]
+   }
+  },
+  {
+   "id": "TV22",
+   "input": {
+    "weight_kg": 60,
+    "ckd_stage": "5",
+    "height_cm": 160,
+    "birth_month": "1966-04",
+    "sex": "female",
+    "potassium": 4.4,
+    "bicarbonate": 20.5
+   },
+   "expect": {
+    "targets": {
+     "calories_kcal": 1780,
+     "protein_g": {
+      "min": 48,
+      "max": 48
+     },
+     "carbs_g": 200,
+     "carbs_per_meal_g": 50,
+     "fiber_g": {
+      "min": 25
+     },
+     "sodium_mg": 2000,
+     "potassium_mg": 3000,
+     "phosphorus_mg": 900,
+     "calcium_mg": 1000,
+     "fluid_ml": null
+    },
+    "reference_weight_kg": 60.0,
+    "weight_basis": "actual",
+    "age": 60,
+    "nutrition_risk": [],
+    "rules": [
+     "W-1",
+     "E-1",
+     "P-2",
+     "K-2",
+     "PH-0",
+     "NA-1",
+     "CA-2",
+     "F-0",
+     "C-1",
+     "FB-1",
+     "L-BIC22"
+    ]
+   }
+  },
+  {
+   "id": "TV23",
+   "input": {
+    "weight_kg": 60,
+    "ckd_stage": "3a",
+    "height_cm": 170,
+    "birth_month": "2008-10",
+    "sex": "male"
+   },
+   "expect": {
+    "error": "out_of_scope_under_18"
+   }
+  }
+ ]
+}

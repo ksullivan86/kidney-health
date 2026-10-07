@@ -7,16 +7,15 @@ import json
 from datetime import date
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
-from fastapi.testclient import TestClient
 
 import app.foods as foods_module
 from app.config import Settings
 from app.main import create_app
 from app.nutrients import NUTRIENT_KEYS
 
-from conftest import DAY, FIXTURE_FOOD_COUNT, find_food, log_food, send_json
+from conftest import ADMIN_PASSWORD, TestClient, DAY, FIXTURE_FOOD_COUNT, find_food, log_food, make_settings, send_json, signed_in_client
 
 
 # --------------------------------------------------------------------------- #
@@ -39,13 +38,13 @@ def test_startup_without_foods_json_still_serves(tmp_path):
 
 
 def test_import_is_idempotent_versioned_and_preserves_ids(settings, foods_json):
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         first_ids = {f["name"]: f["id"] for f in c.get("/api/foods", params={"limit": 100}).json()["foods"]}
         assert len(first_ids) == FIXTURE_FOOD_COUNT
         c.app.state.foods_import["status"] == "imported"
 
     # Same version: skipped, nothing changes.
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         assert c.app.state.foods_import["status"] == "unchanged"
         again = {f["name"]: f["id"] for f in c.get("/api/foods", params={"limit": 100}).json()["foods"]}
         assert again == first_ids
@@ -63,7 +62,7 @@ def test_import_is_idempotent_versioned_and_preserves_ids(settings, foods_json):
     data["foods"] = foods
     foods_json.write_text(json.dumps(data))
 
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         assert c.app.state.foods_import["status"] == "imported"
         assert c.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT - 1
         banana = c.get(f"/api/foods/{first_ids['Banana, raw']}").json()
@@ -155,7 +154,7 @@ def test_suggested_targets_from_profile(client):
     r = client.get("/api/profile/suggested-targets")
     assert r.status_code == 200
     body = r.json()
-    assert body["targets"]["protein_g"] == {"min": 42, "max": 56}
+    assert body["targets"]["protein_g"] == {"min": 56, "max": 56}  # type 1 diabetes at G3b: 0.8 g/kg (note 05 §5.3)
     assert body["targets"]["potassium_mg"] == 3500 and body["targets"]["phosphorus_mg"] == 1000
     assert body["targets"]["fluid_ml"] is None and body["targets"]["calories_kcal"] == 2100
     assert isinstance(body["notes"], list) and body["notes"]
@@ -274,6 +273,37 @@ def test_create_custom_food(client):
     assert [f["id"] for f in client.get("/api/foods", params={"source": "custom"}).json()["foods"]] == [food["id"]]
 
 
+def test_food_rows_store_the_values_the_api_shows(client):
+    """A client that scales a food's shown per-serving values (the Add sheet's live preview) must
+    get the numbers and warnings the saved entry gets: 2.5 x 80.4 mg potassium was 201 mg (high)
+    on the server while 2.5 x the shown 80 mg is 200 mg (moderate)."""
+    label = {"potassium_mg": 80.4, "phosphorus_mg": 40.3, "sodium_mg": 56.2, "carbs_g": 11.98, "protein_g": 5.98, "fluid_ml": None}
+    body = {"name": "Probe granola bar", "serving_desc": "1 bar", "serving_g": 33.33, "nutrients": label, "flags": ["counts_as_fluid"]}
+    food = client.post("/api/foods", json=body).json()
+    n = food["nutrients"]
+    assert (n["potassium_mg"], n["phosphorus_mg"], n["sodium_mg"], n["carbs_g"], n["protein_g"]) == (80, 40, 56, 12.0, 6.0)
+    assert food["serving_g"] == 33.3 and n["fluid_ml"] == 33  # unknown fluid = the (stored) serving weight
+
+    e = client.post("/api/log", json={"date": DAY, "meal": "snack", "food_id": food["id"], "servings": 2.5}).json()
+    en = e["nutrients"]
+    assert (en["potassium_mg"], en["phosphorus_mg"], en["sodium_mg"], en["carbs_g"], en["protein_g"]) == (200, 100, 140, 30.0, 15.0)
+    assert {(w["nutrient"], w["level"]) for w in e["warnings"]} == {("potassium_mg", "medium"), ("protein_g", "medium"), ("carbs_g", "medium")}
+    assert next(w for w in e["warnings"] if w["nutrient"] == "potassium_mg")["message"] == "Moderate potassium: 200 mg in this entry"
+    # by weight: grams / the shown serving_g
+    g = client.post("/api/log", json={"date": DAY, "meal": "snack", "food_id": food["id"], "grams": 99.9}).json()
+    assert g["servings"] == 3 and g["nutrients"]["potassium_mg"] == 240
+
+    # editing the food and quick add store the same way
+    body["nutrients"] = {"potassium_mg": 100.5, "carbs_g": 14.95}
+    edited = client.put(f"/api/foods/{food['id']}", json=body).json()
+    assert edited["nutrients"]["potassium_mg"] == 101 and edited["nutrients"]["carbs_g"] == 15.0
+    assert {w["nutrient"] for w in edited["warnings"]} == {"potassium_mg", "carbs_g"}
+    q = client.post("/api/log/quick", json={"date": DAY, "meal": "lunch", "name": "Soup", "serving_g": 250.04,
+                                            "nutrients": {"sodium_mg": 400.4, "protein_g": 14.96}, "servings": 2}).json()
+    assert q["nutrients"]["sodium_mg"] == 800 and q["nutrients"]["protein_g"] == 30.0
+    assert client.get(f"/api/foods/{q['food_id']}").json()["serving_g"] == 250.0
+
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -317,7 +347,9 @@ def test_builtin_foods_cannot_be_edited_or_deleted_but_can_be_copied(client):
     assert edited["name"] == "Banana, small" and edited["nutrients"]["potassium_mg"] == 362
     assert edited["nutrients"]["carbs_g"] is None  # PUT replaces the nutrient set
     assert edited["kidney_rating"] == "red"
-    assert client.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT + 1
+    # /healthz is public and counts only the shared builtin foods, never anyone's own
+    assert client.get("/healthz").json()["foods"] == FIXTURE_FOOD_COUNT
+    assert any(f["id"] == copy["id"] for f in client.get("/api/foods", params={"q": "banana"}).json()["foods"])
 
 
 def test_put_and_delete_unknown_food_404(client):
@@ -356,7 +388,8 @@ def test_create_entry_snapshots_and_multiplies(client):
     e = r.json()
     assert e["date"] == DAY and e["meal"] == "breakfast" and e["food_id"] == banana["id"]
     assert e["food_name"] == "Banana, raw" and e["servings"] == 2 and e["grams"] is None and e["note"] == "with oats"
-    assert e["nutrients"]["potassium_mg"] == 844 and e["nutrients"]["carbs_g"] == 53.9
+    # the fixture banana says carbs 26.95 g; a food row stores what the API shows (27.0 g)
+    assert e["nutrients"]["potassium_mg"] == 844 and e["nutrients"]["carbs_g"] == 54.0
     assert e["kidney_rating"] == "red"
     assert e["warnings"][0]["message"] == "High potassium: 844 mg in this entry"
     assert e["created_at"].endswith("Z") and e["updated_at"].endswith("Z")
@@ -462,7 +495,7 @@ def test_day_summary_totals_meals_status_alerts_and_order(client):
     assert day["targets"]["potassium_mg"] == 1000 and day["targets"]["fluid_ml"] is None
     status = day["status"]
     assert set(status) == {"potassium_mg", "protein_g", "sodium_mg", "carbs_g"}  # null fluid and per-meal carbs excluded
-    assert status["potassium_mg"] == {"value": 858, "target": 1000, "min": None, "fraction": 0.86, "level": "caution"}
+    assert status["potassium_mg"] == {"value": 858, "target": 1000, "min": None, "fraction": 0.86, "level": "caution", "unknown": 0}
     assert status["protein_g"]["level"] == "caution" and status["protein_g"]["min"] == 42
     assert status["sodium_mg"]["level"] == "ok"
 
@@ -528,7 +561,7 @@ def test_csv_export(client):
     header, body = rows[0], rows[1:]
     assert header[:9] == ["id", "date", "meal", "status", "food_id", "food_name", "servings", "grams", "note"]
     assert header[9:21] == list(NUTRIENT_KEYS)
-    assert header[21:] == ["created_at", "updated_at"]
+    assert header[21:] == ["created_at", "updated_at", "purpose", "source", "source_license"]  # v0.3: "hypo" marks a low treatment; provenance (note 03 R6)
     assert len(body) == 3
     assert [row[1] for row in body] == ["2026-10-04", "2026-10-05", "2026-10-07"]
     banana_row = dict(zip(header, body[0]))
@@ -570,31 +603,34 @@ def test_quick_add_creates_custom_food_and_entry(client):
 
 
 # --------------------------------------------------------------------------- #
-# Basic auth
+# Legacy APP_PASSWORD (v0.2 HTTP Basic) is imported once and Basic auth is gone
 # --------------------------------------------------------------------------- #
 
 
-def test_basic_auth_when_password_set(tmp_path, foods_json):
+def test_app_password_is_imported_once_and_basic_auth_is_gone(tmp_path, foods_json):
     settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json, app_password="s3cret")
     with TestClient(create_app(settings)) as c:
         r = c.get("/api/profile")
-        assert r.status_code == 401
-        assert r.headers["www-authenticate"] == 'Basic realm="kidney-health"'
-        assert r.json() == {"detail": "Unauthorized"}
-        assert c.get("/api/profile", auth=("anyone", "wrong")).status_code == 401
-        assert c.get("/api/profile", headers={"Authorization": "Bearer s3cret"}).status_code == 401
-        assert c.get("/api/profile", headers={"Authorization": "Basic not-base64!"}).status_code == 401
-        assert c.get("/api/profile", auth=("anyone", "s3cret")).status_code == 200
-        assert c.get("/api/profile", auth=("someone-else", "s3cret")).status_code == 200
-        assert c.get("/api/foods", params={"q": "banana"}, auth=("u", "s3cret")).status_code == 200
-        # static routes are protected too
-        assert c.get("/").status_code == 401
-        assert c.get("/", auth=("u", "s3cret")).status_code in (200, 404)
-        # the health check stays open for liveness probes
+        assert r.status_code == 401 and "www-authenticate" not in r.headers
+        assert r.json() == {"detail": "Sign in required"}
+        assert c.get("/api/profile", auth=("anyone", "s3cret")).status_code == 401  # no HTTP Basic any more
+        # the old password became the password of admin "admin"; it is too short for today's policy
+        r = c.post("/api/auth/login", json={"username": "admin", "password": "s3cret"})
+        assert r.status_code == 200 and r.json()["user"]["must_change_password"] is True
+        r = c.get("/api/profile")
+        assert r.status_code == 403 and r.json()["password_change_required"] is True
+        r = c.post("/api/me/password", json={"current_password": "s3cret", "new_password": ADMIN_PASSWORD})
+        assert r.status_code == 200, r.text
+        assert c.get("/api/profile").status_code == 200
+        # static files and the health check need no session (index.html carries no data)
+        assert c.get("/").status_code in (200, 404)
         assert c.get("/healthz").status_code == 200
+    # imported once: a restart does not reset the password
+    with TestClient(create_app(settings)) as c:
+        assert c.post("/api/auth/login", json={"username": "admin", "password": "s3cret"}).status_code == 401
 
 
-def test_no_auth_when_password_unset(client):
+def test_signed_in_client_reads_the_profile(client):
     assert client.get("/api/profile").status_code == 200
     assert "www-authenticate" not in client.get("/api/profile").headers
 
@@ -674,40 +710,41 @@ SEARCH_RESULT = {
 @pytest.fixture
 def usda_client(tmp_path, foods_json, monkeypatch):
     """TestClient with a USDA key whose outbound HTTP goes to an in-process mock."""
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(request)
         path = request.url.path
         if path == "/fdc/v1/foods/search":
-            return httpx.Response(200, json=SEARCH_RESULT)
+            return httpx2.Response(200, json=SEARCH_RESULT)
         if path == "/fdc/v1/food/173944":
-            return httpx.Response(200, json=SR_BANANA)
+            return httpx2.Response(200, json=SR_BANANA)
         if path == "/fdc/v1/food/171890":
-            return httpx.Response(200, json=SR_COFFEE)
+            return httpx2.Response(200, json=SR_COFFEE)
         if path == "/fdc/v1/food/777777":
-            return httpx.Response(200, json=BRANDED_CHIPS)
+            return httpx2.Response(200, json=BRANDED_CHIPS)
         if path == "/fdc/v1/food/500500":
-            return httpx.Response(500, text="upstream exploded")
+            return httpx2.Response(500, text="upstream exploded")
         if path == "/fdc/v1/food/403403":
-            return httpx.Response(403, json={"error": {"code": "API_KEY_INVALID"}})
+            return httpx2.Response(403, json={"error": {"code": "API_KEY_INVALID"}})
         if path == "/fdc/v1/food/666666":
-            raise httpx.ConnectError("boom", request=request)
-        return httpx.Response(404, json={"error": "not found"})
+            raise httpx2.ConnectError("boom", request=request)
+        return httpx2.Response(404, json={"error": "not found"})
 
-    def fake_client() -> httpx.Client:
-        return httpx.Client(base_url=foods_module.USDA_BASE_URL, transport=httpx.MockTransport(handler))
+    def fake_client() -> httpx2.Client:
+        return httpx2.Client(base_url=foods_module.USDA_BASE_URL, transport=httpx2.MockTransport(handler))
 
     monkeypatch.setattr(foods_module, "usda_client", fake_client)
-    settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json, usda_api_key="TESTKEY")
-    with TestClient(create_app(settings)) as c:
+    settings = make_settings(tmp_path, foods_json, usda_api_key="TESTKEY")
+    with signed_in_client(settings) as c:
         c.seen_requests = seen  # type: ignore[attr-defined]
         yield c
 
 
 def test_usda_endpoints_503_without_key(client):
     r = client.get("/api/foods/usda/search", params={"q": "banana"})
-    assert r.status_code == 503 and r.json() == {"detail": "USDA_API_KEY not configured"}
+    assert r.status_code == 503 and r.json()["reason"] == "not_configured"
+    assert "Settings" in r.json()["detail"]
     r = client.post("/api/foods/usda/import", json={"fdc_id": 173944})
     assert r.status_code == 503
 
@@ -747,9 +784,12 @@ def test_usda_import_sr_legacy_with_household_portion(usda_client):
     again = usda_client.post("/api/foods/usda/import", json={"fdc_id": 173944}).json()
     assert again["id"] == food["id"]
     assert len([f for f in usda_client.get("/api/foods", params={"source": "usda"}).json()["foods"]]) == 1
-    # usda foods are editable (only builtin is locked)
+    # usda rows are shared between people, so they are read-only (edit = copy, note 07 §4.16)
     body = {"name": "Banana (USDA)", "serving_desc": "1 medium", "serving_g": 118, "nutrients": {"potassium_mg": 422}}
-    assert usda_client.put(f"/api/foods/{food['id']}", json=body).status_code == 200
+    r = usda_client.put(f"/api/foods/{food['id']}", json=body)
+    assert r.status_code == 409 and "copy" in r.json()["detail"].lower()
+    copy = usda_client.post(f"/api/foods/{food['id']}/copy").json()
+    assert usda_client.put(f"/api/foods/{copy['id']}", json=body).status_code == 200
 
 
 def test_usda_import_beverage_counts_as_fluid(usda_client):
@@ -916,14 +956,14 @@ def test_update_entry_keeps_grams_and_servings_consistent_after_the_food_is_repo
     assert u["grams"] is None and u["servings"] == 2 and u["nutrients"]["potassium_mg"] == 200
 
 
-def test_suggested_targets_use_the_saved_height_for_ideal_body_weight(client):
+def test_suggested_targets_use_the_saved_height_for_the_reference_weight(client):
     client.put("/api/profile", json={"weight_kg": 100, "height_cm": 170, "ckd_stage": "4", "dialysis": "none"})
     body = client.get("/api/profile/suggested-targets").json()
-    assert body["targets"]["calories_kcal"] == 2169 and body["targets"]["protein_g"] == {"min": 43, "max": 58}
-    assert any("ideal body weight" in note and "72.3 kg" in note for note in body["notes"])
+    assert body["targets"]["calories_kcal"] == 2380 and body["targets"]["protein_g"] == {"min": 63, "max": 63}
+    assert any("adjusted weight" in note and "79.2 kg" in note for note in body["notes"])
     client.put("/api/profile", json={"height_cm": None})
     body = client.get("/api/profile/suggested-targets").json()
-    assert body["targets"]["calories_kcal"] == 3000 and body["targets"]["protein_g"] == {"min": 60, "max": 80}
+    assert body["targets"]["calories_kcal"] == 3000 and body["targets"]["protein_g"] == {"min": 80, "max": 80}
     assert any("without a saved height" in note for note in body["notes"])
     # the 400 for a missing weight is plain language (no field names)
     client.put("/api/profile", json={"weight_kg": None})

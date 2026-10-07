@@ -1,0 +1,31 @@
+{
+  "id": "safety-false-claims-corrected",
+  "category": "safety_text",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"hearty\",\"items\":[{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":4}],\"reason_codes\":[\"adds_protein\",\"low_potassium\",\"made_up_code\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Blueberries, raw"
+    ],
+    "claims_corrected": 3
+  }
+}

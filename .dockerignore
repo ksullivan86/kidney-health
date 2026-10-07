@@ -1,29 +1,27 @@
-# Build-context filter for deploy/Containerfile (always build from the repo root).
-# Only app/, data/foods.json, LICENSE and requirements.txt are copied into the image.
-.git
-.github
-.hadolint.yaml
-.gitignore
-.pytest_cache
-.venv
-venv
+# Build context for deploy/Containerfile and deploy/Containerfile.debian (always build from the
+# repository root). This is an ALLOWLIST: everything is excluded, then only what the image needs is
+# let back in. Secrets (deploy/secrets/, .env files), databases, .git and tests never reach the
+# builder, so they cannot leak into a layer or into the build provenance.
+*
+
+!app/
+!data/foods.json
+!data/combos.json
+!LICENSE
+!requirements.lock
+
+# The image's handbook stage (docs/dev/research/08-handbook-site.md §4.7) builds the site served at
+# /learn from these sources. A local build output and caches stay out.
+!handbook/
+handbook/site
+handbook/.cache
+
+# Never ship bytecode caches, local databases or editor droppings from a working copy.
 **/__pycache__
-**/*.pyc
+**/*.py[co]
 **/*.db
 **/*.db-journal
 **/*.db-wal
 **/*.db-shm
 **/.env
-tests
-docs
-scripts/.cache
-data-local
-deploy/compose.yaml
-deploy/.env.example
-deploy/quadlet
-deploy/k8s
-deploy/README.md
-README.md
-ARCHITECTURE.md
-.DS_Store
-node_modules
+**/.DS_Store

@@ -1,0 +1,32 @@
+{
+  "id": "format-finish-reason-length",
+  "category": "format",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    {
+      "content": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":",
+      "finish_reason": "length"
+    }
+  ],
+  "expect": {
+    "calls": 1,
+    "status": "error",
+    "rule_fallback": true
+  }
+}

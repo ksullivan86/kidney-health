@@ -1,0 +1,72 @@
+name: Clinical content correction
+description: A number, warning, rule or handbook text that disagrees with a guideline, label or study.
+title: "Clinical: "
+labels: ["clinical-content"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Every clinical statement in the app and the handbook must be traceable to a source, so a correction needs one too (see "Clinical content" in [CONTRIBUTING.md](https://github.com/ksullivan86/kidney-health/blob/main/CONTRIBUTING.md#clinical-content-policy-and-sign-off)).
+
+        * **If it could hurt someone right now** (a wrong emergency number, anything that delays treating a low, a dose), report it privately as described in [SECURITY.md](https://github.com/ksullivan86/kidney-health/blob/main/SECURITY.md) so it is fixed before it is public.
+        * **Do not include anyone's own health information.** For questions about your own care, please ask your care team.
+        * Clinicians willing to review handbook sections are very welcome: say so below.
+  - type: input
+    id: where
+    attributes:
+      label: Where is it?
+      description: The handbook page (/learn/… or handbook/docs/…), or the app screen and what you did to see it.
+      placeholder: "/learn/eat/potassium/ → 'Your numbers'"
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: What it says now
+      description: Quote the text or describe the number, warning or suggestion.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: What it should say
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: >-
+        One or more sources with the exact place (recommendation number, table, page or label section) and
+        a link or DOI. Primary sources first: KDIGO, KDOQI, ADA Standards of Care, ISPD, FDA labels, then
+        government and charity patient pages, then studies.
+      placeholder: |
+        KDIGO 2024 CKD guideline, Rec 3.3.2.1 (p. S166): https://kdigo.org/…
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your background (optional)
+      description: It helps us route the review; any background is welcome.
+      options:
+        - Nephrologist, nephrology NP or PA
+        - Renal dietitian
+        - Diabetes specialist or diabetes educator (CDCES)
+        - Nurse or pharmacist
+        - Other clinician
+        - Patient or caregiver
+        - Other
+  - type: input
+    id: region
+    attributes:
+      label: Country or region the guidance applies to (optional)
+      description: Lab units, emergency numbers and guidelines differ between countries.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I did not include anyone's personal health information.
+          required: true
+        - label: I am willing to be contacted about reviewing this section of the handbook.

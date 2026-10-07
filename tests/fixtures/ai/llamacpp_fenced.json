@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "```json\n{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":2,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}\n```",
+          "reasoning_content": "Thinking about potassium... (never stored)"
+        }
+      }
+    ],
+    "created": 1759742700,
+    "model": "hermes-4.3-36b-q4_k_m.gguf",
+    "system_fingerprint": "b6750-1f3a2b4c",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 4012,
+      "total_tokens": 4172
+    },
+    "id": "chatcmpl-Zx8",
+    "timings": {
+      "prompt_n": 4012,
+      "prompt_ms": 2210.4,
+      "predicted_n": 160,
+      "predicted_ms": 5880.1
+    }
+  }
+}

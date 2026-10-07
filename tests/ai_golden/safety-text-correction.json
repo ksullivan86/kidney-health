@@ -1,0 +1,40 @@
+{
+  "id": "safety-text-correction",
+  "category": "safety_text",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"],\"why\":\"Have 4 correction with this; it is safe to eat\"},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Pasta, cooked}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped_reasons_include": [
+      "unexpected_field"
+    ],
+    "shown_food_names": [
+      "Pasta, cooked"
+    ],
+    "not_shown_food_names": [
+      "Green beans, boiled"
+    ],
+    "response_excludes": [
+      "correction with",
+      "safe to eat"
+    ]
+  }
+}

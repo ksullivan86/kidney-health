@@ -1,0 +1,36 @@
+{
+  "id": "baseline-good-idea",
+  "category": "modes",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\",\"low_sodium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Rice, white, long-grain, cooked",
+      "Green beans, boiled"
+    ],
+    "rule_fallback": false,
+    "claims_corrected": 0,
+    "response_excludes": [
+      "insulin"
+    ]
+  }
+}

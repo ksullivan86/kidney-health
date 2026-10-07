@@ -102,7 +102,7 @@ def test_summarize_period_matches_contract_shape_and_maths():
     assert k == {
         "role": "limit", "target": 2500, "total": 6900, "average": 2300, "fraction": 0.92, "level": "caution",
         "days_over": 1, "max_day": {"date": "2026-10-01", "value": 3100},
-        "previous_average": 2500, "change_pct": -8.0, "assessment": "daily",
+        "previous_average": 2500, "change_pct": -8.0, "assessment": "daily", "unknown_entries": 0, "unknown_days": 0,
     }
     ph = s["nutrients"]["phosphorus_mg"]
     assert ph["total"] == 2700 and ph["average"] == 900 and ph["fraction"] == 0.9 and ph["level"] == "caution"
@@ -228,11 +228,11 @@ def test_interdialytic_block_totals_over_the_interval_against_target_times_days(
     assert set(block) == {"since", "days", "next", "nutrients"}
     assert (block["since"], block["days"], block["next"]) == ("2026-10-02", 3, MON)
     assert set(block["nutrients"]) == {"potassium_mg", "sodium_mg"}  # fluid untracked, protein not interdialytic
-    assert block["nutrients"]["potassium_mg"] == {"total": 6000, "limit": 7500, "fraction": 0.8, "level": "caution"}
-    assert block["nutrients"]["sodium_mg"] == {"total": 4000, "limit": 6000, "fraction": 0.67, "level": "ok"}
+    assert block["nutrients"]["potassium_mg"] == {"total": 6000, "limit": 7500, "fraction": 0.8, "level": "caution", "unknown_entries": 0}
+    assert block["nutrients"]["sodium_mg"] == {"total": 4000, "limit": 6000, "fraction": 0.67, "level": "ok", "unknown_entries": 0}
     # a fluid target brings fluid in
     block = p.interdialytic_block(iv, day_totals, {"fluid_ml": 1500}, 0.8)
-    assert block["nutrients"] == {"fluid_ml": {"total": 1000, "limit": 4500, "fraction": 0.22, "level": "ok"}}
+    assert block["nutrients"] == {"fluid_ml": {"total": 1000, "limit": 4500, "fraction": 0.22, "level": "ok", "unknown_entries": 0}}
 
 
 def test_summary_notes():
@@ -287,3 +287,18 @@ def test_summarize_period_ignores_non_finite_stored_values_and_targets():
     assert p.summary_target("phosphorus_mg", inf) is None and p.summary_target("phosphorus_mg", {"max": float("nan")}) is None
     block = p.interdialytic_block({"since": MON, "end": TUE, "days": 2, "next": WED}, totals, {"potassium_mg": 2500})
     assert block["nutrients"]["potassium_mg"]["total"] == 1000
+
+
+def test_period_sums_are_exactly_rounded_whatever_the_python_version():
+    # Left-to-right float addition (Python 3.11's sum()) gives 2015.7499999999998 and 3379.4999999999995
+    # here, which round to 2015.7 kcal and 3379 mg; the exact sums are 2015.75 and 3379.5.
+    kcal = [189.92, 501.38, 720.9, 603.55]
+    potassium = [1839.6, 914.3, 625.6]
+    days = ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01"]
+    totals = {d: {"calories_kcal": kcal[i], "potassium_mg": potassium[i] if i < 3 else 0.0} for i, d in enumerate(days)}
+    out = p.summarize_period(days[0], days[-1], totals, {"calories_kcal": 2000, "potassium_mg": 3000})
+    assert out["nutrients"]["calories_kcal"]["total"] == 2015.8
+    assert out["nutrients"]["potassium_mg"]["total"] == 3380
+    iv = {"since": days[0], "end": days[2], "days": 3, "next": days[3]}
+    block = p.interdialytic_block(iv, totals, {"potassium_mg": 2500})
+    assert block["nutrients"]["potassium_mg"]["total"] == 3380

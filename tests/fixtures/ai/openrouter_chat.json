@@ -1,0 +1,37 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "gen-1759743000-AbCdEf",
+    "provider": "DeepInfra",
+    "model": "qwen/qwen3-vl-8b-instruct",
+    "object": "chat.completion",
+    "created": 1759743000,
+    "choices": [
+      {
+        "logprobs": null,
+        "finish_reason": "stop",
+        "native_finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":2,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+            }
+          ],
+          "refusal": null,
+          "reasoning": null
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 4400,
+      "completion_tokens": 150,
+      "total_tokens": 4550
+    }
+  }
+}

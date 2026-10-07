@@ -1,0 +1,27 @@
+{
+  "id": "refusal-status",
+  "category": "refusal",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"refused\",\"refusal\":\"outside_scope\",\"ideas\":[]}"
+  ],
+  "expect": {
+    "status": "refused"
+  }
+}

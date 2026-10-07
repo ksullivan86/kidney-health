@@ -1,0 +1,76 @@
+# One-off pod for restoring a backup into the PVC (docs/deployment.md "Backups and restore").
+# Not part of kustomization.yaml on purpose. Scale the app to 0 first (the PVC is ReadWriteOnce and
+# SQLite must not be written by two processes), apply this, stream the backup in with `kubectl exec -i`,
+# run the commands from the guide, then delete the pod and scale the app back to 1.
+# Same restricted security context as deployment.yaml; it idles for at most an hour.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kidney-health-restore
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health-restore
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 3600
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: restore
+      # Use the same image (tag and digest) as the Deployment, so restore-check knows the schema.
+      image: ghcr.io/ksullivan86/kidney-health:0.3
+      imagePullPolicy: IfNotPresent
+      command: ["python", "-c", "import time; time.sleep(3600)"]
+      env:
+        - name: DATA_DIR
+          value: /data
+        # restore-check also reports whether the stored API keys decrypt with this key.
+        - name: SECRET_KEY_FILE
+          value: /run/secrets/kidney-health/secret_key
+      volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
+        - name: secrets
+          mountPath: /run/secrets/kidney-health
+          readOnly: true
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+          ephemeral-storage: 64Mi
+        limits:
+          memory: 512Mi
+          ephemeral-storage: 1Gi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        privileged: false
+        capabilities:
+          drop:
+            - ALL
+        seccompProfile:
+          type: RuntimeDefault
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: kidney-health-data
+    - name: tmp
+      # Holds the streamed backup: large enough for the database, on disk rather than in memory.
+      emptyDir:
+        sizeLimit: 1Gi
+    - name: secrets
+      secret:
+        secretName: kidney-health
+        defaultMode: 0440
+        optional: true

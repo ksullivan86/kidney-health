@@ -1,0 +1,53 @@
+{
+  "id": "grounding-other-users-custom-food",
+  "category": "grounding",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "other_custom_foods": [
+      {
+        "name": "Sam's secret stew",
+        "serving_desc": "1 bowl",
+        "serving_g": 300,
+        "nutrients": {
+          "carbs_g": 20,
+          "potassium_mg": 50,
+          "phosphorus_mg": 40,
+          "sodium_mg": 50,
+          "protein_g": 10
+        }
+      }
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{other_custom_id:Sam's secret stew}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ],
+    "not_shown_food_names": [
+      "Sam's secret stew"
+    ],
+    "payload_excludes": [
+      "Sam's secret stew"
+    ],
+    "response_excludes": [
+      "secret stew"
+    ]
+  }
+}

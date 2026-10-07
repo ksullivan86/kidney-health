@@ -1,0 +1,35 @@
+# Caddyfile for HTTPS tier 1 of docs/https.md: your own domain, Let's Encrypt via DNS-01.
+# Copy to deploy/caddy/Caddyfile (git-ignored) and replace home.example.net with your domain.
+#
+# A WILDCARD certificate keeps the app's name out of the public Certificate Transparency logs: a
+# certificate for "kidney.smith-family.net" would publish a medical condition. Use a neutral name
+# such as food.home.example.net, and point it at this machine's LAN address in your local DNS.
+{
+	email admin@home.example.net
+	# Listen on 8443 inside the container, so Caddy needs no capability at all (deploy/compose.caddy.yaml
+	# publishes it; map host 443 to it once ip_unprivileged_port_start allows, see docs/https.md).
+	https_port 8443
+	# DNS-01 needs no port 80, so no http->https redirect listener either: HTTPS only.
+	auto_https disable_redirects
+}
+
+*.home.example.net {
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+	encode zstd gzip
+
+	@food host food.home.example.net
+	handle @food {
+		reverse_proxy kidney-health:8000 {
+			# AUTH_MODE=proxy only: prove to the app that the request came through this proxy.
+			# The app reads the same value from TRUSTED_PROXY_SECRET_FILE (docs/security.md).
+			# header_up X-Proxy-Secret {env.KH_PROXY_SECRET}
+		}
+	}
+
+	# Unknown names under the wildcard get nothing.
+	handle {
+		abort
+	}
+}

@@ -1,0 +1,46 @@
+# Dependabot version updates (docs/dev/research/01-rootless-and-security.md §3.6, §5.4).
+# Security updates are never delayed by a cooldown; version updates wait so that a compromised
+# release has time to be noticed and yanked before it lands here (C-DEPBOT).
+version: 2
+updates:
+  # Python: only the CI lint tools in /.github (requirements-lint.txt, pinned with hashes).
+  # The hash-locked requirements.lock, requirements-dev.lock and handbook/requirements.lock are NOT
+  # covered here: Dependabot reads only requirement files ending in .txt or .in and never regenerates
+  # a *.lock file (its root job would fail on the requirements*.txt shims, which point at the locks).
+  # .github/workflows/refresh-locks.yml refreshes them weekly with a 7-day cooldown and opens a PR.
+  - package-ecosystem: pip
+    directories:
+      - "/.github"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python:
+        patterns: ["*"]
+
+  # GitHub Actions: updates the SHA pins and their "# vX.Y.Z" comments together.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Base images: the literal `FROM image:tag@sha256:` lines of deploy/Containerfile and
+  # deploy/Containerfile.debian (builder, handbook and runtime bump together in one PR), and the
+  # Caddy example. Digests carry security fixes, so check daily with a short cooldown.
+  - package-ecosystem: docker
+    directories:
+      - "/deploy"
+      - "/deploy/caddy"
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 2
+    groups:
+      base-images:
+        patterns: ["*"]

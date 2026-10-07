@@ -1,0 +1,1973 @@
+# Sample menus for the handbook: 7 days per stage, built only from builtin foods in data/foods.json
+# (by fdc_id and servings of the food's serving_desc), so every day can be logged in the app.
+#
+# scripts/build_handbook.py turns this file into handbook/docs/eat/menus/<id>.md, the overview table
+# and handbook/docs/eat/grocery-lists.md, and fails (exit 1) unless every day:
+#   * stays within the stage's targets from docs/research/targets_by_stage.json for the reference
+#     person below (protein at least the minimum, with the ARCHITECTURE.md v0.3 diabetes floor of
+#     0.8 g/kg before dialysis; potassium, phosphorus, sodium and fluid at most the ceiling);
+#   * keeps energy inside energy_kcal;
+#   * keeps carbohydrate at each main meal within carb_tolerance_g of carbs_per_meal_g (≤ 10 g) and each
+#     snack inside snack_carbs_g (drinks-only snacks are exempt);
+#   * uses no avoid_ckd food, no hypo_treatment food (rescue foods sit on top of a menu) and, with the
+#     no_phosphate_additive rule, no phosphate_additive food.
+# Print every day's totals with: python scripts/build_handbook.py --totals
+#
+# Editing a day: change fdc_id/servings, run --totals until every day says OK, then run the script
+# without arguments to regenerate the pages. A `note` is shown next to the food name.
+
+last_checked: 2026-10-05
+fact_checked: 2026-10-05
+
+reference_person:
+  weight_kg: 70        # used as the reference ("ideal") weight: BMI 24.2 at 170 cm, so the app uses it as is
+  height_cm: 170
+  diabetes: type1
+
+common:
+  carbs: &carbs >-
+    **Carbohydrate stays steady:** about the same amount at each main meal every day, so a fixed insulin
+    plan or a carbohydrate ratio works the same way from day to day. Your own amount per meal comes from
+    your diabetes team; keep it consistent and count what you actually eat
+    ([Carb counting](../carb-counting.md)).
+  lows: &lows >-
+    **Lows come first.** Treat a low straight away with glucose tablets or another fast 15 g
+    ([Treating a low](../../t1d/treating-a-low.md)), even if it adds potassium or fluid. Rescue foods
+    are on top of these menus and are never "against the rules".
+  log: &log >-
+    **Log it in the app:** every food here is in the app's food list under the same name. Saved meals
+    and "copy day" let you reuse a menu day ([Planning and menus](../../app/planning-and-menus.md)).
+  energy: &energy >-
+    **Hungry, or losing weight without trying?** Add calories with olive oil, unsalted butter or more
+    measured starch covered by your usual insulin plan, not with more meat, and tell your dietitian
+    ([Eating enough](../eating-enough.md)).
+  seasoning: &seasoning >-
+    **Season without salt:** herbs, spices, garlic and onion powder, lemon and vinegar. Do not use salt
+    substitutes: they contain potassium chloride ([Sodium](../sodium.md)).
+  src_fdc: &src_fdc "[USDA FoodData Central (SR Legacy)][FDC]: every nutrient value, through the app's food list."
+  src_q20: &src_q20 "[KDOQI 2020 nutrition guideline][Q20]: energy 25–35 kcal/kg (statement 3.1.1) and protein (statements 3.0.1–3.0.4)."
+  src_k24: &src_k24 "[KDIGO 2024 CKD guideline][K24]: sodium under 2 g a day (Rec 3.3.2.1); protein 0.8 g/kg at G3–G5 (Rec 3.3.1.1); limit bioavailable potassium only when it runs high (PP 3.11.5.2)."
+  src_a11: &src_a11 "[ADA Standards of Care 2026, section 11][A26-11]: protein 0.8 g/kg with diabetes and CKD before dialysis, 1.0–1.2 g/kg on dialysis (Rec 11.3)."
+  src_a5: &src_a5 "[ADA Standards of Care 2026, section 5][A26-5]: consistent carbohydrate in time and amount for people on fixed insulin plans (Rec 5.28)."
+  src_dg7: &src_dg7 "[NKF: carbohydrate counting with CKD][DG7]: 15 g is one carbohydrate choice; 3–6 choices per meal, set by your dietitian."
+
+menus:
+  - id: g1-g2
+    short_title: Stages 1 and 2
+    title: "7-day sample menu: stages 1 and 2"
+    description: "A plant-forward week for CKD stages 1 and 2 with type 1 diabetes: protein 56–70 g, sodium under 2,000 mg, at least 14 g fiber per 1,000 kcal, about 55 g carbohydrate at each main meal."
+    applies_to: [G1-G2]
+    targets_row: {stage: "1", dialysis: none}       # stage 1 and stage 2 rows are the same
+    carbs_per_meal_g: 55
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1750, 2450]                       # 25–35 kcal/kg (KDOQI 2020 3.1.1)
+    potassium_limit: false                          # no limit at G1–G2 unless blood potassium runs high
+    phosphorus_limit: false                         # likewise for phosphate (KDOQI 2020 6.3.1)
+    fiber_min_per_1000_kcal: 14                     # ADA 2026 Rec 5.24
+    rules: [no_phosphate_additive]
+    sources: [FDC, Q20, K24, K22, A26-11, A26-5, DG7]
+    intro: >-
+      At stages 1 and 2 the kidneys still filter well, so there is no potassium or phosphorus limit unless
+      your blood tests run high. The goals are the ones that slow kidney disease: sodium under 2,000 mg,
+      protein that is enough but not too much (56–70 g for a 70 kg adult, and never more than 1.3 g per
+      kg), and a plant-forward pattern with vegetables, fruit, whole grains, beans and nuts. This week has
+      fish, poultry or lean beef at one meal on most days, one meat-free day, at least 14 g of fiber per
+      1,000 kcal and about 55 g of carbohydrate at each main meal. Potassium and phosphorus are shown for information.
+    swaps:
+      - "**Beans and lentils** swap ½ cup for ½ cup: each has about 20 g carbohydrate and 7–9 g protein."
+      - "**Whole grains** swap at the same carbohydrate: ¾ cup brown rice (39 g), 1 cup whole-wheat pasta (35 g), 1 cup quinoa (39 g), 1 cup oatmeal (28 g)."
+      - "**Fish or chicken for beans:** 2 oz of cooked chicken has about 18 g protein and no carbohydrate, so add a starch to keep the meal's carbohydrate steady, and keep the day under 70 g of protein."
+      - "**Nuts:** almonds and walnuts swap ounce for ounce. Choose unsalted."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 0.8–1.0 g per kg for 70 kg: 48–60 g a day at 60 kg and 64–80 g at 80 kg. Keep it under 1.3 g per kg. Ask your dietitian which weight to use."
+      - "**If a blood test shows high potassium or phosphate,** your team may ask you to limit them; the [stage 3 menu](g3.md) shows how a limited week looks."
+      - *carbs
+      - *lows
+      - *energy
+      - *seasoning
+      - *log
+    source_lines:
+      - *src_fdc
+      - *src_q20
+      - "[KDIGO 2024 CKD guideline][K24]: sodium under 2 g a day (Rec 3.3.2.1); protein 0.8 g/kg and avoid more than 1.3 g/kg (PP 3.3.1.1); limit potassium only when it runs high (PP 3.11.5.2)."
+      - "[KDIGO 2022 diabetes in CKD guideline][K22]: a diet high in vegetables, fruits, whole grains, fiber and legumes (practice point 3.1.1)."
+      - *src_a11
+      - "[ADA Standards of Care 2026, section 5][A26-5]: at least 14 g fiber per 1,000 kcal (Rec 5.24) and consistent carbohydrate on fixed insulin plans (Rec 5.28)."
+      - *src_dg7
+    days:
+      - name: "Day 1"
+        note: "Plant-forward does not mean meat-free: one portion of fish or chicken a day fits, with beans, whole grains, nuts and fruit doing the rest. This day has about 41 g of fiber."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "cooked without salt"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 170187, servings: 1}  # Walnuts: 1 oz (28 g)
+              - {fdc_id: 171267, servings: 0.5}  # Milk, 2% reduced fat: ½ cup (122 g)
+              - {fdc_id: 173944, servings: 0.5}  # Banana, raw: ½ medium (59 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 174289, servings: 2}  # Hummus: 4 tbsp (60 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+              - {fdc_id: 169097, servings: 0.5}  # Orange, raw: ½ fruit (66 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169118, servings: 1}  # Pear, raw: 1 small (148 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175168, servings: 1}  # Salmon, Atlantic, farmed, cooked: 3 oz (85 g)
+              - {fdc_id: 169704, servings: 0.75, note: "cooked without salt"}  # Rice, brown, cooked: ¾ cup (152 g)
+              - {fdc_id: 169967, servings: 2}  # Broccoli, boiled: 1 cup, chopped (156 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 0.5, note: "unsalted"}  # Butter, unsalted: ½ tbsp (7 g)
+      - name: "Day 2"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173911, servings: 1}  # Shredded wheat cereal: 1 cup (49 g)
+              - {fdc_id: 171267, servings: 1}  # Milk, 2% reduced fat: 1 cup (244 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 170187, servings: 0.5}  # Walnuts: ½ oz (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 173735, servings: 1}  # Black beans, cooked: ½ cup (86 g)
+              - {fdc_id: 169704, servings: 0.5, note: "cooked without salt"}  # Rice, brown, cooked: ½ cup (101 g)
+              - {fdc_id: 174524, servings: 1}  # Salsa: 2 tbsp (36 g)
+              - {fdc_id: 171705, servings: 1}  # Avocado, raw: ¼ avocado (50 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 174266, servings: 0.5}  # Peanut butter: 1 tbsp (16 g)
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168910, servings: 1, note: "cooked without salt"}  # Pasta, whole-wheat, cooked: 1 cup (117 g)
+              - {fdc_id: 171477, servings: 0.5}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 168462, servings: 2}  # Spinach, raw: 2 cups (60 g)
+              - {fdc_id: 170457, servings: 1}  # Tomato, raw: 1 medium (123 g)
+              - {fdc_id: 171247, servings: 1}  # Parmesan cheese, grated: 1 tbsp (5 g)
+              - {fdc_id: 170420, servings: 1}  # Peas, green, boiled: ½ cup (80 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 3"
+        note: "A meat-free day: lentils at lunch and tofu at dinner give about 63 g of protein."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 174266, servings: 1}  # Peanut butter: 2 tbsp (32 g)
+              - {fdc_id: 173944, servings: 0.5}  # Banana, raw: ½ medium (59 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172421, servings: 1}  # Lentils, cooked: ½ cup (99 g)
+              - {fdc_id: 168917, servings: 0.4, note: "cooked without salt"}  # Quinoa, cooked: 0.4 cup (74 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+              - {fdc_id: 174289, servings: 1}  # Hummus: 2 tbsp (30 g)
+              - {fdc_id: 172749, servings: 0.6667}  # Crackers, whole-wheat: 4 crackers (19 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172448, servings: 2}  # Tofu, firm: ½ block (162 g)
+              - {fdc_id: 169704, servings: 0.75, note: "cooked without salt"}  # Rice, brown, cooked: ¾ cup (152 g)
+              - {fdc_id: 169967, servings: 1}  # Broccoli, boiled: ½ cup, chopped (78 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 169251, servings: 1}  # Mushrooms, white, raw: 1 cup, pieces (70 g)
+              - {fdc_id: 172473, servings: 0.3333, note: "1 tsp in the stir-fry"}  # Soy sauce, reduced sodium: ⅓ tbsp (5 g)
+              - {fdc_id: 172336, servings: 1}  # Canola oil: 1 tbsp (14 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 4"
+        note: "Bean tacos: two corn tortillas, ½ cup of black beans and a little cheese make a full plate for about 57 g of carbohydrate."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "cooked without salt"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 170554, servings: 1}  # Chia seeds: 1 tbsp (12 g)
+              - {fdc_id: 174832, servings: 0.5}  # Almond milk, unsweetened: ½ cup (131 g)
+              - {fdc_id: 170187, servings: 1}  # Walnuts: 1 oz (28 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 171496, servings: 0.6667, note: "home-roasted, not deli"}  # Turkey breast, roasted: 2 oz (57 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169097, servings: 1}  # Orange, raw: 1 fruit (131 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 173241, servings: 2}  # Tortilla, corn: 2 tortillas (52 g)
+              - {fdc_id: 173735, servings: 1}  # Black beans, cooked: ½ cup (86 g)
+              - {fdc_id: 171705, servings: 1}  # Avocado, raw: ¼ avocado (50 g)
+              - {fdc_id: 174524, servings: 1}  # Salsa: 2 tbsp (36 g)
+              - {fdc_id: 169248, servings: 0.5}  # Lettuce, iceberg: ½ cup, shredded (36 g)
+              - {fdc_id: 173414, servings: 0.5}  # Cheese, cheddar: ½ oz (14 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 5"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173911, servings: 1}  # Shredded wheat cereal: 1 cup (49 g)
+              - {fdc_id: 175215, servings: 1}  # Soy milk, unsweetened: 1 cup (243 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 1}  # Bread, whole-wheat: 1 slice (32 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173757, servings: 1}  # Chickpeas (garbanzo), cooked: ½ cup (82 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 174683, servings: 0.5}  # Grapes, red or green, raw: ¼ cup (38 g)
+              - {fdc_id: 171705, servings: 1}  # Avocado, raw: ¼ avocado (50 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170894, servings: 0.5}  # Greek yogurt, plain, nonfat: ½ container (85 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 0.8333}  # Cod, Atlantic, cooked: 2½ oz (71 g)
+              - {fdc_id: 168917, servings: 1, note: "cooked without salt"}  # Quinoa, cooked: 1 cup (185 g)
+              - {fdc_id: 169141, servings: 2}  # Green beans, boiled: 1 cup (126 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+              - {fdc_id: 170187, servings: 1}  # Walnuts: 1 oz (28 g)
+      - name: "Day 6"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 169097, servings: 1}  # Orange, raw: 1 fruit (131 g)
+              - {fdc_id: 173946, servings: 1}  # Blackberries, raw: ½ cup (72 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 168910, servings: 1, note: "cooked without salt"}  # Pasta, whole-wheat, cooked: 1 cup (117 g)
+              - {fdc_id: 173740, servings: 0.5}  # Kidney beans, cooked: ¼ cup (45 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169118, servings: 1}  # Pear, raw: 1 small (148 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 173118, servings: 0.6667}  # Beef, top sirloin steak, broiled: 2 oz (57 g)
+              - {fdc_id: 168483, servings: 1}  # Sweet potato, baked: ½ cup (100 g)
+              - {fdc_id: 169238, servings: 1}  # Kale, boiled: 1 cup (118 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+              - {fdc_id: 169704, servings: 0.5, note: "cooked without salt"}  # Rice, brown, cooked: ½ cup (101 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 7"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "cooked without salt"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171688, servings: 0.5}  # Apple, raw, with skin: ½ medium (91 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+              - {fdc_id: 171267, servings: 0.5}  # Milk, 2% reduced fat: ½ cup (122 g)
+              - {fdc_id: 169414, servings: 1}  # Flaxseed, ground: 1 tbsp (7 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 173946, servings: 2}  # Blackberries, raw: 1 cup (144 g)
+              - {fdc_id: 170894, servings: 0.5}  # Greek yogurt, plain, nonfat: ½ container (85 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175177, servings: 0.65}  # Tilapia, cooked: 2 oz (57 g)
+              - {fdc_id: 169704, servings: 0.75, note: "cooked without salt"}  # Rice, brown, cooked: ¾ cup (152 g)
+              - {fdc_id: 170472, servings: 1}  # Mixed vegetables, frozen, boiled: ½ cup (91 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 169097, servings: 0.5}  # Orange, raw: ½ fruit (66 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+
+  - id: g3
+    short_title: Stage 3 (G3a–G3b), no dialysis
+    title: "7-day sample menu: stage 3, no dialysis"
+    description: "A week of meals for CKD stage 3 with type 1 diabetes: about 56 g protein, sodium well under 2,000 mg, about 55 g carbohydrate at each main meal."
+    applies_to: [G3a, G3b]
+    targets_row: {stage: "3b", dialysis: none}     # the stricter of the two stage 3 rows (potassium 3,500 mg)
+    carbs_per_meal_g: 55
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1750, 2450]                       # 25–35 kcal/kg (KDOQI 2020 3.1.1)
+    protein_about_tolerance_pct: 5                  # "about 56 g": at least 56, at most 5 % more
+    rules: [no_phosphate_additive]
+    sources: [FDC, Q20, K24, A26-11, A26-5, DG7, DG6]
+    intro: >-
+      This week shows how stage 3 kidney disease with type 1 diabetes can look on the plate: three meals
+      with about 55 g of carbohydrate each, small snacks, about 56 g of protein (0.8 g per kg for a
+      70 kg adult), sodium well under 2,000 mg and no foods with phosphate additives. Potassium and
+      phosphorus stay well under the stage 3 review ceilings without counting every fruit, because at
+      stage 3 they are limited only if your blood tests run high. Drink to thirst: there is no fluid
+      limit before dialysis unless your team sets one.
+    swaps:
+      - "**Oatmeal for Cream of Wheat** (1 cup): about +125 mg potassium, +140 mg phosphorus and +2.7 g fiber. Fine at stage 3 when your potassium and phosphate results are in range."
+      - "**Whole-wheat for white bread:** about +45 mg potassium and +40 mg phosphorus per slice, with twice the fiber."
+      - "**Brown rice for white** (1 cup): about +120 mg potassium, +140 mg phosphorus and +2.6 g fiber."
+      - "**Fruit:** any ½ cup of applesauce, blueberries, strawberries, raspberries, grapes or canned pears or peaches can replace another, but check the carbohydrate: ½ cup of grapes is about 14 g, strawberries about 6 g."
+      - "**Protein foods:** chicken, turkey, pork loin, cod and pot roast swap ounce for ounce for potassium; salmon and tilapia have more (about 330 mg per 3 oz)."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 0.8 g per kg for 70 kg. At 60 kg that is about 48 g a day, at 80 kg about 64 g: shrink or grow the meat at lunch and dinner by about ½ oz for each 5 kg. Ask your dietitian which weight to use."
+      - *carbs
+      - *lows
+      - *energy
+      - *seasoning
+      - *log
+    source_lines:
+      - *src_fdc
+      - *src_q20
+      - *src_k24
+      - *src_a11
+      - *src_a5
+      - *src_dg7
+      - "[Bethke and Jansky 2008][DG6]: boiling small pieces of potato removes about half its potassium (Day 3)."
+    days:
+      - name: "Day 1"
+        note: "Based on the sample day in the original diet guide, scaled to the 70 kg reference person."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 1}  # Half and half: 1 tbsp (15 g)
+          - meal: snack
+            label: "Morning snack"
+            items:
+              - {fdc_id: 171695, servings: 2}  # Applesauce, unsweetened: 1 cup (244 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171496, servings: 0.5, note: "home-roasted, not deli"}  # Turkey breast, roasted: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 168409, servings: 2}  # Cucumber, with peel, raw: 1 cup, slices (104 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1.2, note: "unsalted tops if you can find them"}  # Saltine crackers: 6 crackers (18 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 0.6667}  # Chicken breast, roasted, skinless: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 169141, servings: 2}  # Green beans, boiled: 1 cup (126 g)
+              - {fdc_id: 170397, servings: 0.5}  # Cauliflower, boiled: ¼ cup (31 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+      - name: "Day 2"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "plain, cooked in water"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 1}  # Half and half: 1 tbsp (15 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 171477, servings: 0.5}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 170108, servings: 0.5}  # Bell pepper, red, raw: ¼ cup, chopped (38 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted, melted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 0.6667}  # Cod, Atlantic, cooked: 2 oz (57 g)
+              - {fdc_id: 169700, servings: 1}  # Couscous, cooked: 1 cup (157 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 3"
+        note: "Leaching the potato (peel, cut small, boil, drain, boil again in fresh water) lowers its potassium; the numbers below are for unleached potato, so they are on the safe side."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 167762, servings: 0.5}  # Strawberries, raw: ¼ cup, halves (38 g)
+              - {fdc_id: 169641, servings: 0.5}  # Jam or preserves: ½ tbsp (10 g)
+              - {fdc_id: 174683, servings: 1.5}  # Grapes, red or green, raw: ¾ cup (113 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174915, servings: 1}  # Pita bread, white: 1 large, 6-1/2 in (60 g)
+              - {fdc_id: 173709, servings: 0.5, note: "drained"}  # Tuna, light, canned in water, drained: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169988, servings: 1}  # Celery, raw: 1 stalk, medium (40 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 169949, servings: 1}  # Plum, raw: 1 fruit (66 g)
+              - {fdc_id: 168195, servings: 1}  # Clementine, raw: 1 fruit (74 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 174266, servings: 1}  # Peanut butter: 2 tbsp (32 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171817, servings: 0.6667, note: "trimmed, no gravy"}  # Beef, chuck pot roast, braised: 2 oz (57 g)
+              - {fdc_id: 170440, servings: 1, note: "leached and boiled"}  # Potato, boiled, peeled: ½ cup (78 g)
+              - {fdc_id: 170394, servings: 0.5}  # Carrots, boiled: ¼ cup, slices (39 g)
+              - {fdc_id: 172796, servings: 1, note: "dinner roll"}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 174974, servings: 1}  # Vanilla wafers: 8 wafers (30 g)
+      - name: "Day 4"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172796, servings: 1}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 174031, servings: 0.5, note: "patty, no salt added"}  # Ground beef, 90% lean, patty: 1½ oz (43 g)
+              - {fdc_id: 169248, servings: 0.5}  # Lettuce, iceberg: ½ cup, shredded (36 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169381, servings: 2}  # Ketchup, low sodium: 2 tbsp (34 g)
+              - {fdc_id: 172234, servings: 1}  # Mustard, yellow: 1 tsp (5 g)
+              - {fdc_id: 169975, servings: 1, note: "coleslaw"}  # Cabbage, raw: 1 cup, shredded (70 g)
+              - {fdc_id: 171009, servings: 1.5, note: "coleslaw dressing"}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 167765, servings: 1}  # Watermelon, raw: 1 cup, diced (152 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 174957, servings: 0.5}  # Graham crackers: 1 large rectangle (14 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175168, servings: 0.8333}  # Salmon, Atlantic, farmed, cooked: 2½ oz (71 g)
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169936, servings: 1}  # Pears, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 5"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174648, servings: 1.5}  # Corn flakes cereal: 1½ cups (42 g)
+              - {fdc_id: 174832, servings: 0.75}  # Almond milk, unsweetened: ¾ cup (197 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 173424, servings: 2, note: "egg salad"}  # Egg, hard-boiled: 2 large (100 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+              - {fdc_id: 167762, servings: 1.5}  # Strawberries, raw: ¾ cup, halves (114 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1.6}  # Saltine crackers: 8 crackers (24 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172388, servings: 0.6667, note: "stir-fried"}  # Chicken thigh, roasted, skinless: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 170427, servings: 1}  # Bell pepper, green, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169976, servings: 1}  # Cabbage, boiled: ½ cup, shredded (75 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+              - {fdc_id: 169105, servings: 1}  # Tangerine (mandarin), raw: 1 medium (88 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 172694, servings: 1}  # Cake, angel food: 1 piece, 1/12 of cake (28 g)
+              - {fdc_id: 167762, servings: 2}  # Strawberries, raw: 1 cup, halves (152 g)
+      - name: "Day 6"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+              - {fdc_id: 167762, servings: 1.5}  # Strawberries, raw: ¾ cup, halves (114 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 2}  # Half and half: 2 tbsp (30 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 171496, servings: 0.5, note: "home-roasted, not deli"}  # Turkey breast, roasted: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 169105, servings: 1}  # Tangerine (mandarin), raw: 1 medium (88 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted, melted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 174492, servings: 0.5, note: "browned with garlic"}  # Ground turkey, 93% lean, patty: 1½ oz (43 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 170000, servings: 1}  # Onion, raw: ½ cup, chopped (80 g)
+              - {fdc_id: 170108, servings: 1.5}  # Bell pepper, red, raw: ¾ cup, chopped (113 g)
+              - {fdc_id: 169247, servings: 1, note: "side salad"}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 1.5}  # Pears, canned in juice: ¾ cup (186 g)
+      - name: "Day 7"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 171477, servings: 0.5}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 169976, servings: 1}  # Cabbage, boiled: ½ cup, shredded (75 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169105, servings: 1}  # Tangerine (mandarin), raw: 1 medium (88 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 169641, servings: 1}  # Jam or preserves: 1 tbsp (20 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168240, servings: 0.6667}  # Pork loin chop, broiled: 2 oz (57 g)
+              - {fdc_id: 169700, servings: 0.75}  # Couscous, cooked: ¾ cup (118 g)
+              - {fdc_id: 171695, servings: 1.5}  # Applesauce, unsweetened: ¾ cup (183 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 170397, servings: 0.5}  # Cauliflower, boiled: ¼ cup (31 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+
+  - id: g4-g5
+    short_title: Stages 4 and 5, no dialysis
+    title: "7-day sample menu: stages 4 and 5, no dialysis"
+    description: "A week of meals for CKD stage 4 or 5 before dialysis with type 1 diabetes: about 56 g protein, potassium under 2,500 mg, phosphorus under 900 mg."
+    applies_to: [G4, G5]
+    targets_row: {stage: "5", dialysis: none}      # the stricter of the two rows (potassium 2,500, phosphorus 900)
+    carbs_per_meal_g: 55
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1750, 2450]
+    protein_about_tolerance_pct: 5
+    rules: [no_phosphate_additive]
+    sources: [FDC, Q20, K24, A26-11, A26-5, DG7, DG28b]
+    intro: >-
+      This week is built for the stricter starting points used at stages 4 and 5 before dialysis:
+      potassium under 2,500 mg, phosphorus under 900 mg, sodium well under 2,000 mg, and still about
+      56 g of protein (0.8 g per kg for 70 kg), because with diabetes going lower risks muscle loss and
+      lows. It uses refined grains, low-potassium fruit and vegetables in ½-cup portions, egg whites and
+      no foods with phosphate additives. Carbohydrate stays at about 55 g per main meal. If your blood
+      potassium and phosphate are normal, your team may allow more; ask before changing.
+    swaps:
+      - "**Egg whites for a whole egg:** each white has about 3.6 g protein and 5 mg phosphorus; a whole hard-boiled egg has 6.3 g protein and 86 mg phosphorus."
+      - "**Fruit:** swap ½ cup for ½ cup within applesauce, blueberries, strawberries, raspberries, grapes, canned pears and canned peaches; check the carbohydrate."
+      - "**Vegetables:** green beans, cauliflower, cabbage, cucumber, lettuce, onion and peppers swap freely at ½ cup."
+      - "**Rice milk:** use only a brand without phosphate in the ingredient list; almond milk is lower in phosphorus but has more potassium and sodium."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 0.8 g per kg for 70 kg: about 48 g a day at 60 kg and 64 g at 80 kg. Change the meat by about ½ oz at lunch and dinner for each 5 kg. Ask your dietitian which weight to use."
+      - *carbs
+      - *lows
+      - *energy
+      - *seasoning
+      - *log
+    source_lines:
+      - *src_fdc
+      - *src_q20
+      - *src_k24
+      - *src_a11
+      - *src_a5
+      - *src_dg7
+      - "[NKF: milk alternatives][DG28b]: check plant milks for added phosphate."
+    days:
+      - name: "Day 1"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1.25, note: "cooked without salt"}  # Cream of wheat, cooked: 1¼ cups (314 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: snack
+            label: "Morning snack"
+            items:
+              - {fdc_id: 171695, servings: 0.5}  # Applesauce, unsweetened: ¼ cup (61 g)
+              - {fdc_id: 174974, servings: 1}  # Vanilla wafers: 8 wafers (30 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171496, servings: 0.5, note: "home-roasted, not deli"}  # Turkey breast, roasted: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 168409, servings: 2}  # Cucumber, with peel, raw: 1 cup, slices (104 g)
+              - {fdc_id: 169936, servings: 1.5}  # Pears, canned in juice: ¾ cup (186 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 0.6667}  # Chicken breast, roasted, skinless: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 1.25}  # Rice, white, long-grain, cooked: 1¼ cups (198 g)
+              - {fdc_id: 169141, servings: 0.5}  # Green beans, boiled: ¼ cup (32 g)
+              - {fdc_id: 170397, servings: 0.5}  # Cauliflower, boiled: ¼ cup (31 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 2"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 0.75, note: "cooked without salt"}  # Grits, cooked: ¾ cup (193 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169930, servings: 2}  # Peaches, canned in juice: 1 cup (248 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 171477, servings: 0.5}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 170427, servings: 1}  # Bell pepper, green, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1.4}  # Saltine crackers: 7 crackers (21 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 0.6667}  # Cod, Atlantic, cooked: 2 oz (57 g)
+              - {fdc_id: 169700, servings: 1}  # Couscous, cooked: 1 cup (157 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 172694, servings: 1}  # Cake, angel food: 1 piece, 1/12 of cake (28 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+      - name: "Day 3"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 169641, servings: 1.5}  # Jam or preserves: 1½ tbsp (30 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 173424, servings: 1, note: "egg salad"}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "in the egg salad"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 169641, servings: 1}  # Jam or preserves: 1 tbsp (20 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171817, servings: 0.6667, note: "trimmed, no gravy"}  # Beef, chuck pot roast, braised: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 0.6667}  # Rice, white, long-grain, cooked: ⅔ cup (105 g)
+              - {fdc_id: 169976, servings: 0.5}  # Cabbage, boiled: ¼ cup, shredded (38 g)
+              - {fdc_id: 172796, servings: 1, note: "dinner roll"}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 0.5}  # Pears, canned in juice: ¼ cup (62 g)
+              - {fdc_id: 174974, servings: 1}  # Vanilla wafers: 8 wafers (30 g)
+      - name: "Day 4"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174648, servings: 1.25}  # Corn flakes cereal: 1¼ cups (35 g)
+              - {fdc_id: 171942, servings: 1, note: "check the label for added phosphate"}  # Rice milk, unsweetened: 1 cup (240 g)
+              - {fdc_id: 171711, servings: 0.5}  # Blueberries, raw: ¼ cup (37 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172796, servings: 1}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 174031, servings: 0.6667, note: "patty, no salt added"}  # Ground beef, 90% lean, patty: 2 oz (57 g)
+              - {fdc_id: 169248, servings: 0.5}  # Lettuce, iceberg: ½ cup, shredded (36 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169381, servings: 1}  # Ketchup, low sodium: 1 tbsp (17 g)
+              - {fdc_id: 169975, servings: 1, note: "coleslaw"}  # Cabbage, raw: 1 cup, shredded (70 g)
+              - {fdc_id: 171009, servings: 1.5, note: "coleslaw dressing"}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 174957, servings: 0.5}  # Graham crackers: 1 large rectangle (14 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 0.6667, note: "baked with garlic and pepper"}  # Chicken breast, roasted, skinless: 2 oz (57 g)
+              - {fdc_id: 169737, servings: 1.3333}  # Pasta, cooked: 1⅓ cups (165 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 170397, servings: 0.5}  # Cauliflower, boiled: ¼ cup (31 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 5"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1.25, note: "cooked without salt"}  # Cream of wheat, cooked: 1¼ cups (314 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174915, servings: 1}  # Pita bread, white: 1 large, 6-1/2 in (60 g)
+              - {fdc_id: 173709, servings: 0.6667, note: "drained"}  # Tuna, light, canned in water, drained: 2 oz (57 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 169949, servings: 1}  # Plum, raw: 1 fruit (66 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted, melted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172388, servings: 0.6667, note: "stir-fried"}  # Chicken thigh, roasted, skinless: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 170427, servings: 0.5}  # Bell pepper, green, raw: ¼ cup, chopped (38 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169976, servings: 1}  # Cabbage, boiled: ½ cup, shredded (75 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169930, servings: 1.5}  # Peaches, canned in juice: ¾ cup (186 g)
+      - name: "Day 6"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169126, servings: 1.5}  # Pineapple, canned in juice: ¾ cup (188 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 172187, servings: 1, note: "fried rice"}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 170000, servings: 1}  # Onion, raw: ½ cup, chopped (80 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 168195, servings: 1}  # Clementine, raw: 1 fruit (74 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1}  # Saltine crackers: 5 crackers (15 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 174492, servings: 0.6667, note: "browned with garlic"}  # Ground turkey, 93% lean, patty: 2 oz (57 g)
+              - {fdc_id: 169737, servings: 1.25}  # Pasta, cooked: 1¼ cups (155 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 169247, servings: 1, note: "side salad"}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169596, servings: 1}  # Gelatin dessert (Jell-O): ½ cup (135 g)
+      - name: "Day 7"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 1.25, note: "cooked without salt"}  # Grits, cooked: 1¼ cups (321 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 171711, servings: 0.5}  # Blueberries, raw: ¼ cup (37 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171477, servings: 0.5, note: "sliced, home-cooked"}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 168409, servings: 1.5}  # Cucumber, with peel, raw: ¾ cup, slices (78 g)
+              - {fdc_id: 171695, servings: 1.5}  # Applesauce, unsweetened: ¾ cup (183 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 174974, servings: 1}  # Vanilla wafers: 8 wafers (30 g)
+              - {fdc_id: 173418, servings: 1}  # Cream cheese: 1 tbsp (15 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168240, servings: 0.6667}  # Pork loin chop, broiled: 2 oz (57 g)
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+              - {fdc_id: 170397, servings: 1.5}  # Cauliflower, boiled: ¾ cup (93 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 1.5}  # Pears, canned in juice: ¾ cup (186 g)
+
+  - id: hemodialysis
+    short_title: In-center hemodialysis
+    title: "7-day sample menu: in-center hemodialysis"
+    description: "A week of meals for hemodialysis three times a week with type 1 diabetes: 70–84 g protein, potassium under 2,500 mg, fluid under 1,500 mL including foods."
+    applies_to: [HD, HHD]
+    targets_row: {stage: "5", dialysis: hemodialysis}
+    carbs_per_meal_g: 55
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1750, 2450]
+    rules: [no_phosphate_additive]
+    dialysis_days: true
+    sources: [FDC, Q20, K24, A26-11, A26-5, DG7, DG23, DG19a, DG53, DG28a]
+    intro: >-
+      On hemodialysis protein goes **up**, to 70–84 g a day for 70 kg (1.0–1.2 g per kg), because
+      dialysis removes protein and too little causes muscle loss. Potassium stays under 2,500 mg,
+      phosphorus under 1,000 mg and sodium well under 2,000 mg, and fluid is counted: drinks plus foods
+      that are liquid at room temperature (sherbet, gelatin, ice). The menus use about 450–850 mL of the
+      1,500 mL starting allowance, which leaves room for drinks with medicines and on hot days. Days 1, 3
+      and 5 are dialysis days (Monday, Wednesday, Friday). Saturday and Sunday fall in the long weekend gap,
+      the riskiest time for high potassium and fluid overload, so those days stay at the low end.
+    swaps:
+      - "**Egg whites** are the lowest-phosphorus protein: about 3.6 g protein for 5 mg phosphorus each."
+      - "**Drinks:** water, tea or coffee can replace each other cup for cup; all of them count toward fluid, and so do ice chips, sherbet, gelatin and ice pops."
+      - "**Protein foods:** chicken, turkey, pork loin, cod and pot roast swap ounce for ounce; salmon and tilapia have more potassium (about 330 mg per 3 oz)."
+      - "**Fruit and vegetables:** stay with the low-potassium list in ½-cup portions on non-dialysis days, especially on Sunday."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 1.0–1.2 g per kg for 70 kg. At 60 kg that is 60–72 g a day, at 80 kg 80–96 g: change the meat at lunch and dinner by about ¾ oz for each 5 kg. Use the weight your unit gives you (often your dry weight)."
+      - "**Fluid is personal:** the 1,500 mL here assumes you still pass about 500 mL of urine a day. Your unit sets your allowance and checks it at every session."
+      - *carbs
+      - "**Lows on dialysis days:** glucose often drops during and after a session. Check before and after, carry glucose tablets (they add no fluid), and treat a low straight away ([Treating a low](../../t1d/treating-a-low.md)). Your team adjusts insulin for dialysis days."
+      - *energy
+      - *log
+    source_lines:
+      - *src_fdc
+      - *src_q20
+      - *src_k24
+      - *src_a11
+      - *src_a5
+      - *src_dg7
+      - "[DaVita: hemodialysis fluid intake][DG23] and [AKF Kidney Kitchen: fluids][DG19a]: about 1,000 mL a day plus your urine output."
+      - "[Foley 2011][DG53]: the long gap between sessions carries the highest risk; [Cabrera 2015][DG28a]: weight gain between sessions above 3.5 % of body weight is linked to death."
+    days:
+      - name: "Day 1"
+        label: "Monday, dialysis day"
+        dialysis_day: true
+        note: "Dialysis day. Pack the afternoon snack and glucose tablets for the session; check your glucose before and after dialysis. Take phosphate binders with meals and snacks the way your team prescribed. Monday's session ends the long weekend gap."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 1}  # Half and half: 1 tbsp (15 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171496, servings: 0.8333, note: "home-roasted, not deli"}  # Turkey breast, roasted: 2½ oz (71 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+          - meal: snack
+            label: "Afternoon snack (pack for dialysis)"
+            items:
+              - {fdc_id: 172746, servings: 1.2}  # Saltine crackers: 6 crackers (18 g)
+              - {fdc_id: 173418, servings: 1}  # Cream cheese: 1 tbsp (15 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 1}  # Chicken breast, roasted, skinless: 3 oz (86 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 170397, servings: 0.5}  # Cauliflower, boiled: ¼ cup (31 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 2"
+        label: "Tuesday"
+        dialysis_day: false
+        note: "Non-dialysis day."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 0.6667, note: "cooked without salt"}  # Grits, cooked: ⅔ cup (171 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169930, servings: 2}  # Peaches, canned in juice: 1 cup (248 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 0.5}  # Pasta, cooked: ½ cup (62 g)
+              - {fdc_id: 171477, servings: 0.8333}  # Chicken breast, roasted, skinless: 2½ oz (72 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 174683, servings: 2}  # Grapes, red or green, raw: 1 cup (151 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 169641, servings: 0.5}  # Jam or preserves: ½ tbsp (10 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171817, servings: 1, note: "trimmed, no gravy"}  # Beef, chuck pot roast, braised: 3 oz (85 g)
+              - {fdc_id: 168878, servings: 0.6667}  # Rice, white, long-grain, cooked: ⅔ cup (105 g)
+              - {fdc_id: 169976, servings: 0.5}  # Cabbage, boiled: ¼ cup, shredded (38 g)
+              - {fdc_id: 172796, servings: 1, note: "dinner roll"}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 172694, servings: 1}  # Cake, angel food: 1 piece, 1/12 of cake (28 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 3"
+        label: "Wednesday, dialysis day"
+        dialysis_day: true
+        note: "Dialysis day. Pack the afternoon snack and glucose tablets for the session; check your glucose before and after dialysis. Take phosphate binders with meals and snacks the way your team prescribed."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
+              - {fdc_id: 172187, servings: 2}  # Egg, scrambled: 2 large (122 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 169641, servings: 1.5}  # Jam or preserves: 1½ tbsp (30 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174915, servings: 1}  # Pita bread, white: 1 large, 6-1/2 in (60 g)
+              - {fdc_id: 173709, servings: 0.8333, note: "drained"}  # Tuna, light, canned in water, drained: 2½ oz (71 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 168409, servings: 0.5}  # Cucumber, with peel, raw: ¼ cup, slices (26 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 171695, servings: 1.5}  # Applesauce, unsweetened: ¾ cup (183 g)
+          - meal: snack
+            label: "Afternoon snack (pack for dialysis)"
+            items:
+              - {fdc_id: 174974, servings: 0.75}  # Vanilla wafers: 6 wafers (23 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168240, servings: 1}  # Pork loin chop, broiled: 3 oz (85 g)
+              - {fdc_id: 169700, servings: 1.25}  # Couscous, cooked: 1¼ cups (196 g)
+              - {fdc_id: 169141, servings: 0.5}  # Green beans, boiled: ¼ cup (32 g)
+              - {fdc_id: 170397, servings: 2}  # Cauliflower, boiled: 1 cup (124 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 1.5}  # Pears, canned in juice: ¾ cup (186 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 4"
+        label: "Thursday"
+        dialysis_day: false
+        note: "Non-dialysis day."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174648, servings: 1.5}  # Corn flakes cereal: 1½ cups (42 g)
+              - {fdc_id: 174832, servings: 0.5}  # Almond milk, unsweetened: ½ cup (131 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172796, servings: 1}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 174031, servings: 0.8333, note: "patty, no salt added"}  # Ground beef, 90% lean, patty: 2½ oz (71 g)
+              - {fdc_id: 169248, servings: 0.5}  # Lettuce, iceberg: ½ cup, shredded (36 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169381, servings: 1}  # Ketchup, low sodium: 1 tbsp (17 g)
+              - {fdc_id: 169975, servings: 1, note: "coleslaw"}  # Cabbage, raw: 1 cup, shredded (70 g)
+              - {fdc_id: 171009, servings: 1.5, note: "coleslaw dressing"}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 167762, servings: 0.5}  # Strawberries, raw: ¼ cup, halves (38 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted, melted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 1.3333}  # Cod, Atlantic, cooked: 4 oz (113 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169930, servings: 0.5}  # Peaches, canned in juice: ¼ cup (62 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169596, servings: 1}  # Gelatin dessert (Jell-O): ½ cup (135 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 5"
+        label: "Friday, dialysis day"
+        dialysis_day: true
+        note: "Dialysis day. Pack the afternoon snack and glucose tablets for the session; check your glucose before and after dialysis. Take phosphate binders with meals and snacks the way your team prescribed."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1.25, note: "cooked without salt"}  # Cream of wheat, cooked: 1¼ cups (314 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171477, servings: 0.8333, note: "sliced, home-cooked"}  # Chicken breast, roasted, skinless: 2½ oz (72 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 174683, servings: 1.5}  # Grapes, red or green, raw: ¾ cup (113 g)
+          - meal: snack
+            label: "Afternoon snack (pack for dialysis)"
+            items:
+              - {fdc_id: 174957, servings: 0.5}  # Graham crackers: 1 large rectangle (14 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172388, servings: 1, note: "stir-fried"}  # Chicken thigh, roasted, skinless: 3 oz (85 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 170427, servings: 1}  # Bell pepper, green, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169976, servings: 0.5}  # Cabbage, boiled: ¼ cup, shredded (38 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 6"
+        label: "Saturday"
+        dialysis_day: false
+        note: "Non-dialysis day."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
+              - {fdc_id: 173418, servings: 0.5}  # Cream cheese: ½ tbsp (7 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169126, servings: 1.5}  # Pineapple, canned in juice: ¾ cup (188 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 171477, servings: 0.8333}  # Chicken breast, roasted, skinless: 2½ oz (72 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 169976, servings: 1}  # Cabbage, boiled: ½ cup, shredded (75 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 168195, servings: 1}  # Clementine, raw: 1 fruit (74 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1}  # Saltine crackers: 5 crackers (15 g)
+              - {fdc_id: 173418, servings: 1}  # Cream cheese: 1 tbsp (15 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 174492, servings: 1, note: "browned with garlic"}  # Ground turkey, 93% lean, patty: 3 oz (85 g)
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 170108, servings: 2}  # Bell pepper, red, raw: 1 cup, chopped (150 g)
+              - {fdc_id: 169247, servings: 1, note: "side salad"}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 1}  # Pears, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1.5}  # Water, tap: 1½ cups (356 g)
+      - name: "Day 7"
+        label: "Sunday"
+        dialysis_day: false
+        note: "Non-dialysis day in the long weekend gap: potassium and fluid stay at the low end until Monday's session."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 171711, servings: 1.5}  # Blueberries, raw: ¾ cup (111 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 173424, servings: 1, note: "egg salad"}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 2, note: "in the egg salad"}  # Egg white: 2 large (66 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+              - {fdc_id: 167762, servings: 1.5}  # Strawberries, raw: ¾ cup, halves (114 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 169641, servings: 0.5}  # Jam or preserves: ½ tbsp (10 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 1, note: "baked with garlic and pepper"}  # Chicken breast, roasted, skinless: 3 oz (86 g)
+              - {fdc_id: 169700, servings: 1.3333}  # Couscous, cooked: 1⅓ cups (209 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 170397, servings: 1}  # Cauliflower, boiled: ½ cup (62 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 172694, servings: 1}  # Cake, angel food: 1 piece, 1/12 of cake (28 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 1}  # Water, tap: 1 cup, 8 fl oz (237 g)
+
+  - id: peritoneal
+    short_title: Peritoneal dialysis
+    title: "7-day sample menu: peritoneal dialysis"
+    description: "A week of meals for peritoneal dialysis with type 1 diabetes: 70–84 g protein, potassium under 3,500 mg, fluid under 2,000 mL, a little less food energy because of dialysate glucose."
+    applies_to: [PD]
+    targets_row: {stage: "5", dialysis: peritoneal}
+    carbs_per_meal_g: 50
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1500, 2050]                      # 30 kcal/kg minus about 400 kcal absorbed from the dialysate, ± range
+    rules: [no_phosphate_additive]
+    sources: [FDC, Q20, K24, A26-11, A26-5, DG7, DG25a, DG6]
+    intro: >-
+      Peritoneal dialysis runs every day, so potassium is usually less strict than on hemodialysis
+      (under 3,500 mg here, and some people on PD run low and need more), while protein goes **up** to
+      70–84 g a day for 70 kg because protein is lost into the dialysis fluid. The glucose in the
+      dialysis fluid adds calories (often 400 or more a day) and raises blood glucose, so food energy
+      here is lower (about 1,700 kcal) and carbohydrate is about 50 g per main meal. Fluid stays under
+      2,000 mL including foods that are liquid at room temperature.
+    swaps:
+      - "**More potassium is often allowed on PD:** a small orange (about 240 mg), two thin tomato slices (under 100 mg) or a leached potato fit on most days. Follow your own blood results."
+      - "**Protein foods:** chicken, turkey, pork loin, cod, salmon, pot roast and firm tofu all work; keep the portions even on days you are not hungry, because protein is lost into the fluid every day."
+      - "**Fruit:** any ½ cup from the low-potassium list can replace another; check the carbohydrate."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 1.0–1.2 g per kg for 70 kg: 60–72 g a day at 60 kg and 80–96 g at 80 kg. Change the meat by about ¾ oz at lunch and dinner for each 5 kg."
+      - "**Dialysate glucose changes your numbers:** stronger bags add more glucose and calories. Your team adjusts insulin and may change the food plan when your prescription changes."
+      - "**Use a glucose-specific meter** if you use icodextrin (Extraneal): some meters read falsely high ([Peritoneal dialysis](../../stages/peritoneal-dialysis.md))."
+      - *carbs
+      - *lows
+      - *log
+    source_lines:
+      - *src_fdc
+      - *src_q20
+      - *src_k24
+      - *src_a11
+      - *src_a5
+      - *src_dg7
+      - "[DaVita: peritoneal dialysis diet][DG25a]: potassium 3,000–4,000 mg a day; 400 or more kcal a day from the dialysate."
+      - "[Bethke and Jansky 2008][DG6]: boiling small pieces of potato removes about half its potassium."
+    days:
+      - name: "Day 1"
+        note: "The dialysis fluid adds calories and glucose that are not in these totals (often 400 kcal or more a day), so food energy and carbohydrate are a little lower than on the other menus."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "plain, cooked in water"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171711, servings: 2}  # Blueberries, raw: 1 cup (148 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled with the egg"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 0.5}  # Half and half: ½ tbsp (8 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171496, servings: 0.8333, note: "home-roasted, not deli"}  # Turkey breast, roasted: 2½ oz (71 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170457, servings: 0.25, note: "2 thin slices"}  # Tomato, raw: ¼ medium (31 g)
+              - {fdc_id: 169097, servings: 1}  # Orange, raw: 1 fruit (131 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1}  # Saltine crackers: 5 crackers (15 g)
+              - {fdc_id: 174266, servings: 0.5}  # Peanut butter: 1 tbsp (16 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 1}  # Chicken breast, roasted, skinless: 3 oz (86 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 170394, servings: 0.5}  # Carrots, boiled: ¼ cup, slices (39 g)
+              - {fdc_id: 169141, servings: 0.5}  # Green beans, boiled: ¼ cup (32 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 2"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 173418, servings: 1}  # Cream cheese: 1 tbsp (15 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 169936, servings: 1}  # Pears, canned in juice: ½ cup (124 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 171477, servings: 0.8333}  # Chicken breast, roasted, skinless: 2½ oz (72 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 169949, servings: 1}  # Plum, raw: 1 fruit (66 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 169641, servings: 0.5}  # Jam or preserves: ½ tbsp (10 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175168, servings: 1}  # Salmon, Atlantic, farmed, cooked: 3 oz (85 g)
+              - {fdc_id: 170440, servings: 1, note: "leached and boiled"}  # Potato, boiled, peeled: ½ cup (78 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 173430, servings: 2, note: "unsalted"}  # Butter, unsalted: 2 tbsp (28 g)
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 3"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171655, servings: 1, note: "cooked without salt"}  # Grits, cooked: 1 cup (257 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174915, servings: 1}  # Pita bread, white: 1 large, 6-1/2 in (60 g)
+              - {fdc_id: 173709, servings: 0.8333, note: "drained"}  # Tuna, light, canned in water, drained: 2½ oz (71 g)
+              - {fdc_id: 171009, servings: 1.5}  # Mayonnaise: 1½ tbsp (21 g)
+              - {fdc_id: 169988, servings: 1}  # Celery, raw: 1 stalk, medium (40 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 169949, servings: 1}  # Plum, raw: 1 fruit (66 g)
+              - {fdc_id: 171711, servings: 0.5}  # Blueberries, raw: ¼ cup (37 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted, melted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171817, servings: 1, note: "trimmed, no gravy"}  # Beef, chuck pot roast, braised: 3 oz (85 g)
+              - {fdc_id: 168878, servings: 1}  # Rice, white, long-grain, cooked: 1 cup (158 g)
+              - {fdc_id: 170394, servings: 0.5}  # Carrots, boiled: ¼ cup, slices (39 g)
+              - {fdc_id: 169976, servings: 1}  # Cabbage, boiled: ½ cup, shredded (75 g)
+              - {fdc_id: 173430, servings: 1.5, note: "unsalted"}  # Butter, unsalted: 1½ tbsp (21 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 174974, servings: 0.5}  # Vanilla wafers: 4 wafers (15 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 4"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172796, servings: 1}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 174031, servings: 1, note: "patty, no salt added"}  # Ground beef, 90% lean, patty: 3 oz (85 g)
+              - {fdc_id: 169247, servings: 0.5}  # Lettuce, romaine: ½ cup, shredded (24 g)
+              - {fdc_id: 170457, servings: 0.25, note: "2 thin slices"}  # Tomato, raw: ¼ medium (31 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169381, servings: 2}  # Ketchup, low sodium: 2 tbsp (34 g)
+              - {fdc_id: 167765, servings: 1}  # Watermelon, raw: 1 cup, diced (152 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 174957, servings: 0.5}  # Graham crackers: 1 large rectangle (14 g)
+              - {fdc_id: 169105, servings: 1}  # Tangerine (mandarin), raw: 1 medium (88 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 1}  # Cod, Atlantic, cooked: 3 oz (85 g)
+              - {fdc_id: 169700, servings: 1.25}  # Couscous, cooked: 1¼ cups (196 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 169292, servings: 1}  # Zucchini, boiled: ½ cup, sliced (90 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169936, servings: 1}  # Pears, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 5"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174648, servings: 1}  # Corn flakes cereal: 1 cup (28 g)
+              - {fdc_id: 174832, servings: 0.75}  # Almond milk, unsweetened: ¾ cup (197 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 172187, servings: 1}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172183, servings: 1}  # Egg white: 1 large (33 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173227, servings: 1}  # Tea, black, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174924, servings: 2}  # Bread, white: 2 slices (58 g)
+              - {fdc_id: 171477, servings: 0.8333, note: "sliced, home-cooked"}  # Chicken breast, roasted, skinless: 2½ oz (72 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 169248, servings: 1}  # Lettuce, iceberg: 1 cup, shredded (72 g)
+              - {fdc_id: 168409, servings: 0.5}  # Cucumber, with peel, raw: ¼ cup, slices (26 g)
+              - {fdc_id: 169118, servings: 1, note: "small"}  # Pear, raw: 1 small (148 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1.2}  # Saltine crackers: 6 crackers (18 g)
+              - {fdc_id: 173418, servings: 2}  # Cream cheese: 2 tbsp (29 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172388, servings: 1, note: "stir-fried"}  # Chicken thigh, roasted, skinless: 3 oz (85 g)
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 170000, servings: 0.5}  # Onion, raw: ¼ cup, chopped (40 g)
+              - {fdc_id: 169976, servings: 2}  # Cabbage, boiled: 1 cup, shredded (150 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 6"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 174899, servings: 0.5}  # Bagel, plain: ½ bagel (50 g)
+              - {fdc_id: 173418, servings: 0.5}  # Cream cheese: ½ tbsp (7 g)
+              - {fdc_id: 172187, servings: 2}  # Egg, scrambled: 2 large (122 g)
+              - {fdc_id: 172183, servings: 2}  # Egg white: 2 large (66 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 168878, servings: 0.75}  # Rice, white, long-grain, cooked: ¾ cup (119 g)
+              - {fdc_id: 172448, servings: 1.5, note: "stir-fried"}  # Tofu, firm: 0.4 block (122 g)
+              - {fdc_id: 169141, servings: 1.5}  # Green beans, boiled: ¾ cup (95 g)
+              - {fdc_id: 170427, servings: 1.5}  # Bell pepper, green, raw: ¾ cup, chopped (113 g)
+              - {fdc_id: 172336, servings: 2}  # Canola oil: 2 tbsp (28 g)
+              - {fdc_id: 169230, servings: 1}  # Garlic, raw: 1 clove (3 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170250, servings: 1}  # Rice cakes, plain, unsalted: 2 cakes (18 g)
+              - {fdc_id: 174266, servings: 0.5}  # Peanut butter: 1 tbsp (16 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168240, servings: 1}  # Pork loin chop, broiled: 3 oz (85 g)
+              - {fdc_id: 170440, servings: 2, note: "leached and boiled"}  # Potato, boiled, peeled: 1 cup (156 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 171695, servings: 1}  # Applesauce, unsweetened: ½ cup (122 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 174974, servings: 0.5}  # Vanilla wafers: 4 wafers (15 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+      - name: "Day 7"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 174924, servings: 1, note: "toasted"}  # Bread, white: 1 slice (29 g)
+              - {fdc_id: 173430, servings: 0.5, note: "unsalted"}  # Butter, unsalted: ½ tbsp (7 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 172183, servings: 1, note: "scrambled"}  # Egg white: 1 large (33 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+              - {fdc_id: 171255, servings: 1}  # Half and half: 1 tbsp (15 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 1}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 174492, servings: 0.8333, note: "browned with garlic"}  # Ground turkey, 93% lean, patty: 2½ oz (71 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+              - {fdc_id: 169230, servings: 2}  # Garlic, raw: 2 cloves (6 g)
+              - {fdc_id: 170000, servings: 1}  # Onion, raw: ½ cup, chopped (80 g)
+              - {fdc_id: 169292, servings: 0.5}  # Zucchini, boiled: ¼ cup, sliced (45 g)
+              - {fdc_id: 171247, servings: 1}  # Parmesan cheese, grated: 1 tbsp (5 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 172746, servings: 1}  # Saltine crackers: 5 crackers (15 g)
+              - {fdc_id: 173418, servings: 0.5}  # Cream cheese: ½ tbsp (7 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171477, servings: 1, note: "baked with lemon"}  # Chicken breast, roasted, skinless: 3 oz (86 g)
+              - {fdc_id: 169700, servings: 0.5}  # Couscous, cooked: ½ cup (79 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 169930, servings: 2}  # Peaches, canned in juice: 1 cup (248 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 169596, servings: 1}  # Gelatin dessert (Jell-O): ½ cup (135 g)
+          - meal: snack
+            label: "Drinks between meals"
+            items:
+              - {fdc_id: 173647, servings: 2}  # Water, tap: 2 cups (474 g)
+
+  - id: transplant
+    short_title: After a kidney transplant
+    title: "7-day sample menu: after a kidney transplant"
+    description: "A week of meals after a kidney transplant with type 1 diabetes: protein 56–70 g, sodium under 2,000 mg, food-safety choices and no grapefruit."
+    applies_to: [Tx]
+    targets_row: {stage: "1", dialysis: none}       # the app has no transplant row; a working transplant uses the stage 1–2 starting points
+    targets_label: "after a transplant (the stage 1–2 starting points)"
+    carbs_per_meal_g: 55
+    carb_tolerance_g: 5
+    snack_carbs_g: [10, 30]
+    energy_kcal: [1750, 2450]
+    potassium_limit: false                          # unless labs run high: tacrolimus can raise potassium
+    phosphorus_limit: false
+    rules: [no_phosphate_additive, no_grapefruit, transplant_food_safety]
+    sources: [FDC, K09TX, K24, FSTX, FOODSAFE, FSTEMPS, FDAgrapefruit, PROGRAF, A26-5, DG7]
+    intro: >-
+      With a working transplant, most people no longer need the strict kidney diet. KDIGO asks transplant
+      recipients to follow a healthy lifestyle with a proper diet, and your transplant team sets your own
+      numbers. This week uses the app's stage 1–2 starting points: 56–70 g of protein for a 70 kg adult and
+      sodium under 2,000 mg. Three things are different after a transplant. **Food safety:** anti-rejection
+      medicines weaken the immune system, so every meat, fish and egg is cooked through and there is no
+      deli meat or smoked fish. **No grapefruit or its relatives,** which change the blood level of some
+      anti-rejection medicines. **Glucose:** steroids and tacrolimus can raise it, so carbohydrate stays
+      at about 55 g a meal and your team adjusts insulin. Potassium is shown because tacrolimus can raise
+      it; follow your blood tests.
+    swaps:
+      - "**Fruit:** any fruit except grapefruit, pomelo, Seville orange and tangelo. Oranges, clementines, berries, apples, pears and canned fruit in juice are all fine."
+      - "**Protein foods:** chicken, turkey, pork, beef, fish and eggs swap ounce for ounce, always cooked to a safe temperature (poultry 165 °F, fish and whole cuts 145 °F)."
+      - "**Cheese:** hard cheese such as cheddar is fine. Soft cheeses are safe only if the label says they are made from pasteurized milk."
+      - "**Grains:** whole-wheat bread, brown rice and oatmeal swap with their white versions at the same carbohydrate."
+    make_it_yours:
+      - "**Scale for your weight.** Protein here is 0.8–1.0 g per kg for 70 kg: 48–60 g a day at 60 kg and 64–80 g at 80 kg. Ask your transplant dietitian which weight and range to use."
+      - "**If your potassium runs high,** your team may ask you to limit it; the [stage 3 menu](g3.md) shows lower-potassium days."
+      - "**Glucose changes after a transplant.** Steroids and tacrolimus can raise glucose. Check as your team asks and report highs and lows; never change insulin on your own."
+      - *carbs
+      - *lows
+      - *energy
+      - *seasoning
+      - *log
+    source_lines:
+      - *src_fdc
+      - "[KDIGO 2009 transplant recipient guideline][K09TX]: a healthy lifestyle with exercise and a proper diet (Rec 26)."
+      - "[KDIGO 2024 CKD guideline][K24]: sodium under 2 g a day (Rec 3.3.2.1)."
+      - "[USDA–FDA: food safety for transplant recipients][FSTX], [FoodSafety.gov: weakened immune systems][FOODSAFE] and [FoodSafety.gov: safe minimum internal temperatures][FSTEMPS]: deli meats, smoked fish and raw shellfish; safe cooking temperatures."
+      - "[FDA: grapefruit juice and some drugs don't mix][FDAgrapefruit]; [Prograf (tacrolimus) label][PROGRAF]: avoid grapefruit; tacrolimus can raise glucose and potassium."
+      - *src_a5
+      - *src_dg7
+    days:
+      - name: "Day 1"
+        note: "Food safety first: eggs are cooked until the yolk and white are firm, and the turkey is roasted at home, not sliced deli meat."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 172187, servings: 1, note: "cooked until firm"}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 169097, servings: 1}  # Orange, raw: 1 fruit (131 g)
+              - {fdc_id: 167762, servings: 2}  # Strawberries, raw: 1 cup, halves (152 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 171496, servings: 0.5, note: "home-roasted to 165 °F, not deli"}  # Turkey breast, roasted: 1½ oz (43 g)
+              - {fdc_id: 171009, servings: 2}  # Mayonnaise: 2 tbsp (28 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 0.5, note: "unsalted"}  # Butter, unsalted: ½ tbsp (7 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175168, servings: 1, note: "cooked to 145 °F"}  # Salmon, Atlantic, farmed, cooked: 3 oz (85 g)
+              - {fdc_id: 169704, servings: 0.8, note: "cooked without salt"}  # Rice, brown, cooked: 0.8 cup (162 g)
+              - {fdc_id: 169141, servings: 2}  # Green beans, boiled: 1 cup (126 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 2"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "cooked without salt"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171267, servings: 0.5}  # Milk, 2% reduced fat: ½ cup (122 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 170187, servings: 0.5}  # Walnuts: ½ oz (14 g)
+              - {fdc_id: 168833, servings: 2}  # Sugar, brown: 2 tsp, packed (9 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 174915, servings: 1}  # Pita bread, white: 1 large, 6-1/2 in (60 g)
+              - {fdc_id: 171477, servings: 0.5, note: "cooked to 165 °F"}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 170457, servings: 0.5}  # Tomato, raw: ½ medium (62 g)
+              - {fdc_id: 174289, servings: 1}  # Hummus: 2 tbsp (30 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169118, servings: 1}  # Pear, raw: 1 small (148 g)
+              - {fdc_id: 173414, servings: 0.5}  # Cheese, cheddar: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 168250, servings: 0.8333, note: "cooked to 145 °F, rested 3 minutes"}  # Pork tenderloin, roasted: 2½ oz (71 g)
+              - {fdc_id: 168483, servings: 1}  # Sweet potato, baked: ½ cup (100 g)
+              - {fdc_id: 169704, servings: 0.5, note: "cooked without salt"}  # Rice, brown, cooked: ½ cup (101 g)
+              - {fdc_id: 169141, servings: 2}  # Green beans, boiled: 1 cup (126 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 3"
+        note: "Canned light tuna is fine after a transplant. Smoked fish from the fridge case (lox) is not, unless it is cooked in a dish."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175063, servings: 1}  # English muffin, plain: 1 muffin (57 g)
+              - {fdc_id: 174266, servings: 0.5}  # Peanut butter: 1 tbsp (16 g)
+              - {fdc_id: 173944, servings: 0.75}  # Banana, raw: ¾ medium (89 g)
+              - {fdc_id: 171267, servings: 0.5}  # Milk, 2% reduced fat: ½ cup (122 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 173709, servings: 0.6667, note: "drained"}  # Tuna, light, canned in water, drained: 2 oz (57 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 169988, servings: 0.5}  # Celery, raw: ½ stalk, medium (20 g)
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+              - {fdc_id: 174289, servings: 1}  # Hummus: 2 tbsp (30 g)
+              - {fdc_id: 172749, servings: 0.6667}  # Crackers, whole-wheat: 4 crackers (19 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 173118, servings: 0.8333, note: "cooked to 145 °F, rested 3 minutes"}  # Beef, top sirloin steak, broiled: 2½ oz (71 g)
+              - {fdc_id: 169704, servings: 0.75, note: "cooked without salt"}  # Rice, brown, cooked: ¾ cup (152 g)
+              - {fdc_id: 169967, servings: 2}  # Broccoli, boiled: 1 cup, chopped (156 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 4"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173911, servings: 1}  # Shredded wheat cereal: 1 cup (49 g)
+              - {fdc_id: 171267, servings: 1}  # Milk, 2% reduced fat: 1 cup (244 g)
+              - {fdc_id: 167755, servings: 1}  # Raspberries, raw: ½ cup (62 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 173424, servings: 2}  # Egg, hard-boiled: 2 large (100 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 174683, servings: 1}  # Grapes, red or green, raw: ½ cup, about 15 (76 g)
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169118, servings: 1}  # Pear, raw: 1 small (148 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 171956, servings: 0.8333, note: "cooked to 145 °F"}  # Cod, Atlantic, cooked: 2½ oz (71 g)
+              - {fdc_id: 169700, servings: 1, note: "cooked without salt"}  # Couscous, cooked: 1 cup (157 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 171413, servings: 2}  # Olive oil: 2 tbsp (27 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 169930, servings: 1}  # Peaches, canned in juice: ½ cup (124 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 5"
+        note: "Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food thermometer, not by color."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 175009, servings: 1}  # Pancakes, from recipe: 2 pancakes, 4 in (76 g)
+              - {fdc_id: 169661, servings: 1}  # Maple syrup: 1 tbsp (20 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+              - {fdc_id: 171711, servings: 1}  # Blueberries, raw: ½ cup (74 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 172187, servings: 1, note: "cooked until firm"}  # Egg, scrambled: 1 large (61 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 171477, servings: 0.5, note: "cooked to 165 °F"}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 169704, servings: 0.5, note: "cooked without salt"}  # Rice, brown, cooked: ½ cup (101 g)
+              - {fdc_id: 173735, servings: 0.5}  # Black beans, cooked: ¼ cup (43 g)
+              - {fdc_id: 174524, servings: 1}  # Salsa: 2 tbsp (36 g)
+              - {fdc_id: 169247, servings: 1}  # Lettuce, romaine: 1 cup, shredded (47 g)
+              - {fdc_id: 173414, servings: 0.5}  # Cheese, cheddar: ½ oz (14 g)
+              - {fdc_id: 169999, servings: 0.5}  # Corn, sweet, boiled: ½ ear, medium (52 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 171688, servings: 1}  # Apple, raw, with skin: 1 medium (182 g)
+              - {fdc_id: 174266, servings: 0.5}  # Peanut butter: 1 tbsp (16 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 174492, servings: 0.8333, note: "cooked to 165 °F"}  # Ground turkey, 93% lean, patty: 2½ oz (71 g)
+              - {fdc_id: 172796, servings: 1}  # Hamburger or hot dog bun: 1 roll (44 g)
+              - {fdc_id: 169247, servings: 0.5}  # Lettuce, romaine: ½ cup, shredded (24 g)
+              - {fdc_id: 170457, servings: 0.25}  # Tomato, raw: ¼ medium (31 g)
+              - {fdc_id: 169381, servings: 1}  # Ketchup, low sodium: 1 tbsp (17 g)
+              - {fdc_id: 169975, servings: 1}  # Cabbage, raw: 1 cup, shredded (70 g)
+              - {fdc_id: 171009, servings: 1}  # Mayonnaise: 1 tbsp (14 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+      - name: "Day 6"
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 171657, servings: 1, note: "cooked without salt"}  # Cream of wheat, cooked: 1 cup (251 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 168833, servings: 2}  # Sugar, brown: 2 tsp, packed (9 g)
+              - {fdc_id: 173424, servings: 1}  # Egg, hard-boiled: 1 large (50 g)
+              - {fdc_id: 168195, servings: 1}  # Clementine, raw: 1 fruit (74 g)
+              - {fdc_id: 172688, servings: 1}  # Bread, whole-wheat: 1 slice (32 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 173414, servings: 1}  # Cheese, cheddar: 1 oz (28 g)
+              - {fdc_id: 172688, servings: 2}  # Bread, whole-wheat: 2 slices (64 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 170393, servings: 1}  # Carrot, raw: 1 medium (61 g)
+              - {fdc_id: 171688, servings: 0.5}  # Apple, raw, with skin: ½ medium (91 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 169118, servings: 1}  # Pear, raw: 1 small (148 g)
+              - {fdc_id: 170187, servings: 0.5}  # Walnuts: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 172388, servings: 0.8333, note: "cooked to 165 °F"}  # Chicken thigh, roasted, skinless: 2½ oz (71 g)
+              - {fdc_id: 168919, servings: 1, note: "cooked without salt"}  # Egg noodles, cooked: 1 cup (160 g)
+              - {fdc_id: 170394, servings: 1}  # Carrots, boiled: ½ cup, slices (78 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167959, servings: 1}  # Popcorn, air-popped, unsalted: 3 cups (24 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+      - name: "Day 7"
+        note: "Leftovers from the week? Reheat them until steaming hot, 165 °F (74 °C)."
+        meals:
+          - meal: breakfast
+            items:
+              - {fdc_id: 173905, servings: 1, note: "cooked without salt"}  # Oatmeal, cooked (regular or quick oats): 1 cup (234 g)
+              - {fdc_id: 171267, servings: 0.5}  # Milk, 2% reduced fat: ½ cup (122 g)
+              - {fdc_id: 171688, servings: 0.5}  # Apple, raw, with skin: ½ medium (91 g)
+              - {fdc_id: 170187, servings: 0.5}  # Walnuts: ½ oz (14 g)
+              - {fdc_id: 168833, servings: 1}  # Sugar, brown: 1 tsp, packed (5 g)
+              - {fdc_id: 173430, servings: 1, note: "unsalted"}  # Butter, unsalted: 1 tbsp (14 g)
+              - {fdc_id: 171890, servings: 1}  # Coffee, brewed: 1 cup, 8 fl oz (237 g)
+          - meal: lunch
+            items:
+              - {fdc_id: 169737, servings: 1, note: "cooked without salt"}  # Pasta, cooked: 1 cup (124 g)
+              - {fdc_id: 171477, servings: 0.5, note: "cooked to 165 °F"}  # Chicken breast, roasted, skinless: 1½ oz (43 g)
+              - {fdc_id: 170108, servings: 1}  # Bell pepper, red, raw: ½ cup, chopped (75 g)
+              - {fdc_id: 168409, servings: 1}  # Cucumber, with peel, raw: ½ cup, slices (52 g)
+              - {fdc_id: 171413, servings: 1.5}  # Olive oil: 1½ tbsp (20 g)
+              - {fdc_id: 173469, servings: 1}  # Vinegar, cider: 1 tbsp (15 g)
+              - {fdc_id: 171247, servings: 1}  # Parmesan cheese, grated: 1 tbsp (5 g)
+              - {fdc_id: 167762, servings: 1}  # Strawberries, raw: ½ cup, halves (76 g)
+          - meal: snack
+            label: "Afternoon snack"
+            items:
+              - {fdc_id: 168195, servings: 2}  # Clementine, raw: 2 fruits (148 g)
+              - {fdc_id: 170567, servings: 0.5}  # Almonds: ½ oz (14 g)
+          - meal: dinner
+            items:
+              - {fdc_id: 175168, servings: 0.8333, note: "cooked to 145 °F"}  # Salmon, Atlantic, farmed, cooked: 2½ oz (71 g)
+              - {fdc_id: 168917, servings: 0.75, note: "cooked without salt"}  # Quinoa, cooked: ¾ cup (139 g)
+              - {fdc_id: 168390, servings: 1}  # Asparagus, boiled: 4 spears (60 g)
+              - {fdc_id: 169141, servings: 1}  # Green beans, boiled: ½ cup (63 g)
+              - {fdc_id: 167747, servings: 1}  # Lemon juice, fresh: 1 tbsp (15 g)
+              - {fdc_id: 171413, servings: 1}  # Olive oil: 1 tbsp (14 g)
+              - {fdc_id: 169126, servings: 1}  # Pineapple, canned in juice: ½ cup (125 g)
+          - meal: snack
+            label: "Evening snack"
+            items:
+              - {fdc_id: 167577, servings: 1}  # Sherbet, orange: ½ cup (74 g)
+
+grocery:
+  sources: [FDC, DG46a, DG22, DG4, DG20, DG34, DG5]
+  intro: >-
+    One checklist per sample menu, for one person for a week, generated from the menus so the amounts
+    always match. Tick items off on your phone or print the page. Fresh food over packaged: more than
+    70 % of the sodium people eat comes from packaged and restaurant food, and phosphate additives are
+    absorbed almost completely.
+  staples:
+    - "Herbs and spices without salt (black pepper, garlic powder, onion powder, paprika, oregano, cumin, cinnamon)"
+    - "A salt-free seasoning blend whose label does **not** list potassium chloride"
+    - "Lemons or bottled lemon juice, cider or balsamic vinegar, fresh garlic"
+    - "Olive or canola oil, unsalted butter, mayonnaise"
+    - "Low-sodium ketchup and yellow mustard"
+    - "Glucose tablets or gel for lows: keep them at home, in the car and in your bag"
+  check_label:
+    - "**\"PHOS\" in the ingredient list** (phosphoric acid, sodium phosphate, any \"…phosphate\"): choose another brand. Phosphorus is not required on the US Nutrition Facts label."
+    - "**Potassium chloride or other potassium salts**, often in salt substitutes and \"reduced sodium\" soups, sauces and deli meats."
+    - "**Sodium per serving:** 140 mg or less is \"low sodium\"; 460 mg or more (20 % DV) is high."
+    - "**Fresh meat or poultry \"enhanced\", \"self-basting\" or \"injected\" with a solution:** it adds sodium and phosphate. Buy plain."
+    - "**Total carbohydrate × the servings you will eat**, for your insulin plan."
+  source_lines:
+    - "[USDA FoodData Central (SR Legacy)][FDC]: nutrient values."
+    - "[AKF potassium food guide][DG46a] and [NKF: 40 low-potassium fruits and vegetables][DG22]: the low-potassium list."
+    - "[NIDDK: healthy eating for adults with CKD][DG4] and [NKF: phosphorus and your CKD diet][DG20]: \"PHOS\" additives and label reading."
+    - "[FDA: sodium in your diet][DG34]: where sodium comes from and label claims."
+    - "[NKF: potassium and your CKD diet][DG5]: salt substitutes and lite salt are high in potassium."

@@ -132,8 +132,11 @@ def _value(day_totals: Mapping[str, Mapping[str, Any]], day: str, key: str) -> f
     return value if math.isfinite(value) else 0.0
 
 
+# Sums of day totals use math.fsum: exactly rounded, so a period's total and average do not depend
+# on the Python version (3.11's sum() adds left to right, 3.12+ compensates; the two can differ in
+# the last bit and so by 0.1 after rounding, e.g. 2244.1499999999996 vs 2244.15).
 def _average(values: list[float]) -> float | None:
-    return (sum(values) / len(values)) if values else None
+    return (math.fsum(values) / len(values)) if values else None
 
 
 def summarize_period(
@@ -142,16 +145,22 @@ def summarize_period(
     day_totals: Mapping[str, Mapping[str, Any]],
     targets: Mapping[str, Any],
     warn_fraction: float = 0.8,
+    *,
+    day_unknown: Mapping[str, Mapping[str, int]] | None = None,
 ) -> dict[str, Any]:
     """Aggregate eaten day totals over ``[start, end]``.
 
     ``day_totals`` maps ``YYYY-MM-DD`` to that day's eaten totals and must contain only
     days that have at least one eaten entry (a present key *is* a logged day). It may
     hold dates outside the period: the previous period is read from the same mapping.
+    ``day_unknown`` maps a date to ``{key: entries without a value}`` (a day total skips them).
 
     Returns ``{"start", "end", "days", "logged_days", "nutrients": {...}}`` with one
-    item per nutrient that has a numeric target (see ARCHITECTURE.md ``PeriodSummary``).
+    item per nutrient that has a numeric target (see ARCHITECTURE.md ``PeriodSummary``);
+    ``unknown_entries`` / ``unknown_days`` say how many eaten entries (on how many logged days of
+    the period) the totals and averages miss.
     """
+    unknown = day_unknown or {}
     start_d, end_d = to_date(start), to_date(end)
     days = period_length(start_d, end_d)
     current = [d for d in date_range(start_d, end_d) if d in day_totals]
@@ -165,7 +174,7 @@ def summarize_period(
         if target is None:
             continue
         values = [(d, _value(day_totals, d, key)) for d in current]
-        total = sum(v for _, v in values)
+        total = math.fsum(v for _, v in values)
         average = _average([v for _, v in values])
         fraction = None if average is None else round(average / target, 2)
         max_day = max(values, key=lambda t: t[1]) if values else None
@@ -185,6 +194,8 @@ def summarize_period(
             "previous_average": None if previous_average is None else round_value(key, previous_average),
             "change_pct": change_pct,
             "assessment": ASSESSMENT.get(key, DEFAULT_ASSESSMENT),
+            "unknown_entries": sum(int((unknown.get(d) or {}).get(key, 0)) for d in current),
+            "unknown_days": sum(1 for d in current if (unknown.get(d) or {}).get(key)),
         }
 
     return {
@@ -244,11 +255,15 @@ def interdialytic_block(
     day_totals: Mapping[str, Mapping[str, Any]],
     targets: Mapping[str, Any],
     warn_fraction: float = 0.8,
+    *,
+    day_unknown: Mapping[str, Mapping[str, int]] | None = None,
 ) -> dict[str, Any]:
     """``PeriodSummary.interdialytic``: eaten totals over the interval vs ``per-day target × days``.
 
-    Only potassium, sodium and fluid are included, and only when they have a numeric target.
+    Only potassium, sodium and fluid are included, and only when they have a numeric target;
+    ``unknown_entries`` counts the eaten entries in the interval the total misses (no value).
     """
+    unknown = day_unknown or {}
     days = int(interval["days"])
     window = date_range(interval["since"], interval["end"])
     nutrients: dict[str, dict[str, Any]] = {}
@@ -256,7 +271,7 @@ def interdialytic_block(
         target = summary_target(key, targets.get(key))
         if target is None:
             continue
-        total = sum(_value(day_totals, d, key) for d in window)
+        total = math.fsum(_value(day_totals, d, key) for d in window)
         limit = target * days
         fraction = round(total / limit, 2)
         nutrients[key] = {
@@ -264,6 +279,7 @@ def interdialytic_block(
             "limit": round_value(key, limit),
             "fraction": fraction,
             "level": status_level(fraction, warn_fraction),
+            "unknown_entries": sum(int((unknown.get(d) or {}).get(key, 0)) for d in window),
         }
     return {"since": interval["since"], "days": days, "next": interval["next"], "nutrients": nutrients}
 

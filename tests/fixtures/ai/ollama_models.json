@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen3-vl:8b",
+        "object": "model",
+        "created": 1759000000,
+        "owned_by": "library"
+      }
+    ]
+  }
+}

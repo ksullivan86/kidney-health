@@ -1,6 +1,8 @@
 """Unit tests for the pure rules in app/nutrients.py."""
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from app import nutrients as n
@@ -21,7 +23,7 @@ def test_registry_has_the_twelve_contract_keys_in_order():
     assert n.NUTRIENT_BY_KEY["protein_g"].role == "range"
     assert n.NUTRIENT_BY_KEY["carbs_g"].label == "Carbohydrate"
     assert n.NUTRIENT_BY_KEY["fluid_ml"].unit == "mL"
-    assert n.TARGET_KEYS[-1] == "carbs_per_meal_g"
+    assert n.TARGET_KEYS[-2:] == ("carbs_per_meal_g", "carbs_per_snack_g")
 
 
 def test_round_value_integers_for_mg_and_ml_one_decimal_otherwise():
@@ -236,19 +238,34 @@ def test_meal_carb_alerts_only_when_over():
     assert n.meal_carb_alerts(meals, {"max": 80}) == []
 
 
+def test_a_snack_goal_replaces_the_per_meal_goal_for_the_snack():
+    """carbs_per_snack_g (note 06 §4.11) is the snack's own goal on Today and in its alerts (v0.3.0 review L11)."""
+    meals = {"breakfast": {"carbs_g": 70}, "lunch": {"carbs_g": 55}, "dinner": {}, "snack": {"carbs_g": 25}}
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, 60)] == ["breakfast"]  # 25 g is under the per-meal 60
+    alerts = n.meal_carb_alerts(meals, 60, 20)
+    assert [a["meal"] for a in alerts] == ["breakfast", "snack"]
+    assert alerts[1]["message"] == "Snack carbohydrate is over the snack goal: 25 / 20 g"
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, None, 20)] == ["snack"]  # a snack goal alone
+    assert [a["meal"] for a in n.meal_carb_alerts(meals, 60, 30)] == ["breakfast"]
+    projected = n.projected_meal_carb_alerts(meals, None, {"max": 15})
+    assert [a["message"] for a in projected] == ["If you eat what's planned, snack carbohydrate reaches 25 / 15 g (over the snack goal)"]
+
+
 # --------------------------------------------------------------------------- #
 # Suggested targets
 # --------------------------------------------------------------------------- #
 
 
 def test_suggest_targets_non_dialysis_stage_3b_70kg():
+    """Note 05 §5.3: with diabetes at G3a–G5 protein is 0.8 g/kg (never below; fact-check H1) and fibre is new."""
     result = n.suggest_targets(70, "3b", "none", "type1")
     targets = result["targets"]
     assert targets == {
         "calories_kcal": 2100,
-        "protein_g": {"min": 42, "max": 56},
+        "protein_g": {"min": 56, "max": 56},
         "carbs_g": 236,
         "carbs_per_meal_g": 60,
+        "fiber_g": {"min": 29},
         "sodium_mg": 2000,
         "potassium_mg": 3500,
         "phosphorus_mg": 1000,
@@ -269,7 +286,8 @@ def test_suggest_targets_provisional_potassium_and_phosphorus_by_stage(stage, po
 
 
 def test_suggest_targets_stage_4_protein_range():
-    assert n.suggest_targets(70, "4", "none")["targets"]["protein_g"] == {"min": 42, "max": 56}
+    assert n.suggest_targets(70, "4", "none")["targets"]["protein_g"] == {"min": 56, "max": 56}  # default type1: 0.8 g/kg
+    assert n.suggest_targets(70, "4", "none", "none")["targets"]["protein_g"] == {"min": 42, "max": 56}  # 0.6–0.8 g/kg
 
 
 @pytest.mark.parametrize("stage, dialysis", [("3b", "none"), ("1", "none"), ("5", "hemodialysis"), ("5", "peritoneal")])
@@ -299,7 +317,8 @@ def test_suggest_targets_peritoneal():
     assert targets["fluid_ml"] == 2000
     assert targets["calories_kcal"] == 2400
     assert targets["carbs_g"] == 270
-    assert any("dialysate" in note for note in result["notes"])
+    # without the absorbed dialysate calories the note asks for them (E-4 subtracts them once known)
+    assert any("absorbs from the dialysis fluid" in note for note in result["notes"] if note.startswith("Calories"))
 
 
 def test_suggest_targets_early_stage_is_more_liberal():
@@ -315,8 +334,6 @@ def test_suggest_targets_match_research_json():
     from pathlib import Path
 
     path = Path(__file__).resolve().parents[1] / "docs" / "research" / "targets_by_stage.json"
-    if not path.is_file():
-        pytest.skip("docs/research/targets_by_stage.json not checked out")
     rows = json.loads(path.read_text(encoding="utf-8"))
     assert len(rows) == 8
     weight = 70.0
@@ -328,11 +345,13 @@ def test_suggest_targets_match_research_json():
         assert targets["sodium_mg"] == row["sodium_mg"], label
         assert targets["calcium_mg"] == row["calcium_mg"], label
         assert targets["fluid_ml"] == row["fluid_ml"], label
-        assert targets["calories_kcal"] == round(row["calories_kcal_per_kg"] * weight), label
+        assert targets["calories_kcal"] == round(row["calories_kcal_per_kg"] * weight / 10) * 10, label
         assert targets["protein_g"] == {
             "min": round(row["protein_g_per_kg_min"] * weight),
             "max": round(row["protein_g_per_kg_max"] * weight),
         }, label
+        # the notes cite the published KDOQI 2020 numbering, never the 2019 draft's (note 05 F1, C1)
+        assert not re.search(r"KDOQI 2020 3\.1\.[2-4]|KDOQI 2020 3\.0\.1 range|ideal body weight", row["note"]), label
 
 
 def test_suggest_targets_rejects_bad_input():
@@ -368,33 +387,35 @@ def test_high_gi_below_one_carb_choice_is_only_a_medium_note():
 @pytest.mark.parametrize(
     "weight, height, expected",
     [
-        (70, None, (70.0, "actual")),
+        (70, None, (70.0, "actual_no_height")),
         (70, 170, (70.0, "actual")),  # BMI 24.2: inside the healthy band
-        (100, 170, (72.3, "ideal_bmi_25")),  # 25 x 1.7^2 = 72.25 -> 72.3
-        (45, 170, (53.5, "ideal_bmi_18.5")),  # 18.5 x 1.7^2 = 53.465 -> 53.5
-        (72.25, 170, (72.25, "actual")),  # exactly BMI 25 is still "actual"
+        (100, 170, (79.2, "adjusted_above_bmi25")),  # 72.25 + 0.25 x 27.75 = 79.1875 -> 79.2 (note 05 §5.3)
+        (45, 170, (47.1, "adjusted_below_bmi18_5")),  # 45 + 0.25 x (53.465 - 45) = 47.116 -> 47.1
+        (72.25, 170, (72.3, "actual")),  # exactly BMI 25 is still "actual"; the weight is rounded to 0.1 kg
     ],
 )
-def test_dosing_weight_uses_the_healthy_bmi_band_as_ideal_body_weight(weight, height, expected):
+def test_dosing_weight_is_the_reference_weight(weight, height, expected):
     assert n.dosing_weight(weight, height) == expected
 
 
-def test_suggest_targets_use_ideal_body_weight_when_height_is_known():
-    """KDOQI 2020 3.0.1 / 3.1.x are per kg of *ideal* body weight (docs/research/targets_by_stage.json)."""
+def test_suggest_targets_use_the_reference_weight_when_height_is_known():
+    """Note 05 §4.3 and §5.3: per kg of a reference weight (KDOQI leaves the choice to the team, 1.1.6)."""
     heavy = n.suggest_targets(100, "4", "none", "type1", height_cm=170)
-    assert heavy["targets"]["calories_kcal"] == 2169  # 30 x 72.3
-    assert heavy["targets"]["protein_g"] == {"min": 43, "max": 58}  # 0.6-0.8 x 72.3
-    assert heavy["targets"]["carbs_g"] == round(2169 * 0.45 / 4)
+    assert heavy["targets"]["calories_kcal"] == 2380  # 30 x 79.2 = 2376 -> nearest 10
+    assert heavy["targets"]["protein_g"] == {"min": 63, "max": 63}  # 0.8 x 79.2
+    assert heavy["targets"]["carbs_g"] == 268  # 2380 x 0.45 / 4 = 267.75
     basis = [note for note in heavy["notes"] if note.startswith("Weight basis")]
-    assert len(basis) == 1 and "72.3 kg" in basis[0] and "100 kg" in basis[0] and "ideal body weight" in basis[0]
-    assert any("72.3 kg ideal body weight" in note for note in heavy["notes"] if note.startswith("Calories"))
+    assert len(basis) == 1 and "79.2 kg" in basis[0] and "BMI 34.6" in basis[0] and "adjusted weight" in basis[0]
+    assert "ideal body weight" not in " ".join(heavy["notes"])
+    assert any("79.2 kg" in note for note in heavy["notes"] if note.startswith("Calories"))
     # the same person without a saved height falls back to the actual weight and says so
     plain = n.suggest_targets(100, "4", "none", "type1")
-    assert plain["targets"]["calories_kcal"] == 3000 and plain["targets"]["protein_g"] == {"min": 60, "max": 80}
+    assert plain["targets"]["calories_kcal"] == 3000 and plain["targets"]["protein_g"] == {"min": 80, "max": 80}
     assert any("without a saved height" in note for note in plain["notes"])
-    # underweight: the ideal weight is above the actual one, so the targets rise
+    # underweight: moved a quarter of the way up to BMI 18.5; BMI 15.6 is a nutrition risk, so protein rises (P-5)
     light = n.suggest_targets(45, "3b", "none", height_cm=170)
-    assert light["targets"]["calories_kcal"] == 1605 and light["targets"]["protein_g"] == {"min": 32, "max": 43}
+    assert light["targets"]["calories_kcal"] == 1410 and light["targets"]["protein_g"] == {"min": 38, "max": 47}
+    assert any(note.startswith("Nutrition risk: BMI 15.6 is below 20") for note in light["notes"])
     # a normal-weight person gets the contract numbers unchanged
     assert n.suggest_targets(70, "3b", "none", height_cm=170)["targets"] == n.suggest_targets(70, "3b", "none")["targets"]
     with pytest.raises(ValueError):
@@ -402,12 +423,15 @@ def test_suggest_targets_use_ideal_body_weight_when_height_is_known():
 
 
 def test_protein_note_states_the_guideline_thresholds_and_the_right_source():
+    """Published KDOQI 2020 numbering (note 05 F1, C1): protein 3.0.1–3.0.4, energy 3.1.1."""
     diabetic = [note for note in n.suggest_targets(70, "3b", "none", "type1")["notes"] if note.startswith("Protein")][0]
-    assert "KDOQI 2020 3.1.3" in diabetic and "with diabetes" in diabetic
-    assert "guidelines recommend 0.8" in diabetic and "more than 1.3 g/kg (KDIGO 2024)" in diabetic
-    assert "speeds progression" not in diabetic
+    assert "KDOQI 2020 3.0.2" in diabetic and "ADA 2026 Rec 11.3" in diabetic and "not recommended" in diabetic
+    assert "with diabetes" in diabetic and "more than 1.3 g/kg (KDIGO 2024)" in diabetic
+    assert "speeds progression" not in diabetic and "3.1.3" not in diabetic
     non_diabetic = [note for note in n.suggest_targets(70, "3b", "none", "none")["notes"] if note.startswith("Protein")][0]
-    assert "with diabetes" not in non_diabetic and "3.1.1" in non_diabetic and "KDIGO 2024 3.3.1.1" in non_diabetic
+    assert "with diabetes" not in non_diabetic and "3.0.1" in non_diabetic and "KDIGO 2024 Rec 3.3.1.1" in non_diabetic
+    calories = [note for note in n.suggest_targets(70, "3b")["notes"] if note.startswith("Calories")][0]
+    assert "KDOQI 2020 3.1.1" in calories and "3.0.1" not in calories
     assert n.suggest_targets(70, "3b", "none", "none")["targets"]["protein_g"] == {"min": 42, "max": 56}
 
 

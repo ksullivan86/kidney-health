@@ -1,0 +1,16 @@
+{
+  "id": "prefilter-low-1",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "feeling shaky and sweaty, glucose 62"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "treating_a_low",
+    "cards": [
+      "Treating a low"
+    ]
+  }
+}

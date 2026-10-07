@@ -1,159 +1,347 @@
+# Continuous integration: tests, parity, linters and a hardened container smoke test.
+# Nothing here publishes anything: images are built locally and thrown away (release.yml publishes).
+# Spec: docs/dev/research/01-rootless-and-security.md §3.6, §5.4, §7 Phase E.
+#
+# Supply-chain rules for every workflow in this repository (checked by tests/test_deploy.py, zizmor
+# and actionlint): `permissions: {}` at the top and per-job grants; every `uses:` pinned to a full
+# commit SHA with a `# vX.Y.Z` comment (Dependabot updates both); `persist-credentials: false` on
+# every checkout; no pull_request_target; downloaded tools checked against a pinned SHA-256; no
+# caches (nothing to poison); event data reaches shell steps only through env variables.
 name: CI
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
-# Least privilege by default; only the image job may write packages.
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  IMAGE_NAME: ghcr.io/ksullivan86/kidney-health
-  KUBECONFORM_VERSION: v0.6.7
-  ACTIONLINT_VERSION: 1.7.7
+  # Pinned tool releases (re-verify: docs/dev/research/01-rootless-and-security.md §8).
+  ACTIONLINT_VERSION: "1.7.12"
+  ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+  HADOLINT_VERSION: "2.14.0"
+  HADOLINT_SHA256: "6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47"
+  KUBECONFORM_VERSION: "v0.8.0"
+  KUBECONFORM_SHA256: "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
+  KUSTOMIZE_VERSION: "v5.8.2"
+  KUSTOMIZE_SHA256: "06af0a202c2b831207d0173f9c9cdb1b30abceca0747cb3fbb72792d26055c95"
+  GRYPE_VERSION: "v0.120.0"
+  BUILDKIT_IMAGE: "moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea"
 
 jobs:
   test:
-    name: pytest (Python 3.12)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: pytest (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12: the oldest Python the CI covers (requires-python stays >=3.11 for source users).
+        # 3.14: the Python inside the published image (Chainguard python:latest).
+        python: ["3.12", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
-      - name: Install dependencies
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install the hash-locked dependencies (wheels only)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements-dev.lock
       - name: Run tests (no network needed)
         run: python -m pytest
 
-  deploy-lint:
-    name: deployment manifests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: YAML syntax (deploy/, workflows)
-        run: |
-          pip install pyyaml
-          python - <<'PY'
-          import glob, yaml
-          files = sorted(glob.glob("deploy/**/*.yaml", recursive=True) + glob.glob(".github/workflows/*.yml"))
-          assert files, "no YAML files found"
-          for f in files:
-              with open(f) as fh:
-                  list(yaml.safe_load_all(fh))
-              print("ok", f)
-          PY
-      - name: actionlint (this workflow)
-        run: |
-          set -euo pipefail
-          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
-            | tar xz -C "$RUNNER_TEMP" actionlint
-          "$RUNNER_TEMP/actionlint" -color
-      - name: kustomize build + kubeconform
-        run: |
-          set -euo pipefail
-          kubectl kustomize deploy/k8s > "$RUNNER_TEMP/rendered.yaml"
-          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
-            | tar xz -C "$RUNNER_TEMP" kubeconform
-          "$RUNNER_TEMP/kubeconform" -strict -summary "$RUNNER_TEMP/rendered.yaml" deploy/k8s/secret.example.yaml
-          "$RUNNER_TEMP/kubeconform" -strict -summary \
-            -schema-location default \
-            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
-            deploy/k8s/httproute.example.yaml
-      - name: hadolint (Containerfile)
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: deploy/Containerfile
-          config: .hadolint.yaml
-          failure-threshold: warning
-
-  image:
-    name: container image
-    needs: [test, deploy-lint]
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+  js-parity:
+    name: JS parity vectors (Node)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
-      packages: write
-    env:
-      # Publish only from trusted refs: pushes to main, v* tags, and a manual run on
-      # main. Pull requests and manual runs from other branches build amd64 without pushing.
-      PUBLISH: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
     steps:
-      - uses: actions/checkout@v4
-
-      # arm64 is cross-built under QEMU emulation; only needed when we publish.
-      - name: Set up QEMU
-        if: env.PUBLISH == 'true'
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        if: env.PUBLISH == 'true'
-        uses: docker/login-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Tags: main -> latest + main + sha-<short>; v1.2.3 -> 1.2.3, 1.2, 1 (no "0" for v0.x).
-      # GitHub reports the PolyForm licence as "Other", so the licence label is set here
-      # explicitly instead of relying on metadata-action's repository default (NOASSERTION).
-      - name: Image metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix=sha-,format=short
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-          labels: |
-            org.opencontainers.image.title=kidney-health
-            org.opencontainers.image.description=Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings
-            org.opencontainers.image.documentation=https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md
-            org.opencontainers.image.licenses=PolyForm-Noncommercial-1.0.0
+          node-version: "22"
+          package-manager-cache: false
+      - name: Browser rules engine matches the server (tests/data/*.json)
+        run: node tests/js/run_vectors.mjs
 
-      # Pull requests / foreign branches: build linux/amd64 only, never push (validates the
-      # Containerfile). main / tags: build amd64 + arm64 and push to GHCR.
-      - name: Build and push
-        uses: docker/build-push-action@v6
+  lint:
+    name: lint (workflows, Containerfiles, manifests, scripts)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Download pinned tools and verify their SHA-256
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"; mkdir -p "$bin"; cd "$RUNNER_TEMP"
+          fetch() { # url sha256 file
+            curl -fsSL --retry 3 -o "$3" "$1"
+            echo "$2  $3" | sha256sum --check --strict -
+          }
+          fetch "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" "$ACTIONLINT_SHA256" actionlint.tgz
+          tar -xzf actionlint.tgz -C "$bin" actionlint
+          fetch "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64" "$HADOLINT_SHA256" hadolint
+          install -m 0755 hadolint "$bin/hadolint"
+          fetch "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" "$KUBECONFORM_SHA256" kubeconform.tgz
+          tar -xzf kubeconform.tgz -C "$bin" kubeconform
+          fetch "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" "$KUSTOMIZE_SHA256" kustomize.tgz
+          tar -xzf kustomize.tgz -C "$bin" kustomize
+          echo "$bin" >> "$GITHUB_PATH"
+      - name: Every action is pinned to a full commit SHA
+        run: |
+          set -euo pipefail
+          # A `uses:` must be a local path, a docker:// image by digest, or owner/repo@<40 hex>.
+          bad=$(grep -rnE '^\s*(-\s*)?uses:' .github/workflows .github/actions 2>/dev/null \
+            | grep -vE 'uses:\s*\./' \
+            | grep -vE 'uses:\s*docker://[^ ]+@sha256:[0-9a-f]{64}' \
+            | grep -vE 'uses:\s*[^@ ]+@[0-9a-f]{40}(\s+#\s*v[0-9][^ ]*)\s*$' || true)
+          if [ -n "$bad" ]; then echo "Unpinned or uncommented uses: lines:"; echo "$bad"; exit 1; fi
+          echo "all uses: lines are SHA-pinned with a version comment"
+      - name: actionlint
+        run: actionlint -color
+      - name: hadolint (both Containerfiles and the Caddy example)
+        run: hadolint --config .hadolint.yaml deploy/Containerfile deploy/Containerfile.debian deploy/caddy/Containerfile
+      - name: kustomize build + kubeconform (strict)
+        run: |
+          set -euo pipefail
+          kustomize build deploy/k8s > "$RUNNER_TEMP/rendered.yaml"
+          kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            "$RUNNER_TEMP/rendered.yaml" \
+            deploy/k8s/secret.example.yaml deploy/k8s/ingress.example.yaml deploy/k8s/cilium-networkpolicy.example.yaml \
+            deploy/k8s/restore-pod.example.yaml
+      - name: Compose files resolve (docker compose config)
+        run: |
+          set -euo pipefail
+          install -d -m 0700 deploy/secrets deploy/caddy
+          : > deploy/secrets/secret_key; : > deploy/secrets/usda_api_key
+          : > deploy/caddy/Caddyfile; : > deploy/caddy/caddy.env
+          docker compose -f deploy/compose.yaml config --quiet
+          docker compose -f deploy/compose.yaml -f deploy/compose.ai-ollama.yaml config --quiet
+          PUBLIC_URL=https://food.example.net:8443 \
+            docker compose -f deploy/compose.yaml -f deploy/compose.caddy.yaml config --quiet
+      - name: YAML parses (every *.yml / *.yaml in the repository)
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r .github/requirements-lint.txt
+          python .github/scripts/yaml_parse.py
+      - name: shellcheck (deploy and CI scripts)
+        run: shellcheck --version && shellcheck scripts/verify-image.sh deploy/docker-rootless-run.sh .github/scripts/smoke-test.sh
+
+  zizmor:
+    name: zizmor (workflow security audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Runs on private repositories too. Online audits (impostor commits, known-vulnerable
+      # actions) use the read-only job token. Results are annotations: no upload, no write scope.
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          version: "1.30.1"
+          advanced-security: false
+          annotations: true
+          persona: regular
+
+  dependency-review:
+    name: dependency review
+    # Needs the dependency graph, which is free for public repositories only.
+    if: github.event_name == 'pull_request' && !github.event.repository.private
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
+  image:
+    name: image (${{ matrix.variant }}) build + smoke test
+    # Only build an image from a tree whose tests, linters and handbook pass (note 08 §4.8): the
+    # image's handbook stage runs the same strict build.
+    needs: [test, lint, handbook]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: chainguard
+            file: deploy/Containerfile
+            smoke-args: ""
+          - variant: debian
+            file: deploy/Containerfile.debian
+            smoke-args: "--allow-shell"   # the fallback keeps /bin/sh on purpose
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # The Debian fallback is only rebuilt when something it depends on changed.
+      - name: Decide whether to build
+        id: gate
+        env:
+          VARIANT: ${{ matrix.variant }}
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          build=true
+          if [ "$VARIANT" = debian ] && [ "$EVENT" = pull_request ]; then
+            if ! git diff --name-only "$BASE_SHA...HEAD" | grep -qE '^(deploy/|requirements[^/]*\.(in|lock)$|\.dockerignore$)'; then
+              build=false
+              echo "Containerfile.debian inputs unchanged: skipping."
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.gate.outputs.build == 'true'
+        with:
+          driver-opts: image=${{ env.BUILDKIT_IMAGE }}
+          cache-binary: false
+      # linux/amd64 only, loaded into the runner's Docker, never pushed. Attestations are off here
+      # because the docker exporter cannot store them; release.yml builds with provenance + SBOM.
+      - name: Build
+        if: steps.gate.outputs.build == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file: deploy/Containerfile
-          platforms: ${{ env.PUBLISH == 'true' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
-          push: ${{ env.PUBLISH == 'true' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          # Attestation manifests show up as "unknown/unknown" platforms in the GHCR UI
-          # and confuse `podman pull`/auto-update on some versions. Re-enable if you want SLSA provenance.
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: kidney-health:ci-${{ matrix.variant }}
           provenance: false
           sbom: false
+      - name: Smoke test (read-only, cap-drop ALL, as 10001:10001 and as 12345:0)
+        if: steps.gate.outputs.build == 'true'
+        env:
+          IMAGE: kidney-health:ci-${{ matrix.variant }}
+          SMOKE_ARGS: ${{ matrix.smoke-args }}
+        run: |
+          # shellcheck disable=SC2086  # SMOKE_ARGS is empty or one flag
+          .github/scripts/smoke-test.sh "$IMAGE" $SMOKE_ARGS
+      # Gate: fail on High/Critical vulnerabilities that have a fix available (note 01 §4.3).
+      # The weekly scheduled-scan.yml reports everything else.
+      - name: Grype gate (High+, fixable only)
+        if: steps.gate.outputs.build == 'true' && matrix.variant == 'chainguard'
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: kidney-health:ci-chainguard
+          grype-version: ${{ env.GRYPE_VERSION }}
+          severity-cutoff: high
+          only-fixed: true
+          fail-build: true
+          output-format: table
+
+  # The patient handbook (docs/dev/research/08-handbook-site.md §4.8): generated pages current, the
+  # strict build the image runs, internal links, the content rules, the app's links into it, and the
+  # built site served by the real app in Chromium with zero CSP / Trusted Types violations.
+  handbook:
+    name: handbook (build, content, links, /learn in Chromium)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      NO_MKDOCS_2_WARNING: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install the app (hash-locked; the browser check runs the real server)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements-dev.lock
+      - name: Install the handbook toolchain in its own venv (hash-locked)
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/hb"
+          "$RUNNER_TEMP/hb/bin/python" -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r handbook/requirements.lock
+      - name: Generated pages are current (scripts/build_handbook.py --check)
+        run: '"$RUNNER_TEMP/hb/bin/python" scripts/build_handbook.py --check'
+      - name: Strict build, as the image's handbook stage runs it
+        working-directory: handbook
+        env:
+          HANDBOOK_SITE_URL: http://localhost/learn/
+          HANDBOOK_APP_LINK: /
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/hb/bin/mkdocs" build --strict -d "$RUNNER_TEMP/learn"
+          find "$RUNNER_TEMP/learn" -type f -name '*.map' -exec rm -f {} +
+      - name: Internal links and anchors of the built site ("/" is the app's own link)
+        run: python handbook/tools/check_links.py "$RUNNER_TEMP/learn" --allow /
+      - name: Content rules (front matter, sources, no dosing, slugs)
+        run: '"$RUNNER_TEMP/hb/bin/python" -m pytest --noconftest -p no:cacheprovider tests/test_handbook_content.py'
+      - name: Every /learn link in the app resolves to a built page
+        run: HANDBOOK_BUILT_SITE="$RUNNER_TEMP/learn" python -m pytest -p no:cacheprovider tests/test_learn_links.py
+      # Playwright from a hash-locked file; the browser is the runner's own Google Chrome, so no
+      # browser download happens here.
+      - name: Install Playwright (hash-locked)
+        run: |
+          set -euo pipefail
+          python -m venv --system-site-packages "$RUNNER_TEMP/pw"
+          "$RUNNER_TEMP/pw/bin/python" -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r tools/e2e/requirements.lock
+      - name: /learn in Chromium (375x812 and 1280x800; CSP, Trusted Types, failed or outside requests)
+        env:
+          PLAYWRIGHT_CHROMIUM: /usr/bin/google-chrome
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/pw/bin/python" tools/e2e/learn.py --site "$RUNNER_TEMP/learn" \
+            --server-python "$(command -v python)" --out "$RUNNER_TEMP/learn-e2e"
+
+  # Canary for the Material team's successor (note 08 §4.1): allowed to fail. Migrate when a
+  # Zensical >= 0.1 release builds the handbook and passes the checks above.
+  handbook-zensical:
+    name: handbook canary (Zensical; allowed to fail)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install Zensical (hash-locked)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r handbook/requirements-zensical.lock
+      - name: Build the handbook with Zensical (strict)
+        working-directory: handbook
+        env:
+          HANDBOOK_SITE_URL: http://localhost/learn/
+          HANDBOOK_APP_LINK: /
+        run: zensical build -f mkdocs.yml -s

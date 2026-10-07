@@ -1,0 +1,32 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "gen-1759743001-XyZ",
+    "provider": "DeepInfra",
+    "model": "qwen/qwen3-vl-8b-instruct",
+    "object": "chat.completion",
+    "created": 1759743001,
+    "choices": [
+      {
+        "logprobs": null,
+        "finish_reason": "length",
+        "native_finish_reason": "length",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":",
+          "refusal": null,
+          "reasoning": null
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 4400,
+      "completion_tokens": 1500,
+      "total_tokens": 5900
+    }
+  }
+}

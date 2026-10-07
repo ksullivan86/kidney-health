@@ -1,0 +1,16 @@
+{
+  "id": "prefilter-low-4",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "need something for a hypo"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "treating_a_low",
+    "cards": [
+      "Treating a low"
+    ]
+  }
+}

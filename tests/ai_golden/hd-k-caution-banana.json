@@ -1,0 +1,51 @@
+{
+  "id": "hd-k-caution-banana",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "5",
+      "dialysis": "hemodialysis"
+    },
+    "targets": "hd",
+    "entries": [
+      [
+        "breakfast",
+        "Orange juice",
+        1
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        1
+      ],
+      [
+        "lunch",
+        "Banana, raw",
+        1
+      ],
+      [
+        "breakfast",
+        "Potato, baked, with skin",
+        1
+      ]
+    ],
+    "meal": "dinner",
+    "ids_needed": [
+      "Banana, raw"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Banana, raw}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "not_shown_food_names": [
+      "Banana, raw"
+    ],
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ],
+    "rule_fallback": true
+  }
+}

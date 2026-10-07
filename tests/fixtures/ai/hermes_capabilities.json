@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "api_server": true,
+    "chat_completions": true,
+    "responses": true,
+    "runs": true,
+    "images": true
+  }
+}

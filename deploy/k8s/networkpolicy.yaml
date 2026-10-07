@@ -1,0 +1,92 @@
+# Default-deny for the namespace, then exactly what kidney-health needs (§5.3, C-NETPOL):
+#   ingress  only from your Gateway / ingress controller namespace, on port 8000
+#   egress   DNS to kube-dns, and HTTPS (443) to PUBLIC addresses only: api.nal.usda.gov,
+#            world.openfoodfacts.org and, if you enable it, a cloud AI host (docs/network-allowlist.md)
+# Private, CGNAT, link-local (cloud metadata 169.254.169.254) and loopback ranges are excluded, so a
+# compromised pod cannot reach the Kubernetes API, your LAN admin panels or metadata services.
+#
+# TALOS: the default CNI (Flannel) silently IGNORES NetworkPolicy unless kubeNetworkPoliciesEnabled:
+# true is set in its configuration (Talos >= 1.13; on 1.14+ that lives in the KubeFlannelCNIConfig
+# document; https://docs.siderolabs.com/kubernetes-guides/cni/flannel). Check that it is enforced
+# before you rely on it (docs/deployment.md has a test). Domain names cannot be matched here; for an
+# FQDN allowlist use cilium-networkpolicy.example.yaml.
+#
+# Kubelet probes are not affected: a pod cannot block traffic from its own node.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kidney-health
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kidney-health
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        # <-- the namespace of your Gateway API implementation or ingress controller.
+        # Cilium's own Gateway/Ingress is not a pod in a namespace (its traffic has the reserved
+        # "ingress" identity), so this never matches it: also apply the second policy in
+        # cilium-networkpolicy.example.yaml (fromEntities: ingress).
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+      ports:
+        - port: 8000
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:   # public HTTPS only: USDA, Open Food Facts, a cloud AI provider
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fc00::/7"
+              - "fe80::/10"
+              - "::1/128"
+      ports:
+        - port: 443
+          protocol: TCP
+    # Optional LAN AI host (Ollama 11434, Hermes 8643). Also list it in AI_PRIVATE_HOSTS.
+    # - to:
+    #     - ipBlock:
+    #         cidr: 192.168.1.50/32
+    #   ports:
+    #     - port: 11434
+    #       protocol: TCP

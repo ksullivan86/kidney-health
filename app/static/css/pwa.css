@@ -1,0 +1,39 @@
+/* Kidney Diet Log — installed-app (PWA) styles: standalone-mode safe areas, the update toast
+   and the "Install on your phone" panel. Loaded after the view styles, before touch.css. */
+
+/* ---------- standalone mode (opened from the home screen) ----------
+   No browser chrome around the page: keep content clear of a landscape notch or rounded
+   corners as well (top and bottom insets are handled in base.css for every mode), and stop
+   the page from rubber-banding past its ends, which shows the background of the window. */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+  .topbar-inner, .main {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .tablist { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+}
+@media (display-mode: standalone) and (min-width: 720px) {
+  .main { padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+}
+
+/* ---------- update ready ---------- */
+.update-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 61;
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 12px;
+  background: var(--text); color: var(--bg); box-shadow: var(--shadow); font-size: 0.92rem; font-weight: 600;
+  max-width: min(92vw, 480px);
+}
+.update-toast span { white-space: nowrap; }
+.update-toast .btn { min-height: 40px; }
+@media (pointer: coarse), (max-width: 719.98px) { .update-toast .btn { min-height: var(--tap); } }
+
+/* ---------- Install on your phone (Settings → This device) ---------- */
+.install-body { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.install-body p { margin: 0; }
+.install-steps { list-style: decimal; padding-left: 22px; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.install-note {
+  background: var(--caution-tint); color: var(--text); border-left: 4px solid var(--caution);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.9rem;
+}

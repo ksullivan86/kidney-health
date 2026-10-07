@@ -5,13 +5,9 @@ import json
 import sqlite3
 from pathlib import Path
 
-from fastapi.testclient import TestClient
-
 from app import db
-from app.config import Settings
-from app.main import create_app
 
-from conftest import DAY
+from conftest import DAY, make_settings, signed_in_client
 
 # The v0.1 schema verbatim: no log_entries.status, no profile.dialysis_days_json /
 # week_start, no meal_templates table.
@@ -102,7 +98,7 @@ def build_v01_database(path: Path, foods_version: str = "test-1") -> None:
 
 
 def test_v01_database_upgrades_on_startup_and_old_rows_read_back_as_eaten(tmp_path, foods_json):
-    settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json)
+    settings = make_settings(tmp_path, foods_json)
     build_v01_database(settings.db_path)
 
     before = db.connect(settings.db_path)
@@ -112,7 +108,7 @@ def test_v01_database_upgrades_on_startup_and_old_rows_read_back_as_eaten(tmp_pa
     assert db.get_schema_version(before) == 0
     before.close()
 
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:  # the admin claims user 1, which owns every v0.1 row
         assert c.app.state.foods_import["status"] == "unchanged"
         day = c.get("/api/log", params={"date": DAY}).json()
         assert [e["id"] for e in day["entries"]] == [1, 2]
@@ -136,19 +132,20 @@ def test_v01_database_upgrades_on_startup_and_old_rows_read_back_as_eaten(tmp_pa
     assert "status" in db.table_columns(after, "log_entries")
     assert {"dialysis_days_json", "week_start"} <= db.table_columns(after, "profile")
     assert {"id", "name", "note", "items_json"} <= db.table_columns(after, "meal_templates")
-    assert db.get_schema_version(after) == db.SCHEMA_VERSION == 2
+    assert db.get_schema_version(after) == db.SCHEMA_VERSION >= 3
     rows = after.execute("SELECT id, status FROM log_entries ORDER BY id").fetchall()
     assert [(r["id"], r["status"]) for r in rows] == [(1, "eaten"), (2, "eaten"), (3, "planned")]
+    assert {r[0] for r in after.execute("SELECT user_id FROM log_entries")} == {1}
     after.close()
 
 
 def test_migrations_are_idempotent_and_record_the_version(tmp_path):
     path = tmp_path / "kidney.db"
-    assert db.init_db(path) == [1, 2]
+    assert db.init_db(path) == list(range(1, db.SCHEMA_VERSION + 1))
     assert db.init_db(path) == []
     conn = db.connect(path)
-    assert db.get_schema_version(conn) == 2
-    assert db.get_meta(conn, db.SCHEMA_VERSION_KEY) == "2"
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
+    assert db.get_meta(conn, db.SCHEMA_VERSION_KEY) == str(db.SCHEMA_VERSION)
     # the step list is ordered and ends at the advertised version
     assert [v for v, _, _ in db.MIGRATIONS] == sorted(v for v, _, _ in db.MIGRATIONS)
     assert db.MIGRATIONS[-1][0] == db.SCHEMA_VERSION
@@ -185,7 +182,7 @@ def test_add_column_only_when_missing(tmp_path):
 
 def test_partially_upgraded_database_gets_only_the_missing_columns(tmp_path, foods_json):
     """Someone added ``status`` by hand but nothing else: the step must not fail on it."""
-    settings = Settings(data_dir=tmp_path / "data", foods_json=foods_json)
+    settings = make_settings(tmp_path, foods_json)
     build_v01_database(settings.db_path)
     conn = sqlite3.connect(settings.db_path)
     conn.execute("ALTER TABLE log_entries ADD COLUMN status TEXT NOT NULL DEFAULT 'eaten'")
@@ -193,13 +190,13 @@ def test_partially_upgraded_database_gets_only_the_missing_columns(tmp_path, foo
     conn.commit()
     conn.close()
 
-    with TestClient(create_app(settings)) as c:
+    with signed_in_client(settings) as c:
         day = c.get("/api/log", params={"date": DAY}).json()
         assert {e["id"]: e["status"] for e in day["entries"]} == {1: "eaten", 2: "planned"}
         assert day["counts"] == {"eaten": 1, "planned": 1}
         assert c.get("/api/profile").json()["week_start"] == "monday"
 
     conn = db.connect(settings.db_path)
-    assert db.get_schema_version(conn) == 2
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     assert {"dialysis_days_json", "week_start"} <= db.table_columns(conn, "profile")
     conn.close()

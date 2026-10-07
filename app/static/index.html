@@ -8,15 +8,30 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111417" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%232e7d32'/%3E%3Cpath d='M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css">
-<script>
-  // Apply the stored theme before first paint to avoid a flash.
-  try {
-    var t = localStorage.getItem('kdl-theme');
-    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-  } catch (e) {}
-</script>
+<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Kidney Log">
+<!-- No inline scripts and no style attributes anywhere: the CSP allows neither (note 01 §5.5).
+     Stylesheets in cascade order (touch.css last); scripts/build_preview.py inlines the
+     stylesheets and script files in document order for the self-contained preview. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/today.css">
+<link rel="stylesheet" href="css/add.css">
+<link rel="stylesheet" href="css/plan.css">
+<link rel="stylesheet" href="css/trends.css">
+<link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/labs.css">
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="css/sheets.css">
+<link rel="stylesheet" href="css/pwa.css">
+<link rel="stylesheet" href="css/ai.css">
+<link rel="stylesheet" href="css/guidance.css">
+<link rel="stylesheet" href="css/device.css">
+<link rel="stylesheet" href="css/touch.css">
+<script src="theme-init.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -29,9 +44,10 @@
         <path d="M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z" fill="#fff"/>
       </svg>
       <span class="brand-name">Kidney Diet Log</span>
+      <span class="brand-pill" id="brand-pill" hidden>Preview</span>
     </div>
 
-    <nav class="tabs" aria-label="Views">
+    <nav class="tabs" aria-label="Views" data-signed-in hidden>
       <div role="tablist" class="tablist">
         <button role="tab" class="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/></svg>
@@ -56,17 +72,213 @@
       </div>
     </nav>
 
+    <!-- The patient handbook (/learn, or its public copy). js/learn.js shows it once the server says
+         where the handbook is; same window: the handbook links back to the food log. -->
+    <a id="learn-link" class="icon-btn learn-link" href="/learn/" title="Learn: the patient handbook" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 7c-1.6-1.5-4.4-2.3-9-2v13c4.6-.3 7.4.5 9 2 1.6-1.5 4.4-2.3 9-2V5c-4.6-.3-7.4.5-9 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 7v13" stroke="currentColor" stroke-width="1.9"/></svg>
+      <span class="learn-text">Learn</span>
+    </a>
+    <!-- Offline outbox (js/offline.js): "Offline" and/or "N to sync"; opens Settings → This device -->
+    <button id="sync-badge" class="sync-badge" type="button" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="sync-badge-text" class="sync-badge-long"></span>
+      <span id="sync-badge-short" class="sync-badge-short" aria-hidden="true"></span>
+    </button>
+    <p class="sr-only" id="sync-live" role="status" aria-live="polite"></p>
     <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
     </button>
+    <button id="settings-open" class="icon-btn" type="button" aria-label="Settings" title="Settings" data-signed-in hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.6a7.6 7.6 0 0 0 0-3.2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-2.7-1.6L14 2.3h-4l-.3 2.5a7.4 7.4 0 0 0-2.7 1.6l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3.2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 2.7 1.6l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 2.7-1.6l2.4 1 2-3.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>
   </div>
 </header>
 
+<div class="nologin-banner" id="nologin-banner" role="note" hidden>
+  <p><strong>No sign-in.</strong> Anyone who can open this page can see and change this data. The server runs with AUTH_MODE=none; your admin can turn sign-in on (docs/accounts.md).</p>
+</div>
+
+<div class="preview-banner" id="preview-banner" role="note" aria-label="About this preview" hidden>
+  <p>Preview with sample data. Nothing is saved: reloading starts over. To try the hemodialysis features, set Dialysis to Hemodialysis in Profile, save, then use the suggested targets it offers.</p>
+  <button class="icon-btn" type="button" id="preview-banner-close" aria-label="Dismiss the preview notice">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+</div>
+
+<!-- Note 02 R10: on an iPhone or iPad, once, after the third visit (js/pwa.js countVisit); never blocks the page. -->
+<aside class="install-tip" id="install-tip" aria-labelledby="install-tip-title" hidden>
+  <div class="install-tip-text">
+    <p class="install-tip-title" id="install-tip-title">Tip: add this app to your Home Screen</p>
+    <div id="install-tip-steps"></div>
+    <p class="hint">It then opens like an app. These steps are also in Settings → This device.</p>
+  </div>
+  <button class="icon-btn" type="button" id="install-tip-close" aria-label="Dismiss the Home Screen tip">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+</aside>
+
 <main id="main" class="main">
 
+  <!-- ===================== SIGN-IN, FIRST-RUN SETUP, INVITE, RESET, NEW PASSWORD (js/views/auth.js) =====================
+       Hash routes #/login, #/setup, #/invite/<token>, #/reset/<token> (tokens travel only in the URL fragment). -->
+  <section id="view-auth" class="auth-view" aria-labelledby="auth-title" hidden>
+    <div class="auth-card card">
+      <div class="auth-head">
+        <svg class="auth-logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <circle cx="16" cy="16" r="15" fill="var(--ok)"/>
+          <path d="M11 9c-3 0-5 3-5 7s2 7 5 7c2 0 3-1.5 5-1.5s3 1.5 5 1.5c3 0 5-3 5-7s-2-7-5-7c-2 0-3 1.5-5 1.5S13 9 11 9z" fill="#fff"/>
+        </svg>
+        <div>
+          <h1 id="auth-title" class="auth-title" tabindex="-1">Sign in</h1>
+          <p class="auth-sub" id="auth-instance">Kidney Health</p>
+        </div>
+      </div>
+
+      <div class="auth-note level-over" id="auth-https" role="note" hidden>
+        <p><strong>HTTPS required.</strong> This server has more than one account, so signing in over plain HTTP is turned off: anyone on the network could read passwords. Open the app's https:// address instead, or ask your admin (see docs/https.md).</p>
+      </div>
+      <div class="auth-note level-caution" id="auth-insecure" role="note" hidden>
+        <p><strong>This connection is not encrypted (plain HTTP).</strong> Use it only on a network you trust. Inviting other people needs HTTPS; your admin can set it up with docs/https.md.</p>
+      </div>
+      <div class="auth-note info" id="auth-notice" role="status" hidden></div>
+      <div class="auth-error" id="auth-error" role="alert" aria-live="assertive"></div>
+
+      <form id="form-login" class="auth-form" data-screen="login" novalidate hidden>
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64">
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <div class="pw-wrap">
+            <input id="login-password" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+            <button class="pw-toggle" type="button" aria-controls="login-password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="login-submit">Sign in</button>
+        <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
+        <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
+      </form>
+
+      <form id="form-setup" class="auth-form" data-screen="setup" novalidate hidden>
+        <p class="auth-intro">Welcome. Create the first account on this server: it becomes the <b>admin</b>, and any data already on the server becomes yours.</p>
+        <div class="field">
+          <label for="setup-code">Setup code</label>
+          <input id="setup-code" name="code" type="text" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" required maxlength="64" placeholder="XXXX-XXXX-XXXX-XXXX" aria-describedby="setup-code-hint" class="code-input">
+          <span class="hint" id="setup-code-hint">Printed in the server's log on its first start: look for the line with FIRST-RUN SETUP (for example <code>podman logs kidney-health | grep FIRST-RUN</code>). It is valid for 60 minutes; restarting the server prints a new one.</span>
+        </div>
+        <div class="setup-local">
+        <div class="field">
+          <label for="setup-username">Username</label>
+          <input id="setup-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64" aria-describedby="setup-username-hint">
+          <span class="hint" id="setup-username-hint">3 to 64 characters: letters, digits and . _ @ + -</span>
+        </div>
+        <div class="field">
+          <label for="setup-display">Your name <span class="muted small">(optional)</span></label>
+          <input id="setup-display" name="display_name" type="text" autocomplete="nickname" maxlength="80" placeholder="Shown in the app, e.g. Sam">
+        </div>
+        <div class="field">
+          <label for="setup-password">Password</label>
+          <div class="pw-wrap">
+            <input id="setup-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="setup-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="setup-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="setup-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        </div>
+        <p class="hint setup-proxy" hidden>Your sign-in proxy tells the app who you are, so no password is needed here.</p>
+        <label class="check setup-off" for="setup-off">
+          <input type="checkbox" id="setup-off" name="off_enabled">
+          <span class="check-text">Look up barcodes with Open Food Facts
+            <span class="hint">Off unless you tick it. When on, a scanned barcode that is not in this server's food list is looked up at world.openfoodfacts.org; only the barcode number is sent. You can change this later in Settings.</span>
+          </span>
+        </label>
+        <button class="btn primary auth-submit" type="submit" id="setup-submit">Create admin account</button>
+      </form>
+
+      <form id="form-register" class="auth-form" data-screen="invite" novalidate hidden>
+        <p class="auth-intro" id="register-intro">You have been invited. Choose a username and a password for your account.</p>
+        <div class="field">
+          <label for="reg-username">Username</label>
+          <input id="reg-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64" aria-describedby="reg-username-hint">
+          <span class="hint" id="reg-username-hint">3 to 64 characters: letters, digits and . _ @ + -</span>
+        </div>
+        <div class="field">
+          <label for="reg-display">Your name <span class="muted small">(optional)</span></label>
+          <input id="reg-display" name="display_name" type="text" autocomplete="nickname" maxlength="80" placeholder="Shown in the app, e.g. Sam">
+        </div>
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <div class="pw-wrap">
+            <input id="reg-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="reg-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="reg-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="reg-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="reg-submit">Create account</button>
+        <p class="hint auth-help">The link works once. If it has expired, ask the person who sent it for a new one.</p>
+      </form>
+
+      <form id="form-reset" class="auth-form" data-screen="reset" novalidate hidden>
+        <p class="auth-intro" id="reset-intro">Choose a new password for your account. Every other device signed in to it is signed out.</p>
+        <div class="field" id="reset-username-field" hidden>
+          <label for="reset-username">Username</label>
+          <input id="reset-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" readonly aria-describedby="reset-username-hint">
+          <span class="hint" id="reset-username-hint">You sign in with this name. A password manager saves it together with the password.</span>
+        </div>
+        <div class="field">
+          <label for="reset-password">New password</label>
+          <div class="pw-wrap">
+            <input id="reset-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="reset-password-hint">
+            <button class="pw-toggle" type="button" aria-controls="reset-password" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="reset-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="reset-submit">Save password</button>
+        <p class="hint auth-help">The link works once and expires. If it no longer works, ask your admin for a new one.</p>
+      </form>
+
+      <form id="form-change" class="auth-form" data-screen="change" novalidate hidden>
+        <p class="auth-intro" id="chg-intro">Your admin asks you to choose a new password before you continue.</p>
+        <p class="hint" id="chg-who"></p>
+        <input id="chg-username" name="username" type="text" autocomplete="username" readonly hidden>
+        <div class="field">
+          <label for="chg-current">Current password</label>
+          <div class="pw-wrap">
+            <input id="chg-current" name="current" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+            <button class="pw-toggle" type="button" aria-controls="chg-current" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="chg-new">New password</label>
+          <div class="pw-wrap">
+            <input id="chg-new" name="new" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="chg-new-hint">
+            <button class="pw-toggle" type="button" aria-controls="chg-new" aria-pressed="false">Show</button>
+          </div>
+          <span class="hint" id="chg-new-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="chg-submit">Save new password</button>
+        <button class="link-btn auth-alt" type="button" id="chg-signout">Sign out instead</button>
+      </form>
+
+      <div class="auth-form" data-screen="proxy" id="auth-proxy" hidden>
+        <p class="auth-intro">Your sign-in proxy did not tell the app who you are. Your sign-in there may have expired.</p>
+        <a class="btn primary auth-submit" id="proxy-signin" href="/?reauth=1">Sign in again</a>
+        <p class="hint auth-help">If this keeps happening, ask your admin to check the proxy settings (docs/accounts.md).</p>
+      </div>
+
+      <div class="auth-form" data-screen="signedin" id="auth-signedin" hidden>
+        <p class="auth-intro" id="signedin-msg">You are already signed in.</p>
+        <button class="btn primary auth-submit" type="button" id="signedin-continue">Continue to the app</button>
+        <button class="btn secondary auth-submit" type="button" id="signedin-signout">Sign out and use the link</button>
+      </div>
+    </div>
+    <p class="auth-foot">Not medical advice. Targets and limits come from your nephrologist or renal dietitian.</p>
+  </section>
+
   <!-- ===================== TODAY ===================== -->
-  <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today">
+  <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today" hidden>
     <div class="date-nav">
       <button class="icon-btn" type="button" id="date-prev" aria-label="Previous day">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -93,7 +305,25 @@
       <div id="status-bars" class="status-bars"></div>
     </section>
 
+    <!-- Meal guidance (js/views/guidance.js): what fits now, plan the day, treating a low -->
+    <section class="card guidance-today" id="guidance-today" aria-labelledby="guidance-today-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-today-h" class="card-title">Meal ideas</h2>
+        <span class="muted small" id="guidance-today-sub"></span>
+      </div>
+      <div class="guidance-actions" id="guidance-today-actions"></div>
+    </section>
+
     <div id="meals" class="meals"></div>
+
+    <!-- End-of-day insights (js/views/guidance.js): a past day, or today once the main meals are logged or after 19:00 -->
+    <section class="card guidance-insights" id="guidance-day-insights" aria-labelledby="guidance-day-insights-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-day-insights-h" class="card-title">How today went</h2>
+        <span class="muted small" id="guidance-day-insights-sub"></span>
+      </div>
+      <div id="guidance-day-insights-body"></div>
+    </section>
 
     <details class="card details-card" id="totals-details">
       <summary>All nutrient totals for the day</summary>
@@ -114,6 +344,24 @@
 
   <!-- ===================== ADD ===================== -->
   <section id="view-add" class="view" role="tabpanel" aria-labelledby="tab-add" hidden>
+    <!-- "What fits now" (js/views/guidance.js): foods and meals that fit what is left for the chosen meal -->
+    <section class="card guidance-fits" id="guidance-fits" aria-labelledby="guidance-fits-h" hidden>
+      <div class="card-head">
+        <h2 id="guidance-fits-h" class="card-title">What fits now</h2>
+        <button class="link-btn" type="button" id="guidance-fits-clear" hidden>Hide</button>
+      </div>
+      <fieldset class="field guidance-meal-pick">
+        <legend class="sr-only">Meal to find foods for</legend>
+        <div class="segmented meal-seg" id="guidance-fits-meal">
+          <input type="radio" name="gfmeal" id="gfm-breakfast" value="breakfast"><label for="gfm-breakfast">Breakfast</label>
+          <input type="radio" name="gfmeal" id="gfm-lunch" value="lunch"><label for="gfm-lunch">Lunch</label>
+          <input type="radio" name="gfmeal" id="gfm-dinner" value="dinner"><label for="gfm-dinner">Dinner</label>
+          <input type="radio" name="gfmeal" id="gfm-snack" value="snack"><label for="gfm-snack">Snack</label>
+        </div>
+      </fieldset>
+      <p class="sr-only" id="guidance-fits-status" role="status" aria-live="polite"></p>
+      <div id="guidance-fits-body" class="guidance-body"></div>
+    </section>
     <div class="search-row">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <label class="sr-only" for="food-search">Search foods</label>
@@ -121,6 +369,11 @@
     </div>
     <div id="category-chips" class="chips" role="group" aria-label="Filter by category"></div>
     <div class="add-actions">
+      <!-- Barcode scanning (js/scan.js): camera, photo of a barcode, or typed digits; only the digits leave the device -->
+      <button class="btn secondary" type="button" id="btn-scan">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 8v8M10 8v8M12.5 8v8M15 8v8M17 8v8" stroke="currentColor" stroke-width="1.6"/></svg>
+        Scan a barcode
+      </button>
       <button class="btn secondary" type="button" id="btn-quick">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         Quick add
@@ -130,6 +383,8 @@
         Search USDA
       </button>
     </div>
+    <!-- Optional AI (js/views/ai.js): shown only when the server offers AI to this person -->
+    <div class="ai-add" id="ai-add-slot" aria-label="AI help" role="group" hidden></div>
     <section class="saved-shortcuts" id="saved-shortcuts" aria-labelledby="saved-shortcuts-heading" hidden>
       <div class="card-head results-head">
         <h2 id="saved-shortcuts-heading" class="card-title">Saved meals</h2>
@@ -161,6 +416,10 @@
     <div class="plan-actions">
       <button class="link-btn" type="button" id="week-this" hidden>Back to this week</button>
       <span class="spacer"></span>
+      <button class="btn secondary" type="button" id="btn-plan-day">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8.5 14.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Plan a day…
+      </button>
       <button class="btn secondary" type="button" id="btn-copy-day">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         Copy day…
@@ -211,12 +470,20 @@
           <button type="button" class="seg" data-days="14" aria-pressed="true">14 d</button>
           <button type="button" class="seg" data-days="30">30 d</button>
         </div>
-        <a id="export-csv" class="btn secondary" href="#" download="kidney-log.csv">
+        <a id="export-csv" class="btn secondary" href="#">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Export CSV
         </a>
       </div>
     </div>
+    <!-- Period insights (js/views/guidance.js): the chosen number of days, ending yesterday -->
+    <section class="card guidance-insights" id="guidance-period" aria-labelledby="guidance-period-h" hidden>
+      <div class="card-head">
+        <h3 id="guidance-period-h" class="card-title">Insights</h3>
+        <span class="muted small" id="guidance-period-sub"></span>
+      </div>
+      <div id="guidance-period-body"></div>
+    </section>
     <section class="card period-card" id="period-summary" aria-labelledby="period-heading">
       <div class="card-head">
         <h3 id="period-heading" class="card-title">Period summary</h3>
@@ -237,25 +504,71 @@
 
   <!-- ===================== PROFILE ===================== -->
   <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
+    <!-- js/views/profile.js. "About you" and the treatment fields (note 05 §4.2, §4.8), the lab summary,
+         and the daily targets with "Suggest targets" (never auto-saved). -->
+    <div id="profile-lab-alert" class="lab-alerts" role="alert"></div>
     <form id="profile-form" class="profile-form" novalidate>
-      <section class="card">
-        <h2 class="card-title">About you</h2>
+      <section class="card" aria-labelledby="pf-about-h">
+        <h2 class="card-title" id="pf-about-h">About you</h2>
+        <p class="hint">All optional. These details make the suggested targets fit you better; they stay on this server.</p>
         <div class="form-grid">
           <div class="field span-2">
             <label for="pf-name">Name</label>
             <input id="pf-name" name="name" type="text" autocomplete="name" placeholder="Optional">
           </div>
           <div class="field">
-            <label for="pf-weight">Weight (kg)</label>
-            <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70">
+            <label for="pf-birth-month">Birth month</label>
+            <input id="pf-birth-month" name="birth_month" type="month" autocomplete="off" placeholder="YYYY-MM" aria-describedby="pf-birth-month-hint">
+            <span class="hint" id="pf-birth-month-hint">Year and month, for example 1971-03. Age changes calories, protein from 65 and calcium.</span>
           </div>
           <div class="field">
             <label for="pf-height">Height (cm)</label>
-            <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional">
+            <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional" aria-describedby="pf-height-hint">
+            <span class="hint" id="pf-height-hint">Lets the app adjust for a weight above or below the healthy range.</span>
           </div>
           <div class="field">
-            <label for="pf-stage">CKD stage</label>
-            <select id="pf-stage" name="ckd_stage">
+            <label for="pf-weight" id="pf-weight-label">Weight (kg)</label>
+            <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70" aria-describedby="pf-weight-hint">
+            <span class="hint" id="pf-weight-hint">Calories and protein are worked out from it.</span>
+          </div>
+          <div class="field">
+            <label for="pf-weight-6mo">Weight 6 months ago (kg)</label>
+            <input id="pf-weight-6mo" name="weight_6_months_ago_kg" type="number" inputmode="decimal" min="20" max="400" step="0.1" placeholder="Optional" aria-describedby="pf-weight-6mo-hint">
+            <span class="hint" id="pf-weight-6mo-hint">Losing more than 5 % without trying is a sign of malnutrition risk.</span>
+          </div>
+          <div class="field span-2">
+            <label for="pf-sex">Sex used in medical formulas</label>
+            <select id="pf-sex" name="sex" aria-describedby="pf-sex-help">
+              <option value="unspecified">Prefer not to say</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+            <span class="hint" id="pf-sex-help">Used only for formulas (kidney function, energy, calcium). Choose the sex your lab uses for your eGFR. If you take gender-affirming hormones, ask your clinician which to use. "Prefer not to say" uses an average and shows ranges.</span>
+          </div>
+          <fieldset class="field span-2 choice-list" id="pf-activity-field" aria-describedby="pf-activity-hint">
+            <legend>Activity on a usual day</legend>
+            <span class="hint" id="pf-activity-hint">Used for the calorie estimate (2023 Dietary Reference Intakes, Table 7-1).</span>
+            <label class="choice" for="pf-act-none"><input type="radio" name="activity" id="pf-act-none" value=""><span class="choice-text"><b>Not chosen</b><span class="hint">The app uses its default level until you choose.</span></span></label>
+            <label class="choice" for="pf-act-inactive"><input type="radio" name="activity" id="pf-act-inactive" value="inactive"><span class="choice-text"><b>Inactive</b><span class="hint">Daily living only: housework and getting around, about 30 minutes of walking in a day.</span></span></label>
+            <label class="choice" for="pf-act-low_active"><input type="radio" name="activity" id="pf-act-low_active" value="low_active"><span class="choice-text"><b>Low active</b><span class="hint">Daily living plus about an hour of brisk walking (60 to 80 minutes at 3 to 4 mph, 5 to 6.5 km/h).</span></span></label>
+            <label class="choice" for="pf-act-active"><input type="radio" name="activity" id="pf-act-active" value="active"><span class="choice-text"><b>Active</b><span class="hint">Daily living plus 30 to 50 minutes of walking and about an hour and a half of exercise such as cycling or doubles tennis.</span></span></label>
+            <label class="choice" for="pf-act-very_active"><input type="radio" name="activity" id="pf-act-very_active" value="very_active"><span class="choice-text"><b>Very active</b><span class="hint">Daily living plus more than 2 hours of hard exercise such as cycling, jogging or tennis.</span></span></label>
+          </fieldset>
+          <fieldset class="field span-2" id="pf-health-field">
+            <legend>Your health</legend>
+            <label class="check" for="pf-frail"><input type="checkbox" id="pf-frail" name="frail_or_sarcopenic"><span class="check-text">Frailty or low muscle mass (as told by your care team)<span class="hint">Moves protein and calories to the higher end.</span></span></label>
+            <label class="check" for="pf-pregnant"><input type="checkbox" id="pf-pregnant" name="pregnant_or_breastfeeding"><span class="check-text">Pregnant or breastfeeding<span class="hint">The app does not suggest targets then: your kidney and maternity teams set them.</span></span></label>
+            <label class="check" for="pf-hyperk"><input type="checkbox" id="pf-hyperk" name="hyperkalemia_history"><span class="check-text">I have had high potassium, or I take a potassium binder<span class="hint">Keeps the potassium limit from being relaxed when a result is normal.</span></span></label>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="pf-kidney-h">
+        <h2 class="card-title" id="pf-kidney-h">Kidneys and diabetes</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label for="pf-stage" id="pf-stage-label">CKD stage</label>
+            <select id="pf-stage" name="ckd_stage" aria-describedby="pf-stage-hint">
               <option value="1">Stage 1</option>
               <option value="2">Stage 2</option>
               <option value="3a">Stage 3a</option>
@@ -263,6 +576,7 @@
               <option value="4">Stage 4</option>
               <option value="5">Stage 5</option>
             </select>
+            <span class="hint" id="pf-stage-hint">The stage your nephrologist gave you.</span>
           </div>
           <div class="field">
             <label for="pf-dialysis">Dialysis</label>
@@ -280,34 +594,67 @@
               <option value="type2">Type 2</option>
             </select>
           </div>
-          <div class="field">
-            <label for="pf-warn">Warn at (% of limit)</label>
-            <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80">
-            <span class="hint">Status turns to "near limit" at this share of a daily target.</span>
-          </div>
-          <div class="field">
-            <label for="pf-week-start">Week starts on</label>
-            <select id="pf-week-start" name="week_start">
-              <option value="monday">Monday</option>
-              <option value="sunday">Sunday</option>
-            </select>
-            <span class="hint">Used by the Plan view grid and shopping list.</span>
+          <div class="field" id="pf-transplant-field">
+            <label for="pf-transplant-date">Kidney transplant date</label>
+            <input id="pf-transplant-date" name="transplant_date" type="date" aria-describedby="pf-transplant-hint">
+            <span class="hint" id="pf-transplant-hint">Only if you have a working kidney transplant. The stage above is then your transplant's stage.</span>
           </div>
           <fieldset class="field span-2" id="pf-dialysis-days-field" hidden>
             <legend>Dialysis days</legend>
             <div class="weekday-checks" id="pf-dialysis-days"></div>
             <span class="hint">Potassium, sodium and fluid accumulate between sessions; with days set, Today and Trends also total them since the last session.</span>
           </fieldset>
+          <div class="field" id="pf-urine-field" hidden>
+            <label for="pf-urine">Urine per day (mL)</label>
+            <input id="pf-urine" name="urine_output_ml" type="number" inputmode="numeric" min="0" max="5000" step="50" placeholder="Optional" aria-describedby="pf-urine-hint">
+            <span class="hint" id="pf-urine-hint">Your 24-hour urine volume; your fluid allowance adds to it.</span>
+          </div>
+          <div class="field" id="pf-uf-field" hidden>
+            <label for="pf-uf">Ultrafiltration per day (mL)</label>
+            <input id="pf-uf" name="pd_uf_ml" type="number" inputmode="numeric" min="0" max="4000" step="50" placeholder="Optional" aria-describedby="pf-uf-hint">
+            <span class="hint" id="pf-uf-hint">The net fluid your exchanges remove in 24 hours (your PD nurse or record book has it).</span>
+          </div>
+          <div class="field" id="pf-pdkcal-field" hidden>
+            <label for="pf-pdkcal">Calories from dialysis fluid (kcal/day)</label>
+            <input id="pf-pdkcal" name="pd_dialysate_kcal" type="number" inputmode="numeric" min="0" max="1000" step="10" placeholder="Optional" aria-describedby="pf-pdkcal-hint">
+            <span class="hint" id="pf-pdkcal-hint">The glucose your body absorbs from the fluid; ask your PD nurse. It is taken off food calories.</span>
+          </div>
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" aria-labelledby="pf-labs-h">
         <div class="card-head">
-          <h2 class="card-title">Daily targets</h2>
+          <h2 class="card-title" id="pf-labs-h">Blood and urine tests</h2>
+          <button class="btn secondary" type="button" id="pf-open-labs">Lab results</button>
+        </div>
+        <div id="pf-labs-summary" class="labs-summary"><p class="muted small">Add your latest blood test results: potassium and phosphate can change the suggested limits, and creatinine or eGFR shows which stage your kidney function suggests.</p></div>
+      </section>
+
+      <section class="card" aria-labelledby="pf-targets-h">
+        <div class="card-head">
+          <h2 class="card-title" id="pf-targets-h">Daily targets</h2>
           <button class="btn secondary" type="button" id="btn-suggest">Suggest targets</button>
         </div>
-        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points computed from your <em>saved</em> weight, height, stage and dialysis setting (calories and protein are per kg of ideal body weight, so add your height if you are over- or under-weight); discuss them with your care team before using them.</p>
-        <div id="suggest-notes" class="notes" hidden></div>
+        <p class="hint">Leave a field blank to stop tracking that nutrient. Suggestions are starting points worked out from your <em>saved</em> profile and recent lab results (calories and protein are per kg of a reference weight; guidelines leave its choice to your care team). Discuss them with your care team before using them.</p>
+        <div id="targets-stale" class="notes targets-stale" role="status" hidden>
+          <div class="notes-title">Check your daily targets</div>
+          <p id="targets-stale-msg"></p>
+          <div class="targets-stale-actions">
+            <button class="btn secondary" type="button" id="targets-stale-suggest">Suggest targets</button>
+            <button class="link-btn" type="button" id="targets-stale-keep">Keep my targets</button>
+          </div>
+        </div>
+        <div id="targets-review" class="notes targets-review" role="status" hidden>
+          <div class="notes-title">Review suggested targets</div>
+          <div id="targets-review-msg"></div>
+          <div class="targets-stale-actions">
+            <button class="btn secondary" type="button" id="targets-review-suggest">Review suggested targets</button>
+            <button class="link-btn" type="button" id="targets-review-dismiss">Dismiss</button>
+          </div>
+        </div>
+        <div id="suggest-refusal" class="notes suggest-refusal" tabindex="-1" hidden></div>
+        <div id="suggest-notes" class="notes suggest-result" tabindex="-1" hidden></div>
+        <p class="sr-only" id="suggest-live" aria-live="polite"></p>
         <div class="form-grid targets-grid">
           <div class="field">
             <label for="tg-potassium_mg">Potassium (mg)</label>
@@ -325,15 +672,16 @@
             <label for="tg-fluid_ml">Fluid (mL)</label>
             <input id="tg-fluid_ml" data-target="fluid_ml" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
           </div>
-          <div class="field span-2 range-field">
+          <div class="field span-2 range-field" role="group" aria-labelledby="tg-protein-label">
             <span class="label" id="tg-protein-label">Protein (g), minimum to maximum</span>
             <div class="range-inputs">
               <label class="sr-only" for="tg-protein_min">Protein minimum (g)</label>
-              <input id="tg-protein_min" data-target-min="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="min">
+              <input id="tg-protein_min" data-range-min="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="min">
               <span aria-hidden="true">to</span>
               <label class="sr-only" for="tg-protein_max">Protein maximum (g)</label>
-              <input id="tg-protein_max" data-target-max="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="max">
+              <input id="tg-protein_max" data-range-max="protein_g" type="number" inputmode="decimal" min="0" step="1" placeholder="max">
             </div>
+            <span class="hint">The same number in both boxes means "about this much".</span>
           </div>
           <div class="field">
             <label for="tg-carbs_g">Carbohydrate per day (g)</label>
@@ -344,25 +692,42 @@
             <input id="tg-carbs_per_meal_g" data-target="carbs_per_meal_g" type="number" inputmode="numeric" min="0" step="5" placeholder="not tracked">
           </div>
           <div class="field">
+            <label for="tg-carbs_per_snack_g">Carbohydrate per snack (g)</label>
+            <input id="tg-carbs_per_snack_g" data-target="carbs_per_snack_g" type="number" inputmode="numeric" min="0" step="5" placeholder="not tracked" aria-describedby="tg-snack-hint">
+            <span class="hint" id="tg-snack-hint">From your diabetes team. Left empty, meal ideas aim a snack at about half the per-meal amount (at least 15 g).</span>
+          </div>
+          <div class="field">
             <label for="tg-calories_kcal">Calories (kcal)</label>
             <input id="tg-calories_kcal" data-target="calories_kcal" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
           </div>
           <div class="field">
-            <label for="tg-calcium_mg">Calcium (mg, incl. binders)</label>
-            <input id="tg-calcium_mg" data-target="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="not tracked">
+            <label for="tg-fiber_g">Fiber, at least (g)</label>
+            <input id="tg-fiber_g" data-target-goal="fiber_g" type="number" inputmode="numeric" min="0" step="1" placeholder="not tracked" aria-describedby="tg-fiber-hint">
+            <span class="hint" id="tg-fiber-hint">A goal to reach, never "over".</span>
           </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2 class="card-title">Appearance</h2>
-        <div class="field">
-          <label for="pf-theme">Theme</label>
-          <select id="pf-theme">
-            <option value="auto">Match device</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
+          <div class="field span-2 range-field" role="group" aria-labelledby="tg-calcium-label">
+            <span class="label" id="tg-calcium-label">Calcium (mg, including binders), minimum to maximum</span>
+            <div class="range-inputs">
+              <label class="sr-only" for="tg-calcium_min">Calcium minimum (mg)</label>
+              <input id="tg-calcium_min" data-range-min="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="min (optional)">
+              <span aria-hidden="true">to</span>
+              <label class="sr-only" for="tg-calcium_max">Calcium maximum (mg)</label>
+              <input id="tg-calcium_max" data-range-max="calcium_mg" type="number" inputmode="numeric" min="0" step="50" placeholder="max">
+            </div>
+          </div>
+          <div class="field">
+            <label for="pf-warn">Warn at (% of limit)</label>
+            <input id="pf-warn" name="warn_fraction_pct" type="number" inputmode="numeric" min="50" max="100" step="5" value="80" aria-describedby="pf-warn-hint">
+            <span class="hint" id="pf-warn-hint">Status turns to "near limit" at this share of a daily target.</span>
+          </div>
+          <div class="field">
+            <label for="pf-week-start">Week starts on</label>
+            <select id="pf-week-start" name="week_start" aria-describedby="pf-week-start-hint">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+            <span class="hint" id="pf-week-start-hint">Used by the Plan view grid and shopping list.</span>
+          </div>
         </div>
       </section>
 
@@ -370,11 +735,187 @@
         <button class="btn primary" type="submit" id="btn-save-profile">Save profile</button>
         <span id="profile-saved" class="muted small" aria-live="polite"></span>
       </div>
+      <div id="profile-form-error" class="form-error" role="alert"></div>
     </form>
+
+    <section class="card profile-settings" aria-labelledby="profile-settings-heading">
+      <div class="card-head">
+        <h2 class="card-title" id="profile-settings-heading">Settings</h2>
+      </div>
+      <p class="hint">Your account and password, theme, food-data keys, installing the app on this device, and (for admins) people and server settings.</p>
+      <button class="btn secondary" type="button" id="profile-open-settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.6a7.6 7.6 0 0 0 0-3.2l2-1.5-2-3.5-2.4 1a7.4 7.4 0 0 0-2.7-1.6L14 2.3h-4l-.3 2.5a7.4 7.4 0 0 0-2.7 1.6l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3.2l-2 1.5 2 3.5 2.4-1a7.4 7.4 0 0 0 2.7 1.6l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 2.7-1.6l2.4 1 2-3.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        Open Settings
+      </button>
+    </section>
 
     <footer class="disclaimer">
       <strong>Not medical advice.</strong> Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. The food database is reference data; check labels and portions. Food warnings are general renal-diet conventions, not a prescription.
     </footer>
+  </section>
+
+  <!-- ===================== LAB RESULTS (js/views/labs.js; note 05 §4.8) =====================
+       Reached from Profile ("Lab results", #labs). Entry with a unit picker and the converted value
+       echoed before saving, the potassium safety banner, the kidney-function card and the history. -->
+  <section id="view-labs" class="view labs-view" aria-labelledby="labs-title" hidden>
+    <div class="labs-head">
+      <button class="link-btn labs-back" type="button" id="labs-back">Back to Profile</button>
+      <h2 id="labs-title" class="labs-title" tabindex="-1">Lab results</h2>
+      <p class="muted small">Type results from your blood and urine tests. Potassium and phosphate can change your suggested limits; nothing changes your saved targets until you save them in Profile.</p>
+    </div>
+    <div id="labs-alert" class="lab-alerts" role="alert"></div>
+
+    <section class="card" aria-labelledby="lab-add-h">
+      <h2 class="card-title" id="lab-add-h">Add a result</h2>
+      <form id="lab-form" class="lab-form" novalidate>
+        <div class="form-grid">
+          <div class="field span-2">
+            <label for="lab-analyte">Test</label>
+            <select id="lab-analyte" name="analyte"></select>
+          </div>
+          <div class="field">
+            <label for="lab-value">Result</label>
+            <input id="lab-value" name="value" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="e.g. 4.6" aria-describedby="lab-echo">
+          </div>
+          <div class="field">
+            <label for="lab-unit">Unit</label>
+            <select id="lab-unit" name="unit" aria-describedby="lab-unit-hint"></select>
+            <span class="hint" id="lab-unit-hint">Use the unit printed on your report.</span>
+          </div>
+          <div class="field">
+            <label for="lab-date">Date of the test</label>
+            <input id="lab-date" name="taken_on" type="date">
+          </div>
+          <div class="field">
+            <label for="lab-note">Note (optional)</label>
+            <input id="lab-note" name="note" type="text" maxlength="500" autocomplete="off" placeholder="e.g. before dialysis">
+          </div>
+        </div>
+        <p id="lab-echo" class="lab-echo" aria-live="polite"></p>
+        <div class="form-actions">
+          <button class="btn primary" type="submit" id="lab-save">Save result</button>
+        </div>
+        <div id="lab-form-error" class="form-error" role="alert"></div>
+      </form>
+    </section>
+
+    <section id="labs-review" class="notes labs-review" tabindex="-1" aria-labelledby="labs-review-h" hidden>
+      <h2 class="notes-title" id="labs-review-h">What this result changed</h2>
+      <div id="labs-review-body"></div>
+      <div class="targets-stale-actions">
+        <button class="btn secondary" type="button" id="labs-review-go" hidden>Review suggested targets</button>
+        <button class="link-btn" type="button" id="labs-review-dismiss">Dismiss</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="kf-h">
+      <h2 class="card-title" id="kf-h">Kidney function</h2>
+      <div id="kf-body" class="kf-body" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="labs-history-h">
+      <div class="card-head">
+        <h2 class="card-title" id="labs-history-h">History</h2>
+        <div class="field labs-filter">
+          <label for="labs-filter">Show</label>
+          <select id="labs-filter"><option value="">All tests</option></select>
+        </div>
+      </div>
+      <div id="labs-history"></div>
+    </section>
+    <p class="sr-only" id="labs-live" aria-live="polite"></p>
+
+    <footer class="disclaimer">
+      <strong>Not medical advice.</strong> Results are interpreted with general guideline thresholds; your lab's own reference ranges and your care team decide what a result means for you. If a result is very abnormal or you feel unwell, contact your care team or get urgent help.
+    </footer>
+  </section>
+
+  <!-- ===================== SETTINGS (js/views/settings.js; note 07 §4.17, note 02 R10) =====================
+       Reached from the header gear and from Profile (#settings). Sections are filled by settings.js;
+       This device is completed by js/pwa.js in the installed app. -->
+  <section id="view-settings" class="view settings-view" aria-labelledby="settings-title" hidden>
+    <div class="settings-head">
+      <h2 id="settings-title" class="settings-title" tabindex="-1">Settings</h2>
+      <p class="muted small" id="settings-who"></p>
+    </div>
+    <nav class="settings-nav" aria-label="Settings sections">
+      <ul class="settings-nav-list" id="settings-nav"></ul>
+    </nav>
+
+    <section class="card settings-section" id="set-account" data-title="Account" aria-labelledby="set-account-h">
+      <h2 class="card-title" id="set-account-h">Account</h2>
+      <div id="set-account-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-prefs" data-title="Preferences" aria-labelledby="set-prefs-h">
+      <h2 class="card-title" id="set-prefs-h">Preferences</h2>
+      <div class="settings-body">
+        <div class="setting-row">
+          <div class="field">
+            <label for="set-theme">Theme</label>
+            <select id="set-theme" aria-describedby="set-theme-source">
+              <option value="auto">Match device</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+            <span class="setting-source" id="set-theme-source"></span>
+          </div>
+          <div class="field">
+            <label for="set-week-start">Week starts on</label>
+            <select id="set-week-start" aria-describedby="set-week-start-hint">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+            <span class="hint" id="set-week-start-hint">Used by the Plan view and the shopping list. Saved with your profile.</span>
+          </div>
+          <div class="field">
+            <label for="set-lab-units">Units for lab results</label>
+            <select id="set-lab-units" aria-describedby="set-lab-units-hint set-lab-units-source">
+              <option value="us">US: mg/dL, g/dL, mg/g, %</option>
+              <option value="si">SI: mmol/L, µmol/L, g/L, mg/mmol, mmol/mol</option>
+            </select>
+            <span class="hint" id="set-lab-units-hint">The unit offered first when you add a lab result; any unit on your report can still be chosen.</span>
+            <span class="setting-source" id="set-lab-units-source"></span>
+          </div>
+        </div>
+        <p class="status-msg" id="set-prefs-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="card settings-section" id="set-guidance" data-title="Meal guidance" aria-labelledby="set-guidance-h">
+      <h2 class="card-title" id="set-guidance-h">Meal guidance</h2>
+      <div id="set-guidance-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-food" data-title="Food data" aria-labelledby="set-food-h">
+      <h2 class="card-title" id="set-food-h">Food data</h2>
+      <div id="set-food-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-ai" data-title="AI ideas" aria-labelledby="set-ai-h">
+      <h2 class="card-title" id="set-ai-h">AI ideas</h2>
+      <div id="set-ai-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-device" data-title="This device" aria-labelledby="set-device-h">
+      <h2 class="card-title" id="set-device-h">This device</h2>
+      <div id="set-device-body" class="settings-body"></div>
+      <!-- Note 02 R10: js/pwa.js fills and shows this in the installed app only (never in the demo or the preview). -->
+      <div class="install-panel" id="install-panel" aria-labelledby="install-heading" hidden>
+        <h3 class="settings-subtitle" id="install-heading">Install this app</h3>
+        <div class="install-body" id="install-body"></div>
+      </div>
+    </section>
+
+    <section class="card settings-section" id="set-admin" data-title="Admin" aria-labelledby="set-admin-h" hidden>
+      <h2 class="card-title" id="set-admin-h">Admin</h2>
+      <div id="set-admin-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-about" data-title="About" aria-labelledby="set-about-h">
+      <h2 class="card-title" id="set-about-h">About &amp; privacy</h2>
+      <div id="set-about-body" class="settings-body"></div>
+    </section>
   </section>
 </main>
 
@@ -393,6 +934,8 @@
     <div class="sheet-body">
       <div id="sheet-entry-flags" class="flag-chips"></div>
       <p id="sheet-entry-notes" class="food-notes" hidden></p>
+      <!-- Where the data came from (js/scan.js renderProvenance): attribution, quality notes, additives, ingredients -->
+      <div id="sheet-entry-provenance" class="provenance" hidden></div>
 
       <fieldset class="field">
         <legend>Meal</legend>
@@ -439,6 +982,17 @@
       </div>
 
       <div class="warnings" id="entry-warnings" aria-live="polite"></div>
+      <!-- Meal guidance (js/views/guidance.js). "Used to treat a low" sits under the warnings it changes (ticked,
+           they become a plain note: a low treatment is never warned against), so the warnings stay where they
+           were, above the fold on a phone. Then swap ideas, or "For your next low". -->
+      <div class="entry-hypo" id="entry-hypo-row" hidden>
+        <label class="check" for="entry-hypo">
+          <input type="checkbox" id="entry-hypo" aria-describedby="entry-hypo-hint">
+          <span class="check-text">Used to treat a low</span>
+        </label>
+        <span class="hint" id="entry-hypo-hint">Tick it when this food treated a low: it then counts toward the day's totals but never toward your meal carbs, and is not warned about.</span>
+      </div>
+      <div class="entry-guidance" id="entry-guidance"></div>
 
       <div class="preview">
         <div class="preview-head">
@@ -474,7 +1028,31 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="sheet-body">
+    <div class="sheet-body quick-layout">
+      <!-- Note 03 R8: a photo of the label beside the form (nothing is uploaded), and "Read the label for me" when
+           the server offers AI to this person (js/scan.js). Above the fields on phones, beside them on wide screens. -->
+      <div class="quick-photo" id="quick-photo">
+        <div class="field">
+          <label for="q-photo">Use a photo of the label</label>
+          <input id="q-photo" class="ai-file" type="file" accept="image/*" aria-describedby="q-photo-hint">
+          <span class="hint" id="q-photo-hint">Shown here so you can copy the numbers. It stays on this device.</span>
+        </div>
+        <figure class="quick-photo-view" id="q-photo-view" hidden>
+          <div class="quick-photo-frame" id="q-photo-frame" tabindex="0" role="group" aria-label="Your label photo (scroll to see all of it when zoomed)">
+            <img id="q-photo-img" alt="Your photo of the nutrition label">
+          </div>
+          <figcaption class="quick-photo-tools">
+            <div class="zoom-seg" role="group" aria-label="Zoom the photo">
+              <button class="chip" type="button" data-zoom="1" aria-pressed="true">1×</button>
+              <button class="chip" type="button" data-zoom="2" aria-pressed="false">2×</button>
+              <button class="chip" type="button" data-zoom="3" aria-pressed="false">3×</button>
+            </div>
+            <button class="link-btn" type="button" id="q-photo-remove">Remove photo</button>
+          </figcaption>
+        </figure>
+        <div class="quick-photo-ai" id="q-photo-ai" hidden></div>
+      </div>
+      <div class="quick-fields">
       <div class="form-grid">
         <div class="field span-2">
           <label for="q-name">Food name <span class="req" aria-hidden="true">*</span></label>
@@ -487,6 +1065,11 @@
         <div class="field">
           <label for="q-serving-g">Serving weight (g)</label>
           <input id="q-serving-g" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" value="100">
+        </div>
+        <div class="field span-2">
+          <label for="q-gtin">Barcode <span class="optional">(optional)</span></label>
+          <input id="q-gtin" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" aria-describedby="q-gtin-hint">
+          <span class="hint" id="q-gtin-hint">Saved with the food, so scanning it next time finds this food.</span>
         </div>
       </div>
 
@@ -519,18 +1102,97 @@
         <div class="form-grid nutrient-inputs" id="quick-nutrients"></div>
       </fieldset>
 
+      <div class="field">
+        <label for="q-ingredients">Ingredients <span class="optional">(optional)</span></label>
+        <textarea id="q-ingredients" rows="3" maxlength="4000" aria-describedby="q-ingredients-hint q-ingredients-scan"></textarea>
+        <span class="hint" id="q-ingredients-hint">Copy the ingredient list from the package: saving checks it for phosphate and potassium additives.</span>
+        <p class="hint ingredients-scan" id="q-ingredients-scan" aria-live="polite"></p>
+      </div>
+
       <fieldset class="field">
         <legend>Flags</legend>
         <div class="checks" id="quick-flags"></div>
       </fieldset>
 
       <div class="warnings" id="quick-warnings" aria-live="polite"></div>
+      </div>
     </div>
     <div class="sheet-foot">
       <span class="spacer"></span>
       <button class="btn secondary" type="button" data-close>Cancel</button>
       <button class="btn primary" type="submit" id="quick-save">Log it</button>
     </div>
+  </form>
+</dialog>
+
+<!-- ===================== SCAN SHEET (js/scan.js; note 03 R7, note 02 R7) ===================== -->
+<dialog id="sheet-scan" class="sheet" aria-labelledby="sheet-scan-title" aria-describedby="sheet-scan-sub">
+  <form method="dialog" class="sheet-form" id="scan-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-scan-title" class="sheet-title">Scan a barcode</h2>
+        <div class="sheet-sub" id="sheet-scan-sub">The barcode is read on this device; only its number goes to your server.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <section class="scan-part" aria-labelledby="scan-live-h">
+        <h3 class="scan-h" id="scan-live-h">Camera</h3>
+        <div class="scan-viewfinder" id="scan-viewfinder" hidden>
+          <video id="scan-video" playsinline muted autoplay aria-label="Camera view: hold the barcode inside the frame"></video>
+          <div class="scan-aim" aria-hidden="true"></div>
+        </div>
+        <div class="scan-row" id="scan-camera-row">
+          <button class="btn primary" type="button" id="scan-camera">Use the camera</button>
+          <button class="btn secondary" type="button" id="scan-camera-stop" hidden>Stop the camera</button>
+        </div>
+        <p class="hint" id="scan-live-note" hidden></p>
+      </section>
+      <section class="scan-part" aria-labelledby="scan-photo-h">
+        <h3 class="scan-h" id="scan-photo-h">Photo of a barcode</h3>
+        <div class="field">
+          <label for="scan-file">Take or choose a photo</label>
+          <input id="scan-file" class="ai-file" type="file" accept="image/*" aria-describedby="scan-file-hint">
+          <span class="hint" id="scan-file-hint">The photo is read on this device and never uploaded. This works over plain HTTP too.</span>
+        </div>
+      </section>
+      <section class="scan-part" aria-labelledby="scan-type-h">
+        <h3 class="scan-h" id="scan-type-h">Type the barcode</h3>
+        <div class="field">
+          <label for="scan-code">Barcode number</label>
+          <div class="scan-type-row">
+            <input id="scan-code" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" maxlength="64" aria-describedby="scan-code-hint">
+            <button class="btn primary" type="submit" id="scan-go">Look up</button>
+          </div>
+          <span class="hint" id="scan-code-hint">The digits under the bars (usually 12 or 13). A USB or Bluetooth barcode scanner can type here too.</span>
+        </div>
+      </section>
+      <p class="status-msg" id="scan-status" role="status" aria-live="polite"></p>
+      <div class="scan-result" id="scan-result"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Close</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== OFFLINE: SIGN OUT WITH UNSYNCED ENTRIES (js/offline.js; note 02 R5) ===================== -->
+<dialog id="sheet-unsynced" class="sheet" aria-labelledby="sheet-unsynced-title" aria-describedby="sheet-unsynced-sub">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-unsynced-title" class="sheet-title">Entries not synced yet</h2>
+        <div class="sheet-sub" id="sheet-unsynced-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="sheet-unsynced-body"></div>
+    <div class="sheet-foot" id="sheet-unsynced-foot"></div>
   </form>
 </dialog>
 
@@ -639,6 +1301,17 @@
         <div class="field span-2">
           <label for="meal-note">Note</label>
           <input id="meal-note" type="text" maxlength="200" placeholder="Optional">
+        </div>
+        <div class="field span-2">
+          <label for="meal-hint">Meant for</label>
+          <select id="meal-hint" aria-describedby="meal-hint-hint">
+            <option value="">Any main meal</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+          <span class="hint" id="meal-hint-hint">Meal ideas offer it for this meal (“Any main meal”: breakfast, lunch or dinner).</span>
         </div>
       </div>
       <div class="field">
@@ -763,9 +1436,186 @@
   </form>
 </dialog>
 
+<!-- ===================== CSV SHEET (demo and preview only: they cannot download files) ===================== -->
+<dialog id="sheet-csv" class="sheet" aria-labelledby="sheet-csv-title">
+  <div class="sheet-form">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-csv-title" class="sheet-title">Export CSV</h2>
+        <div class="sheet-sub" id="sheet-csv-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="hint csv-note">The installed app downloads this as a .csv file. Here, copy the text and paste it into a spreadsheet or a text file.</p>
+      <label class="sr-only" for="csv-text">CSV text, one row per log entry</label>
+      <textarea id="csv-text" class="csv-text" readonly rows="12" spellcheck="false" wrap="off"></textarea>
+      <p class="status-msg" id="csv-status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Close</button>
+      <button class="btn primary" type="button" id="csv-copy">Copy CSV</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== RE-AUTHENTICATION (js/views/auth.js): sensitive actions answer reauth_required ===================== -->
+<dialog id="sheet-reauth" class="sheet" aria-labelledby="sheet-reauth-title" aria-describedby="sheet-reauth-sub">
+  <form method="dialog" class="sheet-form" id="reauth-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-reauth-title" class="sheet-title">Enter your password again</h2>
+        <div class="sheet-sub" id="sheet-reauth-sub">This action needs your password because you have not entered it in the last few minutes.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <input id="reauth-username" name="username" type="text" autocomplete="username" readonly hidden>
+      <div class="field">
+        <label for="reauth-password">Password</label>
+        <div class="pw-wrap">
+          <input id="reauth-password" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
+          <button class="pw-toggle" type="button" aria-controls="reauth-password" aria-pressed="false">Show</button>
+        </div>
+      </div>
+      <div class="auth-error" id="reauth-error" role="alert" aria-live="assertive"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="reauth-submit">Continue</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== GUIDANCE SHEET (js/views/guidance.js fills it: plan the day, a meal that fits, treating a low) ===================== -->
+<dialog id="sheet-guidance" class="sheet guidance-sheet" aria-labelledby="sheet-guidance-title" aria-describedby="sheet-guidance-sub">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-guidance-title" class="sheet-title">Meal ideas</h2>
+        <div class="sheet-sub" id="sheet-guidance-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+
+<!-- ===================== AI SHEETS (js/views/ai.js fills them) ===================== -->
+<dialog id="sheet-ai" class="sheet" aria-labelledby="sheet-ai-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-title" class="sheet-title">AI</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+<dialog id="sheet-ai-consent" class="sheet" aria-labelledby="sheet-ai-consent-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-consent-title" class="sheet-title">Before anything is sent</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+<dialog id="sheet-ai-sent" class="sheet" aria-labelledby="sheet-ai-sent-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-sent-title" class="sheet-title">What will be sent?</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="update-toast" class="update-toast" role="status" aria-live="polite" hidden>
+  <span>Update ready.</span>
+  <button class="btn primary" type="button" id="update-reload">Reload</button>
+</div>
 <div id="chart-tip" class="chart-tip" role="tooltip" hidden></div>
 
-<script src="app.js"></script>
+<!-- Plain scripts sharing window.KH, in dependency order: rules engine, core, demo API twins,
+     views (auth.js: sign-in screens and re-auth; settings.js: the Settings view), PWA shell (left
+     out of the preview build), boot. -->
+<script src="js/engine/rules.js"></script>
+<script src="js/engine/kidney_function.js"></script>
+<script src="js/engine/targets.js"></script>
+<script src="js/engine/settings.js"></script>
+<script src="js/engine/textclean.js"></script>
+<script src="js/engine/aiguard.js"></script>
+<script src="js/engine/gtin.js"></script>
+<script src="js/engine/additives.js"></script>
+<script src="js/engine/off.js"></script>
+<script src="js/engine/guidance/rules.js"></script>
+<script src="js/engine/guidance/messages.js"></script>
+<script src="js/engine/guidance/budget.js"></script>
+<script src="js/engine/guidance/score.js"></script>
+<script src="js/engine/guidance/fits.js"></script>
+<script src="js/engine/guidance/swaps.js"></script>
+<script src="js/engine/guidance/planner.js"></script>
+<script src="js/engine/guidance/insights.js"></script>
+<script src="js/engine/guidance/hypo.js"></script>
+<script src="js/core.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/offline.js"></script>
+<script src="js/mock/core.js"></script>
+<script src="js/mock/foods.js"></script>
+<script src="js/mock/barcode.js"></script>
+<script src="js/mock/profile.js"></script>
+<script src="js/mock/labs.js"></script>
+<script src="js/mock/log.js"></script>
+<script src="js/mock/meals.js"></script>
+<script src="js/mock/guidance.js"></script>
+<script src="js/mock/auth.js"></script>
+<script src="js/mock/settings.js"></script>
+<script src="js/mock/handbook.js"></script>
+<script src="js/mock/ai.js"></script>
+<script src="js/mock/seed.js"></script>
+<script src="js/views/today.js"></script>
+<script src="js/views/add.js"></script>
+<script src="js/views/plan.js"></script>
+<script src="js/views/trends.js"></script>
+<script src="js/views/labs.js"></script>
+<script src="js/views/profile.js"></script>
+<script src="js/views/auth.js"></script>
+<script src="js/views/settings.js"></script>
+<script src="js/views/ai.js"></script>
+<script src="js/views/guidance.js"></script>
+<!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
+     WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
+<script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>
+<script src="js/scan.js"></script>
+<script src="js/pwa.js" data-preview="omit"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

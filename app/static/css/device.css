@@ -1,0 +1,119 @@
+/* Kidney Diet Log — barcodes, label photos and the offline outbox (js/scan.js, js/offline.js): the Scan sheet
+   and its camera view, where a food's data came from (entry sheet), Quick add's label photo beside the form,
+   the header's sync badge, entries waiting to sync (Today, Settings → This device) and the sign-out sheet. */
+
+/* ---------- Scan sheet ---------- */
+.scan-part { display: flex; flex-direction: column; gap: 8px; }
+.scan-part + .scan-part { border-top: 1px solid var(--border); padding-top: 12px; }
+.scan-h { font-size: 0.95rem; margin: 0; }
+.scan-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.scan-row .btn { flex: 1 1 auto; }
+.scan-type-row { display: flex; gap: 8px; }
+.scan-type-row input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.scan-type-row .btn { flex: none; }
+.scan-viewfinder {
+  position: relative; overflow: hidden; border-radius: var(--radius-sm); background: #000;
+  aspect-ratio: 4 / 3; max-height: 46vh; width: 100%;
+}
+.scan-viewfinder video { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The aiming frame: a wide box in the middle (barcodes are wide), dimming around it. */
+.scan-aim {
+  position: absolute; left: 12%; right: 12%; top: 32%; bottom: 32%; border: 3px solid #fff; border-radius: 10px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35); pointer-events: none;
+}
+.scan-result:empty { display: none; }
+.scan-panel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.scan-panel p { margin: 0; }
+.scan-panel .btn { white-space: normal; height: auto; min-height: var(--tap); padding-top: 8px; padding-bottom: 8px; line-height: 1.25; text-align: center; }
+.scan-product { font-weight: 700; overflow-wrap: anywhere; }
+
+/* ---------- Where the data came from (entry sheet) ---------- */
+.provenance { display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem; }
+.provenance p { margin: 0; }
+.provenance .attribution { color: var(--text-2); }
+.provenance .attribution a { font-weight: 600; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.quality-notes { margin: 0; padding-left: 18px; color: var(--text-2); }
+.quality-notes li + li { margin-top: 2px; }
+.provenance .inline-details > summary { cursor: pointer; color: var(--accent); font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+/* Another site's address shown as text (the preview's frame cannot open new windows): long, so it wraps. */
+.ext-text { overflow-wrap: anywhere; }
+.ingredients-text { margin: 6px 0 0; color: var(--text-2); white-space: pre-line; overflow-wrap: anywhere; }
+.kn.kn-unknown .kn-v { font-size: 0.72rem; font-weight: 600; color: var(--text-2); line-height: 1.6; }
+
+/* ---------- Quick add: label photo beside the form (above it on phones) ---------- */
+.quick-layout { gap: 14px; }
+.quick-fields { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.quick-photo { display: flex; flex-direction: column; gap: 10px; }
+.quick-photo.prompt .field:first-child { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--accent-tint); }
+.quick-photo-view { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.quick-photo-frame {
+  overflow: auto; max-height: 45vh; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2);
+  touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch;
+}
+.quick-photo-frame:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.quick-photo-frame img { display: block; width: 100%; height: auto; max-width: none; }
+.quick-photo-frame.zoom-2 img { width: 200%; }
+.quick-photo-frame.zoom-3 img { width: 300%; }
+.quick-photo-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.quick-photo-tools .link-btn { min-height: var(--tap); }
+.zoom-seg { display: flex; gap: 6px; }
+.zoom-seg .chip { min-width: var(--tap); min-height: var(--tap); }
+.quick-photo-ai { display: flex; flex-direction: column; gap: 8px; }
+.quick-photo-ai p { margin: 0; }
+.quick-photo-ai .link-btn { min-height: var(--tap); }
+.optional { font-weight: 400; color: var(--text-2); }
+.ingredients-scan:empty { display: none; }
+.ingredients-scan { color: var(--over-text); font-weight: 600; }
+@media (min-width: 900px) {
+  .sheet.with-photo { width: 900px; }
+  .sheet.with-photo .quick-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+  .sheet.with-photo .quick-photo { position: sticky; top: 0; }
+  /* Tall enough to read a label, short enough that the whole photo column (picker, photo, zoom, AI) stays in
+     view beside the fields while they scroll. */
+  .sheet.with-photo .quick-photo-frame { max-height: max(220px, min(64vh, calc(100vh - 470px))); }
+}
+
+/* ---------- Offline: header badge, waiting entries, unsynced list ---------- */
+.sync-badge {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: var(--tap); padding: 0 12px;
+  border-radius: 999px; border: 1.5px solid var(--caution); background: var(--caution-tint); color: var(--caution-text);
+  font-weight: 700; font-size: 0.8rem; white-space: nowrap;
+}
+.sync-badge svg { width: 18px; height: 18px; flex: none; }
+.sync-badge.failed { border-color: var(--over); background: var(--over-tint); color: var(--over-text); }
+.sync-badge.syncing svg { animation: kh-spin 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .sync-badge.syncing svg { animation: none; } }
+@keyframes kh-spin { to { transform: rotate(360deg); } }
+.sync-badge-short { display: none; }
+@media (max-width: 480px) {
+  .sync-badge { padding: 0 10px; }
+  .sync-badge-long { display: none; }
+  .sync-badge-short { display: inline; font-variant-numeric: tabular-nums; }
+}
+.badge.pending { color: var(--caution-text); border: 1.5px dashed var(--caution); background: var(--caution-tint); }
+.badge.failed { color: var(--over-text); border: 1.5px solid var(--over); background: var(--over-tint); }
+.entry-waiting .row-btn { opacity: 0.92; }
+.offline-note { margin: 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--caution-tint); color: var(--text); font-size: 0.88rem; }
+#set-outbox-h { scroll-margin-top: 72px; }
+.outbox-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.outbox-item { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.outbox-item.failed { border-color: var(--over); }
+.outbox-item p { margin: 0; }
+.outbox-title { font-weight: 600; overflow-wrap: anywhere; }
+.outbox-error { color: var(--over-text); font-size: 0.88rem; overflow-wrap: anywhere; }
+.outbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Sign-out with entries waiting: three choices; on a phone "Sign out and lose them" gets its own row. */
+#sheet-unsynced-foot { flex-wrap: wrap; }
+@media (max-width: 520px) {
+  #sheet-unsynced-foot .spacer { display: none; }
+  #sheet-unsynced-foot .btn { flex: 1 1 calc(50% - 8px); }
+  #sheet-unsynced-foot .btn.danger-solid { flex-basis: 100%; }
+}
+
+/* File inputs that read as buttons, 44 px tall (a barcode photo, a label photo, the AI photo sheets). */
+input[type=file].ai-file::file-selector-button {
+  min-height: var(--tap); margin-right: 10px; padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer;
+}
+input[type=file].ai-file { max-width: 100%; color: var(--text-2); font-size: 0.9rem; }

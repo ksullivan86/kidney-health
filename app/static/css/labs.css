@@ -1,0 +1,63 @@
+/* Kidney Diet Log — Lab results view (js/views/labs.js) and the lab pieces Profile shows:
+   the potassium safety banner, the latest-results summary, the kidney-function card, history. */
+
+/* ---------- potassium safety banner (KDIGO 2024 Table 28) ---------- */
+.lab-alerts:empty { display: none; }
+.lab-alert {
+  border-radius: var(--radius-sm); padding: 10px 12px; margin: 0 0 8px; border: 2px solid var(--over);
+  background: var(--over-tint); color: var(--text);
+}
+.lab-alert p { margin: 0; }
+.lab-alert p + p { margin-top: 4px; }
+.lab-alert-title { font-weight: 800; color: var(--over-text); }
+.lab-alert.level-emergency { background: var(--over-solid); border-color: var(--over-solid); color: #fff; }
+.lab-alert.level-emergency .lab-alert-title,
+.lab-alert.level-emergency a, .lab-alert.level-emergency .link-btn { color: #fff; }
+.lab-alert-links:empty { display: none; }
+
+/* ---------- view head ---------- */
+.labs-head { display: flex; flex-direction: column; gap: 2px; }
+.labs-head p { margin: 0; }
+.labs-title { font-size: 1.3rem; }
+.labs-title:focus { outline: none; }
+.labs-title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.labs-back { align-self: flex-start; padding-left: 0; }
+
+/* ---------- entry ---------- */
+.lab-echo { margin: 10px 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.lab-echo.warn { background: var(--caution-tint); color: var(--caution-text); font-weight: 600; }
+.labs-review { margin-bottom: 0; }
+.labs-review h2.notes-title { font-size: 1rem; }
+.labs-review ul { margin: 4px 0; }
+.labs-review p + p, .labs-review p + ul, .labs-review ul + p { margin-top: 6px; }
+
+/* ---------- kidney function ---------- */
+.kf-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.kf-tile { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.kf-label { font-size: 0.8rem; font-weight: 600; color: var(--text-2); }
+.kf-value { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kf-unit { font-size: 0.8rem; font-weight: 500; color: var(--text-2); }
+.kf-cat { font-weight: 600; }
+.kf-message { margin: 0 0 6px; }
+
+/* ---------- history ---------- */
+.labs-filter { flex-direction: row; align-items: center; gap: 8px; }
+.labs-filter select { width: auto; min-width: 180px; }
+.labs-group + .labs-group { margin-top: 12px; }
+.labs-group-title { font-size: 0.95rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.lab-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 6px 0; flex-wrap: wrap; }
+.lab-row-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; flex: 1; }
+.lab-row-date { color: var(--text-2); font-size: 0.85rem; min-width: 7.5em; }
+.lab-row-value { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lab-row-note { flex-basis: 100%; color: var(--text-2); font-size: 0.85rem; overflow-wrap: anywhere; }
+.lab-row-actions { display: flex; }
+.lab-row .confirm-row { flex-basis: 100%; }
+.danger-link { color: var(--over-text); }
+.badge.very-high { background: var(--over-tint); color: var(--over-text); }
+
+/* ---------- Profile's summary card ---------- */
+.labs-latest { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; margin: 0 0 6px; }
+.labs-latest li { display: flex; flex-direction: column; }
+.labs-latest-name { font-size: 0.8rem; color: var(--text-2); }
+.labs-summary p { margin: 0; }
+.labs-view .card > .card-title { margin-bottom: 8px; }

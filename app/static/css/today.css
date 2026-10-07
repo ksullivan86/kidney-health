@@ -1,0 +1,135 @@
+/* Kidney Diet Log — Today view (also the "Last 7 days" strip and the since-last-dialysis
+   block that the Trends view reuses). */
+
+/* ---------- Today ---------- */
+.date-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.date-center { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.date-label { font-weight: 700; font-size: 1.1rem; text-align: center; }
+.date-input { max-width: 190px; min-height: 36px; padding: 4px 10px; text-align: center; font-size: 0.9rem; }
+.date-today-row { text-align: center; margin-top: -8px; }
+.date-today-row:empty { display: none; }
+
+.alerts { display: flex; flex-direction: column; gap: 8px; }
+.alerts:empty { display: none; }
+.alert {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--lv-tint); border-left: 4px solid var(--lv); color: var(--text); font-size: 0.92rem;
+}
+.alert .rating { margin-top: 1px; }
+.alert b { color: var(--lv-text); }
+
+.status-bars { display: flex; flex-direction: column; gap: 12px; }
+.stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.stat-label { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; }
+.stat-value { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 0.9rem; text-align: right; white-space: nowrap; }
+.stat-value b { color: var(--text); font-size: 1rem; }
+.stat-track { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 6px; background: var(--track); overflow: visible; }
+.stat-fill { height: 100%; border-radius: 6px; background: var(--lv); transition: width 0.25s ease; min-width: 0; }
+.stat-fill.empty { width: 0; }
+.stat-min { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text-3); border-radius: 1px; }
+.stat-min::after { content: "min"; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 0.65rem; line-height: 1; color: var(--text-3); margin-top: 3px; white-space: nowrap; }
+/* Reserve the line the "min" label occupies between the track and the footnote, so the label
+   never prints over a footnote that wraps on a phone. */
+.stat.has-min .stat-track { margin-bottom: 18px; }
+.stat-foot { grid-column: 1 / -1; font-size: 0.8rem; color: var(--text-3); margin-top: -2px; }
+.empty-state { color: var(--text-3); font-size: 0.9rem; padding: 6px 0; }
+
+.meals { display: flex; flex-direction: column; gap: 12px; }
+.meal { padding: 10px 16px 6px; }
+.meal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.meal-name { font-size: 1rem; font-weight: 700; }
+.meal-carbs { font-weight: 700; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+.meal-carbs .of { font-weight: 500; color: var(--text-2); font-size: 0.85rem; }
+.meal-carbs.over { color: var(--over-text); }
+.meal-carbs .rating { width: 18px; height: 18px; }
+.meal-add { display: inline-flex; align-items: center; gap: 4px; }
+.meal-add svg { width: 18px; height: 18px; }
+.meal-foot { display: flex; justify-content: space-between; align-items: center; color: var(--text-3); font-size: 0.82rem; padding: 6px 4px 4px; gap: 8px; flex-wrap: wrap; }
+.entry-servings { color: var(--text-2); font-size: 0.85rem; }
+.entry-note { color: var(--text-3); font-size: 0.82rem; font-style: italic; }
+
+.nutrient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 12px; font-size: 0.9rem; }
+.nutrient-grid .ng { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.nutrient-grid .ng span:first-child { color: var(--text-2); }
+.nutrient-grid .ng b { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* ---------- planned entries ---------- */
+.entry-planned { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.row-btn.planned { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); margin: 4px 0; background: transparent; }
+.row-btn.planned .row-title { color: var(--text-2); }
+.row-btn.planned .row-nums b { color: var(--text-2); }
+.row-btn.planned:hover { border-color: var(--accent); background: var(--surface-2); }
+.eaten-btn { min-width: var(--tap); padding: 0 12px; gap: 6px; font-size: 0.85rem; }
+.eaten-btn svg { width: 18px; height: 18px; color: var(--ok-text); }
+@media (max-width: 480px) { .eaten-btn { padding: 0 10px; } }
+
+.meal-head { align-items: flex-start; }
+.meal-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.meal-planned-carbs { font-size: 0.8rem; color: var(--text-2); font-variant-numeric: tabular-nums; border-bottom: 1.5px dashed var(--border); padding-bottom: 1px; }
+.meal-planned-carbs.over { color: var(--over-text); border-color: var(--over); }
+.meal-foot { flex-direction: column; align-items: flex-start; gap: 2px; padding-bottom: 0; }
+.meal-foot:empty { display: none; }
+.meal-sum.planned { color: var(--text-3); }
+.meal-actions { display: flex; flex-wrap: wrap; gap: 0 4px; margin: 2px -8px 0; }
+.meal-actions .link-btn { min-height: var(--tap); display: inline-flex; align-items: center; gap: 4px; font-size: 0.9rem; }
+.meal-actions .link-btn svg { width: 18px; height: 18px; }
+.ng-proj { color: var(--text-3); font-weight: 500; }
+
+/* ---------- projected alerts & bars ---------- */
+.alerts.projected .alerts-title { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 0.85rem; font-weight: 600; }
+.alerts.projected .alerts-title .rating { width: 18px; height: 18px; }
+.alert.projected { background: var(--surface-2); border-left-style: dashed; color: var(--text-2); }
+.alert.projected .rating { opacity: 0.8; }
+.stat-proj-value { color: var(--text-3); font-size: 0.85rem; }
+.stat-fill-proj {
+  position: absolute; top: 0; bottom: 0; border-radius: 0 6px 6px 0; background: var(--lv); opacity: 0.35;
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.45) 4px 7px);
+}
+.stat-proj-marker {
+  position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--lv); border-radius: 1px;
+}
+.stat-proj-marker::after {
+  content: ""; position: absolute; left: 50%; top: -5px; width: 8px; height: 8px; transform: translateX(-50%) rotate(45deg);
+  background: var(--lv); border-radius: 1px;
+}
+.stat.has-proj .stat-track { margin-top: 6px; }
+
+/* ---------- "Last 7 days" strip ---------- */
+.week-strip .card-head { margin-bottom: 10px; }
+.strip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+@media (min-width: 720px) { .strip-grid { grid-template-columns: repeat(4, 1fr); } }
+.strip-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.strip-label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); }
+.strip-tag {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2);
+  background: var(--surface-2); border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+}
+.strip-value { font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+.strip-value b { font-size: 1.05rem; }
+.strip-track { position: relative; height: 6px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.strip-fill { height: 100%; border-radius: 4px; background: var(--lv); }
+.strip-foot { font-size: 0.76rem; color: var(--text-3); }
+.week-strip-foot { display: flex; justify-content: flex-end; margin: 6px -8px -8px 0; }
+
+.interdialytic { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.inter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.inter-title { font-size: 0.9rem; font-weight: 700; }
+.inter-list { display: flex; flex-direction: column; gap: 8px; }
+.inter-row { display: grid; grid-template-columns: 72px 1fr auto auto; gap: 8px; align-items: center; font-size: 0.85rem; }
+.inter-label { font-weight: 600; color: var(--text-2); }
+.inter-nums { color: var(--text-2); white-space: nowrap; }
+.inter-nums b { color: var(--text); }
+.inter-row.untracked { grid-template-columns: 72px 1fr auto; }
+.inter-note { color: var(--text-2); }
+.inter-row.untracked .link-btn { padding: 0 4px; justify-self: end; }
+@media (max-width: 420px) {
+  .inter-row { grid-template-columns: 1fr auto; row-gap: 4px; }
+  .inter-row .inter-label { order: 1; }
+  .inter-row .pill { order: 2; justify-self: end; }
+  .inter-row .inter-nums { order: 3; grid-column: 1 / -1; }
+  .inter-row .strip-track { order: 4; grid-column: 1 / -1; }
+  .inter-row.untracked { grid-template-columns: 1fr auto; }
+  .inter-row.untracked .link-btn { order: 2; }
+  .inter-row.untracked .inter-note { order: 3; grid-column: 1 / -1; }
+}
+.interdialytic .hint { margin-top: 8px; color: var(--text-2); } /* text-3 on surface-2 is under 4.5:1 in light mode */

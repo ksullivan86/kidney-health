@@ -1,0 +1,58 @@
+{
+  "version": "2026-10-06.1",
+  "about": "Starter meals for 'Plan the rest of my day' (docs/dev/research/06-meal-guidance.md §4.7 option 3): the four meals of the sample day in docs/diet-guide.md §6 (CKD G3b-G4 with type 1 diabetes, not on dialysis). Items reference builtin foods by USDA fdc_id (data/foods.json); servings are in that food's serving (e.g. 0.75 x '1 cup' = 3/4 cup). A combo is offered only when every food exists, and only after the same meal check as any other plan option. Edit by hand; tests/guidance/test_data.py checks every id and the carbohydrate totals against the guide.",
+  "combos": [
+    {
+      "id": "sample-day-breakfast",
+      "name": "Sample-day breakfast: cream of wheat, blueberries, egg, toast and coffee",
+      "meal": "breakfast",
+      "source": "diet-guide §6",
+      "items": [
+        {"fdc_id": 171657, "servings": 0.75, "as": "Cream of Wheat, cooked, 3/4 cup"},
+        {"fdc_id": 171711, "servings": 1, "as": "Blueberries, 1/2 cup"},
+        {"fdc_id": 173424, "servings": 1, "as": "Egg, hard-boiled, 1 large"},
+        {"fdc_id": 174924, "servings": 1, "as": "White toast, 1 slice"},
+        {"fdc_id": 173430, "servings": 0.25, "as": "Unsalted butter, 1 pat (about 1 tsp)"},
+        {"fdc_id": 171890, "servings": 1, "as": "Coffee, 8 oz"},
+        {"fdc_id": 171255, "servings": 1, "as": "Half-and-half, 1 tbsp"}
+      ]
+    },
+    {
+      "id": "sample-day-snack",
+      "name": "Sample-day snack: applesauce and peanut butter",
+      "meal": "snack",
+      "source": "diet-guide §6",
+      "items": [
+        {"fdc_id": 171695, "servings": 1, "as": "Applesauce, unsweetened, 1/2 cup"},
+        {"fdc_id": 174266, "servings": 0.5, "as": "Peanut butter, 1 tbsp (the food list has regular peanut butter: about 65 mg more sodium than the guide's unsalted one)"}
+      ]
+    },
+    {
+      "id": "sample-day-lunch",
+      "name": "Sample-day lunch: turkey sandwich, salad and pineapple",
+      "meal": "lunch",
+      "source": "diet-guide §6",
+      "items": [
+        {"fdc_id": 174924, "servings": 2, "as": "White bread, 2 slices"},
+        {"fdc_id": 171496, "servings": 0.5, "as": "Roast turkey breast, home-roasted, 1.5 oz"},
+        {"fdc_id": 171009, "servings": 1, "as": "Mayonnaise, 1 tbsp"},
+        {"fdc_id": 169248, "servings": 1, "as": "Iceberg lettuce, 1 cup"},
+        {"fdc_id": 168409, "servings": 1, "as": "Cucumber, 1/2 cup"},
+        {"fdc_id": 169126, "servings": 0.67, "as": "Pineapple canned in juice, 1/3 cup"}
+      ]
+    },
+    {
+      "id": "sample-day-dinner",
+      "name": "Sample-day dinner: chicken, rice, green beans and cauliflower",
+      "meal": "dinner",
+      "source": "diet-guide §6",
+      "items": [
+        {"fdc_id": 171477, "servings": 0.66, "as": "Chicken breast, roasted, 2 oz (the serving is 86 g)"},
+        {"fdc_id": 168878, "servings": 0.67, "as": "White rice, cooked, 2/3 cup"},
+        {"fdc_id": 169141, "servings": 2, "as": "Green beans, boiled, 1 cup"},
+        {"fdc_id": 170397, "servings": 1, "as": "Cauliflower, boiled, 1/2 cup"},
+        {"fdc_id": 171413, "servings": 1, "as": "Olive oil, 1 tbsp"}
+      ]
+    }
+  ]
+}

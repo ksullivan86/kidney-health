@@ -11,3 +11,7 @@ data-local/
 scripts/.cache/
 .DS_Store
 node_modules/
+build/
+# Local handbook builds (cd handbook && mkdocs build); the image builds its own copy.
+handbook/site/
+handbook/.cache/

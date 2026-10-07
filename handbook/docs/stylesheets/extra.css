@@ -1,0 +1,199 @@
+/* Kidney Health Handbook: additions to Material for MkDocs.
+   Served under a CSP with style-src 'self': keep every style in this file, never inline. */
+
+/* ---------- colour contrast: WCAG 2.2 AA (1.4.3) in both schemes ---------- */
+/* Material's teal (#009485) gives 3.77:1 for white text on the header and tabs and for teal links on
+   white; text under 18.66 px bold needs 4.5:1. Teal 800 gives 6.61:1 both ways. The dark scheme keeps
+   Material's own link colour (#00ccb8 on #1e2129, 7.9:1), set by a more specific palette rule.
+   tools/e2e/learn.py measures every visible text run in both schemes and fails below AA. */
+[data-md-color-primary=teal] {
+  --md-primary-fg-color: #00695c;
+  --md-primary-fg-color--light: #00796b;
+  --md-primary-fg-color--dark: #004d40;
+}
+/* Link hover and focus use the accent colour: Material's teal accent is 2.4:1 on white. */
+[data-md-color-scheme=default][data-md-color-accent=teal] {
+  --md-accent-fg-color: #004d40;
+}
+/* Inactive tabs are white at 70 % opacity (4.1:1 on teal 800): 85 % gives 5.2:1, and the current tab is
+   underlined so it does not rely on a small difference in brightness. */
+.md-tabs__link {
+  opacity: 0.85;
+}
+.md-tabs__item--active .md-tabs__link {
+  text-decoration: underline;
+  text-decoration-thickness: 0.1rem;
+  text-underline-offset: 0.3rem;
+}
+/* The phone drawer's section title is 54 % grey on a 7 % grey (4.4:1 light, 4.1:1 dark). */
+.md-nav--primary .md-nav__title:not([for=__drawer]) {
+  color: var(--md-default-fg-color);
+}
+
+/* ---------- announce bar: back to the app, get help now ---------- */
+.kh-announce {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+.kh-announce a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.kh-announce__help strong {
+  font-weight: 700;
+}
+.kh-announce__note {
+  opacity: 0.85;
+  font-size: 0.9em;
+}
+
+/* ---------- navigation ---------- */
+/* Material shows an untitled "i" status icon beside every page whose front matter has `status:`.
+   Every page carries the draft banner instead, so the icon is noise in the menu. */
+.md-nav .md-status {
+  display: none;
+}
+
+/* ---------- draft banner and review line ---------- */
+.md-typeset .kh-draft {
+  margin-top: 0;
+}
+.md-typeset .kh-reviewed {
+  margin-top: 2.5em;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+}
+
+/* ---------- tables: readable on a phone ---------- */
+.md-typeset table:not([class]) {
+  font-size: 0.72rem;
+}
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: 0.5em 0.7em;
+  vertical-align: top;
+}
+@media screen and (max-width: 44.9375em) {
+  .md-typeset table:not([class]) {
+    font-size: 0.68rem;
+  }
+  .md-typeset table:not([class]) td,
+  .md-typeset table:not([class]) th {
+    padding: 0.4em 0.5em;
+    /* Material's 5rem minimum makes 4- and 5-column tables scroll sideways on a phone */
+    min-width: 3.25rem;
+    hyphens: auto;
+  }
+}
+/* Wide tables still scroll sideways on a phone: show a soft shadow at the edge that has more
+   columns (scroll-shadow technique; CSS only, so it works under the hash-only CSP). */
+@media screen and (max-width: 44.9375em) {
+  .md-typeset__scrollwrap {
+    background:
+      linear-gradient(to right, var(--md-default-bg-color) 40%, transparent) left center / 1.5rem 100% no-repeat local,
+      linear-gradient(to left, var(--md-default-bg-color) 40%, transparent) right center / 1.5rem 100% no-repeat local,
+      linear-gradient(to right, var(--md-default-fg-color--lighter), transparent) left center / 0.6rem 100% no-repeat scroll,
+      linear-gradient(to left, var(--md-default-fg-color--lighter), transparent) right center / 0.6rem 100% no-repeat scroll;
+    background-color: var(--md-default-bg-color);
+  }
+  .md-typeset__scrollwrap table:not([class]) {
+    background-color: transparent;
+  }
+}
+/* number columns in generated menu and target tables line up */
+.md-typeset .kh-numbers table td:nth-child(n+4) {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- key-number boxes ---------- */
+.md-typeset .kh-numbers-box {
+  border-left: 0.25rem solid var(--md-primary-fg-color);
+  padding: 0.25em 1em;
+  margin: 1em 0;
+  background: var(--md-code-bg-color);
+}
+
+/* ---------- printable wallet card (get-help-now) ---------- */
+.md-typeset .kh-wallet {
+  border: 2px solid var(--md-default-fg-color);
+  border-radius: 0.4rem;
+  padding: 0.6em 0.9em;
+  max-width: 36rem;
+  margin: 1em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.md-typeset .kh-wallet p,
+.md-typeset .kh-wallet li {
+  margin: 0.2em 0;
+}
+
+/* ---------- print ---------- */
+@media print {
+  .md-header,
+  .md-tabs,
+  .md-banner,
+  .md-sidebar,
+  .md-footer,
+  .md-top,
+  .md-source,
+  .md-search,
+  .headerlink {
+    display: none !important;
+  }
+  .md-main__inner {
+    margin: 0;
+  }
+  .md-content {
+    max-width: none;
+  }
+  .md-typeset {
+    font-size: 10.5pt;
+  }
+  .md-typeset table:not([class]) {
+    font-size: 9pt;
+  }
+  .md-typeset h2,
+  .md-typeset h3 {
+    break-after: avoid;
+  }
+  .md-typeset table,
+  .md-typeset .admonition,
+  .md-typeset details {
+    break-inside: avoid;
+  }
+  /* show where printed citations point */
+  .md-content a[href^="http"]::after {
+    content: " <" attr(href) ">";
+    font-size: 8pt;
+    word-break: break-all;
+  }
+  /* a wallet card prints at credit-card width: cut it out and fold */
+  .md-typeset .kh-wallet {
+    width: 85.6mm;
+    max-width: 85.6mm;
+    font-size: 7.5pt;
+    border-width: 1px;
+  }
+  .md-typeset .kh-wallet a[href^="http"]::after {
+    content: "";
+  }
+  /* tabs: print every tab, not only the selected one */
+  .md-typeset .tabbed-set > input,
+  .md-typeset .tabbed-labels {
+    display: none;
+  }
+  .md-typeset .tabbed-content > .tabbed-block {
+    display: block !important;
+  }
+  /* details blocks print open */
+  .md-typeset details:not([open]) > :not(summary) {
+    display: block;
+  }
+}

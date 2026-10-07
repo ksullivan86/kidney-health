@@ -72,7 +72,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from curated_foods import CATEGORIES, CURATED_FOODS, FLAGS  # noqa: E402
+from curated_foods import CATEGORIES, CURATED_FOODS, FLAGS, ROLES  # noqa: E402
 
 ZIP_URL = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip"
 ZIP_NAME = "FoodData_Central_sr_legacy_food_csv_2018-04.zip"
@@ -145,7 +145,6 @@ def ensure_zip(cache_dir: Path) -> Path:
             shutil.copyfileobj(resp, out, 1 << 16)
         if not zipfile.is_zipfile(tmp_name):
             fail("downloaded file is not a zip archive (proxy or network problem?)")
-        os.chmod(tmp_name, 0o644)  # mkstemp creates 0600; make the cache shareable
         os.replace(tmp_name, target)
     finally:
         if os.path.exists(tmp_name):
@@ -228,6 +227,8 @@ def validate_entry(e: dict, seen_names: set, seen_ids: set) -> None:
     bad = [fl for fl in e.get("flags", []) if fl not in FLAGS]
     if bad:
         fail(f"{name!r}: unknown flags {bad}")
+    if "role" in e and e["role"] not in ROLES:
+        fail(f"{name!r}: unknown role {e['role']!r} (one of {', '.join(ROLES)})")
     if not e.get("serving_desc"):
         fail(f"{name!r}: missing serving_desc")
     if not isinstance(e.get("serving_g"), (int, float)) or e["serving_g"] <= 0:
@@ -286,7 +287,7 @@ def build_manual_entry(e: dict) -> dict:
 
 
 def finish_entry(e: dict, out_id: int, nutrients: dict) -> dict:
-    return {
+    out = {
         "fdc_id": out_id,
         "name": e["name"],
         "category": e["category"],
@@ -296,6 +297,9 @@ def finish_entry(e: dict, out_id: int, nutrients: dict) -> dict:
         "flags": list(e["flags"]),
         "kidney_notes": e.get("kidney_notes") or None,
     }
+    if e.get("role"):
+        out["role"] = e["role"]  # meal-guidance role override (app/guidance/rules.py role_of)
+    return out
 
 
 # Flags must agree with the numbers they are shown next to (ARCHITECTURE.md "Per-serving

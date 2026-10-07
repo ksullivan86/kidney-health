@@ -1,0 +1,31 @@
+# EXAMPLE, not in kustomization.yaml: an Ingress for clusters that still use one. httproute.yaml
+# (Gateway API) is the default. ingress-nginx was RETIRED upstream in March 2026 and gets no more
+# security fixes (https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/); use a maintained
+# controller (Traefik, HAProxy, a Gateway API implementation) and set ingressClassName to it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kidney-health
+  namespace: kidney-health
+  labels:
+    app.kubernetes.io/name: kidney-health
+  annotations:
+    # TLS via cert-manager (docs/https.md, Kubernetes tier):
+    cert-manager.io/cluster-issuer: letsencrypt-dns01      # <-- your ClusterIssuer
+spec:
+  ingressClassName: traefik              # <-- your controller's IngressClass
+  rules:
+    - host: food.home.example.net        # <-- your host name (neutral: it ends up in CT logs)
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kidney-health
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - food.home.example.net
+      secretName: kidney-health-tls      # created by cert-manager from the annotation above

@@ -1,0 +1,13 @@
+{
+  "id": "prefilter-red-flag-1",
+  "category": "prefilter",
+  "feature": "parse_meal",
+  "fixture": {
+    "text": "chest pain after dinner, had rice"
+  },
+  "model_outputs": [],
+  "expect": {
+    "calls": 0,
+    "status": "red_flag"
+  }
+}

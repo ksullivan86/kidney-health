@@ -1,0 +1,74 @@
+{
+  "id": "rules-phosphorus-week-average",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "history": [
+      [
+        1,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ],
+      [
+        2,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ],
+      [
+        3,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ],
+      [
+        4,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ],
+      [
+        5,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ],
+      [
+        6,
+        "dinner",
+        "Cheese, American, processed",
+        6
+      ]
+    ],
+    "ids_needed": [
+      "Chicken breast, roasted, skinless"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Chicken breast, roasted, skinless}}\",\"quarters\":8}],\"reason_codes\":[\"adds_protein\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "not_shown_food_names": [
+      "Chicken breast, roasted, skinless"
+    ],
+    "dropped_reasons_include": [
+      "would_exceed:phosphorus_mg"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "chatcmpl-lms81",
+    "object": "chat.completion",
+    "created": 1759742800,
+    "model": "qwen3-vl-8b-instruct",
+    "choices": [
+      {
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Here are some ideas for dinner:\n{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":2,\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}\nEnjoy your meal!"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 4100,
+      "completion_tokens": 170,
+      "total_tokens": 4270
+    },
+    "stats": {},
+    "system_fingerprint": "qwen3-vl-8b-instruct"
+  }
+}

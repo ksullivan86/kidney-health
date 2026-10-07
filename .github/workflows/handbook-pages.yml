@@ -1,0 +1,89 @@
+# Public copy of the patient handbook on GitHub Pages (docs/dev/research/08-handbook-site.md §4.8, F6).
+#
+# Opt-in: nothing is published until the repository variable HANDBOOK_PAGES is "true". Pages needs a
+# public repository, or GitHub Pro/Team for a private one; a Pages site built from a private repository
+# on Pro or Team is PUBLIC on the internet (only Enterprise Cloud has private Pages). The handbook holds
+# no personal data, but publishing it is the owner's decision. Owner setup, once:
+#   1. Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+#   2. Settings -> Environments -> github-pages: deployment branches "main" only.
+#   3. Settings -> Secrets and variables -> Actions -> Variables: HANDBOOK_PAGES = true.
+#   4. Then set HANDBOOK_PUBLIC_URL to the Pages URL on servers that should link to it, and point the
+#      image's org.opencontainers.image.documentation label at it.
+#
+# The build is the GitHub Pages flavour (handbook/mkdocs.pages.yml): same pages and checks as the copy
+# inside the app, site_url from actions/configure-pages, and no "Back to the food log" link. Pages
+# cannot send response headers, so this copy has no CSP header; it is static and takes no input.
+# Deployment uses the job's OIDC token (no write access to any branch).
+name: Handbook (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "handbook/**"
+      - "scripts/build_handbook.py"
+      - "data/foods.json"
+      - "docs/research/targets_by_stage.json"
+      - "app/nutrients.py"
+      - ".github/workflows/handbook-pages.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+# One deployment at a time; never cancel one that is in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build the handbook
+    if: vars.HANDBOOK_PAGES == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install the handbook toolchain (hash-locked)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r handbook/requirements.lock
+      - name: Generated pages are current
+        run: python scripts/build_handbook.py --check
+      - id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Strict build (Pages flavour)
+        working-directory: handbook
+        env:
+          HANDBOOK_SITE_URL: ${{ steps.pages.outputs.base_url }}/
+          NO_MKDOCS_2_WARNING: "true"
+        run: |
+          set -euo pipefail
+          mkdocs build --strict -f mkdocs.pages.yml -d "$RUNNER_TEMP/site"
+          find "$RUNNER_TEMP/site" -type f -name '*.map' -exec rm -f {} +
+          # Internal links under the Pages base path (for example /kidney-health/).
+          base_path="$(python -c 'import sys, urllib.parse; print(urllib.parse.urlsplit(sys.argv[1]).path or "/")' "$HANDBOOK_SITE_URL")"
+          python tools/check_links.py "$RUNNER_TEMP/site" --base "$base_path"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    name: deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      pages: write      # create the Pages deployment
+      id-token: write   # OIDC token that proves the deployment comes from this workflow
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "chatcmpl-CQ1x7Yb3",
+    "object": "chat.completion",
+    "created": 1759742401,
+    "model": "gpt-6-luna-2026-08-14",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": null,
+          "refusal": "I'm sorry, I can't help with insulin dosing.",
+          "annotations": []
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 4800,
+      "completion_tokens": 12,
+      "total_tokens": 4812
+    }
+  }
+}

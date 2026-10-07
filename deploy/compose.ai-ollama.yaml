@@ -1,0 +1,64 @@
+# Optional overlay: a local Ollama for the optional AI features, reachable ONLY by kidney-health.
+# Specs: docs/dev/research/04-optional-ai.md R10 (recipe) and 01-rootless-and-security.md §10 S6
+# (hardening). Requires an app version with the AI features (v0.3 M2); older versions ignore the
+# AI_* settings below. What is sent to the model and the safety rules: docs/ai.md.
+#
+#   podman-compose -f deploy/compose.yaml -f deploy/compose.ai-ollama.yaml up -d
+#   docker compose  -f deploy/compose.yaml -f deploy/compose.ai-ollama.yaml up -d
+#
+# Ollama has no authentication, so it gets no published port and sits on an `internal` network
+# shared only with kidney-health: no LAN exposure and no internet egress once running.
+# Because that network has no egress, pull the model ONCE before the first start, with a
+# throw-away container on the default network writing into the same volume:
+#   podman volume create kidney-health_ollama-models
+#   podman run -d --name ollama-pull -v kidney-health_ollama-models:/root/.ollama \
+#     docker.io/ollama/ollama:0.35.1@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c
+#   podman exec ollama-pull ollama pull qwen3-vl:8b
+#   podman rm -f ollama-pull
+# (Docker: the same commands with `docker`; the volume name is <project>_ollama-models.)
+#
+# Never mount podman.sock or docker.sock into this or any other container (docs/security.md).
+services:
+  kidney-health:
+    environment:
+      AI_ENABLED: "true"
+      AI_PROVIDER: ollama
+      AI_BASE_URL: http://ollama:11434/v1
+      AI_MODEL: qwen3-vl:8b            # or gemma4:e4b on small GPUs / CPU
+      AI_VISION_MODEL: qwen3-vl:8b
+      # The SSRF policy blocks private addresses unless listed here (env-only, no wildcards).
+      AI_PRIVATE_HOSTS: ollama:11434
+    networks:
+      - default
+      - ai
+
+  ollama:
+    # Digest-pinned; Dependabot (docker ecosystem, directory /deploy) does not read compose files,
+    # so bump this by hand: crane digest docker.io/ollama/ollama:<version>
+    image: docker.io/ollama/ollama:0.35.1@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c
+    container_name: kidney-health-ollama
+    restart: always
+    environment:
+      OLLAMA_CONTEXT_LENGTH: "16384"   # the default 4096 truncates the prompt
+      OLLAMA_KEEP_ALIVE: "30m"
+    volumes:
+      - ollama-models:/root/.ollama
+    # Hardening (§10 S6). The upstream image runs as root inside its user namespace; with every
+    # capability dropped and no-new-privileges that root cannot do more than an ordinary user.
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 12g                     # size it to the model: qwen3-vl:8b needs about 8-10 GB
+    # GPU on Podman (CDI): devices: ["nvidia.com/gpu=all"]
+    # No `ports:`. Only kidney-health can reach it, over the internal network below.
+    networks:
+      - ai
+
+networks:
+  default: {}                          # declared so podman-compose accepts `default` above
+  ai:
+    internal: true                     # no route out: models are pulled beforehand (see above)
+
+volumes:
+  ollama-models: {}

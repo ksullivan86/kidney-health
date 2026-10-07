@@ -1,0 +1,18 @@
+/* Kidney Diet Log — touch targets. Loaded LAST: these minimums override rules of equal
+   specificity in every other file. */
+
+/* ---------- touch targets ----------
+   Mobile-first: on a touch screen (or any phone-width layout) every control reaches the 44 px
+   --tap size the rest of the UI uses, including the secondary ones that had smaller minimums. */
+@media (pointer: coarse), (max-width: 719.98px) {
+  .chip, .segmented .seg, .link-btn, .check, .saved-meal-actions .btn, .saved-meal-actions .link-btn,
+  .meal-item-sv input { min-height: var(--tap); }
+  #category-chips { min-height: calc(var(--tap) + 8px); }
+  .link-btn { display: inline-flex; align-items: center; }
+  .learn-more { display: inline-flex; align-items: center; min-height: var(--tap); } /* handbook links stand alone on their line */
+  .details-card > summary, .inline-details > summary { min-height: var(--tap); display: flex; align-items: center; padding: 4px 0; }
+  .check input { margin-top: 12px; }
+  .check .check-text { padding-top: 11px; }
+  .shop-check input { margin-top: 0; }
+  .shop-check .check-text { padding-top: 0; }
+}

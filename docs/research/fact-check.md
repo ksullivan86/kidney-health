@@ -2,6 +2,13 @@
 
 **Scope.** Adversarial review (2026-10-05) of `docs/research/ckd-diet.md`, `docs/research/t1d-and-ckd.md` and `docs/research/food-lists.md` for wrong numbers, wrong attributions, contradictions between the files, unsafe or missing advice, and unsourced claims. Every HIGH and MEDIUM issue below has been corrected in the draft files; LOW issues were also fixed where the fix was cheap, otherwise they are annotated in place.
 
+> **Superseded in part by design note 05 (v0.3; banner added 2026-10-07).** This is the record of the
+> 2026-10-05 check and is kept as it was. Two of its conclusions no longer hold: the KDOQI 2020 statement
+> numbers in row 10 are the 2019 public-review draft's (the published guideline has 3.0.1–3.0.4 for protein and
+> 3.1.1 for energy, note 05 F1), and the app no longer suggests 0.6–0.8 g/kg protein with diabetes: it suggests
+> 0.8 g/kg per kg of a reference weight (note 05 F4, fact-check H1; ARCHITECTURE.md v0.3 item 10). The three
+> notes it checked carry the same banner and corrected rows.
+
 > Reminder carried over from all three drafts: none of this is medical advice or a substitute for the person's nephrologist, endocrinologist/diabetes team and renal dietitian. Targets are individualised from the person's own labs and prescriptions.
 
 ## 1. What was checked and how
@@ -97,3 +104,31 @@ Severity: **HIGH** = unsafe, missing safety advice, or a wrong number in a safet
 * HIGH: 4 (all fixed)
 * MEDIUM: 10 (all fixed)
 * LOW: 8 (6 fixed, 2 annotated)
+
+## 5. v0.3 addendum: the potassium-additive rule (2026-10-06)
+
+**Rule** (ARCHITECTURE.md v0.3 item 9; design note 03 R5; code `app/nutrients.py`
+`food_warnings`, twin `app/static/js/engine/rules.js`): a food flagged `potassium_additive` (an
+ingredient list or additive code naming a bulk potassium salt: E508 potassium chloride, E326 lactate,
+E332 citrates, E261 acetates, E340 / E450(v) / E451(ii) / E452(ii) phosphates, E501 carbonates, …;
+`app/additives.py`) gets a **medium** potassium warning, "Contains a potassium additive; potassium not
+listed", when its potassium value is unknown. When the label lists potassium, the normal per-serving
+thresholds apply. The flag never produces a high warning on its own. Trace uses (sorbate, benzoate,
+acesulfame K, iodide, …) give a note only.
+
+| # | Statement the rule relies on | Source consulted (2026-10-06) | Result |
+|---|---|---|---|
+| 25 | Meat, poultry and fish products that list a potassium additive contain far more potassium: median **900 mg/100 g (750–1,100)** against 325 mg (260–470) for products without one and 420 mg (270–450) for additive-free references; potassium additives were listed on 9 % of 76 products | Parpia AS et al. *J Ren Nutr* 2018;28:83–90, doi:10.1053/j.jrn.2017.08.013 (PMID 29146137), abstract via Europe PMC | Verified |
+| 26 | Enhanced raw meat and poultry: additive-free products all < 387 mg K/100 g; 5 of 25 enhanced products ≥ 692 mg, **maximum 930 mg/100 g**; **8 of 25 enhanced products did not list the additives** | Sherman RA, Mehta O. *CJASN* 2009;4:1370–1373, doi:10.2215/CJN.02830409 (PMID 19628683), abstract | Verified |
+| 27 | Potassium additives are more bioavailable than potassium in whole foods, and their use in processed foods is growing | Picard K. *J Ren Nutr* 2019;29:350–353, doi:10.1053/j.jrn.2018.10.003 (PMID 30579674), abstract | Verified (narrative review) |
+| 28 | Absorption of potassium from processed foods / additives about 90 % | KDIGO 2024 Figure 33 (row 6 of §1 above, from Picard 2021) | Verified earlier (row 6) |
+
+**Why medium and not high when the value is unknown.** Note 03 R5 proposed `high`; the contract
+(v0.3 item 9) chose `medium` until a renal dietitian reviews it: an additive's dose varies widely
+(Sherman: 5 of 25 enhanced products were at least 692 mg/100 g, the rest lower), and an unknown value
+already shows as "Potassium: not listed" next to the food. **Open decision for the owner and a renal
+dietitian:** whether "unknown + additive" should be `high`. The handbook lists the rule for clinical
+review (`handbook/docs/reference/about.md`); the decision is tracked in `docs/ROADMAP.md`.
+
+**Absence is not proof.** Sherman found 8 of 25 enhanced products without the additive on the label,
+so the app never treats a missing additive as "no added potassium" (`docs/barcode-and-photos.md`).

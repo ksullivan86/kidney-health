@@ -1,0 +1,38 @@
+{
+  "id": "grounding-four-ideas",
+  "category": "grounding",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Pasta, cooked}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Apple, raw, with skin}}\",\"quarters\":2}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped_reasons_include": [
+      "too_many_ideas"
+    ],
+    "shown_food_names": [
+      "Rice, white, long-grain, cooked",
+      "Pasta, cooked",
+      "Blueberries, raw"
+    ],
+    "not_shown_food_names": [
+      "Apple, raw, with skin"
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "id": "chatcmpl-483",
+    "object": "chat.completion",
+    "created": 1759742600,
+    "model": "qwen3-vl:8b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"status\":\"ok\",\"product_name\":\"Crispy Crackers\",\"serving_text\":\"5 crackers (30 g)\",\"serving_g\":30,\"basis\":\"per_serving\",\"per_serving\":{\"calories_kcal\":140,\"protein_g\":2,\"fat_g\":6,\"sat_fat_g\":1,\"carbs_g\":19,\"fiber_g\":1,\"sugar_g\":2,\"sodium_mg\":230,\"potassium_mg\":null,\"phosphorus_mg\":null,\"calcium_mg\":20},\"salt_g\":null,\"percent_dv\":{\"sodium\":10,\"potassium\":2,\"phosphorus\":null,\"calcium\":2},\"ingredients_text\":\"Enriched flour, vegetable oil, salt, sodium bicarbonate, monocalcium phosphate, potassium chloride.\",\"label_style\":\"us_nutrition_facts\"}"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 1650,
+      "completion_tokens": 180,
+      "total_tokens": 1830
+    }
+  }
+}

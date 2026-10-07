@@ -1,0 +1,72 @@
+/* Optional AI (js/views/ai.js): the Add view's AI buttons, the AI sheets (meal ideas, describe a meal,
+   read a label, plate photo), consent and "What will be sent?", and Settings → AI ideas. */
+
+/* Add view */
+.ai-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-add .btn { flex: 1 1 0; min-width: max-content; }
+.ai-add .ai-left { flex-basis: 100%; }
+.ai-add p { margin: 0; }
+
+/* Results */
+.ai-results { display: flex; flex-direction: column; gap: 12px; }
+.ai-results:empty { display: none; }
+.ai-block { display: flex; flex-direction: column; gap: 12px; }
+.ai-idea { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+.ai-idea-title { font-size: 1rem; margin: 0; }
+.ai-why { margin: 0; }
+.ai-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ai-item { display: flex; align-items: flex-start; gap: 8px; }
+.ai-item > svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.ai-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ai-item-name { font-weight: 600; overflow-wrap: anywhere; }
+.ai-item .btn { flex: none; }
+.ai-warnings { list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.85rem; }
+.ai-warnings .w-high { color: var(--over-text); }
+.ai-warnings .w-medium { color: var(--caution-text); }
+.ai-links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; }
+.ai-label { margin: 0; font-size: 0.8rem; color: var(--text-2); }
+.ai-fallback { display: flex; flex-direction: column; gap: 8px; }
+.ai-checks { margin: 0; padding-left: 20px; font-size: 0.9rem; }
+
+/* Cards shown instead of an AI answer (G7 "Treating a low", G8 "Get help now") */
+.ai-card-alert { border-radius: var(--radius-sm); padding: 10px 12px; border-left: 4px solid var(--caution); background: var(--caution-tint); }
+.ai-card-alert.danger { border-left-color: var(--over); background: var(--over-tint); }
+.ai-card-alert h3 { margin: 0 0 6px; font-size: 1rem; }
+.ai-card-alert ul { margin: 0; padding-left: 20px; }
+.ai-card-alert li + li { margin-top: 4px; }
+
+/* Describe a meal, plate checklist */
+.ai-parse-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ai-parse-item legend { font-weight: 600; color: var(--text); font-size: 0.95rem; overflow-wrap: anywhere; }
+.ai-choices { display: flex; flex-direction: column; gap: 2px; }
+
+/* Photos: the photo stays visible beside the form on wide screens, above it on phones */
+.ai-photo-layout { display: flex; flex-direction: column; gap: 12px; }
+.ai-photo-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ai-photo-side:empty { display: none; }
+.ai-photo { display: block; max-width: 100%; max-height: 50vh; border-radius: var(--radius-sm); border: 1px solid var(--border); object-fit: contain; }
+@media (min-width: 760px) {
+  .ai-photo-layout { flex-direction: row; align-items: flex-start; }
+  .ai-photo-side { position: sticky; top: 0; flex: 0 0 40%; }
+  .ai-photo { max-height: 70vh; }
+  .ai-photo-main { flex: 1; }
+}
+.ai-file { min-height: var(--tap); }
+.from-photo { text-decoration: underline dotted var(--accent); text-underline-offset: 3px; border-color: var(--accent); }
+.ai-tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: var(--accent-tint); color: var(--accent); }
+.ai-tag.est { background: var(--caution-tint); color: var(--caution-text); }
+.ai-saved:empty { display: none; }
+.ai-saved { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* "What will be sent?", consent, AI activity */
+.ai-pre { margin: 6px 0 0; padding: 8px 10px; max-height: 40vh; overflow: auto; background: var(--surface-2); border-radius: var(--radius-sm);
+  font-family: var(--mono); font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-pre:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ai-host { overflow-wrap: anywhere; }
+.ai-dry { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.ai-activity { display: flex; flex-direction: column; gap: 6px; }
+.ai-event > summary { font-weight: 500; font-size: 0.9rem; overflow-wrap: anywhere; }
+.ai-event h4 { margin-top: 10px; }
+.ai-admin .setting-item .row-title { font-weight: 600; }
+.ai-pad { padding: 8px 12px; margin: 0; }
+.usage .num { font-variant-numeric: tabular-nums; }

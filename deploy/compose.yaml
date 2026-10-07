@@ -1,51 +1,156 @@
-# Kidney Health food log -- Compose file for podman-compose or docker compose.
+# Kidney Health food log -- Compose file for rootless Podman (podman-compose) or rootless Docker
+# (docker compose). Spec: docs/dev/research/01-rootless-and-security.md §5.2 and §10.
+# Step-by-step guide: docs/deployment.md. Hardening background: docs/security.md.
 #
-#   cp deploy/.env.example deploy/.env && $EDITOR deploy/.env    # optional secrets
-#   podman-compose -f deploy/compose.yaml up -d
-#   docker compose  -f deploy/compose.yaml up -d
+# 1. Secrets are FILES in deploy/secrets/ (git-ignored), never environment variables:
+#      install -d -m 0700 deploy/secrets
+#      python3 -c "import secrets; print(secrets.token_urlsafe(32))" > deploy/secrets/secret_key
+#      : > deploy/secrets/usda_api_key          # empty = USDA search off; or paste your key
+#      chmod 0644 deploy/secrets/secret_key deploy/secrets/usda_api_key
+#    Why 0644 inside a 0700 directory: compose mounts file secrets as bind mounts, and under a
+#    rootless engine your own UID is container root, so a 0600 file you own is unreadable by the
+#    app's UID 10001. Alternative on Podman: `podman unshare chown 10001:10001 deploy/secrets/*`
+#    and keep 0600. (Quadlet's Secret= does not have this problem; see deploy/quadlet/.)
+# 2. Optional, non-secret settings: cp deploy/.env.example deploy/.env and edit it.
+# 3. Start:   podman-compose -f deploy/compose.yaml up -d      (or: docker compose -f deploy/compose.yaml up -d)
+#    podman-compose must be 1.5.0 or later (`podman-compose version`; Ubuntu 24.04 and Debian 12/13
+#    package older ones: `pipx install 'podman-compose>=1.5'`, or use Quadlet, deploy/quadlet/).
+#    Older versions run the health check below through /bin/sh, which the image does not have (the
+#    container then always reports "unhealthy"), and ignore x-podman.relabel (SELinux then denies
+#    the secrets: `chcon -t container_file_t deploy/secrets/*` works around it).
+# 4. First run: the log prints a one-time setup code; open the app and enter it to create the admin:
+#      podman logs kidney-health 2>&1 | grep 'FIRST-RUN SETUP'
 #
-# Compose reads deploy/.env (the directory of this file) for the ${...} substitutions
-# below. Without it both optional variables are empty, which the app treats as unset.
+# The port is published on 127.0.0.1 only: put a reverse proxy with HTTPS in front (docs/https.md).
+# Publishing on 0.0.0.0 would let any device on the LAN bypass the proxy and its login, and phones
+# need HTTPS anyway (camera, offline mode, secure cookies).
+#
+# Optional overlays (compose merges files left to right):
+#   -f deploy/compose.caddy.yaml       Caddy with HTTPS in front (docs/https.md, tier 1)
+#   -f deploy/compose.ai-ollama.yaml   a local Ollama for the optional AI features (docs/security.md)
 name: kidney-health
 
 services:
   kidney-health:
-    image: ghcr.io/ksullivan86/kidney-health:latest
-    # Build locally instead of pulling from GHCR (the context is the repository root):
+    # Track the minor release (security fixes, no breaking changes), never :latest on machines you
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:...
+    # (scripts/verify-image.sh checks the signature and prints the digest).
+    image: ghcr.io/ksullivan86/kidney-health:0.3
+    # Build locally instead (context is the repository root):
     # build:
     #   context: ..
     #   dockerfile: deploy/Containerfile
     container_name: kidney-health
-    # `always` (not unless-stopped) so Podman's podman-restart.service can bring it back
-    # after a reboot: `systemctl --user enable --now podman-restart.service`. Docker restarts
-    # it with the daemon either way. For a real systemd service use deploy/quadlet instead.
+    # `always` (not unless-stopped) so Podman's podman-restart.service brings it back after a
+    # reboot: `systemctl --user enable --now podman-restart.service`. For a real systemd service
+    # use deploy/quadlet/ instead.
     restart: always
+
+    # ---- Hardening (docs/security.md). The app needs no capabilities and writes only /data. ----
+    # Default rootless user namespace: UID 10001 in the container is an unprivileged subordinate
+    # UID on the host, never your own. Do NOT add `userns_mode: keep-id`.
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m   # SQLite temp files; Docker does not add /tmp itself
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      # Fedora/RHEL: SELinux confines the container as container_t automatically. Never add
+      # label=disable. Bind mounts need :Z (named volumes are labelled for you).
+    pids_limit: 128      # uvicorn + a 40-thread pool; Podman's default is 2048
+    mem_limit: 512m      # rootless: needs cgroup v2 (memory and pids are delegated by default)
+    # cpus: 1            # only after delegating the cpu controller (docs/deployment.md)
+    stop_grace_period: 15s
+
     ports:
-      - "8000:8000"                      # host:container; change the left side to move it
+      - "127.0.0.1:${HOST_PORT:-8000}:8000"
+
     environment:
-      DATA_DIR: /data                    # image default, stated for clarity
-      USDA_API_KEY: ${USDA_API_KEY:-}    # optional: enables "Search USDA" (see .env.example)
-      APP_PASSWORD: ${APP_PASSWORD:-}    # optional: HTTP Basic auth on every page
+      # Where the database lives (the image default, stated for clarity).
+      DATA_DIR: /data
+      # Secrets come from files mounted under /run/secrets (see `secrets:` below).
+      SECRET_KEY_FILE: /run/secrets/secret_key
+      USDA_API_KEY_FILE: /run/secrets/usda_api_key
+      # The address(es) whose X-Forwarded-For / -Proto the app believes. With rootless Podman
+      # (pasta) a proxy on this host appears as the CONTAINER'S OWN address, not 127.0.0.1; with
+      # rootless Docker every client appears as the RootlessKit gateway. Check the address the app
+      # logs and read the per-topology table in docs/security.md before changing this.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,::1}
+      # The URL people type, e.g. https://food.home.example.net. Its host is allowed automatically
+      # (DNS-rebinding defence) and invite links are built from it. Empty = unset.
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      # Extra host names the app answers to (comma list, *.example.org wildcards). localhost and
+      # IP literals always work. Empty = unset.
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # local (default: accounts with passwords) | proxy (Authelia, Authentik, tailscale serve)
+      # | none (no sign-in; single person on a trusted LAN only). See docs/deployment.md.
+      AUTH_MODE: ${AUTH_MODE:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # ---- v0.3 features (deploy/.env.example explains each). Meal guidance runs on the server and is on;
+      # everything that contacts the internet is OFF until switched on, and outbound HTTPS starts only for
+      # what you switch on (docs/network-allowlist.md): api.nal.usda.gov (a USDA key),
+      # world.openfoodfacts.org (Open Food Facts on AND the scanning person agreed), your AI provider
+      # (AI_PROVIDER... AND "Optional AI ideas" on), api.pwnedpasswords.com (PASSWORD_BREACH_CHECK).
+      # A value set here LOCKS that setting in Settings → Admin; leave it empty to let an admin choose.
+      OFF_ENABLED: ${OFF_ENABLED:-}
+      OFF_CONTACT: ${OFF_CONTACT:-}
+      GUIDANCE_ENABLED: ${GUIDANCE_ENABLED:-}
+      AI_ENABLED: ${AI_ENABLED:-}
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_VISION_MODEL: ${AI_VISION_MODEL:-}
+      AI_PRIVATE_HOSTS: ${AI_PRIVATE_HOSTS:-}
+      HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
+      PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
+      # A cloud AI provider's key is a file secret like the others (never an env var):
+      # AI_API_KEY_FILE: /run/secrets/ai_api_key                # and add ai_api_key below
+      # GitOps alternative to the setup code: create the first admin from a file secret.
+      # ADMIN_USERNAME: you
+      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password      # and add admin_password below
+
+    secrets:
+      - secret_key
+      - usda_api_key
+      # - admin_password
+      # - ai_api_key
+
     volumes:
-      - kidney-data:/data                # SQLite database (kidney.db + -wal/-shm files)
+      # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
+      # mode 0770), so no chown is needed. Bind mount instead (Podman; :U chowns it to 10001 on
+      # every start, :Z relabels for SELinux; never use either on $HOME or a system directory):
+      #   - ./kidney-data:/data:Z,U
+      - kidney-data:/data
+
     healthcheck:
-      # The image has no curl; the Python stdlib is used instead. /healthz needs no auth.
-      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"]
+      # Same probe as the image HEALTHCHECK (Podman's OCI image format drops that one). Exec form:
+      # podman-compose < 1.5.0 turns it into a /bin/sh command, which fails in this shell-less image.
+      test: ["CMD", "python", "-m", "app.healthcheck"]
       interval: 30s
       timeout: 5s
       start_period: 15s
       retries: 3
-    # Hardening: the process runs as uid 10001 on port 8000 and needs no capabilities.
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    # The app writes only under /data, so a read-only root filesystem also works:
-    # read_only: true
-    # tmpfs:
-    #   - /tmp
+
+# File secrets are bind-mounted read-only at /run/secrets/<name>. x-podman.relabel: Z lets
+# podman-compose (1.5.0 or later) relabel them for SELinux (Fedora, RHEL); other engines ignore the
+# x- key. Older podman-compose: `chcon -t container_file_t deploy/secrets/*` once.
+secrets:
+  secret_key:
+    file: ./secrets/secret_key          # relative to this file: deploy/secrets/ (git-ignored)
+    x-podman.relabel: Z
+  usda_api_key:
+    file: ./secrets/usda_api_key
+    x-podman.relabel: Z
+  # admin_password:
+  #   file: ./secrets/admin_password
+  #   x-podman.relabel: Z
+  # ai_api_key:                         # only for a cloud AI provider (docs/ai.md)
+  #   file: ./secrets/ai_api_key
+  #   x-podman.relabel: Z
 
 volumes:
-  kidney-data:
-    # Rootless Podman keeps it under ~/.local/share/containers/storage/volumes/kidney-health_kidney-data,
-    # Docker under /var/lib/docker/volumes/kidney-health_kidney-data. See docs/deployment.md for backups.
+  # Rootless Podman keeps it under ~/.local/share/containers/storage/volumes/kidney-health_kidney-data,
+  # rootless Docker under ~/.local/share/docker/volumes/. Back it up with
+  # `python -m app.admin backup` (docs/deployment.md), not by copying files from a running container.
+  kidney-data: {}

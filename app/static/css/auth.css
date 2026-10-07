@@ -1,0 +1,68 @@
+/* Kidney Diet Log — sign-in screens (first-run setup, sign-in, invite, reset, new password), the
+   password field with its Show toggle (also used in Settings and the re-auth sheet), error lines,
+   and the red "No sign-in" banner (AUTH_MODE=none). Loaded after settings.css, before sheets.css. */
+
+/* Password and code fields look like every other text field (base.css lists the other types). */
+input[type="password"] {
+  width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+input[aria-invalid="true"] { border-color: var(--over); box-shadow: inset 0 0 0 1px var(--over); }
+
+/* ---------- password + Show ---------- */
+.pw-wrap { display: flex; align-items: stretch; gap: 6px; }
+.pw-wrap input { flex: 1; min-width: 0; }
+.pw-toggle {
+  flex: none; min-width: 64px; min-height: var(--tap); padding: 0 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-weight: 600; font-size: 0.9rem;
+}
+.pw-toggle:hover { background: var(--surface-2); }
+.pw-toggle[aria-pressed="true"] { background: var(--accent-tint); }
+
+/* ---------- screens ---------- */
+body.signed-out .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+.auth-view { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 4px; }
+.auth-card { width: 100%; max-width: 460px; padding: 20px 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 720px) { .auth-view { padding-top: 24px; } .auth-card { padding: 26px 28px 28px; } }
+.auth-head { display: flex; align-items: center; gap: 12px; }
+.auth-logo { width: 40px; height: 40px; flex: none; }
+.auth-title { font-size: 1.35rem; }
+.auth-title:focus { outline: none; }
+.auth-title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.auth-sub { margin: 2px 0 0; color: var(--text-2); font-size: 0.9rem; overflow-wrap: anywhere; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-intro, .auth-help { margin: 0; }
+.auth-submit { width: 100%; }
+.auth-alt { align-self: center; }
+.auth-foot { max-width: 460px; margin: 0; text-align: center; color: var(--text-2); font-size: 0.82rem; }
+.code-input { font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.code-input::placeholder { letter-spacing: 0.04em; }
+.hint code { font-family: var(--mono); font-size: 0.95em; overflow-wrap: anywhere; }
+
+/* Notes on the screens: HTTPS required (red), plain HTTP (yellow), information (blue). */
+.auth-note { border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.9rem; background: var(--lv-tint); color: var(--text); border-left: 4px solid var(--lv); }
+.auth-note p { margin: 0; }
+.auth-note.info { --lv: var(--accent); --lv-tint: var(--accent-tint); }
+
+/* Error lines: role="alert" regions, empty until something goes wrong. */
+.auth-error, .form-error {
+  color: var(--over-text); background: var(--over-tint); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 0.9rem; font-weight: 600;
+}
+.auth-error:empty, .form-error:empty { display: none; }
+/* The same reason next to the field at fault (linked with aria-describedby), so it is in view on a phone. */
+.field-error { color: var(--over-text); font-size: 0.85rem; font-weight: 600; margin: 4px 0 0; }
+.field-error p { margin: 0; }
+.field-error ul { list-style: disc; padding-left: 18px; margin: 2px 0 0; font-weight: 500; }
+#form-reset input[readonly] { background: var(--surface-2, transparent); }
+.auth-error p, .form-error p { margin: 0; }
+.auth-error ul, .form-error ul { list-style: disc; padding-left: 18px; margin: 4px 0 0; font-weight: 500; }
+
+/* ---------- AUTH_MODE=none ---------- */
+.nologin-banner {
+  max-width: 880px; margin: 8px auto 0; padding: 8px 14px; border-radius: var(--radius-sm);
+  background: var(--over-solid); color: #fff; font-size: 0.9rem; line-height: 1.4;
+}
+.nologin-banner p { margin: 0; }
+@media (max-width: 911.98px) { .nologin-banner { margin-left: 16px; margin-right: 16px; } }
+.setup-local { display: flex; flex-direction: column; gap: 14px; }
