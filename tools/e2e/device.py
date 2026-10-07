@@ -195,6 +195,10 @@ class FakeAi:
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                 outer.requests.append(body)
                 content = json.dumps(outer.answer(body))
+                if FakeAi.texts(body)[0].startswith("TASK: next_meal"):
+                    # The v0.3.0 review's case (L4): dosing prose before the JSON. The card must stay clean and the
+                    # AI activity must show this raw answer captioned, with the words masked.
+                    content = "Sure! Take 6 units of insulin before this meal. " + content
                 self._send({"id": "fake", "object": "chat.completion", "model": body.get("model"),
                             "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
                             "usage": {"prompt_tokens": 900, "completion_tokens": 60}})
@@ -817,6 +821,8 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
               cards.count() >= 1 and "AI idea" in label and "checked against your targets" in label, label[:300])
         html_free = page.evaluate("[...document.querySelectorAll('#sheet-ai .ai-idea *')].every((el) => !/^(SCRIPT|IFRAME|OBJECT)$/.test(el.tagName))")
         check(area, "cards are plain text (no script, frame or object elements)", html_free)
+        shown = page.inner_text("#sheet-ai").lower()
+        check(area, "the provider's dosing prose never reaches the cards", "insulin" not in shown and "6 units" not in shown, shown[:200])
         hx.shot(page, "ai-ideas-1280")
         page.click("#sheet-ai >> text=What will be sent?")
         page.wait_for_selector("#sheet-ai-sent[open]")
@@ -902,6 +908,14 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         rows = page.locator("#set-ai-slot .ai-event > summary").all_inner_texts()
         check(area, "AI activity lists the meal ideas, label and plate calls to the fake server",
               len(rows) >= 3 and all("127.0.0.1" in r for r in rows[:3]), json.dumps(rows[:4]))
+        ideas_event = page.locator("#set-ai-slot .ai-event", has_text="Meal ideas").last
+        ideas_event.locator("summary").first.click()
+        raw = ideas_event.locator("pre").last.inner_text()
+        caption = ideas_event.locator("p.hint").last.inner_text()
+        check(area, "AI activity: the raw answer is captioned as unchecked and its dosing words read [hidden]",
+              "before the app checked it" in caption and raw.startswith("Sure! Take 6 [hidden] of [hidden] before this meal.")
+              and "insulin" not in raw.lower() and "units" not in raw.lower(), raw[:160])
+        hx.shot(page, "ai-activity-raw-masked-1280")
         own = page.locator("#set-ai-slot summary", has_text="My own AI provider").locator("xpath=..")
         if not own.evaluate("(el) => el.open"):
             own.locator("summary").first.click()

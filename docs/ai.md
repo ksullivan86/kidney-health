@@ -118,7 +118,10 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   your own provider fails, the app **never** sends your data to the shared one instead.
 * **AI activity.** Settings → AI ideas → **AI activity** lists each call: when, which feature, which
   host, the outcome, and (while it is kept, 30 days by default) what was sent and what came back.
-  **Delete my AI history** removes it. Admins see only counts. The export zip includes it; deleting your
+  The answer that came back is the provider's, before the app's checks: it is captioned so, and words the
+  guard never shows (its blocklist: insulin, doses, medicines and the like) read `[hidden]` in that copy
+  (`js/engine/aiguard.js`, the browser twin of `app/ai/guard.py`); the stored record and the export keep the
+  full text. **Delete my AI history** removes it. Admins see only counts. The export zip includes it; deleting your
   account deletes it.
 * **Limits.** Shared AI calls per day (30 by default; photos and connection tests count); one AI call at
   a time per person; a "busy" message asks you to try again in a few seconds.

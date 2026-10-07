@@ -27,7 +27,7 @@ LOW (apply or justify):
 | L1 | research notes still state pre-v0.3 protein rule | done |
 | L2 | handbook SI phosphate table edges | done |
 | L3 | labs.js K alert window hard-coded 90 days | done |
-| L4 | AI activity shows raw provider reply uncaptioned | pending |
+| L4 | AI activity shows raw provider reply uncaptioned | done |
 | L5 | Settings → AI ideas stale after admin switch | done |
 | L6 | ai.* switches under "Other" | done |
 | L7 | Trends ignores goal / about targets | done (with C1, d458205) |
@@ -42,6 +42,18 @@ LOW (apply or justify):
 | L16 | PEMAT self-score not recorded | pending |
 
 ## Done
+
+* **L4** (raw AI answer in AI activity): new `js/engine/aiguard.js` (KH.aiguard: `fold`, `blocked`,
+  `maskForDisplay`; pattern and look-alike table verbatim from app/ai/guard.py), loaded after textclean.js
+  (index.html, sw.js SHELL_URLS). ai.js `activityRow`: heading "What came back (before the app's checks)", a
+  caption (unchecked, used only what passed, words read [hidden], not advice, export keeps the full text), the
+  masked copy. No server change (app/ai/routes.py is fixer-backend-ops' in-progress file; the stored row and
+  export stay intact as the finding asks). Tests: tests/test_ai_guard_twin.py via tests/js/aiguard_twin.mjs
+  (pattern/table equal; same `blocked` answers on the guard's 84 terms, obfuscations and food names; the
+  review's example masked, readable, nothing left the guard would stop; static ai.js check). device.py ai: the
+  fake now prefixes "Sure! Take 6 units of insulin before this meal." to next-meal answers (the review's
+  repro): cards stay clean, activity shows "Sure! Take 6 [hidden] of [hidden] …" with the caption: 22/22.
+  Docs: docs/ai.md, handbook app/ai.md, ARCHITECTURE (file layout, Settings AI bullet).
 
 * **L3** (potassium banner window): the server decides. `GET /api/labs` now returns `alerts` (app/labs.py
   `current_alerts`: newest potassium, `fresh_labs` with `profile.target_settings` windows, `potassium_alert`;

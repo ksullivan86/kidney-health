@@ -739,6 +739,8 @@ app/static/
                         BarcodeDetector, else the vendored decoder), Quick add's label photo and ingredients, provenance
   js/engine/textclean.js, gtin.js, additives.js, off.js    (M2 barcode) KH.textclean / KH.gtin / KH.additives / KH.off,
                         twins of app/textclean.py, app/gtin.py, app/additives.py and app/off.py's texts (in that order)
+  js/engine/aiguard.js  KH.aiguard: app/ai/guard.py's fold + BLOCKLIST (same pattern and look-alike table), used only to
+                        mask the raw provider answer in Settings → AI activity (tests/test_ai_guard_twin.py)
   js/mock/barcode.js    demo POST /api/foods/barcode (three recorded Open Food Facts products); js/mock/foods.js answers
                         gtin, ingredients_text and the v0.3 Food fields
   vendor/barcode-detector-3.2.2/ponyfill.iife.js, vendor/zxing-wasm-3.1.3/zxing_reader.wasm   the WASM barcode
@@ -1791,7 +1793,8 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   preferences, calls left today, "My own AI provider" (preset, model, vision model, a public https
   address for a custom server when allowed, the write-only key through `KH.views.settings.keyWidget`,
   Test connection, Remove), "What you agreed to send" (Withdraw), "AI activity" (sent / received /
-  verdict while kept; "Delete my AI history"); for admins "AI providers (admin)": each provider with its
+  verdict while kept; the received text captioned as the provider's answer before the app's checks and shown
+  through `KH.aiguard.maskForDisplay`, blocklist words as `[hidden]`; "Delete my AI history"); for admins "AI providers (admin)": each provider with its
   key status, badges and last test, Test connection, Edit, Delete; Add a shared provider (preset, name,
   address, model, vision model, key, advanced options); `AI_PRIVATE_HOSTS` read-only; AI usage (counts).
   The `ai.*` switches are in Admin → Server settings like every registry key.

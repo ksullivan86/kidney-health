@@ -103,8 +103,10 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
 ## Take it back
 
 - Untick **Use AI ideas** to stop all AI calls for your account.
-- **Settings → AI ideas → AI activity** lists what was sent and what came back. **Delete my AI history**
-  removes it. **What you agreed to send** has **Withdraw** for each server.
+- **Settings → AI ideas → AI activity** lists what was sent and what came back. What came back is the AI
+  server's own answer, before the app checked it: the app used only the parts that passed, so words it never
+  shows you, such as anything about insulin, doses or medicines, read [hidden] there. It is not advice. Your
+  data export keeps the full text. **Delete my AI history** removes it. **What you agreed to send** has **Withdraw** for each server.
   Stored requests are kept for 30 days by default; admins see only counts, not contents.
 - If your admin changes a provider's address, everyone is asked for consent again.
 

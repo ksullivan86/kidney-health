@@ -973,7 +973,16 @@
         h('div', { class: 'kv-row' }, h('dt', {}, 'Prompt version'), h('dd', {}, ev.prompt_version))),
       h('h4', { class: 'settings-minor' }, 'What the rules decided'), pre(ev.verdict_json),
       h('h4', { class: 'settings-minor' }, 'What was sent'), ev.request_json ? pre(ev.request_json) : h('p', { class: 'muted small' }, 'No longer kept.'),
-      h('h4', { class: 'settings-minor' }, 'What came back'), ev.response_text ? pre(ev.response_text) : h('p', { class: 'muted small' }, 'No longer kept.'));
+      h('h4', { class: 'settings-minor' }, 'What came back (before the app\'s checks)'),
+      ev.response_text ? [rawCaption(), pre(KH.aiguard.maskForDisplay(ev.response_text))] : h('p', { class: 'muted small' }, 'No longer kept.'));
+  }
+  // The provider's raw answer was never shown as it is: the app kept only what passed its checks. Words the app
+  // never shows (about insulin, doses, medicines…) are hidden in this copy too (KH.aiguard, the server's
+  // blocklist); the stored record and the export keep the full text (v0.3.0 review L4).
+  function rawCaption() {
+    return h('p', { class: 'hint' }, 'The AI server\'s answer as it arrived, before the app checked it. The app used only the parts '
+      + `that passed its checks. Words it never shows you, such as anything about insulin, doses or medicines, read ${KH.aiguard.MASK} `
+      + 'here. This is not advice: ask your care team. Your data export keeps the full text.');
   }
 
   // ---- admin: providers, the private-host allowlist, usage ----

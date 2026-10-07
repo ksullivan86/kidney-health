@@ -41,6 +41,7 @@ const SHELL_URLS = [
   '/js/engine/targets.js',
   '/js/engine/settings.js',
   '/js/engine/textclean.js',
+  '/js/engine/aiguard.js',
   '/js/engine/gtin.js',
   '/js/engine/additives.js',
   '/js/engine/off.js',
