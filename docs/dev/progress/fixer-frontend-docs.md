@@ -39,9 +39,15 @@ LOW (apply or justify):
 | L13 | demo runs with lab rules on (note 05 C10) | done |
 | L14 | disabled Units placeholder promising a later version | done |
 | L15 | "Prefer live camera" setting missing | done |
-| L16 | PEMAT self-score not recorded | pending |
+| L16 | PEMAT self-score not recorded | deferred to ROADMAP (finding's own option) |
 
 ## Done
+
+* **L16** (PEMAT self-score): recorded in docs/ROADMAP.md "Patient handbook" next to the Phase 4 clinical sign-off,
+  citing note 08 §7 Phase 4 and §4.9, with the 10 pages named (the ones the app links: get-help-now,
+  t1d/treating-a-low, eat/potassium, the seven labs pages). Reason: PEMAT is scored by readers (note 08 §4.9 puts
+  "PEMAT ≥ 70 %" on the patient or caregiver reviewer), so an author's score is a step of that review pass; the
+  readability half already ships (test_handbook_content.py warns above grade 9).
 
 * **L9** (builtin list with ETag): implemented, not deferred (note 02 §6 item 9 asks for it in v0.3). Server
   (app/foods.py, outside my area, minimal): `GET /api/foods/builtin` before `/{food_id}` → every non-hidden
