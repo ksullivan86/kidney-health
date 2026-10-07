@@ -28,6 +28,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException,
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_validator
 from starlette.concurrency import run_in_threadpool
 
+from ..auth import housekeeping as auth_housekeeping
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import AdminUser, CurrentUser, RecentAdmin, RecentUser, current_user, require_admin
 from ..auth.errors import ApiProblem
@@ -144,6 +145,17 @@ def housekeeping(conn: sqlite3.Connection, state: AiState, *, force: bool = Fals
         log.exception("AI activity retention purge failed")
         if conn.in_transaction:
             conn.rollback()
+
+
+def daily_retention(conn: sqlite3.Connection, ctx: Any) -> None:
+    """The AI activity retention as a daily step of the app's own housekeeping (registered in
+    :func:`install`): bodies after ``ai.audit_retention_days``, rows and usage after
+    ``audit.retention_days``, whether AI is on, off or simply unused (docs/ai.md "Retention")."""
+    result = K.purge(conn, body_days=int(ctx.store.get(conn, "ai.audit_retention_days")),
+                     row_days=int(ctx.store.get(conn, "audit.retention_days")))
+    conn.commit()
+    if any(result.values()):
+        log.info("AI activity retention: %s", result)
 
 
 def unavailable(reason: str) -> ApiProblem:
@@ -990,6 +1002,7 @@ def install(app: FastAPI, settings: Settings, store: SettingsStore, *, app_versi
     policy = K.build_policy(settings, kubernetes_host=os.environ.get("KUBERNETES_SERVICE_HOST"))
     state = AiState(settings=settings, store=store, client=C.ChatClient(policy, app_version=app_version))
     app.state.ai = state
+    auth_housekeeping.register_daily("ai_retention", daily_retention)
     app.include_router(combined)
     ai_bridge.register_ai_status(status_provider(app))
     return state

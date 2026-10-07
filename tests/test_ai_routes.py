@@ -580,6 +580,54 @@ def test_retention_clears_bodies_then_rows(ai_client):
     conn.close()
 
 
+def test_retention_runs_daily_even_with_ai_switched_off(tmp_path, foods_json, fake_clock):
+    """Review L1: the purge ran only on AI traffic or at start-up, so switching AI off kept the bodies
+    (targets, day totals, describe-a-meal text, model answers) until the next restart. Now it is a step of
+    the app's daily housekeeping, run by any signed-in request."""
+    from datetime import timedelta
+
+    with TestClient(create_app(ai_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        enable(c)
+        ready(c)
+        with attach(c.app, FakeProvider([ideas_answer()])):
+            assert c.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}).status_code == 200
+        assert c.patch("/api/admin/settings", json={"ai.enabled": False}).status_code == 200
+        conn = sqlite3.connect(c.app.state.settings.db_path)
+        old = (fake_clock.moment - timedelta(days=40)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        conn.execute("UPDATE ai_audit SET created_at = ?", (old,))
+        conn.commit()
+        assert c.get("/api/profile").status_code == 200  # not yet a day since start-up
+        assert conn.execute("SELECT COUNT(*) FROM ai_audit WHERE request_json IS NOT NULL").fetchone()[0] == 1
+        fake_clock.advance(hours=25)
+        assert c.get("/api/profile").status_code == 200  # an ordinary request with AI off
+        row = conn.execute("SELECT request_json, response_text, status FROM ai_audit").fetchone()
+        assert row[0] is None and row[1] is None and row[2] == "dropped_all"  # bodies gone, metadata kept
+        conn.close()
+
+
+def test_a_failing_daily_task_does_not_stop_the_others(tmp_path, foods_json, fake_clock, caplog):
+    from app.auth import housekeeping
+
+    ran: list[str] = []
+
+    def broken(conn, ctx):  # noqa: ANN001, ANN202
+        raise RuntimeError("boom")
+
+    housekeeping.register_daily("zz_test_broken", broken)
+    housekeeping.register_daily("zz_test_ok", lambda conn, ctx: ran.append("ok"))
+    try:
+        with TestClient(create_app(ai_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
+            sign_in(c)
+            assert c.get("/api/profile").status_code == 200  # the first request after start-up starts the day
+            fake_clock.advance(hours=25)
+            assert c.get("/api/profile").status_code == 200
+        assert ran == ["ok"] and "daily housekeeping task zz_test_broken failed" in caplog.text
+    finally:
+        housekeeping._daily_tasks.pop("zz_test_broken", None)
+        housekeeping._daily_tasks.pop("zz_test_ok", None)
+
+
 def test_retention_zero_keeps_metadata_only(ai_client):
     enable(ai_client, **{"ai.audit_retention_days": 0})
     ready(ai_client)

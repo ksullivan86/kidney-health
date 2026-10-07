@@ -1071,7 +1071,7 @@ when `targets.lab_rules_enabled` is off.
 | Method and path | Body → response |
 |---|---|
 | `POST /api/labs` | `{analyte, value, unit, taken_on, note?}` → 201 `LabResult + {"alerts": [SafetyAlert]}`; 400 for an unknown analyte or unit, a value outside the plausible range (message names the entered unit and the converted value), a negative or non-finite value, a date after tomorrow or before 1900, a note over 500 characters, or an unknown field |
-| `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200 |
+| `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult], "alerts": [SafetyAlert]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200. `alerts`: the newest potassium's safety alert while fresh under `targets.lab_fresh_days.potassium` (whatever the filters), the window the suggestions use |
 | `DELETE /api/labs/{id}` | → 204; 404 when it is not yours or does not exist |
 | `GET /api/labs/kidney-function` | → `KidneyFunction` (below); never changes the saved stage |
 
@@ -1140,7 +1140,8 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
 * **Lab results** (`#labs`): unit picker defaulting from `user.units.labs`, the conversion echo and
   plausibility check before POST (the twin), *What this result changed* (suggestion before vs after),
   the cumulative *Review suggested targets* notice in Profile (`state.targetsReview`; never applied),
-  the potassium banner (POST alert, else the newest potassium within 90 days via `KH.targets.potassiumAlert`),
+  the potassium banner (POST alert, else `GET /api/labs` `alerts`: the newest potassium while fresh under
+  `targets.lab_fresh_days.potassium`, the suggestions' window; the browser applies no window of its own),
   the kidney-function card and the history with in-page delete confirmation.
 * **Today**: a `{min}`-only target (fiber) is a goal bar ("of at least X", no over state); a range with
   `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`);
@@ -1773,7 +1774,8 @@ provider_id)` with `key_scope`, and `ai_audit`. Every user reference has `ON DEL
 `export.json` carries `ai_audit` (the person's rows), `ai_usage`, `ai_consents` and `ai_provider` (their
 own provider without its key: `key_set`). Deleting an account deletes all four. Bodies in `ai_audit` are
 cleared after `ai.audit_retention_days` (0 keeps metadata only), rows and usage after
-`audit.retention_days`; the purge runs at start-up and daily from AI requests. Logs carry feature,
+`audit.retention_days`; the purge runs at start-up and as a step of the app's daily housekeeping
+(`app/auth/housekeeping.register_daily`, any signed-in request), whether AI is on, off or unused. Logs carry feature,
 provider id, preset, model, host, latency, tokens and status only.
 
 ### Guidance hook
