@@ -180,7 +180,9 @@ food words are not read as a low). The classifier errs toward showing the card.
 
 `planner.py` (§4.7). Slots are filled in order breakfast, lunch, dinner, snack; each slot's room is
 worked out with the items already placed in earlier slots. Options per slot, all passing the same
-`check_meal()` (room + negligible for potassium, phosphorus, sodium and fluid; carbohydrate at most the
+`check_meal()` (room + negligible for potassium, phosphorus, sodium and fluid, and for saved, usual and
+starter meals and AI ideas never more than is left of the day's own potassium, sodium or fluid target, so
+they cannot tip the day into "over"; carbohydrate at most the
 tolerance above the gap — a meal with ≤ 5 g of carbs always passes; no `avoid_ckd` food; portions ¼–3
 servings; built meals and AI ideas never hold a low treatment, an ingredient or an alcoholic drink):
 

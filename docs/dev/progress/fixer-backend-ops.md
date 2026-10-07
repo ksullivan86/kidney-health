@@ -25,7 +25,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L1 | AI retention purge only with AI traffic | done (daily housekeeping task; test with AI off + fake clock) |
 | L2 | IDN AI base URL refused | done (AI PinnedTransport + egress CheckedTransport use raw_host) |
 | L3 | K-2 'relaxed one step' when ladder == relaxed; N-1 age-70 cut-off | done |
-| L4 | check_meal lets AI ideas create a new day 'over' | todo |
+| L4 | check_meal lets AI ideas create a new day 'over' | done |
 | L5 | G7 hypo pre-filter phrasings | todo |
 | L6 | OFF per-serving label without quantity stored as per 100 g | done |
 | L7 | additives: 'phosphorus' word flagged as additive | done |
@@ -97,6 +97,15 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   measured on 160 seeds: median 0.07 (HEAD) / 0.10 (now), max 0.81 (HEAD) / 0.52 (now). Median bound set to
   0.1 with the measurement in a comment. Observation for the owner: at HEAD the beam is up to 0.81 below the
   oracle on a larger sample (ROADMAP already lists the MILP measurement, note 06 §3.1 C).
+
+* **L4** `app/guidance/score.py` `check_meal` + twin `js/engine/guidance/score.js`: for kinds `ai`, `saved`,
+  `usual`, `starter` the potassium/sodium/fluid totals are also capped at `room.day_left` (same limit as
+  `Scorer.lim`), so an idea or a familiar meal never creates a new day "over". `built` keeps room + negligible
+  because the planner's whole-day repair (§4.7, `_repair`, tests `test_whole_day_repair_*`) cuts the slots back
+  together and marks them partial (capping built slots too made later slots no_fit and broke those spec tests).
+  New vector "saved meal near the potassium limit" (before: scale 1.0, 55 mg with 30 mg left; now ½);
+  `tests/guidance/test_ai_bridge.py::test_an_idea_never_creates_a_new_day_over_even_within_the_negligible_amount`;
+  docs/guidance.md planner paragraph. Checks: tests/guidance + AI suites green, node vectors 55 guidance checks.
 
 ## Handoffs (to fixer-frontend-docs)
 

@@ -96,6 +96,27 @@ def test_an_idea_that_exceeds_potassium_is_dropped_with_would_exceed():
     assert r["note"] == M.AI_FALLBACK
 
 
+def test_an_idea_never_creates_a_new_day_over_even_within_the_negligible_amount():
+    """Review L4: the meal check allowed room + negligible (50 mg potassium), so with 30 mg left today an
+    egg white (55 mg) passed and the day went from caution to over; the food scorer already capped at
+    what is left of the day. Both now use the same limit."""
+    from app.guidance.budget import day_totals, meal_room
+    from app.nutrients import daily_status
+
+    fs = fx.foods()
+    block = fx.entry(fs[13], "breakfast", override={"potassium_mg": 2470.0})
+    ctx = fx.context(day=(block,), history=())
+    room = meal_room(ctx, "dinner", totals=day_totals(ctx.day))
+    assert room.day_left["potassium_mg"] == 30 and room.nutrients["potassium_mg"].level == "caution"
+    r = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 4, "quarters": 4}]], candidate_ids=[4])
+    assert r["ideas"] == [] and r["dropped"][0]["reason"] == "would_exceed:potassium_mg"
+    before = daily_status({"potassium_mg": 2470.0}, {"potassium_mg": 2500})["potassium_mg"]["level"]
+    after = daily_status({"potassium_mg": 2525.0}, {"potassium_mg": 2500})["potassium_mg"]["level"]
+    assert (before, after) == ("caution", "over")  # what accepting it would have done
+    half = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 4, "quarters": 2}]], candidate_ids=[4])
+    assert len(half["ideas"]) == 1  # 27.5 mg still fits what is left
+
+
 def test_validation_merges_duplicates_and_bounds_counts():
     ctx = fx.context()
     merged = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 1, "quarters": 2}, {"food_id": 1, "quarters": 2}]])

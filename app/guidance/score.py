@@ -408,7 +408,11 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
                totals: tuple[dict[str, float], frozenset[str]] | None = None) -> MealCheck:
     """The single gate (§4.7): ``kind`` is ``built``, ``ai``, ``saved``, ``usual`` or ``starter``.
 
-    Totals of potassium, phosphorus, sodium and fluid within room + negligible; unknown values only
+    Totals of potassium, phosphorus, sodium and fluid within room + negligible; for every kind except
+    ``built`` also within what is left of the day's own target (potassium, sodium, fluid: an AI idea or
+    a saved, usual or starter meal never tips the day into "over", the same limit the food scorer uses;
+    G4/V5; the planner's built slots share the day and are cut back together by its whole-day repair,
+    §4.7); unknown values only
     while the day's level is ok; carbohydrate at most ``tolerance`` above the meal's gap (negligible
     carbohydrate always passes, as in the food filter); no
     ``avoid_ckd`` food; every portion ¼–3 servings. Built meals and AI ideas additionally never hold
@@ -423,7 +427,10 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
         item = room.nutrients.get(key)
         if item is None:
             continue
-        if totals[key] > item.room + R.NEGLIGIBLE[key]:
+        limit = item.room + R.NEGLIGIBLE[key]
+        if kind != "built":
+            limit = min(limit, room.day_left.get(key, INF))
+        if totals[key] > limit:
             return MealCheck(False, f"would_exceed:{key}")
     for key in (R.K, R.P, R.NA):
         if key in unknown and room.level_of(key) != "ok":

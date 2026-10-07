@@ -259,7 +259,11 @@
     for (const key of [R.K, R.P, R.NA, R.FLUID]) {
       const item = room.nutrients[key];
       if (item == null) continue;
-      if (tot[key] > item.room + R.NEGLIGIBLE[key]) return mealCheck(false, `would_exceed:${key}`);
+      // Within the meal's room; except for the planner's built slots (cut back together by the whole-day
+      // repair), also within what is left of the day's own target: never a new "over" (G4/V5).
+      let limit = item.room + R.NEGLIGIBLE[key];
+      if (kind !== 'built' && key in room.day_left) limit = Math.min(limit, room.day_left[key]);
+      if (tot[key] > limit) return mealCheck(false, `would_exceed:${key}`);
     }
     for (const key of [R.K, R.P, R.NA]) {
       if (unknown.has(key) && GE.budget.levelOf(room, key) !== 'ok') return mealCheck(false, `unknown:${key}`);

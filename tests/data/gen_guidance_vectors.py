@@ -295,6 +295,12 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
                 hist(d, rid("Chicken breast, roasted, skinless"), "dinner"), hist(d, rid("Rice, white, long-grain, cooked"), "dinner"),
                 hist(d, rid("Green beans, boiled"), "dinner"), hist(d, rid("Wine, red"), "dinner"))]),
          {"fn": "what_fits", "meal": "dinner"}),
+        # A saved meal never tips the day into "over" (review L4): 30 mg potassium left today, so the
+        # egg-white supper (55 mg, within the dinner room + the 50 mg negligible amount) is offered at ½.
+        ("saved meal near the potassium limit", base_input(
+            day=[entry(1, 13, "breakfast", override={"potassium_mg": 2470.0})], history=[],
+            saved_meals=[{"id": 2, "name": "Egg-white supper", "meal_hint": "dinner", "items": [[4, 1.0]]}]),
+         {"fn": "what_fits", "meal": "dinner"}),
         # §6.4 swaps
         ("TV-S1 banana", base_input(), {"fn": "find_swaps", "meal": "dinner", "food_id": 6, "servings": 1.0}),
         ("TV-S2 baked potato", base_input(), {"fn": "find_swaps", "meal": "dinner", "food_id": 2, "servings": 1.0,
