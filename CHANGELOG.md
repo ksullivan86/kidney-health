@@ -109,7 +109,8 @@ An auto-updating v0.2 Quadlet host needs its unit file replaced *before* the upd
 9. **CSV export** gains columns at the end: `purpose` (an entry that treated a low), `source` and
    `source_license`. Spreadsheet cells that start like a formula are escaped with a leading `'`.
 10. **Running an `:edge` build from before this release?** Its schema 3 database is upgraded to 7 with no
-    automatic copy: run `python -m app.admin backup /data/before-0.3.0.db` first.
+    automatic copy: back it up first with the running container, for example
+    `podman exec kidney-health python -m app.admin backup /data/before-0.3.0.db`.
 
 **New optional settings** (all off or at a safe default; the full list is in
 [docs/deployment.md](docs/deployment.md#configuration) and `app/config.py`; settings not set in the
