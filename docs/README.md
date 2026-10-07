@@ -10,6 +10,9 @@ using the app; the pages below are for the people who run, maintain and check it
 * [CHANGELOG](../CHANGELOG.md): what changed in each version, upgrade notes, known limitations.
 * [ROADMAP](ROADMAP.md): work the design notes defer to later versions, with the section that defers it.
 * [SECURITY](../SECURITY.md): how to report a vulnerability, supported versions, verifying the image.
+* [LICENSE](../LICENSE) (code, PolyForm Noncommercial 1.0.0) and [handbook/LICENSE](../handbook/LICENSE)
+  (handbook text, CC BY-NC-SA 4.0); the data and third-party licences are listed in the
+  [README](../README.md#licences).
 
 ## Running a server
 
