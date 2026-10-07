@@ -23,6 +23,12 @@ Commands:
 * ``list-users``: id, username, role, status, sign-in source, last sign-in.
 * ``setup-code``: a new first-run setup code (while setup is pending).
 * ``revoke-sessions USERNAME`` / ``revoke-sessions --all``: sign out devices.
+* ``export-user USERNAME FILE`` / ``export-user USERNAME -``: that person's data export, the same ``.zip`` as
+  Settings → Account → Export (mode 0600, never overwrites; ``-`` writes it to stdout), for someone who
+  cannot sign in. Audited (``export.created``).
+* ``disable-user USERNAME``: disable an account as Settings → People does (never the only active admin):
+  signs out its devices, voids its reset links and the links it issued, audited (``user.disabled``).
+  Enable it again in Settings → People.
 * ``purge-pre-v3-backup``: delete ``kidney.db.pre-v3.bak`` now (it is deleted automatically 30
   days after the upgrade).
 * ``vacuum``: rebuild the database file so deleted data leaves no traces on free pages.
@@ -588,6 +594,88 @@ def cmd_revoke_sessions(args: argparse.Namespace, settings: Settings, out: TextI
     return EXIT_OK
 
 
+def _app_version() -> str:
+    """``APP_VERSION`` from app/main.py, read as text: importing app.main would build the app (and migrate)."""
+    import re
+
+    match = re.search(r'^APP_VERSION = "([^"]+)"', (Path(__file__).resolve().parent / "main.py").read_text(encoding="utf-8"), re.M)
+    return match.group(1) if match else "unknown"
+
+
+def cmd_export_user(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """One person's data export, the same ``.zip`` as Settings → Account → Export (note 07 §4.14), for an
+    operator helping someone who cannot sign in. FILE is created with mode 0600 and never overwritten;
+    ``-`` writes the archive to stdout. The audit log records it (``export.created``, via the CLI)."""
+    from . import account
+    from .audit import audit
+
+    conn = _accounts_db(args, settings)
+    try:
+        row = _find_user(conn, args.username)
+        user_id = int(row["id"])
+        data = account.build_export(conn, user_id, app_version=_app_version())
+        if args.file == "-":
+            if sys.stdout.isatty():
+                raise CliError("refusing to write a zip archive to a terminal; redirect it: export-user NAME - > export.zip")
+            sys.stdout.buffer.write(data)
+            sys.stdout.buffer.flush()
+            target = "stdout"
+        else:
+            dest = Path(args.file)
+            try:
+                fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                raise CliError(f"{dest} exists; choose a new file name (exports are never overwritten)") from None
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(data)
+            target = "file"
+        audit(conn, None, "export.created", "user", user_id, via="cli", target=target, bytes=len(data))
+        conn.commit()
+    finally:
+        conn.close()
+    where = "stdout" if args.file == "-" else f"{args.file} (mode 0600)"
+    print(f"export of {row['username']!r} written to {where}: {len(data)} bytes. It holds their health data; "
+          "hand it over privately and delete your copy.", file=out)
+    return EXIT_OK
+
+
+def cmd_disable_user(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """Disable an account as Settings → People does: never the only active admin; every session signed out,
+    open reset links and the links the account issued voided, an audit entry (``user.disabled``, via the CLI).
+    Enable it again in Settings → People (or give it a reset link with ``reset-password``)."""
+    from .audit import audit
+    from .auth import sessions, tokens
+    from .auth.accounts import would_remove_last_admin
+    from .db import utcnow
+
+    conn = _accounts_db(args, settings)
+    try:
+        conn.execute("BEGIN IMMEDIATE")  # the last-admin check and the write see the same data
+        row = _find_user(conn, args.username)
+        user_id = int(row["id"])
+        if row["status"] == "disabled":
+            conn.rollback()
+            print(f"{row['username']!r} is disabled already", file=out)
+            return EXIT_OK
+        if would_remove_last_admin(conn, user_id):
+            raise CliError(f"{row['username']!r} is the only admin; make someone else an admin first")
+        conn.execute("UPDATE users SET status = 'disabled', updated_at = ? WHERE id = ?", (utcnow(), user_id))
+        removed = sessions.revoke_user_sessions(conn, user_id)
+        tokens.void_reset_links(conn, user_id)  # an old link must not work again once the account is enabled
+        issued = tokens.void_issued_by(conn, user_id) if row["role"] == "admin" else 0
+        audit(conn, None, "user.disabled", "user", user_id, via="cli", **({"links_revoked": issued} if issued else {}))
+        conn.commit()
+    except BaseException:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
+    print(f"{row['username']!r} disabled; {removed} session(s) signed out"
+          + (f", {issued} invite or reset link(s) they issued voided" if issued else "") + ".", file=out)
+    return EXIT_OK
+
+
 def cmd_purge_pre_v3_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     path = Path(f"{_db_path(args, settings)}.pre-v3.bak")
     if not path.exists():
@@ -699,6 +787,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("setup-code", help="a new first-run setup code")
     p.set_defaults(func=cmd_setup_code)
+
+    p = sub.add_parser("export-user", help="one person's data export .zip (FILE, or - for stdout)")
+    p.add_argument("username")
+    p.add_argument("file")
+    p.set_defaults(func=cmd_export_user)
+
+    p = sub.add_parser("disable-user", help="disable an account and sign out its devices (not the only admin)")
+    p.add_argument("username")
+    p.set_defaults(func=cmd_disable_user)
 
     p = sub.add_parser("revoke-sessions", help="sign out one account's devices (or --all)")
     p.add_argument("username", nargs="?")

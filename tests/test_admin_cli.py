@@ -332,3 +332,93 @@ def test_purge_pre_v3_backup_and_vacuum(tmp_path, env):
     assert code == 0 and not backup.exists()
     code, out = run(["vacuum"], env)
     assert code == 0 and "vacuumed" in out
+
+
+# --------------------------------------------------------------------------- #
+# export-user and disable-user (note 07 §4.18; v0.3.0 review L14)
+# --------------------------------------------------------------------------- #
+
+
+def _two_people(tmp_path: Path, foods_json: Path) -> None:
+    """The admin and sam, each with a log entry, on a real app; the app is closed again before the CLI runs."""
+    from conftest import HTTPS_URL, add_user, make_settings, signed_in_client
+
+    with signed_in_client(make_settings(tmp_path, foods_json), base_url=HTTPS_URL) as admin_client:
+        food = admin_client.get("/api/foods", params={"limit": 1}).json()["foods"][0]
+        sam = add_user(admin_client)
+        for client, meal in ((admin_client, "breakfast"), (sam, "dinner")):
+            r = client.post("/api/log", json={"date": "2026-10-05", "meal": meal, "food_id": food["id"], "servings": 1})
+            assert r.status_code == 201, r.text
+        assert sam.put("/api/profile", json={"name": "Sam"}).status_code == 200
+
+
+def test_export_user_writes_that_persons_export_privately_and_audits_it(tmp_path, env, foods_json, capsysbinary):
+    import zipfile
+
+    from app.main import APP_VERSION
+
+    _two_people(tmp_path, foods_json)
+    dest = tmp_path / "sam.zip"
+    code, out = run(["export-user", "SAM", str(dest)], env)
+    assert code == 0 and "written to" in out and "health data" in out
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o600
+    with zipfile.ZipFile(dest) as archive:
+        assert {"export.json", "log.csv", "foods.csv", "meals.csv", "labs.csv", "README.txt"} <= set(archive.namelist())
+        data = json.loads(archive.read("export.json"))
+        log_csv = archive.read("log.csv").decode("utf-8")
+    assert data["user"]["username"] == "sam" and data["profile"]["name"] == "Sam" and data["app_version"] == APP_VERSION
+    assert "dinner" in log_csv and "breakfast" not in log_csv  # only sam's rows
+    code, _ = run(["export-user", "sam", str(dest)], env)
+    assert code == 1  # never overwrites
+    conn = sqlite3.connect(env["DATA_DIR"] + "/kidney.db")
+    rows = conn.execute("SELECT actor_user_id, target_id, details_json FROM audit_log WHERE action = 'export.created'").fetchall()
+    conn.close()
+    assert len(rows) == 1 and rows[0][0] is None and json.loads(rows[0][2])["via"] == "cli"
+    code, _ = run(["export-user", "nobody", str(tmp_path / "x.zip")], env)
+    assert code == 1 and not (tmp_path / "x.zip").exists()
+    capsysbinary.readouterr()
+    code = admin.main(["export-user", "sam", "-"], env=env)
+    captured = capsysbinary.readouterr()
+    assert code == 0 and captured.out[:2] == b"PK" and b"written to stdout" in captured.err
+
+
+def test_disable_user_signs_out_voids_links_audits_and_keeps_the_last_admin(tmp_path, env, foods_json, capsys):
+    from datetime import timedelta
+
+    from app.auth import tokens
+
+    _two_people(tmp_path, foods_json)
+    path = Path(env["DATA_DIR"]) / "kidney.db"
+    conn = sqlite3.connect(path)
+    sam_id = conn.execute("SELECT id FROM users WHERE username_norm = 'sam'").fetchone()[0]
+    assert conn.execute("SELECT COUNT(*) FROM sessions WHERE user_id = ?", (sam_id,)).fetchone()[0] >= 1
+    conn.close()
+    assert run(["reset-password", "sam"], env)[0] == 0  # an open reset link for sam
+    code, out = run(["disable-user", "sam"], env)
+    assert code == 0 and "disabled" in out and "session(s) signed out" in out
+    conn = sqlite3.connect(path)
+    assert conn.execute("SELECT status FROM users WHERE id = ?", (sam_id,)).fetchone()[0] == "disabled"
+    assert conn.execute("SELECT COUNT(*) FROM sessions WHERE user_id = ?", (sam_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE user_id = ? AND used_at IS NULL", (sam_id,)).fetchone()[0] == 0
+    row = conn.execute("SELECT actor_user_id, details_json FROM audit_log WHERE action = 'user.disabled'").fetchone()
+    assert row[0] is None and json.loads(row[1])["via"] == "cli"
+    conn.close()
+    code, out = run(["disable-user", "sam"], env)
+    assert code == 0 and "disabled already" in out
+    # The only active admin cannot be disabled.
+    code, _ = run(["disable-user", "admin"], env)
+    assert code == 1 and "only admin" in capsys.readouterr().err
+    # With a second admin it can; the invites and links it issued stop working.
+    assert run_with_stdin(["create-admin", "dad"], env, GOOD_PASSWORD + "\n")[0] == 0
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    admin_id = conn.execute("SELECT id FROM users WHERE username_norm = 'admin'").fetchone()[0]
+    tokens.create_token(conn, tokens.INVITE, ttl=timedelta(days=7), role="user", created_by=admin_id)
+    conn.commit()
+    conn.close()
+    code, out = run(["disable-user", "admin"], env)
+    assert code == 0 and "1 invite or reset link(s) they issued voided" in out
+    conn = sqlite3.connect(path)
+    assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE created_by = ? AND used_at IS NULL", (admin_id,)).fetchone()[0] == 0
+    conn.close()
+    assert run(["disable-user", "nobody"], env)[0] == 1

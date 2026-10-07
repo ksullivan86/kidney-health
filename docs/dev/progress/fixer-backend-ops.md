@@ -35,7 +35,7 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
 | L11 | first-run log line https://<this server> | done |
 | L12 | ISO dates in server texts | done |
 | L13 | AI 10-minute result cache | done |
-| L14 | CLI export-user / disable-user | todo |
+| L14 | CLI export-user / disable-user | done |
 
 ## Done (and how verified)
 
@@ -157,6 +157,17 @@ Scratch: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790b
   ai_eval run). Tests (tests/test_ai_routes.py): reuse within 10 min + expiry + other meal; logging food → new call;
   fallbacks not kept; delete activity / withdraw consent forget; key per person/provider/prompt version; bounded +
   expiry + key order. Docs: ARCHITECTURE AiAnswer `cached`, docs/ai.md Limits and quotas.
+
+* **L14** `app/admin.py` `export-user USERNAME FILE|-` (account.build_export, the web export's zip; O_EXCL 0600, never
+  overwrites, refuses a tty for `-`; APP_VERSION read as text from app/main.py because importing it builds the app;
+  audit `export.created` via cli) and `disable-user USERNAME` (BEGIN IMMEDIATE, last-active-admin rule, status
+  disabled, sessions revoked, reset links voided, an admin's issued links voided, audit `user.disabled` via cli;
+  idempotent). Tests (tests/test_admin_cli.py): real app with admin + sam → export only sam's rows, 0600, no
+  overwrite, audit, unknown user, `-` to stdout (capsysbinary); disable: sessions/links/audit, idempotent, only admin
+  refused, second admin → allowed and its open invite voided. Docs: ARCHITECTURE Admin CLI, docs/accounts.md command
+  reference, handbook self-hosting/users-and-keys.md (one bullet; outside-area minimal change).
+  The ARCHITECTURE Admin CLI text landed in HEAD inside fixer-frontend-docs commit 2799122 (they committed the whole
+  file while my hunk was in the tree); content verified with `git grep "export-user USERNAME FILE" HEAD`.
 
 ## Handoffs (to fixer-frontend-docs)
 

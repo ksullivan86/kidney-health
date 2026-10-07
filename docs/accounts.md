@@ -174,7 +174,9 @@ their account (including what an admin did to it), never an admin's actions on o
 ## Command reference
 
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
-`setup-code` · `revoke-sessions USER|--all` · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
+`setup-code` · `revoke-sessions USER|--all` · `export-user USER FILE|-` (that person's data export, for
+someone who cannot sign in) · `disable-user USER` (never the only admin; signs out their devices; enable
+it again in Settings → People) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings
 list|get|set|unset`. `backup` writes its copy in SQLite's rollback-journal mode, and `restore-check`
 opens a read-only file as immutable, so a backup can be checked on a read-only mount
