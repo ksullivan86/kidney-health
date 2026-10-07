@@ -1291,7 +1291,9 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
 ### Frontend (`js/views/guidance.js`, `KH.guidance`; note 06 §4.16)
 
 * **Add**: "What fits now" (`#guidance-fits`) above the search: a meal picker (set by Today's "Add to …" /
-  "What fits"), the `room_text`, foods by group (two per group, then "Show more"), each with portion,
+  "What fits"), the `room_text`, the targets the answer used and when they were saved (`targets.values`,
+  `profile_updated_at`: "Using the targets in your profile, saved …" with *Check them in Profile*; note 06 R10),
+  foods by group (two per group, then "Show more"), each with portion,
   `fit_text`, the first reason, the renal dot, **Add** / **Plan** (the entry sheet, prefilled) and a "⋯"
   disclosure with **Not for me**; saved/usual meals that fit as chips (a sheet: add or plan them, saved
   ones through `/apply`, usual ones through `/api/log/batch`); tips; `KH.ai.mountIdeas` when `ai.available`.
@@ -1308,7 +1310,7 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   after 19:00 local.
 * **Plan sheet** (`#sheet-guidance`, from Today or Plan → "Plan a day…"): date, meals to plan (the
   server's open slots first), where ideas come from (saved / usual / starters), each meal with its items,
-  totals and why-lines, the day with the plan, the energy note; **Show another** cycles `variant` 0–4;
+  totals and why-lines, the day with the plan, the targets it used (as in What fits now), the energy note; **Show another** cycles `variant` 0–4;
   **Use this plan** sends `apply.entries` to `POST /api/log/batch` with a fresh `client_id` each (one retry
   after a network error is answered `existing`).
 * **Treating a low** (`GET /hypo-options`): the card, the person's options at their dose with **Log it**

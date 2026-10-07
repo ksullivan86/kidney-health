@@ -164,6 +164,41 @@
     const texts = (items || []).filter(Boolean);
     return texts.length ? h('div', { class: 'g-notes' }, texts.map((t) => h('p', { class: 'hint' }, t))) : null;
   }
+  // Which targets an answer used and when the profile holding them was saved (note 06 §5 R10: wrong targets
+  // are amplified by guidance, so the person sees them next to every next-meal and plan answer, with the way
+  // to Profile to change them). Built from the answer's own `targets` block, never from a separate request.
+  const TARGET_LINE = [
+    ['potassium_mg', 'potassium'], ['phosphorus_mg', 'phosphorus'], ['sodium_mg', 'sodium'], ['fluid_ml', 'fluid'],
+    ['protein_g', 'protein'], ['carbs_per_meal_g', 'carbs per meal'], ['carbs_per_snack_g', 'carbs per snack'],
+  ];
+  function targetValueText(key, v) {
+    const fmtKey = key.startsWith('carbs_per_') ? 'carbs_g' : key;
+    const unit = NUT[fmtKey] ? NUT[fmtKey].unit : '';
+    const n = (x) => `${fmtNum(x, fmtKey)} ${unit}`;
+    if (v && typeof v === 'object') {
+      if (v.min != null && v.max != null) return v.min === v.max ? `about ${n(v.min)}` : `${fmtNum(v.min, fmtKey)}–${n(v.max)}`;
+      if (v.min != null) return `at least ${n(v.min)}`;
+      if (v.max != null) return `up to ${n(v.max)}`;
+      return null;
+    }
+    return typeof v === 'number' && Number.isFinite(v) ? n(v) : null;
+  }
+  function savedText(stamp) {
+    const d = stamp ? new Date(stamp) : null;
+    return d && !Number.isNaN(d.getTime()) ? d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : null;
+  }
+  function targetsUsed(targets, { beforeLeave = null } = {}) {
+    if (!targets || !targets.values) return null;
+    const parts = [];
+    for (const [key, word] of TARGET_LINE) {
+      const text = key in targets.values ? targetValueText(key, targets.values[key]) : null;
+      if (text) parts.push(`${word} ${text}`);
+    }
+    const saved = savedText(targets.profile_updated_at);
+    const lead = saved ? `Using the targets in your profile, saved ${saved}` : 'Using the targets in your profile';
+    const open = linkBtn('Check them in Profile', () => { if (beforeLeave) beforeLeave(); router.show('profile'); });
+    return h('p', { class: 'hint g-targets tabular' }, `${lead}${parts.length ? `: ${parts.join(' · ')}.` : '.'} `, open);
+  }
   function timeText(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
   function staleNote(at) {
     return at ? h('p', { class: 'g-offline', role: 'note' }, `Saved at ${timeText(at)}. ${NEEDS_CONNECTION} The suggestions update when it is back.`) : null;
@@ -342,6 +377,8 @@
     if (stale) fitsBody.append(stale);
     if (date !== todayStr()) fitsBody.append(h('p', { class: 'hint' }, `For ${fmtDateLong(date)}.`));
     fitsBody.append(h('p', { class: 'g-room tabular' }, res.room_text));
+    const used = targetsUsed(res.targets);
+    if (used) fitsBody.append(used);
     const onChange = () => loadFits();
     const foods = res.foods || [];
     for (const [group, label] of GROUPS) {
@@ -689,6 +726,8 @@
       if (res.energy_note) out.append(energyNote(res.energy_note));
       out.append(dayAfter(res.day_after));
     }
+    const used = targetsUsed(res.targets, { beforeLeave: () => sheetEl.close() });
+    if (used) out.append(used);
     const n = notes(res.notes);
     if (n) out.append(n);
     const entries = (res.apply && res.apply.entries) || [];

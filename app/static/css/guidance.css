@@ -15,6 +15,9 @@
   margin: 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface-2);
   font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere;
 }
+/* "Using the targets in your profile, saved …" under the room line and in the plan sheet (note 06 R10). */
+.g-targets { margin: 0; overflow-wrap: anywhere; }
+.g-targets .link-btn { white-space: nowrap; }
 .g-group { display: flex; flex-direction: column; gap: 4px; }
 .g-group-title { font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 0 0; }
 .g-notes p { margin: 0; }

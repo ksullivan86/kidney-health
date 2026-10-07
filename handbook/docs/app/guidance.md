@@ -103,6 +103,13 @@ sodium, and nothing is planned. Dinner and the snack slot are still open, so din
 what is left, and no more than 30 % of a day:
 
 > **Left for dinner:** 800 mg potassium · 300 mg phosphorus · 600 mg sodium · 60 g carbs to reach 60 g
+>
+> Using the targets in your profile, saved Oct 3, 2026, 2:15 PM: potassium 3,000 mg · phosphorus
+> 1,000 mg · sodium 2,000 mg · carbs per meal 60 g. **Check them in Profile**
+
+The second line, also shown with every plan, says which targets the suggestions used and when you last
+saved them. If a number is old or wrong, fix it in **Profile** first: guidance follows your targets
+exactly, so a wrong target gives wrong suggestions.
 
 You tap a baked potato with skin (1 medium: 37 g carbohydrate, 926 mg potassium). The sheet warns about
 potassium and offers swaps such as:

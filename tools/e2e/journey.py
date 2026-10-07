@@ -396,7 +396,19 @@ class Journey:
             check(area, f"What fits now ({meal}) never suggests an alcoholic drink", fits["status"] == "ok" and not alcohol, json.dumps(alcohol))
         check(area, "What fits now lists foods for lunch", names, json.dumps(names[:8]))
         check(area, "What fits now says what is left for the meal", "Left for lunch" in page.inner_text("#guidance-fits"))
+        # Note 06 R10: the answer says which targets it used and when the profile holding them was saved.
+        k_target = admin.json("GET", "/api/profile")["targets"].get("potassium_mg")
+        used = page.inner_text("#guidance-fits-body .g-targets")
+        check(area, "What fits now names the targets it used and when they were saved, with a way to Profile",
+              used.startswith("Using the targets in your profile, saved ") and f"potassium {int(k_target):,} mg" in used
+              and "Check them in Profile" in used, used)
         self.shot(page, "04-what-fits")
+        page.click("#guidance-fits-body .g-targets button")
+        page.wait_for_selector("#view-profile:not([hidden])")
+        check(area, "'Check them in Profile' opens Profile", True)
+        self.goto(page, "#add", "#guidance-fits:not([hidden])")
+        page.click("#guidance-fits-meal label[for=gfm-lunch]")
+        page.wait_for_selector("#guidance-fits-body .g-food")
         first = page.locator("#guidance-fits-body .g-food").first
         picked = first.locator(".row-title").inner_text()
         first.locator("button.g-act", has_text="Add").click()
@@ -439,6 +451,9 @@ class Journey:
         self.goto(page, "#today", "#guidance-today-actions")
         page.click("#guidance-today-actions button >> text=Plan the rest of my day")
         page.wait_for_selector("#sheet-guidance[open] #g-plan-use:not([disabled])")
+        used = page.inner_text("#g-plan-out .g-targets")
+        check(area, "the plan names the targets it used and when they were saved",
+              used.startswith("Using the targets in your profile, saved ") and f"potassium {int(k_target):,} mg" in used, used)
         self.shot(page, "04-plan")
         planned_n = int(re.search(r"plan (\d+)", page.get_attribute("#g-plan-use", "aria-label") or "plan 0").group(1))
         with page.expect_response(lambda r: r.url.endswith("/api/log/batch")) as batch:

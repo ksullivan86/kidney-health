@@ -228,6 +228,23 @@ def test_the_view_uses_no_html_sinks_and_marks_lists() -> None:
         assert storage not in VIEW, storage
 
 
+def test_answers_show_which_targets_they_used_and_when_saved() -> None:
+    """Note 06 §5 R10 (wrong targets amplified by guidance): What fits now and the plan sheet show the targets the
+    answer used and when the profile holding them was saved, from the answer's own `targets` block, with a way
+    to Profile. The keys the line names are ones the server sends (and the demo twin mirrors)."""
+    block = re.search(r"const TARGET_LINE = \[(.*?)\];", VIEW, re.S)
+    assert block, "TARGET_LINE not found in js/views/guidance.js"
+    keys = re.findall(r"\['(\w+)', '[\w ]+'\]", block.group(1))
+    assert set(keys) <= set(guidance_api.TARGET_KEYS_SHOWN), set(keys) - set(guidance_api.TARGET_KEYS_SHOWN)
+    assert {"potassium_mg", "phosphorus_mg", "sodium_mg", "carbs_per_meal_g", "carbs_per_snack_g"} <= set(keys)
+    assert "for (const k of TARGET_KEYS_SHOWN)" in MOCK and "profile_updated_at: ctx.profile.targets_updated_at" in MOCK
+    assert VIEW.count("targetsUsed(res.targets") == 2  # What fits now and the plan sheet
+    assert "targets.profile_updated_at" in VIEW and "Using the targets in your profile, saved" in VIEW
+    assert "Check them in Profile" in VIEW and "router.show('profile')" in VIEW
+    # A target of min == max reads "about X" (the Today rule), a min-only one "at least X".
+    assert "v.min === v.max ? `about ${n(v.min)}`" in VIEW and "`at least ${n(v.min)}`" in VIEW
+
+
 def test_settings_view_lists_the_guidance_keys() -> None:
     for key in ("guidance.enabled", "guidance.pool_per_role", "guidance.beam_width"):
         assert key in settings_registry.REGISTRY, key

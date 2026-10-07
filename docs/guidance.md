@@ -230,8 +230,12 @@ part of the account export (`export.json` → `food_preferences`).
 ## Data the engine reads
 
 * The person's **profile** exactly as the Today screen reads it (`app.profile.get_profile`): targets,
-  `warn_fraction`, dialysis mode and days, diabetes type, and when the profile was last saved (shown with
-  every next-meal and plan answer, so the person knows which targets were used).
+  `warn_fraction`, dialysis mode and days, diabetes type, and when the profile was last saved. Every
+  next-meal and plan answer returns them as `targets: {values, profile_updated_at}` (note 06 R10), and the
+  app shows them under the room line of What fits now and in the plan sheet: "Using the targets in your
+  profile, saved Oct 3, 2026, 2:15 PM: potassium 3,000 mg · … · carbs per meal 60 g. Check them in
+  Profile" (`targetsUsed()` in `js/views/guidance.js`; a `{min, max}` target with min = max reads "about X",
+  a min-only one "at least X").
 * **Foods** the person may use, as vectors cached per database and `meta.foods_rev` (bumped by database
   triggers on every food or link write, schema step 5); curated `role` overrides and the `ingredient`
   flag come from `data/foods.json`.

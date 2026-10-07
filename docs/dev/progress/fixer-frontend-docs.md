@@ -18,7 +18,7 @@ CONFIRMED (fix with root cause and a test):
 | C2 | handbook light-scheme links/header fail WCAG AA | done |
 | C3 | Settings → This device renders twice on first visit | done |
 | C4 | DG47 dead citation on 13 handbook pages | done |
-| C5 | guidance never shows which targets it used / when saved | pending |
+| C5 | guidance never shows which targets it used / when saved | done |
 
 LOW (apply or justify): see the table below as each is done.
 
@@ -49,12 +49,24 @@ LOW (apply or justify): see the table below as each is done.
   `test_recipe_review_lines_cite_the_sources_that_state_them`. Strict build OK; `handbook/tools/check_links.py`
   0 broken of 14,636; `tests/test_learn_links.py` against the built site passes.
 
+* **C5** `js/views/guidance.js` `targetsUsed()`: under What fits now's room line and in the plan sheet, "Using
+  the targets in your profile, saved <date, time>: potassium … · carbs per meal … . Check them in Profile"
+  from the answer's own `targets` block (`values`, `profile_updated_at`); {min,max} with min = max → "about X".
+  Tests: `tests/test_guidance_ui.py::test_answers_show_which_targets_they_used_and_when_saved` (keys ⊆ the
+  server's TARGET_KEYS_SHOWN, demo twin mirrors them), `tools/e2e/journey.py` step 4 (both places, the
+  profile's potassium value, the Profile link): 125/125. Docs: docs/guidance.md, handbook app/guidance.md,
+  ARCHITECTURE guidance Frontend bullets (only my hunks staged with `git apply --cached`).
+
 ## Coordination
 
 * The backend fixer (`fixer-backend-ops`) owns the server half of C1 (their C8: unknown K/P counted as 0 in
   `app/log.py`; their C6: insights). I build the UI on the shape they add to DaySummary / range / summary and
   update the mock twin (`js/mock/log.js`) to match. If their shape is not there when I reach C1, I add the
   smallest server change myself and say so here.
+* Their contract text (uncommitted in ARCHITECTURE.md "Foods and log changes" when I looked): DaySummary gains
+  `unknown`, `planned_unknown`, `projected_unknown`, `meal_unknown`, `planned_meal_unknown` ({nutrient: n});
+  status items `unknown: n`; range days the three maps; PeriodSummary nutrients `unknown_entries`,
+  `unknown_days`; interdialytic `unknown_entries`; UI "+ n not listed"; the demo twin returns the same.
 
 ## Next steps
 
