@@ -13,8 +13,9 @@ Emulates the claude.ai Artifact host as strictly as practical:
 * loads it top level AND inside an outer page's <iframe sandbox="allow-scripts"> (opaque origin:
   storage throws, alert/confirm/prompt suppressed, downloads and form submission blocked, no
   query string reaches the page);
-* walks the app (Today, Add, Plan, Trends, Profile with the explained suggestion, Lab results, delete
-  with in-page confirmation, banner) at
+* walks the app (Today, Add, Plan, Trends, What fits now, a recorded barcode with the Open Food Facts
+  agreement, Plan the rest of my day, Treating a low, Profile with the explained suggestion, Lab results,
+  delete with in-page confirmation, banner) at
   375x812 (touch, safe-area insets 47/34) and 1280x800, prefers-color-scheme light/dark and host
   data-theme dark/light, and records console errors, CSP violations, page errors, network
   requests other than the documents, horizontal overflow, elements outside the viewport,
@@ -765,6 +766,38 @@ class Run:
             self.issue("trends", "Copy CSV fallback did not select the text", f"status {status!r}, selection {sel}", "medium")
         self.shot("csv-copied")
         self.press("#sheet-csv .sheet-foot [data-close]", "Close CSV sheet", wait=self.wait_fn("() => !document.querySelector('#sheet-csv').open"))
+
+        # ---- Meal guidance and barcodes (v0.3): What fits now, a recorded barcode, Plan the rest, Treating a low ----
+        self.press("#tab-add", "Add tab (What fits now)", wait=self.wait_fn("() => !document.querySelector('#view-add').hidden"))
+        self.press("#guidance-fits-meal label[for=gfm-dinner]", "What fits dinner",
+                   wait=self.wait_fn("() => document.querySelectorAll('#guidance-fits-body .g-food').length > 0"))
+        self.shot("what-fits")
+        self.checks("What fits now", contrast=True)
+        self.press("#btn-scan", "Scan a barcode", wait=self.wait_fn("() => document.querySelector('#sheet-scan').open"))
+        self.F.locator("#scan-code").fill("3017624010701")
+        self.press("#scan-go", "Look up a recorded demo barcode",
+                   wait=self.wait_fn("() => document.querySelector('#sheet-entry').open || /Open Food Facts/.test(document.querySelector('#scan-result').textContent)"))
+        if not self.F.evaluate("document.querySelector('#sheet-entry').open"):
+            self.shot("scan-consent")
+            self.checks("Scan: the Open Food Facts agreement", contrast=True)
+            self.press("#scan-result button.primary", "Agree and look up", wait=self.wait_fn("() => document.querySelector('#sheet-entry').open"))
+        prov = self.text("#sheet-entry-provenance")
+        if "Open Food Facts contributors, ODbL" not in prov:
+            self.issue("barcode", "The scanned product does not show its ODbL attribution", prov[:200], "high")
+        self.shot("scan-entry")
+        self.checks("Entry sheet for a scanned product", contrast=True)
+        self.press("#sheet-entry [data-close]", "Close the entry sheet", nth=0, wait=self.wait_fn("() => !document.querySelector('#sheet-entry').open"))
+        self.press("#tab-today", "Today tab (Meal ideas)", wait=self.wait_fn("() => !!document.querySelector('#guidance-today-actions button')"))
+        self.press("#guidance-today-actions button:has-text('Plan the rest of my day')", "Plan the rest of my day",
+                   wait=self.wait_fn("() => document.querySelector('#sheet-guidance').open && !!document.querySelector('#g-plan-use')"))
+        self.shot("plan-sheet")
+        self.checks("Plan the rest of my day", contrast=True)
+        self.press("#sheet-guidance [data-close]", "Close the plan", nth=0, wait=self.wait_fn("() => !document.querySelector('#sheet-guidance').open"))
+        self.press("#guidance-today-actions button:has-text('Treating a low')", "Treating a low",
+                   wait=self.wait_fn("() => document.querySelector('#sheet-guidance').open && /Treating a low/.test(document.querySelector('#sheet-guidance').textContent)"))
+        self.shot("treating-a-low")
+        self.checks("Treating a low", contrast=True)
+        self.press("#sheet-guidance [data-close]", "Close Treating a low", nth=0, wait=self.wait_fn("() => !document.querySelector('#sheet-guidance').open"))
 
         # ---- Profile ----
         self.press("#tab-profile", "Profile tab", wait=self.wait_fn("() => document.querySelector('#pf-weight').value === '70'"))

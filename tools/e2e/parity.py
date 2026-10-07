@@ -43,6 +43,8 @@ Sections
      PUT keeping them, copy, quick add) and POST /api/foods/barcode (the person's own foods by every barcode
      form, refresh, lookups off, and every 400/422 with its reason); errors also compare reason, gtin,
      checked, name and contribute_url
+  14 optional AI while it is off (the demo never calls a provider): GET /api/me/ai has the same shape, enabled false and
+     the same personal settings; every /api/ai/* and /api/vision/* route (and the personal probe) answers 404 on both sides
 
 ``--sections 0,11`` runs only those sections (section 1 always runs first: the others need its food ids).
 Error answers are compared by status, detail and, when either side sends one, ``code``.
@@ -989,6 +991,39 @@ class Harness:
                              ignore=frozenset())
 
 
+    def section14(self) -> None:
+        """Optional AI while it is off (the demo always answers like a server with AI off; ARCHITECTURE.md
+        "M2 API: AI and photos" → Parity): GET /api/me/ai has the same keys and value types and says
+        ``enabled: false``; every /api/ai/* and /api/vision/* route answers 404 {"detail": "Not Found"} on both sides."""
+        S = "14 AI off"
+
+        def shape(v: Any) -> Any:
+            if isinstance(v, dict):
+                return {k: shape(x) for k, x in v.items()}
+            if isinstance(v, list):
+                return [shape(v[0])] if v else []
+            if isinstance(v, bool):
+                return "bool"
+            if _is_num(v):
+                return "number"
+            return "null" if v is None else type(v).__name__
+
+        rs, rm = self.server.call("GET", "/api/me/ai"), self.mock.call("GET", "/api/me/ai")
+        self.rec.compare(S, "GET /api/me/ai status", rs["status"], rm["status"])
+        if rs["status"] == 200 and rm["status"] == 200:
+            mine = lambda b: {k: v for k, v in b.items() if k not in ("presets", "shared")}  # noqa: E731  (server lists)
+            self.rec.compare(S, "GET /api/me/ai shape", shape(mine(rs["body"])), shape(mine(rm["body"])), ignore=frozenset())
+            self.rec.compare(S, "GET /api/me/ai enabled", rs["body"].get("enabled"), rm["body"].get("enabled"), ignore=frozenset())
+            self.rec.compare(S, "GET /api/me/ai settings", rs["body"].get("settings"), rm["body"].get("settings"), ignore=frozenset())
+        routes = (("GET", "/api/ai/status", None), ("POST", "/api/ai/next-meal", {"meal": "dinner"}),
+                  ("POST", "/api/ai/parse-meal", {"text": "toast"}), ("POST", "/api/ai/consent", {"provider_id": 1, "purpose": "text"}),
+                  ("DELETE", "/api/ai/consent/1", None), ("GET", "/api/ai/audit", None), ("DELETE", "/api/ai/audit", None),
+                  ("POST", "/api/vision/label", None), ("POST", "/api/vision/plate", None), ("POST", "/api/me/ai/probe", None))
+        for method, path, body in routes:
+            rs, rm = self.server.call(method, path, body), self.mock.call(method, path, body)
+            self.rec.compare(S, f"{method} {path} while AI is off", {"status": rs["status"], "detail": rs.get("detail")},
+                             {"status": rm["status"], "detail": rm.get("detail")}, ignore=frozenset())
+
     def section11(self) -> None:
         """Personalised targets and labs (note 05; ARCHITECTURE.md "M2 API: targets and labs")."""
         today = date.today()
@@ -1594,7 +1629,7 @@ def main(argv: list[str] | None = None) -> int:
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
                          ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
-                         ("11", h.section11), ("12", h.section12), ("13", h.section13)]
+                         ("11", h.section11), ("12", h.section12), ("13", h.section13), ("14", h.section14)]
                 if args.sections:
                     wanted = {"1", *args.sections.split(",")}
                     steps = [(name, fn) for name, fn in steps if name in wanted]

@@ -897,6 +897,46 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         check(A, "no horizontal scroll on Trends", ok, d)
         shot(page, A, "13-trends", full=True)
 
+        # ---------------------------------------------------------------- 10b. meal guidance and barcodes (v0.3)
+        go_tab(page, "add")
+        page.click("#guidance-fits-meal label[for=gfm-dinner]")
+        page.wait_for_selector("#guidance-fits-body .g-food", timeout=8000)
+        fits = sget(f"/api/guidance/next-meal?meal=dinner&date={today}").json()
+        shown = page.locator("#guidance-fits-body .g-food .row-title").all_inner_texts()
+        check(A, "What fits now (dinner) shows the server's suggestions with what is left",
+              fits["status"] == "ok" and shown and shown[0] in [f["name"] for f in fits["foods"]] and "Left for dinner" in page.inner_text("#guidance-fits"),
+              f"{shown[:3]} vs {[f['name'] for f in fits['foods'][:3]]}")
+        ok, d = no_hscroll(page)
+        check(A, "no horizontal scroll on Add with What fits now", ok, d)
+        shot(page, A, "13b-what-fits")
+        API.json("POST", "/api/foods", {"name": "Regress crackers", "serving_desc": "5 crackers (30 g)", "serving_g": 30,
+                                        "nutrients": {"carbs_g": 20, "sodium_mg": 180}, "gtin": "4006381333931",
+                                        "ingredients_text": "wheat flour, sunflower oil, potassium chloride, salt"})
+        page.click("#btn-scan")
+        page.wait_for_selector("#sheet-scan[open]")
+        page.fill("#scan-code", "4006381333931")
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/foods/barcode")) as bar:
+            page.click("#scan-go")
+        page.wait_for_selector("#sheet-entry[open]")
+        sheet = page.inner_text("#sheet-entry")
+        check(A, "A typed barcode finds the person's own food (no outside lookup) with the additive warning",
+              bar.value.status == 200 and bar.value.json()["source"] == "local" and "Contains a potassium additive; potassium not listed" in sheet,
+              f"{bar.value.status} {sheet[:200]}")
+        shot(page, A, "13c-barcode-entry")
+        page.click("#sheet-entry [data-close] >> nth=0")
+        wait_dialog(page, "sheet-entry", False)
+        go_tab(page, "today")
+        page.click("#guidance-today-actions button >> text=Treating a low")
+        page.wait_for_selector("#sheet-guidance[open]")
+        page.wait_for_function("() => /fast carbs/.test(document.querySelector('#sheet-guidance').textContent)"
+                               " && !!document.querySelector('#sheet-guidance .g-food')", timeout=8000)
+        low = page.inner_text("#sheet-guidance")
+        check(A, "Treating a low opens the card and the low-treatment options (never a warning)",
+              "15 g of fast carbs" in low and "Log it" in low, low[:200])
+        shot(page, A, "13d-treating-a-low")
+        page.click("#sheet-guidance [data-close] >> nth=0")
+        wait_dialog(page, "sheet-guidance", False)
+
         # ---------------------------------------------------------------- 11. final Today + global checks
         go_tab(page, "today")
         wait_day_render(page)
