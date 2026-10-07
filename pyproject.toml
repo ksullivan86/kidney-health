@@ -1,6 +1,6 @@
 [project]
 name = "kidney-health"
-version = "0.3.0.dev0"
+version = "0.3.0"
 description = "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings"
 license = { text = "PolyForm-Noncommercial-1.0.0" }
 requires-python = ">=3.11"

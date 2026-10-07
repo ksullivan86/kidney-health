@@ -143,7 +143,7 @@ def test_diet_coke_from_open_food_facts(world: World) -> None:
     assert {(w["nutrient"], w["level"], w["flag"]) for w in food["warnings"]} >= {("phosphorus_mg", "high", "phosphate_additive")}
     request = world.off.requests[0]
     assert request.url.path == "/api/v3.4/product/0049000028911"
-    assert request.headers["User-Agent"] == "KidneyHealth/0.3.0.dev0 (https://github.com/ksullivan86/kidney-health)"
+    assert request.headers["User-Agent"] == "KidneyHealth/0.3.0 (https://github.com/ksullivan86/kidney-health)"
     assert world.usda.requests == []  # no USDA key on this server
 
 
