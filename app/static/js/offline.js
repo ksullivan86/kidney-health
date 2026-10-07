@@ -547,6 +547,12 @@
         return snap ? markOffline(clone(snap.data), { fetched_at: snap.fetched_at }) : undefined;
       }
       if (method === 'POST' && kindOf(method, path)) return await enqueue(method, path, body);
+      // Everything else that changes data needs the server (note 02 R5): say so instead of a bare network error.
+      if (err && method !== 'GET') {
+        err.message = `${err.timedOut ? 'Your server did not answer in time' : 'Your server cannot be reached'}, so this change was not saved: `
+          + 'it needs a connection. Food you log still waits on this device and syncs later.';
+        err.detail = err.message;
+      }
     } catch (e) {
       console.warn('Offline answer failed:', e);
     }

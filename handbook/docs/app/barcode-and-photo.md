@@ -92,13 +92,15 @@ If the scan finds no ingredient list, read it on the package. See
 The app offers **Enter from the label**: Quick add opens with the barcode filled in.
 
 1. Tap **Use a photo of the label** and take a clear, flat picture.
-2. The photo stays on your phone and appears above (or beside) the form. Pinch to zoom.
+2. The photo stays on your phone and appears above the form (beside it on a wide screen). Use the
+   **1×, 2×, 3×** buttons, or pinch, to zoom.
 3. Copy each number per serving. Leave a box empty if it is not on the label.
 4. Type or paste the **ingredients** so the app can set the additive flags.
 5. Save. The new food keeps the barcode, so the next scan finds it at once.
 
 **Optional: Read a label (AI).** If your admin switched on AI with photos and you opted in, **Add →
-Read a label (AI)** sends the photo to the AI ([Optional AI](ai.md)). Your phone first redraws it, which
+Read a label (AI)**, or **Read the label for me (AI)** under the photo in Quick add, sends the photo to
+the AI ([Optional AI](ai.md)). Your phone first redraws it, which
 removes the location and camera data, and the server removes any that remain. The AI only copies printed
 numbers and leaves missing ones empty; the app works out sodium from salt and marks values it estimated
 from the % Daily Value. You get a draft with every field the AI filled marked "from photo". Check each one

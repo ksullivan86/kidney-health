@@ -33,6 +33,23 @@ patient-facing version of this page is the handbook's
 Every way ends the same: only the digits go to your server. A US 12-digit code, the same number read as
 13 digits (with a leading 0), its 14-digit form and the short 8-digit UPC-E code all find the same food.
 
+In the app: **Add → Scan** opens the three ways in one sheet.
+
+* **Camera**: point it at the barcode inside the frame and hold still; the app takes a code only after
+  reading the **same digits twice**, then stops the camera. The camera also stops when you close the
+  sheet, switch apps or leave the page. If the camera sends no picture for 4 seconds, the sheet says so
+  and offers the photo and typing instead. On a plain-HTTP address the camera button is replaced by why
+  (camera access needs HTTPS) and the photo route.
+* **Photo of a barcode**: the phone's own decoder reads it when the browser has one (Chrome on Android,
+  for example); otherwise the app's built-in reader (about 1 MB, part of the app, downloaded from your
+  server the first time it is needed and kept for offline use). Either way the photo stays on the device.
+* **Type the barcode**: the check digit is checked as you submit; a wrong digit or an in-store code is
+  explained under the field before anything is sent.
+
+A found product opens the usual "Add food" sheet with where its data came from under the name: the
+attribution (a link to the product page), the barcode, the quality notes, the additives found and the
+ingredient list. Review the amount and log it.
+
 ### Turning lookups on
 
 | Who | What | Where |
@@ -102,6 +119,24 @@ keeps the barcode, so the next scan finds it at once.
 
 You can also add the product to Open Food Facts for everyone: the answer carries the link
 `https://world.openfoodfacts.org/cgi/product.pl?type=search_or_add&action=display&code=<barcode>`.
+
+**Quick add with a photo of the label.** Quick add has *Use a photo of the label*: the photo is shown
+beside the form on a wide screen (above it on a phone) with 1×, 2× and 3× zoom, so you can copy the
+numbers. It stays on your device (the page shows it from memory and forgets it when you close Quick add).
+Only if your admin set up AI with a vision model is there also **Read the label for me (AI)**, which sends
+a resized copy (see [Photos](#photos)) and fills the fields, each marked "from photo" until you change it.
+Under the **Ingredients** box the app says what saving will mark, as you type ("Saving marks this food:
+Phosphate additives", "Potassium additives", or "Avoid with CKD" for a salt substitute): the same rules
+the server applies when you save.
+
+**Without a connection** a barcode cannot be looked up (the lookup runs on your server), but products you
+scanned or opened before are in the offline food search, and what you log waits on the device until the
+server can be reached ([`install-on-your-phone.md`](install-on-your-phone.md#offline)).
+
+**In the demo** (`?mock=1` and the preview) Open Food Facts is "on" with three recorded products: Diet Coke
+`049000028911`, Kraft macaroni & cheese `021000658831` and Nutella `3017624010701`. It still asks for your
+agreement first, and any other barcode says it is not one of the three. The preview has no built-in
+barcode reader and no camera: type the digits.
 
 ### Limits
 
@@ -177,6 +212,21 @@ You can also add the product to Open Food Facts for everyone: the answer carries
   `app/static/js/engine/rules.js` (parity: `tests/data/rules_vectors.json`).
 * Fixtures are real recorded answers (`scripts/record_barcode_fixtures.py off|usda`); tests replay them
   and never touch the network (`tests/test_off_mapping.py`, `test_usda_branded.py`, `test_barcode_api.py`).
+* Browser: `app/static/js/scan.js` (`KH.scan`: decoder choice, camera, photo, typed digits, the answers'
+  panels, provenance, Quick add's label photo), `css/device.css`, and the twins `js/engine/gtin.js`,
+  `textclean.js`, `additives.js`, `off.js` (parity: `tests/data/barcode_vectors.json`, generator
+  `tests/data/gen_barcode_vectors.py`, run by `node tests/js/run_vectors.mjs`). The demo route is
+  `js/mock/barcode.js`; `tools/e2e/parity.py` section 13 compares it with the server.
+* The built-in reader is vendored, never loaded from a CDN: `barcode-detector` 3.2.2 (`ponyfill.iife.js`)
+  and `zxing-wasm` 3.1.3 (`zxing_reader.wasm`), MIT, built on ZXing-C++ (Apache-2.0), in
+  `app/static/vendor/` with SHA-256 pins and licences in `app/static/vendor/README.md`.
+  `python scripts/vendor_barcode.py` fetches them from the npm registry (checking npm's SHA-512 integrity
+  and the pins); `--check` verifies the files offline (`tests/test_vendor.py`), `--check-latest` reports new
+  releases (weekly in `.github/workflows/vendor-check.yml`, warning only). The page's CSP allows
+  `'wasm-unsafe-eval'` for it.
+* Browser checks: `tools/e2e/device.py` decodes a generated EAN-13 photo with the built-in reader and
+  through the native-detector branch, scans with Chromium's fake camera on `http://localhost`, and checks
+  the label photo upload (≤ 1600 px, no EXIF) against a fake OpenAI-compatible server.
 * `scripts/check_off_live.py` checks the mapping against the live service (staging by default); the
   weekly workflow `.github/workflows/off-live-check.yml` runs it and only warns. Open Food Facts API 3.5+
   empties the classic `nutriments` object; the app pins 3.4 and keeps `parse_nutrition_v35` ready

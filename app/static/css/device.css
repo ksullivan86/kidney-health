@@ -58,6 +58,7 @@
 .zoom-seg .chip { min-width: var(--tap); min-height: var(--tap); }
 .quick-photo-ai { display: flex; flex-direction: column; gap: 8px; }
 .quick-photo-ai p { margin: 0; }
+.quick-photo-ai .link-btn { min-height: var(--tap); }
 .optional { font-weight: 400; color: var(--text-2); }
 .ingredients-scan:empty { display: none; }
 .ingredients-scan { color: var(--over-text); font-weight: 600; }

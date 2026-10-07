@@ -257,7 +257,7 @@
   //   afterResponse(method, path, body, data, opts) → data                 saves copies, merges waiting entries
   function networkError(timedOut = false) {
     const err = new Error(timedOut ? 'The server did not answer in time. Check your connection.' : 'Cannot reach the server. Check your connection.');
-    err.status = 0; err.detail = err.message; err.offline = true;
+    err.status = 0; err.detail = err.message; err.offline = true; err.timedOut = timedOut;
     return err;
   }
   async function unreachable(method, path, body, opts, err) {

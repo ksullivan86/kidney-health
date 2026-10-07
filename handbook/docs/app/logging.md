@@ -106,8 +106,14 @@ database, including branded foods. Tap **Import** to copy one into your list. Im
 ## Offline (coming in v0.3)
 
 With v0.3, **Add**, **Quick add** and **Mark eaten** also work with no connection. The entry waits on
-your phone with a "waiting to sync" badge and is sent when you are back online. Editing or deleting
-an older entry still needs the server ([design note 02][NOTE02]).
+your phone with a "waiting to sync" badge and is sent when you are back online, once, even if the
+connection drops halfway. A badge at the top shows how many entries wait; tap it to see them. Editing or
+deleting an older entry still needs the server, and the app says so instead of saving it
+([design note 02][NOTE02]).
+
+If the server refuses a waiting entry when it arrives (for example, the food was deleted in the
+meantime), the entry is kept as **not saved** with the reason under **Settings → This device**. Tap
+**Retry** or **Discard**; nothing is thrown away without you seeing it.
 
 ## What to do
 

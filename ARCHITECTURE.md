@@ -719,7 +719,17 @@ app/static/
   css/guidance.css      What fits now, the Meal ideas and insight cards, the guidance sheet, swap ideas, Settings → Meal guidance
   js/mock/guidance.js   demo /api/guidance/* routes over KH.guidanceEngine; js/mock/log.js answers POST /api/log/batch,
                         purpose and client_id; js/mock/meals.js answers meal_hint
-  js/pwa.js (M1), js/offline.js, js/scan.js (M2)
+  js/pwa.js (M1)
+  js/offline.js         KH.offline + KH.net (M2 offline outbox; see "M2: the offline outbox"): IndexedDB `kdl`, the
+                        outbox, saved copies of recent days, the header sync badge, Settings → This device list, sign-out sheet
+  js/scan.js, css/device.css   KH.scan (M2 barcode; see "M2 API: barcode" → Frontend): the Scan sheet (native
+                        BarcodeDetector, else the vendored decoder), Quick add's label photo and ingredients, provenance
+  js/engine/textclean.js, gtin.js, additives.js, off.js    (M2 barcode) KH.textclean / KH.gtin / KH.additives / KH.off,
+                        twins of app/textclean.py, app/gtin.py, app/additives.py and app/off.py's texts (in that order)
+  js/mock/barcode.js    demo POST /api/foods/barcode (three recorded Open Food Facts products); js/mock/foods.js answers
+                        gtin, ingredients_text and the v0.3 Food fields
+  vendor/barcode-detector-3.2.2/ponyfill.iife.js, vendor/zxing-wasm-3.1.3/zxing_reader.wasm   the WASM barcode
+                        reader (MIT, ZXing-C++ Apache-2.0), pinned by SHA-256 in vendor/README.md (scripts/vendor_barcode.py)
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
   js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
   js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
@@ -1431,6 +1441,83 @@ The browser rules twin (`js/engine/rules.js`) has the `potassium_additive` flag 
 vectors (`tests/data/rules_vectors.json`, generator `tests/data/gen_rules_vectors.py`) cover it. The new
 `food.*` settings are in `tests/data/settings_vectors.json` (a string key's `pattern` too, with cases
 that break it), which `js/engine/settings.js` must match (frontend).
+
+`js/engine/gtin.js`, `textclean.js`, `additives.js` and `off.js` (quality sentences, attribution) are checked
+by `tests/data/barcode_vectors.json` (generator `tests/data/gen_barcode_vectors.py`: every GTIN form and
+class, text cleaning incl. Python's `\s`/`casefold` semantics, every fixture's ingredient list and 500
+generated ones, the three demo products produced by the real route over the recorded fixtures).
+`js/mock/barcode.js` answers `POST /api/foods/barcode` with the server's validation, reasons and texts; in
+the demo Open Food Facts is "on" (locked) with **three recorded products** (Diet Coke 049000028911,
+Kraft macaroni 021000658831, Nutella 3017624010701, from `tests/fixtures/off/`), consent is still asked, and
+any other barcode answers 404 naming the samples. `tools/e2e/parity.py` section 13 compares foods with a
+`gtin` and ingredient list and every lookup answer (with `reason`, `gtin`, `checked`) against a real server
+with lookups off on both sides.
+
+### Frontend (`js/scan.js` = `KH.scan`, `css/device.css`; note 03 R7, R8 client side, R9, R11)
+
+* **Add view → Scan** (first action) opens `#sheet-scan`: *Camera* (live), *Photo of a barcode*, *Type the
+  barcode* (digits or a USB/Bluetooth scanner; the check digit is checked in the browser with `KH.gtin`,
+  errors under the field with `aria-describedby`/`aria-invalid`). Decoding is on the device only: the
+  native `BarcodeDetector` when it supports `ean_13`, else the vendored ponyfill (`window.BarcodeDetectionAPI`,
+  a static deferred script) whose 1 MB WebAssembly reader is fetched from `/vendor/zxing-wasm-3.1.3/` on
+  first use (`locateFile` override; CSP `script-src 'self' 'wasm-unsafe-eval'`; never cached by the service
+  worker's shell list, kept in its vendor cache after first use). The preview build omits the ponyfill
+  (`data-preview="omit"`): there a photo is read only by a native `BarcodeDetector`, the camera is off,
+  and addresses of other sites are shown as text (its sandboxed frame cannot open new windows).
+* **Live camera** only in a secure context (HTTPS or `localhost`); on plain HTTP the button is replaced by
+  why and the photo route. `getUserMedia({video: {facingMode: "environment"}})`, ~8 detections a second,
+  a result after **two identical reads**, a 4-second no-frame watchdog, tracks stopped on close, Escape,
+  `visibilitychange` (hidden), `pagehide` and navigation.
+* **Result:** `POST /api/foods/barcode` → the entry sheet (`KH.views.add.openEntrySheet`) with the food's
+  provenance under its name: the attribution line (link only when `https:`, `target=_blank`, `rel=noopener
+  noreferrer`), "Barcode <digits>", the quality notes, "Additives found: …", the ingredient list; missing
+  potassium/phosphorus read **"not listed"** (never 0). 404 → *Enter from the label* (Quick add with the
+  barcode and the photo prompt) and the Open Food Facts contribute link; 503 `off_consent_required` → the
+  consent panel (`PATCH /api/me/settings {"food.off_consent": true}` then the lookup again); 503 lookups off,
+  429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward.
+* **Quick add** gains *Barcode* (optional, checked like the scan), *Ingredients* (optional; the browser
+  additive scan shows "Phosphate additives / Potassium additives / …" before saving and the server stores
+  the same flags) and *Use a photo of the label*: shown beside the form on wide screens (above it on
+  phones), zoom 1×/2×/3×, an object URL revoked when removed or closed, never uploaded unless the person
+  presses *Read the label for me (AI)* (offered when `KH.ai` reports the `label` feature): the browser
+  re-encodes it to a JPEG with the long edge ≤ 1600 px through a canvas (no EXIF), asks consent once per
+  destination, and fills the fields marked "from photo" (the mark goes when a field is edited).
+* **Settings → About** lists the data sources (Open Food Facts ODbL notice and method file, USDA FoodData
+  Central citation, the decoder's licences); Admin → Server settings groups the `food.*` keys.
+
+## M2: the offline outbox (`js/offline.js` = `KH.offline`, `KH.net`; note 02 R5)
+
+* **Storage:** IndexedDB database `kdl` (version 1) with stores `meta`, `snapshots` (key `[user_id, path]`),
+  `foods` (key `[user_id, id]`) and `outbox` (key `client_id`, index `created_at`), no library; in the demo,
+  the preview or a browser without IndexedDB the same stores live in memory. Health data never goes to
+  `localStorage`. Everything is per person (`user_id`); another person's items are never sent. Sign-out and
+  *Clear offline data on this device* delete the database (the server's logout also sends `Clear-Site-Data`).
+* **Hooks in `KH.request`** (`KH.net`): `prepare` gives every `POST /api/log` and `/quick` a fresh
+  `client_id` (UUID v4) from its first try; `timeoutFor` aborts a log write or a snapshot read after 6 s;
+  on a network failure (or a 502/503/504 that is not the app's JSON) a log write is **queued** and answered
+  with a pending entry (`id: "pending:<client_id>"`, warnings from the rules twin), a `GET` of a saved path
+  is answered from this device's copy (`/api/auth/status`, `/api/profile`, `/api/me`, `/api/handbook`,
+  `/api/foods/categories`, `/api/meals`, `/api/log?date=` for 13 days back to 7 ahead, `/api/log/range`,
+  `/api/log/summary`), and food search from the foods this device has seen (refreshed daily, ≤ 200 per
+  category); `afterResponse` saves copies and merges waiting entries into the day (totals recomputed with the
+  mock's day maths).
+* **Sync:** on `online`, page show, visibility, every 30 s while something waits, and on start; one at a time
+  (Web Locks `kdl-sync` across tabs). FIFO: consecutive entries go through `POST /api/log/batch` (≤ 40), a
+  quick add or mark-eaten alone; a batch the server refuses is retried without the item its message names
+  (`entries[i]` / `entries.i.`), or one by one when none is named. A refused item is kept as **not saved**
+  with the server's reason (Retry / Discard in Settings → This device); a network error, 5xx, 429, 401 or 403
+  stops the run and the items keep waiting. A repeated `client_id` answers `existing`, so a lost answer
+  never makes a second row.
+* **UI:** the header badge (`#sync-badge`: "Offline · 2 to sync" / "1 not saved"; on phones the number, the
+  full words in its `aria-label`) opens Settings → This device; Today marks waiting entries "waiting to
+  sync" (no Eaten button) and says when it shows this device's saved copy; Add's search says "Offline: saved
+  on this device"; sign-out with items waiting opens `#sheet-unsynced` (Try to sync now / Stay signed in /
+  Sign out and lose them). Announcements go through `#sync-live` (`role=status`). Any other change made
+  without a connection (an edit, a delete, the profile) fails with "… this change was not saved: it needs a
+  connection. Food you log still waits on this device and syncs later."
+* **Checks:** `tests/test_device_ui.py` (static), `tools/e2e/device.py` (Chromium with
+  `context.set_offline`: log offline, reload offline from the service worker, reconnect synced once, a lost
+  batch answer resent without a second row, Retry/Discard, the sign-out sheet; the demo's outbox).
 
 ## M2 API: AI and photos
 

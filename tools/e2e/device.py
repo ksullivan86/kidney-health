@@ -716,6 +716,8 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         watch.offline = True
         ctx.set_offline(True)
         page.evaluate(f"KH.api.quick({{ date: '{TODAY}', meal: 'snack', name: 'Harness quick add', nutrients: {{ carbs_g: 12 }} }})")
+        said = page.evaluate("KH.request('PUT', '/api/profile', { weight_kg: 71 }).then(() => 'saved?', (e) => e.message)")
+        check(area, "a change that cannot wait (profile) says it needs a connection", "needs a connection" in said, said)
         page.goto(f"{hx.base}/#settings")
         page.wait_for_selector("#set-signout")
         page.click("#set-signout")

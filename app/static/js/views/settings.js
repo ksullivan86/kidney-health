@@ -1317,7 +1317,9 @@
   // Note 03 R11: the Open Food Facts notice (ODbL §4.3), how this app changes that data (§4.6: the mapping code), the
   // USDA citation. External links open in a new tab, as user navigation.
   function dataSources() {
-    const ext = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text, h('span', { class: 'sr-only' }, ' (opens in a new tab)'));
+    // Links to other sites open in a new tab; the preview's sandboxed frame cannot, so it shows the address (KH.scan.newTab).
+    const ext = (href, text) => (KH.scan ? KH.scan.newTab(href, text)
+      : h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text, h('span', { class: 'sr-only' }, ' (opens in a new tab)')));
     const O = KH.off;
     return h('ul', { class: 'about-list' },
       h('li', {}, 'Contains information from ', ext(O ? O.HOME_URL : 'https://world.openfoodfacts.org', 'Open Food Facts'),

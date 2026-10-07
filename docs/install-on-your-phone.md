@@ -20,6 +20,7 @@ trusts:
 |---|---|---|
 | Icon on the home screen, opens full screen | Yes | Yes (iOS 26 and later; elsewhere a shortcut) |
 | Opens without a connection to the server (offline) | Yes | No |
+| Food you log without a connection waits on the device and syncs later ([below](#offline)) | Yes | Yes, but the app cannot be reopened until the server is back |
 | "Update ready" message after the server is upgraded | Yes | No |
 | Live barcode scanning with the camera (when available) | Yes | No (taking a photo still works) |
 | "Install app" button on Android and desktop Chrome | Yes | No |
@@ -59,6 +60,31 @@ Firefox for Android can also add the app to the home screen from its menu.
   menu and choose **Install Kidney Diet Log** (Edge: **Apps → Install this site as an app**).
 * **Safari on a Mac (macOS 14 or later):** **File → Add to Dock**.
 * **Firefox:** use it in a normal tab; Firefox on Windows can pin it as a web app.
+
+## Offline
+
+When the phone cannot reach the server (no signal, the server is down, a flight), the app keeps
+working with what this device saved:
+
+* **Logging still works.** Food you add or quick-add, and "mark all eaten", is kept on the device
+  and shown on Today as **waiting to sync**. The header shows a badge such as **Offline · 2 to
+  sync** (on a phone just the number). When the server can be reached again the entries are sent,
+  in order, without you doing anything; each is saved **exactly once**, even if a connection
+  drops halfway through. Tap the badge to see them in **Settings → This device**.
+* **Today, the last two weeks and the next week** open from the copy saved the last time you
+  looked (Today says so and when). Totals include the entries that are waiting.
+* **Food search** finds the foods this device has seen (the built-in list is downloaded once a
+  day while connected). Barcode lookups, AI ideas and anything else that needs the server wait
+  until you are back online.
+* **If the server refuses an entry** when it syncs (for example the food was deleted meanwhile),
+  it is kept as **not saved** with the reason, under **Settings → This device**, where you can
+  **Retry** or **Discard** it.
+* **Signing out** while entries are still waiting asks first: **Try to sync now**, **Stay signed
+  in**, or **Sign out and lose them**. Signing out removes everything this device saved.
+
+Waiting entries are kept in the browser's storage for this app and address, for the person signed
+in; another person signing in on the same phone does not see or send them. Clearing the browser's
+site data, or **Clear offline data on this device**, removes them before they are sent.
 
 ## Keeping the app up to date
 

@@ -87,6 +87,8 @@ def test_scan_sheet_controls_are_labelled_and_announced() -> None:
         assert control in PAGE.label_for, f"#{control} has no <label for>"
         assert PAGE.by_id[control].get("aria-describedby") in PAGE.by_id, f"#{control} hint missing"
     assert PAGE.by_id["scan-file"]["type"] == "file" and PAGE.by_id["scan-file"]["accept"].startswith("image/")
+    # No `capture`: iOS then offers the camera and the photo library (note 02 R7 step 4).
+    assert "capture" not in PAGE.by_id["scan-file"] and "capture" not in PAGE.by_id["q-photo"]
     code = PAGE.by_id["scan-code"]
     assert code["inputmode"] == "numeric" and code.get("autocomplete") == "off"
     assert PAGE.by_id["scan-status"].get("role") == "status" and PAGE.by_id["scan-status"].get("aria-live") == "polite"
@@ -199,6 +201,8 @@ def test_photos_are_downscaled_and_reencoded_before_upload() -> None:
 
 def test_attribution_links_are_https_and_open_safely() -> None:
     assert "KH.off.safeHttpsUrl" in SCAN
+    # The preview's sandboxed frame cannot open windows: there the address is text, not a dead link.
+    assert "if (PREVIEW) return h('span', { class: 'ext-text' }" in SCAN and "KH.scan.newTab(href, text)" in SETTINGS_VIEW
     assert "rel: 'noopener noreferrer'" in SCAN and "target: '_blank'" in SCAN
     assert "if (u.protocol !== 'https:') return null" in ENGINE["off"] or "protocol === 'https:'" in ENGINE["off"]
 

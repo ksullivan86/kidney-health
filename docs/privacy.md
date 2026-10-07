@@ -32,6 +32,14 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   provider and outcome; photos are never stored, only their fingerprint and size). The person sees and
   can delete their AI activity in Settings; admins see only the counts.
 
+**On the person's own device** (the browser's storage for the app's address, never on another
+device): the app's offline copy, the days, foods and settings it last showed (13 days back to 7 ahead)
+so it can open without a connection, and entries logged while offline until the server has them
+([Offline](install-on-your-phone.md#offline)). Signing out, **Clear offline data on this device** and
+the server's sign-out answer (`Clear-Site-Data`) remove all of it. Photos of barcodes and labels are
+read on the device; a barcode photo is never uploaded, and a label photo only when the person asks AI
+to read it (resized, without location data).
+
 Nothing is sent anywhere unless a feature that needs the internet is used (USDA lookups, barcode
 lookups or the optional AI the admin turns on), and then only what that feature needs. The AI sends
 nothing until the person opts in and agrees to the destination shown, and never sends their name,

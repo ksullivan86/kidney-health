@@ -56,7 +56,10 @@
     statusEl.textContent = text || '';
     statusEl.classList.toggle('sr-only', !visible);
   }
+  // A link to another site, in a new tab. The preview runs inside a sandboxed frame that may not open
+  // windows, so there the address is shown as text instead of a link that would do nothing.
   function newTab(href, text) {
+    if (PREVIEW) return h('span', { class: 'ext-text' }, text, ` (${String(href).replace(/^https:\/\//, '').replace(/\/$/, '')})`);
     return h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text, h('span', { class: 'sr-only' }, ' (opens in a new tab)'));
   }
   function note(kind, ...children) { return h('div', { class: `settings-note ${kind}`, role: 'note' }, ...children); }
@@ -635,5 +638,5 @@
   }
 
   KH.scan = { open, lookup, decodeFile, getDetector, decoder: () => decoderKind, liveSupported, stopCamera, attributionsOf,
-    renderProvenance, quickOpened, FORMATS };
+    renderProvenance, quickOpened, newTab, FORMATS };
 })();

@@ -49,3 +49,8 @@ them to CHANGELOG.md) or when the owner drops them. Each feature owner appends i
 * The three reference live evaluations (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes Agent) committed under `docs/dev/ai-eval/` before a model is listed as recommended in `docs/ai.md` — note 04 §6 Phase 5 (a maintainer action: the v0.3.0 build had no Ollama server, OpenAI key or Hermes Agent to run them against).
 * Re-check whether Hermes Agent's `GET /v1/toolsets` lists tools of configured MCP servers, and tighten the tool check if it does — note 04 §9 A1 (b) and §7.
 
+## Scanning, label photos and the offline outbox in the browser (notes 02 R5/R7, 03 R7–R9)
+
+* `GET /api/foods/builtin` with an `ETag` equal to `data/foods.json`'s version, so a device refreshes its offline food list only when the list changes — note 02 R5 "Builtin foods" (a server route; v0.3.0's `js/offline.js` instead refreshes the list once a day through `GET /api/foods?category=…`, at most 200 per category, which covers today's 395 foods).
+* Manual checks on real devices before a release: iPhone over HTTP (photo and typed) and HTTPS (live camera, including the 4-second no-frame fallback for WebKit 282327), Android Chrome (native `BarcodeDetector`) and a desktop browser — note 03 §6 item 14 (a maintainer action: the v0.3.0 build had no phones; `tools/e2e/device.py` covers Chromium with a fake camera and a stand-in native detector).
+* Offline edits and deletes of entries already on the server, and profile changes (v0.3 queues only new entries, quick adds and "mark eaten"; anything else says it needs a connection) — note 02 R5 "Queueable offline actions (v0.3)".
