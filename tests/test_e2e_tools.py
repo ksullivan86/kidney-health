@@ -14,7 +14,7 @@ from app.auth.bootstrap import setup_line
 
 REPO = Path(__file__).resolve().parent.parent
 E2E = REPO / "tools" / "e2e"
-HARNESSES = ("khserver.py", "parity.py", "regress.py", "sandbox.py", "learn.py", "guidance_perf.py")
+HARNESSES = ("khserver.py", "parity.py", "regress.py", "sandbox.py", "learn.py", "guidance_perf.py", "device.py")
 
 
 def load_khserver():

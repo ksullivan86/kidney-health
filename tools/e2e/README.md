@@ -12,6 +12,7 @@ still compile and can read the server's setup code (`tests/test_e2e_tools.py`).
 | `regress.py` | The installed app against a real server at 375×812 and 1280×800, light and dark: first-run setup in the page with the logged code, then Profile (suggested targets, about-you fields), Lab results (conversion echo, what it changed, potassium banner, delete), Today, Add, quick add, USDA message, Plan, saved meals, Trends, CSV, delete confirmations, plus probes (embedded data ignored, live warnings equal the server's) | real, fresh per config | ~4 min |
 | `learn.py` | The patient handbook at `/learn` (a built site, `--site`), served by the real app: start page, a stage page, the potassium page, unit tabs, the palette switch, search, the 404 page, "Back to the food log", sign-in, the header's Learn entry, a warning's handbook link and Settings → About, at 375×812 and 1280×800. Fails on any CSP or Trusted Types violation, page or console error, failed request, request to another origin or unexpected HTTP error. CI runs it in the `handbook` job | real, signed in as the first admin | ~1 min |
 | `guidance_perf.py` | The browser twin of the meal guidance engine (the demo answers `/api/guidance/*` in the page) in headless Chromium with the CPU slowed down 4× (`--rate`): cold, p50, p95 and max of every guidance route for the demo as shipped and for the benchmark size of note 06 §4.12 (1,975 foods, 60 days, 100 saved meals); fails when a route does not answer `ok` or a p95 is above `--max-p95` (200 ms, the note's request budget) | none (static) | ~1 min |
+| `device.py` | Barcodes, label photos, AI cards and the offline outbox (note 03 R7–R9, R11; note 02 R5, R7) in Chromium on `http://localhost` (a secure context): a generated EAN-13 photo decoded by the vendored WebAssembly reader and by the native-detector branch, live scanning with Chromium's fake camera (a generated `.y4m`) and its no-frame watchdog, the plain-HTTP note; the outbox with `context.set_offline` (log offline, reload offline from the service worker, reconnect synced exactly once, a lost batch answer resent without a second row, a refused item's Retry/Discard, the sign-out sheet); AI meal ideas and "Read the label for me" against a fake OpenAI-compatible server it runs itself (the upload is a JPEG ≤ 1600 px without EXIF); the demo's recorded products and outbox; the new screens at 375×812 and 1280×800, light and dark. `--only photo,native,live,outbox,ai,demo,shots` runs a subset | real, signed in as the first admin, AI on (env provider → the fake server) | ~1 min |
 | `khserver.py` | Shared helpers (not a harness): start `uvicorn app.main:app` with a fresh `DATA_DIR` and the image's flags, read the `FIRST-RUN SETUP` code from the log, a JSON client that sends the CSRF headers and keeps the session cookie, `first_admin()`, `invite_user()` | | |
 
 ## Requirements
@@ -35,6 +36,7 @@ python tools/e2e/parity.py                     # exit 0 when every comparison ma
 python tools/e2e/regress.py --no-pytest        # add --only 375-light for one configuration
 python tools/e2e/sandbox.py --workers 4        # add --only top-phone-light-none for one walk
 python tools/e2e/guidance_perf.py              # add --rate 6 for a slower phone
+python tools/e2e/device.py                     # add --only outbox,live for some sections
 (cd handbook && mkdocs build) && python tools/e2e/learn.py --site handbook/site
 ```
 
@@ -44,7 +46,8 @@ Options shared by the harnesses:
   report. Default: `<system temp dir>/kidney-health-e2e/<harness>/`. **`parity.py` wipes it first**;
   never point it at a directory you care about (it refuses paths inside `app/`, `data/` or `tests/`).
 * `--port N` — `parity.py` runs the server on 8061 and the preview site on 8062 (`--static-port`);
-  `regress.py` uses 8063, `learn.py` 8064, `guidance_perf.py` 8065; `sandbox.py` picks a free port unless given one. A harness stops if its
+  `regress.py` uses 8063, `learn.py` 8064, `guidance_perf.py` 8065, `device.py` 8066 (and 8067 for its fake
+  AI server, `--ai-port`); `sandbox.py` picks a free port unless given one. A harness stops if its
   port is already taken, so two can run at once with different ports.
 * `parity.py --server-python PATH` runs the server on another interpreter (for example the
   image's Python) while the harness itself stays on yours.
@@ -72,6 +75,10 @@ setup_required`. So:
 * `regress.py` prints `PASS` / `FAIL` / `INFO` lines; `<out>/report.json` and `<out>/shots/`.
 * `sandbox.py` groups issues by severity; `<out>/results.json` and `<out>/shots/`.
 * `guidance_perf.py` prints a table per data set and `FAIL` lines; `<out>/report.json`.
+* `device.py` prints `PASS` / `FAIL` lines per section; `<out>/report.json` and `<out>/shots/` (a screenshot of
+  the page is kept for a section that stops on an error). What it cannot show: a real phone camera, iOS
+  Safari, a real native `BarcodeDetector` (Linux Chromium has none, so a stand-in exercises that branch) and a
+  live AI provider.
 
 When a parity check fails after a server change, fix the twin in `app/static/js/engine/*` or
 `app/static/js/mock/*` (and the vectors in `tests/data/` when an engine changed), not the harness.
