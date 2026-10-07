@@ -13,6 +13,11 @@
 # `PIP_UPLOADED_PRIOR_TO=P7D scripts/lock.sh --upgrade` and opens a pull request; Dependabot cannot,
 # because it reads only requirement files ending in .txt or .in and never regenerates *.lock.
 #
+# Constraints between locks (dev on runtime, the Zensical canary on the handbook build, Playwright on
+# dev) are passed to pip-compile with -c here, never written into the *.in files: Dependabot's
+# dependency graph reads every requirements*.txt and *.in file and fails on a -r/-c line that names a
+# *.lock file, because it never fetches those (tests/test_dependencies.py keeps it that way).
+#
 # pip-tools runs under Python 3.14, the image's Python: inside python:3.14-slim-trixie when podman
 # or docker can run containers, otherwise with a local python3.14 (or one `uv` can provide).
 # Install the result with:  pip install --require-hashes --no-deps -r requirements.lock
@@ -27,10 +32,10 @@ cd "$(dirname "$0")/.."
 
 compile_with() { # $1 = pip-compile executable
   "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file requirements.lock requirements.in
-  "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file requirements-dev.lock requirements-dev.in
+  "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} -c requirements.lock --output-file requirements-dev.lock requirements-dev.in
   "$1" "${COMPILE_OPTS[@]}" --allow-unsafe ${EXTRA[@]+"${EXTRA[@]}"} --output-file handbook/requirements.lock handbook/requirements.in
-  "$1" "${COMPILE_OPTS[@]}" --allow-unsafe ${EXTRA[@]+"${EXTRA[@]}"} --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
-  "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
+  "$1" "${COMPILE_OPTS[@]}" --allow-unsafe ${EXTRA[@]+"${EXTRA[@]}"} -c handbook/requirements.lock --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
+  "$1" "${COMPILE_OPTS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} -c requirements-dev.lock --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
 }
 
 EXTRA=("$@")
@@ -56,10 +61,10 @@ if [[ -n "$engine" && "${LOCK_LOCAL:-0}" != "1" ]]; then
       env -u PIP_UPLOADED_PRIOR_TO python -m pip install --quiet "pip==$1" "pip-tools==$0"
       shift
       pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file requirements.lock requirements.in
-      pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file requirements-dev.lock requirements-dev.in
+      pip-compile '"${COMPILE_OPTS[*]}"' "$@" -c requirements.lock --output-file requirements-dev.lock requirements-dev.in
       pip-compile '"${COMPILE_OPTS[*]}"' --allow-unsafe "$@" --output-file handbook/requirements.lock handbook/requirements.in
-      pip-compile '"${COMPILE_OPTS[*]}"' --allow-unsafe "$@" --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
-      pip-compile '"${COMPILE_OPTS[*]}"' "$@" --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
+      pip-compile '"${COMPILE_OPTS[*]}"' --allow-unsafe "$@" -c handbook/requirements.lock --output-file handbook/requirements-zensical.lock handbook/requirements-zensical.in
+      pip-compile '"${COMPILE_OPTS[*]}"' "$@" -c requirements-dev.lock --output-file tools/e2e/requirements.lock tools/e2e/requirements.in
       chown "$HOST_UID:$HOST_GID" requirements.lock requirements-dev.lock handbook/requirements.lock \
         handbook/requirements-zensical.lock tools/e2e/requirements.lock 2>/dev/null || true
     ' "$PIP_TOOLS_VERSION" "$PIP_VERSION" ${EXTRA[@]+"${EXTRA[@]}"}
