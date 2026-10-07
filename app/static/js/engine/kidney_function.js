@@ -114,6 +114,14 @@
   function displayValue(analyte, value) { return halfUp(Number(value), analyteDef(analyte).decimals); }
   // "6.0", "1.20", "58": the canonical value as the app shows it.
   function formatValue(analyte, value) { return fixed(displayValue(analyte, value), analyteDef(analyte).decimals); }
+  // "2026-10-07" -> "Oct 7, 2026": a lab date in the app's own format (the Lab results history uses
+  // toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })). Twin of units.display_date.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function displayDate(iso) {
+    const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(iso == null ? '' : String(iso));
+    if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return iso == null ? '' : String(iso);
+    return `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${Number(m[1])}`;
+  }
   function fmtPlain(v) { return Number.isFinite(v) ? pyG(v) : String(v); }
   function pyFloatText(v) { return Number.isNaN(v) ? 'nan' : v > 0 ? 'inf' : '-inf'; }
   function checkPlausible(analyte, canonicalValue, entered = null) {
@@ -352,7 +360,7 @@
       result.female = ef; result.male = em;
       const gf = gfrCategory(ef), gm = gfrCategory(em);
       if (gf !== gm) {
-        out.message = fmt(TEXT.SEX_SPLIT, { date: day, lo: Math.min(ef, em), hi: Math.max(ef, em), method: label, ef, em, Gf: gf, Gm: gm, T: suffix, stage: ckdStage });
+        out.message = fmt(TEXT.SEX_SPLIT, { date: displayDate(day), lo: Math.min(ef, em), hi: Math.max(ef, em), method: label, ef, em, Gf: gf, Gm: gm, T: suffix, stage: ckdStage });
         return out;
       }
       category = gf;
@@ -367,14 +375,14 @@
       shown = lo === hi ? String(lo) : `${lo}–${hi}`;
       rangeNote = fmt(TEXT.RANGE_NOTE, { ef: result.female, em: result.male });
     }
-    out.message = fmt(TEXT.G1, { date: day, e: shown, method: label, G: category, T: suffix, range_note: rangeNote, stage: ckdStage });
+    out.message = fmt(TEXT.G1, { date: displayDate(day), e: shown, method: label, G: category, T: suffix, range_note: rangeNote, stage: ckdStage });
     return out;
   }
 
   KH.kidney = {
     // units
     ANALYTES, ANALYTE_KEYS, ANALYTE_LIST, UNIT_SYSTEMS, CONFIGURABLE_FRESHNESS, UnitError, analyteDef, canonicalUnitName, normaliseUnit,
-    toCanonical, displayValue, formatValue, checkPlausible, convert, defaultUnit, freshDays, unitTable, rowToLab,
+    toCanonical, displayValue, formatValue, displayDate, checkPlausible, convert, defaultUnit, freshDays, unitTable, rowToLab,
     // kidney function
     SEXES, KIDNEY_ANALYTES, METHOD_LABELS, METHOD_ORDER, G_CATEGORIES, STAGE_FOR_CATEGORY, ALBUMINURIA_LIMITS, ALBUMINURIA_LABELS, TEXT,
     KidneyFunctionError, egfrCr, egfrCrCys, egfrCys, roundEgfr, gfrCategory, albuminuriaCategory, labRow, isFresh, newest, ageOn, assess,

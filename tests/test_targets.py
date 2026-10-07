@@ -465,13 +465,13 @@ def test_potassium_caps_never_raise_the_ladder_and_dialysis_relaxes_one_step():
 def test_potassium_notes_and_alert_texts():
     urgent = run({"ckd_stage": "4"}, {"potassium": 6.3})
     assert note(urgent, "Potassium") == (
-        "Potassium: 6.3 mmol/L on 2026-10-05 is dangerously high. Contact your care team today: this result should be repeated "
+        "Potassium: 6.3 mmol/L on Oct 5, 2026 is dangerously high. Contact your care team today: this result should be repeated "
         "within 24 hours, and if you feel unwell (weakness, palpitations or an irregular pulse) get urgent medical care now "
         "(KDIGO 2024 Table 28). The ceiling is set to 2000 mg/day until your team gives you a number. " + R.POTASSIUM_NOTE
     )
     assert urgent["alerts"] == [{
         "level": "urgent", "code": "potassium_very_high", "analyte": "potassium", "value": 6.3, "taken_on": "2026-10-05",
-        "message": "Potassium 6.3 mmol/L on 2026-10-05 is dangerously high. Contact your care team today: this result should be "
+        "message": "Potassium 6.3 mmol/L on Oct 5, 2026 is dangerously high. Contact your care team today: this result should be "
                    "repeated within 24 hours, and if you feel unwell (weakness, palpitations or an irregular pulse) get urgent "
                    "medical care now (KDIGO 2024 Table 28).",
     }]

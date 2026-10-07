@@ -361,7 +361,7 @@
     if (k < POTASSIUM_VERY_HIGH) return null;
     const level = potassiumAlertLevel(k);
     return { level, code: ALERT_CODE_POTASSIUM, analyte: 'potassium', value: k, taken_on: potassium.taken_on,
-      message: pyFormat(NOTES['K-5.alert'], { k, date: potassium.taken_on, urgency: NOTES[`K-5.${level}`] }) };
+      message: pyFormat(NOTES['K-5.alert'], { k, date: K.displayDate(potassium.taken_on), urgency: NOTES[`K-5.${level}`] }) };
   }
   function missingInputs(inputs, mode) {
     const missing = {
@@ -562,7 +562,7 @@
     const kLab = lab.potassium;
     const alerts = [];
     let potassium;
-    const kv = (extra) => ({ k, date: kLab && kLab.taken_on, potassium_note: POTASSIUM_NOTE, ...extra });
+    const kv = (extra) => ({ k, date: kLab && K.displayDate(kLab.taken_on), potassium_note: POTASSIUM_NOTE, ...extra });
     if (k === null || kLab === null) {
       potassium = ladder;
       if (labsOn) apply('K-0', pyFormat(NOTES['K-0'], { k_mg: ladder, stage_label: sLabel, days: windows.potassium, potassium_note: POTASSIUM_NOTE }));
@@ -607,13 +607,13 @@
       }
     } else if (p < PHOSPHATE_LOW) {
       phosphorus = null;
-      apply('PH-1', pyFormat(NOTES['PH-1'], { p, date: pLab.taken_on }));
+      apply('PH-1', pyFormat(NOTES['PH-1'], { p, date: K.displayDate(pLab.taken_on) }));
     } else if (p <= PHOSPHATE_HIGH) {
-      if (graftEarly) { phosphorus = null; apply('PH-2', pyFormat(NOTES['PH-2.none'], { p, date: pLab.taken_on })); }
-      else { phosphorus = PHOSPHORUS_NORMAL_MG; apply('PH-2', pyFormat(NOTES['PH-2'], { p, date: pLab.taken_on, p_mg_or_none: `${phosphorus} mg/day` })); }
+      if (graftEarly) { phosphorus = null; apply('PH-2', pyFormat(NOTES['PH-2.none'], { p, date: K.displayDate(pLab.taken_on) })); }
+      else { phosphorus = PHOSPHORUS_NORMAL_MG; apply('PH-2', pyFormat(NOTES['PH-2'], { p, date: K.displayDate(pLab.taken_on), p_mg_or_none: `${phosphorus} mg/day` })); }
     } else {
       phosphorus = PHOSPHORUS_HIGH_MG;
-      apply('PH-3', pyFormat(NOTES['PH-3'], { p, date: pLab.taken_on }));
+      apply('PH-3', pyFormat(NOTES['PH-3'], { p, date: K.displayDate(pLab.taken_on) }));
     }
 
     // NA: sodium.

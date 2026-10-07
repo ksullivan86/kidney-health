@@ -132,7 +132,7 @@ def test_creatinine_gives_a_g1_suggestion_text_and_never_changes_the_stage():
     assert egfr["suggested_stage"] == "3a" and egfr["matches_profile"] is False and egfr["taken_on"] == "2026-10-01"
     assert out["profile_stage"] == "3b"
     assert out["message"] == (
-        "Your eGFR on 2026-10-01 is 55 mL/min/1.73 m² (CKD-EPI 2021, creatinine), which is stage G3a. Your profile says "
+        "Your eGFR on Oct 1, 2026 is 55 mL/min/1.73 m² (CKD-EPI 2021, creatinine), which is stage G3a. Your profile says "
         "stage 3b. One result does not change a stage — kidney disease stages need results over 3 months (KDIGO 2024). "
         "Talk to your nephrologist before changing it."
     )
@@ -163,7 +163,7 @@ def test_unspecified_sex_reports_both_formulas_and_suggests_only_when_they_agree
     egfr = split["egfr"]
     assert egfr["value"] is None and egfr["female"] == 58 and egfr["male"] == 77
     assert egfr["category"] is None and egfr["suggested_stage"] is None
-    assert split["message"].startswith("Your eGFR on 2026-10-01 is 58–77 mL/min/1.73 m² (CKD-EPI 2021, creatinine): the female")
+    assert split["message"].startswith("Your eGFR on Oct 1, 2026 is 58–77 mL/min/1.73 m² (CKD-EPI 2021, creatinine): the female")
     assert "does not suggest one" in split["message"]
     agree = card([lab(1, "creatinine", 3.0)], birth_month="1966-04", sex="unspecified")
     assert agree["egfr"]["category"] == "G4" and agree["egfr"]["female"] < agree["egfr"]["male"]

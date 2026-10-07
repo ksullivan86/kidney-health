@@ -135,3 +135,34 @@ def test_unit_table_is_plain_data_for_the_browser_twin():
     phosphate = next(row for row in table if row["key"] == "phosphate")
     assert phosphate["units"]["mmol/L"] == {"mul": 1.0, "div": 0.3229, "add": 0.0}
     assert phosphate["plausible"] == [0.5, 20.0] and phosphate["si_unit"] == "mmol/L"
+
+
+DATES = ["2026-10-07", "2026-09-01", "2026-01-31", "2027-12-25", "0999-05-09", "2026-13-01", "2026-00-10", "2026-1-01",
+         "2026-10-07T10:00", "", "not a date", "٢٠٢٦-١٠-٠٧"]
+
+
+def test_lab_dates_in_messages_read_like_the_app_shows_them() -> None:
+    """Review L12: messages said "on 2026-10-07" beside the history's "Oct 7, 2026"."""
+    assert [units.display_date(d) for d in DATES[:5]] == ["Oct 7, 2026", "Sep 1, 2026", "Jan 31, 2026", "Dec 25, 2027", "May 9, 999"]
+    assert [units.display_date(d) for d in DATES[5:]] == DATES[5:]  # anything else is left as it is
+    assert units.display_date(None) == ""
+
+
+def test_the_browser_twin_formats_lab_dates_the_same_way() -> None:
+    import json
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    node = shutil.which("node")
+    assert node, "Node.js 22 is needed to run the browser twin (CLAUDE.md, Parity)"
+    root = Path(__file__).resolve().parents[1]
+    script = (
+        "const fs = require('fs'); const vm = require('vm'); const ctx = vm.createContext({});"
+        "for (const f of ['rules', 'kidney_function']) vm.runInContext(fs.readFileSync("
+        f"{json.dumps(str(root / 'app' / 'static' / 'js' / 'engine'))} + '/' + f + '.js', 'utf8'), ctx);"
+        "const K = vm.runInContext('globalThis.KH.kidney', ctx);"
+        f"process.stdout.write(JSON.stringify({json.dumps(DATES + [None])}.map((d) => K.displayDate(d))));"
+    )
+    out = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=60, check=True).stdout
+    assert json.loads(out) == [units.display_date(d) for d in DATES + [None]]

@@ -262,7 +262,7 @@ def test_post_potassium_returns_the_safety_alert(client, value, level):
     if level:
         alert = lab["alerts"][0]
         assert alert["code"] == "potassium_very_high" and alert["taken_on"] == "2026-10-01"
-        assert alert["message"].startswith(f"Potassium {units.format_value('potassium', value)} mmol/L on 2026-10-01 is dangerously high.")
+        assert alert["message"].startswith(f"Potassium {units.format_value('potassium', value)} mmol/L on Oct 1, 2026 is dangerously high.")
 
 
 @pytest.mark.parametrize(

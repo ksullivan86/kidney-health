@@ -20,6 +20,7 @@ the per-serving thresholds in :mod:`app.nutrients`, so a level always matches th
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -130,6 +131,21 @@ def format_value(analyte: str, value: float) -> str:
     """``"6.0"``, ``"1.20"``, ``"58"``: the canonical value as the app shows it."""
     a = analyte_def(analyte)
     return f"{display_value(analyte, value):.{a.decimals}f}"
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+_ISO_DATE = re.compile(r"^([0-9]{4})-([0-9]{2})-([0-9]{2})$")
+
+
+def display_date(iso: str | None) -> str:
+    """``"2026-10-07"`` -> ``"Oct 7, 2026"``: a lab date in the app's own format (the browser's
+    ``toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'})`` on Lab results), so a
+    message and the history beside it read alike. Anything that is not an ISO date comes back unchanged."""
+    match = _ISO_DATE.match(iso or "")
+    if not match or not 1 <= int(match.group(2)) <= 12:
+        return "" if iso is None else str(iso)
+    year, month, day = (int(g) for g in match.groups())
+    return f"{_MONTHS[month - 1]} {day}, {year}"
 
 
 def check_plausible(analyte: str, canonical_value: float, entered: str | None = None) -> None:

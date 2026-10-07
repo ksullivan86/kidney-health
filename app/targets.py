@@ -436,29 +436,29 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
         b.apply("K-0", note)
     elif k < R.POTASSIUM_LOW:
         potassium = None
-        b.apply("K-1", R.NOTES["K-1"].format(k=k, date=k_lab.taken_on, potassium_note=R.POTASSIUM_NOTE))
+        b.apply("K-1", R.NOTES["K-1"].format(k=k, date=units.display_date(k_lab.taken_on), potassium_note=R.POTASSIUM_NOTE))
     elif k <= R.POTASSIUM_NORMAL_MAX:
         if inputs.hyperkalemia_history:
             potassium = ladder
-            b.apply("K-2h", R.NOTES["K-2h"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+            b.apply("K-2h", R.NOTES["K-2h"].format(k=k, date=units.display_date(k_lab.taken_on), k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
         else:
             potassium = R.POTASSIUM_RELAXED[ladder_key]
             if potassium == ladder:  # stages 1–3a: the relaxed step is the ladder, so nothing was relaxed
-                b.apply("K-2", R.NOTES["K-2.top"].format(k=k, date=k_lab.taken_on, k_mg=potassium, stage_label=stage_label,
+                b.apply("K-2", R.NOTES["K-2.top"].format(k=k, date=units.display_date(k_lab.taken_on), k_mg=potassium, stage_label=stage_label,
                                                          potassium_note=R.POTASSIUM_NOTE))
             else:
-                b.apply("K-2", R.NOTES["K-2"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+                b.apply("K-2", R.NOTES["K-2"].format(k=k, date=units.display_date(k_lab.taken_on), k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
     elif k <= R.POTASSIUM_HIGH_MAX:
         potassium = min(ladder, R.POTASSIUM_CAPS["K-3"])
-        b.apply("K-3", R.NOTES["K-3"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+        b.apply("K-3", R.NOTES["K-3"].format(k=k, date=units.display_date(k_lab.taken_on), k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
     elif k < R.POTASSIUM_VERY_HIGH:
         potassium = min(ladder, R.POTASSIUM_CAPS["K-4"])
-        b.apply("K-4", R.NOTES["K-4"].format(k=k, date=k_lab.taken_on, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+        b.apply("K-4", R.NOTES["K-4"].format(k=k, date=units.display_date(k_lab.taken_on), k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
     else:
         potassium = min(ladder, R.POTASSIUM_CAPS["K-5"])
         level = potassium_alert_level(k)
         urgency = R.NOTES[f"K-5.{level}"]
-        b.apply("K-5", R.NOTES["K-5"].format(k=k, date=k_lab.taken_on, urgency=urgency, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
+        b.apply("K-5", R.NOTES["K-5"].format(k=k, date=units.display_date(k_lab.taken_on), urgency=urgency, k_mg=potassium, potassium_note=R.POTASSIUM_NOTE))
     # The safety alert does not depend on targets.lab_rules_enabled (note 05 §4.9).
     alert = potassium_alert(inputs.labs.get("potassium"))
     if alert is not None:
@@ -481,17 +481,17 @@ def suggest(inputs: Inputs, today: date) -> Suggestion:
                 b.apply("PH-0", R.NOTES["PH-0.labs_off"].format(p_mg=phosphorus))
     elif p < R.PHOSPHATE_LOW:
         phosphorus = None
-        b.apply("PH-1", R.NOTES["PH-1"].format(p=p, date=p_lab.taken_on))
+        b.apply("PH-1", R.NOTES["PH-1"].format(p=p, date=units.display_date(p_lab.taken_on)))
     elif p <= R.PHOSPHATE_HIGH:
         if graft_early:
             phosphorus = None
-            b.apply("PH-2", R.NOTES["PH-2.none"].format(p=p, date=p_lab.taken_on))
+            b.apply("PH-2", R.NOTES["PH-2.none"].format(p=p, date=units.display_date(p_lab.taken_on)))
         else:
             phosphorus = R.PHOSPHORUS_NORMAL_MG
-            b.apply("PH-2", R.NOTES["PH-2"].format(p=p, date=p_lab.taken_on, p_mg_or_none=f"{phosphorus} mg/day"))
+            b.apply("PH-2", R.NOTES["PH-2"].format(p=p, date=units.display_date(p_lab.taken_on), p_mg_or_none=f"{phosphorus} mg/day"))
     else:
         phosphorus = R.PHOSPHORUS_HIGH_MG
-        b.apply("PH-3", R.NOTES["PH-3"].format(p=p, date=p_lab.taken_on))
+        b.apply("PH-3", R.NOTES["PH-3"].format(p=p, date=units.display_date(p_lab.taken_on)))
 
     # NA: sodium.
     b.apply("NA-1", R.NOTES["NA-1"])
@@ -637,7 +637,7 @@ def potassium_alert(potassium: Lab | None) -> dict[str, Any] | None:
         "analyte": "potassium",
         "value": k,
         "taken_on": potassium.taken_on,
-        "message": R.NOTES["K-5.alert"].format(k=k, date=potassium.taken_on, urgency=R.NOTES[f"K-5.{level}"]),
+        "message": R.NOTES["K-5.alert"].format(k=k, date=units.display_date(potassium.taken_on), urgency=R.NOTES[f"K-5.{level}"]),
     }
 
 

@@ -372,7 +372,7 @@ def assess(
         gf, gm = gfr_category(ef), gfr_category(em)
         if gf != gm:
             out["message"] = SEX_SPLIT_TEXT.format(
-                date=day, lo=min(ef, em), hi=max(ef, em), method=label, ef=ef, em=em, Gf=gf, Gm=gm, T=suffix, stage=ckd_stage
+                date=units.display_date(day), lo=min(ef, em), hi=max(ef, em), method=label, ef=ef, em=em, Gf=gf, Gm=gm, T=suffix, stage=ckd_stage
             )
             return out
         category = gf
@@ -387,5 +387,5 @@ def assess(
         lo, hi = sorted((result["female"], result["male"]))
         shown = str(lo) if lo == hi else f"{lo}–{hi}"
         range_note = RANGE_NOTE.format(ef=result["female"], em=result["male"])
-    out["message"] = G1_TEXT.format(date=day, e=shown, method=label, G=category, T=suffix, range_note=range_note, stage=ckd_stage)
+    out["message"] = G1_TEXT.format(date=units.display_date(day), e=shown, method=label, G=category, T=suffix, range_note=range_note, stage=ckd_stage)
     return out
