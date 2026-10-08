@@ -9,6 +9,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Handbook pages work offline once opened.** The app keeps a copy of each handbook page you open (and
+  what it needs to show), so **Learn** pages you have read before open without a connection, for example
+  on a flight or when the home server is down. A page you have not opened on this device says so instead
+  of showing the browser's error page. Nothing personal is kept: the handbook is the same for everyone.
+  **Settings → This device → Clear offline data on this device** removes the copy.
 * **"Not chosen yet" for the kidney stage and the diabetes type.** A new account's Profile no longer
   shows stage 3b and type 1 diabetes as if the person had picked them: both read "Not chosen yet" until
   they choose, and Today shows a one-line prompt meanwhile. The app keeps using stage 3b and type 1

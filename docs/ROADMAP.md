@@ -34,7 +34,6 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 
 ## Patient handbook at `/learn` (note 08)
 
-* Offline handbook pages: a runtime cache in the service worker (v0.3 leaves `/learn` to the network) — note 08 §4.6 "Service worker" (v0.4).
 * "Add this menu day to my plan": turn a generated handbook menu day into planned entries (menus use builtin `fdc_id`s) — note 08 §4.10 "Idea for v0.4".
 * A "finerenone" profile flag that warns on grapefruit, as the Kerendia label says — note 08 §4.10 "Idea for v0.4".
 * Spanish and other languages (page structure and slugs are language-neutral) — note 08 §6 risk 13 (v0.4, with Zensical or `mkdocs-static-i18n`).

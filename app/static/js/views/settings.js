@@ -1357,7 +1357,7 @@
         h('li', {}, 'Your log, foods, saved meals, profile, targets and settings are stored on this server, not on the internet. Your account sees only its own data.'),
         h('li', {}, 'The person who runs this server can technically read all data on it. An admin can also create a password reset link for any account and sign in as that person; the activity log records it, and you are told at your next sign-in.'),
         h('li', {}, 'Keys are stored encrypted and are never shown again. Your export (Account → Your data) holds everything about you except passwords, sessions and keys.'),
-        h('li', {}, 'This device keeps the app itself and, for offline use, a copy of your recent days, your profile and the foods you have seen, plus entries waiting to sync. Signing out clears it (it asks first when something has not synced).')),
+        h('li', {}, 'This device keeps the app itself and the handbook pages you have opened, and, for offline use, a copy of your recent days, your profile and the foods you have seen, plus entries waiting to sync. Signing out clears that copy (it asks first when something has not synced).')),
       subtitle('Not medical advice'),
       h('p', {}, `Targets and limits in this app must come from your nephrologist or renal dietitian${kidneyOnly() ? '' : ', and insulin decisions from your diabetes care team'}. Food warnings are general renal-diet conventions, not a prescription.`),
       subtitle('Learn: the patient handbook'),

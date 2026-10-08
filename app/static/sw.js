@@ -5,11 +5,16 @@
    page then offers "Update ready · Reload" (js/pwa.js). With PWA_ENABLED=false the server sends a
    kill-switch worker instead.
 
-   Caches ONLY the static shell: personal data never enters Cache Storage. Not intercepted:
-   /api/**, /healthz, any non-GET request, other origins, and navigations to anything but the
-   app itself: the /learn handbook goes to the network (offline handbook pages are a v0.4 item,
-   docs/ROADMAP.md). `?reauth=1` on a navigation goes to the network too, so an auth proxy can
+   Caches ONLY static files: personal data never enters Cache Storage. Not intercepted: /api/**,
+   /healthz, any non-GET request, other origins, and navigations to anything but the app itself
+   and the handbook. `?reauth=1` on a navigation goes to the network too, so an auth proxy can
    redirect to its sign-in page.
+
+   The patient handbook under /learn (static, the same for everyone; v0.3.1) is network-first: each
+   page and file it loads while online is copied into its own cache, kdl-learn-<version>, so pages
+   opened before can be read offline. Only plain 200 answers from this server are kept, never a
+   redirect to a sign-in page. Offline, a page never opened on this device answers with a short note
+   (learnOffline) instead of the browser's error page. A new release starts with an empty copy.
 
    SHELL_URLS lists every file index.html loads (tests/test_frontend_shell.py keeps the two in
    step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. */
@@ -18,6 +23,7 @@
 const VERSION = '__VERSION__';
 const SHELL = `kdl-shell-${VERSION}`;
 const VENDOR = `kdl-vendor-${VERSION}`;
+const LEARN = `kdl-learn-${VERSION}`;
 const SHELL_URLS = [
   '/',
   '/theme-init.js',
@@ -119,8 +125,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/') || url.pathname === '/healthz') return;
+  if (url.pathname === '/learn' || url.pathname.startsWith('/learn/')) {
+    event.respondWith(fromLearn(event));
+    return;
+  }
   if (req.mode === 'navigate') {
-    if (url.pathname !== '/' && url.pathname !== '/index.html') return; // the handbook etc. go to the network
+    if (url.pathname !== '/' && url.pathname !== '/index.html') return; // anything else goes to the network
     if (url.searchParams.has('reauth')) return; // let an auth proxy redirect to its sign-in page
     event.respondWith(caches.match('/', { cacheName: SHELL }).then((cached) => cached || fetch(req)));
     return;
@@ -140,3 +150,45 @@ self.addEventListener('fetch', (event) => {
   if (!SHELL_URLS.includes(url.pathname)) return; // anything else: the network decides
   event.respondWith(caches.match(req, { cacheName: SHELL }).then((cached) => cached || fetch(req)));
 });
+
+// The handbook (/learn): the network first, keeping a copy of every plain 200 answer for reading offline.
+async function fromLearn(event) {
+  const req = event.request;
+  try {
+    const res = await fetch(req);
+    if (res.status === 200 && res.type === 'basic' && !res.redirected) {
+      const copy = res.clone();
+      const saved = caches.open(LEARN).then((cache) => cache.put(req, copy)).catch(() => null);
+      try { event.waitUntil(saved); } catch (e) { /* a browser that refuses a late waitUntil still gets the page */ }
+    }
+    return res;
+  } catch (err) {
+    // Offline (or the server is down): the copy kept from an earlier visit. A search-highlight link
+    // (?h=potassium) opens the same page.
+    const hit = await caches.match(req, { cacheName: LEARN, ignoreSearch: req.mode === 'navigate' });
+    if (hit) return hit;
+    if (req.mode === 'navigate') return learnOffline();
+    throw err;
+  }
+}
+
+// A handbook page never opened on this device, while offline: a short note with no script or style.
+function learnOffline() {
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">'
+    + '<title>Not saved for offline reading</title></head><body>'
+    + '<h1>This handbook page is not saved on this device</h1>'
+    + '<p>You are offline, or the server cannot be reached. Handbook pages you have opened before on this device can be read offline; this one has not been opened here yet.</p>'
+    + '<p><a href="/learn/">Handbook start page</a> &middot; <a href="/">Back to the food log</a></p>'
+    + '</body></html>';
+  return new Response(html, {
+    status: 503,
+    statusText: 'Offline',
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Security-Policy': "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
