@@ -125,10 +125,11 @@ jobs:
         run: |
           set -euo pipefail
           kustomize build deploy/k8s > "$RUNNER_TEMP/rendered.yaml"
+          kustomize build deploy/k8s-overlays/example > "$RUNNER_TEMP/rendered-overlay.yaml"
           kubeconform -strict -summary \
             -schema-location default \
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
-            "$RUNNER_TEMP/rendered.yaml" \
+            "$RUNNER_TEMP/rendered.yaml" "$RUNNER_TEMP/rendered-overlay.yaml" \
             deploy/k8s/secret.example.yaml deploy/k8s/ingress.example.yaml deploy/k8s/cilium-networkpolicy.example.yaml \
             deploy/k8s/restore-pod.example.yaml
       - name: Compose files resolve (docker compose config)

@@ -2,8 +2,8 @@
 # Fabric, ...). Requires the Gateway API CRDs and a Gateway with an HTTPS listener (cert-manager
 # can issue its certificate: docs/https.md, Kubernetes tier). ingress-nginx was retired upstream in
 # March 2026; ingress.example.yaml remains only for other Ingress controllers.
-# Edit parentRefs and hostnames, set PUBLIC_URL in deployment.yaml to the same host, and make
-# networkpolicy.yaml allow the Gateway's namespace.
+# Edit parentRefs and hostnames, set PUBLIC_URL in deployment-env.yaml to the same host, and make
+# networkpolicy-ingress.yaml allow the Gateway's namespace.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

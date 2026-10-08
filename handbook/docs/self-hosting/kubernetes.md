@@ -16,19 +16,25 @@ sources: [NOTE01, DEPLOY, SECDOC, K8S-PSS, K8S-NETPOL, K8S-USERNS, TALOS-FLANNEL
 
 The Kustomize base in `deploy/k8s/` runs one pod with one SQLite volume, under the Pod Security
 **restricted** profile, with a default-deny NetworkPolicy. It was written for Talos Linux and works on
-other clusters ([design note 01][NOTE01]; [deployment guide][DEPLOY]).
+other clusters ([design note 01][NOTE01]; [deployment guide][DEPLOY]). The base is **cluster-neutral**:
+you never edit it. Everything that depends on your cluster (host name, Gateway, network ranges, storage
+class, image pin) goes in an **overlay**, a small folder of patches you copy from
+`deploy/k8s-overlays/example/`.
 
-## What is in `deploy/k8s/`
+## What is in `deploy/k8s/` and the example overlay
 
 | File | Purpose | Edit? |
 |---|---|---|
-| `kustomization.yaml` | resources and the image pin (tag and digest) | pin the digest |
-| `namespace.yaml` | namespace with Pod Security `restricted` (enforce, audit, warn) | |
-| `pvc.yaml` | 1 Gi `ReadWriteOnce` volume | `storageClassName` |
-| `deployment.yaml` | UID 10001, read-only root, `/tmp` emptyDir, secret files, probes, `Recreate` | `PUBLIC_URL`, `TRUSTED_PROXIES` |
-| `service.yaml` | ClusterIP port 80 to 8000 | |
-| `networkpolicy.yaml` | default deny; DNS; public HTTPS out; in only from the Gateway's namespace | Gateway namespace |
-| `httproute.yaml` | Gateway API route (default) | `parentRefs`, hostname |
+| `deploy/k8s/kustomization.yaml` | resources and the image (minor-release tag) | no |
+| `deploy/k8s/namespace.yaml` | namespace with Pod Security `restricted` (enforce, audit, warn) | no |
+| `deploy/k8s/pvc.yaml` | 1 Gi `ReadWriteOnce` volume, the cluster's default storage class | no |
+| `deploy/k8s/deployment.yaml` | UID 10001, read-only root, `/tmp` emptyDir, secret files, probes, `Recreate` | no |
+| `deploy/k8s/service.yaml` | ClusterIP port 80 to 8000 | no |
+| `deploy/k8s/networkpolicy.yaml` | default deny; DNS; public HTTPS out; nothing in until the overlay | no |
+| overlay `kustomization.yaml` | the base, the route, the patches; image pin (tag and digest); storage class | pin the digest |
+| overlay `httproute.yaml` | Gateway API route | `parentRefs`, hostname |
+| overlay `deployment-env.yaml` | `PUBLIC_URL`, `TRUSTED_PROXIES` | both |
+| overlay `networkpolicy-ingress.yaml` | lets the Gateway's namespace in on port 8000 | that namespace |
 | `ingress.example.yaml`, `cilium-networkpolicy.example.yaml`, `secret.example.yaml` | examples, not applied | |
 
 **One pod per database:** one replica, `ReadWriteOnce`, `Recreate` rollouts. There is deliberately no
@@ -38,15 +44,18 @@ PodDisruptionBudget, because with one replica it would block node drains.
 
 The commands for each step are in the deployment guide's [Kubernetes section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#kubernetes-talos).
 
-1. **Storage.** Set `storageClassName` in `pvc.yaml`, or leave it for the cluster default. Avoid NFS:
-   SQLite needs file locking that NFS handles poorly.
+1. **Storage.** Leave the cluster's default storage class, or uncomment the storage-class patch in your
+   overlay. Avoid NFS: SQLite needs file locking that NFS handles poorly.
 2. **Secret.** Create it with two keys, `secret_key` (a long random value) and `usda_api_key` (empty
    means "off"). Keep a copy of `secret_key` in your password manager ([Backups](backups.md)).
-3. **Edit** `httproute.yaml` (hostname, Gateway), `networkpolicy.yaml` (Gateway namespace) and
-   `deployment.yaml`: `PUBLIC_URL` = `https://` plus the route's hostname; `TRUSTED_PROXIES` as narrow
-   as your Gateway's pods allow.
-4. **Apply** the Kustomize base, wait for the rollout, and read the one-time setup code from the log.
-5. **Pin the image** by digest after verifying it ([Security](security.md)).
+3. **Copy the example overlay and edit it:** `httproute.yaml` (hostname, Gateway),
+   `networkpolicy-ingress.yaml` (Gateway namespace) and `deployment-env.yaml`: `PUBLIC_URL` = `https://`
+   plus the route's hostname; `TRUSTED_PROXIES` as narrow as your Gateway's pods allow. Keeping your
+   overlay in a separate GitOps repository, with the base as a remote resource pinned to a release,
+   works too.
+4. **Apply** your overlay, wait for the rollout, and read the one-time setup code from the log.
+5. **Pin the image** in your overlay by tag and digest; each release's notes carry the digest
+   ([Security](security.md)).
 
 ## Pod Security restricted
 
@@ -73,9 +82,11 @@ rule and an `AI_PRIVATE_HOSTS` entry ([Network allowlist](network-allowlist.md))
 
 ## `TRUSTED_PROXIES` on a cluster
 
-The shipped `10.244.0.0/16` (Talos' default pod range) trusts **every pod**. That is acceptable only
-while the NetworkPolicy is enforced, or with `TRUSTED_PROXY_SECRET_FILE` set. Narrow it to your
-Gateway's pods where you can ([operator security guide][SECDOC]).
+The base trusts only loopback, which is safe but ignores your Gateway's forwarded headers, so set
+`TRUSTED_PROXIES` in your overlay. The example's `10.244.0.0/16` (the Talos and Flannel default pod
+range; yours may differ) trusts **every pod**. That is acceptable only while the NetworkPolicy is
+enforced, or with `TRUSTED_PROXY_SECRET_FILE` set. Narrow it to your Gateway's pods where you can
+([operator security guide][SECDOC]).
 
 ## Optional: a user namespace for the pod
 

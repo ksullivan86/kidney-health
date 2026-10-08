@@ -1,10 +1,12 @@
-# kubectl apply -k deploy/k8s        (or: kustomize build deploy/k8s | kubectl apply -f -)
-# Guide: docs/deployment.md (Kubernetes / Talos). Before applying, edit:
-#   httproute.yaml       parentRefs + hostnames (or use ingress.example.yaml instead)
-#   networkpolicy.yaml   the namespace of your Gateway / ingress controller
-#   deployment.yaml      TRUSTED_PROXIES and PUBLIC_URL
-#   pvc.yaml             storageClassName for your cluster (or leave the default class)
-# and create the Secret first (secret.example.yaml shows the command).
+# The cluster-neutral base: it renders unchanged on any cluster and holds no cluster-specific value
+# (no pod CIDR, Gateway, host name or storage class). Do not edit it; apply an overlay that adds them:
+#   cp -r deploy/k8s-overlays/example deploy/k8s-overlays/home   # then edit the files it lists
+#   kubectl apply -k deploy/k8s-overlays/home
+# From a separate GitOps repository, use this base remotely in your own kustomization.yaml:
+#   resources: [https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.3.1]
+# Applied alone, the base starts the app but lets no traffic in (the NetworkPolicy allows no ingress
+# until the overlay names your Gateway's namespace). Guide: docs/deployment.md (Kubernetes / Talos).
+# Create the Secret first (secret.example.yaml shows the command).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: kidney-health
@@ -14,13 +16,14 @@ resources:
   - deployment.yaml
   - service.yaml
   - networkpolicy.yaml
-  - httproute.yaml
-  # Not included on purpose: secret.example.yaml (never commit secrets),
-  # ingress.example.yaml (Ingress instead of HTTPRoute), cilium-networkpolicy.example.yaml (Cilium),
-  # restore-pod.example.yaml (one-off, for restoring a backup; docs/deployment.md).
+  # Not included on purpose: the HTTPRoute (it names your Gateway and host: deploy/k8s-overlays/example/),
+  # secret.example.yaml (never commit secrets), ingress.example.yaml (Ingress instead of HTTPRoute),
+  # cilium-networkpolicy.example.yaml (Cilium), restore-pod.example.yaml (one-off, for restoring a
+  # backup; docs/deployment.md).
 images:
-  # Pin the release you verified, by tag AND digest (the digest wins; the tag is for humans):
-  #   scripts/verify-image.sh 0.3.0        prints the verified digest, then:
+  # The base tracks the minor release. Pin the release you verified in your overlay, by tag AND
+  # digest (the digest wins; the tag is for humans; each GitHub release's notes carry it):
+  #   scripts/verify-image.sh 0.3.0        prints the verified digest, then, in the overlay directory:
   #   kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<digest>
   # Never :latest or :edge here.
   - name: ghcr.io/ksullivan86/kidney-health

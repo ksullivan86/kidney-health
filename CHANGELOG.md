@@ -20,6 +20,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   the release exists by then (publishing the release in the GitHub UI creates the tag, so it does);
   otherwise the job prints the block to paste. The deployment guide and the Quadlet unit show the
   digest form first, for hosts managed from git with Renovate or Dependabot.
+* **Kubernetes: the base in `deploy/k8s` is now cluster-neutral** and renders unchanged on any cluster;
+  cluster-specific values moved to an example overlay, `deploy/k8s-overlays/example/` (kustomize
+  patches: `PUBLIC_URL` and `TRUSTED_PROXIES`, the NetworkPolicy's ingress namespace, the HTTPRoute,
+  an optional storage class and the image pin). **Upgrade note:** if you applied `deploy/k8s` directly
+  after editing it, copy the example overlay, move your values into it and apply the overlay: the base
+  alone now lets no traffic in and trusts only loopback. Own overlays under `deploy/k8s-overlays/` are
+  ignored by git; a GitOps repository can use the base remotely (`//deploy/k8s?ref=v0.3.1`). CI renders
+  and validates both.
+* Docs: the optional AI is introduced in three questions (which model answers, what it may do, whose
+  key pays and who can read the request), with a recommended starting setup for a home server with
+  and without a GPU (`docs/ai.md`, and the handbook's AI page in plain words).
 * Docs: Litestream (WAL streaming) works; the two commands that force a full checkpoint and a new
   generation are named (`docs/deployment.md`). A `TRUSTED_PROXIES` row for a proxy container on a
   shared rootless Podman network, and what trusting the whole subnet risks (`docs/security.md`). With

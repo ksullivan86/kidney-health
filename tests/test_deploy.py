@@ -514,8 +514,8 @@ def test_k8s_deployment_security_context():
 def test_k8s_kustomization_and_network_policy():
     kust = read("deploy/k8s/kustomization.yaml")
     resources = re.findall(r"^  - (\S+\.yaml)$", kust, re.M)
-    assert {"networkpolicy.yaml", "httproute.yaml", "deployment.yaml", "namespace.yaml"} <= set(resources)
-    assert not {"secret.example.yaml", "ingress.example.yaml", "cilium-networkpolicy.example.yaml", "restore-pod.example.yaml"} & set(resources)
+    assert {"networkpolicy.yaml", "deployment.yaml", "namespace.yaml", "service.yaml", "pvc.yaml"} <= set(resources)
+    assert not {"httproute.yaml", "secret.example.yaml", "ingress.example.yaml", "cilium-networkpolicy.example.yaml", "restore-pod.example.yaml"} & set(resources)
     assert not (REPO / "deploy/k8s/ingress.yaml").exists(), "ingress-nginx is retired: Ingress is only an example"
     assert 'newTag: "0.3"' in kust
     netpol = read("deploy/k8s/networkpolicy.yaml")
@@ -528,6 +528,37 @@ def test_k8s_kustomization_and_network_policy():
     # Cilium's Gateway/Ingress has the reserved "ingress" identity, which no namespaceSelector matches
     assert re.search(r"fromEntities:\n\s+- ingress", cilium) and 'port: "8000"' in cilium
     assert "cilium-networkpolicy.example.yaml" in netpol and "fromEntities" in netpol
+
+
+def _active_yaml(path: str) -> str:
+    return "\n".join(ln.split(" #", 1)[0] for ln in read(path).splitlines() if not ln.lstrip().startswith("#"))
+
+
+def test_k8s_base_is_cluster_neutral_and_the_example_overlay_holds_the_cluster_values():
+    # Homelab review item 5: the base renders unchanged on any cluster; pod CIDR, Gateway, host name,
+    # storage class and the NetworkPolicy's ingress namespace live in an overlay (kustomize patches).
+    base_files = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "deploy/k8s").glob("*.yaml") if ".example." not in p.name)
+    assert "deploy/k8s/httproute.yaml" not in base_files
+    for path in base_files:
+        active = _active_yaml(path)
+        for needle in ("10.244.", "gateway-system", "example.net", "storageClassName", "TRUSTED_PROXIES", "PUBLIC_URL", "parentRefs"):
+            assert needle not in active, f"{path} carries the cluster-specific {needle!r}"
+    netpol = _active_yaml("deploy/k8s/networkpolicy.yaml")
+    policy = netpol.split("name: kidney-health", 1)[1]
+    assert "ingress:" not in policy.replace("- Ingress", ""), "the base lets no traffic in until an overlay names the Gateway"
+    overlay = read("deploy/k8s-overlays/example/kustomization.yaml")
+    assert re.search(r"^  - \.\./\.\./k8s$", overlay, re.M) and re.search(r"^  - httproute\.yaml", overlay, re.M)
+    assert "path: deployment-env.yaml" in overlay and "path: networkpolicy-ingress.yaml" in overlay
+    env = read("deploy/k8s-overlays/example/deployment-env.yaml")
+    assert "- name: app" in env and "name: TRUSTED_PROXIES" in env and "name: PUBLIC_URL" in env
+    ingress = read("deploy/k8s-overlays/example/networkpolicy-ingress.yaml")
+    assert "name: kidney-health" in ingress and "port: 8000" in ingress and "namespaceSelector" in ingress
+    route = read("deploy/k8s-overlays/example/httproute.yaml")
+    assert "kind: HTTPRoute" in route and "sectionName: https" in route
+    ci = read(".github/workflows/ci.yml")
+    assert "kustomize build deploy/k8s-overlays/example" in ci and '"$RUNNER_TEMP/rendered-overlay.yaml"' in ci
+    gitignore = read(".gitignore")
+    assert "deploy/k8s-overlays/*" in gitignore and "!deploy/k8s-overlays/example/" in gitignore
 
 
 def test_k8s_restore_pod_is_restricted_and_documented():

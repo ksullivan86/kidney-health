@@ -1,0 +1,16 @@
+# Let your Gateway API implementation (or ingress controller) reach the app on port 8000, and nothing
+# else. The base policy allows no ingress at all.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kidney-health
+  namespace: kidney-health
+spec:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system   # <-- the namespace of your Gateway's pods
+      ports:
+        - port: 8000
+          protocol: TCP

@@ -1,0 +1,22 @@
+# Cluster-specific settings for the app container (merged into the base's env by name).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kidney-health
+  namespace: kidney-health
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            # The URL people type; its host passes the Host check and invite and reset links use it.
+            - name: PUBLIC_URL
+              value: https://food.home.example.net    # <-- the HTTPRoute's host name, with https://
+            # Whose X-Forwarded-For / -Proto to believe: your Gateway's pods, as narrow as you can.
+            # A whole pod CIDR (10.244.0.0/16 is Talos' and Flannel's default; yours may differ:
+            # `kubectl get nodes -o jsonpath='{.items[*].spec.podCIDR}'`) trusts EVERY pod in the
+            # cluster, so it is only safe while the NetworkPolicy is enforced or
+            # TRUSTED_PROXY_SECRET_FILE is set (docs/security.md §4).
+            - name: TRUSTED_PROXIES
+              value: "10.244.0.0/16"                  # <-- your Gateway pods' range

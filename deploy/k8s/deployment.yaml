@@ -61,15 +61,11 @@ spec:
               value: /run/secrets/kidney-health/secret_key
             - name: USDA_API_KEY_FILE
               value: /run/secrets/kidney-health/usda_api_key
-            # Whose X-Forwarded-For / -Proto to believe. A pod CIDR trusts EVERY pod in the cluster,
-            # so it is only safe while networkpolicy.yaml is enforced (Talos' default Flannel ignores
-            # NetworkPolicy unless kubeNetworkPoliciesEnabled: true) or TRUSTED_PROXY_SECRET_FILE is
-            # set. Narrow it to your Gateway's pod range when you can (docs/security.md).
-            - name: TRUSTED_PROXIES
-              value: "10.244.0.0/16"
-            # The URL people type; its host passes the Host check and invite links use it.
-            # - name: PUBLIC_URL
-            #   value: https://food.home.example.net
+            # TRUSTED_PROXIES (whose X-Forwarded-For / -Proto to believe) and PUBLIC_URL (the URL
+            # people type) depend on your cluster and host, so the base leaves them unset: the app
+            # then trusts only loopback, which is safe but ignores your Gateway's X-Forwarded-Proto
+            # (cookies without Secure, and sign-in refused over "plain HTTP" once two accounts exist).
+            # Set both in your overlay (deploy/k8s-overlays/example/deployment-env.yaml; docs/security.md §4).
             # - name: AUTH_MODE
             #   value: local
             # v0.3 features (deploy/.env.example explains each): meal guidance is on, everything that contacts
