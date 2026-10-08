@@ -158,7 +158,8 @@ async function fromLearn(event) {
     const res = await fetch(req);
     if (res.status === 200 && res.type === 'basic' && !res.redirected) {
       const copy = res.clone();
-      event.waitUntil(caches.open(LEARN).then((cache) => cache.put(req, copy)).catch(() => null));
+      const saved = caches.open(LEARN).then((cache) => cache.put(req, copy)).catch(() => null);
+      try { event.waitUntil(saved); } catch (e) { /* a browser that refuses a late waitUntil still gets the page */ }
     }
     return res;
   } catch (err) {
