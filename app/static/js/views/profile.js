@@ -71,9 +71,11 @@
     $('#pf-stage-label').textContent = transplant ? 'Transplant kidney stage' : 'CKD stage';
     $('#pf-stage-hint').textContent = transplant ? "The stage of your transplant's function, as your transplant team gives it." : 'The stage your nephrologist gave you.';
     // A kidney-only profile (diabetes "None", v0.3.1): meals have no carbohydrate goal, so the per-meal and per-snack
-    // carbohydrate targets are hidden; their values stay and are saved unchanged.
+    // carbohydrate targets are hidden; their values stay and are saved unchanged. The "Not medical advice" note
+    // below the form leaves out insulin decisions.
     const kidneyOnly = $('#pf-diabetes').value === 'none';
     for (const id of ['#tg-carbs_per_meal_g', '#tg-carbs_per_snack_g']) $(id).closest('.field').hidden = kidneyOnly;
+    $('#pf-disclaimer-diabetes').hidden = kidneyOnly;
   }
   $('#pf-dialysis').addEventListener('change', syncConditionalFields);
   $('#pf-diabetes').addEventListener('change', syncConditionalFields);

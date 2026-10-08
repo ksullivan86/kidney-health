@@ -3,7 +3,8 @@
 With ``diabetes`` "none" a meal has no carbohydrate goal: no per-meal carbohydrate alert (eaten or planned) on the
 server or in the demo, no carbohydrate line in Today's meal headers, and the two diabetes settings of Meal guidance
 (carbohydrate tolerance, carbs taken for a low) are explained instead of shown. The day's carbohydrate is judged like
-any nutrient. Before a diabetes type is chosen the app keeps using type 1, so the meal goals stay.
+any nutrient. Before a diabetes type is chosen the app keeps using type 1, so the meal goals stay. The "Not medical
+advice" note (below Profile's form and in Settings → About) leaves out insulin decisions.
 """
 from __future__ import annotations
 
@@ -135,3 +136,20 @@ def test_saving_a_kidney_only_profile_keeps_the_per_meal_targets(client):
     assert saved.status_code == 200
     targets = client.get("/api/profile").json()["targets"]
     assert targets["carbs_per_meal_g"] == 45 and targets["carbs_per_snack_g"] == 15
+
+
+def test_the_not_medical_advice_note_follows_the_profile():
+    index = (STATIC / "index.html").read_text(encoding="utf-8")
+    assert ('Targets and limits in this app must come from your nephrologist or renal dietitian<span id="pf-disclaimer-diabetes">'
+            ', and insulin decisions from your diabetes care team</span>. The food database') in index
+    profile_js = (STATIC / "js" / "views" / "profile.js").read_text(encoding="utf-8")
+    sync = profile_js[profile_js.index("function syncConditionalFields"):]
+    sync = sync[:sync.index("\n  }\n")]  # the form's select, like the carbohydrate targets it hides
+    assert "const kidneyOnly = $('#pf-diabetes').value === 'none';" in sync and "$('#pf-disclaimer-diabetes').hidden = kidneyOnly;" in sync
+    settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    assert "const kidneyOnly = () => !!(state.profile && state.profile.diabetes === 'none');" in settings
+    about = settings[settings.index("function renderAbout"):]
+    about = about[:about.index("subtitle('Learn: the patient handbook')")]
+    assert "nephrologist or renal dietitian${kidneyOnly() ? '' : ', and insulin decisions from your diabetes care team'}." in about
+    # Settings opened before the profile was loaded draws About again once it is
+    assert "await KH.loadProfile(); renderPrefs(); if (kidneyOnly()) renderAbout();" in settings
