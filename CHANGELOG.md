@@ -34,9 +34,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   About this server and AI providers, with chips to jump between them. Settings now holds only personal
   settings. Members never see the button or the page, and the server still refuses every admin request
   from a member.
+* **Try the app without installing it.** When the handbook is published on GitHub Pages, the app's demo is
+  published beside it, at `demo/`, and every handbook page links to it ("Try the app (demo)"). It is the real
+  app with a sample person and a month of meals, running entirely in your browser: nothing you type leaves
+  the page, and reloading starts over. Its Learn links open the handbook pages next to it.
 
 ### For people who run a server
 
+* `python scripts/build_preview.py --pages DIR` writes the demo as a small static site (the scripts and
+  stylesheets as files, the app's Content-Security-Policy as a `<meta>` element, no inline script); the
+  GitHub Pages workflow builds it into the handbook site's `demo/` and checks its links with the rest.
 * `python -m app.admin backup --dir DIR --keep N` writes a timestamped copy
   (`kidney-YYYYMMDDTHHMMSSZ.db`, UTC) into DIR and keeps only the newest N of them, so a backup tool on
   the host (restic, borg, Duplicati) can copy a separate folder of finished files instead of the live

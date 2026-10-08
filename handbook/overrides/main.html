@@ -1,6 +1,7 @@
 {#-
   Kidney Health Handbook theme overrides (Material for MkDocs 9.7.x).
-  * Announce bar on every page: back to the app (LAN build only) and "Get help now".
+  * Announce bar on every page: back to the app (LAN build only) or the app's demo (Pages build
+    only), and "Get help now".
   * Draft banner driven by front matter: shown unless `status: reviewed` AND `reviewed_by` is set.
   * Review line at the end of every page.
   Keep inline scripts and inline style attributes out of this file: /learn is served with a
@@ -12,6 +13,9 @@
   <div class="kh-announce">
     {% if config.extra.app_link %}
       <a class="kh-announce__app" href="{{ config.extra.app_link }}">&larr; Back to the food log</a>
+      <span class="kh-announce__sep" aria-hidden="true">&middot;</span>
+    {% elif config.extra.demo_link %}
+      <a class="kh-announce__app" href="{{ config.extra.demo_link | url }}">Try the app (demo)</a>
       <span class="kh-announce__sep" aria-hidden="true">&middot;</span>
     {% endif %}
     <a class="kh-announce__help" href="{{ 'get-help-now/' | url }}"><strong>Get help now</strong></a>

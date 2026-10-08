@@ -1,4 +1,5 @@
-"""scripts/build_preview.py: the self-contained preview fragment (no network, no skeleton tags)."""
+"""scripts/build_preview.py: the self-contained preview fragment (no network, no skeleton tags), and the GitHub
+Pages demo (``--pages``, v0.3.1): the same app as a small static site that keeps the app's CSP."""
 from __future__ import annotations
 
 import importlib.util
@@ -143,3 +144,87 @@ def test_preview_default_output_is_inside_the_repo() -> None:
     builder = _load_builder()
     assert builder.DEFAULT_OUT == ROOT / "build" / "kidney-diet-log.html"
     assert "build/" in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+# --------------------------------------------------------------------------- the GitHub Pages demo (v0.3.1)
+
+
+class _TagLister(HTMLParser):
+    def __init__(self, tag: str) -> None:
+        super().__init__()
+        self.tag = tag
+        self.found: list[dict[str, str | None]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == self.tag:
+            self.found.append(dict(attrs))
+
+
+def _tags(html: str, tag: str) -> list[dict[str, str | None]]:
+    lister = _TagLister(tag)
+    lister.feed(html)
+    lister.close()
+    return lister.found
+
+
+@pytest.fixture(scope="module")
+def pages_demo(tmp_path_factory) -> Path:
+    out = tmp_path_factory.mktemp("pages") / "demo"
+    assert _load_builder().main(["--pages", str(out)]) == 0
+    return out
+
+
+def test_pages_demo_keeps_the_app_csp_and_runs_no_inline_script(pages_demo: Path) -> None:
+    from app.security import CSP_DIRECTIVES
+
+    html = (pages_demo / "index.html").read_text(encoding="utf-8")
+    assert html.startswith('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">')
+    policies = [m["content"] for m in _tags(html, "meta") if m.get("http-equiv") == "Content-Security-Policy"]
+    # The app's policy, less frame-ancestors (ignored in a <meta> element); before anything it governs.
+    assert policies == ["; ".join(d for d in CSP_DIRECTIVES if not d.startswith("frame-ancestors"))]
+    assert "require-trusted-types-for 'script'" in policies[0] and "frame-ancestors" not in policies[0]
+    assert html.index("Content-Security-Policy") < min(html.index("<link"), html.index("<script"))
+    # Every script is a file, except the food data, which is JSON (a browser never runs it).
+    assert [s for s in _tags(html, "script") if not s.get("src")] == [{"type": "application/json", "id": "kdl-foods"}]
+    assert _load_builder().pages_csp() == policies[0]  # read from app/security.py without importing the server
+
+
+def test_pages_demo_is_the_app_as_files_under_a_sub_path(pages_demo: Path) -> None:
+    html = (pages_demo / "index.html").read_text(encoding="utf-8")
+    styles, head_scripts, body_scripts = _index_assets()
+    assert [s["src"] for s in _tags(html, "script") if s.get("src")] == [*head_scripts, "preview-flag.js", *body_scripts]
+    assert [link["href"] for link in _tags(html, "link") if link.get("rel") == "stylesheet"] == styles
+    for rel in [*styles, *head_scripts, *body_scripts, "icons/icon.svg"]:
+        assert (pages_demo / rel).read_bytes() == (STATIC / rel).read_bytes(), rel
+    # Not an installable app: no manifest, no service worker.
+    assert not (pages_demo / "js" / "pwa.js").exists()
+    for needle in ('rel="manifest"', "apple-touch-icon", "/sw.js"):
+        assert needle not in html, needle
+    m = re.search(r'<script type="application/json" id="kdl-foods">(.*?)</script>', html, re.S)
+    assert m and json.loads(m.group(1)) == json.loads((ROOT / "data" / "foods.json").read_text(encoding="utf-8"))
+    # Nothing absolute: the demo lives at /<repo>/demo/ and loads nothing from anywhere else.
+    assert not re.search(r"""\b(?:src|href)\s*=\s*["']?\s*(?:/|https?:)""", html, re.I)
+    assert re.search(r'<a id="learn-link"[^>]*href="\.\./"', html)  # the published handbook, one level up
+    assert 'href="./?reauth=1"' in html
+
+
+def test_pages_demo_links_into_the_published_handbook(pages_demo: Path) -> None:
+    from app.handbook import LINKS
+
+    flag = (pages_demo / "preview-flag.js").read_text(encoding="utf-8")
+    assert "\nwindow.KDL_PREVIEW = true;\n" in flag
+    m = re.search(r"^window\.KDL_DEMO_HANDBOOK = (\{.*\});$", flag, re.M)
+    assert m and json.loads(m.group(1)) == {"url": "../", "links": LINKS}  # the server's own table
+    mock = (STATIC / "js" / "mock" / "handbook.js").read_text(encoding="utf-8")
+    assert "window.KDL_DEMO_HANDBOOK" in mock and "new URL(d.url, window.location.href).href" in mock
+    # The fragment preview sets no handbook: there, the demo shows no Learn links.
+    assert "window.KDL_DEMO_HANDBOOK = " not in _load_builder().build_fragment()
+
+
+def test_pages_demo_refuses_an_absolute_path(tmp_path: Path) -> None:
+    static = tmp_path / "static"
+    shutil.copytree(STATIC, static)
+    index = static / "index.html"
+    index.write_text(index.read_text(encoding="utf-8").replace("</main>", '<a href="/api/export">x</a>\n</main>'), encoding="utf-8")
+    with pytest.raises(SystemExit, match="absolute paths"):
+        _load_builder().build_pages(tmp_path / "out", static_dir=static)

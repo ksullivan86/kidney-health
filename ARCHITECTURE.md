@@ -789,12 +789,22 @@ app/static/
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
   js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
   js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
-  js/mock/handbook.js   demo answer for GET /api/handbook (no handbook in the demo)
+  js/mock/handbook.js   demo answer for GET /api/handbook (none; the Pages demo links to the handbook beside it)
   js/main.js            boot
 ```
 
 `scripts/build_preview.py` inlines the `<link rel="stylesheet">` and `<script src>` tags of
-`index.html` in document order. **Parity rule:** every JS twin of server logic (`js/engine/*`,
+`index.html` in document order. With `--pages DIR` (v0.3.1) it writes the same demo as a static site for
+GitHub Pages instead: the stylesheets and scripts as files under their own paths, `index.html` with the
+app's policy (`CSP_DIRECTIVES` of `app/security.py`, read from the source, less `frame-ancestors`) as a
+`<meta http-equiv="Content-Security-Policy">` before anything it governs, no inline script (the food
+database is an `application/json` block), and `preview-flag.js`, which sets `window.KDL_PREVIEW` and
+`window.KDL_DEMO_HANDBOOK` (`{url: "../", links: APP_LINKS}`, the table of `app/guidance/topics.py` that
+`GET /api/handbook` also serves): `js/mock/handbook.js` then answers like a server with
+`HANDBOOK_PUBLIC_URL` set to the handbook one level up, so the demo's Learn links work. The absolute
+paths of the markup become relative (`/learn/` → `../`; anything else absolute stops the build). The
+handbook Pages workflow builds it into `site/demo/` before the link check, and the Pages handbook's
+announce bar links to it (`extra.demo_link` in `handbook/mkdocs.pages.yml`; empty in the `/learn` copy). **Parity rule:** every JS twin of server logic (`js/engine/*`,
 `js/mock/*`) is checked against the server by shared vector files in `tests/data/*.json`, run by
 pytest on the Python side and by `node tests/js/run_vectors.mjs` on the JS side (CI runs both).
 The mock routes as a whole are checked against a real, signed-in server by `tools/e2e/parity.py`

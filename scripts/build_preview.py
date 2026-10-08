@@ -6,6 +6,14 @@ Usage
 
     python3 scripts/build_preview.py                 # writes build/kidney-diet-log.html (gitignored)
     python3 scripts/build_preview.py --out page.html  # anywhere else
+    python3 scripts/build_preview.py --pages DIR      # the GitHub Pages demo: a static site in DIR (v0.3.1)
+
+``--pages`` writes the same app as a small static site instead of one fragment (``index.html``, the
+stylesheets and scripts as files under their own paths, ``preview-flag.js``), because a public web page
+should keep the app's Content-Security-Policy: ``index.html`` carries it as a ``<meta>`` element (Pages
+cannot send headers), without ``frame-ancestors`` (ignored there), and holds no inline script; the food
+database is an inline ``application/json`` block, which a browser never runs. The handbook's Pages workflow
+builds it into ``site/demo/``.
 
 The page needs no server and makes no network request. It inlines, in document order, every
 ``<link rel="stylesheet">`` and ``<script src>`` of ``app/static/index.html`` (the CSS files,
@@ -28,6 +36,7 @@ wrap it in a minimal skeleton first. Standard library only.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -149,10 +158,130 @@ def build_fragment(static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> 
     return "\n".join(p for p in parts if p) + "\n"
 
 
+PAGES_FLAG = "preview-flag.js"
+# The demo sits in demo/ of the handbook's Pages site, so the published handbook is one level up.
+PAGES_HANDBOOK = "../"
+# Absolute paths of the served app and what they become in the demo: the in-app handbook (/learn/) is the
+# published handbook; the proxy sign-in link stays in the demo.
+PAGES_LINKS = {"/learn/": PAGES_HANDBOOK, "/?reauth=1": "./?reauth=1"}
+SECURITY_PY = ROOT / "app" / "security.py"
+
+
+def pages_flag_js() -> str:
+    """``preview-flag.js``: the preview flag, and where the demo's Learn links go (js/mock/handbook.js answers
+    ``GET /api/handbook`` like a server with a public handbook copy, with the server's own link table)."""
+    sys.path.insert(0, str(ROOT))
+    try:
+        from app.guidance.topics import APP_LINKS  # pure data: the build needs no server packages
+    finally:
+        sys.path.pop(0)
+    handbook = json.dumps({"url": PAGES_HANDBOOK, "links": APP_LINKS}, ensure_ascii=False, sort_keys=True)
+    return (
+        "/* Written by scripts/build_preview.py --pages: the GitHub Pages demo runs against the in-page demo API\n"
+        "   (js/mock/*), and its Learn links go to the published handbook next to it. */\n"
+        "window.KDL_PREVIEW = true;\n"
+        f"window.KDL_DEMO_HANDBOOK = {handbook};\n"
+    )
+
+
+def pages_csp(security_py: Path = SECURITY_PY) -> str:
+    """The app's Content-Security-Policy (``CSP_DIRECTIVES`` in app/security.py, read from the source so the build
+    needs no server packages) as one ``<meta>`` value. ``frame-ancestors`` is ignored in a ``<meta>`` element (and
+    logged), so it is left out; GitHub Pages sends no header of its own."""
+    for node in ast.parse(security_py.read_text(encoding="utf-8")).body:
+        targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets if isinstance(node, ast.Assign) else []
+        if any(isinstance(t, ast.Name) and t.id == "CSP_DIRECTIVES" for t in targets) and node.value is not None:
+            directives = ast.literal_eval(node.value)
+            break
+    else:
+        raise SystemExit(f"{security_py}: CSP_DIRECTIVES not found")
+    return "; ".join(d for d in directives if not d.startswith("frame-ancestors"))
+
+
+def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:
+    """Write the demo as a static site into ``out_dir`` (created or emptied of the files it writes); returns the
+    files written. Same app, same flags and sample data as the fragment; files instead of inline code."""
+    index = (static_dir / "index.html").read_text(encoding="utf-8")
+    foods = json.loads(foods_json.read_text(encoding="utf-8"))
+    if not isinstance(foods, dict) or not isinstance(foods.get("foods"), list):
+        raise SystemExit(f"{foods_json}: expected {{version, source, foods: [...]}}")
+    head_m, body_m = _HEAD_RE.search(index), _BODY_RE.search(index)
+    if not head_m or not body_m:
+        raise SystemExit("index.html: could not find <head> and <body>")
+    head, body = _COMMENT_RE.sub("", head_m.group(1)), _COMMENT_RE.sub("", body_m.group(1))
+    title_m = _TITLE_RE.search(head)
+    title = title_m.group(1).strip() if title_m else "Kidney Diet Log"
+    desc_m = _DESCRIPTION_RE.search(head)
+    description = desc_m.group(1) if desc_m else ""
+
+    written: list[Path] = []
+
+    def copy(path: Path) -> str:
+        rel = path.relative_to(static_dir).as_posix()
+        target = out_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(path.read_bytes())
+        written.append(target)
+        return rel
+
+    # The app's icon (the installed-app tags stay out), so the browser does not ask the site root for /favicon.ico.
+    head_tags = [f'<link rel="icon" href="{copy(static_dir / "icons" / "icon.svg")}" type="image/svg+xml">']
+    for kind, path in _assets(head, static_dir, "head"):
+        rel = copy(path)
+        head_tags.append(f'<link rel="stylesheet" href="{rel}">' if kind == "style" else f'<script src="{rel}"></script>')
+    body_scripts = _assets(body, static_dir, "body")
+    markup = _ASSET_RE.sub("", body).strip()
+    markup = re.sub(r"\n{3,}", "\n\n", markup)
+    if re.search(r"<script\b", markup, re.I) or re.search(r"<link\b", markup, re.I):
+        raise SystemExit("index.html: body still references external files")
+    for app_path, pages_path in PAGES_LINKS.items():
+        markup = markup.replace(f'href="{app_path}"', f'href="{pages_path}"')
+    leftover = re.findall(r'(?:href|src)="(/[^"]*)"', markup)
+    if leftover:
+        raise SystemExit(f"index.html: absolute paths the Pages demo cannot serve: {sorted(set(leftover))}")
+    flag = out_dir / PAGES_FLAG
+    out_dir.mkdir(parents=True, exist_ok=True)
+    flag.write_text(pages_flag_js(), encoding="utf-8")
+    written.append(flag)
+    body_tags = [f'<script src="{copy(path)}"></script>' for _kind, path in body_scripts]
+    foods_text = _escape_json_for_script(json.dumps(foods, ensure_ascii=False, separators=(",", ":")))
+    page = "\n".join(p for p in [
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+        f'<meta http-equiv="Content-Security-Policy" content="{pages_csp()}">',
+        '<meta name="referrer" content="no-referrer">',
+        f"<title>{title} (demo)</title>",
+        f'<meta name="description" content="{description}">' if description else "",
+        *head_tags,
+        "</head>",
+        "<body>",
+        markup,
+        f'<script type="application/json" id="kdl-foods">{foods_text}</script>',
+        f'<script src="{PAGES_FLAG}"></script>',
+        *body_tags,
+        "</body>",
+        "</html>",
+    ] if p) + "\n"
+    index_out = out_dir / "index.html"
+    index_out.write_text(page, encoding="utf-8")
+    written.append(index_out)
+    return written
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output file (default: {DEFAULT_OUT})")
+    parser.add_argument("--pages", type=Path, default=None, metavar="DIR",
+                        help="write the GitHub Pages demo (a static site) into DIR instead of one fragment")
     args = parser.parse_args(argv)
+    if args.pages is not None:
+        files = build_pages(args.pages)
+        total = sum(f.stat().st_size for f in files)
+        print(f"wrote the Pages demo to {args.pages} ({len(files)} files, {total:,} bytes)")
+        return 0
     fragment = build_fragment()
     data = fragment.encode("utf-8")
     if len(data) > MAX_BYTES:

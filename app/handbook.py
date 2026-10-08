@@ -50,7 +50,7 @@ from starlette.types import Scope
 
 from .auth.deps import current_user
 from .config import Settings
-from .guidance.topics import NUTRIENT_TOPIC, TOPIC_PAGES
+from .guidance.topics import APP_LINKS
 
 log = logging.getLogger("kidney_health.handbook")
 
@@ -322,39 +322,9 @@ def setup(app: FastAPI, settings: Settings) -> HandbookSite | None:
 # --------------------------------------------------------------------------- #
 
 
-def _topic(slug: str) -> dict[str, str]:
-    page = TOPIC_PAGES[slug]
-    return {"path": page["url"].removeprefix(LEARN_PREFIX), "title": page["title"]}
-
-
-def _page(path: str, title: str) -> dict[str, str]:
-    return {"path": path, "title": title}
-
-
-# What the app links to, as paths under the handbook's base URL (note 08 §4.10). Nutrient pages come
-# from app/guidance/topics.py, the one slug table; tests/test_learn_links.py checks every path.
-LINKS: dict[str, dict[str, dict[str, str]]] = {
-    # Per-serving warnings and daily alerts, by nutrient key (app/nutrients.py).
-    "nutrients": {nutrient: _topic(slug) for nutrient, slug in NUTRIENT_TOPIC.items()},
-    # Food flags that cause or change a warning (app/nutrients.py FLAGS; potassium_additive: ARCHITECTURE
-    # v0.3 decision 9).
-    "flags": {
-        "avoid_ckd": _page("eat/food-lists/", "Food lists"),
-        "phosphate_additive": _topic("phosphate-additives"),
-        "potassium_additive": _topic("label-reading"),
-        "high_gi": _topic("carb-counting"),
-        "hypo_treatment": _topic("treating-a-low"),
-    },
-    # Pages the app links to by name.
-    "pages": {
-        "home": _page("", "Kidney Health Handbook"),
-        "targets": _topic("targets-and-warnings"),
-        "first_setup": _page("app/first-setup/", "First setup"),
-        "get_help_now": _topic("get-help-now"),
-        "blood_potassium": _topic("blood-potassium"),
-        "treating_a_low": _topic("treating-a-low"),
-    },
-}
+# What the app links to (note 08 §4.10): the pure table in app/guidance/topics.py, which the GitHub Pages demo
+# (scripts/build_preview.py --pages) also carries; tests/test_learn_links.py checks every path.
+LINKS = APP_LINKS
 
 
 class HandbookLink(BaseModel):

@@ -333,6 +333,7 @@ follows; AI coding agents also read [`AGENTS.md`](AGENTS.md). Maintainers: [docs
 python -m pytest                       # the whole suite, no network
 node tests/js/run_vectors.mjs          # the browser's copies of the rules match the server's
 python scripts/build_preview.py        # build/kidney-diet-log.html: the self-contained demo
+python scripts/build_preview.py --pages build/demo   # the same demo as a static site (the Pages demo)
 ```
 
 ## Project layout
