@@ -57,6 +57,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* The image is about 1 MB smaller: the handbook's search support for other languages
+  (`/learn/assets/javascripts/lunr/`: lunr-languages, TinySegmenter, wordcut; 964 KB) is left out of the
+  image and the GitHub Pages copy, as the source maps already were. The handbook searches in English only,
+  so its search worker never loaded those files; `tests/test_deploy.py` keeps the two in step.
 * `python scripts/build_preview.py --pages DIR` writes the demo as a small static site (the scripts and
   stylesheets as files, the app's Content-Security-Policy as a `<meta>` element, no inline script); the
   GitHub Pages workflow builds it into the handbook site's `demo/` and checks its links with the rest.

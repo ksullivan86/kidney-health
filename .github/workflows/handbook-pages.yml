@@ -74,6 +74,8 @@ jobs:
           set -euo pipefail
           mkdocs build --strict -f mkdocs.pages.yml -d "$RUNNER_TEMP/site"
           find "$RUNNER_TEMP/site" -type f -name '*.map' -exec rm -f {} +
+          # Search support for other languages: never loaded (search lang: en), as in deploy/Containerfile.
+          rm -rf "$RUNNER_TEMP/site/assets/javascripts/lunr"
           # The app's demo beside the handbook ("Try the app (demo)" links to it; standard library only).
           python ../scripts/build_preview.py --pages "$RUNNER_TEMP/site/demo"
           # Internal links under the Pages base path (for example /kidney-health/).

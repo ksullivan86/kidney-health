@@ -33,16 +33,16 @@ browser; MkDocs itself runs only when the site is built.
 | Material for MkDocs theme (styles, scripts, templates) | MIT ([Material for MkDocs][MATERIAL]) | [material-LICENSE.txt](../assets/licences/material-LICENSE.txt) |
 | clipboard.js and escape-html, inside the theme's script bundle | MIT | notices kept in the bundled file |
 | lunr, the search engine (runs in your browser, no internet needed) | MIT | notices kept in the search worker file |
-| lunr-languages: search support for other languages, shipped by the theme though this site searches in English only | Mozilla Public License 1.1 ([source](https://github.com/MihaiValentin/lunr-languages)) | notice at the top of each `lunr.*.min.js` file |
-| TinySegmenter (Japanese word splitting for search) | BSD, by Taku Kudo | notice in `tinyseg.js` |
-| wordcut (Thai word splitting for search) | GNU LGPL 3.0 ([source](https://github.com/veer66/wordcut)) | shipped unmodified as `wordcut.js` |
 | Material Design Icons (the light and dark mode buttons) | Pictogrammers Free License | [material-design-icons-LICENSE.txt](../assets/licences/material-design-icons-LICENSE.txt) |
 | Font Awesome Free (the GitHub icon in the footer) | icons under CC BY 4.0 | [fontawesome-LICENSE.txt](../assets/licences/fontawesome-LICENSE.txt) |
 | MkDocs (build tool only, not shipped) | BSD-2-Clause ([MkDocs][MKDOCS]) | – |
 
-The language files (lunr-languages, TinySegmenter, wordcut) are copied by the theme into every build.
-This site does not load them, because its search is set to English. They are kept unmodified so their
-licences are easy to follow.
+The theme also copies search support for other languages into every build: lunr-languages (Mozilla
+Public License 1.1, [source](https://github.com/MihaiValentin/lunr-languages)), TinySegmenter for
+Japanese (BSD, by Taku Kudo) and wordcut for Thai (GNU LGPL 3.0,
+[source](https://github.com/veer66/wordcut)). This site searches in English only and never loads them, so
+the copy inside the app and the public copy on GitHub Pages leave those files out. A copy you build
+yourself with MkDocs still has them, unmodified and with their licence notices.
 
 ## How to credit this handbook
 

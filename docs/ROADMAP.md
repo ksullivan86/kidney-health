@@ -42,7 +42,6 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 * Owner decisions before publishing: enable GitHub Pages (`HANDBOOK_PAGES=true`, needs a public repository or GitHub Pro/Team), then set `HANDBOOK_PUBLIC_URL` and the image's documentation label to the Pages URL — note 08 §4.8 "Owner setup", §7 Phase 0 and Phase 4.
 * Clinical sign-off of every handbook page by the named reviewers (draft banners stay until then) — note 08 §4.9 and §7 Phase 4; ARCHITECTURE.md v0.3 decision 11.
 * PEMAT-P self-score (understandability and actionability, each ≥ 70 %) of the 10 most-used pages, recorded in [`handbook/REVIEW.md`](../handbook/REVIEW.md) before the patient or caregiver reviewer's clarity pass: the pages the app links to (`get-help-now`, `t1d/treating-a-low`, `eat/potassium`, and `labs/` blood potassium, eGFR and creatinine, phosphate–calcium–PTH, albumin, bicarbonate, UACR, A1c) — note 08 §7 Phase 4 ("a PEMAT self-score on the 10 most-used pages") and §4.9 review roles. Its readability half ships: `tests/test_handbook_content.py` warns on any patient or caregiver page above reading grade 9.
-* Smaller handbook search index: prune the Lunr language support (about −0.9 MB of the image) — note 08 §6 risk 12 ("possible later").
 
 ## Meal guidance (note 06)
 

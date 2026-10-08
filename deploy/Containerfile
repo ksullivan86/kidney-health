@@ -86,9 +86,12 @@ ENV NO_MKDOCS_2_WARNING=true \
     HANDBOOK_SITE_URL=http://localhost/learn/ \
     HANDBOOK_APP_LINK=/
 # --strict: any warning fails the image build (broken links, external assets via the privacy plugin).
-# Source maps are dropped (1.3 MB nobody needs); sitemap.xml stays (instant navigation reads it).
+# Source maps are dropped (1.3 MB nobody needs); sitemap.xml stays (instant navigation reads it). So is
+# the theme's search support for other languages (assets/javascripts/lunr, 964 KB): the handbook searches
+# in English only (mkdocs.yml, search lang: en), so the search worker never loads it (tests/test_deploy.py).
 RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
  && find /out/learn -type f -name '*.map' -exec rm -f {} + \
+ && rm -rf /out/learn/assets/javascripts/lunr \
  && test -f /out/learn/index.html \
  && chmod -R u=rwX,go=rX /out/learn
 
