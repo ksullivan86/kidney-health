@@ -148,7 +148,8 @@ def test_range_reports_planned_and_projected_per_day(client):
     assert days[1]["planned_totals"]["potassium_mg"] == 422 and days[1]["projected_totals"]["potassium_mg"] == 422
     assert days[1]["projected_status"]["potassium_mg"]["level"] == "over"
     assert set(days[2]) == {"date", "totals", "planned_totals", "projected_totals", "status", "projected_status", "counts",
-                            "unknown", "planned_unknown", "projected_unknown"}
+                            "unknown", "planned_unknown", "projected_unknown", "pattern_alerts"}
+    assert days[2]["pattern_alerts"] == []  # nothing planned that day, so no "running high" (v0.3.1)
 
 
 def test_mark_eaten_for_a_meal_then_the_whole_day(client):
