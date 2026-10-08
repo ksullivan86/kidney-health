@@ -29,15 +29,13 @@ tests).
 
 ## In progress
 
-* Merged today: #13–#18 (the whole v0.3.1 batch) and #19 (kidney-only profile, part 1, 13:48 UTC).
-* "Explain the AI setup in plain words", last part: Settings → AI ideas intro, PR from the branch (built in worktree
-  `scratchpad/kh8`). Same PR, separate commit: `tools/e2e/regress.py` compares warnings without the handbook's
-  "Learn: …" links (with a built handbook every preview comparison failed; found by a QA run today).
-  Verified: full suite in the worktree, `tests/test_ai_setup_intro.py`, `tests/test_learn_links.py`, Chromium
-  walk AI on/off at 375/1280, `regress.py --only 1280-dark` with and without a built handbook (121/121 each).
-* QA of today's merges (worktree `scratchpad/khqa` at the #19 head): `upgrade.py` 71/71 (v0.2 and schema v3 to
-  schema 9), `regress.py` all four configurations pass once the handbook artifact is excluded (see above);
-  `sandbox.py` and `device.py` running at the time of writing (logs in `scratchpad/qa/`).
+* Merged today: #13–#18 (the whole v0.3.1 batch), #19 (kidney-only profile, part 1) and #20 (Settings → AI ideas
+  "How AI help is set up", plus the `regress.py` Learn-link fix; 14:02 UTC).
+* QA of today's merges (worktree `scratchpad/khqa` at the #19 head, logs in `scratchpad/qa/`): `upgrade.py` 71/71
+  (v0.2 and schema v3 to schema 9); `regress.py` passes in all four configurations (fixed in #20); `sandbox.py`
+  passes; `device.py` 151/151; `learn.py` 60/60; `journey.py` failed its setup step (it still looked for the AI
+  switch in Settings, which #15 moved to Server administration) and every later step that needs AI with it.
+  Fixed in the harness (PR from the branch, tools only): 134/134 on the #20 head.
 
 ## Next (in order)
 
