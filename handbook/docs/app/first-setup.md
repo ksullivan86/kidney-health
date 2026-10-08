@@ -58,6 +58,7 @@ Open **Profile** and enter:
 | Dialysis days | The weekdays of your hemodialysis sessions | lets the app total potassium, sodium and fluid between sessions ([Dialysis days](../eat/dialysis-days.md)) |
 | Diabetes | Type 1, Type 2 or None | **Not chosen yet** at first; until you pick, the app assumes type 1, so the Treating a low card stays available. Pick both before you ask for suggested targets |
 | Warn at (% of limit) | 80 % unless your team prefers another number | when a day turns from "ok" to "near limit" |
+| "About" targets: on target up to (% above) | 0 % unless your dietitian gives you a number (0–10 %) | how far above a one-number target, such as protein "about 56 g", still counts as on target ([Targets and warnings](targets-and-warnings.md#your-day)) |
 | Week starts on | Monday or Sunday | used by **Plan** and the shopping list |
 
 Then tap **Save profile**.

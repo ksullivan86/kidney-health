@@ -199,7 +199,8 @@ Albuminuria (KDIGO 2024 Table 3) uses the unit it was entered in: A1 below 30 mg
 * **Blood and urine tests**: the newest result of each test, the kidney-function line, and *Lab results*
   (opens the Labs view).
 * **Daily targets**: the editor (protein and calcium as minimum–maximum; the same number in both boxes
-  reads "about X"; fiber as "at least", a goal that is never "over"), *Warn at* and *Week starts on*.
+  reads "about X"; fiber as "at least", a goal that is never "over"), *Warn at*, *"About" targets: on target up
+  to (% above)* (v0.3.1, 0–10 %, default 0; see ARCHITECTURE.md "Tolerances (v0.3.1)") and *Week starts on*.
 
 **Suggest targets** works from the *saved* profile: when the form differs from it the app asks the
 person to save first. The answer fills the editor (not saved) and shows, in order: a very-high-potassium

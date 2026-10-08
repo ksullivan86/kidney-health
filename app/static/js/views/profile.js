@@ -23,7 +23,7 @@
   // Where a server error about a field is shown.
   const FIELD_INPUT = {
     name: 'pf-name', weight_kg: 'pf-weight', height_cm: 'pf-height', ckd_stage: 'pf-stage', dialysis: 'pf-dialysis', diabetes: 'pf-diabetes',
-    warn_fraction: 'pf-warn', week_start: 'pf-week-start', dialysis_days: 'pf-dd-0', birth_month: 'pf-birth-month', sex: 'pf-sex',
+    warn_fraction: 'pf-warn', about_tolerance_pct: 'pf-about-tol', week_start: 'pf-week-start', dialysis_days: 'pf-dd-0', birth_month: 'pf-birth-month', sex: 'pf-sex',
     activity: 'pf-act-none', transplant_date: 'pf-transplant-date', frail_or_sarcopenic: 'pf-frail', weight_6_months_ago_kg: 'pf-weight-6mo',
     pregnant_or_breastfeeding: 'pf-pregnant', hyperkalemia_history: 'pf-hyperk', urine_output_ml: 'pf-urine', pd_uf_ml: 'pf-uf',
     pd_dialysate_kcal: 'pf-pdkcal', targets: 'tg-potassium_mg',
@@ -124,6 +124,7 @@
     $('#pf-dialysis').value = p.dialysis || 'none';
     $('#pf-diabetes').value = p.diabetes_chosen === false ? '' : (p.diabetes || 'type1');
     $('#pf-warn').value = Math.round((p.warn_fraction ?? 0.8) * 100);
+    $('#pf-about-tol').value = p.about_tolerance_pct ?? 0;
     $('#pf-week-start').value = p.week_start === 'sunday' ? 'sunday' : 'monday';
     const dd = new Set((p.dialysis_days || []).map(Number));
     $$('#pf-dialysis-days input').forEach((c) => { c.checked = dd.has(Number(c.dataset.weekday)); });
@@ -229,6 +230,7 @@
   // ---------------------------------------------------------------------------
   function formBody(targets) {
     const warnPct = numOrNull($('#pf-warn').value);
+    const aboutPct = numOrNull($('#pf-about-tol').value);
     return {
       name: $('#pf-name').value.trim(),
       weight_kg: numOrNull($('#pf-weight').value),
@@ -238,6 +240,8 @@
       dialysis: $('#pf-dialysis').value,
       diabetes: $('#pf-diabetes').value || null,
       warn_fraction: warnPct != null ? Math.min(1, Math.max(0.5, warnPct / 100)) : 0.8,
+      // Schema step 9: empty means 0 (the number itself); the server refuses anything outside 0–10.
+      about_tolerance_pct: aboutPct != null ? aboutPct : 0,
       ...(targets ? { targets } : {}),
       dialysis_days: $('#pf-dialysis').value === 'hemodialysis' ? selectedDialysisDays() : [],
       week_start: $('#pf-week-start').value === 'sunday' ? 'sunday' : 'monday',

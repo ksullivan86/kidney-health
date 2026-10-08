@@ -11,7 +11,7 @@
   const KH = window.KH;
   const { NUT, NUTRIENT_KEYS, MEAL_KEYS, ASSESSMENT, pyRound, pyRepr, pyFsum, sqliteSum, roundValue, roundNutrients, isIntUnit,
     evaluateWarnings, ratingFromWarnings, emptyTotals, addTotals, countUnknown, mergeUnknown, markUnknown, scaleNutrients, statusLevel,
-    dailyStatus, buildAlerts, mealCarbAlerts, summaryTarget } = KH.rules;
+    dailyStatus, buildAlerts, mealCarbAlerts, summaryTarget, targetBounds, overAt, carbTolerance } = KH.rules;
   const { todayStr, addDays, daysBetween, weekdayMon } = KH.util;
   const M = KH.mock;
   const { route, MockApi, Check, fail, failFields, MEAL_RANK, MAX_INTERDIALYTIC_DAYS } = M;
@@ -84,17 +84,29 @@
           || (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0)
           || a.id - b.id);
     },
-    _dayFigures(rows) {
+    // log.carb_tolerance_for: the person's guidance.carb_tolerance_g (the registry default is 10 g).
+    _carbTolerance() {
+      const s = (this._effectiveSetting('guidance', this._currentUser().id).value) || {};
+      return carbTolerance(s.carb_tolerance_g);
+    },
+    _dayFigures(rows, carbToleranceG = 0) {
       const p = this._profile;
       const eaten = emptyTotals(), planned = emptyTotals();
       const meals = Object.fromEntries(MEAL_KEYS.map((m) => [m, emptyTotals()]));
       const plannedMeals = Object.fromEntries(MEAL_KEYS.map((m) => [m, emptyTotals()]));
+      // log.day_figures (v0.3.1): carbohydrate eaten to treat a low, per meal, is left out of the meal's alert.
+      const hypoMeals = {}, projectedHypoMeals = {};
       const counts = { eaten: 0, planned: 0 };
       // log.day_figures: every total says how many entries it misses (values not listed).
       const unknown = {}, plannedUnknown = {};
       const mealUnknown = Object.fromEntries(MEAL_KEYS.map((m) => [m, {}]));
       const plannedMealUnknown = Object.fromEntries(MEAL_KEYS.map((m) => [m, {}]));
       for (const row of rows) {
+        if (row.purpose === HYPO_PURPOSE) {
+          const carbs = Number((row.nutrients || {}).carbs_g || 0);
+          projectedHypoMeals[row.meal] = (projectedHypoMeals[row.meal] || 0) + carbs;
+          if (row.status !== 'planned') hypoMeals[row.meal] = (hypoMeals[row.meal] || 0) + carbs;
+        }
         if (row.status === 'planned') {
           addTotals(planned, row.nutrients); addTotals(plannedMeals[row.meal] || (plannedMeals[row.meal] = emptyTotals()), row.nutrients);
           countUnknown(plannedUnknown, row.nutrients); countUnknown(plannedMealUnknown[row.meal] || (plannedMealUnknown[row.meal] = {}), row.nutrients);
@@ -107,29 +119,33 @@
       }
       const projected = addTotals({ ...eaten }, planned);
       const projectedUnknown = mergeUnknown(unknown, plannedUnknown);
-      const status = markUnknown(dailyStatus(eaten, p.targets, p.warn_fraction), unknown);
-      const projectedStatus = markUnknown(dailyStatus(projected, p.targets, p.warn_fraction), projectedUnknown);
-      const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g, false, p.targets.carbs_per_snack_g)];
+      const about = p.about_tolerance_pct || 0;
+      const tol = carbTolerance(carbToleranceG);
+      const status = markUnknown(dailyStatus(eaten, p.targets, p.warn_fraction, about), unknown);
+      const projectedStatus = markUnknown(dailyStatus(projected, p.targets, p.warn_fraction, about), projectedUnknown);
+      const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g, false, p.targets.carbs_per_snack_g, tol, hypoMeals)];
       let projectedAlerts = [];
       if (counts.planned) {
         const projectedMeals = Object.fromEntries(Object.keys(meals).map((m) => [m, addTotals({ ...meals[m] }, plannedMeals[m] || {})]));
-        projectedAlerts = [...buildAlerts(projectedStatus, true), ...mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true, p.targets.carbs_per_snack_g)];
+        projectedAlerts = [...buildAlerts(projectedStatus, true),
+          ...mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true, p.targets.carbs_per_snack_g, tol, projectedHypoMeals)];
       }
       return { totals: roundNutrients(eaten), planned_totals: roundNutrients(planned), projected_totals: roundNutrients(projected),
         status, projected_status: projectedStatus,
         meals: Object.fromEntries(Object.entries(meals).map(([m, v]) => [m, roundNutrients(v)])),
         planned_meals: Object.fromEntries(Object.entries(plannedMeals).map(([m, v]) => [m, roundNutrients(v)])),
         alerts, projected_alerts: projectedAlerts, counts,
-        unknown, planned_unknown: plannedUnknown, projected_unknown: projectedUnknown, meal_unknown: mealUnknown, planned_meal_unknown: plannedMealUnknown };
+        unknown, planned_unknown: plannedUnknown, projected_unknown: projectedUnknown, meal_unknown: mealUnknown, planned_meal_unknown: plannedMealUnknown,
+        carb_tolerance_g: tol };
     },
     _day(date) {
       const rows = this._fetchEntries({ start: date, end: date });
-      const f = this._dayFigures(rows);
+      const f = this._dayFigures(rows, this._carbTolerance());
       return { date, entries: rows.map((r) => this._entryView(r)), totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals,
         targets: this._profileView().targets, status: f.status, projected_status: f.projected_status, meals: f.meals, planned_meals: f.planned_meals,
         alerts: f.alerts, projected_alerts: f.projected_alerts, counts: f.counts,
         unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown,
-        meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown };
+        meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown, carb_tolerance_g: f.carb_tolerance_g };
     },
     _range(start, end) {
       start = this._dateParam(start, 'start'); end = this._dateParam(end, 'end');
@@ -197,6 +213,8 @@
       for (const key of NUTRIENT_KEYS) {
         const target = summaryTarget(targets[key]);
         if (target == null) continue;
+        // periods.summarize_period (v0.3.1): an "about" target is over only above the person's tolerance.
+        const limitAt = overAt(key, targetBounds(targets[key])[0], target, p.about_tolerance_pct || 0);
         const values = current.map((d) => [d, val(d, key)]);
         const total = values.length ? pyFsum(values.map((x) => x[1])) : 0;
         const average = avg(values.map((x) => x[1]));
@@ -206,8 +224,8 @@
         const previousAverage = avg(previous.map((d) => val(d, key)));
         const changePct = average != null && previousAverage ? pyRound(((average - previousAverage) / previousAverage) * 100, 1) : null;
         nutrients[key] = { role: NUT[key].role, target: roundValue(key, target), total: roundValue(key, total),
-          average: average == null ? null : roundValue(key, average), fraction, level: statusLevel(fraction, wf),
-          days_over: values.filter((x) => x[1] > target).length,
+          average: average == null ? null : roundValue(key, average), fraction, level: statusLevel(fraction, wf, limitAt),
+          days_over: values.filter((x) => (limitAt === 1 ? x[1] > target : x[1] / target > limitAt)).length,
           max_day: maxDay ? { date: maxDay[0], value: roundValue(key, maxDay[1]) } : null,
           previous_average: previousAverage == null ? null : roundValue(key, previousAverage), change_pct: changePct,
           assessment: ASSESSMENT[key] || 'weekly_average',
@@ -426,7 +444,7 @@
 
   // The day figures (totals, status, alerts, projections) for any entry rows and targets: js/offline.js draws a
   // day with the entries still waiting to sync with the same twin of app/log.py the demo uses.
-  function dayFigures(profile, rows) { return MockApi.prototype._dayFigures.call({ _profile: profile }, rows); }
+  function dayFigures(profile, rows, carbToleranceG = 0) { return MockApi.prototype._dayFigures.call({ _profile: profile }, rows, carbToleranceG); }
 
   Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures });
 })();

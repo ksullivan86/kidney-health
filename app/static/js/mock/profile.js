@@ -77,6 +77,9 @@
     c.err(k, 'Input should be a valid boolean');
   }
 
+  // profile._about_tolerance: anything outside 0..10 reads as 0.
+  function aboutTolerancePct(v) { return Number.isInteger(v) && v >= 0 && v <= KH.rules.ABOUT_TOLERANCE_MAX_PCT ? v : 0; }
+
   Object.assign(MockApi.prototype, {
     _profileView() {
       const p = this._profile;
@@ -85,7 +88,8 @@
       const v03 = {};
       for (const k of V03_FIELDS) v03[k] = p[k] === undefined ? V03_DEFAULTS[k] : p[k];
       return { id: 1, name: p.name, weight_kg: p.weight_kg, height_cm: p.height_cm, ckd_stage: p.ckd_stage, dialysis: p.dialysis, diabetes: p.diabetes,
-        warn_fraction: p.warn_fraction, dialysis_days: [...p.dialysis_days], week_start: p.week_start === 'sunday' ? 'sunday' : 'monday', targets,
+        warn_fraction: p.warn_fraction, about_tolerance_pct: aboutTolerancePct(p.about_tolerance_pct),
+        dialysis_days: [...p.dialysis_days], week_start: p.week_start === 'sunday' ? 'sunday' : 'monday', targets,
         ...v03, ckd_stage_chosen: p.ckd_stage_chosen !== false, diabetes_chosen: p.diabetes_chosen !== false, updated_at: p.updated_at };
     },
     _updateProfile(body) {
@@ -103,6 +107,7 @@
       c.choice('dialysis', DIALYSIS_MODES, { nullable: true });
       c.choice('diabetes', DIABETES_TYPES, { nullable: true });
       c.num('warn_fraction', { gt: 0, le: 1 });
+      c.num('about_tolerance_pct', { int: true, ge: 0, le: KH.rules.ABOUT_TOLERANCE_MAX_PCT });
       c.targets();
       c.dialysisDays();
       c.choice('week_start', ['monday', 'sunday'], { nullable: true });
@@ -126,6 +131,8 @@
       for (const col of ['ckd_stage', 'diabetes']) if (data[col] != null) p[`${col}_chosen`] = true;
       // profile._RESET_TO_DEFAULT: null puts sex and the yes/no fields back to their default.
       for (const col of ['sex', ...BOOL_FIELDS]) if (col in data) p[col] = data[col] == null ? V03_DEFAULTS[col] : data[col];
+      // Schema step 9: the tolerance above "about" targets; null puts it back to 0.
+      if ('about_tolerance_pct' in data) p.about_tolerance_pct = data.about_tolerance_pct == null ? 0 : data.about_tolerance_pct;
       if (data.targets != null) p.targets = { ...p.targets, ...data.targets };
       if ('dialysis_days' in data) p.dialysis_days = data.dialysis_days || [];
       p.updated_at = this._stamp();

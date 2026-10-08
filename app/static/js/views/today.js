@@ -118,6 +118,10 @@
     const perMealGoal = day.targets && typeof day.targets.carbs_per_meal_g === 'number' ? day.targets.carbs_per_meal_g : null;
     const snackGoal = day.targets && typeof day.targets.carbs_per_snack_g === 'number' ? day.targets.carbs_per_snack_g : null;
     const wf = (state.profile && state.profile.warn_fraction) || 0.8;
+    // v0.3.1: a meal is "over" only more than the person's tolerance above its goal (the server's alerts use the same
+    // number), and carbohydrate eaten to treat a low is left out of the meal's goal: treating a low is never warned against.
+    const carbTol = Number(day.carb_tolerance_g || 0);
+    const hypoCarbsOf = (list) => list.filter((e) => e.purpose === 'hypo').reduce((a, e) => a + ((e.nutrients && e.nutrients.carbs_g) || 0), 0);
     for (const meal of MEALS) {
       // The snack has its own carbohydrate goal when the person set one (nutrients.meal_carb_alerts does the same).
       const snackOwn = meal.key === 'snack' && snackGoal != null;
@@ -134,8 +138,10 @@
       const carbsUnknown = unknownOf(mu, 'carbs_g');
       const carbs = mt ? mt.carbs_g || 0 : eatenEntries.reduce((a, e) => a + (e.nutrients.carbs_g || 0), 0);
       const plannedCarbs = pmt ? pmt.carbs_g || 0 : plannedEntries.reduce((a, e) => a + (e.nutrients.carbs_g || 0), 0);
-      const over = perMeal != null && carbs > perMeal;
-      const near = perMeal != null && !over && carbs >= perMeal * wf;
+      const hypoCarbs = hypoCarbsOf(eatenEntries);
+      const counted = carbs - hypoCarbs;
+      const over = perMeal != null && counted > perMeal + carbTol;
+      const near = perMeal != null && !over && counted >= perMeal * wf;
       const carbsEl = h('span', { class: `meal-carbs${over ? ' over' : ''}`,
         'aria-label': `Carbohydrate eaten ${atLeastWords(fmtNum(carbs, 'carbs_g'), carbsUnknown)} grams${perMeal != null ? ` of ${perMeal} gram ${snackOwn ? 'snack goal' : 'meal target'}` : ''}`
           + (carbsUnknown ? `; ${foodsNotListing(carbsUnknown, 'carbs_g')}` : '') },
@@ -145,7 +151,7 @@
         carbsUnknown ? h('span', { class: 'not-listed' }, ` ${notListed(carbsUnknown)}`) : null);
       const headRight = h('div', { class: 'meal-head-right' }, carbsEl);
       if (plannedEntries.length) {
-        const projOver = perMeal != null && carbs + plannedCarbs > perMeal;
+        const projOver = perMeal != null && counted + plannedCarbs - hypoCarbsOf(plannedEntries) > perMeal + carbTol;
         headRight.append(h('span', { class: `meal-planned-carbs${projOver ? ' over' : ''}`, 'aria-label': `Planned: ${fmtNum(plannedCarbs, 'carbs_g')} more grams of carbohydrate` },
           `Planned: +${fmtNum(plannedCarbs, 'carbs_g')} g carbs`, projOver ? ` (${fmtNum(carbs + plannedCarbs, 'carbs_g')} g total)` : ''));
       }
@@ -224,7 +230,7 @@
     const level = st.level || 'ok';
     const p = pct(st.fraction);
     // A range whose minimum equals its maximum (protein "about 56 g", note 05 §4.8) reads as one number.
-    const about = st.min != null && st.target != null && Number(st.min) === Number(st.target);
+    const about = KH.ui.isAboutTarget(st, key); // never for a limit (nutrients.is_about)
     const hasMin = st.min != null && !about;
     const targetText = about ? `about ${fmtNum(st.target, key)}` : hasMin ? `${fmtNum(st.min, key)}–${fmtNum(st.target, key)}` : fmtNum(st.target, key);
     // Same word as the server's alerts: goal (calories, carbohydrate), maximum (ranges, info), limit.
@@ -259,7 +265,9 @@
     wrap.append(track);
     const foot = nothingKnown ? [] : [`${atLeast(String(p), unk)} % of ${hasMin ? 'maximum' : about ? 'target' : ROLE_WORD[n.role] || 'limit'}`];
     if (hasMin && st.value < st.min) foot.push(`below the ${fmtNum(st.min, key)} ${n.unit} minimum so far`);
-    if (st.fraction > 1) foot.push(`${atLeast(fmtNum(st.value - st.target, key), unk)} ${n.unit} over`);
+    // An "about" target within the person's tolerance (Profile, v0.3.1) is above the number but not "over".
+    if (st.fraction > 1 && about && level !== 'over') foot.push(`${atLeast(fmtNum(st.value - st.target, key), unk)} ${n.unit} above, within your tolerance`);
+    else if (st.fraction > 1) foot.push(`${atLeast(fmtNum(st.value - st.target, key), unk)} ${n.unit} over`);
     else if (!unk) foot.push(`${fmtNum(st.target - st.value, key)} ${n.unit} left`);
     if (hasProj) foot.push(`${atLeast(String(pp), projUnk)} % with planned`);
     if (foot.length) wrap.append(h('div', { class: 'stat-foot' }, foot.join(' · ')));

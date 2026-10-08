@@ -14,6 +14,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   they choose, and Today shows a one-line prompt meanwhile. The app keeps using stage 3b and type 1
   diabetes for its targets and guidance until then, so the Treating a low card stays available. Target
   suggestions wait until both are chosen. Existing profiles count as chosen (schema step 8).
+* **Carbohydrate tolerance on Today.** A meal's carbohydrate shows as over only when it is more than your
+  carbohydrate tolerance above the meal's goal: 10 g unless you change it in Settings → Meal guidance
+  (5–20 g), the number the meal suggestions already used. A 60.6 g dinner planned as "close to your goal"
+  for a 60 g goal no longer shows "Projected over". Carbohydrate you ate to treat a low is left out of the
+  meal's goal, so treating a low never makes a meal over; it still counts in the day's totals.
+* **A tolerance for "about" targets.** Profile → *"About" targets: on target up to (% above)*, 0–10 %, sets
+  how far above a one-number target, such as protein "about 56 g", still counts as on target (Today, the
+  plan, the period summary). It starts at 0, the earlier behaviour: no guideline gives a number, so it is
+  yours to set with your dietitian. Alerts now call such a number "today's target" instead of "today's
+  maximum" (schema step 9).
 
 ### For people who run a server
 

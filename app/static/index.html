@@ -723,6 +723,11 @@
             <span class="hint" id="pf-warn-hint">Status turns to "near limit" at this share of a daily target.</span>
           </div>
           <div class="field">
+            <label for="pf-about-tol">"About" targets: on target up to (% above)</label>
+            <input id="pf-about-tol" name="about_tolerance_pct" type="number" inputmode="numeric" min="0" max="10" step="1" value="0" aria-describedby="pf-about-tol-hint">
+            <span class="hint" id="pf-about-tol-hint">For a target with one number, such as protein "about 56 g". 0 shows "Above target" as soon as you pass it. Ask your dietitian before you change it.</span>
+          </div>
+          <div class="field">
             <label for="pf-week-start">Week starts on</label>
             <select id="pf-week-start" name="week_start" aria-describedby="pf-week-start-hint">
               <option value="monday">Monday</option>

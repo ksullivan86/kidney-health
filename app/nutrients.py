@@ -342,14 +342,51 @@ def target_bounds(target: Any) -> tuple[float | None, float | None]:
     return (None, float(target))
 
 
-def status_level(fraction: float | None, warn_fraction: float) -> str:
+def status_level(fraction: float | None, warn_fraction: float, over_at: float = 1.0) -> str:
+    """``over`` above ``over_at`` (1.0, or more for an "about" target with a tolerance), ``caution`` from
+    ``warn_fraction``, else ``ok``."""
     if fraction is None or math.isnan(fraction):
         return "ok"
-    if fraction > 1.0:  # includes +inf
+    if fraction > over_at:  # includes +inf
         return "over"
     if fraction >= warn_fraction:
         return "caution"
     return "ok"
+
+
+# The person's tolerance above an "about" target (v0.3.1): 0 (the default, the number itself) to 10 %, from
+# their care team. No guideline gives a value, so the app sets none (handbook/REVIEW.md, "Food targets").
+ABOUT_TOLERANCE_MAX_PCT = 10
+
+
+def about_tolerance(pct: Any) -> float:
+    """The tolerance in percent, clamped to 0..``ABOUT_TOLERANCE_MAX_PCT``; anything unusable is 0."""
+    try:
+        value = float(pct or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return min(max(value, 0.0), float(ABOUT_TOLERANCE_MAX_PCT))
+
+
+def _is_limit(key: str) -> bool:
+    nutrient = NUTRIENT_BY_KEY.get(key)
+    return nutrient is not None and nutrient.role == "limit"
+
+
+def is_about(key: str, lo: float | None, hi: float | None) -> bool:
+    """A range whose minimum equals its maximum once rounded (protein "about 56 g", note 05 §4.8), as the UI
+    shows it. A limit (potassium, sodium, phosphorus, fluid) is never an "about" target, even entered so."""
+    if lo is None or hi is None or not (math.isfinite(lo) and math.isfinite(hi)) or hi <= 0 or _is_limit(key):
+        return False
+    return round_value(key, lo) == round_value(key, hi)
+
+
+def over_at(key: str, lo: float | None, hi: float | None, about_tolerance_pct: Any = 0) -> float:
+    """The fraction of the maximum above which a total is ``over``: 1 + the tolerance for an "about" target,
+    else 1.0."""
+    return 1.0 + about_tolerance(about_tolerance_pct) / 100.0 if is_about(key, lo, hi) else 1.0
 
 
 def _finite_fraction(item: Mapping[str, Any]) -> float | None:
@@ -368,11 +405,13 @@ def daily_status(
     totals: Mapping[str, float | None],
     targets: Mapping[str, Any],
     warn_fraction: float = 0.8,
+    about_tolerance_pct: Any = 0,
 ) -> dict[str, dict[str, Any]]:
     """Per-nutrient ``{"value","target","fraction","level"}`` (+ ``"min"`` for ranges).
 
     Only nutrient keys that have a non-null target are included; the per-meal
     carbohydrate goal is not a nutrient and is handled by :func:`meal_carb_alerts`.
+    An "about" target (minimum = maximum) is ``over`` only above the person's ``about_tolerance_pct``.
     """
     status: dict[str, dict[str, Any]] = {}
     for key in NUTRIENT_KEYS:
@@ -390,7 +429,7 @@ def daily_status(
         fraction = (value / hi) if hi else None
         # The level is judged on the raw fraction (inf is "over"); the reported fraction must be
         # finite because JSON cannot carry it and the alert builders turn it into a percentage.
-        level = status_level(fraction, warn_fraction)
+        level = status_level(fraction, warn_fraction, over_at(key, lo, hi, about_tolerance_pct))
         if fraction is not None and not math.isfinite(fraction):
             fraction = None
         item: dict[str, Any] = {
@@ -408,6 +447,14 @@ def daily_status(
 _ROLE_WORD = {"limit": "limit", "range": "maximum", "info": "maximum", "goal": "goal", "track": "goal"}
 
 
+def _status_word(key: str, item: Mapping[str, Any]) -> str:
+    """How an alert names the number: "target" for an "about" target (minimum = maximum, as the UI words it),
+    else by the nutrient's role."""
+    if not _is_limit(key) and item.get("min") is not None and item.get("target") is not None and item["min"] == item["target"]:
+        return "target"
+    return _ROLE_WORD.get(NUTRIENT_BY_KEY[key].role, "goal")
+
+
 def build_alerts(status: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Alerts for every nutrient whose level is ``caution`` or ``over`` (over first)."""
     alerts: list[dict[str, Any]] = []
@@ -420,7 +467,7 @@ def build_alerts(status: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
         pct = int(round(fraction * 100))
         value = _fmt(key, item.get("value"))
         target = _fmt(key, item.get("target"))
-        word = _ROLE_WORD.get(nutrient.role, "goal")
+        word = _status_word(key, item)
         if level == "caution":
             message = f"{nutrient.label} is at {pct} % of today's {word} ({value} / {target} {nutrient.unit})"
         else:
@@ -445,29 +492,73 @@ def _goal_word(meal: str, snack_target: Any) -> str:
     return "snack goal" if meal == "snack" and target_bounds(snack_target)[1] else "per-meal goal"
 
 
+def carb_tolerance(tolerance_g: Any) -> float:
+    """The person's carbohydrate tolerance in grams (``guidance.carb_tolerance_g``, 5–20, default 10: Smart et al.
+    2009/2012, note 06 F4); anything unusable is 0, the goal itself."""
+    try:
+        value = float(tolerance_g or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return value if math.isfinite(value) and value > 0 else 0.0
+
+
+def _meal_carb_alert_items(
+    meals: Mapping[str, Mapping[str, float | None]],
+    carbs_per_meal_target: Any,
+    snack_target: Any,
+    tolerance_g: Any,
+    hypo_carbs: Mapping[str, float] | None,
+) -> list[tuple[str, float, float, float, float, str]]:
+    """``(meal, counted carbs, goal, tolerance, low-treatment carbs left out, goal word)`` for each meal whose
+    carbohydrate is more than the tolerance above its goal. Carbohydrate eaten to treat a low is left out: treating
+    a low is never warned against (note 06 §4.11)."""
+    goals = _carb_goals(carbs_per_meal_target, snack_target)
+    tol = carb_tolerance(tolerance_g)
+    out = []
+    for meal in MEALS:
+        hi = goals.get(meal)
+        if not hi:
+            continue
+        hypo = float((hypo_carbs or {}).get(meal) or 0.0)
+        carbs = float((meals.get(meal) or {}).get("carbs_g") or 0.0) - hypo
+        if carbs > hi + tol:
+            out.append((meal, carbs, hi, tol, hypo, _goal_word(meal, snack_target)))
+    return out
+
+
+def _over_words(tol: float, word: str) -> str:
+    return f"more than {_fmt('carbs_g', tol)} g over the {word}" if tol > 0 else f"over the {word}"
+
+
+def _hypo_words(hypo: float) -> str:
+    return f"not counting {_fmt('carbs_g', hypo)} g used to treat a low" if hypo > 0 else ""
+
+
 def meal_carb_alerts(
     meals: Mapping[str, Mapping[str, float | None]],
     carbs_per_meal_target: Any,
     snack_target: Any = None,
+    *,
+    tolerance_g: Any = 0,
+    hypo_carbs: Mapping[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """``over`` alerts for meals whose carbohydrate exceeds the per-meal goal (the snack: its own goal when set)."""
-    goals = _carb_goals(carbs_per_meal_target, snack_target)
+    """``over`` alerts for meals whose carbohydrate is more than ``tolerance_g`` above the per-meal goal (the snack:
+    its own goal when set); ``hypo_carbs`` (per meal) are left out."""
     alerts: list[dict[str, Any]] = []
-    for meal in MEALS:
-        hi = goals.get(meal)
-        carbs = float((meals.get(meal) or {}).get("carbs_g") or 0.0)
-        if hi and carbs > hi:
-            alerts.append(
-                {
-                    "level": "over",
-                    "nutrient": "carbs_g",
-                    "meal": meal,
-                    "message": (
-                        f"{meal.capitalize()} carbohydrate is over the {_goal_word(meal, snack_target)}: "
-                        f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g"
-                    ),
-                }
-            )
+    for meal, carbs, hi, tol, hypo, word in _meal_carb_alert_items(meals, carbs_per_meal_target, snack_target,
+                                                                     tolerance_g, hypo_carbs):
+        note = _hypo_words(hypo)
+        alerts.append(
+            {
+                "level": "over",
+                "nutrient": "carbs_g",
+                "meal": meal,
+                "message": (
+                    f"{meal.capitalize()} carbohydrate is {_over_words(tol, word)}: "
+                    f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g" + (f" ({note})" if note else "")
+                ),
+            }
+        )
     return alerts
 
 
@@ -485,7 +576,7 @@ def build_projected_alerts(status: Mapping[str, Mapping[str, Any]]) -> list[dict
             continue
         nutrient = NUTRIENT_BY_KEY[key]
         pct = int(round(fraction * 100))
-        word = _ROLE_WORD.get(nutrient.role, "goal")
+        word = _status_word(key, item)
         message = (
             f"If you eat what's planned, {nutrient.label.lower()} reaches {pct} % of today's {word} "
             f"({_fmt(key, item.get('value'))} / {_fmt(key, item.get('target'))} {nutrient.unit})"
@@ -499,26 +590,27 @@ def projected_meal_carb_alerts(
     meals: Mapping[str, Mapping[str, float | None]],
     carbs_per_meal_target: Any,
     snack_target: Any = None,
+    *,
+    tolerance_g: Any = 0,
+    hypo_carbs: Mapping[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """``over`` alerts for meals whose *projected* carbohydrate exceeds the per-meal goal (the snack: its own
-    goal when set)."""
-    goals = _carb_goals(carbs_per_meal_target, snack_target)
+    """``over`` alerts for meals whose *projected* carbohydrate is more than ``tolerance_g`` above the per-meal goal
+    (the snack: its own goal when set); ``hypo_carbs`` (per meal, eaten and planned) are left out."""
     alerts: list[dict[str, Any]] = []
-    for meal in MEALS:
-        hi = goals.get(meal)
-        carbs = float((meals.get(meal) or {}).get("carbs_g") or 0.0)
-        if hi and carbs > hi:
-            alerts.append(
-                {
-                    "level": "over",
-                    "nutrient": "carbs_g",
-                    "meal": meal,
-                    "message": (
-                        f"If you eat what's planned, {meal} carbohydrate reaches "
-                        f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g (over the {_goal_word(meal, snack_target)})"
-                    ),
-                }
-            )
+    for meal, carbs, hi, tol, hypo, word in _meal_carb_alert_items(meals, carbs_per_meal_target, snack_target,
+                                                                     tolerance_g, hypo_carbs):
+        parts = [_over_words(tol, word), _hypo_words(hypo)]
+        alerts.append(
+            {
+                "level": "over",
+                "nutrient": "carbs_g",
+                "meal": meal,
+                "message": (
+                    f"If you eat what's planned, {meal} carbohydrate reaches "
+                    f"{_fmt('carbs_g', carbs)} / {_fmt('carbs_g', hi)} g ({'; '.join(p for p in parts if p)})"
+                ),
+            }
+        )
     return alerts
 
 

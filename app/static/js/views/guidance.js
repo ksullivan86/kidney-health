@@ -816,7 +816,7 @@
       rows.push(h('li', { class: 'g-after-row' },
         h('span', { class: 'g-after-label' }, NUT[k].label),
         h('span', { class: 'tabular' }, `${fmtNum(st.value, k)} of ${fmtNum(st.target, k)} ${NUT[k].unit} (${pctText})`),
-        levelPill(st.level || 'ok', KH.ui.levelTextFor(st, st.level || 'ok'))));
+        levelPill(st.level || 'ok', KH.ui.levelTextFor(st, st.level || 'ok', k))));
     }
     if (rows.length) sec.append(list('g-after-list', rows));
     for (const a of (d && d.new_alerts) || []) {
@@ -1345,7 +1345,7 @@
       check('show_plan_builder', 'Show “Plan the rest of my day”'),
       check('show_insights', 'Show insights on Today and Trends'),
       aiEnrichRow(check),
-      number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure.', 5, 20),
+      number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure. Today\'s per-meal carbohydrate alert uses it too.', 5, 20),
       number('hypo_dose_g', 'Carbs I take to treat a low (g)', 'The amount your diabetes team gave you, 5 to 30 g. Low-treatment options are sized to it.', 5, 30));
     // Never suggest (categories)
     const catList = cats.status === 'fulfilled' ? cats.value.categories || [] : [];

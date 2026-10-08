@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
-from .nutrients import FLAGS, NUTRIENT_KEYS, TARGET_KEYS
+from .nutrients import ABOUT_TOLERANCE_MAX_PCT, FLAGS, NUTRIENT_KEYS, TARGET_KEYS
 from .periods import normalise_dialysis_days
 
 # Ceilings for numeric request fields. Pydantic floats accept the JSON literals Infinity/NaN
@@ -598,6 +598,9 @@ class DaySummary(BaseModel):
     projected_unknown: dict[str, int] = Field(default_factory=dict)
     meal_unknown: dict[str, dict[str, int]] = Field(default_factory=dict)
     planned_meal_unknown: dict[str, dict[str, int]] = Field(default_factory=dict)
+    # v0.3.1: grams above a meal's carbohydrate goal that still count as on target (guidance.carb_tolerance_g);
+    # the per-meal alerts use it, and the UI draws the meal lines with it.
+    carb_tolerance_g: Number = 0
 
 
 class DayTotals(BaseModel):
@@ -794,6 +797,8 @@ class ProfileUpdate(BaseModel):
     dialysis: Dialysis | None = None
     diabetes: Diabetes | None = None
     warn_fraction: float | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
+    # v0.3.1: how far above an "about" target (minimum = maximum) still counts as on target, 0–10 %; null resets to 0.
+    about_tolerance_pct: int | None = Field(default=None, ge=0, le=ABOUT_TOLERANCE_MAX_PCT)
     targets: dict[str, Any] | None = None
     dialysis_days: list[Any] | None = None
     week_start: WeekStart | None = None
@@ -847,6 +852,7 @@ class Profile(BaseModel):
     dialysis: Dialysis
     diabetes: Diabetes
     warn_fraction: float
+    about_tolerance_pct: int = 0
     dialysis_days: list[int]
     week_start: WeekStart
     targets: dict[str, TargetValue]

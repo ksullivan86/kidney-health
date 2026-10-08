@@ -18,6 +18,7 @@ from . import targets as targets_engine
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, table_exists, utcnow
 from .models import Profile, ProfileUpdate, SuggestedTargets
+from .nutrients import ABOUT_TOLERANCE_MAX_PCT
 from .periods import WEEK_STARTS
 from .settings_store import SettingsStore, default_store
 from .target_rules import ACTIVITIES, SEXES
@@ -35,6 +36,7 @@ _NULLABLE_COLUMNS = (
 _NOT_NULL_COLUMNS = ("name", "ckd_stage", "dialysis", "diabetes", "warn_fraction", "week_start")
 _RESET_TO_DEFAULT: dict[str, Any] = {
     "sex": "unspecified", "frail_or_sarcopenic": 0, "pregnant_or_breastfeeding": 0, "hyperkalemia_history": 0,
+    "about_tolerance_pct": 0,  # schema step 9
 }
 _BOOL_COLUMNS = ("frail_or_sarcopenic", "pregnant_or_breastfeeding", "hyperkalemia_history")
 _BIRTH_MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -103,6 +105,11 @@ def _v03_fields(row: sqlite3.Row) -> dict[str, Any]:
     return out
 
 
+def _about_tolerance(value: Any) -> int:
+    """The stored tolerance above "about" targets (schema step 9); anything outside 0..10 reads as 0."""
+    return value if isinstance(value, int) and 0 <= value <= ABOUT_TOLERANCE_MAX_PCT else 0
+
+
 def row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
     week_start = row["week_start"] if row["week_start"] in WEEK_STARTS else "monday"
     return {
@@ -114,6 +121,7 @@ def row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
         "dialysis": row["dialysis"],
         "diabetes": row["diabetes"],
         "warn_fraction": row["warn_fraction"],
+        "about_tolerance_pct": _about_tolerance(_column(row, "about_tolerance_pct", 0)),
         "dialysis_days": parse_dialysis_days(row["dialysis_days_json"]),
         "week_start": week_start,
         "targets": parse_targets(row["targets_json"]),

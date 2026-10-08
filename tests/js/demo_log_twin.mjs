@@ -3,7 +3,7 @@
 // js/core.js) on plain JSON from stdin and prints its answers, so tests/test_unknown_values_twin.py can compare them
 // with app/log.py and app/periods.py on the same rows.
 //
-//   echo '{"profile": {...}, "rows": [...], "entries": [...], "summary": ["2026-10-01", "2026-10-07"]}' | node tests/js/demo_log_twin.mjs
+//   echo '{"profile": {...}, "rows": [...], "carb_tolerance_g": 10, "entries": [...], "summary": ["2026-10-01", "2026-10-07"]}' | node tests/js/demo_log_twin.mjs
 //
 // core.js builds the page at load, so it runs against a no-op stand-in for the DOM (nothing here touches the page).
 import { readFileSync } from 'node:fs';
@@ -32,7 +32,7 @@ function load() {
 const input = JSON.parse(readFileSync(0, 'utf8'));
 const KH = load();
 const out = {};
-if (input.rows) out.day = KH.mock.dayFigures(input.profile, input.rows);
+if (input.rows) out.day = KH.mock.dayFigures(input.profile, input.rows, input.carb_tolerance_g || 0);
 if (input.entries && input.summary) {
   const api = Object.create(KH.mock.MockApi.prototype);
   api._entries = input.entries;

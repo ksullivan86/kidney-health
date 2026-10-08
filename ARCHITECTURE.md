@@ -315,6 +315,7 @@ Profile = {
   "ckd_stage": "3b", "dialysis": "none", "diabetes": "type1",
   "ckd_stage_chosen": true, "diabetes_chosen": true,   // v0.3.1, schema step 8: false = "Not chosen yet"
   "warn_fraction": 0.8,
+  "about_tolerance_pct": 0,   // v0.3.1, schema step 9: 0–10 % above an "about" target still on target
   "dialysis_days": [0, 2, 4],          // v0.2, weekdays 0=Mon..6=Sun; [] when not on hemodialysis
   "week_start": "monday",              // v0.2
   "targets": {
@@ -392,9 +393,22 @@ DaySummary = {
   "status": { "potassium_mg": {"value": 1800, "target": 2500, "fraction": 0.72, "level": "ok"},
               "protein_g":    {"value": 40, "target": 56, "min": 42, "fraction": 0.71, "level": "ok"}, ... },
   "meals": { "breakfast": {"carbs_g": 45, "protein_g": 12, ... all keys ...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
-  "alerts": [ {"level": "caution"|"over", "nutrient": "potassium_mg", "message": "Potassium is at 85 % of today's limit (2125 / 2500 mg)"} ]
+  "alerts": [ {"level": "caution"|"over", "nutrient": "potassium_mg", "message": "Potassium is at 85 % of today's limit (2125 / 2500 mg)"} ],
+  "carb_tolerance_g": 10    // v0.3.1: the person's guidance.carb_tolerance_g, used by the per-meal alerts
 }
 ```
+
+**Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
+carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,
+the number meal guidance already uses) above its goal: "Dinner carbohydrate is more than 10 g over the
+per-meal goal: 75 / 60 g". Carbohydrate of entries that treated a low (`purpose = "hypo"`) is left out of the
+meal's goal, because treating a low is never warned against; it still counts in every total, and an alert that
+fires anyway says "(not counting 15 g used to treat a low)". An "about" target (minimum = maximum once rounded,
+such as protein "about 56 g") is `over` only above `Profile.about_tolerance_pct` (0–10 %, default 0 = the
+number itself), in the day status, the projected status and the period summary (`level`, `days_over`); its
+alerts name it "today's target". Limits and real ranges keep their line. `nutrients.over_at` /
+`carb_tolerance` and their twins in `js/engine/rules.js` (`overAt`, `carbTolerance`) implement it;
+`tests/test_tolerance.py` compares the server and the demo.
 
 ### Auth (optional)
 *v0.2 only; replaced in v0.3 by accounts (see "M1 API" at the end of this file). `APP_PASSWORD`
@@ -691,6 +705,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 6 | `m006_ai.py` | ai (M2) | note 04 (AI provider settings, usage/quota and audit tables with `ON DELETE CASCADE`) |
 | 7 | `m007_barcode.py` | barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
 | 8 | `m008_profile_chosen.py` | v0.3.1 | "Not chosen yet": `user_profiles.ckd_stage_set_at`, `diabetes_set_at` (`docs/dev/plans/v0.3.1.md` item 1) |
+| 9 | `m009_about_tolerance.py` | v0.3.1 | `user_profiles.about_tolerance_pct` (`docs/dev/plans/v0.3.1.md` item 2) |
 
 ## Backend file ownership
 
@@ -1493,6 +1508,14 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   edge) and Plan's day chips the same; the entry sheet's impact says "would reach at least …". The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
+
+### Schema step 9 (`m009_about_tolerance.py`, v0.3.1)
+
+`user_profiles.about_tolerance_pct INTEGER NOT NULL DEFAULT 0`: how far above an "about" target (minimum =
+maximum) still counts as on target, 0–10 %. `PUT /api/profile` takes an integer 0–10 (`null` resets it to 0;
+anything else is a 400); a stored value outside the range reads as 0. No guideline gives a tolerance, so the
+default keeps the earlier behaviour and the value is the person's, from their care team (`handbook/REVIEW.md`,
+"Food targets"). See "Tolerances (v0.3.1)" under the day summary.
 
 ### Schema step 8 (`m008_profile_chosen.py`, v0.3.1)
 
