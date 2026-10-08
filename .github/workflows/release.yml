@@ -259,6 +259,8 @@ jobs:
           set -euo pipefail
           version="${TAG#v}"
           ref="${IMAGE}:${version}@${DIGEST}"
+          # The backticks below are literal Markdown code spans, not command substitutions.
+          # shellcheck disable=SC2016
           block="$(printf '\n<!-- image-digest -->\n### Image\n\n`%s`\n\nThe multi-arch index digest (linux/amd64 + linux/arm64) this release run scanned, signed and attested; the tags `%s`, `%s` and `latest` point at it. Pin it rather than a tag: Quadlet `Image=%s`; Kubernetes `kustomize edit set image %s=%s`; Renovate and Dependabot then bump tag and digest together. Check it with `scripts/verify-image.sh %s`. Pulling without logging in needs the GHCR package to be public (a repository'"'"'s visibility does not carry over to its packages).\n' \
             "$ref" "$version" "${version%.*}" "$ref" "$IMAGE" "$ref" "$version")"
           if ! body="$(gh release view "$TAG" --json body -q .body 2>/dev/null)"; then
