@@ -784,6 +784,7 @@
     }
     if (!current()) return;
     const parts = [];
+    if (me.enabled) parts.push(setupIntro());
     if (!me.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Off on this server')),
         h('p', {}, 'Optional AI help (meal ideas, describing a meal, reading a label from a photo) is switched off on this server. Nothing you log is sent to an AI service.'));
@@ -794,6 +795,28 @@
     // v0.3.1: the shared providers are set up in Server administration (renderAdmin below), not here.
     if (isAdmin() && me.enabled) parts.push(h('p', { class: 'hint' }, 'Admins: the shared AI providers are set up in Server administration → AI providers.'));
     if (current()) slot.replaceChildren(...parts);
+  }
+
+  // "How AI help is set up": the three questions of docs/ai.md ("The setup in three questions") and the handbook's
+  // "How the setup fits together", in a person's words (v0.3.1). Closed by default; the choices follow below it.
+  function setupIntro() {
+    const more = KH.learn ? KH.learn.link('pages', 'ai', { text: 'Learn: Optional AI' }) : null;
+    return h('details', { class: 'settings-details ai-setup', id: 'set-ai-setup' },
+      h('summary', {}, 'How AI help is set up: three questions'),
+      h('ol', { class: 'ai-setup-list' },
+        h('li', {}, h('b', {}, 'Which model answers? '),
+          'Your admin chooses it: a model that runs at home, or a company\'s AI service. If your admin allows it, '
+          + 'you can use your own key with a company\'s service instead (My own AI provider, below).'),
+        h('li', {}, h('b', {}, 'What may it do? '),
+          'Only what you switch on below: meal ideas, swaps and day plans made from foods the app\'s rules already allowed '
+          + '(and checked again), turning what you describe into search words, reading a label photo into a draft you check '
+          + 'and, if your admin allows it, naming the foods in a plate photo. It cannot chat, give insulin or medicine doses, '
+          + 'or save anything by itself.'),
+        h('li', {}, h('b', {}, 'Whose key pays, and who can read the request? '),
+          'With the server\'s shared provider, the server\'s key pays and your admin can read what is sent. With your own key, '
+          + 'your account at that company pays. Before you start, the consent step says where requests go, and '
+          + '“What will be sent?” shows each request before it leaves.')),
+      more ? h('p', { class: 'notes-learn' }, more) : null);
   }
 
   // Server administration → AI providers (admins only). Overlapping renders keep only the newest, as above.

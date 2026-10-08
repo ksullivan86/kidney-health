@@ -97,6 +97,7 @@ APP_LINKS: dict[str, dict[str, dict[str, str]]] = {
         "get_help_now": _link("get-help-now"),
         "blood_potassium": _link("blood-potassium"),
         "treating_a_low": _link("treating-a-low"),
+        "ai": _named("app/ai/", "Optional AI"),  # Settings → AI ideas, "How AI help is set up" (v0.3.1)
     },
 }
 
