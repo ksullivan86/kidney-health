@@ -82,6 +82,10 @@ working with what this device saved:
 * **Food search** finds the foods this device has seen (the built-in list is downloaded once a
   day while connected). Barcode lookups, AI ideas and anything else that needs the server wait
   until you are back online.
+* **Handbook pages you have opened** (**Learn**) can be read again offline: the app keeps a copy
+  of each page and what it needs. A page you have not opened on this device says so. The pages are
+  the same for everyone, so signing out keeps them; **Clear offline data on this device** removes
+  them, and a new version of the app starts the copy afresh.
 * **If the server refuses an entry** when it syncs (for example the food was deleted meanwhile),
   it is kept as **not saved** with the reason, under **Settings → This device**, where you can
   **Retry** or **Discard** it.

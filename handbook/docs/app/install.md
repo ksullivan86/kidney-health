@@ -93,8 +93,9 @@ reach your server (no signal, the server is down, a flight) ([design note 02][NO
 | The app opens from its icon. | Signing in for the first time on this device. |
 | **Add**, **Quick add** and **Mark eaten**: entries wait on the phone with a "waiting to sync" badge and are sent once, in order, when the server is back. | Editing or deleting an entry that is already on the server, and changing your profile or settings: the app says the change needs a connection. |
 | **Today**, the last two weeks and the coming week, from the copy saved the last time you looked (the screen says so). | Barcode lookups, USDA search, AI and new meal suggestions. |
-| Search among the foods this phone has seen (the builtin list is checked once a day while connected and downloaded again only when it changed). | This handbook (**Learn**): print the pages you need away from home, such as the [Wallet cards](../reference/wallet-card.md). |
+| Search among the foods this phone has seen (the builtin list is checked once a day while connected and downloaded again only when it changed). | |
 | The **Treating a low** card. | |
+| Handbook pages (**Learn**) you have already opened on this phone. | Handbook pages you have not opened on this phone yet: they say so. Print the ones you need away from home, such as the [Wallet cards](../reference/wallet-card.md). |
 
 A badge at the top shows how many entries are waiting ("Offline · 2 to sync"; on a phone just the
 number). Tap it to open **Settings → This device**, where you can **Retry** or **Discard** an entry the

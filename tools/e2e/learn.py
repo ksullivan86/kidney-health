@@ -18,7 +18,12 @@ finishes first-run setup through the API, then in headless Chromium at 375x812 (
    text colour, its alpha and the opacity on the way, over the stacked background colours;
 6. "Back to the food log" → the app's sign-in screen → sign in → the header's Learn entry points at
    /learn/; a banana's potassium warning links to eat/potassium/ in a new tab; Settings → About &
-   privacy links to the handbook; the Learn entry opens it in the same window.
+   privacy links to the handbook; the Learn entry opens it in the same window;
+7. offline (v0.3.1): with the app's service worker in control, the server is stopped and the browser set
+   offline (Chromium's offline switch alone does not reach the worker's own requests); the potassium page
+   opened before opens from the worker's copy (``kdl-learn-<version>``), styled; a page never opened
+   (``eat/sodium/``) answers 503 with the worker's short note. Requests failing meanwhile are expected and
+   not counted; the server is started again for the next viewport.
 
 It fails (exit status 1) on any ``securitypolicyviolation`` event (CSP or Trusted Types), uncaught page
 error, console error, failed request, request to another origin, or HTTP error status other than the
@@ -139,12 +144,14 @@ class Watch:
         self.origin = base
         self.problems: list[str] = []
         self.expected: set[tuple[str, int]] = set()  # (path, status) the harness asks for on purpose
+        self.offline = False  # step 7: requests failing while the browser is offline are the point
 
     def attach(self, context: Any) -> None:
         context.expose_binding("__khViolation", lambda _source, v: self.problems.append(f"CSP violation: {json.dumps(v)}"))
         context.add_init_script(WATCH_SCRIPT)
         context.on("request", self._request)
-        context.on("requestfailed", lambda r: self.problems.append(f"request failed: {r.method} {r.url} ({r.failure})"))
+        context.on("requestfailed", lambda r: None if self.offline else
+                   self.problems.append(f"request failed: {r.method} {r.url} ({r.failure})"))
         context.on("response", self._response)
         context.on("page", self._page)
 
@@ -211,10 +218,11 @@ def contrast(page: Page, area: str, label: str) -> None:
           got["measured"] > 0 and not got["failures"], worst)
 
 
-def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, height: int, touch: bool) -> None:
+def run_viewport(browser: Any, server: khserver.Server, shots: Path, name: str, width: int, height: int, touch: bool) -> None:
+    base = server.base
     area = f"{name} {width}x{height}"
     watch = Watch(base)
-    # Service workers stay on, as for a person: the app's worker must leave /learn to the network.
+    # Service workers stay on, as for a person: the app's worker answers /learn network-first (step 7).
     context = browser.new_context(viewport={"width": width, "height": height}, is_mobile=touch, has_touch=touch,
                                   color_scheme="light")
     watch.attach(context)
@@ -327,6 +335,38 @@ def run_viewport(browser: Any, base: str, shots: Path, name: str, width: int, he
         page.wait_for_load_state("networkidle")
         check(area, "the Learn entry opens the handbook in the same window",
               urlsplit(page.url).path == "/learn/" and len(context.pages) == 1, page.url)
+
+        # 7. offline: pages opened before come from the app's service worker (kdl-learn-<version>)
+        page.evaluate("() => navigator.serviceWorker.ready.then(() => true)")
+        goto(page, f"{base}/learn/eat/potassium/")  # online, through the worker, which keeps a copy
+        check(area, "the handbook page is served through the app's service worker",
+              page.evaluate("() => !!navigator.serviceWorker.controller"))
+        kept = page.evaluate("""async () => {
+            const names = (await caches.keys()).filter((n) => n.startsWith('kdl-learn-'));
+            if (names.length !== 1) return names;
+            const cache = await caches.open(names[0]);
+            return (await cache.keys()).map((r) => new URL(r.url).pathname);
+        }""")
+        check(area, "the page and its files are kept for reading offline",
+              "/learn/eat/potassium/" in kept and any(k.endswith(".css") for k in kept), json.dumps(kept)[:300])
+        watch.offline = True
+        server.stop()  # the home server is out of reach, as on a phone with no signal
+        context.set_offline(True)
+        try:
+            check(area, "offline: a page opened before opens from the copy", goto(page, f"{base}/learn/eat/potassium/"))
+            styled = page.evaluate(
+                "() => getComputedStyle(document.querySelector('.md-header')).backgroundColor !== 'rgba(0, 0, 0, 0)'")
+            check(area, "offline: the copy has its heading and styles", heading(page) == "Potassium" and styled, heading(page))
+            page.screenshot(path=str(shots / f"{name}-9-offline.png"))
+            watch.expected.add(("/learn/eat/sodium/", 503))
+            check(area, "offline: a page never opened answers 503", goto(page, f"{base}/learn/eat/sodium/", 503))
+            check(area, "offline: ... and says it is not saved on this device",
+                  "not saved on this device" in (page.text_content("h1") or ""), page.text_content("body") or "")
+            page.screenshot(path=str(shots / f"{name}-10-offline-not-saved.png"))
+        finally:
+            context.set_offline(False)
+            server.start()
+            watch.offline = False
     except Exception as exc:  # report and keep going with the next viewport
         check(area, "walk finished", False, f"{type(exc).__name__}: {exc}")
         traceback.print_exc()
@@ -361,12 +401,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         server.start()
         khserver.first_admin(server, USERNAME).close()
-        base = server.base
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=chromium_executable(), args=["--no-sandbox"])
             try:
                 for name, width, height, touch in VIEWPORTS:
-                    run_viewport(browser, base, shots, name, width, height, touch)
+                    run_viewport(browser, server, shots, name, width, height, touch)
             finally:
                 browser.close()
     except Exception as exc:

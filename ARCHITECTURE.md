@@ -1987,7 +1987,15 @@ Containerfiles, `js/learn.js`. People-facing: `handbook/docs/app/index.md`,
   More than 64 distinct scripts, or a page that is not UTF-8: the handbook is not served, an ERROR names
   the reason, the app starts normally. `python -m app.handbook csp [DIR]` prints the policy (for
   operators serving the handbook from its own host name).
-* The service worker leaves `/learn` to the network (offline handbook pages: v0.4, `docs/ROADMAP.md`).
+* The service worker answers `/learn` network-first (v0.3.1): every plain 200 answer from this server (a page or
+  a file it loads; never a redirect, another origin or a partial answer) is copied into `kdl-learn-<version>`,
+  and when the network fails that copy is served (pages match without the query string, so a search result's
+  `?h=` link opens the saved page). A page never opened on the device answers offline with a short 503 note made
+  by the worker (`learnOffline`: no script or style, CSP `default-src 'none'`). The handbook is static and the
+  same for everyone, so nothing personal enters the cache; a new release starts with an empty copy (activate
+  removes old `kdl-` caches), **Clear offline data on this device** removes it, signing out keeps it.
+  `tests/test_learn_offline.py` runs the real worker in Node; `tools/e2e/learn.py` step 7 checks it in Chromium
+  with the server stopped.
 
 ### `GET /api/handbook` (signed in)
 
