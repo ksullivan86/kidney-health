@@ -304,7 +304,7 @@
   const LI = KH.labImport;
   const importFile = $('#lab-import-file');
   const importBox = $('#lab-import-preview');
-  const imp = { text: null, units: {}, dateOrder: null };
+  const imp = { text: null, units: {}, dateOrder: null, unticked: new Set() }; // unticked: ids the person cleared
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   function importError(message) {
@@ -318,6 +318,7 @@
     if (file.size > LI.MAX_CHARS) { importError('The file is larger than 1 MB. Split it into smaller files.'); return; }
     try { imp.text = await file.text(); } catch (e) { importError('The file could not be read. Save it again as CSV and choose it again.'); return; }
     imp.units = {};
+    imp.unticked = new Set();
     imp.dateOrder = (cache.unitSystem || 'us') === 'si' ? 'dmy' : 'mdy';
     renderImport();
   });
@@ -380,8 +381,11 @@
       }
       const id = `lab-import-${r.row}-${r.column}`;
       const cb = h('input', { type: 'checkbox', id });
-      cb.checked = !r.saved;
-      cb.addEventListener('change', () => updateSave());
+      cb.checked = !r.saved && !imp.unticked.has(id); // a new unit or date order redraws the list: keep the person's choices
+      cb.addEventListener('change', () => {
+        if (cb.checked) imp.unticked.delete(id); else imp.unticked.add(id);
+        updateSave();
+      });
       ticks.push([cb, r]);
       list.append(h('li', { class: 'lab-row' }, cb, h('label', { for: id },
         h('span', { class: 'lab-row-date' }, when), h('span', { class: 'lab-row-value' }, `${r.label} ${r.display}`),
@@ -391,13 +395,15 @@
 
     const save = h('button', { class: 'btn primary', type: 'button', id: 'lab-import-save' }, 'Save');
     const cancel = h('button', { class: 'btn secondary', type: 'button', id: 'lab-import-cancel' }, 'Cancel');
+    const tooMany = h('p', { class: 'hint warn', hidden: true }, `Up to ${LI.MAX_RESULTS.toLocaleString('en-US')} results at a time: untick some, or split the file.`);
     function updateSave() {
       const n = ticks.filter(([cb]) => cb.checked).length;
       save.textContent = n === 1 ? 'Save 1 result' : `Save ${n} results`;
       save.disabled = n === 0 || n > LI.MAX_RESULTS;
+      tooMany.hidden = n <= LI.MAX_RESULTS;
     }
     updateSave();
-    cancel.addEventListener('click', () => { imp.text = null; importFile.value = ''; clear(importBox); importFile.focus(); });
+    cancel.addEventListener('click', () => { imp.text = null; imp.unticked = new Set(); importFile.value = ''; clear(importBox); importFile.focus(); });
     save.addEventListener('click', async () => {
       const kept = ticks.filter(([cb]) => cb.checked).map(([, r]) => r);
       if (!kept.length) return;
@@ -430,7 +436,7 @@
         if (err.status === 400) importError(err.detail || err.message); else toastError(err);
       }
     });
-    box.append(h('div', { class: 'form-actions' }, save, cancel));
+    box.append(tooMany, h('div', { class: 'form-actions' }, save, cancel));
   }
 
   // ---------------------------------------------------------------------------
