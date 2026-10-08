@@ -58,7 +58,7 @@ everyone look like the proxy.
 
 1. Open the app once through your proxy.
 2. Read the access log; each line starts with the peer, for example `10.88.0.5:51234 - "GET / HTTP/1.1" 200`.
-3. Put that address in `TRUSTED_PROXIES` and restart. **Settings → Admin → About** then shows the trusted
+3. Put that address in `TRUSTED_PROXIES` and restart. **Server administration → About this server** then shows the trusted
    proxy and a count of identity headers ignored from untrusted peers.
 
 | Setup | What the app sees |

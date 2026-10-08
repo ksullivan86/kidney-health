@@ -69,7 +69,7 @@ The commands for each engine, and the fixes below in more detail, are in the dep
 
 ## Which version is running?
 
-**Settings → Admin → About** shows the version and schema. The engine shows the image digest; the
+**Server administration → About this server** shows the version and schema. The engine shows the image digest; the
 commands are at the end of the guide's [troubleshooting section](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#troubleshooting).
 
 ## Debugging without a shell

@@ -813,9 +813,8 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   recent activity, sign out), Preferences (theme saved as `ui.theme`, week start saved with the
   profile, units for lab results), Food data (own USDA key, shared-key status, Open Food Facts
   consent), AI ideas (placeholder `#set-ai-slot` for M2), This device (install, offline, storage,
-  connection, version, clear offline data; `js/pwa.js` supplies the device state), Admin (admins:
-  people, invites and one-time links, server settings, shared keys, usage, activity log, about this
-  server) and About & privacy (licences). Every setting shows its source ("Set by the server
+  connection, version, clear offline data; `js/pwa.js` supplies the device state), Admin (admins
+  only: a link to Server administration) and About & privacy (licences). Every setting shows its source ("Set by the server
   (ENV), locked" / your choice / admin / app default). Keys are write-only: an empty password
   field, "Set · ends in 9xQz · updated Oct 3", Replace / Remove, never a value from the server.
   The key buttons are **Test and save** and **Save**: `PUT /api/me/keys/{p}` stores the key whatever
@@ -823,6 +822,13 @@ answer "available in the installed app" except for a few recorded barcode fixtur
   The sign-in screen never hints at an account name (an upgraded v0.2 server's admin is `admin` or
   `ADMIN_USERNAME`; the server log, CHANGELOG and `docs/accounts.md` tell the operator): a public page
   must not reveal who has an account.
+* **Server administration** (v0.3.1; `#admin`, no tab; the header shield `#admin-open`, which
+  `js/views/auth.js` shows only for `role = "admin"` through `data-admin-only`, and Settings → Admin;
+  drawn by `js/views/settings.js`): People (accounts, invites and one-time links), Server settings,
+  Shared keys, Usage, Activity log, About this server, and AI providers (`KH.ai.renderAdmin`, moved out
+  of Settings → AI ideas), with jump chips like Settings'. A member who opens `#admin` sees a one-line
+  note and the page makes no `/api/admin` request; the server's `require_admin` is the real guard
+  (`tests/test_admin_page.py`).
 
 ## Milestones
 
@@ -1864,10 +1870,11 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   address for a custom server when allowed, the write-only key through `KH.views.settings.keyWidget`,
   Test connection, Remove), "What you agreed to send" (Withdraw), "AI activity" (sent / received /
   verdict while kept; the received text captioned as the provider's answer before the app's checks and shown
-  through `KH.aiguard.maskForDisplay`, blocklist words as `[hidden]`; "Delete my AI history"); for admins "AI providers (admin)": each provider with its
+  through `KH.aiguard.maskForDisplay`, blocklist words as `[hidden]`; "Delete my AI history"). For admins,
+  **Server administration → AI providers** (v0.3.1; before, the end of Settings → AI ideas): each provider with its
   key status, badges and last test, Test connection, Edit, Delete; Add a shared provider (preset, name,
   address, model, vision model, key, advanced options); `AI_PRIVATE_HOSTS` read-only; AI usage (counts).
-  The `ai.*` switches are in Admin → Server settings like every registry key.
+  The `ai.*` switches are in Server administration → Server settings like every registry key.
 * **Add view**: `#ai-add-slot` shows the features `GET /api/ai/status` reports (AI meal ideas, Describe a
   meal, Read a label, Plate photo) and the shared calls left; "AI ideas are off for you" with a link to
   Settings when the person has not opted in; nothing when AI is off.

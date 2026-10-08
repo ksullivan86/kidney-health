@@ -3,8 +3,12 @@
    Sections: Account (name, password, signed-in devices, export, delete, sign out), Preferences
    (theme, week start, units), Food data (USDA key, Open Food Facts), AI ideas (filled by M2),
    This device (install, offline, storage; completed by js/pwa.js in the installed app), Admin
-   (admins only: people and invites, server settings, shared keys, usage, activity, about this
-   server) and About & privacy.
+   (admins only: a link to Server administration) and About & privacy.
+
+   Server administration (v0.3.1, docs/dev/plans/v0.3.1.md item 3) is its own view (#admin), opened from the
+   header shield that only admins see and from Settings → Admin: people and invites, server settings, shared
+   keys, usage, activity, about this server, and AI providers (js/views/ai.js). A member who opens #admin gets a
+   short note and no request; every /api/admin route checks the role on the server anyway.
 
    Every setting shows where its value comes from (env lock / your choice / admin / default) and
    whether it is locked. Keys are write-only: the page never receives a key and never shows one;
@@ -703,7 +707,7 @@
       const why = offAdmin.locked_by_env ? `Set by the server (${offAdmin.locked_by_env}), locked.`
         : offAdmin.source === 'instance' ? 'An admin chose this (or the first-run setup did).' : 'That is the app default.';
       body.append(h('p', { class: 'setting-status', id: 'set-off-server' }, `On this server Open Food Facts lookups are ${offAdmin.value ? 'on' : 'off'}. ${why}`,
-        offAdmin.locked_by_env ? null : ' Change it in Admin → Server settings.'));
+        offAdmin.locked_by_env ? null : ' Change it in Server administration → Server settings.'));
     }
     body.append(h('p', { class: 'hint' }, 'Product data from Open Food Facts is © Open Food Facts contributors, under the Open Database License (ODbL). USDA FoodData Central data is in the public domain.'));
     if (MOCK) {
@@ -817,11 +821,12 @@
   // ---------------------------------------------------------------------------
   const isAdmin = () => !!(state.me && state.me.role === 'admin');
   function renderAdminFrame() {
-    const sec = $('#set-admin');
-    sec.hidden = !isAdmin();
     const body = $('#set-admin-body');
     clear(body);
-    if (!isAdmin()) return;
+    if (!isAdmin()) {
+      body.append(note('info', h('p', {}, 'Server administration is for admins. Ask your admin if your account needs a change.')));
+      return;
+    }
     const none = authMode() === 'none';
     body.append(h('p', { class: 'hint' }, 'Admins manage accounts and server settings. There is no page here to read anyone else’s log, foods or keys.'));
     if (!none) body.append(subtitle('People', 'set-people-h'), h('div', { id: 'set-people' }, loading()));
@@ -1172,10 +1177,11 @@
         toast(value === null ? `${def.label}: back to the default` : `${def.label}: saved`, 'ok');
         renderServerSettings(control ? control.id : id);
         renderFood();
-        // An AI switch changes Settings → AI ideas above and the Add view's AI buttons: ask again, now.
+        // An AI switch changes Settings → AI ideas, the AI providers below and the Add view's AI buttons: ask again, now.
         if (key.startsWith('ai.') && KH.ai) {
           if (typeof KH.ai.forget === 'function') KH.ai.forget();
           KH.ai.renderSettings().catch((e2) => console.warn('AI settings:', e2));
+          if (typeof KH.ai.renderAdmin === 'function') KH.ai.renderAdmin().catch((e2) => console.warn('AI providers:', e2));
           if (typeof KH.ai.renderAddSlot === 'function') KH.ai.renderAddSlot().catch((e2) => console.warn('AI buttons:', e2));
         }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
@@ -1413,7 +1419,7 @@
   function renderNav() {
     const nav = $('#settings-nav');
     clear(nav);
-    for (const sec of $$('.settings-section')) {
+    for (const sec of $$('#view-settings .settings-section')) {
       if (sec.hidden) continue;
       const btn = h('button', { class: 'chip nav-chip', type: 'button' }, sec.dataset.title);
       btn.addEventListener('click', () => {
@@ -1424,10 +1430,41 @@
       nav.append(h('li', {}, btn));
     }
   }
+  // The header shield and Settings → Admin open Server administration; both only for admins (a role can change).
+  function syncAdminEntry() {
+    const shield = $('#admin-open');
+    if (shield) shield.hidden = !isAdmin();
+    $('#set-admin-link').hidden = !isAdmin();
+  }
+  // Server administration: chips that jump to each part, like Settings' section chips.
+  function renderAdminNav() {
+    const nav = $('#admin-nav');
+    clear(nav);
+    const heads = [...$$('#set-admin-body > h3.settings-subtitle')];
+    if (!$('#set-admin-ai').hidden) heads.push($('#set-admin-ai-h'));
+    for (const head of heads) {
+      const btn = h('button', { class: 'chip nav-chip', type: 'button' }, head.textContent);
+      btn.addEventListener('click', () => {
+        head.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        head.setAttribute('tabindex', '-1');
+        head.focus({ preventScroll: true });
+      });
+      nav.append(h('li', {}, btn));
+    }
+  }
+  async function loadAdmin() {
+    if (!state.me) return;
+    syncAdminEntry();
+    const me = state.me;
+    $('#admin-who').textContent = isAdmin() ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username} · admin` : '';
+    $('#set-admin-ai').hidden = !isAdmin(); // js/views/ai.js fills it when the view shows
+    renderAdminFrame();
+    renderAdminNav();
+  }
   async function load() {
     if (!state.me) return;
     renderWho();
-    $('#set-admin').hidden = !isAdmin();
+    syncAdminEntry();
     renderNav();
     renderAccount();
     renderPrefs();
@@ -1437,7 +1474,8 @@
     cache.myKeys = null;
     renderFood();
     renderDevice().catch((err) => console.warn(err));
-    renderAdminFrame();
+    // Server settings feed Food data's Open Food Facts line: read them for admins even with the admin view closed.
+    if (isAdmin() && !cache.adminSettings) adminSettingsReady = loadServerSettings();
     const [settings, keys] = await Promise.allSettled([api.mySettings(), api.myKeys()]);
     cache.mySettings = settings.status === 'fulfilled' ? settings.value.settings : settings.reason;
     cache.myKeys = keys.status === 'fulfilled' ? keys.value : keys.reason;
@@ -1464,5 +1502,11 @@
     load().catch(toastError);
     setTimeout(() => { const t = $('#settings-title'); if (t && state.view === 'settings') t.focus({ preventScroll: true }); }, 0);
   });
-  KH.views.settings = { load, onSignedIn, keyWidget, APP_VERSION };
+  $('#admin-open').addEventListener('click', () => router.show('admin'));
+  $('#set-admin-open').addEventListener('click', () => router.show('admin'));
+  router.register('admin', () => {
+    loadAdmin().catch(toastError);
+    setTimeout(() => { const t = $('#admin-title'); if (t && state.view === 'admin') t.focus({ preventScroll: true }); }, 0);
+  });
+  KH.views.settings = { load, loadAdmin, onSignedIn, keyWidget, APP_VERSION };
 })();

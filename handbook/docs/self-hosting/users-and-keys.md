@@ -45,7 +45,7 @@ Alternatives ([deployment guide][DEPLOY]):
 
 ## Invite people
 
-**Settings → Admin → Users & invites → Invite**. The app shows a link **once**:
+**Server administration → People → Invite**. The app shows a link **once**:
 `https://food.home.example.net/#/invite/…`. Send it however you like; it works once and expires after
 7 days. The secret part sits after `#`, which browsers never send to the server, so it stays out of
 proxy logs. Revoke unused invites from the same screen.
@@ -67,7 +67,7 @@ from other machines ([HTTPS for phones](https.md)).
 - An admin can issue a password-reset link for anyone. That signs the person out everywhere and tells
   them at their next sign-in, and it appears in their activity, so it cannot be done quietly
   ([design note 07][NOTE07]).
-- Open reset and setup links are listed under each account in **Settings → Admin → People**, with
+- Open reset and setup links are listed under each account in **Server administration → People**, with
   who created them, and can be revoked there. A link someone made for **your own** account is
   flagged in your row.
 - Removing an admin contains them: demoting, disabling or deleting an admin also deletes every
@@ -76,7 +76,7 @@ from other machines ([HTTPS for phones](https.md)).
 
 ## Passwords and lock-outs
 
-- No email in v0.3, so no self-service reset. **Settings → Admin → Users → Reset link** (24 hours,
+- No email in v0.3, so no self-service reset. **Server administration → People → Reset link** (24 hours,
   single use), or `python -m app.admin reset-password USERNAME`. `--stdin` sets a password directly
   (break-glass; also unlocks a locked account).
 - Repeated wrong passwords slow that account down, then block the address for a while (refused
@@ -119,7 +119,7 @@ Rotate it ([deployment guide][DEPLOY]):
 - mounted file: add a new **first** line, restart, `python -m app.admin reencrypt`, remove the old line,
   restart.
 
-**Settings → Admin → About this server** shows where the key comes from and whether any secret still
+**Server administration → About this server** shows where the key comes from and whether any secret still
 uses an older key.
 
 ## Proxy sign-in instead of passwords

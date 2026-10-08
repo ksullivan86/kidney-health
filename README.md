@@ -106,7 +106,7 @@ FIRST-RUN SETUP: open https://food.home.example.net/#/setup and enter the code 7
 Open the app, enter the code, choose the admin's user name and a password of at least 15 characters (a
 few unrelated words work well), and decide whether barcode lookups may use Open Food Facts. Then fill in
 **Profile**, press **Suggest targets**, review them with your care team, save, and start logging. Invite
-the rest of the household from **Settings → Admin**.
+the rest of the household from **Server administration** (the shield button next to Settings, admins only).
 
 The app listens on `127.0.0.1:8000` only; put HTTPS in front of it ([docs/https.md](docs/https.md)) so
 phones can install it, scan with the camera and keep your password encrypted. Verify a released image
@@ -206,7 +206,7 @@ digits reach your server. Your own foods with that barcode are always found. Two
 
 | Source | Turn it on | What it receives |
 |---|---|---|
-| **Open Food Facts** (product data under ODbL) | `OFF_ENABLED=true`, the first-run checkbox or Settings → Admin; then each person agrees in Settings → Food data | the barcode digits and the server's User-Agent |
+| **Open Food Facts** (product data under ODbL) | `OFF_ENABLED=true`, the first-run checkbox or Server administration; then each person agrees in Settings → Food data | the barcode digits and the server's User-Agent |
 | **USDA FoodData Central** branded foods (public domain) | a USDA key: `USDA_API_KEY_FILE` (shared) or each person's own in Settings → Food data | the barcode digits and the key |
 
 Scanned foods show where their data came from, the quality notes ("potassium not listed") and the
@@ -277,7 +277,7 @@ most installs touch:
 The complete list (sessions, password rules, size limits, HSTS, proxy headers, AI network policy,
 handbook, ...) is in [docs/deployment.md](docs/deployment.md#configuration) and at the top of
 [`app/config.py`](app/config.py). Settings that are not set in the environment can be changed in the app
-(Settings → Admin → Server settings); the ones set in the environment are shown as locked.
+(Server administration → Server settings); the ones set in the environment are shown as locked.
 
 ## How targets and warnings work
 

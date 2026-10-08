@@ -787,12 +787,34 @@
     if (!me.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Off on this server')),
         h('p', {}, 'Optional AI help (meal ideas, describing a meal, reading a label from a photo) is switched off on this server. Nothing you log is sent to an AI service.'));
-      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Optional AI ideas" on in Admin → Server settings (or AI_ENABLED), and set up a provider below (docs/ai.md).'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Optional AI ideas" on in Server administration → Server settings (or AI_ENABLED), and set up a provider under AI providers there (docs/ai.md).'));
     } else {
       parts.push(personalPart(me));
     }
-    if (isAdmin()) parts.push(await adminPart());
+    // v0.3.1: the shared providers are set up in Server administration (renderAdmin below), not here.
+    if (isAdmin() && me.enabled) parts.push(h('p', { class: 'hint' }, 'Admins: the shared AI providers are set up in Server administration → AI providers.'));
     if (current()) slot.replaceChildren(...parts);
+  }
+
+  // Server administration → AI providers (admins only). Overlapping renders keep only the newest, as above.
+  let adminRender = 0;
+  async function renderAdmin() {
+    const body = $('#set-admin-ai-body');
+    if (!body) return;
+    if (!isAdmin()) { clear(body); return; }
+    const ticket = ++adminRender;
+    if (MOCK) {
+      clear(body).append(h('p', {}, `AI providers are set up in the installed app. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI service.`));
+      return;
+    }
+    if (!body.childElementCount) body.append(h('p', { class: 'muted small' }, 'Loading…'));
+    const part = await adminPart();
+    if (ticket === adminRender) body.replaceChildren(part);
+  }
+  // After a provider change both the person's choices (Settings) and the admin list change.
+  function refreshProviders() {
+    renderSettings().catch((e) => console.warn('AI settings:', e));
+    renderAdmin().catch((e) => console.warn('AI providers:', e));
   }
 
   function personalPart(me) {
@@ -995,7 +1017,7 @@
 
   // ---- admin: providers, the private-host allowlist, usage ----
   async function adminPart() {
-    const box = h('div', { class: 'settings-body ai-admin' }, subtitle('AI providers (admin)'));
+    const box = h('div', { class: 'settings-body ai-admin' }); // the card's title says "AI providers"
     let data;
     try { data = await api.providers(); } catch (err) {
       box.append(h('p', { class: 'form-error' }, `Could not load the providers: ${err.detail || err.message}`));
@@ -1043,7 +1065,7 @@
       const remove = h('button', { class: 'btn danger', type: 'button' }, 'Delete');
       remove.addEventListener('click', () => confirm.inline(actions, remove, {
         message: `Delete ${p.label}? People using it lose AI until they choose another provider.`, confirmText: 'Delete',
-        onConfirm: async () => { await api.deleteProvider(p.id); forget(); renderSettings(); return true; },
+        onConfirm: async () => { await api.deleteProvider(p.id); forget(); refreshProviders(); return true; },
       }));
       actions.append(remove);
       row.append(actions, msg, edit);
@@ -1091,7 +1113,7 @@
         if (p) await api.updateProvider(p.id, b); else await api.createProvider(b);
         key.value = '';
         forget();
-        renderSettings();
+        refreshProviders();
       } catch (e) { if (!e.handled && !e.cancelled) showError(err, e); }
     });
     form.append(field('Service', presetSel), help, field('Name shown to people', label), field('Server address', base),
@@ -1133,8 +1155,9 @@
     new MutationObserver(() => { if (!el.hidden && state.me) fn(); }).observe(el, { attributes: true, attributeFilter: ['hidden'] });
   }
   whenShown('view-settings', () => { renderSettings().catch(toastError); });
+  whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+  KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
     uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();

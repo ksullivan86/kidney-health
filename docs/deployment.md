@@ -140,8 +140,8 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `PASSWORD_BREACH_CHECK` | `false` | Refuse new passwords found in the Have I Been Pwned list (only the first 5 characters of the password's SHA-1 leave the server, to `api.pwnedpasswords.com`). |
 | `OFF_ENABLED`, `OFF_CONTACT` | off; the project URL | Open Food Facts barcode lookups (only the barcode digits go to `world.openfoodfacts.org`, and only for people who agreed in Settings → Food data) and the contact sent in their `User-Agent`. `OFF_RATE_PER_MINUTE` (10, at most 15), `BARCODE_NEGATIVE_TTL_HOURS` (24) and `USDA_BRANDED_BARCODE` (`true`: with a USDA key, a barcode Open Food Facts does not know, or knows without nutrition facts, is looked up in USDA's branded foods) tune them. See [barcode-and-photos.md](barcode-and-photos.md). |
 | `GUIDANCE_ENABLED` | `true` | Rule-based meal guidance (What fits now, swaps, Plan the rest of my day, insights). It runs on the server and sends nothing out. `GUIDANCE_POOL_PER_ROLE` (200) and `GUIDANCE_BEAM_WIDTH` (16) make planning cheaper on a small server. See [guidance.md](guidance.md). |
-| `AI_ENABLED` and the other `AI_*` | AI off | Optional AI ideas. `AI_ENABLED` is the server-wide switch (also in Settings → Admin); the provider is env-only: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL`, `AI_API_KEY_FILE`, `AI_PRIVATE_HOSTS` for a server on your LAN. Each person still opts in. Full list and recipes: [ai.md](ai.md); a local Ollama: `deploy/compose.ai-ollama.yaml`. |
-| `INSTANCE_NAME`, `REGISTRATION_MODE`, `AUDIT_RETENTION_DAYS`, `USDA_SHARED_DAILY_LIMIT` | Kidney Health, `invite`, 365, 200 | Server settings an admin can also change in Settings → Admin → Server settings, unless set here. |
+| `AI_ENABLED` and the other `AI_*` | AI off | Optional AI ideas. `AI_ENABLED` is the server-wide switch (also in Server administration); the provider is env-only: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL`, `AI_API_KEY_FILE`, `AI_PRIVATE_HOSTS` for a server on your LAN. Each person still opts in. Full list and recipes: [ai.md](ai.md); a local Ollama: `deploy/compose.ai-ollama.yaml`. |
+| `INSTANCE_NAME`, `REGISTRATION_MODE`, `AUDIT_RETENTION_DAYS`, `USDA_SHARED_DAILY_LIMIT` | Kidney Health, `invite`, 365, 200 | Server settings an admin can also change in Server administration → Server settings, unless set here. |
 
 `APP_PASSWORD` (v0.2's HTTP Basic auth) is **deprecated**: on the first v0.3 start with no admin
 it becomes the admin's password, then it is ignored. HTTP Basic is no longer accepted.
@@ -164,7 +164,7 @@ every API call except the setup screen answers `503 Setup required`.
 
 Alternatives: `ADMIN_USERNAME` + `ADMIN_PASSWORD_FILE` (GitOps, Kubernetes), or
 `python -m app.admin create-admin` inside the container (the password is read from stdin). After
-setup, invite the other people in your household from Settings → Admin → Users & invites.
+setup, invite the other people in your household from Server administration → People.
 
 ## Rootless Podman with Quadlet (recommended)
 

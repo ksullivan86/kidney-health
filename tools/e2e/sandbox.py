@@ -895,7 +895,7 @@ class Run:
         F = self.F
         F.evaluate("() => window.scrollTo(0, 0)")
         self.press("#settings-open", "Header gear (Settings)", wait=self.wait_fn(
-            "() => !document.querySelector('#view-settings').hidden && !!document.querySelector('#set-account-body .kv') && !!document.querySelector('#set-people .user-list')"))
+            "() => !document.querySelector('#view-settings').hidden && !!document.querySelector('#set-account-body .kv')"))
         F.wait_for_timeout(500)
         self.shot("settings")
         self.shot("settings-full", full=True)
@@ -903,6 +903,15 @@ class Run:
         who = self.text("#settings-who")
         if "sam" not in who:
             self.issue("settings", "Settings does not say who is signed in", who, "medium")
+        if self.visible("#view-settings #set-people"):
+            self.issue("settings", "Admin blocks still drawn in Settings (v0.3.1: Server administration is its own page)", "", "medium")
+        # v0.3.1: Server administration, its own page behind the header shield (the demo account is an admin)
+        self.press("#admin-open", "Header shield (Server administration)", wait=self.wait_fn(
+            "() => !document.querySelector('#view-admin').hidden && !!document.querySelector('#set-people .user-list')"))
+        F.wait_for_timeout(500)
+        self.shot("admin")
+        self.shot("admin-full", full=True)
+        self.checks("Server administration", contrast=True)
         users = self.text("#set-people .user-list")
         if "Sam" not in users or "Alex" not in users:
             self.issue("settings", "Demo admin list should show Sam and the sample invited user", users[:200], "medium")
@@ -917,6 +926,14 @@ class Run:
         self.note(f"copy link toast: {self.text('#toast')!r}")
         self.shot("settings-invite")
         self.checks("Settings invite link", contrast=True)
+        # disable the sample user with the in-page confirmation
+        self.press("#user-2 > details.user-manage > summary", "Manage Alex", wait=self.wait_fn("() => document.querySelector('#user-2 details.user-manage').open"))
+        self.press("#user-2 .btn.danger", "Disable Alex (ask)", wait=self.wait_fn("() => !!document.querySelector('#user-2 .confirm-row')"))
+        self.press("#user-2 .confirm-row .btn.danger-solid", "Disable Alex (confirm)", wait=self.wait_fn(
+            "() => /disabled/i.test(document.querySelector('#user-2 .user-badges').textContent)"))
+        # back to Settings for the personal parts
+        self.press("#settings-open", "Header gear (back to Settings)", wait=self.wait_fn(
+            "() => !document.querySelector('#view-settings').hidden && !!document.querySelector('#set-food-body .key-actions button')"))
         # own key (write-only)
         key = "DemoKey0123456789abcdefWXYZ"
         self.press("#set-food-body .key-actions button", "Add your own key", wait=self.wait_fn("() => !document.querySelector('#set-food-body .key-editor').hidden"))
@@ -935,11 +952,6 @@ class Run:
         self.press("#set-delete-save", "Delete my account (demo, only admin)", wait=self.wait_fn(
             "() => /only admin/.test(document.querySelector('#set-delete .form-error').textContent)"))
         self.shot("settings-delete-refused")
-        # disable the sample user with the in-page confirmation
-        self.press("#user-2 > details.user-manage > summary", "Manage Alex", wait=self.wait_fn("() => document.querySelector('#user-2 details.user-manage').open"))
-        self.press("#user-2 .btn.danger", "Disable Alex (ask)", wait=self.wait_fn("() => !!document.querySelector('#user-2 .confirm-row')"))
-        self.press("#user-2 .confirm-row .btn.danger-solid", "Disable Alex (confirm)", wait=self.wait_fn(
-            "() => /disabled/i.test(document.querySelector('#user-2 .user-badges').textContent)"))
         # sign out and back in (demo)
         F.locator("#set-signout").scroll_into_view_if_needed()
         self.press("#set-signout", "Sign out (demo)", wait=self.wait_fn("() => !document.querySelector('#form-login').hidden && !document.querySelector('#login-demo').hidden"))

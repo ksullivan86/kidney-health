@@ -53,7 +53,7 @@ but do not remove it.
 - [ ] Read the release notes for changed settings and removed features.
 - [ ] Replace your deployment files if the notes say so.
 - [ ] Change the tag (or digest), start, and watch the log.
-- [ ] Open the app, check **Settings → Admin → About** for the version and schema.
+- [ ] Open the app, check **Server administration → About this server** for the version and schema.
 
 ## Database migrations
 
@@ -89,7 +89,7 @@ database. Each step checks before it changes anything, so a restart in the middl
 - **`400 Unknown host` after the upgrade**: set `PUBLIC_URL`.
 - **The health check fails**: an old string-form health command runs through `/bin/sh`, which the image
   no longer has. Use the exec form `["python", "-m", "app.healthcheck"]`.
-- **Which version is running?** **Settings → Admin → About** shows the version and schema; the engine
+- **Which version is running?** **Server administration → About this server** shows the version and schema; the engine
   shows the image digest ([Troubleshooting](troubleshooting.md#which-version-is-running)).
 - More: [Troubleshooting](troubleshooting.md).
 

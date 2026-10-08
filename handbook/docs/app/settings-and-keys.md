@@ -28,8 +28,17 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
 | **AI ideas** | opt in, provider, your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
-| **Admin** (admins only) | users and invites, sign-in and registration, shared keys, usage, activity, about this server |
+| **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
+
+## Server administration (admins only)
+
+Admins see a **shield button** next to the gear. It opens **Server administration**, a page of its own
+with **People** (accounts, invites, reset links), **Server settings** (sign-in and registration, food
+data, AI and the other server-wide switches), **Shared keys**, **Usage**, the **Activity log**, **About
+this server** and **AI providers**. Members never see the button or the page, and the server refuses
+every admin request from a member anyway. There is no page where an admin can read anyone else's log,
+foods or keys.
 
 ## Shared keys and your own keys
 

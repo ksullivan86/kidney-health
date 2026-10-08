@@ -81,7 +81,7 @@ What happens, in order; the commands for Podman, Docker and Kubernetes are in th
 
 Before the accounts migration, the upgrade copies the database to `/data/kidney.db.pre-v3.bak`. It is
 the rollback path and is deleted automatically 30 days later (or at once with
-`python -m app.admin purge-pre-v3-backup`). **Settings → Admin → About** shows it while it exists
+`python -m app.admin purge-pre-v3-backup`). **Server administration → About this server** shows it while it exists
 ([Upgrades](upgrades.md)).
 
 ## Export is not a backup

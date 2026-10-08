@@ -56,7 +56,7 @@ ingredient list. Review the amount and log it.
 
 | Who | What | Where |
 |---|---|---|
-| Admin | Open Food Facts for the server: `food.off_enabled` | Settings → Admin → Server settings, the first-run setup checkbox, or `OFF_ENABLED=true` |
+| Admin | Open Food Facts for the server: `food.off_enabled` | Server administration → Server settings, the first-run setup checkbox, or `OFF_ENABLED=true` |
 | Each person | "Send barcodes I scan to Open Food Facts": `food.off_consent` | Settings → Food data (it is personal: the admin's choice does not make it for you) |
 | Admin or person | A USDA FoodData Central key (shared or your own) | Settings → Food data / Admin → Shared keys, or `USDA_API_KEY_FILE` |
 | Admin | USDA branded barcode lookups: `food.usda_branded_barcode` (on) | Server settings or `USDA_BRANDED_BARCODE` |

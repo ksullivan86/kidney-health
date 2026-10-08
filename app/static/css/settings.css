@@ -3,7 +3,7 @@
    write-only key widget, devices, people and invites, one-time link boxes and notes; the header
    gear and the Settings entry in Profile. Loaded after profile.css. */
 
-#settings-open[aria-current="page"] { color: var(--accent); background: var(--accent-tint); }
+#settings-open[aria-current="page"], #admin-open[aria-current="page"] { color: var(--accent); background: var(--accent-tint); }
 .profile-settings .btn { align-self: flex-start; }
 
 /* ---------- head and section navigation ---------- */

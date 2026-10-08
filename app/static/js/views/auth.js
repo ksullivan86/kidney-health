@@ -208,7 +208,9 @@
   }
 
   function setSignedInChrome(on) {
-    $$('[data-signed-in]').forEach((el) => { el.hidden = !on; });
+    // data-admin-only (the Server administration button, v0.3.1): shown to admins only; the server checks the role anyway.
+    const admin = !!(state.me && state.me.role === 'admin');
+    $$('[data-signed-in]').forEach((el) => { el.hidden = !on || (el.hasAttribute('data-admin-only') && !admin); });
     document.body.classList.toggle('signed-out', !on);
   }
   function applyBanners(st) {
@@ -519,7 +521,7 @@
       try {
         const res = await request('POST', '/api/auth/setup', body, { quiet401: true });
         await loadStatus().catch(() => null);
-        enterApp(res.user, { notice: 'Welcome. Your account is the admin of this server; invite others from Settings → Admin.' });
+        enterApp(res.user, { notice: 'Welcome. Your account is the admin of this server; invite others from Server administration (the shield button at the top).' });
       } catch (err) {
         if (err.status === 409) { showLogin({ notice: 'This server is already set up. Sign in instead.' }); return; }
         showApiError(err, form, btn);
