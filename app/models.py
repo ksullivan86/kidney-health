@@ -578,6 +578,15 @@ class Alert(BaseModel):
     message: str
 
 
+class PatternAlert(BaseModel):
+    """v0.3.1 "running high": the last few days joined with what is planned (``periods.pattern_alerts``)."""
+
+    level: Literal["caution", "over"]
+    nutrient: str
+    kind: Literal["recent_days", "interdialytic", "weekly_average"]
+    message: str
+
+
 class DaySummary(BaseModel):
     date: str
     entries: list[Entry]
@@ -601,6 +610,8 @@ class DaySummary(BaseModel):
     # v0.3.1: grams above a meal's carbohydrate goal that still count as on target (guidance.carb_tolerance_g);
     # the per-meal alerts use it, and the UI draws the meal lines with it.
     carb_tolerance_g: Number = 0
+    # v0.3.1: warnings that join the last few days with the plan; empty before today or with nothing planned.
+    pattern_alerts: list[PatternAlert] = Field(default_factory=list)
 
 
 class DayTotals(BaseModel):
@@ -614,6 +625,7 @@ class DayTotals(BaseModel):
     unknown: dict[str, int] = Field(default_factory=dict)
     planned_unknown: dict[str, int] = Field(default_factory=dict)
     projected_unknown: dict[str, int] = Field(default_factory=dict)
+    pattern_alerts: list[PatternAlert] = Field(default_factory=list)  # v0.3.1, as in DaySummary
 
 
 class RangeSummary(BaseModel):

@@ -75,6 +75,10 @@ pages, and tick it here.
       own tolerance, 0–10 %, from their dietitian (Profile; default 0, so no unsourced number ships).
       Confirm the 10 % ceiling of that setting
 - [ ] Low potassium on PD wording (St8)
+- [ ] "Running high" (v0.3.1): potassium, sodium or fluid over the limit on 2 of the 3 days before a planned
+      day that goes over again; on hemodialysis the interval's total against the limit × its days; the 7-day
+      phosphorus and protein average of at least 3 logged days with the plan. Display rules of the app, not
+      from a guideline: confirm the day counts and which nutrients (`app/periods.py` `pattern_alerts`)
 - [ ] Counting frozen desserts, gelatin and ice as fluid: by volume, by water content (as the app
       does) or the unit's rule (E1); the food data changes if volume is chosen
 - [ ] Binders with snacks: "exactly as prescribed; ask about snacks and skipped meals" (E3)

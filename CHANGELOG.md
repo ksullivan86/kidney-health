@@ -24,6 +24,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   plan, the period summary). It starts at 0, the earlier behaviour: no guideline gives a number, so it is
   yours to set with your dietitian. Alerts now call such a number "today's target" instead of "today's
   maximum" (schema step 9).
+* **Running high over several days.** When you plan food, Today warns if potassium, sodium or fluid goes over
+  your limit again after being over on 2 of the 3 days before (on hemodialysis with dialysis days set: the
+  total since your last dialysis day), and if phosphorus or protein would average above your target over the
+  past week. It names the planned foods that add the most, and the Plan week marks the day. It uses your own
+  targets, only looks at planned food, and never blocks anything.
 * **Server administration has its own page.** Admins open it with the new shield button next to the
   Settings gear (or Settings → Admin): People, Server settings, Shared keys, Usage, the Activity log,
   About this server and AI providers, with chips to jump between them. Settings now holds only personal

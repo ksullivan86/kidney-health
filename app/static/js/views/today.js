@@ -84,6 +84,18 @@
     const projEl = $('#projected-alerts');
     clear(projEl);
     if (counts.planned > 0) {
+      // v0.3.1: the last few days joined with the plan (periods.pattern_alerts), first: a pattern matters more than a day.
+      const pattern = day.pattern_alerts || [];
+      if (pattern.length) {
+        projEl.append(h('div', { class: 'alerts-title' }, 'Running high over several days'));
+        for (const a of pattern) {
+          const lvl = a.level === 'over' ? 'over' : 'caution';
+          const word = lvl === 'over' ? 'Running high' : 'Weekly average high';
+          const more = KH.learn ? KH.learn.forWarning(a) : null;
+          projEl.append(h('div', { class: `alert pattern level-${lvl}` }, ratingIcon(lvl, { label: word }),
+            h('div', {}, h('b', {}, `${word}. `), a.message, more ? [' ', more] : null)));
+        }
+      }
       // A day alert and a per-meal carbohydrate alert share the nutrient key; the meal tells them apart.
       const alertKey = (a) => `${a.nutrient}|${a.meal || ''}`;
       const eatenLevel = Object.fromEntries((day.alerts || []).map((a) => [alertKey(a), a.level]));

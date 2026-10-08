@@ -9,7 +9,7 @@
 (() => {
   'use strict';
   const KH = window.KH;
-  const { NUT, NUTRIENT_KEYS, MEAL_KEYS, ASSESSMENT, pyRound, pyRepr, pyFsum, sqliteSum, roundValue, roundNutrients, isIntUnit,
+  const { NUT, NUTRIENT_KEYS, MEAL_KEYS, ASSESSMENT, pyRound, pyRepr, pyFmt, pyFsum, sqliteSum, roundValue, roundNutrients, isIntUnit,
     evaluateWarnings, ratingFromWarnings, emptyTotals, addTotals, countUnknown, mergeUnknown, markUnknown, scaleNutrients, statusLevel,
     dailyStatus, buildAlerts, mealCarbAlerts, summaryTarget, targetBounds, overAt, carbTolerance } = KH.rules;
   const { todayStr, addDays, daysBetween, weekdayMon } = KH.util;
@@ -47,6 +47,101 @@
     const t = v.trim();
     if (!CLIENT_ID_RE.test(t)) { c.err('client_id', 'must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e'); return; }
     c.out.client_id = t.toLowerCase();
+  }
+
+  // periods.pattern_alerts (v0.3.1, docs/dev/plans/v0.3.1.md item 4): the last few days joined with the plan. Display
+  // rules, not clinical thresholds: every number compared is the person's own target (handbook/REVIEW.md).
+  const RECENT_DAYS = 3, RECENT_HIGH_DAYS = 2, WEEKLY_DAYS = 7, WEEKLY_MIN_LOGGED_DAYS = 3, MAX_PATTERN_SOURCES = 2;
+  const DAILY_PATTERN_KEYS = ['potassium_mg', 'sodium_mg', 'fluid_ml'];
+  const WEEKLY_PATTERN_KEYS = ['phosphorus_mg', 'protein_g'];
+  const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  function dayValue(dayValues, d, key) { const v = Number((dayValues[d] || {})[key] || 0); return Number.isFinite(v) ? v : 0; }
+  function sourcesText(key, sources) {
+    const byName = new Map();
+    for (const [name, nutrients] of sources) {
+      const v = Number((nutrients || {})[key] || 0);
+      if (v > 0 && Number.isFinite(v)) byName.set(name, (byName.get(name) || 0) + v);
+    }
+    const top = [...byName.entries()].sort((a, b) => (b[1] - a[1]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).slice(0, MAX_PATTERN_SOURCES);
+    if (!top.length) return '';
+    const parts = top.map(([name, v]) => `${name} (${pyFmt(key, v)} ${NUT[key].unit})`);
+    return parts.length === 1 ? ` The planned food adding the most: ${parts[0]}.` : ` The planned foods adding the most: ${parts[0]} and ${parts[1]}.`;
+  }
+  function patternAlerts(day, dayValues, plannedTotals, plannedSources, targets, { dialysis = 'none', dialysisDays = null, aboutPct = 0 } = {}) {
+    const out = [];
+    const sources = [...plannedSources];
+    const interval = dialysis === 'hemodialysis' ? MockApi.prototype._interdialyticInterval(day, dialysisDays) : null;
+    for (const key of DAILY_PATTERN_KEYS) {
+      const limit = summaryTarget(targets[key]);
+      if (limit == null || !(Number(plannedTotals[key] || 0) > 0)) continue;
+      const n = NUT[key];
+      if (interval) {
+        const days = Number(interval.days);
+        if (days < 2) continue;
+        const values = [];
+        for (let i = 0; i < days; i++) values.push(dayValue(dayValues, addDays(interval.since, i), key));
+        const total = pyFsum(values);
+        const cap = limit * days;
+        if (total > cap) {
+          out.push({ level: 'over', nutrient: key, kind: 'interdialytic', message:
+            `Since your last dialysis day (${WEEKDAY_NAMES[weekdayMon(interval.since)]}), ${n.label.toLowerCase()} adds up to `
+            + `${pyFmt(key, total)} / ${pyFmt(key, cap)} ${n.unit} with what's planned (${days} days at ${pyFmt(key, limit)} ${n.unit}).`
+            + sourcesText(key, sources) });
+        }
+        continue;
+      }
+      const total = dayValue(dayValues, day, key);
+      if (!(total > limit)) continue;
+      let high = 0;
+      for (let back = 1; back <= RECENT_DAYS; back++) if (dayValue(dayValues, addDays(day, -back), key) > limit) high += 1;
+      if (high >= RECENT_HIGH_DAYS) {
+        const when = high === RECENT_DAYS ? `each of the last ${RECENT_DAYS} days` : `${high} of the last ${RECENT_DAYS} days`;
+        out.push({ level: 'over', nutrient: key, kind: 'recent_days', message:
+          `${n.label} was over your limit on ${when}, and with what's planned it goes over again: `
+          + `${pyFmt(key, total)} / ${pyFmt(key, limit)} ${n.unit}.` + sourcesText(key, sources) });
+      }
+    }
+    for (const key of WEEKLY_PATTERN_KEYS) {
+      const target = summaryTarget(targets[key]);
+      if (target == null || !(Number(plannedTotals[key] || 0) > 0)) continue;
+      const limitAt = overAt(key, targetBounds(targets[key])[0], target, aboutPct);
+      const logged = [];
+      for (let back = 0; back < WEEKLY_DAYS; back++) {
+        const d = addDays(day, -back);
+        if (Object.prototype.hasOwnProperty.call(dayValues, d)) logged.push(d);
+      }
+      if (logged.length < WEEKLY_MIN_LOGGED_DAYS) continue;
+      const average = pyFsum(logged.map((d) => dayValue(dayValues, d, key))) / logged.length;
+      if (average / target > limitAt) {
+        const n = NUT[key];
+        out.push({ level: 'caution', nutrient: key, kind: 'weekly_average', message:
+          `With what's planned, ${n.label.toLowerCase()} averages ${pyFmt(key, average)} ${n.unit} a day over `
+          + `the ${logged.length} days you logged this past week, above your ${pyFmt(key, target)} ${n.unit} target. `
+          + 'It is judged on the weekly average, so lighter days around it balance it out.' + sourcesText(key, sources) });
+      }
+    }
+    return out;
+  }
+  // log.pattern_inputs: per date, the totals each day stands for (eaten before today, eaten + planned from today on),
+  // the planned totals and the planned entries without low treatments; sums in row order.
+  function patternInputs(rows, today) {
+    const values = {}, planned = {}, sources = {};
+    for (const row of rows) {
+      const d = row.date;
+      const isPlanned = row.status === 'planned';
+      if (isPlanned) {
+        addTotals(planned[d] || (planned[d] = emptyTotals()), row.nutrients);
+        if (row.purpose !== HYPO_PURPOSE) (sources[d] || (sources[d] = [])).push([row.food_name, row.nutrients]);
+      }
+      if (!isPlanned || d >= today) addTotals(values[d] || (values[d] = emptyTotals()), row.nutrients);
+    }
+    return { values, planned, sources };
+  }
+  // log.day_pattern_alerts: only from today on, and only for a day with something planned.
+  function dayPatternAlerts(day, inputs, profile, today) {
+    if (day < today || !inputs.planned[day]) return [];
+    return patternAlerts(day, inputs.values, inputs.planned[day], inputs.sources[day] || [], profile.targets,
+      { dialysis: profile.dialysis, dialysisDays: profile.dialysis_days, aboutPct: profile.about_tolerance_pct || 0 });
   }
 
   function csvCell(v) {
@@ -139,25 +234,33 @@
         carb_tolerance_g: tol };
     },
     _day(date) {
-      const rows = this._fetchEntries({ start: date, end: date });
+      const today = todayStr();
+      // log.get_day: from today on, the week before as well (v0.3.1's "running high" warnings).
+      const window = this._fetchEntries({ start: date >= today ? addDays(date, -(WEEKLY_DAYS - 1)) : date, end: date });
+      const rows = window.filter((r) => r.date === date);
       const f = this._dayFigures(rows, this._carbTolerance());
       return { date, entries: rows.map((r) => this._entryView(r)), totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals,
         targets: this._profileView().targets, status: f.status, projected_status: f.projected_status, meals: f.meals, planned_meals: f.planned_meals,
         alerts: f.alerts, projected_alerts: f.projected_alerts, counts: f.counts,
         unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown,
-        meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown, carb_tolerance_g: f.carb_tolerance_g };
+        meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown, carb_tolerance_g: f.carb_tolerance_g,
+        pattern_alerts: dayPatternAlerts(date, patternInputs(window, today), this._profile, today) };
     },
     _range(start, end) {
       start = this._dateParam(start, 'start'); end = this._dateParam(end, 'end');
       this._checkRange(start, end);
+      const today = todayStr();
+      const window = this._fetchEntries({ start: end >= today ? addDays(start, -(WEEKLY_DAYS - 1)) : start, end });
+      const inputs = patternInputs(window, today);
       const byDate = new Map();
-      for (const row of this._fetchEntries({ start, end })) { if (!byDate.has(row.date)) byDate.set(row.date, []); byDate.get(row.date).push(row); }
+      for (const row of window) { if (!byDate.has(row.date)) byDate.set(row.date, []); byDate.get(row.date).push(row); }
       const days = [];
       for (let d = start; d <= end; d = addDays(d, 1)) {
         const f = this._dayFigures(byDate.get(d) || []);
         days.push({ date: d, totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals, status: f.status,
           projected_status: f.projected_status, counts: f.counts,
-          unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown });
+          unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown,
+          pattern_alerts: dayPatternAlerts(d, inputs, this._profile, today) });
       }
       return { days };
     },
@@ -446,5 +549,5 @@
   // day with the entries still waiting to sync with the same twin of app/log.py the demo uses.
   function dayFigures(profile, rows, carbToleranceG = 0) { return MockApi.prototype._dayFigures.call({ _profile: profile }, rows, carbToleranceG); }
 
-  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures });
+  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures, patternAlerts, patternInputs, dayPatternAlerts });
 })();
