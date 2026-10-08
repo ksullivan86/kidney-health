@@ -413,6 +413,8 @@ The image has no shell by design. Use `kubectl debug -it --profile=restricted --
   `header_up X-Proxy-Secret {env.KH_PROXY_SECRET}` inside `reverse_proxy`; Traefik:
   `headers.customRequestHeaders`; nginx: `proxy_set_header X-Proxy-Secret ...`. `tailscale serve`
   cannot add headers, so it needs `TRUSTED_PROXY_SECRET_OPTIONAL=true` (logged as a warning).
+  **Recommended whenever more than one person signs in**, until local accounts get a second factor:
+  put an SSO provider with MFA in front (Authelia, Authentik, Keycloak, Kanidm, Pocket ID).
 * **`AUTH_MODE=none`**: no sign-in at all; everything belongs to one person and anyone who can open
   the page can read and change it. Only for one person on a trusted LAN, never exposed beyond it.
 
@@ -453,6 +455,19 @@ Then:
 * Check a backup now and then: `python -m app.admin restore-check FILE` reports integrity, the
   schema version, the number of users and, when it is given the app's `SECRET_KEY_FILE`, whether
   the stored keys decrypt with the current key (without it, it says the keys were not checked).
+
+**Streaming replication (Litestream).** Litestream, or any tool that tails the WAL, works with this
+app: it writes through ordinary SQLite transactions in WAL mode, and nothing rewrites `kidney.db`
+behind SQLite's back. Run it as a sidecar with the same UID (10001) and the same volume, since it
+needs the `-wal` and `-shm` files next to the database. Two commands force a **full WAL checkpoint**
+(`PRAGMA wal_checkpoint(TRUNCATE)`), after which Litestream starts a new generation and uploads a
+fresh snapshot: deleting an account (Settings → Account, or an admin; on purpose, so the deleted
+person's rows do not linger in the WAL file, and it cannot be turned off) and `python -m app.admin
+vacuum`, which also runs `VACUUM`, rewriting the whole file. Expect one full re-upload after each;
+run `vacuum` rarely. Everything else is ordinary: schema upgrades are transactions (the copy they
+make first, `kidney.db.pre-vN.bak`, is a separate file), `secure_delete = FAST` only zeroes freed
+pages inside normal writes, `backup` writes separate files, and a restore replaces the file while the
+app is stopped, after which Litestream must be restarted so it begins a new generation.
 
 **Restore** (the app must be stopped, so nothing writes during the copy). The backup file must be
 readable for UID 10001 inside the container: `podman unshare chown 10001:0 kidney-2026-10-01.db`

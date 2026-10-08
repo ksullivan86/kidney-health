@@ -15,6 +15,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   database. Plain `backup FILE` and `backup -` are unchanged.
 * Pulling the image without logging in needs the GHCR package to be public; a repository's visibility
   does not carry over to its packages. Release notes now say so.
+* Docs: Litestream (WAL streaming) works; the two commands that force a full checkpoint and a new
+  generation are named (`docs/deployment.md`). A `TRUSTED_PROXIES` row for a proxy container on a
+  shared rootless Podman network, and what trusting the whole subnet risks (`docs/security.md`). With
+  more than one person signing in, `AUTH_MODE=proxy` behind an SSO provider with MFA is recommended
+  until local accounts get a second factor.
 
 ### For contributors
 
