@@ -266,8 +266,10 @@ HELPERS_JS = r"""
       m._templates = []; m._nextTemplateId = 1;
       m._labs = []; m._nextLabId = 1;
       m._notForMe = new Map();
+      // The demo's default profile (js/mock/core.js): "Not chosen yet" (schema step 8), no "about" tolerance (step 9).
       m._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1',
-        warn_fraction: 0.8, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: m._stamp() };
+        warn_fraction: 0.8, about_tolerance_pct: 0, ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [],
+        week_start: 'monday', targets: {}, updated_at: m._stamp() };
       return { foods: m._foods.length, custom: m._foods.filter((f) => f.source !== 'builtin').length, nextFoodId: m._nextFoodId, source: m.foodsSource };
     },
   };
@@ -1106,6 +1108,17 @@ class Harness:
             ("uf Infinity", {"pd_uf_ml": "Infinity"}),
             ("dialysate 1001 + sex x + birth month x (order)", {"pd_dialysate_kcal": 1001, "sex": "x", "birth_month": "x"}),
             ("v0.2 weight empty + v0.3 empty", {"weight_kg": "", "urine_output_ml": ""}),
+            # v0.3.1 schema step 9: the tolerance above "about" targets (an integer 0-10; null resets it to 0)
+            ("about tolerance 5", {"about_tolerance_pct": 5}),
+            ("about tolerance 10.0 and a string", {"about_tolerance_pct": 10.0}),
+            ("about tolerance '7'", {"about_tolerance_pct": "7"}),
+            ("about tolerance null resets", {"about_tolerance_pct": None}),
+            ("about tolerance 11", {"about_tolerance_pct": 11}),
+            ("about tolerance -1", {"about_tolerance_pct": -1}),
+            ("about tolerance 2.5", {"about_tolerance_pct": 2.5}),
+            ("about tolerance lots", {"about_tolerance_pct": "lots"}),
+            ("about tolerance true", {"about_tolerance_pct": True}),
+            ("about tolerance + warn 2 (order)", {"about_tolerance_pct": 99, "warn_fraction": 2}),
         ]:
             self.put_profile(S, label, body)
             self.both(S, f"GET /api/profile after {label}", "GET", "/api/profile")

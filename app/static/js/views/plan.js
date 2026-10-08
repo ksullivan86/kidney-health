@@ -97,7 +97,7 @@
         const extra = unk ? `; ${foodsNotListing(unk, key)}` : '';
         chips.append(h('span', { class: `plan-chip level-${level}`, role: 'img',
           title: `${n.label}: projected ${atLeastWords(fmtNum(val, key), unk)} of ${fmtNum(st.target, key)} ${n.unit} (${pct(st.fraction)} %)${extra}`,
-          'aria-label': `${n.label} ${atLeastWords(fmtNum(val, key), unk)} of ${KH.ui.isAboutTarget(st) ? 'about ' : ''}${fmtNum(st.target, key)} ${n.unit}, ${KH.ui.levelTextFor(st, level)}${extra}` },
+          'aria-label': `${n.label} ${atLeastWords(fmtNum(val, key), unk)} of ${KH.ui.isAboutTarget(st, key) ? 'about ' : ''}${fmtNum(st.target, key)} ${n.unit}, ${KH.ui.levelTextFor(st, level, key)}${extra}` },
           h('i', { class: 'swatch', 'aria-hidden': 'true' }), h('span', { class: 'plan-chip-k' }, n.short), h('b', {}, atLeast(fmtNum(val, key), unk))));
       }
       if (!any) chips.append(h('span', { class: 'muted small plan-empty' }, hasEntries ? 'No targets set' : isPast ? 'Nothing logged' : 'Nothing planned yet'));

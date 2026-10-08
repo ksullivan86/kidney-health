@@ -51,7 +51,7 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 * AI-written insights (v0.3 insights are rule-only; insights and low-treatment options are never sent to AI) — note 06 §3.6 and §4.13.
 * Dialysis-day eating patterns beyond the interdialytic allowance — note 06 §5 R12 ("revisit in v0.4").
 * An offline MILP experiment to measure how far the beam-search plans are from optimal — note 06 §3.1 option C ("could be an offline experiment"). The v0.3.0 review measured the beam against the exhaustive oracle of `tests/guidance/test_planner.py` on 160 seeded days: median 0.10 and at most 0.52 below it (the test bounds 40 days at 0.5).
-* Clinical review (renal dietitian, diabetes educator) of the per-meal caps, score weights, tip texts and the "Treating a low" card — note 06 §5 R1/R6/R11 and §8 open questions (default carb tolerance, `purpose` defaulting to "hypo", starter combos). It also decides whether the per-meal carbohydrate alert and "about" targets get a tolerance: today a planned dinner the plan calls "close to your goal" (60.6 g for a 60 g goal) shows "Projected over" on Today, and the plan's ½-serving protein top-up can end at 101 % of an "about" target (`handbook/REVIEW.md` "Food targets", A4 and v0.3.0 review L8).
+* Clinical review (renal dietitian, diabetes educator) of the per-meal caps, score weights, tip texts and the "Treating a low" card — note 06 §5 R1/R6/R11 and §8 open questions (default carb tolerance, `purpose` defaulting to "hypo", starter combos). Since v0.3.1 Today's per-meal carbohydrate alert uses the person's carbohydrate tolerance and leaves out low treatments, and a person can set a tolerance for "about" targets (0–10 %, default 0); the review confirms the defaults and the 10 % ceiling (`handbook/REVIEW.md` "Food targets", A4 and v0.3.0 review L8).
 * Measure guidance on real hardware: `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and a Pi 5 with the image's Python, tables recorded in `docs/guidance.md` (lower `GUIDANCE_POOL_PER_ROLE` if a Pi 4 p95 is above 200 ms) — note 06 §4.12 and its "Re-verify" line (a maintainer action: the v0.3.0 build had no Raspberry Pi; the figures are estimates from an x86 VM).
 
 ## Barcodes, Open Food Facts and USDA branded foods (note 03)
@@ -111,7 +111,6 @@ Estimated 2026-10-07 for one agent working directly in a single session (as the 
 
 | Item | Tokens | Agent time |
 |---|---|---|
-| Adjustable tolerance (Meal guidance section above; "Not chosen yet" shipped in v0.3.1) | 0.5–1M | 1–2 h |
 | Try the app on GitHub Pages | 0.5–1M | 1–2 h |
 | "Keep my data in this browser" demo mode | 2–4M | 4–8 h |
 | Lab results from a CSV file | 1–1.5M | 2–3 h |

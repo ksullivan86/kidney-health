@@ -378,13 +378,27 @@
     if (typeof t === 'object') return [t.min == null ? null : Number(t.min), t.max == null ? null : Number(t.max)];
     return [null, Number(t)];
   }
-  function statusLevel(fraction, wf) {
+  function statusLevel(fraction, wf, overAtValue = 1) {
     if (fraction == null || Number.isNaN(fraction)) return 'ok';
-    if (fraction > 1) return 'over';
+    if (fraction > overAtValue) return 'over';
     if (fraction >= wf) return 'caution';
     return 'ok';
   }
-  function dailyStatus(totals, targets, wf) {
+  // nutrients.ABOUT_TOLERANCE_MAX_PCT / about_tolerance / is_about / over_at (v0.3.1): an "about" target (minimum =
+  // maximum once rounded) is "over" only above the person's tolerance, 0–10 % (profile.about_tolerance_pct).
+  const ABOUT_TOLERANCE_MAX_PCT = 10;
+  function aboutTolerance(pct) {
+    const v = Number(pct || 0);
+    return Number.isFinite(v) ? Math.min(Math.max(v, 0), ABOUT_TOLERANCE_MAX_PCT) : 0;
+  }
+  // A limit (potassium, sodium, phosphorus, fluid) is never an "about" target, even entered as minimum = maximum.
+  function isLimit(key) { return !!NUT[key] && NUT[key].role === 'limit'; }
+  function isAbout(key, lo, hi) {
+    if (lo == null || hi == null || !Number.isFinite(Number(lo)) || !Number.isFinite(Number(hi)) || Number(hi) <= 0 || isLimit(key)) return false;
+    return roundValue(key, Number(lo)) === roundValue(key, Number(hi));
+  }
+  function overAt(key, lo, hi, pct = 0) { return isAbout(key, lo, hi) ? 1 + aboutTolerance(pct) / 100 : 1; }
+  function dailyStatus(totals, targets, wf, aboutPct = 0) {
     const status = {};
     for (const key of NUTRIENT_KEYS) {
       if (!Object.prototype.hasOwnProperty.call(targets, key)) continue;
@@ -394,7 +408,7 @@
       if (lo == null && hi == null) continue;
       const value = Number(totals[key] || 0);
       let fraction = hi ? value / hi : null;
-      const level = statusLevel(fraction, wf); // judged on the raw fraction
+      const level = statusLevel(fraction, wf, overAt(key, lo, hi, aboutPct)); // judged on the raw fraction
       if (fraction != null && !Number.isFinite(fraction)) fraction = null;
       status[key] = { value: roundValue(key, value), target: hi ? roundValue(key, hi) : null, min: lo != null ? roundValue(key, lo) : null,
         fraction: fraction == null ? null : pyRound(fraction, 2), level };
@@ -405,6 +419,11 @@
     const f = item.fraction;
     return f == null || !Number.isFinite(Number(f)) ? null : Number(f);
   }
+  // nutrients._status_word: "target" for an "about" target, else by the nutrient's role.
+  function statusWord(key, item) {
+    if (!isLimit(key) && item.min != null && item.target != null && Number(item.min) === Number(item.target)) return 'target';
+    return ROLE_WORD[NUT[key].role] || 'goal';
+  }
   function buildAlerts(status, projected = false) {
     const alerts = [];
     for (const [key, item] of Object.entries(status)) {
@@ -412,7 +431,7 @@
       if ((item.level !== 'caution' && item.level !== 'over') || fraction == null) continue;
       const n = NUT[key];
       const p = pyRound(fraction * 100);
-      const word = ROLE_WORD[n.role] || 'goal';
+      const word = statusWord(key, item);
       const value = pyFmt(key, item.value), target = pyFmt(key, item.target);
       let message;
       if (projected) message = `If you eat what's planned, ${n.label.toLowerCase()} reaches ${p} % of today's ${word} (${value} / ${target} ${n.unit})`;
@@ -423,21 +442,32 @@
     alerts.sort((a, b) => (a.level === 'over' ? 0 : 1) - (b.level === 'over' ? 0 : 1));
     return alerts;
   }
+  // nutrients.carb_tolerance: the person's carbohydrate tolerance (guidance.carb_tolerance_g); unusable is 0.
+  function carbTolerance(g) {
+    const v = Number(g || 0);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
   // nutrients.meal_carb_alerts / projected_meal_carb_alerts: the per-meal goal, and for the snack its own goal
-  // (targets.carbs_per_snack_g) when set.
-  function mealCarbAlerts(meals, perMealTarget, projected = false, snackTarget = null) {
+  // (targets.carbs_per_snack_g) when set. v0.3.1: an alert only more than the tolerance above the goal, and the
+  // carbohydrate of entries that treated a low (hypoCarbs, per meal) left out: treating a low is never warned against.
+  function mealCarbAlerts(meals, perMealTarget, projected = false, snackTarget = null, toleranceG = 0, hypoCarbs = null) {
     const [, perMeal] = targetBounds(perMealTarget);
     const [, snack] = targetBounds(snackTarget);
+    const tol = carbTolerance(toleranceG);
     const alerts = [];
     for (const meal of MEAL_KEYS) {
       const hi = meal === 'snack' && snack ? snack : perMeal;
+      if (!hi) continue;
       const word = meal === 'snack' && snack ? 'snack goal' : 'per-meal goal';
-      const carbs = Number((meals[meal] || {}).carbs_g || 0);
-      if (hi && carbs > hi) {
-        alerts.push({ level: 'over', nutrient: 'carbs_g', meal, message: projected
-          ? `If you eat what's planned, ${meal} carbohydrate reaches ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g (over the ${word})`
-          : `${meal.charAt(0).toUpperCase()}${meal.slice(1)} carbohydrate is over the ${word}: ${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g` });
-      }
+      const hypo = Number((hypoCarbs || {})[meal] || 0);
+      const carbs = Number((meals[meal] || {}).carbs_g || 0) - hypo;
+      if (!(carbs > hi + tol)) continue;
+      const overWords = tol > 0 ? `more than ${pyFmt('carbs_g', tol)} g over the ${word}` : `over the ${word}`;
+      const hypoWords = hypo > 0 ? `not counting ${pyFmt('carbs_g', hypo)} g used to treat a low` : '';
+      const numbers = `${pyFmt('carbs_g', carbs)} / ${pyFmt('carbs_g', hi)} g`;
+      alerts.push({ level: 'over', nutrient: 'carbs_g', meal, message: projected
+        ? `If you eat what's planned, ${meal} carbohydrate reaches ${numbers} (${[overWords, hypoWords].filter(Boolean).join('; ')})`
+        : `${meal.charAt(0).toUpperCase()}${meal.slice(1)} carbohydrate is ${overWords}: ${numbers}${hypoWords ? ` (${hypoWords})` : ''}` });
     }
     return alerts;
   }
@@ -458,5 +488,6 @@
     thresholdLevel, carbChoicesText, warningMessage, evaluateWarnings, ratingFromWarnings,
     // totals, daily status, alerts
     emptyTotals, addTotals, countUnknown, mergeUnknown, markUnknown, scaleNutrients, targetBounds, statusLevel, dailyStatus, finiteFraction, buildAlerts, mealCarbAlerts, summaryTarget,
+    ABOUT_TOLERANCE_MAX_PCT, aboutTolerance, isAbout, overAt, statusWord, carbTolerance,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

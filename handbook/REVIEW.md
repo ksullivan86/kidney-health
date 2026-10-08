@@ -64,11 +64,16 @@ pages, and tick it here.
       3.5–5.0 mmol/L and the 3,000/2,500/2,000 mg ceilings above it (A2)
 - [ ] The potassium-additive warning is "medium", not "high", when potassium is not listed
       (ARCHITECTURE v0.3 item 9; A5)
-- [ ] Per-meal caps (30 % per main meal, 15 % per snack) and the ±10 g carbohydrate tolerance (A4)
+- [ ] Per-meal caps (30 % per main meal, 15 % per snack) and the ±10 g carbohydrate tolerance (A4).
+      Since v0.3.1 Today's per-meal carbohydrate alert uses the same personal tolerance (5–20 g, default
+      10 g) and leaves out carbohydrate eaten to treat a low, so the plan's "close to your goal" dinner
+      (60.6 g for a 60 g goal) no longer shows "Projected over"
 - [ ] An "about" target (minimum = maximum, such as protein 56 g at 0.8 g/kg with diabetes): how far
       above it still counts as on target? No cited guideline gives a tolerance, so the app keeps "over"
-      above the number (the plan builder's ½-serving protein top-up can end at 101 %) and words it
-      "Above target", never "Over limit" (v0.3.0 review L8; a tolerance needs a source before it ships)
+      above the number by default (the plan builder's ½-serving protein top-up can end at 101 %) and
+      words it "Above target", never "Over limit" (v0.3.0 review L8). Since v0.3.1 a person can set their
+      own tolerance, 0–10 %, from their dietitian (Profile; default 0, so no unsourced number ships).
+      Confirm the 10 % ceiling of that setting
 - [ ] Low potassium on PD wording (St8)
 - [ ] Counting frozen desserts, gelatin and ice as fluid: by volume, by water content (as the app
       does) or the unit's rule (E1); the food data changes if volume is chosen

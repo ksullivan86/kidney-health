@@ -56,7 +56,9 @@ meal carbohydrate goal. If you take fixed insulin doses, consistent carbohydrate
 ([ADA 2026][A26-5], Rec 5.28). You can set the 10 g between 5 and 20 g; ask your diabetes team. A snack
 uses **Profile → Carbohydrate per snack** when you set it; without it the app aims a snack at about half
 your meal goal, rounded to 5 g and never under 15 g, one carbohydrate choice ([NKF][DG7]). Today shows
-the snack against that goal too, and says when a snack goes over it.
+the snack against that goal too, and says when a snack goes over it. Today's per-meal carbohydrate alert
+uses the same tolerance, and leaves out carbohydrate you ate to treat a low
+([Targets and warnings](targets-and-warnings.md#your-day)).
 
 **4. Protein foods are judged per gram of protein.** Almost every meat is "red" by the per-serving
 rules. So for protein foods the app looks at how much phosphorus and potassium comes with each gram of

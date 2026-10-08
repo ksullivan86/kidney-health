@@ -24,7 +24,7 @@ def test_upgrade_marks_existing_profiles_as_chosen_and_is_idempotent(tmp_path):
     conn.execute("INSERT INTO user_profiles (user_id, ckd_stage, diabetes, updated_at, updated_by) VALUES (1, '4', 'none', ?, 1)", (NOW,))
     conn.commit()
     assert set(m008.COLUMNS).isdisjoint(db.table_columns(conn, "user_profiles"))
-    assert db.migrate(conn) == [8]
+    assert db.migrate(conn, migrations.steps()[:8]) == [8]
     row = conn.execute("SELECT ckd_stage, diabetes, ckd_stage_set_at, diabetes_set_at FROM user_profiles WHERE user_id = 1").fetchone()
     assert tuple(row) == ("4", "none", NOW, NOW)
     # a profile created after the upgrade starts unchosen, and a re-run changes nothing

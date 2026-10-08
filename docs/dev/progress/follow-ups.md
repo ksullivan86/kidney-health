@@ -24,15 +24,19 @@ tests).
   together" in `handbook/docs/app/ai.md` (the Settings intro copy is left for later).
   Both in one PR (#12, merged 2026-10-08 11:16 UTC).
 
+* v0.3.1 item 1 "Not chosen yet": PR #13, merged 2026-10-08 11:34 UTC.
+
 ## In progress
 
-* v0.3.1 item 1 "Not chosen yet": schema step `m008_profile_chosen` (`ckd_stage_set_at`,
-  `diabetes_set_at`), `Profile.ckd_stage_chosen` / `diabetes_chosen`, form option + guards, Today
-  prompt, mock twin, ARCHITECTURE, handbook first-setup, CHANGELOG, ROADMAP and plan done. Verified:
-  full pytest (3429 passed before the rebase onto #12), `node tests/js/run_vectors.mjs`, `node
-  --check` on the changed scripts. Next: commit, PR, merge when green. Decision: the API's
-  suggested-targets endpoint is unchanged (many API tests and clients call it after saving only a
-  weight); the form guards it instead.
+* v0.3.1 item 2 "Adjustable tolerance" (commit on top of main b5cc3e7, PR next):
+  `nutrients.over_at` / `is_about` (never a limit) / `about_tolerance` / `carb_tolerance` / `_status_word`,
+  per-meal alerts with the tolerance and without low treatments, `periods.summarize_period(about_tolerance_pct=)`,
+  `log.day_figures(carb_tolerance_g)` + `carb_tolerance_for` (reads `guidance.carb_tolerance_g`),
+  `DaySummary.carb_tolerance_g`, schema step 9 `m009_about_tolerance`, Profile field + form row, twins in
+  `js/engine/rules.js`, `js/mock/log.js` / `profile.js`, Today, Plan, the entry sheet. Guidance vectors
+  regenerated (one alert now says "today's target"). Verified: `tests/test_tolerance.py` (32 tests), the twin,
+  guidance parity and API tests, `node tests/js/run_vectors.mjs`, `tools/e2e/parity.py` (6528 checks; the one
+  failure was the harness's own reset profile missing item 1's flags, fixed; sections 0,11 rerun 724/724).
 
 ## Next (in order)
 

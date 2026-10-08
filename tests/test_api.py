@@ -467,6 +467,8 @@ def test_day_summary_totals_meals_status_alerts_and_order(client):
         "targets": {"potassium_mg": 1000, "protein_g": {"min": 42, "max": 56}, "sodium_mg": 2000,
                     "carbs_g": 236, "carbs_per_meal_g": 20, "fluid_ml": None},
     })
+    # v0.3.1: the per-meal alert waits for the person's carbohydrate tolerance (default 10 g; tests/test_tolerance.py)
+    assert client.patch("/api/me/settings", json={"guidance": {"carb_tolerance_g": 5}}).status_code == 200
     # insertion order deliberately differs from meal order
     snack = log_food(client, "glucose", meal="snack")
     dinner = log_food(client, "chicken", meal="dinner", servings=2)
@@ -503,7 +505,7 @@ def test_day_summary_totals_meals_status_alerts_and_order(client):
     kinds = {(a["nutrient"], a["level"], a.get("meal")) for a in alerts}
     assert ("potassium_mg", "caution", None) in kinds
     assert ("protein_g", "caution", None) in kinds
-    assert ("carbs_g", "over", "breakfast") in kinds  # 27 g > 20 g per meal
+    assert ("carbs_g", "over", "breakfast") in kinds  # 27 g > 20 g per meal + 5 g tolerance
     assert ("carbs_g", "over", "snack") not in kinds
     k_alert = next(a for a in alerts if a["nutrient"] == "potassium_mg")
     assert k_alert["message"] == "Potassium is at 86 % of today's limit (858 / 1000 mg)"

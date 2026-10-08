@@ -56,6 +56,22 @@ what's planned" projection from planned entries. A target with the same minimum 
 protein "about 56 g", is a target, not a limit: it reads **Near target** or **Above target**. Hypo
 treatments are logged like any food and never blocked or warned against.
 
+**How close counts as on target.** Two settings decide when a number counts as "over":
+
+- **A meal's carbohydrate** shows as over only when it is more than your carbohydrate tolerance above
+  the meal's goal. The tolerance is **10 g** unless you change it (5–20 g) in **Settings → Meal
+  guidance**, the same number the meal suggestions use. Ask your diabetes team: if you take fixed insulin
+  doses, consistent carbohydrate helps your glucose ([ADA 2026][A26-5], Rec 5.28). A 65 g dinner against a
+  60 g goal is on target; a 75 g dinner says "more than 10 g over the per-meal goal".
+- **Carbohydrate you ate to treat a low** is left out of the meal's goal, so treating a low never makes a
+  meal "over". It still counts in your day's totals, and an alert that shows anyway says how much it left
+  out ("not counting 15 g used to treat a low").
+- **An "about" target** (protein "about 56 g") is over as soon as you pass it, unless you set
+  **Profile → "About" targets: on target up to (% above)**, from 0 to 10 %. With 5 %, 58 g of protein
+  reads **Near target** ("2 g above, within your tolerance") and 59 g reads **Above target**. No
+  guideline gives this number, so the app starts at 0 and leaves it to you and your dietitian. Limits
+  such as potassium and sodium never get a tolerance.
+
 ## Day or week?
 
 - **Potassium, sodium, fluid and carbohydrate** are judged **per day**.
@@ -193,5 +209,6 @@ because of its carbohydrate, which you count for insulin; for your kidneys it is
 - [KDIGO 2024 CKD guideline][K24], Table 28 (action levels for high potassium) and Rec 3.3.1.1 (protein);
   [MedlinePlus: high potassium level][MEDLINE-K] (warning signs).
 - [ADA Standards of Care 2026, section 11][A26-11], Rec 11.3 (protein with diabetes and CKD).
-- [ADA Standards of Care 2026, section 5][A26-5], Rec 5.13 (no ideal carbohydrate share) and Rec 5.24 (fiber).
+- [ADA Standards of Care 2026, section 5][A26-5], Rec 5.13 (no ideal carbohydrate share), Rec 5.24 (fiber) and
+  Rec 5.28 (consistent carbohydrate with fixed insulin doses).
 - [USDA FoodData Central][FDC]: the food values in the examples.

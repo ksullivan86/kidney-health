@@ -47,8 +47,10 @@
   // (and its colour) stays the server's: how far above "about" still counts as on target is a clinical decision
   // the app does not make (handbook/REVIEW.md, "Food targets").
   const ABOUT_LEVEL_TEXT = { ok: 'OK', caution: 'Near target', over: 'Above target', unknown: 'Not complete' };
-  const isAboutTarget = (st) => !!st && st.min != null && st.target != null && Number(st.min) === Number(st.target);
-  const levelTextFor = (st, level) => (isAboutTarget(st) ? ABOUT_LEVEL_TEXT : LEVEL_TEXT)[level] || level;
+  // `key` (optional): a limit (potassium, sodium, phosphorus, fluid) is never an "about" target (nutrients.is_about).
+  const isAboutTarget = (st, key = null) => !!st && st.min != null && st.target != null && Number(st.min) === Number(st.target)
+    && !(key && KH.rules.NUT[key] && KH.rules.NUT[key].role === 'limit');
+  const levelTextFor = (st, level, key = null) => (isAboutTarget(st, key) ? ABOUT_LEVEL_TEXT : LEVEL_TEXT)[level] || level;
   const LEVEL_RATING = { ok: 'green', caution: 'yellow', over: 'red', medium: 'yellow', high: 'red', unknown: 'unknown' };
 
   // ---------------------------------------------------------------------------
@@ -727,7 +729,8 @@
       const projected = base + (scaled[key] || 0);
       const fraction = projected / st.target;
       if (fraction < wf) continue;
-      const level = fraction > 1 ? 'over' : 'caution';
+      // An "about" target is over only above the person's tolerance (nutrients.over_at, v0.3.1).
+      const level = fraction > KH.rules.overAt(key, st.min, st.target, (state.profile && state.profile.about_tolerance_pct) || 0) ? 'over' : 'caution';
       const contribution = (scaled[key] || 0) / st.target;
       // Only worth saying when this food changes the level or adds a meaningful share (>= 5 %) of the target.
       if (st.level === level && contribution < 0.05) continue;
@@ -743,11 +746,19 @@
     if (perMeal && day.meals && day.meals[meal]) {
       let mealBase = day.meals[meal].carbs_g || 0;
       if (planned && day.planned_meals && day.planned_meals[meal]) mealBase += day.planned_meals[meal].carbs_g || 0;
-      const base = mealBase - (editing && editing.meal === meal ? editVal('carbs_g') : 0);
+      // Entries that treated a low are left out of the meal's carbohydrate (nutrients.meal_carb_alerts, v0.3.1);
+      // an edited entry is taken out once, either way.
+      const isHypo = (e) => !!e && e.purpose === 'hypo';
+      const hypoBase = (day.entries || []).filter((e) => e.meal === meal && isHypo(e) && (planned || !isPlanned(e)))
+        .reduce((a, e) => a + ((e.nutrients && e.nutrients.carbs_g) || 0), 0);
+      const base = mealBase - hypoBase - (editing && editing.meal === meal && !isHypo(editing) ? editVal('carbs_g') : 0);
       const projected = base + (scaled.carbs_g || 0);
       const fraction = projected / perMeal;
+      const tol = Number(day.carb_tolerance_g || 0);
       if (fraction >= wf && scaled.carbs_g > 0) {
-        out.push({ level: fraction > 1 ? 'over' : 'caution', message: `${MEAL_LABEL[meal]} carbohydrate would be ${fmtNum(projected, 'carbs_g')} / ${perMeal} g (${pct(fraction)} %)${suffix}` });
+        const over = projected > perMeal + tol;
+        const within = !over && projected > perMeal ? `, within your ${fmtNum(tol, 'carbs_g')} g tolerance` : '';
+        out.push({ level: over ? 'over' : 'caution', message: `${MEAL_LABEL[meal]} carbohydrate would be ${fmtNum(projected, 'carbs_g')} / ${perMeal} g (${pct(fraction)} %${within})${suffix}` });
       }
     }
     return out;

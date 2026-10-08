@@ -21,7 +21,7 @@ import sqlite3
 from datetime import date as _date, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
 from .auth.deps import CurrentUser, current_user
@@ -59,6 +59,7 @@ from .nutrients import (
     add_totals,
     build_alerts,
     build_projected_alerts,
+    carb_tolerance,
     count_unknown,
     daily_status,
     empty_totals,
@@ -73,7 +74,7 @@ from .nutrients import (
     scale_nutrients,
 )
 from .periods import interdialytic_block, interdialytic_interval, previous_period, summarize_period, summary_notes, to_date
-from .profile import get_profile
+from .profile import get_profile, settings_store
 
 router = APIRouter(prefix="/api/log", tags=["log"], dependencies=[Depends(current_user)])
 
@@ -300,7 +301,23 @@ def insert_entry(
     return int(cur.lastrowid)
 
 
-def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, Any]:
+def _is_hypo(row: Any) -> bool:
+    """The entry treated a low (``purpose = "hypo"``); rows without the column (before schema step 5) did not."""
+    try:
+        return row["purpose"] == HYPO_PURPOSE
+    except (IndexError, KeyError):
+        return False
+
+
+def carb_tolerance_for(conn: sqlite3.Connection, request: Request, user_id: int) -> float:
+    """The person's carbohydrate tolerance (``guidance.carb_tolerance_g``, 5–20 g, default 10): how far above a
+    meal's goal still counts as on target. Today's per-meal alert and meal guidance use the same number."""
+    prefs = settings_store(request).get(conn, "guidance", user_id)
+    value = prefs.get("carb_tolerance_g") if isinstance(prefs, dict) else getattr(prefs, "carb_tolerance_g", None)
+    return carb_tolerance(value)
+
+
+def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance_g: Any = 0) -> dict[str, Any]:
     """Totals, status and alerts for one day's rows: eaten, planned and projected (eaten + planned).
 
     ``totals`` / ``status`` / ``alerts`` are computed on eaten entries only (unchanged from
@@ -312,11 +329,17 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
     ``meal_unknown`` / ``planned_meal_unknown`` (``{key: entries}``, only keys with a count), and
     every status item has ``"unknown": n`` (its level is judged on what is known; with ``n > 0`` the
     true total may be higher). A total of 0 with an unknown count means "not listed", never "none".
+
+    v0.3.1: a meal's carbohydrate alert fires only more than ``carb_tolerance_g`` above its goal and leaves out
+    entries that treated a low (they still count in every total); an "about" target is judged with the profile's
+    ``about_tolerance_pct``. ``carb_tolerance_g`` is returned so the UI draws the meal lines the same way.
     """
     eaten = empty_totals()
     planned = empty_totals()
     meals = {meal: empty_totals() for meal in MEALS}
     planned_meals = {meal: empty_totals() for meal in MEALS}
+    hypo_meals: dict[str, float] = {}
+    projected_hypo_meals: dict[str, float] = {}
     unknown: dict[str, int] = {}
     planned_unknown: dict[str, int] = {}
     meal_unknown: dict[str, dict[str, int]] = {meal: {} for meal in MEALS}
@@ -324,6 +347,11 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
     counts = {"eaten": 0, "planned": 0}
     for row in rows:
         raw = raw_nutrients(row)
+        if _is_hypo(row):
+            carbs = float(raw.get("carbs_g") or 0.0)
+            projected_hypo_meals[row["meal"]] = projected_hypo_meals.get(row["meal"], 0.0) + carbs
+            if row["status"] != "planned":
+                hypo_meals[row["meal"]] = hypo_meals.get(row["meal"], 0.0) + carbs
         if row["status"] == "planned":
             add_totals(planned, raw)
             add_totals(planned_meals.setdefault(row["meal"], empty_totals()), raw)
@@ -341,14 +369,18 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
 
     targets = profile["targets"]
     warn_fraction = profile["warn_fraction"]
-    status = mark_unknown(daily_status(eaten, targets, warn_fraction), unknown)
-    projected_status = mark_unknown(daily_status(projected, targets, warn_fraction), projected_unknown)
-    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"))
+    about = profile.get("about_tolerance_pct", 0)
+    tolerance = carb_tolerance(carb_tolerance_g)
+    status = mark_unknown(daily_status(eaten, targets, warn_fraction, about), unknown)
+    projected_status = mark_unknown(daily_status(projected, targets, warn_fraction, about), projected_unknown)
+    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
+                                                     tolerance_g=tolerance, hypo_carbs=hypo_meals)
     projected_alerts: list[dict[str, Any]] = []
     if counts["planned"]:
         projected_meals = {meal: add_totals(dict(meals[meal]), planned_meals.get(meal, {})) for meal in meals}
         projected_alerts = build_projected_alerts(projected_status) + projected_meal_carb_alerts(
-            projected_meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g")
+            projected_meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
+            tolerance_g=tolerance, hypo_carbs=projected_hypo_meals,
         )
     return {
         "totals": round_nutrients(eaten),
@@ -366,11 +398,12 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, A
         "projected_unknown": projected_unknown,
         "meal_unknown": meal_unknown,
         "planned_meal_unknown": planned_meal_unknown,
+        "carb_tolerance_g": tolerance,
     }
 
 
-def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any]) -> dict[str, Any]:
-    figures = day_figures(rows, profile)
+def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance_g: Any = 0) -> dict[str, Any]:
+    figures = day_figures(rows, profile, carb_tolerance_g)
     return {
         "date": date,
         "entries": [row_to_entry(r) for r in rows],
@@ -385,11 +418,12 @@ def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any]) -
 
 
 @router.get("", response_model=DaySummary)
-def get_day(user: CurrentUser, date: str | None = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def get_day(user: CurrentUser, request: Request, date: str | None = None,
+            conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     day = parse_date_param(date, "date") if date else today_local()
     profile = get_profile(conn, user.id)
     rows = fetch_entries(conn, user.id, day, day)
-    return summarize_day(day, rows, profile)
+    return summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user.id))
 
 
 @router.get("/range", response_model=RangeSummary)
@@ -463,7 +497,8 @@ def get_summary(user: CurrentUser, start: str | None = None, end: str | None = N
     day_totals = eaten_day_totals(conn, user.id, fetch_from.isoformat(), end_d.isoformat())
     day_unknown = eaten_day_unknown(conn, user.id, fetch_from.isoformat(), end_d.isoformat())
 
-    summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction, day_unknown=day_unknown)
+    summary = summarize_period(start_d, end_d, day_totals, targets, warn_fraction, day_unknown=day_unknown,
+                               about_tolerance_pct=profile.get("about_tolerance_pct", 0))
     summary["interdialytic"] = None if interval is None else interdialytic_block(interval, day_totals, targets, warn_fraction,
                                                                                   day_unknown=day_unknown)
     summary["notes"] = summary_notes(profile["dialysis"], profile["dialysis_days"], interval)

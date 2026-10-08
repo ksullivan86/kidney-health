@@ -14,7 +14,7 @@ import math
 from datetime import date, timedelta
 from typing import Any, Iterable, Mapping
 
-from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, round_value, status_level, target_bounds
+from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, over_at, round_value, status_level, target_bounds
 
 # How a nutrient is judged over a period (ARCHITECTURE.md "Why periods matter").
 ASSESSMENT: dict[str, str] = {
@@ -147,6 +147,7 @@ def summarize_period(
     warn_fraction: float = 0.8,
     *,
     day_unknown: Mapping[str, Mapping[str, int]] | None = None,
+    about_tolerance_pct: Any = 0,
 ) -> dict[str, Any]:
     """Aggregate eaten day totals over ``[start, end]``.
 
@@ -158,7 +159,8 @@ def summarize_period(
     Returns ``{"start", "end", "days", "logged_days", "nutrients": {...}}`` with one
     item per nutrient that has a numeric target (see ARCHITECTURE.md ``PeriodSummary``);
     ``unknown_entries`` / ``unknown_days`` say how many eaten entries (on how many logged days of
-    the period) the totals and averages miss.
+    the period) the totals and averages miss. An "about" target (minimum = maximum) is ``over``, and a day counts
+    in ``days_over``, only above the person's ``about_tolerance_pct`` (as on Today).
     """
     unknown = day_unknown or {}
     start_d, end_d = to_date(start), to_date(end)
@@ -173,6 +175,8 @@ def summarize_period(
         target = summary_target(key, targets.get(key))
         if target is None:
             continue
+        lo, _ = target_bounds(targets.get(key))
+        limit_at = over_at(key, lo, target, about_tolerance_pct)
         values = [(d, _value(day_totals, d, key)) for d in current]
         total = math.fsum(v for _, v in values)
         average = _average([v for _, v in values])
@@ -188,8 +192,8 @@ def summarize_period(
             "total": round_value(key, total),
             "average": None if average is None else round_value(key, average),
             "fraction": fraction,
-            "level": status_level(fraction, warn_fraction),
-            "days_over": sum(1 for _, v in values if v > target),
+            "level": status_level(fraction, warn_fraction, limit_at),
+            "days_over": sum(1 for _, v in values if (v > target if limit_at == 1.0 else v / target > limit_at)),
             "max_day": None if max_day is None else {"date": max_day[0], "value": round_value(key, max_day[1])},
             "previous_average": None if previous_average is None else round_value(key, previous_average),
             "change_pct": change_pct,
