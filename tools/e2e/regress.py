@@ -201,8 +201,12 @@ def expected_warning_texts(warnings: list[dict]) -> list[str]:
     return [("High. " if w["level"] == "high" else "Moderate. ") + w["message"] for w in warnings]
 
 
+# The text of each warning without its "Learn: …" link: the link appears only when the server has a built handbook
+# (handbook/site), and the server's warning messages it is compared with have none.
 READ_WARNINGS = """(sel) => Array.from(document.querySelectorAll(sel + ' > .warning')).map((w) => {
-  const d = w.querySelector(':scope > div'); return (d ? d.textContent : w.textContent).trim(); })"""
+  const d = (w.querySelector(':scope > div') || w).cloneNode(true);
+  d.querySelectorAll('.learn-more').forEach((a) => a.remove());
+  return d.textContent.trim(); })"""
 
 
 # The Profile targets editor (v0.3): single numbers, {min, max} ranges (protein, calcium) and the fiber goal.
