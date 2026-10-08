@@ -181,13 +181,21 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))" | podman secret cr
 # Optional USDA key: create the secret, then uncomment the two USDA lines in the unit.
 #   printf '%s' "$USDA_KEY" | podman secret create kidney-usda-key -
 
-$EDITOR ~/.config/containers/systemd/kidney-health.container     # PUBLIC_URL, TRUSTED_PROXIES
+$EDITOR ~/.config/containers/systemd/kidney-health.container     # Image= (see below), PUBLIC_URL, TRUSTED_PROXIES
 /usr/libexec/podman/quadlet -user -dryrun >/dev/null && echo unit OK  # Debian/Ubuntu: /usr/lib/podman/quadlet
 systemctl --user daemon-reload
 systemctl --user start kidney-health
 sudo loginctl enable-linger "$USER"
 systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.3 tag
 ```
+
+**Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<index digest>`
+and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
+together, which you review and apply, and `scripts/verify-image.sh 0.3.0` checks the signature and
+attestations of exactly that digest. The shipped unit instead tracks `:0.3` with `AutoUpdate=registry`
+(patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
+outside your review.
 
 What the unit sets, and why, is commented line by line in the file: `127.0.0.1` publishing,
 `ReadOnly=true` with a `noexec` tmpfs on `/tmp`, `DropCapability=all`, `NoNewPrivileges=true`,
@@ -529,10 +537,11 @@ older one.
 
 ## Upgrades
 
-* **Track `:0.3`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
-  `podman-auto-update.timer`, or pin a digest you verified (`scripts/verify-image.sh`) and change
-  it deliberately. Do not track `:latest` or `:edge` on a machine you care about: `:edge` follows
-  every merge to `main`.
+* **Pin the release digest** (`Image=...:0.3.1@sha256:<index digest>` from the release notes,
+  checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
+  **track `:0.3`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
+  `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
+  follows every merge to `main`.
 * Before a minor upgrade (0.3 → 0.4): take a backup, read the release notes, then change the tag.
 * Never mount the Podman or Docker socket into an "updater" container ([`security.md` §7](security.md#7-never-mount-the-container-engines-socket)).
 
