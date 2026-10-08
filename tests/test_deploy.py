@@ -367,6 +367,23 @@ def test_handbook_is_built_in_a_throwaway_stage_and_copied_read_only(path):
     assert "HANDBOOK_DIR=/app/learn" in runtime
 
 
+def test_search_support_for_other_languages_is_left_out_while_the_handbook_searches_in_english():
+    """Note 08 §6 risk 12: the theme copies its search support for other languages (lunr-languages, TinySegmenter,
+    wordcut; 964 KB) into every build, and its search worker loads it only for a language other than English. The
+    image and the GitHub Pages copy drop it; if the search ever gets another language, they must keep it."""
+    mkdocs = read("handbook/mkdocs.yml")
+    search = re.search(r"^  - search:\n((?:      .*\n)+)", mkdocs, re.M)
+    assert search, "the search plugin's settings moved: update this test"
+    assert re.findall(r"^\s+lang:\s*(\S+)", search.group(1), re.M) == ["en"], \
+        "the search is no longer English only: keep assets/javascripts/lunr in deploy/Containerfile* and handbook-pages.yml"
+    assert "search" not in read("handbook/mkdocs.pages.yml")  # the Pages build inherits these settings
+    for path in CONTAINERFILES:
+        handbook = re.split(r"^FROM ", path.read_text(encoding="utf-8"), flags=re.M)
+        build = next(s for s in handbook if re.match(r"\S+ AS handbook\s*$", s.splitlines()[0]))
+        assert "\n && rm -rf /out/learn/assets/javascripts/lunr \\\n" in build, path.name
+    assert '\n          rm -rf "$RUNNER_TEMP/site/assets/javascripts/lunr"\n' in read(".github/workflows/handbook-pages.yml")
+
+
 def test_release_labels_match_the_containerfile():
     rel = read(".github/workflows/release.yml")
     assert f"org.opencontainers.image.licenses={IMAGE_LICENCES}\n" in rel

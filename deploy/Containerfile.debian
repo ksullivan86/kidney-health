@@ -58,6 +58,7 @@ ENV NO_MKDOCS_2_WARNING=true \
     HANDBOOK_APP_LINK=/
 RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
  && find /out/learn -type f -name '*.map' -exec rm -f {} + \
+ && rm -rf /out/learn/assets/javascripts/lunr \
  && test -f /out/learn/index.html \
  && chmod -R u=rwX,go=rX /out/learn
 
