@@ -29,13 +29,21 @@ tests).
 
 ## In progress
 
-* Merged today: #13–#18 (the whole v0.3.1 batch), #19 (kidney-only profile, part 1) and #20 (Settings → AI ideas
-  "How AI help is set up", plus the `regress.py` Learn-link fix; 14:02 UTC).
+* Merged today: #13–#18 (the whole v0.3.1 batch), #19 (kidney-only profile, part 1), #20 (Settings → AI ideas
+  "How AI help is set up", plus the `regress.py` Learn-link fix; about 14:00 UTC) and #21 (the `journey.py`
+  setup step opens Server administration for the AI switch; 14:08 UTC).
 * QA of today's merges (worktree `scratchpad/khqa` at the #19 head, logs in `scratchpad/qa/`): `upgrade.py` 71/71
   (v0.2 and schema v3 to schema 9); `regress.py` passes in all four configurations (fixed in #20); `sandbox.py`
-  passes; `device.py` 151/151; `learn.py` 60/60; `journey.py` failed its setup step (it still looked for the AI
-  switch in Settings, which #15 moved to Server administration) and every later step that needs AI with it.
-  Fixed in the harness (PR from the branch, tools only): 134/134 on the #20 head.
+  passes; `device.py` 151/151; `learn.py` 60/60; `journey.py` 134/134 with #21.
+* Kidney-only part 2 (PR from the branch, built in worktree `scratchpad/kh11`): the "Not medical advice" note
+  below Profile and in Settings → About leaves out insulin decisions for diabetes "None". Verified: full suite
+  (exit 0), `tests/test_kidney_only.py` (new test), Chromium walk (`scratchpad/disclaimer_walk.py`: type 1, none,
+  type 2 at 375 light and 1280 dark, Settings opened before the profile loads, the select flipping the note).
+* Next PR, ready in worktree `scratchpad/kh12` (commit 3f4b134): the image and the Pages copy leave out the
+  handbook search's other-language files (`assets/javascripts/lunr`, 964 KB), with a guard test in
+  `tests/test_deploy.py` and the licence page updated. Verified: strict handbook build, pruned like the image,
+  `learn.py` 60/60 on it (search at both widths, no failed requests); deploy, serving and content tests; zizmor
+  and shellcheck on the Pages step.
 
 ## Next (in order)
 
