@@ -21,6 +21,21 @@ The app works fully without AI. AI is an extra layer that can re-rank meal ideas
 as "2 eggs, toast with butter, tea" into food searches, or read the numbers from a photo of a label
 ([design note 04][NOTE04]). The app's own rules check every AI answer before you see it.
 
+## How the setup fits together
+
+Three choices make up every AI setup:
+
+1. **Which AI answers.** Your admin chooses it: a model running at home, a company's AI over the
+   internet (such as OpenAI or OpenRouter), or a home "Hermes" agent. Your admin may also let you add
+   your own key.
+2. **What it may do.** Your admin switches AI on, and then you opt in. AI can suggest meals, turn a
+   typed meal into food searches, and read a label photo. It cannot chat, give doses or save anything.
+3. **Who sees your request.** The consent sheet names where your request goes and who can read it.
+   **What will be sent?** shows the exact request before it goes.
+
+A model at home keeps your data in the house. A company's AI means your request leaves the house, so
+the consent sheet says so before you agree.
+
 ## What AI can and cannot do here
 
 | AI can | AI cannot |

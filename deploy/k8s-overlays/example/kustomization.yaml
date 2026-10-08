@@ -1,0 +1,26 @@
+# Example overlay: everything that depends on YOUR cluster and host, on top of the cluster-neutral
+# base in deploy/k8s. Copy this directory, edit the four places marked "<--", then:
+#   kubectl apply -k deploy/k8s-overlays/<yours>
+# In a separate GitOps repository, replace "../../k8s" with the remote base, pinned to a release:
+#   - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.3.1
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kidney-health
+resources:
+  - ../../k8s
+  - httproute.yaml                # <-- your Gateway, listener and host name (or an Ingress instead)
+patches:
+  - path: deployment-env.yaml     # <-- PUBLIC_URL and TRUSTED_PROXIES
+  - path: networkpolicy-ingress.yaml  # <-- the namespace your Gateway's pods run in
+  # Optional: a storage class other than the cluster default (docs/deployment.md, "Pick storage").
+  # - target: {kind: PersistentVolumeClaim, name: kidney-health-data}
+  #   patch: |-
+  #     - op: add
+  #       path: /spec/storageClassName
+  #       value: longhorn
+# <-- Pin the release you verified: tag AND digest (each GitHub release's notes carry the digest;
+# scripts/verify-image.sh checks it). Renovate or Dependabot can then bump both together.
+# images:
+#   - name: ghcr.io/ksullivan86/kidney-health
+#     newTag: "0.3.1"
+#     digest: sha256:<index digest>

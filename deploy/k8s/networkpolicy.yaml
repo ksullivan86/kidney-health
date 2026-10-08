@@ -1,5 +1,6 @@
 # Default-deny for the namespace, then exactly what kidney-health needs (§5.3, C-NETPOL):
-#   ingress  only from your Gateway / ingress controller namespace, on port 8000
+#   ingress  none in this cluster-neutral base: your overlay allows your Gateway / ingress controller
+#            namespace on port 8000 (deploy/k8s-overlays/example/networkpolicy-ingress.yaml)
 #   egress   DNS to kube-dns, and HTTPS (443) to PUBLIC addresses only: api.nal.usda.gov,
 #            world.openfoodfacts.org and, if you enable it, a cloud AI host (docs/network-allowlist.md)
 # Private, CGNAT, link-local (cloud metadata 169.254.169.254) and loopback ranges are excluded, so a
@@ -39,18 +40,10 @@ spec:
   policyTypes:
     - Ingress
     - Egress
-  ingress:
-    - from:
-        # <-- the namespace of your Gateway API implementation or ingress controller.
-        # Cilium's own Gateway/Ingress is not a pod in a namespace (its traffic has the reserved
-        # "ingress" identity), so this never matches it: also apply the second policy in
-        # cilium-networkpolicy.example.yaml (fromEntities: ingress).
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: gateway-system
-      ports:
-        - port: 8000
-          protocol: TCP
+  # No `ingress:` rules here, so nothing gets in until an overlay adds the Gateway's namespace.
+  # Cilium's own Gateway/Ingress is not a pod in a namespace (its traffic has the reserved "ingress"
+  # identity), so a namespaceSelector never matches it: apply the second policy in
+  # cilium-networkpolicy.example.yaml (fromEntities: ingress) instead.
   egress:
     - to:
         - namespaceSelector:

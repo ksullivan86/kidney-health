@@ -146,10 +146,10 @@ of validity. Caddy and step-ca meet them by default. step-ca can issue a name-co
 Use cert-manager (v1.21.2 at the time of writing) with an ACME `ClusterIssuer` that solves DNS-01
 through your DNS provider's API (Cloudflare: `dns01.cloudflare.apiTokenSecretRef`), or a `CA`
 issuer built from a private root (then follow tier 3 on the phones). Attach the certificate to the
-HTTPS listener of your Gateway (the default `deploy/k8s/httproute.yaml` routes to it) or, with an
+HTTPS listener of your Gateway (the overlay's `httproute.yaml`, from `deploy/k8s-overlays/example/`, routes to it) or, with an
 Ingress, use the `cert-manager.io/cluster-issuer` annotation in
 [`deploy/k8s/ingress.example.yaml`](../deploy/k8s/ingress.example.yaml). Set `PUBLIC_URL` in the
-Deployment to the same host name.
+overlay's `deployment-env.yaml` to the same host name.
 
 ## Not supported
 

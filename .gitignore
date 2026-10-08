@@ -15,3 +15,7 @@ build/
 # Local handbook builds (cd handbook && mkdocs build); the image builds its own copy.
 handbook/site/
 handbook/.cache/
+# Your own Kubernetes overlays hold host names and network ranges: keep them out of this repository
+# (or in a separate GitOps repository that uses deploy/k8s as a remote base).
+deploy/k8s-overlays/*
+!deploy/k8s-overlays/example/

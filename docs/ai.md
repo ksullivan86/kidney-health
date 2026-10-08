@@ -17,8 +17,32 @@ API is in [`ARCHITECTURE.md`](../ARCHITECTURE.md), "M2 API: AI and photos". The 
 > from the app's food list (or from a label you check), and every AI idea passes the same rules as the
 > app's own suggestions.
 
+## The setup in three questions
+
+Every AI setup answers three questions. The rest of this page is the detail behind each answer.
+
+| Question | Who decides, and where | The choices |
+|---|---|---|
+| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
+| **2. What may it do?** (the *features*) | The admin switches AI on (`ai.enabled`) and decides on plate photos (`ai.vision_plate_enabled`) and photos to Hermes (`ai.vision_allow_agent`); then each person opts in (Use AI ideas, and a separate consent for photos). | Meal ideas, swaps and day plans (always chosen from foods the rules allowed, and checked again); describe a meal (search words only); read a label (a draft you check); plate photos (names and a rough weight only; off by default). Nothing can chat, give doses or save on its own. |
+| **3. Whose key pays, and who can read the request?** | Follows from question 1; the consent sheet shows the provider's data line ([table below](#what-is-sent-and-what-never-is)). | A shared provider uses the server's key, and the admin can read what is sent; an own key uses the person's account at that provider. "What will be sent?" shows each request byte for byte before it goes. |
+
+**Where to start:**
+
+* **A home server with a GPU (8–16 GB):** run Ollama next to the app (`deploy/compose.ai-ollama.yaml`)
+  with `qwen3-vl:8b` as both text and vision model (`gemma4:e4b` on smaller GPUs). Nothing leaves the
+  house. Measure it with `scripts/ai_eval.py` before you rely on it ([For contributors](#for-contributors)).
+* **No GPU:** a small model on the CPU is fine for meal ideas and "describe a meal", but photos are slow
+  (raise `AI_VISION_TIMEOUT_S`). Or use a cloud key with the `openai` or `openrouter` preset; the consent
+  sheet then tells each person that their requests go to that company.
+* **LiteLLM** works as the address for a model at home (preset `litellm`). For a **cloud** model, use the
+  cloud provider's own preset instead of LiteLLM-to-cloud: the `litellm` preset's consent line says
+  "runs on your admin's hardware", which would then be untrue, and the `openai` preset also sends
+  `store: false` and a hashed safety identifier.
+
 ## Contents
 
+* [The setup in three questions](#the-setup-in-three-questions)
 * [What AI does and does not do](#what-ai-does-and-does-not-do)
 * [Guardrails](#guardrails)
 * [What is sent, and what never is](#what-is-sent-and-what-never-is)

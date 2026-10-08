@@ -151,9 +151,11 @@ podman-compose -f deploy/compose.yaml up -d
 # Rootless Docker: every hardening flag spelled out; refuses a rootful daemon
 deploy/docker-rootless-run.sh
 
-# Kubernetes (Talos or any other distribution): Pod Security "restricted", one replica;
-# create the secret first (deploy/k8s/secret.example.yaml, docs/deployment.md)
-kubectl apply -k deploy/k8s/
+# Kubernetes (Talos or any other distribution): Pod Security "restricted", one replica; a
+# cluster-neutral base plus your overlay (host, Gateway, TRUSTED_PROXIES). Create the secret first
+# (deploy/k8s/secret.example.yaml, docs/deployment.md)
+cp -r deploy/k8s-overlays/example deploy/k8s-overlays/home && $EDITOR deploy/k8s-overlays/home/*.yaml
+kubectl apply -k deploy/k8s-overlays/home
 ```
 
 A local AI model can run next to the app with `deploy/compose.ai-ollama.yaml` ([docs/ai.md](docs/ai.md#recipes)).

@@ -292,25 +292,46 @@ Limits that matter here:
 ## Kubernetes (Talos)
 
 The Kustomize base in [`deploy/k8s/`](../deploy/k8s/) satisfies Pod Security **restricted**, which
-the namespace enforces:
+the namespace enforces, and is **cluster-neutral**: it renders unchanged on any cluster, with no pod
+CIDR, Gateway, host name or storage class in it. Everything that depends on your cluster goes in an
+overlay, starting from [`deploy/k8s-overlays/example/`](../deploy/k8s-overlays/example/):
 
 ```
-deploy/k8s/
-  kustomization.yaml                  resources + image pin (tag and digest)
+deploy/k8s/                           the base: do not edit, so upgrades merge cleanly
+  kustomization.yaml                  resources + the image (the minor-release tag)
   namespace.yaml                      PSA enforce/audit/warn: restricted
-  pvc.yaml                            1 Gi ReadWriteOnce                    <- storageClassName
+  pvc.yaml                            1 Gi ReadWriteOnce, the cluster's default storage class
   deployment.yaml                     UID 10001, read-only root, /tmp emptyDir, secret files, probes
   service.yaml                        ClusterIP :80 -> :8000
-  networkpolicy.yaml                  default-deny + DNS + public 443 + ingress from the Gateway
-  httproute.yaml                      Gateway API route (default)           <- parentRefs, hostname
+  networkpolicy.yaml                  default-deny + DNS + public 443; NO ingress until the overlay
   ingress.example.yaml                Ingress instead (not applied; ingress-nginx is retired)
   cilium-networkpolicy.example.yaml   FQDN egress allowlist for Cilium (not applied)
   secret.example.yaml                 the Secret's shape (not applied: never commit secrets)
+deploy/k8s-overlays/example/          copy it, edit the lines marked "<--"
+  kustomization.yaml                  base + route + patches; image pin (tag and digest); storage class
+  httproute.yaml                      Gateway API route                      <- parentRefs, hostname
+  deployment-env.yaml                 PUBLIC_URL, TRUSTED_PROXIES            <- your host, Gateway pods
+  networkpolicy-ingress.yaml          ingress from the Gateway's namespace   <- its name
+```
+
+Your own overlays under `deploy/k8s-overlays/` are ignored by git, so host names and network ranges
+stay out of a clone. **From a GitOps repository**, use the base remotely, pinned to a release, and keep
+the overlay's patches in your repository:
+
+```yaml
+# kustomization.yaml in your GitOps repository
+resources:
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.3.1
+  - httproute.yaml
+patches:
+  - path: deployment-env.yaml
+  - path: networkpolicy-ingress.yaml
 ```
 
 ### 1. Pick storage
 
-Edit `pvc.yaml` (`storageClassName`) or leave it unset for the cluster default.
+Leave it to the cluster's default storage class, or uncomment the storage-class patch in your
+overlay's `kustomization.yaml`.
 
 | StorageClass | Fits when | Notes |
 |---|---|---|
@@ -329,8 +350,9 @@ kubectl create namespace kidney-health --dry-run=client -o yaml | kubectl apply 
 kubectl -n kidney-health create secret generic kidney-health \
   --from-literal=secret_key="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')" \
   --from-literal=usda_api_key=''
-$EDITOR deploy/k8s/httproute.yaml deploy/k8s/networkpolicy.yaml deploy/k8s/deployment.yaml
-kubectl apply -k deploy/k8s
+cp -r deploy/k8s-overlays/example deploy/k8s-overlays/home
+$EDITOR deploy/k8s-overlays/home/*.yaml                # the lines marked "<--" (step 3)
+kubectl apply -k deploy/k8s-overlays/home
 kubectl -n kidney-health rollout status deploy/kidney-health
 kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'
 ```
@@ -338,12 +360,17 @@ kubectl -n kidney-health logs deploy/kidney-health | grep 'FIRST-RUN SETUP'
 Both Secret keys must exist (the app reads both files; an empty `usda_api_key` means "off"). Keep a
 copy of `secret_key` in your password manager. Talos encrypts Secrets in etcd (secretbox) by default.
 
-### 3. Things to set in `deployment.yaml`
+### 3. Things to set in your overlay
 
-* `PUBLIC_URL` = the HTTPRoute host name with `https://`.
-* `TRUSTED_PROXIES`: the shipped `10.244.0.0/16` (Talos' default pod CIDR) trusts **every pod**; it is
-  only safe while the NetworkPolicy below is enforced or `TRUSTED_PROXY_SECRET_FILE` is set. Narrow
-  it to your Gateway's pods where you can.
+* `httproute.yaml`: your Gateway's name, namespace and HTTPS listener (`parentRefs`), and the host name.
+* `deployment-env.yaml`: `PUBLIC_URL` = the HTTPRoute host name with `https://`; `TRUSTED_PROXIES` =
+  your Gateway's pods, as narrow as you can. The example's `10.244.0.0/16` is the Talos and Flannel
+  default pod CIDR (yours may differ: `kubectl get nodes -o jsonpath='{.items[*].spec.podCIDR}'`) and
+  trusts **every pod**; it is only safe while the NetworkPolicy below is enforced or
+  `TRUSTED_PROXY_SECRET_FILE` is set. Without the overlay the app trusts only loopback: safe, but it
+  then ignores the Gateway's `X-Forwarded-Proto: https` (no `Secure` cookies, and sign-in is refused as
+  "plain HTTP" once two accounts exist).
+* `networkpolicy-ingress.yaml`: the namespace your Gateway's pods run in.
 * `supplementalGroupsPolicy: Strict` needs containerd ≥ 2.0 (Talos ships it); remove the line if the
   kubelet rejects the pod.
 
@@ -360,7 +387,8 @@ kubectl -n kidney-health run np-test --rm -it --restart=Never \
 # If it prints {"status":"ok",...}, NetworkPolicy is not enforced on your cluster.
 ```
 
-`networkpolicy.yaml` lets the Gateway's namespace in on port 8000 (edit `gateway-system`), and lets
+Your overlay's `networkpolicy-ingress.yaml` lets the Gateway's namespace in on port 8000 (the base lets
+nothing in), and the base's `networkpolicy.yaml` lets
 the pod out only to kube-dns and to **public** addresses on 443 (private, CGNAT, link-local and
 loopback ranges are excluded, so cloud metadata and the API server are unreachable). Kubelet probes
 come from the node and are not affected. With Cilium, replace the `0.0.0.0/0` rule with
@@ -375,8 +403,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.3.0                 # prints the verified digest
-cd deploy/k8s && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<digest>
+scripts/verify-image.sh 0.3.0                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.

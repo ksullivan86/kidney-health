@@ -186,7 +186,7 @@ Tick every line before you put real health data in the app.
 - [ ] `networkpolicy.yaml` applied **and enforced**: Talos' default Flannel ignores NetworkPolicy unless `kubeNetworkPoliciesEnabled: true`. Test it (`docs/deployment.md`).
 - [ ] Ingress only from your Gateway namespace; egress only DNS and public 443 (or the Cilium FQDN example).
 - [ ] Image pinned by digest in `kustomization.yaml` after `scripts/verify-image.sh`; `imagePullPolicy: IfNotPresent`.
-- [ ] `TRUSTED_PROXIES` narrowed to the Gateway's pods where possible (section 4).
+- [ ] `TRUSTED_PROXIES` set in your overlay (the base trusts only loopback) and narrowed to the Gateway's pods where possible (section 4).
 - [ ] Optional: `hostUsers: false` (Kubernetes ≥ 1.36, idmap-capable storage, Talos `SysctlConfig`).
 
 ## 6. Secrets, the `SECRET_KEY` and backups

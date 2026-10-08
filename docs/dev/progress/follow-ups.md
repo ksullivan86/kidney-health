@@ -16,15 +16,25 @@ tests).
   asserts the job's shape. Verified: `pytest tests/test_deploy.py`, `zizmor --offline`, `shellcheck`
   on the extracted script, a dry run of the script.
 
+* PR #11 merged (release digest).
+* Homelab review 5: cluster-neutral base `deploy/k8s` + example overlay `deploy/k8s-overlays/example/`
+  (beside the base: kustomize refuses an overlay nested inside its base). Verified: kustomize build
+  of both, kubeconform strict (18 resources valid), actionlint, zizmor, `pytest tests/test_deploy.py`.
+* AI setup in plain words: "The setup in three questions" in `docs/ai.md`, "How the setup fits
+  together" in `handbook/docs/app/ai.md` (the Settings intro copy is left for later).
+  Both in one PR (#12).
+
+## In progress
+
+* v0.3.1 item 1 "Not chosen yet": schema step `m008_profile_chosen` (`ckd_stage_set_at`,
+  `diabetes_set_at`), `Profile.ckd_stage_chosen` / `diabetes_chosen`, form option + guards, Today
+  prompt, mock twin, ARCHITECTURE and handbook first-setup done; still to do: CHANGELOG, ROADMAP and
+  plan updates, full pytest, then PR. Decision: the API's suggested-targets endpoint is unchanged
+  (many API tests and clients call it after saving only a weight); the form guards it instead.
+
 ## Next (in order)
 
-1. Homelab review 5: cluster-neutral Kubernetes manifests (`deploy/k8s/deployment.yaml`
-   `TRUSTED_PROXIES` back to the loopback default; gateway name/namespace, hostname and the
-   NetworkPolicy's ingress namespace into `deploy/k8s/overlays/example/` with kustomize patches;
-   docs in `docs/deployment.md` "Kubernetes"); `tests/test_deploy.py` and CI's kubeconform must pass.
-2. "Explain the AI setup in plain words": overview at the top of `docs/ai.md`, Settings → AI ideas
-   intro copy, handbook `app/` page.
-3. v0.3.1 batch, items 1–6 of `docs/dev/plans/v0.3.1.md`, then the kidney-only profile.
+1. v0.3.1 items 2–6 of `docs/dev/plans/v0.3.1.md`, then the kidney-only profile.
 
 ## Commands that reproduce the checks
 
