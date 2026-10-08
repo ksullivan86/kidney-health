@@ -230,6 +230,17 @@ and the suggestion never disagree. The *Kidney function* card shows the eGFR wit
 not set), the albuminuria category, and the server's message. *History* lists every result by test,
 newest first, with a filter and deletion (confirmed in the page).
 
+**Import from a spreadsheet** (v0.3.1, on the Lab results view): choose a CSV file with a date column and
+one column per test, for example `Date, Potassium (mmol/L), Creatinine (umol/L)`. The file is read in the
+browser; nothing is sent until **Save**, and then only the ticked results (test, value, unit and date),
+never the file or its other columns. Every result is listed with its conversion before saving; a column
+without a unit asks for one (except potassium and bicarbonate, whose units are equal, and cystatin C and
+eGFR, which have one); dates like 03/04/2026 follow the order you pick, unless a day above 12 shows it.
+Values the app cannot read as one number ("<0.5", ">90", "1,200"), dates in the future and results outside
+the plausible range are listed as not imported, with the reason. A result already saved (same test, date
+and value as shown) is not ticked, and the server skips repeats as well (`POST /api/labs/import`). Up to
+1 MB and 1,000 rows per file.
+
 **Today** draws the fiber goal as progress toward "at least X g" (no "over" state) and a protein range
 whose minimum equals its maximum as "about X g".
 
@@ -252,7 +263,7 @@ admin of a server outside the US can make SI the default while each person can s
 ## Privacy
 
 Birth month, sex, pregnancy and lab results are health data. They are stored only in the server's
-database, are never written to the log, appear in the person's own export (`export.json` and
+database (an imported CSV file is read in the browser and never stored or sent; only the results kept are), are never written to the log, appear in the person's own export (`export.json` and
 `labs.csv`, with values in the canonical unit plus what was typed), and are deleted with the account.
 No admin route reads them.
 

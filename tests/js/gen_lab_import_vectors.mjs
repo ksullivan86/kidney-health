@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+// Writes tests/data/lab_import_vectors.json: what js/engine/lab_import.js (the CSV reader of Lab results →
+// "Import from a spreadsheet", v0.3.1) answers for each case below. The reader has no Python twin (the file is
+// read on the device; the server only sees the results the person keeps), so the file pins its behaviour:
+// review the diff by hand after a change. tests/test_lab_import.py checks every converted value against
+// app/units.py and sends every importable result to POST /api/labs/import; node tests/js/run_vectors.mjs
+// replays the cases.
+//
+//   node tests/js/gen_lab_import_vectors.mjs
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ENGINE = ['rules', 'kidney_function', 'lab_import'].map((p) => `app/static/js/engine/${p}.js`);
+const OUT = join(ROOT, 'tests', 'data', 'lab_import_vectors.json');
+
+const context = vm.createContext({ console });
+for (const rel of ENGINE) vm.runInContext(readFileSync(join(ROOT, rel), 'utf8'), context, { filename: rel });
+const L = vm.runInContext('globalThis.KH.labImport', context);
+
+const TODAY = '2026-10-08';
+const opts = (extra = {}) => ({ today: TODAY, ...extra });
+const manyRows = ['Date,Potassium (mmol/L)', ...Array.from({ length: L.MAX_ROWS + 1 }, (_, i) => `2025-01-01,${(3 + (i % 50) / 10).toFixed(1)}`)].join('\n');
+
+const CASES = [
+  ['units from the headers, conversions, other columns not read',
+    'Date,Potassium (mmol/L),Creatinine (umol/L),eGFR,HbA1c (mmol/mol),Patient name,MRN\n'
+    + '2026-09-01,4.6,150,45,53,Sam Example,12345\n2026-09-29,5.2,162,41,,Sam Example,12345\n', opts()],
+  ['other names for the tests, and labels with brackets',
+    'Test date,K,Phosphorus [mg/dL],Albumin (blood) (g/L),CO2,UACR (mg/mmol),Cystatin C,GFR,A1c (%)\n'
+    + '2026-08-15,4.1,4.4,38,24,3.4,1.45,52,7.1\n', opts()],
+  ['a column without a unit waits for one',
+    'Date,Phosphate,Creatinine,Bicarbonate,Potassium\n2026-09-01,1.3,1.6,23,4.4\n', opts()],
+  ['the unit the person chose for a column',
+    'Date,Phosphate,Creatinine,Bicarbonate,Potassium\n2026-09-01,1.3,1.6,23,4.4\n', opts({ units: { 1: 'mmol/L', 2: 'mg/dL' } })],
+  ['a unit the app does not know for that test',
+    'Date,Potassium (mg/dL),Creatinine (mg/L)\n2026-09-01,4.4,12\n', opts()],
+  ['a unit the person chose instead of the header one',
+    'Date,Potassium (mg/dL),Creatinine (mg/L)\n2026-09-01,4.4,12\n', opts({ units: { 1: 'mEq/L', 2: 'umol/L' } })],
+  ['semicolons, decimal commas and day-first dates',
+    'Date;K;Creatinine (µmol/L);Hemoglobin A1c (mmol/mol)\n13/09/2026;4,5;98;48\n01/10/2026;4,85;101;\n', opts()],
+  ['month-first dates are detected from a day above 12',
+    'Date,Potassium (mmol/L)\n09/13/2026,4.5\n10/01/2026,4.7\n', opts()],
+  ['slash dates without a day above 12 follow the default order',
+    'Date,Potassium (mmol/L)\n03/04/2026,4.5\n', opts()],
+  ['slash dates without a day above 12 follow the chosen order',
+    'Date,Potassium (mmol/L)\n03/04/2026,4.5\n', opts({ dateOrder: 'dmy' })],
+  ['dates in two orders refuse the file',
+    'Date,Potassium (mmol/L)\n13/01/2026,4.5\n01/13/2026,4.6\n', opts()],
+  ['dates with a time, and dots',
+    'Collected,Potassium (mmol/L)\n2026-09-01T08:30:00Z,4.5\n2026.09.02,4.6\n03.09.2026 07:45,4.7\n', opts({ dateOrder: 'dmy' })],
+  ['values that are not a single number',
+    'Date,eGFR,UACR (mg/g),Potassium (mmol/L),Creatinine (umol/L),Albumin (g/L)\n'
+    + '2026-09-01,>90,"1,200",abc,"1,250.5",-3\n2026-09-02,≥60,<3,"4,6","1,234,567",\n', opts()],
+  ['dates that cannot be used',
+    'Date,Potassium (mmol/L)\n2026-10-10,4.5\n2026-02-30,4.6\n1899-12-31,4.7\nyesterday,4.8\n,4.9\n2026-10-09,5.0\n', opts()],
+  ['results outside the plausible range',
+    'Date,Potassium (mmol/L),Phosphate (mmol/L),Creatinine (mg/dL)\n2026-09-01,15,1.2,150\n', opts()],
+  ['repeats in the file and results saved already',
+    'Date,Potassium (mmol/L),Creatinine (mg/dL)\n2026-09-01,4.6,1.4\n2026-09-01,4.61,1.40\n2026-09-02,4.6,1.5\n',
+    opts({ existing: [{ analyte: 'creatinine', taken_on: '2026-09-02', value: 1.5 }, { analyte: 'potassium', taken_on: '2026-09-01', value: 4.4 }] })],
+  ['quotes, a byte-order mark, CRLF and tabs',
+    '\uFEFF"Date"\t"Potassium (mmol/L)"\t"Note"\r\n"2026-09-01"\t"4.4"\t"before\tdialysis, ""fasting"""\r\n\r\n2026-09-03\t4.9\t\r\n', opts()],
+  ['no date column', 'Day,Potassium (mmol/L)\n2026-09-01,4.4\n', opts()],
+  ['no test the app knows', 'Date,Sodium (mmol/L),Glucose\n2026-09-01,140,5.5\n', opts()],
+  ['an empty file', '\n\n', opts()],
+  ['a quote that never ends', 'Date,Potassium (mmol/L)\n"2026-09-01,4.4\n', opts()],
+  ['more rows than one import takes', manyRows, opts()],
+];
+
+const doc = {
+  about: 'js/engine/lab_import.js answers (v0.3.1 lab CSV import); generated by tests/js/gen_lab_import_vectors.mjs, replayed by '
+    + 'tests/js/run_vectors.mjs, cross-checked against app/units.py by tests/test_lab_import.py',
+  limits: { max_chars: L.MAX_CHARS, max_rows: L.MAX_ROWS, max_results: L.MAX_RESULTS },
+  cases: CASES.map(([name, text, options]) => ({ name, text, options, expected: JSON.parse(JSON.stringify(L.analyse(text, options))) })),
+  request_cases: [],
+};
+const first = doc.cases[0];
+const kept = first.expected.results.filter((r) => r.problem == null);
+doc.request_cases.push({ name: 'only the kept results, as written', results: kept, expected: JSON.parse(JSON.stringify(L.requestBody(kept))) });
+writeFileSync(OUT, `${JSON.stringify(doc, null, 1)}\n`);
+console.log(`wrote ${OUT}: ${doc.cases.length} cases`);

@@ -34,6 +34,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   About this server and AI providers, with chips to jump between them. Settings now holds only personal
   settings. Members never see the button or the page, and the server still refuses every admin request
   from a member.
+* **Lab results from a spreadsheet.** Lab results → *Import from a spreadsheet* reads a CSV file with a date
+  column and one column per test ("Date, Potassium (mmol/L), Creatinine (umol/L)", with other names such as K,
+  CO2 or HbA1c understood). The file is read on your device: every result is shown converted before
+  anything is saved, you tick the ones to keep, and only those are sent, never the file or its other
+  columns. Values that are not one number ("<0.5", ">90"), dates in the future, results outside the
+  plausible range and results already saved are listed and left out. New route: `POST /api/labs/import`.
 * **Try the app without installing it.** When the handbook is published on GitHub Pages, the app's demo is
   published beside it, at `demo/`, and every handbook page links to it ("Try the app (demo)"). It is the real
   app with a sample person and a month of meals, running entirely in your browser: nothing you type leaves

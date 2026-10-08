@@ -38,6 +38,7 @@ const SHELL_URLS = [
   '/css/touch.css',
   '/js/engine/rules.js',
   '/js/engine/kidney_function.js',
+  '/js/engine/lab_import.js',
   '/js/engine/targets.js',
   '/js/engine/settings.js',
   '/js/engine/textclean.js',

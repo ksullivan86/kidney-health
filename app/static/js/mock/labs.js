@@ -18,6 +18,7 @@
 
   const DEFAULT_LIST_LIMIT = 200;
   const MAX_LIST_LIMIT = 1000;
+  const MAX_LAB_IMPORT = 1000;
   const MAX_NOTE = 500;
   const MAX_VALUE = 1000000;
   const LAB_FIELDS = ['analyte', 'value', 'unit', 'taken_on', 'note'];
@@ -92,6 +93,46 @@
       if (alert) alerts.push(alert);
     }
     return { ...out, alerts };
+  });
+  // POST /api/labs/import (v0.3.1): each item checked like POST /api/labs (a refused one is listed with the same
+  // message, the others saved); one that repeats a saved result of this person (test, date, shown value) or an
+  // earlier item is skipped; `alerts` as GET /api/labs.
+  route('POST', '/api/labs/import', function ({ body }) {
+    const user = this._currentUser();
+    const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+    if (body == null) failFields(['Field required']);
+    if (!isObject(body)) failFields(['Input should be a valid dictionary or object to extract fields from']);
+    const errors = [];
+    const results = body.results;
+    if (!Object.prototype.hasOwnProperty.call(body, 'results')) errors.push('results: Field required');
+    else if (!Array.isArray(results)) errors.push('results: Input should be a valid list');
+    else {
+      results.forEach((item, i) => { if (!isObject(item)) errors.push(`results.${i}: Input should be a valid dictionary`); });
+      if (results.length < 1) errors.push('results: List should have at least 1 item after validation, not 0');
+      else if (results.length > MAX_LAB_IMPORT) errors.push(`results: List should have at most ${MAX_LAB_IMPORT} items after validation, not ${results.length}`);
+    }
+    for (const k of Object.keys(body)) if (k !== 'results') errors.push(`${k}: Extra inputs are not permitted`);
+    if (errors.length) failFields(errors);
+    const refused = [];
+    const checked = [];
+    results.forEach((item, index) => {
+      try { checked.push(this._labBody(item)); } catch (e) {
+        if (e && e.status === 400) refused.push({ index, reason: e.detail }); else throw e;
+      }
+    });
+    const keyOf = (analyte, takenOn, value) => `${analyte}|${takenOn}|${K.formatValue(analyte, value)}`;
+    const seen = new Set(this._labsOf(user.id).filter((r) => K.ANALYTE_KEYS.includes(r.analyte)).map((r) => keyOf(r.analyte, r.taken_on, r.value)));
+    let saved = 0;
+    let duplicates = 0;
+    const now = this._stamp();
+    for (const b of checked) {
+      const key = keyOf(b.conv.analyte, b.taken_on, b.conv.value);
+      if (seen.has(key)) { duplicates += 1; continue; }
+      seen.add(key);
+      this._insertLab(user.id, b.conv, b.taken_on, b.note, now);
+      saved += 1;
+    }
+    return { saved, duplicates, refused, alerts: this._labAlerts(user.id) };
   });
   route('GET', '/api/labs', function ({ qp }) {
     const user = this._currentUser();

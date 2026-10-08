@@ -14,6 +14,9 @@
    * The kidney-function card (GET /api/labs/kidney-function): eGFR with its G category, the
      albuminuria category, and the server's "talk to your nephrologist" text. It never changes the
      saved stage.
+   * Import from a spreadsheet (v0.3.1): a CSV file is read on this device (js/engine/lab_import.js); every
+     result is listed with its conversion before anything is saved, columns that are not tests are never
+     sent, and only the ticked results go to POST /api/labs/import, which checks each one again.
    * History: every result, newest first, grouped by test, with deletion. */
 (() => {
   'use strict';
@@ -243,13 +246,18 @@
   // ---------------------------------------------------------------------------
   // What the result changed (never applied: "Review suggested targets" opens Profile's suggestion)
   // ---------------------------------------------------------------------------
-  function renderReview(saved, before, after) {
+  // `imported` (an import's headline) replaces the one result's line: several results were saved at once.
+  function renderReview(saved, before, after, imported = null) {
     const box = $('#labs-review');
     const body = clear($('#labs-review-body'));
     const go = $('#labs-review-go');
     go.hidden = true;
-    body.append(h('p', {}, h('b', {}, `${saved.label} ${saved.display}`), ` on ${fmtDay(saved.taken_on)} was saved.`));
-    if (K.KIDNEY_ANALYTES.includes(saved.analyte)) body.append(h('p', {}, 'It is used for the kidney-function estimate below.'));
+    const It = imported ? 'They' : 'It';
+    if (imported) body.append(h('p', {}, h('b', {}, imported)));
+    else {
+      body.append(h('p', {}, h('b', {}, `${saved.label} ${saved.display}`), ` on ${fmtDay(saved.taken_on)} was saved.`));
+      if (K.KIDNEY_ANALYTES.includes(saved.analyte)) body.append(h('p', {}, 'It is used for the kidney-function estimate below.'));
+    }
     if (after.res && before.res) {
       const changes = targetChanges(before.res, after.res);
       if (after.res.derived && after.res.derived.lab_rules_enabled === false) {
@@ -257,19 +265,19 @@
           ? 'The demo does not use lab results to change suggested targets until a clinician has reviewed the lab rules (an admin setting: Server administration → Server settings).'
           : 'This server does not use lab results to change suggested targets (an admin setting).'));
       } else if (changes.length) {
-        body.append(h('p', {}, 'It changes your suggested targets (your saved targets stay as they are until you save new ones in Profile):'),
+        body.append(h('p', {}, `${It} ${imported ? 'change' : 'changes'} your suggested targets (your saved targets stay as they are until you save new ones in Profile):`),
           h('ul', {}, changes.map((c) => h('li', {}, c))));
         go.hidden = false;
       } else {
-        body.append(h('p', {}, 'It does not change your suggested targets.'));
+        body.append(h('p', {}, `${It} ${imported ? 'do' : 'does'} not change your suggested targets.`));
       }
     } else if (after.unavailable) {
       body.append(h('p', { class: 'muted' }, after.unavailable));
     }
-    const more = learnLink(saved.analyte);
+    const more = imported ? null : learnLink(saved.analyte);
     if (more) body.append(h('p', { class: 'notes-learn' }, more));
     box.hidden = false;
-    noteReview(before, after, `new ${saved.label.toLowerCase()} result`);
+    noteReview(before, after, imported ? 'imported lab results' : `new ${saved.label.toLowerCase()} result`);
   }
   // Profile's "Review suggested targets" prompt: every change since the suggestion that was current
   // before the first unreviewed result (results added and deleted since then count together); it
@@ -288,6 +296,148 @@
     router.show('profile');
   });
   $('#labs-back').addEventListener('click', () => router.show('profile'));
+
+  // ---------------------------------------------------------------------------
+  // Import from a spreadsheet (v0.3.1). The file is read here; nothing is sent until "Save", and then only the
+  // ticked results (KH.labImport.requestBody: test, value, unit and date), never the file or its other columns.
+  // ---------------------------------------------------------------------------
+  const LI = KH.labImport;
+  const importFile = $('#lab-import-file');
+  const importBox = $('#lab-import-preview');
+  const imp = { text: null, units: {}, dateOrder: null, unticked: new Set() }; // unticked: ids the person cleared
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  function importError(message) {
+    clear(importBox).append(h('p', { class: 'form-error', role: 'alert' }, message));
+  }
+  importFile.addEventListener('change', async () => {
+    const file = importFile.files && importFile.files[0];
+    clear(importBox);
+    imp.text = null;
+    if (!file) return;
+    if (file.size > LI.MAX_CHARS) { importError('The file is larger than 1 MB. Split it into smaller files.'); return; }
+    try { imp.text = await file.text(); } catch (e) { importError('The file could not be read. Save it again as CSV and choose it again.'); return; }
+    imp.units = {};
+    imp.unticked = new Set();
+    imp.dateOrder = (cache.unitSystem || 'us') === 'si' ? 'dmy' : 'mdy';
+    renderImport();
+  });
+
+  function renderImport() {
+    const existing = cache.data ? cache.data.labs : [];
+    const a = LI.analyse(imp.text, { today: todayStr(), units: imp.units, dateOrder: imp.dateOrder, existing });
+    const box = clear(importBox);
+    if (a.problem) { importError(a.problem); return; }
+
+    // What the person sets: the unit of a column whose header has none (or one the app does not know), and
+    // the order of dates written 03/04/2026 unless a day above 12 settles it.
+    const settings = h('div', { class: 'form-grid lab-import-settings' });
+    for (const col of a.columns) {
+      const chosen = Object.prototype.hasOwnProperty.call(imp.units, col.index);
+      if (!col.needsUnit && !chosen) continue;
+      const id = `lab-import-unit-${col.index}`;
+      const sel = h('select', { id }, h('option', { value: '' }, 'Choose the unit'), col.units.map((u) => h('option', { value: u }, u)));
+      sel.value = chosen ? imp.units[col.index] : '';
+      sel.addEventListener('change', () => {
+        if (sel.value) imp.units[col.index] = sel.value; else delete imp.units[col.index];
+        renderImport();
+        const again = document.getElementById(id);
+        if (again) again.focus();
+      });
+      settings.append(h('div', { class: 'field' }, h('label', { for: id }, `Unit of “${col.header}”`), sel,
+        h('span', { class: col.problem ? 'hint warn' : 'hint' }, col.problem || 'Use the unit printed on your report.')));
+    }
+    if (a.slashDates) {
+      const sel = h('select', { id: 'lab-import-dates' },
+        h('option', { value: 'mdy' }, 'Month/day/year (03/04 is March 4)'), h('option', { value: 'dmy' }, 'Day/month/year (03/04 is April 3)'));
+      sel.value = a.dateOrder;
+      sel.disabled = a.dateOrderDetected;
+      sel.addEventListener('change', () => { imp.dateOrder = sel.value; renderImport(); const again = $('#lab-import-dates'); if (again) again.focus(); });
+      settings.append(h('div', { class: 'field' }, h('label', { for: 'lab-import-dates' }, 'Dates are written'), sel,
+        h('span', { class: 'hint' }, a.dateOrderDetected ? 'Worked out from a day above 12.' : 'Check the dates below.')));
+    }
+    if (settings.childNodes.length) box.append(settings);
+
+    const ok = a.results.filter((r) => !r.problem);
+    const refused = a.results.length - ok.length;
+    const already = ok.filter((r) => r.saved).length;
+    const waiting = a.columns.filter((c) => c.needsUnit).map((c) => `“${c.header}”`);
+    const lines = [`${plural(a.rows, 'row', 'rows')} read: ${plural(ok.length, 'result', 'results')} to check`];
+    if (already) lines.push(`${already} already saved`);
+    if (refused) lines.push(`${refused} cannot be imported`);
+    box.append(h('p', { class: 'lab-import-summary', role: 'status' }, `${lines.join(', ')}.`));
+    if (waiting.length) box.append(h('p', { class: 'hint warn' }, `Choose the unit of ${waiting.join(', ')} to see those results.`));
+    if (a.ignored.length) box.append(h('p', { class: 'muted small' }, `Not read, and not sent: ${a.ignored.join(', ')}.`));
+
+    const list = h('ul', { class: 'list labs-list lab-import-list' });
+    const ticks = [];
+    for (const r of a.results) {
+      const when = r.taken_on ? fmtDay(r.taken_on) : '';
+      if (r.problem) {
+        list.append(h('li', { class: 'lab-row lab-import-problem' }, h('div', { class: 'lab-row-main' },
+          h('span', { class: 'lab-row-date' }, when), h('span', { class: 'lab-row-value' }, `${r.label} ${r.text}`),
+          h('span', { class: 'lab-import-why' }, `Not imported (row ${r.row}): ${r.problem}`))));
+        continue;
+      }
+      const id = `lab-import-${r.row}-${r.column}`;
+      const cb = h('input', { type: 'checkbox', id });
+      cb.checked = !r.saved && !imp.unticked.has(id); // a new unit or date order redraws the list: keep the person's choices
+      cb.addEventListener('change', () => {
+        if (cb.checked) imp.unticked.delete(id); else imp.unticked.add(id);
+        updateSave();
+      });
+      ticks.push([cb, r]);
+      list.append(h('li', { class: 'lab-row' }, cb, h('label', { for: id },
+        h('span', { class: 'lab-row-date' }, when), h('span', { class: 'lab-row-value' }, `${r.label} ${r.display}`),
+        r.saved ? h('span', { class: 'lab-import-saved' }, 'already saved') : null)));
+    }
+    if (list.childNodes.length) box.append(list);
+
+    const save = h('button', { class: 'btn primary', type: 'button', id: 'lab-import-save' }, 'Save');
+    const cancel = h('button', { class: 'btn secondary', type: 'button', id: 'lab-import-cancel' }, 'Cancel');
+    const tooMany = h('p', { class: 'hint warn', hidden: true }, `Up to ${LI.MAX_RESULTS.toLocaleString('en-US')} results at a time: untick some, or split the file.`);
+    function updateSave() {
+      const n = ticks.filter(([cb]) => cb.checked).length;
+      save.textContent = n === 1 ? 'Save 1 result' : `Save ${n} results`;
+      save.disabled = n === 0 || n > LI.MAX_RESULTS;
+      tooMany.hidden = n <= LI.MAX_RESULTS;
+    }
+    updateSave();
+    cancel.addEventListener('click', () => { imp.text = null; imp.unticked = new Set(); importFile.value = ''; clear(importBox); importFile.focus(); });
+    save.addEventListener('click', async () => {
+      const kept = ticks.filter(([cb]) => cb.checked).map(([, r]) => r);
+      if (!kept.length) return;
+      save.disabled = true;
+      try {
+        const before = await suggestionNow();
+        const res = await api.importLabs(LI.requestBody(kept));
+        invalidate();
+        imp.text = null;
+        importFile.value = '';
+        const done = [`Saved ${plural(res.saved, 'result', 'results')}`];
+        if (res.duplicates) done.push(`${res.duplicates} already saved`);
+        if (res.refused.length) done.push(`${res.refused.length} refused`);
+        const out = clear(importBox);
+        out.append(h('p', { class: 'lab-import-summary', role: 'status' }, `${done.join(', ')}.`));
+        if (res.refused.length) {
+          out.append(h('ul', { class: 'lab-import-refused' }, res.refused.map((x) => {
+            const r = kept[x.index];
+            return h('li', {}, `${r.label} ${r.text} (${fmtDay(r.taken_on)}): ${x.reason}`);
+          })));
+        }
+        toast(`${done.join(', ')}`, 'ok');
+        $('#labs-live').textContent = `${done.join(', ')}.`;
+        renderAlert(res.alerts && res.alerts[0] ? res.alerts[0] : null, Boolean(res.alerts && res.alerts.length));
+        if (res.saved) renderReview(null, before, await suggestionNow(), `${plural(res.saved, 'result was', 'results were')} saved from your file.`);
+        await refresh();
+      } catch (err) {
+        save.disabled = false;
+        if (err.handled) return;
+        if (err.status === 400) importError(err.detail || err.message); else toastError(err);
+      }
+    });
+    box.append(tooMany, h('div', { class: 'form-actions' }, save, cancel));
+  }
 
   // ---------------------------------------------------------------------------
   // Banner, kidney-function card and history

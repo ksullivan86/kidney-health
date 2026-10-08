@@ -83,7 +83,6 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a browser-only CKD tracker on GitHub Pages that imports Apple Health blood pressure, lab CSVs and patient-portal C-CDA files). Each needs a design note in `docs/dev/research/` before it is built; sizes are rough.
 
 * **A "keep my data in this browser" demo mode (medium, later).** The Pages demo (published at `demo/` beside the handbook since v0.3.1) with the mock API stored in IndexedDB instead of memory, plus export and import of `export.json`, so a person can use it without a server. It needs clear wording that the data lives only in that browser and is lost if site data is cleared, and the parity vectors keep it matching the server. The self-hosted server stays the full version.
-* **Lab results from a CSV file (small).** Import a spreadsheet with a date column and one column per test (the eight analytes in `app/units.py`, units from the column header or picked by the person). Every row is shown for confirmation before saving, and the existing plausibility ranges and the K-5 alert still apply.
 * **Lab results from a patient-portal C-CDA file (medium).** Many patient portals (MyChart and others) can download a C-CDA XML "health summary"; read the results by LOINC code and map them to our analytes and units, with the same confirmation step. XML from outside needs a hardened parser (`defusedxml`, a new runtime dependency, so a contract decision), size limits, and test fixtures from at least two portals.
 * **Lab results from Apple Health clinical records (medium).** If a person has linked their health system in the Health app, its "Export All Health Data" zip holds those lab results as FHIR R4 JSON files (`clinical-records/`); read the Observation resources by LOINC code into the same import-and-confirm flow as the C-CDA item.
 * **Weight (and later blood pressure) from an Apple Health export (medium).** An iPhone web app cannot read HealthKit directly, so: upload the `export.xml` from the export zip, parse it as a stream (the file can be hundreds of MB) and keep only body mass, and blood pressure once the app has a place to record it (a new table, Trends chart and handbook page). Glucose and insulin stay out: no dosing, and CGM apps keep their own alerts.
@@ -109,7 +108,6 @@ Estimated 2026-10-07 for one agent working directly in a single session (as the 
 | Item | Tokens | Agent time |
 |---|---|---|
 | "Keep my data in this browser" demo mode | 2–4M | 4–8 h |
-| Lab results from a CSV file | 1–1.5M | 2–3 h |
 | Lab results from a patient-portal C-CDA file | 2–3M | 4–6 h |
 | Lab results from Apple Health clinical records | 1.5–2.5M | 3–5 h (less after C-CDA: same review-and-confirm screen) |
 | Weight from an Apple Health export | 1.5–2M | 3–4 h |
