@@ -77,7 +77,7 @@ stays responsive during a flood.
 
 ## Adding people
 
-* **Invite (default, `registration.mode = invite`).** Settings → Admin → Users & invites → Invite.
+* **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.
   Copy the link and send it however you like; it works once and expires after 7 days
   (`registration.invite_ttl_days`). The secret part sits after `#`, so it never reaches the
   server's or a proxy's logs.

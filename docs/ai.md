@@ -161,7 +161,7 @@ leaves your device, and how far to trust it.
 
 ### Switches
 
-Instance settings (Settings → Admin → Server settings; each can be locked by its environment variable):
+Instance settings (Server administration → Server settings; each can be locked by its environment variable):
 
 | Setting (env lock) | Default | Purpose |
 |---|---|---|

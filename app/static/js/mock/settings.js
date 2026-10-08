@@ -8,7 +8,7 @@
    (food.off_consent) as on a real server. It also starts with one admin choice made: lab results do not
    change suggested targets (targets.lab_rules_enabled off), because note 05 C10 asks public demo instances to
    ship that way until a clinician has reviewed the lab rules; the very-high-potassium warning still shows, and
-   the demo admin can switch the rules on in Admin → Server settings like any admin. Keys are write-only
+   the demo admin can switch the rules on in Server administration → Server settings like any admin. Keys are write-only
    as on the server: only "set", the last four characters of a key of 20 or more characters and
    the time are kept, never the key itself, and the demo never contacts USDA (no key test). */
 (() => {

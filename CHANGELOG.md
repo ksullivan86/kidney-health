@@ -24,6 +24,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   plan, the period summary). It starts at 0, the earlier behaviour: no guideline gives a number, so it is
   yours to set with your dietitian. Alerts now call such a number "today's target" instead of "today's
   maximum" (schema step 9).
+* **Server administration has its own page.** Admins open it with the new shield button next to the
+  Settings gear (or Settings → Admin): People, Server settings, Shared keys, Usage, the Activity log,
+  About this server and AI providers, with chips to jump between them. Settings now holds only personal
+  settings. Members never see the button or the page, and the server still refuses every admin request
+  from a member.
 
 ### For people who run a server
 

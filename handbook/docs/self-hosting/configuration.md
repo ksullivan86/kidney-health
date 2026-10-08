@@ -109,7 +109,7 @@ the variable locks it. Each person still decides whether their own scans go to O
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AI_ENABLED` | `false` | Master switch (also **Settings → Admin → Server settings**). While off, every AI route answers "not found" and nothing is sent anywhere. |
+| `AI_ENABLED` | `false` | Master switch (also **Server administration → Server settings**). While off, every AI route answers "not found" and nothing is sent anywhere. |
 | `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` | unset | The server's shared provider: a preset (`openai`, `openrouter`, `nous_portal`, `ollama`, `lmstudio`, `llamacpp`, `vllm`, `litellm`, `hermes`, `openai_compatible`). Admins can add more in **Settings → AI ideas**. |
 | `AI_API_KEY_FILE` | unset | The shared provider's key (`AI_API_KEY` also works; `OPENAI_API_KEY_FILE` for `openai`). Never stored in the database. |
 | `AI_VISION_MODEL` | empty | Set it to enable label and plate photos. |

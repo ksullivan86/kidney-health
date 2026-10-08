@@ -104,9 +104,12 @@ def test_auth_messages_use_live_regions_and_the_reauth_sheet_is_complete() -> No
 
 def test_settings_view_sections_and_entry_points() -> None:
     view = _section('<section id="view-settings"', "</main>")
-    for sec in ("set-account", "set-prefs", "set-food", "set-ai", "set-device", "set-admin", "set-about"):
-        assert f'id="{sec}"' in view, sec
-    assert 'id="set-admin" data-title="Admin" aria-labelledby="set-admin-h" hidden' in view  # admins only
+    settings = _section('<section id="view-settings"', '<section id="view-admin"')
+    for sec in ("set-account", "set-prefs", "set-food", "set-ai", "set-device", "set-admin-link", "set-about"):
+        assert f'id="{sec}"' in settings, sec
+    # v0.3.1: Settings keeps only a link for admins; Server administration is its own view (tests/test_admin_page.py)
+    assert 'id="set-admin-link" data-title="Admin" aria-labelledby="set-admin-link-h" hidden' in settings
+    assert 'id="set-admin-body"' not in settings and 'id="set-admin-body"' in view
     # This device holds the install panel (note 02 R10), hidden until js/pwa.js fills it
     assert '<div class="install-panel" id="install-panel" aria-labelledby="install-heading" hidden>' in view
     # reachable from the header gear and from Profile; the gear and the tabs wait for sign-in

@@ -25,18 +25,16 @@ tests).
   Both in one PR (#12, merged 2026-10-08 11:16 UTC).
 
 * v0.3.1 item 1 "Not chosen yet": PR #13, merged 2026-10-08 11:34 UTC.
+* v0.3.1 item 2 "Adjustable tolerance": PR #14, merged 2026-10-08 12:33 UTC.
 
 ## In progress
 
-* v0.3.1 item 2 "Adjustable tolerance" (commit on top of main b5cc3e7, PR next):
-  `nutrients.over_at` / `is_about` (never a limit) / `about_tolerance` / `carb_tolerance` / `_status_word`,
-  per-meal alerts with the tolerance and without low treatments, `periods.summarize_period(about_tolerance_pct=)`,
-  `log.day_figures(carb_tolerance_g)` + `carb_tolerance_for` (reads `guidance.carb_tolerance_g`),
-  `DaySummary.carb_tolerance_g`, schema step 9 `m009_about_tolerance`, Profile field + form row, twins in
-  `js/engine/rules.js`, `js/mock/log.js` / `profile.js`, Today, Plan, the entry sheet. Guidance vectors
-  regenerated (one alert now says "today's target"). Verified: `tests/test_tolerance.py` (32 tests), the twin,
-  guidance parity and API tests, `node tests/js/run_vectors.mjs`, `tools/e2e/parity.py` (6528 checks; the one
-  failure was the harness's own reset profile missing item 1's flags, fixed; sections 0,11 rerun 724/724).
+* v0.3.1 item 3 "Admin settings on their own page": view `#admin` (Server administration) drawn by
+  `js/views/settings.js`, header shield `#admin-open` (`data-admin-only`, `js/views/auth.js`), Settings →
+  Admin link card, AI providers moved there (`KH.ai.renderAdmin`), docs updated ("Settings → Admin → X" is now
+  "Server administration → X"). Verified: `tests/test_admin_page.py`, UI tests, a real-server Chromium walk
+  (admin + member at 375/1280 px, 36 checks), `tools/e2e/sandbox.py` on two configurations (0 issues). Next:
+  full pytest, commit, PR, merge when green.
 
 ## Next (in order)
 

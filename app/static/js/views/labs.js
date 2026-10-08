@@ -254,7 +254,7 @@
       const changes = targetChanges(before.res, after.res);
       if (after.res.derived && after.res.derived.lab_rules_enabled === false) {
         body.append(h('p', {}, KH.flags.MOCK
-          ? 'The demo does not use lab results to change suggested targets until a clinician has reviewed the lab rules (an admin setting: Settings → Admin → Server settings).'
+          ? 'The demo does not use lab results to change suggested targets until a clinician has reviewed the lab rules (an admin setting: Server administration → Server settings).'
           : 'This server does not use lab results to change suggested targets (an admin setting).'));
       } else if (changes.length) {
         body.append(h('p', {}, 'It changes your suggested targets (your saved targets stay as they are until you save new ones in Profile):'),

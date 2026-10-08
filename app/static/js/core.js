@@ -515,7 +515,7 @@
   // Tabbed views, then views without a tab (Settings: the header gear and Profile open it; Labs:
   // Profile's "Lab results" button).
   const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
-  const VIEWS = [...TAB_VIEWS, 'settings', 'labs'];
+  const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'admin'];
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
   function showView(name, { focusTab = false } = {}) {
@@ -536,6 +536,8 @@
     }
     const gear = $('#settings-open');
     if (gear) { if (name === 'settings') gear.setAttribute('aria-current', 'page'); else gear.removeAttribute('aria-current'); }
+    const shield = $('#admin-open');
+    if (shield) { if (name === 'admin') shield.setAttribute('aria-current', 'page'); else shield.removeAttribute('aria-current'); }
     if (focusTab && $(`#tab-${name}`)) $(`#tab-${name}`).focus();
     try { if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`); } catch (e) { /* sandboxed frame: the view still switches */ }
     window.scrollTo({ top: 0 });
