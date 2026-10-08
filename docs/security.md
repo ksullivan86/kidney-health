@@ -131,6 +131,7 @@ Admin → About shows it, together with a counter of identity headers ignored fr
 | Rootless Podman with **slirp4netns** (Podman 4.x default) | `10.0.2.100` for **every** client, LAN included | Do not trust anything: use `Network=pasta` (Ubuntu 24.04: install `passt`) or leave the default and do not use proxy mode. |
 | Rootless **Docker** without source-IP propagation (the default) | The RootlessKit/bridge gateway (for example `172.17.0.1`) for **every** client, including a proxy on the same host | **No proxy:** leave the loopback default. **An HTTPS proxy on the same host** (Caddy or nginx on the host, `tailscale serve`): that gateway address, from the log. Otherwise the app ignores the proxy's `X-Forwarded-Proto: https`: cookies lose `Secure`, no HSTS, and once a second account exists every sign-in fails with `https_required`. It is safe only while the port is published on `127.0.0.1` (only local processes reach it); in proxy mode also require `TRUSTED_PROXY_SECRET_FILE`. Or use the `compose.caddy.yaml` overlay (container to container). Propagation needs RootlessKit ≥ 3.0 with `"userland-proxy": false`, or `DOCKERD_ROOTLESS_ROOTLESSKIT_NET=pasta` + `..._PORT_DRIVER=implicit`. |
 | Proxy in the **same compose network** (`deploy/compose.caddy.yaml`) | The proxy container's address on that network | That one address (the overlay pins Caddy to `172.31.86.10`). |
+| **Traefik (or Caddy) as a container** on a shared rootless Podman network, the app joined with `Network=proxy.network` and discovered by container labels, **no `PublishPort`** | The proxy container's address on that network (for example `10.89.0.3`) | Pin the proxy's address in its own Quadlet (`IP=`) and trust that one address. Trusting the network's whole subnet (`10.89.0.0/24`) trusts **every container on that network**: in `AUTH_MODE=local` any of them could forge `X-Forwarded-For` to dodge the sign-in throttle, and `X-Forwarded-Proto` to claim HTTPS; in proxy mode it could claim any identity, so there also **require** `TRUSTED_PROXY_SECRET_FILE`. Label discovery needs the Podman socket mounted into the proxy container, which makes that container root-equivalent for your user's containers (section 7): prefer the proxy's file provider, or a socket proxy that allows only read-only container listing. |
 | **Kubernetes** Gateway / ingress controller | The controller pod's IP | The controller's pod range, as narrow as you can. A whole pod CIDR trusts **every pod** in the cluster: only acceptable while `networkpolicy.yaml` is enforced, or with `TRUSTED_PROXY_SECRET_FILE`. |
 | **`tailscale serve`** on the same host | As for pasta (same host) | As for pasta. `tailscale serve` cannot add a secret header, so proxy mode needs `TRUSTED_PROXY_SECRET_OPTIONAL=true` and the app logs a warning. |
 | No proxy (a trial on a trusted LAN) | The real client | Leave the default. Phones need HTTPS for the camera and offline mode anyway ([`https.md`](https.md)). |
@@ -141,6 +142,11 @@ that your proxy sends as `X-Proxy-Secret` (Caddy `header_up X-Proxy-Secret {env.
 Traefik `headers.customRequestHeaders`, nginx `proxy_set_header`). The app compares it in constant
 time and strips it before anything else sees the request. `TRUSTED_PROXIES` containing `0.0.0.0/0`
 or `::/0` is refused outright in proxy mode.
+
+**More than one person signs in?** Local accounts are password-only today (a second factor is on
+the roadmap). For a household or a server reachable beyond one LAN, prefer `AUTH_MODE=proxy` behind
+an SSO provider that enforces a second factor (Authelia, Authentik, Keycloak, Kanidm, Pocket ID): the
+app then never sees a password, and MFA, lockout and session policy live in one place.
 
 ## 5. Checklists
 
@@ -155,7 +161,7 @@ Tick every line before you put real health data in the app.
 - [ ] `podman inspect kidney-health --format '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}'` shows `true` and every capability.
 - [ ] `PublishPort=127.0.0.1:...`, never `0.0.0.0`.
 - [ ] `SECRET_KEY_FILE` comes from `podman secret` (`Secret=` line), not from `/data/secret.key`.
-- [ ] `Network=pasta`; `TRUSTED_PROXIES` set from the logged peer address (section 4).
+- [ ] `Network=pasta`; `TRUSTED_PROXIES` set from the logged peer address (section 4). With a proxy container on a shared network instead: no `PublishPort` at all, the proxy's address pinned (`IP=`) and trusted alone, never the subnet.
 - [ ] `PUBLIC_URL` set to the URL people type; HTTPS in front ([`https.md`](https.md)).
 - [ ] SELinux hosts: enforcing, no `SecurityLabelDisable`; bind mounts use `:Z`.
 - [ ] `loginctl enable-linger` for the user; `podman-auto-update.timer` enabled if you track `:0.3`.
