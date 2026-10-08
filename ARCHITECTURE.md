@@ -414,6 +414,14 @@ the person's own target; the day counts are display rules marked for review in `
 `js/mock/log.js` (`patternAlerts`, `patternInputs`), compared by `tests/test_running_high.py`. Today shows them
 first in the planned block; the Plan week marks the day ("Running high: potassium").
 
+**Kidney-only profile (v0.3.1, part 1).** With `diabetes` "none" a meal has no carbohydrate goal:
+`log.has_meal_carb_goals` is false, so `day_figures` sends no per-meal carbohydrate alert, eaten or planned (the
+twin in `js/mock/log.js` does the same; `tests/test_kidney_only.py`). Today draws no carbohydrate line or
+planned-carbs badge in the meal headers, and Settings → Meal guidance explains instead of showing the
+carbohydrate tolerance and the carbs taken for a low (their values are kept). The day's carbohydrate is judged
+like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. Still to do
+(ROADMAP): the AI prompts and the remaining copy worded from the profile.
+
 **Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
 carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,
 the number meal guidance already uses) above its goal: "Dinner carbohydrate is more than 10 g over the

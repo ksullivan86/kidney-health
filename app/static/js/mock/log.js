@@ -218,12 +218,14 @@
       const tol = carbTolerance(carbToleranceG);
       const status = markUnknown(dailyStatus(eaten, p.targets, p.warn_fraction, about), unknown);
       const projectedStatus = markUnknown(dailyStatus(projected, p.targets, p.warn_fraction, about), projectedUnknown);
-      const alerts = [...buildAlerts(status), ...mealCarbAlerts(meals, p.targets.carbs_per_meal_g, false, p.targets.carbs_per_snack_g, tol, hypoMeals)];
+      // log.has_meal_carb_goals: a kidney-only profile (diabetes "none") has no per-meal carbohydrate alert (v0.3.1).
+      const mealCarbs = (p.diabetes || 'type1') !== 'none';
+      const alerts = [...buildAlerts(status), ...(mealCarbs ? mealCarbAlerts(meals, p.targets.carbs_per_meal_g, false, p.targets.carbs_per_snack_g, tol, hypoMeals) : [])];
       let projectedAlerts = [];
       if (counts.planned) {
         const projectedMeals = Object.fromEntries(Object.keys(meals).map((m) => [m, addTotals({ ...meals[m] }, plannedMeals[m] || {})]));
         projectedAlerts = [...buildAlerts(projectedStatus, true),
-          ...mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true, p.targets.carbs_per_snack_g, tol, projectedHypoMeals)];
+          ...(mealCarbs ? mealCarbAlerts(projectedMeals, p.targets.carbs_per_meal_g, true, p.targets.carbs_per_snack_g, tol, projectedHypoMeals) : [])];
       }
       return { totals: roundNutrients(eaten), planned_totals: roundNutrients(planned), projected_totals: roundNutrients(projected),
         status, projected_status: projectedStatus,

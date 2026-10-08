@@ -63,6 +63,8 @@ treatments are logged like any food and never blocked or warned against.
   guidance**, the same number the meal suggestions use. Ask your diabetes team: if you take fixed insulin
   doses, consistent carbohydrate helps your glucose ([ADA 2026][A26-5], Rec 5.28). A 65 g dinner against a
   60 g goal is on target; a 75 g dinner says "more than 10 g over the per-meal goal".
+- **No diabetes?** If your profile says *Diabetes: None*, meals have no carbohydrate goal: Today shows no
+  carbohydrate line in each meal and never says a meal is over. Your day's carbohydrate still counts.
 - **Carbohydrate you ate to treat a low** is left out of the meal's goal, so treating a low never makes a
   meal "over". It still counts in your day's totals, and an alert that shows anyway says how much it left
   out ("not counting 15 g used to treat a low").
