@@ -113,3 +113,25 @@ def test_today_and_meal_guidance_follow_the_profile():
     settings = guidance[guidance.index("const kidneyOnly"):]
     shown = settings[settings.index("...(kidneyOnly"):]
     assert shown.index("set-g-kidney-only") < shown.index("number('carb_tolerance_g'") < shown.index("number('hypo_dose_g'")
+
+
+def test_profile_hides_the_meal_carbohydrate_targets_but_keeps_them():
+    profile_js = (STATIC / "js" / "views" / "profile.js").read_text(encoding="utf-8")
+    sync = profile_js[profile_js.index("function syncConditionalFields()"):profile_js.index("$('#pf-dialysis').addEventListener")]
+    assert "const kidneyOnly = $('#pf-diabetes').value === 'none';" in sync
+    assert "for (const id of ['#tg-carbs_per_meal_g', '#tg-carbs_per_snack_g']) $(id).closest('.field').hidden = kidneyOnly;" in sync
+    assert "$('#pf-diabetes').addEventListener('change', syncConditionalFields);" in profile_js
+    # hidden, not removed: the form still collects every input[data-target], so a saved value is sent back unchanged
+    assert "for (const inp of $$('input[data-target]')) targets[inp.dataset.target] = numOrNull(inp.value);" in profile_js
+    # the suggestion review names no carbohydrate per meal without diabetes
+    suggestion = profile_js[profile_js.index("function renderSuggestion("):]
+    assert "const mealCarbs = !(state.profile && state.profile.diabetes === 'none');" in suggestion
+    assert "key === 'carbs_g' && mealCarbs ? ['carbs_g', 'carbs_per_meal_g'] : [key]" in suggestion
+
+
+def test_saving_a_kidney_only_profile_keeps_the_per_meal_targets(client):
+    client.put("/api/profile", json={"targets": {"carbs_per_meal_g": 45, "carbs_per_snack_g": 15}})
+    saved = client.put("/api/profile", json={"diabetes": "none", "targets": {"carbs_per_meal_g": 45, "carbs_per_snack_g": 15}})
+    assert saved.status_code == 200
+    targets = client.get("/api/profile").json()["targets"]
+    assert targets["carbs_per_meal_g"] == 45 and targets["carbs_per_snack_g"] == 15

@@ -417,8 +417,9 @@ first in the planned block; the Plan week marks the day ("Running high: potassiu
 **Kidney-only profile (v0.3.1, part 1).** With `diabetes` "none" a meal has no carbohydrate goal:
 `log.has_meal_carb_goals` is false, so `day_figures` sends no per-meal carbohydrate alert, eaten or planned (the
 twin in `js/mock/log.js` does the same; `tests/test_kidney_only.py`). Today draws no carbohydrate line or
-planned-carbs badge in the meal headers, and Settings → Meal guidance explains instead of showing the
-carbohydrate tolerance and the carbs taken for a low (their values are kept). The day's carbohydrate is judged
+planned-carbs badge in the meal headers, Settings → Meal guidance explains instead of showing the
+carbohydrate tolerance and the carbs taken for a low, and Profile hides the per-meal and per-snack carbohydrate
+targets and names no carbohydrate per meal in the suggestion (every value is kept and saved unchanged). The day's carbohydrate is judged
 like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. Still to do
 (ROADMAP): the AI prompts and the remaining copy worded from the profile.
 
