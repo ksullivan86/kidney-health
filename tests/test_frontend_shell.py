@@ -112,6 +112,17 @@ def test_api_client_marks_writes_and_hands_401_to_auth() -> None:
 
 
 # --------------------------------------------------------------------------- PWA head, service worker, manifest, icons
+def test_a_sheet_never_pulls_the_cursor_out_of_a_field_being_typed_in() -> None:
+    """openDialog() gives the sheet's first field focus 30 ms after opening, only if focus has not moved since:
+    typing that starts sooner (a fast person, an assistive tool, a test harness) stays where it is."""
+    core = (STATIC / "js" / "core.js").read_text(encoding="utf-8")
+    body = core[core.index("function openDialog("):]
+    body = body[:body.index("\n  }\n")]
+    assert "const opened = document.activeElement;" in body
+    assert "if (now === opened || now === dlg || !dlg.contains(now)) target.focus({ preventScroll: true });" in body
+    assert body.index("showModal()") < body.index("const opened = document.activeElement;")
+
+
 def test_head_has_the_install_tags_and_not_the_deprecated_ones() -> None:
     assert '<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">' in HEAD
     assert '<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">' in HEAD

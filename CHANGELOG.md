@@ -9,6 +9,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
+  already started typing in: the first field gets the focus a moment after the sheet opens only if you
+  have not moved to another one.
 * **Handbook pages work offline once opened.** The app keeps a copy of each handbook page you open (and
   what it needs to show), so **Learn** pages you have read before open without a connection, for example
   on a flight or when the home server is down. A page you have not opened on this device says so instead

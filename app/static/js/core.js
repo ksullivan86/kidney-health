@@ -676,7 +676,15 @@
     dlg._returnFocus = trigger || document.activeElement;
     if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
     const target = focusEl || $('input, select, button:not([data-close])', dlg);
-    if (target) setTimeout(() => target.focus({ preventScroll: true }), 30);
+    // The first field gets focus a moment later, unless the person (or a test) has already moved into another
+    // one: a delayed focus must never pull the cursor out of a field being typed in.
+    const opened = document.activeElement;
+    if (target) {
+      setTimeout(() => {
+        const now = document.activeElement;
+        if (now === opened || now === dlg || !dlg.contains(now)) target.focus({ preventScroll: true });
+      }, 30);
+    }
     $('.sheet-body', dlg).scrollTop = 0;
   }
   function renderWarnings(container, warnings, { emptyText } = {}) {
