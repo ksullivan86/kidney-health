@@ -1163,6 +1163,29 @@ class Harness:
             ("no body", None),
         ]:
             self.both(S, f"POST /api/labs {label}", "POST", "/api/labs", body)
+        # POST /api/labs/import (v0.3.1): each item checked like POST /api/labs (same messages), repeats of saved results
+        # and of earlier items skipped, the request's shape refused whole.
+        for label, body in [
+            ("saved, repeated and refused items", {"results": [
+                {"analyte": "albumin", "value": 38, "unit": "g/L", "taken_on": ago(20)},
+                {"analyte": "albumin", "value": 3.8, "unit": "g/dL", "taken_on": ago(20)},  # the same result again
+                {"analyte": "a1c", "value": 53, "unit": "mmol/mol", "taken_on": ago(60)},  # saved by a case above
+                {"analyte": "potassium", "value": 42, "unit": "mmol/L", "taken_on": T},
+                {"analyte": "phosphate", "value": 1.1, "unit": "mg/L", "taken_on": T},
+                {"analyte": "albumin", "value": 4.1, "unit": "g/dL", "taken_on": (today + timedelta(days=2)).isoformat()},
+                {"extra": 1, "analyte": "x", "value": "abc", "unit": 5, "taken_on": 3, "note": 7},
+                {"value": 4.2},
+                {"analyte": "bicarbonate", "value": "23", "unit": " mEq/L ", "taken_on": f" {ago(20)} "},
+            ]}),
+            ("the same file again", {"results": [{"analyte": "albumin", "value": 3.8, "unit": "g/dL", "taken_on": ago(20)}]}),
+            ("no results", {}), ("empty list", {"results": []}), ("not a list", {"results": "x"}),
+            ("an item that is not an object", {"results": [1, {"analyte": "potassium"}]}),
+            ("unknown field", {"results": [{"analyte": "potassium", "value": 4, "unit": "mmol/L", "taken_on": T}], "file": "x"}),
+            ("over 1000", {"results": [{"analyte": "potassium", "value": 4, "unit": "mmol/L", "taken_on": T}] * 1001}),
+            ("a list", [1, 2]),
+            ("no body", None),
+        ]:
+            self.both(S, f"POST /api/labs/import {label}", "POST", "/api/labs/import", body)
         for q in ["", "?analyte=potassium", "?analyte=potassium&limit=1", "?limit=2", "?limit=5.0", "?analyte=", "?analyte=sodium",
                   "?limit=0", "?limit=1001", "?limit=abc", "?analyte=x&limit=0"]:
             self.both(S, f"GET /api/labs{q}", "GET", f"/api/labs{q}")

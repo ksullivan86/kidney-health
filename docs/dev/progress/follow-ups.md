@@ -29,26 +29,19 @@ tests).
 
 ## In progress
 
-* v0.3.1 item 3 "Admin settings on their own page": PR #15, merged 2026-10-08 12:50 UTC.
-* v0.3.1 item 4 "Running high": PR #16, merged 2026-10-08 13:03 UTC.
-* v0.3.1 item 5 "Pages demo": PR opened 13:20 UTC (branch reset to main, item 5 cherry-picked from worktree
-  `scratchpad/kh5`). `scripts/build_preview.py --pages DIR` (meta CSP read from app/security.py with ast,
-  `preview-flag.js` with `KDL_PREVIEW` and `KDL_DEMO_HANDBOOK` = `{url: "../", links: APP_LINKS}`), the link
-  table moved to `app/guidance/topics.py` (`APP_LINKS`; `handbook.LINKS` is an alias), the Pages workflow builds
-  the demo into `site/demo/` before the link check, "Try the app (demo)" in the Pages announce bar
-  (`extra.demo_link`). Verified: full Pages site built locally (mkdocs pages flavour + demo, 120 pages, 0 broken
-  links), Chromium walk handbook -> demo -> Learn links at 375/1280 light/dark (no console errors, no CSP
-  violations, no outside requests), tests in `tests/test_preview_build.py` and `tests/test_deploy.py`, full suite.
-* v0.3.1 item 6 "Lab CSV import": in worktree `scratchpad/kh6` (branch `item6-wip`, stacked on item 5).
-  Design: the browser parses the file (`js/engine/lab_import.js`, `KH.labImport.analyse`), shows every result,
-  and sends only the kept ones to a new `POST /api/labs/import` (re-validated like `POST /api/labs`,
-  duplicates skipped, refused rows listed). Reason: a portal export can hold names and record numbers; they
-  never leave the device. Done: the reader (tried under Node). Next: server route + model + tests, mock twin,
-  UI card, vectors `tests/data/lab_import_vectors.json` + node runner section, docs.
+* v0.3.1 items 3, 4 and 5 merged: PR #15 (12:50 UTC), #16 (13:03), #17 (Pages demo, 13:19).
+* v0.3.1 item 6 "Lab CSV import": PR from the branch (item 6 cherry-picked from worktree `scratchpad/kh6`).
+  The browser reads the file (`js/engine/lab_import.js`, `KH.labImport.analyse`) and only the ticked results
+  go to `POST /api/labs/import` (checked like `POST /api/labs`, repeats skipped, refused listed; errors worded by
+  `security.flatten_validation_errors`). Demo twin in `js/mock/labs.js`; Labs card "Import from a spreadsheet";
+  vectors `tests/data/lab_import_vectors.json` (`tests/js/gen_lab_import_vectors.mjs`, reviewed by hand) in the
+  node runner; `tests/test_lab_import.py`. Verified: tests, node vectors, parity harness 6558/6558 (import cases
+  added), Chromium walk on a real server and in demo mode at 375/1280 (preview, unit choice, refused rows, save,
+  only test/value/unit/date sent, re-import ticks nothing, no console errors).
 
 ## Next (in order)
 
-1. v0.3.1 items 2–6 of `docs/dev/plans/v0.3.1.md`, then the kidney-only profile.
+1. After item 6: the kidney-only profile (ROADMAP), then the assistant back end.
 
 ## Commands that reproduce the checks
 

@@ -100,6 +100,7 @@
   route('POST', '/api/labs/import', function ({ body }) {
     const user = this._currentUser();
     const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+    if (body == null) failFields(['Field required']);
     if (!isObject(body)) failFields(['Input should be a valid dictionary or object to extract fields from']);
     const errors = [];
     const results = body.results;
