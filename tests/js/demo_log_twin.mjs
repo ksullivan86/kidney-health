@@ -40,4 +40,9 @@ if (input.entries && input.summary) {
   out.summary = api._summary(input.summary[0], input.summary[1]);
   out.range = api._range(input.summary[0], input.summary[1]);
 }
+// v0.3.1 "running high": {"pattern": {"day", "today", "profile", "rows": [{date, meal, status, purpose, food_name, nutrients}]}}
+if (input.pattern) {
+  const { day, today, profile, rows } = input.pattern;
+  out.pattern = KH.mock.dayPatternAlerts(day, KH.mock.patternInputs(rows, today), profile, today);
+}
 process.stdout.write(JSON.stringify(out));

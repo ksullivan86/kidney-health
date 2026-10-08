@@ -80,6 +80,8 @@
 .alerts.projected .alerts-title .rating { width: 18px; height: 18px; }
 .alert.projected { background: var(--surface-2); border-left-style: dashed; color: var(--text-2); }
 .alert.projected .rating { opacity: 0.8; }
+/* v0.3.1: "running high" over several days: solid, like a day's own alert, inside the planned block */
+.alerts.projected .alert.pattern { border-left-style: solid; }
 .stat-proj-value { color: var(--text-3); font-size: 0.85rem; }
 .stat-fill-proj {
   position: absolute; top: 0; bottom: 0; border-radius: 0 6px 6px 0; background: var(--lv); opacity: 0.35;

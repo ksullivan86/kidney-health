@@ -31,6 +31,10 @@
 .plan-chip-k { font-weight: 600; }
 .plan-chip b { color: var(--text); font-weight: 600; }
 .plan-counts { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-2); }
+/* v0.3.1: a day the plan keeps running high (Today shows the full message) */
+.plan-pattern { margin: 0; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; align-self: flex-start; }
+.plan-pattern.level-over { color: var(--over-text); background: var(--over-tint); }
+.plan-pattern.level-caution { color: var(--caution-text); background: var(--caution-tint); }
 .plan-counts .count { display: inline-flex; align-items: center; gap: 4px; }
 .plan-counts .count svg { width: 15px; height: 15px; }
 .plan-counts .count.eaten svg { color: var(--ok-text); }

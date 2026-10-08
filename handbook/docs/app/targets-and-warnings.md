@@ -81,6 +81,28 @@ treatments are logged like any food and never blocked or warned against.
   against your per-day target × days, so the long weekend gap is visible ([Cabrera 2015][DG28a];
   [Foley 2011][DG53]). See [Dialysis days](../eat/dialysis-days.md).
 
+## Running high over several days
+
+When you plan food for today or a later day, Today and the Plan week also look back a few days, because one
+high day after another is a different situation from one high day:
+
+- **Potassium, sodium and fluid:** if the day goes over your limit with what's planned **and** it was also
+  over on at least 2 of the 3 days before, Today shows **Running high**, for example "Potassium was over your
+  limit on 2 of the last 3 days, and with what's planned it goes over again: 2,700 / 2,500 mg", and names the
+  planned foods that add the most. The Plan week marks that day "Running high: potassium".
+- **On hemodialysis with your dialysis days set,** the same three nutrients are added up since your last
+  dialysis day instead, against your limit × the number of days, so the long weekend gap shows up early.
+- **Phosphorus and protein:** if the days you logged in the past week, with what's planned, average above
+  your target, Today shows **Weekly average high**. They are judged on the weekly average, so lighter days
+  around it balance it out ([KDOQI 2020][Q20]).
+
+It uses only your own targets. It only looks at food you plan: past days never get it, and a nutrient the
+plan adds none of is never mentioned. Food that does not list a value counts as nothing, as everywhere in
+the app. It is information for you and your care team: it never stops you from planning or logging
+anything, carbohydrate is not part of it, and a low treatment is never named as something to cut. How
+many days count ("2 of the last 3", at least 3 logged days for a weekly average) is the app's own rule and
+is waiting for clinical review.
+
 ## Suggested targets
 
 "Suggest targets" in your profile fills in starting values from the same table as

@@ -14,7 +14,7 @@ import math
 from datetime import date, timedelta
 from typing import Any, Iterable, Mapping
 
-from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, over_at, round_value, status_level, target_bounds
+from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, _fmt, over_at, round_value, status_level, target_bounds
 
 # How a nutrient is judged over a period (ARCHITECTURE.md "Why periods matter").
 ASSESSMENT: dict[str, str] = {
@@ -299,3 +299,123 @@ def summary_notes(dialysis: str, dialysis_days: Iterable[int] | None, interval: 
         elif not list(dialysis_days or ()):
             notes.append(NOTE_NO_DIALYSIS_DAYS)
     return notes
+
+
+# --------------------------------------------------------------------------- #
+# Running high over several days (v0.3.1, docs/dev/plans/v0.3.1.md item 4)
+# --------------------------------------------------------------------------- #
+
+# Display rules, not clinical thresholds: every number compared is the person's own target. "2 of the last 3
+# days" and "at least 3 logged days for a weekly average" are marked for clinical review in handbook/REVIEW.md.
+RECENT_DAYS = 3
+RECENT_HIGH_DAYS = 2
+WEEKLY_DAYS = 7
+WEEKLY_MIN_LOGGED_DAYS = 3
+DAILY_PATTERN_KEYS: tuple[str, ...] = ("potassium_mg", "sodium_mg", "fluid_ml")
+WEEKLY_PATTERN_KEYS: tuple[str, ...] = ("phosphorus_mg", "protein_g")
+MAX_PATTERN_SOURCES = 2
+WEEKDAY_NAMES: tuple[str, ...] = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def _day_value(day_values: Mapping[str, Mapping[str, Any]], day: date, key: str) -> float:
+    value = float((day_values.get(day.isoformat()) or {}).get(key) or 0.0)
+    return value if math.isfinite(value) else 0.0
+
+
+def _sources_text(key: str, planned_sources: Iterable[tuple[str, Mapping[str, Any]]]) -> str:
+    """" The planned foods adding the most: banana (422 mg) and juice (300 mg)." (one food: singular; none: "")."""
+    by_name: dict[str, float] = {}
+    for name, nutrients in planned_sources:
+        value = float((nutrients or {}).get(key) or 0.0)
+        if value > 0 and math.isfinite(value):
+            by_name[name] = by_name.get(name, 0.0) + value
+    top = sorted(by_name.items(), key=lambda kv: (-kv[1], kv[0]))[:MAX_PATTERN_SOURCES]
+    if not top:
+        return ""
+    unit = NUTRIENT_BY_KEY[key].unit
+    parts = [f"{name} ({_fmt(key, value)} {unit})" for name, value in top]
+    if len(parts) == 1:
+        return f" The planned food adding the most: {parts[0]}."
+    return f" The planned foods adding the most: {parts[0]} and {parts[1]}."
+
+
+def pattern_alerts(
+    day: str | date,
+    day_values: Mapping[str, Mapping[str, Any]],
+    planned_totals: Mapping[str, Any],
+    planned_sources: Iterable[tuple[str, Mapping[str, Any]]],
+    targets: Mapping[str, Any],
+    *,
+    dialysis: str = "none",
+    dialysis_days: Iterable[int] | None = None,
+    about_tolerance_pct: Any = 0,
+) -> list[dict[str, Any]]:
+    """Warnings that join the last few days with what is planned for ``day`` (``DaySummary.pattern_alerts``).
+
+    ``day_values`` maps ``YYYY-MM-DD`` to the totals each day stands for: what was eaten on days before today,
+    eaten plus planned from today on (the caller decides, ``log.pattern_inputs``). It holds ``day`` itself and
+    only days that have entries. ``planned_totals`` are the day's planned entries: a nutrient the plan does not
+    add is never warned about. ``planned_sources`` are ``(food name, nutrients)`` of the day's planned entries,
+    without low treatments (one is never named as something to cut).
+
+    * Potassium, sodium, fluid: the day's total with the plan is over the limit and so were at least
+      ``RECENT_HIGH_DAYS`` of the ``RECENT_DAYS`` days before it ("recent_days", level "over"). On hemodialysis
+      with dialysis days set, the current interval instead: its total with the plan is over the limit times its
+      days ("interdialytic", level "over"); a dialysis day itself is left to the day's own alert.
+    * Phosphorus and protein: the average of the logged days of the last ``WEEKLY_DAYS`` days, with the plan, is
+      over the target ("weekly_average", level "caution"; they are judged on the weekly average). An "about"
+      target uses the person's tolerance (``nutrients.over_at``).
+
+    Unknown values count as nothing, as everywhere: a total of known values that is already over stays over.
+    Carbohydrate is not part of this, and nothing here blocks logging or planning.
+    """
+    d = to_date(day)
+    sources = list(planned_sources)
+    out: list[dict[str, Any]] = []
+    interval = interdialytic_interval(d, dialysis_days) if dialysis == "hemodialysis" else None
+    for key in DAILY_PATTERN_KEYS:
+        limit = summary_target(key, targets.get(key))
+        if limit is None or not float(planned_totals.get(key) or 0.0) > 0:
+            continue
+        nutrient = NUTRIENT_BY_KEY[key]
+        unit = nutrient.unit
+        if interval is not None:
+            days = int(interval["days"])
+            if days < 2:
+                continue
+            since = to_date(interval["since"])
+            total = math.fsum(_day_value(day_values, since + timedelta(days=i), key) for i in range(days))
+            cap = limit * days
+            if total > cap:
+                out.append({"level": "over", "nutrient": key, "kind": "interdialytic", "message": (
+                    f"Since your last dialysis day ({WEEKDAY_NAMES[since.weekday()]}), {nutrient.label.lower()} adds up to "
+                    f"{_fmt(key, total)} / {_fmt(key, cap)} {unit} with what's planned ({days} days at {_fmt(key, limit)} {unit})."
+                    + _sources_text(key, sources))})
+            continue
+        total = _day_value(day_values, d, key)
+        if not total > limit:
+            continue
+        high = sum(1 for back in range(1, RECENT_DAYS + 1) if _day_value(day_values, d - timedelta(days=back), key) > limit)
+        if high >= RECENT_HIGH_DAYS:
+            when = f"each of the last {RECENT_DAYS} days" if high == RECENT_DAYS else f"{high} of the last {RECENT_DAYS} days"
+            out.append({"level": "over", "nutrient": key, "kind": "recent_days", "message": (
+                f"{nutrient.label} was over your limit on {when}, and with what's planned it goes over again: "
+                f"{_fmt(key, total)} / {_fmt(key, limit)} {unit}." + _sources_text(key, sources))})
+    for key in WEEKLY_PATTERN_KEYS:
+        target = summary_target(key, targets.get(key))
+        if target is None or not float(planned_totals.get(key) or 0.0) > 0:
+            continue
+        lo, _ = target_bounds(targets.get(key))
+        limit_at = over_at(key, lo, target, about_tolerance_pct)
+        logged = [d - timedelta(days=back) for back in range(WEEKLY_DAYS) if (d - timedelta(days=back)).isoformat() in day_values]
+        if len(logged) < WEEKLY_MIN_LOGGED_DAYS:
+            continue
+        average = math.fsum(_day_value(day_values, x, key) for x in logged) / len(logged)
+        if average / target > limit_at:
+            nutrient = NUTRIENT_BY_KEY[key]
+            out.append({"level": "caution", "nutrient": key, "kind": "weekly_average", "message": (
+                f"With what's planned, {nutrient.label.lower()} averages {_fmt(key, average)} {nutrient.unit} a day over "
+                f"the {len(logged)} days you logged this past week, above your {_fmt(key, target)} {nutrient.unit} target. "
+                f"It is judged on the weekly average, so lighter days around it balance it out."
+                + _sources_text(key, sources))})
+    return out

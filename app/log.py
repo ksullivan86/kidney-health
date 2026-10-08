@@ -73,7 +73,8 @@ from .nutrients import (
     round_value,
     scale_nutrients,
 )
-from .periods import interdialytic_block, interdialytic_interval, previous_period, summarize_period, summary_notes, to_date
+from .periods import (WEEKLY_DAYS, interdialytic_block, interdialytic_interval, pattern_alerts, previous_period,
+                      summarize_period, summary_notes, to_date)
 from .profile import get_profile, settings_store
 
 router = APIRouter(prefix="/api/log", tags=["log"], dependencies=[Depends(current_user)])
@@ -402,6 +403,42 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance
     }
 
 
+def pattern_inputs(rows: list[Any], today: str) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]],
+                                                          dict[str, list[tuple[str, dict[str, Any]]]]]:
+    """What ``periods.pattern_alerts`` reads, per date (v0.3.1): the totals each day stands for (what was eaten
+    on days before ``today``, eaten plus planned from ``today`` on; only days with such entries), the planned
+    totals, and the planned entries as ``(food name, nutrients)`` without low treatments. Sums run in row order."""
+    values: dict[str, dict[str, float]] = {}
+    planned: dict[str, dict[str, float]] = {}
+    sources: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for row in rows:
+        day = row["date"]
+        raw = raw_nutrients(row)
+        is_planned = row["status"] == "planned"
+        if is_planned:
+            add_totals(planned.setdefault(day, empty_totals()), raw)
+            if not _is_hypo(row):
+                sources.setdefault(day, []).append((row["food_name"], raw))
+        if not is_planned or day >= today:
+            add_totals(values.setdefault(day, empty_totals()), raw)
+    return values, planned, sources
+
+
+def day_pattern_alerts(day: str, inputs: tuple[Any, Any, Any], profile: dict[str, Any], today: str) -> list[dict[str, Any]]:
+    """``periods.pattern_alerts`` for ``day``: only from today on, and only for a day with something planned."""
+    values, planned, sources = inputs
+    if day < today or day not in planned:
+        return []
+    return pattern_alerts(day, values, planned[day], sources.get(day, []), profile["targets"], dialysis=profile["dialysis"],
+                          dialysis_days=profile["dialysis_days"], about_tolerance_pct=profile.get("about_tolerance_pct", 0))
+
+
+def pattern_window_start(day: str) -> str:
+    """The first date ``pattern_alerts`` may read for ``day`` (the weekly window; the interdialytic interval and
+    the last 3 days fit inside it)."""
+    return (_date.fromisoformat(day) - timedelta(days=WEEKLY_DAYS - 1)).isoformat()
+
+
 def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance_g: Any = 0) -> dict[str, Any]:
     figures = day_figures(rows, profile, carb_tolerance_g)
     return {
@@ -422,8 +459,13 @@ def get_day(user: CurrentUser, request: Request, date: str | None = None,
             conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     day = parse_date_param(date, "date") if date else today_local()
     profile = get_profile(conn, user.id)
-    rows = fetch_entries(conn, user.id, day, day)
-    return summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user.id))
+    today = today_local()
+    # From today on, read the week before as well: v0.3.1's "running high" warnings join it with the plan.
+    window = fetch_entries(conn, user.id, pattern_window_start(day) if day >= today else day, day)
+    rows = [r for r in window if r["date"] == day]
+    summary = summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user.id))
+    summary["pattern_alerts"] = day_pattern_alerts(day, pattern_inputs(window, today), profile, today)
+    return summary
 
 
 @router.get("/range", response_model=RangeSummary)
@@ -433,8 +475,11 @@ def get_range(user: CurrentUser, start: str | None = None, end: str | None = Non
     start_d, end_d = _date.fromisoformat(start_s), _date.fromisoformat(end_s)
 
     profile = get_profile(conn, user.id)
+    today = today_local()
+    window = fetch_entries(conn, user.id, pattern_window_start(start_s) if end_s >= today else start_s, end_s)
+    inputs = pattern_inputs(window, today)
     by_date: dict[str, list[sqlite3.Row]] = {}
-    for row in fetch_entries(conn, user.id, start_s, end_s):
+    for row in window:
         by_date.setdefault(row["date"], []).append(row)
 
     days = []
@@ -454,6 +499,7 @@ def get_range(user: CurrentUser, start: str | None = None, end: str | None = Non
                 "unknown": figures["unknown"],
                 "planned_unknown": figures["planned_unknown"],
                 "projected_unknown": figures["projected_unknown"],
+                "pattern_alerts": day_pattern_alerts(key, inputs, profile, today),
             }
         )
         current += timedelta(days=1)

@@ -394,9 +394,25 @@ DaySummary = {
               "protein_g":    {"value": 40, "target": 56, "min": 42, "fraction": 0.71, "level": "ok"}, ... },
   "meals": { "breakfast": {"carbs_g": 45, "protein_g": 12, ... all keys ...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
   "alerts": [ {"level": "caution"|"over", "nutrient": "potassium_mg", "message": "Potassium is at 85 % of today's limit (2125 / 2500 mg)"} ],
-  "carb_tolerance_g": 10    // v0.3.1: the person's guidance.carb_tolerance_g, used by the per-meal alerts
+  "carb_tolerance_g": 10,   // v0.3.1: the person's guidance.carb_tolerance_g, used by the per-meal alerts
+  "pattern_alerts": [ {"level": "over"|"caution", "nutrient": "potassium_mg",
+                       "kind": "recent_days"|"interdialytic"|"weekly_average", "message": "..."} ]   // v0.3.1
 }
 ```
+
+**Running high (v0.3.1, `periods.pattern_alerts`).** `DaySummary` and each `/api/log/range` day carry
+`pattern_alerts`, warnings that join the last few days with what is planned, for today and later days with
+planned entries only, and only for a nutrient the plan adds. Each day stands for what was eaten before today
+and for eaten + planned from today on (`log.pattern_inputs`; past plans never eaten do not count).
+`recent_days` (level `over`): potassium, sodium or fluid over the limit with the plan, and over on at least 2
+of the 3 days before. `interdialytic` (level `over`, hemodialysis with dialysis days set, instead of
+`recent_days`): the interval's total with the plan over the limit × its days (a dialysis day itself is left to
+its own alert). `weekly_average` (level `caution`): the average of the logged days among the last 7 (at least
+3), with the plan, over the phosphorus or protein target (an "about" target with its tolerance). Messages name
+up to 2 planned foods adding the most, summed per food name, never a low treatment. Every number compared is
+the person's own target; the day counts are display rules marked for review in `handbook/REVIEW.md`. Twin:
+`js/mock/log.js` (`patternAlerts`, `patternInputs`), compared by `tests/test_running_high.py`. Today shows them
+first in the planned block; the Plan week marks the day ("Running high: potassium").
 
 **Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
 carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,

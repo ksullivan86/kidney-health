@@ -72,9 +72,13 @@
       const counts = d.counts || { eaten: 0, planned: 0 };
       const isToday = date === today, isPast = date < today;
       const dial = dd.includes(weekdayMon(date));
+      // v0.3.1: "running high" (periods.pattern_alerts); Today shows the whole message.
+      const pattern = d.pattern_alerts || [];
+      const patternNames = [...new Set(pattern.map((a) => (NUT[a.nutrient] ? NUT[a.nutrient].label.toLowerCase() : a.nutrient)))];
       const card = h('article', { class: `plan-day${isToday ? ' today' : ''}${isPast ? ' past' : ''}${dial ? ' dialysis' : ''}`, role: 'listitem' });
       const open = h('button', { class: 'plan-day-open', type: 'button',
-        'aria-label': `${fmtDateLong(date)}${dial ? ', dialysis day' : ''}: ${counts.eaten} eaten, ${counts.planned} planned. Open in Today` });
+        'aria-label': `${fmtDateLong(date)}${dial ? ', dialysis day' : ''}: ${counts.eaten} eaten, ${counts.planned} planned`
+          + `${patternNames.length ? `, running high: ${patternNames.join(', ')}` : ''}. Open in Today` });
       open.append(h('div', { class: 'plan-day-head' },
         h('div', { class: 'plan-day-date' }, h('span', { class: 'plan-wd' }, WEEKDAYS[weekdayMon(date)]), h('span', { class: 'plan-dnum' }, String(parseDate(date).getDate()))),
         h('div', { class: 'plan-day-badges' },
@@ -102,6 +106,11 @@
       }
       if (!any) chips.append(h('span', { class: 'muted small plan-empty' }, hasEntries ? 'No targets set' : isPast ? 'Nothing logged' : 'Nothing planned yet'));
       open.append(chips);
+      if (pattern.length) {
+        const lvl = pattern.some((a) => a.level === 'over') ? 'over' : 'caution';
+        open.append(h('p', { class: `plan-pattern level-${lvl}`, title: pattern.map((a) => a.message).join(' ') },
+          `Running high: ${patternNames.join(', ')}`));
+      }
       const cnt = h('div', { class: 'plan-counts' });
       if (counts.eaten) cnt.append(h('span', { class: 'count eaten' }, checkIcon(), `${counts.eaten} eaten`));
       if (counts.planned) cnt.append(h('span', { class: 'count planned' }, dashedIcon(), `${counts.planned} planned`));

@@ -29,12 +29,14 @@ tests).
 
 ## In progress
 
-* v0.3.1 item 3 "Admin settings on their own page": view `#admin` (Server administration) drawn by
-  `js/views/settings.js`, header shield `#admin-open` (`data-admin-only`, `js/views/auth.js`), Settings →
-  Admin link card, AI providers moved there (`KH.ai.renderAdmin`), docs updated ("Settings → Admin → X" is now
-  "Server administration → X"). Verified: `tests/test_admin_page.py`, UI tests, a real-server Chromium walk
-  (admin + member at 375/1280 px, 36 checks), `tools/e2e/sandbox.py` on two configurations (0 issues). Next:
-  full pytest, commit, PR, merge when green.
+* v0.3.1 item 3 "Admin settings on their own page": PR #15 (CI running at 13:00 UTC).
+* v0.3.1 item 4 "Running high": built in a separate worktree (branch `item4-wip`, to be cherry-picked onto main
+  after #15 merges): `periods.pattern_alerts`, `log.pattern_inputs` / `day_pattern_alerts` /
+  `pattern_window_start`, `DaySummary.pattern_alerts` and range days, `PatternAlert` model, twin in
+  `js/mock/log.js` (+ `tests/js/demo_log_twin.mjs` "pattern"), Today block, Plan day marker, CSS. Docs:
+  ARCHITECTURE "Running high (v0.3.1)", handbook targets-and-warnings, REVIEW.md, CHANGELOG, ROADMAP, plan.
+  Verified: `tests/test_running_high.py` (rule, inputs, API, twin with all three kinds), a real-server Chromium
+  walk at 375/1280 px (Today block, Plan marker, aria-label, no overflow, no console errors). Next: full pytest.
 
 ## Next (in order)
 
