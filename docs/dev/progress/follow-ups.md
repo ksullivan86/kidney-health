@@ -29,25 +29,19 @@ tests).
 
 ## In progress
 
-* v0.3.1 batch merged: #13 "Not chosen yet", #14 tolerances, #15 admin page, #16 running high, #17 Pages demo,
-  #18 lab CSV import (13:38 UTC). All six items of `docs/dev/plans/v0.3.1.md` are on main; the owner publishes
-  the v0.3.1 release.
-* Kidney-only profile, part 1 (ROADMAP item): PR from the branch (built in worktree `scratchpad/kh7`).
-  `log.has_meal_carb_goals`: no per-meal carbohydrate alerts with diabetes "none" (twin in `js/mock/log.js`),
-  Today hides the meal carbohydrate line and planned-carbs badge, Settings → Meal guidance explains instead of
-  showing the carb tolerance and the low dose. Verified: `tests/test_kidney_only.py` (rule, API, twin), Chromium
-  walk type1 vs none at 375/1280, full suite and parity harness in the worktree. Also in this PR: Profile hides the
-  per-meal and per-snack carbohydrate targets for "None" (values kept; the walk checks hide/show). Left on the
-  ROADMAP: AI prompts worded from the profile (needs a PROMPT_VERSION bump and an owner-run golden set) and the
-  Settings/handbook framing.
-* "Explain the AI setup in plain words", last part: Settings → AI ideas intro (worktree `scratchpad/kh8`, branch
-  `item8-wip`, commit "Settings -> AI ideas: How AI help is set up"); PR after the kidney-only one merges.
-  Verified: `tests/test_ai_setup_intro.py`, `tests/test_learn_links.py` (new `APP_LINKS.pages.ai`), Chromium walk
-  with AI on/off at 375/1280.
+* Merged today: #13–#18 (the whole v0.3.1 batch) and #19 (kidney-only profile, part 1, 13:48 UTC).
+* "Explain the AI setup in plain words", last part: Settings → AI ideas intro, PR from the branch (built in worktree
+  `scratchpad/kh8`). Same PR, separate commit: `tools/e2e/regress.py` compares warnings without the handbook's
+  "Learn: …" links (with a built handbook every preview comparison failed; found by a QA run today).
+  Verified: full suite in the worktree, `tests/test_ai_setup_intro.py`, `tests/test_learn_links.py`, Chromium
+  walk AI on/off at 375/1280, `regress.py --only 1280-dark` with and without a built handbook (121/121 each).
+* QA of today's merges (worktree `scratchpad/khqa` at the #19 head): `upgrade.py` 71/71 (v0.2 and schema v3 to
+  schema 9), `regress.py` all four configurations pass once the handbook artifact is excluded (see above);
+  `sandbox.py` and `device.py` running at the time of writing (logs in `scratchpad/qa/`).
 
 ## Next (in order)
 
-1. Kidney-only part 2 (owner-run prompt change), then the assistant back end (ROADMAP).
+1. Kidney-only part 2 (owner-run prompt change and handbook framing), then the assistant back end (ROADMAP).
 
 ## Commands that reproduce the checks
 
