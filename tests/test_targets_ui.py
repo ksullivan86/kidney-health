@@ -219,9 +219,11 @@ def test_an_about_target_is_never_called_a_limit() -> None:
     assert "about ? KH.ui.ABOUT_LEVEL_TEXT[lv]" in today
     guidance = (STATIC / "js" / "views" / "guidance.js").read_text(encoding="utf-8")
     after = guidance.split("function dayAfter(d)", 1)[1].split("\n  }\n", 1)[0]
-    assert "KH.ui.levelTextFor(st, st.level || 'ok')" in after and "LEVEL_TEXT[" not in after
+    assert "KH.ui.levelTextFor(st, st.level || 'ok', k)" in after and "LEVEL_TEXT[" not in after
     plan = (STATIC / "js" / "views" / "plan.js").read_text(encoding="utf-8")
-    assert "KH.ui.levelTextFor(st, level)" in plan
+    assert "KH.ui.levelTextFor(st, level, key)" in plan
+    # v0.3.1: a limit (potassium, sodium, phosphorus, fluid) is never an "about" target, even entered as min = max
+    assert "KH.rules.NUT[key].role === 'limit'" in core and "const about = KH.ui.isAboutTarget(st, key);" in today
     review = (ROOT / "handbook" / "REVIEW.md").read_text(encoding="utf-8")
     assert 'An "about" target (minimum = maximum' in review
 

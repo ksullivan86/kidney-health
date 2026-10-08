@@ -88,6 +88,8 @@ def test_put_status_marks_a_single_entry_eaten_and_keeps_the_snapshot(client):
 
 def test_day_summary_separates_eaten_planned_and_projected(client):
     client.put("/api/profile", json={"targets": {"potassium_mg": 1000, "carbs_per_meal_g": 20}})
+    # v0.3.1: per-meal alerts wait for the person's carbohydrate tolerance (default 10 g; tests/test_tolerance.py)
+    assert client.patch("/api/me/settings", json={"guidance": {"carb_tolerance_g": 5}}).status_code == 200
     water_planned = log_food(client, "water", meal="breakfast", status="planned")
     banana_eaten = log_food(client, "banana", meal="breakfast")
     banana_planned = log_food(client, "banana", meal="lunch", status="planned")
@@ -114,7 +116,7 @@ def test_day_summary_separates_eaten_planned_and_projected(client):
     assert day["planned_meals"]["breakfast"]["fluid_ml"] == 240 and day["planned_meals"]["lunch"]["carbs_g"] == 27.0
     assert day["planned_meals"]["dinner"]["protein_g"] == 26.4 and set(day["planned_meals"]) == {"breakfast", "lunch", "dinner", "snack"}
 
-    # eaten alerts: only the breakfast carb goal is exceeded (27 g > 20 g)
+    # eaten alerts: only the breakfast carb goal is exceeded (27 g > 20 g + 5 g tolerance)
     assert {(a["nutrient"], a["level"], a.get("meal")) for a in day["alerts"]} == {("carbs_g", "over", "breakfast")}
     projected = {(a["nutrient"], a["level"], a.get("meal")): a["message"] for a in day["projected_alerts"]}
     assert ("potassium_mg", "over", None) in projected
