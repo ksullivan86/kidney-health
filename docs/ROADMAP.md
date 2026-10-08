@@ -122,7 +122,7 @@ Estimated 2026-10-07 for one agent working directly in a single session (as the 
 | Privacy tiers: redaction before the cloud | 1–2M | 2–4 h |
 | Clinician accounts with notes (includes the read-only sharing it needs, about 4–6M) | 7–11M | 2–3 days |
 
-The v0.3.1 batch (the "Not chosen yet" and tolerance item, the admin page, the multi-day warning, the Pages demo and the lab CSV import, about 4.5–8M tokens) is planned in [`docs/dev/plans/v0.3.1.md`](dev/plans/v0.3.1.md).
+The v0.3.1 batch (the "Not chosen yet" and tolerance item, the admin page, the multi-day warning, the Pages demo and the lab CSV import, about 4.5–8M tokens) was built and merged on 2026-10-08 (#13–#18), as planned in [`docs/dev/plans/v0.3.1.md`](dev/plans/v0.3.1.md).
 
 ## Open items from the v0.3.0 build (no specification defers them)
 
