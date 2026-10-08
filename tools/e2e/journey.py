@@ -11,7 +11,8 @@ as the env AI provider and a fake Open Food Facts (``--off-port``, ``OFF_BASE_UR
 story, at 375×812 (phone, light):
 
 1. ``setup``     first-run setup in the page with the logged code and "Look up barcodes with Open Food Facts"
-                 ticked; the admin switches "Optional AI ideas" on in Admin → Server settings and opts in.
+                 ticked; the admin switches "Optional AI ideas" on in Server administration → Server settings
+                 and opts in under Settings → AI ideas.
 2. ``profile``   About you (birth month, height, weight, sex, activity), Kidneys and diabetes; Save; Suggest targets.
 3. ``labs``      potassium 5.8 mmol/L and phosphate 1.9 mmol/L: the conversion echo, "What this result changed",
                  then Profile's suggestion lists the changed targets with the rule's reason and "Why this number?".
@@ -214,18 +215,26 @@ class Journey:
         check(area, "AI is off by default", settings["ai.enabled"]["value"] is False)
         check(area, "nothing was sent to the AI provider or Open Food Facts yet", not self.ai.requests and not self.off.requests,
               f"ai {len(self.ai.requests)}, off {len(self.off.requests)}")
-        # The admin switches AI on (Admin → Server settings) and opts in (Settings → AI ideas).
-        self.goto(page, "#settings", "#adm-ai-enabled")
+        # The admin switches AI on (Server administration → Server settings, v0.3.1) and opts in (Settings → AI ideas).
+        self.goto(page, "#admin", "#view-admin:not([hidden]) #adm-ai-enabled")
+        page.evaluate("() => { window.__journeySameDocument = true; }")  # gone if anything below reloads the page
         with page.expect_response(lambda r: "/api/admin/settings" in r.url and r.request.method == "PATCH"):
             page.check("#adm-ai-enabled")
         self.reauth_if_asked(page)
         wait_js(page, "document.querySelector('#adm-ai-enabled').checked && !document.querySelector('#adm-ai-enabled').disabled")
-        check(area, "Admin → Server settings: Optional AI ideas switched on", admin.json("GET", "/api/admin/settings")["settings"]["ai.enabled"]["value"])
-        # No reload: Settings → AI ideas above draws again by itself (v0.3.0 review), once, with the opt-in box.
-        page.wait_for_selector("#set-ai-slot input[type=checkbox]")
-        check(area, "Settings → AI ideas updates in place after the switch (no 'Off on this server', one copy)",
-              "Off on this server" not in page.inner_text("#set-ai-slot") and page.locator("#set-ai-slot .ai-admin").count() == 1,
-              page.inner_text("#set-ai-slot")[:200])
+        check(area, "Server administration → Server settings: Optional AI ideas switched on",
+              admin.json("GET", "/api/admin/settings")["settings"]["ai.enabled"]["value"])
+        # Server administration → AI providers on the same page draws again by itself, once.
+        page.wait_for_selector("#set-admin-ai-body .ai-admin")
+        check(area, "Server administration → AI providers updates in place after the switch (one copy)",
+              page.locator("#set-admin-ai-body .ai-admin").count() == 1, page.inner_text("#set-admin-ai-body")[:200])
+        # No reload: Settings → AI ideas draws again by itself (v0.3.0 review), once, with the opt-in box.
+        page.click("#settings-open")
+        page.wait_for_selector("#view-settings:not([hidden]) #set-ai-slot input[type=checkbox]")
+        slot = page.inner_text("#set-ai-slot")
+        check(area, "Settings → AI ideas updates in place after the switch (no 'Off on this server', one copy, no reload)",
+              "Off on this server" not in slot and page.locator("#set-ai-slot [id^=ai-opt-]").count() == 1
+              and page.evaluate("() => window.__journeySameDocument === true"), slot[:200])
         if not page.is_checked("#set-ai-slot input[type=checkbox] >> nth=0"):
             page.click("#set-ai-slot label.check >> nth=0")
         page.wait_for_selector("#set-ai-slot >> text=AI ideas are on for you.")
