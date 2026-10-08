@@ -420,8 +420,10 @@ twin in `js/mock/log.js` does the same; `tests/test_kidney_only.py`). Today draw
 planned-carbs badge in the meal headers, Settings → Meal guidance explains instead of showing the
 carbohydrate tolerance and the carbs taken for a low, and Profile hides the per-meal and per-snack carbohydrate
 targets and names no carbohydrate per meal in the suggestion (every value is kept and saved unchanged). The day's carbohydrate is judged
-like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. Still to do
-(ROADMAP): the AI prompts and the remaining copy worded from the profile.
+like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. The "Not
+medical advice" note follows the profile too (part 2): Profile's note below the form hides its insulin clause
+(`#pf-disclaimer-diabetes`) with the form's diabetes select, and Settings → About words the sentence from the
+saved profile. Still to do (ROADMAP): the AI prompts and the handbook framing.
 
 **Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
 carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,

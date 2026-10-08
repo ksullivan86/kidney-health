@@ -1344,6 +1344,9 @@
   // ---------------------------------------------------------------------------
   // Section: About & privacy
   // ---------------------------------------------------------------------------
+  // A kidney-only profile (diabetes "None", v0.3.1); before the profile is loaded, or before a type is chosen, the
+  // app uses type 1.
+  const kidneyOnly = () => !!(state.profile && state.profile.diabetes === 'none');
   function renderAbout() {
     const body = $('#set-about-body');
     clear(body);
@@ -1356,7 +1359,7 @@
         h('li', {}, 'Keys are stored encrypted and are never shown again. Your export (Account → Your data) holds everything about you except passwords, sessions and keys.'),
         h('li', {}, 'This device keeps the app itself and, for offline use, a copy of your recent days, your profile and the foods you have seen, plus entries waiting to sync. Signing out clears it (it asks first when something has not synced).')),
       subtitle('Not medical advice'),
-      h('p', {}, 'Targets and limits in this app must come from your nephrologist or renal dietitian, and insulin decisions from your diabetes care team. Food warnings are general renal-diet conventions, not a prescription.'),
+      h('p', {}, `Targets and limits in this app must come from your nephrologist or renal dietitian${kidneyOnly() ? '' : ', and insulin decisions from your diabetes care team'}. Food warnings are general renal-diet conventions, not a prescription.`),
       subtitle('Learn: the patient handbook'),
       handbookAbout(),
       subtitle('Data sources'),
@@ -1482,7 +1485,7 @@
     renderThemeSource();
     renderLabUnits();
     renderFood();
-    if (!state.profile) { try { await KH.loadProfile(); renderPrefs(); } catch (e) { /* Preferences shows Monday */ } }
+    if (!state.profile) { try { await KH.loadProfile(); renderPrefs(); if (kidneyOnly()) renderAbout(); } catch (e) { /* Preferences shows Monday */ } }
   }
   // After sign-in: apply the theme saved to the account (an admin default counts too).
   async function onSignedIn() {
