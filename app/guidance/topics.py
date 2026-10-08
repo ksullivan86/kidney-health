@@ -65,6 +65,42 @@ def pages(*slugs: str) -> list[dict[str, str]]:
     return [page(s) for s in slugs]
 
 
+def _link(slug: str) -> dict[str, str]:
+    entry = TOPIC_PAGES[slug]
+    return {"path": entry["url"].removeprefix(LEARN_PREFIX), "title": entry["title"]}
+
+
+def _named(path: str, title: str) -> dict[str, str]:
+    return {"path": path, "title": title}
+
+
+# What the app links to (GET /api/handbook "links"; note 08 §4.10), as paths under the handbook's base URL.
+# Nutrient pages come from NUTRIENT_TOPIC above; tests/test_learn_links.py checks every path. Pure data, so the
+# GitHub Pages demo (scripts/build_preview.py --pages) carries the same table without the server's packages.
+APP_LINKS: dict[str, dict[str, dict[str, str]]] = {
+    # Per-serving warnings and daily alerts, by nutrient key (app/nutrients.py).
+    "nutrients": {nutrient: _link(slug) for nutrient, slug in NUTRIENT_TOPIC.items()},
+    # Food flags that cause or change a warning (app/nutrients.py FLAGS; potassium_additive: ARCHITECTURE
+    # v0.3 decision 9).
+    "flags": {
+        "avoid_ckd": _named("eat/food-lists/", "Food lists"),
+        "phosphate_additive": _link("phosphate-additives"),
+        "potassium_additive": _link("label-reading"),
+        "high_gi": _link("carb-counting"),
+        "hypo_treatment": _link("treating-a-low"),
+    },
+    # Pages the app links to by name.
+    "pages": {
+        "home": _named("", "Kidney Health Handbook"),
+        "targets": _link("targets-and-warnings"),
+        "first_setup": _named("app/first-setup/", "First setup"),
+        "get_help_now": _link("get-help-now"),
+        "blood_potassium": _link("blood-potassium"),
+        "treating_a_low": _link("treating-a-low"),
+    },
+}
+
+
 @dataclass(frozen=True)
 class Tip:
     """One row of the tips table: ``when`` names the day-state condition evaluated by ``fits.day_tips``."""

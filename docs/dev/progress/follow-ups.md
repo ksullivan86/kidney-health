@@ -29,14 +29,22 @@ tests).
 
 ## In progress
 
-* v0.3.1 item 3 "Admin settings on their own page": PR #15 (CI running at 13:00 UTC).
-* v0.3.1 item 4 "Running high": built in a separate worktree (branch `item4-wip`, to be cherry-picked onto main
-  after #15 merges): `periods.pattern_alerts`, `log.pattern_inputs` / `day_pattern_alerts` /
-  `pattern_window_start`, `DaySummary.pattern_alerts` and range days, `PatternAlert` model, twin in
-  `js/mock/log.js` (+ `tests/js/demo_log_twin.mjs` "pattern"), Today block, Plan day marker, CSS. Docs:
-  ARCHITECTURE "Running high (v0.3.1)", handbook targets-and-warnings, REVIEW.md, CHANGELOG, ROADMAP, plan.
-  Verified: `tests/test_running_high.py` (rule, inputs, API, twin with all three kinds), a real-server Chromium
-  walk at 375/1280 px (Today block, Plan marker, aria-label, no overflow, no console errors). Next: full pytest.
+* v0.3.1 item 3 "Admin settings on their own page": PR #15, merged 2026-10-08 12:50 UTC.
+* v0.3.1 item 4 "Running high": PR #16, merged 2026-10-08 13:03 UTC.
+* v0.3.1 item 5 "Pages demo": PR opened 13:20 UTC (branch reset to main, item 5 cherry-picked from worktree
+  `scratchpad/kh5`). `scripts/build_preview.py --pages DIR` (meta CSP read from app/security.py with ast,
+  `preview-flag.js` with `KDL_PREVIEW` and `KDL_DEMO_HANDBOOK` = `{url: "../", links: APP_LINKS}`), the link
+  table moved to `app/guidance/topics.py` (`APP_LINKS`; `handbook.LINKS` is an alias), the Pages workflow builds
+  the demo into `site/demo/` before the link check, "Try the app (demo)" in the Pages announce bar
+  (`extra.demo_link`). Verified: full Pages site built locally (mkdocs pages flavour + demo, 120 pages, 0 broken
+  links), Chromium walk handbook -> demo -> Learn links at 375/1280 light/dark (no console errors, no CSP
+  violations, no outside requests), tests in `tests/test_preview_build.py` and `tests/test_deploy.py`, full suite.
+* v0.3.1 item 6 "Lab CSV import": in worktree `scratchpad/kh6` (branch `item6-wip`, stacked on item 5).
+  Design: the browser parses the file (`js/engine/lab_import.js`, `KH.labImport.analyse`), shows every result,
+  and sends only the kept ones to a new `POST /api/labs/import` (re-validated like `POST /api/labs`,
+  duplicates skipped, refused rows listed). Reason: a portal export can hold names and record numbers; they
+  never leave the device. Done: the reader (tried under Node). Next: server route + model + tests, mock twin,
+  UI card, vectors `tests/data/lab_import_vectors.json` + node runner section, docs.
 
 ## Next (in order)
 

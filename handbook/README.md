@@ -27,7 +27,8 @@ The app serves the built site at `/learn/`; a public copy can be published to Gi
 
 ```
 mkdocs.yml            LAN build (site_url http://localhost/learn/); the nav lists every page
-mkdocs.pages.yml      GitHub Pages build (inherits mkdocs.yml; no "Back to the food log" link)
+mkdocs.pages.yml      GitHub Pages build (inherits mkdocs.yml; no "Back to the food log" link;
+                      "Try the app (demo)" links to the demo the Pages workflow builds into demo/)
 requirements.in/.lock mkdocs 1.6.1, mkdocs-material 9.7.7, pymdown-extensions 12.1, PyYAML, pytest (hashed)
 sources.yml           the bibliography: id -> cite, short, url, licence, checked, kind, notes
 data/menus.yml        7-day sample menus by USDA fdc_id + servings (checked against the app's targets)
@@ -35,7 +36,7 @@ data/recipes.yml      original recipes, ingredients by fdc_id + grams
 data/slugs.yml        slugs the app links to (/learn/<path>/); never rename a path without a redirect plan
 includes/             abbreviations.md (tooltips on every page), no-dosing.md, starting-points.md,
                       help-card.md, sources.md (GENERATED reference links appended to every page)
-overrides/main.html   announce bar (back to the app, Get help now), draft banner, review line
+overrides/main.html   announce bar (back to the app or the demo, Get help now), draft banner, review line
 templates/            page templates: medical-page.md and page.md, with the front-matter schema
 tools/check_links.py  internal link and anchor checker for the built site (stdlib only)
 docs/                 the pages; stylesheets/extra.css holds all custom styles (no inline styles)

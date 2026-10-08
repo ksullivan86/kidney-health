@@ -124,12 +124,15 @@ request which ones you ran.
 
 ```bash
 python3 scripts/build_preview.py      # writes build/kidney-diet-log.html (gitignored)
+python3 scripts/build_preview.py --pages build/demo   # the GitHub Pages demo: the same app as a static site
 ```
 
 It inlines `app/static/index.html`'s stylesheets and scripts in order, plus `data/foods.json`, into one
 HTML fragment that runs with no server and no network. `tests/test_preview_build.py` builds it on every
 test run. Keep every new script loadable this way: plain scripts under `window.KH`, no bundler, no ES
-module imports, no inline scripts (the builder refuses them).
+module imports, no inline scripts (the builder refuses them). The Pages demo keeps the files as files
+under the app's CSP (a `<meta>` element), so markup links must not be absolute paths either: the builder
+rewrites the known ones (`/learn/`) and refuses any other.
 
 ## Database migrations
 

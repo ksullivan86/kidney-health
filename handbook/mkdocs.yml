@@ -2,7 +2,8 @@
 # Spec: docs/dev/research/08-handbook-site.md §4.3. Build from inside handbook/:
 #   python scripts/build_handbook.py            (from the repo root: regenerate menus, tables, sources)
 #   cd handbook && NO_MKDOCS_2_WARNING=true mkdocs build --strict
-# GitHub Pages uses mkdocs.pages.yml, which inherits this file and changes only the site URL.
+# GitHub Pages uses mkdocs.pages.yml, which inherits this file and changes only the site URL and the
+# announce-bar links.
 site_name: Kidney Health Handbook
 site_description: Practical, sourced guidance for living with chronic kidney disease and type 1 diabetes.
 # LAN build: http://localhost/learn/ (no port; instant navigation needs the sitemap host to match,
@@ -83,6 +84,7 @@ plugins:
 
 extra:
   app_link: !ENV [HANDBOOK_APP_LINK, ""]    # "/" in the image build: "Back to the food log"; empty on Pages
+  demo_link: ""                             # "demo/" on Pages (mkdocs.pages.yml): "Try the app (demo)"
   generator: false
   social:
     - icon: fontawesome/brands/github

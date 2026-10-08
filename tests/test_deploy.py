@@ -191,6 +191,20 @@ def test_handbook_pages_is_opt_in_and_least_privilege():
         assert action in wf
 
 
+def test_handbook_pages_publishes_the_demo_beside_the_handbook():
+    """v0.3.1: the app's demo (scripts/build_preview.py --pages) goes into demo/ of the Pages site, before the link
+    check, and the Pages handbook (only) links to it."""
+    wf = read(".github/workflows/handbook-pages.yml")
+    build = job_blocks(wf)["build"]
+    demo = build.index('python ../scripts/build_preview.py --pages "$RUNNER_TEMP/site/demo"')
+    assert build.index("mkdocs build --strict -f mkdocs.pages.yml") < demo < build.index("python tools/check_links.py")
+    for path in ("app/static/**", "app/security.py", "app/guidance/topics.py", "scripts/build_preview.py"):
+        assert f'      - "{path}"' in wf, path
+    assert re.search(r"^  demo_link: demo/$", read("handbook/mkdocs.pages.yml"), re.M)
+    assert re.search(r'^  demo_link: ""', read("handbook/mkdocs.yml"), re.M)  # the copy inside the app has the app
+    assert "{% elif config.extra.demo_link %}" in read("handbook/overrides/main.html")
+
+
 def test_handbook_links_are_checked_weekly_and_reported_in_one_issue():
     wf = read(".github/workflows/handbook-links.yml")
     assert re.search(r"^permissions: \{\}$", wf, re.M)

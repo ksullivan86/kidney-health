@@ -82,8 +82,7 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 
 Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a browser-only CKD tracker on GitHub Pages that imports Apple Health blood pressure, lab CSVs and patient-portal C-CDA files). Each needs a design note in `docs/dev/research/` before it is built; sizes are rough.
 
-* **Try the app on GitHub Pages (small).** Publish the demo next to the handbook, at `/demo/` on the Pages site, with a "Try the app" link on the handbook home page. `scripts/build_preview.py` already builds it: the real UI against its in-page copy of the API (`js/mock/*`), sample data, nothing saved, no network. To do: a multi-file build that keeps the scripts as files (no inline script, so the app's CSP still holds), a `<meta>` CSP and the "demo, nothing is saved" banner, a step in `.github/workflows/handbook-pages.yml` (and `app/static/**`, `data/foods.json`, `scripts/build_preview.py` in its `paths`), the Pages link check covering `/demo/`, and a test. Features that need the server (accounts, barcodes and USDA lookups, AI) stay off in the demo, as they are in the preview today.
-* **A "keep my data in this browser" demo mode (medium, later).** The same Pages demo with the mock API stored in IndexedDB instead of memory, plus export and import of `export.json`, so a person can use it without a server. It needs clear wording that the data lives only in that browser and is lost if site data is cleared, and the parity vectors keep it matching the server. The self-hosted server stays the full version.
+* **A "keep my data in this browser" demo mode (medium, later).** The Pages demo (published at `demo/` beside the handbook since v0.3.1) with the mock API stored in IndexedDB instead of memory, plus export and import of `export.json`, so a person can use it without a server. It needs clear wording that the data lives only in that browser and is lost if site data is cleared, and the parity vectors keep it matching the server. The self-hosted server stays the full version.
 * **Lab results from a CSV file (small).** Import a spreadsheet with a date column and one column per test (the eight analytes in `app/units.py`, units from the column header or picked by the person). Every row is shown for confirmation before saving, and the existing plausibility ranges and the K-5 alert still apply.
 * **Lab results from a patient-portal C-CDA file (medium).** Many patient portals (MyChart and others) can download a C-CDA XML "health summary"; read the results by LOINC code and map them to our analytes and units, with the same confirmation step. XML from outside needs a hardened parser (`defusedxml`, a new runtime dependency, so a contract decision), size limits, and test fixtures from at least two portals.
 * **Lab results from Apple Health clinical records (medium).** If a person has linked their health system in the Health app, its "Export All Health Data" zip holds those lab results as FHIR R4 JSON files (`clinical-records/`); read the Observation resources by LOINC code into the same import-and-confirm flow as the C-CDA item.
@@ -109,7 +108,6 @@ Estimated 2026-10-07 for one agent working directly in a single session (as the 
 
 | Item | Tokens | Agent time |
 |---|---|---|
-| Try the app on GitHub Pages | 0.5–1M | 1–2 h |
 | "Keep my data in this browser" demo mode | 2–4M | 4–8 h |
 | Lab results from a CSV file | 1–1.5M | 2–3 h |
 | Lab results from a patient-portal C-CDA file | 2–3M | 4–6 h |
