@@ -651,9 +651,16 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     The offending ``input`` and ``ctx`` are never echoed (a password, API key or setup code could
     be in them), so the body is always JSON-serialisable.
     """
+    detail, errors = flatten_validation_errors(exc.errors())
+    return JSONResponse({"detail": detail, "errors": errors}, status_code=400)
+
+
+def flatten_validation_errors(raw: Iterable[Any]) -> tuple[str, list[dict[str, Any]]]:
+    """``("field: message; ...", [{type, loc, msg}])`` for Pydantic errors, as the 400 handler words them (also used
+    for the per-row reasons of ``POST /api/labs/import``)."""
     parts: list[str] = []
     errors: list[dict[str, Any]] = []
-    for err in exc.errors():
+    for err in raw:
         loc = tuple(err.get("loc", ()))
         name = ".".join(str(x) for x in loc if x not in ("body", "query", "path"))
         kind = str(err.get("type", "value_error"))
@@ -663,7 +670,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         msg = redact(msg)
         parts.append(f"{name}: {msg}" if name else msg)
         errors.append({"type": kind, "loc": [p if isinstance(p, (str, int)) else str(p) for p in loc], "msg": msg})
-    return JSONResponse({"detail": "; ".join(parts) or "invalid request", "errors": errors}, status_code=400)
+    return "; ".join(parts) or "invalid request", errors
 
 
 # --------------------------------------------------------------------------- #

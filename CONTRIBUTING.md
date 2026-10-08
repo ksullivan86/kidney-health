@@ -98,6 +98,7 @@ pull request** and keep them equal with the shared vector files:
 | `app/settings_registry.py`, `app/settings_store.py` | `js/engine/settings.js` | `settings_vectors.json` (`gen_settings_vectors.py`) |
 | `app/targets.py`, `app/target_rules.py` | `js/engine/targets.js` | `targets_vectors.json` (`gen_targets_vectors.py`) |
 | `app/units.py`, `app/kidney_function.py` | `js/engine/kidney_function.js` | `kidney_function_vectors.json` (`gen_kidney_function_vectors.py`) |
+| none (the CSV file is read in the browser only) | `js/engine/lab_import.js` | `lab_import_vectors.json` (`tests/js/gen_lab_import_vectors.mjs`; review the diff by hand) |
 | `app/guidance/*` | `js/engine/guidance/*.js` | `guidance_vectors.json` (`gen_guidance_vectors.py`) |
 | `app/gtin.py`, `app/textclean.py`, `app/additives.py`, `app/off.py` texts | `js/engine/gtin.js`, `textclean.js`, `additives.js`, `off.js` | `barcode_vectors.json` (`gen_barcode_vectors.py`) |
 

@@ -88,6 +88,7 @@ def test_every_api_route_requires_auth(anon_client):
 V03_ROUTES = {
     ("get", "/api/profile/suggested-targets"),
     ("post", "/api/labs"), ("get", "/api/labs"), ("delete", "/api/labs/{lab_id}"), ("get", "/api/labs/kidney-function"),
+    ("post", "/api/labs/import"),  # v0.3.1
     ("get", "/api/guidance/next-meal"), ("get", "/api/guidance/swaps"), ("get", "/api/guidance/hypo-options"),
     ("post", "/api/guidance/plan-day"), ("get", "/api/guidance/insights/day"), ("get", "/api/guidance/insights/period"),
     ("get", "/api/guidance/rules"), ("get", "/api/guidance/not-for-me"), ("put", "/api/guidance/not-for-me/{food_id}"),

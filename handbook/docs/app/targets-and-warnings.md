@@ -132,6 +132,11 @@ is waiting for clinical review.
 
 Optional details in **Profile → About you** and your results in **Lab results** (Profile → Blood and urine
 tests) make "Suggest targets" start from you rather than from a 70 kg example ([design note 05][NOTE05]).
+If your patient portal or a spreadsheet has your past results, **Lab results → Import from a spreadsheet**
+reads a CSV file with a date column and one column per test, for example `Date, Potassium (mmol/L),
+Creatinine (umol/L)`. The file is read on your device: you see every result, converted, and tick the ones to
+keep; only those are sent, never your name or the file's other columns. Results the app cannot read as one
+number (such as "<0.5" or ">90") are listed and left out, so you can type them by hand if you want them.
 Which detail changes which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
 Under each suggested number, **Why this number?** shows the rule, its source and grade, and an **Expert
 opinion** badge where part of the rule is the app's own choice; nothing is saved until you tap

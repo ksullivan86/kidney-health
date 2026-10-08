@@ -394,6 +394,7 @@
     // lab results and kidney function (ARCHITECTURE.md "M2 API: targets and labs")
     labs: (params = {}) => request('GET', '/api/labs?' + qs(params)),
     addLab: (b) => request('POST', '/api/labs', b),
+    importLabs: (b) => request('POST', '/api/labs/import', b),
     deleteLab: (id) => request('DELETE', `/api/labs/${id}`),
     kidneyFunction: () => request('GET', '/api/labs/kidney-function'),
     foods: (params) => request('GET', '/api/foods?' + qs(params)),

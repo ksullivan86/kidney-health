@@ -966,6 +966,31 @@ class LabCreate(BaseModel):
         return self
 
 
+MAX_LAB_IMPORT = 1000
+
+
+class LabImport(BaseModel):
+    """``POST /api/labs/import`` (v0.3.1): results read from a CSV file on the person's device
+    (``js/engine/lab_import.js``). Each item is checked like ``POST /api/labs`` (:class:`LabCreate`) by the route,
+    so one bad row does not refuse the others."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[dict[str, Any]] = Field(min_length=1, max_length=MAX_LAB_IMPORT)
+
+
+class LabImportRefused(BaseModel):
+    index: int  # position in ``results``
+    reason: str  # as POST /api/labs would word it
+
+
+class LabImportResult(BaseModel):
+    saved: int
+    duplicates: int  # skipped: the same test, date and shown value is saved already, or earlier in the request
+    refused: list[LabImportRefused]
+    alerts: list[SafetyAlert]  # as GET /api/labs: the newest potassium's safety alert while it counts
+
+
 class LabResult(BaseModel):
     id: int
     analyte: Analyte

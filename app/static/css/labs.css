@@ -52,6 +52,18 @@
 .lab-row-note { flex-basis: 100%; color: var(--text-2); font-size: 0.85rem; overflow-wrap: anywhere; }
 .lab-row-actions { display: flex; }
 .lab-row .confirm-row { flex-basis: 100%; }
+
+/* Import from a spreadsheet (v0.3.1) */
+.lab-import-preview:empty { display: none; }
+.lab-import-preview { margin-top: 12px; }
+.lab-import-settings { margin: 8px 0 4px; }
+.lab-import-list { margin: 8px 0; }
+.lab-import-list .lab-row { justify-content: flex-start; align-items: flex-start; flex-wrap: nowrap; }
+.lab-import-list input[type=checkbox] { flex: none; width: 22px; height: 22px; margin: 2px 0 0; }
+.lab-import-list label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; flex: 1; min-height: var(--tap); }
+.lab-import-problem .lab-row-main { opacity: 0.9; }
+.lab-import-why { flex-basis: 100%; color: var(--caution-text); font-size: 0.85rem; overflow-wrap: anywhere; }
+.lab-import-saved { color: var(--text-2); font-size: 0.85rem; }
 .danger-link { color: var(--over-text); }
 .badge.very-high { background: var(--over-tint); color: var(--over-text); }
 

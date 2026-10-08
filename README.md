@@ -57,7 +57,8 @@ their own key). Each person in the household has their own account and their own
   number?" with its rule and source, and nothing is saved until you save it.
 * **Lab results and kidney function.** Enter potassium, phosphate, albumin, bicarbonate, urine
   albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c in US or SI units; see eGFR
-  (CKD-EPI 2021) and the albuminuria category. A potassium of 6.0 mmol/L or more always shows an urgent
+  (CKD-EPI 2021) and the albuminuria category, or import past results from a spreadsheet (CSV, read on
+  your device; you tick the results to keep). A potassium of 6.0 mmol/L or more always shows an urgent
   banner.
 * **Meal guidance without AI**: "What fits now" for your next meal, lower-potassium, -phosphorus or
   -sodium swaps with the same carbohydrate, "Plan the rest of my day", end-of-day and weekly insights,

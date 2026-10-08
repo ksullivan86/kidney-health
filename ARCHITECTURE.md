@@ -758,6 +758,8 @@ app/static/
   js/engine/settings.js settings registry + precedence (twin of app/settings_registry.py / settings_store.py)
   js/engine/targets.js, js/engine/kidney_function.js        (M2 targets: KH.targets twin of app/targets.py + target_rules.py;
                         KH.kidney twin of app/units.py + app/kidney_function.py; kidney_function.js loads first)
+  js/engine/lab_import.js  (v0.3.1: KH.labImport, the CSV reader of Lab results → Import from a spreadsheet; browser only,
+                        no Python twin; tests/data/lab_import_vectors.json; loads after kidney_function.js)
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
@@ -1148,8 +1150,22 @@ when `targets.lab_rules_enabled` is off.
 |---|---|
 | `POST /api/labs` | `{analyte, value, unit, taken_on, note?}` → 201 `LabResult + {"alerts": [SafetyAlert]}`; 400 for an unknown analyte or unit, a value outside the plausible range (message names the entered unit and the converted value), a negative or non-finite value, a date after tomorrow or before 1900, a note over 500 characters, or an unknown field |
 | `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult], "alerts": [SafetyAlert]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200. `alerts`: the newest potassium's safety alert while fresh under `targets.lab_fresh_days.potassium` (whatever the filters), the window the suggestions use |
+| `POST /api/labs/import` | v0.3.1. `{"results": [{analyte, value, unit, taken_on, note?}, …]}` (1–1,000 items) → 200 `{"saved": int, "duplicates": int, "refused": [{"index", "reason"}], "alerts": [SafetyAlert]}`. Each item is checked like `POST /api/labs`: a refused one is listed with the same message (`flatten_validation_errors`, as the 400 handler words it) and the others are saved in one transaction. An item that repeats a saved result of the same person (same test, date and value as shown) or an earlier item is skipped and counted in `duplicates`. `alerts` is what `GET /api/labs` returns. 400 only for the request's shape (no `results`, an empty or over-long list, an item that is not an object, an unknown field) |
 | `DELETE /api/labs/{id}` | → 204; 404 when it is not yours or does not exist |
 | `GET /api/labs/kidney-function` | → `KidneyFunction` (below); never changes the saved stage |
+
+**Import from a spreadsheet (v0.3.1).** The CSV file is read in the browser (`js/engine/lab_import.js`,
+`KH.labImport.analyse`): a date column (Date, Taken on, Collected …) and every column whose header names a
+test (`app/units.py` keys and labels, plus aliases such as K, CO2, ACR, HbA1c), the unit from the header
+("Potassium (mmol/L)", "Creatinine [umol/L]") or chosen per column; a test whose units all convert the same
+(potassium, bicarbonate) or have one unit (cystatin C, eGFR) needs none. Values such as "<0.5", ">90" or
+"1,200" (1200 or 1.2?) are listed as not imported with the reason; dates like 03/04/2026 follow the order the
+person picks unless a day above 12 settles it; other columns (names, record numbers) are never sent. The
+person ticks the results to keep and only those go to `POST /api/labs/import` (`KH.labImport.requestBody`:
+test, value, unit and date). The reader has no Python twin: `tests/data/lab_import_vectors.json`
+(`tests/js/gen_lab_import_vectors.mjs`, reviewed by hand) pins it in `node tests/js/run_vectors.mjs`, and
+`tests/test_lab_import.py` checks every converted value against `app/units.py`. The demo twin is in
+`js/mock/labs.js`.
 
 ```json
 LabResult = {"id": 7, "analyte": "phosphate", "label": "Phosphate", "value": 6.0, "unit": "mg/dL",

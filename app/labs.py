@@ -12,6 +12,12 @@ a result that is not yours is a 404, like one that does not exist):
   order). ``alerts`` holds the safety alert of the person's newest potassium while it is fresh under
   ``targets.lab_fresh_days.potassium`` (whatever the filters), the window ``GET /api/profile/suggested-targets``
   uses, so the Labs and Profile banners and the suggestion agree.
+* ``POST /api/labs/import`` ``{results: [{analyte, value, unit, taken_on, note?}, ...]}`` (1–1,000; v0.3.1) →
+  ``{saved, duplicates, refused: [{index, reason}], alerts}``. The browser reads the CSV file
+  (``js/engine/lab_import.js``) and sends only the results the person kept; each one is checked like
+  ``POST /api/labs`` (a refused one is listed with the same message and the others are saved), and one that
+  repeats a saved result of the same person (same test, date and shown value) or an earlier one in the
+  request is skipped. ``alerts`` is the list ``GET /api/labs`` returns.
 * ``DELETE /api/labs/{id}`` → 204.
 * ``GET /api/labs/kidney-function`` → eGFR and albuminuria from the person's results
   (:func:`app.kidney_function.assess`); never changes the saved stage.
@@ -26,13 +32,15 @@ from datetime import date
 from typing import Any, Iterable, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from pydantic import ValidationError
 
 from . import units
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .kidney_function import KIDNEY_ANALYTES, assess
-from .models import MAX_SQLITE_INT, Analyte, KidneyFunction, LabCreate, LabCreated, LabList
+from .models import MAX_SQLITE_INT, Analyte, KidneyFunction, LabCreate, LabCreated, LabImport, LabImportResult, LabList
 from . import profile as profile_module
+from .security import flatten_validation_errors
 from .targets import Lab, fresh_labs, mode_of, potassium_alert
 
 router = APIRouter(prefix="/api/labs", tags=["labs"], dependencies=[Depends(current_user)])
@@ -125,6 +133,46 @@ def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = De
             alerts.append(alert)
     out["alerts"] = alerts
     return out
+
+
+def _same_result_key(analyte: str, taken_on: str, value: float) -> tuple[str, str, str]:
+    """What makes two results the same for an import: the test, the date and the value as shown."""
+    return analyte, taken_on, units.format_value(analyte, value)
+
+
+@router.post("/import", response_model=LabImportResult)
+def import_labs(body: LabImport, user: CurrentUser, request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    refused: list[dict[str, Any]] = []
+    checked: list[tuple[LabCreate, dict[str, Any]]] = []
+    for index, item in enumerate(body.results):
+        try:
+            lab = LabCreate.model_validate(item)
+        except ValidationError as exc:
+            refused.append({"index": index, "reason": flatten_validation_errors(exc.errors())[0]})
+            continue
+        checked.append((lab, units.convert(lab.analyte, lab.value, lab.unit)))
+    seen = {
+        _same_result_key(r["analyte"], r["taken_on"], r["value"])
+        for r in _rows(conn, "SELECT analyte, taken_on, value FROM lab_results WHERE user_id = ?", (user.id,))
+        if r["analyte"] in units.ANALYTES  # a row written by a later version is kept, never matched
+    }
+    saved = duplicates = 0
+    now = utcnow()
+    for lab, result in checked:
+        key = _same_result_key(result["analyte"], lab.taken_on, result["value"])
+        if key in seen:
+            duplicates += 1
+            continue
+        seen.add(key)
+        conn.execute(
+            """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user.id, result["analyte"], result["value"], result["entered_value"], result["entered_unit"], lab.taken_on,
+             lab.note, now),
+        )
+        saved += 1
+    conn.commit()
+    return {"saved": saved, "duplicates": duplicates, "refused": refused, "alerts": current_alerts(conn, user.id, request)}
 
 
 def current_alerts(conn: sqlite3.Connection, user_id: int, request: Request) -> list[dict[str, Any]]:

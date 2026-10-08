@@ -810,6 +810,17 @@
       </form>
     </section>
 
+    <section class="card" id="lab-import" aria-labelledby="lab-import-h">
+      <h2 class="card-title" id="lab-import-h">Import from a spreadsheet</h2>
+      <p class="muted small">A CSV file with a date column and one column per test, for example <code>Date, Potassium (mmol/L), Creatinine (umol/L)</code>. Patient portals and spreadsheet apps can usually save one. The file is read on this device: you check every result before saving, and only the results you keep are sent.</p>
+      <div class="field">
+        <label for="lab-import-file">CSV file</label>
+        <input id="lab-import-file" class="ai-file" type="file" accept=".csv,text/csv,text/plain" aria-describedby="lab-import-hint">
+        <span class="hint" id="lab-import-hint">Up to 1 MB and 1,000 rows.</span>
+      </div>
+      <div id="lab-import-preview" class="lab-import-preview"></div>
+    </section>
+
     <section id="labs-review" class="notes labs-review" tabindex="-1" aria-labelledby="labs-review-h" hidden>
       <h2 class="notes-title" id="labs-review-h">What this result changed</h2>
       <div id="labs-review-body"></div>
@@ -1602,6 +1613,7 @@
      out of the preview build), boot. -->
 <script src="js/engine/rules.js"></script>
 <script src="js/engine/kidney_function.js"></script>
+<script src="js/engine/lab_import.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
