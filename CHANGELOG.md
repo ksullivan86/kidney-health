@@ -34,6 +34,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   About this server and AI providers, with chips to jump between them. Settings now holds only personal
   settings. Members never see the button or the page, and the server still refuses every admin request
   from a member.
+* **Settings → AI ideas explains the setup first.** When AI is on, the page opens with *How AI help is set up:
+  three questions*: which model answers, what it may do, and whose key pays and who can read the request,
+  with a link to the handbook's *Optional AI* page.
 * **No diabetes, no meal carbohydrate goals.** If your profile says *Diabetes: None*, meals have no
   carbohydrate goal: Today no longer shows a carbohydrate line in each meal or warns that a meal is over its
   carbohydrate goal, Settings → Meal guidance explains instead of showing the carbohydrate tolerance and

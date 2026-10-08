@@ -19,7 +19,8 @@ API is in [`ARCHITECTURE.md`](../ARCHITECTURE.md), "M2 API: AI and photos". The 
 
 ## The setup in three questions
 
-Every AI setup answers three questions. The rest of this page is the detail behind each answer.
+Every AI setup answers three questions. The rest of this page is the detail behind each answer. Settings → AI
+ideas asks the same three in a person's words at the top ("How AI help is set up", shown when AI is on).
 
 | Question | Who decides, and where | The choices |
 |---|---|---|

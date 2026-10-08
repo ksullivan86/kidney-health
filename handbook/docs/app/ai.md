@@ -23,7 +23,7 @@ as "2 eggs, toast with butter, tea" into food searches, or read the numbers from
 
 ## How the setup fits together
 
-Three choices make up every AI setup:
+Three choices make up every AI setup (Settings → AI ideas starts with the same three questions):
 
 1. **Which AI answers.** Your admin chooses it: a model running at home, a company's AI over the
    internet (such as OpenAI or OpenRouter), or a home "Hermes" agent. Your admin may also let you add
