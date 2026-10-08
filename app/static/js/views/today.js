@@ -67,6 +67,12 @@
       alertsEl.append(h('p', { class: 'offline-note', role: 'note' }, at ? `Offline: this is the copy this device saved ${at}. ` : 'Offline: this device has no copy of this day. ',
         'Food you add now waits here and syncs when your server can be reached.'));
     }
+    const p = state.profile;
+    if (p && (p.ckd_stage_chosen === false || p.diabetes_chosen === false)) {
+      alertsEl.append(h('p', { class: 'offline-note profile-choose-note', role: 'note' },
+        'Your CKD stage and diabetes type are not chosen yet, so the app uses stage 3b and type 1 diabetes for now. ',
+        h('button', { class: 'link-btn', type: 'button', onclick: () => router.show('profile') }, 'Choose them in Profile')));
+    }
     for (const a of day.alerts || []) {
       const lvl = a.level === 'over' ? 'over' : 'caution';
       const more = KH.learn ? KH.learn.forWarning(a) : null; // the nutrient's handbook page

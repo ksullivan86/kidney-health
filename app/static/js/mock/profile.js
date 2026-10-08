@@ -86,7 +86,7 @@
       for (const k of V03_FIELDS) v03[k] = p[k] === undefined ? V03_DEFAULTS[k] : p[k];
       return { id: 1, name: p.name, weight_kg: p.weight_kg, height_cm: p.height_cm, ckd_stage: p.ckd_stage, dialysis: p.dialysis, diabetes: p.diabetes,
         warn_fraction: p.warn_fraction, dialysis_days: [...p.dialysis_days], week_start: p.week_start === 'sunday' ? 'sunday' : 'monday', targets,
-        ...v03, updated_at: p.updated_at };
+        ...v03, ckd_stage_chosen: p.ckd_stage_chosen !== false, diabetes_chosen: p.diabetes_chosen !== false, updated_at: p.updated_at };
     },
     _updateProfile(body) {
       // ProfileUpdate._empty_is_null: a blank string clears a v0.3 field (before any other check).
@@ -122,6 +122,8 @@
       for (const col of ['weight_kg', 'height_cm', 'birth_month', 'activity', 'transplant_date', 'weight_6_months_ago_kg', 'urine_output_ml', 'pd_uf_ml',
         'pd_dialysate_kcal']) if (col in data) p[col] = data[col];
       for (const col of ['name', 'ckd_stage', 'dialysis', 'diabetes', 'warn_fraction', 'week_start']) if (col in data && data[col] != null) p[col] = data[col];
+      // Schema step 8: sending a stage or a diabetes type is the person's choice; null keeps "Not chosen yet".
+      for (const col of ['ckd_stage', 'diabetes']) if (data[col] != null) p[`${col}_chosen`] = true;
       // profile._RESET_TO_DEFAULT: null puts sex and the yes/no fields back to their default.
       for (const col of ['sex', ...BOOL_FIELDS]) if (col in data) p[col] = data[col] == null ? V03_DEFAULTS[col] : data[col];
       if (data.targets != null) p.targets = { ...p.targets, ...data.targets };

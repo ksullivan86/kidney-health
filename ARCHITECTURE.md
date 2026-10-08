@@ -313,6 +313,7 @@ reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api
 Profile = {
   "id": 1, "name": "", "weight_kg": 70, "height_cm": null,
   "ckd_stage": "3b", "dialysis": "none", "diabetes": "type1",
+  "ckd_stage_chosen": true, "diabetes_chosen": true,   // v0.3.1, schema step 8: false = "Not chosen yet"
   "warn_fraction": 0.8,
   "dialysis_days": [0, 2, 4],          // v0.2, weekdays 0=Mon..6=Sun; [] when not on hemodialysis
   "week_start": "monday",              // v0.2
@@ -689,6 +690,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 5 | `m005_guidance_log.py` | guidance (M2) | note 06 §4.11 (`log_entries.purpose`, `meal_templates.meal_hint`, food preferences) **and** note 02 R5 `log_entries.client_id` + unique index (offline outbox) |
 | 6 | `m006_ai.py` | ai (M2) | note 04 (AI provider settings, usage/quota and audit tables with `ON DELETE CASCADE`) |
 | 7 | `m007_barcode.py` | barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
+| 8 | `m008_profile_chosen.py` | v0.3.1 | "Not chosen yet": `user_profiles.ckd_stage_set_at`, `diabetes_set_at` (`docs/dev/plans/v0.3.1.md` item 1) |
 
 ## Backend file ownership
 
@@ -1491,6 +1493,17 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   edge) and Plan's day chips the same; the entry sheet's impact says "would reach at least …". The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
+
+### Schema step 8 (`m008_profile_chosen.py`, v0.3.1)
+
+`user_profiles.ckd_stage_set_at` and `diabetes_set_at` (TEXT, UTC; NULL = "not chosen yet"). A
+`PUT /api/profile` that sends a non-null `ckd_stage` (or `diabetes`) records the time; null or an
+omitted field leaves the choice open. `Profile` gains `ckd_stage_chosen` and `diabetes_chosen`
+(booleans). A new account's row starts unchosen; rows that existed before the step are marked chosen
+at their `updated_at`. While unchosen, the stored defaults (stage 3b, type 1 diabetes) keep driving
+targets, guidance and the Treating a low card; the Profile form shows "Not chosen yet", Today shows a
+one-line prompt, and the form refuses to fetch suggested targets until both are chosen. The API's
+`GET /api/profile/suggested-targets` itself is unchanged.
 
 ### Schema step 7 (`m007_barcode.py`)
 
