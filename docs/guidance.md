@@ -232,7 +232,8 @@ know."), additive foods, change against the previous period, and "stayed within 
 | `guidance` | user | object below | The person's own choices |
 
 The `guidance` object: `enabled` (true), `carb_tolerance_g` (10, 5–20; since v0.3.1 Today's per-meal
-carbohydrate alert uses it too, whether guidance is on or off: ARCHITECTURE.md "Tolerances (v0.3.1)"), `hypo_dose_g` (15, 5–30),
+carbohydrate alert uses it too, whether guidance is on or off: ARCHITECTURE.md "Tolerances (v0.3.1)"), `hypo_dose_g` (15, 5–30;
+with a kidney-only profile, diabetes "None", the form explains these two instead of showing them),
 `exclude_categories` (food categories never suggested, ≤ 50), `show_plan_builder` (true), `show_insights`
 (true), `ai_enrich` (false; read by the optional AI layer, note 04). "Not for me" foods are separate rows
 (`food_preferences`, ≤ 500 per person) so a deleted food disappears from the list by itself; they are

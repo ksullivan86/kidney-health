@@ -318,6 +318,12 @@ def carb_tolerance_for(conn: sqlite3.Connection, request: Request, user_id: int)
     return carb_tolerance(value)
 
 
+def has_meal_carb_goals(profile: dict[str, Any]) -> bool:
+    """Whether meals have carbohydrate goals: with diabetes, or before a diabetes type is chosen (the app then uses
+    type 1); not for a kidney-only profile (``diabetes`` "none", v0.3.1)."""
+    return profile.get("diabetes", "type1") != "none"
+
+
 def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance_g: Any = 0) -> dict[str, Any]:
     """Totals, status and alerts for one day's rows: eaten, planned and projected (eaten + planned).
 
@@ -333,7 +339,9 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance
 
     v0.3.1: a meal's carbohydrate alert fires only more than ``carb_tolerance_g`` above its goal and leaves out
     entries that treated a low (they still count in every total); an "about" target is judged with the profile's
-    ``about_tolerance_pct``. ``carb_tolerance_g`` is returned so the UI draws the meal lines the same way.
+    ``about_tolerance_pct``. ``carb_tolerance_g`` is returned so the UI draws the meal lines the same way. Without
+    diabetes (``diabetes`` "none", a kidney-only profile) a meal has no carbohydrate goal, so there is no per-meal
+    carbohydrate alert at all; the day's carbohydrate is judged like any nutrient.
     """
     eaten = empty_totals()
     planned = empty_totals()
@@ -372,17 +380,22 @@ def day_figures(rows: list[sqlite3.Row], profile: dict[str, Any], carb_tolerance
     warn_fraction = profile["warn_fraction"]
     about = profile.get("about_tolerance_pct", 0)
     tolerance = carb_tolerance(carb_tolerance_g)
+    meal_carbs = has_meal_carb_goals(profile)
     status = mark_unknown(daily_status(eaten, targets, warn_fraction, about), unknown)
     projected_status = mark_unknown(daily_status(projected, targets, warn_fraction, about), projected_unknown)
-    alerts = build_alerts(status) + meal_carb_alerts(meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
-                                                     tolerance_g=tolerance, hypo_carbs=hypo_meals)
+    alerts = build_alerts(status)
+    if meal_carbs:
+        alerts += meal_carb_alerts(meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
+                                   tolerance_g=tolerance, hypo_carbs=hypo_meals)
     projected_alerts: list[dict[str, Any]] = []
     if counts["planned"]:
         projected_meals = {meal: add_totals(dict(meals[meal]), planned_meals.get(meal, {})) for meal in meals}
-        projected_alerts = build_projected_alerts(projected_status) + projected_meal_carb_alerts(
-            projected_meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
-            tolerance_g=tolerance, hypo_carbs=projected_hypo_meals,
-        )
+        projected_alerts = build_projected_alerts(projected_status)
+        if meal_carbs:
+            projected_alerts += projected_meal_carb_alerts(
+                projected_meals, targets.get("carbs_per_meal_g"), targets.get("carbs_per_snack_g"),
+                tolerance_g=tolerance, hypo_carbs=projected_hypo_meals,
+            )
     return {
         "totals": round_nutrients(eaten),
         "planned_totals": round_nutrients(planned),

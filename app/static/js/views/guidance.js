@@ -1339,14 +1339,21 @@
       return h('div', { class: 'field' }, h('label', { for: id }, label), h('div', { class: 'inline-row' }, input, saveBtn),
         h('span', { class: 'hint', id: `${id}-hint` }, hint));
     };
+    // A kidney-only profile (diabetes "None", v0.3.1): no meal carbohydrate goals and no low-treatment card, so the
+    // two diabetes settings are explained instead of shown (they keep their values for a later change of profile).
+    const kidneyOnly = !!(state.profile && state.profile.diabetes === 'none');
     body.append(
       h('p', { class: 'hint' }, 'Suggestions use only your own food list and the targets in your profile. They never suggest insulin or medicine doses.'),
-      check('enabled', 'Show meal guidance', '“What fits now”, swap ideas, the plan builder and insights. Treating a low is always available.'),
+      check('enabled', 'Show meal guidance', kidneyOnly
+        ? '“What fits now”, swap ideas, the plan builder and insights.'
+        : '“What fits now”, swap ideas, the plan builder and insights. Treating a low is always available.'),
       check('show_plan_builder', 'Show “Plan the rest of my day”'),
       check('show_insights', 'Show insights on Today and Trends'),
       aiEnrichRow(check),
-      number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure. Today\'s per-meal carbohydrate alert uses it too.', 5, 20),
-      number('hypo_dose_g', 'Carbs I take to treat a low (g)', 'The amount your diabetes team gave you, 5 to 30 g. Low-treatment options are sized to it.', 5, 30));
+      ...(kidneyOnly
+        ? [h('p', { class: 'hint', id: 'set-g-kidney-only' }, 'Your profile says you do not have diabetes, so meals have no carbohydrate goal and there is no low-treatment card. The carbohydrate tolerance and the carbs you take for a low appear here if you choose a diabetes type in Profile.')]
+        : [number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure. Today\'s per-meal carbohydrate alert uses it too.', 5, 20),
+          number('hypo_dose_g', 'Carbs I take to treat a low (g)', 'The amount your diabetes team gave you, 5 to 30 g. Low-treatment options are sized to it.', 5, 30)]));
     // Never suggest (categories)
     const catList = cats.status === 'fulfilled' ? cats.value.categories || [] : [];
     if (catList.length) {

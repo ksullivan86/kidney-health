@@ -34,6 +34,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   About this server and AI providers, with chips to jump between them. Settings now holds only personal
   settings. Members never see the button or the page, and the server still refuses every admin request
   from a member.
+* **No diabetes, no meal carbohydrate goals.** If your profile says *Diabetes: None*, meals have no
+  carbohydrate goal: Today no longer shows a carbohydrate line in each meal or warns that a meal is over its
+  carbohydrate goal, Settings → Meal guidance explains instead of showing the carbohydrate tolerance and
+  the carbs taken for a low, and Profile hides the per-meal and per-snack carbohydrate targets (their values
+  are kept). The day's carbohydrate still counts like any nutrient. Until you choose a
+  diabetes type the app keeps using type 1, as before.
 * **Lab results from a spreadsheet.** Lab results → *Import from a spreadsheet* reads a CSV file with a date
   column and one column per test ("Date, Potassium (mmol/L), Creatinine (umol/L)", with other names such as K,
   CO2 or HbA1c understood). The file is read on your device: every result is shown converted before

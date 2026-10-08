@@ -133,6 +133,9 @@
     // v0.3.1: a meal is "over" only more than the person's tolerance above its goal (the server's alerts use the same
     // number), and carbohydrate eaten to treat a low is left out of the meal's goal: treating a low is never warned against.
     const carbTol = Number(day.carb_tolerance_g || 0);
+    // A kidney-only profile (diabetes "None", v0.3.1) has no per-meal carbohydrate goal: the meal headers show no
+    // carbohydrate line and the server sends no per-meal alert; the day's carbohydrate stays in the bars above.
+    const mealCarbs = !(state.profile && state.profile.diabetes === 'none');
     const hypoCarbsOf = (list) => list.filter((e) => e.purpose === 'hypo').reduce((a, e) => a + ((e.nutrients && e.nutrients.carbs_g) || 0), 0);
     for (const meal of MEALS) {
       // The snack has its own carbohydrate goal when the person set one (nutrients.meal_carb_alerts does the same).
@@ -161,8 +164,8 @@
         `Carbs: ${atLeast(fmtNum(carbs, 'carbs_g'), carbsUnknown)} g`,
         perMeal != null ? h('span', { class: 'of' }, ` of ${perMeal} g`) : null,
         carbsUnknown ? h('span', { class: 'not-listed' }, ` ${notListed(carbsUnknown)}`) : null);
-      const headRight = h('div', { class: 'meal-head-right' }, carbsEl);
-      if (plannedEntries.length) {
+      const headRight = h('div', { class: 'meal-head-right' }, mealCarbs ? carbsEl : null);
+      if (mealCarbs && plannedEntries.length) {
         const projOver = perMeal != null && counted + plannedCarbs - hypoCarbsOf(plannedEntries) > perMeal + carbTol;
         headRight.append(h('span', { class: `meal-planned-carbs${projOver ? ' over' : ''}`, 'aria-label': `Planned: ${fmtNum(plannedCarbs, 'carbs_g')} more grams of carbohydrate` },
           `Planned: +${fmtNum(plannedCarbs, 'carbs_g')} g carbs`, projOver ? ` (${fmtNum(carbs + plannedCarbs, 'carbs_g')} g total)` : ''));

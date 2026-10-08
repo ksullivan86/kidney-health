@@ -29,19 +29,25 @@ tests).
 
 ## In progress
 
-* v0.3.1 items 3, 4 and 5 merged: PR #15 (12:50 UTC), #16 (13:03), #17 (Pages demo, 13:19).
-* v0.3.1 item 6 "Lab CSV import": PR from the branch (item 6 cherry-picked from worktree `scratchpad/kh6`).
-  The browser reads the file (`js/engine/lab_import.js`, `KH.labImport.analyse`) and only the ticked results
-  go to `POST /api/labs/import` (checked like `POST /api/labs`, repeats skipped, refused listed; errors worded by
-  `security.flatten_validation_errors`). Demo twin in `js/mock/labs.js`; Labs card "Import from a spreadsheet";
-  vectors `tests/data/lab_import_vectors.json` (`tests/js/gen_lab_import_vectors.mjs`, reviewed by hand) in the
-  node runner; `tests/test_lab_import.py`. Verified: tests, node vectors, parity harness 6558/6558 (import cases
-  added), Chromium walk on a real server and in demo mode at 375/1280 (preview, unit choice, refused rows, save,
-  only test/value/unit/date sent, re-import ticks nothing, no console errors).
+* v0.3.1 batch merged: #13 "Not chosen yet", #14 tolerances, #15 admin page, #16 running high, #17 Pages demo,
+  #18 lab CSV import (13:38 UTC). All six items of `docs/dev/plans/v0.3.1.md` are on main; the owner publishes
+  the v0.3.1 release.
+* Kidney-only profile, part 1 (ROADMAP item): PR from the branch (built in worktree `scratchpad/kh7`).
+  `log.has_meal_carb_goals`: no per-meal carbohydrate alerts with diabetes "none" (twin in `js/mock/log.js`),
+  Today hides the meal carbohydrate line and planned-carbs badge, Settings → Meal guidance explains instead of
+  showing the carb tolerance and the low dose. Verified: `tests/test_kidney_only.py` (rule, API, twin), Chromium
+  walk type1 vs none at 375/1280, full suite and parity harness in the worktree. Also in this PR: Profile hides the
+  per-meal and per-snack carbohydrate targets for "None" (values kept; the walk checks hide/show). Left on the
+  ROADMAP: AI prompts worded from the profile (needs a PROMPT_VERSION bump and an owner-run golden set) and the
+  Settings/handbook framing.
+* "Explain the AI setup in plain words", last part: Settings → AI ideas intro (worktree `scratchpad/kh8`, branch
+  `item8-wip`, commit "Settings -> AI ideas: How AI help is set up"); PR after the kidney-only one merges.
+  Verified: `tests/test_ai_setup_intro.py`, `tests/test_learn_links.py` (new `APP_LINKS.pages.ai`), Chromium walk
+  with AI on/off at 375/1280.
 
 ## Next (in order)
 
-1. After item 6: the kidney-only profile (ROADMAP), then the assistant back end.
+1. Kidney-only part 2 (owner-run prompt change), then the assistant back end (ROADMAP).
 
 ## Commands that reproduce the checks
 

@@ -70,8 +70,13 @@
     const transplant = !onDialysis && !!$('#pf-transplant-date').value;
     $('#pf-stage-label').textContent = transplant ? 'Transplant kidney stage' : 'CKD stage';
     $('#pf-stage-hint').textContent = transplant ? "The stage of your transplant's function, as your transplant team gives it." : 'The stage your nephrologist gave you.';
+    // A kidney-only profile (diabetes "None", v0.3.1): meals have no carbohydrate goal, so the per-meal and per-snack
+    // carbohydrate targets are hidden; their values stay and are saved unchanged.
+    const kidneyOnly = $('#pf-diabetes').value === 'none';
+    for (const id of ['#tg-carbs_per_meal_g', '#tg-carbs_per_snack_g']) $(id).closest('.field').hidden = kidneyOnly;
   }
   $('#pf-dialysis').addEventListener('change', syncConditionalFields);
+  $('#pf-diabetes').addEventListener('change', syncConditionalFields);
   $('#pf-transplant-date').addEventListener('input', syncConditionalFields);
   function selectedDialysisDays() { return $$('#pf-dialysis-days input:checked').map((c) => Number(c.dataset.weekday)).sort(); }
   function setMaxDates() {
@@ -473,10 +478,12 @@
 
     // What saving would change (with the deciding rule's first sentence as the reason).
     const anySaved = Object.values(savedTargets).some((v) => v != null);
+    // The suggestion is worked out from the saved profile: without diabetes it names no carbohydrate per meal.
+    const mealCarbs = !(state.profile && state.profile.diabetes === 'none');
     if (anySaved) {
       const changes = [];
       for (const [key, label, prefixes] of TARGET_ROWS) {
-        const keys = key === 'carbs_g' ? ['carbs_g', 'carbs_per_meal_g'] : [key];
+        const keys = key === 'carbs_g' && mealCarbs ? ['carbs_g', 'carbs_per_meal_g'] : [key];
         for (const k of keys) {
           if (!(k in t) || sameTarget(savedTargets[k], t[k])) continue;
           const decisive = prefixes.flatMap((p) => groups[p] || []).filter((x) => x.note).pop();
@@ -498,7 +505,7 @@
     for (const [key, label, prefixes] of TARGET_ROWS) {
       const its = prefixes.flatMap((p) => groups[p] || []);
       if (!(key in t) && !its.length) continue;
-      const value = key === 'carbs_g' && t.carbs_per_meal_g != null ? `${targetText(key, t[key])}, about ${t.carbs_per_meal_g} g per meal` : targetText(key, t[key]);
+      const value = key === 'carbs_g' && mealCarbs && t.carbs_per_meal_g != null ? `${targetText(key, t[key])}, about ${t.carbs_per_meal_g} g per meal` : targetText(key, t[key]);
       list.append(h('div', { class: 'why-item' },
         h('div', { class: 'why-head' }, h('b', {}, label), h('span', { class: 'why-value' }, value)),
         its.length ? h('details', { class: 'why' }, h('summary', {}, 'Why this number?', h('span', { class: 'sr-only' }, ` (${label.toLowerCase()})`)), ...whyBlock(its)) : null));
