@@ -204,7 +204,7 @@ def test_handbook_links_are_checked_weekly_and_reported_in_one_issue():
 def test_release_moves_tags_only_after_scan_and_gates_public_only_steps():
     rel = read(".github/workflows/release.yml")
     jobs = job_blocks(rel)
-    assert list(jobs) == ["build", "scan", "publish"]
+    assert list(jobs) == ["build", "scan", "publish", "notes"]
     assert "push-by-digest=true" in jobs["build"] and "provenance: mode=max" in jobs["build"]
     assert "sbom: true" in jobs["build"] and "linux/amd64,linux/arm64" in jobs["build"]
     # Tags (ARCHITECTURE.md v0.3 decision 7): main -> :edge + :sha-<short>; v* -> :X.Y.Z, :X.Y, :latest.
@@ -231,6 +231,13 @@ def test_release_moves_tags_only_after_scan_and_gates_public_only_steps():
             assert "if: env.PUBLIC == 'true'" in step, f"{marker} is not gated on a public repository"
     assert publish.count("create-storage-record: false") == 2
     assert publish.rindex("imagetools create") > publish.rindex("cosign sign")
+    # The digest reaches the GitHub release's notes from a job that holds the only `contents: write`
+    # grant, checks nothing out, and runs only on v* tags (homelab review item 4).
+    notes = jobs["notes"]
+    assert "needs: [build, publish]" in notes and "if: startsWith(github.ref, 'refs/tags/v')" in notes
+    assert re.findall(r"^      (\S+): (read|write)", notes, re.M) == [("contents", "write")]
+    assert "actions/checkout@" not in notes and "gh release edit" in notes and "<!-- image-digest -->" in notes
+    assert not re.search(r"^\s+contents: write", jobs["build"] + jobs["scan"] + publish, re.M)
 
 
 def test_codeql_runs_only_for_public_repositories():

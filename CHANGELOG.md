@@ -15,6 +15,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   database. Plain `backup FILE` and `backup -` are unchanged.
 * Pulling the image without logging in needs the GHCR package to be public; a repository's visibility
   does not carry over to its packages. Release notes now say so.
+* Each GitHub release's notes gain an **Image** section with the multi-arch index digest to pin
+  (`:X.Y.Z@sha256:…`), added by a new `release notes (image digest)` job of the release workflow when
+  the release exists by then (publishing the release in the GitHub UI creates the tag, so it does);
+  otherwise the job prints the block to paste. The deployment guide and the Quadlet unit show the
+  digest form first, for hosts managed from git with Renovate or Dependabot.
 * Docs: Litestream (WAL streaming) works; the two commands that force a full checkpoint and a new
   generation are named (`docs/deployment.md`). A `TRUSTED_PROXIES` row for a proxy container on a
   shared rootless Podman network, and what trusting the whole subnet risks (`docs/security.md`). With

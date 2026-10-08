@@ -27,9 +27,12 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-# Track the minor release: patch releases arrive through AutoUpdate, breaking changes never do.
-# Do not track :latest (or :edge, the main branch) on a machine you care about. To pin a verified
-# digest instead: Image=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:... (scripts/verify-image.sh)
+# Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
+# GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
+# Renovate or Dependabot bump tag and digest together:
+#   Image=ghcr.io/ksullivan86/kidney-health:0.3.0@sha256:<index digest>
+# Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
+# never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
 Image=ghcr.io/ksullivan86/kidney-health:0.3
 ContainerName=kidney-health
 # `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily

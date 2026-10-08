@@ -64,22 +64,22 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
 4. **Watch `Release image`** in the Actions tab (build → two Grype gates → sign, attest, tag). If the
    `release` environment has required reviewers, approve the publish job there.
 5. **Verify** the published image (next sections) before announcing it.
-6. **Publish the GitHub release** from the tag with the changelog section as its notes:
+6. **Publish the GitHub release** with the changelog section as its notes. The `release notes (image
+   digest)` job of `release.yml` appends an **Image** section (the multi-arch index digest to pin, the
+   tags that point at it, and the note that anonymous pulls need a public GHCR package) when the
+   release exists by the time the job runs, and it never adds it twice:
 
-   ```bash
-   awk '/^## X\.Y\.Z /{p=1; next} /^## /{p=0} p' CHANGELOG.md > /tmp/notes.md
-   cat >> /tmp/notes.md <<'EOF'
+   * **Release first, tag by GitHub** (the UI's "Publish release" with a new tag, or the command below):
+     the release exists before the workflow starts, so the Image section is appended automatically.
 
-   ### Pulling the image
+     ```bash
+     awk '/^## X\.Y\.Z /{p=1; next} /^## /{p=0} p' CHANGELOG.md > /tmp/notes.md
+     gh release create vX.Y.Z --target main --title "X.Y.Z" --notes-file /tmp/notes.md
+     ```
 
-   `ghcr.io/ksullivan86/kidney-health:X.Y.Z` (also `:X.Y` and `:latest`). Anonymous pulls work only while
-   the GHCR package is public: the repository's visibility does not carry over to the package (owner:
-   your profile → Packages → `kidney-health` → Package settings → Change visibility).
-   EOF
-   gh release create vX.Y.Z --verify-tag --title "X.Y.Z" --notes-file /tmp/notes.md
-   ```
-
-   In the web UI, paste the same changelog section and the "Pulling the image" paragraph.
+   * **Signed tag first** (step 3's `git tag -s`): create the release after the workflow finishes and
+     paste the Image block the `notes` job printed in its log (Actions → the run → "release notes
+     (image digest)"); the build job's summary shows the same digest.
 
 7. **Afterwards**: open `## Unreleased` in `CHANGELOG.md`; watch the next weekly image scan.
 

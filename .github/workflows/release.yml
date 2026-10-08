@@ -233,3 +233,43 @@ jobs:
             echo
             echo "Signed and attested: ${PUBLIC} (public repository only)."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Release notes carry the multi-arch index digest, so a GitOps host can pin `:X.Y.Z@sha256:...` and
+  # let Renovate or Dependabot bump tag and digest together. A separate job: it is the only one with
+  # `contents: write`, it checks nothing out and runs nothing but `gh release edit`. When the tag was
+  # created by publishing the release in the GitHub UI (or `gh release create --target`), the release
+  # exists by now and the block is appended; when a signed tag was pushed first, the release does
+  # not exist yet, so the job prints the block to paste (docs/maintainers.md).
+  notes:
+    name: release notes (image digest)
+    needs: [build, publish]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write        # edit this tag's GitHub release notes; nothing is checked out or pushed
+    env:
+      DIGEST: ${{ needs.build.outputs.digest }}
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Append the index digest to the release notes
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          ref="${IMAGE}:${version}@${DIGEST}"
+          block="$(printf '\n<!-- image-digest -->\n### Image\n\n`%s`\n\nThe multi-arch index digest (linux/amd64 + linux/arm64) this release run scanned, signed and attested; the tags `%s`, `%s` and `latest` point at it. Pin it rather than a tag: Quadlet `Image=%s`; Kubernetes `kustomize edit set image %s=%s`; Renovate and Dependabot then bump tag and digest together. Check it with `scripts/verify-image.sh %s`. Pulling without logging in needs the GHCR package to be public (a repository'"'"'s visibility does not carry over to its packages).\n' \
+            "$ref" "$version" "${version%.*}" "$ref" "$IMAGE" "$ref" "$version")"
+          if ! body="$(gh release view "$TAG" --json body -q .body 2>/dev/null)"; then
+            echo "::notice title=No GitHub release for ${TAG} yet::When you publish it, paste the Image block from this job's log into its notes."
+            printf '%s\n' "$block"
+            exit 0
+          fi
+          if printf '%s' "$body" | grep -q '<!-- image-digest -->'; then
+            echo "the release notes already carry the digest"
+            exit 0
+          fi
+          printf '%s\n%s\n' "$body" "$block" > "$RUNNER_TEMP/notes.md"
+          gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          echo "appended the digest to the ${TAG} release notes"
