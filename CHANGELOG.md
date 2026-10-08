@@ -7,6 +7,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people using the app
+
+* **"Not chosen yet" for the kidney stage and the diabetes type.** A new account's Profile no longer
+  shows stage 3b and type 1 diabetes as if the person had picked them: both read "Not chosen yet" until
+  they choose, and Today shows a one-line prompt meanwhile. The app keeps using stage 3b and type 1
+  diabetes for its targets and guidance until then, so the Treating a low card stays available. Target
+  suggestions wait until both are chosen. Existing profiles count as chosen (schema step 8).
+
 ### For people who run a server
 
 * `python -m app.admin backup --dir DIR --keep N` writes a timestamped copy

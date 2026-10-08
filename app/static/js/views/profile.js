@@ -119,9 +119,10 @@
     $('#pf-name').value = p.name || '';
     $('#pf-weight').value = p.weight_kg ?? '';
     $('#pf-height').value = p.height_cm ?? '';
-    $('#pf-stage').value = p.ckd_stage || '3b';
+    // "Not chosen yet" (schema step 8): the stored default still applies until the person picks.
+    $('#pf-stage').value = p.ckd_stage_chosen === false ? '' : (p.ckd_stage || '3b');
     $('#pf-dialysis').value = p.dialysis || 'none';
-    $('#pf-diabetes').value = p.diabetes || 'type1';
+    $('#pf-diabetes').value = p.diabetes_chosen === false ? '' : (p.diabetes || 'type1');
     $('#pf-warn').value = Math.round((p.warn_fraction ?? 0.8) * 100);
     $('#pf-week-start').value = p.week_start === 'sunday' ? 'sunday' : 'monday';
     const dd = new Set((p.dialysis_days || []).map(Number));
@@ -232,9 +233,10 @@
       name: $('#pf-name').value.trim(),
       weight_kg: numOrNull($('#pf-weight').value),
       height_cm: numOrNull($('#pf-height').value),
-      ckd_stage: $('#pf-stage').value,
+      // Empty = "Not chosen yet": null keeps the stored value and leaves the choice open.
+      ckd_stage: $('#pf-stage').value || null,
       dialysis: $('#pf-dialysis').value,
-      diabetes: $('#pf-diabetes').value,
+      diabetes: $('#pf-diabetes').value || null,
       warn_fraction: warnPct != null ? Math.min(1, Math.max(0.5, warnPct / 100)) : 0.8,
       ...(targets ? { targets } : {}),
       dialysis_days: $('#pf-dialysis').value === 'hemodialysis' ? selectedDialysisDays() : [],
@@ -317,7 +319,9 @@
     const body = formBody(null);
     const changed = [];
     for (const k of ['weight_kg', 'height_cm']) if (!sameNumber(body[k], saved[k])) changed.push(k);
-    for (const k of ['ckd_stage', 'dialysis', 'diabetes']) if (body[k] !== saved[k]) changed.push(k);
+    const savedChoice = (k) => (saved[`${k}_chosen`] === false ? null : saved[k]);
+    for (const k of ['ckd_stage', 'diabetes']) if ((body[k] || null) !== (savedChoice(k) ?? null)) changed.push(k);
+    if (body.dialysis !== saved.dialysis) changed.push('dialysis');
     for (const k of ['weight_6_months_ago_kg', 'urine_output_ml', 'pd_uf_ml', 'pd_dialysate_kcal']) if (!sameNumber(body[k], saved[k])) changed.push(k);
     for (const k of ['birth_month', 'sex', 'activity', 'transplant_date']) if ((body[k] || null) !== (saved[k] || null)) changed.push(k);
     for (const k of ['frail_or_sarcopenic', 'pregnant_or_breastfeeding', 'hyperkalemia_history']) if (!!body[k] !== !!saved[k]) changed.push(k);
@@ -331,6 +335,8 @@
     const weight = numOrNull($('#pf-weight').value);
     const saved = state.profile || {};
     if (weight == null) { toast('Enter your weight (kg) first; the suggestions are per kg of body weight', 'error'); $('#pf-weight').focus(); return; }
+    const unchosen = ['#pf-stage', '#pf-diabetes'].find((sel) => !$(sel).value);
+    if (unchosen) { toast('Choose your CKD stage and diabetes type first; the suggestions depend on both', 'error'); $(unchosen).focus(); return; }
     const changed = unsavedChanges(saved);
     if (saved.weight_kg == null || changed.includes('weight_kg') || changed.includes('height_cm')) {
       toast('Save profile first so the suggestion uses your weight and height', 'error');

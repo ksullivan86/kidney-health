@@ -22,15 +22,17 @@ tests).
   of both, kubeconform strict (18 resources valid), actionlint, zizmor, `pytest tests/test_deploy.py`.
 * AI setup in plain words: "The setup in three questions" in `docs/ai.md`, "How the setup fits
   together" in `handbook/docs/app/ai.md` (the Settings intro copy is left for later).
-  Both in one PR (#12).
+  Both in one PR (#12, merged 2026-10-08 11:16 UTC).
 
 ## In progress
 
 * v0.3.1 item 1 "Not chosen yet": schema step `m008_profile_chosen` (`ckd_stage_set_at`,
   `diabetes_set_at`), `Profile.ckd_stage_chosen` / `diabetes_chosen`, form option + guards, Today
-  prompt, mock twin, ARCHITECTURE and handbook first-setup done; still to do: CHANGELOG, ROADMAP and
-  plan updates, full pytest, then PR. Decision: the API's suggested-targets endpoint is unchanged
-  (many API tests and clients call it after saving only a weight); the form guards it instead.
+  prompt, mock twin, ARCHITECTURE, handbook first-setup, CHANGELOG, ROADMAP and plan done. Verified:
+  full pytest (3429 passed before the rebase onto #12), `node tests/js/run_vectors.mjs`, `node
+  --check` on the changed scripts. Next: commit, PR, merge when green. Decision: the API's
+  suggested-targets endpoint is unchanged (many API tests and clients call it after saving only a
+  weight); the form guards it instead.
 
 ## Next (in order)
 

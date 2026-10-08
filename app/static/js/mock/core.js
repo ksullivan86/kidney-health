@@ -320,7 +320,7 @@
       this._templates = []; this._nextTemplateId = 1;
       this.foodsSource = foodsData ? 'embedded' : 'fallback';
       this._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1', warn_fraction: 0.8,
-        dialysis_days: [], week_start: 'monday', targets: {}, updated_at: this._stamp() };
+        ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: this._stamp() };
       this._importBuiltin(foodsData || KH.mock.fallbackFoods());
       KH.mock.seedSampleData(this, { hemodialysis });
     }

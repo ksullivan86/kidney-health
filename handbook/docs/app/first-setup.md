@@ -53,10 +53,10 @@ Open **Profile** and enter:
 |---|---|---|
 | Weight (kg) | Your weight today. On dialysis, your **dry (target) weight** after a session | pounds ÷ 2.2 = kg: 154 lb = 70 kg |
 | Height (cm) | Your height | inches × 2.54 = cm: 5 ft 7 in = 67 in = 170 cm |
-| CKD stage | 1, 2, 3a, 3b, 4 or 5, from your nephrologist | after a transplant, the stage of the new kidney |
+| CKD stage | 1, 2, 3a, 3b, 4 or 5, from your nephrologist | after a transplant, the stage of the new kidney. A new account shows **Not chosen yet**; until you pick, the app uses stage 3b |
 | Dialysis | None, Hemodialysis or Peritoneal | |
 | Dialysis days | The weekdays of your hemodialysis sessions | lets the app total potassium, sodium and fluid between sessions ([Dialysis days](../eat/dialysis-days.md)) |
-| Diabetes | Type 1, Type 2 or None | |
+| Diabetes | Type 1, Type 2 or None | **Not chosen yet** at first; until you pick, the app assumes type 1, so the Treating a low card stays available. Pick both before you ask for suggested targets |
 | Warn at (% of limit) | 80 % unless your team prefers another number | when a day turns from "ok" to "near limit" |
 | Week starts on | Monday or Sunday | used by **Plan** and the shopping list |
 

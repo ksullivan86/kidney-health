@@ -118,6 +118,9 @@ def row_to_profile(row: sqlite3.Row) -> dict[str, Any]:
         "week_start": week_start,
         "targets": parse_targets(row["targets_json"]),
         **_v03_fields(row),
+        # Before schema step 8 the columns are missing: everything then counts as chosen, as before.
+        "ckd_stage_chosen": _column(row, "ckd_stage_set_at", "") is not None,
+        "diabetes_chosen": _column(row, "diabetes_set_at", "") is not None,
         "updated_at": row["updated_at"],
     }
 
@@ -153,6 +156,11 @@ def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connect
         if col in data and data[col] is not None:
             sets.append(f"{col} = ?")
             params.append(data[col])
+    # Sending a stage or a diabetes type is the person's choice (schema step 8); null keeps "Not chosen yet".
+    for col in ("ckd_stage", "diabetes"):
+        if data.get(col) is not None:
+            sets.append(f"{col}_set_at = ?")
+            params.append(utcnow())
     for col, default in _RESET_TO_DEFAULT.items():
         if col in data:
             value = default if data[col] is None else data[col]

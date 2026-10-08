@@ -861,6 +861,10 @@ class Profile(BaseModel):
     urine_output_ml: Number | None = None
     pd_uf_ml: Number | None = None
     pd_dialysate_kcal: Number | None = None
+    # False until the person picks a value in the Profile form (schema step 8); the stored default
+    # (stage 3b, type 1 diabetes) still drives targets and guidance meanwhile.
+    ckd_stage_chosen: bool = True
+    diabetes_chosen: bool = True
     updated_at: str
 
 
