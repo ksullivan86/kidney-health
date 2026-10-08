@@ -36,9 +36,10 @@ tests).
   `log.has_meal_carb_goals`: no per-meal carbohydrate alerts with diabetes "none" (twin in `js/mock/log.js`),
   Today hides the meal carbohydrate line and planned-carbs badge, Settings → Meal guidance explains instead of
   showing the carb tolerance and the low dose. Verified: `tests/test_kidney_only.py` (rule, API, twin), Chromium
-  walk type1 vs none at 375/1280, full suite and parity harness in the worktree. Left on the ROADMAP: AI prompts
-  worded from the profile (needs a PROMPT_VERSION bump and an owner-run golden set), Settings/handbook framing,
-  hiding the Profile's carbs-per-meal target for "None".
+  walk type1 vs none at 375/1280, full suite and parity harness in the worktree. Also in this PR: Profile hides the
+  per-meal and per-snack carbohydrate targets for "None" (values kept; the walk checks hide/show). Left on the
+  ROADMAP: AI prompts worded from the profile (needs a PROMPT_VERSION bump and an owner-run golden set) and the
+  Settings/handbook framing.
 * "Explain the AI setup in plain words", last part: Settings → AI ideas intro (worktree `scratchpad/kh8`, branch
   `item8-wip`, commit "Settings -> AI ideas: How AI help is set up"); PR after the kidney-only one merges.
   Verified: `tests/test_ai_setup_intro.py`, `tests/test_learn_links.py` (new `APP_LINKS.pages.ai`), Chromium walk
