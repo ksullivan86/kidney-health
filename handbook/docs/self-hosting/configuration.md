@@ -121,7 +121,7 @@ the variable locks it. Each person still decides whether their own scans go to O
 | `AI_AUDIT_RETENTION_DAYS` | 30 | How long request and response bodies are kept (0 = metadata only). |
 | `AI_VISION_PLATE_ENABLED` / `AI_VISION_ALLOW_AGENT` | `false` / `false` | Plate photos; photos to a Hermes agent (which must also pass its tool check before every photo). |
 | `AI_HTTP_PROXY` | unset | Explicit egress proxy; `HTTP(S)_PROXY` is ignored for AI on purpose. |
-| `ASSISTANT_ENABLED` | `false` | Assistant access (also **Server administration → Server settings**): each person may make personal tokens for a chat assistant that reads their own food log and targets, read-only. While off, no token works and none can be made. |
+| `ASSISTANT_ENABLED` | `false` | Assistant access (also **Server administration → Server settings**): each person may make personal tokens for a chat assistant that reads their own food log and targets and, if the person ticks "Can also save food and recipes" for that token, saves food and recipes. While off, no token works and none can be made. |
 
 Also `AI_TIMEOUT_S`, `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500), `AI_STRUCTURED_OUTPUT` (`auto`),
 `AI_REASONING_EFFORT`, `AI_CONTEXT_TOKENS`, `AI_MAX_RESPONSE_BYTES`, `AI_OPENROUTER_ZDR` and `MAX_IMAGE_BYTES`

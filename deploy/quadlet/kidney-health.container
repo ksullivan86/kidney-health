@@ -110,6 +110,10 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=AI_BASE_URL=http://192.168.1.10:8643/v1
 # Environment=AI_MODEL=kidney
 # Environment=AI_PRIVATE_HOSTS=192.168.1.10:8643
+# Assistant access (docs/assistant.md): each person may make personal tokens (Settings → Assistant access) for a
+# chat assistant they connect, such as Open WebUI. A token reads; if the person ticks "Can also save food and
+# recipes" it can also log food and save recipes. Off by default; the app contacts nothing for it.
+# Environment=ASSISTANT_ENABLED=true
 # Environment=PASSWORD_BREACH_CHECK=true
 
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does

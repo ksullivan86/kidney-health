@@ -751,7 +751,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
-| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B) with `log.day_summary`, `foods.usda_search_records` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_mcp.py`, `tools/e2e/mcp_smoke.py` |
+| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -1006,7 +1006,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
 | `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
 | `GET /api/me/tokens` | user | → `{enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}`; works while `assistant.enabled` is off ("Assistant access tokens") |
-| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365}` → 201 TokenItem + `token` (the only time it is sent); 409 switch off, 400 five active, 429 after 20 in an hour |
+| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes); 409 switch off, 400 five active, 429 after 20 in an hour |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
 
@@ -2076,8 +2076,9 @@ shows one line saying the feature is in the installed app (no mock tokens).
 
 `id INTEGER PRIMARY KEY AUTOINCREMENT`, `user_id → users(id) ON DELETE CASCADE`, `name` (1–60 characters after
 cleaning: NFC, no control characters, single spaces), `token_hash` (`UNIQUE`, the SHA-256 hex of the whole token),
-`prefix` (its first 12 characters), `scopes` (space-separated known scopes; only `assistant:read` now, an unknown
-word grants nothing), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
+`prefix` (its first 12 characters), `scopes` (space-separated known scopes: `assistant:read`, and `assistant:log` for a
+token made with `can_log`, which always has `assistant:read` too; an unknown word grants nothing; a token's scopes
+are fixed when it is made), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
 
 ```json
 TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": ["assistant:read"],
@@ -2117,13 +2118,15 @@ the CLI's disable (`account_disabled`, enabling again brings none back) and acco
 then the cascade removes the rows). An admin's "must change password" stops tokens until the change, which revokes
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
-event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids.
+event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of
+part C are the one place a token's name is kept: `assistant.food_logged` and `assistant.recipe_saved` below.)
 
-## Assistant MCP server (assistant step 1, part B)
+## Assistant MCP server (assistant step 1, parts B and C)
 
-Spec `docs/dev/plans/assistant-step1.md` part B; code `app/mcp/` (`server.py`: transport and JSON-RPC; `tools.py`:
-the four tools; `measures.py`: household measures); guide `docs/assistant.md`; tests `tests/test_mcp.py` and
-`tools/e2e/mcp_smoke.py`. No schema change, no new dependency, no JS twin (the demo has no assistant).
+Spec `docs/dev/plans/assistant-step1.md` parts B and C; code `app/mcp/` (`server.py`: transport and JSON-RPC; `tools.py`:
+the four read tools and, for a token with `assistant:log`, `log_food` and `save_recipe`; `measures.py`: household
+measures); guide `docs/assistant.md`; tests `tests/test_mcp.py`, `tests/test_mcp_write.py` and `tools/e2e/mcp_smoke.py`.
+No schema change, no new dependency, no JS twin (the demo has no assistant).
 
 ### Transport
 
@@ -2140,7 +2143,7 @@ next runs):
 | `assistant.enabled` off | `404 {"detail": "Not Found"}`, every method |
 | `GET`, `DELETE`, `PUT`, `PATCH` | `405`, `Allow: POST` |
 | A bearer token with `assistant:read` ("The bearer rule" above); a session cookie is never read | `401` with `WWW-Authenticate: Bearer`, or `429` for a blocked address |
-| Per-token limit (`ratelimit` `mcp`): 60 requests a minute, every request counts, key `token:<id>` | `429` with `Retry-After` |
+| Per-token limit (`ratelimit` `mcp`): 60 requests a minute, every request counts (saving ones too), key `token:<id>` | `429` with `Retry-After` |
 
 JSON-RPC:
 
@@ -2150,13 +2153,20 @@ JSON-RPC:
 * A notification (no `id`) or a client's response (`id` with `result` or `error`) → `202` without a body.
 * `initialize` → `{protocolVersion, capabilities: {tools: {listChanged: false}}, serverInfo: {name: "kidney-health",
   title, version: <app version>}, instructions}` (call `safety_check` first, every number from the tools, never doses
-  or lab interpretation). `ping` → `{}`. `tools/list` → the four tools with `name`, `title`, `description`,
-  `inputSchema` (`additionalProperties: false`) and `annotations: {title, readOnlyHint: true, openWorldHint:
-  false}`; no `outputSchema`.
+  or lab interpretation; a token with `assistant:log` also gets `WRITE_INSTRUCTIONS`: read the items back and ask the
+  person to confirm before saving, say what was saved after, and the confirmation never comes before treating a low).
+  `ping` → `{}`. `tools/list` → the four read tools, and `log_food` and `save_recipe` **only for a token that has
+  `assistant:log`**, with `name`, `title`, `description`, `inputSchema` (`additionalProperties: false`) and
+  `annotations: {title, readOnlyHint: true, openWorldHint: false}` (the read tools) or `{title, readOnlyHint: false,
+  destructiveHint: false, idempotentHint: false, openWorldHint: false}` (the two that save); no `outputSchema`.
 * `tools/call` → `{content: [{type: "text", text: <the result as JSON>}], structuredContent: <the result>,
   isError: false}`. Wrong arguments (strict types, unknown keys refused) or a failing tool → `{content: [{type:
   "text", text: <short message>}], isError: true}`: the field and the rule, never a value (the server log has the
   exception). An unknown tool or `params` that are not an object → `-32602`; any other method → `-32601` (HTTP 200).
+  Calling `log_food` or `save_recipe` with a token that lacks `assistant:log` → a tool result with `isError: true` and
+  the text "This token can only read. The person can make a token that can also save in Settings → Assistant
+  access." (checked before the arguments; nothing is saved). A failure inside a saving tool answers "…could not save
+  this time and nothing was saved…": every save is one transaction.
 
 ### Tools
 
@@ -2187,16 +2197,17 @@ list the value; `value` is `null` when `n > 0` and nothing that counts lists it 
   notes}], usda: {searched, found? | detail?}, note?}`. First `foods.search_foods` (the person's own and linked
   foods and the built-in list); then, for the remaining room, FoodData Central through `foods.usda_credential` (own
   key, else the shared key and its quota; the hourly guard) and `foods.usda_search_records` (one search, never
-  saved: `id: null`, `in_app: false`, `units: []`), each record mapped by `map_usda_record` and
+  saved: `id: null`, `in_app: false`), each record mapped by `map_usda_record` and
   `stored_food_values`; a record whose `fdc_id` is already listed is skipped. `units`: `serving`, `g` when the
   serving weight describes the values (`foods.weight_known`), and the measures the serving description lists.
-* `check_meal {items: [{food: 1–100, amount?: > 0, unit?: 1–40, food_id?}] (1–20), date?, meal?: breakfast | lunch |
-  dinner | snack}` → `{date, meal, saved: false, items: [{food, matched: {food_id, name, brand, source},
-  how_matched: food_id | name | only_match, amount: {as_asked, servings, grams}, serving, nutrients, warnings,
-  kidney_rating, counted_as_treating_a_low}], unresolved: [{food, reason, question, alternatives?, units?,
+* `check_meal {items: [{food: 1–100, amount?: > 0, unit?: 1–40, food_id?, fdc_id?}] (1–20), date?, meal?: breakfast |
+  lunch | dinner | snack}` → `{date, meal, saved: false, items: [{food, matched: {food_id, name, brand, source,
+  in_app, fdc_id?}, how_matched: food_id | fdc_id | name | only_match, amount: {as_asked, servings, grams}, serving,
+  nutrients, warnings, kidney_rating, counted_as_treating_a_low, note?}], unresolved: [{food, reason, question, alternatives?, units?,
   food_id?, name?}], totals: {key: Amount} | null, day_with_these_items?: {key: {name, unit, total: Amount, target?,
   level?, percent?, left?, over_by?}}, alerts?, pattern_alerts?, meal_carbohydrate?, notes}`.
-  * Finding the food: `food_id` (`foods.fetch_user_food`; another person's own food is `unknown_food_id`), else the
+  * Finding the food: `food_id` (`foods.fetch_user_food`; another person's own food is `unknown_food_id`), else
+    `fdc_id` (a USDA food from `search_foods`; see "USDA foods by `fdc_id`" below), else the
     app's search on the words (filler words dropped; plural and singular merged; then, for up to 6 words, one word
     left out at a time, which is never certain). Certain only when exactly one candidate is named by the words: its
     exact name (commas included), a name without a comma, the first part of a "Noun, kind" name or its two first
@@ -2220,8 +2231,57 @@ list the value; `value` is `null` when `n > 0` and nothing that counts lists it 
     `{meal, goal_g, these_items_g, meal_with_these_items_g (eaten + planned + items, low treatments left out),
     treating_a_low_g, not_listed_by, left_g, over (the projected meal alert), tolerance_g}`.
 
-### Not in part B
+### USDA foods by `fdc_id`
 
-No writes (part C adds the `assistant:log` scope with `log_food` and `save_recipe`); no MCP resources or prompts;
-no activity-log row per call (the token's `last_used_at` is the trace); the demo has no assistant.
+An item may name a USDA food by the `fdc_id` `search_foods` shows (`in_app: false`). `place_item` looks for the food
+in the person's list first (`foods.fetch_user_usda_food`: a built-in food carrying that id, or a USDA food they
+imported; nothing is fetched). Otherwise it fetches FoodData Central's record for that id through the same key
+resolution, hourly guard and SSRF-checked transport as `search_foods` (`foods.usda_credential`, `foods.usda_record`)
+and maps it as an import would (`map_usda_record`, `foods.usda_unsaved_row`: the `foods` row it would store, as a
+dict, `id: null`). `check_meal` stops there: nothing is added, the item says it is not in the person's list yet.
+`log_food` and `save_recipe` add it to the list inside their transaction with `foods.add_usda_food` (the code
+behind `POST /api/foods/usda/import`: the one shared `usda` row for the id, updated in place or inserted, linked to
+the person) and then use the saved row by its new food id. A failed lookup is an `unresolved` item
+(`usda_unavailable`: no key, not shared, quota or hourly guard, USDA error; `unknown_fdc_id`: USDA has no such
+food). `food_id` wins over `fdc_id` when both are given.
+
+### Writes (scope `assistant:log`)
+
+Both tools place their items with `place_items` (the code `check_meal` uses; an unresolved or ambiguous item is
+never guessed) and are all or nothing: if any item is unresolved the answer is `{saved: false, unresolved: […],
+notes}` (plus the date, meal and status, or the recipe's name) and **nothing** is written, USDA additions included. Otherwise `write_once` runs one `BEGIN IMMEDIATE`
+transaction: USDA foods added to the list, the rows saved by the existing code, one audit row, commit; any exception
+rolls everything back. Nothing is edited or deleted; a repeated call saves again (no idempotency key).
+
+* `log_food {items: (1–20, as check_meal), meal: breakfast | lunch | dinner | snack, date?, status?: eaten |
+  planned = eaten, purpose?: hypo | none}` → `{saved: true, date, meal, status, entries: [{entry_id, date, meal,
+  status, food_id, food_name, servings, grams, nutrients (unknown null), purpose, counted_as_treating_a_low}],
+  added_to_foods: [{food_id, fdc_id, name}], totals: {key: Amount}, day: <get_today's answer for that date>, notes}`.
+  Each entry is made by `log.insert_logged`, the function behind `POST /api/log` and `/api/log/batch`, from a
+  `LogCreate` (so the date, amount and food-visibility rules are the log API's: `validate_date`, no future limit,
+  `servings`/`grams` bounds; an amount in `g` is stored as grams like the API). `purpose` goes through
+  `log.resolve_purpose` as in the API: `hypo` marks food eaten to treat a low (counted in the day's totals, never
+  toward a meal's carbohydrate goal, never warned about or held back), `none` clears the automatic mark of a
+  `hypo_treatment` food, and left out keeps that automatic mark. Saved entries carry no `warnings` or
+  `kidney_rating`. `day` is `get_today` run after the commit; if it fails the answer still says `saved: true`
+  (`day: null`, with a note).
+* `save_recipe {name: 1–60, ingredients: (1–30, as check_meal items), servings: > 0 and ≤ 100, source_url?}` →
+  `{saved: true, meal: {id, name, note, items: [{food_id, food_name, servings, serving_desc, nutrients}]},
+  servings_made, source_url, totals_whole_recipe: {key: Amount}, totals_per_serving: {key: Amount},
+  added_to_foods, notes}`. The saved meal (`meals.insert_template`, `meal_hint` null) has no servings count, so
+  `items_json` holds the ingredients for the **whole recipe** and `note` is `Makes N serving(s).` plus, with a link,
+  ` Source: <url>`. `source_url` is an `http`/`https` address with a host, at most 900 characters (the note is at most
+  1000 characters in the meals API, so the meal stays editable), with no whitespace, control character, user name or
+  password; it is stored as text and **never fetched**. `totals_per_serving` is the whole-recipe total divided by
+  `servings` (arithmetic only; unknown stays unknown).
+* Activity: `assistant.food_logged` (target `api_token` id; details `via` (the token's name), `entries`, `status`,
+  `meal`, `date`, `foods_added`) and `assistant.recipe_saved` (target `meal` id; details `via`, `name`,
+  `ingredients`, `servings`, `foods_added`), both in the person's own activity list. They keep the token's name
+  because the person needs to know which assistant saved; never the token or its prefix. A refused or unresolved
+  call writes no row.
+
+### Not in parts B and C
+
+The assistant cannot edit or delete anything, and there is no idempotency key; no MCP resources or prompts; no
+activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 

@@ -106,7 +106,10 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
 assistant you connect. A token lets that assistant read your own food log and targets; it cannot change
-anything, and it never sees anyone else's data.
+anything, and it never sees anyone else's data, unless you tick **Can also save food and recipes** when you make
+it. Then the assistant can also add food to your log and save recipes as saved meals (it still cannot edit or
+delete anything). The box is off by default, and a token's choice cannot be changed later: make a new token. The
+list says **Read only** or **Read and save** for each token, and your activity lists what an assistant saved.
 
 - Give the token a name (the app or device it is for) and choose when it expires: 30 days, 90 days or 1 year.
 - The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown

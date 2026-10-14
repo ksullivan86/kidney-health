@@ -87,6 +87,8 @@ spec:
             #   value: /run/secrets/kidney-health/ai_api_key
             # A LAN AI server (Ollama, Hermes): AI_BASE_URL, AI_PRIVATE_HOSTS=<host:port>, and its own egress
             # rule (the commented ipBlock example in networkpolicy.yaml).
+            # - name: ASSISTANT_ENABLED           # personal tokens for a chat assistant (docs/assistant.md); a token
+            #   value: "true"                     # reads, and with "Can also save food and recipes" also saves
           volumeMounts:
             - name: data
               mountPath: /data

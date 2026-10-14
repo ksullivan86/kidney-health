@@ -11,8 +11,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Assistant access tokens** (when the admin turns assistant access on). **Settings → Assistant access** makes
   personal tokens for a chat assistant you connect: it may read your own food log and targets and cannot change
-  anything. Give a token a name and an expiry (30 days, 90 days or 1 year); it is shown once, with **Copy
-  token**, and never again. The list shows when each token was made, last used and expires; **Revoke** ends one
+  anything unless you tick **Can also save food and recipes** (off by default; see below). Give a token a name
+  and an expiry (30 days, 90 days or 1 year); it is shown once, with **Copy token**, and never again. The list shows when each token was made, last used and expires; **Revoke** ends one
   at once, and you can have 5 at a time. Changing your password, a password reset, or your account being
   disabled or deleted revokes all of them; your activity list shows when tokens were made and revoked; see
   [docs/assistant.md](docs/assistant.md).
@@ -21,10 +21,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
   targets and what is left of today, a food search, "check this meal" (each food found in the app, scaled to the
   amount, its warnings, the totals and your day as if you had planned it; nothing is saved), and a safety check
   of every message that shows the app's **Treating a low** card (with your own grams) or **Get help now** first.
-  Unknown values stay unknown, and the assistant gets no doses or medicine advice from the app. It can read but
-  not log food. [docs/assistant.md](docs/assistant.md) explains how to connect it, the system prompt to give it,
-  and its honest limits: the app cannot check what the chat model finally says, and a cloud model sees what you
-  type and what the app answers.
+  Unknown values stay unknown, and the assistant gets no doses or medicine advice from the app. A token reads
+  only, unless you made it with **Can also save food and recipes**. [docs/assistant.md](docs/assistant.md)
+  explains how to connect it, the system prompt to give it, and its honest limits: the app cannot check what
+  the chat model finally says, and a cloud model sees what you type and what the app answers.
+* **An assistant that can save food and recipes (optional, per token).** Tick **Can also save food and recipes**
+  when you make a token (the list then says "Read and save" instead of "Read only"; a token cannot be changed
+  later). The assistant can then add food to your log, eaten or planned, for a meal and day, and save a recipe
+  as a saved meal (the ingredients for the whole recipe; its note says how many servings it makes and keeps the
+  source link as text, which the app never opens). It is told to read the items back and wait for your yes, and
+  to say what it saved. If any food is unclear nothing at all is saved and it asks you. Food you say you ate to
+  treat a low is saved like any other entry and never delayed or warned about. A USDA food it finds is added to
+  your food list first, as the Food screen's import would. Everything it saves is an ordinary entry or saved meal
+  you can edit or delete, and your activity list shows each save with the token's name. It cannot edit or
+  delete anything.
 * Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
   already started typing in: the first field gets the focus a moment after the sheet opens only if you
   have not moved to another one.
@@ -89,7 +99,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   New routes: `GET`/`POST /api/me/tokens`, `DELETE /api/me/tokens/{id}`. A token is accepted only by the
   assistant's own endpoint, never by the rest of `/api`; a refused token counts as a failed sign-in for its
   address. `python -m app.admin reset-password --stdin` and `disable-user` revoke the account's tokens.
-  [docs/assistant.md](docs/assistant.md) has the details.
+  [docs/assistant.md](docs/assistant.md) has the details. `POST /api/me/tokens` takes `can_log` (default false):
+  true gives the token the scopes `assistant:read assistant:log`; an existing token stays read-only.
 * **The assistant's MCP server, `POST /mcp`** (only while assistant access is on; otherwise `404`). MCP Streamable
   HTTP with JSON answers, stateless, protocol versions 2025-06-18 and 2025-03-26, four read-only tools
   (`safety_check`, `get_today`, `search_foods`, `check_meal`). It takes only an assistant token (never the sign-in
@@ -98,6 +109,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   daily quota) when the app's own foods do not fill the results; nothing it finds is saved. Pass the
   `Authorization` header through your reverse proxy. Connecting Open WebUI
   and a Hermes Agent profile, the system prompt and the limits are in [docs/assistant.md](docs/assistant.md).
+  A token with `assistant:log` also lists and may call `log_food` and `save_recipe` (not read-only; each save is
+  one transaction and one activity-log row, and counts in the same 60 requests a minute); with any other token
+  those two are not listed and calling one is an error result that saves nothing. `search_foods` results from
+  USDA can be named by `fdc_id` in `check_meal` (read only), `log_food` and `save_recipe` (added to the person's
+  list). No schema change. `ASSISTANT_ENABLED` is listed (commented out) in the Quadlet and Kubernetes examples.
 * The image is about 1 MB smaller: the handbook's search support for other languages
   (`/learn/assets/javascripts/lunr/`: lunr-languages, TinySegmenter, wordcut; 964 KB) is left out of the
   image and the GitHub Pages copy, as the source maps already were. The handbook searches in English only,
