@@ -1,4 +1,4 @@
-Status: in progress (part C: the `assistant:log` scope, `log_food`, `save_recipe`; parts A and B below are complete)
+Status: complete (part C: the `assistant:log` scope, `log_food`, `save_recipe`; parts A and B below are complete)
 
 # Assistant, step 1, part C: writes with a separate scope (`assistant:log`)
 
@@ -25,7 +25,7 @@ the final B progress note taken from `ab319ad` (same tree otherwise). Commit onl
 
 ## Decisions (and why)
 
-* A saved meal has no servings count: `log_food`'s sibling `save_recipe` stores the whole recipe's ingredients and
+* A saved meal has no servings count: `save_recipe` stores the whole recipe's ingredients and
   puts "Makes N servings. Source: URL" in the meal's `note` (no schema change). The note is limited to 1000
   characters by the meals API, so `source_url` is limited to 900 characters (the spec said 2048): a longer one would
   make the saved meal impossible to edit in the app. Owner to confirm.
@@ -38,12 +38,25 @@ the final B progress note taken from `ab319ad` (same tree otherwise). Commit onl
 
 ## Done
 
-* Backend (steps 1 without the UI, 2, 3, 4, 5) and `tests/test_mcp_write.py` (45 tests) pass; part B's tests pass
-  with three assertions changed for the USDA support (units, search note) and the part A scope test updated.
+* Scope and token creation (`can_log`), `/mcp` gating, `log_food`, `save_recipe`, USDA foods by `fdc_id`
+  (`check_meal` reads them, the two writers add them first), audit events, Settings card (checkbox, "Read only" /
+  "Read and save", activity labels), docs (assistant guide, ARCHITECTURE, handbook AI + settings pages, privacy,
+  CHANGELOG, ROADMAP, deployment env rows), `ASSISTANT_ENABLED` in the Quadlet and k8s examples.
+* Verified: `python -m pytest -q -x -p no:cacheprovider` all pass (exit 0, 3652 tests, no network);
+  `tests/test_mcp_write.py` (45 tests: scopes, tools/list, all-or-nothing, null K/P, purpose "hypo" counted as Today
+  counts it, another person's food_id, USDA add-then-log with a mocked FoodData Central, recipe visible to its owner
+  only, activity rows, revoked token / switch off, 60/min counting saves); part A's scope test updated; part B's
+  USDA `units` and `note` assertions updated; `node tests/js/run_vectors.mjs` passes and
+  `gen_settings_vectors.py --check` is current (the switch's help text changed in the registry and its JS twin);
+  `python tools/e2e/mcp_smoke.py` 26 passed (a real server: read-only refusal, `can_log` token, `log_food`,
+  unresolved saves nothing, `save_recipe`, activity, revoked token 401); Chromium check of Settings → Assistant access at
+  375 px light and 1280 px dark (scratchpad `assistant_card_c.py`): box unticked by default, both labels shown, no
+  sideways scroll, no console errors.
+* Not run here: `mkdocs build --strict` (mkdocs is not installed; CI's handbook job runs it).
 
 ## Next
 
-* Settings UI, docs, deploy examples, e2e smoke, full suite.
+* Nothing in part C. Later (not this PR): recipe pages in `check_meal`, step 2 (the in-app chat).
 
 ## Checks
 

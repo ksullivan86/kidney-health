@@ -29,7 +29,6 @@ medicine doses, medicine advice or lab interpretation, and nothing here ever del
 """
 from __future__ import annotations
 
-import json
 import logging
 import math
 import sqlite3
