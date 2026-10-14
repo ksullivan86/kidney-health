@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-07
+last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6]
+sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
 ---
 
 # Optional AI
@@ -135,6 +135,24 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
   photo guess.
 - There is a daily limit on shared AI use (30 calls per person by default).
 
+## Talk to an assistant (optional)
+
+Some people like to ask about food in a chat, by typing or by talking. If your admin turns on **assistant
+access**, you can connect a chat assistant you already use (for example Open WebUI, or a Hermes Agent profile) to
+the app with a personal token from **Settings → Assistant access**
+([Settings and keys](settings-and-keys.md#assistant-access)).
+
+- The assistant **asks the app** for your targets, what is left of today, the values of a food, and how a meal
+  would change your day. The app does the sums from your own log; the assistant is told never to make numbers up.
+- It can **read, not change**: it cannot log food or change a setting. You log food in the app.
+- When a message sounds like a low, the app hands the assistant the same **Treating a low** card you see in the
+  app, to show first. When a message sounds like an emergency, it hands over **Get help now**.
+- The app cannot check what the assistant finally says. If a number looks wrong, check it on **Today**.
+- What you type or say, and the app's answers, go to the chat assistant and to the AI model it uses. A model run
+  by a company sees them.
+
+How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs your server.
+
 ## If something goes wrong
 
 - **"The AI ideas did not fit your targets today, so these are the app's own ideas."** Every AI idea
@@ -156,3 +174,4 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
   [Ollama: OpenAI compatibility][OLLAMA-OAI]; [Hermes Agent: API server][HERMES-API].
 - [Fridolfsson 2025][FRIDOLFSSON25]: AI estimates from food photos.
 - [ADA Standards of Care 2026, section 6][A26-6]: treating a low.
+- [The assistant guide][ASSISTANT-DOC]: connecting a chat assistant, its system prompt and its limits.

@@ -14,9 +14,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   anything. Give a token a name and an expiry (30 days, 90 days or 1 year); it is shown once, with **Copy
   token**, and never again. The list shows when each token was made, last used and expires; **Revoke** ends one
   at once, and you can have 5 at a time. Changing your password, a password reset, or your account being
-  disabled or deleted revokes all of them; your activity list shows when tokens were made and revoked. The
-  connection the tokens are for (an MCP server for chat clients such as Open WebUI) is the next step; see
+  disabled or deleted revokes all of them; your activity list shows when tokens were made and revoked; see
   [docs/assistant.md](docs/assistant.md).
+* **Talk to an assistant (optional).** With a token, a chat assistant you already use (Open WebUI, with voice if
+  you like, or a Hermes Agent profile with tools) can ask the app for your numbers instead of guessing them: your
+  targets and what is left of today, a food search, "check this meal" (each food found in the app, scaled to the
+  amount, its warnings, the totals and your day as if you had planned it; nothing is saved), and a safety check
+  of every message that shows the app's **Treating a low** card (with your own grams) or **Get help now** first.
+  Unknown values stay unknown, and the assistant gets no doses or medicine advice from the app. It can read but
+  not log food. [docs/assistant.md](docs/assistant.md) explains how to connect it, the system prompt to give it,
+  and its honest limits: the app cannot check what the chat model finally says, and a cloud model sees what you
+  type and what the app answers.
 * Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
   already started typing in: the first field gets the focus a moment after the sheet opens only if you
   have not moved to another one.
@@ -82,6 +90,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
   assistant's own endpoint, never by the rest of `/api`; a refused token counts as a failed sign-in for its
   address. `python -m app.admin reset-password --stdin` and `disable-user` revoke the account's tokens.
   [docs/assistant.md](docs/assistant.md) has the details.
+* **The assistant's MCP server, `POST /mcp`** (only while assistant access is on; otherwise `404`). MCP Streamable
+  HTTP with JSON answers, stateless, protocol versions 2025-06-18 and 2025-03-26, four read-only tools
+  (`safety_check`, `get_today`, `search_foods`, `check_meal`). It takes only an assistant token (never the sign-in
+  cookie), refuses a foreign `Origin` (`403`) and `GET`/`DELETE` (`405`), and allows 60 requests a minute per
+  token (`429`). `search_foods` asks USDA FoodData Central (the person's own key, or the shared key within its
+  daily quota) when the app's own foods do not fill the results; nothing it finds is saved. Pass the
+  `Authorization` header through your reverse proxy. Connecting Open WebUI
+  and a Hermes Agent profile, the system prompt and the limits are in [docs/assistant.md](docs/assistant.md).
 * The image is about 1 MB smaller: the handbook's search support for other languages
   (`/learn/assets/javascripts/lunr/`: lunr-languages, TinySegmenter, wordcut; 964 KB) is left out of the
   image and the GitHub Pages copy, as the source maps already were. The handbook searches in English only,
@@ -123,6 +139,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   assistant surface takes `user: AssistantUser` and gets `request.state.api_token` for its own limits.
   `current_user` stays cookie-only, and `tests/test_auth_coverage.py` walks every `/api` route with a valid
   token to keep it that way.
+* `app/mcp/` is the MCP server (JSON-RPC by hand, no new dependency). Its tools call the app's own functions:
+  `app.log.day_summary` (now also behind `GET /api/log`), `day_figures` for the projection, `food_warnings`,
+  `guidance.hypo.prefilter`, `ai.features.red_flag`, and the new `app.foods.usda_search_records`. `/mcp` is the one
+  exact path in `app.security.BEARER_PATHS` (no cookie CSRF checks, the Origin rule kept), and
+  `tests/test_auth_coverage.py` holds it to being the only write route outside `/api`. `tests/test_mcp.py` covers
+  the protocol, auth and every tool; `python tools/e2e/mcp_smoke.py` speaks the protocol to a real server.
 * `requirements.txt` and `requirements-dev.txt`, kept through 0.3.0 so older instructions still worked,
   are gone. Install from the hash-locked files instead:
   `pip install --require-hashes --no-deps -r requirements-dev.lock` (or `requirements.lock` for the app

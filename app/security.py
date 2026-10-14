@@ -20,7 +20,8 @@ the outermost middleware comes first:
    while streaming); prefixes registered with :func:`register_body_limit` use a larger setting.
 6. :class:`CsrfMiddleware` - ``Sec-Fetch-Site``/``Origin`` checks on unsafe methods, the required
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
-   reads of ``/api`` at all.
+   reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``) get only
+   the ``Origin`` check, on every method.
 
 Request state other code may read (``request.state.<name>``): ``peer`` (TCP peer), ``client_ip``
 (after trusted proxy handling), ``scheme`` (effective scheme), ``proxy_trusted`` (bool).
@@ -100,6 +101,10 @@ STATIC_HEADERS: tuple[tuple[str, str], ...] = (
 )
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+# Bearer-only paths, matched exactly (never as a prefix): the assistant's MCP endpoint (app/mcp; ARCHITECTURE.md
+# "Assistant MCP server"). They never read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site,
+# X-Requested-With) do not apply; the Origin rule does, on every method (the MCP transport's DNS-rebinding rule).
+BEARER_PATHS = frozenset({"/mcp"})
 CSRF_HEADER = "X-Requested-With"
 CSRF_HEADER_VALUE = "kidney-health"
 PROXY_SECRET_HEADER = "X-Proxy-Secret"
@@ -591,6 +596,13 @@ class CsrfMiddleware:
         path = scope.get("path", "")
         method = scope.get("method", "GET").upper()
         headers = Headers(scope=scope)
+        if path in BEARER_PATHS:  # exact match only: "/mcp/", "/mcpx" and "/mcp/x" get the checks below
+            origin = headers.get("origin")
+            if origin is not None and not self.origin_allowed(origin, scope, headers):
+                await _json_response(403, "Cross-site request refused")(scope, receive, send)
+                return
+            await self.app(scope, receive, send)
+            return
         api = is_api_path(path)
         site = headers.get("sec-fetch-site")
         if site is not None:

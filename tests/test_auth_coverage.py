@@ -149,6 +149,35 @@ def test_a_valid_assistant_token_opens_no_api_route(client):
     assert bearer(client.app, token).status_code == 200  # the token was good all along, on the assistant surface
 
 
+# The assistant surface (ARCHITECTURE.md "Assistant MCP server", app/mcp): bearer-only routes outside /api. They are
+# the only routes outside /api that take a write method, a session cookie never opens them, and while assistant
+# access is off they answer 404 as if they did not exist.
+BEARER_ROUTES = {("post", "/mcp")}
+
+
+def test_the_bearer_routes_are_the_only_write_routes_outside_the_api(anon_client):
+    unsafe = {(m, p) for m, p, _ in _walk(anon_client.app.routes)
+              if not p.startswith("/api/") and m in ("post", "put", "patch", "delete")}
+    assert BEARER_ROUTES <= unsafe
+    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES}, sorted(unsafe)  # PUT, PATCH, DELETE /mcp: 405
+
+
+def test_the_bearer_routes_need_a_token_and_never_take_a_session(client):
+    from test_api_tokens import switch
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "ping"}
+    for method, path in sorted(BEARER_ROUTES):
+        assert client.request(method.upper(), path, json=body).status_code == 404  # switched off
+    switch(client, True)
+    token = client.post("/api/me/tokens", json={"name": "coverage"}).json()["token"]
+    alone = TestClient(client.app, headers={"Authorization": f"Bearer {token}"})
+    for method, path in sorted(BEARER_ROUTES):
+        r = client.request(method.upper(), path, json=body)  # the signed-in admin's cookie, no token
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+        assert TestClient(client.app).request(method.upper(), path, json=body).status_code == 401  # anonymous
+        assert alone.request(method.upper(), path, json=body).status_code == 200, (method, path)
+
+
 def test_public_routes_answer_without_a_session(anon_client):
     assert anon_client.get("/api/auth/status").status_code == 200
     assert anon_client.post("/api/auth/login", json={"username": "nobody", "password": "x"}).status_code == 401

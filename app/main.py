@@ -22,6 +22,7 @@ from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
 from . import vision  # M2 ai: POST /api/vision/label, /api/vision/plate
 from .ai import routes as ai_routes  # M2 ai: /api/ai, /api/me/ai, /api/admin/ai-providers
+from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP server for a chat assistant
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
@@ -110,6 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(barcode.router)
     ai_routes.install(app, settings, store, app_version=APP_VERSION)  # M2 ai: checks the AI env, adds its routers
     app.include_router(vision.router)
+    app.include_router(assistant_mcp.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

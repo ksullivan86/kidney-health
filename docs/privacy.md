@@ -48,6 +48,12 @@ lookups or the optional AI the admin turns on), and then only what that feature 
 nothing until the person opts in and agrees to the destination shown, and never sends their name,
 account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 
+If the admin turns on assistant access and a person connects a chat assistant with their own token
+([assistant.md](assistant.md)), the server answers that assistant's questions with the person's own numbers:
+targets, the day's totals, food values and checked meals. Those answers go to the chat client the person
+connected (and to the AI model it uses; a company's model sees them) and stay under that client's own settings.
+The server keeps no copy of the questions or answers; Settings shows when each token was last used.
+
 ## Who can see it
 
 * **You** see everything of yours, and can download it all (Settings → Account → Export) as a

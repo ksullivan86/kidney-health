@@ -68,7 +68,8 @@ CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md   contributor rules and how-tos; 
 docs/README.md, docs/maintainers.md, docs/ROADMAP.md   index of every doc; release process and repo settings; deferred work
 .github/ISSUE_TEMPLATE/, .github/pull_request_template.md   issue forms (bug, feature, clinical correction) and the PR checklist
 tools/e2e/                  harnesses run by hand: parity.py, sandbox.py, regress.py, device.py, journey.py (whole v0.3 story
-                            on a real server), upgrade.py (v0.2 and v3 databases), learn.py, guidance_perf.py
+                            on a real server), upgrade.py (v0.2 and v3 databases), learn.py, guidance_perf.py, mcp_smoke.py
+                            (the assistant's MCP server over HTTP)
                             (+ khserver.py, replay_app.py = the app with USDA answered from tests/fixtures/usda, README.md)
 pyproject.toml, requirements{,-dev}.in + .lock (hash-locked by scripts/lock.sh), .gitignore
 ```
@@ -297,7 +298,10 @@ v0.3 request rules (`app/security.py`, note 01 §5.5 and §10, note 07 §4.8): a
 pass); every unsafe `/api` request (POST/PUT/PATCH/DELETE) must send `X-Requested-With:
 kidney-health` and a same-origin `Origin`/`Sec-Fetch-Site`, and cross-site or same-site `/api`
 reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
-`Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true`.
+`Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true`. The one
+bearer-only path, exactly `/mcp` (`security.BEARER_PATHS`, "Assistant MCP server" below), skips the cookie checks
+(`X-Requested-With`, `Sec-Fetch-Site`: it never reads a cookie) but answers `403` to a foreign `Origin` on every
+method.
 
 ### Health
 * `GET /healthz` → `{"status":"ok","foods": <count>}`
@@ -747,7 +751,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
-| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py` |
+| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B) with `log.day_summary`, `foods.usda_search_records` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_mcp.py`, `tools/e2e/mcp_smoke.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -2114,4 +2118,110 @@ then the cascade removes the rows). An admin's "must change password" stops toke
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids.
+
+## Assistant MCP server (assistant step 1, part B)
+
+Spec `docs/dev/plans/assistant-step1.md` part B; code `app/mcp/` (`server.py`: transport and JSON-RPC; `tools.py`:
+the four tools; `measures.py`: household measures); guide `docs/assistant.md`; tests `tests/test_mcp.py` and
+`tools/e2e/mcp_smoke.py`. No schema change, no new dependency, no JS twin (the demo has no assistant).
+
+### Transport
+
+`POST /mcp` only: MCP Streamable HTTP, JSON-RPC 2.0, one JSON object in and one `application/json` answer out (no
+SSE), stateless (no `Mcp-Session-Id`), `Cache-Control: no-store`. Protocol versions `2025-06-18` (newest) and
+`2025-03-26`: `initialize` answers the client's `protocolVersion` when it is one of them, else `2025-06-18`. The
+`MCP-Protocol-Version` header is accepted, never required or refused. Checks, in order (each answers before the
+next runs):
+
+| Check | Answer |
+|---|---|
+| Body over `MAX_BODY_BYTES` (as everywhere) | `413` |
+| `Origin` present and neither the request's own origin nor `PUBLIC_URL` (`CsrfMiddleware`, exact path `/mcp`, every method) | `403 {"detail": "Cross-site request refused"}` |
+| `assistant.enabled` off | `404 {"detail": "Not Found"}`, every method |
+| `GET`, `DELETE`, `PUT`, `PATCH` | `405`, `Allow: POST` |
+| A bearer token with `assistant:read` ("The bearer rule" above); a session cookie is never read | `401` with `WWW-Authenticate: Bearer`, or `429` for a blocked address |
+| Per-token limit (`ratelimit` `mcp`): 60 requests a minute, every request counts, key `token:<id>` | `429` with `Retry-After` |
+
+JSON-RPC:
+
+* Not JSON (NaN, Infinity and invalid UTF-8 included) → HTTP 400, `{"jsonrpc": "2.0", "id": null, "error":
+  {"code": -32700, "message": …}}`. Not one request object (a batch array, a string, no `"jsonrpc": "2.0"`, no
+  method, an `id` that is null, a boolean or neither a string nor an integer) → HTTP 400, `-32600`.
+* A notification (no `id`) or a client's response (`id` with `result` or `error`) → `202` without a body.
+* `initialize` → `{protocolVersion, capabilities: {tools: {listChanged: false}}, serverInfo: {name: "kidney-health",
+  title, version: <app version>}, instructions}` (call `safety_check` first, every number from the tools, never doses
+  or lab interpretation). `ping` → `{}`. `tools/list` → the four tools with `name`, `title`, `description`,
+  `inputSchema` (`additionalProperties: false`) and `annotations: {title, readOnlyHint: true, openWorldHint:
+  false}`; no `outputSchema`.
+* `tools/call` → `{content: [{type: "text", text: <the result as JSON>}], structuredContent: <the result>,
+  isError: false}`. Wrong arguments (strict types, unknown keys refused) or a failing tool → `{content: [{type:
+  "text", text: <short message>}], isError: true}`: the field and the rule, never a value (the server log has the
+  exception). An unknown tool or `params` that are not an object → `-32602`; any other method → `-32601` (HTTP 200).
+
+### Tools
+
+Every result is one object with `source: "kidney-health"` and `reminder: "Numbers come from the app; fetch them
+again after any change."`. `Amount = {"value": number | null, "not_listed_by": n}`: `n` entries or items do not
+list the value; `value` is `null` when `n > 0` and nothing that counts lists it (unknown is never 0).
+
+* `safety_check {message: string ≤ 2000}` → `{action: "treat_low_first" | "get_help_now" | "none", say_first,
+  matched: {low, emergency}, cards: [card with full_url], link?: "/learn/get-help-now/", full_link?}`. A low:
+  `guidance.hypo.prefilter(message, hypo_dose_g)` with the person's `guidance.hypo_dose_g`; an emergency:
+  `ai.features.red_flag` (note 04 G8, the words of the handbook's "Call 911 now" list) with `RED_FLAG_CARD`. Both →
+  `get_help_now` with both cards in the AI pre-filter's order (Get help now, Treating a low). Absolute links use
+  `PUBLIC_URL`, else the request's origin.
+* `get_today {date?: YYYY-MM-DD}` (default `log.today_local()`, as `GET /api/log`) → built from
+  `log.day_summary`, the function behind `GET /api/log?date=`: `{date, is_today, entries: {eaten, planned},
+  targets_set, nutrients: {key: {name, unit, eaten, planned, eaten_and_planned: Amount, target?: {max, min, about,
+  kind}, eaten_vs_target?, eaten_and_planned_vs_target? (when something is planned): {level, percent, left,
+  over_by, within_tolerance?}}}, alerts, alerts_if_planned_food_is_eaten, pattern_alerts, about_tolerance_pct?,
+  meal_carbohydrate?, dialysis?}`. `left = target − value` only when no entry misses the value and the total is not
+  above the target (as Today's bar); `over_by = value − target`. `meal_carbohydrate` only when
+  `log.has_meal_carb_goals(profile)`: `{goals_set, tolerance_g, meals: {meal: {goal_g, eaten_g, not_listed_by,
+  treating_a_low_g, planned_g, left_g, over, over_if_planned_food_is_eaten}}, note}` (`over` from the app's own
+  meal alerts; carbohydrate that treated a low never counts toward a meal). `dialysis` unless "none": `{type}`;
+  hemodialysis adds `dialysis_days` (names), `is_dialysis_day`, `since_last_dialysis` (equal to `GET
+  /api/log/summary`'s `interdialytic` for that end date) and `notes`.
+* `search_foods {query: 1–100 characters, limit: 1–10 = 5}` → `{query, results: [{id, fdc_id, name, brand, source,
+  in_app, serving: {description, grams}, units, nutrients_per_serving, warnings_per_serving, kidney_rating,
+  notes}], usda: {searched, found? | detail?}, note?}`. First `foods.search_foods` (the person's own and linked
+  foods and the built-in list); then, for the remaining room, FoodData Central through `foods.usda_credential` (own
+  key, else the shared key and its quota; the hourly guard) and `foods.usda_search_records` (one search, never
+  saved: `id: null`, `in_app: false`, `units: []`), each record mapped by `map_usda_record` and
+  `stored_food_values`; a record whose `fdc_id` is already listed is skipped. `units`: `serving`, `g` when the
+  serving weight describes the values (`foods.weight_known`), and the measures the serving description lists.
+* `check_meal {items: [{food: 1–100, amount?: > 0, unit?: 1–40, food_id?}] (1–20), date?, meal?: breakfast | lunch |
+  dinner | snack}` → `{date, meal, saved: false, items: [{food, matched: {food_id, name, brand, source},
+  how_matched: food_id | name | only_match, amount: {as_asked, servings, grams}, serving, nutrients, warnings,
+  kidney_rating, counted_as_treating_a_low}], unresolved: [{food, reason, question, alternatives?, units?,
+  food_id?, name?}], totals: {key: Amount} | null, day_with_these_items?: {key: {name, unit, total: Amount, target?,
+  level?, percent?, left?, over_by?}}, alerts?, pattern_alerts?, meal_carbohydrate?, notes}`.
+  * Finding the food: `food_id` (`foods.fetch_user_food`; another person's own food is `unknown_food_id`), else the
+    app's search on the words (filler words dropped; plural and singular merged; then, for up to 6 words, one word
+    left out at a time, which is never certain). Certain only when exactly one candidate is named by the words: its
+    exact name (commas included), a name without a comma, the first part of a "Noun, kind" name or its two first
+    parts the natural way round ("Juice, apple" is apple juice; "Chocolate, milk" is milk chocolate, never
+    "chocolate milk"); or when the search finds a single food with every word, whole and in that natural order
+    (the brand before or after). Otherwise `several_matches` with up to 5 alternatives (the named ones first),
+    never a guess. Other reasons: `no_match`,
+    `unknown_unit`, `servings_only` (a food whose serving weight does not describe its values), `amount_too_large`
+    (above `MAX_SERVINGS` or `MAX_GRAMS`).
+  * The amount: `serving` (default 1), `g` (`log.resolve_servings`), or a measure the food's `serving_desc` lists
+    (`measures.food_measures`: "1/2 cup, 4 fl oz (124 g)" → cup = 2 servings, fl oz = ¼ serving; a size serving
+    such as "1 medium" also answers to a word of the food's name, "banana"). No other conversion: no cups to
+    tablespoons, no mL to g, and "oz" never means "fl oz". A quantity and measure inside `food` ("white rice 1
+    cup", "2 slices of toast") count when `amount` and `unit` are absent.
+  * Values: `scale_nutrients(raw, servings)` (the log's snapshot rule) and `food_warnings(…, scope="in this
+    amount")`. A `hypo_treatment` food counts as treating a low (`log.resolve_purpose`, the entry sheet's default):
+    no carbohydrate warning and no meal carbohydrate.
+  * Projection: the items as planned rows (meal `unassigned` when no `meal` is given) next to the day's own rows
+    → `log.day_figures` (projected totals, status and alerts) and `log.day_pattern_alerts`; the same numbers as
+    planning those entries (`tests/test_mcp.py`). `meal_carbohydrate` (a profile with diabetes, `meal` given):
+    `{meal, goal_g, these_items_g, meal_with_these_items_g (eaten + planned + items, low treatments left out),
+    treating_a_low_g, not_listed_by, left_g, over (the projected meal alert), tolerance_g}`.
+
+### Not in part B
+
+No writes (part C adds the `assistant:log` scope with `log_food` and `save_recipe`); no MCP resources or prompts;
+no activity-log row per call (the token's `last_used_at` is the trace); the demo has no assistant.
 

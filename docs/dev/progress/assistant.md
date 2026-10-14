@@ -1,4 +1,62 @@
-Status: complete (part A: assistant access tokens; part B, the MCP server, is the next PR)
+Status: in progress (part A complete and merged into this branch's base; part B, the read-only MCP server, in progress)
+
+# Assistant, step 1, part B: the read-only MCP server (`POST /mcp`)
+
+Spec: `docs/dev/plans/assistant-step1.md` part B. Worktree branch `worktree-agent-aeb3388c42b2e86af`, fast-forwarded
+to part A's head `4df02c4` (the worktree had been created at `b2dd99a`, before part A). Commit only; the caller
+integrates after part A's PR merges (no push, no PR from here).
+
+## Plan (files)
+
+1. `app/mcp/` (new package): `server.py` (route `POST /mcp`, 405 for GET/DELETE/PUT/PATCH, JSON-RPC 2.0 dispatch,
+   switch → 404, bearer via `api_tokens.authenticate`, per-token limit `mcp` 60/min), `tools.py` (the four tools,
+   argument validation, schemas), `measures.py` (household measures read from a food's `serving_desc`).
+2. `app/log.py`: extract `day_summary(conn, request, user_id, day)` from `get_day` so `get_today` returns exactly the
+   `GET /api/log?date=` numbers. `app/foods.py`: public `usda_search_records()` (raw FDC search items, no save).
+3. `app/security.py` `CsrfMiddleware`: exact path `/mcp` (`BEARER_PATHS`) skips the cookie checks
+   (`Sec-Fetch-Site`, `X-Requested-With`) but keeps the Origin rule on every method (403).
+4. `app/main.py`: one import + `include_router` line.
+5. Tests: `tests/test_mcp.py`; `/mcp` in `tests/test_auth_coverage.py` (bearer route contract);
+   `tools/e2e/mcp_smoke.py` + `tools/e2e/README.md` + `HARNESSES` in `tests/test_e2e_tools.py`.
+6. Docs: `docs/assistant.md` (switch on, Open WebUI, Hermes, system prompt template, honest limits), ARCHITECTURE
+   (`/mcp` contract + ownership row), CHANGELOG, ROADMAP, handbook `app/ai.md` ("Talk to an assistant (optional)").
+
+## Decisions (and why)
+
+* Switch off → `404` for every method on `/mcp` (plan: "Off: … `/mcp` is 404"), checked before the bearer token.
+* Origin rule in the CSRF middleware (one `origin_allowed`, PUBLIC_URL aware); the 403 comes before the switch.
+* Rate limit counts every authenticated request (notifications too), key `token:<id>`; 429 + Retry-After.
+* `MCP-Protocol-Version` header accepted, never refused (lenient; the server speaks 2025-06-18 and 2025-03-26).
+* `check_meal` resolves against the app's foods only (own, built-in, linked); USDA results from `search_foods` are
+  shown read-only (mapped with `map_usda_record`, never saved; part C saves). An uncertain match is not guessed:
+  it goes to `unresolved` with alternatives and a question (a wrong guess would give wrong totals).
+* Per-item warnings use the existing rules (`food_warnings`) on the item's amount, like a log entry.
+* No `outputSchema` (optional in MCP; a strict client validating it is a risk with no gain here).
+
+## Done
+
+* Steps 1–4 (code): `app/mcp/{__init__,server,tools,measures}.py`, `app/log.py` `day_summary`, `app/foods.py`
+  `usda_search_records`, `app/security.py` `BEARER_PATHS`, `app/main.py` (one import, one include; the 405 route is
+  registered once per method so OpenAPI operation ids stay unique).
+* Step 5: `tests/test_mcp.py` (43 tests), `BEARER_ROUTES` in `tests/test_auth_coverage.py` (the only write routes
+  outside `/api`; 404 off, 401 with a cookie or nothing, 200 with a token), `tools/e2e/mcp_smoke.py` (port 8073) in
+  the README and `HARNESSES`.
+* Step 6: `docs/assistant.md` (switch on, tools, Open WebUI, a separate Hermes profile, system prompt template,
+  check, honest limits, endpoint), ARCHITECTURE ("Assistant MCP server", request rules, layout, ownership),
+  CHANGELOG (three audiences), ROADMAP status, `docs/privacy.md`, `docs/README.md`, handbook `app/ai.md` "Talk to an
+  assistant (optional)" with source `ASSISTANT-DOC` (`python scripts/build_handbook.py` regenerated the sources).
+* Matching rule refined after review: list-style names ("Juice, apple") are read the natural way round, a comma
+  name is never matched in its written order ("Chocolate, milk" is not "chocolate milk"), the exact name with commas
+  counts, "leave one word out" (≤ 6 words) only gives alternatives.
+* Verified: `tests/test_mcp.py` 43 passed; `node tests/js/run_vectors.mjs` passes; `python tools/e2e/mcp_smoke.py`
+  16 passed; the official MCP Python SDK 1.28.1 (`streamablehttp_client` + `ClientSession`, scratch script) talks to
+  a real server: initialize 2025-06-18, tools/list, calls, isError, McpError for an unknown tool, ping.
+
+## Next
+
+* Final full `python -m pytest -q` on the last commit, then mark this note complete.
+
+---
 
 # Assistant, step 1, part A: assistant access tokens
 
