@@ -58,9 +58,9 @@ export.json also holds your AI activity (what the app sent to an AI provider for
 back, for as long as the server keeps it; never photos), your daily AI call counts and the AI
 providers you agreed to send data to.
 
-What is NOT in it: your password, your sign-in sessions, your assistant access tokens and any API
-keys you stored (not even part of them). The person who runs the server keeps backups of the whole
-database; deleting your account does not reach those backups until they expire.
+What is NOT in it: your password, your sign-in sessions, your assistant access tokens and any
+API keys you stored (not even part of them). The person who runs the server keeps backups of the
+whole database; deleting your account does not reach those backups until they expire.
 
 Where a food's data came from is in the "source" and "source_license" columns. Rows marked ODbL-1.0
 contain information from Open Food Facts (https://world.openfoodfacts.org), which is made available

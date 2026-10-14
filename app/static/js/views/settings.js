@@ -756,6 +756,12 @@
     + 'How to connect one is in the app\'s documentation (docs/assistant.md).';
   const EXPIRY_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year' };
   let assistantRender = 0;
+  let unshownToken = null; // the answer of POST /api/me/tokens until a render has put it on screen (once)
+  function takeUnshownToken() { const made = unshownToken; unshownToken = null; return made && made.token ? made : null; }
+  function tokenBox(made) {
+    return linkBox(made.token, ['It is not shown again. Revoke it here if it is lost.'],
+      { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' });
+  }
   function tokenSub(t) {
     const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
@@ -823,11 +829,13 @@
       h('div', { class: 'settings-actions' }, create),
       err);
   }
-  // made: the answer of POST /api/me/tokens (with `token`), shown once at the top of "New token".
+  // made: the answer of POST /api/me/tokens (with `token`). It is shown once, at the top of "New token", by
+  // whichever render finishes next (also when the list cannot be loaded), so a new token is never lost.
   async function renderAssistant(made = null) {
     const sec = $('#set-assistant');
     const body = $('#set-assistant-body');
     if (!sec || !body) return;
+    if (made) unshownToken = made;
     const ticket = ++assistantRender;
     const show = (visible) => { if (sec.hidden === visible) { sec.hidden = !visible; renderNav(); } };
     if (MOCK) {
@@ -839,13 +847,14 @@
     let res;
     try { res = await A.tokens(); } catch (err) {
       if (ticket !== assistantRender) return;
-      if (!sec.hidden) body.replaceChildren(failed(err)); // never show a new card just to say it failed
+      const fresh = takeUnshownToken();
+      if (!sec.hidden) body.replaceChildren(failed(err), ...(fresh ? [tokenBox(fresh)] : [])); // never a new card just to say it failed
       return;
     }
     if (ticket !== assistantRender) return;
     const tokens = res.tokens || [];
     const active = tokens.filter((t) => t.state === 'active').length;
-    if (!res.enabled && !isAdmin() && !active) { body.replaceChildren(); show(false); return; }
+    if (!res.enabled && !isAdmin() && !active) { takeUnshownToken(); body.replaceChildren(); show(false); return; }
     const parts = [h('p', {}, ASSISTANT_INTRO)];
     if (!res.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')));
@@ -853,14 +862,10 @@
       if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Assistant access" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
     }
     parts.push(subtitle('Your tokens'), tokenList(tokens));
-    if (res.enabled) {
-      parts.push(subtitle('New token', 'set-token-new-h'));
-      if (made && made.token) {
-        parts.push(linkBox(made.token, ['It is not shown again. Revoke it here if it is lost.'],
-          { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' }));
-      }
-      parts.push(newTokenForm(res, active));
-    }
+    const fresh = takeUnshownToken();
+    if (res.enabled || fresh) parts.push(subtitle('New token', 'set-token-new-h'));
+    if (fresh) parts.push(tokenBox(fresh));
+    if (res.enabled) parts.push(newTokenForm(res, active));
     body.replaceChildren(...parts);
     show(true);
   }
