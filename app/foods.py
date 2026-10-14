@@ -924,6 +924,50 @@ def usda_search_records(query: str, page_size: int, api_key: str, *, guard: str,
     return [item for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
 
 
+def usda_record(fdc_id: int, api_key: str, *, guard: str, own_key: bool = False) -> UsdaMapped:
+    """FoodData Central's record for ``fdc_id``, mapped as an import maps it. Nothing is saved (the assistant's
+    ``check_meal``, ``log_food`` and ``save_recipe``, ``app/mcp``). Raises :class:`UsdaError`."""
+    data = _usda_fetch(f"/food/{fdc_id}", {}, api_key, guard=guard, own_key=own_key)
+    if not isinstance(data, Mapping):
+        raise UsdaError(502, "USDA returned an unexpected record")
+    return map_usda_record(data, fdc_id)
+
+
+def add_usda_food(conn: sqlite3.Connection, user_id: int, fdc_id: int, mapped: UsdaMapped) -> int:
+    """Put a mapped FoodData Central record in ``user_id``'s food list: the one shared ``usda`` row for
+    ``fdc_id`` (updated in place, or inserted) linked to the person. Returns the food id; the caller commits.
+    The code behind ``POST /api/foods/usda/import``, shared with the assistant's ``log_food`` and ``save_recipe``."""
+    food_id = upsert_usda_food(conn, fdc_id, mapped.kwargs, usda_provenance(mapped))
+    link_food(conn, user_id, food_id)
+    return food_id
+
+
+def fetch_user_usda_food(conn: sqlite3.Connection, user_id: int, fdc_id: int) -> sqlite3.Row | None:
+    """The food with FoodData Central id ``fdc_id`` when it is already in ``user_id``'s food list (a built-in food
+    that carries the id, or a USDA food they imported), else None."""
+    try:
+        return conn.execute(
+            f"""SELECT f.* FROM foods f WHERE f.source IN ('usda', 'builtin') AND f.fdc_id = ? AND f.owner_user_id IS NULL
+                AND {access_clause('f')} ORDER BY f.id LIMIT 1""",
+            (int(fdc_id), *access_params(user_id)),
+        ).fetchone()
+    except OverflowError:  # id beyond SQLite's 64-bit INTEGER: no such row
+        return None
+
+
+def usda_unsaved_row(fdc_id: int, mapped: UsdaMapped) -> dict[str, Any]:
+    """The ``foods`` row an import of ``mapped`` would store, as a dict, without storing it (``id`` is None): the
+    columns serving maths and warnings read, at the precision a stored row has (:func:`stored_food_values`)."""
+    kwargs = mapped.kwargs
+    serving_g, values = stored_food_values(kwargs["nutrients"], kwargs["flags"], kwargs["serving_g"])
+    return {
+        "id": None, "name": kwargs["name"], "brand": kwargs["brand"], "category": kwargs["category"],
+        "source": "usda", "fdc_id": int(fdc_id), "serving_desc": kwargs["serving_desc"], "serving_g": serving_g,
+        **values, "flags_json": json.dumps(list(kwargs["flags"])), "kidney_notes": kwargs["kidney_notes"],
+        "hidden": 0, "quality_json": json.dumps(list(mapped.quality)),
+    }
+
+
 def usda_find_by_gtin(gtin14: str, api_key: str, *, guard: str, own_key: bool = False) -> tuple[int, dict[str, Any]] | None:
     """Find a branded FoodData Central record for a GTIN-14 (note 03 R4): search each form of
     :func:`app.gtin.usda_candidates` (at most three calls) and accept only a result whose ``gtinUpc``,
@@ -1047,8 +1091,7 @@ def usda_import(body: UsdaImport, request: Request, user: CurrentUser, conn: sql
     if not isinstance(data, Mapping):
         raise HTTPException(status_code=502, detail="USDA returned an unexpected record")
     mapped = map_usda_record(data, body.fdc_id)
-    food_id = upsert_usda_food(conn, body.fdc_id, mapped.kwargs, usda_provenance(mapped))
-    link_food(conn, user.id, food_id)
+    food_id = add_usda_food(conn, user.id, body.fdc_id, mapped)
     conn.commit()
     return row_to_food(fetch_food(conn, food_id))
 

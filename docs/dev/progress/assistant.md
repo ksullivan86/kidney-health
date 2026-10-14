@@ -1,4 +1,57 @@
-Status: complete (part A: access tokens; part B: the read-only MCP server at POST /mcp; part C, writes, is the next PR)
+Status: in progress (part C: the `assistant:log` scope, `log_food`, `save_recipe`; parts A and B below are complete)
+
+# Assistant, step 1, part C: writes with a separate scope (`assistant:log`)
+
+Spec: `docs/dev/plans/assistant-step1.md` part C. Worktree branch `worktree-agent-a43b80dd0f8d1c1d8`. Its HEAD was
+only part A (`419e349`); part B (`claude/adoring-sagan-th5swr` at `78bbdca`, rebased on it) was fast-forwarded in, and
+the final B progress note taken from `ab319ad` (same tree otherwise). Commit only: no push, no PR from here.
+
+## Plan (files)
+
+1. Scope: `app/auth/api_tokens.py` (`LOG`, `scopes_for`, log implies read), `TokenCreate.can_log` (`schemas.py`),
+   Settings card (`index.html`/`settings.js`/`settings.css`): checkbox + "Read only" / "Read and save".
+2. `/mcp` (`app/mcp/server.py`): `tools/list` hides the write tools without `assistant:log`; calling one is an
+   `isError` result; `WRITE_INSTRUCTIONS` in `initialize` for a saving token.
+3. `app/mcp/tools.py`: `fdc_id` on items (USDA foods: `check_meal` reads them, `log_food`/`save_recipe` add them to the
+   list first); `place_item`/`place_items` (shared by the three tools); `log_food`, `save_recipe`; `write_once` (one
+   `BEGIN IMMEDIATE` transaction: USDA foods, entries or meal, audit, commit; any failure rolls back everything).
+4. Shared code, not copies: `app.log.insert_logged` (was `_insert_logged`), `app.meals.insert_template`,
+   `app.foods.add_usda_food` (the import route now calls it), `foods.usda_record`, `fetch_user_usda_food`,
+   `usda_unsaved_row`.
+5. Audit: `assistant.food_logged`, `assistant.recipe_saved` (user-visible; details: `via` = token name, counts).
+6. Tests: `tests/test_mcp_write.py`, scope tests in `tests/test_api_tokens.py`; `tools/e2e/mcp_smoke.py` round trip.
+7. Docs: `docs/assistant.md`, ARCHITECTURE, handbook `app/ai.md`, privacy, CHANGELOG, ROADMAP; `ASSISTANT_ENABLED` in
+   `deploy/` examples.
+
+## Decisions (and why)
+
+* A saved meal has no servings count: `log_food`'s sibling `save_recipe` stores the whole recipe's ingredients and
+  puts "Makes N servings. Source: URL" in the meal's `note` (no schema change). The note is limited to 1000
+  characters by the meals API, so `source_url` is limited to 900 characters (the spec said 2048): a longer one would
+  make the saved meal impossible to edit in the app. Owner to confirm.
+* Recipe name: 1-60 characters (the spec); the meals API itself allows 200.
+* No separate stricter rate limit for writes: they count in the shared 60/min per token. Reason: a rate limit must
+  never get in the way of logging food eaten to treat a low.
+* Saved entries are returned without `warnings`/`kidney_rating` (a food eaten to treat a low is never warned about).
+* An `fdc_id` also finds a built-in food that carries it (search_foods shows `fdc_id` for those too).
+* USDA results in `search_foods` now list `units` (they are usable by `fdc_id`); part B's test was updated.
+
+## Done
+
+* Backend (steps 1 without the UI, 2, 3, 4, 5) and `tests/test_mcp_write.py` (45 tests) pass; part B's tests pass
+  with three assertions changed for the USDA support (units, search note) and the part A scope test updated.
+
+## Next
+
+* Settings UI, docs, deploy examples, e2e smoke, full suite.
+
+## Checks
+
+    python -m pytest -q -x tests/test_mcp*.py tests/test_api_tokens.py tests/test_auth_coverage.py
+    node tests/js/run_vectors.mjs
+
+---
+
 
 # Assistant, step 1, part B: the read-only MCP server (`POST /mcp`)
 

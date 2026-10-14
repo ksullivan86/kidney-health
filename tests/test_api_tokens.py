@@ -46,10 +46,12 @@ def switch(admin: TestClient, on: bool) -> None:
     assert r.json()["settings"]["assistant.enabled"]["value"] is on
 
 
-def make(client: TestClient, name: str = "Open WebUI", days: int | None = None) -> dict[str, Any]:
+def make(client: TestClient, name: str = "Open WebUI", days: int | None = None, can_log: bool | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"name": name}
     if days is not None:
         body["expires_in_days"] = days
+    if can_log is not None:
+        body["can_log"] = can_log
     r = client.post("/api/me/tokens", json=body)
     assert r.status_code == 201, r.text
     return r.json()
@@ -500,7 +502,46 @@ def test_the_owner_must_be_able_to_use_the_app_in_this_auth_mode(tmp_path, mode,
 
 def test_unknown_scopes_grant_nothing():
     assert api_tokens.parse_scopes("assistant:read") == ("assistant:read",)
-    assert api_tokens.parse_scopes("assistant:log admin") == ()
+    assert api_tokens.parse_scopes("admin assistant:write") == ()
+    assert api_tokens.parse_scopes("assistant:log admin") == ("assistant:read", "assistant:log")  # log implies read
     assert api_tokens.parse_scopes(None) == ()
     with pytest.raises(ValueError):
         api_tokens.revoke_all(sqlite3.connect(":memory:"), 1, reason="because", actor_id=None)
+
+
+# --------------------------------------------------------------------------- #
+# Scopes (part C): assistant:log, ticked as "can also save food and recipes"
+# --------------------------------------------------------------------------- #
+
+
+def test_a_token_is_read_only_unless_can_log_is_asked_for(admin):
+    plain = make(admin, "reader")
+    assert plain["scopes"] == ["assistant:read"]
+    assert make(admin, "explicit", can_log=False)["scopes"] == ["assistant:read"]
+    saver = make(admin, "saver", can_log=True)
+    assert saver["scopes"] == ["assistant:read", "assistant:log"]  # log implies read
+    listed = {t["name"]: t["scopes"] for t in admin.get("/api/me/tokens").json()["tokens"]}
+    assert listed == {"reader": ["assistant:read"], "explicit": ["assistant:read"],
+                      "saver": ["assistant:read", "assistant:log"]}
+    conn = db(admin)
+    try:
+        stored = {r["name"]: r["scopes"] for r in conn.execute("SELECT name, scopes FROM api_tokens")}
+    finally:
+        conn.close()
+    assert stored == {"reader": "assistant:read", "explicit": "assistant:read", "saver": "assistant:read assistant:log"}
+    created = {r["details"]["scopes"][-1] for r in audit_rows(admin, "api_token.created")}
+    assert created == {"assistant:read", "assistant:log"}  # the activity log says what a token may do
+
+
+def test_scopes_cannot_be_sent_by_name_and_can_log_must_be_a_boolean(admin):
+    assert admin.post("/api/me/tokens", json={"name": "x", "scopes": ["assistant:log"]}).status_code == 400
+    assert admin.post("/api/me/tokens", json={"name": "x", "can_log": "yes please"}).status_code == 400
+    assert admin.post("/api/me/tokens", json={"name": "x", "can_log": None}).status_code == 400
+    assert admin.get("/api/me/tokens").json()["tokens"] == []
+
+
+def test_a_saving_token_still_reads_and_authenticates_like_any_token(admin):
+    saver = make(admin, "saver", can_log=True)["token"]
+    assert bearer(admin.app, saver).status_code == 200
+    assert api_tokens.parse_scopes("assistant:read assistant:log") == api_tokens.SCOPES
+    assert api_tokens.scopes_for(False) == (api_tokens.READ,) and api_tokens.scopes_for(True) == api_tokens.SCOPES
