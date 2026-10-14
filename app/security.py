@@ -683,6 +683,7 @@ _SECRETS_LOCK = threading.Lock()
 _SECRET_MIN_LENGTH = 6
 _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]+"), r"\1 " + REDACTED),
+    (re.compile(r"\bkha_[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"), "kha_" + REDACTED),  # assistant tokens (app/auth/api_tokens.py)
     (
         re.compile(r"(?i)\b(x-api-key|x-proxy-secret|api[_-]?key|password|passwd|secret|token)(\s*[=:]\s*)([^\s&,;\"']+)"),
         r"\1\2" + REDACTED,

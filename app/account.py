@@ -58,9 +58,9 @@ export.json also holds your AI activity (what the app sent to an AI provider for
 back, for as long as the server keeps it; never photos), your daily AI call counts and the AI
 providers you agreed to send data to.
 
-What is NOT in it: your password, your sign-in sessions and any API keys you stored (not even part
-of them). The person who runs the server keeps backups of the whole database; deleting your account
-does not reach those backups until they expire.
+What is NOT in it: your password, your sign-in sessions, your assistant access tokens and any
+API keys you stored (not even part of them). The person who runs the server keeps backups of the
+whole database; deleting your account does not reach those backups until they expire.
 
 Where a food's data came from is in the "source" and "source_license" columns. Rows marked ODbL-1.0
 contain information from Open Food Facts (https://world.openfoodfacts.org), which is made available
@@ -240,10 +240,12 @@ def delete_user(conn: sqlite3.Connection, user_id: int, *, actor_id: int | None,
     Invites and reset/setup links the account created are deleted first: ``auth_tokens.created_by``
     is ``ON DELETE SET NULL``, so after the delete nothing would tie them to the removed admin and they
     would keep working (one could be a reset link for the remaining admin's account)."""
+    from .auth.api_tokens import revoke_all
     from .auth.tokens import void_issued_by
 
     uid = int(user_id)
     voided = void_issued_by(conn, uid)
+    revoke_all(conn, uid, reason="account_deleted", actor_id=actor_id, ip=ip)
     audit(conn, actor_id, action, "user", uid, ip=ip, **({"links_revoked": voided} if voided else {}))
     conn.execute("DELETE FROM users WHERE id = ?", (uid,))
     conn.commit()

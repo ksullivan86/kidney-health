@@ -536,3 +536,23 @@ NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
      "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent"}
 )
+
+
+# --------------------------------------------------------------------------- #
+# Assistant access (docs/dev/plans/assistant-step1.md part A; read by app/auth/api_tokens.py). The tokens
+# themselves are rows of api_tokens (schema step 10), never settings.
+# --------------------------------------------------------------------------- #
+
+register(
+    SettingDef(
+        key="assistant.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="ASSISTANT_ENABLED",
+        label="Assistant access (personal tokens for a chat assistant)",
+        help="Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat "
+        "assistant they connect read their own food log and targets. While off, no token can be made or used; "
+        "turned on again, tokens that have not expired or been revoked work again.",
+    ),
+)

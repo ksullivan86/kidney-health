@@ -2,8 +2,9 @@
 
    Sections: Account (name, password, signed-in devices, export, delete, sign out), Preferences
    (theme, week start, units), Food data (USDA key, Open Food Facts), AI ideas (filled by M2),
-   This device (install, offline, storage; completed by js/pwa.js in the installed app), Admin
-   (admins only: a link to Server administration) and About & privacy.
+   Assistant access (personal tokens for a chat assistant; only while the admin switch is on, see
+   renderAssistant), This device (install, offline, storage; completed by js/pwa.js in the installed
+   app), Admin (admins only: a link to Server administration) and About & privacy.
 
    Server administration (v0.3.1, docs/dev/plans/v0.3.1.md item 3) is its own view (#admin), opened from the
    header shield that only admins see and from Settings → Admin: people and invites, server settings, shared
@@ -34,6 +35,9 @@
     changePassword: (b) => request('POST', '/api/me/password', b),
     deleteMe: (b) => request('DELETE', '/api/me', b),
     activity: () => request('GET', '/api/me/activity?limit=20'),
+    tokens: () => request('GET', '/api/me/tokens'),
+    createToken: (b) => request('POST', '/api/me/tokens', b),
+    revokeToken: (id) => request('DELETE', `/api/me/tokens/${encodeURIComponent(id)}`),
     users: () => request('GET', '/api/admin/users'),
     createUser: (b) => request('POST', '/api/admin/users', b),
     updateUser: (id, b) => request('PATCH', `/api/admin/users/${id}`, b),
@@ -179,16 +183,16 @@
     try { input.focus(); input.select(); } catch (e) { /* ignore */ }
     return false;
   }
-  // A link shown once (invite, account setup, password reset), with Copy.
-  function linkBox(url, lines) {
+  // A link shown once (invite, account setup, password reset), with Copy; also an assistant token (opts).
+  function linkBox(url, lines, opts = {}) {
     const id = uid('link');
     const input = h('input', { id, type: 'text', class: 'link-input', readonly: true, value: url, spellcheck: 'false', autocomplete: 'off' });
-    const copy = action('Copy link', 'primary', async () => {
-      if (await copyText(url, input)) toast('Link copied', 'ok');
-      else toast('Select the link and copy it (Ctrl+C, or touch and hold on a phone).');
+    const copy = action(opts.copy || 'Copy link', 'primary', async () => {
+      if (await copyText(url, input)) toast(opts.copied || 'Link copied', 'ok');
+      else toast(`Select the ${opts.copy ? 'token' : 'link'} and copy it (Ctrl+C, or touch and hold on a phone).`);
     });
-    const box = h('div', { class: 'link-box', role: 'group', 'aria-label': 'Link to send' },
-      h('label', { for: id, class: 'label' }, 'Link (shown only now)'),
+    const box = h('div', { class: 'link-box', role: 'group', 'aria-label': opts.group || 'Link to send' },
+      h('label', { for: id, class: 'label' }, opts.label || 'Link (shown only now)'),
       h('div', { class: 'link-row' }, input, copy),
       lines.map((t) => h('p', { class: 'hint' }, t)),
       MOCK ? h('p', { class: 'hint' }, 'Demo: this is an example link; it does not open anything.') : null);
@@ -494,7 +498,10 @@
     'session.revoked_reauth': 'Signed out after wrong passwords', 'proxy.username_conflict': 'Sign-in proxy name clash', 'settings.changed': 'Setting changed',
     'secret.set': 'Key saved', 'secret.removed': 'Key removed', 'ai_provider.changed': 'AI provider changed', 'export.created': 'Data exported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
+    'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked',
   };
+  const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
+    account_deleted: 'account deleted' };
   function eventDetail(ev) {
     const d = ev.details || {};
     if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}`;
@@ -503,6 +510,8 @@
     if (ev.action === 'user.role_changed') return `${ROLE_LABEL[d.old] || d.old} → ${ROLE_LABEL[d.new] || d.new}`;
     if (ev.action === 'login.failed' && d.via === 'reauth') return 'when asked for the password again';
     if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
+    if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
+    if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -520,7 +529,7 @@
   function activityBlock() {
     const list = h('ul', { class: 'activity-list' }, h('li', { class: 'muted small' }, 'Loading…'));
     const details = h('details', { class: 'settings-details', id: 'set-activity' }, h('summary', {}, 'Recent sign-in activity'), list,
-      h('p', { class: 'hint' }, 'Sign-ins, password and key changes and exports on your account, newest first, including anything an admin did to it.'));
+      h('p', { class: 'hint' }, 'Sign-ins, password, key and assistant token changes and exports on your account, newest first, including anything an admin did to it.'));
     let loaded = false;
     details.addEventListener('toggle', async () => {
       if (!details.open || loaded) return;
@@ -734,6 +743,132 @@
     body.append(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not configured')),
       h('p', {}, 'Optional AI help (meal ideas, reading a nutrition label from a photo) is not set up on this server. Nothing you log is sent to an AI service.'),
       h('div', { id: 'set-ai-slot' }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section: Assistant access (docs/assistant.md; app/auth/api_tokens.py)
+  // ---------------------------------------------------------------------------
+  // Personal tokens for a chat assistant the person connects. The card shows while the admin switch
+  // assistant.enabled is on; while it is off only to admins (where to turn it on) and to a person who still has
+  // active tokens (to revoke them). A new token is in the POST answer only: it is shown once, in a box with Copy,
+  // until the card is drawn again. The demo makes no tokens and says so.
+  const ASSISTANT_INTRO = 'A token gives a chat assistant you connect read-only access to your own food log and targets. '
+    + 'How to connect one is in the app\'s documentation (docs/assistant.md).';
+  const EXPIRY_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year' };
+  let assistantRender = 0;
+  let unshownToken = null; // the answer of POST /api/me/tokens until a render has put it on screen (once)
+  function takeUnshownToken() { const made = unshownToken; unshownToken = null; return made && made.token ? made : null; }
+  function tokenBox(made) {
+    return linkBox(made.token, ['It is not shown again. Revoke it here if it is lost.'],
+      { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' });
+  }
+  function tokenSub(t) {
+    const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
+    if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
+    else parts.push(`${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`);
+    return parts.join(' · ');
+  }
+  function focusAssistant() {
+    const el = $('#set-assistant-body .token-actions button') || $('#set-token-name') || $('#set-assistant-h');
+    if (!el) return;
+    if (el.id === 'set-assistant-h') el.setAttribute('tabindex', '-1');
+    el.focus();
+  }
+  function tokenList(tokens) {
+    if (!tokens.length) return h('p', { class: 'muted small' }, 'No tokens yet.');
+    const ul = h('ul', { class: 'list device-list', 'aria-label': 'Your assistant tokens' });
+    for (const t of tokens) {
+      const li = h('li', { class: `device token-row${t.state === 'active' ? '' : ' token-ended'}` },
+        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, t.name), h('span', { class: 'row-sub' }, tokenSub(t))));
+      if (t.state === 'active') {
+        const actions = h('div', { class: 'token-actions' });
+        const btn = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Revoke ${t.name}` }, 'Revoke');
+        btn.addEventListener('click', () => confirm.inline(actions, btn, {
+          message: `Revoke “${t.name}”? An assistant using it stops working at once.`,
+          confirmText: 'Revoke',
+          onConfirm: async () => {
+            await A.revokeToken(t.id);
+            toast(`Revoked ${t.name}`, 'ok');
+            await renderAssistant();
+            focusAssistant();
+            return true;
+          },
+        }));
+        actions.append(btn);
+        li.append(actions);
+      }
+      ul.append(li);
+    }
+    return ul;
+  }
+  function newTokenForm(res, activeCount) {
+    if (activeCount >= res.max_active) {
+      return h('p', { class: 'hint' }, `You have ${res.max_active} active tokens, the most allowed. Revoke one to make another.`);
+    }
+    const name = h('input', { id: 'set-token-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-token-name-hint' });
+    const expiry = selectEl('set-token-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
+    const err = formError();
+    const create = action('Create token', 'primary', async () => {
+      clear(err);
+      const text = name.value.trim();
+      if (!text) { showFormError(err, 'Give the token a name, for example the app or device it is for.'); name.focus(); return; }
+      let made;
+      try {
+        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value) });
+      } catch (e) {
+        if (!e.cancelled && !e.handled) showFormError(err, e);
+        return;
+      }
+      await renderAssistant(made);
+    }, { id: 'set-token-create' });
+    name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); create.click(); } });
+    return h('div', { class: 'settings-form' },
+      h('div', { class: 'field' }, h('label', { for: 'set-token-name' }, 'Name'), name,
+        h('span', { class: 'hint', id: 'set-token-name-hint' }, 'For example the app or device it is for, so you know which one to revoke.')),
+      h('div', { class: 'field' }, h('label', { for: 'set-token-expiry' }, 'Expires after'), expiry),
+      h('div', { class: 'settings-actions' }, create),
+      err);
+  }
+  // made: the answer of POST /api/me/tokens (with `token`). It is shown once, at the top of "New token", by
+  // whichever render finishes next (also when the list cannot be loaded), so a new token is never lost.
+  async function renderAssistant(made = null) {
+    const sec = $('#set-assistant');
+    const body = $('#set-assistant-body');
+    if (!sec || !body) return;
+    if (made) unshownToken = made;
+    const ticket = ++assistantRender;
+    const show = (visible) => { if (sec.hidden === visible) { sec.hidden = !visible; renderNav(); } };
+    if (MOCK) {
+      body.replaceChildren(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
+        h('p', {}, ASSISTANT_INTRO),
+        h('p', { class: 'hint' }, 'Available in the installed app on your own server once the admin turns assistant access on. The demo makes no tokens.'));
+      show(true);
+      return;
+    }
+    let res;
+    try { res = await A.tokens(); } catch (err) {
+      if (ticket !== assistantRender) return;
+      const fresh = takeUnshownToken();
+      if (!sec.hidden) body.replaceChildren(failed(err), ...(fresh ? [tokenBox(fresh)] : [])); // never a new card just to say it failed
+      return;
+    }
+    if (ticket !== assistantRender) return;
+    const tokens = res.tokens || [];
+    const active = tokens.filter((t) => t.state === 'active').length;
+    if (!res.enabled && !isAdmin() && !active) { takeUnshownToken(); body.replaceChildren(); show(false); return; }
+    const parts = [h('p', {}, ASSISTANT_INTRO)];
+    if (!res.enabled) {
+      parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')));
+      if (active) parts.push(h('p', { class: 'hint' }, 'Your tokens do not work while assistant access is off. You can still revoke them.'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Assistant access" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
+    }
+    parts.push(subtitle('Your tokens'), tokenList(tokens));
+    const fresh = takeUnshownToken();
+    if (res.enabled || fresh) parts.push(subtitle('New token', 'set-token-new-h'));
+    if (fresh) parts.push(tokenBox(fresh));
+    if (res.enabled) parts.push(newTokenForm(res, active));
+    body.replaceChildren(...parts);
+    show(true);
   }
 
   // ---------------------------------------------------------------------------
@@ -1120,7 +1255,7 @@
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
     // The master switch first: Settings → AI ideas sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
-      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.audit_retention_days']],
+      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.audit_retention_days', 'assistant.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
   const CHOICE_LABEL = {
@@ -1184,6 +1319,7 @@
           if (typeof KH.ai.renderAdmin === 'function') KH.ai.renderAdmin().catch((e2) => console.warn('AI providers:', e2));
           if (typeof KH.ai.renderAddSlot === 'function') KH.ai.renderAddSlot().catch((e2) => console.warn('AI buttons:', e2));
         }
+        if (key === 'assistant.enabled') renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
           loadPeople();
@@ -1473,6 +1609,7 @@
     renderPrefs();
     if (KH.guidance) KH.guidance.renderSettings().catch((err) => console.warn('Meal guidance settings:', err)); // js/views/guidance.js
     renderAi();
+    renderAssistant().catch((err) => console.warn('Assistant access:', err));
     renderAbout();
     cache.myKeys = null;
     renderFood();

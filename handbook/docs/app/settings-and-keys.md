@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-07
+last_checked: 2026-10-14
 fact_checked: 2026-10-05
 sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API]
 ---
@@ -27,6 +27,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
 | **AI ideas** | opt in, provider, your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
+| **Assistant access** (when your admin turns it on) | personal tokens for a chat assistant you connect: make one, copy it once, see when it was last used, revoke it ([below](#assistant-access)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
@@ -98,8 +99,21 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
   another minimum). Your other devices are signed out.
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
-- Sensitive actions (changing a password or key, exporting, deleting your account) ask for your password
-  again if you entered it more than 10 minutes ago.
+- Sensitive actions (changing a password or key, making an assistant token, exporting, deleting your
+  account) ask for your password again if you entered it more than 10 minutes ago.
+
+## Assistant access
+
+When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
+assistant you connect. A token lets that assistant read your own food log and targets; it cannot change
+anything, and it never sees anyone else's data.
+
+- Give the token a name (the app or device it is for) and choose when it expires: 30 days, 90 days or 1 year.
+- The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown
+  again. If it is lost, **Revoke** it and make a new one.
+- You can have 5 at a time. **Revoke** ends one at once. Changing your password, a password reset, or your
+  account being disabled revokes all of them.
+- Treat a token like a password: never send it by text message or email.
 
 ## What to do
 

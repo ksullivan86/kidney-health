@@ -116,6 +116,39 @@ def test_every_v03_route_exists_and_needs_a_session(anon_client):
         assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
 
 
+# Assistant access tokens (ARCHITECTURE.md "Assistant access tokens"): managing them needs a session like every
+# /api/me route, and a token counts only on the assistant surface (app/auth/api_tokens.py AssistantUser).
+ASSISTANT_TOKEN_ROUTES = {("get", "/api/me/tokens"), ("post", "/api/me/tokens"), ("delete", "/api/me/tokens/{token_id}")}
+
+
+def test_the_assistant_token_routes_exist_and_need_a_session(anon_client):
+    ops = api_operations(anon_client.app)
+    assert ASSISTANT_TOKEN_ROUTES <= ops, sorted(ASSISTANT_TOKEN_ROUTES - ops)
+    assert not ASSISTANT_TOKEN_ROUTES & PUBLIC
+    for method, path in sorted(ASSISTANT_TOKEN_ROUTES):
+        r = anon_client.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
+        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+
+
+def test_a_valid_assistant_token_opens_no_api_route(client):
+    """Every /api route reads the session cookie only: a request that carries nothing but a valid bearer token
+    (the switch on, the token fresh) is anonymous everywhere, admin routes included."""
+    from test_api_tokens import bearer
+
+    assert client.patch("/api/admin/settings", json={"assistant.enabled": True}).status_code == 200
+    token = client.post("/api/me/tokens", json={"name": "coverage"}).json()["token"]
+    alone = TestClient(client.app, headers={"Authorization": f"Bearer {token}"})
+    checked = 0
+    for method, path in sorted(api_operations(client.app)):
+        if (method, path) in PUBLIC:
+            continue
+        r = alone.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
+        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+        checked += 1
+    assert checked > 50
+    assert bearer(client.app, token).status_code == 200  # the token was good all along, on the assistant surface
+
+
 def test_public_routes_answer_without_a_session(anon_client):
     assert anon_client.get("/api/auth/status").status_code == 200
     assert anon_client.post("/api/auth/login", json={"username": "nobody", "password": "x"}).status_code == 401

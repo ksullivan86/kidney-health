@@ -12,7 +12,7 @@ from .. import account, credentials
 from ..audit import USER_VISIBLE_ACTIONS, audit, list_events
 from ..db import get_db, utcnow
 from ..settings_store import InvalidSettingValue, SettingLocked, SettingNotEditable, SettingsUnavailable
-from . import clock, sessions, tokens
+from . import api_tokens, clock, sessions, tokens
 from .accounts import (
     PasswordRejected,
     begin_immediate,
@@ -102,6 +102,7 @@ def change_password(body: PasswordChangeBody, request: Request, response: Respon
     set_password(conn, user.id, hash_password(new))
     sessions.revoke_user_sessions(conn, user.id)
     tokens.void_reset_links(conn, user.id)  # an older reset link must not undo this change
+    api_tokens.revoke_all(conn, user.id, reason="password_changed", actor_id=user.id, ip=request_ip(request))
     start_session(request, response, conn, ctx, user.id)  # rotate: a new id for this device
     audit(conn, user.id, "user.password_changed", "user", user.id, ip=request_ip(request), via="self")
     conn.commit()

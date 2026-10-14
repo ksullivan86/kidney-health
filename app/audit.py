@@ -69,6 +69,8 @@ ACTIONS: set[str] = {
     "account.deleted",
     "secret_key.rotated",
     "backup.created",
+    "api_token.created",  # assistant access tokens (app/auth/api_tokens.py)
+    "api_token.revoked",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -84,6 +86,8 @@ USER_VISIBLE_ACTIONS = frozenset(
         "secret.set",
         "secret.removed",
         "export.created",
+        "api_token.created",
+        "api_token.revoked",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
