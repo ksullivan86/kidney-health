@@ -51,7 +51,7 @@
     // api_tokens, never settings.
     { key: 'assistant.enabled', type: 'bool', default: false, scope: 'instance', env: 'ASSISTANT_ENABLED',
       label: 'Assistant access (personal tokens for a chat assistant)',
-      help: 'Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat assistant they connect read their own food log and targets. '
+      help: 'Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat assistant they connect read their own food log and targets and, if the person allows it for that token, also save food and recipes. '
         + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },

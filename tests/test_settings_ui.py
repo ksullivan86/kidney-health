@@ -375,3 +375,16 @@ def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> No
     assert "confirm.inline(actions, btn" in block and "confirmText: 'Revoke'" in block
     for call in ("request('GET', '/api/me/tokens')", "request('POST', '/api/me/tokens', b)", "request('DELETE', `/api/me/tokens/"):
         assert call in SETTINGS_JS, call
+
+
+def test_the_assistant_card_offers_saving_as_a_separate_choice_and_says_what_each_token_can_do() -> None:
+    """Part C: a token is read-only unless "Can also save food and recipes" is ticked (off by default); the list says
+    "Read only" or "Read and save" from the token's scopes; the activity list names the two save events."""
+    block = SETTINGS_JS[SETTINGS_JS.index("// Section: Assistant access"):SETTINGS_JS.index("// Section: This device")]
+    assert "id: 'set-token-can-log'" in block and "'Can also save food and recipes'" in block
+    assert "checked" not in block[block.index("id: 'set-token-can-log'"):block.index("id: 'set-token-can-log'") + 120]  # unticked
+    assert "can_log: canLog.checked" in block  # sent as a boolean; the server's answer decides the scopes
+    assert "(t.scopes || []).includes('assistant:log')" in block
+    assert "'Read and save' : 'Read only'" in block
+    assert "'assistant.food_logged': 'Assistant saved food'" in SETTINGS_JS
+    assert "'assistant.recipe_saved': 'Assistant saved a recipe'" in SETTINGS_JS
