@@ -144,7 +144,12 @@ the app with a personal token from **Settings → Assistant access**
 
 - The assistant **asks the app** for your targets, what is left of today, the values of a food, and how a meal
   would change your day. The app does the sums from your own log; the assistant is told never to make numbers up.
-- It can **read, not change**: it cannot log food or change a setting. You log food in the app.
+- A token **reads only** unless you tick **Can also save food and recipes** when you make it. With that box
+  ticked the assistant can also add food to your log and save a recipe as a saved meal. It is told to read back
+  what it will save and wait for your yes, and to say what it saved. A model can still get an amount wrong, so
+  look at **Today** or **Saved meals** afterwards; you can edit or delete anything it saved, and each save is
+  listed in your activity. It can never change a setting or delete anything. A token that only reads leaves
+  logging to you, in the app.
 - When a message sounds like a low, the app hands the assistant the same **Treating a low** card you see in the
   app, to show first. When a message sounds like an emergency, it hands over **Get help now**.
 - The app cannot check what the assistant finally says. If a number looks wrong, check it on **Today**.

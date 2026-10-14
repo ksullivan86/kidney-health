@@ -552,7 +552,8 @@ register(
         env="ASSISTANT_ENABLED",
         label="Assistant access (personal tokens for a chat assistant)",
         help="Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat "
-        "assistant they connect read their own food log and targets. While off, no token can be made or used; "
+        "assistant they connect read their own food log and targets and, if the person allows it for that token, "
+        "also save food and recipes. While off, no token can be made or used; "
         "turned on again, tokens that have not expired or been revoked work again.",
     ),
 )

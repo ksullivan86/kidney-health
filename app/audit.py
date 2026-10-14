@@ -71,6 +71,8 @@ ACTIONS: set[str] = {
     "backup.created",
     "api_token.created",  # assistant access tokens (app/auth/api_tokens.py)
     "api_token.revoked",
+    "assistant.food_logged",  # a token with assistant:log saved food or a recipe (app/mcp/tools.py)
+    "assistant.recipe_saved",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -88,6 +90,8 @@ USER_VISIBLE_ACTIONS = frozenset(
         "export.created",
         "api_token.created",
         "api_token.revoked",
+        "assistant.food_logged",
+        "assistant.recipe_saved",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

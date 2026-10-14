@@ -52,7 +52,8 @@ PREFIX = "kha_"
 TOKEN_RE = re.compile(r"^kha_[A-Za-z0-9_-]{43}$")
 DISPLAY_LENGTH = 12  # "kha_" and the first 8 random characters
 READ = "assistant:read"
-SCOPES: tuple[str, ...] = (READ,)  # known scopes; part C adds "assistant:log"
+LOG = "assistant:log"  # also save food and recipes (part C); a token that has it always has READ too
+SCOPES: tuple[str, ...] = (READ, LOG)  # known scopes, in the order they are stored and shown
 EXPIRY_DAYS: tuple[int, ...] = tuple(get_args(ExpiryDays))
 DEFAULT_EXPIRY_DAYS = 90
 MAX_ACTIVE = 5
@@ -99,9 +100,17 @@ def new_token() -> str:
 
 
 def parse_scopes(text: str | None) -> tuple[str, ...]:
-    """The known scopes in a stored ``scopes`` text, in :data:`SCOPES` order. An unknown word grants nothing."""
+    """The known scopes in a stored ``scopes`` text, in :data:`SCOPES` order. An unknown word grants nothing;
+    ``assistant:log`` implies ``assistant:read``."""
     words = set((text or "").split())
+    if LOG in words:
+        words.add(READ)
     return tuple(s for s in SCOPES if s in words)
+
+
+def scopes_for(can_log: bool) -> tuple[str, ...]:
+    """The scopes of a new token: read, and also log (save food and recipes) when the person ticked it."""
+    return (READ, LOG) if can_log else (READ,)
 
 
 def is_enabled(conn: sqlite3.Connection, ctx: AuthContext) -> bool:
@@ -171,6 +180,7 @@ def create(conn: sqlite3.Connection, user_id: int, name: str, days: int,
         raise ValueError(f"expiry must be one of {EXPIRY_DAYS}")
     if not scopes or any(s not in SCOPES for s in scopes):
         raise ValueError(f"scopes must be some of {SCOPES}")
+    scopes = parse_scopes(" ".join(scopes))  # log implies read
     token = new_token()
     now = clock.now()
     row = {
@@ -343,7 +353,8 @@ def read_my_tokens(request: Request, user: CurrentUser, conn: sqlite3.Connection
 @router.post("", status_code=201)
 def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """A new token, in this answer only (``token``); needs a recent password, like saving a key."""
+    """A new token, in this answer only (``token``); needs a recent password, like saving a key. ``can_log``
+    (default false) also lets it save food and recipes (``assistant:log``); the default is read-only."""
     ctx = auth_context(request)
     if not is_enabled(conn, ctx):
         raise ApiProblem(409, SWITCHED_OFF)
@@ -353,7 +364,7 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     if active_count(conn, user.id) >= MAX_ACTIVE:
         conn.rollback()
         raise ApiProblem(400, f"You have {MAX_ACTIVE} active tokens, the most allowed. Revoke one first.")
-    token, item = create(conn, user.id, name, body.expires_in_days)
+    token, item = create(conn, user.id, name, body.expires_in_days, scopes_for(body.can_log))
     audit(conn, user.id, "api_token.created", "api_token", item["id"], ip=request_ip(request),
           expires_in_days=body.expires_in_days, scopes=item["scopes"])
     conn.commit()

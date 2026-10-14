@@ -517,11 +517,11 @@ def test_search_foods_adds_usda_results_mapped_by_the_app_and_saves_nothing(usda
     assert request.headers["x-api-key"] == "TESTKEY" and "TESTKEY" not in str(request.url)
     [nectar] = got["results"]
     assert nectar["id"] is None and nectar["fdc_id"] == 2000001 and nectar["source"] == "usda" and nectar["in_app"] is False
-    assert nectar["serving"] == {"description": "1 cup (240 mL)", "grams": 240.0} and nectar["units"] == []
+    assert nectar["serving"] == {"description": "1 cup (240 mL)", "grams": 240.0} and nectar["units"] == ["serving", "g", "cup"]  # usable by its fdc_id
     per = nectar["nutrients_per_serving"]
     assert per["calories_kcal"] == 120 and per["carbs_g"] == 30.0 and per["sodium_mg"] == 24
     assert per["potassium_mg"] is None and per["phosphorus_mg"] is None  # not reported: unknown, never 0
-    assert "unknown, not zero" in nectar["notes"] and "check_meal cannot use them" in got["note"]
+    assert "unknown, not zero" in nectar["notes"] and "fdc_id" in got["note"] and "add the food to the person" in got["note"]
 
     both = call(usda_admin.app, token, "search_foods", query="banana", limit=3)
     assert [(r["source"], r["fdc_id"]) for r in both["results"]] == [("builtin", 173944), ("usda", 777777)]

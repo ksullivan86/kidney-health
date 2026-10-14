@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speak MCP to a real server: the assistant's read-only tools at ``POST /mcp``, end to end.
+"""Speak MCP to a real server: the assistant's tools at ``POST /mcp``, read-only and saving, end to end.
 
     python tools/e2e/mcp_smoke.py                     # port 8073, work directory in the system temp dir
     python tools/e2e/mcp_smoke.py --port 8073 --out /tmp/kh-mcp
@@ -12,7 +12,12 @@ first-run setup as the first admin, switches assistant access on through the adm
 * ``initialize`` (version 2025-06-18), ``notifications/initialized`` (202), ``tools/list`` (the four tools);
 * ``get_today``; ``check_meal`` for "banana" and "white rice 1 cup" (both found in the built-in list, the cup read
   from the food's own serving); ``safety_check("I feel shaky and low")`` (the Treating a low card);
-* and the refusals: no token (401), ``GET`` (405), a foreign ``Origin`` (403).
+* and the refusals: no token (401), ``GET`` (405), a foreign ``Origin`` (403);
+* a second token made with "can also save" (``can_log``): ``tools/list`` gains ``log_food`` and ``save_recipe``;
+  the read-only token's call to ``log_food`` is refused and saves nothing; ``log_food`` saves banana and rice for
+  lunch (the same entries ``GET /api/log`` shows, the day's figures in the answer), an unresolved item saves
+  nothing at all, ``save_recipe`` makes a saved meal the meals API shows, the activity list names both saves, and
+  revoking the token stops it (401).
 
 Nothing leaves the machine: no USDA key, Open Food Facts off, no AI. Prints PASS / FAIL lines, writes
 ``<out>/report.json``; exit status 1 on any failure. The server is always stopped.
@@ -36,6 +41,7 @@ OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "mcp_smoke"
 PORT = 8073
 PROTOCOL = "2025-06-18"
 TOOLS = {"get_today", "search_foods", "check_meal", "safety_check"}
+WRITE_TOOLS = {"log_food", "save_recipe"}
 RESULTS: list[dict[str, Any]] = []
 
 
@@ -85,13 +91,18 @@ class Mcp:
 def run(server: Server) -> None:
     admin = first_admin(server, "mcp-smoke")
     try:
-        settings = admin.json("PATCH", "/api/admin/settings", {"assistant.enabled": True})["settings"]
-        check("the admin switches assistant access on", settings["assistant.enabled"]["value"] is True)
-        made = admin.json("POST", "/api/me/tokens", {"name": "MCP smoke", "expires_in_days": 30})
-        token = made["token"]
-        check("a token is made once, kha_ + 43 characters", token.startswith("kha_") and len(token) == 47)
+        run_as(server, admin)
     finally:
         admin.close()
+
+
+def run_as(server: Server, admin: khserver.Api) -> None:
+    settings = admin.json("PATCH", "/api/admin/settings", {"assistant.enabled": True})["settings"]
+    check("the admin switches assistant access on", settings["assistant.enabled"]["value"] is True)
+    made = admin.json("POST", "/api/me/tokens", {"name": "MCP smoke", "expires_in_days": 30})
+    token = made["token"]
+    check("a token is made once, kha_ + 43 characters", token.startswith("kha_") and len(token) == 47)
+    check("a token is read-only unless it is made with can_log", made["scopes"] == ["assistant:read"])
 
     bare = httpx2.Client(base_url=server.base, trust_env=False, timeout=30)
     try:
@@ -148,8 +159,63 @@ def run(server: Server) -> None:
               and "15 g of fast carbs" in " ".join(card.get("lines", [])), json.dumps(safety)[:300])
         neutral = mcp.call("safety_check", message="What could I have for lunch?")
         check("safety_check: an ordinary question is none", neutral.get("action") == "none")
+
+        saving_part(server, admin, mcp)
     finally:
         mcp.close()
+
+
+def saving_part(server: Server, admin: khserver.Api, reader: Mcp) -> None:
+    today = reader.call("get_today")["date"]
+    refused = reader.request("tools/call", {"name": "log_food", "arguments": {"items": [{"food": "banana"}], "meal": "lunch"}})
+    check("a read-only token cannot save: an error result that says so, nothing saved",
+          refused.get("isError") is True and "can only read" in refused["content"][0]["text"]
+          and admin.json("GET", "/api/log", None, params={"date": today})["entries"] == [])
+
+    made = admin.json("POST", "/api/me/tokens", {"name": "MCP smoke saver", "expires_in_days": 30, "can_log": True})
+    check("a token made with can_log has both scopes", made["scopes"] == ["assistant:read", "assistant:log"])
+    saver = Mcp(server.base, made["token"])
+    try:
+        saver.version = PROTOCOL
+        names = {t["name"] for t in saver.request("tools/list")["tools"]}
+        check("a token that can save also lists log_food and save_recipe", names == TOOLS | WRITE_TOOLS, str(sorted(names)))
+
+        logged = saver.call("log_food", items=[{"food": "banana"}, {"food": "white rice 1 cup"}], meal="lunch")
+        shown = admin.json("GET", "/api/log", None, params={"date": today})["entries"]
+        check("log_food saves banana and rice for lunch: the entries the log API shows",
+              logged["saved"] is True and len(logged["entries"]) == 2
+              and {e["entry_id"] for e in logged["entries"]} == {e["id"] for e in shown}
+              and all(e["meal"] == "lunch" and e["status"] == "eaten" for e in shown), json.dumps(logged)[:300])
+        check("log_food answers with the day's figures after saving",
+              logged["day"]["entries"] == {"eaten": 2, "planned": 0}
+              and logged["day"]["nutrients"]["potassium_mg"]["eaten"]["value"] == sum(
+                  e["nutrients"]["potassium_mg"] for e in logged["entries"]))
+
+        unresolved = saver.call("log_food", items=[{"food": "banana"}, {"food": "zzzz qqqq"}], meal="dinner")
+        check("an unresolved item saves nothing at all and asks",
+              unresolved["saved"] is False and unresolved["unresolved"][0]["reason"] == "no_match"
+              and len(admin.json("GET", "/api/log", None, params={"date": today})["entries"]) == 2)
+
+        recipe = saver.call("save_recipe", name="Smoke pudding", servings=2, source_url="https://example.org/pudding",
+                            ingredients=[{"food": "banana", "amount": 2}, {"food": "white rice 1 cup"}])
+        meal = admin.json("GET", f"/api/meals/{recipe['meal']['id']}")
+        check("save_recipe makes a saved meal the meals API shows, with the servings and the link in its note",
+              meal["name"] == "Smoke pudding" and meal["note"] == "Makes 2 servings. Source: https://example.org/pudding"
+              and len(meal["items"]) == 2, json.dumps(meal)[:300])
+
+        events = admin.json("GET", "/api/me/activity")["events"]
+        saves = [e for e in events if e["action"].startswith("assistant.")]
+        check("the activity list names both saves with the token's name",
+              {e["action"] for e in saves} == {"assistant.food_logged", "assistant.recipe_saved"}
+              and all(e["details"]["via"] == "MCP smoke saver" for e in saves), json.dumps(saves)[:300])
+
+        admin.json("DELETE", f"/api/me/tokens/{made['id']}")
+        r = saver.post({"jsonrpc": "2.0", "id": 99, "method": "tools/call",
+                        "params": {"name": "log_food", "arguments": {"items": [{"food": "banana"}], "meal": "lunch"}}})
+        check("a revoked token cannot save: 401, nothing added",
+              r.status_code == 401 and len(admin.json("GET", "/api/log", None, params={"date": today})["entries"]) == 2)
+    finally:
+        saver.close()
 
 
 def main(argv: list[str] | None = None) -> int:

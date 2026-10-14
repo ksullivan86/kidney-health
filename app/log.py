@@ -718,8 +718,9 @@ def _replayed(conn: sqlite3.Connection, user_id: int, client_id: str | None, res
     return row_to_entry(existing)
 
 
-def _insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where: str = "") -> int:
-    """Validate visibility (404) and insert one ``POST /api/log`` item; the caller commits."""
+def insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where: str = "") -> int:
+    """Validate visibility (404) and insert one ``POST /api/log`` item; the caller commits. Also what the
+    assistant's ``log_food`` (``app/mcp``) saves through, so an entry made there is an entry made here."""
     food = fetch_user_food(conn, user_id, body.food_id)
     if food is None:
         raise HTTPException(status_code=404, detail=f"{where}food {body.food_id} not found")
@@ -749,7 +750,7 @@ def create_batch(body: LogBatch, user: CurrentUser, response: Response,
                 if existing is not None:
                     results.append((int(existing["id"]), "existing"))
                     continue
-                results.append((_insert_logged(conn, user.id, item, where=f"entries[{index}]: "), "created"))
+                results.append((insert_logged(conn, user.id, item, where=f"entries[{index}]: "), "created"))
         except sqlite3.IntegrityError:
             conn.rollback()  # a concurrent request used one of the client_ids: the retry sees it as existing
             if attempt:
@@ -778,7 +779,7 @@ def create_entry(body: LogCreate, user: CurrentUser, response: Response,
         response.status_code = 200
         return row_to_entry(existing)
     try:
-        entry_id = _insert_logged(conn, user.id, body)
+        entry_id = insert_logged(conn, user.id, body)
     except sqlite3.IntegrityError:
         return _replayed(conn, user.id, body.client_id, response)
     conn.commit()

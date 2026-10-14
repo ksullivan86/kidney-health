@@ -7,10 +7,10 @@ token. The plan, its rules and its parts are in
 [`dev/plans/assistant-step1.md`](dev/plans/assistant-step1.md); the API contract is in `ARCHITECTURE.md`
 ("Assistant access tokens" and "Assistant MCP server").
 
-**Where this stands.** Step 1 is in place: personal access tokens (part A) and a **read-only MCP server** at
-`/mcp` (part B) with four tools. The assistant can read your numbers and check a meal; it cannot log anything.
-Logging food and saving recipes through the assistant (part C, its own token scope) and a chat screen inside the
-app (step 2) are later steps ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
+**Where this stands.** Step 1 is in place: personal access tokens (part A), the **MCP server** at `/mcp` with four
+tools that read your numbers and check a meal (part B), and, only for a token made with **Can also save food and
+recipes**, two tools that save (part C): `log_food` and `save_recipe`. A chat screen inside the app (step 2) is a
+later step ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 
 ## Contents
 
@@ -22,6 +22,7 @@ app (step 2) are later steps ([ROADMAP](ROADMAP.md), "An assistant you can talk 
   * [For the person running the server](#for-the-person-running-the-server)
   * [Security rules](#security-rules)
 * [What the assistant can ask the app](#what-the-assistant-can-ask-the-app)
+  * [Tools that save](#tools-that-save)
 * [Connect Open WebUI](#connect-open-webui)
 * [Connect a Hermes Agent profile](#connect-a-hermes-agent-profile)
 * [System prompt template](#system-prompt-template)
@@ -47,27 +48,32 @@ your reverse proxy with HTTPS. Exposing the app to the internet so that a vendor
 ## Access tokens
 
 A token is a long secret, `kha_` followed by 43 letters, digits, `-` and `_`, that you paste into the chat
-assistant you connect. It gives that assistant **read-only** access to **your own** food log and targets: it cannot
-change anything, and it never sees anyone else's data. Each token has the scope `assistant:read`; a later step may
-add a separate scope for logging food, which you would have to tick when making the token.
+assistant you connect. By default it gives that assistant **read-only** access to **your own** food log and
+targets (scope `assistant:read`): it cannot change anything. If you tick **Can also save food and recipes** when
+you make the token, it also has the scope `assistant:log`: the assistant can then add entries to your food log and
+save recipes as saved meals, after it has asked you (see [Tools that save](#tools-that-save)). It never sees
+anyone else's data, and it cannot edit or delete anything.
 
 ### For people using the app
 
 **Settings → Assistant access** (it shows once your admin has turned assistant access on):
 
 1. Under **New token**, give the token a **name** (for example the app or device it is for, so you know which one
-   to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year.
+   to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year. Tick **Can also
+   save food and recipes** only if you want the assistant to be able to save for you; it is off by default, and a
+   token cannot be changed later (make a new one instead).
 2. Select **Create token**. The app may ask for your password again first, as it does before saving a key.
 3. The token appears once, with **Copy token**. Paste it into your assistant's settings now: **it is not shown
    again**. If it is lost, revoke it and make a new one.
 
-The list shows each token's name, its first characters (`kha_AbCd1234…`), when it was made, when it was last used
-(or "never used") and when it expires. **Revoke** asks once more and then ends the token at once; the assistant
+The list shows each token's name, whether it is **Read only** or **Read and save**, its first characters
+(`kha_AbCd1234…`), when it was made, when it was last used (or "never used") and when it expires. **Revoke** asks once more and then ends the token at once; the assistant
 using it gets "not allowed" from then on. You can have at most **5** active tokens. Revoked and expired tokens stay
 in the list for 30 days, then disappear.
 
-Your activity list (Settings → Account → Recent sign-in activity) shows when a token was made and when tokens were
-revoked, and why.
+Your activity list (Settings → Account → Recent sign-in activity) shows when a token was made (and whether it can
+save) and when tokens were revoked, and why. It also shows **every time an assistant saved something**: the token's
+name, how many entries (or which recipe), the day and the meal.
 
 ### What ends a token
 
@@ -114,7 +120,7 @@ your data). Deleting your account deletes them.
 
 ## What the assistant can ask the app
 
-The MCP server offers four **read-only** tools. Every number in their answers comes from the app's own code (the
+The MCP server offers four **read-only** tools to every token, and two that save to a token that can save. Every number in their answers comes from the app's own code (the
 same functions as the Today screen, the food search and the entry sheet), never from the chat model. Each answer is
 one JSON object with `"source": "kidney-health"` and the reminder "Numbers come from the app; fetch them again
 after any change." A value a food does not list is `null` (unknown, never 0), and every total says how many foods
@@ -124,8 +130,32 @@ it misses (`not_listed_by`). No answer contains insulin or medicine doses, medic
 |---|---|
 | `safety_check(message)` | Rule-based, for **every** message from the person (up to 2,000 characters). Words that may describe a low (the app's own low pre-filter) → `action: "treat_low_first"` with the app's **Treating a low** card, using the person's own grams from Settings → Meal guidance. Emergency words (the app's red-flag rule, which follows the handbook's "Call 911 now" list) → `action: "get_help_now"` with the **Get help now** card and the link `/learn/get-help-now/` (when both match, both cards come back, and the Get help now card itself says to treat a low first). Otherwise `action: "none"`. It never delays or warns against treating a low. |
 | `get_today(date?)` | The day's numbers exactly as Today has them (default: today on the server's clock): targets (`about` marks a one-number target such as protein "about 56 g"), eaten, planned and both, what is left of each target or how far over, the unknown counts, the app's alerts and "running high" warnings, **per-meal carbohydrate goals only when the profile has diabetes** (carbohydrate used to treat a low counts in the day, never toward a meal), and on hemodialysis whether the day is a dialysis day and the totals since the last session. |
-| `search_foods(query, limit?)` | Up to `limit` (1–10, default 5) foods: the person's own foods and the built-in list first (the app's search), then USDA FoodData Central when the server has a key the person may use. Values are per serving, with the serving's description and grams, the per-serving warnings and the `units` `check_meal` accepts. USDA results are mapped the way an import would map them but **not saved** (`in_app: false`); `check_meal` cannot use them until the person adds the food in the app. |
-| `check_meal(items, date?, meal?)` | Up to 20 items, each `{food, amount?, unit?, food_id?}`. The app finds each food (by `food_id`, else by name: certain only when one food is named that way, "apple juice" for "Juice, apple", or the search finds a single food with all the words in that order; otherwise the item comes back in `unresolved` with the alternatives and a question, never a guess), scales it (`unit`: `serving` by default, `g`, or a measure the food's own serving lists, such as "cup" for "1/2 cup (124 g)"; no other conversions), and returns per-item values and warnings, the totals, the day **as if the items were planned** (the same projection Today draws for planned food, with its alerts), and with `meal` that meal's carbohydrate against its goal. **Nothing is saved.** "white rice 1 cup" or "2 slices of toast" in `food` also work. |
+| `search_foods(query, limit?)` | Up to `limit` (1–10, default 5) foods: the person's own foods and the built-in list first (the app's search), then USDA FoodData Central when the server has a key the person may use. Values are per serving, with the serving's description and grams, the per-serving warnings and the `units` `check_meal` accepts. USDA results are mapped the way an import would map them but **not saved** (`in_app: false`, `id: null`); name one by its `fdc_id` in `check_meal`, `log_food` or `save_recipe`. |
+| `check_meal(items, date?, meal?)` | Up to 20 items, each `{food, amount?, unit?, food_id?, fdc_id?}`. The app finds each food (by `food_id`; else by `fdc_id`, the id `search_foods` gives a USDA result: the person's own copy if they have one, otherwise USDA's record, read and **not saved**; else by name: certain only when one food is named that way, "apple juice" for "Juice, apple", or the search finds a single food with all the words in that order; otherwise the item comes back in `unresolved` with the alternatives and a question, never a guess), scales it (`unit`: `serving` by default, `g`, or a measure the food's own serving lists, such as "cup" for "1/2 cup (124 g)"; no other conversions), and returns per-item values and warnings, the totals, the day **as if the items were planned** (the same projection Today draws for planned food, with its alerts), and with `meal` that meal's carbohydrate against its goal. **Nothing is saved.** "white rice 1 cup" or "2 slices of toast" in `food` also work. |
+
+### Tools that save
+
+Only a token made with **Can also save food and recipes** lists these two tools; with any other token
+`tools/list` leaves them out and calling one is an error that says "This token can only read" and saves nothing.
+Both place their items **exactly as `check_meal` does** (the same food finding and amounts; an item named by `fdc_id`
+works too), so what the assistant checked is what is saved.
+
+| Tool | What it does |
+|---|---|
+| `log_food(items, meal, date?, status?, purpose?)` | Saves up to 20 items as log entries for `meal` (breakfast, lunch, dinner or snack) on `date` (default today; any date the log accepts), `status` `eaten` (default) or `planned`. **All or nothing:** if any item is unresolved or ambiguous, nothing is saved (not even the foods that were found) and the answer is `{"saved": false, "unresolved": [...]}` with the questions to ask the person. Otherwise the answer lists the saved entries (id, food, amount, nutrients with unknown as `null`), the totals of what was saved and **the day's figures after saving** (the same answer as `get_today`). The entries are made by the same function as the log API, so they are ordinary entries: the person can edit or delete them in the app. A USDA food (an item with `fdc_id` that is not in the person's list yet) is **added to the person's food list first**, as the Food screen's USDA import would, in the same all-or-nothing step. `purpose`: `hypo` marks food eaten to treat a low (it counts in the day's totals, never toward a meal's carbohydrate goal, and is saved at once like any other entry: nothing is blocked, delayed or warned about); `none` clears the mark the app would add for a food it knows treats a low. |
+| `save_recipe(name, ingredients, servings, source_url?)` | Saves a recipe as a **saved meal** (Food → Saved meals). `ingredients` are placed like `check_meal` items; if any is unresolved nothing is saved. `name` is 1–60 characters, `servings` is how many servings the whole recipe makes (more than 0, at most 100). A saved meal has no servings count, so it holds the ingredients **for the whole recipe** and its note says "Makes N servings." and, if `source_url` was given, "Source: <link>". The link must be an `http` or `https` address of at most 900 characters, with no spaces or password; it is kept as text and **never opened** by the server. The answer gives the saved meal and the totals for the whole recipe and per serving (`null` means not listed, never 0). Nothing is eaten: use the app, or `log_food`, to log a share of it. |
+
+Rules for both:
+
+* **The person confirms first.** The tool descriptions and the [system prompt](#system-prompt-template) ask the model
+  to read the items back and wait for a yes before saving, and to say what was saved afterwards. The app cannot
+  check that the model did; what it can do is list every save in the person's activity and keep each one editable.
+* **Every save is in the activity list** with the token's name and what was saved (the entry count or the recipe's
+  name), never the token.
+* Saves count in the same **60 requests a minute** per token as everything else, so a model that loops on
+  `log_food` stops after a minute's worth. There is no stricter limit for saving.
+* Neither tool edits or deletes anything, and neither returns insulin or medicine doses, medicine advice or lab
+  interpretation.
 
 ## Connect Open WebUI
 
@@ -162,11 +192,12 @@ mcp_servers:
     headers:
       Authorization: "Bearer kha_your_token_here"
     tools:
-      include: [safety_check, get_today, search_foods, check_meal]
+      include: [safety_check, get_today, search_foods, check_meal]  # add log_food, save_recipe to let it save
 ```
 
-* `tools.include` lists the four tools, so a later version of the app that offers more tools changes nothing
-  until you add them here.
+* `tools.include` lists the tools the profile may use, so a later version of the app that offers more tools changes
+  nothing until you add them here. `log_food` and `save_recipe` work only with a token made with **Can also save
+  food and recipes**.
 * The token is a password: keep the profile's files readable only by you, and revoke the token in the app if the
   file leaks.
 * Put the [system prompt](#system-prompt-template) in the profile's personality or system prompt.
@@ -196,7 +227,13 @@ only source of numbers.
    an amount. If a value is null, say it is unknown (not listed), never zero.
 4. Never give insulin or medicine doses, never suggest changing a medicine, and never interpret lab results:
    say that these belong to the person's care team.
-5. You cannot save anything. The person logs food in the app.
+5. Saving (only if log_food and save_recipe are in your tool list; otherwise you cannot save anything and the
+   person logs food in the app). Before saving, read the items back (food, amount, meal, day, eaten or planned)
+   and ask the person to confirm. After saving, say what was saved. If log_food or save_recipe returns
+   unresolved items, nothing was saved: ask the person the questions and try again with all the items. Only the
+   person decides what is saved; never save a guess. This confirmation is only about the record: it never comes
+   before the person treats a low. When the person ate something to treat a low, save it with purpose "hypo"
+   afterwards, and say nothing against it.
 6. Memory: remember preferences, foods the person likes or avoids, routines and recipes that worked. Never
    remember targets, lab values or totals: fetch them from the tools every time, because the care team may have
    changed them.
@@ -213,7 +250,8 @@ curl -sS https://food.example.org/mcp \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
-The answer lists `safety_check`, `get_today`, `search_foods` and `check_meal`. `401` means the token is wrong,
+The answer lists `safety_check`, `get_today`, `search_foods` and `check_meal`, and, for a token that can save,
+`log_food` and `save_recipe`. `401` means the token is wrong,
 revoked or expired; `404` means assistant access is off. Maintainers can run `python tools/e2e/mcp_smoke.py`,
 which starts a server and speaks the protocol to it end to end ([tools/e2e/README.md](../tools/e2e/README.md)).
 
@@ -230,7 +268,11 @@ which starts a server and speaks the protocol to it end to end ([tools/e2e/READM
   model's provider. Use a local model (for example through Ollama behind Open WebUI) if that is not acceptable.
 * `safety_check` is rule-based: it can miss unusual wording or fire on harmless words. It never replaces calling
   for help or treating a low.
-* The assistant cannot log food (a later step), see lab results, the activity log or settings, or anyone else's
+* **A model can save the wrong thing** (a misheard amount, a food of the same name): the confirmation step is only
+  as good as the model's following it. Every save is in the activity list, and every entry or saved meal can be
+  edited or deleted in the app. If you do not want an assistant to be able to save, make the token without **Can
+  also save food and recipes** (the default).
+* The assistant cannot edit or delete anything, see lab results, the activity log or settings, or anyone else's
   data.
 
 ## The endpoint, for the person running the server
@@ -244,4 +286,9 @@ which starts a server and speaks the protocol to it end to end ([tools/e2e/READM
   counts) or for an address blocked after refused tokens.
 * Behind a reverse proxy, pass the `Authorization` header through, and set `PUBLIC_URL` if a client sends an
   `Origin` with the public address. The usual `TRUSTED_PROXIES` rules apply ([security.md](security.md)).
+* Every request needs `assistant:read`. `tools/list` lists `log_food` and `save_recipe` only for a token that also
+  has `assistant:log` (they carry the annotations `readOnlyHint: false`, `destructiveHint: false`,
+  `idempotentHint: false`, `openWorldHint: false`: a repeated call saves again), and the `initialize` instructions
+  of such a token add the confirm-first rule. A call to a saving tool with a read-only token is a tool result with
+  `isError: true`, not a protocol error.
 * The server logs neither questions nor answers; a failing tool is logged with its name and the error only.

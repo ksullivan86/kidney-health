@@ -24,11 +24,12 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   ([Personalised targets and labs](targets-and-labs.md));
 * API keys the person chose to store, encrypted;
 * assistant access tokens the person made, when the admin has turned assistant access on
-  ([assistant.md](assistant.md)): a name, the first 12 characters, the dates and a one-way hash of each token,
-  never the token itself;
+  ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and
+  recipes), the dates and a one-way hash of each token, never the token itself;
 * a per-day count of lookups made with a shared key (counts only, not what was looked up);
 * entries in the activity log about their account: sign-ins, failed sign-ins, password and key
-  changes, assistant tokens made or revoked, exports;
+  changes, assistant tokens made or revoked, food or recipes an assistant saved (with the token's name and
+  how many entries, or the recipe's name), exports;
 * if the optional AI is on and the person uses it ([ai.md](ai.md)): the providers they agreed to send
   data to, their own AI provider (its key encrypted), a per-day count of AI calls and tokens, and their
   **AI activity**: what each call sent and received (kept 30 days by default, then only the time,
@@ -53,6 +54,11 @@ If the admin turns on assistant access and a person connects a chat assistant wi
 targets, the day's totals, food values and checked meals. Those answers go to the chat client the person
 connected (and to the AI model it uses; a company's model sees them) and stay under that client's own settings.
 The server keeps no copy of the questions or answers; Settings shows when each token was last used.
+A token made with "Can also save food and recipes" lets that assistant also write to the person's own log and
+saved meals (and add a USDA food the person chose to their food list, which looks the food up at USDA FoodData
+Central as the Food screen's import does, sending only the food's number and the key); what it saved is ordinary
+data of the person's account, in the export and deleted with it. A recipe's source link is kept as text and the
+server never opens it.
 
 ## Who can see it
 

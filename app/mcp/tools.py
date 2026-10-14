@@ -1,5 +1,6 @@
-"""The assistant's four read-only tools (``docs/dev/plans/assistant-step1.md`` part B; ARCHITECTURE.md "Assistant
-MCP server"). Each answers one JSON object, sent as ``structuredContent`` and as text.
+"""The assistant's tools (``docs/dev/plans/assistant-step1.md`` parts B and C; ARCHITECTURE.md "Assistant MCP
+server"): four read-only ones and, for a token that also has ``assistant:log``, two that save. Each answers one
+JSON object, sent as ``structuredContent`` and as text.
 
 Every number comes from the app's own functions, never from a copy of the maths:
 
@@ -11,12 +12,20 @@ Every number comes from the app's own functions, never from a copy of the maths:
 * ``check_meal``: the item is found in the app, scaled like a log entry (:func:`app.nutrients.scale_nutrients`),
   warned about with :func:`app.nutrients.food_warnings`, and the day is projected with
   :func:`app.log.day_figures` as if the items were planned entries. Nothing is saved.
+* ``log_food`` (writes): the items are placed exactly as ``check_meal`` places them, then saved through
+  :func:`app.log.insert_logged`, the function behind ``POST /api/log`` and ``/api/log/batch``, in one transaction
+  with the USDA foods they need (:func:`app.foods.add_usda_food`, the code behind the USDA import route). If any
+  item is unresolved nothing is saved.
+* ``save_recipe`` (writes): the ingredients are placed the same way and saved as a saved meal
+  (:func:`app.meals.insert_template`); the saved meal has no servings count, so the ingredients are for the whole
+  recipe and its note says "Makes N servings" and keeps the source link as text (never fetched).
 * ``safety_check``: the app's rule-based pre-filters: :func:`app.guidance.hypo.prefilter` (the Treating a low
   card with the person's own ``hypo_dose_g``) and :func:`app.ai.features.red_flag` (Get help now).
 
 Unknown stays unknown: a value a food does not list is ``null``, and every total says how many items or entries
 it misses (``not_listed_by``); a total that is all unknown is ``null``, never 0. No tool returns insulin or
-medicine doses, medicine advice or lab interpretation, and nothing here ever delays or warns against treating a low.
+medicine doses, medicine advice or lab interpretation, and nothing here ever delays or warns against treating a low
+(``log_food`` takes ``purpose: "hypo"`` for food eaten to treat a low and saves it like any other entry).
 """
 from __future__ import annotations
 
@@ -26,25 +35,30 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date as _date
 from typing import Any, Callable, Literal, Mapping
+from urllib.parse import urlsplit
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from .. import foods
+from .. import foods, meals
 from .. import log as food_log
 from ..ai import features as ai_features
-from ..auth.context import public_base
+from ..audit import audit
+from ..auth import api_tokens
+from ..auth.accounts import begin_immediate
+from ..auth.context import public_base, request_ip
 from ..auth.errors import ApiProblem
 from ..auth.models import User
 from ..guidance import context as guidance_context
 from ..guidance import hypo
-from ..models import MAX_GRAMS, MAX_SERVINGS, validate_date
+from ..models import MAX_GRAMS, MAX_SERVINGS, LogCreate, validate_date
 from ..nutrients import (MEALS, NUTRIENT_BY_KEY, NUTRIENT_KEYS, _carb_goals, _status_word, add_totals,
                          count_unknown, empty_totals, food_warnings, is_about, kidney_rating, round_nutrients,
                          round_value, scale_nutrients)
 from ..periods import (MAX_INTERDIALYTIC_DAYS, NOTE_CAPPED, NOTE_INTERDIALYTIC, NOTE_NO_DIALYSIS_DAYS, WEEKDAY_NAMES,
                        interdialytic_block, interdialytic_interval)
 from ..profile import get_profile, settings_store
+from ..textclean import clean_label
 from . import measures as M
 
 logger = logging.getLogger("kidney_health.mcp")
@@ -103,6 +117,7 @@ class MealItem(_Args):
     amount: float | None = Field(default=None, gt=0, le=MAX_GRAMS, allow_inf_nan=False)
     unit: str | None = Field(default=None, min_length=1, max_length=40)
     food_id: int | None = Field(default=None, ge=1, le=MAX_ROW_ID)
+    fdc_id: int | None = Field(default=None, ge=1, le=MAX_ROW_ID)  # a USDA food from search_foods (in_app false)
 
 
 class MealArgs(_Args):
@@ -346,7 +361,7 @@ def usda_food(record: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
         "source": "usda",
         "in_app": False,
         "serving": {"description": mapped["serving_desc"], "grams": serving_g},
-        "units": [],
+        "units": units_for(mapped["serving_desc"], True),
         "nutrients_per_serving": round_nutrients(values),
         "warnings_per_serving": warnings,
         "kidney_rating": kidney_rating(warnings),
@@ -395,7 +410,9 @@ def search(call: Call, args: SearchArgs) -> dict[str, Any]:
     result: dict[str, Any] = {"query": args.query, "results": results, "usda": usda}
     if extra:
         result["note"] = ("Results with in_app false come from USDA FoodData Central and are not in the person's food "
-                          "list: check_meal cannot use them until the person adds the food in the app.")
+                          "list yet: give their fdc_id (not a food_id) to check_meal, log_food or save_recipe. "
+                          "check_meal only reads them; log_food and save_recipe add the food to the person's list "
+                          "when they save.")
     if not results:
         result["note"] = "Nothing matched. Try fewer or simpler words (the app searches every word in the name)."
     return finish(result)
@@ -408,8 +425,9 @@ def search(call: Call, args: SearchArgs) -> dict[str, Any]:
 
 @dataclass
 class Found:
-    row: sqlite3.Row
-    how: str  # food_id | name | only_match
+    row: Mapping[str, Any]  # a foods row; for a USDA food not in the person's list yet, its unsaved twin (id None)
+    how: str  # food_id | fdc_id | name | only_match
+    mapped: foods.UsdaMapped | None = None  # set with an unsaved USDA row: what an import would store
 
 
 def _keys(text: str | None) -> list[str]:
@@ -533,18 +551,85 @@ def _as_asked(amount_: float | None, unit: str | None) -> str:
     return f"{quantity:g} {unit or ('serving' if quantity == 1 else 'servings')}"
 
 
-def check_item(call: Call, item: MealItem) -> tuple[dict[str, Any], dict[str, Any]] | dict[str, Any]:
-    """``(item view, virtual planned row)`` or an ``unresolved`` entry (with ``food`` filled in)."""
+UsdaCache = dict[int, "Found | dict[str, Any]"]
+
+
+def usda_found(call: Call, fdc_id: int, cache: UsdaCache) -> Found | dict[str, Any]:
+    """A USDA food named by its ``fdc_id`` (the id ``search_foods`` shows for a result with ``in_app`` false): the
+    person's own copy when it is in their list already, else FoodData Central's record, mapped as an import maps
+    it but not saved here (``log_food`` and ``save_recipe`` add it to the list when they save; ``check_meal`` never
+    saves). A failed lookup is an ``unresolved`` entry with the reason."""
+    if fdc_id in cache:
+        return cache[fdc_id]
+    found: Found | dict[str, Any]
+    row = foods.fetch_user_usda_food(call.conn, call.user.id, fdc_id)
+    if row is not None:
+        found = Found(row, "fdc_id")
+    else:
+        found = usda_unsaved(call, fdc_id)
+    cache[fdc_id] = found
+    return found
+
+
+def usda_unsaved(call: Call, fdc_id: int) -> Found | dict[str, Any]:
+    try:
+        cred = foods.usda_credential(call.request, call.conn, call.user.id, call.user.can_use_shared)
+    except ApiProblem as exc:  # no key, not shared with this person, quota used up, paused near the hourly limit
+        return {"reason": "usda_unavailable",
+                "question": f"{exc.detail} Ask the person to add this food in the app, or to choose another food."}
+    try:
+        mapped = foods.usda_record(fdc_id, cred.api_key, guard=foods.guard_id(cred, call.user.id),
+                                   own_key=cred.scope == "own")
+        return Found(foods.usda_unsaved_row(fdc_id, mapped), "fdc_id", mapped)
+    except foods.UsdaError as exc:
+        if exc.status == 404:
+            return {"reason": "unknown_fdc_id",
+                    "question": "USDA has no food with that fdc_id. Use search_foods to find the food again."}
+        return {"reason": "usda_unavailable",
+                "question": f"USDA FoodData Central did not answer ({exc.detail}). Try again in a moment, or ask the "
+                            "person to add the food in the app."}
+    except (TypeError, ValueError, KeyError, AttributeError):  # one odd record never costs the other items
+        logger.warning("assistant: USDA record %d could not be mapped", fdc_id)
+        return {"reason": "usda_unavailable",
+                "question": "That USDA record could not be read. Ask the person to choose another food."}
+
+
+@dataclass
+class Placed:
+    """An item the app found and sized: the food, how it was found, and the amount as the log stores it."""
+
+    item: MealItem
+    row: Mapping[str, Any]  # a foods row, or (``mapped`` set) the unsaved twin of a USDA food not in the list yet
+    how: str
+    servings: float
+    grams: float | None
+    by_grams: bool  # the amount was given in grams, so the entry keeps them (as the log API does)
+    quantity: float  # the amount as asked, in ``unit`` (1 when none was given)
+    amount_: float | None
+    unit: str | None
+    mapped: foods.UsdaMapped | None = None
+
+    @property
+    def food_id(self) -> int | None:
+        return None if self.row["id"] is None else int(self.row["id"])
+
+
+def place_item(call: Call, item: MealItem, cache: UsdaCache) -> Placed | dict[str, Any]:
+    """Find the food and size the amount (the part ``check_meal``, ``log_food`` and ``save_recipe`` share), or an
+    ``unresolved`` entry (with ``food`` filled in) saying what to ask the person. Saves nothing."""
     name_text, parsed_amount, parsed_unit = M.split_amount(item.food)  # "white rice 1 cup" → "white rice", 1, cup
     amount_, unit = item.amount, item.unit
     if amount_ is None and unit is None:  # explicit amount and unit win over words in the food text
         amount_, unit = parsed_amount, parsed_unit
+    found: Found | dict[str, Any]
     if item.food_id is not None:
         row = foods.fetch_user_food(call.conn, call.user.id, item.food_id)
         if row is None:  # unknown, or another person's own food: the same answer
             return {"food": item.food, "reason": "unknown_food_id",
                     "question": "That food_id is not in the person's foods. Use search_foods to find the food again."}
-        found: Found | dict[str, Any] = Found(row, "food_id")
+        found = Found(row, "food_id")
+    elif item.fdc_id is not None:
+        found = usda_found(call, item.fdc_id, cache)
     else:
         found = find_food(call, name_text or item.food)
     if isinstance(found, dict):
@@ -552,24 +637,52 @@ def check_item(call: Call, item: MealItem) -> tuple[dict[str, Any], dict[str, An
     row = found.row
     resolved = item_amount(row, amount_, unit)
     if isinstance(resolved, dict):
-        return {"food": item.food, "food_id": int(row["id"]), "name": row["name"], **resolved}
+        return {"food": item.food, "food_id": None if row["id"] is None else int(row["id"]), "name": row["name"],
+                **resolved}
     servings, grams = resolved
-    scaled = scale_nutrients(foods.raw_nutrients(row), servings)
+    by_grams = M.normalize_unit(unit) == "g" and foods.weight_known(row)
+    quantity = 1.0 if amount_ is None else float(amount_)
+    return Placed(item, row, found.how, servings, grams, by_grams, quantity, amount_, unit, found.mapped)
+
+
+def place_items(call: Call, items: list[MealItem]) -> tuple[list[Placed], list[dict[str, Any]]]:
+    """Every item placed or listed as unresolved, in the order given (a USDA food named twice is fetched once)."""
+    cache: UsdaCache = {}
+    placed: list[Placed] = []
+    unresolved: list[dict[str, Any]] = []
+    for item in items:
+        outcome = place_item(call, item, cache)
+        if isinstance(outcome, dict):
+            unresolved.append(outcome)
+        else:
+            placed.append(outcome)
+    return placed, unresolved
+
+
+def check_item(call: Call, placed: Placed) -> tuple[dict[str, Any], dict[str, Any]]:
+    """``(item view, virtual planned row)`` for a placed item."""
+    row = placed.row
+    scaled = scale_nutrients(foods.raw_nutrients(row), placed.servings)
     flags = foods.parse_flags(row["flags_json"])
     warnings = food_warnings(scaled, flags, row["kidney_notes"], scope="in this amount")
     purpose = food_log.resolve_purpose(row, None)
     view = {
-        "food": item.food,
-        "matched": {"food_id": int(row["id"]), "name": row["name"], "brand": row["brand"], "source": row["source"]},
-        "how_matched": found.how,
-        "amount": {"as_asked": _as_asked(amount_, unit), "servings": round(servings, 3),
-                   "grams": None if grams is None else round(grams, 1)},
+        "food": placed.item.food,
+        "matched": {"food_id": placed.food_id, "name": row["name"], "brand": row["brand"], "source": row["source"],
+                    "in_app": placed.food_id is not None},
+        "how_matched": placed.how,
+        "amount": {"as_asked": _as_asked(placed.amount_, placed.unit), "servings": round(placed.servings, 3),
+                   "grams": None if placed.grams is None else round(placed.grams, 1)},
         "serving": {"description": row["serving_desc"], "grams": round(float(row["serving_g"]), 1)},
         "nutrients": round_nutrients(scaled),
         "warnings": warnings,
         "kidney_rating": kidney_rating(warnings),
         "counted_as_treating_a_low": purpose == food_log.HYPO_PURPOSE,
     }
+    if placed.mapped is not None:
+        view["matched"]["fdc_id"] = row["fdc_id"]
+        view["note"] = ("A USDA food that is not in the person's food list yet; nothing was added. log_food and "
+                        "save_recipe add it to the list when they save.")
     virtual = {**scaled, "food_name": row["name"], "status": "planned", "purpose": purpose}
     return view, virtual
 
@@ -578,14 +691,10 @@ def check_meal(call: Call, args: MealArgs) -> dict[str, Any]:
     today = food_log.today_local()
     day = args.date or today
     items: list[dict[str, Any]] = []
-    unresolved: list[dict[str, Any]] = []
     virtual: list[dict[str, Any]] = []
-    for item in args.items:
-        outcome = check_item(call, item)
-        if isinstance(outcome, dict):
-            unresolved.append(outcome)
-            continue
-        view, row = outcome
+    placed, unresolved = place_items(call, args.items)
+    for one in placed:
+        view, row = check_item(call, one)
         items.append(view)
         virtual.append({**row, "date": day, "meal": args.meal or NO_MEAL})
     totals = empty_totals()
@@ -719,12 +828,221 @@ def safety_check(call: Call, args: SafetyArgs) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# log_food and save_recipe (a token with the assistant:log scope)
+# --------------------------------------------------------------------------- #
+
+READ_ONLY = ("This token can only read. The person can make a token that can also save in Settings → Assistant "
+             "access.")
+RECIPE_NAME_MAX = 60
+MAX_RECIPE_SERVINGS = 100
+# The saved meal's note holds "Makes N servings." and the link; the meals API accepts a note of 1000 characters.
+SOURCE_URL_MAX = 900
+
+
+class LogArgs(_Args):
+    items: list[MealItem] = Field(min_length=1, max_length=20)
+    meal: Literal["breakfast", "lunch", "dinner", "snack"]
+    date: str | None = None
+    status: Literal["planned", "eaten"] = "eaten"
+    purpose: Literal["hypo", "none"] | None = None  # the log API's purposes: "hypo" = eaten to treat a low
+
+    check_date = field_validator("date")(_check_date)
+
+
+def check_source_url(value: str | None) -> str | None:
+    """An http(s) link with a host, no spaces or control characters and no user name or password in it. Stored as
+    text in the saved meal's note; the server never opens it."""
+    if value is None:
+        return None
+    if any(ch.isspace() or not ch.isprintable() for ch in value):
+        raise ValueError("source_url must be one http or https link without spaces")
+    try:
+        parts = urlsplit(value)
+        port = parts.port  # a bad port raises ValueError
+    except ValueError:
+        raise ValueError("source_url must be an http or https link") from None
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname or parts.username or parts.password \
+            or port == 0:
+        raise ValueError("source_url must be an http or https link with a host and no password in it")
+    return value
+
+
+class RecipeArgs(_Args):
+    name: str = Field(min_length=1, max_length=RECIPE_NAME_MAX)
+    ingredients: list[MealItem] = Field(min_length=1, max_length=30)
+    servings: float = Field(gt=0, le=MAX_RECIPE_SERVINGS, allow_inf_nan=False)
+    source_url: str | None = Field(default=None, min_length=1, max_length=SOURCE_URL_MAX)
+
+    check_url = field_validator("source_url")(check_source_url)
+
+
+def token_info(call: Call) -> api_tokens.TokenInfo:
+    return call.request.state.api_token
+
+
+def write_once(call: Call, placed: list[Placed], body: Callable[[list[dict[str, Any]]], Any]) -> Any:
+    """Run ``body`` in one write transaction, all or nothing. First the USDA foods the items need are added to the
+    person's food list (:func:`app.foods.add_usda_food`, the import route's code) and the items point at the saved
+    rows; ``body(added)`` then saves and audits. Any failure rolls the food additions back too."""
+    conn = call.conn
+    try:
+        begin_immediate(conn)
+        food_ids: dict[int, int] = {}
+        added: list[dict[str, Any]] = []
+        for one in placed:
+            if one.mapped is None:
+                continue
+            fdc_id = int(one.row["fdc_id"])
+            if fdc_id not in food_ids:
+                food_ids[fdc_id] = foods.add_usda_food(conn, call.user.id, fdc_id, one.mapped)
+                added.append({"food_id": food_ids[fdc_id], "fdc_id": fdc_id, "name": one.row["name"]})
+            one.row = foods.fetch_user_food(conn, call.user.id, food_ids[fdc_id])
+            one.mapped = None
+        result = body(added)
+        conn.commit()
+        return result
+    except HTTPException as exc:  # the log or meals code refusing an item: say why, save nothing
+        conn.rollback()
+        raise ToolError(str(exc.detail)) from None
+    except ValidationError as exc:
+        conn.rollback()
+        raise ToolError(describe(exc)) from None
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+def saved_totals(rows: list[Mapping[str, Any]], divisor: float = 1.0) -> dict[str, Any]:
+    """Totals of ``rows`` (each with the 12 nutrient keys) divided by ``divisor``, with how many rows miss each."""
+    totals = empty_totals()
+    missing: dict[str, int] = {}
+    for row in rows:
+        add_totals(totals, row)
+        count_unknown(missing, row)
+    rounded = round_nutrients({key: value / divisor for key, value in totals.items()})
+    return {key: amount(rounded[key], missing.get(key)) for key in NUTRIENT_KEYS}
+
+
+def unresolved_result(unresolved: list[dict[str, Any]], what: str, **fields: Any) -> dict[str, Any]:
+    return finish({
+        "saved": False, **fields, "unresolved": unresolved,
+        "notes": [f"Nothing was saved, not even the items the app did find. Ask the person the questions in unresolved, "
+                  f"then call {what} again with all the items (food_id, or fdc_id for a USDA food, where "
+                  "alternatives are listed)."],
+    })
+
+
+def log_food(call: Call, args: LogArgs) -> dict[str, Any]:
+    day = args.date or food_log.today_local()
+    placed, unresolved = place_items(call, args.items)
+    if unresolved:
+        return unresolved_result(unresolved, "log_food", date=day, meal=args.meal, status=args.status)
+    token = token_info(call)
+
+    added_foods: list[dict[str, Any]] = []
+
+    def save(added: list[dict[str, Any]]) -> list[sqlite3.Row]:
+        added_foods.extend(added)
+        ids = []
+        for one in placed:
+            create = LogCreate(
+                date=day, meal=args.meal, food_id=one.food_id, status=args.status, purpose=args.purpose,
+                servings=None if one.by_grams else one.servings, grams=one.quantity if one.by_grams else None)
+            ids.append(food_log.insert_logged(call.conn, call.user.id, create))
+        audit(call.conn, call.user.id, "assistant.food_logged", "api_token", token.id, ip=request_ip(call.request),
+              via=token.name, entries=len(ids), status=args.status, meal=args.meal, date=day, foods_added=len(added))
+        return [food_log.fetch_entry(call.conn, call.user.id, entry_id) for entry_id in ids]
+
+    rows = write_once(call, placed, save)
+    entries = [saved_entry(food_log.row_to_entry(row)) for row in rows]
+    notes = ["Tell the person what was saved: the entries, with amounts. Numbers in day are the app's, read after saving."]
+    if any(e["counted_as_treating_a_low"] for e in entries):
+        notes.append("Entries marked as treating a low count in the day's totals but never toward a meal's "
+                     "carbohydrate goal.")
+    result: dict[str, Any] = {
+        "saved": True, "date": day, "meal": args.meal, "status": args.status,
+        "entries": entries, "added_to_foods": added_foods,
+        "totals": saved_totals([foods.raw_nutrients(row) for row in rows]),
+    }
+    try:  # the entries are saved already: a failure here must not look like a failed save
+        figures = get_today(call, TodayArgs(date=day))
+        figures.pop("source", None)
+        figures.pop("reminder", None)
+        result["day"] = figures
+    except Exception:  # noqa: BLE001
+        logger.exception("assistant log_food: the day's figures could not be read after saving")
+        result["day"] = None
+        notes.append("The entries are saved, but the day's figures could not be read just now: call get_today.")
+    result["notes"] = notes
+    return finish(result)
+
+
+def saved_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
+    """What the assistant is told about an entry it saved: no warnings (a food eaten to treat a low is never
+    warned about) and unknown nutrients as null."""
+    return {
+        "entry_id": entry["id"], "date": entry["date"], "meal": entry["meal"], "status": entry["status"],
+        "food_id": entry["food_id"], "food_name": entry["food_name"], "servings": entry["servings"],
+        "grams": entry["grams"], "nutrients": entry["nutrients"], "purpose": entry["purpose"],
+        "counted_as_treating_a_low": entry["purpose"] == food_log.HYPO_PURPOSE,
+    }
+
+
+def recipe_note(servings: float, source_url: str | None) -> str:
+    """The saved meal has no servings count: its note says how many servings the stored ingredients make."""
+    note = f"Makes {servings:g} serving{'' if servings == 1 else 's'}."
+    return f"{note} Source: {source_url}" if source_url else note
+
+
+def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
+    name = clean_label(args.name, max_len=RECIPE_NAME_MAX)
+    if name is None:
+        raise ToolError("Give the recipe a name.")
+    placed, unresolved = place_items(call, args.ingredients)
+    if unresolved:
+        return unresolved_result(unresolved, "save_recipe", name=name)
+    token = token_info(call)
+    note = recipe_note(args.servings, args.source_url)
+    added_foods: list[dict[str, Any]] = []
+
+    def save(added: list[dict[str, Any]]) -> int:
+        added_foods.extend(added)
+        items = [{"food_id": one.food_id, "servings": float(one.servings)} for one in placed]
+        meal_id = meals.insert_template(call.conn, user_id=call.user.id, name=name, note=note, items=items)
+        audit(call.conn, call.user.id, "assistant.recipe_saved", "meal", meal_id, ip=request_ip(call.request),
+              via=token.name, name=name, ingredients=len(items), servings=args.servings, foods_added=len(added))
+        return meal_id
+
+    meal_id = write_once(call, placed, save)
+    saved = meals.row_to_template(call.conn, meals.fetch_template(call.conn, call.user.id, meal_id))
+    scaled = [scale_nutrients(foods.raw_nutrients(one.row), one.servings) for one in placed]
+    return finish({
+        "saved": True,
+        "meal": {
+            "id": saved["id"], "name": saved["name"], "note": saved["note"],
+            "items": [{"food_id": i["food_id"], "food_name": i["food_name"], "servings": i["servings"],
+                       "serving_desc": i["serving_desc"], "nutrients": i["nutrients"]} for i in saved["items"]],
+        },
+        "servings_made": args.servings,
+        "source_url": args.source_url,
+        "totals_whole_recipe": saved_totals(scaled),
+        "totals_per_serving": saved_totals(scaled, args.servings),
+        "added_to_foods": added_foods,
+        "notes": ["The saved meal holds the ingredients for the whole recipe; its note records how many servings it "
+                  "makes and the source link. Tell the person what was saved."],
+    })
+
+
+# --------------------------------------------------------------------------- #
 # The tool list
 # --------------------------------------------------------------------------- #
 
 _DATE = {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$",
          "description": "A day as YYYY-MM-DD. Leave it out for today (the server's date)."}
 ANNOTATIONS = {"readOnlyHint": True, "openWorldHint": False}
+# Tools that save: not read-only, they only add (never delete or overwrite), a repeat adds again, and they reach
+# no outside service for the model (a USDA lookup is the app's own).
+WRITE_ANNOTATIONS = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 @dataclass(frozen=True)
@@ -735,10 +1053,32 @@ class Tool:
     input_schema: dict[str, Any]
     args: type[_Args]
     run: Callable[[Call, Any], dict[str, Any]]
+    writes: bool = False  # saves something: listed and callable only with a token that has assistant:log
 
     def listing(self) -> dict[str, Any]:
         return {"name": self.name, "title": self.title, "description": self.description,
-                "inputSchema": self.input_schema, "annotations": {"title": self.title, **ANNOTATIONS}}
+                "inputSchema": self.input_schema,
+                "annotations": {"title": self.title, **(WRITE_ANNOTATIONS if self.writes else ANNOTATIONS)}}
+
+
+# An item as check_meal, log_food and save_recipe take it.
+_ITEM = {
+    "type": "object", "additionalProperties": False, "required": ["food"],
+    "properties": {
+        "food": {"type": "string", "minLength": 1, "maxLength": 100,
+                 "description": "The food as the person named it, for example \"white rice\"."},
+        "amount": {"type": "number", "exclusiveMinimum": 0, "maximum": MAX_GRAMS,
+                   "description": "How much, in unit. Default 1."},
+        "unit": {"type": "string", "minLength": 1, "maxLength": 40,
+                 "description": "\"serving\" (default), \"g\", or a measure the food lists, such as "
+                                "\"cup\" or \"slice\" (see units in search_foods)."},
+        "food_id": {"type": "integer", "minimum": 1,
+                    "description": "A food_id from search_foods or from the alternatives in unresolved; it wins "
+                                   "over food."},
+        "fdc_id": {"type": "integer", "minimum": 1,
+                   "description": "The fdc_id of a USDA result from search_foods (in_app false), when the person "
+                                  "chose that one. log_food and save_recipe add it to the person's food list; "
+                                  "check_meal does not."}}}
 
 
 TOOLS: tuple[Tool, ...] = (
@@ -766,7 +1106,7 @@ TOOLS: tuple[Tool, ...] = (
         "search_foods", "Search foods",
         "Search the person's own foods and the app's food list, then USDA FoodData Central when the server has a "
         "key. Values are per serving; null means the food does not list it (unknown, not zero). Each result lists "
-        "the units check_meal accepts for it.",
+        "the units check_meal accepts for it; a USDA result (in_app false) is used by its fdc_id.",
         {"type": "object", "additionalProperties": False, "required": ["query"],
          "properties": {"query": {"type": "string", "minLength": 1, "maxLength": 100,
                                   "description": "Food words, for example \"white rice\"."},
@@ -780,22 +1120,48 @@ TOOLS: tuple[Tool, ...] = (
         "saved. Items the app cannot place come back in unresolved with a question to ask the person.",
         {"type": "object", "additionalProperties": False, "required": ["items"],
          "properties": {
-             "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": {
-                 "type": "object", "additionalProperties": False, "required": ["food"],
-                 "properties": {
-                     "food": {"type": "string", "minLength": 1, "maxLength": 100,
-                              "description": "The food as the person named it, for example \"white rice\"."},
-                     "amount": {"type": "number", "exclusiveMinimum": 0, "maximum": MAX_GRAMS,
-                                "description": "How much, in unit. Default 1."},
-                     "unit": {"type": "string", "minLength": 1, "maxLength": 40,
-                              "description": "\"serving\" (default), \"g\", or a measure the food lists, such as "
-                                             "\"cup\" or \"slice\" (see units in search_foods)."},
-                     "food_id": {"type": "integer", "minimum": 1,
-                                 "description": "A food_id from search_foods or from check_meal's alternatives; it "
-                                                "wins over food."}}}},
+             "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": _ITEM},
              "date": _DATE,
              "meal": {"type": "string", "enum": list(MEALS)}}},
         MealArgs, check_meal,
+    ),
+    Tool(
+        "log_food", "Save food to the log",
+        "Save food to the person's food log, only after you read the items back and the person said yes. Items are "
+        "placed exactly as in check_meal (name, amount and unit, food_id, or the fdc_id of a USDA result). If any "
+        "item is unresolved nothing at all is saved and unresolved says what to ask; otherwise every item is saved "
+        "as an entry (eaten, or planned) for that meal and day, and the answer lists what was saved and the day's "
+        "figures after saving. Use purpose \"hypo\" for food eaten to treat a low: it is saved like any other and "
+        "counts in the day's totals. Say what was saved.",
+        {"type": "object", "additionalProperties": False, "required": ["items", "meal"],
+         "properties": {
+             "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": _ITEM},
+             "meal": {"type": "string", "enum": list(MEALS)},
+             "date": _DATE,
+             "status": {"type": "string", "enum": ["eaten", "planned"], "default": "eaten",
+                        "description": "\"eaten\" (default) for food already eaten, \"planned\" for food to eat later."},
+             "purpose": {"type": "string", "enum": ["hypo", "none"],
+                         "description": "\"hypo\" when the food is eaten to treat a low; \"none\" to leave it "
+                                        "out for a food the app would otherwise count that way."}}},
+        LogArgs, log_food, True,
+    ),
+    Tool(
+        "save_recipe", "Save a recipe",
+        "Save a recipe as a saved meal, only after you read the name, ingredients and number of servings back and "
+        "the person said yes. Ingredients are placed as in check_meal (name, amount and unit, food_id, or the "
+        "fdc_id of a USDA result); if any is unresolved nothing is saved and unresolved says what to ask. The saved "
+        "meal holds the ingredients for the whole recipe, and its note records how many servings it makes and the "
+        "source link (text; the app never opens it). The answer gives the totals for the whole recipe and per "
+        "serving (null means not listed). Say what was saved.",
+        {"type": "object", "additionalProperties": False, "required": ["name", "ingredients", "servings"],
+         "properties": {
+             "name": {"type": "string", "minLength": 1, "maxLength": RECIPE_NAME_MAX},
+             "ingredients": {"type": "array", "minItems": 1, "maxItems": 30, "items": _ITEM},
+             "servings": {"type": "number", "exclusiveMinimum": 0, "maximum": MAX_RECIPE_SERVINGS,
+                          "description": "How many servings the whole recipe makes."},
+             "source_url": {"type": "string", "minLength": 1, "maxLength": SOURCE_URL_MAX,
+                            "description": "An http or https link to where the recipe came from (optional)."}}},
+        RecipeArgs, save_recipe, True,
     ),
 )
 TOOLS_BY_NAME: dict[str, Tool] = {tool.name: tool for tool in TOOLS}

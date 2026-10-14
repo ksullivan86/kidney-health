@@ -15,12 +15,16 @@ Order of checks for every request (each one answers before the next runs):
 3. ``GET``, ``DELETE``, ``PUT``, ``PATCH`` → ``405`` with ``Allow: POST`` (no SSE stream, no sessions to end).
 4. The bearer token (:func:`app.auth.api_tokens.authenticate`, scope ``assistant:read``): the generic ``401``
    with ``WWW-Authenticate: Bearer``, or ``429`` for an address blocked after refused tokens.
-5. The per-token limit, 60 requests a minute (``ratelimit`` ``mcp``, every request counts) → ``429`` with
-   ``Retry-After``.
+5. The per-token limit, 60 requests a minute (``ratelimit`` ``mcp``, every request counts, saving ones too) →
+   ``429`` with ``Retry-After``.
 6. The JSON-RPC message: not JSON → ``-32700``; not one request object (a batch array, no ``"jsonrpc": "2.0"``,
    a bad ``id``) → ``-32600``, both with HTTP 400; a notification, or a response from the client → ``202``
    without a body; an unknown method → ``-32601``; unusable ``params`` or an unknown tool → ``-32602``.
    Wrong tool arguments and tool failures are tool results with ``isError: true`` and a short text.
+
+Scopes: every request needs ``assistant:read``. The tools that save (``log_food``, ``save_recipe``) are listed by
+``tools/list`` and callable only with a token that also has ``assistant:log``; calling one without it is a tool
+result with ``isError: true`` that says the token can only read, and nothing is saved.
 """
 from __future__ import annotations
 
@@ -51,6 +55,12 @@ INSTRUCTIONS = (
     "from these tools, never from memory or your own knowledge, and fetch again after any change. null means the "
     "value is not listed (unknown), never zero: say so. Never give insulin or medicine doses and never interpret "
     "lab results: those belong to the person's care team."
+)
+# Added to the instructions for a token that can also save (assistant:log).
+WRITE_INSTRUCTIONS = (
+    " This token can also save: log_food saves food to the log and save_recipe saves a recipe. Before saving, read "
+    "the items back (food, amount, meal, day, eaten or planned) and ask the person to confirm; after saving, say what "
+    "was saved. The confirmation is only about the record: it never comes before the person treats a low."
 )
 
 RATE_LIMIT = "mcp"
@@ -99,13 +109,18 @@ def _parse(body: bytes) -> Any:
         raise ValueError(str(exc)) from None
 
 
-def initialize_result(params: Mapping[str, Any], version: str) -> dict[str, Any]:
+def can_log(request: Request) -> bool:
+    """The token of this request also has ``assistant:log`` (``authenticate`` has set it)."""
+    return api_tokens.LOG in request.state.api_token.scopes
+
+
+def initialize_result(params: Mapping[str, Any], version: str, can_save: bool = False) -> dict[str, Any]:
     requested = params.get("protocolVersion")
     return {
         "protocolVersion": requested if requested in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0],
         "capabilities": {"tools": {"listChanged": False}},
         "serverInfo": {"name": SERVER_NAME, "title": SERVER_TITLE, "version": version},
-        "instructions": INSTRUCTIONS,
+        "instructions": INSTRUCTIONS + (WRITE_INSTRUCTIONS if can_save else ""),
     }
 
 
@@ -126,6 +141,9 @@ def call_tool(tool: T.Tool, call: T.Call, arguments: Mapping[str, Any]) -> dict[
         return tool_error(str(exc))
     except Exception:  # noqa: BLE001 - never a stack trace or a value in the answer; the log has the details
         logger.exception("assistant tool %s failed", tool.name)
+        if tool.writes:  # every save is one transaction: a failure before the commit leaves nothing behind
+            return tool_error(f"{tool.name} could not save this time and nothing was saved. Try again; if it keeps "
+                              "failing, tell the person to use the app directly.")
         return tool_error(f"{tool.name} could not answer this time. Try again; if it keeps failing, tell the person "
                           "to use the app directly.")
 
@@ -171,16 +189,18 @@ async def mcp_post(request: Request, conn: sqlite3.Connection = Depends(get_db))
         return _error(INVALID_PARAMS, "Invalid params: params must be an object.", request_id)
 
     if method == "initialize":
-        return _result(request_id, initialize_result(params, request.app.version))
+        return _result(request_id, initialize_result(params, request.app.version, can_log(request)))
     if method == "ping":
         return _result(request_id, {})
     if method == "tools/list":
-        return _result(request_id, {"tools": [tool.listing() for tool in T.TOOLS]})
+        return _result(request_id, {"tools": [tool.listing() for tool in T.TOOLS if can_log(request) or not tool.writes]})
 
     name = params.get("name")
     tool = T.TOOLS_BY_NAME.get(name) if isinstance(name, str) else None
     if tool is None:
         return _error(INVALID_PARAMS, f"Unknown tool: {str(name)[:80]}", request_id)
+    if tool.writes and not can_log(request):  # a read-only token: say so, save nothing
+        return _result(request_id, tool_error(T.READ_ONLY))
     arguments = params.get("arguments")
     if arguments is None:
         arguments = {}

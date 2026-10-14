@@ -99,10 +99,12 @@ TOKEN_NAME_MAX = 60
 
 
 class TokenCreate(BaseModel):
-    """``POST /api/me/tokens``. Unknown fields are refused, so a later field (a scope) cannot be sent early."""
+    """``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one
+    way to ask for ``assistant:log`` (it saves food and recipes; ``assistant:read`` is always included)."""
 
     model_config = ConfigDict(extra="forbid", str_max_length=4096)
 
     name: str = Field(min_length=1, max_length=TOKEN_NAME_MAX)
     expires_in_days: ExpiryDays = 90
+    can_log: bool = False
 
