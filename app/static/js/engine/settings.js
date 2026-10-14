@@ -47,6 +47,12 @@
       label: 'Allow photos to go to a Hermes agent', help: 'Off by default. Text printed on a package could try to instruct an agent; even when on, the app only uses a Hermes profile whose tool check passes.' },
     { key: 'ai.vision_plate_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VISION_PLATE_ENABLED',
       label: 'Plate photos (AI estimate of what is on a plate)', help: 'Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app says so on every result and never logs them without a tap.' },
+    // Assistant access (docs/dev/plans/assistant-step1.md part A; app/auth/api_tokens.py). The tokens are rows of
+    // api_tokens, never settings.
+    { key: 'assistant.enabled', type: 'bool', default: false, scope: 'instance', env: 'ASSISTANT_ENABLED',
+      label: 'Assistant access (personal tokens for a chat assistant)',
+      help: 'Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat assistant they connect read their own food log and targets. '
+        + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
     { key: 'food.barcode_negative_ttl_hours', type: 'int', min: 1, max: 720, default: 24, scope: 'instance', env: 'BARCODE_NEGATIVE_TTL_HOURS',

@@ -544,7 +544,7 @@ def cmd_reset_password(args: argparse.Namespace, settings: Settings, out: TextIO
     from datetime import timedelta
 
     from .audit import audit
-    from .auth import sessions, tokens
+    from .auth import api_tokens, sessions, tokens
     from .auth.accounts import set_password
 
     conn = _accounts_db(args, settings)
@@ -562,6 +562,7 @@ def cmd_reset_password(args: argparse.Namespace, settings: Settings, out: TextIO
             conn.execute("UPDATE users SET status = 'active' WHERE id = ? AND status IN ('locked', 'pending_setup')", (user_id,))
             removed = sessions.revoke_user_sessions(conn, user_id)
             tokens.void_reset_links(conn, user_id)  # an older link must not undo this change
+            api_tokens.revoke_all(conn, user_id, reason="password_reset", actor_id=None)
             _forget_failures(conn, settings, row["username_norm"])
             audit(conn, None, "user.password_changed", "user", user_id, via="cli")
             conn.commit()
@@ -694,7 +695,7 @@ def cmd_disable_user(args: argparse.Namespace, settings: Settings, out: TextIO) 
     open reset links and the links the account issued voided, an audit entry (``user.disabled``, via the CLI).
     Enable it again in Settings → People (or give it a reset link with ``reset-password``)."""
     from .audit import audit
-    from .auth import sessions, tokens
+    from .auth import api_tokens, sessions, tokens
     from .auth.accounts import would_remove_last_admin
     from .db import utcnow
 
@@ -712,6 +713,7 @@ def cmd_disable_user(args: argparse.Namespace, settings: Settings, out: TextIO) 
         conn.execute("UPDATE users SET status = 'disabled', updated_at = ? WHERE id = ?", (utcnow(), user_id))
         removed = sessions.revoke_user_sessions(conn, user_id)
         tokens.void_reset_links(conn, user_id)  # an old link must not work again once the account is enabled
+        api_tokens.revoke_all(conn, user_id, reason="account_disabled", actor_id=None)
         issued = tokens.void_issued_by(conn, user_id) if row["role"] == "admin" else 0
         audit(conn, None, "user.disabled", "user", user_id, via="cli", **({"links_revoked": issued} if issued else {}))
         conn.commit()

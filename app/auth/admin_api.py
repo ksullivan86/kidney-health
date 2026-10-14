@@ -17,7 +17,7 @@ from .. import account, credentials
 from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
-from . import clock, sessions, tokens
+from . import api_tokens, clock, sessions, tokens
 from .accounts import (
     begin_immediate,
     check_local_username,
@@ -151,6 +151,7 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
             conn.execute("UPDATE users SET status = 'disabled', updated_at = ? WHERE id = ?", (utcnow(), uid))
             sessions.revoke_user_sessions(conn, uid)
             tokens.void_reset_links(conn, uid)  # an old link must not work again once the account is enabled
+            api_tokens.revoke_all(conn, uid, reason="account_disabled", actor_id=admin.id, ip=ip)
             audit(conn, admin.id, "user.disabled", "user", uid, ip=ip, **_void_admin_links(conn, uid))
         else:  # active
             if row["status"] != "disabled":

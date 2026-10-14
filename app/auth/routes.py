@@ -18,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from .. import settings_registry
 from ..audit import audit
 from ..db import get_db
-from . import clock, passwords, sessions, tokens
+from . import api_tokens, clock, passwords, sessions, tokens
 from .accounts import (
     PasswordRejected,
     check_local_username,
@@ -425,6 +425,7 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     conn.execute("UPDATE users SET status = 'active' WHERE id = ? AND status IN ('locked', 'pending_setup')", (user_id,))
     sessions.revoke_user_sessions(conn, user_id)
     tokens.void_reset_links(conn, user_id)  # any other open link for this account
+    api_tokens.revoke_all(conn, user_id, reason="password_reset", actor_id=user_id, ip=ip)
     ctx.throttle.forget(conn, ctx.throttle.name_mac(row["username_norm"]))
     if row["status"] == "pending_setup":
         via = "account_setup"  # a new account created by an admin: the first password, not a reset
