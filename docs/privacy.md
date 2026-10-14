@@ -23,9 +23,12 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   log, are part of the export, and are deleted with the account
   ([Personalised targets and labs](targets-and-labs.md));
 * API keys the person chose to store, encrypted;
+* assistant access tokens the person made, when the admin has turned assistant access on
+  ([assistant.md](assistant.md)): a name, the first 12 characters, the dates and a one-way hash of each token,
+  never the token itself;
 * a per-day count of lookups made with a shared key (counts only, not what was looked up);
 * entries in the activity log about their account: sign-ins, failed sign-ins, password and key
-  changes, exports;
+  changes, assistant tokens made or revoked, exports;
 * if the optional AI is on and the person uses it ([ai.md](ai.md)): the providers they agreed to send
   data to, their own AI provider (its key encrypted), a per-day count of AI calls and tokens, and their
   **AI activity**: what each call sent and received (kept 30 days by default, then only the time,
@@ -59,8 +62,8 @@ account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-a
 ## Deleting your account
 
 Settings → Account → Delete account removes your account and everything that belongs to it from the
-database at once (log, foods, saved meals, profile, settings, keys, sessions, usage counts, AI
-provider, consents and AI activity). The
+database at once (log, foods, saved meals, profile, settings, keys, sessions, assistant tokens, usage
+counts, AI provider, consents and AI activity). The
 database overwrites deleted records where it can. What deletion cannot reach:
 
 * **backups** made before the deletion keep your data until they expire (ask the person running the

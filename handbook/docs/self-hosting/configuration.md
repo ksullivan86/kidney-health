@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-07
+last_checked: 2026-10-14
 fact_checked: 2026-10-05
 sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
@@ -121,6 +121,7 @@ the variable locks it. Each person still decides whether their own scans go to O
 | `AI_AUDIT_RETENTION_DAYS` | 30 | How long request and response bodies are kept (0 = metadata only). |
 | `AI_VISION_PLATE_ENABLED` / `AI_VISION_ALLOW_AGENT` | `false` / `false` | Plate photos; photos to a Hermes agent (which must also pass its tool check before every photo). |
 | `AI_HTTP_PROXY` | unset | Explicit egress proxy; `HTTP(S)_PROXY` is ignored for AI on purpose. |
+| `ASSISTANT_ENABLED` | `false` | Assistant access (also **Server administration → Server settings**): each person may make personal tokens for a chat assistant that reads their own food log and targets, read-only. While off, no token works and none can be made. |
 
 Also `AI_TIMEOUT_S`, `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500), `AI_STRUCTURED_OUTPUT` (`auto`),
 `AI_REASONING_EFFORT`, `AI_CONTEXT_TOKENS`, `AI_MAX_RESPONSE_BYTES`, `AI_OPENROUTER_ZDR` and `MAX_IMAGE_BYTES`

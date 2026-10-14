@@ -733,6 +733,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 7 | `m007_barcode.py` | barcode (M2) | note 03 R6 (food `gtin`, `source='off'`, `barcode_cache`, attribution fields) |
 | 8 | `m008_profile_chosen.py` | v0.3.1 | "Not chosen yet": `user_profiles.ckd_stage_set_at`, `diabetes_set_at` (`docs/dev/plans/v0.3.1.md` item 1) |
 | 9 | `m009_about_tolerance.py` | v0.3.1 | `user_profiles.about_tolerance_pct` (`docs/dev/plans/v0.3.1.md` item 2) |
+| 10 | `m010_api_tokens.py` | assistant step 1 | `api_tokens`: assistant access tokens, hashes only (`docs/dev/plans/assistant-step1.md` part A; "Assistant access tokens" below) |
 
 ## Backend file ownership
 
@@ -746,6 +747,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
+| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -905,7 +907,8 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   (no sign-in: every request is user 1, an admin; `GET /api/auth/status` says `"no_login": true` so
   the UI shows a red banner).
 * **Every `/api` route needs a signed-in, active person** except `GET /api/auth/status` and
-  `POST /api/auth/{login,setup,register,reset,reset/info}`. Anonymous → `401 {"detail": "Sign in required"}`
+  `POST /api/auth/{login,setup,register,reset,reset/info}`. A bearer token is never a sign-in here: the
+  `Authorization` header is read only by the assistant surface ("Assistant access tokens" below). Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -998,6 +1001,9 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `DELETE /api/me/keys/{provider}` | user *(re-auth)* | → 204 |
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
 | `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
+| `GET /api/me/tokens` | user | → `{enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}`; works while `assistant.enabled` is off ("Assistant access tokens") |
+| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365}` → 201 TokenItem + `token` (the only time it is sent); 409 switch off, 400 five active, 429 after 20 in an hour |
+| `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
 
 ```json
@@ -2046,3 +2052,66 @@ Containerfiles, `js/learn.js`. People-facing: `handbook/docs/app/index.md`,
   `handbook/docs/self-hosting/` explains and links to their sections (`tests/test_deploy.py` checks the
   anchors and that those pages carry no shell blocks). `docs/diet-guide.md` is a pointer to
   `/learn/eat/` with a map from its old sections to the handbook pages.
+
+## Assistant access tokens (assistant step 1, part A)
+
+Spec `docs/dev/plans/assistant-step1.md` part A; code `app/auth/api_tokens.py`; schema step 10; operator and
+user guide `docs/assistant.md`. A person makes a token for a chat assistant they connect; the assistant surface
+(the MCP server at `/mcp`, part B) is the only place a token is accepted.
+
+### Switch
+
+`assistant.enabled` (instance, bool, default **false**, env `ASSISTANT_ENABLED`; Server administration → Server
+settings → "Optional AI"). Off: `GET /api/me/tokens` still lists (`enabled: false`) and `DELETE` still revokes,
+`POST` answers `409`, and every bearer request is refused (`401`) before any lookup. On again: tokens that have
+neither expired nor been revoked work again. Settings → **Assistant access** shows while the switch is on; while it
+is off only to admins (where to turn it on) and to a person who still has active tokens (list and Revoke). The demo
+shows one line saying the feature is in the installed app (no mock tokens).
+
+### Table `api_tokens` (schema step 10, `m010_api_tokens.py`)
+
+`id INTEGER PRIMARY KEY AUTOINCREMENT`, `user_id → users(id) ON DELETE CASCADE`, `name` (1–60 characters after
+cleaning: NFC, no control characters, single spaces), `token_hash` (`UNIQUE`, the SHA-256 hex of the whole token),
+`prefix` (its first 12 characters), `scopes` (space-separated known scopes; only `assistant:read` now, an unknown
+word grants nothing), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
+
+```json
+TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": ["assistant:read"],
+             "created_at": "…", "last_used_at": null, "expires_at": "…", "revoked_at": null,
+             "state": "active" | "expired" | "revoked"}
+```
+
+* A token is `kha_` + 43 base64url characters (`secrets.token_urlsafe(32)`). The plain token is in the `POST`
+  answer only; no route returns it or its hash again, and log lines redact `kha_…` (`app/security.py`).
+* At most 5 active (not revoked, not expired) tokens a person; expiry 30, 90 (default) or 365 days; making one
+  needs a recent password (like keys and the export) and is limited to 20 an hour (`ratelimit` `api_tokens`).
+* The list holds active tokens and those that ended in the last 30 days, newest first; the daily housekeeping
+  deletes older ended rows. Tokens are not in the export (a credential, like sessions).
+
+### The bearer rule (`authenticate`, dependency `AssistantUser`)
+
+* `Authorization: Bearer kha_…` is read **only** by `app.auth.api_tokens.authenticate`. `current_user` never reads
+  it, so every `/api` route treats a request that carries only a token as anonymous (`tests/test_auth_coverage.py`
+  walks every route with a valid token), and a token next to a session cookie changes nothing.
+* Accepted when the switch is on, the token is well formed, its SHA-256 is stored, it is neither revoked nor
+  expired, it has the route's scope, and its owner could use the app now under `AUTH_MODE` (`local`: a local
+  account; `proxy`: a proxy account; `none`: user 1), active and not waiting for a password change.
+* Every refusal is `401 {"detail": "A valid assistant token is required (Settings → Assistant access)."}` with
+  `WWW-Authenticate: Bearer realm="kidney-health"` (plus `error="invalid_token"` when a bearer credential was
+  sent): the same for every reason. A refused credential counts as a sign-in failure of the client address
+  (`Throttle.ip_failure`: `LOGIN_IP_MAX_FAILURES` in 10 minutes block sign-in and tokens from that address for
+  10 minutes; skipped for `TRUSTED_PROXIES` and gateway addresses); a blocked address gets `429` with
+  `Retry-After`. No bearer header, or the switch off: `401`, not counted (nothing was guessed or looked up).
+* On success `last_used_at` is written at most once a minute, and the route gets `request.state.user` and
+  `request.state.api_token` (`TokenInfo`: id, user_id, name, scopes) for its own limits and logs.
+
+### Revocation and the activity log
+
+`revoke_all(conn, user_id, reason=…, actor_id=…)` ends every active token of a person on their own password change
+(`password_changed`), a reset link or `python -m app.admin reset-password --stdin` (`password_reset`), an admin's or
+the CLI's disable (`account_disabled`, enabling again brings none back) and account deletion (`account_deleted`,
+then the cascade removes the rows). An admin's "must change password" stops tokens until the change, which revokes
+them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
+`expires_in_days`, `scopes`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
+event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids.
+

@@ -102,6 +102,7 @@ services:
       AI_MODEL: ${AI_MODEL:-}
       AI_VISION_MODEL: ${AI_VISION_MODEL:-}
       AI_PRIVATE_HOSTS: ${AI_PRIVATE_HOSTS:-}
+      ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # A cloud AI provider's key is a file secret like the others (never an env var):

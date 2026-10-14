@@ -41,10 +41,20 @@ a later PR; it uses `app.auth.api_tokens.AssistantUser` (the bearer dependency b
   Verified: `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_auth_coverage.py`,
   `tests/test_isolation_v03.py`, `tests/test_settings_ui.py` pass; vectors regenerated; node vectors pass.
 
+* Step 6 (UI): `#set-assistant` in `index.html`, `renderAssistant` in `js/views/settings.js` (list, Revoke with
+  inline confirm, New token form, token shown once via `linkBox(…, opts)`), activity labels, `.token-row` CSS.
+  Verified in Chromium with the scratchpad script `assistant_card_e2e.py` (375x812, 1280x800, 1280 dark: create,
+  copy, revoke, reload; member hidden while off; admin sees the off state; switch in the Optional AI group;
+  no console errors, no sideways scroll). Static check `test_the_assistant_card_waits_for_the_server…`.
+* Step 8 (docs): ARCHITECTURE (migrations row, identity rule, `/api/me` rows, ownership row, new section
+  "Assistant access tokens"), `docs/assistant.md`, docs index, privacy, export README text, handbook
+  settings-and-keys + self-hosting/configuration, deployment env row, compose pass-through + .env.example,
+  CHANGELOG (users, operators, contributors).
+
 ## Next
 
-* Step 6: the Settings card (`index.html` `#set-assistant`, `settings.js`), activity labels.
-* Step 8: docs. Then full pytest, node vectors, Playwright check, sandbox.py, regress.py 1280-dark.
+* Full pytest, node vectors, sandbox.py, regress.py --no-pytest --only 1280-dark; adversarial diff review;
+  final commit and push; mark this note complete.
 
 ## Checks
 

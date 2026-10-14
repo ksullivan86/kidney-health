@@ -9,6 +9,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Assistant access tokens** (when the admin turns assistant access on). **Settings → Assistant access** makes
+  personal tokens for a chat assistant you connect: it may read your own food log and targets and cannot change
+  anything. Give a token a name and an expiry (30 days, 90 days or 1 year); it is shown once, with **Copy
+  token**, and never again. The list shows when each token was made, last used and expires; **Revoke** ends one
+  at once, and you can have 5 at a time. Changing your password, a password reset, or your account being
+  disabled or deleted revokes all of them; your activity list shows when tokens were made and revoked. The
+  connection the tokens are for (an MCP server for chat clients such as Open WebUI) is the next step; see
+  [docs/assistant.md](docs/assistant.md).
 * Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
   already started typing in: the first field gets the focus a moment after the sheet opens only if you
   have not moved to another one.
@@ -65,6 +73,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Assistant access** is a new switch, **off by default**: Server administration → Server settings → Optional
+  AI → *Assistant access (personal tokens for a chat assistant)*, or `ASSISTANT_ENABLED=true` (passed through by
+  `deploy/compose.yaml`). While it is off nothing changes for anyone (members do not see the Settings card) and
+  no token can be made or used; turning it off later stops every token at once without deleting any. Schema step
+  10 adds the `api_tokens` table (SHA-256 hashes only, deleted with the account); the upgrade runs by itself.
+  New routes: `GET`/`POST /api/me/tokens`, `DELETE /api/me/tokens/{id}`. A token is accepted only by the
+  assistant's own endpoint, never by the rest of `/api`; a refused token counts as a failed sign-in for its
+  address. `python -m app.admin reset-password --stdin` and `disable-user` revoke the account's tokens.
+  [docs/assistant.md](docs/assistant.md) has the details.
 * The image is about 1 MB smaller: the handbook's search support for other languages
   (`/learn/assets/javascripts/lunr/`: lunr-languages, TinySegmenter, wordcut; 964 KB) is left out of the
   image and the GitHub Pages copy, as the source maps already were. The handbook searches in English only,
@@ -102,6 +119,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* `app.auth.api_tokens.AssistantUser` is the only dependency that reads `Authorization: Bearer`; a route on the
+  assistant surface takes `user: AssistantUser` and gets `request.state.api_token` for its own limits.
+  `current_user` stays cookie-only, and `tests/test_auth_coverage.py` walks every `/api` route with a valid
+  token to keep it that way.
 * `requirements.txt` and `requirements-dev.txt`, kept through 0.3.0 so older instructions still worked,
   are gone. Install from the hash-locked files instead:
   `pip install --require-hashes --no-deps -r requirements-dev.lock` (or `requirements.lock` for the app

@@ -355,3 +355,22 @@ def test_this_device_says_once_whether_the_app_is_installed_and_works_offline() 
         assert repeated not in panel, repeated
     assert "['This app', st.installed ? 'Installed: it opens from your home screen' : 'Not installed: it runs in the browser']" in settings
     assert "'Offline use and the live camera need HTTPS." in settings
+
+
+def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> None:
+    """Settings → Assistant access (app/auth/api_tokens.py): hidden until GET /api/me/tokens says the switch is on
+    (or the person still has tokens, or is an admin); the demo makes no request; a new token lives only in the
+    one box that shows it."""
+    settings = _section('<section id="view-settings"', '<section id="view-admin"')
+    assert ('<section class="card settings-section" id="set-assistant" data-title="Assistant access" '
+            'aria-labelledby="set-assistant-h" hidden>') in settings
+    block = SETTINGS_JS[SETTINGS_JS.index("// Section: Assistant access"):SETTINGS_JS.index("// Section: This device")]
+    assert block.index("if (MOCK) {") < block.index("await A.tokens()")  # the demo never asks the server
+    assert "if (!res.enabled && !isAdmin() && !active) { body.replaceChildren(); show(false); return; }" in block
+    assert "It is not shown again. Revoke it here if it is lost." in block
+    for word in ("localStorage", "sessionStorage", "console", "indexedDB"):
+        assert word not in block, word
+    assert block.count("made.token") == 2  # the check and the one box; nothing else reads it
+    assert "confirm.inline(actions, btn" in block and "confirmText: 'Revoke'" in block
+    for call in ("request('GET', '/api/me/tokens')", "request('POST', '/api/me/tokens', b)", "request('DELETE', `/api/me/tokens/"):
+        assert call in SETTINGS_JS, call
