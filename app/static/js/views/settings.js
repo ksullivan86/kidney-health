@@ -839,7 +839,8 @@
     const ticket = ++assistantRender;
     const show = (visible) => { if (sec.hidden === visible) { sec.hidden = !visible; renderNav(); } };
     if (MOCK) {
-      body.replaceChildren(h('p', {}, ASSISTANT_INTRO),
+      body.replaceChildren(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
+        h('p', {}, ASSISTANT_INTRO),
         h('p', { class: 'hint' }, 'Available in the installed app on your own server once the admin turns assistant access on. The demo makes no tokens.'));
       show(true);
       return;

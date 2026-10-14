@@ -1,4 +1,4 @@
-Status: in progress (part A: assistant access tokens)
+Status: complete (part A: assistant access tokens; part B, the MCP server, is the next PR)
 
 # Assistant, step 1, part A: assistant access tokens
 
@@ -51,10 +51,16 @@ a later PR; it uses `app.auth.api_tokens.AssistantUser` (the bearer dependency b
   settings-and-keys + self-hosting/configuration, deployment env row, compose pass-through + .env.example,
   CHANGELOG (users, operators, contributors).
 
-## Next
+* Verification (final): `python -m pytest` 3557 passed (1 pre-existing warning: unused handbook sources);
+  `node tests/js/run_vectors.mjs` passes; `gen_settings_vectors.py --check` current; Chromium check of the card
+  (scratchpad `assistant_card_e2e.py`) 0 failures; demo card (`?mock=1`) shows the note and makes no request;
+  `tools/e2e/sandbox.py` 0 issues; `tools/e2e/regress.py --no-pytest --only 1280-dark` 121 passed.
+  `mkdocs build --strict` not run locally (mkdocs not installed; CI's handbook job runs it).
 
-* Full pytest, node vectors, sandbox.py, regress.py --no-pytest --only 1280-dark; adversarial diff review;
-  final commit and push; mark this note complete.
+## Next (part B, not this PR)
+
+* `/mcp` route: `user: AssistantUser` (app/auth/api_tokens.py); 404 while `is_enabled()` is false; a per-token
+  limit can key on `request.state.api_token.id`. Extend `docs/assistant.md` (connect Open WebUI / Hermes).
 
 ## Checks
 
