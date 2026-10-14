@@ -1555,6 +1555,13 @@ DEPLOY:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-05
   kind: project
+ASSISTANT-DOC:
+  cite: "kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits)."
+  short: "Assistant guide"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-14
+  kind: project
 ALLOWLIST:
   cite: "kidney-health project. docs/network-allowlist.md: outbound domains."
   short: "Network allowlist"

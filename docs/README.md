@@ -41,8 +41,9 @@ using the app; the pages below are for the people who run, maintain and check it
   the SSRF policy, limits, turning it off.
 * [Barcodes and photos](barcode-and-photos.md): scanning, Open Food Facts and USDA lookups, what leaves
   the device, licences; label and plate photos.
-* [The assistant](assistant.md): personal access tokens for a chat assistant that reads your own food log and
-  targets (assistant step 1), what ends a token, the switch, the security rules.
+* [The assistant](assistant.md): a chat assistant that reads your own food log and targets (assistant step 1):
+  personal access tokens, the read-only MCP server at `/mcp` and its four tools, connecting Open WebUI or a
+  Hermes Agent profile, the system prompt template, honest limits.
 * [Diet guide (moved)](diet-guide.md): a pointer from the old diet guide's sections to the handbook pages.
 
 ## Contributing and maintaining

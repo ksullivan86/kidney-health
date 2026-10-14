@@ -8,14 +8,15 @@ not required.
 
 Order of checks for every request (each one answers before the next runs):
 
-1. ``Origin`` (``app.security.CsrfMiddleware``, the exact path ``/mcp``): present and not this server's own
-   origin (or ``PUBLIC_URL``) → ``403``. The cookie CSRF checks do not apply here: no cookie is ever read.
+1. The middlewares (``app.security``): the body limit (``MAX_BODY_BYTES``, ``413``), then ``Origin`` on the
+   exact path ``/mcp``: present and not this server's own origin (or ``PUBLIC_URL``) → ``403``. The cookie CSRF
+   checks do not apply here: no cookie is ever read.
 2. The instance switch ``assistant.enabled`` off → ``404`` for every method, as if the route did not exist.
 3. ``GET``, ``DELETE``, ``PUT``, ``PATCH`` → ``405`` with ``Allow: POST`` (no SSE stream, no sessions to end).
 4. The bearer token (:func:`app.auth.api_tokens.authenticate`, scope ``assistant:read``): the generic ``401``
    with ``WWW-Authenticate: Bearer``, or ``429`` for an address blocked after refused tokens.
 5. The per-token limit, 60 requests a minute (``ratelimit`` ``mcp``, every request counts) → ``429`` with
-   ``Retry-After``. The body limit is the API's (``MAX_BODY_BYTES``, ``413``).
+   ``Retry-After``.
 6. The JSON-RPC message: not JSON → ``-32700``; not one request object (a batch array, no ``"jsonrpc": "2.0"``,
    a bad ``id``) → ``-32600``, both with HTTP 400; a notification, or a response from the client → ``202``
    without a body; an unknown method → ``-32601``; unusable ``params`` or an unknown tool → ``-32602``.

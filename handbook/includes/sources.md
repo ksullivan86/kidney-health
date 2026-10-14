@@ -190,6 +190,7 @@
 [NOTE07]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/07-accounts-settings-secrets.md "Design note 07"
 [NOTE08]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md "Design note 08"
 [DEPLOY]: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md "Deployment guide"
+[ASSISTANT-DOC]: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md "Assistant guide"
 [ALLOWLIST]: https://github.com/ksullivan86/kidney-health/blob/main/docs/network-allowlist.md "Network allowlist"
 [MATERIAL]: https://squidfunk.github.io/mkdocs-material/ "Material for MkDocs"
 [MKDOCS]: https://www.mkdocs.org/ "MkDocs"
