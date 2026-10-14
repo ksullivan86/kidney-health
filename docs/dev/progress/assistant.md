@@ -1,4 +1,4 @@
-Status: in progress (part A complete and merged into this branch's base; part B, the read-only MCP server, in progress)
+Status: complete (part A: access tokens; part B: the read-only MCP server at POST /mcp; part C, writes, is the next PR)
 
 # Assistant, step 1, part B: the read-only MCP server (`POST /mcp`)
 
@@ -52,9 +52,11 @@ integrates after part A's PR merges (no push, no PR from here).
   16 passed; the official MCP Python SDK 1.28.1 (`streamablehttp_client` + `ClientSession`, scratch script) talks to
   a real server: initialize 2025-06-18, tools/list, calls, isError, McpError for an unknown tool, ping.
 
+* Final: `python -m pytest` 3603 passed (1 pre-existing warning: unused handbook sources).
+
 ## Next
 
-* Final full `python -m pytest -q` on the last commit, then mark this note complete.
+* Part C (writes, scope `assistant:log`: `log_food`, `save_recipe`), not this PR.
 
 ---
 
