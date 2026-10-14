@@ -915,6 +915,15 @@ def usda_record_to_food(data: Mapping[str, Any], fdc_id: int) -> dict[str, Any]:
     return map_usda_record(data, fdc_id).kwargs
 
 
+def usda_search_records(query: str, page_size: int, api_key: str, *, guard: str, own_key: bool = False) -> list[Mapping[str, Any]]:
+    """The ``foods`` items of one FoodData Central text search, as sent: abridged records whose ``foodNutrients``
+    (per 100 g, ``nutrientNumber``/``value``) and branded serving fields :func:`map_usda_record` reads. Nothing is
+    saved (the assistant's ``search_foods``, ``app/mcp``). Raises :class:`UsdaError`."""
+    data = _usda_fetch("/foods/search", {"query": query, "pageSize": int(page_size)}, api_key, guard=guard, own_key=own_key)
+    items = data.get("foods") if isinstance(data, Mapping) else None
+    return [item for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
+
+
 def usda_find_by_gtin(gtin14: str, api_key: str, *, guard: str, own_key: bool = False) -> tuple[int, dict[str, Any]] | None:
     """Find a branded FoodData Central record for a GTIN-14 (note 03 R4): search each form of
     :func:`app.gtin.usda_candidates` (at most three calls) and accept only a result whose ``gtinUpc``,

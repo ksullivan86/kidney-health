@@ -462,6 +462,19 @@ def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any], c
     }
 
 
+def day_summary(conn: sqlite3.Connection, request: Request, user_id: int, day: str) -> dict[str, Any]:
+    """The ``GET /api/log?date=`` answer for ``user_id`` on ``day``: Today's numbers. The assistant's ``get_today``
+    (``app/mcp``) answers from this same function, so the two can never disagree."""
+    profile = get_profile(conn, user_id)
+    today = today_local()
+    # From today on, read the week before as well: v0.3.1's "running high" warnings join it with the plan.
+    window = fetch_entries(conn, user_id, pattern_window_start(day) if day >= today else day, day)
+    rows = [r for r in window if r["date"] == day]
+    summary = summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user_id))
+    summary["pattern_alerts"] = day_pattern_alerts(day, pattern_inputs(window, today), profile, today)
+    return summary
+
+
 # --------------------------------------------------------------------------- #
 # Routes (static paths before ``/{entry_id}``)
 # --------------------------------------------------------------------------- #
@@ -471,14 +484,7 @@ def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any], c
 def get_day(user: CurrentUser, request: Request, date: str | None = None,
             conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     day = parse_date_param(date, "date") if date else today_local()
-    profile = get_profile(conn, user.id)
-    today = today_local()
-    # From today on, read the week before as well: v0.3.1's "running high" warnings join it with the plan.
-    window = fetch_entries(conn, user.id, pattern_window_start(day) if day >= today else day, day)
-    rows = [r for r in window if r["date"] == day]
-    summary = summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user.id))
-    summary["pattern_alerts"] = day_pattern_alerts(day, pattern_inputs(window, today), profile, today)
-    return summary
+    return day_summary(conn, request, user.id, day)
 
 
 @router.get("/range", response_model=RangeSummary)
