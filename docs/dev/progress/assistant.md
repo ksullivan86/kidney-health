@@ -36,15 +36,25 @@ integrates after part A's PR merges (no push, no PR from here).
 ## Done
 
 * Steps 1–4 (code): `app/mcp/{__init__,server,tools,measures}.py`, `app/log.py` `day_summary`, `app/foods.py`
-  `usda_search_records`, `app/security.py` `BEARER_PATHS`, `app/main.py`. Step 5 partly: `tests/test_mcp.py`
-  (42 tests). Verified: `python -m pytest -q tests/test_mcp.py tests/test_security.py tests/test_auth_coverage.py
-  tests/test_api_tokens.py tests/test_api.py tests/test_kidney_only.py tests/test_isolation*.py tests/test_planning.py
-  tests/test_running_high.py -W error::UserWarning` all pass.
+  `usda_search_records`, `app/security.py` `BEARER_PATHS`, `app/main.py` (one import, one include; the 405 route is
+  registered once per method so OpenAPI operation ids stay unique).
+* Step 5: `tests/test_mcp.py` (43 tests), `BEARER_ROUTES` in `tests/test_auth_coverage.py` (the only write routes
+  outside `/api`; 404 off, 401 with a cookie or nothing, 200 with a token), `tools/e2e/mcp_smoke.py` (port 8073) in
+  the README and `HARNESSES`.
+* Step 6: `docs/assistant.md` (switch on, tools, Open WebUI, a separate Hermes profile, system prompt template,
+  check, honest limits, endpoint), ARCHITECTURE ("Assistant MCP server", request rules, layout, ownership),
+  CHANGELOG (three audiences), ROADMAP status, `docs/privacy.md`, `docs/README.md`, handbook `app/ai.md` "Talk to an
+  assistant (optional)" with source `ASSISTANT-DOC` (`python scripts/build_handbook.py` regenerated the sources).
+* Matching rule refined after review: list-style names ("Juice, apple") are read the natural way round, a comma
+  name is never matched in its written order ("Chocolate, milk" is not "chocolate milk"), the exact name with commas
+  counts, "leave one word out" (≤ 6 words) only gives alternatives.
+* Verified: `tests/test_mcp.py` 43 passed; `node tests/js/run_vectors.mjs` passes; `python tools/e2e/mcp_smoke.py`
+  16 passed; the official MCP Python SDK 1.28.1 (`streamablehttp_client` + `ClientSession`, scratch script) talks to
+  a real server: initialize 2025-06-18, tools/list, calls, isError, McpError for an unknown tool, ping.
 
 ## Next
 
-* `/mcp` in `tests/test_auth_coverage.py`; `tools/e2e/mcp_smoke.py` (+ README, `HARNESSES`); docs (step 6); full
-  `python -m pytest -q`, `node tests/js/run_vectors.mjs`, the smoke script against a real server.
+* Final full `python -m pytest -q` on the last commit, then mark this note complete.
 
 ---
 
