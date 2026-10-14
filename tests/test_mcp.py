@@ -558,7 +558,7 @@ def test_check_meal_amounts_in_servings_grams_and_household_measures(admin, toke
     assert got["items"][0]["nutrients"] == banana["nutrients"]
     assert got["items"][2]["nutrients"]["potassium_mg"] == 2 * juice["nutrients"]["potassium_mg"]
     assert got["items"][1]["nutrients"]["potassium_mg"] == 211
-    assert [i["how_matched"] for i in got["items"]] == ["name", "name", "only_match", "only_match", "only_match", "name"]
+    assert [i["how_matched"] for i in got["items"]] == ["name", "name", "name", "only_match", "name", "name"]
     assert got["items"][0]["warnings"][0]["message"] == "High potassium: 422 mg in this amount"
     assert got["totals"]["potassium_mg"] == {"value": round_value("potassium_mg", 422 * 3.5 + 125 * 4 + 218 * 2), "not_listed_by": 0}
     assert admin.get("/api/log", params={"date": DAY}).json()["entries"] == []  # nothing saved
@@ -617,6 +617,23 @@ def test_check_meal_unresolved_items_come_with_a_question(admin, token):
 
     only_unresolved = call(admin.app, token, "check_meal", items=[{"food": "zzzz"}])
     assert only_unresolved["items"] == [] and only_unresolved["totals"] is None and "day_with_these_items" not in only_unresolved
+
+
+def test_check_meal_reads_list_style_names_the_natural_way_round_and_never_guesses_the_order(admin, token):
+    """"Chocolate, milk" (the food lists' style) is milk chocolate: "chocolate milk" must be asked about, not matched."""
+    admin.post("/api/foods", json={"name": "Chocolate, milk", "serving_desc": "1 bar (44 g)", "serving_g": 44,
+                                   "nutrients": {"carbs_g": 26, "potassium_mg": 169}})
+    asked = call(admin.app, token, "check_meal", items=[{"food": "chocolate milk"}])
+    assert asked["items"] == [] and asked["unresolved"][0]["reason"] == "several_matches"
+    assert [a["name"] for a in asked["unresolved"][0]["alternatives"]] == ["Chocolate, milk"]
+    named = call(admin.app, token, "check_meal", items=[{"food": "milk chocolate"}, {"food": "egg white"},
+                                                        {"food": "roasted chicken"}, {"food": "Chocolate, milk"}])
+    assert [(i["matched"]["name"], i["how_matched"]) for i in named["items"]] == [
+        ("Chocolate, milk", "name"), ("Egg white, raw", "name"), ("Chicken breast, roasted", "only_match"),
+        ("Chocolate, milk", "name")]  # the exact name, as search_foods shows it
+    near = call(admin.app, token, "check_meal", items=[{"food": "grilled chicken"}])  # found only without "grilled"
+    assert near["items"] == [] and near["unresolved"][0]["reason"] == "several_matches"
+    assert [a["name"] for a in near["unresolved"][0]["alternatives"]] == ["Chicken breast, roasted"]
 
 
 def test_check_meal_asks_which_meal_for_the_carbohydrate_goal(admin, token):

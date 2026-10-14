@@ -53,9 +53,11 @@ SOURCE = "kidney-health"
 REMINDER = "Numbers come from the app; fetch them again after any change."
 MAX_ROW_ID = 2**63 - 1
 GET_HELP_NOW = "/learn/get-help-now/"
-# check_meal: candidates read per item, alternatives offered when the match is not certain.
+# check_meal: candidates read per item, alternatives offered when the match is not certain, and the longest phrase
+# tried again without one of its words (one search per word, so it stays short).
 SEARCH_CANDIDATES = 8
 MAX_ALTERNATIVES = 5
+MAX_PARTIAL_WORDS = 6
 # A planned item with no meal: counted in the day's totals, compared with no meal's carbohydrate goal
 # (app.nutrients judges per-meal carbohydrate for breakfast, lunch, dinner and snack only).
 NO_MEAL = "unassigned"
@@ -374,7 +376,11 @@ def usda_results(call: Call, query: str, room: int, seen: set[int]) -> tuple[lis
         if not 0 < fdc_id <= MAX_ROW_ID or fdc_id in seen:
             continue
         seen.add(fdc_id)
-        out.append(usda_food(record, fdc_id))
+        try:
+            out.append(usda_food(record, fdc_id))
+        except (TypeError, ValueError, KeyError, AttributeError):  # one odd record never costs the other results
+            logger.warning("assistant search: USDA record %d could not be mapped; skipped", fdc_id)
+            continue
         if len(out) >= room:
             break
     return out, {"searched": True, "found": len(out)}
@@ -411,6 +417,36 @@ def _keys(text: str | None) -> list[str]:
     return [M.word_key(w) for w in M.search_words(text or "")]
 
 
+def _parts(name: str) -> list[str]:
+    return [p.strip() for p in (name or "").split(",") if p.strip()]
+
+
+def _named_as(name: str) -> list[list[str]]:
+    """What a food is called, as keys: a name without a comma as it is; a "Noun, kind, …" name of the food lists by
+    its first part ("Apple" in "Apple, raw, with skin") or its two first parts the natural way round ("Juice,
+    apple" is apple juice, "Milk, whole" whole milk). The order counts: "Chocolate, milk" is milk chocolate, never
+    "chocolate milk"."""
+    parts = _parts(name)
+    if len(parts) <= 1:
+        return [_keys(name)]
+    return [_keys(parts[0]), _keys(parts[1] + " " + parts[0])]
+
+
+def _word_orders(food: Mapping[str, Any]) -> list[list[str]]:
+    """The name's words in the order a person says them: the natural way round ("white rice long-grain cooked" for
+    "Rice, white, long-grain, cooked"; a name without a comma as written), alone or with the brand before or after.
+    Never a comma name as written: "Chocolate, milk" read left to right would be "chocolate milk"."""
+    parts = _parts(food["name"])
+    natural, brand = _keys(" ".join(parts[1:2] + parts[:1] + parts[2:])), _keys(food["brand"])
+    return [natural, brand + natural, natural + brand]
+
+
+def _in_order(wanted: list[str], keys: list[str]) -> bool:
+    """Every wanted word is a word of ``keys``, in the same order (others may come between)."""
+    rest = iter(keys)
+    return bool(wanted) and all(any(word == key for key in rest) for word in wanted)
+
+
 def _alternative(food: Mapping[str, Any]) -> dict[str, Any]:
     return {"food_id": food["id"], "name": food["name"], "brand": food["brand"], "serving": food["serving_desc"]}
 
@@ -429,14 +465,14 @@ def _candidates(call: Call, *queries: list[str]) -> list[dict[str, Any]]:
 
 def find_food(call: Call, text: str) -> Found | dict[str, Any]:
     """The food the person means, or an ``unresolved`` entry. Certain only when exactly one candidate is named by
-    the words (its whole name, or its name before the first comma: "apple" for "Apple, raw, with skin"), or when the
-    search finds a single food whose name has every word as a whole word ("white rice": "Rice, white, long-grain,
-    cooked"); otherwise the alternatives, to ask, and never a guess."""
+    the words (:func:`_named_as`: "apple" for "Apple, raw, with skin", "apple juice" for "Juice, apple"), or when
+    the search finds a single food that has every word, whole and in order (:func:`_word_orders`: "chicken" for
+    "Chicken breast, roasted"); otherwise the alternatives, to ask, and never a guess."""
     words = M.search_words(text)
     singular = [M.singular(w) for w in words]
     found = _candidates(call, words, singular if singular != words else [])
     partial = False
-    if not found and len(words) > 1:  # "grilled chicken breast": try without one word at a time
+    if not found and 1 < len(words) <= MAX_PARTIAL_WORDS:  # "grilled chicken breast": try without one word at a time
         partial = True
         found = _candidates(call, *(singular[:skip] + singular[skip + 1:] for skip in range(len(singular))))
     if not found:
@@ -444,10 +480,12 @@ def find_food(call: Call, text: str) -> Found | dict[str, Any]:
                 "question": f'No food in the app matches "{text}". Ask the person for another name for it, or to add it '
                             "in the app (search_foods also shows foods from USDA FoodData Central)."}
     wanted = _keys(text)
-    named = [] if partial else [f for f in found if wanted in (_keys(f["name"]), _keys(f["name"].split(",", 1)[0]))]
+    typed = [_keys(p) for p in _parts(text)]  # the exact name, commas and all ("Juice, apple" from search_foods)
+    named = [] if partial else [f for f in found
+                                if wanted in _named_as(f["name"]) or typed == [_keys(p) for p in _parts(f["name"])]]
     if len(named) == 1:
         how, food = "name", named[0]
-    elif not partial and len(found) == 1 and set(wanted) <= set(_keys(found[0]["name"]) + _keys(found[0]["brand"])):
+    elif not partial and len(found) == 1 and any(_in_order(wanted, order) for order in _word_orders(found[0])):
         how, food = "only_match", found[0]
     else:
         ordered = named + [f for f in found if f not in named]

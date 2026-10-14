@@ -22,7 +22,7 @@ _FRACTIONS = {"½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3, "�
 QUANTITY = r"(?:\d+(?:[.,]\d+)?(?:(?:\s*-\s*|\s+)\d+/\d+|/\d+)?[½¼¾⅓⅔⅛]?|[½¼¾⅓⅔⅛])"
 _QUANTITY_RE = re.compile(rf"^\s*({QUANTITY})\s*(.*?)\s*$")
 
-# Spellings of the same measure → one name. Anything else is compared in its singular form.
+# Spellings of the same measure → one name. Anything else is compared by its key (:func:`normalize_unit`).
 _SYNONYMS: dict[str, str] = {
     "tablespoon": "tbsp", "tbs": "tbsp", "tbl": "tbsp", "tbsp": "tbsp",
     "teaspoon": "tsp", "tsp": "tsp",

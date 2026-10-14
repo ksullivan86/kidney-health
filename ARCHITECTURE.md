@@ -2197,10 +2197,13 @@ list the value; `value` is `null` when `n > 0` and nothing that counts lists it 
   food_id?, name?}], totals: {key: Amount} | null, day_with_these_items?: {key: {name, unit, total: Amount, target?,
   level?, percent?, left?, over_by?}}, alerts?, pattern_alerts?, meal_carbohydrate?, notes}`.
   * Finding the food: `food_id` (`foods.fetch_user_food`; another person's own food is `unknown_food_id`), else the
-    app's search on the words (filler words dropped; plural and singular merged; then one word left out at a time,
-    which is never certain). Certain only when exactly one candidate's whole name or name before the first comma
-    is the words, or the search finds a single food whose name has every word as a whole word; otherwise
-    `several_matches` with up to 5 alternatives (the named ones first), never a guess. Other reasons: `no_match`,
+    app's search on the words (filler words dropped; plural and singular merged; then, for up to 6 words, one word
+    left out at a time, which is never certain). Certain only when exactly one candidate is named by the words: its
+    exact name (commas included), a name without a comma, the first part of a "Noun, kind" name or its two first
+    parts the natural way round ("Juice, apple" is apple juice; "Chocolate, milk" is milk chocolate, never
+    "chocolate milk"); or when the search finds a single food with every word, whole and in that natural order
+    (the brand before or after). Otherwise `several_matches` with up to 5 alternatives (the named ones first),
+    never a guess. Other reasons: `no_match`,
     `unknown_unit`, `servings_only` (a food whose serving weight does not describe its values), `amount_too_large`
     (above `MAX_SERVINGS` or `MAX_GRAMS`).
   * The amount: `serving` (default 1), `g` (`log.resolve_servings`), or a measure the food's `serving_desc` lists
