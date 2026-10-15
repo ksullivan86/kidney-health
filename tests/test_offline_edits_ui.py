@@ -141,8 +141,8 @@ def test_all_text_of_the_card_goes_in_as_text() -> None:
 
 
 def test_nothing_inline_and_the_card_is_styled_from_the_stylesheet() -> None:
-    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", INDEX), "no inline scripts (CSP)"
-    assert not re.search(r"\sstyle=", INDEX), "no inline style attributes (CSP)"
+    assert not re.search(r"<script(?![^>]*\bsrc\s*=)[^>]*>", INDEX, re.IGNORECASE), "no inline scripts (CSP)"
+    assert not re.search(r"\sstyle\s*=", INDEX, re.IGNORECASE), "no inline style attributes (CSP)"
     for name in ("outbox-item.conflict", "conflict-sides", "conflict-side", "conflict-lines"):
         assert f".{name}" in CSS or name in CSS, name
     assert "!important" not in CSS
