@@ -43,7 +43,7 @@ The image listens on port 8000 over plain HTTP, runs as UID 10001 with no shell,
 | One Linux machine (recommended) | **rootless Podman with Quadlet**: a systemd user service with auto-update | [Rootless Podman](podman-rootless.md) |
 | Docker already | **rootless Docker**, with compose or the run script | [Rootless Docker](docker-rootless.md) |
 | A cluster (Talos or similar) | the **Kustomize** files in `deploy/k8s/` | [Kubernetes](kubernetes.md) |
-| Just a look | the static preview or demo mode; nothing to install | the project README |
+| Just a look | the static preview or demo mode; nothing to install (the online demo can keep your data in your browser if you choose, for trying it without a server) | the project README and its `docs/demo.md` |
 
 Exactly **one** container may use a database. Never run two copies on the same volume
 ([deployment guide][DEPLOY]).

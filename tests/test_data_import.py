@@ -971,3 +971,32 @@ def test_works_with_a_person_on_https_next_to_others(two_clients):
     assert post_import(sam, doc).status_code == 200
     assert export_doc(sam)["log_entries"] and HTTPS_URL
     assert add_user and TestClient
+
+
+def test_the_curated_foods_with_a_negative_id_survive_an_export_and_an_import(tmp_path):
+    """data/foods.json gives glucose tablets, gel and shots and the salt substitutes a negative id of their own in the place of a
+    FoodData Central one, and a copy of such a food keeps it. A log with glucose tablets (the common low treatment) must therefore
+    export and import: before this was fixed the import refused it with "builtin_foods[0].fdc_id: Input should be greater than or
+    equal to 1". Run on the real built-in list, not the test fixture, whose ids are all positive."""
+    real = Path(__file__).resolve().parents[1] / "data" / "foods.json"
+    with signed_in_client(make_settings(tmp_path / "a", real)) as a, signed_in_client(make_settings(tmp_path / "b", real)) as b:
+        tablets = find_food(a, "glucose tablet")
+        assert tablets["fdc_id"] < 0
+        assert a.post("/api/log", json={"date": DAY, "meal": "snack", "food_id": tablets["id"], "servings": 4}).status_code == 201
+        copy = a.post(f"/api/foods/{tablets['id']}/copy")
+        assert copy.status_code == 201 and copy.json()["fdc_id"] == tablets["fdc_id"]
+        doc = export_doc(a)
+        assert [(f["name"], f["fdc_id"]) for f in doc["builtin_foods"]] == [(tablets["name"], tablets["fdc_id"])]
+        assert [f["fdc_id"] for f in doc["custom_foods"]] == [tablets["fdc_id"]]
+        answer = post_import(b, doc)
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["counts"]["log_entries"] == 1 and answer.json()["counts"]["built_in_foods_matched"] == 1
+        assert answer.json()["counts"]["custom_foods"] == 1 and answer.json()["skipped"]["total"] == 0
+        (entry,) = b.get("/api/log", params={"date": DAY}).json()["entries"]
+        assert entry["food_name"] == tablets["name"] and entry["purpose"] == "hypo"
+        # a number of no food here is still only "a built-in food this server does not have", never an error
+        doc["builtin_foods"][0]["fdc_id"] = -987654
+        assert post_import(b, doc, dry_run=True, merge=True).json()["skipped"]["by_kind"] == {"log_entries": 1}
+        # and a number beyond what the database holds is refused as before
+        doc["builtin_foods"][0]["fdc_id"] = -(2**63)
+        assert post_import(b, doc, dry_run=True, merge=True).status_code == 400

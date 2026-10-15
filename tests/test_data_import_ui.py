@@ -50,7 +50,7 @@ def test_the_page_never_keeps_the_file_or_builds_html_from_it() -> None:
 
 
 def test_the_preview_has_no_server_and_says_so() -> None:
-    demo = BLOCK[BLOCK.index("if (MOCK) {"):BLOCK.index("const fileId")]
+    demo = BLOCK[BLOCK.index("if (MOCK && !(KH.demoLocal && KH.demoLocal.on())) {"):BLOCK.index("const fileId")]
     assert "The preview has no server to import into. In the installed app" in demo
     assert "input" not in demo and "request(" not in demo and "A.importData" not in demo
 

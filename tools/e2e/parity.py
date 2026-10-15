@@ -46,6 +46,10 @@ Sections
   14 optional AI while it is off (the demo never calls a provider): GET /api/me/ai has the same shape, enabled false and
      the same personal settings; every /api/ai/* and /api/vision/* route (and the personal probe) answers 404 on both sides
 
+  15 the export of the demo's "Keep my data in this browser" (GET /api/me/export.json on the demo, export.json inside GET /api/me/export.zip on
+     the server), after everything the sections above did: the same keys in the same order and the same records (log entries, own foods, linked
+     foods, saved meals, lab results, symptoms, "Not for me", profile, settings, built-in food references); ids and times are left out as everywhere
+
 ``--sections 0,11`` runs only those sections (section 1 always runs first: the others need its food ids).
 Error answers are compared by status, detail and, when either side sends one, ``code``.
 
@@ -1085,6 +1089,33 @@ class Harness:
             self.rec.compare(S, f"{method} {path} while AI is off", {"status": rs["status"], "detail": rs.get("detail")},
                              {"status": rm["status"], "detail": rm.get("detail")}, ignore=frozenset())
 
+    def section15(self) -> None:
+        """The demo's export.json (js/mock/export.js, "Keep my data in this browser") against the one inside the server's export.zip
+        (app/account.py), after every earlier section: the same keys in the same order, the same records. Left out: what differs by
+        design (the person's name, the activity list, the time, the AI sections the demo leaves empty, when a shared food was linked)."""
+        import zipfile
+
+        S = "15 export.json"
+        r = self.server.client.get("/api/me/export.zip")
+        self.rec.compare(S, "GET /api/me/export.zip status", r.status_code, 200, ignore=frozenset())
+        if r.status_code != 200:
+            return
+        doc_s = json.loads(zipfile.ZipFile(io.BytesIO(r.content)).read("export.json"))
+        rm = self.mock.call("GET", "/api/me/export.json")
+        self.rec.compare(S, "GET /api/me/export.json status", 200, rm["status"], ignore=frozenset())
+        if rm["status"] != 200:
+            return
+        doc_m = rm["body"]
+        self.rec.compare(S, "the keys, in order", list(doc_s), list(doc_m), ignore=frozenset())
+        for key in ("format", "version", "app_version"):
+            self.rec.compare(S, key, doc_s[key], doc_m[key], ignore=frozenset())
+        ignore = IGNORE | {"linked_at"}
+        for key in ("profile", "settings", "log_entries", "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "food_preferences",
+                    "builtin_foods"):
+            self.rec.compare(S, f"{key} ({len(doc_s[key]) if isinstance(doc_s[key], list) else 'object'})", doc_s[key], doc_m[key], ignore=ignore)
+        for key in ("ai_audit", "ai_usage", "ai_consents", "ai_provider"):
+            self.rec.compare(S, f"{key} is empty on both sides", doc_s[key], doc_m[key], ignore=frozenset())
+
     def section11(self) -> None:
         """Personalised targets and labs (note 05; ARCHITECTURE.md "M2 API: targets and labs")."""
         today = date.today()
@@ -1727,7 +1758,7 @@ def main(argv: list[str] | None = None) -> int:
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
                          ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
-                         ("11", h.section11), ("12", h.section12), ("13", h.section13), ("14", h.section14)]
+                         ("11", h.section11), ("12", h.section12), ("13", h.section13), ("14", h.section14), ("15", h.section15)]
                 if args.sections:
                     wanted = {"1", *args.sections.split(",")}
                     steps = [(name, fn) for name, fn in steps if name in wanted]

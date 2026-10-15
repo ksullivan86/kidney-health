@@ -763,6 +763,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py`, `docs/dev/progress/symptoms.md` |
 | Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py`, `docs/dev/progress/offline-edits.md` |
+| Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md`, `docs/dev/progress/demo-local.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py`, `docs/dev/progress/visit-prep.md` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
@@ -862,6 +863,7 @@ The mock routes as a whole are checked against a real, signed-in server by `tool
 (run by hand; see `tools/e2e/README.md`).
 In demo/preview mode the user is a signed-in demo admin; AI, Open Food Facts and USDA calls
 answer "available in the installed app" except for a few recorded barcode fixtures.
+The demo's state is in memory unless the person turns on **Keep my data in this browser** (IndexedDB, demo build only; see that section at the end of this file).
 
 ### Sign-in screens and Settings (M1)
 
@@ -3324,3 +3326,76 @@ No schema step: nothing is stored for any of this.
   replay with `If-Match`, 412 and both answers, 404, a mark queued first, profile and targets still online-only), and the
   `changes` section of `tools/e2e/device.py` (Chromium with `context.set_offline`: edit and delete offline, reload offline,
   reconnect, the conflict card and both buttons, a deleted entry, an entry made offline, "Eaten", a low treatment).
+
+## Keep my data in this browser (demo only)
+
+ROADMAP "Ideas from the owner"; user page [docs/demo.md](docs/demo.md). The Pages demo (`scripts/build_preview.py --pages`) answers every
+`/api` call from the demo API in the page (`js/mock/*`). Normally that state is in memory and gone on reload. An **opt-in** mode stores
+the whole state in the browser's IndexedDB so a person can use the demo as a small log without a server, with **export** and **import** of
+`export.json` (the server's export format) so the data can later move to a real server through `POST /api/me/import`. The self-hosted
+server stays the full version; this mode never exists in the installed app.
+
+* **Off unless chosen, and only in the demo build.** `KH.mock.local.allowed()` is true only when `window.KDL_PREVIEW === true` (the Pages
+  build and the self-contained preview) and the demo API is running; a development server's `?mock=1` page and the installed app never
+  use it, never open the database (`boot`, `probe` and `enable` all start with `if (!allowed())`), and `KH.demoLocal` is an inert stub
+  there. `js/main.js` calls `KH.mock.local.boot()` once, inside `if (MOCK)`, before the first request. Starting the demo only **looks**
+  for a saved copy and never leaves a database behind (an upgrade means there was none, and is aborted); nothing is written until the
+  person ticks **I understand** in the sheet and presses the button. `tests/test_demo_local_ui.py` checks the gating in the source and
+  that the files that name `indexedDB` are exactly `offline.js`, `pwa.js` and `mock/persist.js`; `tests/js/demo_local_storage.mjs` checks it at
+  run time (no database call at all with the flag off).
+* **The sheet** (`index.html` `#sheet-demo-local`, `js/views/demo_local.js`, `css/demo-local.css`; opened from the banner's **Keep my data in
+  this browser** button or from Settings → Your data) says, in this wording (checked by the static test): the data stays only in this browser
+  on this device and nothing is sent anywhere; clearing site data, private browsing or the browser freeing space can delete it, export regularly;
+  on a shared device others can see it (the demo has no real sign-in); for real use run your own server. "I understand" must be ticked.
+  The person chooses to start from an **empty log** (`new MockApi({seed: false})`: a fresh server's account) or from the **sample data as it is
+  now**. `navigator.storage.persist()` is asked for when it is turned on and the answer is shown (`persisted()` is read back at each start).
+  **Stop keeping data here** asks in the page (`KH.confirm.inline`, no browser dialog), deletes the database and reloads into the in-memory
+  sample demo. The banner reads "kept in this browser only" while it is on, shows a save error or conflict, and says why a copy was not loaded.
+* **Storage** (`js/mock/persist.js`, `KH.mock.local`). One record, key `current` of object store `state` in database `kdl-demo-local`:
+  `{format: "kidney-health-demo-local", schema: 1, rev, savedAt, foodsVersion, state}`; `state` is the own properties of the `MockApi` instance
+  (Maps and Sets included, by structured clone; `_guidanceVectors`, a derived cache, is left out). `KH.mock.onWrite(api, method, path)` is called from
+  `MockApi.request` after every non-`GET` that did not throw (an import's dry run does not count) and schedules a **debounced save** (1.5 s; also
+  when the page is hidden). A copy is read at start (`applyState` replaces the instance's properties) before the first request. Rules:
+  * `schema` is the shape of `state`. A copy with a **newer** schema, or one that cannot be read, is **not loaded and never overwritten or deleted**
+    by this page (`status().blocked`; the banner and sheet say why; no turn-on, no stop). Changing the state's shape in a way an old copy cannot
+    satisfy bumps `SCHEMA` and adds a step to `migrate()`; properties the mock creates lazily (`_auth`, `_labs`, `_symptoms`, `_settings`, ...) need none.
+  * `rev` counts the saves. A save is **one transaction** that reads the stored record and writes the next revision only if the stored `rev` is the
+    one this page loaded or wrote last (`'none'` when turning on): a second tab that saved first makes this page set `conflict`, **stop saving**
+    and say so, so a tab never overwrites another's data. A failed save (quota, a refusing browser) sets `error`, keeps the data in the page and
+    tries again after the next change.
+  * **Every IndexedDB call is inside try/catch** and rejects with a plain sentence; with no IndexedDB, a `SecurityError` (private browsing, blocked
+    site data, a sandboxed frame such as the claude.ai preview host) or a full disk the sheet says so and the demo stays in memory.
+  * While the mode is on `KH.net.offlineNow()` is false (there is no server to be offline from), so writes go straight into the stored copy and
+    never wait in the demo's in-memory outbox.
+* **Export** (`js/mock/export.js`): `GET /api/me/export.json` is a demo-only route returning the document of `app/account.py export_data`: the
+  same keys in the same order (`tests/test_demo_local_storage.py` compares them), `log_entries` without the derived `version`, `custom_foods`,
+  `linked_foods` (`linked_at: null`), `meal_templates`, `lab_results` and `symptoms` in the export shapes, `food_preferences`, `builtin_foods`, the
+  person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads it as `export.json`
+  (`KH.demoLocal.exportFile()`; Settings → Your data shows **Export my data (export.json)** while the mode is on, and says what is needed
+  otherwise). The server's zip also has CSV files and a README; the demo gives the JSON only.
+* **Import** (`js/mock/import.js`): `POST /api/me/import?dry_run=&merge=&replace_profile=` is the twin of `app/data_import.py` for the existing
+  "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
+  rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
+  with `extra="forbid"`, strict types, bounded lists and strings) checked in the same order, so the **first problem is the same one**, named by record
+  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the four
+  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`) and only with `replace_profile` (`ai` and the consents never);
+  ids remapped; an own food identical to one already there is reused; built-in foods found by FoodData Central id (older files: id and name);
+  shared foods linked or kept as the person's own copy or reported; an account that has data is refused (409, or `can_import: false` on a dry
+  run) unless `merge`; what is already there is left out; the profile and targets are replaced, not merged; a dry run runs the same code and puts
+  every table back (`snapshotTables`/`restoreTables`). Size: the page's 16 MiB limit and a 413 in the route. **Parity:** `tests/data/import_vectors.json`
+  is generated by `tests/data/gen_import_vectors.py` against the real server (about 240 requests: every kind of refusal, the flow, an older file, and
+  what the account holds afterwards through the ordinary routes) and replayed by `node tests/js/run_vectors.mjs`; `tests/test_import_vectors.py`
+  fails when it is stale and checks the twin's limits against `app/data_import.py`. Differences the browser cannot avoid (it has already run
+  `JSON.parse`): a float written `2.0` is the integer 2, an integer beyond 2**53 is rounded, case folding uses `toLowerCase`.
+* **A server fix found on the way:** the built-in list gives glucose tablets, gel and shots and the salt substitutes a negative `fdc_id`
+  (`data/foods.json`), a copy keeps it, and `ImportFood` / `ImportBuiltinRef` required `fdc_id >= 1`, so an export of a log that used glucose tablets
+  was refused by the import. `FdcId` in `app/data_import.py` accepts any database integer (a number that matches no food is "a built-in food this
+  server does not have"); `tests/test_data_import.py` runs the round trip on the real list.
+* **Files:** `js/mock/persist.js`, `js/mock/export.js`, `js/mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, the banner button and the
+  `#sheet-demo-local` dialog in `index.html` (all in `sw.js`'s shell list), `MockApi({seed})` and the `KH.mock.onWrite` call in `js/mock/core.js`, the boot
+  hook in `js/main.js`, the Settings → Your data entry points in `js/views/settings.js`, `offlineNow()` in `js/offline.js`, `tests/js/fake_idb.mjs`,
+  `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`,
+  `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tools/e2e/demo_local.py`, `docs/demo.md`, `docs/dev/progress/demo-local.md`.
+  The browser walk (`python tools/e2e/demo_local.py`, no server): nothing stored before the choice, the sheet's wording, turn on, add an entry, reload and it
+  is still there, export, stop (confirm, cancel, delete), import into an empty log, two tabs, a browser that refuses IndexedDB, a newer copy, no request to
+  another host, no console or CSP error, no sideways scroll.

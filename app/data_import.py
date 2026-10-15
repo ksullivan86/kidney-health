@@ -213,6 +213,10 @@ def _source_license(value: str | None) -> str | None:
 
 Timestamp = Annotated[str, Field(max_length=40)]
 Id = Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]
+# A built-in food the app curates itself (glucose tablets, gel and shots, the salt substitutes: ``data/foods.json``) carries a
+# negative number of its own where a FoodData Central food has its id, and a copy of one keeps it. An export holds those, so the
+# import must read them (a made-up number simply matches no food here).
+FdcId = Annotated[int, Field(ge=-MAX_SQLITE_INT, le=MAX_SQLITE_INT)]
 Finite = Annotated[float, Field(allow_inf_nan=False)]
 Rating = Literal["green", "yellow", "red"]
 
@@ -248,7 +252,7 @@ class ImportFood(_Strict):
     brand: _short(200) | None = None
     category: _short(100) | None = None
     source: Literal["custom", "usda", "off"]
-    fdc_id: Id | None = None
+    fdc_id: FdcId | None = None
     serving_desc: _short(200, min_length=1)
     serving_g: Annotated[float, Field(ge=MIN_SERVING_G, le=MAX_SERVING_G, allow_inf_nan=False)]
     nutrients: dict[str, Any]
@@ -322,7 +326,7 @@ class ImportLinkedFood(_Strict):
 class ImportBuiltinRef(_Strict):
     id: Id
     name: _short(200, min_length=1)
-    fdc_id: Id | None = None
+    fdc_id: FdcId | None = None
 
 
 class ImportEntry(_Strict):

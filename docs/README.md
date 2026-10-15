@@ -44,6 +44,8 @@ using the app; the pages below are for the people who run, maintain and check it
 * [The assistant](assistant.md): a chat assistant that reads your own food log and targets (assistant step 1):
   personal access tokens, the read-only MCP server at `/mcp` and its four tools, connecting Open WebUI or a
   Hermes Agent profile, the system prompt template, honest limits.
+* [The online demo](demo.md): the Pages demo, and **Keep my data in this browser** (IndexedDB, off until you choose it): what is
+  stored, export and import of `export.json`, when it cannot work.
 * [Diet guide (moved)](diet-guide.md): a pointer from the old diet guide's sections to the handbook pages.
 
 ## Contributing and maintaining
