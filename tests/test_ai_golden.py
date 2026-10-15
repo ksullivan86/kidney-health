@@ -59,7 +59,7 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
     assert len(cases) >= 40
     categories = {c["category"] for c in cases}
     assert {"grounding", "rules", "safety_text", "refusal", "prefilter", "injection", "format", "privacy", "fallback",
-            "modes", "vision"} <= categories
+            "modes", "vision", "kidney_only"} <= categories
     assert len({c["id"] for c in cases}) == len(cases)
 
 

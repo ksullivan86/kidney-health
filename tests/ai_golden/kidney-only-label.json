@@ -1,0 +1,32 @@
+{
+  "id": "kidney-only-label",
+  "category": "kidney_only",
+  "note": "Kidney-only profile (diabetes None): describe a meal, label and plate photo carry no profile data at all (one fixed sentence for everyone), so this must behave as for any profile. Part of the owner's live run for PROMPT_VERSION 2026-10-15.3: python3 scripts/ai_eval.py ... --cases '^kidney-only' (docs/ai.md, 'Re-run the golden set after a prompt change').",
+  "feature": "label",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "3b",
+      "dialysis": "none",
+      "diabetes": "none"
+    },
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"product_name\": \"Whole wheat crackers\", \"serving_text\": \"5 crackers (30 g)\", \"serving_g\": 30, \"basis\": \"per_serving\", \"per_serving\": {\"calories_kcal\": 140, \"protein_g\": 2, \"fat_g\": 6, \"sat_fat_g\": 1, \"carbs_g\": 19, \"fiber_g\": 3, \"sugar_g\": 0, \"sodium_mg\": 230, \"potassium_mg\": null, \"phosphorus_mg\": null, \"calcium_mg\": null}, \"salt_g\": null, \"percent_dv\": {\"sodium\": null, \"potassium\": null, \"phosphorus\": null, \"calcium\": null}, \"ingredients_text\": \"Whole wheat flour, oil, salt\", \"label_style\": \"us_nutrition_facts\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "draft": {
+      "sodium_mg": 230.0,
+      "calories_kcal": 140.0
+    },
+    "payload_includes": [
+      "and sometimes diabetes"
+    ],
+    "payload_excludes": [
+      "chronic kidney disease only",
+      "type 1 diabetes",
+      "stage 3b"
+    ]
+  }
+}

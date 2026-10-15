@@ -177,3 +177,39 @@ def test_the_chat_judge_flags_what_a_case_expects():
     assert problems == ["no card to confirm"]
     problems, _ = ai_eval.judge_chat(log, 200, {"kind": "answer", "tool_calls": 1, "saved": [{"tool": "log_food"}]})
     assert "saved without being asked" in problems and any("kind answer" in p for p in problems)
+
+
+# --------------------------------------------------------------------------- #
+# The kidney-only cases (the prompts follow the profile; the owner's live run checks them with a real model)
+# --------------------------------------------------------------------------- #
+
+KIDNEY_ONLY_WORDS = "chronic kidney disease only (CKD, stage 3b)"
+
+
+def test_there_is_a_kidney_only_case_for_every_feature_and_the_chat_set_has_kidney_only_questions():
+    cases = ai_eval.load_cases(r"^kidney-only")
+    assert sorted(c["feature"] for c in cases) == ["label", "next_meal", "parse_meal", "plate"]
+    assert all(c["category"] == "kidney_only" and c["fixture"]["profile"]["diabetes"] == "none" for c in cases)
+    chat_cases = [c for c in ai_eval.CHAT_SET if c.profile]
+    assert [c.id for c in chat_cases] == ["chat-kidney-only-potassium", "chat-kidney-only-what-fits", "chat-kidney-only-low",
+                                          "chat-kidney-only-insulin"]
+    assert all(c.profile["diabetes"] == "none" for c in chat_cases)
+    assert {c.id for c in ai_eval.CHAT_SET if not c.profile} >= {"chat-low", "chat-insulin", "chat-log-banana"}  # the rest keep type 1
+
+
+def test_the_live_runner_sends_the_kidney_only_wording_for_those_cases_and_type_1_for_the_others(tmp_path):
+    provider = FakeProvider(route=chat_model)
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", vision_model="gpt-6-luna", api_key=KEY,
+                              cases=r"^(kidney-only|baseline-good-idea)", chat=True, safety=False)
+    rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path, log=lambda line: None)
+    assert rep["summary"]["chat_pass_rate"] == 1.0 and rep["prompt_version"]
+    systems = [b["messages"][0]["content"] for b in provider.bodies()]
+    kidney_only = [s for s in systems if KIDNEY_ONLY_WORDS in s]
+    type_1 = [s for s in systems if "and type 1 diabetes" in s]
+    fixed = [s for s in systems if "and sometimes diabetes" in s]  # describe a meal, label, plate: no profile data at all
+    assert len(kidney_only) + len(type_1) + len(fixed) == len(systems)  # every request is worded from its case's profile
+    assert len(fixed) == 3 and not any(KIDNEY_ONLY_WORDS in s or "stage" in s for s in fixed)
+    assert len(kidney_only) >= 1 + 3 and len(type_1) >= 1  # the golden meal ideas case and the chat questions' model calls; the rest type 1
+    for s in kidney_only:  # the PERSON block of the chat names the profile's own value ("diabetes": "none"); the rules assume none
+        assert "type 1 diabetes" not in s and "type 2 diabetes" not in s
+        assert "Low blood glucose is handled by the app" in s or "Low blood sugar and emergencies are handled by the app" in s

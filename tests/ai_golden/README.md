@@ -4,7 +4,8 @@ Each `*.json` file is one offline case run by `tests/test_ai_golden.py` through 
 stub provider that replays `model_outputs` (no network). The file name is the case `id`.
 
 * `category`: one of `grounding`, `rules`, `safety_text`, `refusal`, `prefilter`, `injection`, `format`,
-  `privacy`, `fallback`, `modes`, `vision` (the test checks every category has cases and that there are
+  `privacy`, `fallback`, `modes`, `vision`, `kidney_only` (a profile whose diabetes is "None": the prompts say kidney
+  disease only; the owner re-runs these live after a prompt change; the test checks every category has cases and that there are
   at least 40).
 * `fixture`: the person's profile and targets (`stage4`, `hd`, `tight` or an object), log entries
   (`[meal, food name, servings, status?, purpose?]`), earlier days (`history`), custom foods (theirs and

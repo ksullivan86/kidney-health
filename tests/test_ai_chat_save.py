@@ -570,9 +570,12 @@ def test_ask_mode_records_the_confirm_step(plain_client):
 def test_the_prompt_tells_the_model_when_it_may_save_and_never_to_claim_a_save():
     from app.ai import prompts
 
-    text = prompts.CHAT_SYSTEM_PROMPT
+    text = prompts.chat_prompt({"diabetes": "type1"})  # the profile-worded prompt (tests/test_ai_prompts.py has the other profiles)
     assert "only when the person has asked" in text and 'unless a tool result says "saved": true' in text
     assert "no doses" in text and "a low is never questioned or delayed" in text
+    kidney_only = prompts.chat_prompt({"diabetes": "none"})  # the saving and low rules are the same for everyone
+    assert "only when the person has asked" in kidney_only and 'unless a tool result says "saved": true' in kidney_only
+    assert "still no doses, and a low is never questioned or delayed." in kidney_only
     assert "log_food" in prompts.CHAT_TOOL_NOTES and "save_recipe" in prompts.CHAT_TOOL_NOTES
     assert prompts.PROMPT_VERSION >= "2026-10-15.2"
 

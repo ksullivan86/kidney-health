@@ -61,7 +61,10 @@ to read it (resized, without location data).
 Nothing is sent anywhere unless a feature that needs the internet is used (USDA lookups, barcode
 lookups or the optional AI the admin turns on), and then only what that feature needs. The AI sends
 nothing until the person opts in and agrees to the destination shown, and never sends their name,
-account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-and-what-never-is)).
+account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-and-what-never-is)). Meal ideas and Ask
+word the person's condition from the profile in one sentence (kidney stage or "not chosen yet", dialysis, and a diabetes
+type only if there is one); describe-a-meal and photo requests carry no profile data
+([ai.md](ai.md#the-instructions-follow-your-profile)).
 
 If the admin turns on the **Ask** chat ([assistant.md](assistant.md#the-ask-screen-the-chat-inside-the-app)) and a
 person agrees to it (its own consent, separate from meal data and photos), each question sends the AI provider the

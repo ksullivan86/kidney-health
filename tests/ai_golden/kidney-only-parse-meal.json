@@ -1,0 +1,29 @@
+{
+  "id": "kidney-only-parse-meal",
+  "category": "kidney_only",
+  "note": "Kidney-only profile (diabetes None): describe a meal, label and plate photo carry no profile data at all (one fixed sentence for everyone), so this must behave as for any profile. Part of the owner's live run for PROMPT_VERSION 2026-10-15.3: python3 scripts/ai_eval.py ... --cases '^kidney-only' (docs/ai.md, 'Re-run the golden set after a prompt change').",
+  "feature": "parse_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "3b",
+      "dialysis": "none",
+      "diabetes": "none"
+    },
+    "text": "2 eggs and a slice of toast"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"items\": [{\"text\": \"2 eggs\", \"search\": \"egg\", \"amount\": 2, \"unit\": \"piece\"}, {\"text\": \"a slice of toast\", \"search\": \"bread toasted\", \"amount\": 1, \"unit\": \"slice\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "items": 2,
+    "payload_includes": [
+      "and sometimes diabetes"
+    ],
+    "payload_excludes": [
+      "chronic kidney disease only",
+      "type 1 diabetes",
+      "stage 3b"
+    ]
+  }
+}
