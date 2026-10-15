@@ -91,16 +91,21 @@ reach your server (no signal, the server is down, a flight) ([design note 02][NO
 | Works offline | Needs your server |
 |---|---|
 | The app opens from its icon. | Signing in for the first time on this device. |
-| **Add**, **Quick add** and **Mark eaten**: entries wait on the phone with a "waiting to sync" badge and are sent once, in order, when the server is back. | Editing or deleting an entry that is already on the server, and changing your profile or settings: the app says the change needs a connection. |
+| **Add**, **Quick add**, **Mark eaten**, and **editing or deleting** an entry: they wait on the phone with a "waiting to sync" badge and are sent once, in order, when the server is back. | Changing your profile, targets or settings: the app says the change needs a connection. |
 | **Today**, the last two weeks and the coming week, from the copy saved the last time you looked (the screen says so). | Barcode lookups, USDA search, AI and new meal suggestions. |
 | Search among the foods this phone has seen (the builtin list is checked once a day while connected and downloaded again only when it changed). | |
 | The **Treating a low** card. | |
 | Handbook pages (**Learn**) you have already opened on this phone. | Handbook pages you have not opened on this phone yet: they say so. Print the ones you need away from home, such as the [Wallet cards](../reference/wallet-card.md). |
 
-A badge at the top shows how many entries are waiting ("Offline · 2 to sync"; on a phone just the
-number). Tap it to open **Settings → This device**, where you can **Retry** or **Discard** an entry the
+A badge at the top shows how many entries and changes are waiting ("Offline · 2 to sync"; on a phone just
+the number). Tap it to open **Settings → This device**, where you can **Retry** or **Discard** an entry the
 server refused when it arrived (for example because the food was deleted meanwhile)
 ([Logging food](logging.md#offline)).
+
+A change to an entry that is already on your server is never allowed to overwrite another device's change
+without asking. If the same entry was changed somewhere else while your phone was offline, your change is held
+back, the badge says "to review", and **Settings → This device** shows what your server has next to your
+change, with **Keep the saved one** and **Use mine** ([Logging food](logging.md#offline)).
 
 Your log lives on the server, not on the phone. Removing the icon or getting a new phone does not
 delete it. Only entries still "waiting to sync" live on the phone alone, and only for the person who

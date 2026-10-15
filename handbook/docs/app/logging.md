@@ -132,12 +132,20 @@ your admin to share one.
 
 ## Offline
 
-**Add**, **Quick add** and **Mark eaten** also work with no connection. The entry waits on
-your phone with a "waiting to sync" badge and is sent when you are back online, once, even if the
-connection drops halfway. A badge at the top shows how many entries wait; tap it to see them. Editing or
-deleting an older entry, changing your profile, scanning a barcode and meal suggestions still need the
-server, and the app says so instead of saving it ([design note 02][NOTE02];
-[Install the app](install.md)).
+**Add**, **Quick add**, **Mark eaten** and **editing or deleting** an entry also work with no connection.
+The entry, or the change, waits on your phone with a "waiting to sync" badge and is sent when you are back
+online, once, even if the connection drops halfway. A badge at the top shows how many wait; tap it to see them.
+Changing your profile or targets, scanning a barcode and meal suggestions still need the server, and the app says
+so instead of saving it ([design note 02][NOTE02]; [Install the app](install.md)).
+
+**Nothing you changed on one device is overwritten by another without asking.** A change you make offline is sent
+together with the version of the entry you saw. If the same entry was changed on another device in the
+meantime, your change is held back and **Settings → This device** shows a card: "This entry was changed on
+another device while you were offline". It shows what your server has and your change side by side. Tap
+**Keep the saved one** to drop your change, or **Use mine** to send it on top of what is there now. If the entry
+was deleted elsewhere, the app says "This entry no longer exists" and drops your change. An entry you added
+offline that has not been sent yet is changed or deleted on the phone itself. Treating a low is changed and
+deleted like any other entry.
 
 Your phone also keeps a copy of the last two weeks and the coming week, so **Today** opens while you are
 offline when the app was installed from an `https://` address (it says it is showing the copy saved on

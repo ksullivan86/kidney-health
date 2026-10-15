@@ -280,6 +280,9 @@
   }
   // Offline support (js/offline.js sets KH.net; note 02 R5). The client works without it:
   //   prepare(method, path, body) → body      adds a client_id to the writes the outbox can queue
+  //   intercept(method, path, body, opts) → answer | undefined   an edit or delete that never goes to the server as asked:
+  //                                           an entry still waiting here, or one with a change already queued (order holds)
+  //   onConflict(method, path, body, err, opts)   a 412 (If-Match) on an edit or delete: keeps the person's change to decide on
   //   timeoutFor(method, path) → ms | 0         an AbortController timeout (a private IP can hang for minutes)
   //   offlineNow() → bool                       the demo API counts as unreachable while the browser is offline
   //   onNetworkError(method, path, body, err, opts) → answer | undefined   a saved copy, or the write queued
@@ -303,22 +306,38 @@
     return net && typeof net.afterResponse === 'function' ? net.afterResponse(method, path, body, data, opts) : data;
   }
   // opts: { quiet401 } leaves a 401 to the caller (the sign-in screens), { retried } is internal,
-  // { noQueue } is the outbox's own sync (never queued again, never answered from a saved copy).
+  // { noQueue } is the outbox's own sync (never queued again, never answered from a saved copy),
+  // { ifMatch, base } an edit or delete of a log entry: ifMatch is the entry's `version` as the person saw it (sent as
+  // If-Match: a version that is not the entry's now answers 412 and nothing changes) and base is that entry.
+  const VERSION_TEXT = /^[0-9a-f]{1,64}$/i;
   async function request(method, path, body, opts = {}) {
     const net = KH.net;
     if (net && typeof net.prepare === 'function' && !opts.noQueue) body = net.prepare(method, path, body);
+    if (net && typeof net.intercept === 'function' && !opts.noQueue) {
+      const local = await net.intercept(method, path, body, opts);
+      if (local !== undefined) return local;
+    }
     const retry = (o) => request(method, path, body, o);
+    const conditional = typeof opts.ifMatch === 'string' && VERSION_TEXT.test(opts.ifMatch) ? { 'If-Match': `"${opts.ifMatch}"` } : null;
+    // A version that cannot be sent as a header is never sent as "no version": that would overwrite without a check.
+    if (opts.ifMatch !== undefined && !conditional) throw Object.assign(new Error('This entry has no usable version. Reload the page and try again.'), { status: 400, detail: 'This entry has no usable version. Reload the page and try again.' });
+    // A 412 on a change to a log entry: the outbox keeps the person's change next to the server's entry (a card in
+    // Settings → This device), then the error goes on to the caller as any other.
+    const noteConflict = (err) => (err.status === 412 && net && typeof net.onConflict === 'function' && !opts.noQueue
+      ? net.onConflict(method, path, body, err, opts) : undefined);
     const mock = KH.mock && KH.mock.instance;
     if (mock) {
       if (net && typeof net.offlineNow === 'function' && net.offlineNow()) return unreachable(method, path, body, opts, networkError());
       let data;
-      try { data = await mock.request(method, path, body); } catch (e) {
+      try { data = await mock.request(method, path, body, conditional || undefined); } catch (e) {
         if (!(KH.mock.ApiError && e instanceof KH.mock.ApiError)) throw e;
-        return afterError(apiError(e.status, { detail: e.detail, ...(e.extra || {}) }, null), retry, opts);
+        const err = apiError(e.status, { detail: e.detail, ...(e.extra || {}) }, null);
+        await noteConflict(err);
+        return afterError(err, retry, opts);
       }
       return answered(method, path, body, data, opts);
     }
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', ...(conditional || {}) };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     // Every write carries the app's own header: the server's CSRF check refuses cross-site
     // form posts, which cannot set it (note 07; plain-HTTP LANs send no Sec-Fetch-Site).
@@ -355,7 +374,9 @@
         const answer = await net.onUnavailable(method, path, body, apiError(res.status, data, res), opts);
         if (answer !== undefined) return answer;
       }
-      return afterError(apiError(res.status, data, res), retry, opts);
+      const err = apiError(res.status, data, res);
+      await noteConflict(err);
+      return afterError(err, retry, opts);
     }
     return answered(method, path, body, data, opts);
   }
@@ -387,6 +408,9 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     return { name, bytes: blob.size };
   }
+  // An entry saved by an older version of the app has no version: it is still handed on (the outbox checks it against the
+  // server before sending), just without If-Match.
+  const conditionOn = (base) => (base && typeof base === 'object' ? (typeof base.version === 'string' ? { ifMatch: base.version, base } : { base }) : {});
   const api = {
     profile: () => request('GET', '/api/profile'),
     saveProfile: (b) => request('PUT', '/api/profile', b),
@@ -410,8 +434,10 @@
     usdaImport: (fdc_id) => request('POST', '/api/foods/usda/import', { fdc_id }),
     day: (date) => request('GET', '/api/log?' + qs({ date })),
     addEntry: (b) => request('POST', '/api/log', b),
-    updateEntry: (id, b) => request('PUT', `/api/log/${id}`, b),
-    deleteEntry: (id) => request('DELETE', `/api/log/${id}`),
+    // `base`: the entry as the person saw it. Its version goes as If-Match, so a change made on an out-of-date copy
+    // (typically one that waited in the outbox) is refused with a 412 instead of overwriting what another device saved.
+    updateEntry: (id, b, base) => request('PUT', `/api/log/${id}`, b, conditionOn(base)),
+    deleteEntry: (id, base) => request('DELETE', `/api/log/${id}`, undefined, conditionOn(base)),
     quick: (b) => request('POST', '/api/log/quick', b),
     range: (start, end) => request('GET', '/api/log/range?' + qs({ start, end })),
     summary: (start, end) => request('GET', '/api/log/summary?' + qs({ start, end })),

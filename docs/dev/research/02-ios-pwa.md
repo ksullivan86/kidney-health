@@ -536,6 +536,11 @@ self.addEventListener('fetch', (e) => {
 * **Queueable offline actions (v0.3):** add an entry (`POST /api/log`), quick add
   (`POST /api/log/quick`) and mark eaten (`POST /api/log/mark-eaten`). Edits and deletes of
   server-side entries, profile changes and USDA import need a connection; their buttons say so.
+  **Update (offline edits and deletes, ROADMAP):** the edit and delete of a log entry are queueable
+  too, with an entry `version` and `If-Match` so that a copy that waited offline never overwrites
+  another device's change (a 412 becomes a conflict card; the contract is ARCHITECTURE.md "Offline
+  edits and deletes"). Profile and target changes stay online-only by decision, so the sentence above
+  still holds for them and for the USDA import.
   Pending entries show a "waiting to sync" badge, and their warnings are computed locally with
   `evaluateWarnings`, which is already kept in parity with the server for the preview.
 * **Idempotency (server change):**

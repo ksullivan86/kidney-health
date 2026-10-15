@@ -190,7 +190,7 @@ def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
 def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> dict[str, Any]:
     """The ``export.json`` document for ``user_id`` (only that person's rows)."""
     from .foods import row_to_food
-    from .log import fetch_entries, row_to_entry
+    from .log import entry_fields, fetch_entries
     from .meals import row_to_template
     from .profile import get_profile
 
@@ -210,7 +210,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "user": {"username": user["username"], "display_name": user["display_name"] or "", "created_at": user["created_at"]},
         "profile": get_profile(conn, uid),
         "settings": settings,
-        "log_entries": [row_to_entry(r) for r in fetch_entries(conn, uid)],
+        "log_entries": [entry_fields(r) for r in fetch_entries(conn, uid)],  # no "version": derived, not data
         "custom_foods": [row_to_food(r) for r in custom],
         "linked_foods": _linked_foods(conn, uid),
         "meal_templates": [row_to_template(conn, r) for r in templates],

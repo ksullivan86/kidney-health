@@ -12,19 +12,30 @@ v0.3 (note 06 §4.11, note 02 R5):
   ``hypo_treatment`` food defaults to ``"hypo"`` (the entry sheet's pre-ticked "Used to treat a low").
 * ``client_id``: the offline outbox's UUID. ``POST /api/log``, ``/quick`` and ``/batch`` answer a
   repeat with the entry already created (200 instead of 201), so a replay never logs twice.
+
+Offline edits and deletes (ROADMAP, note 02 R5 "Queueable offline actions"):
+
+* ``version``: every entry carries a short hash of its stored content (:func:`entry_version`). Nothing is stored, so
+  there is no schema step; the same content always has the same version, on every device.
+* ``PUT /api/log/{id}`` and ``DELETE /api/log/{id}`` take an optional ``If-Match: "<version>"``. When it does not
+  match the entry as stored now, the answer is 412 with ``{"detail", "current": <the entry>}`` and nothing changes, so
+  an edit made offline on an out-of-date copy never overwrites what another device saved. Without the header both
+  routes behave exactly as before. Not yours (or not there) is 404 first, with or without a valid version.
 """
 from __future__ import annotations
 
 import csv
 import io
 import sqlite3
+from collections.abc import Mapping
 from datetime import date as _date, datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
 from .auth.deps import CurrentUser, current_user
+from .auth.errors import ApiProblem
 from .db import get_db, utcnow
 from .foods import (
     WEIGHT_UNKNOWN_DETAIL,
@@ -142,7 +153,73 @@ def today_local() -> str:
     return datetime.now().date().isoformat()
 
 
+# --------------------------------------------------------------------------- #
+# Entry versions (offline edits: never overwrite silently)
+# --------------------------------------------------------------------------- #
+
+_FNV_OFFSET = 0xCBF29CE484222325
+_FNV_PRIME = 0x100000001B3
+_FNV_MASK = 0xFFFFFFFFFFFFFFFF
+# What a person sees and edits of an entry, in this order. ``id`` is the address, ``food_id`` never changes for an entry
+# (and differs between servers), and ``created_at`` / ``updated_at`` /
+# ``client_id`` are bookkeeping: the same content has the same version, so an edit that another device undoes does not
+# make a conflict. The nutrient values follow in registry order.
+VERSION_FIELDS: tuple[str, ...] = ("date", "meal", "food_name", "servings", "grams", "note", "status", "purpose")
+
+
+def _version_piece(value: Any) -> str:
+    """One value of the canonical text: ``~`` for none, ``n<number>;`` for a number (a whole number without a
+    point), ``s<UTF-8 bytes>:<text>`` for text. The browser twin (``js/mock/log.js``) builds the same text."""
+    if value is None:
+        return "~"
+    if isinstance(value, str):
+        return f"s{len(value.encode('utf-8'))}:{value}"
+    number = float(value)
+    return f"n{int(number) if number.is_integer() else repr(number)};"
+
+
+def entry_version(entry: Mapping[str, Any]) -> str:
+    """The version of an entry as the API shows it (16 hex digits): FNV-1a (64 bit) over the canonical text of
+    :data:`VERSION_FIELDS` and the 12 nutrient values. It is a change token, not a secret: it tells a client whether
+    the entry it edited is still the entry on the server (``If-Match``)."""
+    nutrients = entry["nutrients"]
+    text = "".join(_version_piece(entry[name]) for name in VERSION_FIELDS)
+    text += "".join(_version_piece(nutrients.get(key)) for key in NUTRIENT_KEYS)
+    digest = _FNV_OFFSET
+    for byte in text.encode("utf-8"):
+        digest = ((digest ^ byte) * _FNV_PRIME) & _FNV_MASK
+    return f"{digest:016x}"
+
+
+def version_matches(header: str | None, version: str) -> bool:
+    """Whether an ``If-Match`` header allows a change to an entry at ``version`` (RFC 9110 section 13.1.1, strong
+    comparison). No header allows it; ``*`` matches any entry that exists; a list matches when one tag does; a weak
+    ``W/"..."`` tag never matches; an unquoted value is read as a tag too, so a client that forgets the quotes still works."""
+    if header is None:
+        return True
+    for tag in header.split(","):
+        tag = tag.strip()
+        if tag == "*":
+            return True
+        if tag.startswith(("W/", "w/")):
+            continue
+        if tag.strip('"') == version:
+            return True
+    return False
+
+
+def version_conflict(entry: Mapping[str, Any]) -> ApiProblem:
+    """412: the entry changed since the client read it. ``current`` is the entry as stored now."""
+    return ApiProblem(412, "This entry was changed on another device", current=entry)
+
+
 def row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
+    entry = entry_fields(row)
+    entry["version"] = entry_version(entry)
+    return entry
+
+
+def entry_fields(row: sqlite3.Row) -> dict[str, Any]:
     nutrients = raw_nutrients(row)
     flags = parse_flags(row["food_flags_json"])
     warnings = food_warnings(nutrients, flags, row["food_kidney_notes"], scope="in this entry")
@@ -790,9 +867,39 @@ def create_entry(body: LogCreate, user: CurrentUser, response: Response,
     return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
 
-@router.put("/{entry_id}", response_model=Entry)
-def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+IfMatch = Annotated[str | None, Header(description='The entry\'s `version`, quoted: "<version>". When it is not the '
+                                                  "entry's version now the answer is 412 and nothing changes.")]
+PRECONDITION_FAILED: dict[int | str, dict[str, Any]] = {
+    412: {"description": "If-Match is not the entry's version now: the entry was changed since the client read it. "
+                         "The body is {detail, current: Entry}; nothing was changed."},
+}
+
+
+def require_current_version(row: sqlite3.Row, if_match: str | None) -> None:
+    """412 with the entry as stored now when ``if_match`` is given and is not its version (called after the 404 check,
+    so another person's entry is a 404 whatever the header says)."""
+    if if_match is None:
+        return
+    entry = row_to_entry(row)
+    if not version_matches(if_match, entry["version"]):
+        raise version_conflict(entry)
+
+
+def lost_race(conn: sqlite3.Connection, user_id: int, entry_id: int) -> Exception:
+    """A change guarded by ``If-Match`` found the entry changed between the check and the write (another request got
+    in first): 412 with what is stored now, or 404 when it is gone."""
+    conn.rollback()
+    fresh = fetch_entry(conn, user_id, entry_id)
+    if fresh is None:
+        return HTTPException(status_code=404, detail=f"log entry {entry_id} not found")
+    return version_conflict(row_to_entry(fresh))
+
+
+@router.put("/{entry_id}", response_model=Entry, responses=PRECONDITION_FAILED)
+def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, if_match: IfMatch = None,
+                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     row = get_entry_or_404(conn, user.id, entry_id)
+    require_current_version(row, if_match)
     food = fetch_food(conn, row["food_id"])
     if food is None:  # cannot happen with foreign keys on, but keep the error explicit
         raise HTTPException(status_code=404, detail="the entry's food no longer exists")
@@ -829,14 +936,29 @@ def update_entry(entry_id: int, body: LogUpdate, user: CurrentUser, conn: sqlite
         params.append(snapshot[key])
     sets.append("updated_at = ?")
     params += [utcnow(), entry_id, user.id]
-    conn.execute(f"UPDATE log_entries SET {', '.join(sets)} WHERE id = ? AND user_id = ?", params)
+    where = "WHERE id = ? AND user_id = ?"
+    if if_match is not None:  # the write only lands on the row that was checked
+        where += " AND updated_at = ?"
+        params.append(row["updated_at"])
+    cur = conn.execute(f"UPDATE log_entries SET {', '.join(sets)} {where}", params)
+    if cur.rowcount == 0 and if_match is not None:
+        raise lost_race(conn, user.id, entry_id)
     conn.commit()
     return row_to_entry(fetch_entry(conn, user.id, entry_id))
 
 
-@router.delete("/{entry_id}", status_code=204, response_class=Response)
-def delete_entry(entry_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    get_entry_or_404(conn, user.id, entry_id)
-    conn.execute("DELETE FROM log_entries WHERE id = ? AND user_id = ?", (entry_id, user.id))
+@router.delete("/{entry_id}", status_code=204, response_class=Response, responses=PRECONDITION_FAILED)
+def delete_entry(entry_id: int, user: CurrentUser, if_match: IfMatch = None,
+                 conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    row = get_entry_or_404(conn, user.id, entry_id)
+    require_current_version(row, if_match)
+    where = "WHERE id = ? AND user_id = ?"
+    params: list[Any] = [entry_id, user.id]
+    if if_match is not None:
+        where += " AND updated_at = ?"
+        params.append(row["updated_at"])
+    cur = conn.execute(f"DELETE FROM log_entries {where}", params)
+    if cur.rowcount == 0 and if_match is not None:
+        raise lost_race(conn, user.id, entry_id)
     conn.commit()
     return Response(status_code=204)

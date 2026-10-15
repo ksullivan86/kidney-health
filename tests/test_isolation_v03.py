@@ -29,6 +29,7 @@ import test_data_import
 import test_export_delete
 import test_isolation
 import test_lab_photo
+import test_log_if_match
 import test_mcp_write
 import test_symptoms
 from ai_support import FakeProvider, attach, chat
@@ -48,6 +49,7 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "log_entries": ("test_isolation.test_b_gets_404_on_every_id_bearing_route_of_a",
                     "test_isolation.test_b_never_sees_a_rows_in_lists_summaries_and_search",
                     "test_isolation_v03.test_client_ids_are_per_person",
+                    "test_log_if_match.test_not_yours_is_404_even_with_a_valid_version",  # PUT / DELETE with If-Match (offline edits)
                     "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),  # POST /api/me/import writes only the caller's rows
     "foods": ("test_isolation.test_deleting_a_custom_food_only_counts_the_owners_references",
               "test_isolation.test_barcode_lookup_never_matches_another_persons_custom_food",
@@ -89,7 +91,8 @@ SHARED_OR_SYSTEM = {
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
-           "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_lab_photo": test_lab_photo}
+           "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_lab_photo": test_lab_photo,
+           "test_log_if_match": test_log_if_match}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

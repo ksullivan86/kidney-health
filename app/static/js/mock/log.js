@@ -5,7 +5,12 @@
    treated a low, else null) and `client_id` (the offline outbox's UUID, lower-case, unique per person);
    a repeated client_id answers with the entry already created; POST /api/log/batch adds 1–40 entries all
    or nothing. A hypo_treatment food defaults to purpose "hypo" unless the request says "none". Quick add takes
-   gtin and ingredients_text (barcodes): the new custom food keeps the barcode and gets the additive scan. */
+   gtin and ingredients_text (barcodes): the new custom food keeps the barcode and gets the additive scan.
+
+   Offline edits and deletes (ARCHITECTURE.md "Offline edits and deletes"): every entry carries `version`, a hash of its
+   content (`entryVersion`, the twin of log.entry_version, checked by tests/data/entry_version_vectors.json), and
+   PUT / DELETE /api/log/{id} take If-Match: a version that is not the entry's now answers 412 with
+   {detail, current: the entry} and changes nothing. No header, no check. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -47,6 +52,45 @@
     const t = v.trim();
     if (!CLIENT_ID_RE.test(t)) { c.err('client_id', 'must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e'); return; }
     c.out.client_id = t.toLowerCase();
+  }
+
+  // log.entry_version: FNV-1a (64 bit) over the canonical text of what a person sees and edits of an entry. Written
+  // without TextEncoder so it also runs where the page has none; the same text and the same hash as the server's.
+  const VERSION_FIELDS = ['date', 'meal', 'food_name', 'servings', 'grams', 'note', 'status', 'purpose'];
+  const FNV_OFFSET = 0xcbf29ce484222325n, FNV_PRIME = 0x100000001b3n, FNV_MASK = 0xffffffffffffffffn;
+  function utf8(text) {
+    const out = [];
+    for (const ch of String(text)) {
+      const c = ch.codePointAt(0);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return out;
+  }
+  function versionPiece(value) {
+    if (value == null) return '~';
+    if (typeof value === 'string') return `s${utf8(value).length}:${value}`;
+    return `n${String(Number(value))};`;
+  }
+  function entryVersion(entry) {
+    let text = VERSION_FIELDS.map((name) => versionPiece(entry[name])).join('');
+    text += NUTRIENT_KEYS.map((key) => versionPiece(entry.nutrients[key])).join('');
+    let digest = FNV_OFFSET;
+    for (const byte of utf8(text)) digest = ((digest ^ BigInt(byte)) * FNV_PRIME) & FNV_MASK;
+    return digest.toString(16).padStart(16, '0');
+  }
+  // log.version_matches: RFC 9110 strong comparison of an If-Match header (null = none sent) with an entry's version.
+  function versionMatches(header, version) {
+    if (header == null) return true;
+    for (let tag of String(header).split(',')) {
+      tag = tag.trim();
+      if (tag === '*') return true;
+      if (tag.startsWith('W/') || tag.startsWith('w/')) continue;
+      if (tag.replace(/^"+|"+$/g, '') === version) return true;
+    }
+    return false;
   }
 
   // periods.pattern_alerts (v0.3.1, docs/dev/plans/v0.3.1.md item 4): the last few days joined with the plan. Display
@@ -165,10 +209,12 @@
     _entryView(row) {
       const food = this._food(row.food_id) || { flags: [], kidney_notes: null };
       const warnings = evaluateWarnings(row.nutrients, food.flags, food.kidney_notes, 'in this entry');
-      return { id: row.id, date: row.date, meal: row.meal, food_id: row.food_id, food_name: row.food_name, servings: pyRound(row.servings, 3),
+      const view = { id: row.id, date: row.date, meal: row.meal, food_id: row.food_id, food_name: row.food_name, servings: pyRound(row.servings, 3),
         grams: row.grams == null ? null : pyRound(row.grams, 1), note: row.note, status: row.status, nutrients: roundNutrients(row.nutrients),
         warnings, kidney_rating: ratingFromWarnings(warnings), purpose: row.purpose || null, client_id: row.client_id || null,
         created_at: row.created_at, updated_at: row.updated_at };
+      view.version = entryVersion(view);
+      return view;
     },
     // fetch_entries: ORDER BY date, meal, status (eaten first), created_at, id
     _fetchEntries({ start = null, end = null, status = null, meal = null } = {}) {
@@ -519,10 +565,15 @@
     const entries = created.map((r) => this._entryView(r));
     return { created: entries.length, entries };
   });
-  route('*', '/api/log/{id}', function ({ method, id, body }) {
+  route('*', '/api/log/{id}', function ({ method, id, body, header }) {
     const data = method === 'PUT' ? this._logBody(body, { update: true }) : null;
     const row = this._entry(id);
     if (!row) fail(404, `log entry ${id} not found`);
+    // log.require_current_version: after the 404 and the body checks, a version that is not the entry's now is a 412.
+    if (method === 'PUT' || method === 'DELETE') {
+      const current = this._entryView(row);
+      if (!versionMatches(header('If-Match'), current.version)) fail(412, 'This entry was changed on another device', { current });
+    }
     if (method === 'DELETE') { this._entries.splice(this._entries.indexOf(row), 1); return null; }
     if (method === 'PUT') {
       const food = this._food(row.food_id);
@@ -551,5 +602,5 @@
   // day with the entries still waiting to sync with the same twin of app/log.py the demo uses.
   function dayFigures(profile, rows, carbToleranceG = 0) { return MockApi.prototype._dayFigures.call({ _profile: profile }, rows, carbToleranceG); }
 
-  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures, patternAlerts, patternInputs, dayPatternAlerts });
+  Object.assign(M, { csvCell, CSV_COLUMNS, resolvePurpose, dayFigures, patternAlerts, patternInputs, dayPatternAlerts, entryVersion, versionMatches, VERSION_FIELDS });
 })();

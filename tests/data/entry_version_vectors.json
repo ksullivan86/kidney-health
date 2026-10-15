@@ -1,0 +1,1764 @@
+{
+ "fields": [
+  "date",
+  "meal",
+  "food_name",
+  "servings",
+  "grams",
+  "note",
+  "status",
+  "purpose"
+ ],
+ "cases": [
+  {
+   "name": "a plain entry",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "fbf238be24cc6050"
+  },
+  {
+   "name": "another day",
+   "entry": {
+    "date": "2026-10-06",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "4ad6f8ae48a7bba9"
+  },
+  {
+   "name": "another meal",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "dinner",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "52da8be669d400e5"
+  },
+  {
+   "name": "another name",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Apple, raw, with skin",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "8df748b0b99c7ee3"
+  },
+  {
+   "name": "a fractional amount",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 0.333,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "e940fc6d592219fe"
+  },
+  {
+   "name": "a whole amount as a float",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 2.0,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "5640c4fb4e9d56ff"
+  },
+  {
+   "name": "the same amount as an integer",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 2,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "5640c4fb4e9d56ff"
+  },
+  {
+   "name": "by weight",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 2.542,
+    "grams": 300.0,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "d869bed5e46bfef4"
+  },
+  {
+   "name": "by weight with a fraction",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 0.5,
+    "grams": 42.5,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "8b2d01c3d3722a2c"
+  },
+  {
+   "name": "a note",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": "with breakfast",
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "ddbdc56ce57126bf"
+  },
+  {
+   "name": "an empty note",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": "",
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "609dc8e6d7e17425"
+  },
+  {
+   "name": "a note with accents",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": "très bon, crème fraîche",
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "845acc6ecd8f4702"
+  },
+  {
+   "name": "a note with emoji",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": "🍌 for the road 😀",
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "efbf3ed3d73a8116"
+  },
+  {
+   "name": "a note with a line break and quotes",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": "line one\nline \"two\"\ttabbed",
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "76afa6695850fa9c"
+  },
+  {
+   "name": "planned",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "planned",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "2abb0c1a244d3fe1"
+  },
+  {
+   "name": "treated a low",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Glucose tablets",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": "hypo",
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "80bda8b4ec6be91d"
+  },
+  {
+   "name": "a name with accents",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Crème brûlée 🍮",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "302c725d096d1e98"
+  },
+  {
+   "name": "unknown nutrients",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": null,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "43b98fd7acfbf2ea"
+  },
+  {
+   "name": "a nutrient of zero",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 0,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 0,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": 0
+    }
+   },
+   "version": "2c4649cb168be097"
+  },
+  {
+   "name": "fractional nutrients",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": 1.3,
+     "fat_g": 0.4,
+     "sat_fat_g": null,
+     "carbs_g": 26.9,
+     "fiber_g": 3.1,
+     "sugar_g": 14.4,
+     "sodium_mg": null,
+     "potassium_mg": null,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "4304a3f99050cbb7"
+  },
+  {
+   "name": "every nutrient",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 10.0,
+     "protein_g": 20.5,
+     "fat_g": 30.0,
+     "sat_fat_g": 40.5,
+     "carbs_g": 50.0,
+     "fiber_g": 60.5,
+     "sugar_g": 70.0,
+     "sodium_mg": 80.5,
+     "potassium_mg": 90.0,
+     "phosphorus_mg": 100.5,
+     "calcium_mg": 110.0,
+     "fluid_ml": 120.5
+    }
+   },
+   "version": "042fc6bf955b6b2f"
+  },
+  {
+   "name": "a large amount",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 1000,
+    "grams": 100000.0,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105000,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": 1000,
+     "potassium_mg": null,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "071875b064c4c359"
+  },
+  {
+   "name": "a tiny amount",
+   "entry": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_name": "Banana, raw",
+    "servings": 0.001,
+    "grams": 0.1,
+    "note": null,
+    "status": "eaten",
+    "purpose": null,
+    "nutrients": {
+     "calories_kcal": 105,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 27,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 422,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": null
+    }
+   },
+   "version": "191ba3b0d8c4de88"
+  }
+ ],
+ "match_cases": [
+  {
+   "name": "no header",
+   "header": null,
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "the version, quoted",
+   "header": "\"fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "the version, unquoted",
+   "header": "fbf238be24cc6050",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "another version",
+   "header": "\"0000000000000000\"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "a star",
+   "header": "*",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "a star with spaces",
+   "header": "  *  ",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "a weak tag of the version",
+   "header": "W/\"fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "a weak tag in lower case",
+   "header": "w/\"fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "a list with the version second",
+   "header": "\"0000000000000000\", \"fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "a list with the version first",
+   "header": "\"fbf238be24cc6050\",\"0000000000000000\"",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "a list without it",
+   "header": "\"0000000000000000\", \"ffffffffffffffff\"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "a weak tag then the version",
+   "header": "W/\"fbf238be24cc6050\", \"fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "an empty header",
+   "header": "",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "only spaces",
+   "header": "   ",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "a comma",
+   "header": ",",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "the version with a trailing quote only",
+   "header": "fbf238be24cc6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": true
+  },
+  {
+   "name": "the version in capitals",
+   "header": "\"FBF238BE24CC6050\"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "the version with spaces inside the quotes",
+   "header": "\" fbf238be24cc6050 \"",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  },
+  {
+   "name": "text that is not a tag",
+   "header": "garbage",
+   "version": "fbf238be24cc6050",
+   "expected": false
+  }
+ ],
+ "script": [
+  {
+   "name": "log an oat bar",
+   "method": "POST",
+   "path": "/api/log/quick",
+   "body": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "name": "Oat bar",
+    "serving_desc": "1 bar",
+    "serving_g": 40,
+    "nutrients": {
+     "calories_kcal": 160,
+     "protein_g": 3,
+     "carbs_g": 24,
+     "potassium_mg": 150,
+     "phosphorus_mg": 80,
+     "sodium_mg": 90
+    },
+    "servings": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 1.0,
+     "grams": null,
+     "note": null,
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "yellow",
+     "version": "6b3aae8eb852e12b",
+     "nutrients": {
+      "calories_kcal": 160.0,
+      "protein_g": 3.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 24.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 90,
+      "potassium_mg": 150,
+      "phosphorus_mg": 80,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "log a planned food with accents",
+   "method": "POST",
+   "path": "/api/log/quick",
+   "body": {
+    "date": "2026-10-05",
+    "meal": "dinner",
+    "name": "Crème fraîche 😀",
+    "serving_desc": "1 bar",
+    "serving_g": 40,
+    "nutrients": {
+     "calories_kcal": 160,
+     "protein_g": 3,
+     "carbs_g": 24,
+     "potassium_mg": 150,
+     "phosphorus_mg": 80,
+     "sodium_mg": 90
+    },
+    "servings": 0.5,
+    "status": "planned",
+    "note": "très bon"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 2,
+     "date": "2026-10-05",
+     "meal": "dinner",
+     "food_name": "Crème fraîche 😀",
+     "servings": 0.5,
+     "grams": null,
+     "note": "très bon",
+     "status": "planned",
+     "purpose": null,
+     "kidney_rating": "green",
+     "version": "376f1a4e5f59656a",
+     "nutrients": {
+      "calories_kcal": 80.0,
+      "protein_g": 1.5,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 12.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 45,
+      "potassium_mg": 75,
+      "phosphorus_mg": 40,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "read the day",
+   "method": "GET",
+   "path": "/api/log?date=2026-10-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "date": "2026-10-05",
+     "counts": {
+      "eaten": 1,
+      "planned": 1
+     },
+     "entries": [
+      {
+       "id": 1,
+       "date": "2026-10-05",
+       "meal": "lunch",
+       "food_name": "Oat bar",
+       "servings": 1.0,
+       "grams": null,
+       "note": null,
+       "status": "eaten",
+       "purpose": null,
+       "kidney_rating": "yellow",
+       "version": "6b3aae8eb852e12b",
+       "nutrients": {
+        "calories_kcal": 160.0,
+        "protein_g": 3.0,
+        "fat_g": null,
+        "sat_fat_g": null,
+        "carbs_g": 24.0,
+        "fiber_g": null,
+        "sugar_g": null,
+        "sodium_mg": 90,
+        "potassium_mg": 150,
+        "phosphorus_mg": 80,
+        "calcium_mg": null,
+        "fluid_ml": 0
+       }
+      },
+      {
+       "id": 2,
+       "date": "2026-10-05",
+       "meal": "dinner",
+       "food_name": "Crème fraîche 😀",
+       "servings": 0.5,
+       "grams": null,
+       "note": "très bon",
+       "status": "planned",
+       "purpose": null,
+       "kidney_rating": "green",
+       "version": "376f1a4e5f59656a",
+       "nutrients": {
+        "calories_kcal": 80.0,
+        "protein_g": 1.5,
+        "fat_g": null,
+        "sat_fat_g": null,
+        "carbs_g": 12.0,
+        "fiber_g": null,
+        "sugar_g": null,
+        "sodium_mg": 45,
+        "potassium_mg": 75,
+        "phosphorus_mg": 40,
+        "calcium_mg": null,
+        "fluid_ml": 0
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "PUT with the matching version",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "servings": 2
+   },
+   "if_match": "\"{{version:0}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": null,
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "d742d7d2203121a7",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with the version it had before (412)",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "servings": 9,
+    "meal": "dinner"
+   },
+   "if_match": "\"{{version:0}}\"",
+   "answer": {
+    "ok": false,
+    "status": 412,
+    "detail": "This entry was changed on another device",
+    "current": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": null,
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "d742d7d2203121a7",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT without the header",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "late"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "late",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "5de95b4778caaa6e",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with a weak tag (412)",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "weak"
+   },
+   "if_match": "W/\"{{version:5}}\"",
+   "answer": {
+    "ok": false,
+    "status": 412,
+    "detail": "This entry was changed on another device",
+    "current": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "late",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "5de95b4778caaa6e",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with a star",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "star"
+   },
+   "if_match": "*",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "star",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "c212280547d08cda",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with a list",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "list"
+   },
+   "if_match": "\"zzzzzzzzzzzzzzzz\", \"{{version:7}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "list",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "b804a5f5083785e2",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with an unquoted version",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "bare"
+   },
+   "if_match": "{{version:8}}",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "bare",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "11f349adec06ccaa",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with an empty header (412)",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "note": "empty"
+   },
+   "if_match": "",
+   "answer": {
+    "ok": false,
+    "status": 412,
+    "detail": "This entry was changed on another device",
+    "current": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "bare",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "11f349adec06ccaa",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with a bad body and an old version (400)",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "servings": -1
+   },
+   "if_match": "\"{{version:0}}\"",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "servings: Input should be greater than 0"
+   }
+  },
+  {
+   "name": "PUT of an entry that is not there (404)",
+   "method": "PUT",
+   "path": "/api/log/99",
+   "body": {
+    "servings": 2
+   },
+   "if_match": "\"{{version:9}}\"",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "log entry 99 not found"
+   }
+  },
+  {
+   "name": "PUT that changes the date and the status",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "date": "2026-10-06",
+    "status": "planned"
+   },
+   "if_match": "\"{{version:9}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-06",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": null,
+     "note": "bare",
+     "status": "planned",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "15033375a878137c",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT that puts them back: the first version again",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "date": "2026-10-05",
+    "status": "eaten",
+    "note": null,
+    "servings": 1
+   },
+   "if_match": "\"{{version:13}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 1.0,
+     "grams": null,
+     "note": null,
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "yellow",
+     "version": "6b3aae8eb852e12b",
+     "nutrients": {
+      "calories_kcal": 160.0,
+      "protein_g": 3.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 24.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 90,
+      "potassium_mg": 150,
+      "phosphorus_mg": 80,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "PUT with the grams of a food that has a weight",
+   "method": "PUT",
+   "path": "/api/log/1",
+   "body": {
+    "grams": 80
+   },
+   "if_match": "\"{{version:14}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Oat bar",
+     "servings": 2.0,
+     "grams": 80.0,
+     "note": null,
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "red",
+     "version": "526b9e9088934fe6",
+     "nutrients": {
+      "calories_kcal": 320.0,
+      "protein_g": 6.0,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 48.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 180,
+      "potassium_mg": 300,
+      "phosphorus_mg": 160,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "DELETE with a version that is not the entry's (412)",
+   "method": "DELETE",
+   "path": "/api/log/2",
+   "if_match": "\"0000000000000000\"",
+   "answer": {
+    "ok": false,
+    "status": 412,
+    "detail": "This entry was changed on another device",
+    "current": {
+     "id": 2,
+     "date": "2026-10-05",
+     "meal": "dinner",
+     "food_name": "Crème fraîche 😀",
+     "servings": 0.5,
+     "grams": null,
+     "note": "très bon",
+     "status": "planned",
+     "purpose": null,
+     "kidney_rating": "green",
+     "version": "376f1a4e5f59656a",
+     "nutrients": {
+      "calories_kcal": 80.0,
+      "protein_g": 1.5,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 12.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 45,
+      "potassium_mg": 75,
+      "phosphorus_mg": 40,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "mark everything planned as eaten",
+   "method": "POST",
+   "path": "/api/log/mark-eaten",
+   "body": {
+    "date": "2026-10-05"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "updated": 1
+    }
+   }
+  },
+  {
+   "name": "DELETE with the version from before mark-eaten (412)",
+   "method": "DELETE",
+   "path": "/api/log/2",
+   "if_match": "\"{{version:2.1}}\"",
+   "answer": {
+    "ok": false,
+    "status": 412,
+    "detail": "This entry was changed on another device",
+    "current": {
+     "id": 2,
+     "date": "2026-10-05",
+     "meal": "dinner",
+     "food_name": "Crème fraîche 😀",
+     "servings": 0.5,
+     "grams": null,
+     "note": "très bon",
+     "status": "eaten",
+     "purpose": null,
+     "kidney_rating": "green",
+     "version": "7868ca7d4132271f",
+     "nutrients": {
+      "calories_kcal": 80.0,
+      "protein_g": 1.5,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 12.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 45,
+      "potassium_mg": 75,
+      "phosphorus_mg": 40,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "read the day again",
+   "method": "GET",
+   "path": "/api/log?date=2026-10-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "date": "2026-10-05",
+     "counts": {
+      "eaten": 2,
+      "planned": 0
+     },
+     "entries": [
+      {
+       "id": 1,
+       "date": "2026-10-05",
+       "meal": "lunch",
+       "food_name": "Oat bar",
+       "servings": 2.0,
+       "grams": 80.0,
+       "note": null,
+       "status": "eaten",
+       "purpose": null,
+       "kidney_rating": "red",
+       "version": "526b9e9088934fe6",
+       "nutrients": {
+        "calories_kcal": 320.0,
+        "protein_g": 6.0,
+        "fat_g": null,
+        "sat_fat_g": null,
+        "carbs_g": 48.0,
+        "fiber_g": null,
+        "sugar_g": null,
+        "sodium_mg": 180,
+        "potassium_mg": 300,
+        "phosphorus_mg": 160,
+        "calcium_mg": null,
+        "fluid_ml": 0
+       }
+      },
+      {
+       "id": 2,
+       "date": "2026-10-05",
+       "meal": "dinner",
+       "food_name": "Crème fraîche 😀",
+       "servings": 0.5,
+       "grams": null,
+       "note": "très bon",
+       "status": "eaten",
+       "purpose": null,
+       "kidney_rating": "green",
+       "version": "7868ca7d4132271f",
+       "nutrients": {
+        "calories_kcal": 80.0,
+        "protein_g": 1.5,
+        "fat_g": null,
+        "sat_fat_g": null,
+        "carbs_g": 12.0,
+        "fiber_g": null,
+        "sugar_g": null,
+        "sodium_mg": 45,
+        "potassium_mg": 75,
+        "phosphorus_mg": 40,
+        "calcium_mg": null,
+        "fluid_ml": 0
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "PUT back to planned without the header: the same content, the same version",
+   "method": "PUT",
+   "path": "/api/log/2",
+   "body": {
+    "status": "planned"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 2,
+     "date": "2026-10-05",
+     "meal": "dinner",
+     "food_name": "Crème fraîche 😀",
+     "servings": 0.5,
+     "grams": null,
+     "note": "très bon",
+     "status": "planned",
+     "purpose": null,
+     "kidney_rating": "green",
+     "version": "376f1a4e5f59656a",
+     "nutrients": {
+      "calories_kcal": 80.0,
+      "protein_g": 1.5,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 12.0,
+      "fiber_g": null,
+      "sugar_g": null,
+      "sodium_mg": 45,
+      "potassium_mg": 75,
+      "phosphorus_mg": 40,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "DELETE with the matching version",
+   "method": "DELETE",
+   "path": "/api/log/2",
+   "if_match": "\"{{version:20}}\"",
+   "answer": {
+    "ok": true,
+    "body": null
+   }
+  },
+  {
+   "name": "DELETE again (404)",
+   "method": "DELETE",
+   "path": "/api/log/2",
+   "if_match": "\"{{version:20}}\"",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "log entry 2 not found"
+   }
+  },
+  {
+   "name": "DELETE with a star",
+   "method": "DELETE",
+   "path": "/api/log/1",
+   "if_match": "*",
+   "answer": {
+    "ok": true,
+    "body": null
+   }
+  },
+  {
+   "name": "a low treatment",
+   "method": "POST",
+   "path": "/api/log/quick",
+   "body": {
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "name": "Glucose tablets",
+    "serving_desc": "1 bar",
+    "serving_g": 40,
+    "nutrients": {
+     "carbs_g": 16,
+     "sugar_g": 16
+    },
+    "servings": 4,
+    "flags": [
+     "hypo_treatment"
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 3,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Glucose tablets",
+     "servings": 4.0,
+     "grams": null,
+     "note": null,
+     "status": "eaten",
+     "purpose": "hypo",
+     "kidney_rating": "green",
+     "version": "dd8f0cd0ec02d13d",
+     "nutrients": {
+      "calories_kcal": null,
+      "protein_g": null,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 64.0,
+      "fiber_g": null,
+      "sugar_g": 64.0,
+      "sodium_mg": null,
+      "potassium_mg": null,
+      "phosphorus_mg": null,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "a low treatment is edited like any other",
+   "method": "PUT",
+   "path": "/api/log/3",
+   "body": {
+    "servings": 2,
+    "note": "3.4 mmol/L"
+   },
+   "if_match": "\"{{version:24}}\"",
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 3,
+     "date": "2026-10-05",
+     "meal": "lunch",
+     "food_name": "Glucose tablets",
+     "servings": 2.0,
+     "grams": null,
+     "note": "3.4 mmol/L",
+     "status": "eaten",
+     "purpose": "hypo",
+     "kidney_rating": "green",
+     "version": "dd33b6e2ee1f07e4",
+     "nutrients": {
+      "calories_kcal": null,
+      "protein_g": null,
+      "fat_g": null,
+      "sat_fat_g": null,
+      "carbs_g": 32.0,
+      "fiber_g": null,
+      "sugar_g": 32.0,
+      "sodium_mg": null,
+      "potassium_mg": null,
+      "phosphorus_mg": null,
+      "calcium_mg": null,
+      "fluid_ml": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "a low treatment is deleted like any other",
+   "method": "DELETE",
+   "path": "/api/log/3",
+   "if_match": "\"{{version:25}}\"",
+   "answer": {
+    "ok": true,
+    "body": null
+   }
+  },
+  {
+   "name": "nothing is left",
+   "method": "GET",
+   "path": "/api/log?date=2026-10-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "date": "2026-10-05",
+     "counts": {
+      "eaten": 0,
+      "planned": 0
+     },
+     "entries": []
+    }
+   }
+  }
+ ]
+}

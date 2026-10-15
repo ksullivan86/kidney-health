@@ -77,8 +77,23 @@ working with what this device saved:
   sync** (on a phone just the number). When the server can be reached again the entries are sent,
   in order, without you doing anything; each is saved **exactly once**, even if a connection
   drops halfway through. Tap the badge to see them in **Settings → This device**.
+* **Editing and deleting still work.** Change an entry's amount, meal, day, **eaten** or **planned**,
+  or note, tap **Eaten** on a planned one, or delete an entry that is already on your server: the
+  change waits on the device too (**waiting to sync**, shown on Today at once, counted in the badge)
+  and is sent in order when the server can be reached. An entry you added offline and that has
+  not been sent yet is simply changed, or removed, on the phone.
+* **Nothing is overwritten silently.** Each change is sent together with the version of the entry
+  you saw. If that entry was changed on another device while yours was offline, your change is **not**
+  sent. **Settings → This device** shows a card, "This entry was changed on another device while
+  you were offline", with what your server has and your change side by side, and two buttons:
+  **Keep the saved one** (your change is dropped) or **Use mine** (it is sent on top of what is there
+  now). If the entry was deleted elsewhere, the app says "This entry no longer exists" and drops
+  your change. The header badge counts such a card as **to review**.
+* **Your profile and targets need the server.** A change to them is not kept for later (a care
+  team's targets must never be overwritten by a copy that waited on a phone); the app says it needs a
+  connection. So do settings, barcode lookups and AI.
 * **Today, the last two weeks and the next week** open from the copy saved the last time you
-  looked (Today says so and when). Totals include the entries that are waiting.
+  looked (Today says so and when). Totals include the entries and changes that are waiting.
 * **Food search** finds the foods this device has seen (the built-in list is downloaded once a
   day while connected). Barcode lookups, AI ideas and anything else that needs the server wait
   until you are back online.
@@ -89,7 +104,7 @@ working with what this device saved:
 * **If the server refuses an entry** when it syncs (for example the food was deleted meanwhile),
   it is kept as **not saved** with the reason, under **Settings → This device**, where you can
   **Retry** or **Discard** it.
-* **Signing out** while entries are still waiting asks first: **Try to sync now**, **Stay signed
+* **Signing out** while entries or changes are still waiting asks first: **Try to sync now**, **Stay signed
   in**, or **Sign out and lose them**. Signing out removes everything this device saved.
 
 Waiting entries are kept in the browser's storage for this app and address, for the person signed
