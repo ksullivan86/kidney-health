@@ -60,7 +60,8 @@ INSTRUCTIONS = (
 WRITE_INSTRUCTIONS = (
     " This token can also save: log_food saves food to the log and save_recipe saves a recipe. Before saving, read "
     "the items back (food, amount, meal, day, eaten or planned) and ask the person to confirm; after saving, say what "
-    "was saved. The confirmation is only about the record: it never comes before the person treats a low."
+    "was saved. The confirmation is only about the record: it never comes before the person treats a low. Send a new "
+    "request_key with each save, and the same one again only to retry that save: a repeat is not saved twice."
 )
 
 RATE_LIMIT = "mcp"
