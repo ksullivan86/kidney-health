@@ -24,6 +24,7 @@
     const start = addDays(end, -(state.trendsDays - 1));
     $('#trends-title').textContent = `Last ${state.trendsDays} days`;
     if (KH.guidance) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
+    if (KH.symptoms) KH.symptoms.trends(start, end).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
     $('#trends-range').textContent = `${fmtDateShort(start)} – ${fmtDateShort(end)}`;
     const exportLink = $('#export-csv');
     if (MOCK) {

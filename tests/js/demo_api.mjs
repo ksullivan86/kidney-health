@@ -11,33 +11,7 @@
 // that field of answer i (paths are plain strings: a test that needs an id in a path reads it from a first run). core.js builds the page at load, so it runs against a no-op
 // stand-in for the DOM (no request touches the page).
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const STATIC = join(ROOT, 'app', 'static');
-
-function scripts() {
-  const html = readFileSync(join(STATIC, 'index.html'), 'utf8');
-  return [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1])
-    .filter((src) => /^js\/(engine\/|mock\/|core\.js$)/.test(src));
-}
-
-function load() {
-  const noop = new Proxy(function () {}, {
-    get: (t, k) => (k === Symbol.toPrimitive ? () => '' : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : noop),
-    apply: () => noop,
-    construct: () => noop,
-  });
-  const context = vm.createContext({ console, URL, URLSearchParams, setTimeout, clearTimeout, TextEncoder, TextDecoder, crypto });
-  Object.assign(context, { document: noop, navigator: { userAgent: 'node' }, location: new URL('http://localhost/?mock=1'),
-    localStorage: { getItem: () => null, setItem() {}, removeItem() {} } });
-  vm.runInContext('globalThis.window = globalThis; window.matchMedia = () => ({ matches: false, addEventListener() {} }); '
-    + 'window.addEventListener = () => {};', context);
-  for (const rel of scripts()) vm.runInContext(readFileSync(join(STATIC, rel), 'utf8'), context, { filename: rel });
-  return vm.runInContext('globalThis.KH', context);
-}
+import { loadDemo, newDemo } from './demo_loader.mjs';
 
 function resolveRefs(value, answers) {
   if (Array.isArray(value)) return value.map((v) => resolveRefs(v, answers));
@@ -52,10 +26,8 @@ function resolveRefs(value, answers) {
 }
 
 const requests = JSON.parse(readFileSync(0, 'utf8'));
-const KH = load();
-const foods = JSON.parse(readFileSync(join(ROOT, 'data', 'foods.json'), 'utf8'));
-const api = new KH.mock.MockApi({ foodsData: foods });
-KH.mock.instance = api;
+const KH = loadDemo();
+const api = newDemo(KH);
 const answers = [];
 for (const req of requests) {
   const path = resolveRefs(req.path, answers);

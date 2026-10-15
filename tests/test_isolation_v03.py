@@ -29,6 +29,7 @@ import test_data_import
 import test_export_delete
 import test_isolation
 import test_mcp_write
+import test_symptoms
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -61,6 +62,8 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "auth_tokens": ("test_auth_coverage.test_admin_routes_are_403_for_people_who_are_not_admins",
                     "test_export_delete.test_delete_account_needs_confirmation_and_password_and_cascades"),
     "lab_results": ("test_isolation_v03.test_lab_results_are_per_person", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
+    "symptoms": ("test_symptoms.test_a_second_person_never_sees_or_changes_the_first_persons_symptoms",
+                 "test_symptoms.test_deleting_an_account_deletes_its_symptoms_and_only_its_own"),  # step 15
     "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
     "ai_providers": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "ai_consents": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
@@ -83,7 +86,7 @@ SHARED_OR_SYSTEM = {
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
-           "test_ai_chat_save": test_ai_chat_save}
+           "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

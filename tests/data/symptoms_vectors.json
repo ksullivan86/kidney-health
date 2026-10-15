@@ -1,0 +1,5100 @@
+{
+ "symptoms": [
+  [
+   "swelling",
+   "Swelling"
+  ],
+  [
+   "itching",
+   "Itching"
+  ],
+  [
+   "tiredness",
+   "Tiredness"
+  ],
+  [
+   "cramps",
+   "Cramps"
+  ],
+  [
+   "nausea",
+   "Nausea"
+  ],
+  [
+   "breathlessness",
+   "Breathlessness"
+  ],
+  [
+   "poor_appetite",
+   "Poor appetite"
+  ],
+  [
+   "other",
+   "Other"
+  ]
+ ],
+ "severity_labels": {
+  "1": "Mild",
+  "2": "Moderate",
+  "3": "Severe"
+ },
+ "limits": {
+  "max_label": 60,
+  "max_note": 300,
+  "max_per_day": 30
+ },
+ "href": "/learn/get-help-now/",
+ "link_text": "Get help now",
+ "red_flags": {
+  "breathlessness": {
+   "level": "emergency",
+   "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”."
+  },
+  "swelling": {
+   "level": "today",
+   "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”."
+  }
+ },
+ "row_cases": [
+  {
+   "row": {
+    "id": 1,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 1,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "name": "Swelling",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "today",
+     "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": false
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 2,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 2,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "name": "Swelling",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "today",
+     "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": false
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 3,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 3,
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "label": "",
+    "name": "Swelling",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "today",
+     "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": true
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 4,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 4,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "name": "Itching",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 5,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 5,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "name": "Itching",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 6,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 6,
+    "date": "2025-03-03",
+    "symptom": "itching",
+    "label": "",
+    "name": "Itching",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 7,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 7,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "name": "Tiredness",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 8,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 8,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "name": "Tiredness",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 9,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 9,
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "label": "",
+    "name": "Tiredness",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 10,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 10,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "name": "Cramps",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 11,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 11,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "name": "Cramps",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 12,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 12,
+    "date": "2025-03-03",
+    "symptom": "cramps",
+    "label": "",
+    "name": "Cramps",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 13,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 13,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "name": "Nausea",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 14,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 14,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "name": "Nausea",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 15,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 15,
+    "date": "2025-03-03",
+    "symptom": "nausea",
+    "label": "",
+    "name": "Nausea",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 16,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 16,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "name": "Breathlessness",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "emergency",
+     "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": false
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 17,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 17,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "name": "Breathlessness",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "emergency",
+     "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": false
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 18,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 18,
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "label": "",
+    "name": "Breathlessness",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": {
+     "level": "emergency",
+     "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+     "href": "/learn/get-help-now/",
+     "link_text": "Get help now",
+     "prominent": true
+    }
+   }
+  },
+  {
+   "row": {
+    "id": 19,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 19,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "name": "Poor appetite",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 20,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 20,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "name": "Poor appetite",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 21,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 21,
+    "date": "2025-03-03",
+    "symptom": "poor_appetite",
+    "label": "",
+    "name": "Poor appetite",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 22,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "severity": 1,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 22,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "name": "Dry mouth",
+    "severity": 1,
+    "severity_label": "Mild",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 23,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "severity": 2,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 23,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "name": "Dry mouth",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 24,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "severity": 3,
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 24,
+    "date": "2025-03-03",
+    "symptom": "other",
+    "label": "Dry mouth",
+    "name": "Dry mouth",
+    "severity": 3,
+    "severity_label": "Severe",
+    "note": "",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  },
+  {
+   "row": {
+    "id": 99,
+    "date": "2025-03-04",
+    "symptom": "tiredness",
+    "label": "",
+    "severity": 2,
+    "note": "a note",
+    "created_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "symptom": {
+    "id": 99,
+    "date": "2025-03-04",
+    "symptom": "tiredness",
+    "label": "",
+    "name": "Tiredness",
+    "severity": 2,
+    "severity_label": "Moderate",
+    "note": "a note",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "red_flag": null
+   }
+  }
+ ],
+ "script": [
+  {
+   "name": "a mild tiredness with a note",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "after dialysis"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "after dialysis",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "severe swelling is a red flag and prominent",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "swelling",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 2,
+     "date": "2025-03-03",
+     "symptom": "swelling",
+     "label": "",
+     "name": "Swelling",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": true
+     }
+    }
+   }
+  },
+  {
+   "name": "mild swelling is a red flag, not prominent",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-04",
+    "symptom": "swelling",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 3,
+     "date": "2025-03-04",
+     "symptom": "swelling",
+     "label": "",
+     "name": "Swelling",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    }
+   }
+  },
+  {
+   "name": "moderate breathlessness is a red flag",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-04",
+    "symptom": "breathlessness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 4,
+     "date": "2025-03-04",
+     "symptom": "breathlessness",
+     "label": "",
+     "name": "Breathlessness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    }
+   }
+  },
+  {
+   "name": "other with a label, stripped",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "other",
+    "severity": 2,
+    "label": "  Dry mouth ",
+    "note": " kept  "
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 5,
+     "date": "2025-03-05",
+     "symptom": "other",
+     "label": "Dry mouth",
+     "name": "Dry mouth",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "kept",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "itching with a null label and note",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "itching",
+    "severity": 1,
+    "label": null,
+    "note": null
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 6,
+     "date": "2025-03-05",
+     "symptom": "itching",
+     "label": "",
+     "name": "Itching",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "nausea with a line break in the note",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "nausea",
+    "severity": 3,
+    "note": "line one\nline two\tand a tab"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 7,
+     "date": "2025-03-05",
+     "symptom": "nausea",
+     "label": "",
+     "name": "Nausea",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "line one\nline two\tand a tab",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "poor appetite",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "poor_appetite",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 8,
+     "date": "2025-03-05",
+     "symptom": "poor_appetite",
+     "label": "",
+     "name": "Poor appetite",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "cramps",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "cramps",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 9,
+     "date": "2025-03-05",
+     "symptom": "cramps",
+     "label": "",
+     "name": "Cramps",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "severity as text",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "cramps",
+    "severity": "2"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 10,
+     "date": "2025-03-05",
+     "symptom": "cramps",
+     "label": "",
+     "name": "Cramps",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "severity as a whole float",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "cramps",
+    "severity": 3.0
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 11,
+     "date": "2025-03-05",
+     "symptom": "cramps",
+     "label": "",
+     "name": "Cramps",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "surrounding spaces in the date",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": " 2025-03-05 ",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 12,
+     "date": "2025-03-05",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "a label of the longest length",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "other",
+    "severity": 1,
+    "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 13,
+     "date": "2025-03-05",
+     "symptom": "other",
+     "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+     "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "a note of the longest length (counted in characters)",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 14,
+     "date": "2025-03-05",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "list the first three days",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-03-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 1,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "after dialysis",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 3,
+       "date": "2025-03-04",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 5,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "Dry mouth",
+       "name": "Dry mouth",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "kept",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 6,
+       "date": "2025-03-05",
+       "symptom": "itching",
+       "label": "",
+       "name": "Itching",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 7,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "line one\nline two\tand a tab",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 8,
+       "date": "2025-03-05",
+       "symptom": "poor_appetite",
+       "label": "",
+       "name": "Poor appetite",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 9,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 10,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 11,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 12,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 13,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 14,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "list one day",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-04&end=2025-03-04",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 3,
+       "date": "2025-03-04",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "list a day with one entry",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-03-03",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 1,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "after dialysis",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "list days with nothing",
+   "method": "GET",
+   "path": "/api/symptoms?start=2024-01-01&end=2024-01-31",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": []
+    }
+   }
+  },
+  {
+   "name": "list needs a start",
+   "method": "GET",
+   "path": "/api/symptoms",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "start is required (YYYY-MM-DD)"
+   }
+  },
+  {
+   "name": "list needs an end",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "end is required (YYYY-MM-DD)"
+   }
+  },
+  {
+   "name": "list: a start that is not a date",
+   "method": "GET",
+   "path": "/api/symptoms?start=soon&end=2025-03-05",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "start: date must be formatted YYYY-MM-DD"
+   }
+  },
+  {
+   "name": "list: an end that is not a real date",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-02-30",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "end: date is not a valid calendar date"
+   }
+  },
+  {
+   "name": "list: end before start",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-05&end=2025-03-03",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "end must not be before start"
+   }
+  },
+  {
+   "name": "list: more than a year",
+   "method": "GET",
+   "path": "/api/symptoms?start=2024-01-01&end=2025-03-05",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "range too large (max 366 days)"
+   }
+  },
+  {
+   "name": "list: exactly the longest range",
+   "method": "GET",
+   "path": "/api/symptoms?start=2024-03-05&end=2025-03-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 1,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "after dialysis",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 3,
+       "date": "2025-03-04",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 5,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "Dry mouth",
+       "name": "Dry mouth",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "kept",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 6,
+       "date": "2025-03-05",
+       "symptom": "itching",
+       "label": "",
+       "name": "Itching",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 7,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "line one\nline two\tand a tab",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 8,
+       "date": "2025-03-05",
+       "symptom": "poor_appetite",
+       "label": "",
+       "name": "Poor appetite",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 9,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 10,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 11,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 12,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 13,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 14,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "list: an empty start",
+   "method": "GET",
+   "path": "/api/symptoms?start=&end=2025-03-05",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "start is required (YYYY-MM-DD)"
+   }
+  },
+  {
+   "name": "update to nausea, severe, another day, empty note",
+   "method": "PUT",
+   "path": "/api/symptoms/1",
+   "body": {
+    "date": "2025-03-05",
+    "symptom": "nausea",
+    "severity": 3,
+    "note": ""
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 1,
+     "date": "2025-03-05",
+     "symptom": "nausea",
+     "label": "",
+     "name": "Nausea",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "update to an other with a label",
+   "method": "PUT",
+   "path": "/api/symptoms/2",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": "Itchy eyes"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 2,
+     "date": "2025-03-03",
+     "symptom": "other",
+     "label": "Itchy eyes",
+     "name": "Itchy eyes",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "update to breathlessness, severe",
+   "method": "PUT",
+   "path": "/api/symptoms/2",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "breathlessness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 2,
+     "date": "2025-03-03",
+     "symptom": "breathlessness",
+     "label": "",
+     "name": "Breathlessness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": true
+     }
+    }
+   }
+  },
+  {
+   "name": "update of a symptom that is not there",
+   "method": "PUT",
+   "path": "/api/symptoms/99",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update of a symptom that is not there, with a bad body",
+   "method": "PUT",
+   "path": "/api/symptoms/99",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "headache",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "list after the changes",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-03-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 3,
+       "date": "2025-03-04",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 1,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 5,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "Dry mouth",
+       "name": "Dry mouth",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "kept",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 6,
+       "date": "2025-03-05",
+       "symptom": "itching",
+       "label": "",
+       "name": "Itching",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 7,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "line one\nline two\tand a tab",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 8,
+       "date": "2025-03-05",
+       "symptom": "poor_appetite",
+       "label": "",
+       "name": "Poor appetite",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 9,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 10,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 11,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 12,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 13,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 14,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "delete",
+   "method": "DELETE",
+   "path": "/api/symptoms/3",
+   "answer": {
+    "ok": true,
+    "body": null
+   }
+  },
+  {
+   "name": "delete again",
+   "method": "DELETE",
+   "path": "/api/symptoms/3",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update after the delete",
+   "method": "PUT",
+   "path": "/api/symptoms/3",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "list after the delete",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-03-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 1,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 5,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "Dry mouth",
+       "name": "Dry mouth",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "kept",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 6,
+       "date": "2025-03-05",
+       "symptom": "itching",
+       "label": "",
+       "name": "Itching",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 7,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "line one\nline two\tand a tab",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 8,
+       "date": "2025-03-05",
+       "symptom": "poor_appetite",
+       "label": "",
+       "name": "Poor appetite",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 9,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 10,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 11,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 12,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 13,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 14,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "delete with the id 0",
+   "method": "DELETE",
+   "path": "/api/symptoms/0",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id 0",
+   "method": "PUT",
+   "path": "/api/symptoms/0",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id -1",
+   "method": "DELETE",
+   "path": "/api/symptoms/-1",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id -1",
+   "method": "PUT",
+   "path": "/api/symptoms/-1",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id +99",
+   "method": "DELETE",
+   "path": "/api/symptoms/+99",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id +99",
+   "method": "PUT",
+   "path": "/api/symptoms/+99",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id 9_9",
+   "method": "DELETE",
+   "path": "/api/symptoms/9_9",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id 9_9",
+   "method": "PUT",
+   "path": "/api/symptoms/9_9",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id 99.0",
+   "method": "DELETE",
+   "path": "/api/symptoms/99.0",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id 99.0",
+   "method": "PUT",
+   "path": "/api/symptoms/99.0",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id 99999999999999999999",
+   "method": "DELETE",
+   "path": "/api/symptoms/99999999999999999999",
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "update with the id 99999999999999999999",
+   "method": "PUT",
+   "path": "/api/symptoms/99999999999999999999",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 404,
+    "detail": "Symptom not found"
+   }
+  },
+  {
+   "name": "delete with the id 'abc'",
+   "method": "DELETE",
+   "path": "/api/symptoms/abc",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom_id: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "delete with the id '1.5'",
+   "method": "DELETE",
+   "path": "/api/symptoms/1.5",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom_id: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "update with an id that is not a number",
+   "method": "PUT",
+   "path": "/api/symptoms/abc",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom_id: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "update with an id that is not a number and a bad body",
+   "method": "PUT",
+   "path": "/api/symptoms/abc",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "headache",
+    "severity": 9
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom_id: Input should be a valid integer, unable to parse string as an integer; symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'; severity: Input should be less than or equal to 3"
+   }
+  },
+  {
+   "name": "POST: an unknown symptom",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "headache",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "POST: a symptom in capitals",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "OTHER",
+    "severity": 1,
+    "label": "x"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "POST: a null symptom",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": null,
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "POST: a symptom that is a number",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": 7,
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "POST: severity 0",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 0
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be greater than or equal to 1"
+   }
+  },
+  {
+   "name": "POST: severity 4",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 4
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be less than or equal to 3"
+   }
+  },
+  {
+   "name": "POST: severity high",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": "high"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "POST: severity 2.5",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2.5
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer, got a number with a fractional part"
+   }
+  },
+  {
+   "name": "POST: severity null",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": null
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer"
+   }
+  },
+  {
+   "name": "POST: severity true",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": true
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 15,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "POST: severity a list",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": [
+     2
+    ]
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer"
+   }
+  },
+  {
+   "name": "POST: severity as text with spaces",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": " 2 "
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 16,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "POST: severity as 2.0 in text",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": "2.0"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 17,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "POST: severity as 2.5 in text",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": "2.5"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "POST: severity as 1e0 in text",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": "1e0"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be a valid integer, unable to parse string as an integer"
+   }
+  },
+  {
+   "name": "POST: a date in the future",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2999-01-01",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: must not be in the future"
+   }
+  },
+  {
+   "name": "POST: a date long ago",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "1899-12-31",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: must be 1900 or later"
+   }
+  },
+  {
+   "name": "POST: a date in the wrong form",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "10/05/2026",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: date must be formatted YYYY-MM-DD"
+   }
+  },
+  {
+   "name": "POST: a date that is not on the calendar",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2026-02-30",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: date is not a valid calendar date"
+   }
+  },
+  {
+   "name": "POST: a date that is a number",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": 20261005,
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: Input should be a valid string"
+   }
+  },
+  {
+   "name": "POST: a date that is empty",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: date must be formatted YYYY-MM-DD"
+   }
+  },
+  {
+   "name": "POST: a note that is too long",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "note: String should have at most 300 characters"
+   }
+  },
+  {
+   "name": "POST: a note of too many emoji",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "note: String should have at most 300 characters"
+   }
+  },
+  {
+   "name": "POST: a note with a control character",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "bad\u0000note"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "note: must be plain text"
+   }
+  },
+  {
+   "name": "POST: a note with a bell",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": "bad\u0007note"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "note: must be plain text"
+   }
+  },
+  {
+   "name": "POST: a note that is a number",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "note": 5
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "note: Input should be a valid string"
+   }
+  },
+  {
+   "name": "POST: a label on a symptom that is not other",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "label": "Dry mouth"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is only for the symptom other"
+   }
+  },
+  {
+   "name": "POST: other without a label",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is required when the symptom is other"
+   }
+  },
+  {
+   "name": "POST: other with an empty label",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": ""
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is required when the symptom is other"
+   }
+  },
+  {
+   "name": "POST: other with a label of spaces",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": "   "
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is required when the symptom is other"
+   }
+  },
+  {
+   "name": "POST: a label that is too long",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": "lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label: String should have at most 60 characters"
+   }
+  },
+  {
+   "name": "POST: a label of two lines",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": "two\nlines"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label: must be one line of plain text"
+   }
+  },
+  {
+   "name": "POST: a label with a tab inside",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": "a\tb"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label: must be one line of plain text"
+   }
+  },
+  {
+   "name": "POST: a label that is a list",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1,
+    "label": [
+     "x"
+    ]
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label: Input should be a valid string"
+   }
+  },
+  {
+   "name": "POST: an unknown field",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2,
+    "surprise": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "surprise: Extra inputs are not permitted"
+   }
+  },
+  {
+   "name": "POST: an id in the body",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2,
+    "id": 7
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "id: Extra inputs are not permitted"
+   }
+  },
+  {
+   "name": "POST: a user_id in the body",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 2,
+    "user_id": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "user_id: Extra inputs are not permitted"
+   }
+  },
+  {
+   "name": "POST: several problems at once, in the model's order",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "symptom": "x",
+    "severity": 9,
+    "date": "bad",
+    "note": 5,
+    "label": 1,
+    "extra": 1,
+    "more": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: date must be formatted YYYY-MM-DD; symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'; severity: Input should be less than or equal to 3; label: Input should be a valid string; note: Input should be a valid string; extra: Extra inputs are not permitted; more: Extra inputs are not permitted"
+   }
+  },
+  {
+   "name": "POST: nothing",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {},
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: Field required; symptom: Field required; severity: Field required"
+   }
+  },
+  {
+   "name": "POST: a list",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": [
+    {
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "severity": 2
+    }
+   ],
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Input should be a valid dictionary or object to extract fields from"
+   }
+  },
+  {
+   "name": "POST: a string",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": "tiredness",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Input should be a valid dictionary or object to extract fields from"
+   }
+  },
+  {
+   "name": "POST: a number",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": 7,
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Input should be a valid dictionary or object to extract fields from"
+   }
+  },
+  {
+   "name": "POST with no body",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Field required"
+   }
+  },
+  {
+   "name": "PUT: an unknown symptom",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "headache",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "PUT: a symptom in capitals",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "OTHER",
+    "severity": 1,
+    "label": "x"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "PUT: a null symptom",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": null,
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "PUT: a symptom that is a number",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": 7,
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "symptom: Input should be 'swelling', 'itching', 'tiredness', 'cramps', 'nausea', 'breathlessness', 'poor_appetite' or 'other'"
+   }
+  },
+  {
+   "name": "PUT: severity 0",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 0
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be greater than or equal to 1"
+   }
+  },
+  {
+   "name": "PUT: severity 4",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 4
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "severity: Input should be less than or equal to 3"
+   }
+  },
+  {
+   "name": "PUT: a date in the future",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2999-01-01",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: must not be in the future"
+   }
+  },
+  {
+   "name": "PUT: a date long ago",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "1899-12-31",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: must be 1900 or later"
+   }
+  },
+  {
+   "name": "PUT: a label on a symptom that is not other",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "tiredness",
+    "severity": 1,
+    "label": "Dry mouth"
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is only for the symptom other"
+   }
+  },
+  {
+   "name": "PUT: other without a label",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": {
+    "date": "2025-03-03",
+    "symptom": "other",
+    "severity": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "label is required when the symptom is other"
+   }
+  },
+  {
+   "name": "PUT with no body",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Field required"
+   }
+  },
+  {
+   "name": "PUT with a body that is a list",
+   "method": "PUT",
+   "path": "/api/symptoms/4",
+   "body": [
+    {
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "severity": 2
+    }
+   ],
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "Input should be a valid dictionary or object to extract fields from"
+   }
+  },
+  {
+   "name": "nothing was stored by the refusals",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-03&end=2025-03-05",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 2,
+       "date": "2025-03-03",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 15,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 16,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 17,
+       "date": "2025-03-03",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 4,
+       "date": "2025-03-04",
+       "symptom": "breathlessness",
+       "label": "",
+       "name": "Breathlessness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "emergency",
+        "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 1,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 5,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "Dry mouth",
+       "name": "Dry mouth",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "kept",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 6,
+       "date": "2025-03-05",
+       "symptom": "itching",
+       "label": "",
+       "name": "Itching",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 7,
+       "date": "2025-03-05",
+       "symptom": "nausea",
+       "label": "",
+       "name": "Nausea",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "line one\nline two\tand a tab",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 8,
+       "date": "2025-03-05",
+       "symptom": "poor_appetite",
+       "label": "",
+       "name": "Poor appetite",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 9,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 10,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 11,
+       "date": "2025-03-05",
+       "symptom": "cramps",
+       "label": "",
+       "name": "Cramps",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 12,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 13,
+       "date": "2025-03-05",
+       "symptom": "other",
+       "label": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 14,
+       "date": "2025-03-05",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "fill the day, 1",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 18,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 2",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 19,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 3",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 20,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 4",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 21,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 5",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 22,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 6",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 23,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 7",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 24,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 8",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 25,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 9",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 26,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 10",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 27,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 11",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 28,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 12",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 29,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 13",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 30,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 14",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 31,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 15",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 32,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 16",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 33,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 17",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 34,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 18",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 35,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 19",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 36,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 20",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 37,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 21",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 38,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 22",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 39,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 23",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 40,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 24",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 41,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 25",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 42,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 26",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 43,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 27",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 44,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 28",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 45,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 29",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 46,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "fill the day, 30",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 47,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "the day is full",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "cramps",
+    "severity": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "too many symptoms for one day (max 30)"
+   }
+  },
+  {
+   "name": "an entry on another day is fine",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "2025-03-11",
+    "symptom": "cramps",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 48,
+     "date": "2025-03-11",
+     "symptom": "cramps",
+     "label": "",
+     "name": "Cramps",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "moving it into the full day is refused",
+   "method": "PUT",
+   "path": "/api/symptoms/48",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "cramps",
+    "severity": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "too many symptoms for one day (max 30)"
+   }
+  },
+  {
+   "name": "editing inside the full day is fine",
+   "method": "PUT",
+   "path": "/api/symptoms/19",
+   "body": {
+    "date": "2025-03-10",
+    "symptom": "tiredness",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 19,
+     "date": "2025-03-10",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "list the full day",
+   "method": "GET",
+   "path": "/api/symptoms?start=2025-03-10&end=2025-03-10",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 18,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 19,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 20,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 21,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 22,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 23,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 24,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 25,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 26,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 27,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 28,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 29,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 30,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 31,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 32,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 33,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 34,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 35,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 36,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 37,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 38,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 39,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 40,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 41,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 42,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 43,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 44,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 45,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 46,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      },
+      {
+       "id": 47,
+       "date": "2025-03-10",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "today",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "{{today:0}}",
+    "symptom": "swelling",
+    "severity": 2
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 49,
+     "date": "{{today:0}}",
+     "symptom": "swelling",
+     "label": "",
+     "name": "Swelling",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    }
+   }
+  },
+  {
+   "name": "yesterday",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "{{today:-1}}",
+    "symptom": "swelling",
+    "severity": 3
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 50,
+     "date": "{{today:-1}}",
+     "symptom": "swelling",
+     "label": "",
+     "name": "Swelling",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": true
+     }
+    }
+   }
+  },
+  {
+   "name": "tomorrow is allowed (the person's clock may be ahead)",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "{{today:1}}",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 51,
+     "date": "{{today:1}}",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "<ts>",
+     "red_flag": null
+    }
+   }
+  },
+  {
+   "name": "the day after tomorrow is not",
+   "method": "POST",
+   "path": "/api/symptoms",
+   "body": {
+    "date": "{{today:2}}",
+    "symptom": "tiredness",
+    "severity": 1
+   },
+   "answer": {
+    "ok": false,
+    "status": 400,
+    "detail": "date: must not be in the future"
+   }
+  },
+  {
+   "name": "the list ends at today",
+   "method": "GET",
+   "path": "/api/symptoms?start={{today:-3}}&end={{today:0}}",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 50,
+       "date": "{{today:-1}}",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 49,
+       "date": "{{today:0}}",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "the list can end tomorrow",
+   "method": "GET",
+   "path": "/api/symptoms?start={{today:-1}}&end={{today:1}}",
+   "answer": {
+    "ok": true,
+    "body": {
+     "symptoms": [
+      {
+       "id": 50,
+       "date": "{{today:-1}}",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 3,
+       "severity_label": "Severe",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": true
+       }
+      },
+      {
+       "id": 49,
+       "date": "{{today:0}}",
+       "symptom": "swelling",
+       "label": "",
+       "name": "Swelling",
+       "severity": 2,
+       "severity_label": "Moderate",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": {
+        "level": "today",
+        "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+        "href": "/learn/get-help-now/",
+        "link_text": "Get help now",
+        "prominent": false
+       }
+      },
+      {
+       "id": 51,
+       "date": "{{today:1}}",
+       "symptom": "tiredness",
+       "label": "",
+       "name": "Tiredness",
+       "severity": 1,
+       "severity_label": "Mild",
+       "note": "",
+       "created_at": "<ts>",
+       "red_flag": null
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "summarise_cases": [
+  {
+   "name": "nothing recorded",
+   "symptoms": [],
+   "groups": []
+  },
+  {
+   "name": "groups, highest severity per day, most days first, then by name",
+   "symptoms": [
+    {
+     "id": 1,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    },
+    {
+     "id": 1,
+     "date": "2025-03-03",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    },
+    {
+     "id": 1,
+     "date": "2025-03-04",
+     "symptom": "tiredness",
+     "label": "",
+     "name": "Tiredness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    },
+    {
+     "id": 1,
+     "date": "2025-03-04",
+     "symptom": "swelling",
+     "label": "",
+     "name": "Swelling",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    },
+    {
+     "id": 1,
+     "date": "2025-03-03",
+     "symptom": "other",
+     "label": "Dry mouth",
+     "name": "Dry mouth",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    },
+    {
+     "id": 1,
+     "date": "2025-03-05",
+     "symptom": "other",
+     "label": "dry MOUTH",
+     "name": "dry MOUTH",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    },
+    {
+     "id": 1,
+     "date": "2025-03-04",
+     "symptom": "other",
+     "label": "Itchy eyes",
+     "name": "Itchy eyes",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": null
+    }
+   ],
+   "groups": [
+    {
+     "key": "other:dry mouth",
+     "symptom": "other",
+     "name": "Dry mouth",
+     "days": [
+      {
+       "date": "2025-03-03",
+       "severity": 2
+      },
+      {
+       "date": "2025-03-05",
+       "severity": 1
+      }
+     ],
+     "dayCount": 2,
+     "worst": 2,
+     "worst_label": "Moderate",
+     "red_flag": null
+    },
+    {
+     "key": "tiredness",
+     "symptom": "tiredness",
+     "name": "Tiredness",
+     "days": [
+      {
+       "date": "2025-03-03",
+       "severity": 3
+      },
+      {
+       "date": "2025-03-04",
+       "severity": 2
+      }
+     ],
+     "dayCount": 2,
+     "worst": 3,
+     "worst_label": "Severe",
+     "red_flag": null
+    },
+    {
+     "key": "other:itchy eyes",
+     "symptom": "other",
+     "name": "Itchy eyes",
+     "days": [
+      {
+       "date": "2025-03-04",
+       "severity": 3
+      }
+     ],
+     "dayCount": 1,
+     "worst": 3,
+     "worst_label": "Severe",
+     "red_flag": null
+    },
+    {
+     "key": "swelling",
+     "symptom": "swelling",
+     "name": "Swelling",
+     "days": [
+      {
+       "date": "2025-03-04",
+       "severity": 1
+      }
+     ],
+     "dayCount": 1,
+     "worst": 1,
+     "worst_label": "Mild",
+     "red_flag": {
+      "level": "today",
+      "text": "The handbook lists “new swelling of the legs, ankles or face” under “Call your care team today”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    }
+   ]
+  },
+  {
+   "name": "the red flag follows the worst day; days come out oldest first whatever the order given",
+   "symptoms": [
+    {
+     "id": 1,
+     "date": "2025-03-05",
+     "symptom": "breathlessness",
+     "label": "",
+     "name": "Breathlessness",
+     "severity": 1,
+     "severity_label": "Mild",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    },
+    {
+     "id": 1,
+     "date": "2025-03-03",
+     "symptom": "breathlessness",
+     "label": "",
+     "name": "Breathlessness",
+     "severity": 3,
+     "severity_label": "Severe",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": true
+     }
+    },
+    {
+     "id": 1,
+     "date": "2025-03-04",
+     "symptom": "breathlessness",
+     "label": "",
+     "name": "Breathlessness",
+     "severity": 2,
+     "severity_label": "Moderate",
+     "note": "",
+     "created_at": "2026-10-05T12:30:00.000000Z",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": false
+     }
+    }
+   ],
+   "groups": [
+    {
+     "key": "breathlessness",
+     "symptom": "breathlessness",
+     "name": "Breathlessness",
+     "days": [
+      {
+       "date": "2025-03-03",
+       "severity": 3
+      },
+      {
+       "date": "2025-03-04",
+       "severity": 2
+      },
+      {
+       "date": "2025-03-05",
+       "severity": 1
+      }
+     ],
+     "dayCount": 3,
+     "worst": 3,
+     "worst_label": "Severe",
+     "red_flag": {
+      "level": "emergency",
+      "text": "The handbook lists “severe breathlessness” and “sudden breathlessness or fainting with no clear cause” under “Call 911 now”.",
+      "href": "/learn/get-help-now/",
+      "link_text": "Get help now",
+      "prominent": true
+     }
+    }
+   ]
+  }
+ ]
+}

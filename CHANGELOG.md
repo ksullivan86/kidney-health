@@ -14,6 +14,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   a cloud AI outside your network", or that your admin switched it off (off is off for everyone). A feature that moves
   to another AI asks for your consent again for that AI. Your own key stays your own choice. See
   [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
+* **Write down a symptom.** **Today → Symptoms → Add** records a symptom for a day: pick it (swelling, itching, tiredness,
+  cramps, nausea, breathlessness, poor appetite, or **Other** with a name of your own), choose **Mild**, **Moderate** or
+  **Severe** and add a note if you like. **Edit** and **Delete** are on each entry; **Trends → Symptoms** lists what you
+  recorded in the days on screen (how many days, the worst severity, the dates), and your export holds them
+  (`symptoms.csv` and `export.json`; **Import from a file** brings them back). **The app only records and shows them: it
+  never says what a symptom means, what causes it or what to do about it.** The two symptoms that the handbook's
+  [Get help now](handbook/docs/get-help-now.md) page lists as warning signs, breathlessness ("Call 911 now") and new
+  swelling ("Call your care team today"), show the handbook's own words and a link to that page, and a severe one stands
+  out and comes first. Symptoms are never sent to an AI provider or an assistant. They need your server (they are not
+  saved while you are offline). See [Reports for your care team](handbook/docs/app/reports-for-your-team.md) and
+  [docs/privacy.md](docs/privacy.md).
 * **Talk to Ask (when the admin sets up speech to text).** A **microphone** button next to Send: tap, speak, tap again
   (a minute at most). The first time, a sheet says where your recording goes ("Your recording is sent to <host> to turn it
   into text, then deleted. Nothing is kept.") and nothing is recorded before you agree. **The words appear in the question
@@ -288,6 +299,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Every feature resolves through `routes._resolve(request, conn, user, feature)`. The older AI tests set the routing to `any`
   with `tests/ai_support.py` `LEGACY_ROUTING`; the new ones are `tests/test_ai_routing.py`, `tests/test_ai_routing_ui.py` and
   `tests/js/routing_page.mjs`.
+* The symptoms log is `app/symptoms.py` (`/api/symptoms`, the red-flag table `RED_FLAGS`, row shape), the `Symptom*` models in
+  `app/models.py`, `app/migrations/m015_symptoms.py` (**schema step 15**: `symptoms`, no CHECK on the key), `symptoms` in the
+  export (`app/account.py`, plus `symptoms.csv`) and the import (`app/data_import.py`, `ImportSymptom`), and in the browser
+  `js/engine/symptoms.js` (`KH.symptomRules`), `js/mock/symptoms.js`, `js/views/symptoms.js` and `css/symptoms.css`.
+  Parity: `tests/data/gen_symptoms_vectors.py` writes `tests/data/symptoms_vectors.json` from the server (a request script
+  run on a fresh server and a fresh demo), `node tests/js/run_vectors.mjs` replays it (`tests/js/demo_loader.mjs` loads the
+  whole demo), `tests/test_symptoms_vectors.py` fails when it is stale. Tests: `tests/test_symptoms.py` (routes,
+  validation, the handbook page checked against the red-flag quotes, isolation, deletion, export and import),
+  `tests/test_migration_m015.py`, `tests/test_symptoms_ui.py`; `python tools/e2e/symptoms.py` drives it in Chromium.
+  `tests/test_isolation_v03.py` lists the table in its matrix. Export version stays 1 (`symptoms` is an optional list).
 * Voice for Ask is `app/ai/stt.py` (configuration, clip checks, the multipart call, consent and limit helpers; pure),
   `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`,
   `js/views/ask-voice.js` and `css/ask-voice.css` (attached to Ask by two hook lines in `ask.js`), the voice consent text and

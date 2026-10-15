@@ -38,7 +38,7 @@ def test_the_page_agrees_with_the_server_on_what_is_never_sent_and_how_big_a_fil
     assert size and int(size.group(1)) * 1024 * 1024 == Settings.__dataclass_fields__["max_import_bytes"].default
     shown = {k for k, _, _ in re.findall(r"\['([a-z_]+)', '([^']+)', '([^']+)'\]", BLOCK[BLOCK.index("const IMPORT_KINDS"):BLOCK.index("const IMPORT_SKIP_WHAT")])}
     assert shown == {"log_entries", "custom_foods", "shared_foods_kept_as_own", "shared_foods_linked", "meal_templates",
-                     "lab_results", "food_preferences", "settings"}
+                     "lab_results", "symptoms", "food_preferences", "settings"}
 
 
 def test_the_page_never_keeps_the_file_or_builds_html_from_it() -> None:
@@ -93,7 +93,7 @@ def test_each_choice_checks_again_and_keeps_the_focus_where_it_was() -> None:
     assert page["merged"] == {"options": {"merge": True, "replace_profile": False, "dry_run": True}, "focused": "set-import-merge"}
     assert page["profileChosen"] == {"options": {"merge": True, "replace_profile": True, "dry_run": True}, "focused": "set-import-profile"}
     blocked = page["blocked"]
-    assert blocked["importDisabled"] is True and "This account already has data (3 log entries, 1 food of yours, 0 saved meals, 0 lab results)" in blocked["text"]
+    assert blocked["importDisabled"] is True and "This account already has data (3 log entries, 1 food of yours, 0 saved meals, 0 lab results, 0 symptoms)" in blocked["text"]
     assert "Will be added" not in blocked["text"]  # nothing is promised while it is refused
     assert "Nothing new to add." in page["nothingNew"] and "null" not in page["nothingNew"]
 

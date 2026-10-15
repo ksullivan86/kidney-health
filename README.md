@@ -60,6 +60,10 @@ their own key). Each person in the household has their own account and their own
   (CKD-EPI 2021) and the albuminuria category, or import past results from a spreadsheet (CSV, read on
   your device; you tick the results to keep). A potassium of 6.0 mmol/L or more always shows an urgent
   banner.
+* **Symptoms log.** Write down a symptom (swelling, itching, tiredness, cramps, nausea, breathlessness, poor
+  appetite, or one of your own) with a date and how bad it is; Today shows the day's, Trends lists the days, and the
+  export holds them. The app records and shows; it never says what a symptom means. The two that the handbook's Get help
+  now page lists as warning signs show its own words and a link to it.
 * **Meal guidance without AI**: "What fits now" for your next meal, lower-potassium, -phosphorus or
   -sodium swaps with the same carbohydrate, "Plan the rest of my day", end-of-day and weekly insights,
   and a "Treating a low" card that works even offline. Arithmetic on your care team's targets; it never
@@ -354,6 +358,7 @@ app/
   db.py, migrations/      SQLite connection + append-only schema steps (1-7)
   nutrients.py, periods.py    pure rules: warnings, daily status, period maths
   targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
+  symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
   guidance/               rule-based meal guidance (pure engine + routes)
   gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
   ai/, vision.py, imagecheck.py   optional AI (presets, network policy, guard, routes) and photo checks

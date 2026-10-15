@@ -26,7 +26,7 @@ The file is untrusted input (it may have been edited, or made up to look like an
   the new ids; one whose food is neither in the file nor built in is skipped and listed, never guessed.
   An entry's nutrient numbers are recomputed from its food and servings, as every entry is, never taken from the
   file.
-* **Duplicates.** An account that already has entries, own foods, saved meals or lab results is refused (409)
+* **Duplicates.** An account that already has entries, own foods, saved meals, lab results or symptoms is refused (409)
   unless the person chose ``merge=1`` ("Add to my existing data"); then whatever is already here is left out
   (:data:`RULE`), so importing the same file again adds nothing.
 * The person's profile, targets and settings are replaced only with ``replace_profile=1``: they are clinical
@@ -67,12 +67,17 @@ from .models import (
     MAX_SERVING_G,
     MAX_SERVINGS,
     MAX_SQLITE_INT,
+    MAX_SYMPTOM_LABEL,
+    MAX_SYMPTOM_NOTE,
+    MAX_SYMPTOMS_PER_DAY,
     MIN_SERVING_G,
     Analyte,
     EntryStatus,
     LabCreate,
     Meal,
     ProfileUpdate,
+    SymptomCreate,
+    SymptomKey,
     validate_client_id,
     validate_date,
     validate_flags,
@@ -100,6 +105,7 @@ MAX_BUILTIN_REFS = 5_000
 MAX_MEALS = 1_000
 MAX_MEAL_ITEMS = 100
 MAX_LABS = 5_000
+MAX_SYMPTOMS = 20_000
 MAX_SETTINGS = 200
 MAX_SKIPPED_SHOWN = 100  # skipped items listed in the answer; the total is always given
 MAX_MESSAGE_CHARS = 200
@@ -123,12 +129,12 @@ NOT_IMPORTED: tuple[str, ...] = (
 )
 
 RULE = (
-    "Your file's foods, log entries, saved meals, lab results and \"Not for me\" foods are added to this account. If "
-    "the account already has entries, foods of your own, saved meals or lab results, nothing is imported unless you "
-    "choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, "
-    "food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the "
-    "same name and foods; a lab result with the same test, date and value. So importing the same file again adds "
-    "nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets "
+    "Your file's foods, log entries, saved meals, lab results, symptoms and \"Not for me\" foods are added to this "
+    "account. If the account already has entries, foods of your own, saved meals, lab results or symptoms, nothing is "
+    "imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with "
+    "the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a "
+    "saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same "
+    "date, name, severity and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets "
     "and settings\"."
 )
 
@@ -425,6 +431,34 @@ class ImportLab(_Strict):
         return self
 
 
+class ImportSymptom(_Strict):
+    id: Id
+    date: str
+    symptom: SymptomKey
+    label: _short(MAX_SYMPTOM_LABEL) | None = None
+    severity: Annotated[int, Field(ge=1, le=3)]
+    note: _short(MAX_SYMPTOM_NOTE) | None = None
+    created_at: Timestamp
+
+    @field_validator("created_at")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return parse_timestamp(v)
+
+    @model_validator(mode="after")
+    def _as_recorded(self) -> "ImportSymptom":
+        """Checked exactly like ``POST /api/symptoms`` (date not in the future, a label only for "other", plain text);
+        the id in the file is never used."""
+        try:
+            SymptomCreate(date=self.date, symptom=self.symptom, severity=self.severity, label=self.label or "",
+                          note=self.note or "")
+        except ValidationError as exc:
+            first = exc.errors(include_url=False, include_context=False, include_input=False)[0]
+            where = ".".join(str(p) for p in first["loc"]) or "symptom"
+            raise ValueError(f"{where}: {str(first['msg']).removeprefix('Value error, ')[:120]}") from None
+        return self
+
+
 class ImportFoodPreference(_Strict):
     food_id: Id
     name: _short(200)
@@ -465,6 +499,7 @@ class ExportFile(_Strict):
     builtin_foods: Annotated[list[ImportBuiltinRef], Field(max_length=MAX_BUILTIN_REFS)] = []
     meal_templates: Annotated[list[ImportMeal], Field(max_length=MAX_MEALS)] = []
     lab_results: Annotated[list[ImportLab], Field(max_length=MAX_LABS)] = []
+    symptoms: Annotated[list[ImportSymptom], Field(max_length=MAX_SYMPTOMS)] = []
     food_preferences: Annotated[list[ImportFoodPreference], Field(max_length=MAX_NOT_FOR_ME)] = []
     # Accepted without looking inside, never read or stored.
     user: Any = None
@@ -660,6 +695,7 @@ class Importer:
             "custom_foods": c.execute("SELECT COUNT(*) FROM foods WHERE owner_user_id = ? AND source = 'custom'", (u,)).fetchone()[0],
             "meal_templates": c.execute("SELECT COUNT(*) FROM meal_templates WHERE user_id = ?", (u,)).fetchone()[0],
             "lab_results": c.execute("SELECT COUNT(*) FROM lab_results WHERE user_id = ?", (u,)).fetchone()[0],
+            "symptoms": c.execute("SELECT COUNT(*) FROM symptoms WHERE user_id = ?", (u,)).fetchone()[0],
         }
 
     # -- foods ----------------------------------------------------------------------------------------------------
@@ -863,6 +899,33 @@ class Importer:
             )
             self.counts["lab_results"] += 1
 
+    # -- symptoms ---------------------------------------------------------------------------------------------------
+    def import_symptoms(self) -> None:
+        from .symptoms import SYMPTOM_NAMES
+
+        have: Counter[tuple] = Counter(
+            (r["date"], r["symptom"], r["label"], r["severity"], r["note"])
+            for r in self.conn.execute("SELECT date, symptom, label, severity, note FROM symptoms WHERE user_id = ?", (self.uid,))
+        )
+        per_day: Counter[str] = Counter(r[0] for r in self.conn.execute("SELECT date FROM symptoms WHERE user_id = ?", (self.uid,)))
+        for index, s in enumerate(self.doc.symptoms):
+            label, note = s.label or "", s.note or ""
+            key = (s.date, s.symptom, label, s.severity, note)
+            if have[key] > 0:
+                have[key] -= 1
+                self.already["symptoms"] += 1
+                continue
+            if per_day[s.date] >= MAX_SYMPTOMS_PER_DAY:
+                self.skip("symptoms", index, label or SYMPTOM_NAMES[s.symptom],
+                          f"that day already has {MAX_SYMPTOMS_PER_DAY} symptoms, the most one day holds")
+                continue
+            self.conn.execute(
+                "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (self.uid, s.date, s.symptom, label, s.severity, note, s.created_at),
+            )
+            per_day[s.date] += 1
+            self.counts["symptoms"] += 1
+
     # -- "Not for me" -----------------------------------------------------------------------------------------------
     def import_preferences(self) -> None:
         c = self.conn
@@ -922,6 +985,7 @@ class Importer:
         self.import_entries()
         self.import_meals()
         self.import_labs()
+        self.import_symptoms()
         self.import_preferences()
         self.import_profile_and_settings()
 
@@ -932,8 +996,9 @@ class Importer:
 
 
 COUNT_KEYS = ("log_entries", "custom_foods", "shared_foods_kept_as_own", "shared_foods_linked", "built_in_foods_matched",
-              "meal_templates", "lab_results", "food_preferences", "profile", "settings")
-ALREADY_KEYS = ("log_entries", "custom_foods", "shared_foods_linked", "meal_templates", "lab_results", "food_preferences")
+              "meal_templates", "lab_results", "symptoms", "food_preferences", "profile", "settings")
+ALREADY_KEYS = ("log_entries", "custom_foods", "shared_foods_linked", "meal_templates", "lab_results", "symptoms",
+                "food_preferences")
 
 
 def _file_summary(doc: ExportFile) -> dict[str, Any]:
@@ -942,7 +1007,8 @@ def _file_summary(doc: ExportFile) -> dict[str, Any]:
         "app_version": short(doc.app_version, 40) if doc.app_version else None,
         "records": {"log_entries": len(doc.log_entries), "custom_foods": len(doc.custom_foods),
                     "linked_foods": len(doc.linked_foods), "meal_templates": len(doc.meal_templates),
-                    "lab_results": len(doc.lab_results), "food_preferences": len(doc.food_preferences),
+                    "lab_results": len(doc.lab_results), "symptoms": len(doc.symptoms),
+                    "food_preferences": len(doc.food_preferences),
                     "profile": 1 if doc.profile is not None else 0},
     }
 
@@ -965,7 +1031,7 @@ def run_import(conn: sqlite3.Connection, user_id: int, raw: bytes, *, dry_run: b
         else:
             audit(conn, user_id, "data.imported", "user", user_id, ip=ip, merge=merge, profile=bool(importer.counts["profile"]),
                   **{k: int(importer.counts[k]) for k in ("log_entries", "custom_foods", "meal_templates", "lab_results",
-                                                          "food_preferences")})
+                                                          "symptoms", "food_preferences")})
             conn.commit()
             committed = True
     except sqlite3.OperationalError as exc:

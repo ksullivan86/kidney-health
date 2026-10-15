@@ -507,10 +507,11 @@
     ['shared_foods_linked', 'shared food linked to you', 'shared foods linked to you'],
     ['meal_templates', 'saved meal', 'saved meals'],
     ['lab_results', 'lab result', 'lab results'],
+    ['symptoms', 'symptom', 'symptoms'],
     ['food_preferences', '“Not for me” food', '“Not for me” foods'],
     ['settings', 'setting', 'settings'],
   ];
-  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', food_preferences: '“Not for me” food', settings: 'Setting' };
+  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', symptoms: 'Symptom', food_preferences: '“Not for me” food', settings: 'Setting' };
   const IMPORT_SKIP_SHOWN = 12;
   const importCount = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function importLines(counts) {
@@ -518,10 +519,11 @@
     if (counts.profile) lines.push('your profile and targets');
     return lines;
   }
-  // "2 log entries, 1 food of yours, 1 saved meal, 0 lab results" for the sizes of a file or an account.
+  // "2 log entries, 1 food of yours, 1 saved meal, 0 lab results, 0 symptoms" for the sizes of a file or an account.
   function importSizes(r) {
     return [importCount(r.log_entries || 0, 'log entry', 'log entries'), importCount(r.custom_foods || 0, 'food of yours', 'foods of yours'),
-      importCount(r.meal_templates || 0, 'saved meal', 'saved meals'), importCount(r.lab_results || 0, 'lab result', 'lab results')].join(', ');
+      importCount(r.meal_templates || 0, 'saved meal', 'saved meals'), importCount(r.lab_results || 0, 'lab result', 'lab results'),
+      importCount(r.symptoms || 0, 'symptom', 'symptoms')].join(', ');
   }
   function importBlock() {
     const wrap = h('div', { class: 'import-block', id: 'set-import' }, subtitle('Import from a file', 'set-import-h'));
@@ -664,7 +666,7 @@
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
     if (ev.action === 'data.imported') {
-      return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results']]
+      return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms']]
         .filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`).join(', ') || 'nothing new';
     }
     if (ev.action === 'assistant.food_logged') return `${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}, ${d.status}, ${d.meal} on ${d.date}, with “${d.via}”`;

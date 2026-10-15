@@ -397,6 +397,11 @@
     importLabs: (b) => request('POST', '/api/labs/import', b),
     deleteLab: (id) => request('DELETE', `/api/labs/${id}`),
     kidneyFunction: () => request('GET', '/api/labs/kidney-function'),
+    // symptoms log (ARCHITECTURE.md "Symptoms log")
+    symptoms: (start, end) => request('GET', '/api/symptoms?' + qs({ start, end })),
+    addSymptom: (b) => request('POST', '/api/symptoms', b),
+    updateSymptom: (id, b) => request('PUT', `/api/symptoms/${id}`, b),
+    deleteSymptom: (id) => request('DELETE', `/api/symptoms/${id}`),
     foods: (params) => request('GET', '/api/foods?' + qs(params)),
     categories: () => request('GET', '/api/foods/categories'),
     food: (id) => request('GET', `/api/foods/${id}`),

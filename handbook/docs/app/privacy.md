@@ -25,6 +25,7 @@ or delete it.
 |---|---|---|
 | Your account: user name, display name, password **hash** | server | the password itself is never stored |
 | Profile, targets and lab results | server | |
+| Symptoms you write down (the symptom, the date, how bad, your note) | server | in your export; never sent to an AI provider or to an assistant |
 | Every log entry, your own foods, saved meals, foods you marked "Not for me" | server | |
 | Settings, and your own API keys **encrypted** | server | keys are write-only ([Settings and keys](settings-and-keys.md)) |
 | Your activity: sign-ins, password and key changes, exports | server | kept for 365 days by default |
@@ -71,7 +72,7 @@ The handbook (**Learn**) loads nothing from the internet either.
 - **Trends → Export CSV** saves every entry for the days on screen, for your dietitian
   ([Reports for your care team](reports-for-your-team.md)).
 - **Settings → Account → Your data → Export my data (.zip)** downloads one file with everything you
-  entered: profile, settings, every entry, your foods, saved meals, lab results, "Not for me" foods, AI
+  entered: profile, settings, every entry, your foods, saved meals, lab results, symptoms, "Not for me" foods, AI
   history and activity, as JSON and CSV, plus a `README.txt` that explains the files. No passwords,
   sessions or keys are included. You may need to enter your password again first
   ([design note 07][NOTE07]).
@@ -90,7 +91,7 @@ The handbook (**Learn**) loads nothing from the internet either.
    food this way says so in its note, so its totals do not look complete.
 4. Press **Import**. Everything is added, or nothing is.
 
-What comes across: your log entries, the foods you made, saved meals, lab results and "Not for me" foods,
+What comes across: your log entries, the foods you made, saved meals, lab results, symptoms and "Not for me" foods,
 and the USDA and Open Food Facts foods you used (kept as your own copies if the new server does not have
 them, with their licence note). The numbers of an entry are worked out again from its food and amount, as
 for any entry you log.
@@ -102,7 +103,7 @@ to those again on the new server.
 Two boxes, both off at first:
 
 - **Add to my existing data.** A new account is empty, so you do not need it. If the account already has
-  entries, foods, saved meals or lab results, the import is refused unless you tick it; then anything that
+  entries, foods, saved meals, lab results or symptoms, the import is refused unless you tick it; then anything that
   is already there is left out, so importing the same file twice adds nothing.
 - **Also replace my profile, targets and settings.** Your profile, food targets and meal-guidance
   settings are replaced by the ones in the file. They stay off by default because targets are best set

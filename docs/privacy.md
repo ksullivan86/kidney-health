@@ -22,6 +22,15 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   only to work out suggested targets and the kidney-function card, are never written to the server's
   log, are part of the export, and are deleted with the account
   ([Personalised targets and labs](targets-and-labs.md));
+* the **symptoms** the person chooses to record (schema step 15): which symptom (from a short list, or a name of
+  their own up to 60 characters for "other"), the date, how bad (mild, moderate or severe) and an optional note up to
+  300 characters. This is a new kind of health data. It is shown only to that person, on Today and Trends; it is part of
+  the export (`export.json` and `symptoms.csv`) and of the import; it is never written to the server's log, and it
+  is deleted with the account. **It is never sent to an AI provider, the Ask chat or an assistant: the code that builds
+  those requests does not read it** (a test checks that), and a later feature must say so here before it does. The app
+  records and shows a symptom; it does not say what it means. A symptom that the handbook's Get help now page lists
+  as a warning sign shows the handbook's own words and a link to that page; that is computed from the symptom's name
+  alone, on the server, and sends nothing anywhere ([Symptoms](../handbook/docs/app/reports-for-your-team.md));
 * API keys the person chose to store, encrypted;
 * assistant access tokens the person made, when the admin has turned assistant access on
   ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and
@@ -122,7 +131,7 @@ your account on the server you are signed in to. Your browser reads the file and
 server over the same connection as everything else; nothing is sent anywhere else. Before anything changes
 the server checks the file and shows what would be added and what would be left out.
 
-* **Carried over:** your log entries, foods you made, saved meals, lab results and "Not for me" foods; the
+* **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms and "Not for me" foods; the
   shared USDA and Open Food Facts foods you used (linked if the new server has them, otherwise kept as your
   own copies, with their licence note). If you also tick *Also replace my profile, targets and settings*: your
   profile, targets, meal-guidance settings and display settings. That box is off by default because your
@@ -137,7 +146,7 @@ the server checks the file and shows what would be added and what would be left 
   everyone, only for you.
 * **The numbers of an entry are recalculated** from its food and amount, as for any entry you log, so they
   follow the foods on the new server.
-* **No double counting.** An account that already has entries, foods, saved meals or lab results refuses
+* **No double counting.** An account that already has entries, foods, saved meals, lab results or symptoms refuses
   an import unless you tick *Add to my existing data*; then whatever is already there is left out, so
   importing the same file twice adds nothing. A food that is neither in the file nor built in is listed as
   left out, never guessed; a saved meal that loses a food that way says so in its note.
