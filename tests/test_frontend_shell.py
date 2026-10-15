@@ -211,3 +211,14 @@ def test_icon_sources_and_build_script_agree() -> None:
     assert "playwright==" in (ROOT / "requirements-tools.txt").read_text(encoding="utf-8")
     for dev in ("requirements-dev.in", "requirements-dev.lock"):
         assert "playwright" not in (ROOT / dev).read_text(encoding="utf-8").lower()
+
+
+def test_the_toast_never_blocks_a_tap() -> None:
+    # The toast is a short message (role=status, text only, no buttons). Shown for up to 6 s at the bottom of the screen,
+    # it must not take taps from what is under it, such as the offline conflict card's "Keep the saved one" / "Use mine".
+    css = re.sub(r"/\*.*?\*/", "", (STATIC / "css" / "base.css").read_text(encoding="utf-8"), flags=re.S)
+    rules = {m.group(1).strip(): m.group(2) for m in re.finditer(r"([^{}]+)\{([^}]*)\}", css)}
+    assert "pointer-events: none" in rules[".toast"]
+    assert all("pointer-events: auto" not in body for sel, body in rules.items() if ".toast" in sel and "update-toast" not in sel)
+    assert re.search(r'<div id="toast" class="toast" role="status"', INDEX, re.IGNORECASE)
+
