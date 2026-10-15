@@ -215,6 +215,59 @@ def apple_health_files() -> list[dict]:
     return files
 
 
+# --------------------------------------------------------------------------- patient-portal C-CDA files (Lab results → Import from a patient portal file)
+def ccda_files() -> list[dict]:
+    """Hand-written C-CDA documents like a portal's health summary (made-up person, no real data), parsed by the REAL browser's DOMParser: one
+    summary with a Results section (HbA1c in % and in mmol/mol, the albumin/creatinine ratio in two units) and, to be skipped, a pending
+    result, a test the app does not keep, a unit it cannot convert, a limit (IVL_PQ), a blank value and a lab result in a Vital Signs
+    section; a file with a DOCTYPE and an entity (refused before it is parsed), a truncated file (a parse error), and a file that is not XML.
+    HbA1c and urine ratio results only, so they change no suggested target."""
+    ns = 'xmlns="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+
+    def obs(code: str, time: str, value: str, status: str = "completed") -> str:
+        return (f'<component><observation classCode="OBS" moodCode="EVN"><templateId root="2.16.840.1.113883.10.20.22.4.2"/>'
+                f'<id root="1.3.6.1.4.1.99999.3" extension="example-obs"/>'
+                f'<code code="{code}" codeSystem="2.16.840.1.113883.6.1"/><statusCode code="{status}"/><effectiveTime value="{time}"/>{value}'
+                '<performer><assignedEntity><assignedPerson><name><given>Dr</given><family>Example</family></name></assignedPerson></assignedEntity></performer>'
+                '</observation></component>')
+
+    def pq(value: str, unit: str) -> str:
+        return f'<value xsi:type="PQ" value="{value}" unit="{unit}"/>'
+
+    def section(oid: str, title: str, *observations: str) -> str:
+        return (f'<component><section><templateId root="{oid}"/><title>{title}</title><text>HbA1c 5.0 % (narrative, never read)</text>'
+                '<entry><organizer classCode="BATTERY" moodCode="EVN"><templateId root="2.16.840.1.113883.10.20.22.4.1"/>'
+                f'{"".join(observations)}</organizer></entry></section></component>')
+
+    header = ('<recordTarget><patientRole><id root="1.3.6.1.4.1.99999.1" extension="example-0001"/><addr><streetAddressLine>1 Example Street</streetAddressLine></addr>'
+              '<patient><name><given>Sam</given><family>Example</family></name><birthTime value="19700101"/></patient></patientRole></recordTarget>')
+
+    def document(*sections: str, prolog: str = '<?xml version="1.0" encoding="UTF-8"?>\n<?xml-stylesheet type="text/xsl" href="CDA.xsl"?>\n') -> str:
+        return f'{prolog}<ClinicalDocument {ns}>{header}<component><structuredBody>{"".join(sections)}</structuredBody></component></ClinicalDocument>'
+
+    results = section(
+        "2.16.840.1.113883.10.20.22.2.3.1", "Results",
+        obs("4548-4", "20260402120000+0000", pq("6.9", "%")),
+        obs("4548-4", "20260315", pq("53", "mmol/mol")),
+        obs("9318-7", "20260402", pq("28", "ug/mg{creat}")),
+        obs("32294-1", "20260409", pq("2.7", "mg/mmol{creat}")),
+        obs("4548-4", "20260410", pq("7.5", "%"), status="active"),
+        obs("2345-7", "20260402", pq("99", "mg/dL")),
+        obs("4548-4", "20260411", pq("7.2", "mg/dL")),
+        obs("9318-7", "20260412", '<value xsi:type="IVL_PQ"><high value="30" unit="mg/g" inclusive="false"/></value>'),
+        obs("4548-4", "20260413", '<value xsi:type="PQ" nullFlavor="NI"/>'),
+    )
+    vitals = section("2.16.840.1.113883.10.20.22.2.4.1", "Vital signs", obs("4548-4", "20260414", pq("6.0", "%")))
+    summary = document(results, vitals)
+    dtd = document(results, prolog='<?xml version="1.0"?><!DOCTYPE ClinicalDocument [<!ENTITY x "y">]>')
+    return [
+        {"name": "HealthSummary.xml", "mimeType": "text/xml", "buffer": summary.encode()},
+        {"name": "dtd.xml", "mimeType": "text/xml", "buffer": dtd.encode()},
+        {"name": "cut.xml", "mimeType": "text/xml", "buffer": summary[:1500].encode()},
+        {"name": "notes.xml", "mimeType": "text/xml", "buffer": b"not xml at all"},
+    ]
+
+
 # --------------------------------------------------------------------------- helpers
 def fmt_num(v, key) -> str:
     """app.js fmtNum for already-rounded server values."""
@@ -610,6 +663,56 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         check(A, "Apple Health import: the server stored the converted values",
               round(stored[("uacr", "2026-03-09")]["value"], 1) == 30.1 and stored[("uacr", "2026-03-09")]["entered_unit"] == "mg/mmol"
               and stored[("uacr", "2026-03-02")]["value"] == 24 and stored[("a1c", "2026-03-02")]["value"] == 7.1 and ("a1c", "2026-02-10") not in stored,
+              str(sorted(stored)))
+        # ---------------------------------------------------------------- 2c-iii. lab results from a patient-portal C-CDA file (parsed on the device by the real DOMParser)
+        want_ccda = ("4 results found in 4 files; 1 result of tests the app does not track; 1 not completed (pending, cancelled or on hold); 1 result in a unit the app cannot convert; "
+                     "2 without a single number; 1 file refused because it has a DOCTYPE or ENTITY declaration (a real health summary has none); 2 files that are not valid XML.")
+        n_before, n_console = len(rec.requests), len(rec.console)
+        page.set_input_files("#lab-ccda-file", ccda_files())
+        page.wait_for_selector("#lab-ccda-summary")
+        # A malformed XML file makes Chromium's parser build an error document (a parsererror element) with inline styles, which the page's CSP
+        # refuses (style-src 'self'): two console messages per broken file, nothing else. The document is never shown; the page reads it as an error.
+        page.wait_for_timeout(300)
+        noise = [c for c in rec.console[n_console:] if c[0] == "error" and c[1].startswith("Refused to apply inline style")]
+        check(A, "Patient portal file: the two broken files add only Chromium's refused inline styles of its parse-error document to the console",
+              noise and len(noise) == len(rec.console[n_console:]) <= 8, str(rec.console[n_console:][:5]))
+        rec.console[:] = [c for c in rec.console if c not in noise]
+        check(A, "Patient portal file: the real DOMParser reads the summary and the page says what it found, what was refused and why",
+              page.inner_text("#lab-ccda-summary") == want_ccda, page.inner_text("#lab-ccda-summary"))
+        picked = rec.requests[n_before:]
+        check(A, "Patient portal file: choosing the files sends nothing (no write, no other host, no file)",
+              all(m == "GET" and urlparse(u).netloc == urlparse(BASE).netloc and not body for m, u, body, _rt in picked), str([(m, u) for m, u, _b, _r in picked]))
+        ticks = page.locator("#lab-ccda-preview .lab-fhir-list input[type=checkbox]")
+        check(A, "Patient portal file: the four results start ticked, newest first",
+              ticks.count() == 4 and all(ticks.nth(i).is_checked() for i in range(4))
+              and page.locator("#lab-ccda-preview .lab-fhir-list .lab-row-value").all_inner_texts()
+              == ["Urine albumin-to-creatinine ratio 2.7 mg/mmol = 23.9 mg/g", "Urine albumin-to-creatinine ratio 28.0 mg/g", "HbA1c 6.9 %", "HbA1c 53 mmol/mol = 7.0 %"],
+              str(page.locator("#lab-ccda-preview .lab-fhir-list .lab-row-value").all_inner_texts()))
+        refused = page.inner_text("#lab-ccda-preview .lab-fhir-refused")
+        check(A, "Patient portal file: the unit it cannot convert, the limit and the blank value are listed as not imported, with the reasons",
+              "the app cannot convert the unit “mg/dL” for HbA1c" in refused and "a range or a limit" in refused and "the lab left the value blank" in refused, refused)
+        check(A, "Patient portal file: the two import tables share no element id",
+              page.locator("[id^=lab-ccda-row-]").count() == 4
+              and page.evaluate("() => new Set([...document.querySelectorAll('[id]')].map(e => e.id)).size === document.querySelectorAll('[id]').length"), "ids")
+        ok, d = no_hscroll(page)
+        check(A, "no horizontal scroll with the patient portal results open", ok, d)
+        shot(page, A, "03e-labs-patient-portal", full=True)
+        ticks.nth(3).uncheck()
+        check(A, "Patient portal file: unticking one updates the Save button", page.inner_text("#lab-ccda-save") == "Save 3 results", page.inner_text("#lab-ccda-save"))
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/labs/import")) as ri:
+            page.click("#lab-ccda-save")
+        sent = json.loads(ri.value.request.post_data)
+        check(A, "Patient portal file: Save sends only the three ticked rows (test, value, unit, day), no file name, name or XML",
+              ri.value.status == 200 and ri.value.json()["saved"] == 3 and len(sent["results"]) == 3
+              and all(set(r) == {"analyte", "value", "unit", "taken_on"} for r in sent["results"])
+              and not any(bad in ri.value.request.post_data for bad in ("Sam", "Example", ".xml", "<", "ClinicalDocument")), ri.value.request.post_data)
+        page.wait_for_selector("#lab-ccda-preview .lab-import-summary")
+        check(A, "Patient portal file: the page says what was saved", "Saved 3 results" in page.inner_text("#lab-ccda-preview"), page.inner_text("#lab-ccda-preview"))
+        stored = {(r["analyte"], r["taken_on"]): r for r in sget("/api/labs").json()["labs"]}
+        check(A, "Patient portal file: the server stored the converted values, and nothing from the skipped sections",
+              round(stored[("uacr", "2026-04-09")]["value"], 1) == 23.9 and stored[("uacr", "2026-04-09")]["entered_unit"] == "mg/mmol"
+              and stored[("uacr", "2026-04-02")]["value"] == 28 and stored[("a1c", "2026-04-02")]["value"] == 6.9
+              and ("a1c", "2026-03-15") not in stored and ("a1c", "2026-04-14") not in stored and ("a1c", "2026-04-10") not in stored,
               str(sorted(stored)))
         page.click("#labs-back")
         page.wait_for_selector("#view-profile:not([hidden])")

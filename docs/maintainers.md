@@ -54,6 +54,14 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
      headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
      the lookup described in [targets-and-labs.md](targets-and-labs.md#in-the-app);
+   * Labs → Import from a patient portal file with a real C-CDA download from a patient portal (MyChart and at least one other; the
+     "Download" of the health summary or a visit summary, XML or C-CDA format, not the PDF): the documents in
+     `tests/data/ccda_labs_vectors.json` and `tools/e2e/regress.py` are hand-written, so look at the headline's counts for
+     results a real file has that the reader skips (a code or unit the table lacks, a result only on the organizer's `effectiveTime`,
+     a section with other template ids, a file refused for a DOCTYPE), and add a LOINC code only after the lookup described in
+     [targets-and-labs.md](targets-and-labs.md#in-the-app). Also check, in Safari on an iPhone and in Chrome, that the page reads the
+     file (the Trusted Types policy `kh-xml` is the part only a real browser exercises) and that no console error other than
+     Chromium's "Refused to apply inline style" for a malformed file appears;
    * `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and 5 with the image's
      Python, results recorded in [docs/guidance.md](guidance.md#performance);
    * for a release that changes the upgrade path: decide whether to hold `:latest` (below).

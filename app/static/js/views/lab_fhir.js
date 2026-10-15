@@ -43,20 +43,23 @@
     }
   }
 
-  /* review(box, analysis, {onSave, onCancel}) draws an analysis of KH.fhirLabs (start().finish()): the headline, the table (new rows
-     ticked), the refusals, Save and Cancel. onSave(kept, saveButton) gets the ticked rows as {analyte, value, unit, taken_on, label,
-     text}; the caller sends them. Returns {save, cancel, rows}. */
+  /* review(box, analysis, {onSave, onCancel, prefix, emptyHint}) draws an analysis of KH.fhirLabs (start().finish()): the headline, the
+     table (new rows ticked), the refusals, Save and Cancel. onSave(kept, saveButton) gets the ticked rows as {analyte, value, unit,
+     taken_on, label, text}; the caller sends them. Returns {save, cancel, rows}. The patient-portal import (js/views/lab_ccda.js) draws
+     its analysis with this too: `prefix` (default "lab-fhir") starts every element id, so that two tables on the page never share one,
+     and `emptyHint` says where to look when nothing was found. */
   function review(into, analysis, opts = {}) {
+    const prefix = opts.prefix || 'lab-fhir';
     clear(into);
     if (analysis.problem) {
       into.append(h('p', { class: 'form-error', role: 'alert' }, analysis.problem));
       return { save: null, cancel: null, rows: [], headline: null };
     }
-    const headline = h('p', { class: 'lab-import-summary', role: 'status', id: 'lab-fhir-summary', tabindex: '-1' }, `${analysis.summary.join('; ')}.`);
+    const headline = h('p', { class: 'lab-import-summary', role: 'status', id: `${prefix}-summary`, tabindex: '-1' }, `${analysis.summary.join('; ')}.`);
     into.append(headline);
     const rows = analysis.results.map((r, i) => ({ ...r, index: i, cb: null }));
     if (!rows.length) {
-      into.append(h('p', { class: 'hint warn' }, 'No lab result the app keeps was found. Choose the files in the clinical-records folder (the ones whose names start with Observation). '
+      into.append(h('p', { class: 'hint warn' }, `No lab result the app keeps was found. ${opts.emptyHint || 'Choose the files in the clinical-records folder (the ones whose names start with Observation).'} `
         + 'The app keeps potassium, phosphate, albumin, bicarbonate, urine albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c.'));
     } else {
       into.append(h('p', { class: 'hint' }, 'These come from your health system, not from an AI. The new ones are ticked: untick any you do not want. Nothing is saved until you press Save.'));
@@ -64,7 +67,7 @@
 
     const list = h('ul', { class: 'list labs-list lab-import-list lab-fhir-list' });
     for (const r of rows) {
-      const id = `lab-fhir-row-${r.index}`;
+      const id = `${prefix}-row-${r.index}`;
       const cb = h('input', { type: 'checkbox', id });
       cb.checked = !r.saved; // a result the person already has starts unticked
       r.cb = cb;
@@ -87,8 +90,8 @@
       if (hidden) into.append(h('p', { class: 'muted small' }, `${plural(hidden, 'more is', 'more are')} not listed.`));
     }
 
-    const save = h('button', { class: 'btn primary', type: 'button', id: 'lab-fhir-save' }, 'Save');
-    const cancel = h('button', { class: 'btn secondary', type: 'button', id: 'lab-fhir-cancel' }, rows.length ? 'Cancel' : 'Close');
+    const save = h('button', { class: 'btn primary', type: 'button', id: `${prefix}-save` }, 'Save');
+    const cancel = h('button', { class: 'btn secondary', type: 'button', id: `${prefix}-cancel` }, rows.length ? 'Cancel' : 'Close');
     const ticked = () => rows.filter((r) => r.cb.checked);
     function update() {
       const n = ticked().length;

@@ -15,6 +15,8 @@ STATIC = ROOT / "app" / "static"
 INDEX = (STATIC / "index.html").read_text(encoding="utf-8")
 HEAD, BODY = INDEX.split("</head>", 1)
 SCRIPTS = sorted(p for p in STATIC.rglob("*.js") if "vendor" not in p.parts)
+C_CDA_ENGINE = STATIC / "js" / "engine" / "ccda_labs.js"
+C_CDA_PARSE_LINE = "return new root.DOMParser().parseFromString(trustedXml(text), 'application/xml');"
 
 
 def _png(path: Path) -> tuple[int, int, int]:
@@ -53,12 +55,22 @@ def test_scripts_use_no_html_sinks() -> None:
                        r"set(?:Timeout|Interval)\(\s*['\"`]")
     for path in SCRIPTS:
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if path == C_CDA_ENGINE and line.strip() == C_CDA_PARSE_LINE:
+                continue  # the one exception: the C-CDA import's XML parse, through its own Trusted Types policy (below)
             assert not sinks.search(line), f"{path.relative_to(ROOT)}:{n}: {line.strip()}"
 
 
-def test_only_pwa_js_creates_a_trusted_types_policy_and_only_for_sw_js() -> None:
+def test_only_two_files_create_a_trusted_types_policy_each_one_named_and_narrow() -> None:
     owners = [p for p in SCRIPTS if "createPolicy" in p.read_text(encoding="utf-8")]
-    assert owners == [STATIC / "js" / "pwa.js"]
+    assert owners == [C_CDA_ENGINE, STATIC / "js" / "pwa.js"]
+    # kh-xml: the patient-portal file import; its text goes through createHTML only if it is a string with no DOCTYPE or ENTITY
+    cdaengine = C_CDA_ENGINE.read_text(encoding="utf-8")
+    assert cdaengine.count("createPolicy(") == 1 and "tt.createPolicy('kh-xml'" in cdaengine
+    assert "'default'" not in cdaengine and "allow-duplicates" not in cdaengine
+    assert "if (typeof s !== 'string' || DTD_RE.test(s)) throw new TypeError('blocked XML');" in cdaengine
+    # DOMParser is used by that one file, once, for application/xml, with the policy's output; nowhere else in the app
+    assert [p for p in SCRIPTS if "DOMParser" in p.read_text(encoding="utf-8")] == [C_CDA_ENGINE]
+    assert cdaengine.count("parseFromString") == 1 and C_CDA_PARSE_LINE in cdaengine
     pwa = (STATIC / "js" / "pwa.js").read_text(encoding="utf-8")
     assert pwa.count("createPolicy(") == 1 and "createPolicy('kh-sw'" in pwa
     assert "'default'" not in pwa and "allow-duplicates" not in pwa

@@ -144,6 +144,8 @@ printed results for you to check, but only when your admin has an AI on your own
 every row starts unticked and only the rows you tick are saved.
 If you use an iPhone and linked your health system in the Health app, **Lab results → Import from Apple Health (clinical
 records)** can read those results from the Health export, on your phone ([steps below](#import-lab-results-from-the-iphone-health-app)).
+If your patient portal (MyChart or another) can download your health summary as a file, **Lab results → Import from a patient portal
+file (C-CDA .xml)** can read its lab results in the same way ([steps below](#import-lab-results-from-a-patient-portal-file)).
 Which detail changes which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
 Under each suggested number, **Why this number?** shows the rule, its source and grade, and an **Expert
 opinion** badge where part of the rule is the app's own choice; nothing is saved until you tap
@@ -226,6 +228,37 @@ What to know:
   the files anywhere. It reads up to 2,000 files at a time, up to 1 MB each; if you have more, choose some of them.
 - The app only copies the numbers. It does not say whether a result is normal, high or low, and it never changes your saved
   targets: talk to your care team about what a result means.
+
+## Import lab results from a patient-portal file
+
+Many patient portals (MyChart and others) let you download your health summary or a visit summary as a file for other apps. If
+yours does, the app can read the lab results in it. **The file is read on your phone or computer. Nothing is uploaded**: you check
+every result, and only the results you keep are saved on your server.
+
+1. In your patient portal, open your **health summary** or a **visit summary** and choose **Download**. If it asks which format,
+   choose **XML** (it may be called **C-CDA** or **CCD**), not the PDF. The menus are named differently in each portal, so look for
+   "Download" or "Share". Save the file where you can find it.
+2. In this app, go to **Profile → Lab results** and find **Import from a patient portal file (C-CDA .xml)**. Tap **Choose Files**,
+   pick the **.xml** file (you can pick several), and tap **Open**.
+3. The app reads the file and shows a line such as "12 results found in 1 file". Below it are the results it recognised, each
+   converted to the app's units. The results you do not have yet are **ticked**: untick any you do not want. A result you already
+   saved is not ticked.
+4. Tap **Save**. A potassium of 6.0 mmol/L or more shows the same urgent warning as when you type it.
+
+What to know:
+
+- The app reads only the **Results** part of the summary, only the nine tests it uses (potassium, phosphate, albumin, bicarbonate,
+  urine albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c), and only results marked completed. Everything else in
+  the file (medicines, allergies, vital signs, visits, and tests the app does not use) is skipped and counted.
+- A result is listed as **not imported**, with the reason, when it has no single number (such as "<0.5"), a unit the app cannot
+  convert, no usable date, or a number outside the plausible range. You can type those by hand if you want them.
+- The app does not read your name, address, record numbers, doctors or the notes in the file, and it does not send the file
+  anywhere. It reads up to 20 files at a time, up to 5 MB each. A file that is not a health summary, or that is damaged, is
+  skipped and counted; so is a file that contains a document type declaration, which a real health summary does not have.
+- The app only copies the numbers. It does not say whether a result is normal, high or low, and it never changes your saved
+  targets: talk to your care team about what a result means.
+- A portal's file may have results the app cannot place (a different code or unit). The line at the top says how many were left out;
+  type those by hand.
 
 ## Examples
 

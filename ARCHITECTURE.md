@@ -795,6 +795,10 @@ app/static/
   js/engine/fhir_labs.js  (v0.4: KH.fhirLabs, the reader of Lab results → Import from Apple Health, FHIR clinical-records files; browser
                         only, no Python twin; tests/data/fhir_labs_vectors.json; loads after lab_import.js) and js/views/lab_fhir.js (KH.labFhir, its
                         card and review table, after lab_photo.js; "Lab results from Apple Health clinical records" under "M2 API: targets and labs")
+  js/engine/ccda_labs.js  (v0.4: KH.ccdaLabs, the reader of Lab results → Import from a patient portal file, a C-CDA XML health summary parsed in the
+                        browser; browser only, no Python twin; tests/data/ccda_labs_vectors.json; reuses KH.fhirLabs's LOINC table, units, day rule and
+                        collector, so it loads after fhir_labs.js) and js/views/lab_ccda.js (KH.labCcda, its card, after lab_fhir.js, whose review table
+                        it draws; "Lab results from a patient-portal C-CDA file" under "M2 API: targets and labs")
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
@@ -1364,6 +1368,54 @@ appear only on the page, in the list of refusals, and no file or file name is st
   `tests/test_fhir_labs_ui.py` (with `tests/js/fhir_labs_page.mjs`) checks the page: no inline script or handler, no network call, nothing
   stored in the browser, a file over 1 MB never read, new rows ticked, only ticked rows saved, text drawn as text. The demo has the same
   card (`js/mock/labs.js` answers the import route).
+
+### Lab results from a patient-portal C-CDA file (browser only; `js/engine/ccda_labs.js`, `js/views/lab_ccda.js`; ROADMAP "Ideas from the owner")
+
+**No new route, no new setting, no new dependency, no new network request, no schema step; one CSP change (below).** Patient portals
+(MyChart and others) let a person download a C-CDA (HL7 Consolidated CDA R2.1) "health summary" as an XML file. The person chooses the
+`.xml` file(s) in the Labs view (card `#lab-ccda`, below "Import from Apple Health"). **Least trust: the XML is parsed in the browser,
+never uploaded, and the server has no XML parser** (the roadmap's first plan was `defusedxml` on the server; a browser parse needs no
+dependency and sends nothing, and the file holds the patient's name, address and ids). Each file is opened with `File.text()` (a file
+over 5 MB is not opened), refused if it contains `<!DOCTYPE` or `<!ENTITY` (checked on the text, before any parser sees it; a real C-CDA
+has no DTD; counted, never cleaned), parsed by `new DOMParser().parseFromString(…, 'application/xml')` (a browser never loads an
+external entity or DTD), refused on a `parsererror` or a root that is not a `ClinicalDocument` of `urn:hl7-org:v3`, read, and let go of
+before the next file. `KH.ccdaLabs.start({today, existing, tzOffsetMinutes, parseXml}).add(file)` / `finish()` return the rows, the
+refusals and the counts exactly like `KH.fhirLabs`; the page draws them with `KH.labFhir.review` (id prefix `lab-ccda`) and only the ticked
+rows go to `POST /api/labs/import` through `KH.views.labs.saveImported` (test, value, unit and day, nothing else). `parseXml` is a
+parameter (default: the browser's `DOMParser`); Node tests pass the dev-only `tests/js/mini_xml.mjs`, which no page file loads. Contract:
+
+* **Reuse.** The LOINC table, `unitOf` (units through `KH.kidney`), the day rule (`dayOf`), the counting, repeat-collapsing, "already
+  saved" marking, 1,000-row cap and headline (`collector`) are `KH.fhirLabs`'s, exported from `js/engine/fhir_labs.js`; nothing is
+  copied (`tests/test_ccda_labs.py` fails on a second table or unit list). The FHIR reader's behaviour is unchanged (its vectors).
+* **Sections and entries.** Walk `ClinicalDocument/component/structuredBody/component/section` (and sections nested by `component`); keep
+  sections whose `templateId/@root` is `2.16.840.1.113883.10.20.22.2.3.1` (Results, entries required) or `…2.3` (entries optional); from a
+  Results section follow only `entry`, `organizer`, `component` to `observation` (Result Organizer `…4.1` is read through, not required); an
+  observation with `templateId/@root` `…4.2` (Result Observation) is a record, any other is "not a lab result", and an observation's own
+  children are never walked. Other sections are ignored. The OIDs are cited with their HL7 sources, and what could not be verified (the
+  R2.1 definition page of `…2.3`), in `docs/targets-and-labs.md`; `tests/test_ccda_labs.py` pins them.
+* **Test.** `code/@code` with `@codeSystem` `2.16.840.1.113883.6.1`, and each `code/translation` the same way, through `KH.fhirLabs.LOINC`;
+  two codes for different tests, none, or a `nullFlavor` code skip the record (counted).
+* **Status, value, unit, day.** `statusCode/@code` = `completed`; `value` with `xsi:type` `PQ`, a plain number in `@value` (`<5`, `>100`,
+  `IVL_PQ`, text, a second value, a `nullFlavor` are refused with the reason) and the UCUM `@unit` read through `unitOf` (unknown or missing
+  unit refused); `effectiveTime/@value` else `effectiveTime/low/@value`, an HL7 TS `YYYYMMDD[HHMM[SS[.S]]][+/-ZZZZ]` read by `dayOf` (the
+  FHIR reader's rules: a time with a zone is the device's calendar day, a date alone as written, nothing before 1900 or after tomorrow).
+* **Limits.** 20 files per pick (more are refused before any is read), 5 MB per file, 200,000 elements and depth 64 walked per file (all or
+  nothing: a file over the budget keeps no row), only structural elements walked (never the narrative, names, addresses, ids, authors,
+  performers or notes, which are not read at all: `tests/test_ccda_labs_ui.py` pins the exact element and attribute names the code asks
+  for), 1,000 rows, 100 listed refusals; counts stay exact; text from a file reaches the page only through `h()` (text nodes).
+* **Trusted Types (the CSP change).** `require-trusted-types-for 'script'` makes `DOMParser.parseFromString` a sink that throws on a plain
+  string, so `app/security.py` now says `trusted-types kh-sw kh-xml`. `kh-xml` is created once, in `ccda_labs.js` only; its `createHTML`
+  accepts a string with no DOCTYPE or ENTITY and returns it unchanged, and the result is passed straight to the parser. No default policy,
+  no `allow-duplicates`; `tests/test_frontend_shell.py` allows exactly two files to create a policy (`pwa.js`: `kh-sw`; `ccda_labs.js`:
+  `kh-xml`), exactly one parser call and no other `parseFromString`; `tests/test_security.py` pins the CSP. Without Trusted Types, or when a
+  host page's CSP does not list the name (the Artifact-hosted preview), the string is used or the file is counted "could not be read".
+* **Safety.** Nothing here gives advice or says whether a result is normal; the potassium banner and "what this result changed" come from
+  the shared save as for a typed result. A real portal export has not been tried (hand-written samples only).
+* **Parity and tests.** No Python twin: `tests/data/ccda_labs_vectors.json` (hand-written C-CDA documents and expectations;
+  `tests/js/gen_ccda_labs_vectors.mjs` stops if the module disagrees) is replayed by `node tests/js/run_vectors.mjs`; `tests/test_ccda_labs.py`
+  converts every proposed row with `app/units.py` and posts them to `POST /api/labs/import`; `tests/test_ccda_labs_ui.py` (with
+  `tests/js/ccda_labs_page.mjs`, whose fake parser throws on a plain string as Chromium does) checks the page; `tools/e2e/regress.py` runs a
+  sample through real Chromium (the real `DOMParser` and the policy). The demo has the same card (`js/mock/labs.js` answers the import route).
 
 ### Settings (registered in `app/settings_registry.py`)
 
