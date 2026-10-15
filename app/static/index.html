@@ -1579,6 +1579,49 @@
   </form>
 </dialog>
 
+<!-- ===================== MENU DAY SHEET (js/views/menuplan.js fills it: "Add this day to my plan" from a handbook link; saves nothing until "Add to plan") ===================== -->
+<dialog id="sheet-menuplan" class="sheet" aria-labelledby="sheet-menuplan-title" aria-describedby="sheet-menuplan-sub">
+  <form method="dialog" class="sheet-form" id="menuplan-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-menuplan-title" class="sheet-title">Add this menu day to my plan</h2>
+        <div class="sheet-sub" id="sheet-menuplan-sub">From a link in the handbook. Nothing is saved until you press Add to plan. The amounts are the link's; every number shown is this app's own.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-error" id="menuplan-error" role="alert" hidden></div>
+      <div class="field" id="menuplan-date-field">
+        <label for="menuplan-date">Date</label>
+        <input id="menuplan-date" type="date" required>
+        <span class="hint">Tomorrow, or the next day with nothing logged or planned. Foods are added as planned.</span>
+      </div>
+      <div id="menuplan-groups"></div>
+      <div class="menuplan-skipped" id="menuplan-skipped" hidden>
+        <h3 class="mp-meal-title">Not added</h3>
+        <ul id="menuplan-skipped-list" class="mp-skipped"></ul>
+      </div>
+      <div class="preview" id="menuplan-preview">
+        <div class="preview-head">
+          <h3 class="preview-title">This menu day</h3>
+          <span class="muted small" id="menuplan-count"></span>
+        </div>
+        <div id="menuplan-key" class="key-numbers"></div>
+        <h3 class="preview-title mp-sub" id="menuplan-day-title"></h3>
+        <ul id="menuplan-lines" class="mp-lines"></ul>
+      </div>
+      <div class="warnings" id="menuplan-warnings" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" id="menuplan-close" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="menuplan-save">Add to plan</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===================== GUIDANCE SHEET (js/views/guidance.js fills it: plan the day, a meal that fits, treating a low) ===================== -->
 <dialog id="sheet-guidance" class="sheet guidance-sheet" aria-labelledby="sheet-guidance-title" aria-describedby="sheet-guidance-sub">
   <form method="dialog" class="sheet-form" novalidate>
@@ -1674,6 +1717,7 @@
 <script src="js/engine/rules.js"></script>
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/lab_import.js"></script>
+<script src="js/engine/menu_link.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -1709,6 +1753,7 @@
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>
 <script src="js/views/plan.js"></script>
+<script src="js/views/menuplan.js"></script>
 <script src="js/views/trends.js"></script>
 <script src="js/views/labs.js"></script>
 <script src="js/views/profile.js"></script>

@@ -26,6 +26,9 @@ validation:
     anchors: warn
     absolute_links: warn
     unrecognized_links: warn
+# Where each menu day's "Add this day to my plan" link points: the app (HANDBOOK_APP_LINK), its demo (Pages) or nowhere.
+hooks:
+  - tools/menu_links.py
 watch:
   - includes
   - sources.yml

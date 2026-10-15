@@ -85,6 +85,8 @@ def main(argv: list[str]) -> int:
                 broken.append(f"{rel}: {url} (leaves the site)")
             elif not target.exists():
                 broken.append(f"{rel}: {url} (missing)")
+            elif "?" in u.fragment:
+                continue  # an app route such as #plan-menu?items=... (the menu days' links), not a page anchor
             elif u.fragment and target.suffix == ".html" and target in pages and u.fragment not in pages[target].ids:
                 broken.append(f"{rel}: {url} (no such anchor)")
 

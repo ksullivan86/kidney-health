@@ -86,6 +86,8 @@ Food safety first: eggs are cooked until the yolk and white are firm, and the tu
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b172187x1,b172688x2,b173430x1,b169097x1,b167762x2,b171890x1,l172688x2,l171496x0.5,l171009x2,l169247x1,l170457x0.5,l171688x1,s167959x1,s173430x0.5,d175168x1,d169704x0.8,d169141x2,d171413x1,d167747x1,s167577x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 2
 
 <div class="kh-numbers" markdown>
@@ -125,6 +127,8 @@ Food safety first: eggs are cooked until the yolk and white are firm, and the tu
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b173905x1,b171267x0.5,b171711x1,b170187x0.5,b168833x2,b173430x1,b171890x1,l174915x1,l171477x0.5,l169247x1,l168409x1,l170457x0.5,l174289x1,l171413x1,l174683x1,s169118x1,s173414x0.5,d168250x0.8333,d168483x1,d169704x0.5,d169141x2,d173430x1,s167959x1,s173430x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 3
 
 Canned light tuna is fine after a transplant. Smoked fish from the fridge case (lox) is not, unless it is cooked in a dish.
@@ -163,6 +167,8 @@ Canned light tuna is fine after a transplant. Smoked fish from the fridge case (
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b175063x1,b174266x0.5,b173944x0.75,b171267x0.5,b173430x1,l173709x0.6667,l171009x1,l169988x0.5,l172688x2,l169247x1,l171688x1,s170393x1,s174289x1,s172749x0.6667,d173118x0.8333,d169704x0.75,d169967x2,d173430x1,d171413x1,d167762x1,s167577x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 4
 
 <div class="kh-numbers" markdown>
@@ -199,6 +205,8 @@ Canned light tuna is fine after a transplant. Smoked fish from the fridge case (
 | **Day** | **1,853 kcal** | | **209** | **68.8** | **2,495** | **1,174** | **758** | **454** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b173911x1,b171267x1,b167755x1,b171890x1,l173424x2,l171009x1,l173430x1,l172688x2,l169247x1,l168409x1,l174683x1,l170393x1,s169118x1,s170567x0.5,d171956x0.8333,d169700x1,d168390x1,d171413x2,d167747x1,d169930x1,s167959x1,s173430x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 5
 
@@ -244,6 +252,8 @@ Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food th
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b175009x1,b169661x1,b167762x1,b171711x1,b173430x1,b172187x1,b171890x1,l171477x0.5,l169704x0.5,l173735x0.5,l174524x1,l169247x1,l173414x0.5,l169999x0.5,l171413x1.5,s171688x1,s174266x0.5,d174492x0.8333,d172796x1,d169247x0.5,d170457x0.25,d169381x1,d169975x1,d171009x1,d173469x1,d169126x1,s167577x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 6
 
 <div class="kh-numbers" markdown>
@@ -281,6 +291,8 @@ Burger night: ground poultry is cooked to 165 °F (74 °C); check with a food th
 | **Day** | **1,807 kcal** | | **208** | **63.6** | **1,962** | **1,030** | **1,147** | **236** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171657x1,b173430x1,b168833x2,b173424x1,b168195x1,b172688x1,b171890x1,l173414x1,l172688x2,l173430x1,l168409x1,l170393x1,l171688x0.5,l167762x1,s169118x1,s170187x0.5,d172388x0.8333,d168919x1,d170394x1,d173430x1,d169141x1,s167959x1,s173430x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 7
 
@@ -323,6 +335,8 @@ Leftovers from the week? Reheat them until steaming hot, 165 °F (74 °C).
 | **Day** | **1,812 kcal** | | **205** | **66.1** | **2,494** | **1,190** | **304** | **394** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b173905x1,b171267x0.5,b171688x0.5,b170187x0.5,b168833x1,b173430x1,b171890x1,l169737x1,l171477x0.5,l170108x1,l168409x1,l171413x1.5,l173469x1,l171247x1,l167762x1,s168195x2,s170567x0.5,d175168x0.8333,d168917x0.75,d168390x1,d169141x1,d167747x1,d171413x1,d169126x1,s167577x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Swaps that keep the numbers
 

@@ -87,7 +87,15 @@ the app ([Sample menus](../eat/menus/index.md); [design note 08][NOTE08]). Every
 builtin food, with the **same name** in the app, and amounts are given in household measures and grams
 ([USDA FoodData Central][FDC]).
 
-To put a menu day into your plan:
+The quickest way is the link under each day on a menu page: **Add this day to my plan**. The app opens
+(and asks you to sign in first if you are signed out). It lists the day's foods with its own numbers and shows
+what the day adds up to with anything you have already planned. Choose the date, untick any food you do not
+want, and press **Add to plan**. The foods go in as **planned**, so you can mark each one eaten later. Nothing
+is saved until you press **Add to plan**, and the link only names foods from the app's own list and how many
+servings: the app works out every number itself. If the link does not open your app, for example on another
+device, use the steps below.
+
+To put a menu day into your plan by hand:
 
 - [ ] Open the menu for your stage, for example [Stage 3](../eat/menus/g3.md).
 - [ ] On **Add**, choose the day, search each food by its name, and enter the **grams** from the menu.

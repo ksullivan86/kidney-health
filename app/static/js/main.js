@@ -21,6 +21,9 @@
     if (KH.views.ask && KH.views.ask.refreshTab) KH.views.ask.refreshTab().catch(() => false);
     const initial = view || location.hash.replace('#', '');
     router.show(router.VIEWS.includes(initial) ? initial : 'today');
+    // A "Add this day to my plan" link from the handbook, kept in memory while signing in (js/views/menuplan.js): shows
+    // its confirmation sheet now; nothing is saved until the person presses "Add to plan".
+    if (KH.menuPlan) KH.menuPlan.openPending().catch((e) => console.warn('Menu day:', e));
     // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
     if (KH.pwa && KH.pwa.countVisit) KH.pwa.countVisit();
   }

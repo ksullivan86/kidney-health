@@ -121,6 +121,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   anything is saved, you tick the ones to keep, and only those are sent, never the file or its other
   columns. Values that are not one number ("<0.5", ">90"), dates in the future, results outside the
   plausible range and results already saved are listed and left out. New route: `POST /api/labs/import`.
+* **"Add this day to my plan" on the handbook's sample menus.** Under each day of the seven-day menus is a link
+  that opens the app at a sheet for that day: the day's foods, each with the app's own name and numbers, grouped by
+  meal with a tick box, a date (tomorrow, or the next day with nothing logged or planned) and what the day adds up
+  to together with what you have already planned. Untick what you do not want and press **Add to plan**; the foods
+  are added as **planned**. **Nothing is saved until you press Add to plan**, and pressing it twice adds nothing
+  twice. The link only names foods from the app's own list and how many servings; a food that is not in that list,
+  an amount that makes no sense or a link that was changed is listed under **Not added** with the reason, or the
+  whole link is refused. If you are signed out, the app keeps the link in memory while you sign in and then shows the
+  sheet (a page reload or an outside sign-in page forgets it: open the link again). A food that treats a low is
+  planned like any other food and gets no warning of its own. On the GitHub Pages copy of the handbook the link opens
+  the app's demo. See [Planning meals and using the menus](handbook/docs/app/planning-and-menus.md#using-the-handbooks-sample-menus).
 * **Try the app without installing it.** When the handbook is published on GitHub Pages, the app's demo is
   published beside it, at `demo/`, and every handbook page links to it ("Try the app (demo)"). It is the real
   app with a sample person and a month of meals, running entirely in your browser: nothing you type leaves
@@ -258,6 +269,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   exact path in `app.security.BEARER_PATHS` (no cookie CSRF checks, the Origin rule kept), and
   `tests/test_auth_coverage.py` holds it to being the only write route outside `/api`. `tests/test_mcp.py` covers
   the protocol, auth and every tool; `python tools/e2e/mcp_smoke.py` speaks the protocol to a real server.
+* **Menu days to the app (ROADMAP v0.4, note 08 §4.10).** `scripts/build_handbook.py` writes a plain link under each
+  generated menu day, `#plan-menu?items=b173905x1,…` (`<meal letter><fdc_id>x<servings>`: built-in foods only, at most
+  40, no personal data, no numbers the app would trust) and fails a day the link cannot carry. The MkDocs hook
+  `handbook/tools/menu_links.py` points it at the app (`HANDBOOK_APP_LINK`), at the Pages demo or drops it.
+  `js/engine/menu_link.js` reads it strictly (`tests/data/menu_link_vectors.json`, `node tests/js/run_vectors.mjs`) and
+  `js/views/menuplan.js` shows the confirmation sheet; foods resolve through `GET /api/foods/builtin` (no new route, no
+  schema change) and only **Add to plan** writes, through `POST /api/log/batch` with a `client_id` per food. Contract:
+  [ARCHITECTURE.md](ARCHITECTURE.md#menu-days-in-the-app-add-this-day-to-my-plan-v04); tests `tests/test_menu_plan.py`;
+  `python tools/e2e/menuplan.py` in Chromium. `handbook/tools/check_links.py` no longer reads a `#route?x=y` fragment as
+  a page anchor.
 * `requirements.txt` and `requirements-dev.txt`, kept through 0.3.0 so older instructions still worked,
   are gone. Install from the hash-locked files instead:
   `pip install --require-hashes --no-deps -r requirements-dev.lock` (or `requirements.lock` for the app

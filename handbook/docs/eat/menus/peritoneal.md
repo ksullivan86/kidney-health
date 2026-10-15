@@ -89,6 +89,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b173905x1,b171711x2,b172187x1,b172183x1,b171890x1,b171255x0.5,l174924x2,l171496x0.8333,l171009x1.5,l169247x1,l170457x0.25,l169097x1,s172746x1,s174266x0.5,d171477x1,d168878x1,d170394x0.5,d169141x0.5,d171413x2,s169930x1,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 2
 
 <div class="kh-numbers" markdown>
@@ -127,6 +129,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Day** | **1,745 kcal** | | **186** | **76.1** | **2,126** | **918** | **878** | **710** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b175063x1,b173424x1,b172183x1,b173418x1,b167762x1,b169936x1,b173227x1,l169737x1,l171477x0.8333,l171413x2,l170108x1,l168409x1,l169949x1,s170250x1,s169641x0.5,d175168x1,d170440x1,d168390x1,d167747x1,d173430x2,d174924x2,s174683x1,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 3
 
@@ -167,6 +171,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171655x1,b173430x1,b172187x1,b172183x1,b169930x1,b171890x1,l174915x1,l173709x0.8333,l171009x1.5,l169988x1,l169247x1,l169949x1,l171711x0.5,s167959x1,s173430x1,d171817x1,d168878x1,d170394x0.5,d169976x1,d173430x1.5,s167762x1,s174974x0.5,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 4
 
 <div class="kh-numbers" markdown>
@@ -205,6 +211,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Day** | **1,579 kcal** | | **185** | **76.1** | **2,062** | **706** | **746** | **710** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171657x1,b167755x1,b173424x1,b172183x1,b174924x1,b173430x1,b171890x1,l172796x1,l174031x1,l169247x0.5,l170457x0.25,l170000x0.5,l169381x2,l167765x1,s174957x0.5,s169105x1,d171956x1,d169700x1.25,d167747x1,d169292x1,d171413x2,s169936x1,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 5
 
@@ -246,6 +254,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b174648x1,b174832x0.75,b171711x1,b172187x1,b172183x1,b174924x1,b173227x1,l174924x2,l171477x0.8333,l171009x1,l169248x1,l168409x0.5,l169118x1,s172746x1.2,s173418x2,d172388x1,d168878x0.75,d170108x1,d170000x0.5,d169976x2,d172336x2,d169230x1,s167577x1,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 6
 
 <div class="kh-numbers" markdown>
@@ -283,6 +293,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Day** | **1,744 kcal** | | **189** | **76.1** | **2,382** | **960** | **748** | **710** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b174899x0.5,b173418x0.5,b172187x2,b172183x2,b169126x1,b171890x1,l168878x0.75,l172448x1.5,l169141x1.5,l170427x1.5,l172336x2,l169230x1,s170250x1,s174266x0.5,d168240x1,d170440x2,d169141x1,d171695x1,d173430x1,s171711x1,s174974x0.5,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 7
 
@@ -324,6 +336,8 @@ The dialysis fluid adds calories and glucose that are not in these totals (often
 | **Day** | **1,748 kcal** | | **179** | **82.4** | **1,713** | **840** | **821** | **824** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171657x1,b167762x1,b174924x1,b173430x0.5,b173424x1,b172183x1,b171890x1,b171255x1,l169737x1,l174492x0.8333,l171413x1.5,l169230x2,l170000x1,l169292x0.5,l171247x1,s172746x1,s173418x0.5,d171477x1,d169700x0.5,d167747x1,d168390x1,d171413x2,d169930x2,s169596x1,s173647x2">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Swaps that keep the numbers
 
