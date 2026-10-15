@@ -85,7 +85,9 @@
 .ai-routing-table input[type="radio"] { width: 20px; height: 20px; }
 .ai-route-lock { display: block; font-weight: 400; }
 .ai-route-rule { margin: 0; }
-.ai-routing-table thead th { overflow-wrap: anywhere; }
+.ai-routing-table thead th { overflow-wrap: break-word; } /* not `anywhere`: that lets the table squeeze a column until "Local" breaks inside the word */
+.ai-routing .form-grid .field { min-width: 0; }
+.ai-routing .form-grid .hint { overflow-wrap: anywhere; } /* AI_PROVIDER_ROLE=local is one long word in a half-width column */
 .ai-dry-fallback { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
 .ai-dry-fallback p { margin: 4px 0; }
 .ai-consent-fallback { margin: 8px 0; padding-top: 8px; border-top: 1px solid var(--border); }
@@ -94,3 +96,5 @@
 .ai-routing-warnings p { margin: 0; }
 .ai-routing-lines { margin: 4px 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
 .ai-routing-person { margin-top: 12px; }
+/* The "Allow the cloud AI (host) as the fallback" buttons name a host: let the words wrap instead of running past a phone's edge. */
+.ai-routing-lines .btn, .ai-fallback-line + .settings-actions .btn { white-space: normal; height: auto; min-height: var(--tap); padding-top: 8px; padding-bottom: 8px; line-height: 1.25; text-align: center; max-width: 100%; }

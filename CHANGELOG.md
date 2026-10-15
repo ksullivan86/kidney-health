@@ -123,7 +123,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   notice and the app's own numbers; links are removed; lab words add "Lab results are for your care team to
   interpret." The conversation stays in the page (**New conversation**, reloading or signing out clears it; the server
   keeps no transcript). Ask has its own consent ("What will be sent?" shows the exact request) and one question can
-  use up to 7 AI calls, each counted in the daily limit. Voice is a later part. The demo shows the tab with a note and
+  use up to 7 AI calls, each counted in the daily limit. Speaking a question is the "Talk to Ask" item above. The demo shows the tab with a note and
   no input. See [docs/assistant.md](docs/assistant.md#the-ask-screen-the-chat-inside-the-app).
 * **Ask can save food and recipes, with a trust setting you control.** Ask the assistant to "log a banana for
   breakfast" or to save a recipe. By default (**Settings → AI ideas → How much do you trust the assistant? → Ask me
@@ -252,6 +252,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **The Content-Security-Policy names one more Trusted Types policy: `trusted-types kh-sw kh-xml`.** The patient-portal
+  (C-CDA) lab import parses the .xml file in the browser, and the browser's XML parser is a Trusted Types sink; the new
+  `kh-xml` policy is created once by the app and passes only files without a DOCTYPE or ENTITY declaration. If you set
+  your own CSP at a reverse proxy instead of using the app's header, add `kh-xml` there too, or that import cannot read
+  any file. See [docs/security.md](docs/security.md).
 * **Importing an export that holds glucose tablets (or gel, shots or a salt substitute) works.** The built-in list gives
   glucose tablets, gel and shots and the two salt substitutes a negative food number of their own (where a USDA food has its
   FoodData Central id), and a copy of such a food keeps it. An export of a log that used one wrote that number in
@@ -471,7 +476,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   rules and the `hypo` purpose note are the same text for every profile (a test compares them across three profiles);
   `TASK_SYSTEM_PROMPT` (describe a meal, label, plate) is one fixed sentence with no profile data. `person_block` sends null
   for a stage or diabetes type not chosen yet; `targets_block(meal_carbs=False)` leaves the per-meal and per-snack carbohydrate
-  goals out for diabetes "None". **`PROMPT_VERSION` is `2026-10-15.3`: the owner runs the golden set with a live model for it**
+  goals out for diabetes "None". **This made `PROMPT_VERSION` `2026-10-15.3` (the lab report photos made it `.4`): the owner runs the golden set with a live model for the current one**
   (command in [docs/ai.md](docs/ai.md#for-contributors)). Tests: `tests/test_ai_prompts.py` (snapshots
   `tests/fixtures/ai/prompts_*.txt` for type 1 with CKD 4, kidney-only stage 3b and not chosen yet),
   `tests/test_ai_profile_prompts.py`, the golden cases `tests/ai_golden/kidney-only-*.json` (one per feature) and the

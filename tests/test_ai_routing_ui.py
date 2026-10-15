@@ -192,3 +192,13 @@ def test_settings_offers_to_agree_to_the_cloud_ai_later_only_where_the_person_ha
     assert a["after"]["hidden"] is True
     assert "Agreed: if the local AI's answer fails the app's checks, api.openai.com is asked." in a["after"]["line"]
     assert "never asked" not in a["after"]["line"]
+
+
+def test_the_phone_layout_rules_of_the_routing_pieces_stay():
+    """Found by tools/e2e/fallback.py at 375 px: a button naming a host ran past the screen, a table heading broke inside
+    the word "Local", and `AI_PROVIDER_ROLE=local` overlapped the next column. The rules that fixed them stay in ai.css."""
+    button_rule = re.search(r"\.ai-routing-lines \.btn[^{]*\{([^}]*)\}", CSS)
+    assert button_rule and "white-space: normal" in button_rule.group(1) and "max-width: 100%" in button_rule.group(1)
+    assert re.search(r"\.ai-routing-table thead th \{ overflow-wrap: break-word;", CSS)  # `anywhere` lets the table squeeze a column mid-word
+    assert re.search(r"\.ai-routing \.form-grid \.hint \{ overflow-wrap: anywhere;", CSS)
+    assert re.search(r"\.ai-routing \.form-grid \.field \{ min-width: 0;", CSS)

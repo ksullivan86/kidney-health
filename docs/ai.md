@@ -851,7 +851,7 @@ history.
   have not been made ([`ROADMAP.md`](ROADMAP.md)).
 * **Re-run the golden set after a prompt change** (the owner, with a live model; CI never does). Any change to the
   prompts bumps `PROMPT_VERSION`, and the new version needs a live run before a model is called recommended for it.
-  `PROMPT_VERSION` `2026-10-15.3` (the instructions follow the profile) has not had one yet. The offline set runs with
+  `PROMPT_VERSION` `2026-10-15.4` (.3 made the instructions follow the profile, .4 added the lab report line) has not had one yet. The offline set runs with
   `python -m pytest tests/test_ai_golden.py tests/test_ai_prompts.py tests/test_ai_profile_prompts.py`. The live run, from
   the repository root, against OpenAI (key from a file, never the command line):
 
@@ -867,7 +867,7 @@ history.
       --model qwen3-vl:8b --vision-model qwen3-vl:8b --runs 3 --chat
   ```
 
-  It writes `docs/dev/ai-eval/<date>-<preset>-<model>.json` (its `prompt_version` must read `2026-10-15.3`) and exits 0
+  It writes `docs/dev/ai-eval/<date>-<preset>-<model>.json` (its `prompt_version` must read `2026-10-15.4`) and exits 0
   only when every gate passes. To look at just the new profile first, add `--cases '^kidney-only' --no-safety`: it runs the
   four `kidney-only-*` golden cases (meal ideas, describe a meal, label, plate photo; a profile with *Diabetes: None*; the
   last three carry no profile data, so they must behave as for anyone), and with `--chat` the four `chat-kidney-only-*`
