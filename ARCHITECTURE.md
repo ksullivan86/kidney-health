@@ -60,7 +60,7 @@ deploy/Containerfile        published image (Chainguard by digest); Containerfil
 deploy/compose.yaml         rootless compose (+ compose.caddy.yaml, compose.ai-ollama.yaml overlays)
 deploy/quadlet/kidney-health.container
 deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRoute
-.github/workflows/ci.yml    pytest 3.12+3.14, JS parity, linters, image smoke test + Grype gate (never pushes)
+.github/workflows/ci.yml    pytest 3.12+3.14+3.15, JS parity, linters, image smoke test + Grype gate (never pushes)
 .github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
 SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
 CHANGELOG.md                user-facing changes per version (v0.3)
@@ -688,8 +688,10 @@ proxies, the image and CI; (5) the note that owns the feature.
    `scripts/lock.sh --upgrade` weekly with a 7-day cooldown (`PIP_UPLOADED_PRIOR_TO=P7D`) and opens a
    pull request; Dependabot's pip ecosystem covers only `/.github`.
 6. **Base image:** Chainguard Python pinned by digest for `deploy/Containerfile`, plus
-   `deploy/Containerfile.debian` as the fallback (note 01 §5.1). CI tests on **Python 3.12 and
-   the image's Python** (3.14 at the time of writing). The app must stay compatible with 3.11+.
+   `deploy/Containerfile.debian` as the fallback (note 01 §5.1). CI tests on **Python 3.12, 3.14 (the Debian
+   fallback) and 3.15 (the image's Python at the time of writing)**. The app must stay compatible with 3.11+.
+   The handbook build stage temporarily stays on a 3.14 digest (PyYAML has no cp315 wheel; wheels only, so
+   the dev lock also leaves PyYAML out on 3.15 and the two YAML-reading test files skip there).
 7. **Image tags:** pushes to `main` publish `:edge` and `:sha-<short>`; `v*` tags publish
    `:latest`, `:X.Y.Z`, `:X.Y`. Signing, SBOM and provenance per note 01 §5.4; attestation steps
    that need a public repo are gated on `github.event.repository.private == false`. *(M1 review:)*

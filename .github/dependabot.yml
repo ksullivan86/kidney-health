@@ -33,6 +33,13 @@ updates:
   # Base images: the literal `FROM image:tag@sha256:` lines of deploy/Containerfile and
   # deploy/Containerfile.debian (builder, handbook and runtime bump together in one PR), and the
   # Caddy example. Digests carry security fixes, so check daily with a short cooldown.
+  # One exception for now: the handbook stage of deploy/Containerfile stays on the Python 3.14
+  # `latest-dev` digest until PyYAML publishes a cp315 wheel (see the TEMPORARY SPLIT comment there).
+  # Dependabot tracks the tag, so it will keep proposing to move that line to the 3.15 digest with the
+  # rest of the group; that bump fails the image build at the handbook stage. Before merging such a
+  # pull request, put the handbook line back on the 3.14 digest in the pull request's branch.
+  # Dependabot cannot skip a single FROM line: `ignore` is per image name, which the builder and the
+  # runtime share, so the group stays as one.
   - package-ecosystem: docker
     directories:
       - "/deploy"

@@ -15,7 +15,13 @@ from pathlib import Path
 
 import pytest
 
-import yaml  # requirements-dev.lock and the handbook venv (a MkDocs dependency) both install PyYAML
+# requirements-dev.lock and the handbook venv (a MkDocs dependency) both install PyYAML. Not on Python 3.15:
+# PyYAML has no cp315 wheel yet, so the lock leaves it out there (requirements-dev.in) and this file skips; the
+# 3.12 and 3.14 test cells and CI's handbook job (3.14) run it. Below 3.15 a missing PyYAML is an error, not a skip.
+if sys.version_info >= (3, 15):
+    yaml = pytest.importorskip("yaml", reason="PyYAML has no cp315 wheel yet (requirements-dev.in)")
+else:
+    import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK = ROOT / "handbook"

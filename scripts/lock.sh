@@ -18,14 +18,17 @@
 # dependency graph reads every requirements*.txt and *.in file and fails on a -r/-c line that names a
 # *.lock file, because it never fetches those (tests/test_dependencies.py keeps it that way).
 #
-# pip-tools runs under Python 3.14, the image's Python: inside python:3.14-slim-trixie when podman
-# or docker can run containers, otherwise with a local python3.14 (or one `uv` can provide).
+# pip-tools runs under Python 3.14, the Debian fallback image's Python: inside python:3.14-slim-trixie
+# (the same digest as deploy/Containerfile.debian) when podman or docker can run containers, otherwise
+# with a local python3.14 (or one `uv` can provide). The pins are not Python-specific: the app lock
+# must have a wheel for every Python the project runs on (3.12 and 3.14 in CI, 3.15 in the Chainguard
+# image); docs/maintainers.md ("Refreshing the lock files") has the `pip download` check for that.
 # Install the result with:  pip install --require-hashes --no-deps -r requirements.lock
 set -euo pipefail
 
 PIP_TOOLS_VERSION="7.6.1"
 PIP_VERSION="26.2.1"   # >= 26.0 for --uploaded-prior-to (PIP_UPLOADED_PRIOR_TO)
-IMAGE="docker.io/library/python:3.14-slim-trixie@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886b2d554ce40151"
+IMAGE="docker.io/library/python:3.14-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170"
 COMPILE_OPTS=(--quiet --generate-hashes --strip-extras --resolver=backtracking)
 
 cd "$(dirname "$0")/.."
