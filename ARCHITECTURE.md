@@ -739,6 +739,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 9 | `m009_about_tolerance.py` | v0.3.1 | `user_profiles.about_tolerance_pct` (`docs/dev/plans/v0.3.1.md` item 2) |
 | 10 | `m010_api_tokens.py` | assistant step 1 | `api_tokens`: assistant access tokens, hashes only (`docs/dev/plans/assistant-step1.md` part A; "Assistant access tokens" below) |
 | 11 | `m011_assistant_request_keys.py` | assistant step 1 | `assistant_request_keys`: the duplicate guard of `log_food` and `save_recipe`, hashes only ("Retries" under "Assistant MCP server" below) |
+| 12 | `m012_ai_consent_chat.py` | assistant step 2 | `ai_consents.purpose` accepts `chat` (table rebuilt; `docs/dev/plans/assistant-step2.md`; "Ask chat" above) |
 
 ## Backend file ownership
 
@@ -753,6 +754,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
+| Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -808,6 +810,8 @@ app/static/
                         reader (MIT, ZXing-C++ Apache-2.0), pinned by SHA-256 in vendor/README.md (scripts/vendor_barcode.py)
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
   js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
+  js/views/ask.js, css/ask.css   the Ask screen: a sixth tab shown only when GET /api/ai/status says features.chat (assistant
+                        step 2; see "Ask chat"); in the demo the tab shows a note and no input
   js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
   js/mock/handbook.js   demo answer for GET /api/handbook (none; the Pages demo links to the handbook beside it)
   js/main.js            boot
@@ -1733,7 +1737,8 @@ Code: the package `app/ai/` — `presets` (preset table), `netpolicy` (pure URL/
 error categories, CA-store self-check), `client` (request bodies, parsing, JSON extraction, one
 retry or repair, concurrency gate, "Test connection" with the Hermes tool check), `prompts`
 (`SYSTEM_PROMPT`, `TASK_SYSTEM_PROMPT`, `PROMPT_VERSION`, the data block), `schemas` (wire schemas and
-answer models), `guard` (V1–V9, pure), `features` (prepare/judge for each feature, the G7/G8
+answer models, and `ChatStep` for the Ask chat), `guard` (V1–V9, pure), `chat` (the Ask chat's step loop, answer checks and
+figures; "Ask chat" below), `features` (prepare/judge for each feature, the G7/G8
 pre-filters, the label draft), `config` (provider rows, resolution, quota, consent, AI activity,
 retention), `routes` (the routers below, the call pipeline, the daily re-test); `app/vision.py` (photo
 routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
@@ -1747,9 +1752,10 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   (`false`, `AI_ALLOW_USER_BASE_URL`), `ai.shared_daily_limit` (30, 0–100000, 0 = unlimited,
   `AI_SHARED_DAILY_LIMIT`), `ai.max_concurrency` (2, 1–32, `AI_MAX_CONCURRENCY`), `ai.audit_retention_days`
   (30, 0–365, `AI_AUDIT_RETENTION_DAYS`), `ai.vision_plate_enabled` (`false`, `AI_VISION_PLATE_ENABLED`),
-  `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), and the person's object `ai` (scope `user`):
+  `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), `ai.chat_enabled` (`false`, `AI_CHAT_ENABLED`; the Ask screen,
+  "Ask chat" below), and the person's object `ai` (scope `user`):
   `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200)}`
-  with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the eight `ai.*` instance
+  with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the nine `ai.*` instance
   keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
 * **Environment only** (`app/config.py` `AiEnv`; never runtime-editable): `AI_PROVIDER` (a preset),
   `AI_BASE_URL`, `AI_API_KEY[_FILE]` (`OPENAI_API_KEY[_FILE]` accepted when `AI_PROVIDER=openai`),
@@ -1786,11 +1792,12 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate}, prompt_version}` |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat}, prompt_version}`; `features.chat` is true only with the person set up for AI **and** `ai.chat_enabled` on |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
-| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
-| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos` (both when left out) → 204; 404 when there is none |
+| `POST /api/ai/chat` | `{messages: [{role: "user" \| "assistant", text (1–2000)}] (1–20, the last from the person)}` (`?dry_run=true`) → the Ask answer, or the rule-based card for a low or an emergency; 404 while `ai.chat_enabled` is off ("Ask chat" below) |
+| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
+| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat` (all when left out) → 204; 404 when there is none |
 | `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
@@ -1851,7 +1858,7 @@ Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "visi
 
 ### The call pipeline (`app/ai/routes.py` `run_call`)
 
-Consent (per person, provider, purpose `text`/`photos`, destination host and `POLICY_VERSION`) → a
+Consent (per person, provider, purpose `text`/`photos`/`chat`, destination host and `POLICY_VERSION`) → a
 concurrency slot (`ai.max_concurrency` on the server, one per person; refused at once with `429`;
 `routes.ai_slot`) → the Hermes tool check inside the slot (≤ 5 minutes old for text, **before every
 photo**; a failed check sets `disabled_reason` until a check passes) → the daily quota (`BEGIN IMMEDIATE`; shared keys only; probes
@@ -1876,7 +1883,7 @@ total deadline = read timeout + 10 s. Images go only as `data:image/jpeg;base64,
 
 ### Prompts, answers and the guard
 
-The meal features send no free text to people (§9 A2): an idea is `{theme, items: [{food_id (enum of the
+The meal features send no free text to people (§9 A2; the Ask chat is the one exception, with its own checks in "Ask chat" above): an idea is `{theme, items: [{food_id (enum of the
 candidates), quarters 1–12}] (1–5), reason_codes (enum, 1–3), handbook (enum of slugs, ≤ 2)}`; the server
 checks every claim against the recomputed numbers and writes the title and sentence from templates
 (`guard.THEME_TITLE`, `guard.REASON_TEXT`). A `low_*` claim holds only when every portion is low by the
@@ -1905,12 +1912,92 @@ the body, into one buffer within 60 s (408), held in that slot through the call;
 are bounded by `ai.max_concurrency`, not by open connections (the shipped profiles cap the container at
 512 MiB).
 
+### Ask chat (assistant step 2, part A)
+
+Spec `docs/dev/plans/assistant-step2.md`; code `app/ai/chat.py` (pure but for the callbacks the route gives it),
+`ChatStep` and `chat_step_schema` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `POST /api/ai/chat` in
+`app/ai/routes.py`, schema step 12; the screen `js/views/ask.js` ("Frontend" below); people: `docs/assistant.md` "The Ask
+screen", `docs/ai.md`, the handbook's AI page; tests `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`,
+`tests/test_migration_m012.py`, `tests/test_ask_ui.py`. The chat reuses, and never copies, the AI client
+(`complete_json`: one repair turn), the concurrency gate, the quota, the consent flow, the activity log and the step-1
+tool functions of `app/mcp/tools.py`.
+
+* **Request.** `{"messages": [{"role": "user" | "assistant", "text": 1–2000 characters}]}`: 1 to 20 items, the last from
+  the person. The conversation is kept only in the page; the server stores no transcript. `?dry_run=true` returns the
+  first model request exactly as it would be sent (`{dry_run, feature: "chat", destination, host, provider, headers,
+  body, …}`), takes no quota and writes no activity row. A body that does not fit is `400` like every other body.
+* **Checks, in order.** Signed in (401) → `ai.enabled` (404 `Not Found`) → `ai.chat_enabled` (404, before the body is
+  read) → the body → **the rules** (below; no provider is looked up, no consent or quota is needed) → a provider serves the
+  person (503 with the reasons of the other features, `not_opted_in` first) → the dry run → consent for purpose `chat`
+  (`409 consent_required` with the sheet's text) → the person's single slot and the server's slot (`429 busy_person` /
+  `busy_server`) → the Hermes tool check → the loop. A first model call refused for quota is `429 quota_exhausted`.
+* **Rules first, every message.** The `safety_check` tool function (step 1) runs on the newest message: emergency wording
+  → `kind: "get_help_now"` with the Get help now card (its link `/learn/get-help-now/`); low wording → `kind: "treat_low"`
+  with the Treating a low card (the person's own `hypo_dose_g`) and the text "Treat the low first. When you feel better, ask
+  again."; both → `get_help_now` with both cards. `ai_called` is false, `label.source` is `app`, and nothing is spent or
+  logged. A message that matched a rule, and the answer after it, is left out of the history sent to the model on later
+  turns. Nothing in the chat warns against, delays or questions a low treatment.
+* **Answer** (`label` after V9): `{feature: "chat", kind, text, cards: [{title, lines, handbook, url}], numbers:
+  [{title, rows: [{label, value, detail}]}], notes: [str], label: {source: "ai" | "app", provider_label, model, checked,
+  notice}, provider: {id, label, model, host} | null, ai_called, model_calls, tool_calls, prompt_version, audit_id}`. `kind`:
+  `answer` (a checked answer), `withheld` (the dose or number check failed; `text` is the fixed sentence), `unfinished`
+  (the step limit or the quota ended the loop, or the conversation no longer fit the prompt budget; the text is "The
+  assistant could not finish; here are the app's numbers."), `error` (the provider failed or refused; the sentence of the
+  other features), `treat_low`, `get_help_now`. `cards` is a list because a message may need both cards.
+* **The loop** (`chat.converse`; not provider-native tool calling, so it works with every provider). Each step the model
+  returns exactly one JSON object, `{"call": {"tool", "arguments"}}` or `{"answer"}`, validated by `ChatStep`
+  (`extra="forbid"`; one repair turn inside `complete_json`). Allowed tools: `get_today`, `search_foods`, `check_meal`
+  (never the saving tools or `safety_check`), run for the person through `app.mcp.tools.run` in the thread pool and put
+  into the next request as a labelled, cleaned, escaped data block. An unknown tool or bad arguments are told to the model
+  (it counts toward the limit) and it may try again. At most 6 tool calls; after the sixth result the model is told to
+  answer, and a call after that ends the loop as `unfinished`. So a message makes at most 7 model calls. Each model call
+  takes one unit of the person's quota (a quota that runs out after the first call ends the loop as `unfinished`), the
+  provider's timeout and one `ai_audit` row (`feature: "chat"`; **no request or response body and no message text**,
+  whatever `ai.audit_retention_days` says; the verdict names the step, the tool and the outcome). JSON mode: a provider
+  in `json_schema` mode is asked for `json_object` (free-form arguments cannot be a strict schema); the protocol and its
+  schema are in the system prompt in every mode. History that does not fit `context_tokens` is trimmed from the oldest end;
+  not even the newest message fitting is `503 context_too_small`.
+* **The prompt** (`PROMPT_VERSION` 2026-10-15.1): the rules (every number from a tool, null is unknown and not zero, fetch
+  again each turn, no insulin or medicine doses, no medicine advice, no lab interpretation, a plain warning and "check with
+  your care team" for salt substitutes, anti-inflammatory pain medicines and big protein or fluid changes, short plain
+  words), the step schema, the three tools with their argument schemas read from the step-1 tools, and the person block
+  of the other prompts (stage, dialysis, diabetes, preferences, age band and sex only with `share_age_sex`; the user id
+  is the keyed hash of the other features). Never the name, user name, e-mail, weight, height, exact age or notes.
+* **The checked answer** (the chat's V6, `chat.check_answer`, in this order): the *text policy* (NFKC, `Cc`/`Cf` removed with
+  line breaks kept, links and e-mail addresses removed except the app's own `/learn/...` paths, cut at 1200 characters at a
+  sentence end; nothing left is `kind: "error"`); the *dose check* (insulin, bolus, basal, correction and carbohydrate
+  ratios, dose/dosing/dosage, `N units`, the binder names of `guard.MEDICINE_NAMES`, advice to skip, delay or change
+  insulin or medicine, and a sentence about a low blood sugar that also restricts, delays or avoids something) →
+  `withheld` with "This answer was not shown because it touched on medicine or insulin doses. Ask your care team about
+  doses."; the *number check* (every number with a unit of mg, mcg, g, ml, l, kcal, kJ, % or their spelled-out forms must equal,
+  at the precision shown, a number in this message's tool results, including numbers inside their text, or in the
+  person's own messages; thousands separators are read, no units are converted, "per 100 g" is a basis; numbers without such a
+  unit pass) → `withheld` with "The assistant's answer had a number the app did not work out, so it is not shown. Here are
+  the app's own numbers."; then *lab words* (eGFR, creatinine, A1c, "blood potassium", "lab result" ... in the answer or the
+  question) add the note "Lab results are for your care team to interpret." to `notes`. A withheld answer keeps `numbers`.
+* **`numbers`** ("From the app"): what this message's tools returned, formatted by the server: the day's figures with
+  target and what is left (`get_today`), a checked meal's totals and the day with it (`check_meal`), and foods found with
+  their potassium, phosphorus and sodium per serving (`search_foods`); the latest look-up of each kind, at most four groups.
+  Unknown is shown as "not listed" and a total with unknown parts as "… or more", never as 0.
+* **Consent purpose `chat`** has its own "What will be sent?" text (`js/views/ai.js`): the messages in this conversation
+  and the app's own numbers the assistant looks up (targets, totals, food names and nutrients); never the name, user name,
+  e-mail, weight, height, exact age or notes; each question can take several AI calls. Once per provider and host, like
+  `text` and `photos`.
+* **No new clinical numbers.** The chat adds no threshold of its own; every figure it shows is a tool result. Its limits
+  (20 messages, 2000 characters, 6 tool calls, 1200 characters of answer) are sizes of the conversation.
+
 ### Schema step 6 (`m006_ai.py`)
 
 `ai_providers` (scope/owner `CHECK`, `locked` only for shared, one per person, one env row,
 `AUTOINCREMENT`; `api_key_enc` sealed, `api_key_hint`, `probe_json`, `probed_at`, `disabled_reason`),
 `ai_consents (user_id, provider_id, purpose)` (both foreign keys cascade), `ai_usage (user_id, day,
 provider_id)` with `key_scope`, and `ai_audit`. Every user reference has `ON DELETE CASCADE`.
+
+### Schema step 12 (`m012_ai_consent_chat.py`)
+
+`ai_consents.purpose` was `CHECK (purpose IN ('text','photos'))`; SQLite cannot change a CHECK, so the step rebuilds the table
+(copy, drop, rename, recreate `ai_consents_provider`) with the purposes `text`, `photos` and `chat`. Same columns, key and
+cascades; every row is kept; atomic, `foreign_key_check`, idempotent (a table that already allows `chat` is left alone).
 
 ### Data, export, deletion and retention
 
@@ -1959,13 +2046,23 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   with `entry_id` or `food_id` + `servings`, `plan`).
 * Model output is set with `textContent` only; links only through `KH.learn.href` (handbook pages);
   `tests/test_ai_ui.py` checks the routes it calls, the demo answer's shape and these rules.
+* **Ask screen** (`js/views/ask.js`, `#view-ask`, tab `#tab-ask`): the tab is hidden until `KH.views.ask.refreshTab()` (after
+  sign-in and whenever `KH.ai.forget()` runs) sees `features.chat`; a message list in `role="log"` (answers are text nodes;
+  `/learn/...` paths become links through `KH.learn.href`), an input where Enter sends and Shift+Enter makes a new line,
+  "Thinking…", the existing alert cards (`KH.ai.cardEl`) for `treat_low` and `get_help_now`, "From the app" under every
+  answer with `numbers`, a plain notice for `withheld`, `unfinished` and `error`, "New conversation", the consent sheet on
+  first use (`KH.ai.withConsent('chat', …)`, with "What will be sent?"), and the line "Answers come from an AI model; every
+  number is the app's own. Not medical advice." The last 20 messages are sent each time; nothing is stored in the browser.
+  A question that was not answered (consent declined, 429, 503) goes back into the box. Demo and preview: the tab shows a
+  note that the chat works in the installed app with an AI provider, and no input (no mock answers).
+  `tests/test_ask_ui.py` checks the shell, the CSP rules and these behaviours.
 
 ### Parity (demo/preview mode)
 
 The `ai.*` keys are in `tests/data/settings_vectors.json` and `js/engine/settings.js`. Demo mode never
 calls a provider: `js/mock/ai.js` answers like a server with AI off (`GET /api/me/ai` → `enabled: false`;
-every `/api/ai/*` and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
-app.
+every `/api/ai/*` (`/api/ai/chat` too) and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
+app. `ai.chat_enabled` is a registry key like the others (vectors and twin). The Ask screen has no twin: the demo shows its note.
 
 ## M3: the handbook at `/learn`
 

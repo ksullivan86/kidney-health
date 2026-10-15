@@ -515,7 +515,8 @@
   // ---------------------------------------------------------------------------
   // Tabbed views, then views without a tab (Settings: the header gear and Profile open it; Labs:
   // Profile's "Lab results" button).
-  const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'profile'];
+  // Ask is a tab too, but js/views/ask.js hides it unless the server's chat is available (arrow keys skip a hidden tab).
+  const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'ask', 'profile'];
   const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'admin'];
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
@@ -553,13 +554,14 @@
   $$('.tab').forEach((tab) => {
     tab.addEventListener('click', () => showView(tab.dataset.view));
     tab.addEventListener('keydown', (e) => {
-      const i = TAB_VIEWS.indexOf(tab.dataset.view);
+      const shown = TAB_VIEWS.filter((v) => { const el = $(`#tab-${v}`); return el && !el.hidden; });
+      const i = shown.indexOf(tab.dataset.view);
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
-        const next = TAB_VIEWS[(i + (e.key === 'ArrowRight' ? 1 : TAB_VIEWS.length - 1)) % TAB_VIEWS.length];
+        const next = shown[(i + (e.key === 'ArrowRight' ? 1 : shown.length - 1)) % shown.length];
         showView(next, { focusTab: true });
-      } else if (e.key === 'Home') { e.preventDefault(); showView(TAB_VIEWS[0], { focusTab: true }); }
-      else if (e.key === 'End') { e.preventDefault(); showView(TAB_VIEWS[TAB_VIEWS.length - 1], { focusTab: true }); }
+      } else if (e.key === 'Home') { e.preventDefault(); showView(shown[0], { focusTab: true }); }
+      else if (e.key === 'End') { e.preventDefault(); showView(shown[shown.length - 1], { focusTab: true }); }
     });
   });
   window.addEventListener('hashchange', () => {

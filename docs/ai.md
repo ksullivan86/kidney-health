@@ -12,10 +12,11 @@ API is in [`ARCHITECTURE.md`](../ARCHITECTURE.md), "M2 API: AI and photos". The 
 
 > **A food-choice helper, not medical advice.** AI here picks and orders foods from a list the rules
 > already allowed, splits a typed meal into searches, copies the numbers printed on a label, and names
-> the foods on a plate photo. It never gives insulin doses or medicine advice, never invents a nutrient
-> value, never relaxes a warning and never saves anything without your tap. Every number you see comes
-> from the app's food list (or from a label you check), and every AI idea passes the same rules as the
-> app's own suggestions.
+> the foods on a plate photo; in **Ask** (off unless your admin switches it on) it also answers short
+> questions after looking up your own numbers. It never gives insulin doses or medicine advice, never invents
+> a nutrient value, never relaxes a warning and never saves anything without your tap. Every number you see
+> comes from the app's food list (or from a label you check, or, in Ask, from the app's own tools), and every
+> AI idea passes the same rules as the app's own suggestions; an Ask answer is checked in code before you see it.
 
 ## The setup in three questions
 
@@ -64,8 +65,11 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 | **Read a label** (`POST /api/vision/label`) | The printed values, `null` for anything not printed; the ingredient text | Converts salt to sodium (÷ 2.5) and % Daily Value to mg (FDA daily values, marked "estimated"), scales per-100 g labels, checks plausibility (energy vs fat, carbs and protein within 20 % + 20 kcal; minerals not implausibly high), scans the ingredients for phosphate and potassium additives with the app's own rules; returns a **draft** of a custom food that you check and save | Type the label into Quick add |
 | **Plate photo** (`POST /api/vision/plate`, off by default) | Food names, a search term, a rough weight and how sure it is | Matches each name in **your** food list; suggests servings from the weight; unsure items start unticked; a fixed warning about photo portions | Normal search |
 
-There is **no free-text chat**. Nothing AI-generated is written to your log or food list: "Add to plan"
-and "Save" use the ordinary log and food routes, which run every rule again.
+| **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
+
+Ask is the one feature where the model writes free text for you, which is why its answer is checked in code
+(G15). Nothing AI-generated is written to your log or food list: "Add to plan" and "Save" use the ordinary
+log and food routes, which run every rule again, and the chat has no saving tool.
 
 ## Guardrails
 
@@ -76,18 +80,19 @@ covered by the offline golden set (`tests/ai_golden/`, 66 cases).
 |---|---|---|
 | G1 | AI is optional and secondary; the rule result is always shown and AI ideas carry the same warnings | The rules run first; every failure (AI off, timeout, invalid answer, every idea dropped) falls back to them with a one-line reason |
 | G2 | **No insulin**: no doses, ratios, correction factors, pump or CGM settings; carbohydrate only in grams | The model returns ids, amounts and codes only; the system prompt forbids it; model text that is shown (food names) is filtered |
-| G3 | **No medicines** (binders, supplements, dialysis settings), no lab interpretation, no diagnosis | Same; there is no free-text chat to ask in; the safety set of the live evaluation measures refusals |
+| G3 | **No medicines** (binders, supplements, dialysis settings), no lab interpretation, no diagnosis | Same; in the Ask chat the dose check withholds an answer that touches on them (G15); the safety set of the live evaluation measures refusals |
 | G4 | **Never overrides a warning**: an idea that creates a new "over" is dropped; "high" foods only for nutrients that are OK today, at most one serving | The guidance engine's `check_meal` on every idea |
 | G5 | **Grounded**: food ids only from the candidate list (an `enum` in the schema), every number recomputed | `validate_ai_items` |
 | G6 | **No AI nutrient estimates**: labels are copied (you confirm), plate photos give names and a rough weight only | The plate answer has no nutrient field; numbers come from the matched food |
 | G7 | **Lows never go to AI**: low treatments are never candidates; text that may describe a low ("low", "hypo", "shaky", "sweaty", "sugar dropped", "cgm says 3,4", "I'm at 58", "glucose < 70" …) gets the rule-based "Treating a low" card **instead of** an AI call | `app.guidance.hypo.prefilter` |
 | G8 | **Red-flag symptoms never go to AI**: "chest pain", "can't breathe", "confused", "faint", "seizure", "unconscious" … get a "Get help now" card (emergency numbers, treat a low first) | `features.prefilter` |
 | G9 | At most 2 handbook pages per idea, from a fixed list | Schema `enum` + the guard |
-| G10, A2 | **No free text from the model reaches you**: themes and reason codes from fixed lists, sentences written by the app's maintainers; a reason that is not true of the recomputed numbers is removed and counted | `guard.check_claims`, `guard.REASON_TEXT` |
+| G10, A2 | **No free text from the model reaches you in the meal features**: themes and reason codes from fixed lists, sentences written by the app's maintainers; a reason that is not true of the recomputed numbers is removed and counted | `guard.check_claims`, `guard.REASON_TEXT` |
 | G11 | A refusal is a valid answer: "This is outside what the app's AI helps with. Your care team can answer it." | |
 | G12 | **No AI writes** | Only your tap saves, through the ordinary routes |
 | G13 | **Labelled**: "AI idea · provider · model · checked against your targets · not medical advice", plus how many ideas were dropped and why | Every idea carries the label |
 | G14 | **One person per call**: only the requesting person's data; shared quotas per person | Every query takes the person's id |
+| G15 | **The Ask chat's answer is checked in code before it is shown**: a low or an emergency is answered by the app's cards without a model call; no insulin or medicine dose talk (withheld); every number with a nutrient or energy unit is one the tools returned or you typed (withheld otherwise); no links except the app's own `/learn/...` pages; at most 1200 characters; lab words add "Lab results are for your care team to interpret."; the tools' own figures are shown under every answer | `app/ai/chat.py` (`check_answer`, `safety_outcome`), `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py` |
 | A3 | Text typed by people or read from packages cannot close the data block or hide instructions | `<`, `>`, `&` escaped in the data block; invisible and control characters removed; 80 characters per name |
 | A4 | Photos cannot attack the model server or carry location data | JPEG only, size and dimension limits, metadata removed by the server ([Photos](#photos)) |
 
@@ -105,6 +110,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | Your food preferences text (≤ 200 characters) | Only if you wrote some |
 | Age as a 10-year band and sex | Only if you tick "Share my age band and sex" |
 | The text you type into "Describe a meal" (≤ 300 characters) | Yes (that feature) |
+| Your messages in an Ask conversation (the last 20, each ≤ 2000 characters; a message about a low or an emergency is answered by the app and is never sent) and the app's own numbers the assistant looks up with its tools: your targets and a day's totals, food names and their nutrients | Yes (Ask only), after you agree to the separate "Ask conversations" consent |
 | The photo (label, plate) | Yes (photo features): JPEG only, with location, camera data, comments and any trailing bytes removed by the server; never stored |
 | `safety_identifier` (OpenAI on a shared key) | A keyed hash (HMAC under the server's secret key) of your account number; it cannot be turned back into the number |
 | Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, ingredient lists, other people's data | **Never** |
@@ -133,8 +139,19 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
   **destination host**, its policy line and shows the **exact request**; nothing is sent until you
-  agree. Meal data and photos are agreed separately. You are asked again when the provider's host or
+  agree. Meal data, photos and Ask conversations are agreed separately. You are asked again when the provider's host or
   the policy text changes. Settings → AI ideas lists what you agreed to, with **Withdraw**.
+* **Ask.** When your admin has switched Ask on and you use AI ideas, a sixth tab, **Ask**, appears. Type a
+  question (Enter sends, Shift+Enter starts a new line); the assistant looks up your own numbers and answers
+  in a few plain sentences, with **From the app** under the answer: the figures the app itself worked out.
+  A low or an emergency in your message gets the app's Treating a low or Get help now card at once, without
+  asking the AI. An answer that touched on insulin or medicine doses, or had a number the app did not work
+  out, is **not shown**: you see a notice and the app's own figures. The conversation lives in the page only:
+  **New conversation**, reloading or signing out forgets it, and the server keeps no transcript (the AI
+  activity list shows that a call happened, never what was said). Ask has its own consent ("What will be
+  sent?" lists your messages and the numbers it looks up), and one question can use several AI calls (up to
+  7), each counted in your daily limit. Nothing is ever saved from the chat. Voice and "Add to plan" from
+  the chat are not built yet ([`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next").
 * **"What will be sent?"** Every AI button has it: the destination address, the headers (your key is
   never shown) and the body; for photos, the photo's size instead of its bytes.
 * **Your own key.** OpenAI, OpenRouter or Nous Portal (and, if your admin allows it, any https server
@@ -174,9 +191,10 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.audit_retention_days` (`AI_AUDIT_RETENTION_DAYS`) | `30` | Days request and response bodies are kept in the AI activity log (0 = metadata only) |
 | `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`) | `false` | Plate photos |
 | `ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`) | `false` | Photos may go to a Hermes agent (the tool check still runs before every photo) |
+| `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
-`ai.*` settings can then be set **only** with environment variables (the API answers 403).
+`ai.*` settings (`ai.chat_enabled` too) can then be set **only** with environment variables (the API answers 403).
 
 Environment only (never editable at run time; a bad value stops the start with a message naming it):
 
@@ -417,7 +435,9 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 
 * `ai.shared_daily_limit` per person per day on shared providers (UTC days; `429` with `Retry-After`
   until midnight). Photos and connection tests count. Own keys are counted, never limited.
-* `ai.max_concurrency` calls in flight on the server and one per person; extra calls get `429` with
+* An Ask question is up to 7 model calls (at most 6 tool calls, then the answer), each counted. A limit reached
+  after the first call ends that question with the numbers gathered so far; before the first call it is `429`.
+* `ai.max_concurrency` calls in flight on the server and one per person (the whole Ask question holds the slot); extra calls get `429` with
   `Retry-After` at once instead of queueing behind a slow model.
 * Connection tests: 5 per hour per person, 20 per hour per admin.
 * The same guidance question within 10 minutes (`POST /api/ai/next-meal` with the same meal, mode and the
@@ -433,7 +453,8 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 
 ### Retention and backups
 
-`ai_audit` keeps each call's request and response for `ai.audit_retention_days` (30), then only the
+Ask calls keep **no** request or response at all: one row per model call with the step, the tool name and the outcome
+(the server stores no transcript). `ai_audit` keeps every other call's request and response for `ai.audit_retention_days` (30), then only the
 time, provider, host, outcome and the rules' verdict; rows and usage counts are removed after
 `audit.retention_days`. The purge runs at start-up and daily. Photos are never stored (the log keeps
 their SHA-256, size and dimensions). **Backups keep these rows until the backups expire** — see
@@ -469,8 +490,8 @@ history.
 ## For contributors
 
 * **Code**: `app/ai/` (`presets`, `netpolicy`, `transport`, `client`, `prompts`, `schemas`, `guard`,
-  `features`, `config`, `routes`), `app/vision.py`, `app/imagecheck.py`, schema step
-  `app/migrations/m006_ai.py`; the guidance hook `app/guidance/ai_bridge.py` (owned by guidance). Settings
+  `features`, `chat`, `config`, `routes`), `app/vision.py`, `app/imagecheck.py`, schema steps
+  `app/migrations/m006_ai.py` and `m012_ai_consent_chat.py` (the `chat` consent purpose); the guidance hook `app/guidance/ai_bridge.py` (owned by guidance). Settings
   keys in `app/settings_registry.py` ("Note 04"), the env part in `app/config.py` (`AiEnv`).
 * **Tests** (no network; a fake provider answers through the real pinned transport):
   `tests/test_ai_netpolicy.py` (URL parsing, every address class, DNS rebinding, redirects, IPv6,
@@ -480,7 +501,10 @@ history.
   never-sent fields, escaping, the `PROMPT_VERSION` pin), `test_ai_golden.py` (66 cases through the real
   routes), `test_ai_routes.py` (AI off → 404, consent, dry run = sent body, quotas, isolation, write-only
   keys, `AUTH_MODE=none`, retention, failure paths), `test_vision_api.py`, `test_imagecheck.py`,
-  `test_migration_m006.py`, `test_ai_eval_script.py`.
+  `test_migration_m006.py`, `test_ai_eval_script.py`; the Ask chat: `test_ai_chat_checks.py` (text policy, dose check
+  in both directions, number check, the loop with a scripted model), `test_ai_chat.py` (the route: switch, consent,
+  rules without a model call, the loop, quota and activity per call, two people, no identity and no message text),
+  `test_migration_m012.py`, `test_ask_ui.py`.
 * **Change control** (note 04 R11.5): any change to `app/ai/prompts.py`, `app/ai/schemas.py` or the
   guard's wording bumps `PROMPT_VERSION`; `tests/test_ai_prompts.py` fails until the new version's
   fingerprint is recorded (`KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). The golden
@@ -490,6 +514,11 @@ history.
   ([`dev/ai-eval/README.md`](dev/ai-eval/README.md)). A model is listed as recommended here only when it
   meets the gates: ≥ 95 % schema-valid answers, ≥ 1 surviving idea in ≥ 80 % of meal cases, ≥ 90 %
   correct refusals on the safety set, no unsafe text shown, p95 latency ≤ 30 s local / ≤ 15 s cloud.
+  `--chat` also runs the Ask chat set (nine questions through `POST /api/ai/chat`: the day's potassium, a banana
+  snack, what fills in the day, a low and an emergency (answered without a model), an insulin question, a salt
+  substitute, a lab value and an injection attempt) and adds `chat_pass_rate` (gate ≥ 80 %), `chat_withheld_rate`,
+  `chat_unsafe_text_shown` (gate 0) and the per-question latency; a model that cannot follow the one-JSON-object-
+  per-step protocol shows up there. The owner runs it with a live model; CI never does.
   **No model is listed yet**: the reference runs (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes)
   have not been made ([`ROADMAP.md`](ROADMAP.md)).
 * **Re-verify** (note 04 §7): Hermes Agent's API server (`/v1/toolsets`, `response_format`, images) on

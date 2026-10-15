@@ -35,6 +35,10 @@
       label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
     { key: 'ai.audit_retention_days', type: 'int', min: 0, max: 365, default: 30, scope: 'instance', env: 'AI_AUDIT_RETENTION_DAYS',
       label: 'Keep what was sent to and received from AI for (days)', help: 'Each person sees their own AI activity in Settings. 0 keeps only the time, provider and outcome. Backups keep it until they expire.' },
+    { key: 'ai.chat_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_CHAT_ENABLED',
+      label: 'Ask (a chat with the AI inside the app)',
+      help: 'Off by default. Needs AI on. When on, people who opted in get an Ask screen: they type a question, the AI looks up the app\'s own numbers, and the app checks the answer before it is shown. '
+        + 'Lows and emergencies are answered by the app\'s rules without asking the AI. Each question can use several AI calls.' },
     { key: 'ai.enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_ENABLED',
       label: 'Optional AI ideas', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
     { key: 'ai.max_concurrency', type: 'int', min: 1, max: 32, default: 2, scope: 'instance', env: 'AI_MAX_CONCURRENCY',

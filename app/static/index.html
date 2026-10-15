@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="css/pwa.css">
 <link rel="stylesheet" href="css/ai.css">
 <link rel="stylesheet" href="css/guidance.css">
+<link rel="stylesheet" href="css/ask.css">
 <link rel="stylesheet" href="css/device.css">
 <link rel="stylesheet" href="css/touch.css">
 <script src="theme-init.js"></script>
@@ -64,6 +65,11 @@
         <button role="tab" class="tab" id="tab-trends" aria-controls="view-trends" aria-selected="false" tabindex="-1" data-view="trends">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="11" width="3.5" height="7" rx="1" fill="currentColor"/><rect x="10.25" y="6" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="15.5" y="13" width="3.5" height="5" rx="1" fill="currentColor"/></svg>
           <span>Trends</span>
+        </button>
+        <!-- Ask (js/views/ask.js): hidden until the server says the chat is available; always shown in the demo. -->
+        <button role="tab" class="tab" id="tab-ask" aria-controls="view-ask" aria-selected="false" tabindex="-1" data-view="ask" hidden>
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Ask</span>
         </button>
         <button role="tab" class="tab" id="tab-profile" aria-controls="view-profile" aria-selected="false" tabindex="-1" data-view="profile">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -507,6 +513,30 @@
   </section>
 
   <!-- ===================== PROFILE ===================== -->
+  <!-- ===================== ASK (js/views/ask.js; the chat with the AI, docs/assistant.md) =====================
+       The conversation lives in this page only. Answers are set with textContent; the cards, "From the app" figures and
+       notices come from the server's checked answer (POST /api/ai/chat). -->
+  <section id="view-ask" class="view ask-view" role="tabpanel" aria-labelledby="tab-ask" hidden>
+    <div class="ask-head">
+      <h2 class="card-title" id="ask-title">Ask</h2>
+      <button class="btn secondary" type="button" id="ask-new" hidden>New conversation</button>
+    </div>
+    <p class="muted small" id="ask-intro">Ask about today's numbers, a food, or what fits in the rest of your day. The assistant looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <div class="settings-note caution" id="ask-demo" role="note" hidden></div>
+    <div class="ask-thread" id="ask-thread" role="log" aria-label="Conversation"></div>
+    <p class="sr-only" id="ask-live" role="status" aria-live="polite"></p>
+    <div class="ask-dock" id="ask-composer">
+      <div class="ask-composer">
+        <div class="field ask-field">
+          <label class="sr-only" for="ask-input">Your question</label>
+          <textarea id="ask-input" rows="2" maxlength="2000" placeholder="Ask a question" aria-describedby="ask-note"></textarea>
+        </div>
+        <button class="btn primary" type="button" id="ask-send">Send</button>
+      </div>
+      <p class="hint ask-line" id="ask-note"></p>
+    </div>
+  </section>
+
   <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
     <!-- js/views/profile.js. "About you" and the treatment fields (note 05 §4.2, §4.8), the lab summary,
          and the daily targets with "Suggest targets" (never auto-saved). -->
@@ -1663,6 +1693,7 @@
 <script src="js/views/settings.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/guidance.js"></script>
+<script src="js/views/ask.js"></script>
 <!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
      WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
 <script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>

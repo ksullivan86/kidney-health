@@ -50,7 +50,7 @@ MAX_TOKENS_RANGE = (64, 32_768)
 TIMEOUT_RANGE = (5.0, 600.0)
 CONTEXT_RANGE = (1024, 2_000_000)
 DISABLED_REASONS = ("hermes_tools", "hermes_check_failed")
-Purpose = Literal["text", "photos"]
+Purpose = Literal["text", "photos", "chat"]
 
 
 # --------------------------------------------------------------------------- #

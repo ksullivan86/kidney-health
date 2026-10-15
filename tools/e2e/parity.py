@@ -1048,7 +1048,8 @@ class Harness:
             self.rec.compare(S, "GET /api/me/ai enabled", rs["body"].get("enabled"), rm["body"].get("enabled"), ignore=frozenset())
             self.rec.compare(S, "GET /api/me/ai settings", rs["body"].get("settings"), rm["body"].get("settings"), ignore=frozenset())
         routes = (("GET", "/api/ai/status", None), ("POST", "/api/ai/next-meal", {"meal": "dinner"}),
-                  ("POST", "/api/ai/parse-meal", {"text": "toast"}), ("POST", "/api/ai/consent", {"provider_id": 1, "purpose": "text"}),
+                  ("POST", "/api/ai/parse-meal", {"text": "toast"}), ("POST", "/api/ai/chat", {"messages": [{"role": "user", "text": "hi"}]}),
+                  ("POST", "/api/ai/consent", {"provider_id": 1, "purpose": "text"}),
                   ("DELETE", "/api/ai/consent/1", None), ("GET", "/api/ai/audit", None), ("DELETE", "/api/ai/audit", None),
                   ("POST", "/api/vision/label", None), ("POST", "/api/vision/plate", None), ("POST", "/api/me/ai/probe", None))
         for method, path, body in routes:

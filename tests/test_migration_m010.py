@@ -64,7 +64,7 @@ def test_populated_v9_database_upgrades_keeps_every_row_and_is_idempotent(tmp_pa
     assert db.table_columns(conn, "api_tokens") == {"id", "user_id", "name", "token_hash", "prefix", "scopes", "created_at",
                                                      "last_used_at", "expires_at", "revoked_at"}
     m010.migrate(conn)  # a re-run changes nothing
-    assert db.migrate(conn) == []
+    assert db.migrate(conn, migrations.steps()[:10]) == []
     conn.close()
 
 
