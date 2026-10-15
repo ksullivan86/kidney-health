@@ -276,7 +276,8 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
     K.add_tokens(conn, user.id, prep.cfg, result.usage)
     audit_id = K.write_audit(
         conn, user.id, feature=prep.feature if prep.mode is None else f"{prep.feature}:{prep.mode}", cfg=prep.cfg,
-        model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(), response_text=result.text,
+        model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
+        response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
         verdict={k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
                                                           "trimmed")},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
@@ -416,6 +417,8 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     one check. ``slot_held=True`` means the caller already holds the person's slot (:func:`ai_slot`;
     the photo routes take it before reading the upload). With ``background``, a shared provider that
     is due for its daily connection test gets one after the response is sent (:func:`maintenance_probe`)."""
+    if prep.local_only and not prep.cfg.local_only:  # a local-only feature (a lab report photo) never leaves the private network
+        raise unavailable("local_not_private")
     state = ai_state(request)
     client = _client_for(request)
     await run_in_threadpool(_check_consent, conn, user, prep)
@@ -488,7 +491,7 @@ class ParseMealBody(BaseModel):
 class ConsentBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]
-    purpose: Literal["text", "photos", "chat", "voice"] = "text"
+    purpose: Literal["text", "photos", "chat", "voice", "labs"] = "text"
     skip_preview: bool = False
 
 
@@ -561,6 +564,8 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
     photo_cfg = routes["photos"].cfg
     photos = bool(photo_cfg and photo_cfg.vision_model and _photos_allowed(conn, state, photo_cfg))
     chat_cfg = routes["chat"].cfg
+    labs_cfg = routes["labs"].cfg  # local-only: the shared provider holding the role "local", never a person's own
+    lab_report = on("labs") and bool(labs_cfg and labs_cfg.vision_model and labs_cfg.local_only and _photos_allowed(conn, state, labs_cfg))
     chat_on = on("chat") and bool(state.store.get(conn, "ai.chat_enabled"))
     voice_cfg = voice_config(request, conn) if chat_on else None  # voice is part of Ask: it follows the chat route
     voice = None
@@ -577,7 +582,7 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
         "message": K.MESSAGES.get(reason) if reason else None,
         "provider": None if cfg is None else R.provider_summary(cfg),
         "consent": {**{p: (K.consent(conn, user.id, c, p) if c is not None else None)
-                       for p, c in (("text", routes["meal_ideas"].cfg), ("photos", photo_cfg), ("chat", chat_cfg))},
+                       for p, c in (("text", routes["meal_ideas"].cfg), ("photos", photo_cfg), ("chat", chat_cfg), ("labs", labs_cfg))},
                     "voice": None if voice_cfg is None or chat_cfg is None else stt.consent(conn, user.id, chat_cfg.id, voice_cfg)},
         "routing": {"mode": "as_before" if any(r.route == "any" for r in routes.values()) else "routed"},
         "routes": {f: R.route_view(conn, user.id, f, routes[f]) for f in R.FEATURES},
@@ -586,7 +591,7 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
         "features": {"next_meal": on("meal_ideas"), "parse_meal": on("describe"), "label": on("photos") and photos,
                      "plate": on("photos") and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
-                     "chat": chat_on, "voice": voice is not None},
+                     "chat": chat_on, "voice": voice is not None, "lab_report": lab_report},
         "voice": voice,
         "trust": _trust_view(conn, state, prefs),
         "prompt_version": PROMPT_VERSION,
@@ -893,7 +898,7 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
 
 @router.delete("/consent/{provider_id}", status_code=204, response_class=Response)
 def withdraw_consent(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)], request: Request, user: CurrentUser,
-                     purpose: Literal["text", "photos", "chat", "voice"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+                     purpose: Literal["text", "photos", "chat", "voice", "labs"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     if not K.withdraw_consent(conn, user.id, provider_id, purpose):
         raise HTTPException(status_code=404, detail="no consent for this provider")
     conn.commit()
@@ -1309,6 +1314,7 @@ async def probe_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE
 
 
 Route = Literal["local", "cloud", "off", "any"]
+LocalOnlyRoute = Literal["local", "off"]
 ProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
 
 
@@ -1320,6 +1326,7 @@ class RoutingBody(BaseModel):
     meal_ideas: Route | None = None
     describe: Route | None = None
     chat: Route | None = None
+    labs: LocalOnlyRoute | None = None  # local or off only: a lab report photo never goes to a cloud AI
     local_provider: ProviderId | None = None
     cloud_provider: ProviderId | None = None
 

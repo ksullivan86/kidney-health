@@ -241,6 +241,15 @@ the plausible range are listed as not imported, with the reason. A result alread
 and value as shown) is not ticked, and the server skips repeats as well (`POST /api/labs/import`). Up to
 1 MB and 1,000 rows per file.
 
+**Read a lab report photo** (on the same view, below the spreadsheet import; only when the optional AI has a **local**
+AI that reads photos, [`ai.md`](ai.md#lab-report-photos)): a photo or screenshot of a report is read by the AI on the
+admin's own network, which copies the printed results of the nine tests above. The app keeps the tests and units it
+knows and numbers inside the plausible range (the checks `POST /api/labs` makes), never a future date, and says how many
+lines it left out. The rows appear in the same table as a spreadsheet import, **all unticked**, under "Read by AI from your
+photo. Check each value against the report before you tick it."; a row whose date was not read (or could mean two days)
+needs your date before it can be ticked; only the ticked rows are saved, through `POST /api/labs/import`, so the potassium
+banner and "what this changed" work as for a file. The AI never says whether a result is normal, high or low.
+
 **Today** draws the fiber goal as progress toward "at least X g" (no "over" state) and a protein range
 whose minimum equals its maximum as "about X g".
 

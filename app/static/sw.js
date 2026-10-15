@@ -92,6 +92,7 @@ const SHELL_URLS = [
   '/js/views/trends.js',
   '/js/views/symptoms.js',
   '/js/views/labs.js',
+  '/js/views/lab_photo.js',
   '/js/views/visit.js',
   '/js/views/profile.js',
   '/js/views/auth.js',

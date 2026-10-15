@@ -5,14 +5,14 @@ reaches the network.
 
 Case format (README in ``tests/ai_golden/``)::
 
-    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate",
+    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report",
      "fixture": {"profile": {...}, "targets": {...} | "<preset>", "entries": [[meal, food name, servings, status?, purpose?]],
                  "history": [[days before, meal, food name, servings]], "custom_foods": [{...}], "other_custom_foods": [{...}],
                  "settings": {"ai": {...}}, "meal", "mode", "text", "image", "swap_entry": index},
      "model_outputs": [<content string> | {"content", "finish_reason", "refusal", "reasoning_content", "status"}],
      "expect": {"http", "status", "calls", "shown_food_names", "not_shown_food_names", "dropped_reasons_include",
                 "claims_corrected", "rule_fallback", "repaired", "response_excludes", "payload_includes",
-                "payload_excludes", "cards", "draft", "items"}}
+                "payload_excludes", "cards", "draft", "items", "rows", "dropped"}}
 
 Placeholders in model outputs are resolved from the request the app actually sent:
 ``"{{id:<food name>}}"`` → that candidate's id, ``"{{ref:<food name>}}"`` → its ref (``f3``, ``s1``),
@@ -33,7 +33,7 @@ from typing import Any, Iterator
 import httpx2
 import pytest
 
-from ai_support import LEGACY_ROUTING, FakeProvider, attach, chat
+from ai_support import LEGACY_ROUTING, PUBLIC_IP, FakeProvider, attach, chat
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from app.config import AiEnv
 from app.main import create_app
@@ -43,6 +43,8 @@ CASES = sorted((ROOT / "ai_golden").glob("*.json"))
 FOODS_JSON = ROOT.parent / "data" / "foods.json"
 IMAGES = ROOT / "fixtures" / "ai" / "images"
 DAY = "2026-10-05"
+LOCAL_HOST = "ollama.lan:11434"
+LOCAL_ADDRESS = "10.0.0.5"  # what the stub's local AI "resolves" to: the local network scope refuses a public address
 TARGET_PRESETS: dict[str, dict[str, Any]] = {
     "stage4": {"potassium_mg": 3000, "phosphorus_mg": 1000, "sodium_mg": 2000, "protein_g": {"min": 56, "max": 56},
                "carbs_g": 236, "carbs_per_meal_g": 60, "fluid_ml": None, "calories_kcal": 2100, "calcium_mg": 1000},
@@ -59,7 +61,7 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
     assert len(cases) >= 40
     categories = {c["category"] for c in cases}
     assert {"grounding", "rules", "safety_text", "refusal", "prefilter", "injection", "format", "privacy", "fallback",
-            "modes", "vision", "kidney_only"} <= categories
+            "modes", "vision", "kidney_only", "lab_report"} <= categories
     assert len({c["id"] for c in cases}) == len(cases)
 
 
@@ -67,10 +69,17 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
 def golden(tmp_path_factory) -> Iterator[tuple[TestClient, TestClient]]:
     tmp = tmp_path_factory.mktemp("golden")
     settings = make_settings(tmp, FOODS_JSON, ai=AiEnv(provider="openai", api_key="sk-golden-0123456789abcdefghij",
-                                                         model="gpt-6-luna", vision_model="gpt-6-luna"))
+                                                         model="gpt-6-luna", vision_model="gpt-6-luna",
+                                                         private_hosts=(LOCAL_HOST,)))
     with TestClient(create_app(settings), base_url=HTTPS_URL) as admin:
         sign_in(admin)
         r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.shared_daily_limit": 0, "ai.vision_plate_enabled": True})
+        assert r.status_code == 200, r.text
+        # Lab report photos run only on a local AI (privacy tier 1): the cases of category lab_report use this one.
+        r = admin.post("/api/admin/ai-providers", json={"preset": "ollama", "model": "gemma", "vision_model": "llava",
+                                                         "base_url": f"http://{LOCAL_HOST}/v1"})
+        assert r.status_code == 201, r.text
+        r = admin.put("/api/admin/ai-routing", json={"local_provider": r.json()["id"]})
         assert r.status_code == 200, r.text
         sam = add_user(admin)
         yield admin, sam
@@ -148,6 +157,10 @@ def prepare(admin: TestClient, sam: TestClient, fx: dict[str, Any]) -> dict[str,
     for purpose in ("text", "photos"):
         r = admin.post("/api/ai/consent", json={"provider_id": status["provider"]["id"], "purpose": purpose})
         assert r.status_code == 200, r.text
+    labs = status["routes"]["labs"]["runs_on"]  # the local AI, when this server has one
+    if labs is not None:
+        r = admin.post("/api/ai/consent", json={"provider_id": labs["id"], "purpose": "labs"})
+        assert r.status_code == 200, r.text
     return ctx
 
 
@@ -205,7 +218,7 @@ def stub(case: dict[str, Any], case_ctx: dict[str, Any]) -> FakeProvider:
         return chat(None if content is None else resolve(content, request), finish=out.get("finish_reason", "stop"),
                     refusal=out.get("refusal"), extra_message=extra)
 
-    return FakeProvider(route=route)
+    return FakeProvider(route=route, address=LOCAL_ADDRESS if case["feature"] == "lab_report" else PUBLIC_IP)
 
 
 def shown_names(result: dict[str, Any], client: TestClient) -> set[str]:
@@ -238,6 +251,9 @@ def test_golden_case(path: Path, golden):
             r = admin.post("/api/ai/next-meal", json=body)
         elif feature == "parse_meal":
             r = admin.post("/api/ai/parse-meal", json={"text": fx["text"], "date": DAY})
+        elif feature == "lab_report":
+            image = (IMAGES / fx.get("image", "label.jpg")).read_bytes()
+            r = admin.post("/api/ai/read-lab-report", content=image, headers={"Content-Type": "image/jpeg"})
         else:
             image = (IMAGES / fx.get("image", "label.jpg")).read_bytes()
             r = admin.post(f"/api/vision/{feature}", content=image, headers={"Content-Type": "image/jpeg"})
@@ -256,7 +272,8 @@ def test_golden_case(path: Path, golden):
         assert name in names, (case["id"], names)
     for name in expect.get("not_shown_food_names", []):
         assert name not in names, (case["id"], names)
-    reasons = [d["reason"] for d in result.get("dropped", [])]
+    dropped = result.get("dropped", [])
+    reasons = [d["reason"] for d in dropped] if isinstance(dropped, list) else []  # a lab report counts its dropped lines instead
     for prefix in expect.get("dropped_reasons_include", []):
         assert any(r_.startswith(prefix) for r_ in reasons), (case["id"], reasons)
     if "claims_corrected" in expect:
@@ -281,6 +298,10 @@ def test_golden_case(path: Path, golden):
         assert actual == value, (case["id"], key, actual)
     if "items" in expect:
         assert len(result.get("items", [])) == expect["items"], (case["id"], result.get("items"))
+    if "rows" in expect:  # lab_report: [analyte, value, unit, taken_on or null] per proposed row, in order
+        assert [[x["analyte"], x["value"], x["unit"], x["taken_on"]] for x in result.get("rows", [])] == expect["rows"], (case["id"], result.get("rows"))
+    if "dropped" in expect and isinstance(result.get("dropped"), dict):
+        assert result["dropped"] == expect["dropped"], (case["id"], result["dropped"])
     if "checks_include" in expect:
         codes = [c["code"] for c in result.get("checks", [])]
         for code in expect["checks_include"]:

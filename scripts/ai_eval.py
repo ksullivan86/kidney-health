@@ -331,6 +331,10 @@ def run_eval(options: Options, *, transport_factory: Any = None, data_dir: Path 
             for run in range(1, options.runs + 1):
                 for case in cases:
                     feature = case["feature"]
+                    if feature == "lab_report":
+                        # Local-only (privacy tier 1): a lab report photo is never sent to the one provider this run measures,
+                        # which may be a cloud AI. The offline golden cases cover it (tests/test_ai_golden.py).
+                        continue
                     if feature in ("label", "plate") and (not options.include_vision or not options.vision_model):
                         continue
                     fx = case.get("fixture", {})

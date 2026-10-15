@@ -744,6 +744,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 13 | `m013_assistant_ask_keys.py` | assistant step 2, part C | `assistant_ask_keys`: the duplicate guard of the Ask chat's saves, hashes only ("Saving from the chat" below) |
 | 14 | `m014_ai_consent_voice.py` | assistant step 2, part B | `ai_consents.purpose` accepts `voice` (table rebuilt from its stored definition; "Voice input" below). |
 | 15 | `m015_symptoms.py` | symptoms log | `symptoms`: a person's symptoms by date and severity, no list of keys in the table ("Symptoms log" below). |
+| 16 | `m016_ai_consent_labs.py` | lab report photos | `ai_consents.purpose` accepts `labs` (table rebuilt from its stored definition; "Lab report photos" below). Needs step 15 in place (the numbering has no gaps). |
 
 ## Backend file ownership
 
@@ -1286,7 +1287,8 @@ person ticks the results to keep and only those go to `POST /api/labs/import` (`
 test, value, unit and date). The reader has no Python twin: `tests/data/lab_import_vectors.json`
 (`tests/js/gen_lab_import_vectors.mjs`, reviewed by hand) pins it in `node tests/js/run_vectors.mjs`, and
 `tests/test_lab_import.py` checks every converted value against `app/units.py`. The demo twin is in
-`js/mock/labs.js`.
+`js/mock/labs.js`. The same import is the only way a result read from a photo of a lab report is saved ("Lab report photos" under "M2 API: AI and photos"):
+the person ticks rows (all start unticked) and the page sends the ticked ones, through the shared `KH.views.labs.saveImported`.
 
 ```json
 LabResult = {"id": 7, "analyte": "phosphate", "label": "Phosphate", "value": 6.0, "unit": "mg/dL",
@@ -1832,7 +1834,7 @@ error categories, CA-store self-check), `client` (request bodies, parsing, JSON 
 retry or repair, concurrency gate, "Test connection" with the Hermes tool check), `prompts`
 (`SYSTEM_PROMPT` and `CHAT_SYSTEM_PROMPT` as templates with `system_prompt(person)` and `chat_prompt(person)`, `TASK_SYSTEM_PROMPT`, `PROMPT_VERSION`, the data block), `schemas` (wire schemas and
 answer models, and `ChatStep` for the Ask chat), `guard` (V1–V9, pure), `chat` (the Ask chat's step loop, answer checks and
-figures; "Ask chat" below), `features` (prepare/judge for each feature, the G7/G8
+figures; "Ask chat" below), `lab_report` (the checks on a lab report photo's copied lines; "Lab report photos" below), `features` (prepare/judge for each feature, the G7/G8
 pre-filters, the label draft), `config` (provider rows, resolution, quota, consent, AI activity,
 retention), `routing` (provider roles and per-feature routing; "Privacy tiers" below), `routes` (the routers below, the call pipeline, the daily re-test); `app/vision.py` (photo
 routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
@@ -1849,9 +1851,9 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), `ai.chat_enabled` (`false`, `AI_CHAT_ENABLED`; the Ask screen,
   "Ask chat" below), `ai.allow_trusted_saves` (`false`, `AI_ALLOW_TRUSTED_SAVES`; lets a person trust the Ask chat to save
   without asking, "Saving from the chat" below), `ai.voice_enabled` (`false`, `AI_VOICE_ENABLED`; the Ask microphone,
-  "Voice input" below), the six routing keys `ai.route.*` ("Privacy tiers: roles and routing" below), and the person's object `ai` (scope `user`):
+  "Voice input" below), the seven routing keys `ai.route.*` ("Privacy tiers: roles and routing" below; `ai.route.labs` takes only `local` or `off`), and the person's object `ai` (scope `user`):
   `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200), trust: "ask" |
-  "conversation" | "always" ("ask")}` with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the seventeen
+  "conversation" | "always" ("ask")}` with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the eighteen
   `ai.*` instance keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
 * **Environment only** (`app/config.py` `AiEnv`; never runtime-editable): `AI_PROVIDER` (a preset),
   `AI_PROVIDER_ROLE` (`local` or `cloud`: the role of that provider; `local` needs a private host, checked at start-up),
@@ -1894,17 +1896,18 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, labs, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat, labs: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice, lab_report}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `features.lab_report` is true only with the person opted in and the `labs` route resolving to the local AI (role `local`, pinned to the private network) with a vision model ("Lab report photos" below); `routes.labs.text` says why not ("Needs a local AI on your own network, which is not set up on this server, so it is off."); `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
 | `POST /api/ai/chat` | `{messages: [{role: "user" \| "assistant", text (1–2000)}] (1–20, the last from the person), request_id? (8–48 of A–Z a–z 0–9 _ -), trust? ("ask" \| "conversation")}` (`?dry_run=true`) → the Ask answer, or the rule-based card for a low or an emergency; 404 while `ai.chat_enabled` is off ("Ask chat" below; `request_id` and `trust`: "Saving from the chat") |
 | `POST /api/ai/transcribe` | the body is one clip (`Content-Type` `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/wav`, at most `STT_MAX_AUDIO_BYTES`), `?seconds=0..60` (the page's own length, for the activity row only) → `{text}`; 404 before the body unless voice is on and configured ("Voice input" below) |
-| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat" \| "voice", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when no feature of that purpose is served by `provider_id` any more (`text` covers meal ideas and describe, which may run on different providers; `voice` is not routed: it rides with Ask, so `provider_id` is the provider the chat route resolves to, and the consent names the transcription host); the consent request also carries `local` (the provider is the local AI) |
-| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat\|voice` (all when left out) → 204; 404 when there is none |
+| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat" \| "voice" \| "labs", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when no feature of that purpose is served by `provider_id` any more (`text` covers meal ideas and describe, which may run on different providers; `voice` is not routed: it rides with Ask, so `provider_id` is the provider the chat route resolves to, and the consent names the transcription host); the consent request also carries `local` (the provider is the local AI) and, for `labs`, `notice` (the plain-words lines of the consent sheet: where the photo goes, what the report may show, that it is not kept, to crop it) |
+| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat\|voice\|labs` (all when left out) → 204; 404 when there is none |
 | `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
 | `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
+| `POST /api/ai/read-lab-report` | raw `image/jpeg` body (`?dry_run=true`) → `{status: "ok" \| "no_results" \| "not_a_lab_report" \| "unreadable", rows: [{analyte, label, value, unit, display, taken_on \| null, printed_date \| null, date_problem \| null, date_note \| null}], dropped: {unknown_analyte, unknown_unit, out_of_range}, dropped_notes: [text], message?, notice, provider: {id, label, model, host}, …}` (the `AiAnswer` fields). **Local AI only** and its own consent purpose `labs`; never saves ("Lab report photos" below) |
 | `GET /api/me/ai` | → `{enabled, settings, chat_enabled, trusted_saves_allowed, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], routing: {mode, features: [{feature, label, role, route, available, reason, text, runs_on}]} \| null, presets, consents, daily_limit, remaining_today}` |
 | `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences, trust}` → the view above; a change of `trust` writes one `ai.trust_changed` activity row (so does `PATCH /api/me/settings` with an `ai` object) |
 | `PUT /api/me/ai/provider` *(re-auth)* | `{preset, model, base_url?, vision_model?, api_key?, remove_key?}` → the view; `403` when personal providers are off; `api_key` write-only |
@@ -1916,8 +1919,8 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `PUT /api/admin/ai-providers/{id}` *(re-auth)* | same body (+ `remove_key`) → `Provider`; `409` for the env provider; a new host deletes its consents |
 | `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for the env provider |
 | `POST /api/admin/ai-providers/{id}/probe` *(re-auth)* | → `{probe, provider}` (20 per hour; may show the first 300 characters of an error body, shared providers only) |
-| `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked}], env_role, as_before, defaults, writable}` |
-| `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe, chat: "local" \| "cloud" \| "off" \| "any", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
+| `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env, allowed}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked}], env_role, as_before, defaults, writable}` |
+| `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe, chat: "local" \| "cloud" \| "off" \| "any", labs: "local" \| "off", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
 | `GET /api/admin/ai-usage` | `days` 1–366 (30) → `{days, usage: [{user_id, username, provider_id, key_scope, requests, prompt_tokens, completion_tokens}]}` (counts only, never content) |
 
 ```json
@@ -1970,18 +1973,20 @@ Code: `app/ai/routing.py`; the scope `local` in `app/ai/netpolicy.py` and `Provi
 operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `docs/privacy.md`.
 
 * **Features and consent purposes.** `photos` (label, plate; purpose `photos`), `meal_ideas` (next-meal in every mode;
-  purpose `text`), `describe` (parse-meal; purpose `text`), `chat` (Ask; purpose `chat`). Consent stays per person,
+  purpose `text`), `describe` (parse-meal; purpose `text`), `chat` (Ask; purpose `chat`), and the local-only `labs` (a lab report
+  photo; purpose `labs`; "Lab report photos" below). Consent stays per person,
   provider and purpose, so moving a feature to another provider asks again for that provider.
 * **Settings** (instance scope; `app/settings_registry.py`, the twin `js/engine/settings.js` and
   `tests/data/settings_vectors.json`): `ai.route.photos|meal_ideas|describe|chat` (`local` \| `cloud` \| `off` \| `any`,
-  default `local`; env locks `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) and
+  default `local`; env locks `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`), `ai.route.labs`
+  (`local` \| `off` only, default `local`, env lock `AI_ROUTE_LABS`) and
   `ai.route.local_provider`, `ai.route.cloud_provider` (a shared provider id, 0 = none; ids are never reused because
   `ai_providers.id` is `AUTOINCREMENT`). The environment provider holds the role `AI_PROVIDER_ROLE` names and no other.
-  All six are in `NO_SIGNIN_ENV_ONLY`; Server settings shows a pointer for them (`ROUTING_GROUP`), the table is the
+  All seven are in `NO_SIGNIN_ENV_ONLY`; Server settings shows a pointer for them (`ROUTING_GROUP`), the table is the
   place to edit.
 * **Resolution** (`routing.resolve_feature(feature)`): AI off or not opted in as before; route `off` → `feature_off`
   for everyone (Ask: 404 through `require_chat_enabled`); the person's `own` provider, or route `any`, → `config.resolve`
-  unchanged (an own provider has role `own`; a shared one is annotated with the role it holds); route `local` / `cloud` →
+  unchanged, **except for the local-only feature `labs`, which never takes that branch** (an own provider has role `own`; a shared one is annotated with the role it holds); route `local` / `cloud` →
   the shared provider that holds the role (`no_local_provider` / `no_cloud_provider` when none, `provider_disabled` when
   switched off or its key is unreadable). The result is a `config.Resolved` with `feature`, `route` and `role`; consent,
   quota (`ai_usage.provider_id`), the answer cache key, `ai_audit`, the dry run and "What will be sent?" all use its
@@ -1995,11 +2000,12 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   local provider (`routing.pin_if_local`) use the same scope.
 * **Upgrade rule, no schema change.** `routes.startup` calls `routing.initialise` before the environment provider is
   synced and records the verdict in `meta.ai_routing_initialised`: a database that already has a shared provider
-  gets `ai.route.*` = `any` for the features not locked by the environment (nothing changes until an admin chooses);
+  gets `ai.route.*` = `any` for the features not locked by the environment (nothing changes until an admin chooses), except
+  `labs`, which starts on `local`;
   a database with none keeps the defaults (`local`: off until a local AI exists). It runs once, so a provider added
   later never flips a new server to `any`. (A migration step was not used: the brief's step 15 would leave a gap
   below it while the voice step 14 is unmerged, and `app/migrations` refuses gaps.)
-* **Not routed.** A person's own provider (their choice; `off` still applies), the Assistant/MCP tools (they call no
+* **Not routed.** A person's own provider (their choice; `off` still applies; it never serves `labs`), the Assistant/MCP tools (they call no
   provider), and the admin's "Test connection" (it names the provider). **Voice** (`app/ai/voice.py`) is part of Ask, not a
   fifth feature: its recording goes to `STT_BASE_URL`, `voice_config` is `None` (404) while the chat route is `off`, the
   transcribe route resolves the `chat` feature, and the `voice` consent row (`ai_consents`, purpose `voice`, host = the
@@ -2045,8 +2051,8 @@ prompt. Model text that must be shown (describe-a-meal phrases and search terms,
 including §9 A2's expanded terms: `shot`, `pen`, `skip`, `delay`, medicines and binder brand names, and
 `extra`/`more`/`double` used as advice).
 `PROMPT_VERSION` changes with any change to prompts, wire schemas or guard wording
-(`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`; it is `2026-10-15.3` since the
-prompts follow the profile).
+(`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`; it is `2026-10-15.4`: .4 added the lab
+report line `TASK_LINES["lab_report"]` and its schema, .3 made the prompts follow the profile).
 
 **The prompts follow the profile** (kidney-only profile, part 3). `SYSTEM_PROMPT` (meal ideas) and `CHAT_SYSTEM_PROMPT` (Ask)
 are templates whose only profile-dependent part is `[[CONDITION]]`, filled by `system_prompt(person)` and `chat_prompt(person)`
@@ -2064,7 +2070,8 @@ prompt and are untouched; `tests/test_ai_prompts.py` fails if a profile changes 
 
 ### Photos (`app/vision.py`, `app/imagecheck.py`; note 03 R8, R9, §9 B1, B10; note 04 §9 A4)
 
-One set of routes (`/api/vision/label`, `/api/vision/plate`, none under `/api/ai`). Off unless the
+One set of routes (`/api/vision/label`, `/api/vision/plate`; the lab report photo route is the one exception under `/api/ai`,
+"Lab report photos" below). Off unless the
 provider has a vision model; plate photos off unless `ai.vision_plate_enabled`; a Hermes provider only
 with `ai.vision_allow_agent` **and** a passing tool check before every photo. The body is the raw JPEG
 (`Content-Type: image/jpeg`, no multipart): `MAX_IMAGE_BYTES` from `Content-Length` and while streaming
@@ -2076,6 +2083,77 @@ switches → headers (415/413) → photo consent (409) → the person's and a se
 the body, into one buffer within 60 s (408), held in that slot through the call; so the photos in memory
 are bounded by `ai.max_concurrency`, not by open connections (the shipped profiles cap the container at
 512 MiB).
+
+### Lab report photos (`POST /api/ai/read-lab-report`; ROADMAP "Lab results from a PDF report", photo version)
+
+Code: `app/vision.py` (`lab_router`, the route), `app/ai/lab_report.py` (the checks, pure), `features.prepare_read_lab_report`,
+`schemas.lab_report_schema` / `LabReportAnswer`, `prompts.TASK_LINES["lab_report"]`, `routing` (`LOCAL_ONLY`), schema step 16;
+browser `js/views/lab_photo.js` (`KH.labPhoto`) and `KH.views.labs.saveImported` (`js/views/labs.js`). People and operators:
+`docs/ai.md` "Lab report photos"; what goes where: `docs/privacy.md`.
+
+* **Local AI only (least trust).** A lab report can show a name, a date of birth, record numbers and a clinic, and the app
+  cannot take them out of an image. The feature is the routed feature `labs` (consent purpose `labs`), whose setting
+  `ai.route.labs` is `local` or `off` only (default `local`; `AI_ROUTE_LABS`; `cloud` and `any` are refused by the registry type,
+  by `PUT /api/admin/ai-routing` and `PATCH /api/admin/settings` (`400`, "Input should be 'local' or 'off'"), by `routing.plan` (`400`, reason `local_only`) and by the environment, which stops the start).
+  `routing.resolve_feature` skips a person's own provider and the rule `any` for a local-only feature, resolves it to the
+  shared provider holding the role `local` (so `no_local_provider` when there is none: the feature is off and the status says
+  "Needs a local AI on your own network, which is not set up on this server, so it is off."), and refuses a result that is not
+  `role == "local"` with `cfg.local_only` (`local_not_private`). `prepare_read_lab_report` raises `LocalOnlyRequired` and
+  `routes.run_call` answers `503 local_not_private` for any `Prepared.local_only` call on a provider that is not pinned, so the
+  call uses the network scope `local` (every resolved address private at call time) however it was reached.
+  `routing.initialise` starts `labs` on `local` (written out) even on an upgraded server whose other features start on `any`.
+* **The request.** Raw `image/jpeg` body like the label route (no multipart, nothing spooled; `register_body_limit` gives
+  `/api/ai/read-lab-report` the image limit), `?dry_run=true`. Order of refusals: sign-in `401` → AI off `404` → the `labs` route and
+  the vision model `503` (`feature_off`, `no_local_provider`, `local_not_private`, `not_opted_in`, `not_allowed`,
+  `vision_not_configured`, `agent_not_allowed`) → content type and declared size `415`/`413` → consent for `labs` `409` → the
+  person's and a server AI slot `429` → only then the body (`408`), checked and rewritten by `imagecheck.check_jpeg` like every
+  photo. The call counts in `ai.shared_daily_limit`. The photo is never written to disk, stored or logged; the dry run shows the
+  destination (`provider.local` true) and `[N base64 characters]`, never bytes, takes the slot and no quota and writes no row.
+* **The model only copies.** `TASK_LINES["lab_report"]` (with the unchanged `TASK_SYSTEM_PROMPT`) asks for the printed lines of
+  the app's nine tests, in the codes of `app/units.py`, the number and unit exactly as printed, the date as printed or `null`;
+  no judgement, range, flag, advice or identity. The answer schema is strict (`additionalProperties: false`, every property
+  required): `{status: "ok" | "not_a_lab_report" | "unreadable", rows: [{analyte, value, unit, taken_on}] (≤ 60)}`; `analyte` is
+  the nine codes or `other` on the wire and any short string in the answer model (so a backend that does not enforce the enum
+  loses a line, not the answer).
+* **The app decides** (`lab_report.judge`, pure; in this order per line): `analyte` not one of `units.ANALYTES` → dropped,
+  `dropped.unknown_analyte`; `unit` not accepted by `units.canonical_unit_name` for that test (an empty unit too; nothing is
+  guessed) → `dropped.unknown_unit`; the value fails the very validation of `POST /api/labs` (`models.LabCreate`: a
+  non-negative number, converted, inside the plausible range) → `dropped.out_of_range`; a repeated line is one row. The unit is
+  returned in the app's spelling (`µmol/L`) with `display` from `units.convert` ("1.2 mmol/L = 3.7 mg/dL"). The date is read
+  only when it cannot mean two days (`YYYY-MM-DD`, month names, `d/m/y` or `m/d/y` when a part is above 12 or both are equal);
+  otherwise, and for a date in the future or before 1900 (`models.validate_past_date`), `taken_on` is `null` with `date_problem`
+  (`missing`, `ambiguous`, `unreadable`, `future`, `too_old`) and `date_note` (the app's sentence); the row is kept for the
+  person to date. `printed_date` is echoed only if it is digits, month names and `/ . , : -`. **No text the model wrote reaches the person**: the test is a code the app labels, the value a number, the unit the app's
+  spelling, the date a parsed day. The response is `{status: "ok" | "no_results" | "not_a_lab_report" | "unreadable", rows,
+  dropped: {unknown_analyte, unknown_unit, out_of_range}, dropped_notes: ["3 lines were not recognised: …"], notice: "Read by AI
+  from your photo. Check each value against the report before you tick it.", provider, …}`; `502` for an answer that fails
+  the schema after the one repair.
+* **Consent.** Purpose `labs` (schema step 16), keyed to the local provider and its host and `POLICY_VERSION` like the others;
+  `POST /api/ai/consent` with `labs` is `409` for any provider but the one the `labs` route resolves to. The consent request
+  carries `notice` (`config.labs_notice(host)`): the photo is sent to <host> (your local AI, on your own network) to read the
+  results; the report may show your name, date of birth and record numbers and the app cannot remove them from a photo, so crop
+  it to the results table; the photo is not kept; every row starts unticked and nothing is saved until the person ticks it and
+  presses Save.
+* **Nothing is kept.** The AI activity row (`feature` `read_lab_report`) has the request with the photo replaced by its SHA-256,
+  size and dimensions (the prompt text is fixed) and **no copy of the model's answer** (`Prepared.keep_response = False`, even
+  with `ai.audit_retention_days > 0`); the verdict holds the counts. The answer cache never holds it (`_cache_key` is for next-meal
+  only). The log line has feature, provider, model, host, latency, tokens and status only.
+* **Nothing is written by this route.** A saved result is the person's tick and the ordinary `POST /api/labs/import`
+  (`LabImport`, each row checked again like `POST /api/labs`, duplicates skipped, the potassium alert returned as for a CSV file).
+* **Browser.** The card `#lab-photo` in the Labs view (below "Import from a spreadsheet") is hidden unless `GET /api/ai/status`
+  says `features.lab_report`; with AI on but the feature unavailable it shows only the server's sentence (`routes.labs.text`; the
+  person not opted in; a local AI without a vision model); with AI off, and in the demo and preview, it is not there at all
+  (`js/mock/ai.js` answers every `/api/ai/*` route `404`). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
+  `KH.ai.withConsent('labs', …, 'labs')` and `KH.ai.uploadPhoto('lab-report', …)`; "What will be sent?" is the dry run. The result is
+  drawn with the CSV import's table (same classes, `lab-photo-list` besides), **every checkbox unchecked**, the notice line and
+  the dropped counts above it; a row without a date shows a date input and its checkbox is disabled until a valid date
+  (1900-01-01 to tomorrow) is entered (clearing it unticks the row); "already saved" marks a result with the same test, date and
+  shown value. Save sends only the ticked rows through `KH.views.labs.saveImported` (the CSV import's own save: `POST
+  /api/labs/import`, counts, refusals, the potassium banner, "what this changed"). Everything from the server is set with
+  `textContent`; the photo is held in memory until Save or Discard. `tests/js/lab_photo_page.mjs` runs the file against a fake page.
+* **Tests.** `tests/test_lab_photo.py` (routing, consent, filters and counts, "same validation as POST /api/labs", dates, nothing
+  written, nothing kept, two people), `tests/test_migration_m016.py`, `tests/test_lab_photo_ui.py`, the golden category `lab_report`
+  (`tests/ai_golden/lab-report-*.json`; `scripts/ai_eval.py` skips them: they are local-only).
 
 ### Ask chat (assistant step 2, parts A and C)
 
@@ -2316,6 +2394,13 @@ of the DDL), so a column or constraint that a step between 12 and 14 added is ke
 `foreign_key_check`, idempotent. A voice row keeps the transcription host in `host` and the AI provider's id in
 `provider_id` ("Voice input" above).
 
+### Schema step 16 (`m016_ai_consent_labs.py`)
+
+`ai_consents.purpose` accepts `labs` besides `text`, `photos`, `chat` and `voice`. SQLite cannot change a CHECK, so the table is
+rebuilt as steps 12 and 14 did: from the **stored definition** of the old table with `'labs'` added to that one list, so a
+column or constraint that a step between 14 and 16 added is kept; every row is copied (a person who agreed to photos, chat or
+voice is not asked again); atomic, `foreign_key_check`, idempotent. A `labs` row keeps the local provider's host and id.
+
 ### Data, export, deletion and retention
 
 `export.json` carries `ai_audit` (the person's rows), `ai_usage`, `ai_consents` and `ai_provider` (their
@@ -2344,12 +2429,15 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   key status, badges and last test, Test connection, Edit, Delete; Add a shared provider (preset, name,
   address, model, vision model, key, advanced options); `AI_PRIVATE_HOSTS` read-only; AI usage (counts).
   The `ai.*` switches are in Server administration → Server settings like every registry key. At the top of that
-  section `js/views/ai_routing.js` draws "Which AI does each feature use?" (privacy tiers): a table of the four features
-  with Local / Cloud / Off (and "As before" while a feature is still on `any`), the local-AI and cloud-AI selects (the
+  section `js/views/ai_routing.js` draws "Which AI does each feature use?" (privacy tiers): a table of the features (four with
+  Local / Cloud / Off, and "As before" while a feature is still on `any`; the lab report row only Local and Off, from `allowed`), the local-AI and cloud-AI selects (the
   local one lists only private providers), a warning for every feature that goes to the cloud ("this sends … to
   <host>, outside your network"), and Save routing (`PUT /api/admin/ai-routing`, only the changes). Settings → AI ideas
   adds "Where each AI feature runs", one line per feature from `GET /api/me/ai`'s `routing`, and, once routing is set
   up, the provider choice is "The server's AI" or "My own provider".
+* **Labs view**: the card "Read a lab report photo" (`js/views/lab_photo.js`, "Lab report photos" above); `KH.ai.uploadPhoto`
+  takes the kind `lab-report` for `POST /api/ai/read-lab-report`, and the consent sheet shows the server's `notice` lines for the
+  purpose `labs` instead of the generic text.
 * **Add view**: `#ai-add-slot` shows the features `GET /api/ai/status` reports (AI meal ideas, Describe a
   meal, Read a label, Plate photo) and the shared calls left; "AI ideas are off for you" with a link to
   Settings when the person has not opted in; nothing when AI is off.
@@ -2390,7 +2478,7 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
 The `ai.*` keys are in `tests/data/settings_vectors.json` and `js/engine/settings.js`. Demo mode never
 calls a provider: `js/mock/ai.js` answers like a server with AI off (`GET /api/me/ai` → `enabled: false`;
 every `/api/ai/*` (`/api/ai/chat` and `/api/ai/transcribe` too) and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
-app. `ai.chat_enabled`, `ai.voice_enabled` and the six `ai.route.*` keys are registry keys like the others (vectors and twin; the demo's `GET /api/me/ai` has `routing: null`). The Ask screen and the routing table have no twin: the demo shows its note, and no microphone or read-aloud switch.
+app. `ai.chat_enabled`, `ai.voice_enabled` and the seven `ai.route.*` keys are registry keys like the others (vectors and twin; the demo's `GET /api/me/ai` has `routing: null`). The Ask screen and the routing table have no twin: the demo shows its note, and no microphone or read-aloud switch. The lab report reader has no twin either: in the demo `/api/ai/read-lab-report` answers `404` like every AI route and the card is not shown.
 
 ## M3: the handbook at `/learn`
 

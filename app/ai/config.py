@@ -52,7 +52,7 @@ MAX_TOKENS_RANGE = (64, 32_768)
 TIMEOUT_RANGE = (5.0, 600.0)
 CONTEXT_RANGE = (1024, 2_000_000)
 DISABLED_REASONS = ("hermes_tools", "hermes_check_failed")
-Purpose = Literal["text", "photos", "chat", "voice"]
+Purpose = Literal["text", "photos", "chat", "voice", "labs"]
 
 
 # --------------------------------------------------------------------------- #
@@ -650,12 +650,28 @@ def consents_of(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
              "skip_preview": bool(r["skip_preview"]), "at": r["created_at"]} for r in rows]
 
 
+def labs_notice(host: str) -> list[str]:
+    """What the consent sheet for a lab report photo (purpose ``labs``) says, in plain words: where the photo goes, what it
+    may show, that it is not kept, and what the person can do about it. Shown in full by the sheet; pinned by the tests."""
+    return [
+        f"The photo of your lab report is sent to {host} (your local AI, on your own network) to read the results.",
+        "The report may show your name, date of birth and record numbers, and the app cannot remove them from a photo. "
+        "Crop the photo to the results table if you can.",
+        "The photo is not kept: the server does not store or log it, and the AI activity list holds only a fingerprint of it.",
+        "The AI only copies what is printed. Every row starts unticked, and nothing is saved until you check it against the "
+        "report, tick it and press Save.",
+    ]
+
+
 def consent_request(cfg: ProviderConfig, purpose: Purpose) -> dict[str, Any]:
     """What the consent sheet shows before the first call to a host (R9 step 3)."""
     preset = cfg.preset_def
-    return {"provider_id": cfg.id, "provider_label": cfg.label, "host": cfg.host, "purpose": purpose,
-            "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind,
-            "local": cfg.local_only}  # the local AI: on the admin's private network, never reached outside it
+    out: dict[str, Any] = {"provider_id": cfg.id, "provider_label": cfg.label, "host": cfg.host, "purpose": purpose,
+                           "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind,
+                           "local": cfg.local_only}  # the local AI: on the admin's private network, never reached outside it
+    if purpose == "labs":
+        out["notice"] = labs_notice(cfg.host)
+    return out
 
 
 # --------------------------------------------------------------------------- #

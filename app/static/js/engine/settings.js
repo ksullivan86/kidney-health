@@ -55,6 +55,8 @@
       label: 'The cloud AI (shared provider id)', help: 'The shared provider that runs outside your network (0: none). Set it in Server administration → AI providers, not here.' },
     { key: 'ai.route.describe', type: 'choice', options: ['local', 'cloud', 'off', 'any'], default: 'local', scope: 'instance', env: 'AI_ROUTE_DESCRIBE',
       label: 'Which AI turns a described meal into search words', help: 'local, cloud, off or any. Default local.' },
+    { key: 'ai.route.labs', type: 'choice', options: ['local', 'off'], default: 'local', scope: 'instance', env: 'AI_ROUTE_LABS',
+      label: 'Which AI reads a photo of a lab report', help: 'local or off, never cloud: a lab report can show a name, a date of birth and record numbers that cannot be removed from a photo, so it is read only by the local AI. Default local: with no local AI the feature is off.' },
     { key: 'ai.route.local_provider', type: 'int', min: 0, max: 1000000000, default: 0, scope: 'instance', env: null,
       label: 'The local AI (shared provider id)', help: 'The shared provider that runs on your own network (0: none). Only a provider whose host is in AI_PRIVATE_HOSTS can be local. Set it in Server administration → AI providers, not here.' },
     { key: 'ai.route.meal_ideas', type: 'choice', options: ['local', 'cloud', 'off', 'any'], default: 'local', scope: 'instance', env: 'AI_ROUTE_MEAL_IDEAS',

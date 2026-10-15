@@ -1,0 +1,25 @@
+{
+  "id": "lab-report-malformed-answer-is-repaired-once",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": \"high\", \"unit\": \"mmol/L\", \"taken_on\": null}]}",
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "calls": 2,
+    "status": "ok",
+    "repaired": true,
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        "2026-10-07"
+      ]
+    ]
+  }
+}

@@ -99,6 +99,7 @@ V03_ROUTES = {
     ("get", "/api/ai/status"), ("post", "/api/ai/next-meal"), ("post", "/api/ai/parse-meal"), ("post", "/api/ai/consent"),
     ("delete", "/api/ai/consent/{provider_id}"), ("get", "/api/ai/audit"), ("delete", "/api/ai/audit"),
     ("post", "/api/vision/label"), ("post", "/api/vision/plate"),
+    ("post", "/api/ai/read-lab-report"),  # a photo of a lab report, local AI only (ROADMAP "Lab results ... photo version")
     ("get", "/api/me/ai"), ("patch", "/api/me/ai"), ("put", "/api/me/ai/provider"), ("delete", "/api/me/ai/provider"),
     ("post", "/api/me/ai/probe"),
     ("get", "/api/admin/ai-providers"), ("post", "/api/admin/ai-providers"), ("put", "/api/admin/ai-providers/{provider_id}"),

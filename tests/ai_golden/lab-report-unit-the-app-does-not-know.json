@@ -1,0 +1,27 @@
+{
+  "id": "lab-report-unit-the-app-does-not-know",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 180, \"unit\": \"mg/dL\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"creatinine\", \"value\": 1.1, \"unit\": \"\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"phosphate\", \"value\": 3.4, \"unit\": \"mg/dL\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 2,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "phosphate",
+        3.4,
+        "mg/dL",
+        "2026-10-07"
+      ]
+    ]
+  }
+}

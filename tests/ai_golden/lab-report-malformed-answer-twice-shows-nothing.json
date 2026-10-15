@@ -1,0 +1,16 @@
+{
+  "id": "lab-report-malformed-answer-twice-shows-nothing",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": \"high\", \"unit\": \"mmol/L\", \"taken_on\": null}]}",
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": \"high\", \"unit\": \"mmol/L\", \"taken_on\": null}]}"
+  ],
+  "expect": {
+    "http": 502,
+    "calls": 2
+  }
+}

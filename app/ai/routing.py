@@ -11,9 +11,11 @@ feature        what it covers                                              conse
 ``meal_ideas`` next-meal ideas, their order, swaps, the day plan           ``text``
 ``describe``   turning a described meal into search words                  ``text``
 ``chat``       the Ask screen                                              ``chat``
+``labs``       reading a photo of a lab report                             ``labs``
 =============  ==========================================================  ====================
 
-Each feature is ``local``, ``cloud``, ``off`` or ``any`` (settings ``ai.route.<feature>``). **The default is the
+Each feature is ``local``, ``cloud``, ``off`` or ``any`` (settings ``ai.route.<feature>``), except ``labs``, which is
+``local`` or ``off`` only (see below). **The default is the
 least-trusting one, ``local``**: with no local provider the feature is off until an admin pins it to ``cloud``.
 ``any`` is the rule from before routing existed (the shared provider the person chose, else the first usable one).
 A server that already had a provider when this was added starts every feature on ``any`` so nothing changes
@@ -25,6 +27,10 @@ Rules that keep "local" local:
   when the role is set, when the provider's address is edited, and again before every call);
 * a call to the local provider uses the network scope ``local`` (``ProviderConfig.local_only``), so the transport
   refuses any address that is not private, even if the name later resolves to a public one;
+* ``labs`` is **local-only**: a lab report photo can show a name, a date of birth and record numbers that the app cannot
+  remove from an image, so the setting accepts only ``local`` and ``off``, a person's own provider is never used for it
+  (even one they chose), the upgrade rule never sets it to ``any``, and with no usable local provider it is off
+  (:data:`LOCAL_ONLY`);
 * ``off`` is off for everyone, including people with their own provider; a person's own provider is otherwise their
   own choice, counts as a cloud provider (the app lets people point only at public hosts) and is never replaced.
 
@@ -47,21 +53,27 @@ from .netpolicy import NetPolicy, PolicyError, is_private_host, parse_base_url
 
 log = logging.getLogger("kidney_health.ai")
 
-Feature = Literal["photos", "meal_ideas", "describe", "chat"]
+Feature = Literal["photos", "meal_ideas", "describe", "chat", "labs"]
 Role = Literal["local", "cloud"]
-FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "chat")
+FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "chat", "labs")
+# Features that run only on the local AI: their route is ``local`` or ``off`` (the setting refuses the rest), and neither a
+# person's own provider nor the pre-routing rule ``any`` ever serves them.
+LOCAL_ONLY: tuple[str, ...] = ("labs",)
+LOCAL_ONLY_ROUTES: tuple[str, ...] = ("local", "off")
 HEADLINE: tuple[str, ...] = ("meal_ideas", "describe", "photos", "chat")  # the status endpoint's top-level provider: the first that resolves
 ROLES: tuple[str, ...] = ("local", "cloud")
 ROUTES: tuple[str, ...] = ("local", "cloud", "off", "any")
 # The consent purpose each feature is agreed under (ai_consents.purpose).
-PURPOSE: dict[str, K.Purpose] = {"photos": "photos", "meal_ideas": "text", "describe": "text", "chat": "chat"}
-LABEL = {"photos": "Photos (labels and plates)", "meal_ideas": "Meal ideas", "describe": "Describe a meal", "chat": "Ask"}
+PURPOSE: dict[str, K.Purpose] = {"photos": "photos", "meal_ideas": "text", "describe": "text", "chat": "chat", "labs": "labs"}
+LABEL = {"photos": "Photos (labels and plates)", "meal_ideas": "Meal ideas", "describe": "Describe a meal", "chat": "Ask",
+         "labs": "Lab report photos"}
 # What leaves the server for each feature, in the words of the admin warning and the consent sheet.
 SENDS = {
     "photos": "your photos of labels and plates",
     "meal_ideas": "your meal data (stage, targets, today's totals and the foods the rules offered)",
     "describe": "the meals you describe in words",
     "chat": "your messages in Ask and the app's own numbers the AI looks up",
+    "labs": "your photos of lab reports (which can show your name, date of birth and record numbers)",
 }
 INITIALISED_KEY = "ai_routing_initialised"  # meta: set once, whichever way the first start-up decided
 
@@ -76,6 +88,11 @@ def role_key(role: str) -> str:
 
 def features_for_purpose(purpose: str) -> tuple[str, ...]:
     return tuple(f for f in FEATURES if PURPOSE[f] == purpose)
+
+
+def allowed_routes(feature: str) -> tuple[str, ...]:
+    """The routes the setting accepts for ``feature`` (every feature but the local-only ones also takes ``cloud`` and ``any``)."""
+    return LOCAL_ONLY_ROUTES if feature in LOCAL_ONLY else ROUTES
 
 
 # --------------------------------------------------------------------------- #
@@ -138,9 +155,9 @@ def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Key
     if require_opt_in and not prefs.get("opt_in"):
         return K.Resolved(None, None, "not_opted_in", feature=feature)
     route = str(store.get(conn, route_key(feature)))
-    if route == "off":
-        return K.Resolved(None, None, "feature_off", feature=feature, route=route)
-    if str(prefs.get("provider") or "auto") == "own" or route == "any":
+    if route == "off" or (feature in LOCAL_ONLY and route != "local"):  # a local-only feature is local or off, nothing in between
+        return K.Resolved(None, None, "feature_off", feature=feature, route="off")
+    if feature not in LOCAL_ONLY and (str(prefs.get("provider") or "auto") == "own" or route == "any"):
         # A person's own provider is their choice; "any" is the rule from before routing existed.
         resolved = K.resolve(conn, store, keyring, settings, user_id=user_id, can_use_shared=can_use_shared, require_opt_in=require_opt_in)
         resolved.feature, resolved.route = feature, route
@@ -164,7 +181,11 @@ def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Key
     except InvalidToken:
         log.warning("the key of shared AI provider %s cannot be decrypted with the current SECRET_KEY; set it again", row["id"])
         return K.Resolved(row, None, "provider_disabled", feature=feature, route=route)
-    return _holding(conn, store, settings, policy, K.Resolved(row, cfg, None, feature=feature, route=route))
+    held = _holding(conn, store, settings, policy, K.Resolved(row, cfg, None, feature=feature, route=route))
+    if feature in LOCAL_ONLY and held.cfg is not None and not (held.role == "local" and held.cfg.local_only):
+        # Belt and braces: whatever the settings say, a local-only feature is never served by a provider that is not pinned to the private network.
+        return K.Resolved(row, None, "local_not_private", feature=feature, route=route, role=held.role)
+    return held
 
 
 def _holding(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, policy: NetPolicy, resolved: K.Resolved) -> K.Resolved:
@@ -204,10 +225,15 @@ _MISSING = {
 }
 
 
+LABS_NEEDS_LOCAL = "Needs a local AI on your own network, which is not set up on this server, so it is off."
+
+
 def runs_on_text(resolved: K.Resolved) -> str:
     """One line for Settings and the Add view: where this feature runs (or why it does not)."""
     cfg = resolved.cfg
     if cfg is None:
+        if resolved.feature in LOCAL_ONLY and resolved.reason in ("no_local_provider", "not_configured"):
+            return LABS_NEEDS_LOCAL
         return _MISSING.get(resolved.reason or "") or K.MESSAGES.get(resolved.reason or "", "Not available.")
     if resolved.role == "local":
         return f"Runs on your local AI ({cfg.host})."
@@ -254,6 +280,7 @@ def initialise(conn: sqlite3.Connection, store: SettingsStore) -> str | None:
 
     A database that already has a shared provider belongs to a server that was using it for every feature: each
     feature starts on ``any``, which changes nothing until an admin opens Server administration → AI providers and chooses.
+    A local-only feature (``labs``) never starts on ``any``: it starts on ``local``, whatever the server did before.
     A database with no shared provider has nothing to preserve and starts on the least-trusting defaults.
     Returns ``as_before`` or ``least_trust`` the first time, None after that."""
     if not table_exists(conn, "ai_providers") or not store.tables_exist(conn) or get_meta(conn, INITIALISED_KEY):
@@ -264,7 +291,9 @@ def initialise(conn: sqlite3.Connection, store: SettingsStore) -> str | None:
             definition = store.definition(route_key(feature))
             if store.env_value(definition)[0] or store.effective(conn, route_key(feature)).source == "instance":
                 continue
-            store.set_instance(conn, route_key(feature), "any")
+            # A local-only feature (a lab report photo) is new with routing: nothing was ever served "as before", so it starts
+            # on the least-trusting setting, written out so that it does not depend on the registry default.
+            store.set_instance(conn, route_key(feature), "local" if feature in LOCAL_ONLY else "any")
     verdict = "as_before" if has_provider else "least_trust"
     set_meta(conn, INITIALISED_KEY, verdict)
     return verdict
@@ -281,7 +310,8 @@ def overview(conn: sqlite3.Connection, store: SettingsStore, settings: Settings,
     for feature in FEATURES:
         eff = store.effective(conn, route_key(feature))
         features.append({"feature": feature, "label": LABEL[feature], "sends": SENDS[feature], "route": eff.value,
-                         "source": eff.source, "locked_by_env": eff.env if eff.locked else None})
+                         "source": eff.source, "locked_by_env": eff.env if eff.locked else None,
+                         "allowed": list(allowed_routes(feature))})
     roles: dict[str, Any] = {}
     for role in ROLES:
         row = role_row(conn, store, settings, role)
@@ -319,6 +349,10 @@ def plan(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, pol
     changes: dict[str, Any] = {}
     for feature, route in features.items():
         key = route_key(feature)
+        if route not in allowed_routes(feature):
+            raise RoutingError(f"{LABEL[feature]} can only be local or off: a lab report can show your name, date of birth and record "
+                               "numbers, which cannot be removed from a photo, so it is never sent to a cloud AI.",
+                               field=feature, reason="local_only")
         if store.env_value(store.definition(key))[0]:
             raise RoutingError(f"{feature} is set by the server ({store.definition(key).env}) and cannot be changed here.", status=409, field=feature, locked=True)
         changes[key] = route

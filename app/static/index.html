@@ -881,6 +881,27 @@
       <div id="lab-import-preview" class="lab-import-preview"></div>
     </section>
 
+    <!-- Read a lab report photo (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
+         The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. -->
+    <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
+      <h2 class="card-title" id="lab-photo-h">Read a lab report photo</h2>
+      <p id="lab-photo-why" class="muted small" hidden></p>
+      <div id="lab-photo-controls" hidden>
+        <p class="muted small">Take a photo or a screenshot of your lab report (a PDF can be screenshotted). The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can.</p>
+        <div class="field">
+          <label for="lab-photo-file">Photo or screenshot of the report</label>
+          <input id="lab-photo-file" class="ai-file" type="file" accept="image/*" aria-describedby="lab-photo-hint">
+          <span class="hint" id="lab-photo-hint">The photo is sent to your local AI and is not kept.</span>
+        </div>
+        <div class="settings-actions">
+          <button class="btn secondary" type="button" id="lab-photo-read">Read the report</button>
+          <button class="btn secondary" type="button" id="lab-photo-what">What will be sent?</button>
+        </div>
+        <div id="lab-photo-error" class="form-error" role="alert"></div>
+      </div>
+      <div id="lab-photo-results" class="lab-import-preview" aria-live="polite"></div>
+    </section>
+
     <section id="labs-review" class="notes labs-review" tabindex="-1" aria-labelledby="labs-review-h" hidden>
       <h2 class="notes-title" id="labs-review-h">What this result changed</h2>
       <div id="labs-review-body"></div>
@@ -1902,6 +1923,7 @@
 <script src="js/views/trends.js"></script>
 <script src="js/views/symptoms.js"></script>
 <script src="js/views/labs.js"></script>
+<script src="js/views/lab_photo.js"></script>
 <script src="js/views/visit.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>

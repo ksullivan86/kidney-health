@@ -17,6 +17,8 @@
    * Import from a spreadsheet (v0.3.1): a CSV file is read on this device (js/engine/lab_import.js); every
      result is listed with its conversion before anything is saved, columns that are not tests are never
      sent, and only the ticked results go to POST /api/labs/import, which checks each one again.
+   * Read a lab report photo (js/views/lab_photo.js): only with a local AI; the AI copies the printed results, every row starts
+     unticked, and the ticked ones are saved through the same POST /api/labs/import (saveImported below).
    * History: every result, newest first, grouped by test, with deletion. */
 (() => {
   'use strict';
@@ -323,6 +325,35 @@
     renderImport();
   });
 
+  // Saves the results the person ticked through POST /api/labs/import (which checks each one again) and shows what happened
+  // in `box`: the counts, why any were refused, the potassium banner, and what the results changed. Shared by the CSV import
+  // above and "Read a lab report photo" (js/views/lab_photo.js), so both end the same way. `kept` rows carry analyte, value,
+  // unit, taken_on, label and text; `source` ends the headline ("saved from your file"); `onSaved` runs once the server has
+  // saved them. Returns the server's answer; errors are the caller's to show.
+  async function saveImported(kept, box, source, onSaved = null) {
+    const before = await suggestionNow();
+    const res = await api.importLabs(LI.requestBody(kept));
+    invalidate();
+    if (onSaved) onSaved();
+    const done = [`Saved ${plural(res.saved, 'result', 'results')}`];
+    if (res.duplicates) done.push(`${res.duplicates} already saved`);
+    if (res.refused.length) done.push(`${res.refused.length} refused`);
+    const out = clear(box);
+    out.append(h('p', { class: 'lab-import-summary', role: 'status' }, `${done.join(', ')}.`));
+    if (res.refused.length) {
+      out.append(h('ul', { class: 'lab-import-refused' }, res.refused.map((x) => {
+        const r = kept[x.index];
+        return h('li', {}, `${r.label} ${r.text} (${fmtDay(r.taken_on)}): ${x.reason}`);
+      })));
+    }
+    toast(`${done.join(', ')}`, 'ok');
+    $('#labs-live').textContent = `${done.join(', ')}.`;
+    renderAlert(res.alerts && res.alerts[0] ? res.alerts[0] : null, Boolean(res.alerts && res.alerts.length));
+    if (res.saved) renderReview(null, before, await suggestionNow(), `${plural(res.saved, 'result was', 'results were')} saved from ${source}.`);
+    await refresh();
+    return res;
+  }
+
   function renderImport() {
     const existing = cache.data ? cache.data.labs : [];
     const a = LI.analyse(imp.text, { today: todayStr(), units: imp.units, dateOrder: imp.dateOrder, existing });
@@ -409,27 +440,7 @@
       if (!kept.length) return;
       save.disabled = true;
       try {
-        const before = await suggestionNow();
-        const res = await api.importLabs(LI.requestBody(kept));
-        invalidate();
-        imp.text = null;
-        importFile.value = '';
-        const done = [`Saved ${plural(res.saved, 'result', 'results')}`];
-        if (res.duplicates) done.push(`${res.duplicates} already saved`);
-        if (res.refused.length) done.push(`${res.refused.length} refused`);
-        const out = clear(importBox);
-        out.append(h('p', { class: 'lab-import-summary', role: 'status' }, `${done.join(', ')}.`));
-        if (res.refused.length) {
-          out.append(h('ul', { class: 'lab-import-refused' }, res.refused.map((x) => {
-            const r = kept[x.index];
-            return h('li', {}, `${r.label} ${r.text} (${fmtDay(r.taken_on)}): ${x.reason}`);
-          })));
-        }
-        toast(`${done.join(', ')}`, 'ok');
-        $('#labs-live').textContent = `${done.join(', ')}.`;
-        renderAlert(res.alerts && res.alerts[0] ? res.alerts[0] : null, Boolean(res.alerts && res.alerts.length));
-        if (res.saved) renderReview(null, before, await suggestionNow(), `${plural(res.saved, 'result was', 'results were')} saved from your file.`);
-        await refresh();
+        await saveImported(kept, importBox, 'your file', () => { imp.text = null; importFile.value = ''; });
       } catch (err) {
         save.disabled = false;
         if (err.handled) return;
@@ -536,8 +547,9 @@
     if (!state.profile) KH.loadProfile().catch(toastError);
     invalidate();
     refresh();
+    if (KH.labPhoto) KH.labPhoto.show(); // js/views/lab_photo.js: offered only when the server says the local AI can read a report
   });
 
   KH.labs = { load, invalidate, currentAlert, alertBanner, summary, learnLink, LEARN, ANALYTE_ORDER };
-  KH.views.labs = { refresh, renderReview, parseValue };
+  KH.views.labs = { refresh, renderReview, parseValue, saveImported, fmtDay };
 })();

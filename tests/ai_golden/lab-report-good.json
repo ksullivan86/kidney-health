@@ -1,0 +1,55 @@
+{
+  "id": "lab-report-good",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"phosphate\", \"value\": 3.4, \"unit\": \"mg/dL\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"creatinine\", \"value\": 97, \"unit\": \"umol/L\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"egfr\", \"value\": 61, \"unit\": \"mL/min/1.73m2\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"a1c\", \"value\": 6.9, \"unit\": \"%\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 0,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        "2026-10-07"
+      ],
+      [
+        "phosphate",
+        3.4,
+        "mg/dL",
+        "2026-10-07"
+      ],
+      [
+        "creatinine",
+        97,
+        "µmol/L",
+        "2026-10-07"
+      ],
+      [
+        "egfr",
+        61,
+        "mL/min/1.73 m²",
+        "2026-10-07"
+      ],
+      [
+        "a1c",
+        6.9,
+        "%",
+        "2026-10-07"
+      ]
+    ],
+    "payload_includes": [
+      "TASK: read_lab_report",
+      "lab_report"
+    ]
+  }
+}

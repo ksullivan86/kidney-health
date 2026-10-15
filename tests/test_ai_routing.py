@@ -29,7 +29,8 @@ from app.main import create_app
 CLOUD_KEY = "sk-env-0123456789abcdefghijklmn"
 LOCAL_URL = "http://ollama.lan:11434/v1"
 PRIVATE_IP = "10.0.0.5"
-FEATURES = ("photos", "meal_ideas", "describe", "chat")
+FEATURES = ("photos", "meal_ideas", "describe", "chat")  # the four an admin may send to the cloud or to "any"
+ALL = (*FEATURES, "labs")  # plus the local-only one (a lab report photo; tests/test_lab_photo.py)
 PARSE = {"status": "ok", "items": [{"text": "an apple", "search": "apple", "amount": 1, "unit": "serving"}]}
 
 
@@ -234,7 +235,7 @@ def test_the_registry_defaults_are_the_least_trusting_ones():
             d.validate("lan")
     for role in ("local", "cloud"):
         assert reg.get(f"ai.route.{role}_provider").default == 0
-    keys = {f"ai.route.{f}" for f in FEATURES} | {"ai.route.local_provider", "ai.route.cloud_provider"}
+    keys = {f"ai.route.{f}" for f in ALL} | {"ai.route.local_provider", "ai.route.cloud_provider"}
     assert keys <= reg.NO_SIGNIN_ENV_ONLY
 
 
@@ -244,13 +245,13 @@ def test_a_new_server_has_every_feature_off_until_a_local_ai_exists(tmp_path, fo
     with TestClient(create_app(routed_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
         sign_in(c)
         turn_on(c)
-        assert [r["value"] for k, r in c.get("/api/admin/settings").json()["settings"].items() if k in {f"ai.route.{f}" for f in FEATURES}] == ["local"] * 4
+        assert [r["value"] for k, r in c.get("/api/admin/settings").json()["settings"].items() if k in {f"ai.route.{f}" for f in ALL}] == ["local"] * 5
         assert db(c, "SELECT value FROM meta WHERE key = 'ai_routing_initialised'")[0]["value"] == "least_trust"
         ready(c, {})
         status = c.get("/api/ai/status").json()
         assert status["available"] is False and status["reason"] == "no_local_provider"
-        assert status["routing"] == {"mode": "routed"} and set(status["routes"]) == set(FEATURES)
-        for f in FEATURES:
+        assert status["routing"] == {"mode": "routed"} and set(status["routes"]) == set(ALL)
+        for f in ALL:
             assert status["routes"][f]["available"] is False and status["routes"][f]["reason"] == "no_local_provider"
         assert not any(status["features"].values())
         local, cloud = fakes()
@@ -292,9 +293,10 @@ def test_an_upgraded_server_keeps_serving_every_feature_from_its_one_provider(tm
         settings = c.get("/api/admin/settings").json()["settings"]
         assert [settings[f"ai.route.{f}"]["value"] for f in FEATURES] == ["any"] * 4
         assert settings["ai.route.photos"]["source"] == "instance"
+        assert settings["ai.route.labs"]["value"] == "local" and settings["ai.route.labs"]["source"] == "instance"  # never "any"
         assert db(c, "SELECT value FROM meta WHERE key = 'ai_routing_initialised'")[0]["value"] == "as_before"
         overview = c.get("/api/admin/ai-routing").json()
-        assert overview["as_before"] is True and [f["route"] for f in overview["features"]] == ["any"] * 4
+        assert overview["as_before"] is True and [f["route"] for f in overview["features"]] == ["any"] * 4 + ["local"]
         cloud = cloud_id(c)
         ready(c, {cloud: ("text", "photos", "chat")})
         status = c.get("/api/ai/status").json()
@@ -313,7 +315,7 @@ def test_routing_is_decided_once_and_an_admins_choice_survives_a_restart(tmp_pat
     with TestClient(create_app(settings), base_url=HTTPS_URL) as c:  # a new server: nothing to preserve
         sign_in(c)
         assert [r["value"] for k, r in c.get("/api/admin/settings").json()["settings"].items() if k.startswith("ai.route.") and k.count(".") == 2
-                and not k.endswith("_provider")] == ["local"] * 4
+                and not k.endswith("_provider")] == ["local"] * 5
     with TestClient(create_app(settings), base_url=HTTPS_URL) as c:  # restarted, now with a provider in the database
         sign_in(c)
         assert c.get("/api/admin/settings").json()["settings"]["ai.route.photos"]["value"] == "local"  # still the new-server rule
@@ -468,7 +470,7 @@ def test_consent_is_given_for_a_provider_a_feature_of_that_purpose_now_uses(rig)
 def test_off_answers_like_a_disabled_feature_and_sends_nothing(rig):
     pin_roles(rig)
     ready(rig.client, {rig.local: ("text", "photos", "chat")})
-    assert route(rig.client, photos="off", meal_ideas="off", describe="off", chat="off").status_code == 200
+    assert route(rig.client, photos="off", meal_ideas="off", describe="off", chat="off", labs="off").status_code == 200
     local, cloud = fakes()
     with attach_routed(rig.client.app, local=local, cloud=cloud):
         for r in (next_meal(rig.client), describe(rig.client), photo(rig.client, "/api/vision/label"), photo(rig.client, "/api/vision/plate")):
@@ -478,7 +480,7 @@ def test_off_answers_like_a_disabled_feature_and_sends_nothing(rig):
     assert local.requests == [] and cloud.requests == []
     status = rig.client.get("/api/ai/status").json()
     assert not any(status["features"].values()) and status["reason"] == "feature_off"
-    assert [status["routes"][f]["route"] for f in FEATURES] == ["off"] * 4
+    assert [status["routes"][f]["route"] for f in ALL] == ["off"] * 5
     assert status["routes"]["photos"]["text"] == "Switched off by your admin."
 
 
@@ -552,7 +554,8 @@ def test_the_status_says_where_each_feature_runs(rig):
     assert routes["photos"]["available"] is False and routes["photos"]["reason"] == "feature_off" and routes["photos"]["runs_on"] is None
     assert routes["chat"]["consent"] is None  # not agreed for the cloud provider yet
     assert status["available"] is True and status["provider"]["id"] == rig.local  # the headline: the first feature that resolves
-    assert status["features"] == {"next_meal": True, "parse_meal": True, "label": False, "plate": False, "chat": True, "voice": False}
+    assert status["features"] == {"next_meal": True, "parse_meal": True, "label": False, "plate": False, "chat": True, "voice": False,
+                                  "lab_report": True}
     assert status["consent"]["text"]["host"].startswith("ollama.lan") and status["consent"]["photos"] is None
 
 
@@ -561,7 +564,7 @@ def test_a_person_reads_one_line_per_feature(rig):
     assert route(rig.client, chat="cloud").status_code == 200
     ready(rig.client, {})
     routing = rig.client.get("/api/me/ai").json()["routing"]
-    assert routing["mode"] == "routed" and [f["feature"] for f in routing["features"]] == list(FEATURES)
+    assert routing["mode"] == "routed" and [f["feature"] for f in routing["features"]] == list(ALL)
     text = {f["feature"]: f["text"] for f in routing["features"]}
     assert text["photos"].startswith("Runs on your local AI (ollama.lan") and text["chat"].startswith("Runs on OpenAI (api.openai.com), a cloud AI")
     assert "consent" not in routing["features"][0]  # one line each, no consent detail
@@ -579,8 +582,9 @@ def test_the_guidance_block_follows_the_meal_ideas_route(rig):
 def test_the_overview_has_what_the_admin_screen_needs(rig):
     pin_roles(rig)
     o = rig.client.get("/api/admin/ai-routing").json()
-    assert [f["feature"] for f in o["features"]] == list(FEATURES) and o["writable"] is True and o["env_role"] is None
-    assert o["defaults"] == {f: "local" for f in FEATURES} and o["as_before"] is False
+    assert [f["feature"] for f in o["features"]] == list(ALL) and o["writable"] is True and o["env_role"] is None
+    assert o["defaults"] == {f: "local" for f in ALL} and o["as_before"] is False
+    assert {f["feature"]: f["allowed"] for f in o["features"]} == {**{f: ["local", "cloud", "off", "any"] for f in FEATURES}, "labs": ["local", "off"]}
     assert all("sends" in f and f["label"] for f in o["features"])
     assert {p["id"]: p["private"] for p in o["providers"]} == {rig.local: True, rig.cloud: False}
 
@@ -685,7 +689,7 @@ def test_the_deployment_files_pass_the_routing_variables_and_the_ollama_overlay_
     repo = Path(__file__).resolve().parent.parent
     compose = (repo / "deploy" / "compose.yaml").read_text(encoding="utf-8")
     example = (repo / "deploy" / ".env.example").read_text(encoding="utf-8")
-    for name in ("AI_PROVIDER_ROLE", "AI_ROUTE_PHOTOS", "AI_ROUTE_MEAL_IDEAS", "AI_ROUTE_DESCRIBE", "AI_ROUTE_CHAT"):
+    for name in ("AI_PROVIDER_ROLE", "AI_ROUTE_PHOTOS", "AI_ROUTE_MEAL_IDEAS", "AI_ROUTE_DESCRIBE", "AI_ROUTE_CHAT", "AI_ROUTE_LABS"):
         assert f"      {name}: ${{{name}:-}}" in compose, name
         assert f"\n{name}=\n" in example, name
     overlay = (repo / "deploy" / "compose.ai-ollama.yaml").read_text(encoding="utf-8")

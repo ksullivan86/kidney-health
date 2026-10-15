@@ -9,6 +9,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Read lab results from a photo of a report (only with an AI on your own network).** On **Lab results**, below "Import
+  from a spreadsheet", **Read a lab report photo** takes a photo or screenshot of a lab report (a PDF can be screenshotted)
+  and copies the printed results of the tests the app keeps (potassium, phosphate, albumin, bicarbonate, urine
+  albumin-to-creatinine ratio, creatinine, cystatin C, eGFR, HbA1c). **Every row starts unticked** under "Read by AI from
+  your photo. Check each value against the report before you tick it."; you enter any date it could not read, tick what
+  matches, and only the ticked rows are saved (through the same save as a spreadsheet import, so the potassium warning
+  works the same). The AI only copies: it never says whether a result is normal, high or low. A report can show your name,
+  date of birth and record numbers, which cannot be removed from a photo, so this runs **only on the local AI**: never on
+  a cloud AI and never on a key of your own, and it is **off** (with the reason on the card) when your admin has no local
+  AI. It has its own consent ("Lab report photos"), the photo is not kept (the AI activity list holds its fingerprint
+  only), and it needs no network from your browser. See [docs/ai.md](docs/ai.md#lab-report-photos).
 * **Settings → AI ideas says where each AI feature runs.** When your admin keeps an AI at home as well as one in the
   cloud, one line per feature (photos, meal ideas, describing a meal, Ask) says "Runs on your local AI (host)", "Runs on
   a cloud AI outside your network", or that your admin switched it off (off is off for everyone). A feature that moves
@@ -181,6 +192,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Lab report photos: a new routed feature that is local or off only.** `ai.route.labs` (`AI_ROUTE_LABS`) takes `local` or
+  `off` and refuses `cloud` and `any` (in the setting, the admin table, `PUT /api/admin/ai-routing` and the environment).
+  The default is `local`: with no local AI (a shared provider with the role `local`, a vision model, a private host) the
+  feature is off. A server upgraded from an earlier version starts it on `local` even though its other features start on
+  `any`. **Schema step 16** rebuilds `ai_consents` so the new consent purpose `labs` is allowed (every existing consent is
+  kept; back up before upgrading, as always). `POST /api/ai/read-lab-report` is the new route (raw JPEG body, `?dry_run=true`);
+  it counts in `ai.shared_daily_limit`; the AI activity row keeps no copy of the AI's answer. `PROMPT_VERSION` is
+  2026-10-15.4. The admin's routing table shows only Local and Off for that row. See [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
 * **Which AI does each feature use? (privacy tiers, tier 1).** You can now keep **two shared AI providers at once**, a
   *local* one on your own network (Ollama on a home GPU) and a *cloud* one, and pin each feature (**photos**, **meal
   ideas**, **describe a meal**, **Ask**) to *local*, *cloud* or *off*: Server administration → AI providers → *Which AI

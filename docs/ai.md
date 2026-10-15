@@ -67,6 +67,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 | **Describe a meal** (`POST /api/ai/parse-meal`) | Phrases with a search term, an amount and a unit ("2 eggs" → `egg`, 2, `piece`) | Searches **your** food list for each phrase (3 matches at most); converts the amount only when the food's serving supports that unit; you pick each match | Normal search |
 | **Read a label** (`POST /api/vision/label`) | The printed values, `null` for anything not printed; the ingredient text | Converts salt to sodium (÷ 2.5) and % Daily Value to mg (FDA daily values, marked "estimated"), scales per-100 g labels, checks plausibility (energy vs fat, carbs and protein within 20 % + 20 kcal; minerals not implausibly high), scans the ingredients for phosphate and potassium additives with the app's own rules; returns a **draft** of a custom food that you check and save | Type the label into Quick add |
 | **Plate photo** (`POST /api/vision/plate`, off by default) | Food names, a search term, a rough weight and how sure it is | Matches each name in **your** food list; suggests servings from the weight; unsure items start unticked; a fixed warning about photo portions | Normal search |
+| **Read a lab report photo** (`POST /api/ai/read-lab-report`, **local AI only**) | The printed result lines of the app's own lab tests (`potassium`, `phosphate`, `albumin`, `bicarbonate`, `uacr`, `creatinine`, `cystatin_c`, `egfr`, `a1c`): the number and unit exactly as printed, and the date as printed or `null`. Never a judgement, a range or advice | Keeps only the app's own tests and units, runs the checks of `POST /api/labs` on every value (a plausible number, converted by the app) and refuses a future date, counts what it left out ("3 lines were not recognised"), and returns **proposed rows**: every row starts **unticked**, a missing or ambiguous date is entered by you, and only the rows you tick are saved, through the ordinary `POST /api/labs/import`. It never says whether a value is normal, high or low | Type the result in Labs, or import a CSV |
 
 | **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`), a request to save (`log_food`, `save_recipe`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A request to save is **a card you press Save on** unless you chose to trust the assistant (see "Saving from Ask" below). A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
 
@@ -78,7 +79,7 @@ exception is a choice you make yourself, behind an admin switch and a warning ("
 ## Guardrails
 
 These are enforced in code (`app/ai/guard.py`, `app/ai/features.py`, `app/guidance/ai_bridge.py`) and
-covered by the offline golden set (`tests/ai_golden/`, 73 cases).
+covered by the offline golden set (`tests/ai_golden/`, 87 cases).
 
 | # | Guardrail | How |
 |---|---|---|
@@ -98,6 +99,7 @@ covered by the offline golden set (`tests/ai_golden/`, 73 cases).
 | G14 | **One person per call**: only the requesting person's data; shared quotas per person | Every query takes the person's id |
 | G15 | **The Ask chat's answer is checked in code before it is shown**: a low or an emergency is answered by the app's cards without a model call; no insulin or medicine dose talk (withheld); every number with a nutrient or energy unit is one the tools returned or you typed (withheld otherwise); no links except the app's own `/learn/...` pages; at most 1200 characters; lab words add "Lab results are for your care team to interpret."; the tools' own figures are shown under every answer | `app/ai/chat.py` (`check_answer`, `safety_outcome`), `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py` |
 | G16 | **Saving from Ask is your choice, least trust first**: by default the assistant's request to save is a card (the foods the app found, the app's totals) and nothing is saved until you press Save, which posts to the ordinary route. "Trust it for this conversation" or "Trust it always" (Settings → AI ideas, behind a warning, and only while your admin has allowed it) lets it save at once, all or nothing, with Undo on every save. Either way the app's numbers, the low and emergency rules and the dose checks stay on, a message about a low or an emergency never saves, and a food eaten to treat a low is saved and never warned about. Photo and label readings are always shown to you to check | `app/ai/chat_save.py`, `tests/test_ai_chat_save.py`, `tests/test_ask_ui.py` |
+| G17 | **A lab report photo stays on your network and is only copied**: it is read only by the **local** AI (never a cloud AI, never a person's own provider, whatever the routing or the environment says); the model returns `{analyte, value, unit, taken_on}` lines and nothing else; the app drops every test and unit it does not know (counted), applies the checks of `POST /api/labs` and never keeps a future date; the review table starts with **every row unticked** and the line "Read by AI from your photo. Check each value against the report before you tick it."; nothing is saved without your tick, and then through the ordinary import; the AI activity row holds the photo's fingerprint, not the photo and not what the AI copied | `app/ai/lab_report.py`, `app/ai/routing.py` (`LOCAL_ONLY`), `app/vision.py`, `tests/test_lab_photo.py`, `tests/test_lab_photo_ui.py` |
 | A3 | Text typed by people or read from packages cannot close the data block or hide instructions | `<`, `>`, `&` escaped in the data block; invisible and control characters removed; 80 characters per name |
 | A4 | Photos cannot attack the model server or carry location data | JPEG only, size and dimension limits, metadata removed by the server ([Photos](#photos)) |
 
@@ -150,6 +152,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | Your messages in an Ask conversation (the last 20, each ≤ 2000 characters; a message about a low or an emergency is answered by the app and is never sent) and the app's own numbers the assistant looks up with its tools: your targets and a day's totals, food names and their nutrients | Yes (Ask only), after you agree to the separate "Ask conversations" consent |
 | Your voice recording from the Ask microphone (up to 60 seconds) | Only if you tap the microphone, **not to the AI provider**: to the speech-to-text server your admin set up (`STT_BASE_URL`), which turns it into text; the recording is deleted at once and never stored. Only the words you then choose to send go to the AI. See [Voice input](#voice-input-speech-to-text) |
 | The photo (label, plate) | Yes (photo features): JPEG only, with location, camera data, comments and any trailing bytes removed by the server; never stored |
+| The photo of a lab report | Only to the **local AI** on your admin's network (never a cloud AI, never a person's own provider), and only after you agree to the separate "Lab report photos" consent: JPEG only, location and camera data removed, never stored. **The report may show your name, date of birth and record numbers, and the app cannot remove them from an image**: crop the photo to the results table if you can. The AI activity list keeps the photo's fingerprint and size, not the photo and not what the AI copied |
 | `safety_identifier` (OpenAI on a shared key) | A keyed hash (HMAC under the server's secret key) of your account number; it cannot be turned back into the number |
 | Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, ingredient lists, other people's data | **Never** |
 
@@ -246,6 +249,31 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
 See [`barcode-and-photos.md`](barcode-and-photos.md#photos): what a label or plate photo does, what
 leaves your device, and how far to trust it.
 
+### Lab report photos
+
+*Labs → Read a lab report photo*, shown only when your admin has a **local AI** (one on your own network) that can read
+photos and you have turned on AI ideas; otherwise the card says why ("Needs a local AI on your own network, which is not
+set up on this server, so it is off.") and nothing can be sent. A lab report can show your name, your date of birth and
+your record numbers, and the app cannot remove them from a photo, so it is read **only** by the local AI: never by a
+cloud AI, and never by a provider of your own, even if you chose one.
+
+1. Take a photo or choose a screenshot of the report (a PDF can be screenshotted). Crop it to the results table if you can.
+2. The first time, a consent sheet says where the photo goes (your local AI, by host name), that the report may show your
+   name, date of birth and record numbers, that the photo is not kept, and to crop it. "What will be sent?" shows the exact
+   request first, without the photo's bytes.
+3. The AI **copies** the printed results of the tests this app keeps (potassium, phosphate, albumin, bicarbonate, urine
+   albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c). The app then keeps only the lines it understands,
+   in units it knows, with plausible numbers (the check `POST /api/labs` makes) and no future date, and tells you how many
+   lines it left out ("3 lines were not recognised").
+4. The rows appear in the same table as a CSV import, **all unticked**, under "Read by AI from your photo. Check each value
+   against the report before you tick it." Check each value (and its unit) against the report, tick the ones that match,
+   enter the date for any row that has none (or whose date could mean two days), and press **Save**. Only the ticked rows
+   are saved, exactly as an import of a CSV file: the potassium warning and "what this changed" work the same.
+
+The photo is not kept: not on the server, not in the activity list (which holds its fingerprint and size only), and not in
+the page once you save or discard. The AI never says whether a result is normal, high or low; ask your care team. If the
+photo is not a lab report, or cannot be read, you are told and nothing is shown.
+
 ## For the person running the server
 
 ### Switches
@@ -266,6 +294,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 | `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
+| `ai.route.labs` (`AI_ROUTE_LABS`) | `local` | Reading a photo of a lab report: `local` or `off` **only**. `cloud` and `any` are refused by the setting, the admin screen, the API and the environment (a report shows a name and a date of birth), and a person's own provider is never used for it. With no local AI the feature is off |
 | `ai.route.local_provider`, `ai.route.cloud_provider` | `0` | The id of the shared provider that is the local AI and the one that is the cloud AI (0: none). Set through the same table, never by hand: a local AI must be on a private host |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
@@ -338,8 +367,17 @@ pin each feature to one of them, or switch it off.
 | `meal_ideas` | AI meal ideas, their order, swaps, the day plan | `ai.route.meal_ideas` (`AI_ROUTE_MEAL_IDEAS`) | Meal data |
 | `describe` | Turning a described meal into search words | `ai.route.describe` (`AI_ROUTE_DESCRIBE`) | Meal data |
 | `chat` | The Ask screen | `ai.route.chat` (`AI_ROUTE_CHAT`) | Ask conversations |
+| `labs` | Read a lab report photo | `ai.route.labs` (`AI_ROUTE_LABS`) | Lab report photos |
 
-Each is `local`, `cloud`, `off` or `any`.
+Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `off` only.
+
+* **`labs` is local-only.** A lab report photo can show a name, a date of birth and record numbers that the app cannot take
+  out of an image, so the setting accepts only `local` and `off` (the admin table shows two choices for that row;
+  `PUT /api/admin/ai-routing` refuses `cloud` and `any` for it; `AI_ROUTE_LABS=cloud` stops the start with a message
+  naming the variable). It always resolves to the shared provider that holds the role `local`, pinned to the private
+  network like every local call; **a person's own provider is never used for it**, even one they chose, and `any` does not
+  apply. With no local AI it is off, and the status says "Needs a local AI on your own network ...". A server that
+  already had a provider and starts on `any` for the other features starts `labs` on `local`.
 
 * **The default is the least-trusting one: `local`.** With no local provider the feature is **off** until an
   admin pins it to `cloud` (and chooses the cloud provider). A cloud provider is never contacted for a feature
@@ -392,7 +430,8 @@ not set up yet" while any feature is on `any`. No schema change is involved.
 
 **People's own provider.** Routing does not move a person's own key (Settings → AI ideas → My own AI provider, if
 you allow it): it is their choice, counts as a *cloud* provider (people can only point at public addresses) and is
-never replaced; `off` still applies. To keep everything on your network, set `AI_ALLOW_USER_KEYS=false`. When the
+never replaced; `off` still applies. The one exception is the other way round: lab report photos never use a person's
+own provider. To keep everything on your network, set `AI_ALLOW_USER_KEYS=false`. When the
 admin has set up routing, a person's provider choice is "The server's AI" or "My own provider", and Settings lists
 one line per feature: *Runs on your local AI (ollama.lan:11434)* or *Runs on OpenAI (api.openai.com), a cloud AI
 outside your network*.
@@ -404,7 +443,7 @@ the provider that served the call, and "What will be sent?" shows its host (and 
 
 **API.** `GET /api/admin/ai-routing` (admins) returns the features with their route and source, the two roles, the
 shared providers (`private`, `role`) and `as_before`; `PUT /api/admin/ai-routing` (recent password; `403` without
-sign-in) takes any of `photos`, `meal_ideas`, `describe`, `chat` (`local|cloud|off|any`) and `local_provider`,
+sign-in) takes any of `photos`, `meal_ideas`, `describe`, `chat` (`local|cloud|off|any`), `labs` (`local|off`) and `local_provider`,
 `cloud_provider` (a shared provider id, 0 clears). Each change is in the audit log as `settings.changed`.
 `GET /api/ai/status` adds `routing.mode` (`routed` or `as_before`) and `routes`: per feature `route`, `role`
 (`local`, `cloud`, `own` or null), `available`, `reason`, `text` ("Runs on ..."), `runs_on` (provider, host, model) and
@@ -713,7 +752,7 @@ history.
   in `tests/fixtures/ai/`, retries and repair, the Hermes tool check), `test_ai_guard.py` (every
   blocklist term, claims, V3–V9; 100 % of the guard's branches), `test_ai_prompts.py` (payload snapshot,
   never-sent fields, escaping, the prompts of three profiles, the `PROMPT_VERSION` pin), `test_ai_profile_prompts.py`
-  (the requests of all five features for three profiles), `test_ai_golden.py` (73 cases through the real
+  (the requests of all five features for three profiles), `test_ai_golden.py` (87 cases through the real
   routes), `test_ai_routes.py` (AI off → 404, consent, dry run = sent body, quotas, isolation, write-only
   keys, `AUTH_MODE=none`, retention, failure paths), `test_vision_api.py`, `test_imagecheck.py`,
   `test_migration_m006.py`, `test_ai_eval_script.py`; the Ask chat: `test_ai_chat_checks.py` (text policy, dose check

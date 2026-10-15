@@ -115,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(barcode.router)
     ai_routes.install(app, settings, store, app_version=APP_VERSION)  # M2 ai: checks the AI env, adds its routers
     app.include_router(vision.router)
+    app.include_router(vision.lab_router)
     app.include_router(ai_voice.router)
     app.include_router(ai_voice.admin_router)
     app.include_router(assistant_mcp.router)
