@@ -31,7 +31,7 @@ or delete it.
 | Your activity: sign-ins, password and key changes, exports | server | kept for 365 days by default |
 | AI requests and answers, if you use AI | server | kept for 30 days by default; you can delete them ([Optional AI](ai.md)) |
 | The app's own files, and the handbook pages you opened | your phone | for opening without a connection; the same for everyone, so signing out keeps them and **Clear offline data on this device** removes them |
-| A copy of your recent days, your profile, the foods this phone has seen, and entries waiting to sync | your phone (only for you) | removed when you sign out or tap **Clear offline data on this device** ([design note 02][NOTE02]) |
+| A copy of your recent days, your profile, the foods this phone has seen, and entries and changes waiting to sync | your phone (only for you) | removed when you sign out or tap **Clear offline data on this device** ([design note 02][NOTE02]) |
 | Photos of a barcode or a label | your phone only | a barcode photo is read on the phone and never uploaded; a label photo is sent only if you ask AI to read it, and the server never keeps it ([Barcodes and label photos](barcode-and-photo.md)) |
 
 ## Who can see it

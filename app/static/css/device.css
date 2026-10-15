@@ -103,6 +103,18 @@
 .outbox-error { color: var(--over-text); font-size: 0.88rem; overflow-wrap: anywhere; }
 .outbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* A change of an entry that another device changed too (offline edits): the server's entry and the person's change
+   side by side, then the two choices. A value that differs is bold and underlined, and says so to a screen reader. */
+.outbox-item.conflict { border-color: var(--caution); border-width: 2px; background: var(--caution-tint); }
+.conflict-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.conflict-side { min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.conflict-side-title { font-weight: 600; font-size: 0.85rem; color: var(--text-2); }
+.conflict-lines { margin: 4px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; font-size: 0.88rem; }
+.conflict-lines dt { color: var(--text-2); }
+.conflict-lines dd { margin: 0; overflow-wrap: anywhere; }
+.conflict-lines dd.differs { font-weight: 700; text-decoration: underline; }
+@media (max-width: 380px) { .conflict-lines { grid-template-columns: minmax(0, 1fr); } .conflict-lines dt { font-size: 0.78rem; } }
+
 /* Sign-out with entries waiting: three choices; on a phone "Sign out and lose them" gets its own row. */
 #sheet-unsynced-foot { flex-wrap: wrap; }
 @media (max-width: 520px) {

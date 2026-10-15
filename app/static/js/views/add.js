@@ -172,7 +172,9 @@
     if (KH.guidance) KH.guidance.entry.open({ mode, food, entry, onChange: updatePreview });
     updatePreview();
     sheets.open(entryDlg, trigger, entryServings);
-    if (!food && entry) {
+    if (!food && entry && entry.food_id == null) {
+      $('#entry-grams-hint').textContent = 'Serving size unavailable offline';
+    } else if (!food && entry) {
       try {
         const f = await api.food(entry.food_id);
         if (sheet.entry !== entry) return;
@@ -332,12 +334,17 @@
         if (sheet.amountTouched) { body.servings = sv; body.grams = grams; }
         const purpose = KH.guidance ? KH.guidance.entry.purpose('edit') : undefined;
         if (purpose) body.purpose = purpose;
-        await api.updateEntry(sheet.entry.id, body);
+        // The entry's version goes with the change (If-Match): if another device changed the entry meanwhile, nothing is
+        // overwritten and the two versions are put side by side in Settings → This device (js/offline.js).
+        const updated = await api.updateEntry(sheet.entry.id, body, sheet.entry);
         entryDlg.close();
-        toast('Entry updated', 'ok');
+        toast(updated && updated.pending ? 'Saved on this device: the change reaches your server when it can be reached' : 'Entry updated', 'ok');
         if (body.date && body.date !== state.date) KH.views.today.setDate(body.date); else KH.views.today.loadDay();
       }
-    } catch (err) { toastError(err); }
+    } catch (err) {
+      toastError(err);
+      if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); } // the card waits in Settings → This device
+    }
     finally { sheet.busy = false; saveBtn.disabled = false; }
   });
   $('#entry-delete').addEventListener('click', (ev) => {
@@ -349,12 +356,16 @@
       onConfirm: async () => {
         sheet.busy = true;
         try {
-          await api.deleteEntry(entry.id);
+          const res = await api.deleteEntry(entry.id, entry);
           entryDlg.close();
-          toast('Entry deleted', 'ok');
+          toast(res && res.pending ? 'Saved on this device: the entry is deleted when your server can be reached' : 'Entry deleted', 'ok');
           KH.views.today.loadDay();
           return true;
-        } catch (err) { toastError(err); return false; }
+        } catch (err) {
+          toastError(err);
+          if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); }
+          return false;
+        }
         finally { sheet.busy = false; }
       },
     });

@@ -342,6 +342,8 @@ class ImportEntry(_Strict):
     client_id: str | None = None
     created_at: Timestamp
     updated_at: Timestamp
+    # The export leaves it out (it is worked out from the content); an entry copied from GET /api/log carries it. Never used.
+    version: _short(64) | None = None
 
     @field_validator("date")
     @classmethod

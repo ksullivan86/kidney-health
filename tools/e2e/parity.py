@@ -22,7 +22,7 @@ Sections
   2 GET /api/foods?q= for 15 queries (fresh history); 2b again after sections 4-5 (with history)
   3 suggested targets: stage x dialysis x height/weight x diabetes (144) + 3b random weights/heights
   4 scripted day: profile, 8 entries (grams-based, 2 planned), GET /api/log?date=
-  5 PUT entry, copy-day, mark-eaten, saved meals create/from-log/apply/list, shopping, range, CSV, quick add
+  5 PUT entry (and PUT / DELETE with If-Match: the 412 and each side's entry version), copy-day, mark-eaten, saved meals create/from-log/apply/list, shopping, range, CSV, quick add
   6 GET /api/log/summary: 7-day window with 4 logged days; hemodialysis [0,2,4] end on every weekday
   7 validation errors: status code + detail text
   8 bulk: every builtin food logged at an odd amount, entry/day/summary parity (summation order)
@@ -220,11 +220,11 @@ class ServerSide:
         self.api = api
         self.client = api.client
 
-    def call(self, method: str, path: str, body: Any = None) -> dict:
-        if body is None:
-            r = self.client.request(method, path)
-        else:
-            r = self.client.request(method, path, json=body)
+    def call(self, method: str, path: str, body: Any = None, headers: dict[str, str] | None = None) -> dict:
+        kwargs: dict[str, Any] = {} if body is None else {"json": body}
+        if headers:
+            kwargs["headers"] = headers  # e.g. If-Match on PUT / DELETE /api/log/{id}
+        r = self.client.request(method, path, **kwargs)
         out: dict[str, Any] = {"status": r.status_code}
         ctype = r.headers.get("content-type", "")
         payload: Any = None
@@ -247,9 +247,9 @@ class ServerSide:
 HELPERS_JS = r"""
 () => {
   window.__parity = {
-    async call(method, path, body) {
+    async call(method, path, body, headers) {
       try {
-        const r = await window.__kdlMock.request(method, path, body === null ? undefined : body);
+        const r = await window.__kdlMock.request(method, path, body === null ? undefined : body, headers || undefined);
         return { status: 200, body: r === undefined ? null : r };
       } catch (e) {
         const out = { status: (e && e.status) || 500, detail: (e && e.detail) || String(e), error: e && e.status ? null : String((e && e.stack) || e) };
@@ -282,8 +282,8 @@ class MockSide:
     def __init__(self, page) -> None:
         self.page = page
 
-    def call(self, method: str, path: str, body: Any = None) -> dict:
-        return self.page.evaluate("([m, p, b]) => window.__parity.call(m, p, b)", [method, path, body])
+    def call(self, method: str, path: str, body: Any = None, headers: dict[str, str] | None = None) -> dict:
+        return self.page.evaluate("([m, p, b, h]) => window.__parity.call(m, p, b, h)", [method, path, body, headers])
 
     def seq(self, calls: list) -> list:
         out: list = []
@@ -392,13 +392,15 @@ class Harness:
         return self.food_id[name]
 
     def both(self, section: str, label: str, method: str, path: Any, body: Any = None, ignore: frozenset = IGNORE,
-             extras: tuple[str, ...] = ()):
+             extras: tuple[str, ...] = (), headers: Any = None):
         ps = path(0) if callable(path) else path
         pm = path(1) if callable(path) else path
         bs = body(0) if callable(body) else body
         bm = body(1) if callable(body) else body
-        rs = self.server.call(method, ps, bs)
-        rm = self.mock.call(method, pm, bm)
+        hs = headers(0) if callable(headers) else headers
+        hm = headers(1) if callable(headers) else headers
+        rs = self.server.call(method, ps, bs, hs)
+        rm = self.mock.call(method, pm, bm, hm)
         self.rec.compare_resp(section, label, rs, rm, ignore, extras)
         return rs, rm
 
@@ -610,6 +612,31 @@ class Harness:
         self.both(S, "PUT entry date move (cola -> D+4)", "PUT", self.entry_path("cola"), {"date": d(D, 4)})
         self.both(S, "PUT entry date back (cola -> D)", "PUT", self.entry_path("cola"), {"date": D})
         self.both(S, f"GET /api/log?date={D} after edits", "GET", f"/api/log?date={D}")
+        # v0.4 offline edits (ARCHITECTURE.md "Offline edits and deletes"): `version` and If-Match, each side with its own version.
+        far = d(D, 40)  # a day nothing else uses, so the entry leaves no trace for the sections after this one
+        self.log(S, "ifm", far, "snack", "Banana, raw", servings=2, note="parity If-Match")
+        entry = lambda r, side: r["body"]["entries"][0]  # noqa: E731 - the day holds the one entry
+        rs, rm = self.both(S, "GET the day of the If-Match entry (its version)", "GET", f"/api/log?date={far}")
+        ver = {0: entry(rs, 0)["version"], 1: entry(rm, 1)["version"]}
+        old = dict(ver)
+        quoted = lambda side: {"If-Match": f'"{ver[side]}"'}  # noqa: E731
+        rs, rm = self.both(S, "PUT with the matching If-Match", "PUT", self.entry_path("ifm"), {"servings": 3}, headers=quoted)
+        ver = {0: rs["body"]["version"], 1: rm["body"]["version"]}
+        self.both(S, "PUT with the version it had before (412, the current entry)", "PUT", self.entry_path("ifm"), {"servings": 9, "meal": "dinner"},
+                  headers=lambda side: {"If-Match": f'"{old[side]}"'})
+        self.both(S, "PUT with a weak tag (412)", "PUT", self.entry_path("ifm"), {"note": "weak"}, headers=lambda side: {"If-Match": f'W/"{ver[side]}"'})
+        self.both(S, "PUT with an empty If-Match (412)", "PUT", self.entry_path("ifm"), {"note": "empty"}, headers={"If-Match": ""})
+        self.both(S, "PUT with a list holding the version", "PUT", self.entry_path("ifm"), {"note": "list"},
+                  headers=lambda side: {"If-Match": f'"0000000000000000", "{ver[side]}"'})
+        rs, rm = self.both(S, "PUT with a star", "PUT", self.entry_path("ifm"), {"note": "star"}, headers={"If-Match": "*"})
+        ver = {0: rs["body"]["version"], 1: rm["body"]["version"]}
+        self.both(S, "PUT that changes nothing but the time: the same version", "PUT", self.entry_path("ifm"), {"note": "star"})
+        self.both(S, "PUT with a bad body and the right version (400)", "PUT", self.entry_path("ifm"), {"servings": -1}, headers=quoted)
+        self.both(S, "PUT of an entry that is not there with a version (404)", "PUT", "/api/log/99999", {"servings": 1}, headers=quoted)
+        self.both(S, "DELETE with the version it had before (412)", "DELETE", self.entry_path("ifm"), headers=lambda side: {"If-Match": f'"{old[side]}"'})
+        self.both(S, "GET the entry after the refusals", "GET", f"/api/log?date={far}")
+        self.both(S, "DELETE with the matching If-Match", "DELETE", self.entry_path("ifm"), headers=quoted)
+        self.both(S, "DELETE again with the same version (404)", "DELETE", self.entry_path("ifm"), headers=quoted)
         # copy-day
         self.both(S, "copy-day D -> D+1 (defaults)", "POST", "/api/log/copy-day", {"from_date": D, "to_date": d(D, 1)})
         self.both(S, "copy-day D -> D+2 lunch+dinner eaten only, as eaten", "POST", "/api/log/copy-day",

@@ -9,6 +9,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Edit and delete an entry without a connection.** Changing an entry that is already on your server (its amount, meal,
+  day, **eaten** or **planned**, or note, and the **Eaten** button) or deleting it now works offline, like adding food does:
+  Today shows the change at once, marked **waiting to sync**, and it is sent, in order, when your server can be reached.
+  **Nothing is overwritten silently.** If the same entry was changed on another device while yours was offline, your change
+  is **not** sent: **Settings → This device** shows a card, "This entry was changed on another device while you were
+  offline", with what your server has and your change side by side, and two buttons: **Keep the saved one** (your change
+  is dropped) or **Use mine** (it is sent on top of what is there now). If the entry was deleted elsewhere, the app says "This
+  entry no longer exists" and drops your change. An entry you added offline and that has not been sent yet is edited or
+  deleted right on the phone. Treating a low is edited and deleted like any other entry. **Your profile and targets still
+  need a connection** (a care team's targets must never be overwritten by a copy that waited on a phone). See
+  [Install on your phone](docs/install-on-your-phone.md#offline) and [Logging food](handbook/docs/app/logging.md#offline).
 * **Import lab results from the iPhone Health app (clinical records).** If you linked your health system in the Health app,
   **Lab results → Import from Apple Health (clinical records)** reads those results from the Health export: you unzip the
   export in Files, open `apple_health_export/clinical-records`, and choose all the files there. **The files are read on your
@@ -204,6 +215,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Entries have a `version`, and `PUT` / `DELETE /api/log/{id}` take `If-Match`.** Every entry in an API answer carries
+  `version`, a short hash of what is stored (nothing new is stored: no schema step). A `PUT` or `DELETE` with
+  `If-Match: "<version>"` that does not match answers **412** with `{"detail", "current": <the entry>}` and changes nothing;
+  an entry that is not yours is a 404 first, with or without a valid version. Without the header both routes behave as
+  before. The data export leaves `version` out and the import accepts and ignores it. See
+  [ARCHITECTURE.md](ARCHITECTURE.md#offline-edits-and-deletes-roadmap-note-02-r5-queueable-offline-actions).
 * **Lab report photos: a new routed feature that is local or off only.** `ai.route.labs` (`AI_ROUTE_LABS`) takes `local` or
   `off` and refuses `cloud` and `any` (in the setting, the admin table, `PUT /api/admin/ai-routing` and the environment).
   The default is `local`: with no local AI (a shared provider with the role `local`, a vision model, a private host) the
@@ -344,6 +361,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* Offline edits and deletes (`js/offline.js`, `js/core.js`, `app/log.py`). One outbox item per entry (`edit` or `delete`,
+  with the `version` and the entry as the person saw it), replayed with `If-Match`; a 412 whose entry equals the one the change
+  was made on (the person's own queued "mark eaten" went first) is sent once more, any other is a conflict card; a 404 drops
+  the change; editing or deleting an entry that waits on the device rewrites or removes the queued create. `KH.net` gained
+  `intercept` and `onConflict`; `KH.request` takes `{ ifMatch, base }`; the demo API's `request`/`handle` take request headers
+  and `js/mock/log.js` has `entryVersion`, `versionMatches` and the 412. Parity vectors: `tests/data/entry_version_vectors.json`
+  (`python3 tests/data/gen_entry_version_vectors.py`, replayed by `node tests/js/run_vectors.mjs`). Checks:
+  `tests/test_log_if_match.py`, `tests/test_offline_edits_ui.py`, `node tests/js/outbox_changes.mjs` (the queue logic in Node
+  against the demo API), and `python tools/e2e/device.py --only changes` in Chromium. `tests/js/demo_loader.mjs` can load more
+  scripts (`extra`) and take the page's `navigator`.
 * Lab results from Apple Health clinical records are browser-only: no route, setting, dependency, network request or schema step.
   `app/static/js/engine/fhir_labs.js` (`KH.fhirLabs`: the LOINC table, `start()`/`add()`/`finish()`) reads FHIR `Observation`s and
   Bundles; `app/static/js/views/lab_fhir.js` (`KH.labFhir`) is the card and review table and saves through the shared

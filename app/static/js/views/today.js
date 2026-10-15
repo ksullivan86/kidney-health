@@ -2,8 +2,10 @@
    entries, all-nutrient totals and the "Last 7 days" strip (with "since last dialysis"). Meal
    guidance (js/views/guidance.js) adds the Meal ideas card, a "What fits" link per meal, the
    "treated a low" badge and the end-of-day insights. Offline (js/offline.js), the day may be this
-   device's saved copy ("Saved at …") and entries waiting to sync carry a "waiting to sync" or "not
-   saved" badge; they are counted in the day and open Settings → This device instead of the editor. */
+   device's saved copy ("Saved at …") and entries waiting to sync carry a "waiting to sync" badge; they
+   are counted in the day and can be edited or deleted like any other (the change joins what waits). An
+   entry that "needs review" (changed on another device too) or was "not saved" opens Settings → This
+   device instead of the editor. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -178,7 +180,7 @@
         const ul = h('ul', { class: 'list' });
         for (const e of entries) {
           const waiting = e.pending ? ' entry-waiting' : '';
-          ul.append(isPlanned(e) ? h('li', { class: `entry-planned${waiting}` }, entryRow(e), e.pending ? null : eatenButton(e)) : h('li', { class: waiting.trim() || null }, entryRow(e)));
+          ul.append(isPlanned(e) ? h('li', { class: `entry-planned${waiting}` }, entryRow(e), needsReview(e) ? null : eatenButton(e)) : h('li', { class: waiting.trim() || null }, entryRow(e)));
         }
         card.append(ul);
       }
@@ -315,6 +317,9 @@
     return h('span', { class: `tabular meal-sum${planned ? ' planned' : ''}${missing.length ? ' incomplete' : ''}` }, planned ? `Planned: ${text}` : text);
   }
 
+  // An entry the person has to deal with in Settings → This device first: refused by the server ("not saved"), or changed on
+  // another device while a change of theirs waited ("needs review"). Entries that merely wait to sync are edited as usual.
+  const needsReview = (e) => !!(e.conflict || (e.pending && e.failed));
   function entryRow(e) {
     const planned = isPlanned(e);
     const amount = e.grams != null ? `${fmtNum(e.grams, 'fluid_ml')} g (${fmtServings(e.servings)})` : fmtServings(e.servings);
@@ -325,19 +330,22 @@
         ? h('span', { class: 'n not-listed', 'aria-label': `${NUT[k].label} not listed` }, `${NUT[k].short} `, h('b', {}, 'not listed'))
         : h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(e.nutrients[k], k)), ` ${NUT[k].unit}`));
     }
-    // An entry still on this device (js/offline.js): it cannot be edited until it reaches the server.
-    const waiting = e.pending ? (e.failed ? 'not saved' : 'waiting to sync') : null;
-    const label = e.pending ? `${e.food_name}, ${amount}, ${waiting}: open This device` : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`;
+    // An entry that only this device has, or a change of it that waits (js/offline.js): it is edited like any other and the
+    // change waits too; one that needs review or was not saved opens Settings → This device instead.
+    const waiting = e.pending ? (e.conflict ? 'needs review' : e.failed ? 'not saved' : 'waiting to sync') : null;
+    const label = needsReview(e) ? `${e.food_name}, ${amount}, ${waiting}: open This device`
+      : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${waiting ? `, ${waiting}` : ''}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`;
     const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': label },
       ratingIcon(e.kidney_rating),
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null,
-          waiting ? h('span', { class: `badge ${e.failed ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
+          waiting ? h('span', { class: `badge ${e.failed || e.conflict ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
         h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null)),
       nums);
     btn.addEventListener('click', () => {
-      if (!e.pending) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }
-      toast(e.failed ? 'This entry did not reach your server. Review it in Settings → This device.' : 'This entry is waiting to sync. You can change it once it has reached your server.');
+      if (!needsReview(e)) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }
+      toast(e.conflict ? 'This entry was changed on another device too. Choose which version to keep in Settings → This device.'
+        : 'This entry did not reach your server. Review it in Settings → This device.');
       $('#sync-badge').click();
     });
     return btn;
@@ -347,10 +355,13 @@
     b.addEventListener('click', async () => {
       b.disabled = true;
       try {
-        await api.updateEntry(e.id, { status: 'eaten' });
-        toast(`${e.food_name} marked as eaten`, 'ok');
+        const res = await api.updateEntry(e.id, { status: 'eaten' }, e);
+        toast(res && res.pending ? `Saved on this device: ${e.food_name} is marked as eaten when your server can be reached` : `${e.food_name} marked as eaten`, 'ok');
         await loadDay();
-      } catch (err) { toastError(err); b.disabled = false; }
+      } catch (err) {
+        toastError(err); b.disabled = false;
+        if (err && err.conflict) { await loadDay(); $('#sync-badge').click(); } // changed on another device: the card is in Settings → This device
+      }
     });
     return b;
   }

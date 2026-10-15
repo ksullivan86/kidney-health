@@ -6,7 +6,8 @@
    main.py does), the MockApi class with its request/handle entry points, and the route table:
        KH.mock.route(method, pattern, handler)
    `pattern` is an exact path, a path with `{id}` placeholders (digits), or a RegExp;
-   `handler(req)` runs with `this` = the MockApi and req = { method, path, id, ids, query, qp, body }.
+   `handler(req)` runs with `this` = the MockApi and req = { method, path, id, ids, query, qp, body, header }
+   (`header(name)` is a request header's value, or null).
    Feature files (js/mock/foods.js, profile.js, log.js, meals.js, auth.js, settings.js) add their table methods to
    MockApi.prototype and register their routes; js/mock/seed.js seeds the demo person and
    KH.mock.start() (called by main.js in demo mode) builds the instance.
@@ -345,13 +346,18 @@
     }
 
     // ---- router ----
-    async request(method, path, body) {
+    // `headers`: the request headers a route reads (only If-Match, on PUT / DELETE /api/log/{id}); names in any case.
+    async request(method, path, body, headers) {
       await new Promise((r) => setTimeout(r, 40));
-      const res = this.handle(method, path, body);
+      const res = this.handle(method, path, body, headers);
       return typeof res === 'string' || res == null ? res : JSON.parse(JSON.stringify(res)); // what the wire would carry
     }
-    handle(method, path, body) {
+    handle(method, path, body, headers) {
       const url = new URL(path, 'http://demo.invalid');
+      const header = (name) => {
+        const key = Object.keys(headers || {}).find((k) => k.toLowerCase() === String(name).toLowerCase());
+        return key === undefined ? null : String(headers[key]);
+      };
       const p = url.pathname;
       const q = url.searchParams;
       const qp = (k) => { const all = q.getAll(k); return all.length ? all[all.length - 1] : null; }; // Starlette: the last value wins
@@ -359,7 +365,7 @@
         if (r.method !== '*' && r.method !== method) continue;
         const m = p.match(r.pattern);
         if (!m) continue;
-        return r.handler.call(this, { method, path: p, id: m[1], ids: m.slice(1), query: q, qp, body });
+        return r.handler.call(this, { method, path: p, id: m[1], ids: m.slice(1), query: q, qp, body, header });
       }
       fail(404, 'Not Found');
       return null;

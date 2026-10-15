@@ -4,6 +4,8 @@
 //
 //   import { loadDemo, newDemo } from './demo_loader.mjs';
 //   const KH = loadDemo();                 // the scripts, nothing started
+//   const KH = loadDemo({ extra: ['js/offline.js'], navigator });   // more scripts of app/static after them (the outbox), and
+//                                          // the page's navigator (a test sets navigator.onLine = false to go offline)
 //   const api = newDemo(KH);               // a fresh demo person with the sample data, signed in as the demo admin
 //
 // Used by tests/js/demo_api.mjs (requests replayed for pytest) and tests/js/run_vectors.mjs (the symptoms vectors).
@@ -21,18 +23,18 @@ function scripts() {
     .filter((src) => /^js\/(engine\/|mock\/|core\.js$)/.test(src));
 }
 
-export function loadDemo() {
+export function loadDemo({ extra = [], navigator = { userAgent: 'node', onLine: true } } = {}) {
   const noop = new Proxy(function () {}, {
     get: (t, k) => (k === Symbol.toPrimitive ? () => '' : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : noop),
     apply: () => noop,
     construct: () => noop,
   });
-  const context = vm.createContext({ console, URL, URLSearchParams, setTimeout, clearTimeout, TextEncoder, TextDecoder, crypto });
-  Object.assign(context, { document: noop, navigator: { userAgent: 'node' }, location: new URL('http://localhost/?mock=1'),
+  const context = vm.createContext({ console, URL, URLSearchParams, setTimeout, clearTimeout, setInterval, clearInterval, TextEncoder, TextDecoder, crypto });
+  Object.assign(context, { document: noop, navigator, location: new URL('http://localhost/?mock=1'),
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} } });
   vm.runInContext('globalThis.window = globalThis; window.matchMedia = () => ({ matches: false, addEventListener() {} }); '
     + 'window.addEventListener = () => {};', context);
-  for (const rel of scripts()) vm.runInContext(readFileSync(join(STATIC, rel), 'utf8'), context, { filename: rel });
+  for (const rel of [...scripts(), ...extra]) vm.runInContext(readFileSync(join(STATIC, rel), 'utf8'), context, { filename: rel });
   return vm.runInContext('globalThis.KH', context);
 }
 

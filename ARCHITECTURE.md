@@ -377,8 +377,10 @@ v0.3 adds `source: "off"`, the `Food` fields `gtin`, `source_url`, `source_licen
   (`servings` default 1; if `grams` given, servings = grams / serving_g) → Entry (201)
 * `PUT /api/log/{id}` body any of `meal`, `servings`, `grams`, `note`, `date` → Entry (recomputes snapshot from the food;
   an entry that was logged by weight keeps its grams and re-derives servings from the food's *current* `serving_g`
-  unless the body sets `servings`, so grams and servings always agree, as with copy-day)
-* `DELETE /api/log/{id}` → 204
+  unless the body sets `servings`, so grams and servings always agree, as with copy-day). Optional header
+  `If-Match: "<version>"`: a version that is not the entry's now answers **412** and changes nothing ("Offline edits and
+  deletes" below)
+* `DELETE /api/log/{id}` → 204; the same optional `If-Match`
 * `POST /api/log/quick` body `{"date","meal","name","serving_desc"?,"serving_g"?,"nutrients":{...},"servings"?,"flags"?}`
   → Entry; creates a `custom` food then logs it.
 * `GET /api/log/range?start=YYYY-MM-DD&end=YYYY-MM-DD` → `{"days":[{"date", "totals": {...}, "status": {...}}]}` (one item per day, including empty days)
@@ -388,7 +390,8 @@ v0.3 adds `source: "off"`, the `Food` fields `gtin`, `source_url`, `source_licen
 Entry = { "id": 5, "date": "2026-10-05", "meal": "breakfast", "food_id": 12, "food_name": "Banana, raw",
           "servings": 1, "grams": null, "note": null, "nutrients": {...multiplied...},
           "warnings": [...per-serving-style warnings evaluated on this entry's totals...],
-          "kidney_rating": "red", "created_at": "...", "updated_at": "..." }
+          "kidney_rating": "red", "created_at": "...", "updated_at": "...",
+          "version": "9f3a0c5d1e7b2468" }   // v0.4: a hash of the stored content; see "Offline edits and deletes"
 
 DaySummary = {
   "date": "2026-10-05",
@@ -759,6 +762,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py`, `docs/dev/progress/symptoms.md` |
+| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py`, `docs/dev/progress/offline-edits.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py`, `docs/dev/progress/visit-prep.md` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
@@ -1049,6 +1053,8 @@ export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "a
                "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
                "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and "Not for me" list use (import)
 // linked_foods items: {id, name, source, fdc_id, linked_at, gtin, food}; food = the whole record, shaped like a custom_foods item (import)
+// log_entries items: the API's Entry without "version" (it is worked out from the content, so a new export stays importable by an older
+//   server); the import accepts and ignores a "version" key
 ```
 
 ### Import of `export.json` (`POST /api/me/import`, `app/data_import.py`)
@@ -1861,11 +1867,12 @@ with lookups off on both sides.
   never makes a second row.
 * **UI:** the header badge (`#sync-badge`: "Offline · 2 to sync" / "1 not saved"; on phones the number, the
   full words in its `aria-label`) opens Settings → This device; Today marks waiting entries "waiting to
-  sync" (no Eaten button) and says when it shows this device's saved copy; Add's search says "Offline: saved
+  sync" and says when it shows this device's saved copy; Add's search says "Offline: saved
   on this device"; sign-out with items waiting opens `#sheet-unsynced` (Try to sync now / Stay signed in /
-  Sign out and lose them). Announcements go through `#sync-live` (`role=status`). Any other change made
-  without a connection (an edit, a delete, the profile) fails with "… this change was not saved: it needs a
-  connection. Food you log still waits on this device and syncs later."
+  Sign out and lose them). Announcements go through `#sync-live` (`role=status`). **Edits and deletes of entries already on
+  the server wait too** ("Offline edits and deletes" below). Any other change made without a connection (the profile,
+  targets, settings) fails with "… this change was not saved: it needs a connection. Food you log still waits on this
+  device and syncs later."
 * **Checks:** `tests/test_device_ui.py` (static), `tools/e2e/device.py` (Chromium with
   `context.set_offline`: log offline, reload offline from the service worker, reconnect synced once, a lost
   batch answer resent without a second row, Retry/Discard, the sign-out sheet; the demo's outbox).
@@ -3109,3 +3116,99 @@ instructions tell the model to send a fresh key per intended save and to reuse i
 The assistant (through a token) cannot edit or delete anything; no MCP resources or prompts; no
 activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 
+
+## Offline edits and deletes (ROADMAP; note 02 R5 "Queueable offline actions")
+
+Editing an entry already on the server (its amount, meal, day, eaten or planned, note) and deleting it wait in the outbox like
+a new entry does. The rule is **never overwrite silently**. Profile, target, lab and settings changes stay online-only (least
+trust: a care team's targets must never be overwritten by a stale offline copy); they say "… it needs a connection" as before.
+No schema step: nothing is stored for any of this.
+
+### Entry version and `If-Match` (`app/log.py`, `Entry` in `app/models.py`)
+
+* **`Entry.version`** (every route that answers an entry: the day, `POST`, `PUT`, `/batch`, `/quick`, copy-day, saved meals
+  apply and from-log): 16 hex digits, FNV-1a (64 bit) over a canonical text of what the person sees and edits.
+  The text is, in order, `date`, `meal`, `food_name`, `servings`, `grams`, `note`, `status`, `purpose` and the 12 nutrient values
+  (registry order), taken from the entry JSON (so already rounded: servings 3 decimals, grams 1, nutrients as shown), each as
+  `~` for none, `n<number>;` (a whole number without a point, else Python's shortest repr) or `s<UTF-8 byte length>:<text>`.
+  The same content has the same version on every device and server: `id` (the address), `food_id` (never changes for an
+  entry, and differs between servers), `client_id`, `created_at` and `updated_at` are not in it, so an edit that is undone
+  elsewhere is no conflict. It is a change token, not a secret. FNV and not SHA because the demo (`js/mock/log.js`
+  `entryVersion`, synchronous, no Web Crypto) must give the identical value.
+* **`PUT /api/log/{id}` and `DELETE /api/log/{id}`** take an optional **`If-Match: "<version>"`** (RFC 9110 §13.1.1, strong
+  comparison: a quoted or bare tag, a comma list, or `*` for "any entry that exists"; a weak `W/"…"` or an empty value never
+  matches). Order of the checks: sign-in and CSRF, the body (400), the entry is the person's and exists (**404, with or without
+  a valid version, so another person's entry is not revealed**), then the version. A mismatch answers **412
+  `{"detail": "This entry was changed on another device", "current": <Entry as stored now>}`** and changes nothing. With the
+  header the write is `… WHERE id = ? AND user_id = ? AND updated_at = <the row that was checked>`, so a request that gets in
+  between the check and the write also answers 412 (or 404 when it deleted the entry). **Without the header both routes behave
+  exactly as before** (last write wins), so every existing client works.
+* The export (`export.json`) drops `version` (derived, so a new export stays importable by an older server); the import accepts
+  and ignores it. The CSV is unchanged. Documented in the OpenAPI schema (`If-Match` header parameter, the 412 response).
+
+### The outbox (`js/offline.js`, hooks in `js/core.js`)
+
+* **What the client sends.** `api.updateEntry(id, body, entry)` / `api.deleteEntry(id, entry)` pass the entry as the person
+  saw it: `KH.request` sends `If-Match: "<entry.version>"` (only a hex string is ever put in a header) and hands `entry` to the
+  hooks as `opts.base`. An entry without a `version` (an old saved copy) is sent without the header, as before.
+* **Queueing.** A failed or timed-out (6 s) edit or delete is queued, kind `edit` or `delete`:
+  `{client_id, user_id, kind, method, path: "/api/log/<id>", entry_id, body, version, base: <entry as seen>, state, …}`; the
+  caller gets the entry as it will look (`pending: true`) or `{pending: true}` for a delete. Without `opts.base` nothing is
+  queued (there is no version to check) and the usual "needs a connection" message stands. The queued body is cut to **what
+  differs from the entry the person saw** (the entry sheet always sends the meal, day, status and note; `changedFields`), so
+  "Use mine" never rewrites a field the person did not change, and a save that changes nothing queues nothing. **One item per entry:** a second
+  edit joins the first (bodies merged, the original version kept, moved to the end of the queue so it still goes after a
+  "mark eaten" queued in between), a delete replaces it, an edit of an entry with a delete waiting is "This entry no longer
+  exists". `KH.net.intercept` sends an edit made while a change for that entry already waits into the queue even when online
+  (the order the person acted in holds), and handles `pending:<client_id>` entries locally.
+* **An entry that was made offline and is still waiting** (id `pending:<client_id>`): editing it **rewrites the queued create**
+  (the same `client_id`, so it is still created exactly once) and deleting it **removes the queued create** with no request.
+  If it has just been sent the person is told to open it again.
+* **Today** draws what waits: an edited entry in its new form (amount and nutrients worked out from the food this device knows,
+  else by scaling the entry's own numbers; warnings from the rules twin), a deleted one gone, one moved to another day on both
+  days, all marked "waiting to sync" and counted in the totals (`withWaiting`, the same day maths as the demo). A waiting
+  entry opens the editor like any other.
+* **Replay** is FIFO under the same lock, one request per change, and stops at the first network error, 5xx, 429, 401 or 403
+  like every other item. Each change is sent with its stored `version` as `If-Match`:
+  * **2xx**: done and removed (the day is read again).
+  * **404**: the entry is gone (or never was the person's; the server does not say which, nor does the app): "This entry no
+    longer exists (<name>), so your change was dropped", the item is removed.
+  * **412**: the entry changed on the server. If the server's `current` still equals the entry the change was made on (the
+    eight fields above; this is the person's own queued "mark eaten" having been sent first, and queueing a mark updates the
+    expected entries of the changes already waiting), the change is sent again **once** with `current.version`. Otherwise the
+    item becomes a **conflict** (`state: 'conflict'`, `server: current`): nothing is sent, nothing is retried, the badge says
+    "N to review", Today marks the entry "needs review" with the server's version (it opens Settings → This device, not the
+    editor), and a toast says what happened.
+  * **another 4xx** (for example 400): kept as "not saved" with the server's reason, Retry / Discard, as for a new entry.
+* **A copy saved before versions existed** (an entry in this device's saved days that has no `version`, from before the
+  upgrade) is queued without one. A change with no version is never sent unchecked: at replay the app reads that day from the
+  server first (`GET /api/log?date=`, answered as the server has it, without what waits drawn on it) and compares the entry
+  with the one the change was made on. Equal: the server's `version` is sent as `If-Match`. Different: a conflict card. Gone:
+  "This entry no longer exists". The read failing: "not saved".
+* **The conflict card** (Settings → This device, `conflictCard` in `js/offline.js`): "This entry was changed on another device
+  while you were offline", the entry as the server has it ("Saved on your server") and the person's change ("Your change":
+  the server's entry with the person's changes on top, which is what "Use mine" leaves) side by side (food, day, meal, amount,
+  status, note; a value that differs is bold and underlined and said so to a screen reader; a delete shows "Delete <name>"),
+  and two buttons. **Keep the saved one** drops the change. **Use mine** sends it again with
+  the version the server has now; if the entry changed again meanwhile that is a new conflict, never an overwrite. All text goes
+  in as text nodes (notes are the person's own words). An edit made online that gets a 412 (the entry was changed elsewhere
+  since the day was read) becomes the same card (`KH.net.onConflict`) and the sheet closes with a message.
+* The queue holds this person's items only; sign-out and **Clear offline data** remove it as before. Items are in the badge
+  ("Offline · 2 to sync", "1 to review", the aria-label says "2 changes are waiting to sync") and the list.
+* **Safety.** A low treatment (`purpose` `hypo`) is edited and deleted offline like any other entry: nothing in the queue, the
+  card or the replay looks at the purpose, and nothing warns about or blocks treating a low. No clinical number is added.
+
+### Parity and checks
+
+* `entryVersion`, `versionMatches` and the `PUT` / `DELETE` routes of the demo (`js/mock/log.js`; `js/mock/core.js` passes the
+  request headers to routes as `header(name)`) are checked against the server by `tests/data/entry_version_vectors.json`
+  (generated by `tests/data/gen_entry_version_vectors.py`: 23 entries and their versions, 19 `If-Match` headers, one request
+  script with its answers: match, 412 with the current entry, no header, `*`, a list, a weak tag, a bad body, a missing entry,
+  deletes), replayed by `node tests/js/run_vectors.mjs`; `tests/test_entry_version_vectors.py` fails when the file is stale.
+  `tools/e2e/parity.py` compares entries as before (`version` is the same on both sides).
+* `tests/test_log_if_match.py` (server: version, match, 412, no header, 404 first, the race, export and import),
+  `tests/test_offline_edits_ui.py` (static: queueable kinds, `If-Match`, the card's words and text-only rule, no inline script or
+  style) and `tests/js/outbox_changes.mjs` (the queue logic in Node, with the demo API as the server: queue, coalesce, rewrite,
+  replay with `If-Match`, 412 and both answers, 404, a mark queued first, profile and targets still online-only), and the
+  `changes` section of `tools/e2e/device.py` (Chromium with `context.set_offline`: edit and delete offline, reload offline,
+  reconnect, the conflict card and both buttons, a deleted entry, an entry made offline, "Eaten", a low treatment).

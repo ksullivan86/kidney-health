@@ -22,6 +22,14 @@ the service worker and the camera are allowed):
                reload while offline (the app starts from this device's copies, the entry shows "waiting to sync"),
                reconnect, synced once; a lost batch response (the server got it, the page did not) synced again
                without a second row; an item the server refuses shown with Retry/Discard; sign-out asks first.
+* ``changes``  offline edits and deletes of entries already on the server: an entry edited and another deleted with
+               the network off (Today shows both at once, the badge counts "2 to sync", an offline reload keeps them),
+               reconnect: each sent once with If-Match (the version it was made on); another device changed the entry
+               meanwhile: the server keeps its edit, the badge says "to review", the card in Settings → This device shows
+               the server's entry and the person's change side by side, "Use mine" re-sends with the new version, "Keep the
+               saved one" drops the change; an entry another device deleted: "This entry no longer exists", dropped; an
+               entry made offline: edited (the queued create is rewritten) and deleted (nothing is sent); "Eaten" and a low
+               treatment edited offline like any other entry; the profile still needs a connection.
 * ``ai``       Settings → AI ideas (opt in), AI meal ideas with consent and "What will be sent?", the cards labelled
                and next to the rule-based list, text only; Quick add's label photo beside the form, "Read the label
                for me": the browser sends a JPEG ≤ 1600 px without EXIF, fields marked "from photo", logged.
@@ -45,6 +53,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import re
 import struct
 import sys
 import tempfile
@@ -67,7 +76,7 @@ OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device"
 PORT = 8066
 AI_PORT = 8067
 TIMEOUT_MS = 20_000
-SECTIONS = ("photo", "native", "live", "outbox", "firstvisit", "iostip", "ai", "demo", "shots")
+SECTIONS = ("photo", "native", "live", "outbox", "changes", "firstvisit", "iostip", "ai", "demo", "shots")
 RESULTS: list[dict[str, Any]] = []
 TODAY = date.today().isoformat()
 
@@ -800,6 +809,249 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         ctx.close()
 
 
+def section_changes(hx: Harness, state: dict[str, Any]) -> None:
+    """Offline edits and deletes of entries already on the server (ROADMAP; ARCHITECTURE.md "Offline edits and deletes")."""
+    area = "offline edits and deletes"
+    ctx, watch = hx.context(width=375, height=812, touch=True, service_workers="allow")
+    page = ctx.new_page()
+    state["page"] = page
+    sent: list[tuple[str, str, str | None]] = []  # (method, path, If-Match) of every write the page makes
+
+    def noting(request: Any) -> None:
+        if request.method in ("PUT", "DELETE", "POST") and urlsplit(request.url).path.startswith("/api/log"):
+            sent.append((request.method, urlsplit(request.url).path, request.headers.get("if-match")))
+    page.on("request", noting)
+
+    def food_entry(query: str, **extra: Any) -> dict[str, Any]:
+        food = hx.api("GET", f"/api/foods?q={query}&limit=5")["foods"][0]
+        return hx.api("POST", "/api/log", {"date": TODAY, "meal": extra.pop("meal", "lunch"), "food_id": food["id"], **extra})
+
+    def on_server(entry_id: int) -> dict[str, Any] | None:
+        return next((e for e in hx.entries() if e["id"] == entry_id), None)
+
+    def open_row(entry: dict[str, Any]) -> None:
+        page.click(f"#meals .row-btn:has-text(\"{entry['food_name']}\") >> nth=0")
+        page.wait_for_selector("#sheet-entry[open]")
+
+    def go(offline: bool) -> None:
+        watch.offline = offline
+        ctx.set_offline(offline)
+
+    def visit(url: str) -> None:
+        page.wait_for_load_state("networkidle")  # a request still on its way would be aborted by the navigation
+        page.goto(url)
+
+    def refresh() -> None:
+        page.wait_for_load_state("networkidle")
+        page.reload()
+
+    def toast_text() -> str:
+        return page.evaluate("document.querySelector('#toast').textContent")
+
+    had = {e["id"] for e in hx.entries()}  # what other sections left; this one leaves today as it found it
+    try:
+        wait_controlled(page, hx.base)
+        page.wait_for_selector("#view-today:not([hidden])")
+        apple = food_entry("apple raw", servings=1)
+        berries = food_entry("blueberries", meal="snack", servings=1)
+        check(area, "the server's entries carry a version", bool(apple["version"]) and bool(berries["version"]))
+        visit(f"{hx.base}/")  # online: the device saves its copy of today, versions included
+        page.wait_for_selector("#view-today:not([hidden]) #meals .row-btn")
+        saved = page.evaluate(idb("get", "snapshots", [page.evaluate("KH.state.me.id"), f"/api/log?date={TODAY}"]))
+        check(area, "the saved copy of the day holds each entry's version",
+              saved and {e["id"]: e["version"] for e in saved["data"]["entries"]}.get(apple["id"]) == apple["version"])
+
+        # 1. Edit one entry and delete another with the network off.
+        go(True)
+        open_row(apple)
+        page.fill("#entry-servings", "3")
+        page.fill("#entry-note", "edited offline")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        wait_js(page, "document.querySelector('#toast').textContent.includes('Saved on this device')")
+        check(area, "offline: the edit is saved on this device, and says so", "Saved on this device" in toast_text(), toast_text())
+        page.wait_for_selector("#meals .badge.pending")
+        today = page.inner_text("#meals")  # (the badges are upper-cased by the stylesheet)
+        check(area, "offline: Today shows the new amount and note, marked 'waiting to sync'",
+              "edited offline" in today and "waiting to sync" in today.lower(), today[:300])
+        open_row(berries)
+        page.click("#entry-delete")
+        page.click("#sheet-entry .confirm-row .btn.danger-solid")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        check(area, "offline: the deleted entry is gone from Today", berries["food_name"] not in page.inner_text("#meals"))
+        badge = page.evaluate("[document.querySelector('#sync-badge-text').textContent, document.querySelector('#sync-badge').getAttribute('aria-label')]")
+        check(area, "the header badge counts both changes", badge[0] == "Offline · 2 to sync" and "2 changes are waiting to sync." in badge[1], json.dumps(badge))
+        check(area, "the server has neither yet",
+              on_server(apple["id"])["servings"] == 1 and on_server(berries["id"]) is not None)
+        refresh()  # still offline: the service worker serves the app, the device's copy plus what waits
+        page.wait_for_selector("#view-today:not([hidden]) #meals .badge.pending")
+        again = page.inner_text("#meals")
+        check(area, "after an offline reload the edit and the delete are still applied to Today",
+              "edited offline" in again and berries["food_name"] not in again, again[:300])
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item")
+        listed = page.inner_text("#set-outbox")
+        check(area, "Settings → This device lists the change and the delete", "Change: " in listed and "Delete: " in listed and berries["food_name"] in listed, listed[:400])
+        page.locator("#set-outbox").scroll_into_view_if_needed()
+        hx.shot(page, "changes-offline-list-375", full=False)
+
+        # 2. Back online: both are applied, once, each with the version it was made on.
+        sent.clear()
+        go(False)
+        wait_js(page, "KH.offline.counts().pending === 0 && !KH.offline.isOffline()", TIMEOUT_MS)
+        mine = on_server(apple["id"])
+        check(area, "reconnected: the edit reached the server", mine and mine["servings"] == 3 and mine["note"] == "edited offline", json.dumps(mine)[:200])
+        check(area, "reconnected: the delete reached the server", on_server(berries["id"]) is None)
+        puts = [s for s in sent if s[0] == "PUT" and s[1] == f"/api/log/{apple['id']}"]
+        dels = [s for s in sent if s[0] == "DELETE" and s[1] == f"/api/log/{berries['id']}"]
+        check(area, "each was sent once, with If-Match: the version it was made on",
+              [p[2] for p in puts] == [f'"{apple["version"]}"'] and [d[2] for d in dels] == [f'"{berries["version"]}"'], json.dumps(sent))
+
+        # 3. Another device changed the entry while this one was offline: nothing is overwritten, a card asks.
+        visit(f"{hx.base}/")
+        page.wait_for_selector("#view-today:not([hidden]) #meals .row-btn")
+        plum = food_entry("plum", meal="dinner", servings=1)
+        pear = food_entry("pear", meal="dinner", servings=1)
+        refresh()
+        page.wait_for_selector(f"#meals .row-btn:has-text(\"{plum['food_name']}\")")
+        go(True)
+        open_row(plum)
+        page.fill("#entry-servings", "2")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        open_row(pear)
+        page.click("#entry-delete")
+        page.click("#sheet-entry .confirm-row .btn.danger-solid")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        other_plum = hx.api("PUT", f"/api/log/{plum['id']}", {"servings": 5, "note": "changed elsewhere"})
+        other_pear = hx.api("PUT", f"/api/log/{pear['id']}", {"note": "also changed elsewhere"})
+        watch.expect(f"/api/log/{plum['id']}", 412)
+        watch.expect(f"/api/log/{pear['id']}", 412)
+        sent.clear()
+        go(False)
+        wait_js(page, "KH.offline.counts().conflict === 2", TIMEOUT_MS)
+        check(area, "a changed entry is a conflict: the server kept the other device's edit",
+              on_server(plum["id"])["servings"] == 5 and on_server(plum["id"])["version"] == other_plum["version"])
+        check(area, "a deleted entry that was changed meanwhile is still there", on_server(pear["id"]) is not None)
+        check(area, "each was tried once and not again", [s[0] for s in sent if s[1] in (f"/api/log/{plum['id']}", f"/api/log/{pear['id']}")] == ["PUT", "DELETE"], json.dumps(sent))
+        page.wait_for_selector("#sync-badge.failed")
+        check(area, "the badge says two need review", "2 to review" in page.inner_text("#sync-badge-text"), page.inner_text("#sync-badge-text"))
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item.conflict")
+        cards = page.inner_text("#set-outbox")
+        check(area, "the card says what happened, and shows both sides",
+              cards.count("This entry was changed on another device while you were offline") == 2 and "Saved on your server" in cards
+              and "Your change" in cards and "changed elsewhere" in cards and "Keep the saved one" in cards and "Use mine" in cards, cards[:600])
+        side_by_side = page.evaluate("""() => { const s = document.querySelector('.conflict-sides'); const a = s.children[0].getBoundingClientRect(), b = s.children[1].getBoundingClientRect();
+          return Math.abs(a.top - b.top) < 2 && b.left > a.left; }""")
+        check(area, "the two versions are side by side", side_by_side)
+        problems = layout_problems(page, "#set-outbox")
+        check(area, "the cards fit a phone (no sideways scroll, 44 px buttons)", not problems, "; ".join(problems[:8]))
+        hx.shot(page, "changes-conflict-375", full=False)
+        page.set_viewport_size({"width": 1280, "height": 800})
+        page.locator("#set-outbox .outbox-item.conflict").first.scroll_into_view_if_needed()
+        wide = layout_problems(page, "#set-outbox")
+        check(area, "and a desktop window (no sideways scroll, 44 px buttons)", not wide, "; ".join(wide[:8]))
+        hx.shot(page, "changes-conflict-1280", full=False)
+        page.set_viewport_size({"width": 375, "height": 812})
+        visit(f"{hx.base}/")
+        page.wait_for_selector("#view-today:not([hidden]) #meals .badge.failed")
+        check(area, "Today shows the entry as the server has it, marked 'needs review'",
+              page.inner_text("#meals").lower().count("needs review") == 2 and "changed elsewhere" in page.inner_text("#meals"), page.inner_text("#meals")[-700:])
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item.conflict")
+        # "Use mine" on the edit; "Keep the saved one" on the delete.
+        sent.clear()
+        card_for_plum = page.locator("#set-outbox .outbox-item.conflict", has_text=plum["food_name"])
+        card_for_plum.get_by_role("button", name="Use mine").click()
+        wait_js(page, "KH.offline.counts().conflict === 1 && KH.offline.counts().pending === 0", TIMEOUT_MS)
+        check(area, "'Use mine' sends the change with the version the server has now",
+              [s[2] for s in sent if s[0] == "PUT"] == [f'"{other_plum["version"]}"'] and on_server(plum["id"])["servings"] == 2, json.dumps(sent))
+        page.locator("#set-outbox .outbox-item.conflict", has_text=pear["food_name"]).get_by_role("button", name="Keep the saved one").click()
+        wait_js(page, "KH.offline.counts().conflict === 0 && KH.offline.counts().pending === 0", TIMEOUT_MS)
+        kept = on_server(pear["id"])
+        check(area, "'Keep the saved one' drops the delete: the entry stays as the server has it", kept and kept["version"] == other_pear["version"] and kept["note"] == "also changed elsewhere")
+        check(area, "nothing waits and the badge is gone", page.is_hidden("#sync-badge") and not page.evaluate(idb("all", "outbox")))
+
+        # 4. An entry another device deleted: "This entry no longer exists", the change is dropped.
+        visit(f"{hx.base}/")
+        grape = food_entry("grapes", meal="snack", servings=1)
+        refresh()
+        page.wait_for_selector(f"#meals .row-btn:has-text(\"{grape['food_name']}\")")
+        go(True)
+        open_row(grape)
+        page.fill("#entry-servings", "2")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        hx.api("DELETE", f"/api/log/{grape['id']}")
+        watch.expect(f"/api/log/{grape['id']}", 404)
+        go(False)
+        wait_js(page, "KH.offline.counts().pending === 0", TIMEOUT_MS)
+        wait_js(page, "document.querySelector('#toast').textContent.includes('no longer exists')")
+        check(area, "a change to an entry that is gone says so and is dropped", "This entry no longer exists" in toast_text() and not page.evaluate(idb("all", "outbox")), toast_text())
+
+        # 5. An entry made offline: editing it rewrites the queued create, deleting it sends nothing.
+        visit(f"{hx.base}/")
+        page.wait_for_selector("#view-today:not([hidden])")
+        go(True)
+        page.evaluate(f"KH.api.quick({{ date: '{TODAY}', meal: 'snack', name: 'Harness soup', serving_g: 250, nutrients: {{ carbs_g: 12 }}, servings: 1 }})")
+        page.evaluate(f"KH.api.quick({{ date: '{TODAY}', meal: 'snack', name: 'Harness stew', serving_g: 250, nutrients: {{ carbs_g: 8 }}, servings: 1 }})")
+        refresh()
+        page.wait_for_selector("#meals .badge.pending")
+        open_row({"food_name": "Harness soup"})
+        page.fill("#entry-servings", "2")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        open_row({"food_name": "Harness stew"})
+        page.click("#entry-delete")
+        page.click("#sheet-entry .confirm-row .btn.danger-solid")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        queued = page.evaluate(idb("all", "outbox"))
+        check(area, "an entry made offline can be edited and deleted like any other: one create waits, with the new amount",
+              len(queued) == 1 and queued[0]["kind"] == "quick" and queued[0]["body"]["servings"] == 2, json.dumps(queued)[:300])
+        sent.clear()
+        go(False)
+        wait_js(page, "KH.offline.counts().pending === 0", TIMEOUT_MS)
+        soup = [e for e in hx.entries() if e["food_name"] == "Harness soup"]
+        check(area, "reconnected: the server has the edited entry once, and never heard of the deleted one",
+              len(soup) == 1 and soup[0]["servings"] == 2 and not [e for e in hx.entries() if e["food_name"] == "Harness stew"]
+              and all("stew" not in json.dumps(s).lower() for s in sent), json.dumps(sent))
+
+        # 6. "Eaten" on a planned entry, and a low treatment, offline.
+        planned = food_entry("cherries", meal="snack", servings=1, status="planned")
+        low = food_entry("glucose", meal="snack", servings=1)
+        visit(f"{hx.base}/")
+        page.wait_for_selector(f"#meals .row-btn:has-text(\"{planned['food_name']}\")")
+        go(True)
+        page.click(f"li.entry-planned:has-text(\"{planned['food_name']}\") .eaten-btn")
+        wait_js(page, "document.querySelector('#toast').textContent.includes('Saved on this device')")
+        open_row(low)
+        warned = page.inner_text("#sheet-entry")
+        page.fill("#entry-servings", "2")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        check(area, "a low treatment is edited offline like any other entry, with no warning or block about treating a low",
+              low["purpose"] == "hypo" and "Saved on this device" in toast_text() and not re.search(r"\b(don't|do not|avoid|too much)\b.*\b(treat|low)", warned, re.I), warned[:300])
+        go(False)
+        wait_js(page, "KH.offline.counts().pending === 0", TIMEOUT_MS)
+        check(area, "reconnected: 'Eaten' and the low treatment's new amount are on the server",
+              on_server(planned["id"])["status"] == "eaten" and on_server(low["id"])["servings"] == 2)
+
+        # 7. Profile and targets still need a connection.
+        go(True)
+        said = page.evaluate("KH.request('PUT', '/api/profile', { weight_kg: 72 }).then(() => 'saved?', (e) => e.message)")
+        check(area, "a profile change still says it needs a connection (and nothing waits)",
+              "needs a connection" in said and not page.evaluate(idb("all", "outbox")), said)
+        go(False)
+        check(area, "the server's profile is untouched", hx.api("GET", "/api/profile")["weight_kg"] == 70)
+    finally:
+        no_problems(area, watch)
+        ctx.close()
+        for entry in hx.entries():
+            if entry["id"] not in had:
+                hx.api("DELETE", f"/api/log/{entry['id']}")
+
+
 # Settings → This device as drawn on the page: rows, the outbox list, the button, and ids used more than once.
 DEVICE_SECTION_JS = """() => {
   const body = document.querySelector('#set-device-body');
@@ -1115,6 +1367,30 @@ def section_demo(hx: Harness, state: dict[str, Any]) -> None:
         wait_js(page, "KH.offline.counts().pending === 0")
         wait_js(page, "!document.querySelector('#meals .badge.pending')")
         check(area, "back online: synced into the demo's log", "Demo offline snack" in page.inner_text("#meals"))
+        # Offline edits against the demo API: If-Match, the 412 and the conflict card work in the demo as on the server.
+        look = "KH.mock.instance._entries.find((e) => e.food_name === 'Demo offline snack')"
+        watch.offline = True
+        ctx.set_offline(True)
+        page.click("#meals .row-btn:has-text('Demo offline snack')")
+        page.wait_for_selector("#sheet-entry[open]")
+        page.fill("#entry-servings", "2")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        check(area, "offline in the demo: the edit waits and Today shows it", page.evaluate("KH.offline.counts().pending") == 1
+              and page.evaluate(f"{look}.servings") == 1 and "2 servings" in page.inner_text("#meals"))
+        page.evaluate(f"KH.mock.instance.handle('PUT', '/api/log/' + {look}.id, {{ note: 'changed elsewhere' }})")  # another device
+        ctx.set_offline(False)
+        watch.offline = False
+        wait_js(page, "KH.offline.counts().conflict === 1", TIMEOUT_MS)
+        check(area, "the demo answers 412 like the server: nothing overwritten, one card to decide",
+              page.evaluate(f"[{look}.servings, {look}.note]") == [1, "changed elsewhere"])
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item.conflict")
+        check(area, "the card shows both sides and both buttons", "Saved on your server" in page.inner_text("#set-outbox")
+              and page.get_by_role("button", name="Keep the saved one").count() == 1 and page.get_by_role("button", name="Use mine").count() == 1)
+        page.get_by_role("button", name="Use mine").click()
+        wait_js(page, "KH.offline.counts().conflict === 0 && KH.offline.counts().pending === 0", TIMEOUT_MS)
+        check(area, "'Use mine' sends it with the new version: the demo has the person's amount", page.evaluate(f"{look}.servings") == 2)
         page.goto(f"{hx.base}/?mock=1#settings")
         page.wait_for_selector("#set-ai-body")
         check(area, "AI in the demo: 'in the installed app'", "installed app" in page.inner_text("#set-ai-body"))
@@ -1277,6 +1553,7 @@ def main(argv: list[str] | None = None) -> int:
                         "native": lambda: section_native(hx, state),
                         "live": lambda: section_live(hx, state, pw),
                         "outbox": lambda: section_outbox(hx, state),
+                        "changes": lambda: section_changes(hx, state),
                         "firstvisit": lambda: section_firstvisit(hx, state),
                         "iostip": lambda: section_iostip(hx, state),
                         "ai": lambda: section_ai(hx, state, fake),

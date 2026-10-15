@@ -203,10 +203,10 @@
   // Every /api route except the public auth ones needs a signed-in person (the server's
   // current_user dependency runs before anything else), so check before the route table.
   const baseHandle = MockApi.prototype.handle;
-  MockApi.prototype.handle = function handle(method, path, body) {
+  MockApi.prototype.handle = function handle(method, path, body, headers) {
     const p = new URL(path, 'http://demo.invalid').pathname;
     if (p.startsWith('/api/') && !PUBLIC_AUTH.has(`${method} ${p}`)) this._currentUser();
-    return baseHandle.call(this, method, path, body);
+    return baseHandle.call(this, method, path, body, headers);
   };
 
   // ---------------------------------------------------------------------------

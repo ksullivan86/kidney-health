@@ -492,6 +492,8 @@ class Entry(BaseModel):
     client_id: str | None = None  # v0.3: the offline outbox id it was created with
     created_at: str
     updated_at: str
+    # v0.4: a hash of the stored content; PUT / DELETE take it back as If-Match, and a mismatch is a 412 (app/log.py).
+    version: str
 
 
 class LogBatchResult(BaseModel):
