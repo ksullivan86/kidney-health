@@ -198,6 +198,24 @@ the server checks the file and shows what would be added and what would be left 
   person running the server can change that with `MAX_IMPORT_BYTES`).
 * The `.zip` also holds spreadsheets (CSV) for reading; only `export.json` is imported.
 
+## The online demo: data kept in your browser (only if you choose)
+
+The online demo (the GitHub Pages build) runs entirely in your browser with sample data and has no server, so it stores nothing
+by default. If you press **Keep my data in this browser** and tick *I understand*, the demo keeps its data in **this browser's
+IndexedDB, on this device only**. **Nothing is sent anywhere**: the page makes no request for it, and there is no account and no
+server to hold a copy. What that means for you:
+
+* it is **not backed up**: clearing site data, private browsing, or the browser deciding to free up space can delete it, so export
+  it regularly (**Settings → Your data → Export my data (export.json)**) and keep the file somewhere private, since it holds
+  your health data;
+* anyone who can use this browser on this device can open the demo and see it (the demo has no real sign-in);
+* **Stop keeping data here** deletes the stored copy; the demo then starts again with its sample data;
+* the file is the same `export.json` a server writes, so you can move to a real server with **Import from a file** (above);
+* the installed app never does any of this: it keeps your data on your server only (its offline queue stores unsent entries
+  on the device, see [Install on your phone](install-on-your-phone.md#offline)).
+
+See [The online demo](demo.md).
+
 ## Deleting your account
 
 Settings → Account → Delete account removes your account and everything that belongs to it from the

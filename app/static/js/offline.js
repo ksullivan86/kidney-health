@@ -827,7 +827,9 @@
   // ---------------------------------------------------------------------------
   // The demo API is in the page: it counts as unreachable while the browser says it is offline, so the outbox can be
   // tried in the demo too.
-  function offlineNow() { return MOCK && navigator.onLine === false; }
+  // The demo counts as unreachable while the browser is offline, except when the person keeps the demo's data in this browser
+  // (js/mock/persist.js): then there is no server to reach, and a write goes straight into the stored copy.
+  function offlineNow() { return MOCK && navigator.onLine === false && !(KH.mock && KH.mock.local && KH.mock.local.on()); }
   function prepare(method, path, body) {
     const kind = kindOf(method, path);
     if ((kind === 'entry' || kind === 'quick') && body && typeof body === 'object' && !Array.isArray(body) && body.client_id == null) {

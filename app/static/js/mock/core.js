@@ -314,7 +314,9 @@
   }
 
   class MockApi {
-    constructor({ foodsData = null, hemodialysis = false } = {}) {
+    // `seed: false` builds the empty account of a fresh server (no sample person, no sample days): the start of "Keep my data in
+    // this browser" (js/mock/persist.js), whose person brings their own data.
+    constructor({ foodsData = null, hemodialysis = false, seed = true } = {}) {
       this._lastUs = 0;
       this._foods = []; this._foodById = new Map(); this._nextFoodId = 1;
       this._entries = []; this._nextEntryId = 1;
@@ -323,7 +325,7 @@
       this._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1', warn_fraction: 0.8, about_tolerance_pct: 0,
         ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: this._stamp() };
       this._importBuiltin(foodsData || KH.mock.fallbackFoods());
-      KH.mock.seedSampleData(this, { hemodialysis });
+      if (seed) KH.mock.seedSampleData(this, { hemodialysis });
     }
 
     // utcnow(): ISO-8601 UTC with microseconds, strictly increasing within the page.
@@ -350,6 +352,8 @@
     async request(method, path, body, headers) {
       await new Promise((r) => setTimeout(r, 40));
       const res = this.handle(method, path, body, headers);
+      // A write that went through (handle throws an ApiError for one that did not): "Keep my data in this browser" saves after it.
+      if (method !== 'GET' && method !== 'HEAD' && typeof KH.mock.onWrite === 'function') KH.mock.onWrite(this, method, path);
       return typeof res === 'string' || res == null ? res : JSON.parse(JSON.stringify(res)); // what the wire would carry
     }
     handle(method, path, body, headers) {

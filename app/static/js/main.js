@@ -45,6 +45,10 @@
         if (tab) tab.focus();
       });
     }
+    // Demo build only (js/mock/persist.js): a copy the person chose to keep in this browser is read back before the first request;
+    // everywhere else this does nothing and touches no browser store.
+    if (MOCK && KH.mock.local) await KH.mock.local.boot();
+    if (MOCK && KH.demoLocal) KH.demoLocal.init();
     // false: a sign-in screen is showing; it calls KH.app.start() once someone is signed in.
     if (!(await KH.auth.boot())) return;
     if (KH.views.settings && KH.views.settings.onSignedIn) KH.views.settings.onSignedIn(state.me);

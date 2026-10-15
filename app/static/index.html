@@ -34,6 +34,7 @@
 <link rel="stylesheet" href="css/ask.css">
 <link rel="stylesheet" href="css/ask-voice.css">
 <link rel="stylesheet" href="css/device.css">
+<link rel="stylesheet" href="css/demo-local.css">
 <link rel="stylesheet" href="css/touch.css">
 <script src="theme-init.js"></script>
 </head>
@@ -113,7 +114,9 @@
 </div>
 
 <div class="preview-banner" id="preview-banner" role="note" aria-label="About this preview" hidden>
-  <p>Preview with sample data. Nothing is saved: reloading starts over. To try the hemodialysis features, set Dialysis to Hemodialysis in Profile, save, then use the suggested targets it offers.</p>
+  <p id="preview-banner-text">Preview with sample data. Nothing is saved: reloading starts over. To try the hemodialysis features, set Dialysis to Hemodialysis in Profile, save, then use the suggested targets it offers.</p>
+  <!-- The Pages demo only (js/views/demo_local.js shows it; it stays hidden in the installed app and in ?mock=1): opens the sheet below. -->
+  <button class="btn secondary small" type="button" id="preview-banner-keep" hidden>Keep my data in this browser</button>
   <button class="icon-btn" type="button" id="preview-banner-close" aria-label="Dismiss the preview notice">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
   </button>
@@ -1696,6 +1699,61 @@
   </div>
 </dialog>
 
+<!-- ===================== DEMO ONLY: KEEP MY DATA IN THIS BROWSER (js/views/demo_local.js, js/mock/persist.js) =====================
+     Opened from the demo banner. Off by default: nothing is stored until "I understand" is ticked and the button pressed. -->
+<dialog id="sheet-demo-local" class="sheet" aria-labelledby="sheet-demo-local-title" aria-describedby="sheet-demo-local-sub">
+  <div class="sheet-form">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-demo-local-title" class="sheet-title">Keep my data in this browser</h2>
+        <div class="sheet-sub" id="sheet-demo-local-sub">For trying the app without a server.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="dl-off">
+        <p>This demo can save what you enter in this browser, so it is still here the next time you open it. It needs no server and no account.</p>
+        <ul class="about-list dl-list" id="dl-terms">
+          <li>Your data stays only in this browser, on this device. Nothing is sent anywhere.</li>
+          <li>Clearing site data, private browsing, or the browser deciding to free up space can delete it. Export it regularly (Settings, Your data) and keep the file somewhere safe.</li>
+          <li>On a shared device, other people who use this browser can see it. The demo has no real sign-in.</li>
+          <li>For real use, run your own server: it keeps your data on a computer you control, with sign-in and backups.</li>
+        </ul>
+        <fieldset class="field choice-list" id="dl-start">
+          <legend>Start with</legend>
+          <label class="choice" for="dl-start-empty"><input type="radio" name="dl-start" id="dl-start-empty" value="empty" checked><span class="choice-text"><b>An empty log of my own</b><span class="hint">The sample person and the sample days are left out. You can bring a file in with Settings, Your data, Import from a file.</span></span></label>
+          <label class="choice" for="dl-start-sample"><input type="radio" name="dl-start" id="dl-start-sample" value="sample"><span class="choice-text"><b>The sample data, as it is now</b><span class="hint">Keeps the sample person and everything you changed in this page so far.</span></span></label>
+        </fieldset>
+        <label class="check" for="dl-understand"><input type="checkbox" id="dl-understand"><span class="check-text">I understand<span class="hint">My data would be stored in this browser only, and it can be lost.</span></span></label>
+      </div>
+      <div id="dl-on" hidden>
+        <p id="dl-on-line">Your data is being kept in this browser.</p>
+        <ul class="about-list dl-list">
+          <li>It stays only in this browser, on this device. Nothing is sent anywhere.</li>
+          <li>Clearing site data, private browsing, or the browser freeing up space can delete it. Export it regularly.</li>
+          <li>Other people who use this browser can see it. For real use, run your own server.</li>
+        </ul>
+        <p class="hint" id="dl-saved" role="status"></p>
+        <p class="hint" id="dl-persist"></p>
+        <p class="hint">To bring a file in, use Settings, Your data, Import from a file. To move to a real server, import the same file there.</p>
+      </div>
+      <div id="dl-blocked" hidden>
+        <p class="form-error" id="dl-blocked-text" role="alert"></p>
+      </div>
+      <p class="form-error" id="dl-problem" role="alert" hidden></p>
+      <p class="status-msg" id="dl-msg" role="status" aria-live="polite"></p>
+    </div>
+    <div class="sheet-foot" id="dl-foot">
+      <button class="btn secondary" type="button" data-close>Close</button>
+      <button class="btn secondary" type="button" id="dl-export" hidden>Export export.json</button>
+      <button class="btn danger" type="button" id="dl-stop" hidden>Stop keeping data here</button>
+      <button class="btn primary" type="button" id="dl-enable" disabled>Keep my data in this browser</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- ===================== RE-AUTHENTICATION (js/views/auth.js): sensitive actions answer reauth_required ===================== -->
 <dialog id="sheet-reauth" class="sheet" aria-labelledby="sheet-reauth-title" aria-describedby="sheet-reauth-sub">
   <form method="dialog" class="sheet-form" id="reauth-form" novalidate>
@@ -1952,6 +2010,9 @@
 <script src="js/mock/settings.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/ai.js"></script>
+<script src="js/mock/export.js"></script>
+<script src="js/mock/import.js"></script>
+<script src="js/mock/persist.js"></script>
 <script src="js/mock/seed.js"></script>
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>
@@ -1972,6 +2033,7 @@
 <script src="js/views/guidance.js"></script>
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
+<script src="js/views/demo_local.js"></script>
 <!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
      WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
 <script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>

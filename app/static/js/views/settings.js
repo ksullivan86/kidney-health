@@ -435,18 +435,33 @@
     box.append(h('p', { class: 'hint' }, 'Do not recognise a device? Sign it out, then change your password.'));
   }
 
+  // The online demo keeps its data in this browser (the person turned it on): export and import then work in the page.
+  const keptHere = () => !!(MOCK && KH.demoLocal && KH.demoLocal.on());
   function dataBlock(me) {
     const wrap = h('div', { class: 'data-block' });
     const msg = statusMsg('set-export-msg');
     wrap.append(h('p', {}, 'Download everything you have entered: a .zip with export.json and spreadsheet (CSV) files for your log, foods, saved meals and settings. It holds no passwords, sessions or keys.'));
-    wrap.append(h('div', { class: 'settings-actions' }, action('Export my data (.zip)', 'secondary', async () => {
-      if (MOCK) { msg.textContent = 'In the installed app this downloads a .zip of your data. The preview has no server, so there is nothing to download.'; return; }
+    wrap.append(h('div', { class: 'settings-actions' }, action(MOCK && keptHere() ? 'Export my data (export.json)' : 'Export my data (.zip)', 'secondary', async () => {
+      if (MOCK && keptHere()) { // "Keep my data in this browser" is on (the Pages demo, js/views/demo_local.js): the file the zip would hold
+        msg.textContent = 'Preparing your export…';
+        try {
+          const res = await KH.demoLocal.exportFile();
+          msg.textContent = `Saved ${res.name} (${fmtBytes(res.bytes)}). Keep it somewhere private: it holds your health data.`;
+        } catch (err) { msg.textContent = ''; throw err; }
+        return;
+      }
+      if (MOCK) { msg.textContent = 'In the installed app this downloads a .zip of your data. The preview has no server, so there is nothing to download. In the online demo, turn on Keep my data in this browser to try the export and import here.'; return; }
       msg.textContent = 'Preparing your export…';
       try {
         const res = await download('/api/me/export.zip', `kidney-health-${me.username}.zip`);
         msg.textContent = `Saved ${res.name} (${fmtBytes(res.bytes)}). Keep it somewhere private: it holds your health data.`;
       } catch (err) { msg.textContent = ''; throw err; }
     }, { id: 'set-export' })), msg);
+    // The online demo only: the way back to the "Keep my data in this browser" sheet once the banner has been dismissed.
+    if (MOCK && PREVIEW && KH.demoLocal && KH.demoLocal.open) {
+      wrap.append(h('div', { class: 'settings-actions' }, action(keptHere() ? 'Manage the data kept here' : 'Keep my data in this browser', 'secondary',
+        async (btn) => KH.demoLocal.open(btn), { id: 'set-demo-local' })));
+    }
     wrap.append(importBlock());
 
     // Delete the account (not in AUTH_MODE=none: every request is user 1 there, which must stay)
@@ -529,7 +544,7 @@
     const wrap = h('div', { class: 'import-block', id: 'set-import' }, subtitle('Import from a file', 'set-import-h'));
     wrap.append(h('p', {}, 'Moving to another server, or starting again? Choose the export.json from an export of yours (open the .zip first). You see what would be added before anything is changed.'));
     const msg = statusMsg('set-import-msg');
-    if (MOCK) {
+    if (MOCK && !(KH.demoLocal && KH.demoLocal.on())) { // the online demo with "Keep my data in this browser" on imports like a server (js/mock/import.js)
       wrap.append(h('p', { class: 'hint', id: 'set-import-demo' }, 'The preview has no server to import into. In the installed app you choose the export.json here, check what would be added, then import it.'), msg);
       return wrap;
     }

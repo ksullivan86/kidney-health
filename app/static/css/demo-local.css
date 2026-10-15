@@ -1,0 +1,10 @@
+/* Demo only: "Keep my data in this browser" (js/views/demo_local.js). The banner button and the sheet. */
+.preview-banner { flex-wrap: wrap; }
+.preview-banner p { flex: 1 1 16rem; }
+.preview-banner .btn { min-height: var(--tap); white-space: normal; text-align: center; font-size: 0.85rem; padding: 4px 12px; }
+.preview-banner .btn[hidden] { display: none; }
+#sheet-demo-local .dl-list { margin: 8px 0 12px; }
+#sheet-demo-local fieldset { border: 0; padding: 0; margin: 0 0 8px; min-width: 0; }
+#sheet-demo-local legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+#sheet-demo-local .sheet-foot { flex-wrap: wrap; }
+#set-demo-local { white-space: normal; max-width: 100%; } /* a long label wraps instead of reaching past a phone's edge */

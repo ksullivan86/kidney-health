@@ -21,7 +21,8 @@ The page needs no server and makes no network request. It inlines, in document o
 ``data/foods.json`` (as ``<script type="application/json" id="kdl-foods">``), and sets
 ``window.KDL_PREVIEW = true`` before the modules run, so the app runs against its in-page copy
 of the server API (``js/mock/*``), seeded with a sample person ("Sam") and a month of meals.
-Nothing is saved: reloading starts over.
+Nothing is saved unless the person opts in (the demo's "Keep my data in this browser", docs/demo.md, which needs
+IndexedDB and exists only where ``window.KDL_PREVIEW`` is set): otherwise reloading starts over.
 
 Left out on purpose: the installed-app tags of ``<head>`` (manifest, icons, apple-touch-icon,
 apple-mobile-web-app-title) and every script marked ``data-preview="omit"`` (``js/pwa.js``:
