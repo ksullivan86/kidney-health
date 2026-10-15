@@ -83,7 +83,7 @@ everyone.
 
 | Sent to the AI provider | Never sent |
 |---|---|
-| Your CKD stage, dialysis type and diabetes type | Your name, user name or email |
+| Your CKD stage, dialysis type and diabetes type ("not chosen yet" if you have not picked them; with *Diabetes: None* the AI is told you have kidney disease only) | Your name, user name or email |
 | Your targets and today's totals and status | Your weight, height, exact age or dates |
 | Up to 40 candidate foods with their numbers | Entry notes, other people's data |
 | Your food preferences, if you wrote any (up to 200 characters) | Anything when you have not opted in |

@@ -12,6 +12,12 @@ python3 scripts/ai_eval.py --provider ollama --base-url http://localhost:11434/v
 python3 scripts/ai_eval.py --provider openai --model gpt-6-luna --vision-model gpt-6-luna --api-key-file ~/.config/openai.key
 ```
 
+The prompts are worded from the profile, so a prompt change is checked with a kidney-only profile too: the four golden
+cases `kidney-only-*` (meal ideas, describe a meal, label, plate photo; diabetes "None") and, with `--chat`, the four
+`chat-kidney-only-*` questions. `--cases '^kidney-only' --no-safety` runs just the golden ones. `PROMPT_VERSION`
+`2026-10-15.3` (the first with profile-worded prompts) is still waiting for its live run; the full command is in
+[`docs/ai.md`](../../ai.md#for-contributors) ("Re-run the golden set after a prompt change").
+
 A report holds the prompt version, the provider (never the key), the summary
 (`schema_valid_rate`, `next_meal_with_idea_rate`, `idea_survival_rate`, `claims_corrected`,
 `safety_refusal_rate`, `unsafe_text_shown`, latency p50/p95, dropped reasons, transport errors), the R11

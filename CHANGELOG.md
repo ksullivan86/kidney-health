@@ -137,6 +137,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   are kept). The day's carbohydrate still counts like any nutrient. The "Not medical advice" note below
   Profile and in Settings → About no longer mentions insulin decisions. Until you choose a
   diabetes type the app keeps using type 1, as before.
+* **The AI no longer assumes you have type 1 diabetes.** The instructions meal ideas and Ask start with used to say
+  "chronic kidney disease and type 1 diabetes" for everyone. They now describe you from your profile: your kidney stage
+  (or "not chosen yet"), dialysis if you have it, and a diabetes type only if your profile has one. With *Diabetes:
+  None* they say kidney disease only; until you choose, they say not to assume either way. **Nothing else changes: the
+  rules about lows, doses and medicines are the same text for everyone** (a profile with "None" can still have a low), and
+  a message about a low still gets the app's Treating a low card without an AI call. The data changes a little: a stage or
+  type you have not chosen yet is sent as "not chosen yet" instead of the stored default, and with *Diabetes: None* the
+  per-meal and per-snack carbohydrate goals are not sent. Describe a meal and the photo features still send no profile data.
+  See [docs/ai.md](docs/ai.md#the-instructions-follow-your-profile).
 * **Lab results from a spreadsheet.** Lab results → *Import from a spreadsheet* reads a CSV file with a date
   column and one column per test ("Date, Potassium (mmol/L), Creatinine (umol/L)", with other names such as K,
   CO2 or HbA1c understood). The file is read on your device: every result is shown converted before
@@ -293,6 +302,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* The meal ideas and Ask prompts follow the profile (kidney-only profile, part 3). `app/ai/prompts.py`: `SYSTEM_PROMPT` and
+  `CHAT_SYSTEM_PROMPT` are templates whose only profile-dependent part is `[[CONDITION]]`, rendered by `system_prompt(person)`
+  and `chat_prompt(person)` from `condition_text(person)`, which words only whitelisted profile values. The low-treatment
+  rules and the `hypo` purpose note are the same text for every profile (a test compares them across three profiles);
+  `TASK_SYSTEM_PROMPT` (describe a meal, label, plate) is one fixed sentence with no profile data. `person_block` sends null
+  for a stage or diabetes type not chosen yet; `targets_block(meal_carbs=False)` leaves the per-meal and per-snack carbohydrate
+  goals out for diabetes "None". **`PROMPT_VERSION` is `2026-10-15.3`: the owner runs the golden set with a live model for it**
+  (command in [docs/ai.md](docs/ai.md#for-contributors)). Tests: `tests/test_ai_prompts.py` (snapshots
+  `tests/fixtures/ai/prompts_*.txt` for type 1 with CKD 4, kidney-only stage 3b and not chosen yet),
+  `tests/test_ai_profile_prompts.py`, the golden cases `tests/ai_golden/kidney-only-*.json` (one per feature) and the
+  `chat-kidney-only-*` questions of `scripts/ai_eval.py`. No code path of the safety rules changed.
 * Privacy tiers, tier 1: `app/ai/routing.py` (roles, `resolve_feature`, the status and admin views, the once-only
   `initialise`), the network scope `local` in `app/ai/netpolicy.py` (`is_private_host`) with `ProviderConfig.local_only`,
   `GET`/`PUT /api/admin/ai-routing`, six `ai.route.*` registry keys (with their twin and vectors), `js/views/ai_routing.js`.

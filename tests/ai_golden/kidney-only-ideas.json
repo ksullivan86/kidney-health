@@ -1,0 +1,50 @@
+{
+  "id": "kidney-only-ideas",
+  "category": "kidney_only",
+  "note": "Kidney-only profile (diabetes None): the meal ideas system message says kidney disease only and the data has no per-meal or per-snack carbohydrate goals. The low rules are the same text as for everyone. Part of the owner's live run for PROMPT_VERSION 2026-10-15.3: python3 scripts/ai_eval.py ... --cases '^kidney-only' (docs/ai.md, 'Re-run the golden set after a prompt change').",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "3b",
+      "dialysis": "none",
+      "diabetes": "none"
+    },
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":4},{\"food_id\":\"{{id:Rice cakes, plain, unsalted}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\",\"low_sodium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Blueberries, raw",
+      "Rice cakes, plain, unsalted"
+    ],
+    "rule_fallback": false,
+    "claims_corrected": 0,
+    "response_excludes": [
+      "insulin"
+    ],
+    "payload_includes": [
+      "chronic kidney disease only (CKD, stage 3b)"
+    ],
+    "payload_excludes": [
+      "type 1 diabetes",
+      "carbs_per_meal_g",
+      "carbs_per_snack_g"
+    ]
+  }
+}

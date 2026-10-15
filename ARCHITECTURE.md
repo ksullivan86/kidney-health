@@ -428,7 +428,7 @@ targets and names no carbohydrate per meal in the suggestion (every value is kep
 like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. The "Not
 medical advice" note follows the profile too (part 2): Profile's note below the form hides its insulin clause
 (`#pf-disclaimer-diabetes`) with the form's diabetes select, and Settings → About words the sentence from the
-saved profile. Still to do (ROADMAP): the AI prompts and the handbook framing.
+saved profile. **The AI prompts follow the profile too (part 3, `PROMPT_VERSION` 2026-10-15.3; "Prompts, answers and the guard" below).** Still to do (ROADMAP): the owner's live golden-set run for that version and the handbook framing.
 
 **Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
 carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,
@@ -1827,7 +1827,7 @@ Code: the package `app/ai/` — `presets` (preset table), `netpolicy` (pure URL/
 `AI_PRIVATE_HOSTS`/`AI_DENY_CIDRS` parsers), `transport` (pinned `httpx2` transport, decoded-byte cap,
 error categories, CA-store self-check), `client` (request bodies, parsing, JSON extraction, one
 retry or repair, concurrency gate, "Test connection" with the Hermes tool check), `prompts`
-(`SYSTEM_PROMPT`, `TASK_SYSTEM_PROMPT`, `PROMPT_VERSION`, the data block), `schemas` (wire schemas and
+(`SYSTEM_PROMPT` and `CHAT_SYSTEM_PROMPT` as templates with `system_prompt(person)` and `chat_prompt(person)`, `TASK_SYSTEM_PROMPT`, `PROMPT_VERSION`, the data block), `schemas` (wire schemas and
 answer models, and `ChatStep` for the Ask chat), `guard` (V1–V9, pure), `chat` (the Ask chat's step loop, answer checks and
 figures; "Ask chat" below), `features` (prepare/judge for each feature, the G7/G8
 pre-filters, the label draft), `config` (provider rows, resolution, quota, consent, AI activity,
@@ -2041,8 +2041,23 @@ prompt. Model text that must be shown (describe-a-meal phrases and search terms,
 `guard.name_policy` (no URLs, e-mail addresses or markup characters; the blocklist after homoglyph folding,
 including §9 A2's expanded terms: `shot`, `pen`, `skip`, `delay`, medicines and binder brand names, and
 `extra`/`more`/`double` used as advice).
-`PROMPT_VERSION` (`2026-10-07.1`) changes with any change to prompts, wire schemas or guard wording
-(`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`).
+`PROMPT_VERSION` changes with any change to prompts, wire schemas or guard wording
+(`tests/test_ai_prompts.py` pins its fingerprint in `tests/fixtures/ai/prompt_version.json`; it is `2026-10-15.3` since the
+prompts follow the profile).
+
+**The prompts follow the profile** (kidney-only profile, part 3). `SYSTEM_PROMPT` (meal ideas) and `CHAT_SYSTEM_PROMPT` (Ask)
+are templates whose only profile-dependent part is `[[CONDITION]]`, filled by `system_prompt(person)` and `chat_prompt(person)`
+from `prompts.condition_text(person)`, built from the `person` block (`person_block`) and only from whitelisted values
+(`CKD_STAGES`, `DIALYSIS_TEXT`, `DIABETES_TEXT`; anything else reads as "not chosen yet" or a plain "diabetes"): "chronic
+kidney disease (CKD, stage 4) and type 1 diabetes", "chronic kidney disease only (CKD, stage 3b)" for diabetes "none", and
+"…; whether they also have diabetes is not chosen yet, so do not assume that they do or that they do not" when the type is
+not chosen. **Everything else in the prompts is the same text for every profile, the low-treatment rules included** (the app
+handles a low, a low is never questioned or delayed, the `hypo` purpose note of log_food): a person with "none" can still
+have a low or log for someone who does. `TASK_SYSTEM_PROMPT` (describe a meal, label, plate photo) carries one fixed sentence
+and no profile data. `person_block` sends null for a stage or diabetes type the person has not chosen (the stored defaults 3b
+and type 1 are not their answer), and `targets_block(meal_carbs=False)` leaves out `carbs_per_meal_g` and `carbs_per_snack_g`
+for "none". The pre-filters (`hypo.prefilter`, `features.red_flag`), the guard and the Ask chat's answer checks do not read the
+prompt and are untouched; `tests/test_ai_prompts.py` fails if a profile changes more than the condition sentence.
 
 ### Photos (`app/vision.py`, `app/imagecheck.py`; note 03 R8, R9, §9 B1, B10; note 04 §9 A4)
 
@@ -2107,7 +2122,7 @@ tool functions of `app/mcp/tools.py`.
   in `json_schema` mode is asked for `json_object` (free-form arguments cannot be a strict schema); the protocol and its
   schema are in the system prompt in every mode. History that does not fit `context_tokens` is trimmed from the oldest end;
   not even the newest message fitting is `503 context_too_small`.
-* **The prompt** (`PROMPT_VERSION` 2026-10-15.2; .2 added the saving tools and rule 10, which allows a save only when the person
+* **The prompt** (`PROMPT_VERSION` 2026-10-15.3; .3 words the person from the profile, see "Prompts, answers and the guard"; .2 added the saving tools and rule 10, which allows a save only when the person
   asked in the conversation and forbids saying anything is saved unless a tool result says `"saved": true`): the rules (every number from a tool, null is unknown and not zero, fetch
   again each turn, no insulin or medicine doses, no medicine advice, no lab interpretation, a plain warning and "check with
   your care team" for salt substitutes, anti-inflammatory pain medicines and big protein or fluid changes, short plain

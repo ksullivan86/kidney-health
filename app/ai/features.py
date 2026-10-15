@@ -189,7 +189,7 @@ def prepare_next_meal(ctx: GuidanceContext, cfg: ProviderConfig, *, meal: str, m
         data = prompts.next_meal_context(bridge, ctx, mode=mode, meal=meal, meals_left=meals_left, person=person, extra=extra)
         schema, validator, judge = _meal_schema(mode, bridge, ctx, meal, cfg)
         task = mode
-        body = build_body(cfg, system=prompts.SYSTEM_PROMPT, user_text=prompts.user_message(task, data, mode=cfg.structured, schema=schema),
+        body = build_body(cfg, system=prompts.system_prompt(person), user_text=prompts.user_message(task, data, mode=cfg.structured, schema=schema),
                           schema=schema, schema_name=f"kidney_{mode}", mode=cfg.structured)
         if _fits(cfg, body) or mode in ("swap", "plan"):
             break
