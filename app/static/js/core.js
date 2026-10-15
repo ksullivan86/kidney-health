@@ -518,11 +518,11 @@
   // ---------------------------------------------------------------------------
   // Tabs / views. Each js/views/<name>.js registers what showing it loads.
   // ---------------------------------------------------------------------------
-  // Tabbed views, then views without a tab (Settings: the header gear and Profile open it; Labs:
+  // Tabbed views, then views without a tab (Settings: the header gear and Profile open it; Visit prep: Trends opens it; Labs:
   // Profile's "Lab results" button).
   // Ask is a tab too, but js/views/ask.js hides it unless the server's chat is available (arrow keys skip a hidden tab).
   const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'ask', 'profile'];
-  const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'admin'];
+  const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'visit', 'admin'];
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
   function showView(name, { focusTab = false } = {}) {

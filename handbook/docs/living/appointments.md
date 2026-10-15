@@ -32,7 +32,7 @@ you have it right ([AHRQ][AHRQ-TB]). Big choices, such as which treatment to hav
 | Your **lab results** over time | Trends matter more than one number | [NIDDK][NIDDK-managing]; [Lab results](../labs/index.md) |
 | Home **blood pressure** readings and **weights** (on dialysis: weights before and after sessions) | Show how blood pressure and fluid behave between visits | Your notebook or home monitor |
 | Your **CGM report** (AGP) | 14 days of data with the sensor worn at least 70 % of the time gives a reliable picture | [Time-in-range consensus][TIR19]; [CGM reports](../labs/cgm-metrics.md) |
-| The app's **period summary** or **CSV export** | Shows your average potassium, phosphorus, sodium, protein, carbohydrate and fluid against your targets, for a dietitian | [Reports for your care team](../app/reports-for-your-team.md) |
+| The app's **period summary** or **CSV export** | Shows your average potassium, phosphorus, sodium, protein, carbohydrate and fluid against your targets, for a dietitian | [Reports for your care team](../app/reports-for-your-team.md); in the app, **Trends → Get ready for a visit** puts the averages, your latest lab results, your symptoms and your own questions on one page to print or save as a PDF ([Visit prep](../app/reports-for-your-team.md#visit-prep-one-page-for-an-appointment)) |
 | Your **sick-day plan** and when you last used it | So the team can check and update it | [Sick days](../t1d/sick-days.md) |
 | **Three questions**, written down | So the most important things get answered | [AHRQ][AHRQ-Q]; [Questions to ask](../reference/questions-to-ask.md) |
 
