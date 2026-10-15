@@ -32,6 +32,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
   table, and lists what it cannot read (a result like "<0.5", an unknown unit, no usable date) with the reason. Names, record
   numbers, doctors and notes in the files are never read; it reads up to 2,000 files of 1 MB each. See
   [the handbook](handbook/docs/app/targets-and-warnings.md#import-lab-results-from-the-iphone-health-app).
+* **Local first, cloud only when the local answer fails (if your admin chooses it).** For photos, meal ideas and describing a
+  meal, an admin can set the route to **Local, then cloud**. Your request goes to the AI on your own network first; a
+  cloud company sees it **only if** that answer failed the app's checks (it was not usable, or the app's rules threw all of it
+  out) **and** you agreed to send that kind of data to that company. If the local AI is switched off, slow, over its limit or
+  declines the question, the cloud is not asked. The consent sheet names both hosts, says when the cloud one is used and has its
+  own tick box (**Also allow the cloud AI (host) as the fallback**; leave it off and the cloud is never asked, and agree later
+  from Settings → AI ideas or from the answer that says it was not asked); "What will be sent?"
+  shows both requests and says the second goes only if the first fails the checks; and an answer that came from the cloud says so:
+  *The local AI's answer did not pass the app's checks, so the cloud AI (host) answered.* AI activity lists both calls, and each
+  counts in your daily limit. Settings → AI ideas reads *Runs on your local AI (host); if its answer fails the app's checks, on
+  the cloud AI (host).* Ask and lab report photos never work this way. See
+  [docs/ai.md](docs/ai.md#local-first-cloud-only-when-the-local-answer-fails).
 * **Read lab results from a photo of a report (only with an AI on your own network).** On **Lab results**, below "Import
   from a spreadsheet", **Read a lab report photo** takes a photo or screenshot of a lab report (a PDF can be screenshotted)
   and copies the printed results of the tests the app keeps (potassium, phosphate, albumin, bicarbonate, urine
@@ -221,6 +233,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   an entry that is not yours is a 404 first, with or without a valid version. Without the header both routes behave as
   before. The data export leaves `version` out and the import accepts and ignores it. See
   [ARCHITECTURE.md](ARCHITECTURE.md#offline-edits-and-deletes-roadmap-note-02-r5-queueable-offline-actions).
+* **Privacy tier 3: `local_then_cloud`.** `ai.route.photos`, `ai.route.meal_ideas` and `ai.route.describe`
+  (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`) accept a fifth value, `local_then_cloud`: the call goes to the
+  local AI, and the cloud AI (the provider with the role `cloud`) is sent the same request, prepared exactly as the route `cloud`
+  would, **only when the local answer fails the schema or the app's rules**, and only for a person who agreed to send that purpose
+  to the cloud host. It is not used when the local AI is unreachable, slow, erroring, over quota or declines. Both roles are
+  needed (with no cloud AI it behaves as `local`; with no local AI it is off). The admin table has a **Local, then cloud** column
+  with the one-line rule and a warning; `PUT /api/admin/ai-routing` and the settings refuse it for Ask (`400 no_fallback`) and
+  for lab report photos (still `local` or `off` only). Defaults and the upgrade rule are unchanged, so nothing changes until an
+  admin picks it. No schema change. Each call is counted in `ai.shared_daily_limit` and has its own AI activity row. See
+  [docs/ai.md](docs/ai.md#local-first-cloud-only-when-the-local-answer-fails) and [docs/privacy.md](docs/privacy.md).
 * **Lab report photos: a new routed feature that is local or off only.** `ai.route.labs` (`AI_ROUTE_LABS`) takes `local` or
   `off` and refuses `cloud` and `any` (in the setting, the admin table, `PUT /api/admin/ai-routing` and the environment).
   The default is `local`: with no local AI (a shared provider with the role `local`, a vision model, a private host) the
@@ -381,6 +403,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   list every code, every proposed row converts like `units.convert` and is accepted by `POST /api/labs/import`) and
   `tests/test_fhir_labs_ui.py` (with `tests/js/fhir_labs_page.mjs`: no inline script, no network call, a file over 1 MB never read, more
   than 2,000 files refused, new rows ticked, only ticked rows saved, text drawn as text).
+* Privacy tier 3 (`local_then_cloud`): `routing.FALLBACK_ROUTE` / `FALLBACK_FEATURES` / `allowed_routes`; `Resolved.fallback`;
+  `Prepared.cloud` (the same prepare function called with the cloud `ProviderConfig`) and `features.judge_rejected`;
+  `routes.run_call` is built around `Attempt` (`failed_checks`, `usable`), `_clear_fallback` (consent, tool check, quota),
+  `_fallback_view` and `dry_run_of`; `config.consent_request(fallback=...)` and `FALLBACK_RULE`; the type `AiStructuredRoute` in
+  the registry with the JS twin and vectors (`tests/data/gen_settings_vectors.py` adds `local_then_cloud` as a bad value for
+  `ai.route.chat` and `ai.route.labs`). Tests: `tests/test_ai_fallback.py`, `tests/js/routing_page.mjs` scenario 7 with
+  `tests/test_ai_routing_ui.py`; the browser harness `tools/e2e/fallback.py`. `PROMPT_VERSION` is unchanged.
 * The meal ideas and Ask prompts follow the profile (kidney-only profile, part 3). `app/ai/prompts.py`: `SYSTEM_PROMPT` and
   `CHAT_SYSTEM_PROMPT` are templates whose only profile-dependent part is `[[CONDITION]]`, rendered by `system_prompt(person)`
   and `chat_prompt(person)` from `condition_text(person)`, which words only whitelisted profile values. The low-treatment

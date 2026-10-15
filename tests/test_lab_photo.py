@@ -214,7 +214,7 @@ def test_a_bad_stored_or_environment_value_still_never_reaches_the_cloud(lab, mo
     assert (r.status_code == 200 and local.calls == 1) or (r.status_code == 503 and local.requests == [])
     # the resolver itself: a local-only feature whose stored route is not "local" is off
     assert "labs" in R.LOCAL_ONLY and R.allowed_routes("labs") == ("local", "off")
-    assert R.allowed_routes("photos") == R.ROUTES
+    assert R.allowed_routes("photos") == (*R.ROUTES, R.FALLBACK_ROUTE) and R.allowed_routes("chat") == R.ROUTES  # tier 3 is for the structured features
 
 
 def test_a_persons_own_provider_and_key_are_never_used(lab):

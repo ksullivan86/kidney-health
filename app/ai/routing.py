@@ -21,6 +21,15 @@ least-trusting one, ``local``**: with no local provider the feature is off until
 A server that already had a provider when this was added starts every feature on ``any`` so nothing changes
 (:func:`initialise`); a new server starts on the defaults.
 
+**Tier 3, ``local_then_cloud``** (:data:`FALLBACK_ROUTE`): the structured features (``photos``, ``meal_ideas``, ``describe``) can
+also be ``local_then_cloud``: the call goes to the local AI first, exactly as with ``local``, and the cloud AI is asked a
+second time **only when the local AI's answer fails the schema or the app's rules** (the validator or the judge rejects it).
+It is not asked when the local AI cannot be reached, takes too long, is over its quota or declines the question: those answer
+as with ``local``. Ask (a conversation of several calls) and ``labs`` (local-only) never take it. Both roles must be held for
+the fallback to exist: with no usable cloud AI the feature behaves as ``local``, with no local AI it is off (as ``local``
+is). The person must also have agreed to send that purpose to the cloud host; without it nothing is sent there
+(:func:`app.ai.routes.run_call`). A person's own provider is their own choice and is never a fallback and never given one.
+
 Rules that keep "local" local:
 
 * a provider can hold the role only while :func:`app.ai.netpolicy.is_private_host` says its host is private (checked
@@ -60,6 +69,10 @@ FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "chat", "labs")
 # person's own provider nor the pre-routing rule ``any`` ever serves them.
 LOCAL_ONLY: tuple[str, ...] = ("labs",)
 LOCAL_ONLY_ROUTES: tuple[str, ...] = ("local", "off")
+# Tier 3: "local first, cloud only when the local answer fails". Only the features whose answer is one structured reply that the
+# app checks in code (the validator, then the judge) can use it; Ask is a loop of calls and a lab report never leaves the network.
+FALLBACK_ROUTE = "local_then_cloud"
+FALLBACK_FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe")
 HEADLINE: tuple[str, ...] = ("meal_ideas", "describe", "photos", "chat")  # the status endpoint's top-level provider: the first that resolves
 ROLES: tuple[str, ...] = ("local", "cloud")
 ROUTES: tuple[str, ...] = ("local", "cloud", "off", "any")
@@ -91,8 +104,11 @@ def features_for_purpose(purpose: str) -> tuple[str, ...]:
 
 
 def allowed_routes(feature: str) -> tuple[str, ...]:
-    """The routes the setting accepts for ``feature`` (every feature but the local-only ones also takes ``cloud`` and ``any``)."""
-    return LOCAL_ONLY_ROUTES if feature in LOCAL_ONLY else ROUTES
+    """The routes the setting accepts for ``feature``: every feature but the local-only ones also takes ``cloud`` and ``any``,
+    and the structured ones (:data:`FALLBACK_FEATURES`) also ``local_then_cloud``."""
+    if feature in LOCAL_ONLY:
+        return LOCAL_ONLY_ROUTES
+    return (*ROUTES, FALLBACK_ROUTE) if feature in FALLBACK_FEATURES else ROUTES
 
 
 # --------------------------------------------------------------------------- #
@@ -171,9 +187,13 @@ def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Key
         return K.Resolved(None, None, "not_configured", feature=feature, route=route)
     if not can_use_shared:
         return K.Resolved(None, None, "not_allowed", feature=feature, route=route)
-    row = role_row(conn, store, settings, route)
+    # ``local_then_cloud`` starts on the local AI, exactly as ``local`` does (same reasons when there is none); the cloud AI is only
+    # looked up afterwards, as the second call's provider.
+    fallback_wanted = route == FALLBACK_ROUTE and feature in FALLBACK_FEATURES
+    role = "local" if route == FALLBACK_ROUTE else route
+    row = role_row(conn, store, settings, role)
     if row is None:
-        return K.Resolved(None, None, f"no_{route}_provider", feature=feature, route=route)
+        return K.Resolved(None, None, f"no_{role}_provider", feature=feature, route=route)
     if not K.usable(row):
         return K.Resolved(row, None, "provider_disabled", feature=feature, route=route)
     try:
@@ -185,7 +205,25 @@ def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Key
     if feature in LOCAL_ONLY and held.cfg is not None and not (held.role == "local" and held.cfg.local_only):
         # Belt and braces: whatever the settings say, a local-only feature is never served by a provider that is not pinned to the private network.
         return K.Resolved(row, None, "local_not_private", feature=feature, route=route, role=held.role)
+    if fallback_wanted and held.cfg is not None:
+        held.fallback = _cloud_fallback(conn, store, keyring, settings, user_id=user_id, feature=feature, first=row)
     return held
+
+
+def _cloud_fallback(conn: sqlite3.Connection, store: SettingsStore, keyring: Keyring, settings: Settings, *, user_id: int,
+                    feature: str, first: Mapping[str, Any]) -> K.Resolved | None:
+    """The shared provider holding the role ``cloud``, as the second call of a ``local_then_cloud`` feature, or None (the feature
+    then behaves as ``local``): no cloud provider chosen, it is switched off, its key cannot be read, or it is not a cloud-only
+    holder (the local AI is never its own fallback). A person's own provider is never a fallback. Nothing is sent from here."""
+    row = role_row(conn, store, settings, "cloud")
+    if row is None or int(row["id"]) == int(first["id"]) or not K.usable(row) or role_of(conn, store, settings, row) != "cloud":
+        return None
+    try:
+        cfg = K.to_config(row, keyring, settings, user_id=user_id)
+    except InvalidToken:
+        log.warning("the key of shared AI provider %s cannot be decrypted with the current SECRET_KEY; set it again", row["id"])
+        return None
+    return K.Resolved(row, cfg, None, feature=feature, route=FALLBACK_ROUTE, role="cloud")
 
 
 def _holding(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, policy: NetPolicy, resolved: K.Resolved) -> K.Resolved:
@@ -236,6 +274,9 @@ def runs_on_text(resolved: K.Resolved) -> str:
             return LABS_NEEDS_LOCAL
         return _MISSING.get(resolved.reason or "") or K.MESSAGES.get(resolved.reason or "", "Not available.")
     if resolved.role == "local":
+        fallback = resolved.fallback.cfg if resolved.fallback is not None else None
+        if fallback is not None:  # local_then_cloud with a usable cloud AI (tier 3)
+            return f"Runs on your local AI ({cfg.host}); if its answer fails the app's checks, on the cloud AI ({fallback.host})."
         return f"Runs on your local AI ({cfg.host})."
     if resolved.role == "own":
         return f"Runs on your own AI provider, {cfg.label} ({cfg.host}), outside your network."
@@ -260,8 +301,18 @@ def route_view(conn: sqlite3.Connection, user_id: int, feature: str, resolved: K
         "message": K.MESSAGES.get(resolved.reason) if resolved.reason else None,
         "text": runs_on_text(resolved), "runs_on": None if cfg is None else provider_summary(cfg),
     }
+    # Tier 3: the cloud AI that is asked only if the local answer fails the app's checks (None for every other route).
+    # ``given``: whether the person agreed to send this purpose to the cloud host (without it the cloud AI is never asked);
+    # ``request``: the sheet Settings shows when they want to agree later.
+    fallback = resolved.fallback.cfg if resolved.fallback is not None else None
+    given = None if fallback is None else K.consent(conn, user_id, fallback, PURPOSE[feature])
+    out["fallback"] = None if fallback is None else {
+        "runs_on": provider_summary(fallback), "rule": K.FALLBACK_RULE, "given": given is not None,
+        "request": {**K.consent_request(fallback, PURPOSE[feature]), "as_fallback": True, "rule": K.FALLBACK_RULE}}
     if consent:
         out["consent"] = None if cfg is None else K.consent(conn, user_id, cfg, PURPOSE[feature])
+        if fallback is not None:
+            out["fallback"]["consent"] = given
     return out
 
 
@@ -350,9 +401,15 @@ def plan(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, pol
     for feature, route in features.items():
         key = route_key(feature)
         if route not in allowed_routes(feature):
-            raise RoutingError(f"{LABEL[feature]} can only be local or off: a lab report can show your name, date of birth and record "
-                               "numbers, which cannot be removed from a photo, so it is never sent to a cloud AI.",
-                               field=feature, reason="local_only")
+            if feature in LOCAL_ONLY:
+                raise RoutingError(f"{LABEL[feature]} can only be local or off: a lab report can show your name, date of birth and record "
+                                   "numbers, which cannot be removed from a photo, so it is never sent to a cloud AI.",
+                                   field=feature, reason="local_only")
+            if route == FALLBACK_ROUTE:
+                raise RoutingError(f"{LABEL[feature]} cannot be local, then cloud: an Ask conversation is several AI calls in a row, so "
+                                   "the app cannot start it on the local AI and finish it on the cloud AI. Choose local or cloud.",
+                                   field=feature, reason="no_fallback")
+            raise RoutingError(f"{LABEL[feature]} cannot be {route}.", field=feature, reason="route_not_allowed")
         if store.env_value(store.definition(key))[0]:
             raise RoutingError(f"{feature} is set by the server ({store.definition(key).env}) and cannot be changed here.", status=409, field=feature, locked=True)
         changes[key] = route

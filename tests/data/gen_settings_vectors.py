@@ -77,6 +77,8 @@ def validation_vectors() -> list[dict]:
         values = list(VALUES.get(item["type"], []))
         if item["type"] == "choice":
             values = [*item["options"], item["options"][0].upper(), *values]
+            if item["key"].startswith("ai.route."):  # routes a feature does not take: Ask and lab report photos refuse "local, then cloud"
+                values += [v for v in ("local_then_cloud", "cloud", "any") if v not in item["options"]]
         if item.get("pattern"):
             values += PATTERN_VALUES
         for value in values:

@@ -84,6 +84,12 @@
 .ai-routing-table td { text-align: center; }
 .ai-routing-table input[type="radio"] { width: 20px; height: 20px; }
 .ai-route-lock { display: block; font-weight: 400; }
+.ai-route-rule { margin: 0; }
+.ai-routing-table thead th { overflow-wrap: anywhere; }
+.ai-dry-fallback { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.ai-dry-fallback p { margin: 4px 0; }
+.ai-consent-fallback { margin: 8px 0; padding-top: 8px; border-top: 1px solid var(--border); }
+.ai-fallback-line { margin: 4px 0; }
 .ai-routing-warnings { display: flex; flex-direction: column; gap: 8px; }
 .ai-routing-warnings p { margin: 0; }
 .ai-routing-lines { margin: 4px 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }

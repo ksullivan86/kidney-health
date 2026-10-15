@@ -186,11 +186,22 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   network*, or *Switched off by your admin* (or that it needs a local or cloud AI that is not set up yet). Your
   admin decides this per feature; you choose between the server's AI and your own provider. A feature that moves to
   another provider asks for your consent again for that provider
-  ([Which AI does each feature use?](#which-ai-does-each-feature-use)).
+  ([Which AI does each feature use?](#which-ai-does-each-feature-use)). A line may read *Runs on your local AI
+  (ollama.lan:11434); if its answer fails the app's checks, on the cloud AI (api.openai.com)*: your admin chose
+  **local first, cloud only when the local answer fails**
+  ([below](#local-first-cloud-only-when-the-local-answer-fails)). Then the cloud AI sees your request only if you agreed
+  to that, and only when the local AI's answer did not pass the app's checks; the answer says which AI gave it, and when
+  the cloud AI was asked it adds: *The local AI's answer did not pass the app's checks, so the cloud AI (api.openai.com)
+  answered.*
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
   **destination host**, its policy line and shows the **exact request**; nothing is sent until you
   agree. Meal data, photos and Ask conversations are agreed separately. You are asked again when the provider's host or
-  the policy text changes. Settings → AI ideas lists what you agreed to, with **Withdraw**.
+  the policy text changes. Settings → AI ideas lists what you agreed to, with **Withdraw**. For a feature that is
+  *local first, then cloud*, the sheet names both hosts, says that the cloud one is used only if the local AI's answer
+  fails the app's checks, and has its own tick box, **Also allow the cloud AI (host) as the fallback**: leave it off and
+  the cloud AI is never asked. You can agree later, from Settings → AI ideas (the feature's line has **Allow the cloud AI
+  (host) as the fallback**) or from the answer that says the cloud AI was not asked; **Withdraw** in the same Settings
+  list takes it back.
 * **Ask.** When your admin has switched Ask on and you use AI ideas, a sixth tab, **Ask**, appears. Type a
   question (Enter sends, Shift+Enter starts a new line); the assistant looks up your own numbers and answers
   in a few plain sentences, with **From the app** under the answer: the figures the app itself worked out.
@@ -227,7 +238,9 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   (it would send the answer to the browser's maker). Only the answer's words are read, never the cards or links. The
   browser's own speech recognition is **not** used: Chrome would send your voice to Google and Safari to Apple.
 * **"What will be sent?"** Every AI button has it: the destination address, the headers (your key is
-  never shown) and the body; for photos, the photo's size instead of its bytes.
+  never shown) and the body; for photos, the photo's size instead of its bytes. For a feature that is *local first, then
+  cloud* it shows the local request and, under it, that a second request with the same content may go to the cloud host
+  **only if the local AI's answer fails the app's checks**, with that request's exact body too.
 * **Your own key.** OpenAI, OpenRouter or Nous Portal (and, if your admin allows it, any https server
   on port 443 with a public address). The key is encrypted on the server and never shown again: you see
   "Set · ends in 9xQz" with **Replace** and **Remove**. Changing it asks for your password again. If
@@ -293,7 +306,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.voice_enabled` (`AI_VOICE_ENABLED`) | `false` | The Ask microphone. Needs `ai.chat_enabled` and a transcription server (`STT_BASE_URL`, below). While off, `POST /api/ai/transcribe` answers 404 and nobody sees the microphone. |
 | `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
-| `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
+| `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing); `photos`, `meal_ideas` and `describe` also `local_then_cloud` (the local AI first, the cloud AI only when the local answer fails the app's checks; **not** `chat`). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
 | `ai.route.labs` (`AI_ROUTE_LABS`) | `local` | Reading a photo of a lab report: `local` or `off` **only**. `cloud` and `any` are refused by the setting, the admin screen, the API and the environment (a report shows a name and a date of birth), and a person's own provider is never used for it. With no local AI the feature is off |
 | `ai.route.local_provider`, `ai.route.cloud_provider` | `0` | The id of the shared provider that is the local AI and the one that is the cloud AI (0: none). Set through the same table, never by hand: a local AI must be on a private host |
 
@@ -369,7 +382,9 @@ pin each feature to one of them, or switch it off.
 | `chat` | The Ask screen | `ai.route.chat` (`AI_ROUTE_CHAT`) | Ask conversations |
 | `labs` | Read a lab report photo | `ai.route.labs` (`AI_ROUTE_LABS`) | Lab report photos |
 
-Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `off` only.
+Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `off` only. `photos`, `meal_ideas` and
+`describe` can also be **`local_then_cloud`** ([below](#local-first-cloud-only-when-the-local-answer-fails)); `chat` and
+`labs` cannot.
 
 * **`labs` is local-only.** A lab report photo can show a name, a date of birth and record numbers that the app cannot take
   out of an image, so the setting accepts only `local` and `off` (the admin table shows two choices for that row;
@@ -423,6 +438,53 @@ tests of the local AI follow the same rule.
    **The cloud AI**, and pin **Ask** to *Cloud*. The table then warns "this sends your messages in Ask and the
    app's own numbers the AI looks up to api.openai.com, outside your network" before you save.
 
+#### Local first, cloud only when the local answer fails
+
+*Privacy tiers, tier 3.* `local_then_cloud` (the table's **Local, then cloud** column; `AI_ROUTE_PHOTOS`,
+`AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE` accept it) is for a home GPU that is good most of the time but sometimes
+returns something unusable, when you would rather the cloud AI helps than that the person gets nothing. The call goes to the
+local AI first, exactly as with `local`. **The cloud AI is asked only when the local AI's answer fails the schema or the
+app's rules:**
+
+* the reply is not the expected JSON (no JSON, the wrong shape, empty, cut short; after the one repair turn every call
+  already gets), or
+* the app's rules throw all of it out: every idea or pick is dropped (`dropped_all`), or every food of a described meal or
+  plate photo is dropped by the text policy.
+
+It is **not** asked when the local AI is unreachable or takes too long, answers with an HTTP error, the person is over
+their quota, or the AI declines the question (a refusal; "nothing fits" is an answer, not a failure). Those answer exactly as
+with `local`. A label the model calls "not a label" or "unreadable" is its answer too, not a failed check.
+
+* **Same data, same checks.** The second request is prepared for the cloud AI exactly as the route `cloud` would send it
+  (its own model and vision model, the same prompt, the same data, the same photo) and its answer goes through the same
+  validator and judge. No new data is sent, nothing is stored differently, and the person's own provider is never used as a
+  fallback (a person who chose their own provider is not routed: it is their choice, as with `local`).
+* **Consent.** The cloud request is sent only if the person has a valid consent for the cloud provider's host under that
+  feature's purpose too (the sheet names both hosts and asks separately; see above). Without it nothing is sent: the person
+  gets the local AI's failure as with `local`, with the line *The local AI's answer did not pass the app's checks. The cloud
+  AI (host) was not asked because you have not agreed to send this there.* and a button to agree.
+* **Quota and activity.** Each call counts one unit of `ai.shared_daily_limit` and has its own AI activity row (the failed
+  local one with `cloud_fallback: asked`, the cloud one with `fallback_for` naming the first). If the daily limit is used up
+  by the local call, the cloud AI is not asked. Both calls run inside the person's one AI slot.
+* **What the answer says.** `provider` names the AI that gave the answer (the cloud AI after a fallback), and
+  `cloud_fallback.message` is the plain line: *The local AI's answer did not pass the app's checks, so the cloud AI (host)
+  answered.* If the cloud AI was asked too but also gave nothing usable, the local failure is returned with *... so the cloud
+  AI (host) was asked as well, but it gave no usable answer.* A cloud answer to a meal-ideas request that passed is kept for the same 10 minutes as
+  any other (under its own key, so an answer the route `cloud` got is never shown as a fallback), so asking again does not ask
+  either AI.
+* **Both roles are needed.** With no usable cloud AI the feature behaves as `local`; with no local AI it is off (as `local`
+  is). Photos fall back only if the cloud AI has a vision model (and photos may go to it).
+* **Not for Ask, never for lab reports.** Ask is a conversation of several calls in a row, so it cannot start on the local AI
+  and finish on the cloud AI: `PUT /api/admin/ai-routing`, the settings and the environment refuse `local_then_cloud` for
+  `chat` (`400`). `labs` stays local-only: the setting still accepts only `local` and `off`.
+* **Nothing changes until an admin picks it.** Defaults (`local`) and the upgrade rule (`any` for a server that already had a
+  provider) are unchanged.
+
+The admin table says it in one line under the table: *The cloud AI is asked only if the local AI's answer fails the app's
+checks. It is not asked when the local AI cannot be reached, takes too long, is over its limit or declines the question.*
+and warns when a feature is set to it: *Meal ideas: local first. If the local AI's answer fails the app's checks, this sends
+... to api.openai.com, outside your network, for people who agreed to that.*
+
 **Upgrading.** The first start of this version decides once (`meta.ai_routing_initialised`): a database that
 **already has a shared provider** starts every feature on `any`, so nothing changes for people until an admin opens
 the table and chooses; a database with none (a new server) starts on the defaults above. The table says "Routing is
@@ -443,12 +505,18 @@ the provider that served the call, and "What will be sent?" shows its host (and 
 
 **API.** `GET /api/admin/ai-routing` (admins) returns the features with their route and source, the two roles, the
 shared providers (`private`, `role`) and `as_before`; `PUT /api/admin/ai-routing` (recent password; `403` without
-sign-in) takes any of `photos`, `meal_ideas`, `describe`, `chat` (`local|cloud|off|any`), `labs` (`local|off`) and `local_provider`,
-`cloud_provider` (a shared provider id, 0 clears). Each change is in the audit log as `settings.changed`.
+sign-in) takes any of `photos`, `meal_ideas`, `describe` (`local|cloud|off|any|local_then_cloud`), `chat` (`local|cloud|off|any`),
+`labs` (`local|off`) and `local_provider`, `cloud_provider` (a shared provider id, 0 clears); `local_then_cloud` for `chat` is a `400`
+with the reason `no_fallback`, for `labs` a `400` with `local_only`. Each change is in the audit log as `settings.changed`.
 `GET /api/ai/status` adds `routing.mode` (`routed` or `as_before`) and `routes`: per feature `route`, `role`
 (`local`, `cloud`, `own` or null), `available`, `reason`, `text` ("Runs on ..."), `runs_on` (provider, host, model) and
-the consent for that provider; `provider` and `consent` keep their meaning for the first feature that resolves.
-`GET /api/me/ai` adds `routing` (one line per feature).
+the consent for that provider; `provider` and `consent` keep their meaning for the first feature that resolves. For a
+`local_then_cloud` feature `fallback` holds the cloud provider (`runs_on`), the person's consent for it and the consent request.
+`GET /api/me/ai` adds `routing` (one line per feature; for a `local_then_cloud` feature `fallback` has `given`, whether the person agreed to the cloud host,
+and `request`, the sheet Settings shows to agree later). A `409 consent_required` for such a feature adds `consent.fallback` (the
+cloud provider's request, with `given` and the rule); `?dry_run=true` adds `cloud_fallback` (the second request, its `message`, and
+whether the person agreed); an answer adds `cloud_fallback` only after a fallback or when it was needed but not possible
+(`used`, `answered`, `reason` such as `no_consent` or `quota_exhausted`, `message`, `local`, `cloud` and the two audit ids).
 
 ### Recipes
 

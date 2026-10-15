@@ -616,6 +616,9 @@
     aiBox.hidden = false;
   }
 
+  // Local first, cloud only when the local answer fails (privacy tier 3): the plain line saying which AI answered after a fallback.
+  const fallbackLines = (answer) => (KH.ai && typeof KH.ai.fallbackNotes === 'function' ? KH.ai.fallbackNotes(answer) : []);
+
   // The label draft into the Quick add fields, each marked until the person changes it.
   function fillFromLabel(answer, out) {
     clear(out);
@@ -623,7 +626,7 @@
       const text = answer.status === 'not_a_label' ? 'This does not look like a nutrition label. Try a photo of the Nutrition Facts panel.'
         : answer.status === 'unreadable' ? 'The label could not be read. Try a sharper photo in good light, or type the numbers.'
           : answer.message || 'The AI answer could not be used. Type the numbers from the photo.';
-      out.append(note('caution', h('p', {}, text)));
+      out.append(note('caution', h('p', {}, text)), ...fallbackLines(answer));
       return;
     }
     const d = answer.draft;
@@ -652,7 +655,7 @@
     $('#quick-form').dispatchEvent(new Event('input', { bubbles: true }));
     const checks = (answer.checks || []).map((c) => h('li', {}, c.message));
     out.append(note('caution', h('p', {}, h('strong', {}, answer.notice || 'Read by AI from your photo. Check every number against the label before saving.'))),
-      checks.length ? h('ul', { class: 'ai-checks' }, checks) : null);
+      checks.length ? h('ul', { class: 'ai-checks' }, checks) : null, ...fallbackLines(answer));
     toast('The form is filled from your photo. Check every number.');
     const needs = (answer.needs || [])[0];
     const focus = needs === 'name' ? $('#q-name') : needs === 'serving_g' ? $('#q-serving-g') : $('#q-name');

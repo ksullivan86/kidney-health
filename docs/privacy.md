@@ -96,6 +96,16 @@ for the person's consent again. A person's own key is their own choice and goes 
 personal keys off. A server that already used one provider before this existed keeps using it for everything until the admin
 chooses.
 
+**Local first, cloud only when the local answer fails.** For photos, meal ideas and describing a meal an admin can choose
+*Local, then cloud* ([ai.md](ai.md#local-first-cloud-only-when-the-local-answer-fails)). The request goes to the local AI
+first, and the cloud company sees it **only if** the local AI's answer fails the app's checks (it is not usable, or the app's
+rules throw it all out) **and** the person has agreed to send that kind of data to that cloud host. It does not go to the
+cloud when the local AI is unreachable, slow, over its limit or declines the question. The consent sheet names both hosts and
+has a separate tick box for the cloud one; "What will be sent?" shows both requests and says the second goes only if the
+first fails the checks; every answer says which AI gave it, and the AI activity list records both calls. What is sent to the
+cloud is exactly what a feature pinned to the cloud would send, no more, and never to a person's own provider. Ask is not
+offered this way (it is several calls in a row) and **lab report photos never are**: they stay on the local AI only.
+
 **A photo of a lab report** (Labs → Read a lab report photo, [ai.md](ai.md#lab-report-photos)) can show a person's name,
 date of birth, record numbers and clinic, and the app cannot take them out of an image. So it is read **only by the local
 AI**: never by a cloud AI and never by a provider the person added themselves, whatever the admin's routing says (the setting
@@ -204,6 +214,8 @@ Export your data first if you want to keep it.
   yourself (Ollama) keeps it in the house, and you can read it. Keep `ai.audit_retention_days` short if
   your backups are kept long. Mark that model as the local AI (`AI_PROVIDER_ROLE=local`, or Server administration →
   AI providers → Which AI does each feature use?) so photos, meal ideas, describing a meal and Ask use it by default, and
-  pin a feature to a cloud provider only on purpose ([ai.md](ai.md#which-ai-does-each-feature-use)). Reading a photo of a
-  lab report works only with a local AI (it cannot be pinned to a cloud provider).
+  pin a feature to a cloud provider only on purpose ([ai.md](ai.md#which-ai-does-each-feature-use)); *Local, then cloud* is the
+  middle way (the cloud company sees a request only when the local answer fails the app's checks and the person agreed).
+  Reading a photo of a lab report works only with a local AI (it cannot be pinned to a cloud provider, or to *Local, then
+  cloud*).
 * Use HTTPS once more than one person has an account ([https.md](https.md)).

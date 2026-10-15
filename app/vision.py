@@ -44,7 +44,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .ai import features as F
 from .ai import lab_report as LR
-from .ai.routes import _resolve, ai_slot, ai_state, check_consent, require_ai_enabled, run_call, unavailable
+from .ai.routes import _resolve, ai_slot, ai_state, check_consent, dry_run_of, require_ai_enabled, run_call, unavailable
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
 from .auth.models import User
@@ -112,7 +112,11 @@ async def read_photo(request: Request) -> CheckedImage:
         del buf
 
 
-def _vision_config(request: Request, conn: sqlite3.Connection, user: User, *, plate: bool):  # noqa: ANN202 - ProviderConfig
+def _vision_config(request: Request, conn: sqlite3.Connection, user: User, *, plate: bool):  # noqa: ANN202 - (ProviderConfig, ProviderConfig | None)
+    """The provider that reads the photo and, for the route ``local_then_cloud``, the cloud provider it falls back to (or None).
+
+    The cloud provider is a fallback only if it could read the photo on its own as well: it has a vision model and photos may go
+    to it (an agent provider only with ``ai.vision_allow_agent``); otherwise there is no fallback for photos, not a failing one."""
     state = ai_state(request)
     if plate and not state.store.get(conn, "ai.vision_plate_enabled"):
         raise ApiProblem(503, "Plate photos are switched off on this server.", reason="plate_disabled")
@@ -123,35 +127,47 @@ def _vision_config(request: Request, conn: sqlite3.Connection, user: User, *, pl
     assert cfg is not None
     if not cfg.vision_model:
         raise ApiProblem(503, "Photo features need a vision model; your admin has not set one.", reason="vision_not_configured")
-    if not cfg.preset_def.photos_by_default and not state.store.get(conn, "ai.vision_allow_agent"):
+    allow_agent = bool(state.store.get(conn, "ai.vision_allow_agent"))
+    if not cfg.preset_def.photos_by_default and not allow_agent:
         raise ApiProblem(503, "Photos are not sent to an agent provider on this server (AI_VISION_ALLOW_AGENT).", reason="agent_not_allowed")
-    return cfg
+    fallback = resolved.fallback.cfg if resolved.fallback is not None else None
+    if fallback is not None and not (fallback.vision_model and (fallback.preset_def.photos_by_default or allow_agent)):
+        fallback = None
+    return cfg, fallback
 
 
 def _upstream_error(result: dict[str, Any]) -> None:
     if result.get("status") == "error":
-        raise ApiProblem(502, str(result.get("message") or "The AI request failed."), reason=result.get("reason"),
-                         audit_id=result.get("audit_id"))
+        detail = str(result.get("message") or "The AI request failed.")
+        fallback = result.get("cloud_fallback")  # local_then_cloud: say that the cloud AI was (or was not) asked, whatever came of it
+        if isinstance(fallback, dict) and fallback.get("message"):
+            detail = f"{detail} {fallback['message']}"
+        raise ApiProblem(502, detail, reason=result.get("reason"), audit_id=result.get("audit_id"),
+                         **({"cloud_fallback": fallback} if isinstance(fallback, dict) else {}))
 
 
 async def _before_reading(request: Request, conn: sqlite3.Connection, user: User, *, plate: bool, dry_run: bool):  # noqa: ANN202
-    """Every refusal that needs no photo bytes: switches and vision model, headers, photo consent."""
-    cfg = await run_in_threadpool(_vision_config, request, conn, user, plate=plate)
+    """Every refusal that needs no photo bytes: switches and vision model, headers, photo consent. Returns the provider and the
+    cloud fallback provider (None unless the route is ``local_then_cloud``)."""
+    cfg, fallback = await run_in_threadpool(_vision_config, request, conn, user, plate=plate)
     photo_headers(request)
     if not dry_run:
-        await run_in_threadpool(check_consent, conn, user, cfg, "photos")
-    return cfg
+        await run_in_threadpool(check_consent, conn, user, cfg, "photos", fallback)
+    return cfg, fallback
 
 
 @router.post("/label")
 async def read_label(request: Request, user: CurrentUser, background: BackgroundTasks, dry_run: bool = Query(False),
                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Read a nutrition label: printed values only, a Quick-add draft the person checks (never saved)."""
-    cfg = await _before_reading(request, conn, user, plate=False, dry_run=dry_run)
+    cfg, fallback = await _before_reading(request, conn, user, plate=False, dry_run=dry_run)
     async with ai_slot(request, conn, user.id):
-        prep = F.prepare_read_label(cfg, await read_photo(request))
+        image = await read_photo(request)
+        prep = F.prepare_read_label(cfg, image)
+        if fallback is not None:  # local_then_cloud: the same photo, prepared for the cloud AI, sent only if the local answer fails the checks
+            prep.cloud = F.prepare_read_label(fallback, image)
         if dry_run:
-            return prep.dry_run(request.app.version)
+            return await dry_run_of(conn, user, request, prep)
         result = await run_call(request, conn, user, prep, background, slot_held=True)
     _upstream_error(result)
     return result
@@ -161,11 +177,15 @@ async def read_label(request: Request, user: CurrentUser, background: Background
 async def plate(request: Request, user: CurrentUser, background: BackgroundTasks, dry_run: bool = Query(False),
                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """What is on this plate: names and a rough weight, matched to the person's own foods (off by default)."""
-    cfg = await _before_reading(request, conn, user, plate=True, dry_run=dry_run)
+    cfg, fallback = await _before_reading(request, conn, user, plate=True, dry_run=dry_run)
     async with ai_slot(request, conn, user.id):
-        prep = F.prepare_plate(cfg, await read_photo(request), search=F.search_function(conn, user.id))
+        image = await read_photo(request)
+        search = F.search_function(conn, user.id)
+        prep = F.prepare_plate(cfg, image, search=search)
+        if fallback is not None:
+            prep.cloud = F.prepare_plate(fallback, image, search=search)
         if dry_run:
-            return prep.dry_run(request.app.version)
+            return await dry_run_of(conn, user, request, prep)
         result = await run_call(request, conn, user, prep, background, slot_held=True)
     _upstream_error(result)
     return result

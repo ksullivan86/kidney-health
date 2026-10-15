@@ -469,6 +469,10 @@ class Resolved:
     feature: str | None = None
     route: str | None = None
     role: str | None = None
+    # Privacy tiers, tier 3 (route ``local_then_cloud``): the shared cloud provider that is asked a second time, and only when the
+    # local AI's answer fails the schema or the app's rules (see app.ai.routes.run_call). None for every other route, for a person
+    # who uses their own provider, and when no cloud provider is usable (the feature then behaves as ``local``).
+    fallback: "Resolved | None" = None
 
     @property
     def ok(self) -> bool:
@@ -650,6 +654,11 @@ def consents_of(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
              "skip_preview": bool(r["skip_preview"]), "at": r["created_at"]} for r in rows]
 
 
+# The one rule for the cloud fallback of a ``local_then_cloud`` feature, in the words of the consent sheet, the admin table and the docs.
+FALLBACK_RULE = ("The cloud AI is asked only if the local AI's answer fails the app's checks. It is not asked when the local AI "
+                 "cannot be reached, takes too long, is over its limit or declines the question.")
+
+
 def labs_notice(host: str) -> list[str]:
     """What the consent sheet for a lab report photo (purpose ``labs``) says, in plain words: where the photo goes, what it
     may show, that it is not kept, and what the person can do about it. Shown in full by the sheet; pinned by the tests."""
@@ -663,14 +672,20 @@ def labs_notice(host: str) -> list[str]:
     ]
 
 
-def consent_request(cfg: ProviderConfig, purpose: Purpose) -> dict[str, Any]:
-    """What the consent sheet shows before the first call to a host (R9 step 3)."""
+def consent_request(cfg: ProviderConfig, purpose: Purpose, *, fallback: ProviderConfig | None = None,
+                    fallback_given: bool = False) -> dict[str, Any]:
+    """What the consent sheet shows before the first call to a host (R9 step 3).
+
+    ``fallback`` is the cloud provider of a ``local_then_cloud`` feature: the sheet then names it too (``fallback``: its
+    own request, with ``given`` saying whether the person already agreed to it) and says when it is used."""
     preset = cfg.preset_def
     out: dict[str, Any] = {"provider_id": cfg.id, "provider_label": cfg.label, "host": cfg.host, "purpose": purpose,
                            "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind,
                            "local": cfg.local_only}  # the local AI: on the admin's private network, never reached outside it
     if purpose == "labs":
         out["notice"] = labs_notice(cfg.host)
+    if fallback is not None:
+        out["fallback"] = {**consent_request(fallback, purpose), "given": bool(fallback_given), "rule": FALLBACK_RULE}
     return out
 
 
