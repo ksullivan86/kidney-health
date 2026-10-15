@@ -1,0 +1,144 @@
+/* Kidney Diet Log — Visit prep: the screen and the printed page (js/views/visit.js; ARCHITECTURE.md "Visit prep").
+   On screen the page is a card in the app's light or dark theme (the tokens of base.css). Printed, it is black on white,
+   without the header, the tabs, the banners and the controls, and it is set small enough that a typical page fits one sheet
+   of A4 or Letter (a long symptoms or questions list runs on to a second sheet; rows are not split). No inline styles. */
+
+.period-visit { margin: 8px 0 0; }
+.period-visit .link-btn { padding-left: 0; }
+
+/* ---------- the screen header: back, title, period, print ---------- */
+.visit-head { display: flex; flex-direction: column; gap: 2px; }
+.visit-head p { margin: 0; }
+.visit-back { align-self: flex-start; padding-left: 0; }
+.visit-title { font-size: 1.3rem; }
+.visit-title:focus { outline: none; }
+.visit-title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.visit-controls { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-top: 8px; }
+.visit-controls .btn svg { width: 20px; height: 20px; }
+
+/* ---------- the page ---------- */
+.visit-page { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.visit-doc-head { display: flex; flex-direction: column; gap: 2px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+.visit-doc-head p { margin: 0; }
+.visit-doc-title { font-size: 1.25rem; }
+.visit-who { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
+.visit-period { font-weight: 600; }
+.visit-section { min-width: 0; }
+.visit-h { font-size: 1rem; margin: 0 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+.visit-section > p { margin: 0 0 6px; }
+.visit-note { margin: 4px 0 0; font-size: 0.9rem; }
+.visit-problem { color: var(--over-text); font-weight: 600; }
+.visit-foot { margin: 0; color: var(--text-2); border-top: 1px solid var(--border); padding-top: 8px; }
+.print-only { display: none; }
+
+/* ---------- averages ---------- */
+.visit-avg { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 10px 24px; }
+@media (min-width: 720px) { .visit-avg { grid-template-columns: 1fr 1fr; } }
+.visit-avg-row { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+.visit-avg-top { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-weight: 600; }
+.visit-avg-nums { font-size: 0.95rem; overflow-wrap: anywhere; }
+.visit-avg-nums b { font-size: 1.1rem; }
+.visit-avg-foot { font-size: 0.82rem; color: var(--text-2); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.visit-avg-foot.not-listed { color: var(--text); font-weight: 600; }
+.visit-avg .strip-tag.weekly { color: var(--accent); background: var(--accent-tint); }
+
+/* ---------- lab results ---------- */
+.visit-labs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.visit-lab {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: baseline;
+  padding: 6px 0; border-top: 1px solid var(--border);
+}
+.visit-lab:first-child { border-top: 0; }
+.visit-lab-name { font-weight: 600; grid-column: 1; }
+.visit-lab-latest { grid-column: 1; overflow-wrap: anywhere; }
+.visit-lab-trend { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 1.4rem; font-weight: 700; line-height: 1; min-width: 1.2em; text-align: center; }
+.visit-lab-prev { grid-column: 1 / -1; font-size: 0.85rem; overflow-wrap: anywhere; }
+.visit-labs + .visit-note { margin-top: 6px; }
+.visit-section .lab-alert { margin-bottom: 8px; }
+
+/* ---------- symptoms ---------- */
+.visit-sym { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.visit-sym-row { padding: 6px 0; border-top: 1px solid var(--border); min-width: 0; break-inside: avoid; }
+.visit-sym-row:first-child { border-top: 0; }
+.visit-sym-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.visit-sym-name { font-weight: 600; overflow-wrap: anywhere; }
+.visit-sym-count { font-size: 0.85rem; color: var(--text-2); }
+.visit-sym-dates { margin: 2px 0 0; font-size: 0.85rem; color: var(--text-2); overflow-wrap: anywhere; }
+.visit-sym .sym-flag { margin-top: 4px; }
+
+/* ---------- my questions ---------- */
+.visit-q-add { display: flex; gap: 8px; align-items: stretch; }
+.visit-q-add input { flex: 1; min-width: 0; }
+.visit-q-add .btn { flex: none; }
+#visit-q-error { margin: 4px 0 0; }
+#visit-q-error[hidden] { display: none; }
+.visit-q-list { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.visit-q-list:empty { display: none; }
+.visit-q { padding-left: 2px; }
+.visit-q::marker { font-weight: 700; }
+.visit-q-text { overflow-wrap: anywhere; }
+.visit-q .link-btn { margin-left: 8px; min-height: 28px; }
+
+/* ---------- the handbook's checklist ---------- */
+.visit-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.visit-check { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.visit-check input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+.visit-check label { min-width: 0; overflow-wrap: anywhere; padding: 2px 0; }
+.visit-check-link { margin: 6px 0 0; }
+.visit-check-link:empty { display: none; }
+
+/* ---------- print ---------- */
+@media print {
+  @page { margin: 9mm; }
+
+  /* Only while the Visit prep page is the one showing (:has: every current browser; elsewhere the page prints with the
+     header as any other page of the app does). */
+  :root:has(#view-visit:not([hidden])) { color-scheme: light; }
+  :root:has(#view-visit:not([hidden])) body { background: #fff; color: #000; font-size: 9pt; line-height: 1.22; }
+  :root:has(#view-visit:not([hidden])) :is(.skip-link, .topbar, .nologin-banner, .preview-banner, .install-tip, .toast, .update-toast, .chart-tip, dialog) { display: none !important; }
+  :root:has(#view-visit:not([hidden])) .main { max-width: none; padding: 0; }
+
+  #view-visit .screen-only { display: none !important; }
+  #view-visit .print-only:not([hidden]) { display: block; }
+  #view-visit { gap: 0; }
+  #view-visit .visit-page { border: 0; padding: 0; box-shadow: none; border-radius: 0; gap: 6pt; }
+
+  /* Black on white whatever the theme: text, lines and the level icons (shape black, glyph white). */
+  #view-visit, #view-visit * { color: #000 !important; background: transparent !important; box-shadow: none !important; text-shadow: none !important; }
+  #view-visit .visit-doc-head, #view-visit .visit-h, #view-visit .visit-foot { border-color: #000 !important; }
+  #view-visit .visit-avg-row, #view-visit .visit-lab, #view-visit .visit-sym-row { border-color: #777 !important; }
+  #view-visit .rating .shape { fill: #000 !important; }
+  #view-visit .rating .glyph { fill: #fff !important; }
+  #view-visit .pill, #view-visit .strip-tag, #view-visit .sym-flag, #view-visit .lab-alert { border: 1px solid #000 !important; }
+  #view-visit .sym-flag.prominent, #view-visit .lab-alert { border-width: 2px !important; }
+  #view-visit .learn-more::after { content: none; }
+  #view-visit a { text-decoration: none; }
+
+  #view-visit .visit-doc-title { font-size: 14pt; }
+  #view-visit .visit-h { font-size: 11pt; margin-bottom: 3pt; }
+  #view-visit .visit-avg { grid-template-columns: 1fr 1fr; gap: 4pt 16pt; }
+  #view-visit .visit-avg-row { padding-bottom: 3pt; break-inside: avoid; }
+  #view-visit .visit-avg-nums b { font-size: 11pt; }
+  #view-visit .visit-labs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16pt; }
+  #view-visit .visit-lab { padding: 2pt 0; break-inside: avoid; border-top: 0; border-bottom: 1px solid #777; }
+  #view-visit .visit-lab-trend { font-size: 12pt; }
+  #view-visit .visit-checklist { display: block; column-count: 2; column-gap: 16pt; }
+  #view-visit .visit-check { break-inside: avoid; }
+  #view-visit .visit-doc-head { padding-bottom: 3pt; gap: 0; }
+  #view-visit .visit-avg-row { gap: 0; }
+  #view-visit .visit-section > p { margin-bottom: 2pt; }
+  #view-visit .visit-sym-row { padding: 2pt 0; }
+  #view-visit .visit-q-list { margin-top: 3pt; gap: 1pt; }
+  #view-visit .sym-flag, #view-visit .sym-flag.prominent { padding: 4pt 8pt; margin-top: 2pt; font-size: 9pt; }
+  #view-visit .visit-note { margin-top: 2pt; font-size: 8.5pt; }
+  #view-visit .visit-foot { padding-top: 4pt; font-size: 8.5pt; }
+  #view-visit .visit-sym-row { padding: 3pt 0; }
+  #view-visit .visit-section { break-inside: auto; }
+  #view-visit .visit-h { break-after: avoid; }
+  #view-visit .visit-q { break-inside: avoid; }
+  #view-visit .visit-check { gap: 6pt; }
+  #view-visit .visit-check input { width: 11pt; height: 11pt; margin-top: 2pt; accent-color: #000; }
+  #view-visit .visit-blank-lines { list-style: decimal; margin: 6pt 0 0; padding-left: 22px; }
+  #view-visit .visit-blank-lines li { height: 18pt; border-bottom: 1px solid #000; }
+  #view-visit .visit-blank-lines li::marker { color: #000; }
+}

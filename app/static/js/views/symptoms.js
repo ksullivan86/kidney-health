@@ -216,5 +216,6 @@
     }
   }
 
-  KH.symptoms = { today: loadToday, trends, open: openSheet };
+  // flagEl: the handbook's line, drawn the same way for the Visit prep page (js/views/visit.js).
+  KH.symptoms = { today: loadToday, trends, open: openSheet, flagEl };
 })();

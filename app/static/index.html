@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/labs.css">
 <link rel="stylesheet" href="css/symptoms.css">
+<link rel="stylesheet" href="css/visit.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/sheets.css">
@@ -517,6 +518,7 @@
       <div id="period-body" class="period-body"></div>
       <div id="period-interdialytic" class="period-inter" hidden></div>
       <ul id="period-notes" class="period-notes"></ul>
+      <p class="period-visit"><button class="link-btn" type="button" id="visit-open">Get ready for a visit: one printable page</button></p>
     </section>
     <!-- Symptom days over the chosen period (js/views/symptoms.js): a list, not a chart -->
     <section class="card symptoms-card" id="symptoms-trends" aria-labelledby="symptoms-trends-h">
@@ -908,6 +910,73 @@
     <footer class="disclaimer">
       <strong>Not medical advice.</strong> Results are interpreted with general guideline thresholds; your lab's own reference ranges and your care team decide what a result means for you. If a result is very abnormal or you feel unwell, contact your care team or get urgent help.
     </footer>
+  </section>
+
+  <!-- ===================== VISIT PREP (js/views/visit.js; ARCHITECTURE.md "Visit prep") =====================
+       Reached from Trends ("Get ready for a visit", #visit). One printable page made on this device from what the person
+       logged: averages against their targets, the latest lab results, the symptoms log and their own questions. Nothing
+       is sent anywhere; the questions are never stored. Print / Save as PDF is window.print() from js/views/visit.js; the
+       page's print rules are in css/visit.css. -->
+  <section id="view-visit" class="view visit-view" aria-labelledby="visit-title" hidden>
+    <div class="visit-head screen-only">
+      <button class="link-btn visit-back" type="button" id="visit-back">Back to Trends</button>
+      <h2 id="visit-title" class="visit-title" tabindex="-1">Visit prep</h2>
+      <p class="muted small">One page to bring to an appointment, made on this device from what you logged. Print it or save it as a PDF; nothing is sent anywhere.</p>
+      <div class="visit-controls">
+        <div class="segmented" role="group" aria-label="Period" id="visit-periods"></div>
+        <button class="btn primary" type="button" id="visit-print">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Print / Save as PDF
+        </button>
+      </div>
+    </div>
+
+    <article class="card visit-page" id="visit-page" aria-labelledby="visit-page-title">
+      <header class="visit-doc-head">
+        <h2 id="visit-page-title" class="visit-doc-title">Visit summary</h2>
+        <p id="visit-who" class="visit-who" hidden></p>
+        <p id="visit-period" class="visit-period"></p>
+        <p id="visit-made" class="muted small"></p>
+      </header>
+
+      <section class="visit-section" aria-labelledby="visit-avg-h">
+        <h3 class="visit-h" id="visit-avg-h">Food and drink: average per day against my targets</h3>
+        <p class="muted small" id="visit-avg-sub"></p>
+        <div id="visit-avg-body"></div>
+      </section>
+
+      <section class="visit-section" aria-labelledby="visit-labs-h">
+        <h3 class="visit-h" id="visit-labs-h">Latest lab results</h3>
+        <div id="visit-labs-body"></div>
+      </section>
+
+      <section class="visit-section" aria-labelledby="visit-sym-h">
+        <h3 class="visit-h" id="visit-sym-h">Symptoms I recorded</h3>
+        <div id="visit-sym-body"></div>
+      </section>
+
+      <section class="visit-section" aria-labelledby="visit-q-h">
+        <h3 class="visit-h" id="visit-q-h">My questions</h3>
+        <p class="muted small screen-only">Write what you want to ask. The list stays on this page only: it is not saved on this device, not sent to your server and never seen by the AI. Print it or save it as a PDF before you leave the page.</p>
+        <div class="visit-q-add screen-only">
+          <label class="sr-only" for="visit-q-input">A question for my care team</label>
+          <input id="visit-q-input" type="text" maxlength="300" autocomplete="off" placeholder="For example: Who do I call with questions between visits?">
+          <button class="btn secondary" type="button" id="visit-q-add">Add</button>
+        </div>
+        <p class="field-error screen-only" id="visit-q-error" role="alert" hidden></p>
+        <ol class="visit-q-list" id="visit-q-list"></ol>
+        <ol class="visit-blank-lines print-only" id="visit-blank-lines" aria-hidden="true"><li></li><li></li><li></li></ol>
+      </section>
+
+      <section class="visit-section" aria-labelledby="visit-check-h">
+        <h3 class="visit-h" id="visit-check-h">Checklist from the handbook</h3>
+        <ul class="visit-checklist" id="visit-checklist"></ul>
+        <p class="small visit-check-link screen-only" id="visit-check-link"></p>
+      </section>
+
+      <p class="visit-foot small">This page lists what you recorded in the app. It does not say what a result or a symptom means: your care team does.</p>
+    </article>
+    <p class="sr-only" id="visit-live" aria-live="polite"></p>
   </section>
 
   <!-- ===================== SETTINGS (js/views/settings.js; note 07 §4.17, note 02 R10) =====================
@@ -1792,6 +1861,7 @@
 <script src="js/engine/lab_import.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
+<script src="js/engine/visitprep.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -1832,6 +1902,7 @@
 <script src="js/views/trends.js"></script>
 <script src="js/views/symptoms.js"></script>
 <script src="js/views/labs.js"></script>
+<script src="js/views/visit.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>

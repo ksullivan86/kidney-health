@@ -758,6 +758,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py`, `docs/dev/progress/symptoms.md` |
+| Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py`, `docs/dev/progress/visit-prep.md` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
@@ -792,6 +793,8 @@ app/static/
   js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
   js/views/labs.js, guidance.js                                                    (M2)
+  js/views/visit.js     Visit prep (#visit, no tab; opened from Trends): the one-page summary to print ("Visit prep" below); js/engine/visitprep.js:
+                        KH.visitPrep, its pure parts; css/visit.css: the page and its print rules
   js/views/symptoms.js  KH.symptoms: the Symptoms card on Today, its add / edit sheet and the Trends list (symptoms log); today.js and
                         trends.js call KH.symptoms.today(date) and KH.symptoms.trends(start, end)
   js/engine/symptoms.js KH.symptomRules: the browser twin of app/symptoms.py (list, severities, limits, the handbook's red flags, the API shape) and
@@ -2630,6 +2633,87 @@ refusal and its exact text, the 30-a-day limit, ids that pydantic reads as numbe
 tests/js/run_vectors.mjs` replays them (`tests/js/demo_loader.mjs` loads the whole demo); `tests/test_symptoms_vectors.py`
 fails when the file is stale. `python tools/e2e/symptoms.py` drives the screens in Chromium (375 px light, 1280 px dark,
 the demo): no sideways scroll, no console error, no request to another host.
+
+## Visit prep
+
+ROADMAP "Visit prep". A printable one-page summary for an appointment, made **in the browser from reads the app already
+has**: no route, no table, no migration, no new server code, no twin to keep in step. Code: `js/views/visit.js` (the view
+`#visit`), `js/engine/visitprep.js` (`KH.visitPrep`, pure), `css/visit.css`, the `#view-visit` section of `index.html`,
+`visit` in `VIEWS` (`js/core.js`). It is reached from **Trends** (the period summary card's "Get ready for a visit" button);
+it has no tab, so the bottom bar keeps its six. The demo shows it from its own data.
+
+### What the page holds
+
+* **The head**: "Visit summary", the person's **display name** only when they chose one (the name Settings already shows; never
+  the username or anything else), the period (`Last 2 weeks`, `Last 4 weeks` (the default) or `Last 3 months`, as 14, 28 or 90
+  days ending today) and the date it was made.
+* **Averages** of sodium, potassium, phosphorus, protein and, when it has a target, fluid, **against the person's targets**:
+  `GET /api/log/summary?start=&end=` (`app/periods.py summarize_period`, the numbers Trends shows) and nothing else. The page
+  does no sum, average or percentage of its own (`averageRows` picks and words the server's `average`, `target`, `fraction`,
+  `days_over`, `level`, `assessment`, `unknown_days` and `unknown_entries`; `tests/test_visit_prep_numbers.py` checks each
+  against the endpoint for a seeded person and that the function has no arithmetic). It says how many of the days had food
+  entries. A value that some foods do not list is **"≥ 1,433" with "N days with foods that do not list potassium (M foods): the
+  average may be higher"**, and, when no food listed it at all, **"Not listed"** with the same counts: never 0, never "OK" (the
+  level becomes `unknown`, "Not complete", as in Trends). A nutrient with no target is named under the list ("No target is
+  set for ..."), not guessed.
+* **Latest lab results**: `GET /api/labs?limit=1000`; per test (in `KH.labs.ANALYTE_ORDER`) the newest result as the Labs screen
+  writes it (`display`: the entered value and unit and, when different, the converted one), its date, the result before it with
+  its date, and an **arrow**: ↑ the newest value is higher than the one before, ↓ lower, → the same (compared on the server's
+  rounded canonical `value`). The arrow has a screen-reader text and a line under the list says it does not say whether the
+  change matters. **No interpretation and no ranges**: the page adds no normal range and no judgement of a result. The one
+  existing warning is kept: the server's potassium alert (`alerts` of the same answer, the window the Labs screen uses) is
+  drawn with `KH.labs.alertBanner`, as on the Labs screen, so a printed page never hides a current urgent potassium.
+* **Symptoms**: `GET /api/symptoms?start=&end=`, grouped with `KH.symptomRules.summarise` (the Trends grouping): per symptom
+  the days, the worst severity and the dates, a severe red flag first, and the handbook's line for the warning signs **drawn by
+  `KH.symptoms.flagEl`**, the function the Today and Trends lists use (exported for this page), so the words are exactly the
+  ones in "Symptoms log" above. Notes stay in the log.
+* **My questions** and **a checklist**. See below.
+
+A section whose read failed says so in the page ("The lab results could not be loaded ... Try again before you print"), so a
+printed page never silently leaves a section out.
+
+### Questions and the checklist: memory only
+
+The person's questions (one line of plain text each, at most 300 characters, at most 20, no duplicates: `cleanQuestion`,
+`addQuestion`) and the ticks of the checklist live in **the page's memory and nowhere else**: not `localStorage`,
+`sessionStorage`, IndexedDB or a cookie, not the server, not the outbox, not the address bar, never the AI. They are gone on
+reload and for another person who signs in on the same page (`S.owner`), and the page says so where they are written. This is
+the least-trust option: a shared or lost device keeps nothing of them. (The cost is that a list must be printed or saved as a
+PDF before leaving; a later opt-in "keep on this device" would be a decision for `docs/privacy.md` first.) A question that is
+typed but not added is added when **Print / Save as PDF** is pressed. With no questions, the printed page shows three ruled
+lines to write on.
+
+The checklist is the "What to do" list of `handbook/docs/living/appointments.md`, word for word
+(`KH.visitPrep.CHECKLIST`; `tests/test_visit_prep_ui.py` compares each line with the page), with a link to the page
+(`/learn/living/appointments/`, through `KH.learn.href`, so no handbook means no link; `tests/test_learn_links.py` checks the path).
+The app adds no clinical content of its own.
+
+### Printing
+
+**Print / Save as PDF** is `window.print()`, called from `js/views/visit.js` (no inline handler). `css/visit.css` `@media print`
+(used only while `#view-visit` is the view showing, through `:root:has(#view-visit:not([hidden]))`) hides the skip link, header,
+tabs, banners, toasts and dialogs and everything marked `screen-only` (the period buttons, the question box, Remove, the
+handbook link), sets `color-scheme: light`, **black text on white whatever the theme** (the level icons black with white
+glyphs), 9 pt text, 9 mm page margins and rows that are not split. For a typical person (five targets, four tests, a few
+symptoms) the page is **one sheet on A4 and on Letter** (`tools/e2e/visitprep.py` makes both PDFs and counts the sheets); a long
+symptoms or questions list runs on to a second sheet. On screen it follows the light and dark theme and works at 375 px.
+
+### Security and privacy
+
+* Three reads of the app's own API, each already `current_user` and scoped by `user.id` (summary, labs, symptoms); the view
+  sends **no write and no other request** (`tests/test_visit_prep_ui.py` checks the code has no `fetch`, XHR or beacon and
+  calls only `api.summary`, `api.labs`, `api.symptoms`; the Chromium harness checks that no write and no other host is asked).
+* Nothing is sent to a provider: the view does not touch `KH.ai` or `/api/ai`, and `app/ai/`, `app/mcp/` and `app/guidance/`
+  still never read symptoms, so the page adds no path for a symptom, a lab result or a question to an AI.
+* Text goes in through `h()` children (`textContent`), never as HTML; no inline script, handler or style (CSP).
+* No dosing, no insulin or medicine content, no new clinical number. Treating a low is not touched.
+
+### Tests
+
+`tests/test_visit_prep_ui.py` (shell, service worker, no inline code, `textContent` only, `window.print` wired from the file,
+the print rules, no network and no storage in the view, the checklist against the handbook), `tests/test_visit_prep_numbers.py`
+with `tests/js/visitprep_runner.mjs` (the endpoint's numbers through the engine, unknown values, labs, grouped symptoms, the
+questions' limits), `python tools/e2e/visitprep.py` (Chromium at 375 px light and 1280 px dark, the demo, print emulation and PDFs).
 
 ## Assistant access tokens (assistant step 1, part A)
 

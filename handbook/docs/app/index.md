@@ -36,6 +36,7 @@ that server is called the **admin** in these pages.
 | Get optional AI ideas | **Settings** → **AI ideas** | [Optional AI](ai.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
 | Write down a symptom, and show how it went | **Today** → **Symptoms**, then **Trends** | [Reports for your care team](reports-for-your-team.md#symptoms-you-write-down) |
+| Print one page for an appointment | **Trends** → **Get ready for a visit** | [Reports for your care team](reports-for-your-team.md#visit-prep-one-page-for-an-appointment) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |
 | See, export or delete your data | **Settings** → **Account** | [Privacy and your data](privacy.md) |
 

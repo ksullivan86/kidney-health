@@ -27,6 +27,7 @@ every entry ([architecture contract][ARCH]).
 | Export CSV | **Trends** → **Export CSV** | the dietitian's own analysis in a spreadsheet |
 | Last 7 days strip | bottom of **Today** | a quick look between visits |
 | Symptoms | **Today** → **Symptoms**; **Trends** → **Symptoms** | showing how a symptom went, with its dates |
+| Visit prep | **Trends** → **Get ready for a visit** | one printable page for an appointment |
 
 ## The period summary
 
@@ -86,13 +87,36 @@ one stands out. Itch, tiredness, poor appetite or nausea, and muscle cramps are 
 **Mention at your next visit**; it adds: "If any of these get worse quickly, do not wait: call today."
 Symptoms are never sent to an AI provider or an assistant ([Privacy and your data](privacy.md)).
 
+## Visit prep: one page for an appointment
+
+**Trends → Get ready for a visit** opens **Visit prep**. Choose the last 2 weeks, 4 weeks (the first choice) or
+3 months, then press **Print / Save as PDF**; your browser prints the page or saves it as a PDF, and the header,
+tabs and buttons are left off. It is made on your device and **nothing is sent anywhere**. The page shows:
+
+- your **averages per day** of sodium, potassium, phosphorus and protein (and fluid, if you have a fluid target)
+  against your targets: the same numbers as the period summary, with how many days had food entries. When some
+  foods do not list a value, the page says "at least" or "Not listed" and how many foods are missing; it never
+  shows a missing value as 0;
+- the **latest result of each lab test**, its date, the result before it and an arrow: ↑ higher, ↓ lower,
+  → the same. The arrow only compares the two numbers; it does not say what a change means, which is for your
+  care team ([Lab results](../labs/index.md));
+- the **symptoms** you recorded in that period, grouped by symptom with the number of days and the worst
+  severity, and the handbook's own words for the warning signs, as in "Symptoms you write down" above;
+- **My questions**: type your own. The list is **not saved** on your device or on your server and is never seen
+  by the AI, so it is gone when you leave or reload the page: print it or save the PDF first. Under it are the
+  checklist items from [Getting the most from appointments](../living/appointments.md) to tick.
+
+Your name is printed only if you gave the app a display name. The page records and shows; it never says whether a
+number is good or bad.
+
 ## What to do before a visit
 
 - [ ] Ask your dietitian which days they want to see, and how they want the file (printed, on your
       phone, or through the clinic's patient portal).
 - [ ] Log those days **completely**: drinks, sauces, snacks and low treatments too.
 - [ ] Delete planned entries you did not eat, and tap **Eaten** on the ones you did.
-- [ ] Open **Trends**, pick the range and take a screenshot of the period summary and of the **Symptoms** list.
+- [ ] Open **Trends**, pick the range and take a screenshot of the period summary and of the **Symptoms** list, or
+      press **Get ready for a visit** and print or save the page.
 - [ ] Export the CSV for the same range.
 - [ ] Bring your lab results and your medicine list ([Your medicine list](../medicines/your-medicine-list.md)).
 

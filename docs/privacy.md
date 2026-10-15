@@ -31,6 +31,7 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   records and shows a symptom; it does not say what it means. A symptom that the handbook's Get help now page lists
   as a warning sign shows the handbook's own words and a link to that page; that is computed from the symptom's name
   alone, on the server, and sends nothing anywhere ([Symptoms](../handbook/docs/app/reports-for-your-team.md));
+* **Visit prep** (Trends → Get ready for a visit) stores nothing and sends nothing: it is drawn in the browser from the summary, lab results and symptoms the person already has, with the person's own questions kept in the open page's memory only (not in the browser's storage, not on the server, never sent to an AI); it is printed or saved as a PDF by the browser. The code that builds requests to an AI provider or an assistant does not read it ([Reports for your care team](../handbook/docs/app/reports-for-your-team.md));
 * API keys the person chose to store, encrypted;
 * assistant access tokens the person made, when the admin has turned assistant access on
   ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and

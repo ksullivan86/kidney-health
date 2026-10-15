@@ -14,6 +14,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   a cloud AI outside your network", or that your admin switched it off (off is off for everyone). A feature that moves
   to another AI asks for your consent again for that AI. Your own key stays your own choice. See
   [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
+* **Visit prep: one page for an appointment.** **Trends → Get ready for a visit** opens a page you can **print or save as a
+  PDF** (your browser's own print): choose the last 2 weeks, 4 weeks or 3 months and it shows your **average sodium,
+  potassium, phosphorus and protein** (and fluid, if you have a target) per day against your targets, the same numbers as the
+  period summary, with how many days had entries (a value some foods do not list reads "at least" or "Not listed", never 0);
+  the **latest result of each lab test** with its date, the one before it and an arrow (↑ ↓ →) that only compares the two
+  numbers; the **symptoms** you recorded, with the handbook's own words for the warning signs; **your own questions**; and the
+  handbook's checklist for visits to tick. Printed, it is black on white without the menus and fits one sheet of A4 or Letter
+  for a typical month. **Nothing is sent anywhere, and your questions are not saved at all**: they stay in the open page and are
+  gone when you leave or reload it, so print or save the PDF first. Your name is printed only if you gave the app a display
+  name. The page says what you recorded and never what it means. See
+  [Reports for your care team](handbook/docs/app/reports-for-your-team.md#visit-prep-one-page-for-an-appointment).
 * **Write down a symptom.** **Today → Symptoms → Add** records a symptom for a day: pick it (swelling, itching, tiredness,
   cramps, nausea, breathlessness, poor appetite, or **Other** with a name of your own), choose **Mild**, **Moderate** or
   **Severe** and add a note if you like. **Edit** and **Delete** are on each entry; **Trends → Symptoms** lists what you
@@ -319,6 +330,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Every feature resolves through `routes._resolve(request, conn, user, feature)`. The older AI tests set the routing to `any`
   with `tests/ai_support.py` `LEGACY_ROUTING`; the new ones are `tests/test_ai_routing.py`, `tests/test_ai_routing_ui.py` and
   `tests/js/routing_page.mjs`.
+* Visit prep is front end only (no route, table, migration or server code): `js/views/visit.js` (the view `#visit`, no tab; Trends'
+  period card opens it), `js/engine/visitprep.js` (`KH.visitPrep`, pure: the averages are picked from `GET /api/log/summary`, the lab
+  rows and arrows from `GET /api/labs`, the question limits, the handbook checklist word for word), `css/visit.css` (screen and
+  `@media print`), the `#view-visit` section of `index.html`, `visit` in `VIEWS`, and `KH.symptoms.flagEl` exported from
+  `js/views/symptoms.js`. The questions live in the page's memory only. Tests: `tests/test_visit_prep_ui.py`,
+  `tests/test_visit_prep_numbers.py` (with `tests/js/visitprep_runner.mjs`); `python tools/e2e/visitprep.py` drives it in Chromium
+  and writes the A4 and Letter PDFs. No parity vectors: there is no server logic with a twin.
 * The symptoms log is `app/symptoms.py` (`/api/symptoms`, the red-flag table `RED_FLAGS`, row shape), the `Symptom*` models in
   `app/models.py`, `app/migrations/m015_symptoms.py` (**schema step 15**: `symptoms`, no CHECK on the key), `symptoms` in the
   export (`app/account.py`, plus `symptoms.csv`) and the import (`app/data_import.py`, `ImportSymptom`), and in the browser
