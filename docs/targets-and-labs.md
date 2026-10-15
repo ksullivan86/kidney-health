@@ -241,6 +241,87 @@ the plausible range are listed as not imported, with the reason. A result alread
 and value as shown) is not ticked, and the server skips repeats as well (`POST /api/labs/import`). Up to
 1 MB and 1,000 rows per file.
 
+**Import from Apple Health (clinical records)** (on the same view, next to the spreadsheet import): if you linked your
+health system in the iPhone Health app, its lab results can be imported from the Health export. The app never sees the
+export: **the files are read in the browser, on your device, and nothing is uploaded.** On an iPhone: in the Health app tap
+your picture, then *Export All Health Data* and save the zip to Files; in Files tap the zip to unzip it, open
+`apple_health_export` and `clinical-records` (one FHIR JSON file per record); back in the Labs view choose the files, go to
+`clinical-records`, tap *Select*, then *Select All*. The page reads each file on the device (a file over 1 MB is not opened),
+shows a line such as "41 results found in 380 files; 245 records that are not lab results; 12 results of tests the app does
+not track; 3 results in a unit the app cannot convert", and then the **same review table as the spreadsheet import**. The
+results come from your health system, not from an AI, so the new ones start **ticked** (a result you already have, same test,
+day and value as shown, does not); untick any you do not want. Nothing is saved until **Save**, and then only the ticked rows
+(test, value, unit and day) are sent, through `POST /api/labs/import` (the same save as the spreadsheet, so the potassium
+banner and "what this result changed" work the same). No file, file name, patient name or id, provider or note is read, kept
+or sent. What the reader (`js/engine/fhir_labs.js`, `KH.fhirLabs`) does with a file:
+
+* reads a record that is an `Observation`, or a `Bundle` whose entries are Observations; every other kind of record
+  (Patient, Condition, Immunization and so on) is ignored and counted as "not a lab result";
+* keeps only results whose `status` is `final`, `amended` or `corrected` (preliminary, cancelled and entered-in-error ones are
+  counted and left out);
+* finds the test by its **LOINC code** (`code.coding` with system `http://loinc.org`) in the table below; any other code, a
+  code of another system, or two codes that name different tests, is skipped and counted. Only serum or plasma (and LOINC's own
+  "serum, plasma or blood") codes are read: whole, venous and arterial blood (blood gas), urine potassium or creatinine,
+  24-hour urine and the race-specific, MDRD and paediatric eGFR codes are not (the app cannot tell which of a race pair applies
+  to you, and it uses CKD-EPI 2021, which has no race term);
+* needs a **single number** in `valueQuantity` with a unit it knows for that test, taken from the UCUM `code` or the unit
+  text; a result such as "<0.5" (a `comparator`), a text result, a missing unit, or a unit the app has no conversion for (for
+  example potassium in mg/dL) is listed as not imported with the reason, never guessed. Units are converted, and values
+  range-checked, only by the app's own unit table (`app/units.py`, through its browser twin), so the plausible ranges are
+  those of the spreadsheet import and `POST /api/labs`; the one spelling the reader adds is `ug/mg` for `mg/g` (the same unit),
+  annotations such as `{creat}` are dropped and `{1.73_m2}` is read as 1.73 m²;
+* takes the **day** from `effectiveDateTime`, else `effectiveInstant`, else `effectivePeriod.start`, else `issued`. A date
+  alone ("2026-09-01") is used as written; a time with a time zone ("2026-09-02T03:30:00Z") is shown as the calendar day on
+  your device; a month or year alone, a day more than one day after today (the server's own allowance for time zones), a day
+  before 1900 or a date that does not exist is listed as not imported;
+* collapses the same test, day and shown value to one row (a result in a Bundle and in its own file, or under two codes);
+* stops at the limits: **at most 2,000 files per pick (more are refused before any is read), 1 MB per file, a depth and size
+  check on every parsed file, 1,000 rows shown (the newest; the rest are counted as left out)**. A file that is not JSON,
+  is too large, too deeply nested or cannot be read is skipped and counted. Nothing in a file is ever evaluated, and text
+  from a file is only ever shown as text.
+
+LOINC codes the reader maps (each is a code of LOINC release 2.82 whose name was looked up on 2026-10-15 in the LOINC
+terminology services at tx.fhir.org and the NLM Clinical Tables; the code's own page is `https://loinc.org/<code>`, linked
+below; LOINC® is a registered trademark of Regenstrief Institute, Inc., and the codes and names are used under the
+[LOINC licence](https://loinc.org/license/)). The unit column is the UCUM unit LOINC itself gives as the example. A new code
+is added only after the same lookup, and `tests/test_fhir_labs.py` checks that every test and unit exists in `app/units.py`
+and that this page lists every code.
+
+| Test in the app | LOINC code | LOINC name | Example unit |
+|---|---|---|---|
+| Potassium | [2823-3](https://loinc.org/2823-3) | Potassium [Moles/volume] in Serum or Plasma | `mmol/L` |
+| Potassium | [77142-8](https://loinc.org/77142-8) | Potassium [Moles/volume] in Serum, Plasma or Blood | `mmol/L` |
+| Phosphate | [2777-1](https://loinc.org/2777-1) | Phosphate [Mass/volume] in Serum or Plasma | `mg/dL` |
+| Phosphate | [14879-1](https://loinc.org/14879-1) | Phosphate [Moles/volume] in Serum or Plasma | `mmol/L` |
+| Albumin (blood) | [1751-7](https://loinc.org/1751-7) | Albumin [Mass/volume] in Serum or Plasma | `g/dL` |
+| Albumin (blood) | [61151-7](https://loinc.org/61151-7) | Albumin [Mass/volume] in Serum or Plasma by Bromocresol green (BCG) dye binding method | `g/dL` |
+| Albumin (blood) | [61152-5](https://loinc.org/61152-5) | Albumin [Mass/volume] in Serum or Plasma by Bromocresol purple (BCP) dye binding method | `g/dL` |
+| Albumin (blood) | [77148-5](https://loinc.org/77148-5) | Albumin [Mass/volume] in Serum, Plasma or Blood by Bromocresol purple (BCP) dye binding method | `g/L` |
+| Bicarbonate (CO2) | [1963-8](https://loinc.org/1963-8) | Bicarbonate [Moles/volume] in Serum or Plasma | `mmol/L` |
+| Bicarbonate (CO2) | [2028-9](https://loinc.org/2028-9) | Carbon dioxide, total [Moles/volume] in Serum or Plasma | `mmol/L` |
+| Urine albumin-to-creatinine ratio | [9318-7](https://loinc.org/9318-7) | Albumin/Creatinine [Mass Ratio] in Urine | `ug/mg{creat}` |
+| Urine albumin-to-creatinine ratio | [14959-1](https://loinc.org/14959-1) | Microalbumin/Creatinine [Mass Ratio] in Urine | `mg/g{creat}` |
+| Urine albumin-to-creatinine ratio | [32294-1](https://loinc.org/32294-1) | Albumin/Creatinine [Ratio] in Urine | `mg/mmol{creat}` |
+| Urine albumin-to-creatinine ratio | [30000-4](https://loinc.org/30000-4) | Microalbumin/Creatinine [Ratio] in Urine | `mg/mmol{creat}` |
+| Creatinine (blood) | [2160-0](https://loinc.org/2160-0) | Creatinine [Mass/volume] in Serum or Plasma | `mg/dL` |
+| Creatinine (blood) | [14682-9](https://loinc.org/14682-9) | Creatinine [Moles/volume] in Serum or Plasma | `umol/L` |
+| Creatinine (blood) | [77140-2](https://loinc.org/77140-2) | Creatinine [Moles/volume] in Serum, Plasma or Blood | `umol/L` |
+| Cystatin C | [33863-2](https://loinc.org/33863-2) | Cystatin C [Mass/volume] in Serum or Plasma | `mg/L` |
+| eGFR (reported by the lab) | [98979-8](https://loinc.org/98979-8) | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)/1.73 sq M | `mL/min/{1.73_m2}` |
+| eGFR (reported by the lab) | [98980-6](https://loinc.org/98980-6) | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine and Cystatin C-based formula (CKD-EPI 2021)/1.73 sq M | `mL/min/{1.73_m2}` |
+| eGFR (reported by the lab) | [62238-1](https://loinc.org/62238-1) | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI)/1.73 sq M | `mL/min/{1.73_m2}` |
+| eGFR (reported by the lab) | [94677-2](https://loinc.org/94677-2) | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine and Cystatin C-based formula (CKD-EPI)/1.73 sq M | `mL/min/{1.73_m2}` |
+| eGFR (reported by the lab) | [50210-4](https://loinc.org/50210-4) | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Cystatin C-based formula/1.73 sq M | `mL/min/{1.73_m2}` |
+| HbA1c | [4548-4](https://loinc.org/4548-4) | Hemoglobin A1c/Hemoglobin.total in Blood | `%` |
+| HbA1c | [17856-6](https://loinc.org/17856-6) | Hemoglobin A1c/Hemoglobin.total in Blood by HPLC | `%` |
+| HbA1c | [4549-2](https://loinc.org/4549-2) | Hemoglobin A1c/Hemoglobin.total in Blood by Electrophoresis | `%` |
+
+Browser only: there is no new route, no new setting and no new dependency; `tests/data/fhir_labs_vectors.json` (hand-written
+sample resources and expectations, `tests/js/gen_fhir_labs_vectors.mjs`) pins the reader in `node tests/js/run_vectors.mjs`, and
+`tests/test_fhir_labs.py` / `tests/test_fhir_labs_ui.py` check it against the server's units and the page. The files in the
+Health export are FHIR JSON (the reader is written for R4 Observations; the export may also hold records of older FHIR versions,
+whose Observations use the same fields the reader looks at; this is untested against a real export, see the roadmap).
+
 **Read a lab report photo** (on the same view, below the spreadsheet import; only when the optional AI has a **local**
 AI that reads photos, [`ai.md`](ai.md#lab-report-photos)): a photo or screenshot of a report is read by the AI on the
 admin's own network, which copies the printed results of the nine tests above. The app keeps the tests and units it
@@ -272,7 +353,7 @@ admin of a server outside the US can make SI the default while each person can s
 ## Privacy
 
 Birth month, sex, pregnancy and lab results are health data. They are stored only in the server's
-database (an imported CSV file is read in the browser and never stored or sent; only the results kept are), are never written to the log, appear in the person's own export (`export.json` and
+database (an imported CSV file or the Apple Health clinical-records files are read in the browser and never stored or sent; only the results kept are), are never written to the log, appear in the person's own export (`export.json` and
 `labs.csv`, with values in the canonical unit plus what was typed), and are deleted with the account.
 No admin route reads them.
 

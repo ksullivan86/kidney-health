@@ -50,6 +50,10 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the manual device matrix of note 02 ("Manual device test matrix"): an iPhone, an iPad, an Android
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
      plain HTTP (barcode photo, typed digits);
+   * Labs → Import from Apple Health with a real Health export from an iPhone (Safari, the Files app's Select All in
+     `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
+     headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
+     the lookup described in [targets-and-labs.md](targets-and-labs.md#in-the-app);
    * `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and 5 with the image's
      Python, results recorded in [docs/guidance.md](guidance.md#performance);
    * for a release that changes the upgrade path: decide whether to hold `:latest` (below).
