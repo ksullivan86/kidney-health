@@ -371,6 +371,35 @@ await scenario('what waits belongs to the person who made it', async ({ KH, nav,
   expect('signing out clears the queue', [(await KH.offline.items()).length, KH.offline.counts()], [0, { pending: 0, failed: 0, conflict: 0, changes: 0 }]);
 });
 
+await scenario('changes queued in the same millisecond still replay in the order they were made', async ({ KH, nav, date, quick, stored }) => {
+  // A fast device (or a CI runner) can queue an edit, a "mark eaten" and a second edit within one millisecond. The outbox
+  // replays in created_at order, so the stamps must still rise; a tie used to fall back to the store's random key order.
+  const inPage = KH.util.todayStr.constructor; // the Function of the page's own context, to reach its globals
+  const RealDate = inPage('return Date')();
+  const FIXED = RealDate.now();
+  class FrozenDate extends RealDate {
+    constructor(...args) { if (args.length) super(...args); else super(FIXED); }
+    static now() { return FIXED; }
+  }
+  inPage('d', 'globalThis.Date = d')(FrozenDate); // every clock read in the page is the same millisecond
+  try {
+    const c = quick({ status: 'planned', name: 'Plum' });
+    await KH.api.day(date);
+    nav.onLine = false;
+    await KH.api.updateEntry(c.id, { note: 'one' }, c);
+    await KH.api.markEaten({ date });
+    const eaten = (await KH.api.day(date)).entries.find((e) => e.id === c.id);
+    await KH.api.updateEntry(c.id, { status: 'planned' }, eaten);
+    const stamps = (await KH.offline.items()).map((i) => i.created_at);
+    expect('every queued item has its own, rising stamp', [stamps.length, stamps.every((t, i) => i === 0 || t > stamps[i - 1])], [2, true]);
+    nav.onLine = true;
+    const last = await KH.offline.syncNow();
+    expect('replayed in order: the mark first, then the person\'s last edit', [last.conflicts, stored(c.id).status, stored(c.id).note], [0, 'planned', 'one']);
+  } finally {
+    inPage('d', 'globalThis.Date = d')(RealDate);
+  }
+});
+
 if (failures.length) {
   for (const f of failures.slice(0, 20)) console.error(`MISMATCH ${f.label}\n   got:  ${JSON.stringify(f.got)}\n   want: ${JSON.stringify(f.want)}`);
   console.error(`\n${failures.length} of ${checks} checks failed (tests/js/outbox_changes.mjs)`);

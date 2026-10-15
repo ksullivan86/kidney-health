@@ -155,6 +155,10 @@
   }
   const userId = () => (state.me && Number.isInteger(state.me.id) ? state.me.id : null);
   const nowIso = () => new Date().toISOString();
+  // The outbox replays in created_at order, so two changes queued in the same millisecond must still get distinct, rising
+  // stamps: otherwise the tie falls back to the store's key order (a random id) and a "mark eaten" could replay after a later edit.
+  let lastQueued = 0;
+  const queueStamp = () => { lastQueued = Math.max(Date.now(), lastQueued + 1); return new Date(lastQueued).toISOString(); };
   function pathOf(path) { try { return new URL(path, 'http://app.invalid'); } catch (e) { return null; } }
   function kindOf(method, path) {
     const u = pathOf(path);
@@ -301,7 +305,7 @@
     if (kind === 'edit' || kind === 'delete') return enqueueChange(method, path, body, opts);
     if (!kind || uid == null || !body || typeof body !== 'object') return undefined;
     const item = { client_id: kind === 'mark' ? uuid4() : body.client_id || uuid4(), user_id: uid, kind, method, path, body: clone(body),
-      food: kind === 'entry' ? await knownFood(body.food_id) : null, created_at: nowIso(), attempts: 0, state: 'pending', last_error: null };
+      food: kind === 'entry' ? await knownFood(body.food_id) : null, created_at: queueStamp(), attempts: 0, state: 'pending', last_error: null };
     if (kind !== 'mark') item.body.client_id = item.client_id;
     await store.put('outbox', item);
     if (kind === 'mark') await markExpected(body);
@@ -405,11 +409,11 @@
     let item = waiting;
     if (item) {
       if (kind === 'delete') { item.kind = 'delete'; item.method = 'DELETE'; item.body = null; } else item.body = { ...item.body, ...changes };
-      item.created_at = nowIso(); // it goes after anything queued since (a "mark eaten"), as the person did it
+      item.created_at = queueStamp(); // it goes after anything queued since (a "mark eaten"), as the person did it
       item.state = 'pending'; item.last_error = null; item.attempts = 0; item.rebased = false;
     } else {
       item = { client_id: uuid4(), user_id: uid, kind, method, path, entry_id: entryId, body: changes,
-        version: typeof opts.ifMatch === 'string' ? opts.ifMatch : base.version || null, base, created_at: nowIso(), attempts: 0, state: 'pending',
+        version: typeof opts.ifMatch === 'string' ? opts.ifMatch : base.version || null, base, created_at: queueStamp(), attempts: 0, state: 'pending',
         last_error: null, rebased: false };
     }
     await store.put('outbox', item);
@@ -426,7 +430,7 @@
     const entryId = Number(ENTRY_PATH.exec(pathOf(path).pathname)[1]);
     if (!(await myItems()).some((i) => isChange(i) && i.entry_id === entryId)) {
       await store.put('outbox', { client_id: uuid4(), user_id: uid, kind, method, path, entry_id: entryId, body: kind === 'edit' ? changedFields(opts.base, body || {}) : null,
-        version: typeof opts.ifMatch === 'string' ? opts.ifMatch : null, base: clone(opts.base), server: clone(current), created_at: nowIso(), attempts: 1,
+        version: typeof opts.ifMatch === 'string' ? opts.ifMatch : null, base: clone(opts.base), server: clone(current), created_at: queueStamp(), attempts: 1,
         state: 'conflict', last_error: 'changed on another device', rebased: false });
       await refreshCounts();
     }
