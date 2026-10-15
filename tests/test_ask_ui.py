@@ -42,8 +42,9 @@ def test_the_tab_the_view_and_the_files_are_in_the_shell():
 
 
 def test_no_inline_script_and_no_style_attribute_anywhere_in_the_ask_pieces():
-    assert "<script" not in ask_section() and " style=" not in ask_section() and "onclick=" not in ask_section()
-    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", INDEX)  # the page as a whole: only script files
+    section = ask_section().lower()  # HTML tag and attribute names are case-insensitive
+    assert "<script" not in section and " style=" not in section and "onclick=" not in section
+    assert not re.search(r"<script(?![^>]*\bsrc\s*=)[^>]*>", INDEX, re.IGNORECASE)  # the page as a whole: only script files
     assert "setAttribute('style'" not in ASK_JS and "setAttribute(\"style\"" not in ASK_JS and "style:" not in ASK_JS
     assert "@import" not in ASK_CSS and "url(" not in ASK_CSS
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", ASK_CSS), "colours come from the app's tokens (light and dark)"
