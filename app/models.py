@@ -1016,6 +1016,91 @@ class LabList(BaseModel):
     alerts: list[SafetyAlert]
 
 
+# --------------------------------------------------------------------------- #
+# Symptoms log (schema step 15; app/symptoms.py)
+# --------------------------------------------------------------------------- #
+
+SymptomKey = Literal["swelling", "itching", "tiredness", "cramps", "nausea", "breathlessness", "poor_appetite", "other"]
+MAX_SYMPTOM_LABEL = 60  # the free-text name of an "other" symptom
+MAX_SYMPTOM_NOTE = 300
+MAX_SYMPTOMS_PER_DAY = 30  # per person and date: a bound on what one person can store, not a clinical number
+# Control characters (not tab, newline or carriage return, which a note may hold) are refused in both fields; a label
+# is a single line, so it also refuses those three.
+_SYMPTOM_TEXT_BAD = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_SYMPTOM_LABEL_BAD = re.compile(r"[\x00-\x1f\x7f]")
+
+
+class SymptomCreate(BaseModel):
+    """``POST /api/symptoms`` and ``PUT /api/symptoms/{id}``: one symptom on one day (a record, never advice)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    date: str
+    symptom: SymptomKey
+    severity: int = Field(ge=1, le=3)  # 1 mild, 2 moderate, 3 severe
+    label: str = Field(default="", max_length=MAX_SYMPTOM_LABEL)  # only for "other"
+    note: str = Field(default="", max_length=MAX_SYMPTOM_NOTE)
+
+    @field_validator("date")
+    @classmethod
+    def _date(cls, v: str) -> str:
+        return validate_past_date(v)
+
+    @field_validator("label", "note", mode="before")
+    @classmethod
+    def _null_is_empty(cls, v: Any) -> Any:
+        return "" if v is None else v
+
+    @field_validator("label")
+    @classmethod
+    def _label(cls, v: str) -> str:
+        if _SYMPTOM_LABEL_BAD.search(v):
+            raise ValueError("must be one line of plain text")
+        return v
+
+    @field_validator("note")
+    @classmethod
+    def _note(cls, v: str) -> str:
+        if _SYMPTOM_TEXT_BAD.search(v):
+            raise ValueError("must be plain text")
+        return v
+
+    @model_validator(mode="after")
+    def _label_only_for_other(self) -> "SymptomCreate":
+        if self.symptom == "other" and not self.label:
+            raise ValueError("label is required when the symptom is other")
+        if self.symptom != "other" and self.label:
+            raise ValueError("label is only for the symptom other")
+        return self
+
+
+class SymptomRedFlag(BaseModel):
+    """A symptom the handbook's Get help now page lists as a warning sign: the handbook's own words and the link."""
+
+    level: Literal["emergency", "today"]  # "Call 911 now" / "Call your care team today"
+    text: str
+    href: str
+    link_text: str
+    prominent: bool  # severe: the app shows it prominently
+
+
+class SymptomOut(BaseModel):
+    id: int
+    date: str
+    symptom: SymptomKey
+    label: str
+    name: str  # "Swelling", or the label of an "other"
+    severity: Literal[1, 2, 3]
+    severity_label: Literal["Mild", "Moderate", "Severe"]
+    note: str
+    created_at: str
+    red_flag: SymptomRedFlag | None
+
+
+class SymptomList(BaseModel):
+    symptoms: list[SymptomOut]  # oldest day first, then entry order
+
+
 class EgfrResult(BaseModel):
     value: int | None
     method: Literal["lab", "ckd_epi_2021_cr_cys", "ckd_epi_2021_cr", "ckd_epi_2012_cys"]

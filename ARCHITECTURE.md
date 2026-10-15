@@ -743,6 +743,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 12 | `m012_ai_consent_chat.py` | assistant step 2 | `ai_consents.purpose` accepts `chat` (table rebuilt; `docs/dev/plans/assistant-step2.md`; "Ask chat" above) |
 | 13 | `m013_assistant_ask_keys.py` | assistant step 2, part C | `assistant_ask_keys`: the duplicate guard of the Ask chat's saves, hashes only ("Saving from the chat" below) |
 | 14 | `m014_ai_consent_voice.py` | assistant step 2, part B | `ai_consents.purpose` accepts `voice` (table rebuilt from its stored definition; "Voice input" below). |
+| 15 | `m015_symptoms.py` | symptoms log | `symptoms`: a person's symptoms by date and severity, no list of keys in the table ("Symptoms log" below). |
 
 ## Backend file ownership
 
@@ -756,6 +757,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
+| Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py`, `docs/dev/progress/symptoms.md` |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
@@ -790,6 +792,10 @@ app/static/
   js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
   js/views/labs.js, guidance.js                                                    (M2)
+  js/views/symptoms.js  KH.symptoms: the Symptoms card on Today, its add / edit sheet and the Trends list (symptoms log); today.js and
+                        trends.js call KH.symptoms.today(date) and KH.symptoms.trends(start, end)
+  js/engine/symptoms.js KH.symptomRules: the browser twin of app/symptoms.py (list, severities, limits, the handbook's red flags, the API shape) and
+                        the Trends grouping; tests/data/symptoms_vectors.json. js/mock/symptoms.js: the demo's /api/symptoms routes. css/symptoms.css
                         labs.js: the Lab results view (#labs, no tab; opened from Profile) and KH.labs (helpers Profile uses)
                         guidance.js: KH.guidance, the meal guidance UI (M2 guidance; see "M2 API: guidance" → Frontend)
   css/labs.css          Lab results view, the potassium safety banner, Profile's lab summary (M2 targets)
@@ -1019,7 +1025,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/tokens` | user | → `{enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}`; works while `assistant.enabled` is off ("Assistant access tokens") |
 | `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes); 409 switch off, 400 five active, 429 after 20 in an hour |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
-| `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
+| `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `README.txt`; no passwords, sessions or keys |
 | `POST /api/me/import?dry_run=&merge=&replace_profile=` | user *(re-auth)* | body: the `export.json` file as `application/json` (up to `MAX_IMPORT_BYTES`, 16 MiB, for this path only) → the report below; 400 the file is refused (naming the record kind and position), 409 the account has data and `merge` was not set, 413 too large, 415 not JSON, 429 after 20 in an hour. See "Import of `export.json`" |
 
 ```json
@@ -1029,7 +1035,9 @@ KeyItem = {"provider": "usda", "label": "USDA FoodData Central",
            "user_keys_allowed": true, "effective": "own" | "shared" | "none"}
 export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
                "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
-               "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
+               "custom_foods", "linked_foods", "meal_templates", "lab_results",
+               "symptoms",           // [{id, date, symptom, label, severity, note, created_at}] oldest day first (schema step 15); an optional list added to version 1
+               "ai_audit", "activity",
                "food_preferences",   // food_preferences: v0.3 guidance "Not for me" foods (schema step 5)
                "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
                "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and "Not for me" list use (import)
@@ -1094,11 +1102,11 @@ person; they act on that person only (`user.id`), never on a name or id in the f
   import would do and it writes nothing (no row, no id, no revision). A locked database answers 503.
 * **Report** (both calls): `{dry_run, imported, can_import, blocked, file: {format, version, exported_at, app_version,
   records}, options: {merge, replace_profile}, counts: {log_entries, custom_foods, shared_foods_kept_as_own,
-  shared_foods_linked, built_in_foods_matched, meal_templates, lab_results, food_preferences, profile, settings},
+  shared_foods_linked, built_in_foods_matched, meal_templates, lab_results, symptoms, food_preferences, profile, settings},
   already_there: {…}, skipped: {total, shown (≤ 100 of {kind, index, label, reason}), by_kind, more}, not_selected,
   not_imported, rule}`.
 * **Activity.** One `data.imported` row (user-visible) with `log_entries`, `custom_foods`, `meal_templates`,
-  `lab_results`, `food_preferences`, `merge` and `profile`: counts only, no content.
+  `lab_results`, `symptoms`, `food_preferences`, `merge` and `profile`: counts only, no content.
 * **Size and cost.** `MAX_IMPORT_BYTES` (16 MiB) is registered with `security.register_body_limit` for exactly
   `/api/me/import`; every other path keeps `MAX_BODY_BYTES`. Measured: a year at eight entries a day is 3.5 MB as
   the export writes it (2.2 MB minified); a 15 MB file with 13,000 entries imports in about 1.5 s and needs about
@@ -2525,6 +2533,88 @@ from its submit handler and keeps the list in memory); `tools/e2e/menuplan.py` (
   `handbook/docs/self-hosting/` explains and links to their sections (`tests/test_deploy.py` checks the
   anchors and that those pages carry no shell blocks). `docs/diet-guide.md` is a pointer to
   `/learn/eat/` with a map from its old sections to the handbook pages.
+
+## Symptoms log (schema step 15)
+
+ROADMAP "Symptoms log". A person records a symptom with a date and a severity; Today and Trends show it and the export
+holds it. **The app records and shows. It never suggests a cause, a treatment or a dose**; the one thing it adds is a
+pointer to the handbook for the symptoms that page lists as warning signs. Code: `app/symptoms.py` (router, tables, row
+shape), the `Symptom*` models in `app/models.py`, `app/migrations/m015_symptoms.py`.
+
+### Table `symptoms` (schema step 15, `m015_symptoms.py`)
+
+`symptoms (id, user_id → users ON DELETE CASCADE, date TEXT 'YYYY-MM-DD', symptom TEXT, label TEXT '' (≤ 60), severity
+INTEGER 1..3, note TEXT '' (≤ 300), created_at)` with index `symptoms_user_date (user_id, date, id)`. There is **no CHECK
+on the symptom key**: a later key must not need a table rebuild (steps 12 and 14 had to); the API validates it, and a row
+with a key this version does not know is kept, left out of the lists and included in the export. The table checks what
+never changes (severity 1 to 3, the lengths, a 10-character date). Deleting an account deletes its symptoms.
+
+### Routes (`/api/symptoms`; every one `current_user`, scoped by `user.id`, not yours is 404, CSRF header on writes)
+
+| Route | Answer |
+|---|---|
+| `GET /api/symptoms?start=&end=` | `{symptoms: [SymptomOut]}` oldest day first, then entry order; `start` and `end` (`YYYY-MM-DD`) are required, at most 366 days (the log's range rules and messages) |
+| `POST /api/symptoms` `SymptomCreate` | 201 `SymptomOut` |
+| `PUT /api/symptoms/{id}` `SymptomCreate` | 200 `SymptomOut`: replaces the editable fields, keeps `created_at`; the body is checked before the id is looked up |
+| `DELETE /api/symptoms/{id}` | 204 |
+
+`SymptomCreate` (`extra="forbid"`, strings stripped): `date` (not in the future with a day of time-zone slack, 1900 or
+later: `validate_past_date`), `symptom` (`swelling`, `itching`, `tiredness`, `cramps`, `nausea`, `breathlessness`,
+`poor_appetite`, `other`), `severity` (1 mild, 2 moderate, 3 severe), `label` (≤ 60 characters, one line of plain text;
+**required for `other`, refused for every other symptom**) and `note` (≤ 300 characters, plain text: control characters
+refused, tab, newline and carriage return allowed). A `null` label or note is empty. One person holds at most 30
+symptoms per date (`MAX_SYMPTOMS_PER_DAY`, a bound on storage, not a clinical number; a 31st, or a move into a full day,
+is a 400). `SymptomOut`: `{id, date, symptom, label, name, severity, severity_label, note, created_at, red_flag}`; `name` is
+"Swelling" or, for `other`, the label; `severity_label` is `Mild`, `Moderate` or `Severe`.
+
+### Red flags (what the app says, and where it comes from)
+
+`red_flag` is `null` except for the symptoms that `handbook/docs/get-help-now.md` sorts as warning signs, where it is
+`{level, text, href: "/learn/get-help-now/", link_text: "Get help now", prominent}` (`prominent`: severity 3). The table
+is `app.symptoms.RED_FLAGS`, and each line is built only from phrases copied from the page:
+
+| Symptom | Page group (`level`) | Quoted from the page |
+|---|---|---|
+| `breathlessness` | "Call 911 now" (`emergency`) | "Severe breathlessness"; "sudden breathlessness or fainting with no clear cause" |
+| `swelling` | "Call your care team today" (`today`) | "new swelling of the legs, ankles or face" |
+
+Itching, tiredness, cramps, nausea and poor appetite are under "Mention at your next visit" on that page and carry no
+`red_flag`; `other` never does (the app does not read a person's own words). `tests/test_symptoms.py` reads the page and
+fails when a quoted phrase is no longer under its heading, when a symptom outside the table appears under a warning
+heading, and when a line names a cause, a treatment or a dose. The people-facing wording is in
+`handbook/docs/app/reports-for-your-team.md` ("Symptoms you write down"). Changing the list needs the clinical review
+that `handbook/REVIEW.md` tracks for the page itself.
+
+### Where it shows
+
+* **Today** (`js/views/symptoms.js`, `KH.symptoms.today(date)`): a compact **Symptoms** card under Daily status: the
+  day's entries (name, severity word, note, **Edit**, **Delete** asking in the page), **Add** opening the bottom sheet
+  `#sheet-symptom` (symptom, a name for `other`, severity with nothing chosen at first, date, optional note; nothing is
+  saved until **Save**; choosing a red-flag symptom shows the handbook's line in the sheet). A severe red flag is a block
+  that stands out and is listed first; the handbook link is `KH.learn.href(red_flag.href)` (no handbook, no link; the line
+  stays), opening in a new tab so a sheet in use is not lost. Days after today cannot be added to. Symptoms are not
+  queued offline: a save needs the server and the card says so when it cannot load.
+* **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the
+  worst severity, a strip of marks over the period (decoration, `aria-hidden`; a mark's height is the severity), the dates
+  written out with their severity, and the same handbook line. No chart library.
+* **Export and import**: `export.json` → `symptoms` and `symptoms.csv` (formula-escaped); the import
+  (`ImportSymptom`, `app/data_import.py`) checks every record like `POST /api/symptoms`, never uses the id in the file,
+  counts `symptoms` in the report, treats an account with symptoms as having data (409 without `merge=1`), leaves out a
+  symptom with the same date, name, severity and note that is already there, and skips (and lists) one beyond 30 on a day.
+* **Privacy**: never logged; never read by `app/ai/`, `app/mcp/`, `app/guidance/` or `app/vision.py` (a test greps
+  them), so no AI provider and no assistant ever receives a symptom. A later feature that wants to must change
+  `docs/privacy.md` first. In the isolation matrix (`tests/test_isolation_v03.py`).
+
+### Parity (demo/preview mode)
+
+`js/engine/symptoms.js` (`KH.symptomRules`) and the demo routes `js/mock/symptoms.js` are checked against
+`tests/data/symptoms_vectors.json`, generated by `tests/data/gen_symptoms_vectors.py` from the server itself: the tables,
+rows in their API shape, and **one request script run against a fresh server and a fresh demo** (every route, every
+refusal and its exact text, the 30-a-day limit, ids that pydantic reads as numbers, and `{{today:N}}` dates for the
+"not in the future" boundary), then the Trends grouping (hand-written: only the browser draws it). `node
+tests/js/run_vectors.mjs` replays them (`tests/js/demo_loader.mjs` loads the whole demo); `tests/test_symptoms_vectors.py`
+fails when the file is stale. `python tools/e2e/symptoms.py` drives the screens in Chromium (375 px light, 1280 px dark,
+the demo): no sideways scroll, no console error, no request to another host.
 
 ## Assistant access tokens (assistant step 1, part A)
 

@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="css/trends.css">
 <link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/labs.css">
+<link rel="stylesheet" href="css/symptoms.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/sheets.css">
@@ -316,6 +317,19 @@
       <div id="status-bars" class="status-bars"></div>
     </section>
 
+    <!-- Symptoms (js/views/symptoms.js): what the person records for this day. The app records and shows it; it never says what a symptom means. -->
+    <section class="card symptoms-card" id="symptoms-today" aria-labelledby="symptoms-today-h">
+      <div class="card-head">
+        <h2 id="symptoms-today-h" class="card-title">Symptoms</h2>
+        <button class="btn secondary" type="button" id="symptoms-add">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Add
+        </button>
+      </div>
+      <p class="sr-only" id="symptoms-live" role="status"></p>
+      <div id="symptoms-today-body" class="symptoms-body"></div>
+    </section>
+
     <!-- Meal guidance (js/views/guidance.js): what fits now, plan the day, treating a low -->
     <section class="card guidance-today" id="guidance-today" aria-labelledby="guidance-today-h" hidden>
       <div class="card-head">
@@ -503,6 +517,14 @@
       <div id="period-body" class="period-body"></div>
       <div id="period-interdialytic" class="period-inter" hidden></div>
       <ul id="period-notes" class="period-notes"></ul>
+    </section>
+    <!-- Symptom days over the chosen period (js/views/symptoms.js): a list, not a chart -->
+    <section class="card symptoms-card" id="symptoms-trends" aria-labelledby="symptoms-trends-h">
+      <div class="card-head">
+        <h3 id="symptoms-trends-h" class="card-title">Symptoms</h3>
+        <span class="muted small" id="symptoms-trends-sub"></span>
+      </div>
+      <div id="symptoms-trends-body" class="symptoms-body"></div>
     </section>
     <p class="muted small chart-legend">
       Daily totals against your target (dashed line). Bars:
@@ -1623,6 +1645,56 @@
   </form>
 </dialog>
 
+<!-- ===================== SYMPTOM SHEET (js/views/symptoms.js: add or edit one symptom; nothing is saved until Save) ===================== -->
+<dialog id="sheet-symptom" class="sheet" aria-labelledby="sheet-symptom-title" aria-describedby="sheet-symptom-sub">
+  <form method="dialog" class="sheet-form" id="symptom-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-symptom-title" class="sheet-title">Add a symptom</h2>
+        <div class="sheet-sub" id="sheet-symptom-sub">A record for you and your care team. The app does not say what a symptom means.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-error" id="symptom-error" role="alert" hidden></div>
+      <div class="field">
+        <label for="symptom-kind">Symptom</label>
+        <select id="symptom-kind"></select>
+      </div>
+      <div class="field" id="symptom-label-field" hidden>
+        <label for="symptom-label">Name it</label>
+        <input id="symptom-label" type="text" maxlength="60" autocomplete="off" placeholder="for example dry mouth" aria-describedby="symptom-label-hint">
+        <span class="hint" id="symptom-label-hint">Up to 60 characters.</span>
+      </div>
+      <fieldset class="field">
+        <legend>Severity</legend>
+        <div class="segmented meal-seg sev-seg" id="symptom-severity">
+          <input type="radio" name="symptom-severity" id="symptom-sev-1" value="1"><label for="symptom-sev-1">Mild</label>
+          <input type="radio" name="symptom-severity" id="symptom-sev-2" value="2"><label for="symptom-sev-2">Moderate</label>
+          <input type="radio" name="symptom-severity" id="symptom-sev-3" value="3"><label for="symptom-sev-3">Severe</label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="symptom-date">Date</label>
+        <input id="symptom-date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="symptom-note">Note (optional)</label>
+        <textarea id="symptom-note" rows="2" maxlength="300" aria-describedby="symptom-note-hint"></textarea>
+        <span class="hint" id="symptom-note-hint">Up to 300 characters, for example when it started.</span>
+      </div>
+      <div id="symptom-flag" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="symptom-save">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===================== GUIDANCE SHEET (js/views/guidance.js fills it: plan the day, a meal that fits, treating a low) ===================== -->
 <dialog id="sheet-guidance" class="sheet guidance-sheet" aria-labelledby="sheet-guidance-title" aria-describedby="sheet-guidance-sub">
   <form method="dialog" class="sheet-form" novalidate>
@@ -1719,6 +1791,7 @@
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/lab_import.js"></script>
 <script src="js/engine/menu_link.js"></script>
+<script src="js/engine/symptoms.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -1743,6 +1816,7 @@
 <script src="js/mock/barcode.js"></script>
 <script src="js/mock/profile.js"></script>
 <script src="js/mock/labs.js"></script>
+<script src="js/mock/symptoms.js"></script>
 <script src="js/mock/log.js"></script>
 <script src="js/mock/meals.js"></script>
 <script src="js/mock/guidance.js"></script>
@@ -1756,6 +1830,7 @@
 <script src="js/views/plan.js"></script>
 <script src="js/views/menuplan.js"></script>
 <script src="js/views/trends.js"></script>
+<script src="js/views/symptoms.js"></script>
 <script src="js/views/labs.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>

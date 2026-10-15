@@ -1,7 +1,7 @@
 """A person's own data: the export archive and account deletion (note 07 §4.14).
 
 * :func:`build_export` returns a ``.zip`` with ``export.json`` (the documented shape below),
-  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv`` and ``README.txt``. It never contains
+  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv``, ``symptoms.csv`` and ``README.txt``. It never contains
   passwords, session data or API keys (not even their last four characters). Every CSV cell that a
   spreadsheet would run as a formula is escaped (:func:`app.log.csv_safe`).
 * :func:`delete_user` audits, then ``DELETE FROM users`` (every personal table cascades: entries,
@@ -13,11 +13,16 @@
 
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
-     "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
+     "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "ai_audit", "activity",
      "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
 
 ``food_preferences`` (v0.3, schema step 5) lists the foods the person marked "Not for me" in meal
 guidance: ``[{food_id, name, preference, created_at}]``.
+
+``symptoms`` (schema step 15) lists the symptoms the person recorded, oldest day first: ``[{id, date, symptom, label,
+severity, note, created_at}]`` (the stored columns; ``severity`` is 1 mild, 2 moderate, 3 severe; ``label`` is the
+person's own name for an ``other``). It is an optional list added to version 1: an older file without it still imports,
+and the version stays 1 because nothing that was there changed.
 
 Import (``POST /api/me/import``, :mod:`app.data_import`) reads this same file. So that a food can be found on
 another server, ``linked_foods`` items also carry ``gtin`` and ``food`` (the whole food record, shaped like a
@@ -60,6 +65,7 @@ This archive holds everything this server stores about your account, in two form
 * foods.csv    - foods you created, and shared foods you imported or scanned.
 * meals.csv    - your saved meals, one line per food.
 * labs.csv     - your lab results (empty if you have none).
+* symptoms.csv - the symptoms you recorded, with date and severity (1 mild, 2 moderate, 3 severe; empty if none).
 
 export.json also holds your AI activity (what the app sent to an AI provider for you and what came
 back, for as long as the server keeps it; never photos), your daily AI call counts and the AI
@@ -161,6 +167,15 @@ def _lab_results(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]
     return export_rows(conn, user_id)
 
 
+def _symptoms(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """The symptoms log (schema step 15), oldest day first; [] on an older schema."""
+    if not table_exists(conn, "symptoms"):
+        return []
+    from .symptoms import export_rows
+
+    return export_rows(conn, user_id)
+
+
 def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
     from .log import csv_safe
 
@@ -200,6 +215,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "linked_foods": _linked_foods(conn, uid),
         "meal_templates": [row_to_template(conn, r) for r in templates],
         "lab_results": _lab_results(conn, uid),
+        "symptoms": _symptoms(conn, uid),
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
         "activity": list_events(conn, actor_user_id=uid, actions=USER_VISIBLE_ACTIONS, limit=500),
         "food_preferences": _food_preferences(conn, uid),
@@ -240,6 +256,10 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
 
     labs_csv = _csv(LAB_CSV_COLUMNS, ([lab.get(k) for k in LAB_CSV_COLUMNS] for lab in data["lab_results"]))
 
+    from .symptoms import CSV_COLUMNS as SYMPTOM_CSV_COLUMNS
+
+    symptoms_csv = _csv(SYMPTOM_CSV_COLUMNS, ([row.get(k) for k in SYMPTOM_CSV_COLUMNS] for row in data["symptoms"]))
+
     buffer = io.BytesIO()
     stamp = datetime.now(timezone.utc).timetuple()[:6]
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -249,6 +269,7 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
             ("foods.csv", foods_csv),
             ("meals.csv", meals_csv),
             ("labs.csv", labs_csv),
+            ("symptoms.csv", symptoms_csv),
             ("README.txt", README),
         ):
             info = zipfile.ZipInfo(name, date_time=stamp)

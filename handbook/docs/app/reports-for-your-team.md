@@ -26,6 +26,7 @@ every entry ([architecture contract][ARCH]).
 | Charts for 7, 14 or 30 days | **Trends** | spotting patterns: weekends, dialysis days, a food that keeps coming back |
 | Export CSV | **Trends** → **Export CSV** | the dietitian's own analysis in a spreadsheet |
 | Last 7 days strip | bottom of **Today** | a quick look between visits |
+| Symptoms | **Today** → **Symptoms**; **Trends** → **Symptoms** | showing how a symptom went, with its dates |
 
 ## The period summary
 
@@ -66,13 +67,32 @@ Text (food names, notes) that starts with `=`, `+`, `-`, `@`, a tab or a line br
 apostrophe in the file, so a spreadsheet does not run it as a formula ([architecture contract][ARCH];
 [design note 03][NOTE03]).
 
+## Symptoms you write down
+
+**Today → Symptoms → Add** records a symptom for a day. Pick it from the list (swelling, itching, tiredness,
+cramps, nausea, breathlessness, poor appetite, or **Other** with a name of your own, up to 60 characters),
+choose **Mild**, **Moderate** or **Severe**, and add a note if you like, for example when it started. You can
+**Edit** or **Delete** an entry, and you can add one for today or for a day that has passed. **Trends →
+Symptoms** lists what you recorded in the days on screen: for each symptom the number of days, the worst
+severity and the dates, so you can show your care team how it went. The export has them too (`symptoms.csv` and
+`export.json`), and they need your connection to the server: they are not saved while you are offline.
+
+The app records and shows them. **It does not say what a symptom means, what causes it or what to do about
+it**; that is for your care team. Two symptoms are different, because the [Get help now](../get-help-now.md)
+page lists them. It lists "severe breathlessness" and "sudden breathlessness or fainting with no clear cause"
+under **Call 911 now**, and "new swelling of the legs, ankles or face" under **Call your care team today**.
+When you record one of those, the app shows the handbook's own words and a link to that page, and a severe
+one stands out. Itch, tiredness, poor appetite or nausea, and muscle cramps are on that page under
+**Mention at your next visit**; it adds: "If any of these get worse quickly, do not wait: call today."
+Symptoms are never sent to an AI provider or an assistant ([Privacy and your data](privacy.md)).
+
 ## What to do before a visit
 
 - [ ] Ask your dietitian which days they want to see, and how they want the file (printed, on your
       phone, or through the clinic's patient portal).
 - [ ] Log those days **completely**: drinks, sauces, snacks and low treatments too.
 - [ ] Delete planned entries you did not eat, and tap **Eaten** on the ones you did.
-- [ ] Open **Trends**, pick the range and take a screenshot of the period summary.
+- [ ] Open **Trends**, pick the range and take a screenshot of the period summary and of the **Symptoms** list.
 - [ ] Export the CSV for the same range.
 - [ ] Bring your lab results and your medicine list ([Your medicine list](../medicines/your-medicine-list.md)).
 

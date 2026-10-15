@@ -1,0 +1,58 @@
+/* Kidney Diet Log — symptoms log: the Today card, the add / edit sheet and the Trends list (js/views/symptoms.js).
+   Light and dark come from the tokens in base.css. Severity is always written as a word; the colour and the height of a
+   mark only repeat it. */
+
+.symptoms-card .card-head { align-items: center; }
+.symptoms-card .card-head .btn { min-height: 36px; padding: 0 12px; gap: 6px; }
+.symptoms-card .card-head .btn svg { width: 18px; height: 18px; }
+.symptoms-body:empty { display: none; }
+.symptoms-empty { margin: 0; color: var(--text-2); font-size: 0.9rem; }
+
+/* ---------- Today: the day's entries ---------- */
+.sym-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sym-item { padding: 8px 0; min-width: 0; }
+.sym-item + .sym-item { border-top: 1px solid var(--border); }
+.sym-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.sym-name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.sym-sev {
+  font-size: 0.78rem; font-weight: 700; line-height: 1; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border);
+}
+.sym-sev.sev-2 { background: var(--caution-tint); color: var(--caution-text); border-color: transparent; }
+.sym-sev.sev-3 { background: var(--over-tint); color: var(--over-text); border-color: transparent; }
+.sym-note { margin: 2px 0 0; color: var(--text-2); font-size: 0.88rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+.sym-actions { display: flex; gap: 0 2px; margin-left: auto; }
+.sym-main .confirm-row { flex-basis: 100%; }
+
+/* The handbook's line for a symptom on its Get help now page. A severe one is a block that stands out. */
+.sym-flag {
+  display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 0; padding: 8px 10px; font-size: 0.88rem;
+  border-radius: var(--radius-sm); background: var(--surface-2); border-left: 4px solid var(--caution); color: var(--text);
+}
+.sym-flag .rating { width: 18px; height: 18px; margin-top: 1px; }
+.sym-flag > span { min-width: 0; overflow-wrap: anywhere; }
+.sym-flag.prominent { background: var(--over-tint); border-left-color: var(--over); font-size: 0.95rem; padding: 10px 12px; }
+.sym-flag.prominent .rating { width: 22px; height: 22px; }
+.sym-flag.prominent b { color: var(--over-text); }
+.sym-flag .learn-more { font-weight: 600; white-space: nowrap; }
+#symptom-flag:empty { display: none; }
+#symptom-flag .sym-flag { margin-top: 0; }
+
+/* ---------- the sheet ---------- */
+.sev-seg { grid-template-columns: repeat(3, 1fr); }
+#symptom-note { resize: vertical; min-height: calc(var(--tap) * 1.5); font: inherit; }
+
+/* ---------- Trends: symptom days over the period ---------- */
+.sym-groups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sym-group { padding: 10px 0; min-width: 0; }
+.sym-group + .sym-group { border-top: 1px solid var(--border); }
+.sym-group-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.sym-group-name { font-weight: 600; overflow-wrap: anywhere; }
+.sym-group-count { color: var(--text-2); font-size: 0.88rem; }
+.sym-strip { display: flex; align-items: flex-end; gap: 2px; height: 24px; margin: 6px 0 2px; }
+.sym-strip i { display: block; flex: 1 1 0; min-width: 3px; height: 4px; border-radius: 2px; background: var(--track); }
+.sym-strip i[data-sev="1"] { height: 9px; background: var(--accent); }
+.sym-strip i[data-sev="2"] { height: 16px; background: var(--accent); }
+.sym-strip i[data-sev="3"] { height: 24px; background: var(--accent); }
+.sym-dates { margin: 2px 0 0; color: var(--text-2); font-size: 0.85rem; overflow-wrap: anywhere; }
+.sym-axis { display: flex; justify-content: space-between; gap: 8px; color: var(--text-3); font-size: 0.75rem; margin: 0; }

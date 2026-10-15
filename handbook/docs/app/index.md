@@ -35,6 +35,7 @@ that server is called the **admin** in these pages.
 | Ask "what fits in my dinner?" | **What fits now** on **Add**, **What fits** on **Today** | [Meal guidance](guidance.md) |
 | Get optional AI ideas | **Settings** → **AI ideas** | [Optional AI](ai.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
+| Write down a symptom, and show how it went | **Today** → **Symptoms**, then **Trends** | [Reports for your care team](reports-for-your-team.md#symptoms-you-write-down) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |
 | See, export or delete your data | **Settings** → **Account** | [Privacy and your data](privacy.md) |
 
