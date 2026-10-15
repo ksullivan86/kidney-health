@@ -62,7 +62,7 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 
 ## Optional AI (note 04)
 
-* Read-only tool calling (for example `search_foods(q)` run by the server, at most 3 calls) for presets whose connection test confirms tool support — note 04 R14 ("Deferred (v0.4+)").
+* Read-only tool calling (for example `search_foods(q)` run by the server, at most 3 calls) for presets whose connection test confirms tool support — note 04 R14 ("Deferred (v0.4+)"). **Partly done (2026-10-15):** the Ask screen already lets the model call read-only tools that the server runs (`get_today`, `search_foods`, `check_meal`; at most 6 calls) through the app's own JSON loop, which works with every provider (ARCHITECTURE "The loop"). Not built: provider-native tool calling, and tools for the one-shot features (photos, meal ideas, describe a meal).
 * kidney-health as an MCP server for Hermes Agent (streamable HTTP, a per-person bearer token, read-only tools returning rule-checked results only) — note 04 R14 and §3.3 H5. **Done (2026-10-14)**: see "An assistant you can talk to" below and [`assistant.md`](assistant.md). Remove this line when the release is tagged.
 * Streaming status events ("contacting model… checking…") for perceived latency — note 04 R14.
 * A free-text "ask" box, only after the golden set grows a large safety section and live evaluations show ≥ 99 % correct refusals — note 04 R14. **Built (2026-10-15) as the Ask screen, off by default** ([`assistant.md`](assistant.md)); the live evaluation that this line makes the condition (`python scripts/ai_eval.py --chat`) is still the owner's to run. Remove this line when the release is tagged.

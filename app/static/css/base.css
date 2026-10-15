@@ -388,7 +388,7 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   z-index: 60; background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 0.9rem;
   max-width: min(92vw, 480px); box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
 }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); } /* text only: never takes a tap from what is under it */
 .toast.error { background: var(--over-solid); color: #fff; }
 .toast.ok { background: var(--ok-solid); color: #fff; }
 

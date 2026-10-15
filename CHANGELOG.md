@@ -9,6 +9,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **A message at the bottom of the screen no longer blocks a tap.** The short message that appears for a few seconds
+  (for example "2 entries were changed on another device" after you come back online) could cover the conflict
+  card's buttons on a phone and swallow the tap; taps now go through to what is under it.
 * **The online demo can keep your data in your browser (you choose).** The demo's banner has a new button, **Keep my data in
   this browser**. It opens a sheet that says plainly that your data stays only in this browser on this device and nothing is
   sent anywhere; that clearing site data, private browsing, or the browser deciding to free up space can delete it; that you

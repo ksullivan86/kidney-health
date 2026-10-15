@@ -431,7 +431,7 @@ targets and names no carbohydrate per meal in the suggestion (every value is kep
 like any nutrient. Before a diabetes type is chosen the app uses type 1, so the meal goals stay. The "Not
 medical advice" note follows the profile too (part 2): Profile's note below the form hides its insulin clause
 (`#pf-disclaimer-diabetes`) with the form's diabetes select, and Settings → About words the sentence from the
-saved profile. **The AI prompts follow the profile too (part 3, `PROMPT_VERSION` 2026-10-15.3; "Prompts, answers and the guard" below).** Still to do (ROADMAP): the owner's live golden-set run for that version and the handbook framing.
+saved profile. **The AI prompts follow the profile too (part 3, `PROMPT_VERSION` 2026-10-15.3, now 2026-10-15.4 with the lab report task line; "Prompts, answers and the guard" below).** Still to do (ROADMAP): the owner's live golden-set run for the current version and the handbook framing.
 
 **Tolerances (v0.3.1).** A meal's carbohydrate alert fires only when the meal is more than the person's
 carbohydrate tolerance (`guidance.carb_tolerance_g`, 5–20 g, default 10; Smart et al. 2009/2012, note 06 F4,
@@ -2812,7 +2812,7 @@ from its submit handler and keeps the list in memory); `tools/e2e/menuplan.py` (
 
 ## Symptoms log (schema step 15)
 
-ROADMAP "Symptoms log". A person records a symptom with a date and a severity; Today and Trends show it and the export
+Was the ROADMAP item "Symptoms log" (done 2026-10-15, so no longer listed there). A person records a symptom with a date and a severity; Today and Trends show it and the export
 holds it. **The app records and shows. It never suggests a cause, a treatment or a dose**; the one thing it adds is a
 pointer to the handbook for the symptoms that page lists as warning signs. Code: `app/symptoms.py` (router, tables, row
 shape), the `Symptom*` models in `app/models.py`, `app/migrations/m015_symptoms.py`.
@@ -2894,7 +2894,7 @@ the demo): no sideways scroll, no console error, no request to another host.
 
 ## Visit prep
 
-ROADMAP "Visit prep". A printable one-page summary for an appointment, made **in the browser from reads the app already
+Was the ROADMAP item "Visit prep" (done 2026-10-15, so no longer listed there). A printable one-page summary for an appointment, made **in the browser from reads the app already
 has**: no route, no table, no migration, no new server code, no twin to keep in step. Code: `js/views/visit.js` (the view
 `#visit`), `js/engine/visitprep.js` (`KH.visitPrep`, pure), `css/visit.css`, the `#view-visit` section of `index.html`,
 `visit` in `VIEWS` (`js/core.js`). It is reached from **Trends** (the period summary card's "Get ready for a visit" button);
