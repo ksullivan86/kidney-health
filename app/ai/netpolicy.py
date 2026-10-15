@@ -25,6 +25,11 @@ metadata service, a LAN admin panel or the Kubernetes API, and a person (with
 3. **A person's own URL** (scope ``user``): https on port 443 to global addresses only;
    ``AI_PRIVATE_HOSTS`` never applies.
 
+4. **A local provider** (scope ``local``, privacy tiers tier 1: the shared provider an admin gave the role
+   "local"): everything a shared provider must pass, and its host must be private by this policy
+   (:func:`is_private_host`) and **every** resolved address must be private, so a name that later resolves to
+   a public address is refused instead of sent.
+
 There is no wildcard and no "allow all private" switch: ``*`` and ``/0`` networks are refused, and the
 retired ``ALLOW_PRIVATE_AI_HOSTS`` stops the server at start-up (``app/config.py``).
 """
@@ -40,7 +45,7 @@ from ..egress import METADATA_ADDRESSES, embedded_ipv4
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
-Scope = Literal["shared", "user"]
+Scope = Literal["shared", "user", "local"]
 Verdict = Literal["global", "private", "denied"]
 
 # Coarse error categories (R5 step 6). Bodies from user-configured URLs are never echoed, so these
@@ -368,6 +373,19 @@ def check_url(url: BaseUrl, scope: Scope, policy: NetPolicy) -> None:
             raise PolicyError("blocked_address", f"{url.host_port} is private; add it to AI_PRIVATE_HOSTS to use it")
     if url.scheme == "http" and not may_use_http(url, policy):
         raise PolicyError("blocked_address", f"http:// is only allowed for hosts in AI_PRIVATE_HOSTS; use https for {url.host_port}")
+    if scope == "local" and not is_private_host(url, policy):
+        raise PolicyError("blocked_address", f"{url.host_port} is not a private host (AI_PRIVATE_HOSTS), so it cannot be the local AI")
+
+
+def is_private_host(url: BaseUrl, policy: NetPolicy) -> bool:
+    """Does this policy treat the base URL as a private host? An IP literal must be a private address (not a
+    public one, never a denied one) listed in ``AI_PRIVATE_HOSTS``; a name must be listed there by name and port.
+    No DNS is used: a name that merely resolves into a listed network does not count (list it by name).
+    This is the test for giving a shared provider the role "local"."""
+    hosts = policy.private_hosts
+    if url.ip is not None:
+        return classify(url.ip, policy) == "private" and hosts.allows_address(url.ip, url.port)
+    return hosts.allows_name(url.host, url.port)
 
 
 def may_use_http(url: BaseUrl, policy: NetPolicy) -> bool:
@@ -393,6 +411,8 @@ def check_address(url: BaseUrl, ip: IPAddress, scope: Scope, policy: NetPolicy) 
     allowlisted = policy.private_hosts.allows_name(url.host, url.port) or policy.private_hosts.allows_address(ip, url.port)
     if verdict == "private" and not allowlisted:
         raise PolicyError("blocked_address", f"{url.host_port} resolves to a private address; add it to AI_PRIVATE_HOSTS")
+    if scope == "local" and verdict != "private":
+        raise PolicyError("blocked_address", f"{url.host} resolves to a public address; the local AI is never contacted outside the private network")
     if url.scheme == "http" and not allowlisted:
         raise PolicyError("blocked_address", f"http:// is only allowed for hosts in AI_PRIVATE_HOSTS ({url.host_port} is not)")
 

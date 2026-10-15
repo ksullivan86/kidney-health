@@ -1,5 +1,5 @@
 /* Optional AI (js/views/ai.js): the Add view's AI buttons, the AI sheets (meal ideas, describe a meal,
-   read a label, plate photo), consent and "What will be sent?", and Settings → AI ideas. */
+   read a label, plate photo), consent and "What will be sent?", and Settings → AI ideas; plus which AI each feature uses (ai_routing.js). */
 
 /* Add view */
 .ai-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -71,3 +71,18 @@
 .ai-admin .setting-item .row-title { font-weight: 600; }
 .ai-pad { padding: 8px 12px; margin: 0; }
 .usage .num { font-variant-numeric: tabular-nums; }
+
+/* Which AI does each feature use? (js/views/ai_routing.js) */
+.ai-routing { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.ai-routing-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ai-routing-table th, .ai-routing-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ai-routing-table thead th { text-align: center; font-weight: 600; }
+.ai-routing-table thead th:first-child, .ai-routing-table tbody th { text-align: left; }
+.ai-routing-table tbody th { font-weight: 500; overflow-wrap: anywhere; }
+.ai-routing-table td { text-align: center; }
+.ai-routing-table input[type="radio"] { width: 20px; height: 20px; }
+.ai-route-lock { display: block; font-weight: 400; }
+.ai-routing-warnings { display: flex; flex-direction: column; gap: 8px; }
+.ai-routing-warnings p { margin: 0; }
+.ai-routing-lines { margin: 4px 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.ai-routing-person { margin-top: 12px; }

@@ -120,7 +120,7 @@ async def transcribe(request: Request, user: CurrentUser, seconds: Annotated[int
     ``seconds`` is the page's own measure of the length, used only for the activity row's coarse length bucket."""
     cfg = voice_config(request, conn)
     assert cfg is not None  # require_voice
-    resolved = await run_in_threadpool(_resolve, request, conn, user)
+    resolved = await run_in_threadpool(_resolve, request, conn, user, "chat")  # voice is part of Ask: it follows the chat route
     if not resolved.ok or resolved.cfg is None:
         raise unavailable(resolved.reason or "not_configured")
     kind = clip_headers(request, cfg.max_audio_bytes)

@@ -15,7 +15,7 @@ from typing import Any, Iterator
 
 import pytest
 
-from ai_support import FakeProvider, attach, chat
+from ai_support import LEGACY_ROUTING, FakeProvider, attach, chat
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from app.config import AiEnv, Settings
 from app.imagecheck import check_jpeg
@@ -48,7 +48,7 @@ def settings_for(tmp_path: Path, foods_json: Path, **ai: Any) -> Settings:
 
 
 def enable(client: TestClient, **extra: Any) -> None:
-    r = client.patch("/api/admin/settings", json={"ai.enabled": True, **extra})
+    r = client.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, **extra})
     assert r.status_code == 200, r.text
 
 

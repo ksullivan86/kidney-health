@@ -33,7 +33,7 @@ from typing import Any, Iterator
 import httpx2
 import pytest
 
-from ai_support import FakeProvider, attach, chat
+from ai_support import LEGACY_ROUTING, FakeProvider, attach, chat
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from app.config import AiEnv
 from app.main import create_app
@@ -70,7 +70,7 @@ def golden(tmp_path_factory) -> Iterator[tuple[TestClient, TestClient]]:
                                                          model="gpt-6-luna", vision_model="gpt-6-luna"))
     with TestClient(create_app(settings), base_url=HTTPS_URL) as admin:
         sign_in(admin)
-        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, "ai.shared_daily_limit": 0, "ai.vision_plate_enabled": True})
+        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.shared_daily_limit": 0, "ai.vision_plate_enabled": True})
         assert r.status_code == 200, r.text
         sam = add_user(admin)
         yield admin, sam

@@ -46,6 +46,11 @@ def chat(content: Any, *, finish: str = "stop", refusal: str | None = None, usag
                      "usage": {"prompt_tokens": usage[0], "completion_tokens": usage[1], "total_tokens": sum(usage)}}}
 
 
+# Privacy tiers, tier 1: a fresh database routes every feature to a local AI (off when there is none). The older tests
+# were written for one shared provider serving everything, which is the setting "any" (what an upgraded server keeps).
+LEGACY_ROUTING = {f"ai.route.{feature}": "any" for feature in ("photos", "meal_ideas", "describe", "chat")}
+
+
 class FakeProvider:
     """Answers queued fixture items in order (or ``route(request)`` when set) and records each request.
 
@@ -123,5 +128,32 @@ def attach(app: Any, provider: FakeProvider, *, reprobe: bool = False) -> Iterat
     state.auto_reprobe = reprobe
     try:
         yield provider
+    finally:
+        state.client.transport_factory, state.client._sleep, state.auto_reprobe = old_factory, old_sleep, old_reprobe
+
+
+@contextmanager
+def attach_routed(app: Any, *, local: FakeProvider, cloud: FakeProvider, own: FakeProvider | None = None,
+                  local_host: str = "ollama.lan") -> Iterator[None]:
+    """Like :func:`attach`, with a different fake behind each destination (privacy tiers): the host named
+    ``local_host`` (and any call made in the ``local`` network scope), a person's own provider (scope ``user``),
+    and everything else (the cloud). A fake that is never reached has ``requests == []``."""
+    state = app.state.ai
+    old_factory, old_sleep, old_reprobe = state.client.transport_factory, state.client._sleep, state.auto_reprobe
+
+    def factory(base: Any, scope: Any, policy: Any) -> Any:
+        if scope == "user":
+            target = own or cloud
+        elif scope == "local" or base.host == local_host:
+            target = local
+        else:
+            target = cloud
+        return target.factory(base, scope, policy)
+
+    state.client.transport_factory = factory
+    state.client._sleep = no_sleep
+    state.auto_reprobe = False
+    try:
+        yield
     finally:
         state.client.transport_factory, state.client._sleep, state.auto_reprobe = old_factory, old_sleep, old_reprobe

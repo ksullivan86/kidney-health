@@ -9,6 +9,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Settings → AI ideas says where each AI feature runs.** When your admin keeps an AI at home as well as one in the
+  cloud, one line per feature (photos, meal ideas, describing a meal, Ask) says "Runs on your local AI (host)", "Runs on
+  a cloud AI outside your network", or that your admin switched it off (off is off for everyone). A feature that moves
+  to another AI asks for your consent again for that AI. Your own key stays your own choice. See
+  [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
 * **Talk to Ask (when the admin sets up speech to text).** A **microphone** button next to Send: tap, speak, tap again
   (a minute at most). The first time, a sheet says where your recording goes ("Your recording is sent to <host> to turn it
   into text, then deleted. Nothing is kept.") and nothing is recorded before you agree. **The words appear in the question
@@ -145,6 +150,22 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Which AI does each feature use? (privacy tiers, tier 1).** You can now keep **two shared AI providers at once**, a
+  *local* one on your own network (Ollama on a home GPU) and a *cloud* one, and pin each feature (**photos**, **meal
+  ideas**, **describe a meal**, **Ask**) to *local*, *cloud* or *off*: Server administration → AI providers → *Which AI
+  does each feature use?*, the settings `ai.route.*`, or `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`,
+  `AI_ROUTE_CHAT`. **The default is the least-trusting one: every feature is local, so with no local AI a feature is off
+  until you pin it to cloud.** Only a provider on a private host (`AI_PRIVATE_HOSTS`; a name must be listed by name) can be
+  the local AI, the server re-checks that before each call and refuses to connect to the local AI on a public address,
+  and the table warns "this sends … to <host>, outside your network" before a feature is pinned to the cloud. The
+  environment provider takes a role with `AI_PROVIDER_ROLE=local|cloud` (the Ollama overlay `deploy/compose.ai-ollama.yaml`
+  sets `local`). **Upgrading changes nothing:** a server that already has a shared provider starts every feature on
+  `any` (the old rule: the provider each person chose), and the table says "Routing is not set up yet" until you
+  choose; a new server starts on the defaults. A person's own key stays their choice; `off` is off for everyone. Consent,
+  quota and the AI activity list follow the provider a feature uses, so a feature moved to another provider asks for
+  consent again. The Ask microphone is not routed: it belongs to Ask (its recording goes to the transcription server, and
+  Ask `off` takes it along). No schema change. [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use),
+  [docs/privacy.md](docs/privacy.md).
 * **Voice input for Ask** is a new switch, **off by default**: Server administration → Server settings → Optional AI →
   *Voice input for Ask (a microphone button)*, or `AI_VOICE_ENABLED=true`. It needs Ask on and **a transcription server you
   set up**: `STT_BASE_URL` (one OpenAI-compatible `/v1/audio/transcriptions` endpoint, base ending in `/v1`), `STT_MODEL`,
@@ -261,6 +282,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* Privacy tiers, tier 1: `app/ai/routing.py` (roles, `resolve_feature`, the status and admin views, the once-only
+  `initialise`), the network scope `local` in `app/ai/netpolicy.py` (`is_private_host`) with `ProviderConfig.local_only`,
+  `GET`/`PUT /api/admin/ai-routing`, six `ai.route.*` registry keys (with their twin and vectors), `js/views/ai_routing.js`.
+  Every feature resolves through `routes._resolve(request, conn, user, feature)`. The older AI tests set the routing to `any`
+  with `tests/ai_support.py` `LEGACY_ROUTING`; the new ones are `tests/test_ai_routing.py`, `tests/test_ai_routing_ui.py` and
+  `tests/js/routing_page.mjs`.
 * Voice for Ask is `app/ai/stt.py` (configuration, clip checks, the multipart call, consent and limit helpers; pure),
   `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`,
   `js/views/ask-voice.js` and `css/ask-voice.css` (attached to Ask by two hook lines in `ask.js`), the voice consent text and

@@ -106,7 +106,7 @@ def _vision_config(request: Request, conn: sqlite3.Connection, user: User, *, pl
     state = ai_state(request)
     if plate and not state.store.get(conn, "ai.vision_plate_enabled"):
         raise ApiProblem(503, "Plate photos are switched off on this server.", reason="plate_disabled")
-    resolved = _resolve(request, conn, user)
+    resolved = _resolve(request, conn, user, "photos")
     if not resolved.ok:
         raise unavailable(resolved.reason or "not_configured")
     cfg = resolved.cfg

@@ -434,6 +434,7 @@ def main(argv: list[str] | None = None) -> int:
     key_file = out / "stt_key"
     key_file.write_text("fake-key-0123456789abcdef\n", encoding="utf-8")
     env = {"AI_ENABLED": "true", "AI_CHAT_ENABLED": "true", "AI_PROVIDER": "openai_compatible",
+           "AI_PROVIDER_ROLE": "local",  # the fake AI is the local AI
            "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1", "AI_MODEL": "fake-text",
            "STT_BASE_URL": f"http://127.0.0.1:{args.stt_port}/v1", "STT_MODEL": "fake-whisper", "STT_API_KEY_FILE": str(key_file),
            "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port},127.0.0.1:{args.stt_port}", "AI_SHARED_DAILY_LIMIT": "0",

@@ -72,6 +72,12 @@ class ProviderConfig:
     max_response_bytes: int = 262_144
     key_scope: Literal["own", "shared"] = "shared"
     safety_identifier: str | None = field(default=None, repr=False)
+    local_only: bool = False  # the shared provider holding the role "local": the transport refuses any public address
+
+    @property
+    def net_scope(self) -> Scope:
+        """The network-policy scope of its calls: ``local`` makes the transport refuse any address that is not private."""
+        return "local" if self.local_only else self.scope
 
     @property
     def preset_def(self) -> Preset:
@@ -316,7 +322,7 @@ class ChatClient:
     async def request(self, cfg: ProviderConfig, method: str, path: str, body: Any | None = None, *,
                       timeout_s: float | None = None, error_snippet: Callable[[bytes], None] | None = None) -> HttpResult:
         return await send_json(
-            cfg.base, cfg.scope, self.policy, method=method, path=path, headers=headers_for(cfg, self.app_version),
+            cfg.base, cfg.net_scope, self.policy, method=method, path=path, headers=headers_for(cfg, self.app_version),
             body=body, read_timeout_s=timeout_s or cfg.timeout_s, max_bytes=cfg.max_response_bytes,
             transport_factory=self.transport_factory, error_snippet=error_snippet,
         )

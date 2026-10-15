@@ -28,6 +28,9 @@ services:
       AI_VISION_MODEL: qwen3-vl:8b
       # The SSRF policy blocks private addresses unless listed here (env-only, no wildcards).
       AI_PRIVATE_HOSTS: ollama:11434
+      # This Ollama is the local AI: photos, meal ideas, describing a meal and Ask all run on it by default
+      # (docs/ai.md "Which AI does each feature use?"). A cloud AI is added in Server administration only if you want one.
+      AI_PROVIDER_ROLE: local
     networks:
       - default
       - ai

@@ -96,6 +96,8 @@
     deleteProvider: (id) => request('DELETE', `/api/admin/ai-providers/${id}`),
     probeProvider: (id) => request('POST', `/api/admin/ai-providers/${id}/probe`),
     usage: () => request('GET', '/api/admin/ai-usage?days=30'),
+    routing: () => request('GET', '/api/admin/ai-routing'),
+    setRouting: (b) => request('PUT', '/api/admin/ai-routing', b),
     probeVoice: () => request('POST', '/api/admin/ai-voice/probe'),
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
     createFood: (b) => request('POST', '/api/foods', b),
@@ -246,7 +248,7 @@
   function renderDryRun(container, dry) {
     container.append(
       h('dl', { class: 'kv' },
-        h('div', { class: 'kv-row' }, h('dt', {}, 'Goes to'), h('dd', {}, `${dry.provider ? dry.provider.label : ''} · ${dry.host}`)),
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Goes to'), h('dd', {}, `${dry.provider ? dry.provider.label : ''} · ${dry.host}${dry.provider && dry.provider.local ? ' (your local AI, on your network)' : ''}`)),
         h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${dry.method} ${dry.destination}`)),
         dry.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, `${Math.round(dry.image_bytes / 1024)} KiB JPEG, ${dry.images.map((i) => `${i.width}×${i.height}`).join(', ')}, location and camera data removed`)) : null,
         dry.trimmed_candidates ? h('div', { class: 'kv-row' }, h('dt', {}, 'Left out'), h('dd', {}, `${dry.trimmed_candidates} lower-ranked foods, to fit the provider's prompt size`)) : null),
@@ -280,7 +282,7 @@
     const showEach = h('input', { type: 'checkbox', id: showId });
     body.append(...[ // an absent part is null: leave it out (append(null) would write the word "null")
       voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
-        ' at ', h('strong', { class: 'ai-host' }, consent.host), '.'),
+        ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
       note('caution', h('p', {}, consent.policy)),
       h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
@@ -298,9 +300,13 @@
 
   // Runs `send` once the person has agreed to send to this provider for `purpose` (409 → consent sheet,
   // then one more try); shows the request first when they asked for that. null = the person declined.
-  async function withConsent(purpose, send, preview, trigger) {
+  // `feature` (privacy tiers: photos, meal_ideas, describe or chat) names whose provider the consent is about, since two
+  // features of one purpose can run on different providers; it defaults to the purpose's usual feature.
+  const FEATURE_OF = { text: 'meal_ideas', photos: 'photos', chat: 'chat' };
+  async function withConsent(purpose, send, preview, trigger, feature = FEATURE_OF[purpose]) {
     const st = await status();
-    const given = st && st.consent && st.consent[purpose];
+    const route = st && st.routes && st.routes[feature];
+    const given = route ? route.consent : st && st.consent && st.consent[purpose];
     if (given && !given.skip_preview) {
       const dry = await preview();
       if (!dry || !dry.dry_run) return dry; // answered without AI (a low, a red flag, no targets): nothing to send
@@ -477,7 +483,7 @@
       if (!text.value.trim()) { showError(err, 'Write what you ate first.'); text.focus(); return; }
       btn.textContent = 'Asking…';
       try {
-        const answer = await withConsent('text', () => api.parseMeal(payload()), () => api.parseMeal(payload(), true), btn);
+        const answer = await withConsent('text', () => api.parseMeal(payload()), () => api.parseMeal(payload(), true), btn, 'describe');
         if (answer) renderParsed(out, answer, () => ({ date, meal: segValue(body, mealName), status: segValue(body, statusName) }));
       } catch (e) { if (!e.handled && !e.cancelled) showError(err, e); } finally { btn.textContent = 'Find foods'; }
     });
@@ -967,16 +973,19 @@
     opt.addEventListener('change', () => save({ opt_in: opt.checked }, opt.checked ? 'AI ideas are on for you.' : 'AI ideas are off for you. Nothing is sent.').catch(() => { opt.checked = !opt.checked; }));
     wrap.append(check('Use AI ideas', opt, 'Off by default. The app\'s own rules always run first and check every AI idea.'));
 
-    // Provider choice
+    // Provider choice. Once the admin has set up routing, which shared provider serves a feature is the admin's decision
+    // (the lines below say where each runs); the person's choice is then the server's AI or their own provider.
+    const routed = !!(me.routing && me.routing.mode === 'routed');
     const choices = [];
-    for (const p of me.shared) {
+    if (routed && me.shared.length) choices.push(['auto', 'The server\'s AI', 'Your admin decides which AI each feature uses (below).']);
+    else for (const p of me.shared) {
       choices.push([`shared:${p.id}`, `${p.label} (${p.host})`, `${p.policy}${p.usable ? '' : ' Switched off until its connection test passes.'}`]);
     }
     if (me.user_keys_allowed || me.own) choices.push(['own', 'My own provider and key', me.own ? `${me.own.label} (${me.own.host})` : 'Set it up below.']);
     if (choices.length) {
       const name = uid('ai-provider');
       const fs = h('fieldset', { class: 'field' }, h('legend', {}, 'Provider'));
-      const current = s.provider === 'auto' && me.shared.length ? `shared:${me.shared[0].id}` : s.provider;
+      const current = routed ? (s.provider === 'own' ? 'own' : 'auto') : (s.provider === 'auto' && me.shared.length ? `shared:${me.shared[0].id}` : s.provider);
       for (const [value, label, hint] of choices) {
         const id = uid('ai-prov');
         const radio = h('input', { type: 'radio', name, id, value, checked: value === current });
@@ -1001,6 +1010,8 @@
     if (me.daily_limit) wrap.append(h('p', { class: 'muted small' }, `Shared AI calls left today: ${me.remaining_today} of ${me.daily_limit}.`));
     if (me.chat_enabled) wrap.append(trustPart(me, save));
     wrap.append(msg, err);
+    const lines = KH.aiRouting ? KH.aiRouting.personLines(me.routing) : null;
+    if (lines) wrap.append(lines);
     if (me.user_keys_allowed || me.own) wrap.append(ownProviderPart(me));
     wrap.append(consentsPart(me), activityPart());
     return wrap;
@@ -1173,6 +1184,9 @@
       return box;
     }
     if (!data.writable) box.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so AI providers and AI settings can be set only with environment variables (docs/ai.md).')));
+    try { box.append(KH.aiRouting.adminPart(await api.routing(), refreshProviders)); } catch (err) {
+      box.append(h('p', { class: 'form-error' }, `Could not load the routing: ${err.detail || err.message}`));
+    }
     const list = h('div', { class: 'setting-list' });
     if (!data.providers.length) list.append(h('p', { class: 'muted' }, 'No shared provider yet. Add one below, or set AI_PROVIDER in the environment.'));
     for (const p of data.providers) list.append(providerRow(p, data));

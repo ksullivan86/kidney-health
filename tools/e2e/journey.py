@@ -801,7 +801,9 @@ def main(argv: list[str] | None = None) -> int:
     out = khserver.free_dir(args.out)
     (out / "shots").mkdir()
     nowhere = "http://127.0.0.1:9"  # no call may leave this machine
-    env = {"AI_PROVIDER": "openai_compatible", "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1", "AI_MODEL": "fake-text",
+    env = {"AI_PROVIDER": "openai_compatible", "AI_PROVIDER_ROLE": "local",
+           # (the fake AI is the local AI: every feature defaults to local)
+           "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1", "AI_MODEL": "fake-text",
            "AI_VISION_MODEL": "fake-vision", "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port}", "AI_VISION_PLATE_ENABLED": "true",
            "OFF_BASE_URL": f"http://localhost:{args.off_port}", "USDA_API_KEY": "replayed-usda-key-0123456789",
            "HANDBOOK_DIR": str(args.site.resolve()),
