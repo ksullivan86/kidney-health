@@ -5,8 +5,11 @@ stub provider that replays `model_outputs` (no network). The file name is the ca
 
 * `category`: one of `grounding`, `rules`, `safety_text`, `refusal`, `prefilter`, `injection`, `format`,
   `privacy`, `fallback`, `modes`, `vision`, `kidney_only` (a profile whose diabetes is "None": the prompts say kidney
-  disease only; the owner re-runs these live after a prompt change; the test checks every category has cases and that there are
-  at least 40).
+  disease only; the owner re-runs these live after a prompt change), `lab_report` (the test checks every category has cases and
+  that there are at least 40). A `lab_report` case has `feature: "lab_report"` and runs `POST /api/ai/read-lab-report` on a **local**
+  stub provider (the only kind that feature may use); `expect.rows` is `[analyte, value, unit, taken_on or null]` per proposed
+  row and `expect.dropped` the counts of lines the app left out. `scripts/ai_eval.py` skips these cases (it measures one,
+  possibly cloud, provider).
 * `fixture`: the person's profile and targets (`stage4`, `hd`, `tight` or an object), log entries
   (`[meal, food name, servings, status?, purpose?]`), earlier days (`history`), custom foods (theirs and
   another person's), AI and guidance settings, the meal and mode, the text (parse-meal) or the image

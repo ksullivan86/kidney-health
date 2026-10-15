@@ -53,6 +53,8 @@
   .ai-photo-main { flex: 1; }
 }
 .ai-file { min-height: var(--tap); }
+.ai-route-na { color: var(--text-2); text-align: center; }
+.ai-consent-notice p { margin: 0 0 8px; }
 .from-photo { text-decoration: underline dotted var(--accent); text-underline-offset: 3px; border-color: var(--accent); }
 .ai-tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: var(--accent-tint); color: var(--accent); }
 .ai-tag.est { background: var(--caution-tint); color: var(--caution-text); }

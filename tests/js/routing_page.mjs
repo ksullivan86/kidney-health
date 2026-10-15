@@ -153,4 +153,24 @@ const out = {};
   out.person = { lines: text(R.personLines(routing)), none: R.personLines(null), before: text(R.personLines({ ...routing, mode: 'as_before' })) };
 }
 
+// 6. Lab report photos are local or off only: the row offers those two choices and nothing else, and says so.
+{
+  const withLabs = data();
+  withLabs.features.push({ feature: 'labs', label: 'Lab report photos', sends: 'your photos of lab reports', route: 'local', source: 'default', locked_by_env: null, allowed: ['local', 'off'] });
+  FEATURES.push(['labs', 'Lab report photos', 'your photos of lab reports']);
+  const root = R.adminPart(withLabs, null);
+  const row = find(root, (e) => e.tag === 'tr' && find(e, (x) => x.tag === 'th' && x.attrs.scope === 'row' && text(x).startsWith('Lab report photos')).length)[0];
+  out.labs = {
+    radios: find(row, (e) => e.tag === 'input').map((e) => e.attrs['aria-label']),
+    cells: find(row, (e) => e.tag === 'td').length,
+    notOffered: find(row, (e) => e.attrs.class === 'ai-route-na').map(text),
+    hint: text(find(row, (e) => e.tag === 'th')[0]),
+    intro: text(root).includes('never go to a cloud AI'),
+    cloudWarning: warningsOf(root),
+  };
+  await radio(root, 'labs', 'off').fire('change');
+  await find(root, (e) => e.tag === 'button' && text(e) === 'Save routing')[0].fire('click');
+  out.labsSaved = log.saved[log.saved.length - 1];
+}
+
 console.log(JSON.stringify(out));

@@ -1,4 +1,4 @@
-"""The four AI features: what each sends, and what the person gets back (note 04 R3, R7–R9; note 03 R8,
+"""The AI features: what each sends, and what the person gets back (note 04 R3, R7–R9; note 03 R8,
 R9; note 06 §4.13). Database reads only through the guidance context and the food search; never a write.
 
 Each feature has a **prepare** step (pure apart from those reads: builds the exact body, the validator
@@ -15,6 +15,9 @@ and the judge) and a **judge** step (pure: turns the model's answer into the res
   draft the person checks. It never saves.
 * :func:`prepare_plate` (``POST /api/vision/plate``): food names and a rough weight; matches come from
   the app's own food search; the model never supplies a nutrient value.
+* :func:`prepare_read_lab_report` (``POST /api/ai/read-lab-report``): the printed result lines of a lab report photo,
+  copied; :mod:`app.ai.lab_report` keeps only the app's own tests, units and plausible values, as *proposed* rows. It
+  runs only on the local AI, keeps no content in the AI activity row and never saves.
 """
 from __future__ import annotations
 
@@ -34,7 +37,7 @@ from ..guidance.ai_bridge import candidates_for_ai
 from ..guidance.budget import open_slots
 from ..guidance.state import GuidanceContext
 from ..textclean import clean_text
-from . import guard, prompts, schemas
+from . import guard, lab_report, prompts, schemas
 from .client import ProviderConfig, build_body, shown_headers
 from ..imagecheck import CheckedImage
 
@@ -100,13 +103,15 @@ class Prepared:
     body: dict[str, Any]
     validator: Callable[[Any], Any]
     judge: Callable[[Any], dict[str, Any]]
-    purpose: str = "text"  # consent purpose: text | photos
+    purpose: str = "text"  # consent purpose: text | photos | labs
     vision: bool = False
     mode: str | None = None
     images: list[CheckedImage] = field(default_factory=list)
     fallback: dict[str, Any] | None = None
     trimmed: int = 0  # candidates removed to fit AI_CONTEXT_TOKENS
     notes: list[str] = field(default_factory=list)  # fixed sentences shown under the answer
+    keep_response: bool = True  # False: the AI activity row keeps no copy of the model's answer (a lab report is health data)
+    local_only: bool = False  # True: the call must be pinned to the private network (checked again before it is built)
 
     @property
     def model(self) -> str:
@@ -443,6 +448,24 @@ def prepare_read_label(cfg: ProviderConfig, image: CheckedImage) -> Prepared:
     # The route adds ``provider`` ({id, label, model, host}) to every answer (note 03 R8 step 5).
     return Prepared(feature="read_label", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.LabelAnswer),
                     judge=label_draft, purpose="photos", vision=True, images=[image])
+
+
+class LocalOnlyRequired(ValueError):
+    """A local-only feature was given a provider that is not pinned to the private network."""
+
+
+def prepare_read_lab_report(cfg: ProviderConfig, image: CheckedImage) -> Prepared:
+    """A photo of a lab report: the printed lines of the app's own tests, copied by the model and checked in code.
+
+    The report can show a name, a date of birth and record numbers that cannot be removed from the image, so ``cfg`` must
+    be the local AI pinned to the private network (``cfg.local_only``); anything else is refused here, whatever the caller
+    resolved. Nothing the model says is kept in the AI activity row (only the photo's fingerprint is)."""
+    if not cfg.local_only:
+        raise LocalOnlyRequired("a lab report photo is read only by the local AI")
+    schema = schemas.lab_report_schema()
+    body = _vision_body(cfg, "lab_report", schema, "lab_report", image)
+    return Prepared(feature="read_lab_report", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.LabReportAnswer),
+                    judge=lab_report.judge, purpose="labs", vision=True, images=[image], keep_response=False, local_only=True)
 
 
 def prepare_plate(cfg: ProviderConfig, image: CheckedImage, *, search: Callable[[str], list[dict[str, Any]]]) -> Prepared:

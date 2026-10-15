@@ -31,6 +31,7 @@
     photos: 'your photo (location and camera data removed)',
     chat: 'your messages in this conversation, and the app\'s own numbers the assistant looks up (your targets, today\'s totals, food names and nutrients)',
     voice: 'your voice recording (up to a minute)',
+    labs: 'your photo of a lab report (location and camera data removed)',
   };
   // What the consent sheet adds under "Never sent", by purpose.
   const NEVER_SENT_TEXT = {
@@ -39,9 +40,10 @@
     voice: 'Nothing but the recording is sent: no name, user name, e-mail or account details. The words come back into the question box for you to read and edit; '
       + 'nothing goes to the AI until you press Send. The recording is not kept on this device or on the server.',
   };
-  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask', voice: 'Voice' };
-  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations', voice: 'Voice recordings' };
-  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations', voice: 'your voice recordings' };
+  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask', voice: 'Voice',
+    read_lab_report: 'Read a lab report' };
+  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations', voice: 'Voice recordings', labs: 'Lab report photos' };
+  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations', voice: 'your voice recordings', labs: 'your lab report photos' };
   const CONFIDENCE_TEXT = { low: 'not sure', medium: 'fairly sure', high: 'sure' };
   // Why the rules left an AI idea out (app/guidance/ai_bridge.py, app/ai/guard.py reason codes).
   const DROP_TEXT = {
@@ -109,12 +111,13 @@
     deleteMeal: (id) => request('DELETE', `/api/meals/${id}`),
   };
 
-  // A photo goes as the raw JPEG body (no multipart, note 03 R8): the shared JSON client cannot send it.
+  // A photo goes as the raw JPEG body (no multipart, note 03 R8): the shared JSON client cannot send it. `kind` is label or
+  // plate (POST /api/vision/<kind>), or lab-report (POST /api/ai/read-lab-report: a report photo, local AI only).
   async function uploadPhoto(kind, blob, dry) {
     if (MOCK) throw Object.assign(new Error('Photos are read by AI only in the installed app.'), { status: 0 });
     let res;
     try {
-      res = await fetch(`/api/vision/${kind}${dry ? '?dry_run=true' : ''}`, {
+      res = await fetch(`${kind === 'lab-report' ? '/api/ai/read-lab-report' : `/api/vision/${kind}`}${dry ? '?dry_run=true' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'image/jpeg', Accept: 'application/json', 'X-Requested-With': 'kidney-health' },
         body: blob,
@@ -280,11 +283,16 @@
     const { body, foot } = fillSheet(consentEl, voice ? 'Before your recording is sent' : 'Before anything is sent', `${consent.provider_label} · ${consent.host}`);
     const showId = uid('ai-preview');
     const showEach = h('input', { type: 'checkbox', id: showId });
+    // A lab report photo (purpose labs) is explained in the server's own words (consent.notice): where it goes, that a report can
+    // show a name, a date of birth and record numbers, that the photo is not kept, and to crop it. The generic "never sent" line
+    // is left out for it, because it would be untrue of a photo.
+    const notice = consent.purpose === 'labs' && Array.isArray(consent.notice) ? consent.notice : null;
     body.append(...[ // an absent part is null: leave it out (append(null) would write the word "null")
-      voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
-        ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
+      notice ? h('div', { class: 'ai-consent-notice' }, notice.map((line) => h('p', {}, line)))
+        : voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
+          ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
       note('caution', h('p', {}, consent.policy)),
-      h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
+      notice ? null : h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
       voice ? null : check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.')].filter(Boolean));
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Not now');
@@ -302,7 +310,7 @@
   // then one more try); shows the request first when they asked for that. null = the person declined.
   // `feature` (privacy tiers: photos, meal_ideas, describe or chat) names whose provider the consent is about, since two
   // features of one purpose can run on different providers; it defaults to the purpose's usual feature.
-  const FEATURE_OF = { text: 'meal_ideas', photos: 'photos', chat: 'chat' };
+  const FEATURE_OF = { text: 'meal_ideas', photos: 'photos', chat: 'chat', labs: 'labs' };
   async function withConsent(purpose, send, preview, trigger, feature = FEATURE_OF[purpose]) {
     const st = await status();
     const route = st && st.routes && st.routes[feature];
@@ -1164,7 +1172,8 @@
       h('h4', { class: 'settings-minor' }, 'What the rules decided'), pre(ev.verdict_json),
       h('h4', { class: 'settings-minor' }, 'What was sent'), ev.request_json ? pre(ev.request_json) : h('p', { class: 'muted small' }, 'No longer kept.'),
       h('h4', { class: 'settings-minor' }, 'What came back (before the app\'s checks)'),
-      ev.response_text ? [rawCaption(), pre(KH.aiguard.maskForDisplay(ev.response_text))] : h('p', { class: 'muted small' }, 'No longer kept.'));
+      ev.response_text ? [rawCaption(), pre(KH.aiguard.maskForDisplay(ev.response_text))]
+        : h('p', { class: 'muted small' }, ev.feature === 'read_lab_report' ? 'Never kept: what the AI copied from a lab report is health data, so only the photo\'s fingerprint is recorded.' : 'No longer kept.'));
   }
   // The provider's raw answer was never shown as it is: the app kept only what passed its checks. Words the app
   // never shows (about insulin, doses, medicines…) are hidden in this copy too (KH.aiguard, the server's

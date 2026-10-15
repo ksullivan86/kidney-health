@@ -180,7 +180,7 @@ def test_wire_schemas_stay_in_the_strict_subset():
 
     for schema in (schemas.ideas_schema([1, 2], ["potassium"]), schemas.ideas_schema([], []), schemas.rerank_schema(["f1"]),
                    schemas.swap_schema(["s1"]), schemas.plan_schema(["lunch"], 3), schemas.parse_meal_schema(),
-                   schemas.read_label_schema(), schemas.plate_schema()):
+                   schemas.read_label_schema(), schemas.plate_schema(), schemas.lab_report_schema()):
         assert schema["type"] == "object"
         walk(schema)
 
@@ -325,7 +325,7 @@ def _fingerprint() -> str:
         "slugs": prompts.AI_HANDBOOK_SLUGS, "per_portion": dict(prompts.PER_PORTION_KEYS), "flags": sorted(prompts.SHOWN_FLAGS),
         "schemas": [schemas.ideas_schema([1], ["potassium"]), schemas.rerank_schema(["f1"]), schemas.swap_schema(["s1"]),
                     schemas.plan_schema(["lunch"], 3), schemas.parse_meal_schema(), schemas.read_label_schema(),
-                    schemas.plate_schema()],
+                    schemas.plate_schema(), schemas.lab_report_schema()],
         "blocklist": guard.BLOCKLIST.pattern, "reasons": guard.REASON_TEXT, "themes": guard.THEME_TITLE,
         "refused": guard.REFUSED_TEXT, "notice": guard.NOTICE,
         # The Ask chat (assistant step 2): its prompt, tool notes, step protocol, the answer checks and their fixed texts.

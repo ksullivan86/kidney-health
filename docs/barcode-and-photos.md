@@ -266,7 +266,9 @@ Two optional photo features use the AI layer ([`ai.md`](ai.md)): **Read a label*
 nutrition label into a draft custom food, and **Plate photo** names the foods on a plate. Both are off
 unless your admin set up an AI provider with a vision model; plate photos are also off by default
 (`ai.vision_plate_enabled`). The barcode **photo** above is different: it is read on your device and
-never uploaded.
+never uploaded. A third photo feature, **Read a lab report photo** (Labs view), is different again: a report can
+show a name, a date of birth and record numbers, so it is read **only by the local AI**, never a cloud one; see
+[`ai.md`](ai.md#lab-report-photos).
 
 ### What leaves your device and the server
 

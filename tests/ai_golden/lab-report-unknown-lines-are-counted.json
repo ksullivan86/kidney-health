@@ -1,0 +1,27 @@
+{
+  "id": "lab-report-unknown-lines-are-counted",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"sodium\", \"value\": 139, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"other\", \"value\": 101, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"glucose\", \"value\": 5.1, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 3,
+      "unknown_unit": 0,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        "2026-10-07"
+      ]
+    ]
+  }
+}

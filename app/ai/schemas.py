@@ -17,9 +17,10 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Mapping, Sequence
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from ..nutrients import NUTRIENT_KEYS
+from ..units import ANALYTE_KEYS as LAB_ANALYTES  # the app's own lab test codes (the only ones a lab report row may name)
 
 THEMES: tuple[str, ...] = ("light", "hearty", "familiar", "new_idea")
 REASON_CODES: tuple[str, ...] = (
@@ -36,6 +37,9 @@ MAX_RERANK = 12
 MAX_SWAP_PICKS = 3
 MAX_PARSE_ITEMS = 8
 MAX_PLATE_ITEMS = 8
+MAX_LAB_ROWS = 60  # result lines read from one report photo
+LAB_OTHER = "other"  # a result line that is not one of the app's lab tests (counted and dropped by the app)
+MAX_LAB_TEXT = 120  # a copied test name, unit or date (longer text fails the answer; a longer-but-wrong name is dropped by the app)
 MAX_NAME_CHARS = 80
 MAX_TEXT_CHARS = 300
 MAX_HANDBOOK = 2
@@ -158,6 +162,22 @@ def plate_schema() -> dict[str, Any]:
         "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
     })
     return _object({"status": {"type": "string", "enum": ["ok", "no_food", "unsure"]}, "items": _array(item, hi=MAX_PLATE_ITEMS)})
+
+
+def lab_report_schema() -> dict[str, Any]:
+    """A photo of a lab report: the printed result lines, copied (never read as good or bad). ``analyte`` is one of the app's own
+    lab test codes (``app/units.py``) or ``other`` for any further line; the app drops everything else. ``value`` is the printed
+    number, ``unit`` the printed unit, ``taken_on`` the printed date (null when none is printed)."""
+    row = _object({
+        "analyte": {"type": "string", "enum": [*LAB_ANALYTES, LAB_OTHER]},
+        "value": {"type": "number"},
+        "unit": _str(),
+        "taken_on": _nullable("string"),
+    })
+    return _object({
+        "status": {"type": "string", "enum": ["ok", "not_a_lab_report", "unreadable"]},
+        "rows": _array(row, hi=MAX_LAB_ROWS),
+    })
 
 
 def chat_step_schema(tool_names: Sequence[str]) -> dict[str, Any]:
@@ -302,6 +322,31 @@ class PlateAnswer(BaseModel):
     model_config = _FORBID
     status: Literal["ok", "no_food", "unsure"]
     items: Annotated[list[PlateItem], Field(max_length=MAX_PLATE_ITEMS)]
+
+
+class LabReportRow(BaseModel):
+    """One printed result line. ``analyte`` is any short string here (the wire schema hints at the app's codes, but a backend
+    that does not enforce it must not fail the whole answer): the app drops a code it does not know and counts it. ``value``
+    carries no bound for the same reason: the range check is the one ``POST /api/labs`` makes (``app.models.LabCreate``)."""
+
+    model_config = _FORBID
+    analyte: Annotated[str, StringConstraints(max_length=MAX_LAB_TEXT)]
+    value: Annotated[float, Field(allow_inf_nan=False)]
+    unit: Annotated[str, StringConstraints(max_length=MAX_LAB_TEXT)]
+    taken_on: Annotated[str, StringConstraints(max_length=MAX_LAB_TEXT)] | None
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _a_number_not_a_flag(cls, v: Any) -> Any:
+        if isinstance(v, bool):  # true would otherwise read as 1.0, a plausible albumin
+            raise ValueError("value must be a number")
+        return v
+
+
+class LabReportAnswer(BaseModel):
+    model_config = _FORBID
+    status: Literal["ok", "not_a_lab_report", "unreadable"]
+    rows: Annotated[list[LabReportRow], Field(max_length=MAX_LAB_ROWS)]
 
 
 class ChatCall(BaseModel):

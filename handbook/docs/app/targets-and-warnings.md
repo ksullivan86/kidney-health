@@ -139,6 +139,9 @@ reads a CSV file with a date column and one column per test, for example `Date, 
 Creatinine (umol/L)`. The file is read on your device: you see every result, converted, and tick the ones to
 keep; only those are sent, never your name or the file's other columns. Results the app cannot read as one
 number (such as "<0.5" or ">90") are listed and left out, so you can type them by hand if you want them.
+If you have a photo or a screenshot of a lab report instead, **Lab results → Read a lab report photo** can copy the
+printed results for you to check, but only when your admin has an AI on your own network ([Optional AI](ai.md#read-a-lab-report-from-a-photo)):
+every row starts unticked and only the rows you tick are saved.
 Which detail changes which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
 Under each suggested number, **Why this number?** shows the rule, its source and grade, and an **Expert
 opinion** badge where part of the rule is the app's own choice; nothing is saved until you tap

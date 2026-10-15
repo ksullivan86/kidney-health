@@ -43,6 +43,8 @@ Your admin can set up two AIs at once: one **at home** (on the home network) and
 for each feature which one it uses, or switch it off. The app starts with the safest choice: photos, meal ideas,
 describing a meal and Ask all go to the AI at home, and a feature stays **off** until there is one. A feature goes to a
 company's AI only when your admin chooses that, and the admin screen says what it would send and where.
+**Reading a photo of a lab report** is stricter still: it runs only on the AI at home, never on a company's AI and never on
+a key of your own, and it is off if there is no AI at home.
 
 **Settings → AI ideas** shows one line per feature, such as "Runs on your local AI" or "Runs on a cloud AI outside your
 network". If your admin moves a feature to a different AI, the app asks for your consent again for that AI. Your own
@@ -56,7 +58,8 @@ everyone.
 | Pick and order meal ideas, using **only** foods the rules already allowed | Invent a food or a nutrient number: every number comes from the app's food list |
 | Split "describe a meal" text into search words; you pick each match | Save anything on its own, unless you chose to trust it in **Ask** (below): you tap **Add to plan** or **Save** and the normal rules run again |
 | Copy printed numbers from a label photo into a draft food you check, marked "from photo" | Estimate nutrients from a plate photo: it gives food **names** and a rough weight; the numbers come from your food list |
-| Name foods it sees on a plate photo | Give doses, answer medical questions, or read your lab results |
+| Name foods it sees on a plate photo | Give doses, answer medical questions, or tell you what your lab results mean |
+| Copy the printed results from a photo of a lab report into rows you check, on the AI at home only | Say whether a result is normal, high or low, save a result on its own, or read a report on a company's AI |
 | In **Ask**, answer a short question after looking up your own numbers in the app | Make up a number: the app checks every number in an answer before you see it |
 
 ### Safety rules that always apply
@@ -89,6 +92,7 @@ everyone.
 | Your food preferences, if you wrote any (up to 200 characters) | Anything when you have not opted in |
 | Age in 10-year bands and sex, **only if you tick "share age and sex"** | |
 | A label or plate photo (photo features only), with location and camera data removed | |
+| A photo of a lab report, **only to the AI at home** and only after you agree to it separately. The report may show your name, date of birth and record numbers, which the app cannot remove from a photo: crop it to the results table if you can | |
 | Your messages in an **Ask** conversation, and the numbers the assistant looks up for it (your targets, today's totals, food names and nutrients), **only after you agree to it separately** | |
 
 Before anything is sent the first time, a consent sheet shows the **provider**, the **server address**
@@ -122,6 +126,29 @@ today. Each AI idea shows its foods with their warnings, the totals, what is lef
 and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead. If your admin
 has switched on **Ask**, a tab called **Ask** is there too.
 
+## Read a lab report from a photo
+
+On the **Lab results** screen, below "Import from a spreadsheet", **Read a lab report photo** copies the printed results
+from a photo or a screenshot of your report (a PDF can be screenshotted). It appears only when your admin has an AI at
+home that can read photos and you have turned on AI ideas; otherwise the card says why, for example "Needs a local AI on
+your own network, which is not set up on this server, so it is off."
+
+1. Take a photo, or choose a screenshot, and crop it to the results table if you can. A report can show your name, your
+   date of birth and your record numbers, and the app cannot take them out of a picture. That is why this runs only on
+   the AI at home.
+2. The first time, a consent sheet says where the photo goes, what the report may show, and that the photo is not kept.
+   **What will be sent?** shows the request before it goes.
+3. The AI only **copies** what is printed. The app keeps the tests it knows (potassium, phosphate, albumin, bicarbonate,
+   urine albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c), in units it knows, with plausible numbers,
+   and tells you how many lines it left out.
+4. You see the rows in the same table as a spreadsheet import, **all unticked**, with "Read by AI from your photo. Check
+   each value against the report before you tick it." Compare each value and its unit with the report, tick the ones that
+   match, type the date for any row that has none, and press **Save**. Only ticked rows are saved. A potassium of
+   6.0 mmol/L or more shows the same urgent warning as when you type it.
+
+The AI never says whether a result is normal, high or low, and it never changes your targets: only you save results,
+and your saved targets stay as they are until you save new ones in Profile. Talk to your care team about what a result means.
+
 ## Turn it on
 
 1. Check that your admin has switched AI on (**Settings → AI ideas** says whether it is on).
@@ -130,7 +157,7 @@ has switched on **Ask**, a tab called **Ask** is there too.
 4. Decide whether to share age band and sex. It is off by default.
 5. Optional: write preferences such as "vegetarian, no fish".
 6. The first time you use an AI button, read the consent sheet and the exact text, then accept. Photos
-   have their own consent, and so does **Ask**. You can also ask to see the request before every AI call.
+   have their own consent, and so do **Ask** and lab report photos. You can also ask to see the request before every AI call.
 
 ## Take it back
 
@@ -146,7 +173,8 @@ has switched on **Ask**, a tab called **Ask** is there too.
 
 - AI can be wrong or slow. A home model on a small computer can take a minute or two; the app then shows
   its own ideas.
-- Photo reading copies what is printed. Check every field marked "from photo" against the label.
+- Photo reading copies what is printed. Check every field marked "from photo" against the label, and every lab report
+  row against the report before you tick it.
 - Portions guessed from a plate photo were off by about a third on average in a 2025 test, and too
   small for big plates ([Fridolfsson 2025][FRIDOLFSSON25]). Do not count carbohydrate for insulin from a
   photo guess.

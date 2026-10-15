@@ -2,7 +2,8 @@
    "Which AI does each feature use?").
 
    * Server administration → AI providers: the table "Which AI does each feature use?" (photos, meal ideas, describe a meal,
-     Ask: local, cloud or off), the shared provider that is the local AI and the one that is the cloud AI, and a
+     Ask: local, cloud or off; lab report photos: local or off only, because a report shows a name and a date of birth that
+     cannot be removed from an image), the shared provider that is the local AI and the one that is the cloud AI, and a
      warning for every feature that sends something to the cloud. Saved with PUT /api/admin/ai-routing (through
      KH.ai.api), which refuses a local AI that is not on a private address.
    * Settings → AI (a person): one line per feature saying where it runs ("Runs on your local AI (host)").
@@ -54,14 +55,15 @@
     wrap.append(h('p', { class: 'hint' },
       'A local AI runs on your own network (for example Ollama on a home computer): what a feature sends never leaves it. '
       + 'A cloud AI is a company\'s service outside your network. Each feature is pinned to one of them, or switched off. '
-      + 'Photos can show more than a label, so the safe choice for them is local.'));
+      + 'Photos can show more than a label, so the safe choice for them is local. Lab report photos can only be local or off: '
+      + 'a report shows your name and date of birth, which cannot be removed from a photo, so they never go to a cloud AI.'));
     if (data.as_before) {
       wrap.append(note('caution', h('p', {},
         'Routing is not set up yet, so a feature marked "As before" uses the shared provider each person chose, as it did before this table existed. '
         + 'Choose a row below to pin it. On a new server every feature starts on local and stays off until a local AI is chosen.')));
     }
     if (!data.writable) {
-      wrap.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so routing can be set only with the environment variables AI_ROUTE_PHOTOS, AI_ROUTE_MEAL_IDEAS, AI_ROUTE_DESCRIBE, AI_ROUTE_CHAT and AI_PROVIDER_ROLE (docs/ai.md).')));
+      wrap.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so routing can be set only with the environment variables AI_ROUTE_PHOTOS, AI_ROUTE_MEAL_IDEAS, AI_ROUTE_DESCRIBE, AI_ROUTE_CHAT, AI_ROUTE_LABS and AI_PROVIDER_ROLE (docs/ai.md).')));
     }
 
     const chosen = {}; // feature → the route picked now
@@ -76,9 +78,15 @@
     for (const f of data.features) {
       chosen[f.feature] = f.route;
       const name = uid(`ai-route-${f.feature}`);
+      const only = f.allowed && f.allowed.length < 3; // a feature that may only be local or off (lab report photos)
       const row = h('tr', {}, h('th', { scope: 'row' }, f.label,
+        only ? h('span', { class: 'hint ai-route-lock' }, 'Local or off, never sent to a cloud AI') : null,
         f.locked_by_env ? h('span', { class: 'hint ai-route-lock' }, `Set by the server (${f.locked_by_env})`) : null));
       for (const c of columns) {
+        if (f.allowed && !f.allowed.includes(c)) { // not offered for this feature: no choice to make
+          row.append(h('td', { class: 'ai-route-na' }, h('span', { 'aria-hidden': 'true' }, '–'), h('span', { class: 'sr-only' }, `${f.label}: ${ROUTE_TEXT[c]} is not offered`)));
+          continue;
+        }
         const input = h('input', { type: 'radio', name, value: c, checked: f.route === c, 'aria-label': `${f.label}: ${ROUTE_TEXT[c]}` });
         input.disabled = !data.writable || !!f.locked_by_env || (c === 'any' && f.route !== 'any');
         input.addEventListener('change', () => { chosen[f.feature] = c; refresh(); });

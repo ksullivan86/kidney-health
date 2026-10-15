@@ -1,0 +1,30 @@
+{
+  "id": "lab-report-advice-or-a-dose-is-never-a-row",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"a1c\", \"value\": 7.2, \"unit\": \"%\", \"taken_on\": \"2026-10-07\"}, {\"analyte\": \"other\", \"value\": 10, \"unit\": \"units of insulin\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 1,
+      "unknown_unit": 0,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "a1c",
+        7.2,
+        "%",
+        "2026-10-07"
+      ]
+    ],
+    "response_excludes": [
+      "insulin"
+    ]
+  }
+}

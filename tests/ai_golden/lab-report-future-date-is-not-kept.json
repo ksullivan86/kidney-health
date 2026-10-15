@@ -1,0 +1,27 @@
+{
+  "id": "lab-report-future-date-is-not-kept",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/L\", \"taken_on\": \"2099-01-01\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 0,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        null
+      ]
+    ]
+  }
+}

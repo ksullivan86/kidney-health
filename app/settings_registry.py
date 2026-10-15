@@ -583,6 +583,10 @@ register(
 # provider that has each role (0: none); the admin screen sets them through PUT /api/admin/ai-routing, which refuses
 # a host that is not private for `local`, and the resolution checks that again before every call.
 AiRoute = Literal["local", "cloud", "off", "any"]
+# Reading a lab report from a photo (app/ai/routing.py `labs`): the report can show a name, a date of birth and record
+# numbers that the app cannot remove from an image, so this feature runs only on the local AI (or not at all). `cloud` and
+# `any` are refused here, whoever asks and whatever the environment says.
+AiLocalOnlyRoute = Literal["local", "off"]
 AiProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
 
 register(
@@ -624,6 +628,16 @@ register(
         help="local, cloud, off or any. Default local. Needs Ask (ai.chat_enabled) on as well.",
     ),
     SettingDef(
+        key="ai.route.labs",
+        model=AiLocalOnlyRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_LABS",
+        label="Which AI reads a photo of a lab report",
+        help="local or off, never cloud: a lab report can show a name, a date of birth and record numbers that cannot be "
+        "removed from a photo, so it is read only by the local AI. Default local: with no local AI the feature is off.",
+    ),
+    SettingDef(
         key="ai.route.local_provider",
         model=AiProviderId,
         default=0,
@@ -645,7 +659,7 @@ NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
      "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled", "ai.voice_enabled",
      "ai.allow_trusted_saves",
-     "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.local_provider",
+     "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.labs", "ai.route.local_provider",
      "ai.route.cloud_provider"}
 )
 

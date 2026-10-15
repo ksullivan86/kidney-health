@@ -2,6 +2,13 @@
 §9 B1, B10; note 04 R3 read-label / identify-food and §9 A4). One set of routes, no duplicates under
 ``/api/ai``; backed by :func:`app.ai.features.prepare_read_label` and :func:`app.ai.features.prepare_plate`.
 
+The third photo route, ``POST /api/ai/read-lab-report`` (``lab_router``), reads a photo of a lab report and runs by the same
+rules (raw JPEG body, the same checks, the same order of refusals, nothing stored), with three differences that come from
+what a report shows: it can show a name, a date of birth and record numbers that cannot be removed from an image, so it
+runs **only on the local AI** (the shared provider holding the role ``local``, pinned to the private network; a person's own
+provider and the cloud are never used, whatever is set); it has its own consent purpose ``labs``; and the AI activity row
+keeps no content (the photo's SHA-256 only). It returns *proposed* rows and writes nothing.
+
 * Registered with the AI routes and like them **404 while ``ai.enabled`` is off**; a signed-in person
   only. ``503`` (with ``reason``) when no vision model is set (``vision_not_configured``), plate photos
   are off (``plate_disabled``, the default), or the provider is a Hermes agent and
@@ -36,6 +43,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from starlette.concurrency import run_in_threadpool
 
 from .ai import features as F
+from .ai import lab_report as LR
 from .ai.routes import _resolve, ai_slot, ai_state, check_consent, require_ai_enabled, run_call, unavailable
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
@@ -46,6 +54,8 @@ from .security import register_body_limit
 
 router = APIRouter(prefix="/api/vision", tags=["vision"], dependencies=[Depends(current_user), Depends(require_ai_enabled)])
 register_body_limit("/api/vision", "max_image_bytes")
+lab_router = APIRouter(prefix="/api/ai", tags=["vision"], dependencies=[Depends(current_user), Depends(require_ai_enabled)])
+register_body_limit("/api/ai/read-lab-report", "max_image_bytes")
 
 JPEG_TYPES = frozenset({"image/jpeg"})
 PHOTO_READ_TIMEOUT_S = 60.0  # a 4 MiB photo at ~70 KB/s; a slower upload must not hold an AI slot for longer
@@ -158,4 +168,48 @@ async def plate(request: Request, user: CurrentUser, background: BackgroundTasks
             return prep.dry_run(request.app.version)
         result = await run_call(request, conn, user, prep, background, slot_held=True)
     _upstream_error(result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# A photo of a lab report (local AI only)
+# --------------------------------------------------------------------------- #
+
+
+def _lab_config(request: Request, conn: sqlite3.Connection, user: User):  # noqa: ANN202 - ProviderConfig
+    """The local AI for a lab report photo, or the reason there is none (503). Never a person's own provider or a cloud one."""
+    resolved = _resolve(request, conn, user, "labs")
+    if not resolved.ok:
+        raise unavailable(resolved.reason or "not_configured")
+    cfg = resolved.cfg
+    assert cfg is not None
+    if resolved.role != "local" or not cfg.local_only:  # routing guarantees this; a lab report is never sent anywhere else
+        raise unavailable("local_not_private")
+    if not cfg.vision_model:
+        raise ApiProblem(503, "Reading a photo needs a vision model; your admin has not set one for the local AI.", reason="vision_not_configured")
+    state = ai_state(request)
+    if not cfg.preset_def.photos_by_default and not state.store.get(conn, "ai.vision_allow_agent"):
+        raise ApiProblem(503, "Photos are not sent to an agent provider on this server (AI_VISION_ALLOW_AGENT).", reason="agent_not_allowed")
+    return cfg
+
+
+@lab_router.post("/read-lab-report")
+async def read_lab_report(request: Request, user: CurrentUser, background: BackgroundTasks, dry_run: bool = Query(False),
+                          conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Read the printed results of a lab report photo: ``{rows, dropped, provider, ...}`` of proposed rows (never saved).
+
+    Order, as for the label route: switches and the local AI (503) → headers (415/413) → consent for ``labs`` (409) → the
+    person's and a server AI slot (429) → only then the body (408), checked and rewritten like every photo."""
+    cfg = await run_in_threadpool(_lab_config, request, conn, user)
+    photo_headers(request)
+    if not dry_run:
+        await run_in_threadpool(check_consent, conn, user, cfg, "labs")
+    async with ai_slot(request, conn, user.id):
+        prep = F.prepare_read_lab_report(cfg, await read_photo(request))
+        if dry_run:
+            return prep.dry_run(request.app.version)
+        result = await run_call(request, conn, user, prep, background, slot_held=True)
+    _upstream_error(result)
+    result.setdefault("rows", [])
+    result.setdefault("dropped", {key: 0 for key in LR.DROPPED_KEYS})
     return result

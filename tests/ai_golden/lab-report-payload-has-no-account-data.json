@@ -1,0 +1,38 @@
+{
+  "id": "lab-report-payload-has-no-account-data",
+  "category": "lab_report",
+  "feature": "lab_report",
+  "fixture": {
+    "image": "label.jpg"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/L\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 0,
+      "out_of_range": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        "2026-10-07"
+      ]
+    ],
+    "payload_excludes": [
+      "birth_month",
+      "ckd_stage",
+      "weight_kg",
+      "1961",
+      "\"username\"",
+      "admin"
+    ],
+    "payload_includes": [
+      "TASK: read_lab_report"
+    ]
+  }
+}
