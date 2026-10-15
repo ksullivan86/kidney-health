@@ -19,7 +19,7 @@ from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from test_ai_chat import ask, step_answer
 from test_ai_voice import WEBM, fake_stt, forwarded
 from test_ai_routes import DAY, IDEAS, OWN_KEY, TARGETS
-from test_vision_api import LABEL_ANSWER, LABEL_JPG, PLATE_ANSWER, PLATE_JPG, photo
+from test_vision_api import LABEL_ANSWER, PLATE_ANSWER, PLATE_JPG, photo
 from app.ai import config as K
 from app.ai import routing as R
 from app.ai.netpolicy import NetPolicy, PolicyError, check_addresses, check_url, is_private_host, parse_base_url, parse_private_hosts

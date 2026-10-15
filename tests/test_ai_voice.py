@@ -18,7 +18,7 @@ from typing import Any, Iterator
 import httpx2
 import pytest
 
-from ai_support import PUBLIC_IP, FakeProvider, attach
+from ai_support import FakeProvider, attach
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from test_ai_chat import become_ready
 from test_ai_routes import OPENAI_KEY, enable

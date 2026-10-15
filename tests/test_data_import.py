@@ -907,7 +907,7 @@ def test_labs_are_checked_like_typed_ones_and_converted_again(client, fresh):
     doc["lab_results"][1]["value"] = 999999  # the canonical number in a file is not trusted: it is recomputed
     r = post_import(fresh, doc)
     assert r.status_code == 200 and r.json()["counts"]["lab_results"] == 2
-    labs = {l["analyte"]: l for l in fresh.get("/api/labs").json()["labs"]}
+    labs = {lab["analyte"]: lab for lab in fresh.get("/api/labs").json()["labs"]}
     assert labs["creatinine"]["entered_value"] == 110 and labs["creatinine"]["entered_unit"] == "µmol/L"
     assert labs["creatinine"]["value"] == pytest.approx(1.24, abs=0.01) and labs["creatinine"]["note"] == "fasting"
 

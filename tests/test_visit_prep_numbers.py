@@ -12,7 +12,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import pytest
 from conftest import log_food
 
 ROOT = Path(__file__).resolve().parents[1]

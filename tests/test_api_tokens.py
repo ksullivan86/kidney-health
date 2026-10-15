@@ -20,7 +20,7 @@ from fastapi import Request
 from app.auth import api_tokens
 from app.auth.api_tokens import AssistantUser
 from app.settings_registry import REGISTRY
-from conftest import ADMIN_PASSWORD, USER_PASSWORD, TestClient, add_user, sign_in
+from conftest import ADMIN_PASSWORD, USER_PASSWORD, TestClient, sign_in
 
 PROBE = "/assistant-probe"
 TOKEN_RE = re.compile(r"^kha_[A-Za-z0-9_-]{43}$")

@@ -2370,7 +2370,7 @@ tool functions of `app/mcp/tools.py`.
   in `json_schema` mode is asked for `json_object` (free-form arguments cannot be a strict schema); the protocol and its
   schema are in the system prompt in every mode. History that does not fit `context_tokens` is trimmed from the oldest end;
   not even the newest message fitting is `503 context_too_small`.
-* **The prompt** (`PROMPT_VERSION` 2026-10-15.3; .3 words the person from the profile, see "Prompts, answers and the guard"; .2 added the saving tools and rule 10, which allows a save only when the person
+* **The prompt** (`PROMPT_VERSION` 2026-10-15.4; .4 only added the lab report line, which Ask does not use; .3 words the person from the profile, see "Prompts, answers and the guard"; .2 added the saving tools and rule 10, which allows a save only when the person
   asked in the conversation and forbids saying anything is saved unless a tool result says `"saved": true`): the rules (every number from a tool, null is unknown and not zero, fetch
   again each turn, no insulin or medicine doses, no medicine advice, no lab interpretation, a plain warning and "check with
   your care team" for salt substitutes, anti-inflammatory pain medicines and big protein or fluid changes, short plain

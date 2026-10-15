@@ -15,7 +15,7 @@ from typing import Any, Iterator
 import pytest
 
 from ai_support import FakeProvider, attach, chat
-from conftest import DAY, HTTPS_URL, TestClient, add_user, log_food, make_settings, sign_in
+from conftest import DAY, HTTPS_URL, TestClient, add_user, log_food, sign_in
 from test_ai_routes import TARGETS, ai_settings, enable
 from app.main import create_app
 

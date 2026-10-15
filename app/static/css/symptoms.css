@@ -3,7 +3,7 @@
    mark only repeat it. */
 
 .symptoms-card .card-head { align-items: center; }
-.symptoms-card .card-head .btn { min-height: 36px; padding: 0 12px; gap: 6px; }
+.symptoms-card .card-head .btn { min-height: var(--tap); padding: 0 12px; gap: 6px; } /* 44 px: found at 36 px by tools/e2e/sandbox.py */
 .symptoms-card .card-head .btn svg { width: 18px; height: 18px; }
 .symptoms-body:empty { display: none; }
 .symptoms-empty { margin: 0; color: var(--text-2); font-size: 0.9rem; }

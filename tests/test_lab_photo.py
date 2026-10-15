@@ -26,7 +26,7 @@ import pytest
 
 from ai_support import FakeProvider, attach_routed, chat
 from conftest import HTTPS_URL, TestClient, add_user, sign_in
-from test_ai_routing import PRIVATE_IP, Rig, add_local, cloud_id, db, fakes, pin_roles, ready, route, routed_settings, turn_on
+from test_ai_routing import Rig, add_local, cloud_id, db, fakes, ready, route, routed_settings, turn_on
 from test_ai_routes import OWN_KEY
 from test_vision_api import LABEL_JPG, photo, usage_rows
 from app.ai import config as K

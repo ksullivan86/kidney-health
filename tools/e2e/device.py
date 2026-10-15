@@ -852,8 +852,9 @@ def section_changes(hx: Harness, state: dict[str, Any]) -> None:
     try:
         wait_controlled(page, hx.base)
         page.wait_for_selector("#view-today:not([hidden])")
-        apple = food_entry("apple raw", servings=1)
-        berries = food_entry("blueberries", meal="snack", servings=1)
+        # Foods the outbox section does not log (it leaves an apple and a blueberries row for today, and the rows are found by name).
+        apple = food_entry("strawberries", servings=1)
+        berries = food_entry("raspberries", meal="snack", servings=1)
         check(area, "the server's entries carry a version", bool(apple["version"]) and bool(berries["version"]))
         visit(f"{hx.base}/")  # online: the device saves its copy of today, versions included
         page.wait_for_selector("#view-today:not([hidden]) #meals .row-btn")

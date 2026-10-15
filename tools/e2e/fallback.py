@@ -166,6 +166,13 @@ def walk(browser: Any, admin: Any, local: FakeAi, cloud: FakeAi, ids: dict[str, 
     check(f"[{tag}] meal ideas, describe and photos are on Local, then cloud",
           all(page.is_checked(f'#ai-routing input[aria-label="{label}: Local, then cloud"]')
               for label in ("Meal ideas", "Describe a meal", "Photos (labels and plates)")))
+    check(f"[{tag}] the table's Local and Cloud headings are not broken inside the word",
+          page.evaluate("""() => ['Local', 'Cloud'].every((w) => { const cell = [...document.querySelectorAll('#ai-routing thead th')].find((c) => c.textContent.trim() === w);
+            const r = document.createRange(); r.selectNodeContents(cell); return r.getClientRects().length === 1; })"""))
+    check(f"[{tag}] the role hints stay inside their own column",
+          page.evaluate("""() => [...document.querySelectorAll('#ai-routing .form-grid .hint')].every((e) => { const r = document.createRange(); r.selectNodeContents(e);
+            return r.getBoundingClientRect().right <= e.parentElement.getBoundingClientRect().right + 1; })"""))
+    check(f"[{tag}] Server administration has no sideways scroll", not overflow(page))
     page.screenshot(path=str(out / "shots" / f"admin-{tag}.png"), full_page=True)
     page.goto("/#settings")
     page.wait_for_selector("#set-ai-slot .ai-routing-lines", timeout=15000)
@@ -175,6 +182,7 @@ def walk(browser: Any, admin: Any, local: FakeAi, cloud: FakeAi, ids: dict[str, 
     check(f"[{tag}] Ask keeps the plain local line", f"Ask: Runs on your local AI ({local_host})." in lines, lines[:400])
     check(f"[{tag}] Settings offers to agree to the cloud AI for meal ideas",
           page.locator(".ai-routing-lines li", has_text="Meal ideas").locator("button", has_text="Allow the cloud AI").count() == 1)
+    check(f"[{tag}] Settings has no sideways scroll", not overflow(page))
     page.screenshot(path=str(out / "shots" / f"settings-{tag}.png"), full_page=True)
 
     # 2. The first request: the sheet names both hosts, says when the cloud one is used, and nothing is sent before Agree.
@@ -200,6 +208,8 @@ def walk(browser: Any, admin: Any, local: FakeAi, cloud: FakeAi, ids: dict[str, 
           line == f"The local AI's answer did not pass the app's checks. The cloud AI ({cloud_host}) was not asked because you have not agreed to send this there.", line)
     check(f"[{tag}] the cloud AI got no request", not cloud.requests, str(len(cloud.requests)))
     check(f"[{tag}] the local AI was asked (its answer and one repair turn)", len(local.task_requests) >= 1)
+    check(f"[{tag}] the Allow button stays inside the sheet (a sheet clips what runs past its edge)",
+          page.evaluate("() => { const b = [...document.querySelectorAll('#sheet-ai .btn')].find((x) => x.textContent.startsWith('Allow the cloud AI')); return !!b && b.getBoundingClientRect().right <= window.innerWidth; }"))
     page.screenshot(path=str(out / "shots" / f"not-asked-{tag}.png"))
 
     # 4. Agree to the cloud AI from the answer; the same failure now sends one request there.

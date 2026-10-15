@@ -105,6 +105,8 @@ def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
     if not mock:
         check(f"[{tag}] Today has the Symptoms card, empty to begin with", "No symptoms recorded for this day" in page.inner_text("#symptoms-today-body"),
               page.inner_text("#symptoms-today-body"))
+    height = page.evaluate("document.querySelector('#symptoms-add').getBoundingClientRect().height")
+    check(f"[{tag}] the Add button is at least 44 px tall (a tap target)", height >= 44, str(height))
     # nothing chosen: the sheet says what is missing and sends nothing
     before = len(watch.writes)
     page.click("#symptoms-add")
