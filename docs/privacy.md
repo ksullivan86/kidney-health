@@ -74,13 +74,45 @@ server never opens it.
 ## Who can see it
 
 * **You** see everything of yours, and can download it all (Settings → Account → Export) as a
-  `.zip` with a JSON file and CSV files your dietitian or a spreadsheet can open.
+  `.zip` with a JSON file and CSV files your dietitian or a spreadsheet can open, and bring the JSON file
+  into another server (see "Moving your data to another server" below).
 * **Other people on the same server** cannot see any of it.
 * **Admins** manage accounts but have no screen or API that shows another person's log, foods or
   profile. However:
   * the person who runs the server can technically read the database file and its backups;
   * an admin can create a password-reset link for any account. If that happens, you are told at
     your next sign-in, and it appears in your activity list.
+
+## Moving your data to another server
+
+Settings → Account → Your data → **Import from a file** reads the `export.json` of an export of yours into
+your account on the server you are signed in to. Your browser reads the file and sends it to your own
+server over the same connection as everything else; nothing is sent anywhere else. Before anything changes
+the server checks the file and shows what would be added and what would be left out.
+
+* **Carried over:** your log entries, foods you made, saved meals, lab results and "Not for me" foods; the
+  shared USDA and Open Food Facts foods you used (linked if the new server has them, otherwise kept as your
+  own copies, with their licence note). If you also tick *Also replace my profile, targets and settings*: your
+  profile, targets, meal-guidance settings and display settings. That box is off by default because your
+  targets may have been agreed with your care team on the server you are importing into.
+* **Not carried over, even if a file has them:** your username, password and sign-in sessions; assistant
+  access tokens and every API key; your AI activity, AI call counts, the AI providers you agreed to send
+  data to and your own AI provider (you agree again, on the new server); your Open Food Facts barcode
+  choice; your sign-in activity list; anything about other people. An export never holds the first group
+  and the importer ignores them if someone adds them to a file.
+* **Only your own account is changed.** The file cannot reach another person's data, and it cannot make
+  anything shared: a USDA or Open Food Facts food the new server lacks is never created from a file for
+  everyone, only for you.
+* **The numbers of an entry are recalculated** from its food and amount, as for any entry you log, so they
+  follow the foods on the new server.
+* **No double counting.** An account that already has entries, foods, saved meals or lab results refuses
+  an import unless you tick *Add to my existing data*; then whatever is already there is left out, so
+  importing the same file twice adds nothing. A food that is neither in the file nor built in is listed as
+  left out, never guessed; a saved meal that loses a food that way says so in its note.
+* The server writes one line to your activity list ("Data imported", with counts and no content). Importing
+  is limited to 20 requests an hour and needs your password again; the file may be up to 16 MiB (the
+  person running the server can change that with `MAX_IMPORT_BYTES`).
+* The `.zip` also holds spreadsheets (CSV) for reading; only `export.json` is imported.
 
 ## Deleting your account
 

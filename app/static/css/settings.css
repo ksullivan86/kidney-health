@@ -118,3 +118,10 @@
 .about-list { list-style: disc; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 /* A source line under a checkbox lines up with the checkbox's text. */
 .setting-row > .check + .setting-source, .setting-item > .check + .setting-tail { margin-left: 28px; }
+
+/* ---------- import from a file (Settings → Your data) ---------- */
+.import-block, .import-result { display: flex; flex-direction: column; gap: 10px; }
+.import-block > p, .import-result p { margin: 0; }
+.import-title { margin: 0; font-size: 1rem; }
+.import-title:focus { outline: none; }
+.import-sub { font-weight: 600; }

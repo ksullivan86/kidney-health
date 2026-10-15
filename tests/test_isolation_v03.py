@@ -24,6 +24,7 @@ import pytest
 import test_ai_routes as ai_tests
 import test_api_tokens
 import test_auth_coverage
+import test_data_import
 import test_export_delete
 import test_isolation
 import test_mcp_write
@@ -43,20 +44,23 @@ GUIDANCE_A = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclu
 MATRIX: dict[str, tuple[str, ...]] = {
     "log_entries": ("test_isolation.test_b_gets_404_on_every_id_bearing_route_of_a",
                     "test_isolation.test_b_never_sees_a_rows_in_lists_summaries_and_search",
-                    "test_isolation_v03.test_client_ids_are_per_person"),
+                    "test_isolation_v03.test_client_ids_are_per_person",
+                    "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),  # POST /api/me/import writes only the caller's rows
     "foods": ("test_isolation.test_deleting_a_custom_food_only_counts_the_owners_references",
-              "test_isolation.test_barcode_lookup_never_matches_another_persons_custom_food"),
-    "user_food_links": ("test_isolation.test_shared_usda_row_links_without_exposing_and_unlink_is_per_person",),
-    "meal_templates": ("test_isolation.test_b_gets_404_on_every_id_bearing_route_of_a",),
-    "user_profiles": ("test_isolation.test_b_never_sees_a_rows_in_lists_summaries_and_search",),
-    "user_settings": ("test_isolation_v03.test_guidance_preferences_are_per_person",),
+              "test_isolation.test_barcode_lookup_never_matches_another_persons_custom_food",
+              "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
+    "user_food_links": ("test_isolation.test_shared_usda_row_links_without_exposing_and_unlink_is_per_person",
+                        "test_data_import.test_a_usda_food_is_linked_when_the_server_has_the_shared_row"),
+    "meal_templates": ("test_isolation.test_b_gets_404_on_every_id_bearing_route_of_a", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
+    "user_profiles": ("test_isolation.test_b_never_sees_a_rows_in_lists_summaries_and_search", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
+    "user_settings": ("test_isolation_v03.test_guidance_preferences_are_per_person", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
     "sessions": ("test_isolation.test_sessions_are_per_person",),
     "secrets": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "usage_daily": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "auth_tokens": ("test_auth_coverage.test_admin_routes_are_403_for_people_who_are_not_admins",
                     "test_export_delete.test_delete_account_needs_confirmation_and_password_and_cascades"),
-    "lab_results": ("test_isolation_v03.test_lab_results_are_per_person",),
-    "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person",),
+    "lab_results": ("test_isolation_v03.test_lab_results_are_per_person", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
+    "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
     "ai_providers": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "ai_consents": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "ai_usage": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
@@ -76,7 +80,7 @@ SHARED_OR_SYSTEM = {
 }
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
-           "test_mcp_write": test_mcp_write}
+           "test_mcp_write": test_mcp_write, "test_data_import": test_data_import}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

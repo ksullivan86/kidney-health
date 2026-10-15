@@ -51,6 +51,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
   already started typing in: the first field gets the focus a moment after the sheet opens only if you
   have not moved to another one.
+* **Import your data into another server.** **Settings → Account → Your data → Import from a file**: choose the
+  `export.json` from an export of yours (open the `.zip` first) and the app reads it in your browser and asks the
+  server to check it. You see what would be added (log entries, your own foods, saved meals, lab results,
+  "Not for me" foods), what is left out and why (a food that is not in the file and not built in is listed, never
+  guessed; a saved meal that loses a food says so in its note), and what is never imported, before anything
+  changes; **Import** then adds it all or nothing. It needs your password again. Passwords, sign-in sessions,
+  assistant tokens, keys, AI activity and your Open Food Facts and AI choices are never imported, even if a
+  file has them. An account that already has entries, foods,
+  saved meals or lab results is refused unless you tick **Add to my existing data**; then whatever is already
+  there is left out, so importing the same file twice adds nothing. Your profile, targets and meal-guidance
+  settings are replaced only if you also tick **Also replace my profile, targets and settings** (off by
+  default: you may have agreed them with your care team on this server). The numbers of an imported entry are
+  recalculated from its food and servings, as for any entry. The preview says it works in the installed app
+  ([docs/privacy.md](docs/privacy.md), handbook *Your data*).
 * **Handbook pages work offline once opened.** The app keeps a copy of each handbook page you open (and
   what it needs to show), so **Learn** pages you have read before open without a connection, for example
   on a flight or when the home server is down. A page you have not opened on this device says so instead
@@ -126,6 +140,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
   address. `python -m app.admin reset-password --stdin` and `disable-user` revoke the account's tokens.
   [docs/assistant.md](docs/assistant.md) has the details. `POST /api/me/tokens` takes `can_log` (default false):
   true gives the token the scopes `assistant:read assistant:log`; an existing token stays read-only.
+* **Import of a person's export, `POST /api/me/import`** (cookie session, CSRF header, password entered recently;
+  `?dry_run=1` checks and counts and keeps nothing; `merge=1` and `replace_profile=1` are the two choices
+  above). The file is untrusted input: every record kind is checked against the API's own limits (unknown fields,
+  NaN, a wrong version, a bad date or a food id that points nowhere refuse the whole file, naming the record
+  and its position), and ids are remapped (built-in foods are found by their FoodData Central id; a shared USDA
+  or Open Food Facts food is linked when this server already has the row, and otherwise kept as the person's own
+  copy, never written as a shared row from a file). It runs in one transaction, writes one `data.imported`
+  activity row with counts only, and is limited to 20 requests per person per hour. Its body limit is its own,
+  **`MAX_IMPORT_BYTES` (16 MiB)**, for this one path; every other route keeps `MAX_BODY_BYTES` (1 MiB). A year
+  at eight entries a day is about 3.5 MB as the export writes it, and a 15 MB file needs about 90 MB of extra
+  memory for a moment (the containers are limited to 512 MB). No schema change. The export (`export.json`) now
+  also lists the built-in foods a person uses (`builtin_foods`) and carries the whole record of each shared
+  food they linked, so that it can be imported elsewhere; version stays 1 and older files still import.
 * **The assistant's MCP server, `POST /mcp`** (only while assistant access is on; otherwise `404`). MCP Streamable
   HTTP with JSON answers, stateless, protocol versions 2025-06-18 and 2025-03-26, four read-only tools
   (`safety_check`, `get_today`, `search_foods`, `check_meal`). It takes only an assistant token (never the sign-in
@@ -194,6 +221,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   assistant surface takes `user: AssistantUser` and gets `request.state.api_token` for its own limits.
   `current_user` stays cookie-only, and `tests/test_auth_coverage.py` walks every `/api` route with a valid
   token to keep it that way.
+* `app/data_import.py` holds the import: strict pydantic models with `extra="forbid"`, `parse_export` and the
+  `Importer`. The dry run does the real work inside the transaction and rolls it back, so its answer is exactly
+  the real import's. `insert_entry` and `insert_template` take optional `created_at` / `updated_at`;
+  `profile.apply_profile_changes` is the body of `PUT /api/profile` (no commit) and can replace the targets.
+  `tests/test_data_import.py` is the matrix (round trip, dry run, all-or-nothing, extra fields, NaN, versions,
+  secrets in a crafted file, another person's ids, duplicates); `test_isolation_v03.py` lists it for every table
+  the import writes.
 * `app/mcp/` is the MCP server (JSON-RPC by hand, no new dependency). Its tools call the app's own functions:
   `app.log.day_summary` (now also behind `GET /api/log`), `day_figures` for the projection, `food_warnings`,
   `guidance.hypo.prefilter`, `ai.features.red_flag`, and the new `app.foods.usda_search_records`. `/mcp` is the one

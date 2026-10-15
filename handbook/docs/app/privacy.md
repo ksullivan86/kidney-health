@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-07
+last_checked: 2026-10-15
 fact_checked: 2026-10-05
 sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE07, ARCH, GDPR]
 ---
@@ -75,6 +75,42 @@ The handbook (**Learn**) loads nothing from the internet either.
   history and activity, as JSON and CSV, plus a `README.txt` that explains the files. No passwords,
   sessions or keys are included. You may need to enter your password again first
   ([design note 07][NOTE07]).
+- **Settings → Account → Your data → Import from a file** brings an export back into your account, for
+  example on a new server. See the next section.
+
+## Move to another server
+
+1. On the old server, press **Export my data (.zip)** and open the `.zip` on your device. The file you need
+   is `export.json`; the CSV files are for reading in a spreadsheet.
+2. On the new server, sign in (you need an account there first), then go to **Settings → Account → Your
+   data → Import from a file** and choose `export.json`. Your password is asked for again.
+3. The app first shows what would happen and changes nothing: what would be added, what is already there
+   and left out, and any items it cannot match (each listed with the reason). A food that is not in the
+   file and is not one of the app's built-in foods is listed, never guessed. A saved meal that loses a
+   food this way says so in its note, so its totals do not look complete.
+4. Press **Import**. Everything is added, or nothing is.
+
+What comes across: your log entries, the foods you made, saved meals, lab results and "Not for me" foods,
+and the USDA and Open Food Facts foods you used (kept as your own copies if the new server does not have
+them, with their licence note). The numbers of an entry are worked out again from its food and amount, as
+for any entry you log.
+
+What does not come across, even if a file has it: your password and sign-in sessions, assistant tokens and
+every key, your AI history and the AI providers you agreed to, and your Open Food Facts choice. You agree
+to those again on the new server.
+
+Two boxes, both off at first:
+
+- **Add to my existing data.** A new account is empty, so you do not need it. If the account already has
+  entries, foods, saved meals or lab results, the import is refused unless you tick it; then anything that
+  is already there is left out, so importing the same file twice adds nothing.
+- **Also replace my profile, targets and settings.** Your profile, food targets and meal-guidance
+  settings are replaced by the ones in the file. They stay off by default because targets are best set
+  with your kidney team, and you may already have set them on this server. Check them in **Profile**
+  afterwards.
+
+An import is limited to 16 MiB (years of entries) and to 20 tries an hour. It adds one line, "Data
+imported", to your activity list.
 
 ## Delete your account
 

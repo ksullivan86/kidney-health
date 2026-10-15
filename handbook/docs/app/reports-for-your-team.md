@@ -94,9 +94,9 @@ More: [Questions to ask](../reference/questions-to-ask.md) and [Appointments](..
   7 pm ([Meal guidance](guidance.md); [design note 06][NOTE06]). Low treatments are left out of the
   carbohydrate insights.
 - **Settings → Account → Your data → Export my data (.zip)** downloads everything in one file (JSON and
-  CSV, lab results included), for your own records or to move to another server
-  ([design note 07][NOTE07]; [Privacy and your data](privacy.md)). For your dietitian, the CSV above is
-  easier.
+  CSV, lab results included), for your own records or to move to another server (**Import from a file**,
+  [Privacy and your data](privacy.md#move-to-another-server); [design note 07][NOTE07]). For your
+  dietitian, the CSV above is easier.
 
 ## If something goes wrong
 

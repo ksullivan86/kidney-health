@@ -14,10 +14,16 @@
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
      "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
-     "food_preferences", "ai_usage", "ai_consents", "ai_provider"}
+     "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
 
 ``food_preferences`` (v0.3, schema step 5) lists the foods the person marked "Not for me" in meal
 guidance: ``[{food_id, name, preference, created_at}]``.
+
+Import (``POST /api/me/import``, :mod:`app.data_import`) reads this same file. So that a food can be found on
+another server, ``linked_foods`` items also carry ``gtin`` and ``food`` (the whole food record, shaped like a
+``custom_foods`` item) and ``builtin_foods`` lists ``[{id, name, fdc_id}]`` for the built-in foods the person's
+entries, saved meals and "Not for me" list point at. Both are additions to version 1: an older file without them
+still imports (:mod:`app.data_import` says what it can and cannot match).
 
 AI (v0.3, schema step 6; note 04 §9 A8): ``ai_audit`` is the person's AI activity (what was sent and
 received while kept, never images), ``ai_usage`` the daily call and token counts, ``ai_consents`` the
@@ -47,8 +53,9 @@ Kidney Health export
 
 This archive holds everything this server stores about your account, in two forms:
 
-* export.json  - every record, in a documented JSON format ("kidney-health-export", version 1) that
-                 a later version of the app can import.
+* export.json  - every record, in a documented JSON format ("kidney-health-export", version 1). To move
+                 to another server, unzip it, then use Settings > Account > Your data > "Import from a
+                 file" on the new server and choose export.json.
 * log.csv      - your food log (eaten and planned entries) with the nutrient snapshot of each entry.
 * foods.csv    - foods you created, and shared foods you imported or scanned.
 * meals.csv    - your saved meals, one line per food.
@@ -110,6 +117,41 @@ def _own_ai_provider(conn: sqlite3.Connection, user_id: int) -> dict[str, Any] |
     return None if row is None else {k: (bool(row[k]) if k == "key_set" else row[k]) for k in row.keys()}
 
 
+def _linked_foods(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """The shared foods (FoodData Central, Open Food Facts) the person imported or scanned, each with the whole food
+    record so another server can keep the food when it does not have the shared row itself."""
+    from .foods import row_to_food
+
+    out: list[dict[str, Any]] = []
+    for r in conn.execute(
+        """SELECT f.*, l.created_at AS linked_at FROM user_food_links l
+           JOIN foods f ON f.id = l.food_id WHERE l.user_id = ? ORDER BY f.id""",
+        (int(user_id),),
+    ).fetchall():
+        out.append({"id": r["id"], "name": r["name"], "source": r["source"], "fdc_id": r["fdc_id"],
+                    "linked_at": r["linked_at"], "gtin": r["gtin"], "food": row_to_food(r)})
+    return out
+
+
+def _builtin_foods(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """``[{id, name, fdc_id}]`` of the built-in foods the person's entries, saved meals and "Not for me" list use, so
+    another server can find the same built-in food by its FoodData Central id."""
+    from .meals import parse_items
+
+    uid = int(user_id)
+    ids = {r[0] for r in conn.execute("SELECT DISTINCT food_id FROM log_entries WHERE user_id = ?", (uid,))}
+    for r in conn.execute("SELECT items_json FROM meal_templates WHERE user_id = ?", (uid,)):
+        ids.update(item["food_id"] for item in parse_items(r[0]))  # tolerant of a malformed row, like the meals API
+    if table_exists(conn, "food_preferences"):
+        ids.update(r[0] for r in conn.execute("SELECT food_id FROM food_preferences WHERE user_id = ?", (uid,)))
+    out: list[dict[str, Any]] = []
+    wanted = sorted(ids)
+    for start in range(0, len(wanted), 500):
+        chunk = wanted[start:start + 500]
+        out += _rows(conn, f"SELECT id, name, fdc_id FROM foods WHERE source = 'builtin' AND id IN ({', '.join('?' for _ in chunk)})", chunk)
+    return sorted(out, key=lambda r: r["id"])
+
+
 def _lab_results(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
     """Lab results (schema step 4) with the canonical unit, unrounded; [] on an older schema."""
     if not table_exists(conn, "lab_results"):
@@ -144,11 +186,6 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         for r in conn.execute("SELECT key, value_json FROM user_settings WHERE user_id = ? ORDER BY key", (uid,))
     }
     custom = conn.execute("SELECT * FROM foods WHERE owner_user_id = ? ORDER BY id", (uid,)).fetchall()
-    linked = conn.execute(
-        """SELECT f.id, f.name, f.source, f.fdc_id, l.created_at AS linked_at FROM user_food_links l
-           JOIN foods f ON f.id = l.food_id WHERE l.user_id = ? ORDER BY f.id""",
-        (uid,),
-    ).fetchall()
     templates = conn.execute("SELECT * FROM meal_templates WHERE user_id = ? ORDER BY id", (uid,)).fetchall()
     return {
         "format": EXPORT_FORMAT,
@@ -160,7 +197,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "settings": settings,
         "log_entries": [row_to_entry(r) for r in fetch_entries(conn, uid)],
         "custom_foods": [row_to_food(r) for r in custom],
-        "linked_foods": [{k: r[k] for k in r.keys()} for r in linked],
+        "linked_foods": _linked_foods(conn, uid),
         "meal_templates": [row_to_template(conn, r) for r in templates],
         "lab_results": _lab_results(conn, uid),
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
@@ -169,6 +206,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "ai_usage": _ai_rows(conn, "ai_usage", uid, "day, provider_id"),
         "ai_consents": _ai_rows(conn, "ai_consents", uid, "provider_id, purpose"),
         "ai_provider": _own_ai_provider(conn, uid),
+        "builtin_foods": _builtin_foods(conn, uid),
     }
 
 
@@ -184,9 +222,7 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
     log_csv = _csv(CSV_COLUMNS, (csv_row(r) for r in entries))  # source and source_license are columns since v0.3
 
     food_rows = []
-    for food in [*data["custom_foods"], *(
-        f for f in (_food_by_id(conn, row["id"]) for row in data["linked_foods"]) if f is not None
-    )]:
+    for food in [*data["custom_foods"], *(row["food"] for row in data["linked_foods"])]:
         food_rows.append(
             [food.get(k) for k in FOOD_CSV_FIELDS]
             + [food["nutrients"].get(k) for k in NUTRIENT_KEYS]
@@ -219,13 +255,6 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, text.encode("utf-8"))
     return buffer.getvalue()
-
-
-def _food_by_id(conn: sqlite3.Connection, food_id: int) -> dict[str, Any] | None:
-    from .foods import fetch_food, row_to_food
-
-    row = fetch_food(conn, food_id)
-    return None if row is None else row_to_food(row)
 
 
 def export_filename(username: str) -> str:

@@ -30,7 +30,8 @@ Keys (defaults in brackets):
 * ``ALLOW_INSECURE_HTTP`` [automatic: allowed while one account exists]
 * ``SECRET_KEY[_FILE]`` [auto-generated ``$DATA_DIR/secret.key``, mode 0600, with a warning]
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
-  ``MAX_IMAGE_BYTES`` [4 MiB], ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
+  ``MAX_IMAGE_BYTES`` [4 MiB], ``MAX_IMPORT_BYTES`` [16 MiB: only ``POST /api/me/import``],
+  ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
   ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``
 * Optional AI (note 04 R4, §9 A5; ``app/ai/``), parsed into :class:`AiEnv` (``Settings.ai``): the
   server-defined provider ``AI_PROVIDER``, ``AI_BASE_URL``, ``AI_API_KEY[_FILE]`` (``OPENAI_API_KEY[_FILE]``
@@ -219,6 +220,7 @@ class Settings:
     docs_enabled: bool = False
     max_body_bytes: int = 1_048_576
     max_image_bytes: int = 4_194_304
+    max_import_bytes: int = 16_777_216  # POST /api/me/import only (app/data_import.py): an export of several years
     hsts_max_age: int = 31_536_000
     pwa_enabled: bool = True
     log_level: str = "INFO"
@@ -566,6 +568,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         docs_enabled=docs_enabled,
         max_body_bytes=parse_int(env, "MAX_BODY_BYTES", 1_048_576, 1024, 64 * 1024 * 1024),
         max_image_bytes=parse_int(env, "MAX_IMAGE_BYTES", 4_194_304, 1024, 64 * 1024 * 1024),
+        max_import_bytes=parse_int(env, "MAX_IMPORT_BYTES", 16_777_216, 1024 * 1024, 64 * 1024 * 1024),
         hsts_max_age=parse_int(env, "HSTS_MAX_AGE", 31_536_000, 0, 63_072_000),
         pwa_enabled=parse_bool(env, "PWA_ENABLED", True),
         log_level=_choice(env, "LOG_LEVEL", "INFO", LOG_LEVELS, upper=True),

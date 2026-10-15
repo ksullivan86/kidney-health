@@ -63,7 +63,8 @@ def api_operations(app: Any) -> set[tuple[str, str]]:
 
 def test_the_route_walk_finds_the_api(anon_client):
     walked = {(m, p) for m, p, _ in _walk(anon_client.app.routes)}
-    for op in (("get", "/api/foods"), ("post", "/api/auth/login"), ("delete", "/api/me"), ("get", "/api/admin/audit")):
+    for op in (("get", "/api/foods"), ("post", "/api/auth/login"), ("delete", "/api/me"), ("get", "/api/admin/audit"),
+               ("post", "/api/me/import")):
         assert op in walked, op
     assert len(api_operations(anon_client.app)) > 60
 

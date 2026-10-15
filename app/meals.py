@@ -137,13 +137,15 @@ def resolve_items(conn: sqlite3.Connection, user_id: int, items: Iterable[MealIt
 
 
 def insert_template(conn: sqlite3.Connection, *, user_id: int, name: str, note: str | None, items: list[dict[str, Any]],
-                    meal_hint: str | None = None) -> int:
-    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``."""
+                    meal_hint: str | None = None, created_at: str | None = None, updated_at: str | None = None) -> int:
+    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``. ``created_at`` and
+    ``updated_at`` are for an import of the person's own export (``app/data_import.py``); left out they are now."""
     now = utcnow()
+    created = created_at or now
     cur = conn.execute(
         """INSERT INTO meal_templates (user_id, name, note, items_json, meal_hint, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (int(user_id), name, note, json.dumps(items), meal_hint, now, now),
+        (int(user_id), name, note, json.dumps(items), meal_hint, created, updated_at or created),
     )
     return int(cur.lastrowid)
 
