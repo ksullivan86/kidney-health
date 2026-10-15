@@ -252,6 +252,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **The Content-Security-Policy names one more Trusted Types policy: `trusted-types kh-sw kh-xml`.** The patient-portal
+  (C-CDA) lab import parses the .xml file in the browser, and the browser's XML parser is a Trusted Types sink; the new
+  `kh-xml` policy is created once by the app and passes only files without a DOCTYPE or ENTITY declaration. If you set
+  your own CSP at a reverse proxy instead of using the app's header, add `kh-xml` there too, or that import cannot read
+  any file. See [docs/security.md](docs/security.md).
 * **Importing an export that holds glucose tablets (or gel, shots or a salt substitute) works.** The built-in list gives
   glucose tablets, gel and shots and the two salt substitutes a negative food number of their own (where a USDA food has its
   FoodData Central id), and a copy of such a food keeps it. An export of a log that used one wrote that number in
