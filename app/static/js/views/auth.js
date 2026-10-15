@@ -387,6 +387,7 @@
       KH.app.start(resumeView);
     } else {
       router.show(resumeView || 'today');
+      if (KH.menuPlan) KH.menuPlan.openPending().catch(() => null); // a handbook menu link opened while the session had ended
     }
     if (KH.views.settings && KH.views.settings.onSignedIn) KH.views.settings.onSignedIn(user);
     // The submit button that had focus is hidden now: give the keyboard a place in the app.

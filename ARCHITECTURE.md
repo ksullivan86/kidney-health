@@ -2296,6 +2296,74 @@ Containerfiles, `js/learn.js`. People-facing: `handbook/docs/app/index.md`,
   fails unless each resolves to a page in `handbook/docs` (and, in CI's handbook job, in the built site),
   anchors included.
 
+### Menu days in the app (add this day to my plan, v0.4)
+
+Note 08 §4.10 ("Idea for v0.4"). Every generated menu day in the handbook ends with a plain link that opens the app
+at a confirmation sheet for that day. Nothing is saved until the person presses **Add to plan**.
+
+**The link (the contract between `scripts/build_handbook.py` and `js/engine/menu_link.js`):**
+
+```text
+<app address>#plan-menu?items=b173905x1,b167755x0.5,l170187x1,d171267x2,s173944x0.6667
+```
+
+* One entry per food: `<meal><fdc_id>x<servings>`, entries separated by `,`. `<meal>` is one letter: `b` breakfast,
+  `l` lunch, `d` dinner, `s` snack (all snack blocks of a day are `s`). `<fdc_id>` is the USDA number of a **built-in**
+  food (`data/foods.json`, which is what `menus.yml` already uses); `<servings>` is a number of servings of the food's
+  own `serving_desc`, above 0, at most 1000 (`MAX_SERVINGS`), up to 4 decimals (`0.6667`), without a sign, exponent or
+  leading dot. The link is in the URL **fragment**, so the browser never sends it to any server, and it carries no
+  name, date, unit, nutrient or total: the app looks each food up and works out every number itself.
+* Limits: at most 40 entries (`MAX_LOG_BATCH`, so one confirmation is one batch), at most 1500 characters in all,
+  only `[A-Za-z0-9.,_-]` after `items=`, exactly one parameter. The build fails a menu day that does not fit (more than
+  40 foods, the same food twice for one meal, servings the link cannot carry), so a generated link is always readable.
+* The reader refuses the **whole link** (the sheet says why, no Add button) when it is too long, has another
+  character or parameter, has no entry or more than 40; it **skips one entry** (listed under "Not added" with the
+  reason) for an unknown meal letter, an amount outside the limits, an empty entry, the same meal and food twice (the
+  first is kept), or a food number that is not a built-in food of this server.
+
+**Handbook side.** `menu_plan_paragraph()` writes the link as one raw HTML paragraph under each day's table
+(`<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=…">Add this day to my plan</a> …`; raw
+HTML so MkDocs does not read the hash as a page anchor). The committed pages hold the placeholder `@KH_APP@`; the
+MkDocs hook `handbook/tools/menu_links.py` (`hooks:` in `mkdocs.yml`, inherited by `mkdocs.pages.yml`) replaces it at
+build time: with `extra.app_link` (the image build, `HANDBOOK_APP_LINK=/`) the link is `/#plan-menu?items=…`, the same
+origin as the app that serves `/learn/`; else with `extra.demo_link` (the Pages build) a path relative to the page,
+`../../../demo/#plan-menu?items=…`, with the text "Try this day in the app's demo"; with neither the paragraph is
+dropped. No script runs on the handbook side (`/learn` is served under a hash-only CSP) and the handbook never sees the
+app's session. `handbook/tools/check_links.py` skips a fragment that holds `?` (an app route, not a page anchor).
+
+**App side.** No new server route and no schema change: the reader runs in the browser and resolves through existing
+routes.
+
+1. `js/engine/menu_link.js` (`KH.menuLink`, pure, no DOM) parses the hash strictly, `resolve()` matches the entries with
+   `GET /api/foods/builtin` (the same list for everyone: `source` must be `builtin`, so a custom food, a food another
+   person scanned or imported, a hidden food or a row id of the app never resolves, and its name is never looked up or
+   shown), and `batchEntries()` builds the body of `POST /api/log/batch`.
+2. `js/views/menuplan.js` shows `#sheet-menuplan`: each food with the app's own name, rating, serving text and
+   nutrients, grouped by meal with a tick box; the date (default tomorrow, or the first of the next 14 days with
+   nothing logged or planned, from `GET /api/log/range`); the menu's own totals; the day's projected totals (the server's
+   `projected_status` for that date plus the ticked foods, from `GET /api/log`) with the same near / over lines as the
+   other planning sheets (`impactOn`, `statusLevel`, `overAt`). A food that treats a low is planned like any food
+   and gets no wording of its own; it is left out of a meal's carbohydrate line, as for every entry.
+3. Only **Add to plan** writes: `POST /api/log/batch` with the ticked foods as `status: "planned"` on the chosen date,
+   through the normal request wrapper (`X-Requested-With`, session cookie, re-authentication prompt). One `client_id`
+   per food is made when the sheet opens, so a second press or a retry after a lost answer adds nothing twice (the
+   batch answers 200 with every item `existing`).
+4. **Signed out:** the link is taken out of the address bar into a variable in memory at page load (`takeLink()`), never
+   into any storage, so the sign-in screens, which rewrite the address, do not lose it and the list does not stay in the
+   history. `main.js start()` (first start after sign-in) and `auth.js enterApp` (signing in again on an open page) call
+   `KH.menuPlan.openPending()`. A page reload, an outside sign-in page (proxy or single sign-on) or another person
+   signing in on the same page forgets it: open the link again. A session that ended while the sheet was loading the
+   food list sends the person to the sign-in screen; open the link again.
+5. **Demo:** the mock API answers `GET /api/foods/builtin` and `POST /api/log/batch`, so the sheet works in the
+   preview; the Pages demo has the whole food list (the `?mock=1` page of a live server has 24 foods, so most foods are
+   listed as not added there).
+
+Tests: `tests/data/menu_link_vectors.json` (`node tests/js/run_vectors.mjs`, section "menu link");
+`tests/test_menu_plan.py` (every generated day has its link and it says what `menus.yml` says; the reader run over all
+42 links against the real `GET /api/foods/builtin` of the shipped list resolves every food; a tampered link; the batch
+creates planned entries and a second post adds nothing; the hook's three modes; no inline script; the view writes only
+from its submit handler and keeps the list in memory); `tools/e2e/menuplan.py` (Chromium, by hand).
+
 ### Build, CI and publishing
 
 * Image: a throw-away `handbook` stage (same base as the builder) installs `handbook/requirements.lock`

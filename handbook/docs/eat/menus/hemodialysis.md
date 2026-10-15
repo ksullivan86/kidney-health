@@ -91,6 +91,8 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171657x1,b171711x1,b172187x1,b172183x1,b174924x1,b173430x1,b171890x1,b171255x1,l174924x2,l171496x0.8333,l171009x1.5,l169248x1,l168409x1,l169126x1,s172746x1.2,s173418x1,d171477x1,d168878x1,d169141x1,d170397x0.5,d171413x2,s167577x1,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 2: Tuesday
 
 Non-dialysis day.
@@ -131,6 +133,8 @@ Non-dialysis day.
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171655x0.6667,b173430x1,b173424x1,b172183x1,b169930x2,b171890x1,l169737x0.5,l171477x0.8333,l171413x2,l170108x1,l168409x1,l174683x2,s170250x1,s169641x0.5,d171817x1,d168878x0.6667,d169976x0.5,d172796x1,d173430x2,s172694x1,s167762x1,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 3: Wednesday, dialysis day
 
 Dialysis day. Pack the afternoon snack and glucose tablets for the session; check your glucose before and after dialysis. Take phosphate binders with meals and snacks the way your team prescribed.
@@ -169,6 +173,8 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 | **Day** | **1,754 kcal** | | **216** | **77.0** | **1,926** | **848** | **1,325** | **592** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b175063x1,b172187x2,b172183x1,b167762x1,b169641x1.5,b171890x1,l174915x1,l173709x0.8333,l171009x1.5,l168409x0.5,l169248x1,l171695x1.5,s174974x0.75,s171711x1,d168240x1,d169700x1.25,d169141x0.5,d170397x2,d173430x2,s169936x1.5,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Day 4: Thursday
 
@@ -214,6 +220,8 @@ Non-dialysis day.
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b174648x1.5,b174832x0.5,b171711x1.5,b173424x1,b172183x1,b171890x1,l172796x1,l174031x0.8333,l169248x0.5,l170000x0.5,l169381x1,l169975x1,l171009x1.5,l173469x1,l167762x0.5,l171711x1.5,s167959x1,s173430x1,d171956x1.3333,d168878x1,d167747x1,d168390x1,d171413x2,d169930x0.5,s169596x1,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 5: Friday, dialysis day
 
 Dialysis day. Pack the afternoon snack and glucose tablets for the session; check your glucose before and after dialysis. Take phosphate binders with meals and snacks the way your team prescribed.
@@ -256,6 +264,8 @@ Dialysis day. Pack the afternoon snack and glucose tablets for the session; chec
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171657x1.25,b167755x1,b173424x1,b172183x1,b174924x1,b173430x1,b171890x1,l174924x2,l171477x0.8333,l171009x1.5,l169247x1,l168409x1,l174683x1.5,s174957x0.5,s171695x1,d172388x1,d168878x1,d170427x1,d170000x0.5,d169976x0.5,d172336x2,d169230x1,s167577x1,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 6: Saturday
 
 Non-dialysis day.
@@ -297,6 +307,8 @@ Non-dialysis day.
 
 </div>
 
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b174899x0.5,b173418x0.5,b172187x1,b172183x1,b169126x1.5,b171890x1,l168878x0.75,l171477x0.8333,l169141x1,l169976x1,l172336x2,l168195x1,s172746x1,s173418x1,d174492x1,d169737x1,d171413x2,d169230x2,d170108x2,d169247x1,d173469x1,s169936x1,s173647x1.5">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
+
 ## Day 7: Sunday
 
 Non-dialysis day in the long weekend gap: potassium and fluid stay at the low end until Monday's session.
@@ -337,6 +349,8 @@ Non-dialysis day in the long weekend gap: potassium and fluid stay at the low en
 | **Day** | **1,826 kcal** | | **215** | **76.1** | **1,660** | **827** | **1,070** | **473** |
 
 </div>
+
+<p class="kh-plan-day"><a class="kh-plan-link" href="@KH_APP@#plan-menu?items=b171655x1,b173430x1,b172187x1,b172183x1,b171711x1.5,b173227x1,l174924x2,l173424x1,l172183x2,l171009x1.5,l169248x1,l171695x1,l167762x1.5,s170250x1,s169641x0.5,d171477x1,d169700x1.3333,d171413x2,d169141x1,d170397x1,s172694x1,s171711x1,s173647x1">Add this day to my plan</a> <span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>
 
 ## Swaps that keep the numbers
 

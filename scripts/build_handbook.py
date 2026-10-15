@@ -73,6 +73,13 @@ CATEGORY_ORDER = ["Meat, Poultry & Eggs", "Fish & Seafood", "Legumes, Nuts & See
                   "Grains & Breads", "Vegetables", "Fruits", "Condiments & Sauces", "Beverages",
                   "Sweets & Snacks", "Prepared & Fast Food", "Diabetes supplies"]
 NOT_SHOPPED = {173647}  # tap water: counted in the menus' fluid, not bought
+# "Add this day to my plan" (ROADMAP v0.4). The link format is a contract with the app (ARCHITECTURE.md, "Menu days
+# in the app"; app/static/js/engine/menu_link.js reads it): built-in food references and amounts only.
+MENU_LINK_MEALS = {"breakfast": "b", "lunch": "l", "dinner": "d", "snack": "s"}
+MENU_LINK_MAX_ITEMS = 40       # POST /api/log/batch takes at most 40 entries (app/models.py MAX_LOG_BATCH)
+MENU_LINK_MAX_SERVINGS = 1000  # app/models.py MAX_SERVINGS
+APP_LINK_TOKEN = "@KH_APP@"    # replaced at mkdocs build time by handbook/tools/menu_links.py (the app, or the demo, or nothing)
+MENU_LINK_TEXT = "Add this day to my plan"
 DIABETES_FLOOR_STAGES = {"3a", "3b", "4", "5"}  # ARCHITECTURE.md v0.3 item 10 (note 05 fact-check H1)
 STAGE_LABELS = {("1", "none"): "G1", ("2", "none"): "G2", ("3a", "none"): "G3a", ("3b", "none"): "G3b",
                 ("4", "none"): "G4", ("5", "none"): "G5, no dialysis", ("5", "hemodialysis"): "Hemodialysis",
@@ -564,10 +571,53 @@ def _check_day(d: DayResult, limits: dict) -> None:
     missing = set(MAIN_MEALS) - seen
     if missing:
         d.problems.append(f"missing meals: {', '.join(sorted(missing))}")
+    _check_plan_link(d)
+
+
+def _check_plan_link(d: DayResult) -> None:
+    """The day must fit the "Add this day to my plan" link: at most 40 entries, no food twice for one meal
+    (the app would keep only the first), and amounts the link can carry (above 0, at most 1000, 4 decimals)."""
+    entries = [(m.meal, it) for m in d.meals for it in m.items]
+    if len(entries) > MENU_LINK_MAX_ITEMS:
+        d.problems.append(f"{len(entries)} foods; the 'Add this day to my plan' link takes at most {MENU_LINK_MAX_ITEMS}")
+    seen = set()
+    for meal, it in entries:
+        key = (meal, int(it.food["fdc_id"]))
+        if key in seen:
+            d.problems.append(f"{it.food['name']} is listed twice for {meal}; the 'Add this day to my plan' link keeps one")
+        seen.add(key)
+        if not (0 < it.servings <= MENU_LINK_MAX_SERVINGS) or abs(round(it.servings, 4) - it.servings) > 1e-9:
+            d.problems.append(f"{it.food['name']}: {it.servings!r} servings cannot go in the 'Add this day to my plan' link "
+                              f"(above 0, at most {MENU_LINK_MAX_SERVINGS}, 4 decimals)")
 
 
 def _fluid(v: float) -> str:
     return fmt_int(v) if v > 0.5 else "–"
+
+
+def menu_link_servings(servings: float) -> str:
+    """Servings as the link writes them: at most 4 decimals, no trailing zeros (0.5, 1, 0.6667)."""
+    text = f"{servings:.4f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def menu_plan_items(day: DayResult) -> str:
+    """The day's foods as the app's link reads them: ``<meal letter><fdc_id>x<servings>`` separated by commas, in
+    the order of the page (app/static/js/engine/menu_link.js)."""
+    return ",".join(f"{MENU_LINK_MEALS[m.meal]}{int(it.food['fdc_id'])}x{menu_link_servings(it.servings)}"
+                    for m in day.meals for it in m.items)
+
+
+def menu_plan_hash(day: DayResult) -> str:
+    return f"#plan-menu?items={menu_plan_items(day)}"
+
+
+def menu_plan_paragraph(day: DayResult) -> str:
+    """The plain link under a menu day. Raw HTML, so MkDocs does not read the hash as a page anchor; the token in
+    the address becomes the app's address (or the demo's, or the paragraph is dropped) in handbook/tools/menu_links.py.
+    It names only built-in foods and amounts; the app works out every number itself and asks before it saves."""
+    return (f'<p class="kh-plan-day"><a class="kh-plan-link" href="{APP_LINK_TOKEN}{menu_plan_hash(day)}">{MENU_LINK_TEXT}</a> '
+            '<span class="kh-plan-hint">Opens the app and shows this day for you to check. Nothing is saved until you confirm.</span></p>')
 
 
 def render_menu_page(res: MenuResult, person: dict, last_checked: str, fact_checked=None) -> str:
@@ -649,7 +699,7 @@ def render_menu_page(res: MenuResult, person: dict, last_checked: str, fact_chec
         out.append(f"| **Day** | **{fmt_int(tt['calories_kcal'])} kcal** | | **{fmt_int(tt['carbs_g'])}** | "
                    f"**{fmt_1(tt['protein_g'])}** | **{fmt_int(tt['potassium_mg'])}** | "
                    f"**{fmt_int(tt['phosphorus_mg'])}** | **{fmt_int(tt['sodium_mg'])}** | **{_fluid(tt['fluid_ml'])}** |")
-        out += ["", "</div>", ""]
+        out += ["", "</div>", "", menu_plan_paragraph(d), ""]
     if spec.get("swaps"):
         out += ["## Swaps that keep the numbers", ""]
         out += [f"- {s}" for s in spec["swaps"]]

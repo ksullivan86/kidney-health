@@ -42,7 +42,7 @@ NO_MKDOCS_2_WARNING=true ../.venv-hb/bin/mkdocs build --strict
 ```
 
 - **LAN build** (served by the app): `mkdocs.yml`, `site_url` `http://localhost/learn/` (override with
-  `HANDBOOK_SITE_URL`; set `HANDBOOK_APP_LINK=/` for the "Back to the food log" link).
+  `HANDBOOK_SITE_URL`; set `HANDBOOK_APP_LINK=/` for the "Back to the food log" link and the menu days' "Add this day to my plan" links).
 - **GitHub Pages build**: `mkdocs build --strict -f mkdocs.pages.yml` with `HANDBOOK_SITE_URL` set to the
   Pages URL. Each page's top bar links to the app's demo ("Try the app (demo)"), which the Pages workflow
   builds beside the handbook with `python scripts/build_preview.py --pages <site>/demo`.

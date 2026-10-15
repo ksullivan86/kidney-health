@@ -1,0 +1,110 @@
+{
+  "about": "js/engine/menu_link.js answers for the handbook's 'Add this day to my plan' links (v0.4). Written by hand, reviewed by hand; replayed by tests/js/run_vectors.mjs. The Python side of the format is scripts/build_handbook.py (menu_plan_items); tests/test_menu_plan.py runs the engine over every generated link.",
+  "limits": {"max_items": 40, "max_link_chars": 1500, "max_servings": 1000},
+  "meals": {"b": "breakfast", "l": "lunch", "d": "dinner", "s": "snack"},
+  "parse_cases": [
+    {"name": "a plain day", "hash": "#plan-menu?items=b173905x1,b167755x0.5,l170187x1,d171267x2,s173944x0.6667",
+     "expected": {"ok": true, "skipped": [], "items": [
+       {"meal": "breakfast", "fdc_id": 173905, "servings": 1}, {"meal": "breakfast", "fdc_id": 167755, "servings": 0.5},
+       {"meal": "lunch", "fdc_id": 170187, "servings": 1}, {"meal": "dinner", "fdc_id": 171267, "servings": 2},
+       {"meal": "snack", "fdc_id": 173944, "servings": 0.6667}]}},
+    {"name": "one entry", "hash": "#plan-menu?items=s1x1",
+     "expected": {"ok": true, "skipped": [], "items": [{"meal": "snack", "fdc_id": 1, "servings": 1}]}},
+    {"name": "an unknown meal letter is skipped, the rest is kept", "hash": "#plan-menu?items=z173905x1,b173905x1",
+     "expected": {"ok": true, "items": [{"meal": "breakfast", "fdc_id": 173905, "servings": 1}],
+       "skipped": [{"text": "z173905x1", "reason": "not a meal the app knows (breakfast, lunch, dinner or snack)"}]}},
+    {"name": "a word for the meal is not a meal letter", "hash": "#plan-menu?items=breakfast173905x1",
+     "expected": {"ok": true, "items": [], "skipped": [{"text": "breakfast173905x1", "reason": "not a food and an amount the app understands"}]}},
+    {"name": "zero servings", "hash": "#plan-menu?items=b1x0,l2x0.0",
+     "expected": {"ok": true, "items": [], "skipped": [
+       {"text": "b1x0", "reason": "an amount that is not above 0 and at most 1000 servings"},
+       {"text": "l2x0.0", "reason": "an amount that is not above 0 and at most 1000 servings"}]}},
+    {"name": "servings above the app's limit, at the limit", "hash": "#plan-menu?items=b1x1000.5,b2x1000,b3x1001",
+     "expected": {"ok": true, "items": [{"meal": "breakfast", "fdc_id": 2, "servings": 1000}], "skipped": [
+       {"text": "b1x1000.5", "reason": "an amount that is not above 0 and at most 1000 servings"},
+       {"text": "b3x1001", "reason": "an amount that is not above 0 and at most 1000 servings"}]}},
+    {"name": "servings that are not plain numbers", "hash": "#plan-menu?items=b1x-1,b2x1e3,b3x1.23456,b4x.5,b5x,b6xabc,b7x1.2.3",
+     "expected": {"ok": true, "items": [], "skipped": [
+       {"text": "b1x-1", "reason": "not a food and an amount the app understands"},
+       {"text": "b2x1e3", "reason": "not a food and an amount the app understands"},
+       {"text": "b3x1.23456", "reason": "not a food and an amount the app understands"},
+       {"text": "b4x.5", "reason": "not a food and an amount the app understands"},
+       {"text": "b5x", "reason": "not a food and an amount the app understands"},
+       {"text": "b6xabc", "reason": "not a food and an amount the app understands"},
+       {"text": "b7x1.2.3", "reason": "not a food and an amount the app understands"}]}},
+    {"name": "four decimals are the most", "hash": "#plan-menu?items=b1x0.3333,b2x0.33333",
+     "expected": {"ok": true, "items": [{"meal": "breakfast", "fdc_id": 1, "servings": 0.3333}],
+       "skipped": [{"text": "b2x0.33333", "reason": "not a food and an amount the app understands"}]}},
+    {"name": "the same food twice for one meal keeps the first", "hash": "#plan-menu?items=b1x1,b1x2,l1x1,b2x1",
+     "expected": {"ok": true, "items": [
+       {"meal": "breakfast", "fdc_id": 1, "servings": 1}, {"meal": "lunch", "fdc_id": 1, "servings": 1}, {"meal": "breakfast", "fdc_id": 2, "servings": 1}],
+       "skipped": [{"text": "b1x2", "reason": "the same food is listed twice for this meal (the first one is kept)"}]}},
+    {"name": "a food number of zero", "hash": "#plan-menu?items=b0x1",
+     "expected": {"ok": true, "items": [], "skipped": [{"text": "b0x1", "reason": "not a built-in food number"}]}},
+    {"name": "a food number that is too long", "hash": "#plan-menu?items=b1234567890x1",
+     "expected": {"ok": true, "items": [], "skipped": [{"text": "b1234567890x1", "reason": "not a food and an amount the app understands"}]}},
+    {"name": "an empty entry", "hash": "#plan-menu?items=b1x1,,l1x1,",
+     "expected": {"ok": true, "items": [{"meal": "breakfast", "fdc_id": 1, "servings": 1}, {"meal": "lunch", "fdc_id": 1, "servings": 1}],
+       "skipped": [{"text": "(empty)", "reason": "an empty entry"}, {"text": "(empty)", "reason": "an empty entry"}]}},
+    {"name": "a long unknown entry is cut short", "hash": "#plan-menu?items=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "expected": {"ok": true, "items": [], "skipped": [{"text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbb…", "reason": "not a food and an amount the app understands"}]}},
+    {"name": "no entries", "hash": "#plan-menu?items=", "expected": {"ok": false, "error": "This menu link has no foods in it."}},
+    {"name": "the route alone", "hash": "#plan-menu", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a question mark and nothing else", "hash": "#plan-menu?", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "another parameter name", "hash": "#plan-menu?item=b1x1", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a second parameter", "hash": "#plan-menu?items=b1x1&date=2026-10-20", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a parameter before items", "hash": "#plan-menu?v=1&items=b1x1", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a percent escape", "hash": "#plan-menu?items=b1x1%2Cl1x1", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "markup", "hash": "#plan-menu?items=<img src=x onerror=alert(1)>", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a space", "hash": "#plan-menu?items=b1x1 ,l1x1", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a second hash sign", "hash": "#plan-menu?items=b1x1#today", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "non-ASCII digits and letters", "hash": "#plan-menu?items=b١x1,é١x1", "expected": {"ok": false, "error": "The app does not understand this menu link."}},
+    {"name": "a longer route name", "hash": "#plan-menus?items=b1x1", "expected": {"ok": false, "error": "This is not a menu link."}},
+    {"name": "another view", "hash": "#today", "expected": {"ok": false, "error": "This is not a menu link."}},
+    {"name": "an empty hash", "hash": "", "expected": {"ok": false, "error": "This is not a menu link."}},
+    {"name": "not text", "hash": null, "expected": {"ok": false, "error": "This is not a menu link."}},
+    {"name": "forty entries are the most", "hash_repeat": {"prefix": "#plan-menu?items=", "item": "b{n}x1", "count": 40, "start": 1},
+     "expected_count": 40, "expected_ok": true},
+    {"name": "forty-one entries are refused", "hash_repeat": {"prefix": "#plan-menu?items=", "item": "b{n}x1", "count": 41, "start": 1},
+     "expected": {"ok": false, "error": "This link has more than 40 foods, more than a menu day has."}},
+    {"name": "a link that is too long", "hash_repeat": {"prefix": "#plan-menu?items=", "item": "b1x1", "count": 400, "start": 1, "same": true},
+     "expected": {"ok": false, "error": "This link is too long to be a menu day."}}
+  ],
+  "resolve_cases": [
+    {"name": "only built-in foods are matched, by their food number",
+     "foods": [
+       {"id": 11, "source": "custom", "fdc_id": 100, "name": "My own oats", "hidden": false},
+       {"id": 12, "source": "builtin", "fdc_id": 100, "name": "Oatmeal, cooked", "hidden": false},
+       {"id": 13, "source": "usda", "fdc_id": 200, "name": "Imported", "hidden": false},
+       {"id": 14, "source": "builtin", "fdc_id": 300, "name": "Hidden builtin", "hidden": true},
+       {"id": 15, "source": "builtin", "fdc_id": null, "name": "No number", "hidden": false},
+       {"id": 16, "source": "builtin", "fdc_id": 400, "name": "Milk", "hidden": false},
+       {"id": 17, "source": "builtin", "fdc_id": 400, "name": "Milk again", "hidden": false}],
+     "items": [
+       {"meal": "lunch", "fdc_id": 400, "servings": 1}, {"meal": "breakfast", "fdc_id": 100, "servings": 1.5}, {"meal": "dinner", "fdc_id": 200, "servings": 1},
+       {"meal": "dinner", "fdc_id": 300, "servings": 1}, {"meal": "snack", "fdc_id": 11, "servings": 1}, {"meal": "snack", "fdc_id": 999, "servings": 1},
+       {"meal": "breakfast", "fdc_id": 400, "servings": 2}],
+     "expected": {
+       "rows": [{"meal": "breakfast", "fdc_id": 100, "servings": 1.5, "food_id": 12}, {"meal": "breakfast", "fdc_id": 400, "servings": 2, "food_id": 16},
+                {"meal": "lunch", "fdc_id": 400, "servings": 1, "food_id": 16}],
+       "skipped": [
+         {"text": "food 200", "reason": "not one of the app's built-in foods"}, {"text": "food 300", "reason": "not one of the app's built-in foods"},
+         {"text": "food 11", "reason": "not one of the app's built-in foods"}, {"text": "food 999", "reason": "not one of the app's built-in foods"}]}},
+    {"name": "no foods at all", "foods": [], "items": [{"meal": "lunch", "fdc_id": 1, "servings": 1}],
+     "expected": {"rows": [], "skipped": [{"text": "food 1", "reason": "not one of the app's built-in foods"}]}},
+    {"name": "a list that is not a list", "foods": null, "items": [{"meal": "lunch", "fdc_id": 1, "servings": 1}],
+     "expected": {"rows": [], "skipped": [{"text": "food 1", "reason": "not one of the app's built-in foods"}]}}
+  ],
+  "batch_cases": [
+    {"name": "planned entries on the chosen date, one client id each",
+     "rows": [{"meal": "breakfast", "servings": 1.5, "food_id": 12}, {"meal": "snack", "servings": 0.6667, "food_id": 16, "client_id": "0f8fad5b-d9cb-469f-a165-70867728950e"}],
+     "date": "2026-10-20",
+     "expected": [
+       {"date": "2026-10-20", "meal": "breakfast", "food_id": 12, "servings": 1.5, "status": "planned", "client_id": "id-1"},
+       {"date": "2026-10-20", "meal": "snack", "food_id": 16, "servings": 0.6667, "status": "planned", "client_id": "0f8fad5b-d9cb-469f-a165-70867728950e"}]}
+  ],
+  "encode_cases": [
+    {"items": [{"meal": "breakfast", "fdc_id": 173905, "servings": 1}, {"meal": "snack", "fdc_id": 173944, "servings": 0.6667}, {"meal": "dinner", "fdc_id": 5, "servings": 1.2}],
+     "expected": "#plan-menu?items=b173905x1,s173944x0.6667,d5x1.2"}
+  ]
+}

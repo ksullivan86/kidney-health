@@ -111,6 +111,14 @@
   text-align: right;
 }
 
+/* "Add this day to my plan" under each menu day: a plain link to the app (handbook/tools/menu_links.py) */
+.md-typeset .kh-plan-day {
+  margin: 0.6em 0 1.6em;
+}
+.md-typeset .kh-plan-link {
+  font-weight: 600;
+}
+
 /* ---------- key-number boxes ---------- */
 .md-typeset .kh-numbers-box {
   border-left: 0.25rem solid var(--md-primary-fg-color);
@@ -136,6 +144,9 @@
 
 /* ---------- print ---------- */
 @media print {
+  .md-typeset .kh-plan-day {
+    display: none;
+  }
   .md-header,
   .md-tabs,
   .md-banner,

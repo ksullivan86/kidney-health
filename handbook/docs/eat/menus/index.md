@@ -42,7 +42,8 @@ numbers, see the [recipes](../recipes/index.md).
       ([ADA 2026 §5][A26-5]). Your own amount comes from your diabetes team.
 - [ ] **Swap like for like** using the swap list on each menu page and the [food lists](../food-lists.md).
 - [ ] **Treat lows first.** Rescue foods sit on top of any menu ([Treating a low](../../t1d/treating-a-low.md)).
-- [ ] **Log it:** every food is in the app under the same name; save a day as a meal or copy it.
+- [ ] **Log it:** every food is in the app under the same name. Under each day, **Add this day to my plan**
+      opens the app so you can check the day and add it as planned; or save a day as a meal or copy it.
 
 ## How the menus were built
 

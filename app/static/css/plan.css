@@ -78,3 +78,20 @@
 .shop-item.done .hint { color: var(--text-3); }
 .shopping-foot { display: flex; justify-content: flex-end; margin: 4px -8px -6px 0; }
 .shopping-foot:has(> [hidden]) { display: none; }
+
+/* ---------- "Add this menu day to my plan" sheet (js/views/menuplan.js) ---------- */
+#sheet-menuplan .mp-meal { margin-bottom: 10px; }
+.mp-meal-title { font-size: 0.85rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.03em; margin: 8px 0 2px; }
+.mp-items, .mp-skipped, .mp-lines { list-style: none; margin: 0; padding: 0; }
+.mp-item { padding: 3px 0; }
+.mp-item .check { align-items: center; min-height: var(--tap); }
+.mp-item .check input { margin-top: 0; }
+.mp-item .check .check-text { padding-top: 0; }
+.mp-name { display: flex; align-items: center; gap: 6px; font-weight: 600; overflow-wrap: anywhere; }
+.mp-name .rating { width: 18px; height: 18px; flex: none; }
+.menuplan-skipped { margin: 8px 0 12px; font-size: 0.9rem; }
+.mp-skipped li { padding: 3px 0; overflow-wrap: anywhere; }
+.mp-sub { margin: 10px 0 4px; }
+.mp-line { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.mp-line .rating { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+#sheet-menuplan .preview { margin-bottom: 10px; }

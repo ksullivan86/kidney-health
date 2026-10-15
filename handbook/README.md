@@ -77,7 +77,8 @@ the link checker. The build never fetches anything: fonts are off, the privacy p
 home network and under the app's hash-only Content Security Policy.
 
 To see it exactly as the app serves it (the image builds with `HANDBOOK_APP_LINK=/`, which adds the
-"Back to the food log" link to `/`, so the link checker is told that `/` is allowed):
+"Back to the food log" link to `/` and points each menu day's "Add this day to my plan" link at the app, see
+`tools/menu_links.py`; the link checker is told that `/` is allowed):
 
 ```bash
 (cd handbook && NO_MKDOCS_2_WARNING=true HANDBOOK_APP_LINK=/ ../.venv-hb/bin/mkdocs build --strict)
