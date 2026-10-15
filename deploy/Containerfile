@@ -20,16 +20,17 @@
 #     TRUSTED_PROXIES (app/security.py).
 #
 # Base images: literal `FROM image:tag@sha256:` lines so Dependabot (docker ecosystem, directory
-# /deploy, group "base-images") bumps builder, handbook and runtime together. Chainguard's free tier
-# publishes only :latest and :latest-dev, so the digest is what pins the Python version (3.14 when
-# these digests were resolved on 2026-10-06). Re-resolve by hand with:
+# /deploy, group "base-images") bumps them in one pull request. Chainguard's free tier publishes only
+# :latest and :latest-dev, so the digest is what pins the Python version: builder and runtime are
+# Python 3.15 (resolved on 2026-10-15; :latest moved from 3.14 to 3.15 and the 3.14 digests no longer
+# get security updates). The handbook stage is the one exception, see its comment. Re-resolve by hand with:
 #   crane digest cgr.dev/chainguard/python:latest-dev ; crane digest cgr.dev/chainguard/python:latest
 # The Debian fallback (deploy/Containerfile.debian) is built by CI on pull requests but not published.
 
 # ---------------------------------------------------------------------------------------------------
 # Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2 AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:e8e6a6f7677673d91c9b28fa2ec6ad62cd5ed532179846d2c14e75c93a12c3fc AS builder
 # Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
 # hadolint ignore=DL3002
 USER 0
@@ -62,7 +63,15 @@ RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
 # dependency. app/handbook.py serves the site at /learn with its own CSP (hashes of the theme's
 # inline scripts, computed at start-up). The generated pages (menus, tables, sources) are committed
 # and checked by CI (scripts/build_handbook.py --check), so nothing outside handbook/ is needed here.
-# Keep the FROM line identical to the builder's so Dependabot bumps all three together.
+#
+# TEMPORARY SPLIT: this stage stays on the Python 3.14 `latest-dev` digest (built 2026-10-06) while the
+# builder and the runtime moved to Python 3.15. The handbook toolchain needs PyYAML (hash-locked in
+# handbook/requirements.lock, installed wheels only) and PyYAML publishes no cp315 wheel yet, so on 3.15
+# the install fails and nothing may be built from source. The stage outputs static HTML only, so its
+# Python version never reaches the runtime image. When a PyYAML release ships a cp315 wheel, regenerate
+# handbook/requirements.lock (scripts/lock.sh) and make this FROM line identical to the builder's again.
+# Dependabot will keep proposing to bump this line to the 3.15 digest; until then that bump fails the
+# image build at the handbook stage, so do not merge it (tests/test_deploy.py checks this comment stays).
 # ---------------------------------------------------------------------------------------------------
 FROM cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2 AS handbook
 # Root only in this throw-away stage (it creates /opt/hb and /out/learn).
@@ -98,7 +107,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:8c6e0d0a587455e8a8d145e20234d5ef5a531a1c052a7b9d76b155ccc7fcded2
+FROM cgr.dev/chainguard/python:latest@sha256:1c4deeea85db49ab5f6bcd9e7fc0bf3fd8439e99f7bde45330f40400685eb394
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),

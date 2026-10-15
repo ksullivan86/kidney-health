@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -129,7 +130,8 @@ def test_ci_covers_the_required_checks():
     ci = read(".github/workflows/ci.yml")
     jobs = job_blocks(ci)
     assert {"test", "js-parity", "lint", "zizmor", "image"} <= set(jobs)
-    assert re.search(r'python:\s*\["3\.12",\s*"3\.14"\]', jobs["test"])
+    assert re.search(r'python:\s*\["3\.12",\s*"3\.14",\s*"3\.15"\]', jobs["test"])  # 3.15: the published image's Python
+    assert "allow-prereleases" not in jobs["test"]  # 3.15.0 is released; setup-python serves it as a stable version
     assert "--require-hashes" in jobs["test"] and "requirements-dev.lock" in jobs["test"]
     assert "node tests/js/run_vectors.mjs" in jobs["js-parity"]
     lint = jobs["lint"]
@@ -297,11 +299,22 @@ def test_hash_locks_are_refreshed_weekly_with_a_cooldown_by_pull_request():
 
 @pytest.mark.parametrize("path", CONTAINERFILES, ids=lambda p: p.name)
 def test_containerfile_bases_are_digest_pinned_and_move_together(path):
-    froms = re.findall(r"^FROM\s+(\S+)", path.read_text(encoding="utf-8"), re.M)
+    text = path.read_text(encoding="utf-8")
+    froms = re.findall(r"^FROM\s+(\S+)", text, re.M)
     assert len(froms) == 3, froms  # builder, handbook, runtime
     for ref in froms:
         assert DIGEST.search(ref), f"{path.name}: FROM without @sha256 digest: {ref}"
-    assert froms[0] == froms[1], "builder and handbook stages must use the identical FROM line"
+    if path.name == "Containerfile.debian":
+        assert froms[0] == froms[1] == froms[2], "the Debian fallback's three FROM lines must stay identical"
+    elif froms[0] == froms[1]:
+        assert "TEMPORARY SPLIT" not in text, "builder and handbook are identical again: delete the stale split comment"
+    else:
+        # The one allowed difference: the handbook stage stays on the Python 3.14 `latest-dev` digest while PyYAML (a
+        # handbook dependency) has no cp315 wheel and the builder and runtime moved to Python 3.15. It must say why,
+        # and be the same image and tag as the builder so that only the digest differs. When the split is no
+        # longer needed, make the lines identical again (the branch above then asks for the comment to go).
+        assert "TEMPORARY SPLIT" in text and "PyYAML" in text, "a different handbook FROM line needs its explanation"
+        assert froms[1].split("@")[0] == froms[0].split("@")[0] == "cgr.dev/chainguard/python:latest-dev"
 
 
 def test_chainguard_builder_and_runtime_are_the_same_family():
@@ -644,7 +657,12 @@ def test_docs_exist_and_follow_the_v03_decisions():
 
 
 def test_every_yaml_file_parses():
-    import yaml  # requirements-dev.lock installs PyYAML (the CI lint job installs it from .github/requirements-lint.txt)
+    # requirements-dev.lock installs PyYAML (the CI lint job installs it from .github/requirements-lint.txt). Not on
+    # Python 3.15: no cp315 wheel yet, so the lock leaves it out there and this skips; 3.12, 3.14 and the lint job run it.
+    if sys.version_info >= (3, 15):
+        yaml = pytest.importorskip("yaml", reason="PyYAML has no cp315 wheel yet (requirements-dev.in)")
+    else:
+        import yaml
 
     import importlib.util
 

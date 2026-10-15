@@ -642,6 +642,11 @@ compiles anything.
   supported.
 * **Base digests** are pinned in the `FROM` lines and bumped by Dependabot; to re-resolve them by
   hand: `crane digest cgr.dev/chainguard/python:latest-dev` and `crane digest cgr.dev/chainguard/python:latest`.
+  The Chainguard image runs Python 3.15 (its free `latest` moved up from 3.14; the Debian fallback stays on
+  3.14). One exception for now: the throw-away `handbook` stage keeps a Python 3.14 `latest-dev` digest,
+  because PyYAML, which the handbook toolchain needs, has no 3.15 wheel yet and nothing is built from
+  source. It outputs static HTML only, so the runtime image is unaffected; the comment above that `FROM`
+  line says when to make it identical to the builder's again.
 * The patient handbook is built by a separate, throw-away stage (`handbook`) from the hash-locked
   `handbook/requirements.lock` with `mkdocs build --strict`; only the built site reaches the runtime
   image, read-only at `/app/learn`, and the app serves it at `/learn/`. The build fails on any broken

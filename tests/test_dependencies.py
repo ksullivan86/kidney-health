@@ -51,6 +51,19 @@ def test_runtime_lock_contents():
     assert all(dev[name] == version for name, version in pins.items()), "dev lock must use the runtime pins"
 
 
+def test_locks_have_wheels_for_the_published_images_python():
+    """The Chainguard image moved to Python 3.15 and installs wheels only (--only-binary=:all:). pydantic-core
+    2.46.5 has no cp315 wheel; 2.48.0 is the first release that does, and pydantic 2.14 is the line that requires
+    one. PyYAML (6.0.3, the newest) has none at all, so the dev lock marks it as not for 3.15 (the YAML-reading
+    tests skip there; 3.12 and 3.14 run them). Drop the marker once PyYAML publishes a cp315 wheel."""
+    pins = requirement_names(REPO / "requirements.lock")
+    assert tuple(int(x) for x in pins["pydantic-core"].split(".")) >= (2, 48, 0)
+    assert tuple(int(x) for x in pins["pydantic"].split(".")[:2]) >= (2, 14)
+    dev = (REPO / "requirements-dev.lock").read_text(encoding="utf-8")
+    assert re.search(r'^pyyaml==\S+ ; python_version < "3\.15" \\$', dev, re.M)
+    assert re.search(r'^pyyaml>=6,<7; python_version < "3\.15"$', (REPO / "requirements-dev.in").read_text(encoding="utf-8"), re.M)
+
+
 def test_requirements_in_has_no_uvicorn_extras():
     text = (REPO / "requirements.in").read_text(encoding="utf-8")
     assert re.search(r"^uvicorn(?!\[)", text, re.M) and "uvicorn[" not in text

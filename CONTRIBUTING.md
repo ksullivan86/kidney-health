@@ -49,7 +49,7 @@ note it touches.
 
 ## Set up
 
-Python 3.11 or newer (CI runs 3.12 and 3.14, the image's Python) and, for the parity check, Node 22.
+Python 3.11 or newer (CI runs 3.12, 3.14 and 3.15, the image's Python) and, for the parity check, Node 22.
 
 ```bash
 git clone https://github.com/ksullivan86/kidney-health.git

@@ -6,7 +6,7 @@ upgrades: [`docs/deployment.md`](../docs/deployment.md). HTTPS for phones: [`doc
 
 | Path | Use |
 |---|---|
-| `Containerfile` | The published image: Chainguard Python by digest, hash-locked wheels, root-owned read-only code, no shell or pip, UID 10001. Build from the repo root: `podman build --format docker -f deploy/Containerfile -t kidney-health:local .` |
+| `Containerfile` | The published image: Chainguard Python 3.15 by digest (the handbook build stage is on 3.14 for now, see the file), hash-locked wheels, root-owned read-only code, no shell or pip, UID 10001. Build from the repo root: `podman build --format docker -f deploy/Containerfile -t kidney-health:local .` |
 | `Containerfile.debian` | Fallback on `python:3.14-slim-trixie` (keeps `/bin/sh` for debugging; no pip, no setuid). Built and smoke-tested by CI, not published. |
 | `quadlet/` | systemd Quadlet units for rootless Podman (recommended on one host): auto-start, auto-update, `Secret=` files |
 | `compose.yaml`, `.env.example`, `secrets/` | podman-compose / docker compose; secrets are files in `secrets/` (git-ignored) |

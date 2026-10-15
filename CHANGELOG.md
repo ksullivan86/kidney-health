@@ -417,6 +417,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   shared rootless Podman network, and what trusting the whole subnet risks (`docs/security.md`). With
   more than one person signing in, `AUTH_MODE=proxy` behind an SSO provider with MFA is recommended
   until local accounts get a second factor.
+* **The published image now runs Python 3.15.** Chainguard's free `python:latest` moved from 3.14 to 3.15,
+  and the old 3.14 digests no longer get security updates, so `deploy/Containerfile` follows (builder and
+  runtime digests; nothing to do when you pull the new image). Still wheels only, hash-locked, nothing built
+  from source. `pydantic` 2.13.5 → 2.14.0 and `pydantic-core` 2.46.5 → 2.50.0 are the only pins that
+  moved: 2.46.5 has no Python 3.15 wheel (2.48.0 and later do). No change to what the app does. The
+  handbook build stage (a throw-away stage that only produces the static pages) stays on a Python 3.14
+  digest for now because PyYAML has no 3.15 wheel yet, and `deploy/Containerfile.debian` stays on
+  `python:3.14-slim-trixie` (new digest). CI now tests Python 3.12, 3.14 and 3.15; on 3.15 the two test
+  files that read YAML skip, since PyYAML is left out of `requirements-dev.lock` there.
 
 ### For contributors
 

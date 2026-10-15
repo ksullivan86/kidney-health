@@ -45,8 +45,12 @@ jobs:
       fail-fast: false
       matrix:
         # 3.12: the oldest Python the CI covers (requires-python stays >=3.11 for source users).
-        # 3.14: the Python inside the published image (Chainguard python:latest).
-        python: ["3.12", "3.14"]
+        # 3.14: the Python of the Debian fallback image (deploy/Containerfile.debian) and of the handbook build.
+        # 3.15: the Python inside the published image (Chainguard python:latest moved to 3.15). setup-python
+        #       serves the released 3.15.0, so the plain version string is enough (no prerelease opt-in).
+        #       requirements-dev.lock leaves PyYAML out there (no cp315 wheel yet), so the two test modules
+        #       that read YAML skip on 3.15.
+        python: ["3.12", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
