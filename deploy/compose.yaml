@@ -28,6 +28,7 @@
 # Optional overlays (compose merges files left to right):
 #   -f deploy/compose.caddy.yaml       Caddy with HTTPS in front (docs/https.md, tier 1)
 #   -f deploy/compose.ai-ollama.yaml   a local Ollama for the optional AI features (docs/security.md)
+#   -f deploy/compose.stt-whisper.yaml a local speech-to-text server for the Ask microphone (docs/ai.md)
 name: kidney-health
 
 services:

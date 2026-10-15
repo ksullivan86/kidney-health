@@ -56,6 +56,7 @@ from . import config as K
 from .cache import AnswerCache, CachedAnswer
 from . import features as F
 from . import guard, prompts, schemas
+from . import stt
 from . import presets as P
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
@@ -483,7 +484,7 @@ class ParseMealBody(BaseModel):
 class ConsentBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]
-    purpose: Literal["text", "photos", "chat"] = "text"
+    purpose: Literal["text", "photos", "chat", "voice"] = "text"
     skip_preview: bool = False
 
 
@@ -548,6 +549,13 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
     available = cfg is not None and bool(prefs.get("opt_in"))
     reason = resolved.reason if cfg is None else (None if prefs.get("opt_in") else "not_opted_in")
     photos = bool(cfg and cfg.vision_model and _photos_allowed(conn, state, cfg))
+    chat_on = available and bool(state.store.get(conn, "ai.chat_enabled"))
+    voice_cfg = voice_config(request, conn) if chat_on else None
+    voice = None
+    if voice_cfg is not None and cfg is not None:
+        voice = {"host": voice_cfg.host, "model": voice_cfg.model, "max_seconds": stt.MAX_SECONDS, "max_bytes": voice_cfg.max_audio_bytes,
+                 "remaining_today": stt.remaining_today(conn, user.id, voice_cfg), "consent": stt.consent(conn, user.id, cfg.id, voice_cfg),
+                 "request": stt.consent_request(voice_cfg, _policy_for(request), cfg.id)}
     housekeeping(conn, state)
     return {
         "enabled": True,
@@ -559,13 +567,15 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
             "id": cfg.id, "label": cfg.label, "host": cfg.host, "model": cfg.model, "vision_model": cfg.vision_model,
             "scope": cfg.scope, "kind": cfg.preset_def.kind, "policy": P.policy_line(cfg.preset_def, scope=cfg.scope),
         },
-        "consent": None if cfg is None else {p: K.consent(conn, user.id, cfg, p) for p in ("text", "photos", "chat")},
+        "consent": None if cfg is None else {**{p: K.consent(conn, user.id, cfg, p) for p in ("text", "photos", "chat")},
+                                             "voice": None if voice_cfg is None else stt.consent(conn, user.id, cfg.id, voice_cfg)},
         "policy_version": P.POLICY_VERSION,
         "daily_limit": int(state.store.get(conn, "ai.shared_daily_limit")) or None,
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
         "features": {"next_meal": available, "parse_meal": available, "label": available and photos,
                      "plate": available and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
-                     "chat": available and bool(state.store.get(conn, "ai.chat_enabled"))},
+                     "chat": chat_on, "voice": voice is not None},
+        "voice": voice,
         "trust": _trust_view(conn, state, prefs),
         "prompt_version": PROMPT_VERSION,
     }
@@ -628,6 +638,16 @@ def require_chat_enabled(request: Request, conn: sqlite3.Connection = Depends(ge
     """``/api/ai/chat`` behaves as unregistered (404) while ``ai.chat_enabled`` is off (checked before the body)."""
     if not ai_state(request).store.get(conn, "ai.chat_enabled"):
         raise HTTPException(status_code=404, detail="Not Found")
+
+
+def voice_config(request: Request, conn: sqlite3.Connection) -> stt.SttConfig | None:
+    """The transcription server (``STT_BASE_URL``) when voice is available to the Ask screen: configured, the admin
+    switch ``ai.voice_enabled`` on and the chat on. ``None`` otherwise (the transcribe route is then a 404)."""
+    state = ai_state(request)
+    cfg = getattr(request.app.state, "stt", None)
+    if cfg is None or not state.store.get(conn, "ai.voice_enabled") or not state.store.get(conn, "ai.chat_enabled"):
+        return None
+    return cfg
 
 
 class ChatMessage(BaseModel):
@@ -832,6 +852,16 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
         raise unavailable(resolved.reason or "not_configured")
     cfg = resolved.cfg
     assert cfg is not None
+    if body.purpose == "voice":  # the recording goes to the transcription server, not to the AI provider
+        voice = voice_config(request, conn)
+        if voice is None:
+            raise HTTPException(status_code=404, detail="Not Found")
+        asked = stt.consent_request(voice, _policy_for(request), cfg.id)
+        if cfg.id != body.provider_id:
+            raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=asked)
+        given = stt.give_consent(conn, user.id, cfg.id, voice)
+        conn.commit()
+        return {"consent": given, **asked}
     if cfg.id != body.provider_id:
         raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=K.consent_request(cfg, body.purpose))
     given = K.give_consent(conn, user.id, cfg, body.purpose, skip_preview=body.skip_preview)
@@ -841,7 +871,7 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
 
 @router.delete("/consent/{provider_id}", status_code=204, response_class=Response)
 def withdraw_consent(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)], request: Request, user: CurrentUser,
-                     purpose: Literal["text", "photos", "chat"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+                     purpose: Literal["text", "photos", "chat", "voice"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     if not K.withdraw_consent(conn, user.id, provider_id, purpose):
         raise HTTPException(status_code=404, detail="no consent for this provider")
     conn.commit()
@@ -1134,6 +1164,22 @@ def _shared_row_or_404(conn: sqlite3.Connection, provider_id: int) -> Any:
     return row
 
 
+def voice_admin_view(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
+    """The transcription server as an admin sees it (read-only: it is set with ``STT_*``; the key is never shown)."""
+    state = ai_state(request)
+    cfg = getattr(request.app.state, "stt", None)
+    out: dict[str, Any] = {"configured": cfg is not None, "enabled": bool(state.store.get(conn, "ai.voice_enabled"))}
+    if cfg is None:
+        return out
+    problem = None
+    try:
+        check_url(cfg.base, "shared", _policy_for(request))
+    except PolicyError as exc:
+        problem = str(exc)
+    return {**out, "host": cfg.host, "model": cfg.model, "key_set": bool(cfg.api_key), "local": stt.is_local(cfg, _policy_for(request)),
+            "daily_limit": cfg.daily_limit or None, "max_seconds": stt.MAX_SECONDS, "max_bytes": cfg.max_audio_bytes, "problem": problem}
+
+
 def admin_list(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
     state = ai_state(request)
     keyring = _keyring(request)
@@ -1149,6 +1195,7 @@ def admin_list(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
         "proxy": bool(state.policy.proxy),
         "env_provider": bool(state.settings.ai.provider),
         "writable": state.settings.auth_mode != "none",
+        "voice": voice_admin_view(request, conn),
     }
 
 
@@ -1277,8 +1324,11 @@ def install(app: FastAPI, settings: Settings, store: SettingsStore, *, app_versi
     import os
 
     policy = K.build_policy(settings, kubernetes_host=os.environ.get("KUBERNETES_SERVICE_HOST"))
+    for warning in stt.check_env(settings, policy):  # the speech-to-text server (STT_*), under the same address rules
+        log.warning("configuration: %s", warning)
     state = AiState(settings=settings, store=store, client=C.ChatClient(policy, app_version=app_version))
     app.state.ai = state
+    app.state.stt = stt.load(settings)
     auth_housekeeping.register_daily("ai_retention", daily_retention)
     app.include_router(combined)
     ai_bridge.register_ai_status(status_provider(app))

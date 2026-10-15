@@ -36,7 +36,10 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   provider and outcome; photos are never stored, only their fingerprint and size). The person sees and
   can delete their AI activity in Settings; admins see only the counts. The **Ask** chat is the exception:
   its calls keep no request, answer or message text, only the time, provider, model, the step and tool name and
-  the outcome, and the conversation is not stored on the server at all;
+  the outcome, and the conversation is not stored on the server at all. **Voice input** is another exception: the
+  recording and its words are never stored; the activity list gets one row per recording with the transcription host, the
+  model, a length bucket ("under 10 s") and the outcome, and the person's agreement to send recordings to that host is
+  kept like the other consents;
 
 **On the person's own device** (the browser's storage for the app's address, never on another
 device): the app's offline copy, the days, foods and settings it last showed (13 days back to 7 ahead)
@@ -68,6 +71,15 @@ their activity list for every change of the choice and for every save ("with Ask
 the meal and the day, or the recipe's name), and, for 24 hours, a remembered key (a hash, never the key itself) with the ids
 of what that chat request saved, so a request sent twice saves once. None of this is sent to the AI provider, and Ask's
 conversation is still not stored.
+
+If the admin turns on **voice input** for Ask ([ai.md](ai.md#voice-input-speech-to-text)) and a person agrees to it (its own
+consent), tapping the microphone sends that **one recording** (a minute at most) to the speech-to-text server the admin
+chose, and nothing else: no name, account details or cookie. That server turns it into text, which comes back into the
+person's question box; the recording is deleted at once and the server keeps neither it nor the text (not on disk, not
+in the database, not in the log). If the transcription server is on the admin's own network the audio does not leave it;
+if it is an online service, it receives the audio under its own terms, which the consent sheet says. The browser's own
+speech recognition is never used (Chrome would send the audio to Google, Safari to Apple). Only what the person then
+chooses to send with **Send** goes to the AI, as above.
 
 If the admin turns on assistant access and a person connects a chat assistant with their own token
 ([assistant.md](assistant.md)), the server answers that assistant's questions with the person's own numbers:

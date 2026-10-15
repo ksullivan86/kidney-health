@@ -35,6 +35,7 @@ from ..crypto import InvalidToken, Keyring
 from ..db import table_exists, utcnow
 from ..security import register_secret
 from ..settings_store import SettingsStore
+from . import stt
 from .client import ProviderConfig
 from .netpolicy import BaseUrl, NetPolicy, PolicyError, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
 from .transport import ca_store_problem
@@ -51,7 +52,7 @@ MAX_TOKENS_RANGE = (64, 32_768)
 TIMEOUT_RANGE = (5.0, 600.0)
 CONTEXT_RANGE = (1024, 2_000_000)
 DISABLED_REASONS = ("hermes_tools", "hermes_check_failed")
-Purpose = Literal["text", "photos", "chat"]
+Purpose = Literal["text", "photos", "chat", "voice"]
 
 
 # --------------------------------------------------------------------------- #
@@ -629,8 +630,10 @@ def consents_of(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
            FROM ai_consents c JOIN ai_providers p ON p.id = c.provider_id WHERE c.user_id = ? ORDER BY c.provider_id, c.purpose""",
         (int(user_id),),
     ).fetchall()
-    return [{"provider_id": r["provider_id"], "provider_label": r["label"], "purpose": r["purpose"], "host": r["host"],
-             "policy_version": r["policy_version"], "current": r["policy_version"] == POLICY_VERSION,
+    return [{"provider_id": r["provider_id"], "provider_label": stt.LABEL if r["purpose"] == "voice" else r["label"],
+             "purpose": r["purpose"], "host": r["host"],
+             "policy_version": r["policy_version"],
+             "current": r["policy_version"] == (stt.POLICY_VERSION if r["purpose"] == "voice" else POLICY_VERSION),
              "skip_preview": bool(r["skip_preview"]), "at": r["created_at"]} for r in rows]
 
 

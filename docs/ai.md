@@ -51,7 +51,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
   [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others),
-  [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
+  [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
 
@@ -113,6 +113,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | Age as a 10-year band and sex | Only if you tick "Share my age band and sex" |
 | The text you type into "Describe a meal" (≤ 300 characters) | Yes (that feature) |
 | Your messages in an Ask conversation (the last 20, each ≤ 2000 characters; a message about a low or an emergency is answered by the app and is never sent) and the app's own numbers the assistant looks up with its tools: your targets and a day's totals, food names and their nutrients | Yes (Ask only), after you agree to the separate "Ask conversations" consent |
+| Your voice recording from the Ask microphone (up to 60 seconds) | Only if you tap the microphone, **not to the AI provider**: to the speech-to-text server your admin set up (`STT_BASE_URL`), which turns it into text; the recording is deleted at once and never stored. Only the words you then choose to send go to the AI. See [Voice input](#voice-input-speech-to-text) |
 | The photo (label, plate) | Yes (photo features): JPEG only, with location, camera data, comments and any trailing bytes removed by the server; never stored |
 | `safety_identifier` (OpenAI on a shared key) | A keyed hash (HMAC under the server's secret key) of your account number; it cannot be turned back into the number |
 | Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, ingredient lists, other people's data | **Never** |
@@ -152,7 +153,7 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   **New conversation**, reloading or signing out forgets it, and the server keeps no transcript (the AI
   activity list shows that a call happened, never what was said). Ask has its own consent ("What will be
   sent?" lists your messages and the numbers it looks up), and one question can use several AI calls (up to
-  7), each counted in your daily limit. Voice is not built yet ([`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next").
+  7), each counted in your daily limit.
 * **Saving from Ask.** Ask a question like "log a banana for breakfast" and the assistant may ask the app to save it.
   What happens depends on **Settings → AI ideas → How much do you trust the assistant?**:
   * **Ask me before every save** (the default, recommended): you get a card with the foods the app found, the amounts
@@ -169,6 +170,15 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   admin turns that off, Ask goes back to asking before every save and Settings says so. Every change of this choice is in
   your activity list. The trust choice applies to the Ask screen only: an assistant you connected with a token
   ([`assistant.md`](assistant.md)) is told in its own instructions to confirm first.
+* **Talking to Ask.** When your admin has set up speech to text, a **microphone** button sits beside **Send**. Tap it (the
+  first time a sheet says where your recording goes: "Your recording is sent to <host> to turn it into text, then deleted.
+  Nothing is kept."), speak, and tap it again to stop (it stops by itself after a minute; **Discard** or Escape throws the
+  recording away, and so does leaving the page). The words appear **in the question box for you to read and fix; nothing is
+  sent to the AI until you press Send.** If your browser cannot record or you refuse the microphone, a line says so and you
+  can type. **Read answers aloud** (a switch under the box, off by default, remembered on this device) speaks the answer with a
+  voice built into your device; if the device has none, the switch is hidden, because the app will not use an online voice
+  (it would send the answer to the browser's maker). Only the answer's words are read, never the cards or links. The
+  browser's own speech recognition is **not** used: Chrome would send your voice to Google and Safari to Apple.
 * **"What will be sent?"** Every AI button has it: the destination address, the headers (your key is
   never shown) and the body; for photos, the photo's size instead of its bytes.
 * **Your own key.** OpenAI, OpenRouter or Nous Portal (and, if your admin allows it, any https server
@@ -208,11 +218,12 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.audit_retention_days` (`AI_AUDIT_RETENTION_DAYS`) | `30` | Days request and response bodies are kept in the AI activity log (0 = metadata only) |
 | `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`) | `false` | Plate photos |
 | `ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`) | `false` | Photos may go to a Hermes agent (the tool check still runs before every photo) |
+| `ai.voice_enabled` (`AI_VOICE_ENABLED`) | `false` | The Ask microphone. Needs `ai.chat_enabled` and a transcription server (`STT_BASE_URL`, below). While off, `POST /api/ai/transcribe` answers 404 and nobody sees the microphone. |
 | `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
-`ai.*` settings (`ai.chat_enabled` too) can then be set **only** with environment variables (the API answers 403).
+`ai.*` settings (`ai.chat_enabled` and `ai.voice_enabled` too) can then be set **only** with environment variables (the API answers 403).
 
 Environment only (never editable at run time; a bad value stops the start with a message naming it):
 
@@ -235,6 +246,12 @@ Environment only (never editable at run time; a bad value stops the start with a
 | `AI_MAX_RESPONSE_BYTES` | `262144` | Answer size cap (decompressed bytes) |
 | `AI_OPENROUTER_ZDR` | `false` | Ask OpenRouter for zero-data-retention endpoints |
 | `MAX_IMAGE_BYTES` | `4194304` | Photo size cap |
+| `STT_BASE_URL` | unset | The speech-to-text server for the Ask microphone: one OpenAI-compatible endpoint, `{STT_BASE_URL}/audio/transcriptions`; ends in `/v1`; the same address rules as an AI provider ([Voice input](#voice-input-speech-to-text)) |
+| `STT_MODEL` | required with `STT_BASE_URL` | The model name that server knows (`whisper-1`, `Systran/faster-whisper-small`) |
+| `STT_API_KEY_FILE` / `STT_API_KEY` | unset | Its key, if it wants one (write-only, never returned by any API; give it as a file) |
+| `STT_TIMEOUT_S` | `60` | How long the transcription server may take (5–300 s) |
+| `STT_DAILY_LIMIT` | `100` | Recordings per person per day (0 = unlimited); not part of `ai.shared_daily_limit` |
+| `STT_MAX_AUDIO_BYTES` | `1572864` | Size cap of one recording (64 KiB – 8 MiB); a minute of the page's recording is about 240 KB |
 
 ### Providers and presets
 
@@ -423,10 +440,53 @@ Use the preset, set `AI_BASE_URL` to the server's `/v1` address and list it in `
 it is on a private network. Run **Test connection** once: it records which JSON mode the server
 supports. A LiteLLM proxy is run by you, not by the app: pin it by digest.
 
+### Voice input (speech to text)
+
+The Ask screen can take a spoken question. The app **never runs a speech model itself** (as it never runs Ollama) and **never uses
+the browser's speech recognition**: Chrome sends that audio to Google and Safari to Apple, outside your control, and Firefox has
+none. Instead the page records with the browser's `MediaRecorder` and your server forwards the clip to **one transcription
+server you choose**, under the same address rules as an AI provider.
+
+* **Set up.** Run a transcription server that speaks OpenAI's `/v1/audio/transcriptions` (a local
+  [Speaches](https://github.com/speaches-ai/speaches) or whisper.cpp-style container, or a cloud service such as OpenAI or Groq), then set
+  `STT_BASE_URL` (ending in `/v1`), `STT_MODEL` and, if it wants one, `STT_API_KEY_FILE`. For a server on your network add its
+  `host:port` to `AI_PRIVATE_HOSTS` (plain http works only for a listed private host, exactly like an Ollama host; there is no
+  second allowlist and no wildcard). As an admin, open Server administration → AI providers → **Speech to text**: it shows the host
+  and model (never the key) and **Test transcription** sends one second of silence. Then switch on Server settings → Optional AI →
+  **Voice input for Ask** (`ai.voice_enabled`; off until you do; it needs Ask on). Each person agrees on first use.
+* **A local container.** `deploy/compose.stt-whisper.yaml` is an overlay like the Ollama one: the container sits on an `internal`
+  network with **no route to the internet**, no published port, read-only, no capabilities, a non-root user, limits and a health
+  check. **Put the model in the volume once, before the first start** (the header of the file has the commands: a throw-away
+  container with network access fills the volume), because the running container must never reach the internet. The image is pinned
+  by digest: the file ships with a marked placeholder (`@sha256:<pin-the-digest-you-verified>`) because the digest has to be
+  verified by whoever deploys it (`crane digest`); the overlay will not start until it is replaced.
+* **What is sent where.** The recording (one clip, `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/wav`, at most `STT_MAX_AUDIO_BYTES`,
+  a minute) goes to the transcription host as a multipart form with the model name, and nothing else: no name, no account details, no
+  cookie. The text comes back and goes into the person's question box; only the person's **Send** sends anything to the AI. The
+  consent sheet says: "Your recording is sent to <host> to turn it into text, then deleted. Nothing is kept." A cloud service
+  receives the audio under its own terms; a container on your own network does not leave it.
+* **What is kept.** Nothing. The audio exists in the server's memory while it is checked and forwarded: it is not written to disk or
+  the database, not logged, and not kept on the device (no file, no playback). The transcript is not stored either. The AI activity
+  list gets one row per recording with the host, the model, a length bucket ("under 10 s") and the outcome, and no words. The
+  transcript is cleaned like a chat message (NFKC, control characters out, at most 2000 characters).
+* **Checks on the clip.** The content type must be one of the four; the first bytes must be that container (a PDF or an image sent as
+  `audio/webm` is refused); a recording over the size limit is `413`; a WAV longer than a minute is `413`; the page stops a recording
+  at a minute. The route answers 404 before reading anything unless AI, Ask and voice are on and configured.
+* **Limits.** `STT_DAILY_LIMIT` per person per day (default 100; `429` with `Retry-After` until midnight UTC; a refused clip is not
+  counted, a failed transcription is), one AI call at a time per person (the recording holds the same slot), and the admin test is
+  20 per hour. Voice is counted separately from `ai.shared_daily_limit`; the admin's usage list shows it as "speech to text".
+* **Browsers.** The microphone needs a secure context (https or localhost) and `MediaRecorder` (Chrome, Edge, Firefox, Safari 14.1+).
+  The app's `Permissions-Policy` allows the microphone for its own origin only (`microphone=(self)`). Without it a line says so and
+  the box still works. **Read answers aloud** uses only voices built into the device (`localService`): if there is none, the switch
+  is hidden.
+* **Troubleshooting.** `blocked_address`: list the host in `AI_PRIVATE_HOSTS` (the start-up log warns when the host would be refused).
+  `http_404`: the model name or the `/v1` path is wrong for that server. `http_401` / `http_403`: the key. `timeout`: a cold or
+  CPU-only model; raise `STT_TIMEOUT_S`. "No words were heard": the model heard nothing (move closer; check the browser's microphone).
+
 ### Addresses: the SSRF policy
 
 A provider's address is configurable, so it is treated as untrusted (`app/ai/netpolicy.py`,
-`app/ai/transport.py`):
+`app/ai/transport.py`). The speech-to-text server (`STT_BASE_URL`) follows exactly the same rules as a shared provider:
 
 * https only (plain http only for an `AI_PRIVATE_HOSTS` entry); no user name, query or fragment; a path of
   plain segments ending in `/v1`; numeric hosts only as ordinary dotted IPv4 (`2130706433`, `0x7f.1`,
@@ -453,6 +513,7 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 
 * `ai.shared_daily_limit` per person per day on shared providers (UTC days; `429` with `Retry-After`
   until midnight). Photos and connection tests count. Own keys are counted, never limited.
+* Voice recordings are counted apart: `STT_DAILY_LIMIT` per person per day (100; 0 = unlimited; `ai_usage` provider 0).
 * An Ask question is up to 7 model calls (at most 6 tool calls, then the answer), each counted. A limit reached
   after the first call ends that question with the numbers gathered so far; before the first call it is `429`.
 * `ai.max_concurrency` calls in flight on the server and one per person (the whole Ask question holds the slot); extra calls get `429` with
@@ -495,7 +556,7 @@ history.
 | `hermes_tools` / `hermes_check_failed` | The Hermes profile has an enabled toolset with tools, or the check failed; fix the profile, then Test connection |
 | `agent_not_allowed` | Photos to Hermes need `AI_VISION_ALLOW_AGENT=true` |
 | `vision_not_configured` / `plate_disabled` | No vision model is set / plate photos are off |
-| `quota_exhausted` | Today's shared calls are used up |
+| `quota_exhausted` | Today's shared calls are used up (voice: today's recordings, `STT_DAILY_LIMIT`) |
 | "The AI ideas did not fit your targets today" | Every idea failed the rules; the app shows its own |
 
 ### Turning AI off

@@ -9,6 +9,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Talk to Ask (when the admin sets up speech to text).** A **microphone** button next to Send: tap, speak, tap again
+  (a minute at most). The first time, a sheet says where your recording goes ("Your recording is sent to <host> to turn it
+  into text, then deleted. Nothing is kept.") and nothing is recorded before you agree. **The words appear in the question
+  box for you to read and fix; nothing goes to the AI until you press Send.** **Read answers aloud** (a switch, off by
+  default, remembered on this device) speaks the answer with a voice built into your device, never an online voice. The
+  browser's own speech recognition is not used. See [docs/assistant.md](docs/assistant.md#talking-to-ask-voice).
 * **Ask: a chat inside the app (when the admin turns it on).** A new **Ask** tab, for people who use AI ideas: type
   a question ("How much potassium do I have left today?", "Can I have a banana as a snack?") and press Enter. The
   assistant looks up your own targets and food log with the app's read-only tools and answers in a few plain
@@ -139,6 +145,23 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Voice input for Ask** is a new switch, **off by default**: Server administration → Server settings → Optional AI →
+  *Voice input for Ask (a microphone button)*, or `AI_VOICE_ENABLED=true`. It needs Ask on and **a transcription server you
+  set up**: `STT_BASE_URL` (one OpenAI-compatible `/v1/audio/transcriptions` endpoint, base ending in `/v1`), `STT_MODEL`,
+  `STT_API_KEY_FILE` if it wants a key (write-only, never returned), `STT_TIMEOUT_S`, `STT_DAILY_LIMIT` (100 recordings per
+  person per day) and `STT_MAX_AUDIO_BYTES` (1.5 MiB). The address follows **the same rules as an AI provider** (the pinned
+  SSRF transport; a LAN host such as `stt:8000` only when `AI_PRIVATE_HOSTS` lists it); there is no new outbound path.
+  **Recordings are transcribed and deleted: never written to disk or the database, never logged, and the transcript is not
+  stored either.** The AI activity list gets one row per recording (host, model, a length bucket, the outcome; no words).
+  Server administration → AI providers → *Speech to text* shows the host and model (never the key) with **Test
+  transcription** (one second of silence). **`Permissions-Policy` now allows the microphone for the app's own origin
+  (`microphone=(self)`, it was `microphone=()`)**; everything else in the header is unchanged. **Schema step 14**: `ai_consents` is
+  rebuilt so a consent for the new purpose `voice` can be stored (every consent is kept; as always, back up before
+  upgrading). `deploy/compose.stt-whisper.yaml` is an optional overlay with a local speech-to-text container on an internal
+  network with **no route to the internet** (read-only, no capabilities, non-root, limits, a health check): put the model in the
+  volume once beforehand, and **replace the digest placeholder with a digest you verified** before using it. The browser's own
+  speech recognition is never used (Chrome would send the audio to Google, Safari to Apple). See
+  [docs/ai.md](docs/ai.md#voice-input-speech-to-text).
 * **Ask (a chat with the AI inside the app)** is a new switch, **off by default**: Server administration → Server
   settings → Optional AI → *Ask (a chat with the AI inside the app)*, or `AI_CHAT_ENABLED=true`. It needs
   `AI_ENABLED` and a provider; people who opted in then get the **Ask** tab. While it is off, `POST /api/ai/chat`
@@ -238,6 +261,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* Voice for Ask is `app/ai/stt.py` (configuration, clip checks, the multipart call, consent and limit helpers; pure),
+  `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`,
+  `js/views/ask-voice.js` and `css/ask-voice.css` (attached to Ask by two hook lines in `ask.js`), the voice consent text and
+  the Speech to text panel in `js/views/ai.js`, `app/migrations/m014_ai_consent_voice.py` (step 14, after step 13's
+  `assistant_ask_keys`). Tests: `tests/test_ai_voice.py`,
+  `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py` (a static test fails if any shipped file names the
+  browser's speech recognition), `tests/test_deploy_stt.py`; `python tools/e2e/ask_voice.py` drives it in Chromium with a
+  fake audio device and a fake transcription server. Plan: `docs/dev/plans/assistant-step2.md` (part B).
 * The Ask chat is `app/ai/chat.py` (the step loop, the text policy, the dose and number checks, the "From the app"
   figures; pure but for the callbacks the route gives it), `ChatStep` in `app/ai/schemas.py`, the prompt in
   `app/ai/prompts.py`, `POST /api/ai/chat` in `app/ai/routes.py`, `js/views/ask.js`. It reuses `complete_json`, the

@@ -56,6 +56,10 @@
       label: 'Allow photos to go to a Hermes agent', help: 'Off by default. Text printed on a package could try to instruct an agent; even when on, the app only uses a Hermes profile whose tool check passes.' },
     { key: 'ai.vision_plate_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VISION_PLATE_ENABLED',
       label: 'Plate photos (AI estimate of what is on a plate)', help: 'Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app says so on every result and never logs them without a tap.' },
+    { key: 'ai.voice_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VOICE_ENABLED',
+      label: 'Voice input for Ask (a microphone button)',
+      help: 'Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record a question; the recording goes to that server to become text, '
+        + 'is deleted at once, and the text appears in the box for them to read and edit before anything is sent to the AI.' },
     // Assistant access (docs/dev/plans/assistant-step1.md part A; app/auth/api_tokens.py). The tokens are rows of
     // api_tokens, never settings.
     { key: 'assistant.enabled', type: 'bool', default: false, scope: 'instance', env: 'ASSISTANT_ENABLED',

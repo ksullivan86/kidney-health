@@ -1,4 +1,4 @@
-Status: complete (step 2, part C: the Ask chat can save, with a trust setting; steps 1 and 2 part A below are complete too)
+Status: complete (step 2, part C: the Ask chat can save, with a trust setting; steps 1 and 2 part A below are complete too; step 2, part B (voice) is complete too, see its section at the end)
 
 # Assistant, step 2, part C: the Ask chat can save, with a trust setting
 
@@ -408,3 +408,87 @@ a later PR; it uses `app.auth.api_tokens.AssistantUser` (the bearer dependency b
     python -m pytest -q
     node tests/js/run_vectors.mjs
     python3 tests/data/gen_settings_vectors.py --check
+
+# Assistant, step 2, part B: voice for the Ask chat
+
+Status: complete (full suite passed, exit 0, after merging `origin/main` 8936b29: numbers in "Checks"). Worktree `agent-aa91a184a25b62836` (branch
+`worktree-agent-aa91a184a25b62836`, first based on `main` at `ec7f670`, then merged with `origin/main` 8936b29). Commit only: no push, no PR from here. Spec:
+`docs/dev/plans/assistant-step2.md` ("Part B: voice") and the roadmap item "An assistant you can talk to".
+
+## Design (decided by the owner: least trust)
+
+* Speech to text is a server-side provider, off by default: `STT_BASE_URL` (ends in `/v1`, like `AI_BASE_URL`),
+  `STT_MODEL`, `STT_API_KEY[_FILE]` (optional, write-only), `STT_TIMEOUT_S`, `STT_DAILY_LIMIT`, `STT_MAX_AUDIO_BYTES`,
+  and the admin switch `ai.voice_enabled` (`AI_VOICE_ENABLED`). The call goes through `send_json` (the SSRF transport)
+  with scope `shared`: a LAN host only when `AI_PRIVATE_HOSTS` lists it. The browser's own speech recognition is never
+  used (Chrome sends that audio to Google, Safari to Apple); `tests/test_ask_voice_ui.py` keeps every name of it out.
+* `POST /api/ai/transcribe` (`app/ai/voice.py`, logic in `app/ai/stt.py`): 404 before the body unless AI, Ask and voice
+  are on and configured; 503 if the person cannot use AI; 415/413 by headers; 409 consent `voice`; then the AI slot,
+  the body (in memory, at most 1.5 MiB), the first bytes must match the type (400), a WAV over a minute is 413, the
+  daily limit (429), the multipart call, `{text}` cleaned by the chat text policy (<= 2000). Audio and transcript are
+  never stored or logged; one `ai_audit` row (feature `voice`, no bodies, a length bucket and the outcome).
+* Consent: purpose `voice` in `ai_consents` (schema step 14). The row has `host` = the transcription host and
+  `provider_id` = the AI provider that serves the person (the Ask screen needs one; the table's foreign key needs a
+  row). A changed host, provider or wording asks again. Settings -> AI shows it as "Speech to text". Owner to confirm.
+* Daily limit: env `STT_DAILY_LIMIT` (default 100, 0 = unlimited), counted in `ai_usage` under provider 0 with
+  `key_scope = 'own'` so the shared AI calls (`ai.shared_daily_limit`) never include voice. Owner to confirm.
+* Browser: `js/views/ask-voice.js` + `css/ask-voice.css`, two hook lines in `ask.js` (`KH.askVoice.sync(available)` in
+  `refreshTab`, `KH.askVoice.speak(answer)` after an answer), `KH.ai.askConsent` exported from `ai.js`. Consent comes
+  before the microphone is opened; the transcript goes into the question box and is never sent by the code.
+
+## Done (each verified as noted)
+
+* Sub-step 1, server: `AiEnv.stt_*` and `Settings.max_audio_bytes` (`app/config.py`), `send_json(content=...)`
+  (`app/ai/transport.py`), `app/ai/stt.py`, `app/ai/voice.py` (route, `GET /api/admin/ai-providers` -> `voice`,
+  `POST /api/admin/ai-voice/probe`), status `features.voice` + `voice` + `consent.voice`, consent give/withdraw for
+  `voice`, `ai.voice_enabled` (registry, JS twin, vectors, admin list), `Permissions-Policy: microphone=(self)`,
+  `app/migrations/m014_ai_consent_voice.py`. Verified: `tests/test_ai_voice.py` (83), `tests/test_migration_m014.py`,
+  the pinned `tests/test_migration_m012.py`, `tests/test_security.py`, `tests/test_ai_routes.py`, `tests/test_ai_chat.py`,
+  `node tests/js/run_vectors.mjs`, `python tests/data/gen_settings_vectors.py --check`.
+* Sub-step 2, browser: the files above, `index.html`, `sw.js`, the voice consent text, the activity row and the admin
+  Speech to text panel (with "Test transcription") in `ai.js`; fixed a stray "null" in the consent sheet when there is
+  no request to preview. Verified: `tests/test_ask_voice_ui.py` (22), `tests/test_ask_ui.py`, `tests/test_ai_ui.py`,
+  and `python tools/e2e/ask_voice.py` in Chromium (82 checks: fake audio device, fake transcription server, 375 px light and
+  1280 px dark, consent before recording, the Recording row, multipart reaches the server, words in the box and nothing
+  reaches the AI before Send, Discard / leaving the tab / Escape release the microphone, the 60 s stop with the page's
+  clock moved, a blocked microphone, no MediaRecorder, read aloud with a stubbed engine and only device voices, the admin
+  panel and test, the demo, no sideways scroll, no console errors, neither transcript nor key in the server log).
+* Sub-step 3, overlay and docs: `deploy/compose.stt-whisper.yaml` (+ `tests/test_deploy_stt.py`), ARCHITECTURE ("Voice
+  input", schema step 14, routes, settings, env, file ownership), `docs/ai.md`, `docs/assistant.md`, `docs/privacy.md`,
+  `docs/network-allowlist.md`, `docs/deployment.md`, `deploy/README.md`, the handbook AI / configuration / network pages,
+  CHANGELOG, ROADMAP, the plan file. Verified: `tests/test_deploy_stt.py`, `tests/test_deploy.py`,
+  `tests/test_handbook_content.py`.
+
+## Migration numbering
+
+Step 14 follows the real step 13 (`m013_assistant_ask_keys.py`, part C) since the merge of `origin/main` 8936b29; no stand-in is
+needed any more. `m014` rebuilds `ai_consents` from its stored definition, so it does not depend on what 13 did (13 added a table
+only). `test_migration_m012.py` takes main's version (it migrates to `db.SCHEMA_VERSION`) with the one test that needs a
+12-step database pinned to `steps()[:12]`.
+
+## Decisions and why
+
+* The overlay is not in CI's `compose config` lint: its digest is a marked placeholder (an invalid reference). Add it when
+  the owner pins a verified digest.
+* The overlay does not set `AI_VOICE_ENABLED`: the admin turns voice on in Server administration (an env value would lock it).
+* Read aloud shows whenever the Ask composer is available (it needs no server), the microphone only with `features.voice`.
+* Validation errors of the route are 400 like the rest of the app (not 422).
+
+## Not done / for the owner
+
+* Verify the Speaches image tag and digest (`crane digest`), the HF cache path and health check in the overlay, with a real
+  container; try the microphone on a real iPhone (Safari) and an Android phone (the first-tap consent then record
+  sequence calls `getUserMedia` a moment after the tap).
+* `mkdocs build --strict` not run (mkdocs is not installed); CI's handbook job runs it.
+
+## Checks
+
+    python -m pytest tests/test_ai_voice.py tests/test_migration_m014.py tests/test_ask_voice_ui.py tests/test_deploy_stt.py -q
+    node tests/js/run_vectors.mjs
+    python3 tests/data/gen_settings_vectors.py --check
+    python tools/e2e/ask_voice.py
+
+After merging `origin/main` 8936b29 (export import #37, Ask saving with a trust setting #38, step 13): the full suite 4125 passed,
+exit 0; `node tests/js/run_vectors.mjs` and the settings generator `--check` current (39 keys); `tools/e2e/ask_voice.py` 82/82;
+`tools/e2e/ask.py` 108/108 (one run under a parallel pytest load failed a check that reads the server right after a click: a race
+in that harness, green when run alone). Read aloud also speaks the fixed `confirm_save` line (kind added by part C).

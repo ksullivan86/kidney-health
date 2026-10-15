@@ -57,6 +57,7 @@
       available = !!(st && st.features && st.features.chat);
     } catch (err) { /* the tab stays out of the way when the status cannot be read */ }
     tab.hidden = !available;
+    if (KH.askVoice) KH.askVoice.sync(available); // js/views/ask-voice.js: the microphone and read aloud follow the same answer
     if (!available && state.view === 'ask') router.show('today');
     return available;
   }
@@ -178,6 +179,7 @@
     } else {
       const entry = { role: 'assistant', text: answer.text || '' }; // a card may update this once it is used
       els.list.append(answerBubble(answer, entry));
+      if (KH.askVoice) KH.askVoice.speak(answer); // reads the checked text aloud when the person asked for that
       thread.push(entry);
       noteServerTrust(answer);
       els.live.textContent = 'Answer received.';

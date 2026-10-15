@@ -29,6 +29,7 @@ listed below; what they receive and the AI address rules (`AI_PRIVATE_HOSTS`, `A
 | `openrouter.ai` | 443 | AI with the `openrouter` preset | off |
 | `inference-api.nousresearch.com` | 443 | AI with the `nous_portal` preset | off |
 | your AI host (e.g. `ollama:11434`, `host.containers.internal:8643`) | its port | A local Ollama, Hermes or other OpenAI-compatible server. Private addresses are reachable only when listed in the env-only `AI_PRIVATE_HOSTS`. | off |
+| your speech-to-text host (`STT_BASE_URL`, e.g. `stt:8000` from `deploy/compose.stt-whisper.yaml`, or a cloud service such as `api.openai.com`) | its port | The Ask microphone is on (`ai.voice_enabled`, needs Ask) **and** a person agreed: the app sends one recording (a minute at most) to `{STT_BASE_URL}/audio/transcriptions`. The same SSRF-checked transport and the same address rules as an AI provider: a private address only when listed in `AI_PRIVATE_HOSTS`, no redirects. A local container needs **no** internet at all: put it on an `internal` network. See [`ai.md`](ai.md#voice-input-speech-to-text). | off |
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` (k-anonymity: only 5 hex characters of a hash leave the server) | off |
 
 Not used: Web Push services (planned for v0.4, opt-in; their hosts will be added here), telemetry,
@@ -47,7 +48,8 @@ resolution is needed for any of the hosts above.
 * **Rootless Podman / Docker:** there is no simple per-container egress allowlist (an accepted
   residual risk, [`security.md`](security.md#10-accepted-residual-risks)). Use a host firewall or your
   router if you need one. The optional Ollama overlay puts Ollama on an `internal` network with no
-  route out at all.
+  route out at all, and so does the speech-to-text overlay (`deploy/compose.stt-whisper.yaml`): its model is put in a
+  volume beforehand and the running container must never reach the internet.
 * **Egress proxy:** the AI client ignores `HTTP(S)_PROXY` on purpose; set `AI_HTTP_PROXY` explicitly
   if AI calls must go through a proxy (address pinning is then the proxy's job, and per-user base
   URLs are disabled). The health check never uses a proxy.
