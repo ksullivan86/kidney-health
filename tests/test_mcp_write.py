@@ -7,7 +7,9 @@ code, a USDA food through the import route's code. Nothing here uses the network
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import sqlite3
 from typing import Any
 
@@ -17,7 +19,7 @@ import pytest
 from app import egress
 from app import foods as foods_module
 from app import log as log_module
-from conftest import DAY, TestClient, make_settings, signed_in_client
+from conftest import DAY, USER_PASSWORD, TestClient, make_settings, signed_in_client
 from test_api_tokens import audit_rows, db, make, switch
 from test_mcp import TARGETS, call, call_raw, rpc, set_targets, tool_error
 
@@ -646,8 +648,6 @@ def test_saving_counts_toward_the_sixty_requests_a_minute(admin, saver, fake_clo
 
 
 def test_the_saving_tools_speak_of_no_doses_or_medicines():
-    import re
-
     from app.mcp import server as mcp_server
     from app.mcp import tools as mcp_tools
 
@@ -657,3 +657,285 @@ def test_the_saving_tools_speak_of_no_doses_or_medicines():
     assert not dosing.search(mcp_server.WRITE_INSTRUCTIONS) and not dosing.search(mcp_tools.READ_ONLY)
     for text in (mcp_tools.TOOLS_BY_NAME["log_food"].description, mcp_server.WRITE_INSTRUCTIONS):
         assert not re.search(r"\b(wait|hold off|too much sugar|avoid|should not)\b", text, re.I), text  # never against a low
+
+
+# --------------------------------------------------------------------------- #
+# Retries: request_key (schema step 11; app/mcp/request_keys.py)
+# --------------------------------------------------------------------------- #
+
+KEY = "retry-key-0001"
+
+
+def key_rows(client: TestClient) -> list[dict[str, Any]]:
+    conn = db(client)
+    try:
+        return [dict(r) for r in conn.execute("SELECT * FROM assistant_request_keys ORDER BY created_at, key_hash")]
+    finally:
+        conn.close()
+
+
+def two_logged(app: Any, token: str, key: str | None = KEY, **extra: Any) -> dict[str, Any]:
+    items = [{"food": "banana", "amount": 2}, {"food": "apple juice", "amount": 1, "unit": "cup"}]
+    return log_food(app, token, items, **({"request_key": key} if key else {}), **extra)
+
+
+def test_the_saving_tools_list_request_key_and_tell_the_model_when_to_reuse_it(admin, saver):
+    tools = {t["name"]: t for t in rpc(admin.app, saver, "tools/list").json()["result"]["tools"]}
+    for name in WRITE_TOOLS:
+        key = tools[name]["inputSchema"]["properties"]["request_key"]
+        assert (key["type"], key["minLength"], key["maxLength"], key["pattern"]) == ("string", 8, 64, r"^[A-Za-z0-9_-]+$")
+        assert "request_key" not in tools[name]["inputSchema"]["required"]  # optional
+        assert "new request_key with each save" in tools[name]["description"]
+        assert "only to retry that same save" in tools[name]["description"]
+    text = rpc(admin.app, saver, "initialize", {"protocolVersion": "2025-06-18"}).json()["result"]["instructions"]
+    assert "request_key" in text and "only to retry" in text
+
+
+def test_log_food_repeat_with_the_same_key_saves_nothing_and_answers_with_the_first_save(admin, saver):
+    first = two_logged(admin.app, saver)
+    assert first["saved"] is True and "duplicate" not in first and len(first["entries"]) == 2
+    before = entries(admin)
+    assert len(before) == 2 and audit_rows(admin, "assistant.food_logged")[0]["details"]["entries"] == 2
+    for _ in range(2):  # and again: still the first save
+        again = two_logged(admin.app, saver)
+        assert again["saved"] is True and again["duplicate"] is True
+        assert [e["entry_id"] for e in again["entries"]] == [e["entry_id"] for e in first["entries"]]
+        for key in ("date", "meal", "status", "entries", "added_to_foods", "totals", "day"):
+            assert again[key] == first[key], key
+        assert any("already saved" in n and "nothing was saved again" in n for n in again["notes"])
+        assert entries(admin) == before  # nothing new: the eaten count is unchanged
+        assert again["day"]["entries"] == {"eaten": 2, "planned": 0}
+    assert len(audit_rows(admin, "assistant.food_logged")) == 1  # only the first call saved
+
+
+def test_a_repeat_with_other_items_but_the_same_key_is_still_the_first_save_and_says_how_to_save_a_new_one(admin, saver):
+    first = two_logged(admin.app, saver)
+    other = log_food(admin.app, saver, [{"food": "banana", "amount": 5}], meal="dinner", request_key=KEY)
+    assert other["duplicate"] is True and [e["entry_id"] for e in other["entries"]] == [e["entry_id"] for e in first["entries"]]
+    assert other["meal"] == "lunch" and len(entries(admin)) == 2
+    assert any("different save" in n and "new request_key" in n for n in other["notes"])
+    new = log_food(admin.app, saver, [{"food": "banana", "amount": 5}], meal="dinner", request_key="retry-key-0002")
+    assert new["saved"] is True and "duplicate" not in new and len(entries(admin)) == 3
+
+
+def test_without_a_key_every_call_saves_again_as_before(admin, saver):
+    one, two = two_logged(admin.app, saver, key=None), two_logged(admin.app, saver, key=None)
+    assert "duplicate" not in one and "duplicate" not in two and len(entries(admin)) == 4
+    assert key_rows(admin) == []
+
+
+def test_the_key_is_stored_hashed_with_the_token_id_and_never_in_the_clear(admin):
+    from app.mcp import request_keys
+
+    made = make(admin, "Kitchen tablet", can_log=True)
+    first = two_logged(admin.app, made["token"])
+    [row] = key_rows(admin)
+    assert row["key_hash"] == request_keys.key_hash(made["id"], KEY) and re.fullmatch(r"[0-9a-f]{64}", row["key_hash"])
+    assert row["key_hash"] != hashlib.sha256(KEY.encode()).hexdigest()  # the token id is part of it
+    assert (row["user_id"], row["token_id"], row["tool"]) == (1, made["id"], "log_food")
+    assert json.loads(row["saved_json"])["entry_ids"] == [e["entry_id"] for e in first["entries"]]
+    conn = db(admin)
+    try:
+        dump = json.dumps([tuple(r) for table in ("assistant_request_keys", "audit_log")
+                           for r in conn.execute(f"SELECT * FROM {table}")])
+    finally:
+        conn.close()
+    assert KEY not in dump  # not in the table, not in the activity log
+
+
+def test_a_repeat_reads_the_entries_from_the_database_again(admin, saver):
+    first = two_logged(admin.app, saver)
+    banana, juice = (e["entry_id"] for e in first["entries"])
+    assert admin.put(f"/api/log/{banana}", json={"servings": 3}).status_code == 200  # edited since
+    edited = two_logged(admin.app, saver)
+    assert edited["duplicate"] is True and edited["entries"][0]["servings"] == 3
+    assert edited["entries"][0]["nutrients"]["potassium_mg"] == 3 * 422
+    assert edited["day"]["nutrients"]["potassium_mg"]["eaten"]["value"] == 3 * 422 + 2 * 125
+    assert admin.delete(f"/api/log/{juice}").status_code == 204  # one deleted since: say so, never save it again
+    partly = two_logged(admin.app, saver)
+    assert partly["saved"] is True and partly["duplicate"] is True and [e["entry_id"] for e in partly["entries"]] == [banana]
+    assert any("1 of the 2 entries" in n and "not in the log" in n for n in partly["notes"])
+    assert admin.delete(f"/api/log/{banana}").status_code == 204  # all deleted since
+    gone = two_logged(admin.app, saver)
+    assert gone["saved"] is False and gone["duplicate"] is True and gone["entries"] == []
+    assert "day" not in gone and any("none of them is in the log" in n and "new request_key" in n for n in gone["notes"])
+    assert entries(admin) == [] and len(audit_rows(admin, "assistant.food_logged")) == 1  # nothing was saved again
+    fresh = two_logged(admin.app, saver, key="retry-key-0002")  # a new key saves
+    assert fresh["saved"] is True and len(entries(admin)) == 2
+
+
+def test_a_key_is_stored_only_when_the_save_succeeded(admin, saver, monkeypatch):
+    unresolved = log_food(admin.app, saver, [{"food": "zzzz qqqq"}], request_key=KEY)
+    assert unresolved["saved"] is False and "duplicate" not in unresolved and key_rows(admin) == []
+    assert tool_error(admin.app, saver, "log_food", {"items": [], "meal": "lunch", "request_key": KEY}).startswith("Invalid")
+    assert key_rows(admin) == []
+    real = log_module.insert_logged
+    calls = {"n": 0}
+
+    def flaky(conn: sqlite3.Connection, user_id: int, body: Any, where: str = "") -> int:
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("disk on fire")
+        return real(conn, user_id, body, where)
+
+    monkeypatch.setattr(log_module, "insert_logged", flaky)
+    assert "nothing was saved" in tool_error(admin.app, saver, "log_food", {
+        "items": [{"food": "banana"}, {"food": "apple juice"}], "meal": "lunch", "date": DAY, "request_key": KEY})
+    nothing_saved(admin)
+    assert key_rows(admin) == []  # the key was rolled back with the save
+    monkeypatch.setattr(log_module, "insert_logged", real)
+    done = two_logged(admin.app, saver)  # the retry with the same key is a real save, not a duplicate
+    assert done["saved"] is True and "duplicate" not in done and len(entries(admin)) == 2 and len(key_rows(admin)) == 1
+
+
+def test_a_key_expires_after_24_hours_and_old_keys_are_deleted(admin, saver, fake_clock):
+    two_logged(admin.app, saver)
+    [old] = key_rows(admin)
+    fake_clock.advance(hours=23, minutes=59)
+    assert two_logged(admin.app, saver)["duplicate"] is True and len(entries(admin)) == 2
+    fake_clock.advance(minutes=2)  # now more than 24 hours since the first save
+    again = two_logged(admin.app, saver)
+    assert again["saved"] is True and "duplicate" not in again and len(entries(admin)) == 4
+    [new] = key_rows(admin)  # the expired row was replaced, not left behind
+    assert new["key_hash"] == old["key_hash"] and new["created_at"] > old["created_at"]
+    assert two_logged(admin.app, saver)["duplicate"] is True  # and the new one counts from now
+    # a daily clean-up removes keys nobody asked for again
+    from app.mcp import request_keys
+
+    fake_clock.advance(hours=25)
+    conn = db(admin)
+    try:
+        assert request_keys.purge_old(conn) == 1
+        assert conn.execute("SELECT COUNT(*) FROM assistant_request_keys").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+def test_a_key_is_independent_for_another_token_and_for_another_person(two_clients):
+    admin, sam = two_clients
+    switch(admin, True)
+    mine = make(admin, "mine", can_log=True)["token"]
+    other_token = make(admin, "second", can_log=True)["token"]
+    theirs = make(sam, "theirs", can_log=True)["token"]
+    first = two_logged(admin.app, mine)
+    assert two_logged(admin.app, mine)["duplicate"] is True
+    second = two_logged(admin.app, other_token)  # the same person's other token: its own key
+    assert second["saved"] is True and "duplicate" not in second and len(entries(admin)) == 4
+    for_sam = two_logged(sam.app, theirs)  # another person, the same key text
+    assert for_sam["saved"] is True and "duplicate" not in for_sam and len(entries(sam)) == 2
+    assert {e["entry_id"] for e in for_sam["entries"]}.isdisjoint(e["entry_id"] for e in first["entries"])
+    assert two_logged(sam.app, theirs)["duplicate"] is True and len(entries(sam)) == 2
+    assert two_logged(admin.app, other_token)["entries"] == second["entries"]
+    assert sorted((r["user_id"], r["tool"]) for r in key_rows(admin)) == [(1, "log_food"), (1, "log_food"), (2, "log_food")]
+    # the answer to a retry only ever lists the caller's own rows, even if the stored ids point at someone else's
+    conn = db(admin)
+    try:
+        conn.execute("UPDATE assistant_request_keys SET saved_json = ? WHERE user_id = 2",
+                     (json.dumps({"entry_ids": [e["entry_id"] for e in first["entries"]]}),))
+        conn.commit()
+    finally:
+        conn.close()
+    stolen = two_logged(sam.app, theirs)
+    assert stolen["saved"] is False and stolen["duplicate"] is True and stolen["entries"] == []
+    assert "Banana" not in json.dumps(stolen)
+
+
+def test_a_retry_that_raced_the_first_save_is_answered_as_a_duplicate_and_adds_nothing(admin, saver, monkeypatch):
+    from app.mcp import request_keys
+    from app.mcp import tools as mcp_tools
+
+    first = two_logged(admin.app, saver)
+    real, calls = request_keys.find, {"n": 0}
+
+    def late(*args: Any, **kwargs: Any) -> Any:
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(*args, **kwargs)  # the first look (before the lock) sees nothing
+
+    monkeypatch.setattr(mcp_tools.request_keys, "find", late)
+    raced = two_logged(admin.app, saver)
+    assert calls["n"] == 2 and raced["duplicate"] is True
+    assert [e["entry_id"] for e in raced["entries"]] == [e["entry_id"] for e in first["entries"]]
+    assert len(entries(admin)) == 2 and len(audit_rows(admin, "assistant.food_logged")) == 1 and len(key_rows(admin)) == 1
+
+
+def test_the_same_key_on_the_other_saving_tool_is_refused_and_saves_nothing(admin, saver):
+    two_logged(admin.app, saver)
+    text = tool_error(admin.app, saver, "save_recipe", {**RECIPE, "request_key": KEY})
+    assert "already used by log_food" in text and "new request_key" in text
+    assert saved_meals(admin) == [] and audit_rows(admin, "assistant.recipe_saved") == []
+    ok = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": "retry-key-0002"})
+    assert ok["saved"] is True and len(saved_meals(admin)) == 1
+    assert "already used by save_recipe" in tool_error(admin.app, saver, "log_food", {
+        "items": [{"food": "banana"}], "meal": "lunch", "date": DAY, "request_key": "retry-key-0002"})
+    assert len(entries(admin)) == 2
+
+
+@pytest.mark.parametrize("bad", ["short", "x" * 7, "x" * 65, "has space inside", "slash/slash/slash", "dot.dot.dot.dot",
+                                 "ключ-ключ-ключ", "key\nkey\nkey\n", "        ", "", 12345678, True, ["retry-key-0001"]])
+def test_a_bad_request_key_is_an_error_and_saves_nothing(admin, saver, bad):
+    assert tool_error(admin.app, saver, "log_food", {"items": [{"food": "banana"}], "meal": "lunch", "date": DAY,
+                                                      "request_key": bad}).startswith("Invalid arguments")
+    assert tool_error(admin.app, saver, "save_recipe", {**RECIPE, "request_key": bad}).startswith("Invalid arguments")
+    nothing_saved(admin)
+    assert key_rows(admin) == []
+
+
+@pytest.mark.parametrize("good", ["abcdefgh", "A" * 64, "a-b_C-1_2-3_", "8f14e45f-ceea-467f-a8d1-5e6a7b9c0d12"])
+def test_request_keys_of_8_to_64_url_safe_characters_are_accepted(admin, saver, good):
+    got = log_food(admin.app, saver, [{"food": "banana"}], request_key=good)
+    assert got["saved"] is True
+    assert log_food(admin.app, saver, [{"food": "banana"}], request_key=good)["duplicate"] is True
+    assert len(entries(admin)) == 1
+
+
+def test_save_recipe_repeat_with_the_same_key_answers_with_the_first_meal_and_saves_nothing(admin, saver):
+    first = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+    assert first["saved"] is True and "duplicate" not in first and len(saved_meals(admin)) == 1
+    for _ in range(2):
+        again = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+        assert again["saved"] is True and again["duplicate"] is True and again["meal"] == first["meal"]
+        for key in ("servings_made", "source_url", "totals_whole_recipe", "totals_per_serving", "added_to_foods"):
+            assert again[key] == first[key], key
+        assert any("already saved this recipe" in n and "nothing was saved again" in n for n in again["notes"])
+        assert [m["id"] for m in saved_meals(admin)] == [first["meal"]["id"]]
+    assert len(audit_rows(admin, "assistant.recipe_saved")) == 1
+    [row] = key_rows(admin)
+    assert (row["tool"], json.loads(row["saved_json"])["meal_id"]) == ("save_recipe", first["meal"]["id"])
+    other = call(admin.app, saver, "save_recipe", **{**RECIPE, "name": "Other pudding", "request_key": "retry-key-0002"})
+    assert other["saved"] is True and "duplicate" not in other and len(saved_meals(admin)) == 2
+
+
+def test_save_recipe_repeat_reads_the_meal_from_the_database_again(admin, saver):
+    first = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+    meal = first["meal"]
+    put = admin.put(f"/api/meals/{meal['id']}", json={"name": "Renamed pudding", "note": meal["note"], "items": [
+        {"food_id": i["food_id"], "servings": i["servings"]} for i in meal["items"][:1]]})  # edited since: one ingredient
+    assert put.status_code == 200, put.text
+    edited = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+    assert edited["duplicate"] is True and edited["meal"]["name"] == "Renamed pudding" and len(edited["meal"]["items"]) == 1
+    assert edited["totals_whole_recipe"]["potassium_mg"] == {"value": 3 * 422, "not_listed_by": 0}
+    assert edited["totals_per_serving"]["potassium_mg"] == {"value": 317, "not_listed_by": 0}  # 1266 / 4 = 316.5, rounded half up
+    assert admin.delete(f"/api/meals/{meal['id']}").status_code == 204  # deleted since: say so, never save it again
+    gone = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+    assert gone["saved"] is False and gone["duplicate"] is True and "meal" not in gone
+    assert any("not in the app now" in n and "new request_key" in n for n in gone["notes"])
+    assert saved_meals(admin) == [] and len(audit_rows(admin, "assistant.recipe_saved")) == 1
+    assert call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": "retry-key-0002"})["saved"] is True
+
+
+def test_save_recipe_key_is_stored_only_when_the_save_succeeded(admin, saver):
+    bad = call(admin.app, saver, "save_recipe", name="Stew", servings=2, request_key=KEY,
+               ingredients=[{"food": "banana"}, {"food": "zzzz qqqq"}])
+    assert bad["saved"] is False and key_rows(admin) == [] and saved_meals(admin) == []
+    done = call(admin.app, saver, "save_recipe", **{**RECIPE, "request_key": KEY})
+    assert done["saved"] is True and "duplicate" not in done and len(key_rows(admin)) == 1
+
+
+def test_a_deleted_account_takes_its_keys_with_it(two_clients):
+    admin, sam = two_clients
+    switch(admin, True)
+    token = make(sam, "theirs", can_log=True)
+    two_logged(admin.app, token["token"])
+    assert len(key_rows(admin)) == 1
+    assert sam.request("DELETE", "/api/me", json={"password": USER_PASSWORD, "confirm": "DELETE"}).status_code == 204
+    assert key_rows(admin) == []

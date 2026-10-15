@@ -19,6 +19,8 @@ Every number comes from the app's own functions, never from a copy of the maths:
 * ``save_recipe`` (writes): the ingredients are placed the same way and saved as a saved meal
   (:func:`app.meals.insert_template`); the saved meal has no servings count, so the ingredients are for the whole
   recipe and its note says "Makes N servings" and keeps the source link as text (never fetched).
+* Both take an optional ``request_key``: a retry with the same key by the same token within 24 hours saves nothing
+  and answers with what the first call saved (:mod:`app.mcp.request_keys`).
 * ``safety_check``: the app's rule-based pre-filters: :func:`app.guidance.hypo.prefilter` (the Treating a low
   card with the person's own ``hypo_dose_g``) and :func:`app.ai.features.red_flag` (Get help now).
 
@@ -60,6 +62,7 @@ from ..periods import (MAX_INTERDIALYTIC_DAYS, NOTE_CAPPED, NOTE_INTERDIALYTIC, 
 from ..profile import get_profile, settings_store
 from ..textclean import clean_label
 from . import measures as M
+from . import request_keys
 
 logger = logging.getLogger("kidney_health.mcp")
 
@@ -845,6 +848,8 @@ class LogArgs(_Args):
     date: str | None = None
     status: Literal["planned", "eaten"] = "eaten"
     purpose: Literal["hypo", "none"] | None = None  # the log API's purposes: "hypo" = eaten to treat a low
+    request_key: str | None = Field(default=None, min_length=request_keys.KEY_MIN, max_length=request_keys.KEY_MAX,
+                                    pattern=request_keys.KEY_PATTERN)
 
     check_date = field_validator("date")(_check_date)
 
@@ -872,6 +877,8 @@ class RecipeArgs(_Args):
     ingredients: list[MealItem] = Field(min_length=1, max_length=30)
     servings: float = Field(gt=0, le=MAX_RECIPE_SERVINGS, allow_inf_nan=False)
     source_url: str | None = Field(default=None, min_length=1, max_length=SOURCE_URL_MAX)
+    request_key: str | None = Field(default=None, min_length=request_keys.KEY_MIN, max_length=request_keys.KEY_MAX,
+                                    pattern=request_keys.KEY_PATTERN)
 
     check_url = field_validator("source_url")(check_source_url)
 
@@ -932,7 +939,38 @@ def unresolved_result(unresolved: list[dict[str, Any]], what: str, **fields: Any
     })
 
 
+class AlreadySaved(Exception):
+    """A retry whose ``request_key`` an earlier call already used: raised inside the save's transaction (which is
+    rolled back, so nothing is added) when the first call finished while this one was waiting to save."""
+
+    def __init__(self, seen: request_keys.Seen) -> None:
+        super().__init__("request_key already used")
+        self.seen = seen
+
+
+def earlier_save(call: Call, tool: str, key: str | None) -> request_keys.Seen | None:
+    """What this token already saved with ``key`` in the last 24 hours (a retry), or None. The same key on the other
+    saving tool is a mistake of the model's, not a retry: it is refused so nothing is mixed up."""
+    if key is None:
+        return None
+    seen = request_keys.find(call.conn, call.user.id, token_info(call).id, key)
+    if seen is not None and seen.tool != tool:
+        raise ToolError(f"That request_key was already used by {seen.tool}. Send a new request_key for each save you "
+                        "intend, and reuse one only to retry the same save.")
+    return seen
+
+
+def retry_note(what: str) -> str:
+    return (f"A call with this request_key already saved {what}, so nothing was saved again; this is what that call "
+            "saved, read from the app now. Tell the person what was saved. If this was a different save, call the "
+            "tool again with a new request_key.")
+
+
 def log_food(call: Call, args: LogArgs) -> dict[str, Any]:
+    key = args.request_key
+    seen = earlier_save(call, "log_food", key)
+    if seen is not None:
+        return logged_again(call, seen)
     day = args.date or food_log.today_local()
     placed, unresolved = place_items(call, args.items)
     if unresolved:
@@ -942,6 +980,9 @@ def log_food(call: Call, args: LogArgs) -> dict[str, Any]:
     added_foods: list[dict[str, Any]] = []
 
     def save(added: list[dict[str, Any]]) -> list[sqlite3.Row]:
+        again = earlier_save(call, "log_food", key)  # now inside the write lock: a retry that raced the first call
+        if again is not None:
+            raise AlreadySaved(again)
         added_foods.extend(added)
         ids = []
         for one in placed:
@@ -951,21 +992,61 @@ def log_food(call: Call, args: LogArgs) -> dict[str, Any]:
             ids.append(food_log.insert_logged(call.conn, call.user.id, create))
         audit(call.conn, call.user.id, "assistant.food_logged", "api_token", token.id, ip=request_ip(call.request),
               via=token.name, entries=len(ids), status=args.status, meal=args.meal, date=day, foods_added=len(added))
+        if key is not None:
+            request_keys.remember(call.conn, call.user.id, token.id, "log_food", key,
+                                  {"entry_ids": ids, "added_to_foods": added})
         return [food_log.fetch_entry(call.conn, call.user.id, entry_id) for entry_id in ids]
 
-    rows = write_once(call, placed, save)
+    try:
+        rows = write_once(call, placed, save)
+    except AlreadySaved as again:
+        return logged_again(call, again.seen)
+    return logged_answer(call, rows, added_foods)
+
+
+def logged_again(call: Call, seen: request_keys.Seen) -> dict[str, Any]:
+    """The answer to a retry of ``log_food``: the first call's entries as they are in the log now (an entry the person
+    deleted since is not listed, and a note says so). Nothing is saved."""
+    ids = [int(i) for i in seen.saved.get("entry_ids", [])]
+    rows = [row for row in (food_log.fetch_entry(call.conn, call.user.id, i) for i in ids) if row is not None]
+    gone = len(ids) - len(rows)
+    if not rows:
+        return finish({
+            "saved": False, "duplicate": True, "entries": [],
+            "notes": ["A call with this request_key already saved these entries, but none of them is in the log now "
+                      "(the person deleted them), so nothing was saved again. Tell the person; if they still want "
+                      "the food logged, call log_food again with a new request_key."]})
+    notes = [retry_note("these entries")]
+    if gone:
+        notes.append(f"{gone} of the {len(ids)} entries that call saved {'is' if gone == 1 else 'are'} not in the log "
+                     "now (the person deleted them); only those still there are listed.")
+    return logged_answer(call, rows, still_in_foods(call, seen), notes, duplicate=True)
+
+
+def still_in_foods(call: Call, seen: request_keys.Seen) -> list[dict[str, Any]]:
+    """The foods the first call added to the person's list that are still in it."""
+    return [a for a in seen.saved.get("added_to_foods", [])
+            if foods.fetch_user_food(call.conn, call.user.id, int(a["food_id"])) is not None]
+
+
+def logged_answer(call: Call, rows: list[sqlite3.Row], added_foods: list[dict[str, Any]],
+                  notes: list[str] | None = None, *, duplicate: bool = False) -> dict[str, Any]:
+    """The answer of ``log_food``: the entries, their totals and the day's figures read after saving."""
     entries = [saved_entry(food_log.row_to_entry(row)) for row in rows]
-    notes = ["Tell the person what was saved: the entries, with amounts. Numbers in day are the app's, read after saving."]
+    first = entries[0]
+    notes = [*(notes or []),
+             "Tell the person what was saved: the entries, with amounts. Numbers in day are the app's, read after saving."]
     if any(e["counted_as_treating_a_low"] for e in entries):
         notes.append("Entries marked as treating a low count in the day's totals but never toward a meal's "
                      "carbohydrate goal.")
     result: dict[str, Any] = {
-        "saved": True, "date": day, "meal": args.meal, "status": args.status,
+        "saved": True, **({"duplicate": True} if duplicate else {}),
+        "date": first["date"], "meal": first["meal"], "status": first["status"],
         "entries": entries, "added_to_foods": added_foods,
         "totals": saved_totals([foods.raw_nutrients(row) for row in rows]),
     }
     try:  # the entries are saved already: a failure here must not look like a failed save
-        figures = get_today(call, TodayArgs(date=day))
+        figures = get_today(call, TodayArgs(date=first["date"]))
         figures.pop("source", None)
         figures.pop("reminder", None)
         result["day"] = figures
@@ -995,6 +1076,10 @@ def recipe_note(servings: float, source_url: str | None) -> str:
 
 
 def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
+    key = args.request_key
+    seen = earlier_save(call, "save_recipe", key)
+    if seen is not None:
+        return recipe_again(call, seen)
     name = clean_label(args.name, max_len=RECIPE_NAME_MAX)
     if name is None:
         raise ToolError("Give the recipe a name.")
@@ -1006,29 +1091,64 @@ def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
     added_foods: list[dict[str, Any]] = []
 
     def save(added: list[dict[str, Any]]) -> int:
+        again = earlier_save(call, "save_recipe", key)  # now inside the write lock: a retry that raced the first call
+        if again is not None:
+            raise AlreadySaved(again)
         added_foods.extend(added)
         items = [{"food_id": one.food_id, "servings": float(one.servings)} for one in placed]
         meal_id = meals.insert_template(call.conn, user_id=call.user.id, name=name, note=note, items=items)
         audit(call.conn, call.user.id, "assistant.recipe_saved", "meal", meal_id, ip=request_ip(call.request),
               via=token.name, name=name, ingredients=len(items), servings=args.servings, foods_added=len(added))
+        if key is not None:
+            request_keys.remember(call.conn, call.user.id, token.id, "save_recipe", key,
+                                  {"meal_id": meal_id, "servings_made": args.servings, "source_url": args.source_url,
+                                   "added_to_foods": added})
         return meal_id
 
-    meal_id = write_once(call, placed, save)
-    saved = meals.row_to_template(call.conn, meals.fetch_template(call.conn, call.user.id, meal_id))
+    try:
+        meal_id = write_once(call, placed, save)
+    except AlreadySaved as again:
+        return recipe_again(call, again.seen)
     scaled = [scale_nutrients(foods.raw_nutrients(one.row), one.servings) for one in placed]
+    return recipe_answer(call, meal_id, scaled, args.servings, args.source_url, added_foods)
+
+
+def recipe_again(call: Call, seen: request_keys.Seen) -> dict[str, Any]:
+    """The answer to a retry of ``save_recipe``: the first call's saved meal as it is now (if the person deleted it
+    since, a note says so). Nothing is saved."""
+    row = meals.fetch_template(call.conn, call.user.id, int(seen.saved.get("meal_id", 0)))
+    if row is None:
+        return finish({
+            "saved": False, "duplicate": True,
+            "notes": ["A call with this request_key already saved this recipe, but the saved meal is not in the app "
+                      "now (the person deleted it), so nothing was saved again. Tell the person; if they still want "
+                      "it, call save_recipe again with a new request_key."]})
+    built = (meals.build_item(call.conn, raw) for raw in meals.parse_items(row["items_json"]))
+    scaled = [figures for _, figures in built if figures is not None]
+    return recipe_answer(call, int(row["id"]), scaled, float(seen.saved.get("servings_made") or 1),
+                         seen.saved.get("source_url"), still_in_foods(call, seen), [retry_note("this recipe")],
+                         duplicate=True)
+
+
+def recipe_answer(call: Call, meal_id: int, scaled: list[dict[str, float | None]], servings: float,
+                  source_url: str | None, added_foods: list[dict[str, Any]], notes: list[str] | None = None, *,
+                  duplicate: bool = False) -> dict[str, Any]:
+    """The answer of ``save_recipe``: the saved meal (read from the database) and its totals."""
+    saved = meals.row_to_template(call.conn, meals.fetch_template(call.conn, call.user.id, meal_id))
     return finish({
-        "saved": True,
+        "saved": True, **({"duplicate": True} if duplicate else {}),
         "meal": {
             "id": saved["id"], "name": saved["name"], "note": saved["note"],
             "items": [{"food_id": i["food_id"], "food_name": i["food_name"], "servings": i["servings"],
                        "serving_desc": i["serving_desc"], "nutrients": i["nutrients"]} for i in saved["items"]],
         },
-        "servings_made": args.servings,
-        "source_url": args.source_url,
+        "servings_made": servings,
+        "source_url": source_url,
         "totals_whole_recipe": saved_totals(scaled),
-        "totals_per_serving": saved_totals(scaled, args.servings),
+        "totals_per_serving": saved_totals(scaled, servings),
         "added_to_foods": added_foods,
-        "notes": ["The saved meal holds the ingredients for the whole recipe; its note records how many servings it "
+        "notes": [*(notes or []),
+                  "The saved meal holds the ingredients for the whole recipe; its note records how many servings it "
                   "makes and the source link. Tell the person what was saved."],
     })
 
@@ -1040,8 +1160,9 @@ def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
 _DATE = {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$",
          "description": "A day as YYYY-MM-DD. Leave it out for today (the server's date)."}
 ANNOTATIONS = {"readOnlyHint": True, "openWorldHint": False}
-# Tools that save: not read-only, they only add (never delete or overwrite), a repeat adds again, and they reach
-# no outside service for the model (a USDA lookup is the app's own).
+# Tools that save: not read-only, they only add (never delete or overwrite), a repeat adds again (unless it carries
+# the same request_key as the first call), and they reach no outside service for the model (a USDA lookup is the
+# app's own).
 WRITE_ANNOTATIONS = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
@@ -1060,6 +1181,16 @@ class Tool:
                 "inputSchema": self.input_schema,
                 "annotations": {"title": self.title, **(WRITE_ANNOTATIONS if self.writes else ANNOTATIONS)}}
 
+
+# The duplicate guard of the two saving tools (app/mcp/request_keys.py).
+RETRY_ADVICE = ("Send a new request_key with each save you mean to make, and send the same one again only to retry "
+                "that same save after an error or no answer: a repeat with the same key saves nothing and answers "
+                "with what the first call saved.")
+_REQUEST_KEY = {
+    "type": "string", "minLength": request_keys.KEY_MIN, "maxLength": request_keys.KEY_MAX,
+    "pattern": request_keys.KEY_PATTERN,
+    "description": "A fresh random string for this save (8 to 64 letters, digits, - or _). Reuse it only to retry "
+                   "this same save; a repeat with the same key is not saved twice."}
 
 # An item as check_meal, log_food and save_recipe take it.
 _ITEM = {
@@ -1132,7 +1263,7 @@ TOOLS: tuple[Tool, ...] = (
         "item is unresolved nothing at all is saved and unresolved says what to ask; otherwise every item is saved "
         "as an entry (eaten, or planned) for that meal and day, and the answer lists what was saved and the day's "
         "figures after saving. Use purpose \"hypo\" for food eaten to treat a low: it is saved like any other and "
-        "counts in the day's totals. Say what was saved.",
+        "counts in the day's totals. " + RETRY_ADVICE + " Say what was saved.",
         {"type": "object", "additionalProperties": False, "required": ["items", "meal"],
          "properties": {
              "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": _ITEM},
@@ -1142,7 +1273,8 @@ TOOLS: tuple[Tool, ...] = (
                         "description": "\"eaten\" (default) for food already eaten, \"planned\" for food to eat later."},
              "purpose": {"type": "string", "enum": ["hypo", "none"],
                          "description": "\"hypo\" when the food is eaten to treat a low; \"none\" to leave it "
-                                        "out for a food the app would otherwise count that way."}}},
+                                        "out for a food the app would otherwise count that way."},
+             "request_key": _REQUEST_KEY}},
         LogArgs, log_food, True,
     ),
     Tool(
@@ -1152,7 +1284,7 @@ TOOLS: tuple[Tool, ...] = (
         "fdc_id of a USDA result); if any is unresolved nothing is saved and unresolved says what to ask. The saved "
         "meal holds the ingredients for the whole recipe, and its note records how many servings it makes and the "
         "source link (text; the app never opens it). The answer gives the totals for the whole recipe and per "
-        "serving (null means not listed). Say what was saved.",
+        "serving (null means not listed). " + RETRY_ADVICE + " Say what was saved.",
         {"type": "object", "additionalProperties": False, "required": ["name", "ingredients", "servings"],
          "properties": {
              "name": {"type": "string", "minLength": 1, "maxLength": RECIPE_NAME_MAX},
@@ -1160,7 +1292,8 @@ TOOLS: tuple[Tool, ...] = (
              "servings": {"type": "number", "exclusiveMinimum": 0, "maximum": MAX_RECIPE_SERVINGS,
                           "description": "How many servings the whole recipe makes."},
              "source_url": {"type": "string", "minLength": 1, "maxLength": SOURCE_URL_MAX,
-                            "description": "An http or https link to where the recipe came from (optional)."}}},
+                            "description": "An http or https link to where the recipe came from (optional)."},
+             "request_key": _REQUEST_KEY}},
         RecipeArgs, save_recipe, True,
     ),
 )

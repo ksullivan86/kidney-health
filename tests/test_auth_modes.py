@@ -179,6 +179,7 @@ def test_none_mode_hides_accounts_and_refuses_shared_key_writes(none_client):
         ("POST", "/api/auth/register", {"username": "a", "password": "b"}),
         ("GET", "/api/admin/users", None),
         ("POST", "/api/admin/invites", {}),
+        ("POST", "/api/admin/users/1/revoke-tokens", None),
     ):
         assert none_client.request(method, path, json=body).status_code == 404, path
     r = none_client.put("/api/admin/keys/usda", json={"api_key": "a-shared-key-for-everyone-1234"})

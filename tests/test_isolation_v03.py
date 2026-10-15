@@ -26,6 +26,7 @@ import test_api_tokens
 import test_auth_coverage
 import test_export_delete
 import test_isolation
+import test_mcp_write
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -61,6 +62,7 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "ai_usage": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "ai_audit": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "api_tokens": ("test_api_tokens.test_another_persons_tokens_are_invisible_and_404",),  # assistant access, step 10
+    "assistant_request_keys": ("test_mcp_write.test_a_key_is_independent_for_another_token_and_for_another_person",),  # step 11
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -73,7 +75,8 @@ SHARED_OR_SYSTEM = {
     "sqlite_sequence": "SQLite internal",
 }
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
-           "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens}
+           "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
+           "test_mcp_write": test_mcp_write}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

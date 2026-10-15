@@ -115,7 +115,9 @@ list says **Read only** or **Read and save** for each token, and your activity l
 - The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown
   again. If it is lost, **Revoke** it and make a new one.
 - You can have 5 at a time. **Revoke** ends one at once. Changing your password, a password reset, or your
-  account being disabled revokes all of them.
+  account being disabled revokes all of them, and so does an admin who uses **Revoke assistant tokens** on your
+  account (your activity says so).
+- If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
 - Treat a token like a password: never send it by text message or email.
 
 ## What to do

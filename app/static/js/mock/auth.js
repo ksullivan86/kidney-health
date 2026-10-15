@@ -119,7 +119,8 @@
       const link = u.reset_link && u.reset_link.expires_at > this._stamp() ? u.reset_link : null;
       return { id: u.id, username: u.username, display_name: u.display_name || '', role: u.role, status: u.status, auth_source: u.auth_source,
         can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
-        created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null };
+        created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
+        assistant_tokens: 0 }; // the demo makes no assistant tokens (app/auth/admin_api.py counts the active ones)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
@@ -470,6 +471,12 @@
     if (u.id === admin.id && a.sessions.every((s) => s.id !== 'demo-this-browser')) a.signedIn = false;
     this._audit(admin.id, 'sessions.revoked', 'user', u.id, { count });
     return { revoked: count };
+  });
+  route('POST', userIdRoute('/revoke-tokens'), function ({ id }) {
+    this._requireAdmin();
+    this._requireRecent();
+    targetUser(this, id); // the demo makes no assistant tokens: an unknown id is 404, anything else has none to revoke
+    return { revoked: 0 };
   });
   route('GET', '/api/admin/invites', function () {
     this._requireAdmin();

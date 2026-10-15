@@ -377,6 +377,22 @@ def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> No
         assert call in SETTINGS_JS, call
 
 
+def test_the_people_list_offers_to_revoke_a_persons_assistant_tokens_only_while_the_switch_is_on() -> None:
+    """Server administration → People → Manage: "Revoke assistant tokens (n)" with an inline confirm, shown only while
+    the admin switch assistant.enabled is on and the person has active tokens; the demo makes no tokens."""
+    block = SETTINGS_JS[SETTINGS_JS.index("function assistantSwitchOn()"):SETTINGS_JS.index("function inviteBlock(")]
+    assert "all['assistant.enabled'].value === true" in block
+    assert "assistantSwitchOn() && assistantTokens > 0" in block
+    assert "`Revoke assistant tokens (${assistantTokens})`" in block
+    assert "confirm.inline(actions, rev" in block and "confirmText: 'Revoke'" in block
+    assert "A.revokeUserTokens(u.id)" in block
+    assert "revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`)" in SETTINGS_JS
+    assert "admin: 'revoked by an admin'" in SETTINGS_JS  # the person's activity says who ended the tokens
+    assert "loadPeople(); // \"Revoke assistant tokens\" shows only while the switch is on" in SETTINGS_JS
+    assert "onclick" not in block and "javascript:" not in block  # no inline handlers: the CSP forbids inline scripts
+    assert "route('POST', userIdRoute('/revoke-tokens')" in MOCK_AUTH_JS and "assistant_tokens: 0" in MOCK_AUTH_JS
+
+
 def test_the_assistant_card_offers_saving_as_a_separate_choice_and_says_what_each_token_can_do() -> None:
     """Part C: a token is read-only unless "Can also save food and recipes" is ticked (off by default); the list says
     "Read only" or "Read and save" from the token's scopes; the activity list names the two save events."""

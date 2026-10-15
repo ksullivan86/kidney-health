@@ -56,8 +56,9 @@ def test_populated_v9_database_upgrades_keeps_every_row_and_is_idempotent(tmp_pa
     path = tmp_path / "kidney.db"
     build_v9_with_data(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == [10]
-    assert db.get_schema_version(conn) == 10
+    applied = db.migrate(conn)
+    assert applied[0] == 10 and applied == list(range(10, db.SCHEMA_VERSION + 1))  # step 10, then any later step
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     assert conn.execute("SELECT COUNT(*) FROM log_entries WHERE user_id = 2").fetchone()[0] == 1
     assert conn.execute("SELECT about_tolerance_pct FROM user_profiles WHERE user_id = 2").fetchone()[0] == 5
     assert db.table_columns(conn, "api_tokens") == {"id", "user_id", "name", "token_hash", "prefix", "scopes", "created_at",

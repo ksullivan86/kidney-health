@@ -738,6 +738,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 8 | `m008_profile_chosen.py` | v0.3.1 | "Not chosen yet": `user_profiles.ckd_stage_set_at`, `diabetes_set_at` (`docs/dev/plans/v0.3.1.md` item 1) |
 | 9 | `m009_about_tolerance.py` | v0.3.1 | `user_profiles.about_tolerance_pct` (`docs/dev/plans/v0.3.1.md` item 2) |
 | 10 | `m010_api_tokens.py` | assistant step 1 | `api_tokens`: assistant access tokens, hashes only (`docs/dev/plans/assistant-step1.md` part A; "Assistant access tokens" below) |
+| 11 | `m011_assistant_request_keys.py` | assistant step 1 | `assistant_request_keys`: the duplicate guard of `log_food` and `save_recipe`, hashes only ("Retries" under "Assistant MCP server" below) |
 
 ## Backend file ownership
 
@@ -751,7 +752,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
-| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
+| Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -1028,13 +1029,14 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 
 | Method and path | Body → response |
 |---|---|
-| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at, reset_link}]}`; `reset_link` is the open reset or setup link (`{id, created_by, created_at, expires_at}`, never the token) or `null` (also in the `user` of the POST/PATCH answers) |
+| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at, reset_link, assistant_tokens}]}`; `reset_link` is the open reset or setup link (`{id, created_by, created_at, expires_at}`, never the token) or `null`; `assistant_tokens` is how many active assistant tokens the person has (a number, never a token; also in the `user` of the POST/PATCH answers) |
 | `POST /api/admin/users` | `{username, display_name?, role}` → 201 `{user, setup_url, expires_at}`: a `pending_setup` account and a one-time link (`/#/reset/…`, `registration.invite_ttl_days`) where the person sets a password. Proxy mode: pre-creates the proxy identity (`setup_url: null`) |
 | `PATCH /api/admin/users/{id}` | any of `{role, status ("active"\|"disabled"), can_use_shared, must_change_password (true), display_name}` → `{user}`. 409 when it would leave no active admin, for disabling yourself, or enabling a locked/new account (use a reset link). A role change or disabling signs the person out. Demoting or disabling an admin deletes every unused invite and reset/setup link they created (audit detail `links_revoked`); disabling also voids the account's own open link |
 | `DELETE /api/admin/users/{id}` | `{confirm_username}` → 204 (cascade); 409 for yourself or the last admin. The person's unused invites and links are deleted first (`auth_tokens.created_by` is `ON DELETE SET NULL`) |
 | `POST /api/admin/users/{id}/reset-link` | → `{url, expires_at}` (24 h, single use; also unlocks; voids the account's older link) |
 | `DELETE /api/admin/users/{id}/reset-link` | → 204, voids the account's open reset or setup link (404 when there is none); audit `user.reset_link_revoked` |
 | `POST /api/admin/users/{id}/revoke-sessions` | → `{revoked: n}` |
+| `POST /api/admin/users/{id}/revoke-tokens` | → `{revoked: n}`: ends every active assistant token of the person (`api_tokens.revoke_all`, reason `admin`; works while `assistant.enabled` is off; `n: 0` and no audit row when there is none); 404 for an unknown id; audit `api_token.revoked` (actor the admin, target `user`, details `reason`, `count`). The person's Settings → Assistant access then lists them as revoked |
 | `GET /api/admin/invites` · `POST /api/admin/invites` · `DELETE /api/admin/invites/{id}` | POST `{role, note?, ttl_days? (1–90)}` → 201 `{invite, url, expires_at}` (the URL is shown once); list → `{invites: [{id, role, note, created_by, created_at, expires_at, used_at, state}]}`; 409 when registration is `closed` or in proxy mode |
 | `GET /api/admin/settings` · `PATCH /api/admin/settings` | → `{settings: {key: {value, source, locked_by_env, scope}}}`; PATCH `{key: value \| null}`, audited with old and new values |
 | `GET /api/admin/keys` · `PUT/DELETE /api/admin/keys/{provider}` | shared keys: `{providers: [{provider, label, shared: {set, source ("db"\|"env"), locked, last4?, updated_at?}}]}`; PUT `{api_key, test?}`; an env key (`USDA_API_KEY[_FILE]`) is locked (409); 403 in none mode |
@@ -2114,8 +2116,9 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
 
 `revoke_all(conn, user_id, reason=…, actor_id=…)` ends every active token of a person on their own password change
 (`password_changed`), a reset link or `python -m app.admin reset-password --stdin` (`password_reset`), an admin's or
-the CLI's disable (`account_disabled`, enabling again brings none back) and account deletion (`account_deleted`,
-then the cascade removes the rows). An admin's "must change password" stops tokens until the change, which revokes
+the CLI's disable (`account_disabled`, enabling again brings none back), account deletion (`account_deleted`,
+then the cascade removes the rows) and an admin's "Revoke assistant tokens" in Server administration → People
+(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`). An admin's "must change password" stops tokens until the change, which revokes
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of
@@ -2251,7 +2254,8 @@ Both tools place their items with `place_items` (the code `check_meal` uses; an 
 never guessed) and are all or nothing: if any item is unresolved the answer is `{saved: false, unresolved: […],
 notes}` (plus the date, meal and status, or the recipe's name) and **nothing** is written, USDA additions included. Otherwise `write_once` runs one `BEGIN IMMEDIATE`
 transaction: USDA foods added to the list, the rows saved by the existing code, one audit row, commit; any exception
-rolls everything back. Nothing is edited or deleted; a repeated call saves again (no idempotency key).
+rolls everything back. Nothing is edited or deleted; a repeated call saves again unless it carries the same
+`request_key` ("Retries" below).
 
 * `log_food {items: (1–20, as check_meal), meal: breakfast | lunch | dinner | snack, date?, status?: eaten |
   planned = eaten, purpose?: hypo | none}` → `{saved: true, date, meal, status, entries: [{entry_id, date, meal,
@@ -2280,8 +2284,34 @@ rolls everything back. Nothing is edited or deleted; a repeated call saves again
   because the person needs to know which assistant saved; never the token or its prefix. A refused or unresolved
   call writes no row.
 
+### Retries (`request_key`, schema step 11)
+
+Chat clients retry tool calls, so `log_food` and `save_recipe` take an optional `request_key` (string, 8–64 characters
+of `A–Z a–z 0–9 _ -`; anything else is an `isError` result and saves nothing). The tool descriptions and the server
+instructions tell the model to send a fresh key per intended save and to reuse it only to retry that save. Code
+`app/mcp/request_keys.py`; without a key nothing changes.
+
+* Table `assistant_request_keys` (`m011_assistant_request_keys.py`): `key_hash` (`PRIMARY KEY`, 64 hex characters:
+  the SHA-256 of the token's id and the key, never the key), `user_id → users` and `token_id → api_tokens` (both
+  `ON DELETE CASCADE`), `tool`, `saved_json` (`{"entry_ids": […], "added_to_foods": […]}` for `log_food`,
+  `{"meal_id", "servings_made", "source_url", "added_to_foods"}` for `save_recipe`), `created_at`.
+* The key is written **inside the save's transaction** (`write_once`), so a failed or unresolved save stores no key and
+  a successful one always does. A second call by the **same token** with the same key within **24 hours** saves
+  nothing, writes no audit row and answers `{saved: true, duplicate: true, …}` in the shape of the first answer, with a
+  note ("a call with this request_key already saved this; if this was a different save, call again with a new
+  request_key"). The entries (or the saved meal) are read from the database again for that person
+  (`fetch_entry` / `fetch_template` are scoped by `user.id`), so it shows edits; deleted rows are left out with a note,
+  and when none is left the answer is `{saved: false, duplicate: true, notes}` and **nothing is saved again** (a new
+  key saves). `day` is `get_today` for the entries' date, as for a fresh save. The items of the repeat are not
+  compared with the first call's.
+* A retry that raced the first call and was waiting for the write lock finds the key inside the transaction, rolls
+  back and answers the same way. The same key on the other tool is an `isError` result.
+* Every lookup is scoped by `user_id`, `token_id` and the hash, so another token or another person with the same key
+  text is independent. Rows older than 24 hours are ignored, deleted by the next keyed save and by the daily
+  housekeeping (`purge_old`, like `api_tokens.purge_ended`). The person's activity is unchanged: a duplicate is not a save.
+
 ### Not in parts B and C
 
-The assistant cannot edit or delete anything, and there is no idempotency key; no MCP resources or prompts; no
+The assistant cannot edit or delete anything; no MCP resources or prompts; no
 activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 

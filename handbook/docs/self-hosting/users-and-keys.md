@@ -70,6 +70,9 @@ from other machines ([HTTPS for phones](https.md)).
 - Open reset and setup links are listed under each account in **Server administration → People**, with
   who created them, and can be revoked there. A link someone made for **your own** account is
   flagged in your row.
+- If someone loses a device or you stop trusting a chat assistant, **Server administration → People → Manage →
+  Revoke assistant tokens** ends every assistant token that person has (it shows while assistant access is on and
+  they have active ones). It appears in their activity; they can make new tokens in their settings.
 - Removing an admin contains them: demoting, disabling or deleting an admin also deletes every
   unused invite and reset or setup link they created. A reset link also stops working once the
   account's password is changed another way, or the account is disabled.
