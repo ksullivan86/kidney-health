@@ -6,4 +6,7 @@
 pytest>=8,<9
 # YAML parsing for the handbook content tests (front matter, sources.yml) and the deploy YAML checks, so
 # CI's test job runs them instead of skipping them.
-pyyaml>=6,<7
+# Not on Python 3.15: PyYAML (6.0.3, the newest release) publishes no cp315 wheel yet, and the lock is
+# installed wheels-only (--only-binary=:all:), so nothing is ever built from source. Those tests skip on
+# 3.15 and run on 3.12 and 3.14. Drop the marker once a PyYAML release has a cp315 wheel.
+pyyaml>=6,<7; python_version < "3.15"
