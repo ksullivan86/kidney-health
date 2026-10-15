@@ -37,7 +37,7 @@ from ..security import register_secret
 from ..settings_store import SettingsStore
 from . import stt
 from .client import ProviderConfig
-from .netpolicy import BaseUrl, NetPolicy, PolicyError, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
+from .netpolicy import BaseUrl, NetPolicy, PolicyError, is_private_host, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
 from .transport import ca_store_problem
 from .presets import PRESETS, POLICY_VERSION, STRUCTURED_SETTINGS, REASONING_EFFORTS, Preset, get as get_preset, policy_line
 
@@ -75,7 +75,7 @@ def check_env(settings: Settings) -> list[str]:
     """Validate the env provider at start-up; returns warnings, raises :class:`ConfigError`."""
     env = settings.ai
     warnings: list[str] = []
-    build_policy(settings)
+    policy = build_policy(settings)
     ca_problem = ca_store_problem()
     if env.http_proxy:
         try:
@@ -83,7 +83,8 @@ def check_env(settings: Settings) -> list[str]:
         except ValueError as exc:
             raise ConfigError(f"AI_HTTP_PROXY: {exc}") from None
     if not env.provider:
-        stray = [n for n, v in (("AI_BASE_URL", env.base_url), ("AI_MODEL", env.model), ("AI_API_KEY", env.api_key)) if v]
+        stray = [n for n, v in (("AI_BASE_URL", env.base_url), ("AI_MODEL", env.model), ("AI_API_KEY", env.api_key),
+                                ("AI_PROVIDER_ROLE", env.provider_role)) if v]
         if stray:
             warnings.append(f"{', '.join(stray)} {'is' if len(stray) == 1 else 'are'} set but AI_PROVIDER is not, so no server AI provider is defined.")
         if ca_problem:
@@ -100,6 +101,9 @@ def check_env(settings: Settings) -> list[str]:
         parsed = parse_base_url(base)
     except PolicyError as exc:
         raise ConfigError(f"AI_BASE_URL: {exc}") from None
+    if env.provider_role == "local" and not is_private_host(parsed, policy):
+        raise ConfigError("AI_PROVIDER_ROLE=local needs a private host: list the AI_BASE_URL host and port in AI_PRIVATE_HOSTS "
+                          "(a name must be listed by name), or use AI_PROVIDER_ROLE=cloud.")
     if ca_problem and parsed.scheme == "https":
         raise ConfigError(f"AI_PROVIDER={preset.name} uses https, but {ca_problem}.")
     if ca_problem:
@@ -460,6 +464,11 @@ class Resolved:
     row: sqlite3.Row | None
     cfg: ProviderConfig | None
     reason: str | None  # None = usable; else disabled | not_opted_in | not_configured | not_allowed | own_unavailable | own_key_unreadable | provider_disabled
+    # Set by app.ai.routing.resolve_feature (privacy tiers): the feature, its route (local | cloud | off | any) and the
+    # role of the provider that serves it (local | cloud | own, None when no role applies).
+    feature: str | None = None
+    route: str | None = None
+    role: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -474,6 +483,10 @@ MESSAGES = {
     "own_unavailable": "Your own AI provider is switched off or not allowed on this server; it is never replaced by the shared one.",
     "own_key_unreadable": "Your AI key can no longer be read (the server's secret key changed); enter it again in Settings.",
     "provider_disabled": "The AI provider is switched off until its connection test passes (an admin can test it in Settings).",
+    "feature_off": "Your admin has switched this AI feature off.",
+    "no_local_provider": "This feature is set to use a local AI, and none is set up on this server. An admin can set one in Server administration → AI providers.",
+    "no_cloud_provider": "This feature is set to use a cloud AI, and your admin has not chosen one. An admin can choose it in Server administration → AI providers.",
+    "local_not_private": "The local AI is not on a private address (AI_PRIVATE_HOSTS) any more, so nothing is sent to it.",
 }
 
 
@@ -641,7 +654,8 @@ def consent_request(cfg: ProviderConfig, purpose: Purpose) -> dict[str, Any]:
     """What the consent sheet shows before the first call to a host (R9 step 3)."""
     preset = cfg.preset_def
     return {"provider_id": cfg.id, "provider_label": cfg.label, "host": cfg.host, "purpose": purpose,
-            "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind}
+            "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind,
+            "local": cfg.local_only}  # the local AI: on the admin's private network, never reached outside it
 
 
 # --------------------------------------------------------------------------- #

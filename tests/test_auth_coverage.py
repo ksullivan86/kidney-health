@@ -104,6 +104,7 @@ V03_ROUTES = {
     ("get", "/api/admin/ai-providers"), ("post", "/api/admin/ai-providers"), ("put", "/api/admin/ai-providers/{provider_id}"),
     ("delete", "/api/admin/ai-providers/{provider_id}"), ("post", "/api/admin/ai-providers/{provider_id}/probe"),
     ("get", "/api/admin/ai-usage"),
+    ("get", "/api/admin/ai-routing"), ("put", "/api/admin/ai-routing"),  # privacy tiers: which AI each feature uses
     ("get", "/api/handbook"),
 }
 

@@ -235,13 +235,14 @@ The app makes **no** outbound request until you turn a feature on. The full list
 |---|---|---|
 | USDA FoodData Central search | Yes (needs a key) | Your search words, with the key in a header (never in a URL or a log). |
 | Open Food Facts barcode lookup | Yes (`food.off_enabled=false`; Settings or the setup screen) | The barcode number only. |
-| Optional AI (OpenAI, OpenRouter, Nous Portal, a local Ollama or Hermes) | Yes (`AI_ENABLED=false`, then per-person opt-in with a consent text naming the provider) | Only the fields the feature needs, shown to the person before sending. Prefer a local model. AI calls never use tools, and the rules engine checks every suggestion. |
+| Optional AI (OpenAI, OpenRouter, Nous Portal, a local Ollama or Hermes) | Yes (`AI_ENABLED=false`, then per-person opt-in with a consent text naming the provider) | Only the fields the feature needs, shown to the person before sending. Prefer a local model. AI calls never use tools, and the rules engine checks every suggestion. Each feature is pinned to a local or a cloud provider (default local, so off until a local AI exists); the local provider can only be reached on private addresses ([ai.md](ai.md#which-ai-does-each-feature-use)). |
 | Breached-password check | Yes (`PASSWORD_BREACH_CHECK=false`) | The first 5 hex characters of the password's SHA-1 (k-anonymity). |
 
 AI base URLs pass an SSRF filter: private, loopback and link-local addresses are reachable only
 through the env-only `AI_PRIVATE_HOSTS` allowlist (for example `ollama:11434`), every resolved address
-is validated and pinned, and redirects are not followed. On Kubernetes the egress NetworkPolicy is a
-second layer.
+is validated and pinned, and redirects are not followed. The provider an admin marks as the local AI is held to a
+stricter scope: its host must be private and every resolved address must be private, so a name that later resolves
+publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
 
 ## 9. Supply chain: what CI guarantees
 

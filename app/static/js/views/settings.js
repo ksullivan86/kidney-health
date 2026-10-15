@@ -1443,8 +1443,13 @@
     // The master switch first: Settings → AI ideas sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
       'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.audit_retention_days', 'assistant.enabled']],
+    // Drawn by js/views/ai_routing.js in Server administration → AI providers (a provider must be private to be local, so these
+    // are not edited one by one here): the list shows a pointer instead of rows.
+    ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat',
+      'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Activity log', ['audit.retention_days']],
   ];
+  const ROUTING_GROUP = 'Which AI each feature uses';
   const CHOICE_LABEL = {
     'registration.mode': { invite: 'Invite links (recommended)', closed: 'Closed: admins create accounts', open: 'Open: anyone who can reach the page (HTTPS only)' },
     'ui.theme': { system: 'Match each device', light: 'Light', dark: 'Dark' },
@@ -1477,6 +1482,11 @@
     if (other.length) groups.push(['Other', other]);
     for (const [title, keys] of groups) {
       if (!keys.length) continue;
+      if (title === ROUTING_GROUP) {
+        box.append(h('h4', { class: 'settings-minor' }, title),
+          h('p', { class: 'hint' }, 'Set in the AI section below (Which AI does each feature use?): a local AI must be on your own network, and the table says what each choice sends where.'));
+        continue;
+      }
       const list = h('div', { class: 'setting-list' });
       for (const key of keys) { seen.add(key); list.append(settingRow(key, all[key])); }
       box.append(h('h4', { class: 'settings-minor' }, title), list);

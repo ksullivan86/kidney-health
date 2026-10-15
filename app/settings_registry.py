@@ -574,10 +574,79 @@ register(
         "(ask, conversation or always).",
     ),
 )
+# Privacy tiers, tier 1: which shared AI each feature uses (docs/ai.md "Which AI does each feature use?"; read by
+# app/ai/routing.py). A feature is pinned to the shared provider holding the role `local` (a host on the private
+# network that the server's own network policy accepts) or `cloud`, is `off`, or is `any` (the pre-routing rule:
+# whichever shared provider the person chose). The default is the least-trusting one, `local`: with no local provider
+# the feature is off until an admin pins it to `cloud`. An upgraded server that already had a provider keeps `any`
+# until an admin changes it (app/ai/routing.py `initialise`). The two provider settings hold the id of the shared
+# provider that has each role (0: none); the admin screen sets them through PUT /api/admin/ai-routing, which refuses
+# a host that is not private for `local`, and the resolution checks that again before every call.
+AiRoute = Literal["local", "cloud", "off", "any"]
+AiProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
+
+register(
+    SettingDef(
+        key="ai.route.photos",
+        model=AiRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_PHOTOS",
+        label="Which AI reads photos (labels and plates)",
+        help="local, cloud, off or any (any shared provider a person chose, as before routing). A kitchen photo can show "
+        "more than a label, so the default is local: with no local AI the feature is off.",
+    ),
+    SettingDef(
+        key="ai.route.meal_ideas",
+        model=AiRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_MEAL_IDEAS",
+        label="Which AI suggests meals (ideas, order, swaps, day plan)",
+        help="local, cloud, off or any. Default local.",
+    ),
+    SettingDef(
+        key="ai.route.describe",
+        model=AiRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_DESCRIBE",
+        label="Which AI turns a described meal into search words",
+        help="local, cloud, off or any. Default local.",
+    ),
+    SettingDef(
+        key="ai.route.chat",
+        model=AiRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_CHAT",
+        label="Which AI answers in Ask",
+        help="local, cloud, off or any. Default local. Needs Ask (ai.chat_enabled) on as well.",
+    ),
+    SettingDef(
+        key="ai.route.local_provider",
+        model=AiProviderId,
+        default=0,
+        scope="instance",
+        label="The local AI (shared provider id)",
+        help="The shared provider that runs on your own network (0: none). Only a provider whose host is in AI_PRIVATE_HOSTS "
+        "can be local. Set it in Server administration → AI providers, not here.",
+    ),
+    SettingDef(
+        key="ai.route.cloud_provider",
+        model=AiProviderId,
+        default=0,
+        scope="instance",
+        label="The cloud AI (shared provider id)",
+        help="The shared provider that runs outside your network (0: none). Set it in Server administration → AI providers, not here.",
+    ),
+)
 NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
      "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled", "ai.voice_enabled",
-     "ai.allow_trusted_saves"}
+     "ai.allow_trusted_saves",
+     "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.local_provider",
+     "ai.route.cloud_provider"}
 )
 
 

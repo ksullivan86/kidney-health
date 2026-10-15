@@ -37,6 +37,18 @@ Three choices make up every AI setup (Settings → AI ideas starts with the same
 A model at home keeps your data in the house. A company's AI means your request leaves the house, so
 the consent sheet says so before you agree.
 
+## Where each feature runs
+
+Your admin can set up two AIs at once: one **at home** (on the home network) and one **in the cloud**, and choose
+for each feature which one it uses, or switch it off. The app starts with the safest choice: photos, meal ideas,
+describing a meal and Ask all go to the AI at home, and a feature stays **off** until there is one. A feature goes to a
+company's AI only when your admin chooses that, and the admin screen says what it would send and where.
+
+**Settings → AI ideas** shows one line per feature, such as "Runs on your local AI" or "Runs on a cloud AI outside your
+network". If your admin moves a feature to a different AI, the app asks for your consent again for that AI. Your own
+key, if you add one, is your own choice and goes to that company. If your admin switches a feature off, it is off for
+everyone.
+
 ## What AI can and cannot do here
 
 | AI can | AI cannot |

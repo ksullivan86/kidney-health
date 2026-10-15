@@ -52,7 +52,7 @@ def client(tmp_path, foods_json):
                                                              model="gpt-6-luna", vision_model="gpt-6-luna"))
     with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
         sign_in(c)
-        assert c.patch("/api/admin/settings", json={"ai.enabled": True}).status_code == 200
+        assert c.patch("/api/admin/settings", json={"ai.enabled": True, **{f"ai.route.{f}": "any" for f in ("photos", "meal_ideas", "describe", "chat")}}).status_code == 200
         assert c.put("/api/profile", json=PROFILE).status_code == 200
         assert c.patch("/api/me/ai", json={"opt_in": True, "preferences": "vegetarian, no fish"}).status_code == 200
         yield c

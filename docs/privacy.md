@@ -63,6 +63,17 @@ weight, height, exact age or notes. A message that sounds like a low or an emerg
 never sent. A question can take up to seven calls to the provider. What the provider does with it follows the
 policy line the consent sheet shows ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 
+**Where each AI feature runs.** An admin who runs a model at home (Ollama on a GPU) can keep two shared AI providers
+at once, a **local** one on the home network and a **cloud** one, and choose per feature which it uses
+([ai.md](ai.md#which-ai-does-each-feature-use)). The default is the least-trusting one: **photos** (a kitchen photo can show
+more than a label), **meal ideas**, **describing a meal** and **Ask** all go to the local AI, and are **off** if there is
+none; a feature goes to a cloud company only when the admin pins it there, and the admin screen then says what it sends and
+where. What the local AI receives never leaves the home network (the server refuses to connect to it on a public
+address). Settings → AI ideas tells each person, per feature, where it runs, and a feature that moves to another provider asks
+for the person's consent again. A person's own key is their own choice and goes to that company; the admin can switch
+personal keys off. A server that already used one provider before this existed keeps using it for everything until the admin
+chooses.
+
 When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
 entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses
 Save on a card; the person can instead choose to trust it for a conversation or always (Settings → AI ideas, only while the
@@ -158,5 +169,7 @@ Export your data first if you want to keep it.
 * Tell the people you invite what this page says, especially the two points under "Admins".
 * If you turn the optional AI on, what people send goes to the provider you chose; a model you run
   yourself (Ollama) keeps it in the house, and you can read it. Keep `ai.audit_retention_days` short if
-  your backups are kept long.
+  your backups are kept long. Mark that model as the local AI (`AI_PROVIDER_ROLE=local`, or Server administration →
+  AI providers → Which AI does each feature use?) so photos, meal ideas, describing a meal and Ask use it by default, and
+  pin a feature to a cloud provider only on purpose ([ai.md](ai.md#which-ai-does-each-feature-use)).
 * Use HTTPS once more than one person has an account ([https.md](https.md)).

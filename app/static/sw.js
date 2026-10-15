@@ -90,6 +90,7 @@ const SHELL_URLS = [
   '/js/views/auth.js',
   '/js/views/settings.js',
   '/js/views/ai.js',
+  '/js/views/ai_routing.js',
   '/js/views/guidance.js',
   '/js/views/ask.js',
   '/js/views/ask-voice.js',

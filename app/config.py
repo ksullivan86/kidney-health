@@ -127,6 +127,7 @@ class AiEnv:
     max_response_bytes: int = 262_144
     http_proxy: str | None = None  # AI_HTTP_PROXY; HTTP(S)_PROXY are ignored for AI calls
     openrouter_zdr: bool = False
+    provider_role: str | None = None  # AI_PROVIDER_ROLE: local | cloud, the role of the AI_PROVIDER provider (docs/ai.md "Which AI does each feature use?")
     # Speech to text for the Ask screen's microphone (assistant step 2, part B; app/ai/stt.py): one OpenAI-compatible
     # ``{STT_BASE_URL}/audio/transcriptions`` endpoint, under the same address rules as the AI provider.
     stt_base_url: str | None = None  # STT_BASE_URL, ends in /v1 like AI_BASE_URL
@@ -176,6 +177,7 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
         max_response_bytes=parse_int(env, "AI_MAX_RESPONSE_BYTES", 262_144, 4096, 16 * 1024 * 1024),
         http_proxy=_raw(env, "AI_HTTP_PROXY"),
         openrouter_zdr=parse_bool(env, "AI_OPENROUTER_ZDR", False),
+        provider_role=(_choice(env, "AI_PROVIDER_ROLE", "", ("", "local", "cloud")) or None),
         stt_base_url=_raw(env, "STT_BASE_URL"),
         stt_api_key=stt_key,
         stt_model=_raw(env, "STT_MODEL"),

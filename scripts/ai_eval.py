@@ -297,7 +297,9 @@ def run_eval(options: Options, *, transport_factory: Any = None, data_dir: Path 
                 admin.app.state.ai.client.transport_factory = transport_factory
             admin.app.state.ai.auto_reprobe = False  # measure the cases only
             sign_in(admin)
-            r = admin.patch("/api/admin/settings", json={"ai.enabled": True, "ai.shared_daily_limit": 0,
+            # The evaluation measures one provider on every feature: routing "any" is that (docs/ai.md "Which AI does each feature use?").
+            routing = {f"ai.route.{feature}": "any" for feature in ("photos", "meal_ideas", "describe", "chat")}
+            r = admin.patch("/api/admin/settings", json={"ai.enabled": True, "ai.shared_daily_limit": 0, **routing,
                                                          "ai.vision_plate_enabled": True, "ai.vision_allow_agent": True,
                                                          **({"ai.chat_enabled": True} if options.chat else {})})
             if r.status_code != 200:

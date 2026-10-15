@@ -21,6 +21,7 @@
       allow_user_base_url: false,
       own: null,
       shared: [],
+      routing: null,
       presets: [],
       consents: [],
       daily_limit: 30,

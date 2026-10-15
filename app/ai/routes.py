@@ -58,6 +58,7 @@ from . import features as F
 from . import guard, prompts, schemas
 from . import stt
 from . import presets as P
+from . import routing as R
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
 
@@ -172,9 +173,11 @@ def unavailable(reason: str) -> ApiProblem:
     return ApiProblem(503, K.MESSAGES.get(reason, "AI is not available."), reason=reason)
 
 
-def _resolve(request: Request, conn: sqlite3.Connection, user: User) -> K.Resolved:
+def _resolve(request: Request, conn: sqlite3.Connection, user: User, feature: str) -> K.Resolved:
+    """The provider ``feature`` (photos, meal_ideas, describe or chat) uses for this person: privacy tiers, tier 1."""
     state = ai_state(request)
-    return K.resolve(conn, state.store, _keyring(request), state.settings, user_id=user.id, can_use_shared=user.can_use_shared)
+    return R.resolve_feature(conn, state.store, _keyring(request), state.settings, state.policy, user_id=user.id,
+                             can_use_shared=user.can_use_shared, feature=feature)
 
 
 def _seconds_to_midnight() -> int:
@@ -314,6 +317,7 @@ async def maintenance_probe(app: FastAPI, provider_id: int, server_port: int | N
             return
         try:
             cfg = await run_in_threadpool(K.to_config, row, keyring, state.settings, user_id=0)
+            cfg = await run_in_threadpool(R.pin_if_local, conn, state.store, state.settings, row, cfg)
         except InvalidToken:
             log.warning("AI provider %s: daily connection test skipped, its key cannot be decrypted", provider_id)
             return
@@ -500,7 +504,7 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
     off = guidance_api.gate(conn, state.store, user.id, "plan" if body.mode == "plan" else None)
     if off is not None:
         return off
-    resolved = _resolve(request, conn, user)
+    resolved = _resolve(request, conn, user, "meal_ideas")
     if not resolved.ok:
         raise unavailable(resolved.reason or "not_configured")
     ctx = guidance_api.load_ctx(request, conn, user.id, day)
@@ -540,40 +544,48 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
 
 @router.get("/status")
 def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """What the person's AI buttons can do now (provider, consent, quota, photo features)."""
+    """What the person's AI buttons can do now: per feature where it runs (``routes``), consent, quota, photo features."""
     state = ai_state(request)
-    resolved = K.resolve(conn, state.store, _keyring(request), state.settings, user_id=user.id,
-                         can_use_shared=user.can_use_shared, require_opt_in=False)
+    routes = R.resolve_all(conn, state.store, _keyring(request), state.settings, state.policy, user_id=user.id,
+                           can_use_shared=user.can_use_shared, require_opt_in=False)
     prefs = K.ai_prefs(conn, state.store, user.id)
-    cfg = resolved.cfg
-    available = cfg is not None and bool(prefs.get("opt_in"))
-    reason = resolved.reason if cfg is None else (None if prefs.get("opt_in") else "not_opted_in")
-    photos = bool(cfg and cfg.vision_model and _photos_allowed(conn, state, cfg))
-    chat_on = available and bool(state.store.get(conn, "ai.chat_enabled"))
-    voice_cfg = voice_config(request, conn) if chat_on else None
+    opted_in = bool(prefs.get("opt_in"))
+    head = next((routes[f] for f in R.HEADLINE if routes[f].cfg is not None), routes["meal_ideas"])  # the first feature that resolves
+    cfg = head.cfg
+    available = cfg is not None and opted_in
+    reason = head.reason if cfg is None else (None if opted_in else "not_opted_in")
+
+    def on(feature: str) -> bool:
+        return routes[feature].cfg is not None and opted_in
+
+    photo_cfg = routes["photos"].cfg
+    photos = bool(photo_cfg and photo_cfg.vision_model and _photos_allowed(conn, state, photo_cfg))
+    chat_cfg = routes["chat"].cfg
+    chat_on = on("chat") and bool(state.store.get(conn, "ai.chat_enabled"))
+    voice_cfg = voice_config(request, conn) if chat_on else None  # voice is part of Ask: it follows the chat route
     voice = None
-    if voice_cfg is not None and cfg is not None:
+    if voice_cfg is not None and chat_cfg is not None:
         voice = {"host": voice_cfg.host, "model": voice_cfg.model, "max_seconds": stt.MAX_SECONDS, "max_bytes": voice_cfg.max_audio_bytes,
-                 "remaining_today": stt.remaining_today(conn, user.id, voice_cfg), "consent": stt.consent(conn, user.id, cfg.id, voice_cfg),
-                 "request": stt.consent_request(voice_cfg, _policy_for(request), cfg.id)}
+                 "remaining_today": stt.remaining_today(conn, user.id, voice_cfg), "consent": stt.consent(conn, user.id, chat_cfg.id, voice_cfg),
+                 "request": stt.consent_request(voice_cfg, _policy_for(request), chat_cfg.id)}
     housekeeping(conn, state)
     return {
         "enabled": True,
-        "opted_in": bool(prefs.get("opt_in")),
+        "opted_in": opted_in,
         "available": available,
         "reason": reason,
         "message": K.MESSAGES.get(reason) if reason else None,
-        "provider": None if cfg is None else {
-            "id": cfg.id, "label": cfg.label, "host": cfg.host, "model": cfg.model, "vision_model": cfg.vision_model,
-            "scope": cfg.scope, "kind": cfg.preset_def.kind, "policy": P.policy_line(cfg.preset_def, scope=cfg.scope),
-        },
-        "consent": None if cfg is None else {**{p: K.consent(conn, user.id, cfg, p) for p in ("text", "photos", "chat")},
-                                             "voice": None if voice_cfg is None else stt.consent(conn, user.id, cfg.id, voice_cfg)},
+        "provider": None if cfg is None else R.provider_summary(cfg),
+        "consent": {**{p: (K.consent(conn, user.id, c, p) if c is not None else None)
+                       for p, c in (("text", routes["meal_ideas"].cfg), ("photos", photo_cfg), ("chat", chat_cfg))},
+                    "voice": None if voice_cfg is None or chat_cfg is None else stt.consent(conn, user.id, chat_cfg.id, voice_cfg)},
+        "routing": {"mode": "as_before" if any(r.route == "any" for r in routes.values()) else "routed"},
+        "routes": {f: R.route_view(conn, user.id, f, routes[f]) for f in R.FEATURES},
         "policy_version": P.POLICY_VERSION,
         "daily_limit": int(state.store.get(conn, "ai.shared_daily_limit")) or None,
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
-        "features": {"next_meal": available, "parse_meal": available, "label": available and photos,
-                     "plate": available and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
+        "features": {"next_meal": on("meal_ideas"), "parse_meal": on("describe"), "label": on("photos") and photos,
+                     "plate": on("photos") and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
                      "chat": chat_on, "voice": voice is not None},
         "voice": voice,
         "trust": _trust_view(conn, state, prefs),
@@ -611,7 +623,7 @@ def _prepare_parse(request: Request, conn: sqlite3.Connection, user: User, body:
     cards = F.prefilter(body.text, prefs.hypo_dose_g)  # G7, G8: before anything else, AI is not called
     if cards is not None:
         return cards
-    resolved = _resolve(request, conn, user)
+    resolved = _resolve(request, conn, user, "describe")
     if not resolved.ok:
         raise unavailable(resolved.reason or "not_configured")
     return F.prepare_parse_meal(resolved.cfg, body.text, search=F.search_function(conn, user.id))  # type: ignore[arg-type]
@@ -635,8 +647,10 @@ async def parse_meal(body: ParseMealBody, request: Request, user: CurrentUser, b
 
 
 def require_chat_enabled(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> None:
-    """``/api/ai/chat`` behaves as unregistered (404) while ``ai.chat_enabled`` is off (checked before the body)."""
-    if not ai_state(request).store.get(conn, "ai.chat_enabled"):
+    """``/api/ai/chat`` behaves as unregistered (404) while ``ai.chat_enabled`` is off, or its route is ``off``
+    (``ai.route.chat``; checked before the body)."""
+    store = ai_state(request).store
+    if not store.get(conn, "ai.chat_enabled") or store.get(conn, R.route_key("chat")) == "off":
         raise HTTPException(status_code=404, detail="Not Found")
 
 
@@ -646,6 +660,8 @@ def voice_config(request: Request, conn: sqlite3.Connection) -> stt.SttConfig | 
     state = ai_state(request)
     cfg = getattr(request.app.state, "stt", None)
     if cfg is None or not state.store.get(conn, "ai.voice_enabled") or not state.store.get(conn, "ai.chat_enabled"):
+        return None
+    if state.store.get(conn, R.route_key("chat")) == "off":  # voice is part of Ask: Ask switched off by routing takes it along
         return None
     return cfg
 
@@ -710,7 +726,7 @@ def _chat_rules(request: Request, conn: sqlite3.Connection, user: User, text: st
 
 def _prepare_chat(request: Request, conn: sqlite3.Connection, user: User, body: ChatBody) -> F.Prepared:
     state = ai_state(request)
-    resolved = _resolve(request, conn, user)
+    resolved = _resolve(request, conn, user, "chat")
     if not resolved.ok:
         raise unavailable(resolved.reason or "not_configured")
     cfg = resolved.cfg
@@ -846,24 +862,30 @@ async def chat(body: ChatBody, request: Request, user: CurrentUser, background: 
 
 @router.post("/consent")
 def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Agree to send data to the provider that serves you now, for text or for photos (R9 step 3)."""
-    resolved = _resolve(request, conn, user)
-    if not resolved.ok:
-        raise unavailable(resolved.reason or "not_configured")
-    cfg = resolved.cfg
-    assert cfg is not None
-    if body.purpose == "voice":  # the recording goes to the transcription server, not to the AI provider
+    """Agree to send data to a provider that now serves a feature of this purpose (``text``: meal ideas and
+    describe-a-meal, which may be routed to different providers; ``photos``; ``chat``), R9 step 3. ``voice`` is not
+    routed: the recording goes to the transcription server (``STT_BASE_URL``), and the consent rides with Ask, keyed to
+    the AI provider that serves Ask now (``chat``), so it follows Ask if Ask is moved to another provider."""
+    if body.purpose == "voice":
+        chat = _resolve(request, conn, user, "chat")
+        if not chat.ok or chat.cfg is None:
+            raise unavailable(chat.reason or "not_configured")
         voice = voice_config(request, conn)
         if voice is None:
             raise HTTPException(status_code=404, detail="Not Found")
-        asked = stt.consent_request(voice, _policy_for(request), cfg.id)
-        if cfg.id != body.provider_id:
+        asked = stt.consent_request(voice, _policy_for(request), chat.cfg.id)
+        if chat.cfg.id != body.provider_id:
             raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=asked)
-        given = stt.give_consent(conn, user.id, cfg.id, voice)
+        given = stt.give_consent(conn, user.id, chat.cfg.id, voice)
         conn.commit()
         return {"consent": given, **asked}
-    if cfg.id != body.provider_id:
-        raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=K.consent_request(cfg, body.purpose))
+    serving = [_resolve(request, conn, user, feature) for feature in R.features_for_purpose(body.purpose)]
+    usable = [r.cfg for r in serving if r.cfg is not None]
+    if not usable:
+        raise unavailable(next((r.reason for r in serving if r.reason), None) or "not_configured")
+    cfg = next((c for c in usable if c.id == body.provider_id), None)
+    if cfg is None:
+        raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=K.consent_request(usable[0], body.purpose))
     given = K.give_consent(conn, user.id, cfg, body.purpose, skip_preview=body.skip_preview)
     conn.commit()
     return {"consent": given, **K.consent_request(cfg, body.purpose)}
@@ -944,6 +966,8 @@ def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str,
     enabled = bool(state.store.get(conn, "ai.enabled"))
     allow_custom = bool(state.store.get(conn, "ai.allow_user_base_url")) and not state.settings.ai.http_proxy
     own = K.own_row(conn, user.id)
+    routes = R.resolve_all(conn, state.store, keyring, state.settings, state.policy, user_id=user.id,
+                           can_use_shared=user.can_use_shared, require_opt_in=False) if enabled else None
     shared = [] if not user.can_use_shared else [
         {"id": int(r["id"]), "label": r["label"], "host": parse_base_url(r["base_url"]).display_host, "kind": P.get(r["preset"]).kind,
          "policy": P.policy_line(P.get(r["preset"]), scope="shared"), "photos": bool(r["vision_model"]), "usable": K.usable(r)}
@@ -958,6 +982,9 @@ def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str,
         "allow_user_base_url": allow_custom,
         "own": None if own is None else K.provider_view(own, keyring, state.settings),
         "shared": shared,
+        "routing": None if routes is None else {
+            "mode": "as_before" if any(r.route == "any" for r in routes.values()) else "routed",
+            "features": R.me_summary(routes, conn, user.id)},
         "presets": K.presets_view(user=True, allow_custom=allow_custom),
         "consents": K.consents_of(conn, user.id),
         "daily_limit": int(state.store.get(conn, "ai.shared_daily_limit")) or None,
@@ -1066,6 +1093,7 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
     state = ai_state(request)
     try:
         cfg = await run_in_threadpool(K.to_config, row, _keyring(request), state.settings, user_id=user.id)
+        cfg = await run_in_threadpool(R.pin_if_local, conn, state.store, state.settings, row, cfg)
     except InvalidToken:
         raise unavailable("own_key_unreadable" if row["scope"] == "user" else "provider_disabled") from None
     snippets: list[str] = []
@@ -1188,7 +1216,8 @@ def admin_list(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
         if p["tool_check"]:
             p["key_help"] = "Paste the key of the dedicated tool-free profile, never your main Hermes profile's key."
     return {
-        "providers": [K.provider_view(r, keyring, state.settings) for r in K.shared_rows(conn)],
+        "providers": [{**K.provider_view(r, keyring, state.settings), "role": R.role_of(conn, state.store, state.settings, r),
+                       "private_host": R.is_private(r, state.policy)} for r in K.shared_rows(conn)],
         "presets": presets,
         "private_hosts": state.policy.private_hosts.entries(),  # AI_PRIVATE_HOSTS, read-only
         "deny_cidrs": [str(n) for n in state.policy.deny],
@@ -1232,6 +1261,9 @@ def update_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)
     if row["locked"]:
         raise ApiProblem(409, "This provider is set by the server's environment (AI_PROVIDER) and cannot be changed here.", locked=True)
     data = _admin_input(state, body)
+    if R.role_of(conn, state.store, state.settings, row) == "local" and not R.is_private_host(data.base_url, state.policy):
+        raise ApiProblem(400, "This provider is your local AI, so its address must stay on your own network (listed in AI_PRIVATE_HOSTS). "
+                         "Choose another local AI under Which AI does each feature use? first.", field="base_url", reason="not_private")
     key = _secret(body.api_key)
     host_changed = K.update_provider(conn, row, data, updated_by=admin.id)
     conn.execute("UPDATE ai_providers SET enabled = ? WHERE id = ?", (int(body.enabled), provider_id))
@@ -1259,7 +1291,8 @@ def delete_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)
     if row["locked"]:
         raise ApiProblem(409, "This provider is set by the server's environment (AI_PROVIDER); unset it there.", locked=True)
     conn.execute("DELETE FROM ai_providers WHERE id = ?", (provider_id,))
-    audit(conn, admin.id, "ai_provider.changed", "ai_provider", provider_id, ip=request_ip(request), change="deleted")
+    roles = R.drop_role(conn, ai_state(request).store, provider_id, updated_by=admin.id)  # a role never points at a deleted provider
+    audit(conn, admin.id, "ai_provider.changed", "ai_provider", provider_id, ip=request_ip(request), change="deleted", roles_cleared=roles)
     conn.commit()
     return Response(status_code=204)
 
@@ -1273,6 +1306,52 @@ async def probe_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE
     probe = await _probe_row(request, conn, admin, row, admin=True)
     view = await run_in_threadpool(lambda: K.provider_view(K.provider_row(conn, provider_id), _keyring(request), ai_state(request).settings))
     return {"probe": probe, "provider": view}
+
+
+Route = Literal["local", "cloud", "off", "any"]
+ProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
+
+
+class RoutingBody(BaseModel):
+    """Any subset: a route per feature, and the shared provider holding each role (0 clears it)."""
+
+    model_config = ConfigDict(extra="forbid")
+    photos: Route | None = None
+    meal_ideas: Route | None = None
+    describe: Route | None = None
+    chat: Route | None = None
+    local_provider: ProviderId | None = None
+    cloud_provider: ProviderId | None = None
+
+
+@admin_router.get("/ai-routing")
+def read_ai_routing(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Which AI each feature uses and which shared provider is local or cloud (docs/ai.md)."""
+    state = ai_state(request)
+    return R.overview(conn, state.store, state.settings, state.policy)
+
+
+@admin_router.put("/ai-routing")
+def update_ai_routing(body: RoutingBody, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Change the routing. A provider whose host the network policy does not treat as private cannot be the local AI."""
+    _none_mode_refusal(request)
+    state = ai_state(request)
+    given = body.model_dump(exclude_none=True)
+    features = {f: given[f] for f in R.FEATURES if f in given}
+    providers = {r: given[f"{r}_provider"] for r in R.ROLES if f"{r}_provider" in given}
+    if not features and not providers:
+        raise ApiProblem(400, "Nothing to change.")
+    try:
+        changed = R.apply(conn, state.store, R.plan(conn, state.store, state.settings, state.policy, features=features, providers=providers),
+                          updated_by=admin.id)
+    except R.RoutingError as exc:
+        conn.rollback()
+        raise ApiProblem(exc.status, str(exc), **({"field": exc.field} if exc.field else {}), **exc.extra) from None
+    ip = request_ip(request)
+    for key, old, new in changed:
+        audit(conn, admin.id, "settings.changed", "setting", key, ip=ip, key=key, old=old, new=new)
+    conn.commit()
+    return R.overview(conn, state.store, state.settings, state.policy)
 
 
 @admin_router.get("/ai-usage")
@@ -1309,8 +1388,8 @@ def status_provider(app: FastAPI):  # noqa: ANN201 - the ai_bridge status callab
         if keyring is None or not state.store.get(conn, "ai.enabled"):
             return {"available": False, "provider_label": None}
         row = conn.execute("SELECT can_use_shared FROM users WHERE id = ?", (int(user_id),)).fetchone()
-        resolved = K.resolve(conn, state.store, keyring, state.settings, user_id=user_id,
-                             can_use_shared=bool(row["can_use_shared"]) if row is not None else False)
+        resolved = R.resolve_feature(conn, state.store, keyring, state.settings, state.policy, user_id=user_id,
+                                     can_use_shared=bool(row["can_use_shared"]) if row is not None else False, feature="meal_ideas")
         return {"available": resolved.ok, "provider_label": resolved.cfg.label if resolved.cfg else None}
 
     return provider
@@ -1338,6 +1417,7 @@ def install(app: FastAPI, settings: Settings, store: SettingsStore, *, app_versi
 def startup(app: FastAPI, conn: sqlite3.Connection) -> None:
     """At start-up: keep the env provider row in step with ``AI_PROVIDER`` and run the retention purge."""
     state: AiState = app.state.ai
+    R.initialise(conn, state.store)  # before the environment provider is synced: it decides "upgraded" or "new" from what is stored
     K.sync_env_provider(conn, state.settings, getattr(app.state, "keyring", None))
     conn.commit()
     housekeeping(conn, state, force=True)

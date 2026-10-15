@@ -1250,7 +1250,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     out = khserver.free_dir(args.out)
     (out / "shots").mkdir()
-    env = {"AI_ENABLED": "true", "AI_PROVIDER": "openai_compatible", "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1",
+    env = {"AI_ENABLED": "true", "AI_PROVIDER": "openai_compatible", "AI_PROVIDER_ROLE": "local",
+           # (the fake AI is the local AI: every feature defaults to local)
+           "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1",
            "AI_MODEL": "fake-text", "AI_VISION_MODEL": "fake-vision", "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port}",
            "AI_SHARED_DAILY_LIMIT": "0", "AI_VISION_PLATE_ENABLED": "true",
            # No call may leave this machine: a proxy that does not exist for anything but the local servers.

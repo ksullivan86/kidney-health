@@ -25,7 +25,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 
 | Question | Who decides, and where | The choices |
 |---|---|---|
-| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
+| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. Since privacy tiers an admin can also keep **two shared providers at once**, a *local* one (on your network) and a *cloud* one, and pin each feature to one of them ([Which AI does each feature use?](#which-ai-does-each-feature-use)). | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
 | **2. What may it do?** (the *features*) | The admin switches AI on (`ai.enabled`) and decides on plate photos (`ai.vision_plate_enabled`) and photos to Hermes (`ai.vision_allow_agent`); then each person opts in (Use AI ideas, and a separate consent for photos). | Meal ideas, swaps and day plans (always chosen from foods the rules allowed, and checked again); describe a meal (search words only); read a label (a draft you check); plate photos (names and a rough weight only; off by default). Nothing can chat, give doses or save on its own. |
 | **3. Whose key pays, and who can read the request?** | Follows from question 1; the consent sheet shows the provider's data line ([table below](#what-is-sent-and-what-never-is)). | A shared provider uses the server's key, and the admin can read what is sent; an own key uses the person's account at that provider. "What will be sent?" shows each request byte for byte before it goes. |
 
@@ -33,7 +33,9 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 
 * **A home server with a GPU (8–16 GB):** run Ollama next to the app (`deploy/compose.ai-ollama.yaml`)
   with `qwen3-vl:8b` as both text and vision model (`gemma4:e4b` on smaller GPUs). Nothing leaves the
-  house. Measure it with `scripts/ai_eval.py` before you rely on it ([For contributors](#for-contributors)).
+  house. Mark it as the local AI (`AI_PROVIDER_ROLE=local`, which the overlay sets) and photos, meal ideas, describing a meal
+  and Ask all run on it by default ([routing](#which-ai-does-each-feature-use)). Measure it with `scripts/ai_eval.py` before
+  you rely on it ([For contributors](#for-contributors)).
 * **No GPU:** a small model on the CPU is fine for meal ideas and "describe a meal", but photos are slow
   (raise `AI_VISION_TIMEOUT_S`). Or use a cloud key with the `openai` or `openrouter` preset; the consent
   sheet then tells each person that their requests go to that company.
@@ -50,7 +52,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [What is sent, and what never is](#what-is-sent-and-what-never-is)
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
-  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others),
+  [which AI each feature uses](#which-ai-does-each-feature-use), [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
@@ -140,6 +142,12 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   the ordinary log). If every idea is left out, the app's own ideas are shown instead.
 * **Turning it on.** Settings → **AI ideas** → **Use AI ideas** (off by default). The section says when
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
+* **Where each feature runs.** Once your admin has set up routing, Settings → AI ideas lists one line per
+  feature: *Runs on your local AI (ollama.lan:11434)*, *Runs on OpenAI (api.openai.com), a cloud AI outside your
+  network*, or *Switched off by your admin* (or that it needs a local or cloud AI that is not set up yet). Your
+  admin decides this per feature; you choose between the server's AI and your own provider. A feature that moves to
+  another provider asks for your consent again for that provider
+  ([Which AI does each feature use?](#which-ai-does-each-feature-use)).
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
   **destination host**, its policy line and shows the **exact request**; nothing is sent until you
   agree. Meal data, photos and Ask conversations are agreed separately. You are asked again when the provider's host or
@@ -221,6 +229,8 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.voice_enabled` (`AI_VOICE_ENABLED`) | `false` | The Ask microphone. Needs `ai.chat_enabled` and a transcription server (`STT_BASE_URL`, below). While off, `POST /api/ai/transcribe` answers 404 and nobody sees the microphone. |
 | `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
+| `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
+| `ai.route.local_provider`, `ai.route.cloud_provider` | `0` | The id of the shared provider that is the local AI and the one that is the cloud AI (0: none). Set through the same table, never by hand: a local AI must be on a private host |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
 `ai.*` settings (`ai.chat_enabled` and `ai.voice_enabled` too) can then be set **only** with environment variables (the API answers 403).
@@ -230,6 +240,7 @@ Environment only (never editable at run time; a bad value stops the start with a
 | Variable | Default | Purpose |
 |---|---|---|
 | `AI_PROVIDER` | unset | The server's own shared provider: a preset name (below). Shown in Settings as "set by the server", locked |
+| `AI_PROVIDER_ROLE` | unset | `local` or `cloud`: the role of the `AI_PROVIDER` provider ([routing](#which-ai-does-each-feature-use)). `local` is refused at start-up unless its host is private by `AI_PRIVATE_HOSTS` (a name must be listed by name). The only way to give a role while sign-in is off |
 | `AI_BASE_URL` | the preset's | Must end in `/v1` (`/p/<profile>/v1` for Hermes multiplexing) |
 | `AI_API_KEY_FILE` / `AI_API_KEY` | unset | Its key (write-only, never stored in the database). `OPENAI_API_KEY[_FILE]` is accepted when `AI_PROVIDER=openai` |
 | `AI_MODEL` | `gpt-6-luna` for `openai`, required otherwise | Text model |
@@ -277,6 +288,92 @@ models, finds the JSON mode that works (`json_schema`, then `json_object`, then 
 vision with a red square when a vision model is set, and for `hermes` runs the tool check first. Shared
 providers are tested again automatically after a person's call when the last test is a day old, and
 after a change of address, model or key.
+
+### Which AI does each feature use?
+
+*Privacy tiers, tier 1 ([`ROADMAP.md`](ROADMAP.md)).* A cloud model sees whatever a feature sends it, and a
+kitchen photo can show more than a label. So an admin can keep **two shared providers at once**, one **local**
+(a host on your own network, for example Ollama on a home GPU) and one **cloud** (a company's service), and
+pin each feature to one of them, or switch it off.
+
+| Feature | Covers | Setting (env) | Consent |
+|---|---|---|---|
+| `photos` | Read a label, plate photo | `ai.route.photos` (`AI_ROUTE_PHOTOS`) | Photos |
+| `meal_ideas` | AI meal ideas, their order, swaps, the day plan | `ai.route.meal_ideas` (`AI_ROUTE_MEAL_IDEAS`) | Meal data |
+| `describe` | Turning a described meal into search words | `ai.route.describe` (`AI_ROUTE_DESCRIBE`) | Meal data |
+| `chat` | The Ask screen | `ai.route.chat` (`AI_ROUTE_CHAT`) | Ask conversations |
+
+Each is `local`, `cloud`, `off` or `any`.
+
+* **The default is the least-trusting one: `local`.** With no local provider the feature is **off** until an
+  admin pins it to `cloud` (and chooses the cloud provider). A cloud provider is never contacted for a feature
+  that was not pinned to it, however it was added.
+* **`any` is the rule from before routing:** the shared provider the person chose (Settings → AI ideas), else the
+  first usable one. It is what an upgraded server keeps (below); the table offers it only while it is the current
+  value, and warns that it may send to a cloud AI.
+* **`off` is off for everyone**, including people with their own provider. Ask `off` answers 404, like Ask switched
+  off; the other features answer `503` with the reason `feature_off`.
+* Where there is no provider for the role, the feature answers `503` with `no_local_provider` or
+  `no_cloud_provider`, and Settings says why.
+* **Voice input is not a fifth feature.** The microphone belongs to Ask: its recording goes to the transcription server
+  (`STT_BASE_URL`), never to a routed AI provider, and its consent is keyed to the AI provider that serves Ask now (the
+  `chat` route; the consent names the transcription host). So voice follows Ask: Ask pinned `off` (or with no provider yet)
+  takes the microphone along, and if Ask is moved to another provider the person is asked about voice again. Voice works
+  the same with every feature on `local`.
+
+**Roles.** In Server administration → AI providers → *Which AI does each feature use?* an admin chooses **The local
+AI** and **The cloud AI** from the shared providers (one provider cannot hold both). The local AI must be on a
+private host: an IP address inside `AI_PRIVATE_HOSTS`, or a name **listed there by name and port** (a name that
+only resolves into a listed network does not count, and DNS is not consulted when the role is set). The server
+refuses anything else (`400`, reason `not_private`), refuses to move the local AI's address onto a public one, and
+clears a role when its provider is deleted. A provider on a private address is not automatically local: a
+LiteLLM proxy on your LAN that forwards to a cloud model should be marked **cloud**.
+`AI_PROVIDER_ROLE=local|cloud` gives the environment provider its role (and is the only way to set roles while
+sign-in is off); that provider then holds no other role.
+
+**What "local" guarantees.** (1) The role is re-checked before every call: if the host is no longer private (for
+example `AI_PRIVATE_HOSTS` changed), nothing is sent (`local_not_private`). (2) Calls to the local AI use the
+network scope `local` (`netpolicy`, `ProviderConfig.local_only`): every resolved address must be private, so a
+name that later resolves to a public address is refused (`blocked_address`) instead of being sent to. Connection
+tests of the local AI follow the same rule.
+
+**Recommended home-lab setup.**
+
+1. Run Ollama on the GPU machine and list it in `AI_PRIVATE_HOSTS` (`ollama.lan:11434`, by name and port).
+2. Make it the server's provider with `AI_PROVIDER=ollama`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL` and
+   `AI_PROVIDER_ROLE=local` (`deploy/compose.ai-ollama.yaml` does this), or add it under *Add a shared provider* and
+   choose it as **The local AI**.
+3. Nothing else is needed: photos, meal ideas, describing a meal and Ask all run on it by default, and nothing is sent
+   outside your network.
+4. Only if you want one feature in the cloud, say Ask: add the cloud provider (its key as a file secret), choose it as
+   **The cloud AI**, and pin **Ask** to *Cloud*. The table then warns "this sends your messages in Ask and the
+   app's own numbers the AI looks up to api.openai.com, outside your network" before you save.
+
+**Upgrading.** The first start of this version decides once (`meta.ai_routing_initialised`): a database that
+**already has a shared provider** starts every feature on `any`, so nothing changes for people until an admin opens
+the table and chooses; a database with none (a new server) starts on the defaults above. The table says "Routing is
+not set up yet" while any feature is on `any`. No schema change is involved.
+
+**People's own provider.** Routing does not move a person's own key (Settings → AI ideas → My own AI provider, if
+you allow it): it is their choice, counts as a *cloud* provider (people can only point at public addresses) and is
+never replaced; `off` still applies. To keep everything on your network, set `AI_ALLOW_USER_KEYS=false`. When the
+admin has set up routing, a person's provider choice is "The server's AI" or "My own provider", and Settings lists
+one line per feature: *Runs on your local AI (ollama.lan:11434)* or *Runs on OpenAI (api.openai.com), a cloud AI
+outside your network*.
+
+**Consent, quota, activity.** They all follow the provider a feature resolves to: a feature moved to another provider
+asks for consent again for that provider (the consent for the first one is kept), usage and the AI activity log name
+the provider that served the call, and "What will be sent?" shows its host (and "your local AI, on your network").
+`ai.shared_daily_limit` counts calls to any shared provider, local ones too.
+
+**API.** `GET /api/admin/ai-routing` (admins) returns the features with their route and source, the two roles, the
+shared providers (`private`, `role`) and `as_before`; `PUT /api/admin/ai-routing` (recent password; `403` without
+sign-in) takes any of `photos`, `meal_ideas`, `describe`, `chat` (`local|cloud|off|any`) and `local_provider`,
+`cloud_provider` (a shared provider id, 0 clears). Each change is in the audit log as `settings.changed`.
+`GET /api/ai/status` adds `routing.mode` (`routed` or `as_before`) and `routes`: per feature `route`, `role`
+(`local`, `cloud`, `own` or null), `available`, `reason`, `text` ("Runs on ..."), `runs_on` (provider, host, model) and
+the consent for that provider; `provider` and `consent` keep their meaning for the first feature that resolves.
+`GET /api/me/ai` adds `routing` (one line per feature).
 
 ### Recipes
 
@@ -501,6 +598,8 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 * The connection goes to the checked address with the original host name for TLS (no DNS rebinding);
   redirects are errors; the environment's proxy variables are ignored; answers must be JSON and at most
   `AI_MAX_RESPONSE_BYTES` after decompression.
+* The provider that holds the **local** role is held to a stricter scope ([routing](#which-ai-does-each-feature-use)):
+  its host must be private by this policy and **every** resolved address must be private.
 * **Add your own public address to `AI_DENY_CIDRS`** if people may enter their own server: otherwise a
   "public" address that is your own WAN address could reach your reverse proxy from inside.
 * Errors reaching people are coarse (`dns_failed`, `blocked_address`, `connect_failed`, `timeout`,
@@ -569,7 +668,7 @@ history.
 ## For contributors
 
 * **Code**: `app/ai/` (`presets`, `netpolicy`, `transport`, `client`, `prompts`, `schemas`, `guard`,
-  `features`, `chat`, `config`, `routes`), `app/vision.py`, `app/imagecheck.py`, schema steps
+  `features`, `chat`, `config`, `routing`, `routes`), `app/vision.py`, `app/imagecheck.py`, schema steps
   `app/migrations/m006_ai.py` and `m012_ai_consent_chat.py` (the `chat` consent purpose); the guidance hook `app/guidance/ai_bridge.py` (owned by guidance). Settings
   keys in `app/settings_registry.py` ("Note 04"), the env part in `app/config.py` (`AiEnv`).
 * **Tests** (no network; a fake provider answers through the real pinned transport):
@@ -583,7 +682,10 @@ history.
   `test_migration_m006.py`, `test_ai_eval_script.py`; the Ask chat: `test_ai_chat_checks.py` (text policy, dose check
   in both directions, number check, the loop with a scripted model), `test_ai_chat.py` (the route: switch, consent,
   rules without a model call, the loop, quota and activity per call, two people, no identity and no message text),
-  `test_migration_m012.py`, `test_ask_ui.py`.
+  `test_migration_m012.py`, `test_ask_ui.py`; routing: `test_ai_routing.py` (roles, defaults, the upgrade rule, each feature
+  on the local AI with the cloud fake seeing zero requests, off, consent per resolved provider, status, the `local` scope),
+  `test_ai_routing_ui.py` with `tests/js/routing_page.mjs` (the admin table and the person's lines run against a fake page).
+  The older AI tests set routing to `any` through `tests/ai_support.py` (`LEGACY_ROUTING`).
 * **Change control** (note 04 R11.5): any change to `app/ai/prompts.py`, `app/ai/schemas.py` or the
   guard's wording bumps `PROMPT_VERSION`; `tests/test_ai_prompts.py` fails until the new version's
   fingerprint is recorded (`KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). The golden
