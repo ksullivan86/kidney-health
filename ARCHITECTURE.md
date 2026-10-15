@@ -1974,7 +1974,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for the env provider |
 | `POST /api/admin/ai-providers/{id}/probe` *(re-auth)* | → `{probe, provider}` (20 per hour; may show the first 300 characters of an error body, shared providers only) |
 | `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env, allowed}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked}], env_role, as_before, defaults, writable}` |
-| `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe, chat: "local" \| "cloud" \| "off" \| "any", labs: "local" \| "off", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
+| `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe: "local" \| "cloud" \| "off" \| "any" \| "local_then_cloud", chat: "local" \| "cloud" \| "off" \| "any", labs: "local" \| "off", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 no_fallback` (`local_then_cloud` for `chat`), `400 local_only` (`cloud`, `any` or `local_then_cloud` for `labs`), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
 | `GET /api/admin/ai-usage` | `days` 1–366 (30) → `{days, usage: [{user_id, username, provider_id, key_scope, requests, prompt_tokens, completion_tokens}]}` (counts only, never content) |
 
 ```json
@@ -2031,7 +2031,8 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   photo; purpose `labs`; "Lab report photos" below). Consent stays per person,
   provider and purpose, so moving a feature to another provider asks again for that provider.
 * **Settings** (instance scope; `app/settings_registry.py`, the twin `js/engine/settings.js` and
-  `tests/data/settings_vectors.json`): `ai.route.photos|meal_ideas|describe|chat` (`local` \| `cloud` \| `off` \| `any`,
+`tests/data/settings_vectors.json`): `ai.route.photos|meal_ideas|describe|chat` (`local` \| `cloud` \| `off` \| `any`, and for
+  `photos`, `meal_ideas` and `describe` also `local_then_cloud` (tier 3, below),
   default `local`; env locks `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`), `ai.route.labs`
   (`local` \| `off` only, default `local`, env lock `AI_ROUTE_LABS`) and
   `ai.route.local_provider`, `ai.route.cloud_provider` (a shared provider id, 0 = none; ids are never reused because
@@ -2066,6 +2067,62 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   transcription host) is keyed to the provider the chat route resolves to; `POST /api/ai/consent` with purpose `voice`
   therefore checks `provider_id` against the chat route, and moving Ask to another provider asks about voice again.
 
+### Privacy tiers, tier 3: local first, cloud only when the local answer fails (route `local_then_cloud`)
+
+Code: `routing.FALLBACK_ROUTE` / `FALLBACK_FEATURES` / `allowed_routes`, `Resolved.fallback` (`app/ai/config.py`),
+`Prepared.cloud` and `features.judge_rejected` (`app/ai/features.py`), `routes.run_call` / `Attempt` / `_with_cloud` /
+`dry_run_of`, `vision._vision_config`, `config.consent_request(fallback=...)` and `FALLBACK_RULE`. People and operators:
+`docs/ai.md` "Local first, cloud only when the local answer fails"; what goes where: `docs/privacy.md`.
+
+* **The route.** `ai.route.photos|meal_ideas|describe` also accept `local_then_cloud` (the type is `AiStructuredRoute` in
+  `app/settings_registry.py`, mirrored in `js/engine/settings.js` and the vectors; `tests/data/gen_settings_vectors.py` adds
+  `local_then_cloud` as a bad value for `ai.route.chat` and `ai.route.labs`). **Not** `chat` (several calls in a row; `plan`
+  refuses it with `400 no_fallback`, the registry type, the settings route and the environment refuse it too) and **never** `labs`:
+  `LOCAL_ONLY` and `LOCAL_ONLY_ROUTES` are unchanged, `allowed_routes("labs")` is still `("local", "off")`. Defaults (`local`),
+  `initialise` (`any` for an upgraded server, `local` for `labs`) and every existing route are unchanged: nothing changes until
+  an admin picks it.
+* **Resolution.** `resolve_feature` resolves a `local_then_cloud` feature exactly as `local` (same reasons: `no_local_provider`,
+  `provider_disabled`, `local_not_private`, the call pinned to scope `local`) and, only when that succeeds, looks up the shared
+  provider holding the role `cloud` as `Resolved.fallback` (None when there is none, it is switched off, its key cannot be read, or
+  it is the local provider). A person's own provider (or `any`) takes the old branch: no local first, never a fallback. So both
+  roles are needed for the fallback; with no cloud provider the feature behaves as `local`, with no local provider it is off.
+  `runs_on_text` reads "Runs on your local AI (host); if its answer fails the app's checks, on the cloud AI (host)."
+* **Preparing both requests.** The prepare step builds the request for the local provider and, when `Resolved.fallback` is set,
+  `Prepared.cloud`: the same prepare function called with the cloud `ProviderConfig`, so the cloud request is exactly what route
+  `cloud` sends (its model or vision model, structured mode and prompt budget; the same data and photo). A cloud prompt budget the
+  request does not fit, or a cloud provider with no vision model (photos), means no fallback for that request.
+* **When the cloud is asked** (`run_call`, `Attempt.failed_checks`). After the local call: `result.status == "invalid"` (the
+  validator rejected the reply after the one repair turn: no JSON, wrong shape, empty, truncated) or `result.status == "ok"` and
+  `features.judge_rejected(verdict)` (`dropped_all`, or a food list whose items were all dropped by the text policy). **Not** for
+  `error` (unreachable, timeout, `http_*`, `blocked_address`), a refusal (`refused`, or the model's own `no_fit`), a judge crash,
+  nor when the local call never started (quota, busy, consent): those answer as with `local`. Then `_clear_fallback` requires the
+  person's `ai_consents` row for the cloud provider, the **same purpose** and the current policy version (`no_consent` otherwise:
+  nothing is sent), the Hermes tool check and one unit of quota (`quota_exhausted` or the tool-check reason otherwise). The second
+  call runs inside the same concurrency slot.
+* **Result.** `provider` names the AI that gave the shown answer. The cloud's answer is shown when it is usable (`ok` or
+  `refused`, `Attempt.usable`); otherwise the local failure is shown. `cloud_fallback` is added to the answer only when the local
+  answer failed the checks: `used`, `answered`, `reason`, `message` (the plain line), `local` and `cloud` providers, `local_audit_id`,
+  `audit_id`, and for `no_consent` a `consent` request (with `as_fallback` and the rule) so the page can offer to agree. Photo
+  routes answer a failure on both as `502` with the message appended to `detail` and `cloud_fallback` in the body. A usable cloud
+  answer is kept for the 10-minute reuse under its own key (`_cache_key(..., fallback=True)`: the scope carries `:fallback`, so
+  an answer the route `cloud` got is never shown as a fallback; `_kept_cloud_answer` shows it again only while the cloud consent
+  stands).
+* **Activity and quota.** Two `ai_audit` rows (the local one with `verdict_json.cloud_fallback` = `asked` or the reason it was
+  not asked, the cloud one with `fallback_for` = the local row's id) and two quota units (`ai_usage` per provider).
+* **Consent sheet and dry run.** `check_consent(..., fallback=cloud_cfg)` adds `consent.fallback` (the cloud provider's request,
+  `given`, `rule`) to a `409 consent_required`; the cloud consent is requested but **not required** for the local call. The
+  sheet (`askConsent`) names both hosts, states the rule and has its own tick box; `POST /api/ai/consent` accepts the cloud
+  provider's id for the feature's purpose. `?dry_run=true` returns the local request and `cloud_fallback` (host, model, the second
+  request's exact body, `consent` true/false/null, and the message "a second request with the same content may go to <host>,
+  but only if the local AI's answer fails the app's checks"); nothing is sent by looking.
+* **Frontend.** `js/views/ai_routing.js`: the column "Local, then cloud" (only where `allowed` has it), the one-line rule, the
+  warning, the role hints; `personLines` adds, for a feature whose `route_view.fallback.given` is false, "Allow the cloud AI
+  (host) as the fallback" (it opens the consent sheet with `fallback.request`, `as_fallback`). `route_view` always carries
+  `fallback: {runs_on, rule, given, request}` for such a feature (and `consent` in the status endpoint). `js/views/ai.js`: `fallbackDryRun`, the consent sheet, `fallbackNotes` (shown by `droppedNotes`, so
+  also in guidance's AI order, pick and plan, and by `js/scan.js` for a label), the activity row line.
+* **Unchanged.** SSRF policy, scopes, auth, user scoping (consent and cache keys carry the person), what is sent (the cloud
+  request is the one route `cloud` would send), `PROMPT_VERSION`.
+
 ### The call pipeline (`app/ai/routes.py` `run_call`)
 
 Consent (per person, provider, purpose `text`/`photos`/`chat`, destination host and `POLICY_VERSION`) → a
@@ -2075,7 +2132,9 @@ photo**; a failed check sets `disabled_reason` until a check passes) → the dai
 and photos count) → the call (at most one extra request: a retry after 429/5xx/connect errors or one
 repair turn) → the judge (V3–V9; a judge error shows nothing) → an `ai_audit` row → a log line with
 metadata only. Shared providers whose last test is missing or a day old are tested again in a
-background task after the response (at most once an hour per provider; nobody's quota). AI routes are
+background task after the response (at most once an hour per provider; nobody's quota). With the route `local_then_cloud` the
+steps from the tool check to the audit row run a second time for the cloud provider, in the same slot, only if the first answer
+failed the schema or the judge and the person agreed to that host ("Privacy tiers, tier 3" above). AI routes are
 `async`; their database work runs in the thread pool.
 
 ### Outbound HTTP (`app/ai/netpolicy.py`, `app/ai/transport.py`; note 04 R5, §9 A5)
@@ -2484,7 +2543,8 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   address, model, vision model, key, advanced options); `AI_PRIVATE_HOSTS` read-only; AI usage (counts).
   The `ai.*` switches are in Server administration → Server settings like every registry key. At the top of that
   section `js/views/ai_routing.js` draws "Which AI does each feature use?" (privacy tiers): a table of the features (four with
-  Local / Cloud / Off, and "As before" while a feature is still on `any`; the lab report row only Local and Off, from `allowed`), the local-AI and cloud-AI selects (the
+  Local / Cloud / Off, and "As before" while a feature is still on `any`; "Local, then cloud" for photos, meal ideas and describe a meal,
+  with its one-line rule under the table; the lab report row only Local and Off, from `allowed`), the local-AI and cloud-AI selects (the
   local one lists only private providers), a warning for every feature that goes to the cloud ("this sends … to
   <host>, outside your network"), and Save routing (`PUT /api/admin/ai-routing`, only the changes). Settings → AI ideas
   adds "Where each AI feature runs", one line per feature from `GET /api/me/ai`'s `routing`, and, once routing is set

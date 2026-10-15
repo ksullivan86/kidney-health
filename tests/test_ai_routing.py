@@ -584,7 +584,9 @@ def test_the_overview_has_what_the_admin_screen_needs(rig):
     o = rig.client.get("/api/admin/ai-routing").json()
     assert [f["feature"] for f in o["features"]] == list(ALL) and o["writable"] is True and o["env_role"] is None
     assert o["defaults"] == {f: "local" for f in ALL} and o["as_before"] is False
-    assert {f["feature"]: f["allowed"] for f in o["features"]} == {**{f: ["local", "cloud", "off", "any"] for f in FEATURES}, "labs": ["local", "off"]}
+    ROUTES4, ROUTES5 = ["local", "cloud", "off", "any"], ["local", "cloud", "off", "any", "local_then_cloud"]
+    assert {f["feature"]: f["allowed"] for f in o["features"]} == {
+        "photos": ROUTES5, "meal_ideas": ROUTES5, "describe": ROUTES5, "chat": ROUTES4, "labs": ["local", "off"]}  # tier 3: not Ask, not labs
     assert all("sends" in f and f["label"] for f in o["features"])
     assert {p["id"]: p["private"] for p in o["providers"]} == {rig.local: True, rig.cloud: False}
 

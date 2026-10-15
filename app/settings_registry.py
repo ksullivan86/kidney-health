@@ -583,6 +583,11 @@ register(
 # provider that has each role (0: none); the admin screen sets them through PUT /api/admin/ai-routing, which refuses
 # a host that is not private for `local`, and the resolution checks that again before every call.
 AiRoute = Literal["local", "cloud", "off", "any"]
+# Privacy tiers, tier 3 (docs/ai.md "Local first, cloud only when the local answer fails"): the structured features (photos,
+# meal ideas, describe a meal) also take `local_then_cloud`: the request goes to the local AI first and to the cloud AI only
+# when the local AI's answer fails the schema or the app's rules (never when the local AI is unreachable, too slow, over its
+# quota or declines). Ask (a chat of several calls) and the local-only lab report photos do not take it.
+AiStructuredRoute = Literal["local", "cloud", "off", "any", "local_then_cloud"]
 # Reading a lab report from a photo (app/ai/routing.py `labs`): the report can show a name, a date of birth and record
 # numbers that the app cannot remove from an image, so this feature runs only on the local AI (or not at all). `cloud` and
 # `any` are refused here, whoever asks and whatever the environment says.
@@ -592,31 +597,34 @@ AiProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
 register(
     SettingDef(
         key="ai.route.photos",
-        model=AiRoute,
+        model=AiStructuredRoute,
         default="local",
         scope="instance",
         env="AI_ROUTE_PHOTOS",
         label="Which AI reads photos (labels and plates)",
-        help="local, cloud, off or any (any shared provider a person chose, as before routing). A kitchen photo can show "
+        help="local, cloud, off, any (any shared provider a person chose, as before routing) or local_then_cloud (the local "
+        "AI first; the cloud AI only when the local answer fails the app's checks). A kitchen photo can show "
         "more than a label, so the default is local: with no local AI the feature is off.",
     ),
     SettingDef(
         key="ai.route.meal_ideas",
-        model=AiRoute,
+        model=AiStructuredRoute,
         default="local",
         scope="instance",
         env="AI_ROUTE_MEAL_IDEAS",
         label="Which AI suggests meals (ideas, order, swaps, day plan)",
-        help="local, cloud, off or any. Default local.",
+        help="local, cloud, off, any or local_then_cloud (the cloud AI only when the local answer fails the app's checks). "
+        "Default local.",
     ),
     SettingDef(
         key="ai.route.describe",
-        model=AiRoute,
+        model=AiStructuredRoute,
         default="local",
         scope="instance",
         env="AI_ROUTE_DESCRIBE",
         label="Which AI turns a described meal into search words",
-        help="local, cloud, off or any. Default local.",
+        help="local, cloud, off, any or local_then_cloud (the cloud AI only when the local answer fails the app's checks). "
+        "Default local.",
     ),
     SettingDef(
         key="ai.route.chat",

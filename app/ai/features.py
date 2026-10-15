@@ -39,6 +39,7 @@ from ..guidance.state import GuidanceContext
 from ..textclean import clean_text
 from . import guard, lab_report, prompts, schemas
 from .client import ProviderConfig, build_body, shown_headers
+from .config import FALLBACK_RULE
 from ..imagecheck import CheckedImage
 
 Mode = str
@@ -112,6 +113,10 @@ class Prepared:
     notes: list[str] = field(default_factory=list)  # fixed sentences shown under the answer
     keep_response: bool = True  # False: the AI activity row keeps no copy of the model's answer (a lab report is health data)
     local_only: bool = False  # True: the call must be pinned to the private network (checked again before it is built)
+    # Privacy tiers, tier 3 (route ``local_then_cloud``): the same request prepared for the cloud AI, i.e. exactly what route ``cloud``
+    # would send. :func:`app.ai.routes.run_call` sends it only if the call above gets an answer that fails the schema or the app's
+    # rules (:func:`judge_rejected`), and only for a person who agreed to send this purpose to that host. None on every other route.
+    cloud: "Prepared | None" = None
 
     @property
     def model(self) -> str:
@@ -130,8 +135,13 @@ class Prepared:
                         content[i] = {"type": "image", **(image.audit_copy() if image else {"image_sha256": None})}
         return body
 
-    def dry_run(self, app_version: str) -> dict[str, Any]:
-        """R9 step 4: destination, headers without the key, the exact body, the image byte count."""
+    def dry_run(self, app_version: str, cloud_consent: bool | None = None) -> dict[str, Any]:
+        """R9 step 4: destination, headers without the key, the exact body, the image byte count.
+
+        With a cloud fallback (route ``local_then_cloud``) the answer also says, under ``cloud_fallback``, that a second request
+        with the same content may go to the cloud host **only if the local AI's answer fails the app's checks**, and shows that
+        request too. ``cloud_consent`` is whether the person already agreed to send this purpose to that host (without it
+        nothing is sent there)."""
         body = json.loads(json.dumps(self.body))
         for message in body.get("messages", []):
             content = message.get("content")
@@ -140,7 +150,7 @@ class Prepared:
                     if isinstance(part, dict) and part.get("type") == "image_url":
                         url = part["image_url"]["url"]
                         part["image_url"]["url"] = url.split(",", 1)[0] + f",[{len(url.split(',', 1)[1])} base64 characters]"
-        return {
+        out: dict[str, Any] = {
             "dry_run": True,
             "feature": self.feature,
             "mode": self.mode,
@@ -155,6 +165,33 @@ class Prepared:
             "images": [i.audit_copy() for i in self.images],
             "trimmed_candidates": self.trimmed,
         }
+        if self.cloud is not None:
+            second = self.cloud.dry_run(app_version)
+            host = self.cloud.cfg.host
+            refused = " You have not agreed to send this to that host, so it would not be sent." if cloud_consent is False else ""
+            out["cloud_fallback"] = {
+                **{k: second[k] for k in ("destination", "host", "provider", "method", "headers", "body", "image_bytes", "images",
+                                          "trimmed_candidates")},
+                "model": self.cloud.model, "consent": cloud_consent, "rule": FALLBACK_RULE,
+                "message": f"A second request with the same content may go to {host}, but only if the local AI's answer fails the "
+                           f"app's checks. If its answer passes, or the local AI cannot be reached, nothing is sent there.{refused}",
+            }
+        return out
+
+
+def judge_rejected(verdict: Mapping[str, Any]) -> bool:
+    """Did the app's rules reject everything the model answered (the judge's verdict, not the model's own words)?
+
+    This is the second half of "the local answer fails the schema or the app's rules" for the cloud fallback (the first half is the
+    validator: a reply that is not the expected JSON). It is true when the judge kept nothing: ``dropped_all`` (every idea or pick
+    was dropped, or the model listed none), and for a list of foods (described meal, plate photo) when every item was dropped by
+    the text policy. It is false for what the model said itself in a valid answer (``refused``, ``no_fit``: "nothing fits", a label
+    that is ``not_a_label`` or ``unreadable``, ``no_food``, an empty list), and for a judge that crashed (``error``): sending the
+    same data to a second AI cannot fix a bug in the app."""
+    status = str(verdict.get("status", "ok"))
+    if status == "dropped_all":
+        return True
+    return status == "ok" and "items" in verdict and not verdict["items"] and bool(verdict.get("dropped"))
 
 
 def _estimate_tokens(body: Mapping[str, Any]) -> int:

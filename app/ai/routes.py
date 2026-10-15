@@ -24,7 +24,7 @@ import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime, timedelta, timezone
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Callable, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_validator
@@ -180,6 +180,31 @@ def _resolve(request: Request, conn: sqlite3.Connection, user: User, feature: st
                              can_use_shared=user.can_use_shared, feature=feature)
 
 
+def _with_cloud(resolved: K.Resolved, prep: F.Prepared, build: Callable[[C.ProviderConfig], F.Prepared]) -> F.Prepared:
+    """Privacy tiers, tier 3: for the route ``local_then_cloud``, prepare the same request for the cloud AI too, exactly as the
+    route ``cloud`` would send it (its own model, structured mode and prompt budget). Nothing is sent from here: :func:`run_call`
+    sends it only if the local answer fails the app's checks and the person agreed. A cloud prompt budget the request does not fit
+    means there is no fallback for this request, not a half-sent one."""
+    fallback = resolved.fallback
+    if fallback is None or fallback.cfg is None:
+        return prep
+    try:
+        prep.cloud = build(fallback.cfg)
+    except (F.ContextTooSmall, ValueError):
+        log.info("no cloud fallback for %s: the request does not fit the cloud AI's prompt budget", prep.feature)
+        prep.cloud = None
+    return prep
+
+
+async def dry_run_of(conn: sqlite3.Connection, user: User, request: Request, prep: F.Prepared) -> dict[str, Any]:
+    """"What will be sent?" for a prepared call: the exact request and, for a ``local_then_cloud`` feature, that a second request
+    may go to the cloud host **only if the local answer fails the app's checks** (and whether the person agreed to that host)."""
+    consent = None
+    if prep.cloud is not None:
+        consent = await run_in_threadpool(K.consent, conn, user.id, prep.cloud.cfg, prep.cloud.purpose) is not None  # type: ignore[arg-type]
+    return prep.dry_run(request.app.version, consent)
+
+
 def _seconds_to_midnight() -> int:
     now = datetime.now(timezone.utc)
     tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -197,16 +222,22 @@ BUSY_TEXT = {
 }
 
 
-def check_consent(conn: sqlite3.Connection, user: User, cfg: C.ProviderConfig, purpose: str) -> None:
+def check_consent(conn: sqlite3.Connection, user: User, cfg: C.ProviderConfig, purpose: str,
+                  fallback: C.ProviderConfig | None = None) -> None:
     """409 ``consent_required`` (with what the person would agree to) unless they agreed to send
-    ``purpose`` (``text``, ``photos`` or ``chat``) to this provider."""
+    ``purpose`` (``text``, ``photos`` or ``chat``) to this provider.
+
+    This is the consent for the provider the call goes to first. A ``local_then_cloud`` feature also passes the cloud provider
+    as ``fallback``: the consent sheet then names both hosts and says when the cloud one is used, but the cloud consent is not
+    required here: without it the cloud AI is simply never asked (:func:`run_call`)."""
     if K.consent(conn, user.id, cfg, purpose) is None:  # type: ignore[arg-type]
+        given = fallback is not None and K.consent(conn, user.id, fallback, purpose) is not None  # type: ignore[arg-type]
         raise ApiProblem(409, "Agree to send this to the AI provider first.", consent_required=True,
-                         consent=K.consent_request(cfg, purpose))  # type: ignore[arg-type]
+                         consent=K.consent_request(cfg, purpose, fallback=fallback, fallback_given=given))  # type: ignore[arg-type]
 
 
 def _check_consent(conn: sqlite3.Connection, user: User, prep: F.Prepared) -> None:
-    check_consent(conn, user, prep.cfg, prep.purpose)
+    check_consent(conn, user, prep.cfg, prep.purpose, prep.cloud.cfg if prep.cloud is not None else None)
 
 
 @contextlib.asynccontextmanager
@@ -271,15 +302,17 @@ def _take_quota(conn: sqlite3.Connection, state: AiState, user: User, cfg: C.Pro
 
 
 def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepared, result: C.CallResult,
-            verdict: dict[str, Any], status: str) -> int:
+            verdict: dict[str, Any], status: str, extra: dict[str, Any] | None = None) -> int:
+    """The AI activity row of one call (and its tokens). ``extra`` is for the row only: with a cloud fallback (tier 3) the local
+    row says ``cloud_fallback`` (``asked`` or why not) and the cloud row ``fallback_for`` (the local row's id)."""
     keep = int(state.store.get(conn, "ai.audit_retention_days")) > 0
     K.add_tokens(conn, user.id, prep.cfg, result.usage)
     audit_id = K.write_audit(
         conn, user.id, feature=prep.feature if prep.mode is None else f"{prep.feature}:{prep.mode}", cfg=prep.cfg,
         model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
         response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
-        verdict={k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
-                                                          "trimmed")},
+        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
+                                                             "trimmed")}, **(extra or {})},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
     )
     conn.commit()
@@ -358,13 +391,16 @@ def _server_port(request: Request) -> int | None:
     return server[1] if isinstance(server, (tuple, list)) and len(server) > 1 else None
 
 
-def _cache_key(user: User, prep: F.Prepared) -> tuple[Any, ...] | None:
+def _cache_key(user: User, prep: F.Prepared, *, fallback: bool = False) -> tuple[Any, ...] | None:
     """The :class:`~app.ai.cache.AnswerCache` key for a guidance answer (note 06 §4.13); ``None`` for the
-    features that are never reused (parse-meal text, photos)."""
+    features that are never reused (parse-meal text, photos).
+
+    ``fallback``: the call is the cloud request of a ``local_then_cloud`` feature. It is kept under its own key, so an answer the
+    route ``cloud`` got is never shown as "the cloud AI answered because the local one failed", and the other way round."""
     if prep.feature != "next_meal":
         return None
-    return AnswerCache.key(user.id, prep.cfg.id, prep.cfg.scope, prep.feature, prep.mode, PROMPT_VERSION,
-                           guidance_rules.rules_hash(), prep.body)
+    return AnswerCache.key(user.id, prep.cfg.id, prep.cfg.scope + (":fallback" if fallback else ""), prep.feature, prep.mode,
+                           PROMPT_VERSION, guidance_rules.rules_hash(), prep.body)
 
 
 def _judge(prep: F.Prepared, parsed: Any) -> dict[str, Any]:
@@ -407,33 +443,46 @@ def _reuse(conn: sqlite3.Connection, user: User, prep: F.Prepared, hit: CachedAn
     return _answer(prep, verdict, audit_id, cached=True)
 
 
-async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared,
-                   background: BackgroundTasks | None = None, *, slot_held: bool = False) -> dict[str, Any]:
-    """Consent → (a kept answer for the same question, note 06 §4.13) → concurrency slot → tool check →
-    quota → call → judge → audit. Never writes anything the person did not ask for; nothing AI-generated
-    reaches the log or the food list (G12).
+@dataclass
+class Attempt:
+    """One call to one provider: what came back, what the app's rules made of it, and its AI activity row."""
 
-    The Hermes tool check runs inside the slot, so a burst of requests from one person makes at most
-    one check. ``slot_held=True`` means the caller already holds the person's slot (:func:`ai_slot`;
-    the photo routes take it before reading the upload). With ``background``, a shared provider that
-    is due for its daily connection test gets one after the response is sent (:func:`maintenance_probe`)."""
-    if prep.local_only and not prep.cfg.local_only:  # a local-only feature (a lab report photo) never leaves the private network
-        raise unavailable("local_not_private")
-    state = ai_state(request)
-    client = _client_for(request)
-    await run_in_threadpool(_check_consent, conn, user, prep)
-    cache_key = _cache_key(user, prep)
-    if cache_key is not None:
-        hit = state.answers.get(cache_key)
-        if hit is not None:
-            return await run_in_threadpool(_reuse, conn, user, prep, hit)
-    async with contextlib.nullcontext() if slot_held else ai_slot(request, conn, user.id):
-        await tool_gate(request, conn, prep, client)
-        await run_in_threadpool(_take_quota, conn, state, user, prep.cfg)
-        result = await client.complete_json(prep.cfg, prep.body, prep.validator, vision=prep.vision)
+    prep: F.Prepared
+    result: C.CallResult
+    verdict: dict[str, Any]
+    status: str
+    audit_id: int | None = None
+
+    @property
+    def failed_checks(self) -> bool:
+        """Did the answer fail the schema or the app's rules? This, and nothing else, sends a ``local_then_cloud`` call on to the
+        cloud AI (privacy tiers, tier 3).
+
+        True: the reply was not the expected JSON (``invalid``: no JSON, wrong shape, empty, cut short), or the judge threw all of
+        it out (:func:`app.ai.features.judge_rejected`). False, so the cloud AI is **not** asked: the AI could not be reached,
+        took too long or answered with an HTTP error (``error``); the call was over quota (it never started); the model declined
+        (``refused``, a safety refusal); or the answer passed. Those answer exactly as with the route ``local``."""
+        if self.result.status == "invalid":
+            return True
+        return self.result.status == "ok" and F.judge_rejected(self.verdict)
+
+    @property
+    def usable(self) -> bool:
+        """An answer that may stand in for the one that failed: valid and not thrown out by the rules, or the model's own decline."""
+        if self.result.status == "refused":
+            return True
+        return self.result.status == "ok" and not F.judge_rejected(self.verdict) and self.verdict.get("status") != "error"
+
+
+def _provider_view(prep: F.Prepared) -> dict[str, Any]:
+    return {"id": prep.cfg.id, "label": prep.cfg.label, "model": prep.model, "host": prep.cfg.host}
+
+
+def _verdict_of(prep: F.Prepared, result: C.CallResult) -> tuple[dict[str, Any], str]:
+    """The checked answer (or why there is none) and the status the AI activity row records, from one call's result."""
     if result.status == "ok":
         # The judge gets its own copy, so the answer kept for reuse is the provider's, untouched.
-        verdict = await run_in_threadpool(_judge, prep, copy.deepcopy(result.parsed))
+        verdict = _judge(prep, copy.deepcopy(result.parsed))
         status = str(verdict.get("status", "ok"))
         if status in ("dropped_all", "no_fit") and prep.fallback is not None:
             verdict["fallback"] = prep.fallback
@@ -449,19 +498,156 @@ async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep:
     verdict["repaired"] = result.repaired
     verdict["retried"] = result.retried
     verdict["trimmed"] = prep.trimmed
-    audit_id = await run_in_threadpool(_finish, conn, state, user, prep, result, verdict, status)
-    if cache_key is not None and result.status == "ok" and status == "ok":
-        state.answers.put(cache_key, result.parsed, audit_id)
-    if (background is not None and state.auto_reprobe and prep.cfg.scope == "shared"
-            and await run_in_threadpool(_claim_reprobe, conn, state, prep.cfg.id)):
-        background.add_task(maintenance_probe, request.app, prep.cfg.id, _server_port(request))
+    return verdict, status
+
+
+async def _send(client: C.ChatClient, prep: F.Prepared) -> Attempt:
+    """The call itself (slot, tool check and quota are already taken) and the app's check of what came back."""
+    result = await client.complete_json(prep.cfg, prep.body, prep.validator, vision=prep.vision)
+    verdict, status = await run_in_threadpool(_verdict_of, prep, result)
+    return Attempt(prep, result, verdict, status)
+
+
+# Tier 3: what the person is told about the cloud AI, in plain words (docs/ai.md "Local first, cloud only when the local answer fails").
+FALLBACK_NOT_ASKED = {
+    "no_consent": "because you have not agreed to send this there",
+    "quota_exhausted": "because today's shared AI calls are used up",
+}
+
+
+def _fallback_view(local: F.Prepared, cloud: F.Prepared, *, asked: bool, answered: bool, reason: str | None = None,
+                   local_audit_id: int | None = None, cloud_audit_id: int | None = None, cached: bool = False) -> dict[str, Any]:
+    """The answer's ``cloud_fallback``: present only when the local AI's answer failed the app's checks and the route is
+    ``local_then_cloud``. ``used``: the cloud AI was sent the request (or an answer kept from an earlier one is shown);
+    ``answered``: its answer is the one shown; ``reason``: why it was not asked (``no_consent``, ``quota_exhausted``, ...)."""
+    host = cloud.cfg.host
+    if answered:
+        message = f"The local AI's answer did not pass the app's checks, so the cloud AI ({host}) answered."
+    elif asked:
+        message = (f"The local AI's answer did not pass the app's checks, so the cloud AI ({host}) was asked as well, "
+                   "but it gave no usable answer.")
+    else:
+        why = FALLBACK_NOT_ASKED.get(reason or "", "right now")
+        message = f"The local AI's answer did not pass the app's checks. The cloud AI ({host}) was not asked {why}."
+    out: dict[str, Any] = {"used": asked, "answered": answered, "reason": reason, "message": message, "cached": cached,
+                           "local": _provider_view(local), "cloud": _provider_view(cloud),
+                           "local_audit_id": local_audit_id, "audit_id": cloud_audit_id}
+    if reason == "no_consent":  # the page can offer to agree to it (the same sheet as any consent)
+        out["consent"] = {**K.consent_request(cloud.cfg, cloud.purpose), "as_fallback": True, "rule": K.FALLBACK_RULE}  # type: ignore[arg-type]
+    return out
+
+
+def _kept_cloud_answer(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepared) -> dict[str, Any] | None:
+    """A cloud answer kept from an earlier fallback of the same question (10 minutes): shown again without asking either AI,
+    but only while the person still has their consent for the cloud host."""
+    cloud = prep.cloud
+    key = _cache_key(user, cloud, fallback=True) if cloud is not None else None
+    if cloud is None or key is None:
+        return None
+    hit = state.answers.get(key)
+    if hit is None or K.consent(conn, user.id, cloud.cfg, cloud.purpose) is None:  # type: ignore[arg-type]
+        return None
+    answer = _reuse(conn, user, cloud, hit)
+    answer["cloud_fallback"] = _fallback_view(prep, cloud, asked=True, answered=True, cached=True)
+    return answer
+
+
+async def _clear_fallback(request: Request, conn: sqlite3.Connection, state: AiState, user: User, cloud: F.Prepared,
+                          client: C.ChatClient) -> str | None:
+    """Everything that must hold before the cloud AI is sent the second request: the person's consent for that host and
+    purpose, the Hermes tool check and one unit of quota. None to go ahead, else the reason it is not asked (the local
+    answer is then returned as it is, as with the route ``local``)."""
+    if await run_in_threadpool(K.consent, conn, user.id, cloud.cfg, cloud.purpose) is None:  # type: ignore[arg-type]
+        return "no_consent"
+    try:
+        await tool_gate(request, conn, cloud, client)
+        await run_in_threadpool(_take_quota, conn, state, user, cloud.cfg)
+    except ApiProblem as exc:
+        return str(exc.extra.get("reason") or "unavailable")
+    return None
+
+
+def _log_attempt(attempt: Attempt) -> None:
+    prep, result = attempt.prep, attempt.result
     log.info("ai call feature=%s provider=%s preset=%s model=%s host=%s latency_ms=%d prompt_tokens=%d completion_tokens=%d status=%s",
              prep.feature, prep.cfg.id, prep.cfg.preset, prep.model, prep.cfg.host, result.latency_ms,
-             result.usage.get("prompt_tokens", 0), result.usage.get("completion_tokens", 0), status)
+             result.usage.get("prompt_tokens", 0), result.usage.get("completion_tokens", 0), attempt.status)
     if prep.cfg.preset_def.kind == "self_hosted" and 3900 <= result.usage.get("prompt_tokens", 0) <= 4096:
         log.warning("AI provider %s used %d prompt tokens: Ollama may be cutting prompts at 4096 tokens; set "
                     "OLLAMA_CONTEXT_LENGTH (docs/ai.md, Troubleshooting)", prep.cfg.id, result.usage["prompt_tokens"])
-    return _answer(prep, verdict, audit_id, cached=False)
+
+
+async def run_call(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared,
+                   background: BackgroundTasks | None = None, *, slot_held: bool = False) -> dict[str, Any]:
+    """Consent → (a kept answer for the same question, note 06 §4.13) → concurrency slot → tool check →
+    quota → call → judge → audit. Never writes anything the person did not ask for; nothing AI-generated
+    reaches the log or the food list (G12).
+
+    The Hermes tool check runs inside the slot, so a burst of requests from one person makes at most
+    one check. ``slot_held=True`` means the caller already holds the person's slot (:func:`ai_slot`;
+    the photo routes take it before reading the upload). With ``background``, a shared provider that
+    is due for its daily connection test gets one after the response is sent (:func:`maintenance_probe`).
+
+    **Local first, cloud only when the local answer fails** (route ``local_then_cloud``, ``prep.cloud`` set): the call above
+    goes to the local AI. Only if its answer fails the schema or the app's rules (:attr:`Attempt.failed_checks`), the same
+    request, prepared for the cloud AI exactly as the route ``cloud`` would send it, goes to the cloud AI, inside the same slot,
+    and only if the person has agreed to send this purpose to that host (otherwise nothing is sent and the local failure is
+    returned, with ``cloud_fallback.reason == "no_consent"``). An unreachable or slow local AI, an HTTP error, an exhausted quota
+    or a refusal never reach the cloud AI: they answer as with ``local``. Each call has its own quota unit and AI activity row.
+    The answer names the AI that gave it (``provider``) and, after a fallback, says so in ``cloud_fallback.message``."""
+    if prep.local_only and not prep.cfg.local_only:  # a local-only feature (a lab report photo) never leaves the private network
+        raise unavailable("local_not_private")
+    if prep.local_only:  # and never has a cloud fallback, whatever prepared it (routing already refuses local_then_cloud for it)
+        prep.cloud = None
+    state = ai_state(request)
+    client = _client_for(request)
+    await run_in_threadpool(_check_consent, conn, user, prep)
+    cache_key = _cache_key(user, prep)
+    if cache_key is not None:
+        hit = state.answers.get(cache_key)
+        if hit is not None:
+            return await run_in_threadpool(_reuse, conn, user, prep, hit)
+    if prep.cloud is not None:
+        kept = await run_in_threadpool(_kept_cloud_answer, conn, state, user, prep)
+        if kept is not None:
+            return kept
+    cloud = prep.cloud
+    skipped: str | None = None
+    second: Attempt | None = None
+    async with contextlib.nullcontext() if slot_held else ai_slot(request, conn, user.id):
+        await tool_gate(request, conn, prep, client)
+        await run_in_threadpool(_take_quota, conn, state, user, prep.cfg)
+        first = await _send(client, prep)
+        fall_back = cloud is not None and first.failed_checks
+        if fall_back:
+            assert cloud is not None
+            skipped = await _clear_fallback(request, conn, state, user, cloud, client)
+        first.audit_id = await run_in_threadpool(
+            _finish, conn, state, user, prep, first.result, first.verdict, first.status,
+            {"cloud_fallback": skipped or "asked"} if fall_back else None)
+        if fall_back and skipped is None:
+            assert cloud is not None
+            second = await _send(client, cloud)
+            second.audit_id = await run_in_threadpool(
+                _finish, conn, state, user, cloud, second.result, second.verdict, second.status, {"fallback_for": first.audit_id})
+    final = second if second is not None and second.usable else first
+    assert final.audit_id is not None
+    final_key = _cache_key(user, final.prep, fallback=second is not None and final is second)
+    if final_key is not None and final.result.status == "ok" and final.status == "ok":
+        state.answers.put(final_key, final.result.parsed, final.audit_id)
+    for attempt in (first, second):
+        if attempt is None:
+            continue
+        if (background is not None and state.auto_reprobe and attempt.prep.cfg.scope == "shared"
+                and await run_in_threadpool(_claim_reprobe, conn, state, attempt.prep.cfg.id)):
+            background.add_task(maintenance_probe, request.app, attempt.prep.cfg.id, _server_port(request))
+        _log_attempt(attempt)
+    answer = _answer(final.prep, final.verdict, final.audit_id, cached=False)
+    if cloud is not None and first.failed_checks:  # the route is local_then_cloud and the local answer did not pass
+        answer["cloud_fallback"] = _fallback_view(
+            prep, cloud, asked=second is not None, answered=final is second, reason=skipped, local_audit_id=first.audit_id,
+            cloud_audit_id=None if second is None else second.audit_id)
+    return answer
 
 
 # --------------------------------------------------------------------------- #
@@ -534,8 +720,13 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
             return {"status": "treating_a_low", "cards": [gmessages.treating_a_low_card(ctx.prefs.hypo_dose_g)], "ai_called": False,
                     "message": "Low treatments are never sent to AI."}
         swap = (food, servings, purpose)
+    person = _person(conn, state, user.id)
+
+    def build(cfg: C.ProviderConfig) -> F.Prepared:
+        return F.prepare_next_meal(ctx, cfg, meal=meal, mode=body.mode, person=person, swap=swap)  # type: ignore[arg-type]
+
     try:
-        return F.prepare_next_meal(ctx, resolved.cfg, meal=meal, mode=body.mode, person=_person(conn, state, user.id), swap=swap)  # type: ignore[arg-type]
+        return _with_cloud(resolved, build(resolved.cfg), build)  # type: ignore[arg-type]
     except F.ContextTooSmall:
         raise ApiProblem(503, "The AI provider's prompt budget (AI_CONTEXT_TOKENS) is too small for this request.",
                          reason="context_too_small") from None
@@ -618,7 +809,7 @@ async def next_meal(body: NextMealBody, request: Request, user: CurrentUser, bac
     if isinstance(prep, dict):
         return prep
     if dry_run:
-        return prep.dry_run(request.app.version)
+        return await dry_run_of(conn, user, request, prep)
     return await run_call(request, conn, user, prep, background)
 
 
@@ -631,7 +822,12 @@ def _prepare_parse(request: Request, conn: sqlite3.Connection, user: User, body:
     resolved = _resolve(request, conn, user, "describe")
     if not resolved.ok:
         raise unavailable(resolved.reason or "not_configured")
-    return F.prepare_parse_meal(resolved.cfg, body.text, search=F.search_function(conn, user.id))  # type: ignore[arg-type]
+    search = F.search_function(conn, user.id)
+
+    def build(cfg: C.ProviderConfig) -> F.Prepared:
+        return F.prepare_parse_meal(cfg, body.text, search=search)
+
+    return _with_cloud(resolved, build(resolved.cfg), build)  # type: ignore[arg-type]
 
 
 @router.post("/parse-meal")
@@ -642,7 +838,7 @@ async def parse_meal(body: ParseMealBody, request: Request, user: CurrentUser, b
     if isinstance(prep, dict):
         return prep
     if dry_run:
-        return prep.dry_run(request.app.version)
+        return await dry_run_of(conn, user, request, prep)
     return await run_call(request, conn, user, prep, background)
 
 
@@ -888,9 +1084,14 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
     usable = [r.cfg for r in serving if r.cfg is not None]
     if not usable:
         raise unavailable(next((r.reason for r in serving if r.reason), None) or "not_configured")
-    cfg = next((c for c in usable if c.id == body.provider_id), None)
+    # A ``local_then_cloud`` feature also asks for the cloud AI it falls back to (the consent for that host is separate: without it
+    # the cloud AI is never asked).
+    fallbacks = [r.fallback.cfg for r in serving if r.fallback is not None and r.fallback.cfg is not None]
+    cfg = next((c for c in [*usable, *fallbacks] if c.id == body.provider_id), None)
     if cfg is None:
-        raise ApiProblem(409, "The AI provider changed; review what will be sent again.", consent=K.consent_request(usable[0], body.purpose))
+        first = next(r for r in serving if r.cfg is not None)
+        raise ApiProblem(409, "The AI provider changed; review what will be sent again.",
+                         consent=K.consent_request(usable[0], body.purpose, fallback=first.fallback.cfg if first.fallback is not None else None))
     given = K.give_consent(conn, user.id, cfg, body.purpose, skip_preview=body.skip_preview)
     conn.commit()
     return {"consent": given, **K.consent_request(cfg, body.purpose)}
@@ -1313,7 +1514,7 @@ async def probe_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE
     return {"probe": probe, "provider": view}
 
 
-Route = Literal["local", "cloud", "off", "any"]
+StructuredRoute = Literal["local", "cloud", "off", "any", "local_then_cloud"]  # tier 3: local first, the cloud only if the answer fails the checks
 LocalOnlyRoute = Literal["local", "off"]
 ProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
 
@@ -1322,10 +1523,10 @@ class RoutingBody(BaseModel):
     """Any subset: a route per feature, and the shared provider holding each role (0 clears it)."""
 
     model_config = ConfigDict(extra="forbid")
-    photos: Route | None = None
-    meal_ideas: Route | None = None
-    describe: Route | None = None
-    chat: Route | None = None
+    photos: StructuredRoute | None = None
+    meal_ideas: StructuredRoute | None = None
+    describe: StructuredRoute | None = None
+    chat: StructuredRoute | None = None  # read here so that R.plan refuses local_then_cloud for Ask with its own reason (400)
     labs: LocalOnlyRoute | None = None  # local or off only: a lab report photo never goes to a cloud AI
     local_provider: ProviderId | None = None
     cloud_provider: ProviderId | None = None

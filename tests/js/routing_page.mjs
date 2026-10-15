@@ -43,11 +43,15 @@ const clear = (el) => { el.children = []; return el; };
 const text = (el) => (el.nodeType === 3 ? el.t : [el.textContent, ...el.children.map(text)].filter(Boolean).join(' ')).replace(/\s+/g, ' ').trim();
 const find = (el, pred, out = []) => { if (el.nodeType === 1) { if (pred(el)) out.push(el); el.children.forEach((c) => find(c, pred, out)); } return out; };
 
-const log = { saved: [], toasts: [], forgot: 0, after: 0 };
+const log = { saved: [], toasts: [], forgot: 0, after: 0, consents: [] };
+let consentAnswer = true;
 let failSave = null;
 const KH = {
   h, clear, toast: (m, k) => log.toasts.push([k, m]),
-  ai: { forget: () => { log.forgot += 1; }, api: { setRouting: async (b) => { if (failSave) throw failSave; log.saved.push(b); return {}; } } },
+  ai: {
+    forget: () => { log.forgot += 1; }, api: { setRouting: async (b) => { if (failSave) throw failSave; log.saved.push(b); return {}; } },
+    askConsent: async (request) => { log.consents.push(request); return consentAnswer; }, // the consent sheet (js/views/ai.js)
+  },
 };
 const context = vm.createContext({ window: { KH }, document: { contains: () => true }, console });
 vm.runInContext(source, context, { filename: 'ai_routing.js' });
@@ -70,7 +74,7 @@ function data({ routes = {}, locked = {}, roles = { local: 2, cloud: 1 }, provid
   return { features, roles: { local: role('local'), cloud: role('cloud') }, providers, env_role: envRole, as_before: features.some((f) => f.route === 'any'), writable };
 }
 const warningsOf = (root) => find(root, (e) => e.attrs.class === 'ai-routing-warnings').map(text).join(' | ');
-const radio = (root, feature, route) => find(root, (e) => e.tag === 'input' && e.attrs['aria-label'] === `${FEATURES.find((f) => f[0] === feature)[1]}: ${{ local: 'Local', cloud: 'Cloud', off: 'Off', any: 'As before' }[route]}`)[0];
+const radio = (root, feature, route) => find(root, (e) => e.tag === 'input' && e.attrs['aria-label'] === `${FEATURES.find((f) => f[0] === feature)[1]}: ${{ local: 'Local', cloud: 'Cloud', off: 'Off', any: 'As before', local_then_cloud: 'Local, then cloud' }[route]}`)[0];
 const selects = (root) => find(root, (e) => e.tag === 'select');
 const options = (sel) => sel.children.filter((c) => c.tag === 'option').map((o) => o.attrs.value + ':' + text(o));
 const out = {};
@@ -171,6 +175,69 @@ const out = {};
   await radio(root, 'labs', 'off').fire('change');
   await find(root, (e) => e.tag === 'button' && text(e) === 'Save routing')[0].fire('click');
   out.labsSaved = log.saved[log.saved.length - 1];
+}
+
+// 7. Local, then cloud (privacy tier 3): offered only where the server allows it, with the one-line rule; a warning says what goes to the cloud and when.
+{
+  const ROUTES4 = ['local', 'cloud', 'off', 'any'];
+  const withAllowed = (d) => {
+    d.features = d.features.map((f) => ({ ...f, allowed: f.feature === 'labs' ? ['local', 'off'] : f.feature === 'chat' ? ROUTES4 : [...ROUTES4, 'local_then_cloud'] }));
+    return d;
+  };
+  const root = R.adminPart(withAllowed(data()), null);
+  const rowOf = (name) => find(root, (e) => e.tag === 'tr' && find(e, (x) => x.tag === 'th' && x.attrs.scope === 'row' && text(x).startsWith(name)).length)[0];
+  out.fallback = {
+    header: find(root, (e) => e.tag === 'th' && e.attrs.scope === 'col').map(text),
+    meal: find(rowOf('Meal ideas'), (e) => e.tag === 'input').map((e) => e.attrs['aria-label']),
+    ask: find(rowOf('Ask'), (e) => e.tag === 'input').map((e) => e.attrs['aria-label']),
+    askNotOffered: find(rowOf('Ask'), (e) => e.attrs.class === 'ai-route-na').map(text),
+    labsNotOffered: find(rowOf('Lab report photos'), (e) => e.attrs.class === 'ai-route-na').map(text),
+    rule: text(find(root, (e) => e.attrs.class === 'hint ai-route-rule')[0]),
+    atStart: warningsOf(root),
+  };
+  await radio(root, 'meal_ideas', 'local_then_cloud').fire('change');
+  out.fallbackChosen = warningsOf(root);
+  await find(root, (e) => e.tag === 'button' && text(e) === 'Save routing')[0].fire('click');
+  out.fallbackSaved = log.saved[log.saved.length - 1];
+
+  // Both roles must be held: with no cloud AI chosen it works as local (nothing leaves), with no local AI it is off.
+  const noCloud = R.adminPart(withAllowed(data({ roles: { local: 2 }, providers: [PROVIDERS[1]], routes: { photos: 'local_then_cloud' } })), null);
+  const noLocal = R.adminPart(withAllowed(data({ roles: { cloud: 1 }, providers: [PROVIDERS[0]], routes: { describe: 'local_then_cloud' } })), null);
+  out.fallbackRoles = { noCloud: warningsOf(noCloud), noLocal: warningsOf(noLocal) };
+
+  // The only spare provider is offered as the cloud AI when a feature is set to local, then cloud.
+  const spare = R.adminPart(withAllowed(data({ roles: { local: 2 }, providers: [{ ...PROVIDERS[0], role: null }, PROVIDERS[1]] })), null);
+  await radio(spare, 'photos', 'local_then_cloud').fire('change');
+  await find(spare, (e) => e.tag === 'button' && text(e) === 'Save routing')[0].fire('click');
+  out.fallbackOffered = log.saved[log.saved.length - 1];
+
+  // A server that does not send "allowed" (or allows nothing more) shows no extra column.
+  out.noFallbackColumn = find(R.adminPart(data(), null), (e) => e.tag === 'th' && e.attrs.scope === 'col').map(text);
+}
+
+// 8. Settings → AI ideas: a person who has not agreed to the cloud AI of a "local, then cloud" feature can agree later.
+{
+  const request = { provider_id: 1, provider_label: 'OpenAI', host: 'api.openai.com', purpose: 'text', as_fallback: true, rule: 'The cloud AI is asked only if ...' };
+  const fallback = (given) => ({ runs_on: { host: 'api.openai.com' }, rule: 'x', given, request });
+  const routing = { mode: 'routed', features: [
+    { feature: 'meal_ideas', label: 'Meal ideas', text: 'Runs on your local AI (ollama.lan:11434); if its answer fails the app\'s checks, on the cloud AI (api.openai.com).', fallback: fallback(false) },
+    { feature: 'photos', label: 'Photos (labels and plates)', text: 'Runs on your local AI (ollama.lan:11434); if its answer fails the app\'s checks, on the cloud AI (api.openai.com).', fallback: fallback(true) },
+    { feature: 'chat', label: 'Ask', text: 'Runs on your local AI (ollama.lan:11434).', fallback: null },
+  ] };
+  const root = R.personLines(routing);
+  const items = find(root, (e) => e.tag === 'li');
+  const buttons = find(root, (e) => e.tag === 'button');
+  const before = items.map(text);
+  consentAnswer = false; // the sheet is closed without agreeing: nothing changes
+  await buttons[0].fire('click');
+  const declined = { hidden: buttons[0].attrs.hidden, line: text(items[0]) };
+  consentAnswer = true;
+  await buttons[0].fire('click');
+  out.agreeLater = {
+    buttonCount: buttons.length, button: text(buttons[0]), before, declined,
+    asked: log.consents.map((r) => [r.provider_id, r.host, r.purpose, r.as_fallback]),
+    after: { hidden: buttons[0].hidden, line: text(items[0]) },
+  };
 }
 
 console.log(JSON.stringify(out));

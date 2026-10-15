@@ -51,6 +51,16 @@ network". If your admin moves a feature to a different AI, the app asks for your
 key, if you add one, is your own choice and goes to that company. If your admin switches a feature off, it is off for
 everyone.
 
+**Local first, cloud only if the local answer fails.** For photos, meal ideas and describing a meal your admin can choose
+this middle way. The line then reads "Runs on your local AI (host); if its answer fails the app's checks, on the cloud AI
+(host)". Your request goes to the AI at home first. A company's AI sees it **only if** the answer from home did not pass
+the app's checks (it was not usable, or the app's rules threw all of it out) **and** you agreed to send that kind of data
+to that company. It is not asked when the AI at home is switched off, slow, over its limit or declines the question. The
+consent sheet names both and has its own tick box for the company, so you can leave it off (you can agree later in Settings → AI
+ideas). When the company's AI answered,
+the answer says so: "The local AI's answer did not pass the app's checks, so the cloud AI (host) answered." Both calls show
+in your AI activity and count in your daily limit. Ask and lab report photos never work this way.
+
 ## What AI can and cannot do here
 
 | AI can | AI cannot |

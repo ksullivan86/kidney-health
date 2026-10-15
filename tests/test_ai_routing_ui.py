@@ -129,3 +129,66 @@ def test_a_person_reads_where_each_feature_runs(page):
     assert "Ask: Runs on OpenAI (api.openai.com), a cloud AI outside your network." in p["lines"]
     assert "off for everyone, whatever provider they use" in p["lines"] and p["none"] is None
     assert "the server uses the provider chosen above, as before" in p["before"]
+
+
+# --------------------------------------------------------------------------- #
+# Privacy tier 3: "Local, then cloud"
+# --------------------------------------------------------------------------- #
+
+
+def test_local_then_cloud_is_offered_only_where_the_server_allows_it_with_the_one_line_rule(page):
+    f = page["fallback"]
+    assert f["header"] == ["Feature", "Local", "Cloud", "Off", "Local, then cloud"]
+    assert f["meal"] == ["Meal ideas: Local", "Meal ideas: Cloud", "Meal ideas: Off", "Meal ideas: Local, then cloud"]
+    assert f["ask"] == ["Ask: Local", "Ask: Cloud", "Ask: Off"] and f["askNotOffered"] == ["– Ask: Local, then cloud is not offered"]
+    assert f["labsNotOffered"] == ["– Lab report photos: Cloud is not offered", "– Lab report photos: Local, then cloud is not offered"]
+    assert page["noFallbackColumn"] == ["Feature", "Local", "Cloud", "Off"]  # a server that allows nothing more shows no extra column
+    # the rule, in the server's own words
+    from app.ai import config as K
+
+    assert f["rule"].startswith("Local, then cloud: " + K.FALLBACK_RULE)
+    assert "Ask and lab report photos cannot use it." in f["rule"]
+
+
+def test_choosing_local_then_cloud_says_what_goes_to_the_cloud_and_when_and_saves_only_that(page):
+    assert page["fallbackChosen"] == ("Meal ideas: local first. If the local AI's answer fails the app's checks, this sends your meal data "
+                                      "(stage, targets, today's totals and the foods the rules offered) to api.openai.com, outside your network, "
+                                      "for people who agreed to that.")
+    assert page["fallbackSaved"] == {"meal_ideas": "local_then_cloud"}
+    assert page["fallback"]["atStart"] == ""
+
+
+def test_both_roles_are_needed_and_the_page_says_what_happens_without_one(page):
+    roles = page["fallbackRoles"]
+    assert roles["noCloud"] == ("Photos (labels and plates): local, then cloud, but no cloud AI is chosen, so it works as local: "
+                                "the cloud AI is never asked.")
+    assert "Describe a meal: local, then cloud, but no local AI is chosen, so it is off until you choose one." in roles["noLocal"]
+    assert "this sends the meals you describe" not in roles["noLocal"]  # nothing leaves while the feature is off
+    assert page["fallbackOffered"] == {"photos": "local_then_cloud", "cloud_provider": 1}  # the only spare provider is offered
+
+
+def test_the_ui_rule_is_the_servers_rule_and_the_new_pieces_are_wired():
+    from app.ai import config as K
+
+    assert K.FALLBACK_RULE.replace("'", "\\'") in ROUTING_JS.replace("'\n    + '", "")
+    for needle in ("function fallbackDryRun(f)", "dry.cloud_fallback ? fallbackDryRun(dry.cloud_fallback) : null",
+                   "function fallbackNotes(answer)", "const f = answer && answer.cloud_fallback;", "consent.fallback",
+                   "api.consent({ provider_id: fb.provider_id", "fallbackNotes, droppedNotes };"):
+        assert needle in AI_JS, needle
+    scan = (STATIC / "js" / "scan.js").read_text(encoding="utf-8")
+    assert "KH.ai.fallbackNotes(answer)" in scan
+    for cls in ("ai-dry-fallback", "ai-consent-fallback", "ai-fallback-line", "ai-route-rule"):
+        assert f".{cls}" in CSS, cls
+
+
+def test_settings_offers_to_agree_to_the_cloud_ai_later_only_where_the_person_has_not(page):
+    a = page["agreeLater"]
+    assert a["buttonCount"] == 1  # the photos line (agreed) and the Ask line (no fallback) have none
+    assert a["button"] == "Allow the cloud AI (api.openai.com) as the fallback"
+    assert ("You have not agreed to send this to api.openai.com, so the cloud AI is never asked."
+            in a["before"][0]) and "never asked" not in a["before"][1] + a["before"][2]
+    assert "hidden" not in a["declined"] and "never asked" in a["declined"]["line"]  # closing the sheet changes nothing
+    assert a["asked"] == [[1, "api.openai.com", "text", True], [1, "api.openai.com", "text", True]]  # the server's own request
+    assert a["after"]["hidden"] is True
+    assert "Agreed: if the local AI's answer fails the app's checks, api.openai.com is asked." in a["after"]["line"]
+    assert "never asked" not in a["after"]["line"]

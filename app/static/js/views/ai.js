@@ -256,7 +256,20 @@
         dry.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, `${Math.round(dry.image_bytes / 1024)} KiB JPEG, ${dry.images.map((i) => `${i.width}×${i.height}`).join(', ')}, location and camera data removed`)) : null,
         dry.trimmed_candidates ? h('div', { class: 'kv-row' }, h('dt', {}, 'Left out'), h('dd', {}, `${dry.trimmed_candidates} lower-ranked foods, to fit the provider's prompt size`)) : null),
       h('details', { class: 'settings-details' }, h('summary', {}, 'Headers'), pre(dry.headers)),
-      h('details', { class: 'settings-details', open: true }, h('summary', {}, 'Body (exactly as sent)'), pre(dry.body)));
+      h('details', { class: 'settings-details', open: true }, h('summary', {}, 'Body (exactly as sent)'), pre(dry.body)),
+      dry.cloud_fallback ? fallbackDryRun(dry.cloud_fallback) : null);
+  }
+  // Privacy tier 3 (local first, cloud only when the local answer fails): a second request with the same content may go to the
+  // cloud AI, but only if the local AI's answer fails the app's checks. Shown under the request that is sent first.
+  function fallbackDryRun(f) {
+    return h('section', { class: 'ai-dry-fallback' },
+      h('h4', { class: 'settings-minor' }, 'Only if the local AI\'s answer fails the app\'s checks'),
+      h('p', {}, f.message),
+      h('dl', { class: 'kv' },
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Would go to'), h('dd', {}, `${f.provider ? f.provider.label : ''} · ${f.host}`)),
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${f.method} ${f.destination}`)),
+        f.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, 'The same photo, location and camera data removed')) : null),
+      h('details', { class: 'settings-details' }, h('summary', {}, 'Second request (exactly as it would be sent)'), pre(f.body)));
   }
   async function showSent(dry, { trigger = null, confirmText = null } = {}) {
     const { body, foot } = fillSheet(sentEl, 'What will be sent?', 'Exactly this request leaves the server. Your key is never shown.');
@@ -280,9 +293,13 @@
     // A voice recording goes to the speech-to-text server, not to the AI provider, and there is no request to preview
     // before it exists: its sheet says where it goes and what comes back, with no "show me the request" choice.
     const voice = consent.purpose === 'voice';
-    const { body, foot } = fillSheet(consentEl, voice ? 'Before your recording is sent' : 'Before anything is sent', `${consent.provider_label} · ${consent.host}`);
+    const fb = !voice && consent.fallback ? consent.fallback : null; // local first, then this cloud AI only if the answer fails the checks
+    const sub = `${consent.provider_label} · ${consent.host}`
+      + (fb ? `, then ${fb.provider_label} · ${fb.host} only if the answer fails the app's checks` : '');
+    const { body, foot } = fillSheet(consentEl, voice ? 'Before your recording is sent' : 'Before anything is sent', sub);
     const showId = uid('ai-preview');
     const showEach = h('input', { type: 'checkbox', id: showId });
+    const allowCloud = fb && !fb.given ? h('input', { type: 'checkbox', id: uid('ai-cloud-fallback') }) : null;
     // A lab report photo (purpose labs) is explained in the server's own words (consent.notice): where it goes, that a report can
     // show a name, a date of birth and record numbers, that the photo is not kept, and to crop it. The generic "never sent" line
     // is left out for it, because it would be untrue of a photo.
@@ -291,7 +308,16 @@
       notice ? h('div', { class: 'ai-consent-notice' }, notice.map((line) => h('p', {}, line)))
         : voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
           ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
+      consent.as_fallback ? h('p', { class: 'hint' }, `This is the cloud AI your admin set as the fallback. ${consent.rule || ''}`) : null,
       note('caution', h('p', {}, consent.policy)),
+      fb ? h('div', { class: 'ai-consent-fallback' },
+        h('p', {}, 'Only if the local AI\'s answer fails the app\'s checks, the same request goes a second time to ', h('strong', {}, fb.provider_label),
+          ' at ', h('strong', { class: 'ai-host' }, fb.host), ', outside your network.'),
+        h('p', { class: 'hint' }, fb.rule),
+        note('caution', h('p', {}, fb.policy)),
+        allowCloud ? check(`Also allow the cloud AI (${fb.host}) as the fallback`, allowCloud,
+          'Leave this off and the cloud AI is never asked: you see the local AI\'s answer, or that it failed.')
+          : h('p', { class: 'hint' }, `You already agreed to send this to ${fb.host}.`)) : null,
       notice ? null : h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
       voice ? null : check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.')].filter(Boolean));
@@ -302,6 +328,7 @@
     const agreed = await awaitChoice(consentEl, ok, trigger);
     if (!agreed) return false;
     await api.consent({ provider_id: consent.provider_id, purpose: consent.purpose, skip_preview: !showEach.checked });
+    if (allowCloud && allowCloud.checked) await api.consent({ provider_id: fb.provider_id, purpose: consent.purpose, skip_preview: !showEach.checked });
     forget();
     return true;
   }
@@ -343,10 +370,27 @@
     else if (answer.message) out.push(note('caution', h('p', {}, answer.message)));
     return out.concat(droppedNotes(answer));
   }
+  // Privacy tier 3 (route local_then_cloud): when the local AI's answer did not pass the app's checks, say which AI answered, or why
+  // the cloud AI was not asked. Without the person's consent for the cloud host nothing was sent; the button offers to agree.
+  function fallbackNotes(answer) {
+    const f = answer && answer.cloud_fallback;
+    if (!f || !f.message) return [];
+    const out = [h('p', { class: 'hint ai-fallback-line' }, f.message)];
+    if (f.reason === 'no_consent' && f.consent) {
+      const agree = button(`Allow the cloud AI (${f.consent.host}) as the fallback`, 'secondary', async (btn) => {
+        if (await askConsent(f.consent, null, btn)) {
+          btn.hidden = true;
+          toast('Agreed. If the local AI\'s answer fails the app\'s checks again, the cloud AI will be asked.');
+        }
+      });
+      out.push(h('div', { class: 'settings-actions' }, agree));
+    }
+    return out;
+  }
   // G13: how many AI ideas or picks the rules left out and why, and how many claimed reasons they removed. The
   // guidance views' AI order, AI pick and AI plan show the same lines (KH.ai.droppedNotes).
   function droppedNotes(answer, what = null) {
-    const out = [];
+    const out = [...fallbackNotes(answer)];
     const dropped = ((answer && answer.dropped) || []).length;
     if (dropped) {
       const noun = what || (answer.feature === 'next_meal' ? ['AI idea was', 'AI ideas were'] : ['AI answer was', 'AI answers were']);
@@ -1159,16 +1203,25 @@
         h('div', { class: 'kv-row' }, h('dt', {}, 'Took'), h('dd', {}, `${((ev.latency_ms || 0) / 1000).toFixed(1)} s`))),
       h('p', { class: 'hint' }, 'Your recording and its words are not kept anywhere: not on this device, not on the server.'));
   }
+  const FALLBACK_ROW = { asked: 'The cloud AI was asked next (the row above this one).', no_consent: 'The cloud AI was not asked: you have not agreed to send this there.',
+    quota_exhausted: 'The cloud AI was not asked: today\'s shared AI calls were used up.' };
+  function fallbackRowLine(verdict) {
+    if (verdict && verdict.fallback_for) return 'A second request, sent because the local AI\'s answer did not pass the app\'s checks.';
+    if (verdict && verdict.cloud_fallback) return `The answer did not pass the app\'s checks. ${FALLBACK_ROW[verdict.cloud_fallback] || 'The cloud AI was not asked.'}`;
+    return null;
+  }
   function activityRow(ev) {
     const when = `${util.fmtDateShort(ev.created_at.slice(0, 10))} ${ev.created_at.slice(11, 16)} UTC`;
     if (ev.feature === 'voice') return voiceRow(ev, when);
     const feature = FEATURE_TEXT[ev.feature.split(':')[0]] || ev.feature;
+    const fallbackLine = fallbackRowLine(ev.verdict_json);
     return h('details', { class: 'settings-details ai-event' },
       h('summary', {}, `${when} · ${feature} · ${ev.destination_host} · ${statusText(ev.status)}`),
       h('dl', { class: 'kv' },
         h('div', { class: 'kv-row' }, h('dt', {}, 'Model'), h('dd', {}, ev.model || '')),
         h('div', { class: 'kv-row' }, h('dt', {}, 'Took'), h('dd', {}, `${((ev.latency_ms || 0) / 1000).toFixed(1)} s`)),
         h('div', { class: 'kv-row' }, h('dt', {}, 'Prompt version'), h('dd', {}, ev.prompt_version))),
+      fallbackLine ? h('p', { class: 'hint ai-fallback-line' }, fallbackLine) : null,
       h('h4', { class: 'settings-minor' }, 'What the rules decided'), pre(ev.verdict_json),
       h('h4', { class: 'settings-minor' }, 'What was sent'), ev.request_json ? pre(ev.request_json) : h('p', { class: 'muted small' }, 'No longer kept.'),
       h('h4', { class: 'settings-minor' }, 'What came back (before the app\'s checks)'),
@@ -1359,5 +1412,5 @@
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
   KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
-    uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
+    uploadPhoto, fallbackNotes, droppedNotes }; // uploadPhoto, fallbackNotes: js/scan.js reads a label photo into Quick add
 })();
