@@ -186,6 +186,35 @@ class Recorder:
         return out
 
 
+# --------------------------------------------------------------------------- Apple Health clinical records (Lab results → Import from Apple Health)
+def apple_health_files() -> list[dict]:
+    """Hand-written FHIR resources like the Health export's clinical-records files (made-up person, no real data): four results the app
+    keeps (HbA1c twice, one of them in mmol/mol, and the albumin/creatinine ratio in two units), one preliminary, one unknown test, one in
+    a unit the app cannot convert, a Patient, and a file that is not JSON. They are HbA1c and urine ratio results only, so they change no
+    suggested target."""
+    def obs(code: str, value: float, unit: str, ucum: str, date: str, **extra) -> dict:
+        o = {"resourceType": "Observation", "id": "example", "status": "final",
+             "subject": {"reference": "Patient/example-0001", "display": "Sam Example"},
+             "code": {"coding": [{"system": "http://loinc.org", "code": code}]}, "effectiveDateTime": date,
+             "valueQuantity": {"value": value, "unit": unit, "system": "http://unitsofmeasure.org", "code": ucum}}
+        o.update(extra)
+        return o
+    patient = {"resourceType": "Patient", "id": "example-0001", "name": [{"family": "Example", "given": ["Sam"]}]}
+    resources = {
+        "Observation-a1c.json": obs("4548-4", 7.1, "%", "%", "2026-03-02"),
+        "Observation-uacr-mgg.json": obs("9318-7", 24, "mg/g", "ug/mg{creat}", "2026-03-02"),
+        "Observation-uacr-mgmmol.json": obs("32294-1", 3.4, "mg/mmol creat", "mg/mmol{creat}", "2026-03-09"),
+        "Bundle-old.json": {"resourceType": "Bundle", "type": "collection", "entry": [{"resource": patient}, {"resource": obs("4548-4", 53, "mmol/mol", "mmol/mol", "2026-02-10")}]},
+        "Observation-glucose.json": obs("2345-7", 99, "mg/dL", "mg/dL", "2026-03-02"),
+        "Observation-preliminary.json": obs("4548-4", 8.0, "%", "%", "2026-03-03", status="preliminary"),
+        "Observation-bad-unit.json": obs("4548-4", 7.2, "mg/dL", "mg/dL", "2026-03-04"),
+        "Patient-1.json": patient,
+    }
+    files = [{"name": n, "mimeType": "application/json", "buffer": json.dumps(r).encode()} for n, r in resources.items()]
+    files.append({"name": "notes.json", "mimeType": "application/json", "buffer": b"not json at all"})
+    return files
+
+
 # --------------------------------------------------------------------------- helpers
 def fmt_num(v, key) -> str:
     """app.js fmtNum for already-rounded server values."""
@@ -543,6 +572,45 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
             page.locator("#labs-history .confirm-row .btn.danger-solid").click()
         check(A, "Delete result: DELETE /api/labs/{id} 204 and the banner goes", ri.value.status == 204
               and page.wait_for_function("() => !document.querySelector('#labs-alert .lab-alert')") is not None, str(ri.value.status))
+        # ---------------------------------------------------------------- 2c-ii. lab results from Apple Health clinical records (read on the device)
+        want_summary = ("4 results found in 9 files; 2 records that are not lab results; 1 result of tests the app does not track; "
+                        "1 not final (preliminary, cancelled or entered in error); 1 result in a unit the app cannot convert; 1 file that is not JSON.")
+        n_before = len(rec.requests)
+        page.set_input_files("#lab-fhir-file", apple_health_files())
+        page.wait_for_selector("#lab-fhir-summary")
+        check(A, "Apple Health import: the page reads the nine files and says what it found", page.inner_text("#lab-fhir-summary") == want_summary,
+              page.inner_text("#lab-fhir-summary"))
+        picked = rec.requests[n_before:]
+        check(A, "Apple Health import: choosing the files sends nothing (no write, no other host, no file)",
+              all(m == "GET" and urlparse(u).netloc == urlparse(BASE).netloc and not body for m, u, body, _rt in picked), str([(m, u) for m, u, _b, _r in picked]))
+        ticks = page.locator("#lab-fhir-preview .lab-fhir-list input[type=checkbox]")
+        check(A, "Apple Health import: the four results start ticked, newest first",
+              ticks.count() == 4 and all(ticks.nth(i).is_checked() for i in range(4))
+              and page.locator("#lab-fhir-preview .lab-fhir-list .lab-row-value").all_inner_texts()
+              == ["Urine albumin-to-creatinine ratio 3.4 mg/mmol = 30.1 mg/g", "Urine albumin-to-creatinine ratio 24.0 mg/g", "HbA1c 7.1 %", "HbA1c 53 mmol/mol = 7.0 %"],
+              str(page.locator("#lab-fhir-preview .lab-fhir-list .lab-row-value").all_inner_texts()))
+        refused = page.inner_text("#lab-fhir-preview .lab-fhir-refused")
+        check(A, "Apple Health import: the unit it cannot convert is listed as not imported, with the reason",
+              "the app cannot convert the unit “mg/dL” for HbA1c" in refused, refused)
+        ok, d = no_hscroll(page)
+        check(A, "no horizontal scroll with the Apple Health results open", ok, d)
+        shot(page, A, "03d-labs-apple-health", full=True)
+        ticks.nth(3).uncheck()
+        check(A, "Apple Health import: unticking one updates the Save button", page.inner_text("#lab-fhir-save") == "Save 3 results", page.inner_text("#lab-fhir-save"))
+        with page.expect_response(lambda r: is_api(r, "POST", "/api/labs/import")) as ri:
+            page.click("#lab-fhir-save")
+        sent = json.loads(ri.value.request.post_data)
+        check(A, "Apple Health import: Save sends only the three ticked rows (test, value, unit, day), no file name or name",
+              ri.value.status == 200 and ri.value.json()["saved"] == 3 and len(sent["results"]) == 3
+              and all(set(r) == {"analyte", "value", "unit", "taken_on"} for r in sent["results"])
+              and "Sam Example" not in ri.value.request.post_data and ".json" not in ri.value.request.post_data, ri.value.request.post_data)
+        page.wait_for_selector("#lab-fhir-preview .lab-import-summary")
+        check(A, "Apple Health import: the page says what was saved", "Saved 3 results" in page.inner_text("#lab-fhir-preview"), page.inner_text("#lab-fhir-preview"))
+        stored = {(r["analyte"], r["taken_on"]): r for r in sget("/api/labs").json()["labs"]}
+        check(A, "Apple Health import: the server stored the converted values",
+              round(stored[("uacr", "2026-03-09")]["value"], 1) == 30.1 and stored[("uacr", "2026-03-09")]["entered_unit"] == "mg/mmol"
+              and stored[("uacr", "2026-03-02")]["value"] == 24 and stored[("a1c", "2026-03-02")]["value"] == 7.1 and ("a1c", "2026-02-10") not in stored,
+              str(sorted(stored)))
         page.click("#labs-back")
         page.wait_for_selector("#view-profile:not([hidden])")
         page.wait_for_selector("#targets-review:not([hidden])")

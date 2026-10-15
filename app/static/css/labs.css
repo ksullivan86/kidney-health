@@ -64,6 +64,10 @@
 .lab-import-problem .lab-row-main { opacity: 0.9; }
 .lab-import-why { flex-basis: 100%; color: var(--caution-text); font-size: 0.85rem; overflow-wrap: anywhere; }
 .lab-import-saved { color: var(--text-2); font-size: 0.85rem; }
+/* Import from Apple Health (js/views/lab_fhir.js): the CSV import's table; the how-to steps and the list of refusals. */
+.lab-fhir-steps { margin: 8px 0 12px; padding-left: 1.3em; }
+.lab-fhir-steps li { margin: 0 0 4px; }
+.lab-fhir-refused { margin-top: 4px; }
 /* Read a lab report photo (js/views/lab_photo.js): the same table as the CSV import; a row without a date asks for one under it. */
 .lab-photo-list .lab-row { flex-wrap: wrap; }
 .lab-photo-date { flex: 1 1 100%; margin: 0 0 6px; padding-left: 34px; min-width: 0; }

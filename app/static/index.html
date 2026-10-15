@@ -881,6 +881,24 @@
       <div id="lab-import-preview" class="lab-import-preview"></div>
     </section>
 
+    <!-- Import from Apple Health (js/views/lab_fhir.js, js/engine/fhir_labs.js): the clinical-records JSON files of the Health app's export are
+         read on this device, never uploaded; the same review table as the spreadsheet import, and only the rows kept are sent. -->
+    <section class="card" id="lab-fhir" aria-labelledby="lab-fhir-h">
+      <h2 class="card-title" id="lab-fhir-h">Import from Apple Health (clinical records)</h2>
+      <p class="muted small">If you linked your health system in the iPhone Health app, its lab results are in the Health export as small files. They are read on this device and <strong>nothing is uploaded</strong>: you check every result before saving, and only the results you keep are sent.</p>
+      <ol class="small lab-fhir-steps">
+        <li>In the <strong>Health</strong> app, tap your picture (top right), then <strong>Export All Health Data</strong>, and save the zip to <strong>Files</strong>.</li>
+        <li>In <strong>Files</strong>, tap the zip to unzip it, then open <strong>apple_health_export</strong> and <strong>clinical-records</strong>.</li>
+        <li>Back here, choose the files below, go to <strong>clinical-records</strong>, tap <strong>Select</strong>, then <strong>Select All</strong>.</li>
+      </ol>
+      <div class="field">
+        <label for="lab-fhir-file">Clinical-records files (.json)</label>
+        <input id="lab-fhir-file" class="ai-file" type="file" multiple accept=".json,application/json,application/fhir+json" aria-describedby="lab-fhir-hint">
+        <span class="hint" id="lab-fhir-hint">Up to 2,000 files, 1 MB each. Only lab results the app keeps are read; names and other details in the files are ignored.</span>
+      </div>
+      <div id="lab-fhir-preview" class="lab-import-preview"></div>
+    </section>
+
     <!-- Read a lab report photo (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
          The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. -->
     <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
@@ -1880,6 +1898,7 @@
 <script src="js/engine/rules.js"></script>
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/lab_import.js"></script>
+<script src="js/engine/fhir_labs.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/visitprep.js"></script>
@@ -1924,6 +1943,7 @@
 <script src="js/views/symptoms.js"></script>
 <script src="js/views/labs.js"></script>
 <script src="js/views/lab_photo.js"></script>
+<script src="js/views/lab_fhir.js"></script>
 <script src="js/views/visit.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>

@@ -32,6 +32,15 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   as a warning sign shows the handbook's own words and a link to that page; that is computed from the symptom's name
   alone, on the server, and sends nothing anywhere ([Symptoms](../handbook/docs/app/reports-for-your-team.md));
 * **Visit prep** (Trends → Get ready for a visit) stores nothing and sends nothing: it is drawn in the browser from the summary, lab results and symptoms the person already has, with the person's own questions kept in the open page's memory only (not in the browser's storage, not on the server, never sent to an AI); it is printed or saved as a PDF by the browser. The code that builds requests to an AI provider or an assistant does not read it ([Reports for your care team](../handbook/docs/app/reports-for-your-team.md));
+* **Lab results from Apple Health clinical records** (Labs → Import from Apple Health, [Personalised targets and labs](targets-and-labs.md))
+  are read **in the browser, on the device, and nothing is uploaded**. The person unzips the Health app's export in the Files app and
+  chooses the `clinical-records` JSON files; the page opens each one with the browser's file reader (a file over 1 MB is not even
+  opened), parses it there, shows the lab results it recognises, and lets go of the file. Only the rows the person keeps (the test,
+  the value, the unit and the day) are sent, to the person's own server, through the same `POST /api/labs/import` as a typed or
+  spreadsheet result, and are then stored and exported like any lab result. The files' other contents (the patient's name and ids,
+  providers, notes, every other record) and the file names are not read, kept or sent, nothing is kept in the browser's storage,
+  and the code makes no other network request (a test checks that). The files are not sent to an AI provider, the Ask chat or an
+  assistant either;
 * API keys the person chose to store, encrypted;
 * assistant access tokens the person made, when the admin has turned assistant access on
   ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and

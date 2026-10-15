@@ -9,6 +9,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Import lab results from the iPhone Health app (clinical records).** If you linked your health system in the Health app,
+  **Lab results → Import from Apple Health (clinical records)** reads those results from the Health export: you unzip the
+  export in Files, open `apple_health_export/clinical-records`, and choose all the files there. **The files are read on your
+  phone and nothing is uploaded**: the app shows a line such as "41 results found in 380 files; 12 results of tests the app
+  does not track; 3 results in a unit the app cannot convert", then the same review table as a spreadsheet import. The new
+  results start ticked (they come from your health system, not from an AI), ones you already have do not, and only the ticked
+  rows are saved, through the same save as a spreadsheet (so the potassium warning works the same). It reads final, amended or
+  corrected lab results of the nine tests the app keeps (matched by LOINC code, listed with their loinc.org links in
+  [docs/targets-and-labs.md](docs/targets-and-labs.md)), converts units only with the app's own
+  table, and lists what it cannot read (a result like "<0.5", an unknown unit, no usable date) with the reason. Names, record
+  numbers, doctors and notes in the files are never read; it reads up to 2,000 files of 1 MB each. See
+  [the handbook](handbook/docs/app/targets-and-warnings.md#import-lab-results-from-the-iphone-health-app).
 * **Read lab results from a photo of a report (only with an AI on your own network).** On **Lab results**, below "Import
   from a spreadsheet", **Read a lab report photo** takes a photo or screenshot of a lab report (a PDF can be screenshotted)
   and copies the printed results of the tests the app keeps (potassium, phosphate, albumin, bicarbonate, urine
@@ -332,6 +344,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* Lab results from Apple Health clinical records are browser-only: no route, setting, dependency, network request or schema step.
+  `app/static/js/engine/fhir_labs.js` (`KH.fhirLabs`: the LOINC table, `start()`/`add()`/`finish()`) reads FHIR `Observation`s and
+  Bundles; `app/static/js/views/lab_fhir.js` (`KH.labFhir`) is the card and review table and saves through the shared
+  `KH.views.labs.saveImported`. Every LOINC code was looked up in LOINC 2.82 and cites its loinc.org page in the code and in
+  [docs/targets-and-labs.md](docs/targets-and-labs.md). Tests: `tests/data/fhir_labs_vectors.json` (hand-written resources and
+  expectations; `node tests/js/gen_fhir_labs_vectors.mjs` regenerates it and stops if the module disagrees) in
+  `node tests/js/run_vectors.mjs`, `tests/test_fhir_labs.py` (every code's test and unit exist in `app/units.py`, check digits, the docs
+  list every code, every proposed row converts like `units.convert` and is accepted by `POST /api/labs/import`) and
+  `tests/test_fhir_labs_ui.py` (with `tests/js/fhir_labs_page.mjs`: no inline script, no network call, a file over 1 MB never read, more
+  than 2,000 files refused, new rows ticked, only ticked rows saved, text drawn as text).
 * The meal ideas and Ask prompts follow the profile (kidney-only profile, part 3). `app/ai/prompts.py`: `SYSTEM_PROMPT` and
   `CHAT_SYSTEM_PROMPT` are templates whose only profile-dependent part is `[[CONDITION]]`, rendered by `system_prompt(person)`
   and `chat_prompt(person)` from `condition_text(person)`, which words only whitelisted profile values. The low-treatment

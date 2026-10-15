@@ -788,6 +788,9 @@ app/static/
                         KH.kidney twin of app/units.py + app/kidney_function.py; kidney_function.js loads first)
   js/engine/lab_import.js  (v0.3.1: KH.labImport, the CSV reader of Lab results → Import from a spreadsheet; browser only,
                         no Python twin; tests/data/lab_import_vectors.json; loads after kidney_function.js)
+  js/engine/fhir_labs.js  (v0.4: KH.fhirLabs, the reader of Lab results → Import from Apple Health, FHIR clinical-records files; browser
+                        only, no Python twin; tests/data/fhir_labs_vectors.json; loads after lab_import.js) and js/views/lab_fhir.js (KH.labFhir, its
+                        card and review table, after lab_photo.js; "Lab results from Apple Health clinical records" under "M2 API: targets and labs")
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
@@ -1311,6 +1314,50 @@ Analytes, canonical units, accepted units and plausible ranges: `app/units.py` (
 stored unrounded in the canonical unit; the API rounds it to the analyte's shown decimals. The card uses
 results of the last 365 days: newest date first, then lab eGFR > creatinine + cystatin C that day >
 creatinine > cystatin C; nothing on dialysis, in pregnancy or under 18; albuminuria in the entered unit.
+
+### Lab results from Apple Health clinical records (browser only; `js/engine/fhir_labs.js`, `js/views/lab_fhir.js`; ROADMAP "Ideas from the owner")
+
+**No new route, no new setting, no new dependency, no new network request, no schema step.** The Health app's "Export All Health Data" zip
+holds `apple_health_export/clinical-records/` with one FHIR JSON resource per file. The person unzips it in the Files app and chooses those
+files in the Labs view (card `#lab-fhir`, below "Import from a spreadsheet"). **Least trust: the files are read on the device and never
+uploaded.** Each file is opened with `File.text()` (a file over 1 MB is not opened), handed to `KH.fhirLabs.start().add()` and let go of;
+`finish()` returns the rows, the refusals and the counts; the page shows the headline ("41 results found in 380 files; …") and the CSV
+import's review table; only the ticked rows go to `POST /api/labs/import` through `KH.views.labs.saveImported` (the shared save: test,
+value, unit and day, nothing else). Names, ids, providers and notes in a file are never read (only the fixed paths below are), file names
+appear only on the page, in the list of refusals, and no file or file name is stored or sent. Contract points:
+
+* **Records.** `Observation`, or `Bundle` entries that are Observations (one level; a nested Bundle is "not a lab result"); every other
+  record is counted as not a lab result. `status` must be `final`, `amended` or `corrected`.
+* **Test.** `code.coding[]` with system `http://loinc.org` looked up in the table in `js/engine/fhir_labs.js` (`KH.fhirLabs.LOINC_LIST`,
+  26 codes for the nine tests of `app/units.py`; the table with each code's `https://loinc.org/<code>` page is in
+  `docs/targets-and-labs.md`). Every code was looked up in LOINC 2.82 (tx.fhir.org and the NLM Clinical Tables) on 2026-10-15; only
+  "Serum or Plasma" and "Serum, Plasma or Blood" specimens (HbA1c in blood, the urine albumin/creatinine ratio) are mapped, never
+  blood-gas, urine (potassium, creatinine), 24-hour, race-specific, MDRD or paediatric codes. Two codes for different tests, or none
+  in the table, skip the record (counted). `tests/test_fhir_labs.py` fails when a code names a test or a unit `app/units.py` lacks, when a
+  check digit is wrong, or when the docs do not list a code.
+* **Value and unit.** One number in `valueQuantity.value` (a `comparator` other than `=`, a text result or a missing number is refused);
+  the unit from the UCUM `code` (system `http://unitsofmeasure.org` or none) and the unit text, both must name the same unit when both
+  are known; read through `KH.kidney.canonicalUnitName` (the twin of `units.canonical_unit_name`) after dropping UCUM annotations and
+  a few spellings of the same unit (`UNIT_ALIASES`: `ug/mg` is `mg/g`, `mL/min/1.73m*2` and similar are the eGFR unit). An unknown unit is refused,
+  never guessed. Conversion and the plausible range are `KH.kidney.convert` (`units.convert`): the same checks and messages as
+  `POST /api/labs` and the CSV import; no clinical number is added here.
+* **Day.** First of `effectiveDateTime`, `effectiveInstant`, `effectivePeriod.start`, `issued`. A date alone is taken as written; a time
+  with a zone is converted to the calendar day on the device (the zone offset at that instant); a month or year alone, a date that does
+  not exist, a day before 1900 or after tomorrow (the server's allowance) is refused.
+* **Rows.** The same test, day and shown value collapse to one; results already saved (same key as the server's duplicate check) are
+  marked and start unticked; **new rows start ticked** (the data come from the person's health system, not from an AI); at most the
+  newest 1,000 are shown, because `POST /api/labs/import` takes 1 to 1,000 (the rest is counted as left out).
+* **Limits.** 2,000 files per pick (more are refused before any file is read), 1 MB per file, depth 40 and 300,000 values per file,
+  5,000 entries per Bundle, 50,000 records and 5,000 collected rows per pick, 100 listed refusals (counts stay exact); `JSON.parse` in
+  try/catch; the depth/size walk is iterative; no `eval`; all text from a file reaches the page through the `h()` helper (text nodes).
+* **Safety.** Nothing here gives advice or says whether a result is normal; the potassium banner and "what this result changed" come
+  from the shared save exactly as for a typed result.
+* **Parity.** The reader has no Python twin: `tests/data/fhir_labs_vectors.json` (hand-written sample resources and hand-written
+  expectations; `tests/js/gen_fhir_labs_vectors.mjs` stops if the module disagrees) is replayed by `node tests/js/run_vectors.mjs`, and
+  `tests/test_fhir_labs.py` converts every proposed row with `app/units.py` and posts them to `POST /api/labs/import`.
+  `tests/test_fhir_labs_ui.py` (with `tests/js/fhir_labs_page.mjs`) checks the page: no inline script or handler, no network call, nothing
+  stored in the browser, a file over 1 MB never read, new rows ticked, only ticked rows saved, text drawn as text. The demo has the same
+  card (`js/mock/labs.js` answers the import route).
 
 ### Settings (registered in `app/settings_registry.py`)
 

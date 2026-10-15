@@ -142,6 +142,8 @@ number (such as "<0.5" or ">90") are listed and left out, so you can type them b
 If you have a photo or a screenshot of a lab report instead, **Lab results → Read a lab report photo** can copy the
 printed results for you to check, but only when your admin has an AI on your own network ([Optional AI](ai.md#read-a-lab-report-from-a-photo)):
 every row starts unticked and only the rows you tick are saved.
+If you use an iPhone and linked your health system in the Health app, **Lab results → Import from Apple Health (clinical
+records)** can read those results from the Health export, on your phone ([steps below](#import-lab-results-from-the-iphone-health-app)).
 Which detail changes which target is listed in [First setup](first-setup.md#which-details-change-your-targets).
 Under each suggested number, **Why this number?** shows the rule, its source and grade, and an **Expert
 opinion** badge where part of the rule is the app's own choice; nothing is saved until you tap
@@ -195,6 +197,35 @@ Other details that change the suggestion:
 - **Fiber** gets a goal of at least 14 g per 1,000 kcal ([ADA 2026][A26-5], Rec 5.24).
 - No starting targets during pregnancy or breastfeeding, under age 18, or in the first 12 weeks after a
   transplant.
+
+## Import lab results from the iPhone Health app
+
+If you linked your health system (your hospital or clinic) in the iPhone **Health** app, your lab results are in the Health
+app, and the app can read them from the Health export. **The files are read on your phone. Nothing is uploaded**: you check
+every result, and only the results you keep are saved on your server.
+
+1. In the **Health** app, tap your picture (top right), then **Export All Health Data**. It can take a few minutes. Save the
+   zip file to the **Files** app.
+2. In **Files**, tap the zip file to unzip it. Open the new folder **apple_health_export**, then **clinical-records**. It holds
+   one small file per record (lab results, medicines, visits). You do not need to open them.
+3. In this app, go to **Profile → Lab results** and find **Import from Apple Health (clinical records)**. Tap **Choose Files**,
+   go to the **clinical-records** folder in Files, tap **Select**, then **Select All**, and tap **Open**.
+4. The app reads the files and shows a line such as "41 results found in 380 files". Below it are the results it
+   recognised, each converted to the app's units. The results you do not have yet are **ticked**: untick any you do not want.
+   A result you already saved is not ticked.
+5. Tap **Save**. A potassium of 6.0 mmol/L or more shows the same urgent warning as when you type it.
+
+What to know:
+
+- The app keeps only the nine tests it uses (potassium, phosphate, albumin, bicarbonate, urine albumin-to-creatinine ratio,
+  creatinine, cystatin C, eGFR and HbA1c) and only final, amended or corrected results. Everything else in the folder is
+  skipped and counted, for example medicines, visits, blood pressure and tests the app does not use.
+- A result is listed as **not imported**, with the reason, when it has no single number (such as "<0.5"), a unit the app
+  cannot convert, no usable date, or a number outside the plausible range. You can type those by hand if you want them.
+- The app does not read your name, your record numbers, your doctors or the notes in the files, and it does not send
+  the files anywhere. It reads up to 2,000 files at a time, up to 1 MB each; if you have more, choose some of them.
+- The app only copies the numbers. It does not say whether a result is normal, high or low, and it never changes your saved
+  targets: talk to your care team about what a result means.
 
 ## Examples
 
