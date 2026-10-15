@@ -27,7 +27,13 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
+
+# PyYAML has no cp315 wheel yet, so the lock leaves it out on Python 3.15 (requirements-dev.in) and this file skips
+# there; the 3.12 and 3.14 cells run it. Below 3.15 a missing PyYAML is an error, not a skip.
+if sys.version_info >= (3, 15):
+    yaml = pytest.importorskip("yaml", reason="PyYAML has no cp315 wheel yet (requirements-dev.in)")
+else:
+    import yaml
 
 from conftest import make_settings, signed_in_client
 
