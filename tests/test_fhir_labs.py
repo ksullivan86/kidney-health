@@ -14,6 +14,7 @@ import json
 import re
 from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -263,6 +264,7 @@ def test_nothing_from_the_identity_of_a_file_is_in_an_answer():
 
 def test_the_vectors_are_hand_written_resources_with_no_real_person():
     text = json.dumps(VECTORS["cases"], ensure_ascii=False)
-    assert "Sam Example" in text and "example.org" in text
+    hosts = {urlparse(url).hostname for url in re.findall(r'https?://[^\s"\\]+', text)}
+    assert "Sam Example" in text and "example.org" in hosts  # made-up names and the reserved example domain
     assert not re.search(r"\b\d{3}-\d{2}-\d{4}\b", text)  # no social-security-like number
     assert not re.search(r"@[a-z0-9.-]+\.[a-z]{2,}", text)  # no e-mail address
