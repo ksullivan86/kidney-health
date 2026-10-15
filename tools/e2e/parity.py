@@ -938,7 +938,8 @@ class Harness:
                           "phosphorus_mg": 60, "fluid_ml": 12, "fiber_g": None, "sugar_g": ""},
             "flags": ["High_GI", "processed", "high_gi"], "kidney_notes": "  "})
         cid = (rs["body"]["id"], rm["body"]["id"])
-        food = lambda suffix="": (lambda side: f"/api/foods/{cid[side]}{suffix}")
+        def food(suffix=""):
+            return lambda side: f"/api/foods/{cid[side]}{suffix}"
         self.both(S, "GET /api/foods/categories with custom category", "GET", "/api/foods/categories")
         self.both(S, "GET /api/foods?source=custom", "GET", "/api/foods?source=custom")
         self.both(S, "GET /api/foods?q=cookie", "GET", "/api/foods?q=cookie")

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from math import floor as _floor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date as _date, timedelta
 from typing import Iterable, Mapping, Sequence
 

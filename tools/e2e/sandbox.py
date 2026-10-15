@@ -610,7 +610,6 @@ class Run:
                        f"first warning top {w['firstTop']:.0f}px, sheet footer top {w['footTop']:.0f}px", "low" if not self.phone else "medium")
         self.shot("add-sheet")
         self.checks("Add sheet (banana)", contrast=True)
-        n_before = self.count("#meals .row-btn")
         self.press("#entry-save", "Save banana as eaten", wait=self.wait_fn(
             "() => !document.querySelector('#sheet-entry').open && !document.querySelector('#view-today').hidden && /Banana/i.test(document.querySelector('#meals').textContent)"))
         toast = self.text("#toast")

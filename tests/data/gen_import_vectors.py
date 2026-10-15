@@ -31,7 +31,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent / "import_vectors.json"

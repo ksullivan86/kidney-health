@@ -534,7 +534,8 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         form = page.evaluate(READ_TARGET_FORM)
         t = sugg["targets"]
         exp_form = expected_target_form(form, t)
-        norm = lambda d: {k: (str(float(v)) if v not in ("", None) else "") for k, v in d.items()}
+        def norm(d):
+            return {k: (str(float(v)) if v not in ("", None) else "") for k, v in d.items()}
         check(A, "Suggest targets fills the form with the server's numbers (not saved yet)", norm(form) == norm(exp_form), f"form={form} expected={exp_form}")
         check(A, "Suggested targets for 70 kg / 175 cm / 3b / type 1 match note 05 (0.8 g/kg protein floor, fiber goal)",
               t == {"calories_kcal": 2100, "protein_g": {"min": 56, "max": 56}, "carbs_g": 236, "carbs_per_meal_g": 60, "fiber_g": {"min": 29},
@@ -788,7 +789,8 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         with page.expect_response(lambda r: is_api(r, "POST", "/api/log")) as ri:
             page.click("#entry-save")
         e_blue = ri.value.json()
-        lv = lambda texts: [t.split(". ", 1)[0] for t in texts]
+        def lv(texts):
+            return [t.split(". ", 1)[0] for t in texts]
         check(A, "1 serving: preview warning levels == server entry levels", lv(prev1) == lv(expected_warning_texts(e_blue["warnings"])),
               f"preview={prev1} server={expected_warning_texts(e_blue['warnings'])}")
         wait_toast(page, "Added Blueberries")
