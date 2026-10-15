@@ -33,6 +33,9 @@
    paediatric formulas are not (the app cannot tell which of a race pair applies; it uses CKD-EPI 2021). A new code is added here
    only after the same lookup, and tests/test_fhir_labs.py checks that every analyte and unit exists in app/units.py.
 
+   js/engine/ccda_labs.js (lab results from a patient-portal C-CDA file) reuses this module's LOINC table, unit handling, day rule and
+   collector() (counting, collapsing, the 1,000-row cap, the headline) instead of copying them; nothing about FHIR leaks into it.
+
    Plain script: needs js/engine/rules.js and js/engine/kidney_function.js first; runs in the page (window.KH.fhirLabs) and under Node
    (tests/js/run_vectors.mjs, tests/data/fhir_labs_vectors.json). No DOM. */
 (function (root) {
@@ -167,7 +170,12 @@
     if (!text) return { problem: 'no date' };
     const m = DATE_RE.exec(text);
     if (!m) return { problem: /^\d{4}(-\d{2})?$/.test(text) ? `date ${quote(text)} has no day` : `date ${quote(text)} is not a date the app can read` };
-    const [, y, mo, d, hh, mi, ss, zone] = m;
+    return dayOf(text, m[1], m[2], m[3], m[4], m[5], m[6], m[7], today, tz);
+  }
+
+  // The day of a date already split into its parts (also used by js/engine/ccda_labs.js for HL7 TS values): `text` is what the file
+  // said, for messages; hh, mi, ss and zone are undefined when the file gave no time or no zone; zone is "Z" or "+hh:mm" / "+hhmm".
+  function dayOf(text, y, mo, d, hh, mi, ss, zone, today, tz) {
     let iso = `${y}-${mo}-${d}`;
     if (K.parseIsoDate(iso).error) return { problem: `date ${quote(text)} is not a real date` };
     if (Number(y) < 1900) return { problem: `date ${quote(text)} is before 1900` };
@@ -232,8 +240,8 @@
   // ---------------------------------------------------------------------------
   // A pick of files, one file at a time (the page reads each file, hands it over and lets go of its text)
   // ---------------------------------------------------------------------------
-  const ZERO = () => ({
-    files: 0, read: 0, notJson: 0, tooBig: 0, tooComplex: 0, unreadable: 0, // files
+  // The counters of a pick that do not depend on the kind of file: records looked at and what became of them.
+  const RECORD_COUNTS = () => ({
     notLab: 0, observations: 0, unknownCode: 0, wrongStatus: 0, // records
     noValue: 0, notExact: 0, badUnit: 0, badDate: 0, refused: 0, duplicates: 0, leftOut: 0, // tracked tests that were not kept
     found: 0, saved: 0, problemsHidden: 0,
@@ -241,28 +249,25 @@
 
   const tooManyFiles = (n) => `You chose ${num(n)} files; the app reads up to ${num(MAX_FILES)} at a time. Choose fewer files, for example only the Observation files.`;
 
-  /* start({today, existing: [{analyte, taken_on, value}], tzOffsetMinutes}) → {add(file), finish()}
-     file: {name, size, text} (a file the page could not read: {name, unreadable: true}; one the page did not read because its size is
-     over the limit: {name, size}). finish() → {
-       problem,   // why nothing was read (too many files), or null
-       counts,    // exact numbers (ZERO above)
-       results,   // rows to review, newest day first: {analyte, label, taken_on, value, unit, text, display, saved}
-       problems,  // tracked tests that were not kept, up to 100: {analyte, label, taken_on, text, problem, file}
-       summary,   // the headline's parts, in words
-     } */
-  function start(opts = {}) {
+  /* The part of a reader that does not depend on the file format, shared with js/engine/ccda_labs.js: the counters, the refusals
+     (listed once, up to 100), and the results (converted and range-checked only by js/engine/kidney_function.js, repeats collapsed,
+     rows the person already has marked, the newest 1,000 kept).
+     collector({today, existing: [{analyte, taken_on, value}], tzOffsetMinutes}, fileCounts) →
+       {counts, problems, today, tz, refuse(analyte, taken_on, text, why, file), record(), keep(analyte, taken_on, value, unit, file),
+        results(), summarize(o)}
+     fileCounts: the counters of this format's files, all zero (for example {notJson: 0}); they are added to the shared ones. */
+  function collector(opts = {}, fileCounts = {}) {
     const today = opts.today || null;
     const tz = typeof opts.tzOffsetMinutes === 'number' ? opts.tzOffsetMinutes : null;
     const existing = new Set((opts.existing || []).map((r) => {
       try { return `${r.analyte}|${r.taken_on}|${K.formatValue(r.analyte, r.value)}`; } catch (e) { return ''; }
     }));
-    const counts = ZERO();
+    const counts = { files: 0, read: 0, ...fileCounts, ...RECORD_COUNTS() };
     const seen = new Set();
     const rows = [];
     const problems = [];
     const seenProblems = new Set();
     let records = 0;
-    let tooMany = 0;
 
     function refuse(analyte, taken_on, text, why, file) {
       const key = `${analyte}|${taken_on || ''}|${text}|${why}`;
@@ -272,14 +277,84 @@
       problems.push({ analyte, label: K.ANALYTES[analyte].label, taken_on: taken_on || null, text, problem: why, file });
     }
 
-    function observation(obs, file) {
-      if (records >= MAX_RECORDS) { counts.leftOut += 1; return; }
+    // A result record is about to be looked at: false (and counted as left out) once the pick is over its budget of 50,000.
+    function record() {
+      if (records >= MAX_RECORDS) { counts.leftOut += 1; return false; }
       records += 1;
       counts.observations += 1;
+      return true;
+    }
+
+    // A result of a tracked test with its unit (the app's spelling) and day settled: convert, range-check, collapse repeats, keep.
+    function keep(analyte, taken, value, unit, file) {
+      let c;
+      try {
+        c = K.convert(analyte, value, unit);
+      } catch (e) {
+        if (!(e instanceof K.UnitError)) throw e;
+        counts.refused += 1;
+        refuse(analyte, taken, `${value} ${unit}`, e.message, file);
+        return;
+      }
+      const key = `${analyte}|${taken}|${K.formatValue(analyte, c.value)}`;
+      if (seen.has(key)) { counts.duplicates += 1; return; }
+      if (rows.length >= MAX_COLLECT) { counts.leftOut += 1; return; }
+      seen.add(key);
+      rows.push({ key, analyte, label: K.ANALYTES[analyte].label, taken_on: taken, value, unit, text: `${value} ${unit}`, display: c.display, saved: existing.has(key) });
+    }
+
+    // The rows to review, newest day first (the same day in the order of the Labs picker), at most 1,000.
+    function results() {
+      rows.sort((a, b) => (a.taken_on === b.taken_on ? ORDER.indexOf(a.analyte) - ORDER.indexOf(b.analyte) || a.value - b.value : a.taken_on < b.taken_on ? 1 : -1));
+      const kept = rows.slice(0, MAX_RESULTS);
+      counts.leftOut += rows.length - kept.length;
+      const out = kept.map(({ key, ...row }) => row);
+      counts.found = out.length;
+      counts.saved = out.filter((r) => r.saved).length;
+      return out;
+    }
+
+    /* The headline's parts, in words. o.wrongStatus: what "not kept for its status" means in this format; o.fileParts: this format's
+       own parts about files (not JSON, over the size limit, ...), put before "left out". */
+    function summarize(o = {}) {
+      const s = [];
+      s.push(`${plural(counts.found, 'result', 'results')} found in ${plural(counts.files, 'file', 'files')}`);
+      if (counts.saved) s.push(`${num(counts.saved)} already saved`);
+      if (counts.notLab) s.push(counts.notLab === 1 ? '1 record that is not a lab result' : `${num(counts.notLab)} records that are not lab results`);
+      if (counts.unknownCode) s.push(`${plural(counts.unknownCode, 'result', 'results')} of tests the app does not track`);
+      if (counts.wrongStatus) s.push(`${num(counts.wrongStatus)} ${o.wrongStatus || 'not final (preliminary, cancelled or entered in error)'}`);
+      if (counts.badUnit) s.push(`${plural(counts.badUnit, 'result', 'results')} in a unit the app cannot convert`);
+      if (counts.noValue + counts.notExact) s.push(`${num(counts.noValue + counts.notExact)} without a single number`);
+      if (counts.badDate) s.push(`${num(counts.badDate)} without a usable day`);
+      if (counts.refused) s.push(`${num(counts.refused)} outside the plausible range`);
+      if (counts.duplicates) s.push(`${num(counts.duplicates)} repeated`);
+      for (const part of o.fileParts || []) s.push(part);
+      if (counts.leftOut) s.push(`${num(counts.leftOut)} left out (the app takes the newest ${num(MAX_RESULTS)} at a time)`);
+      return s;
+    }
+
+    return { counts, problems, today, tz, refuse, record, keep, results, summarize };
+  }
+
+  /* start({today, existing: [{analyte, taken_on, value}], tzOffsetMinutes}) → {add(file), finish()}
+     file: {name, size, text} (a file the page could not read: {name, unreadable: true}; one the page did not read because its size is
+     over the limit: {name, size}). finish() → {
+       problem,   // why nothing was read (too many files), or null
+       counts,    // exact numbers
+       results,   // rows to review, newest day first: {analyte, label, taken_on, value, unit, text, display, saved}
+       problems,  // tracked tests that were not kept, up to 100: {analyte, label, taken_on, text, problem, file}
+       summary,   // the headline's parts, in words
+     } */
+  function start(opts = {}) {
+    const col = collector(opts, { notJson: 0, tooBig: 0, tooComplex: 0, unreadable: 0 });
+    const { counts, problems, today, tz, refuse } = col;
+    let tooMany = 0;
+
+    function observation(obs, file) {
+      if (!col.record()) return;
       const analyte = analyteOf(obs.code);
       if (!analyte) { counts.unknownCode += 1; return; }
       if (!OK_STATUS.has(obs.status)) { counts.wrongStatus += 1; return; }
-      const label = K.ANALYTES[analyte].label;
       const when = dateOf(obs, today, tz);
       const taken = when.iso || null;
       const q = isObject(obs.valueQuantity) ? obs.valueQuantity : null;
@@ -297,20 +372,7 @@
       const unit = unitOf(analyte, q);
       if (unit.problem) { counts.badUnit += 1; refuse(analyte, taken, text, unit.problem, file); return; }
       if (when.problem) { counts.badDate += 1; refuse(analyte, null, `${q.value} ${unit.unit}`, when.problem, file); return; }
-      let c;
-      try {
-        c = K.convert(analyte, q.value, unit.unit);
-      } catch (e) {
-        if (!(e instanceof K.UnitError)) throw e;
-        counts.refused += 1;
-        refuse(analyte, taken, `${q.value} ${unit.unit}`, e.message, file);
-        return;
-      }
-      const key = `${analyte}|${taken}|${K.formatValue(analyte, c.value)}`;
-      if (seen.has(key)) { counts.duplicates += 1; return; }
-      if (rows.length >= MAX_COLLECT) { counts.leftOut += 1; return; }
-      seen.add(key);
-      rows.push({ key, analyte, label, taken_on: taken, value: q.value, unit: unit.unit, text: `${q.value} ${unit.unit}`, display: c.display, saved: existing.has(key) });
+      col.keep(analyte, taken, q.value, unit.unit, file);
     }
 
     function document_(doc, file) {
@@ -355,29 +417,13 @@
       const out = { problem: null, counts, results: [], problems, summary: [] };
       if (tooMany) { out.problem = tooManyFiles(counts.files); return out; }
       if (!counts.files) { out.problem = 'No files were chosen.'; return out; }
-      rows.sort((a, b) => (a.taken_on === b.taken_on ? ORDER.indexOf(a.analyte) - ORDER.indexOf(b.analyte) || a.value - b.value : a.taken_on < b.taken_on ? 1 : -1));
-      const kept = rows.slice(0, MAX_RESULTS);
-      counts.leftOut += rows.length - kept.length;
-      out.results = kept.map(({ key, ...row }) => row);
-      counts.found = out.results.length;
-      counts.saved = out.results.filter((r) => r.saved).length;
-
-      const s = out.summary;
-      s.push(`${plural(counts.found, 'result', 'results')} found in ${plural(counts.files, 'file', 'files')}`);
-      if (counts.saved) s.push(`${num(counts.saved)} already saved`);
-      if (counts.notLab) s.push(counts.notLab === 1 ? '1 record that is not a lab result' : `${num(counts.notLab)} records that are not lab results`);
-      if (counts.unknownCode) s.push(`${plural(counts.unknownCode, 'result', 'results')} of tests the app does not track`);
-      if (counts.wrongStatus) s.push(`${num(counts.wrongStatus)} not final (preliminary, cancelled or entered in error)`);
-      if (counts.badUnit) s.push(`${plural(counts.badUnit, 'result', 'results')} in a unit the app cannot convert`);
-      if (counts.noValue + counts.notExact) s.push(`${num(counts.noValue + counts.notExact)} without a single number`);
-      if (counts.badDate) s.push(`${num(counts.badDate)} without a usable day`);
-      if (counts.refused) s.push(`${num(counts.refused)} outside the plausible range`);
-      if (counts.duplicates) s.push(`${num(counts.duplicates)} repeated`);
-      if (counts.notJson) s.push(`${plural(counts.notJson, 'file', 'files')} that ${counts.notJson === 1 ? 'is' : 'are'} not JSON`);
-      if (counts.tooBig) s.push(`${plural(counts.tooBig, 'file', 'files')} over 1 MB`);
-      if (counts.tooComplex) s.push(`${plural(counts.tooComplex, 'file', 'files')} too complex to read`);
-      if (counts.unreadable) s.push(`${plural(counts.unreadable, 'file', 'files')} that could not be read`);
-      if (counts.leftOut) s.push(`${num(counts.leftOut)} left out (the app takes the newest ${num(MAX_RESULTS)} at a time)`);
+      out.results = col.results();
+      const fileParts = [];
+      if (counts.notJson) fileParts.push(`${plural(counts.notJson, 'file', 'files')} that ${counts.notJson === 1 ? 'is' : 'are'} not JSON`);
+      if (counts.tooBig) fileParts.push(`${plural(counts.tooBig, 'file', 'files')} over 1 MB`);
+      if (counts.tooComplex) fileParts.push(`${plural(counts.tooComplex, 'file', 'files')} too complex to read`);
+      if (counts.unreadable) fileParts.push(`${plural(counts.unreadable, 'file', 'files')} that could not be read`);
+      out.summary = col.summarize({ fileParts });
       return out;
     }
 
@@ -399,6 +445,8 @@
   KH.fhirLabs = {
     MAX_FILES, MAX_FILE_BYTES, MAX_DEPTH, MAX_NODES, MAX_BUNDLE_ENTRIES, MAX_RECORDS, MAX_COLLECT, MAX_RESULTS, MAX_PROBLEMS,
     LOINC: Object.fromEntries([...BY_CODE]), LOINC_LIST, loincUrl, ORDER, UNIT_ALIASES: Object.fromEntries([...UNIT_ALIASES]),
-    mapUnit, unitOf, readDate, dateOf, analyteOf, withinLimits, tooManyFiles, start, analyse,
+    mapUnit, unitOf, readDate, dayOf, dateOf, analyteOf, withinLimits, tooManyFiles, start, analyse,
+    // shared with js/engine/ccda_labs.js (the C-CDA reader): the format-independent half of a reader and the text helpers
+    collector, MAX_TEXT, shown, quote, num, plural,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

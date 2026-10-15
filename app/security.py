@@ -66,9 +66,11 @@ CSP_DIRECTIVES: tuple[str, ...] = (
     "form-action 'self'",
     "frame-ancestors 'none'",
     "require-trusted-types-for 'script'",
-    # One named policy, created once by the service-worker registration code and allowing only
-    # '/sw.js' (note 01 §10 S3). Never add 'allow-duplicates' or a 'default' policy.
-    "trusted-types kh-sw",
+    # Two named policies, each created once and used by one file (note 01 §10 S3). kh-sw: the service-worker
+    # registration code (js/pwa.js), allowing only '/sw.js'. kh-xml: the patient-portal file import
+    # (js/engine/ccda_labs.js), which hands a C-CDA XML string without a DOCTYPE or ENTITY to the browser's
+    # DOMParser, a Trusted Types sink. Never add 'allow-duplicates' or a 'default' policy.
+    "trusted-types kh-sw kh-xml",
 )
 CONTENT_SECURITY_POLICY = "; ".join(CSP_DIRECTIVES)
 

@@ -9,6 +9,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Import lab results from a patient-portal file (C-CDA .xml).** Many patient portals (MyChart and others) can download a
+  "health summary" or "visit summary" as a C-CDA XML file. **Lab results → Import from a patient portal file (C-CDA .xml)** reads the
+  lab results in it: download the file in the portal (choose the XML or C-CDA format, not the PDF) and choose it in the app. **The file
+  is read on your device and nothing is uploaded**; your server never sees the XML. The app shows a line such as "12 results found in
+  2 files; 3 results of tests the app does not track; 1 not completed", then the same review table as the other imports: the new
+  results start ticked (they come from your health system, not from an AI), ones you already have do not, and only the ticked rows are
+  saved, through the same save as a spreadsheet (so the potassium warning works the same). It reads the Results section only, completed
+  results of the nine tests the app keeps (matched by LOINC code, the same table as the Apple Health import), converts units only with
+  the app's own table, and lists what it cannot read (a result like "<0.5", an unknown unit, no usable date) with the reason. Your
+  name, address, record numbers, doctors and notes in the file are never read. A file that contains a DOCTYPE or ENTITY declaration
+  (a real health summary has none) is refused, up to 20 files of 5 MB each. See
+  [the handbook](handbook/docs/app/targets-and-warnings.md#import-lab-results-from-a-patient-portal-file).
 * **Edit and delete an entry without a connection.** Changing an entry that is already on your server (its amount, meal,
   day, **eaten** or **planned**, or note, and the **Eaten** button) or deleting it now works offline, like adding food does:
   Today shows the change at once, marked **waiting to sync**, and it is sent, in order, when your server can be reached.
@@ -383,6 +395,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* Lab results from a patient-portal C-CDA file are browser-only (no route, setting, dependency, network request or schema step), with
+  **one CSP change: `trusted-types kh-sw kh-xml`** (`app/security.py`). The browser's `DOMParser` is a Trusted Types sink, so
+  `app/static/js/engine/ccda_labs.js` (`KH.ccdaLabs`) creates a second named policy, `kh-xml`, whose `createHTML` accepts only a string
+  without a DOCTYPE or ENTITY; `tests/test_frontend_shell.py` now allows exactly two policy-creating files and one parser call, and
+  `tests/test_security.py` pins the CSP. The reader reuses `KH.fhirLabs` (the LOINC table, `unitOf`, `dayOf`, and a new exported
+  `collector()` for the counting, collapsing, 1,000-row cap and headline; the FHIR reader's behaviour and vectors are unchanged);
+  `app/static/js/views/lab_ccda.js` (`KH.labCcda`) is the card and draws `KH.labFhir.review`, which now takes an id `prefix`. The XML parser
+  is injected (`parseXml`): Node tests use the dev-only `tests/js/mini_xml.mjs`, real Chromium runs in `tools/e2e/regress.py`. Tests:
+  `tests/data/ccda_labs_vectors.json` (hand-written C-CDA documents and expectations; `node tests/js/gen_ccda_labs_vectors.mjs`
+  regenerates it and stops if the module disagrees) in `node tests/js/run_vectors.mjs`, `tests/test_ccda_labs.py` (the OIDs, the shared
+  table, every row converts like `units.convert`, DTD refusal before parsing, no identity in an answer) and `tests/test_ccda_labs_ui.py` (with
+  `tests/js/ccda_labs_page.mjs`: no inline script, no network call, only fixed element and attribute names read, a file over 5 MB never
+  read, more than 20 files refused, new rows ticked, only ticked rows saved, text drawn as text, one policy created once).
 * Offline edits and deletes (`js/offline.js`, `js/core.js`, `app/log.py`). One outbox item per entry (`edit` or `delete`,
   with the `version` and the entry as the person saw it), replayed with `If-Match`; a 412 whose entry equals the one the change
   was made on (the person's own queued "mark eaten" went first) is sent once more, any other is a conflict card; a 404 drops

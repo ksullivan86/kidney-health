@@ -322,6 +322,83 @@ sample resources and expectations, `tests/js/gen_fhir_labs_vectors.mjs`) pins th
 Health export are FHIR JSON (the reader is written for R4 Observations; the export may also hold records of older FHIR versions,
 whose Observations use the same fields the reader looks at; this is untested against a real export, see the roadmap).
 
+**Import from a patient portal file (C-CDA .xml)** (on the same view, below Apple Health): many patient portals (MyChart and
+others) let you download a "health summary" or "visit summary" as a **C-CDA** XML file (HL7 Consolidated CDA, release 2.1). The
+app reads the lab results in it, by LOINC code, into the same review table. **The file is read and parsed in the browser, on your
+device, and nothing is uploaded**: the server never sees the XML, so it needs no XML parser and has none to attack. In the portal,
+open your health summary or a visit summary and choose *Download*; if it offers a choice of formats, pick XML (also called C-CDA
+or CCD), not the PDF (the menus differ between portals). Back in the Labs view, choose the `.xml` file, or several (up to 20
+files of 5 MB each). The page shows a line such as "12 results found in 2 files; 3 results of tests the app does not track; 1 not
+completed (pending, cancelled or on hold)" and the **same review table as the spreadsheet and Apple Health imports**. The results
+come from your health system, not from an AI, so the new ones start **ticked** (one you already have, same test, day and value as
+shown, does not); nothing is saved until **Save**, and then only the ticked rows (test, value, unit and day) are sent, through
+`POST /api/labs/import`. No file, file name, name, address, id, author, note or narrative is read, kept or sent. What the reader
+(`js/engine/ccda_labs.js`, `KH.ccdaLabs`) does:
+
+* **Refuses before it parses:** a file over 5 MB (not even opened), more than 20 files in one pick, and any file that contains
+  `<!DOCTYPE` or `<!ENTITY`: a real C-CDA has no DTD, so such a file is refused whole and counted with that reason ("1 file refused
+  because it has a DOCTYPE or ENTITY declaration"); it is never "cleaned". A file the parser reports as malformed (a `parsererror`),
+  XML whose root is not a `ClinicalDocument` of the HL7 v3 namespace, and a file with no Results section are counted too.
+* **Parses with the browser's own `DOMParser`** as `application/xml`, which never loads an external entity or DTD, one file at a
+  time (the text and the document are let go of before the next file). It walks only the section, entry, organizer and observation
+  elements, at most 200,000 elements and 64 levels deep per file, never the narrative text.
+* **Reads only Results sections.** A section whose `templateId` root is `2.16.840.1.113883.10.20.22.2.3.1` (Results Section, entries
+  required) or `2.16.840.1.113883.10.20.22.2.3` (entries optional), found under
+  `ClinicalDocument/component/structuredBody/component/section` (or a section nested in a section); every other section (vital
+  signs, problems, plan of care, allergies, ...) is ignored, even if it holds a lab code. In it: `entry/organizer/component/observation`
+  or `entry/observation` whose `templateId` root is `2.16.840.1.113883.10.20.22.4.2` (Result Observation); an observation without
+  that template is counted as "not a lab result", and an observation's own children (comments, reference ranges, nested
+  observations) are never read.
+* **Test.** `code/@code` with `@codeSystem` `2.16.840.1.113883.6.1` (LOINC), and the same on `code/translation`, looked up in the
+  LOINC table of the Apple Health reader (above: one table, used by both readers). A code of another system, an unknown code, no code
+  (`nullFlavor`), or two codes that name different tests is skipped and counted.
+* **Status.** `statusCode/@code` must be `completed`; anything else (active, aborted, cancelled, held, suspended, none) is counted and left out.
+* **Value and unit.** `value` of `xsi:type="PQ"` with `@value` (one number) and `@unit` (a UCUM code), converted and range-checked
+  only by the app's unit table (`app/units.py` through its browser twin), exactly as above: an unknown unit or no unit is listed as
+  not imported with the reason, never guessed. A `<5` or `>100` in `@value`, an `IVL_PQ` (a range or limit), a text, coded or
+  missing value, a second value, or a `nullFlavor` (the lab left it blank) is listed and left out.
+* **Day.** `effectiveTime/@value`, else `effectiveTime/low/@value`, an HL7 TS value `YYYYMMDD[HHMM[SS[.S]]][+/-ZZZZ]`, by the same
+  rules as the Apple Health reader: a date alone is used as written; a time with a time zone is shown as the calendar day on your
+  device; a month or year alone, a date that does not exist, a day before 1900 or more than one day ahead is listed as not imported.
+* **Rows.** The same counting, repeat-collapsing, "already saved" marking and 1,000-row cap (the newest) as the Apple Health reader.
+
+The template identifiers (checked on 2026-10-15 against HL7's publications; the reader matches the `root` only, so the
+`extension` that tells the versions apart, for example `2015-08-01`, does not matter):
+
+| What | `templateId` / code system | Source |
+|---|---|---|
+| Results Section (entries required) | `2.16.840.1.113883.10.20.22.2.3.1` | [HL7 C-CDA, Results Section](https://hl7.org/cda/us/ccda/StructureDefinition-ResultsSection.html) |
+| Results Section (entries optional) | `2.16.840.1.113883.10.20.22.2.3` | the HL7 CDA Examples [results example](https://build.fhir.org/ig/HL7/CDA-Examples/Binary-results-with-lab-location.html) (see the note below) |
+| Result Organizer (read through, not required) | `2.16.840.1.113883.10.20.22.4.1` | [HL7 C-CDA, Result Organizer](https://hl7.org/cda/us/ccda/StructureDefinition-ResultOrganizer.html) |
+| Result Observation | `2.16.840.1.113883.10.20.22.4.2` | [HL7 C-CDA, Result Observation](https://hl7.org/cda/us/ccda/StructureDefinition-ResultObservation.html) |
+| LOINC code system (the OID of `codeSystem`) | `2.16.840.1.113883.6.1` | the same HL7 example; the section's own code there is LOINC 30954-2, "Relevant diagnostic tests and/or laboratory data" |
+
+What was and was not verified: the first, third and fourth identifiers are the ones HL7's published C-CDA templates carry (the pages
+above, release 5.0.0 of the guide, whose template identifiers are the same as release 2.1's; the observation and organizer pages
+list the `2023-05-01` version of the same roots). The HL7 CDA Examples guide's results example, which is a C-CDA R2.1 Results section,
+carries `2.16.840.1.113883.10.20.22.2.3` and `2.16.840.1.113883.10.20.22.2.3.1` together, the section code 30954-2, the organizer
+`...4.1`, the observation `...4.2` and the LOINC OID. **The R2.1 definition page of the entries-optional template itself
+(`...2.3`) could not be fetched from the machine this was written on**; that it is "Results Section (entries optional)" rests on that
+example and on a second source (the Aidbox C-CDA converter's documentation), not on its own HL7 page. Nothing is guessed from it:
+the template only decides which sections are read, and any other section is ignored.
+
+**Why in the browser, and the one security change.** The roadmap first planned `defusedxml` on the server. Parsing in the browser
+needs no new dependency, uploads nothing (so a health summary full of names and addresses never leaves the device) and keeps the
+server free of an XML parser, which is the least-trust choice; browsers never fetch an external entity or DTD for `DOMParser`, and
+a file with a DOCTYPE is refused anyway. One consequence: the app's CSP has `require-trusted-types-for 'script'`, and `DOMParser`
+is a Trusted Types sink (a plain string throws), so the CSP now lists a second named policy, **`kh-xml`**
+(`trusted-types kh-sw kh-xml`, `app/security.py`). It is created once in `js/engine/ccda_labs.js`, its `createHTML` accepts only a
+string without a DOCTYPE or ENTITY and returns it unchanged, and its output goes straight to the parser and nowhere else; no default
+policy, no duplicates, and `tests/test_frontend_shell.py` fails if any other file creates a policy or calls the parser. A malformed
+file makes Chromium build an error document with inline styles that the page's CSP refuses, so a broken file shows as a
+"Refused to apply inline style" line in the browser's console; the page itself shows "not valid XML".
+
+Browser only: there is no new route, setting or dependency; `tests/data/ccda_labs_vectors.json` (hand-written C-CDA documents and
+expectations, `tests/js/gen_ccda_labs_vectors.mjs`, parsed in Node by the dev-only `tests/js/mini_xml.mjs`) pins the reader in
+`node tests/js/run_vectors.mjs`, `tests/test_ccda_labs.py` / `tests/test_ccda_labs_ui.py` check it against the server's units and the page, and
+`tools/e2e/regress.py` runs a sample through real Chromium's `DOMParser`. The samples are hand-written: **no real portal export has been tried**
+(see the roadmap and [maintainers](maintainers.md)); a real one may use codes or units this table lacks, which the headline counts.
+
 **Read a lab report photo** (on the same view, below the spreadsheet import; only when the optional AI has a **local**
 AI that reads photos, [`ai.md`](ai.md#lab-report-photos)): a photo or screenshot of a report is read by the AI on the
 admin's own network, which copies the printed results of the nine tests above. The app keeps the tests and units it
@@ -353,7 +430,7 @@ admin of a server outside the US can make SI the default while each person can s
 ## Privacy
 
 Birth month, sex, pregnancy and lab results are health data. They are stored only in the server's
-database (an imported CSV file or the Apple Health clinical-records files are read in the browser and never stored or sent; only the results kept are), are never written to the log, appear in the person's own export (`export.json` and
+database (an imported CSV file, the Apple Health clinical-records files or a patient-portal C-CDA file are read in the browser and never stored or sent; only the results kept are), are never written to the log, appear in the person's own export (`export.json` and
 `labs.csv`, with values in the canonical unit plus what was typed), and are deleted with the account.
 No admin route reads them.
 

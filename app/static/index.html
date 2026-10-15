@@ -899,6 +899,23 @@
       <div id="lab-fhir-preview" class="lab-import-preview"></div>
     </section>
 
+    <!-- Import from a patient portal file (js/views/lab_ccda.js, js/engine/ccda_labs.js): a C-CDA health summary (.xml) downloaded from a patient portal
+         is parsed by the browser on this device, never uploaded; the same review table as the spreadsheet import, and only the rows kept are sent. -->
+    <section class="card" id="lab-ccda" aria-labelledby="lab-ccda-h">
+      <h2 class="card-title" id="lab-ccda-h">Import from a patient portal file (C-CDA .xml)</h2>
+      <p class="muted small">Patient portals such as MyChart can give you your health summary as an XML file. It is read on this device and <strong>nothing is uploaded</strong>: you check every result before saving, and only the results you keep are sent.</p>
+      <ol class="small lab-fhir-steps">
+        <li>In your patient portal (for example MyChart), open your <strong>health summary</strong> or a <strong>visit summary</strong> and choose <strong>Download</strong>. If it offers a choice of formats, pick the <strong>XML</strong> one (also called <strong>C-CDA</strong> or <strong>CCD</strong>), not the PDF. The names of the menus differ between portals.</li>
+        <li>Back here, choose the <strong>.xml</strong> file below. You can choose several.</li>
+      </ol>
+      <div class="field">
+        <label for="lab-ccda-file">Health summary files (.xml)</label>
+        <input id="lab-ccda-file" class="ai-file" type="file" multiple accept=".xml,text/xml,application/xml" aria-describedby="lab-ccda-hint">
+        <span class="hint" id="lab-ccda-hint">Up to 20 files, 5 MB each. Only the Results section is read, and only lab results the app keeps; names and other details in the files are ignored.</span>
+      </div>
+      <div id="lab-ccda-preview" class="lab-import-preview"></div>
+    </section>
+
     <!-- Read a lab report photo (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
          The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. -->
     <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
@@ -1899,6 +1916,7 @@
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/lab_import.js"></script>
 <script src="js/engine/fhir_labs.js"></script>
+<script src="js/engine/ccda_labs.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/visitprep.js"></script>
@@ -1944,6 +1962,7 @@
 <script src="js/views/labs.js"></script>
 <script src="js/views/lab_photo.js"></script>
 <script src="js/views/lab_fhir.js"></script>
+<script src="js/views/lab_ccda.js"></script>
 <script src="js/views/visit.js"></script>
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>

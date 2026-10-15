@@ -41,6 +41,15 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   providers, notes, every other record) and the file names are not read, kept or sent, nothing is kept in the browser's storage,
   and the code makes no other network request (a test checks that). The files are not sent to an AI provider, the Ask chat or an
   assistant either;
+* **Lab results from a patient-portal C-CDA file** (Labs → Import from a patient portal file, [Personalised targets and labs](targets-and-labs.md))
+  are read and **parsed in the browser, on the device, and nothing is uploaded**, so the server never sees the XML and has no XML parser.
+  The person downloads the health summary from the portal and chooses the `.xml` file (up to 20 files of 5 MB; a larger one is not
+  even opened); the page parses each with the browser's own parser, reads only the lab results of the Results section, shows the
+  ones it recognises and lets go of the file. A file with a DOCTYPE or ENTITY declaration is refused before it is parsed. Only the
+  rows the person keeps (the test, the value, the unit and the day) are sent, to the person's own server, through the same
+  `POST /api/labs/import`. A portal summary also holds the patient's name, address, ids, doctors, medicines and notes: none of
+  that is read, kept or sent, nothing is kept in the browser's storage, and the code makes no other network request (a test checks
+  that). The files are not sent to an AI provider, the Ask chat or an assistant either;
 * API keys the person chose to store, encrypted;
 * assistant access tokens the person made, when the admin has turned assistant access on
   ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and
