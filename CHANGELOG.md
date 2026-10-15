@@ -9,6 +9,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Ask: a chat inside the app (when the admin turns it on).** A new **Ask** tab, for people who use AI ideas: type
+  a question ("How much potassium do I have left today?", "Can I have a banana as a snack?") and press Enter. The
+  assistant looks up your own targets and food log with the app's read-only tools and answers in a few plain
+  sentences, with **From the app** under the answer showing the figures the app itself worked out. **A low or an
+  emergency in your message is answered by the app's own Treating a low or Get help now card at once, without asking
+  the AI**, and nothing in Ask ever tells you to wait or skip a low treatment. The app checks every answer before you
+  see it: one that touches on insulin or medicine doses, or has a number the app did not work out, is replaced by a
+  notice and the app's own numbers; links are removed; lab words add "Lab results are for your care team to
+  interpret." The conversation stays in the page (**New conversation**, reloading or signing out clears it; the server
+  keeps no transcript). Ask has its own consent ("What will be sent?" shows the exact request) and one question can
+  use up to 7 AI calls, each counted in the daily limit. Nothing is ever saved from the chat; voice and "Add to plan"
+  from the chat are later parts. The demo shows the tab with a note and no input. See
+  [docs/assistant.md](docs/assistant.md#the-ask-screen-the-chat-inside-the-app).
 * **Assistant access tokens** (when the admin turns assistant access on). **Settings → Assistant access** makes
   personal tokens for a chat assistant you connect: it may read your own food log and targets and cannot change
   anything unless you tick **Can also save food and recipes** (off by default; see below). Give a token a name
@@ -91,6 +104,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Ask (a chat with the AI inside the app)** is a new switch, **off by default**: Server administration → Server
+  settings → Optional AI → *Ask (a chat with the AI inside the app)*, or `AI_CHAT_ENABLED=true`. It needs
+  `AI_ENABLED` and a provider; people who opted in then get the **Ask** tab. While it is off, `POST /api/ai/chat`
+  answers 404 and nobody sees the tab. A question takes up to 7 model calls (at most 6 tool calls, then the answer),
+  each counted in `ai.shared_daily_limit` (30 by default, so it runs out faster), each through the concurrency
+  gate, the timeout and the AI activity list. **The AI activity rows of Ask keep no request, answer or message
+  text** (only the step, the tool name and the outcome), whatever `AI_AUDIT_RETENTION_DAYS` says, and the
+  conversation is not stored on the server. **Schema step 12**: the table `ai_consents` is rebuilt so a consent for
+  the new purpose `chat` can be stored (every consent is kept; as always, back up before upgrading).
+  `PROMPT_VERSION` is
+  2026-10-15.1 (the Ask prompt): run `python scripts/ai_eval.py --chat` with your provider to see how well its model
+  follows the one-JSON-step protocol. Small local models may not; see [docs/ai.md](docs/ai.md).
 * **Assistant access** is a new switch, **off by default**: Server administration → Server settings → Optional
   AI → *Assistant access (personal tokens for a chat assistant)*, or `ASSISTANT_ENABLED=true` (passed through by
   `deploy/compose.yaml`). While it is off nothing changes for anyone (members do not see the Settings card) and
@@ -158,6 +183,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* The Ask chat is `app/ai/chat.py` (the step loop, the text policy, the dose and number checks, the "From the app"
+  figures; pure but for the callbacks the route gives it), `ChatStep` in `app/ai/schemas.py`, the prompt in
+  `app/ai/prompts.py`, `POST /api/ai/chat` in `app/ai/routes.py`, `js/views/ask.js`. It reuses `complete_json`, the
+  gate, the quota, the consent flow and the step-1 tool functions (`app.mcp.tools.run`) instead of copying them, and
+  `guard.MEDICINE_NAMES` is now shared by the names blocklist (its pattern is unchanged) and the dose check. Tests:
+  `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`;
+  `scripts/ai_eval.py --chat` is the live check (manual, owner). Plan: `docs/dev/plans/assistant-step2.md`.
 * `app.auth.api_tokens.AssistantUser` is the only dependency that reads `Authorization: Bearer`; a route on the
   assistant surface takes `user: AssistantUser` and gets `request.state.api_token` for its own limits.
   `current_user` stays cookie-only, and `tests/test_auth_coverage.py` walks every `/api` route with a valid

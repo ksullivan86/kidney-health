@@ -1,9 +1,9 @@
 """HTTP routes of the optional AI layer (note 04 R3, R4, R9; §9 A1, A5–A8; ARCHITECTURE "M2 API: AI and photos").
 
-* ``/api/ai/*`` (status, next-meal, parse-meal, consent, the person's AI activity): every route needs a
+* ``/api/ai/*`` (status, next-meal, parse-meal, chat, consent, the person's AI activity): every route needs a
   signed-in person **and** ``ai.enabled``; while AI is off they answer ``404 {"detail": "Not Found"}``,
   exactly as if they were not registered (checked per request, so switching AI on in Settings needs no
-  restart).
+  restart). ``POST /api/ai/chat`` (the Ask screen) also needs ``ai.chat_enabled``.
 * ``/api/me/ai`` (the person's AI choices and own provider; always registered so Settings can show the
   "AI is off on this server" state; the probe needs AI on).
 * ``/api/admin/ai-providers`` and ``/api/admin/ai-usage`` (admins; writes need a recent password).
@@ -45,12 +45,15 @@ from ..guidance import api as guidance_api
 from ..guidance import context as guidance_context
 from ..guidance import messages as gmessages
 from ..guidance import rules as guidance_rules
+from ..mcp import tools as T
 from ..models import MAX_SQLITE_INT, Meal
 from ..settings_store import SettingsStore
+from . import chat as CH
 from . import client as C
 from . import config as K
 from .cache import AnswerCache, CachedAnswer
 from . import features as F
+from . import guard, prompts, schemas
 from . import presets as P
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
@@ -190,7 +193,7 @@ BUSY_TEXT = {
 
 def check_consent(conn: sqlite3.Connection, user: User, cfg: C.ProviderConfig, purpose: str) -> None:
     """409 ``consent_required`` (with what the person would agree to) unless they agreed to send
-    ``purpose`` (``text`` or ``photos``) to this provider."""
+    ``purpose`` (``text``, ``photos`` or ``chat``) to this provider."""
     if K.consent(conn, user.id, cfg, purpose) is None:  # type: ignore[arg-type]
         raise ApiProblem(409, "Agree to send this to the AI provider first.", consent_required=True,
                          consent=K.consent_request(cfg, purpose))  # type: ignore[arg-type]
@@ -478,7 +481,7 @@ class ParseMealBody(BaseModel):
 class ConsentBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]
-    purpose: Literal["text", "photos"] = "text"
+    purpose: Literal["text", "photos", "chat"] = "text"
     skip_preview: bool = False
 
 
@@ -554,12 +557,13 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
             "id": cfg.id, "label": cfg.label, "host": cfg.host, "model": cfg.model, "vision_model": cfg.vision_model,
             "scope": cfg.scope, "kind": cfg.preset_def.kind, "policy": P.policy_line(cfg.preset_def, scope=cfg.scope),
         },
-        "consent": None if cfg is None else {p: K.consent(conn, user.id, cfg, p) for p in ("text", "photos")},
+        "consent": None if cfg is None else {p: K.consent(conn, user.id, cfg, p) for p in ("text", "photos", "chat")},
         "policy_version": P.POLICY_VERSION,
         "daily_limit": int(state.store.get(conn, "ai.shared_daily_limit")) or None,
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
         "features": {"next_meal": available, "parse_meal": available, "label": available and photos,
-                     "plate": available and photos and bool(state.store.get(conn, "ai.vision_plate_enabled"))},
+                     "plate": available and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
+                     "chat": available and bool(state.store.get(conn, "ai.chat_enabled"))},
         "prompt_version": PROMPT_VERSION,
     }
 
@@ -604,6 +608,178 @@ async def parse_meal(body: ParseMealBody, request: Request, user: CurrentUser, b
     return await run_call(request, conn, user, prep, background)
 
 
+# --------------------------------------------------------------------------- #
+# /api/ai/chat: the Ask screen (assistant step 2, part A; docs/dev/plans/assistant-step2.md)
+# --------------------------------------------------------------------------- #
+
+
+def require_chat_enabled(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> None:
+    """``/api/ai/chat`` behaves as unregistered (404) while ``ai.chat_enabled`` is off (checked before the body)."""
+    if not ai_state(request).store.get(conn, "ai.chat_enabled"):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+
+class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["user", "assistant"]
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=CH.MAX_MESSAGE_CHARS)]
+
+
+class ChatBody(BaseModel):
+    """The conversation so far, kept in the page only: the server stores no transcript."""
+
+    model_config = ConfigDict(extra="forbid")
+    messages: Annotated[list[ChatMessage], Field(min_length=1, max_length=CH.MAX_MESSAGES)]
+
+    @field_validator("messages")
+    @classmethod
+    def last_is_the_person(cls, value: list[ChatMessage]) -> list[ChatMessage]:
+        if value[-1].role != "user":
+            raise ValueError("the last message must be from the person")
+        return value
+
+
+def _chat_answer(kind: str, text: str | None, *, cards: Any = (), numbers: Any = (), notes: Any = (),
+                 cfg: C.ProviderConfig | None = None, model: str = "", model_calls: int = 0, tool_calls: int = 0,
+                 audit_id: int | None = None) -> dict[str, Any]:
+    """The Ask answer (V9: where it came from). ``label`` says the AI wrote it and the app checked it; for the
+    app's own rules (a low, an emergency) it says the AI was not asked."""
+    if cfg is None:
+        label: dict[str, Any] = {"source": "app", "checked": True, "notice": "From the app's own rules. The AI was not asked."}
+        provider = None
+    else:
+        label = {**guard.label(cfg.label, model), "notice": CH.NOTICE.format(label=cfg.label, model=model)}
+        provider = {"id": cfg.id, "label": cfg.label, "model": model, "host": cfg.host}
+    return {"feature": "chat", "kind": kind, "text": text, "cards": list(cards), "numbers": list(numbers), "notes": list(notes),
+            "label": label, "provider": provider, "ai_called": cfg is not None, "model_calls": model_calls,
+            "tool_calls": tool_calls, "prompt_version": PROMPT_VERSION, "audit_id": audit_id}
+
+
+def _chat_rules(request: Request, conn: sqlite3.Connection, user: User, text: str) -> dict[str, Any] | None:
+    """The rules first, on every message and before any provider is looked at: the step-1 ``safety_check`` (the
+    Treating a low card with the person's own grams; the Get help now card). The model is not called."""
+    result = T.run(T.TOOLS_BY_NAME["safety_check"], T.Call(request, conn, user), {"message": text})
+    found = CH.safety_outcome(result)
+    if found is None:
+        return None
+    kind, answer, cards = found
+    return _chat_answer(kind, answer, cards=cards)
+
+
+def _prepare_chat(request: Request, conn: sqlite3.Connection, user: User, body: ChatBody) -> F.Prepared:
+    state = ai_state(request)
+    resolved = _resolve(request, conn, user)
+    if not resolved.ok:
+        raise unavailable(resolved.reason or "not_configured")
+    cfg = resolved.cfg
+    assert cfg is not None
+    history = CH.history_messages([m.model_dump() for m in body.messages])
+    if not history or history[-1]["role"] != "user":
+        raise HTTPException(status_code=400, detail="The last message is empty")
+    schema = schemas.chat_step_schema(CH.CHAT_TOOLS)
+    system = prompts.chat_system(CH.tools_text({name: T.TOOLS_BY_NAME[name].input_schema for name in CH.CHAT_TOOLS}), schema,
+                                 _person(conn, state, user.id))
+    mode = "json_object" if cfg.structured == "json_schema" else cfg.structured  # free-form arguments: see chat_step_schema
+
+    def make(messages: list[dict[str, str]]) -> dict[str, Any]:
+        request_body = C.build_body(cfg, system=system, user_text="", schema=schema, schema_name="kidney_chat", mode=mode)
+        request_body["messages"] = [{"role": "system", "content": system}, *messages]
+        return request_body
+
+    window = CH.fit_history(history, lambda messages: F._fits(cfg, make(messages)))
+    if window is None:
+        raise ApiProblem(503, "The AI provider's prompt budget (AI_CONTEXT_TOKENS) is too small for this request.",
+                         reason="context_too_small")
+    return F.Prepared(feature="chat", cfg=cfg, body=make(window), validator=schemas.model_validator_for(schemas.ChatStep),
+                      judge=lambda parsed: {}, purpose="chat")
+
+
+def _run_chat_tool(request: Request, conn: sqlite3.Connection, user: User, name: str,
+                   arguments: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    """One of the step-1 tools for this person, in a worker thread; ``(result, None)`` or ``(None, message for the model)``."""
+    try:
+        return T.run(T.TOOLS_BY_NAME[name], T.Call(request, conn, user), arguments), None
+    except T.ToolError as exc:
+        return None, str(exc)
+    except Exception:  # a tool bug must not end the conversation with a 500
+        log.exception("Ask chat: tool %s failed", name)
+        return None, prompts.CHAT_TOOL_FAILED
+    finally:
+        if conn.in_transaction:  # the tools only read; leave the connection clean for the next quota step
+            conn.rollback()
+
+
+def _finish_chat(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepared, result: C.CallResult,
+                 info: dict[str, Any]) -> int:
+    """The activity row of one model call: metadata only. No message text and no request or response body are kept
+    (the server stores no transcript); the verdict names the step, the tool and the outcome."""
+    K.add_tokens(conn, user.id, prep.cfg, result.usage)
+    status = {"ok": "ok", "refused": "refused", "invalid": "invalid"}.get(result.status, f"error:{result.error}")
+    verdict = {**{k: v for k, v in info.items() if v is not None}, "repaired": result.repaired, "retried": result.retried}
+    audit_id = K.write_audit(
+        conn, user.id, feature="chat", cfg=prep.cfg, model=prep.model, prompt_version=PROMPT_VERSION, request=None,
+        response_text=None, verdict=verdict, latency_ms=result.latency_ms, status=status, keep_bodies=False)
+    conn.commit()
+    housekeeping(conn, state)
+    return audit_id
+
+
+async def run_chat(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared, body: ChatBody,
+                   background: BackgroundTasks | None = None) -> dict[str, Any]:
+    """Consent → the person's slot → tool check → the step loop (:func:`app.ai.chat.converse`) with one unit of
+    quota, one activity row and one provider timeout per model call → the checked answer. Nothing is saved."""
+    state = ai_state(request)
+    client = _client_for(request)
+    await run_in_threadpool(_check_consent, conn, user, prep)
+
+    async def complete(request_body: dict[str, Any], index: int) -> C.CallResult:
+        try:
+            await run_in_threadpool(_take_quota, conn, state, user, prep.cfg)
+        except ApiProblem as exc:
+            if index > 0 and exc.extra.get("reason") == "quota_exhausted":
+                raise CH.StopLoop("quota") from None  # the first call was allowed: end with the numbers gathered
+            raise
+        return await client.complete_json(prep.cfg, request_body, prep.validator)
+
+    async def run_tool(name: str, arguments: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+        return await run_in_threadpool(_run_chat_tool, request, conn, user, name, arguments)
+
+    async def record(result: C.CallResult, info: dict[str, Any]) -> int:
+        return await run_in_threadpool(_finish_chat, conn, state, user, prep, result, info)
+
+    async with ai_slot(request, conn, user.id):
+        await tool_gate(request, conn, prep, client)
+        outcome = await CH.converse(
+            prep.body, person_texts=[m.text for m in body.messages if m.role == "user"], newest=body.messages[-1].text,
+            complete=complete, run_tool=run_tool, record=record, fits=lambda request_body: F._fits(prep.cfg, request_body))
+    text = outcome.text
+    if outcome.kind == "error":
+        text = guard.REFUSED_TEXT if outcome.refused else ERROR_TEXT.get(outcome.error or "", "The AI request failed.")
+    if (background is not None and state.auto_reprobe and prep.cfg.scope == "shared"
+            and await run_in_threadpool(_claim_reprobe, conn, state, prep.cfg.id)):
+        background.add_task(maintenance_probe, request.app, prep.cfg.id, _server_port(request))
+    log.info("ai call feature=chat provider=%s preset=%s model=%s host=%s model_calls=%d tool_calls=%d kind=%s reason=%s",
+             prep.cfg.id, prep.cfg.preset, prep.model, prep.cfg.host, outcome.model_calls, outcome.tool_calls, outcome.kind,
+             outcome.reason)
+    return _chat_answer(outcome.kind, text, numbers=CH.numbers_view(outcome.runs), notes=outcome.notes, cfg=prep.cfg,
+                        model=prep.model, model_calls=outcome.model_calls, tool_calls=outcome.tool_calls,
+                        audit_id=outcome.audit_id)
+
+
+@router.post("/chat", dependencies=[Depends(require_chat_enabled)])
+async def chat(body: ChatBody, request: Request, user: CurrentUser, background: BackgroundTasks,
+               dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """One message of the Ask conversation: the rules answer a low or an emergency without the model; otherwise the
+    model looks up the app's own numbers with its read-only tools and its answer is checked in code before it is shown."""
+    rules = await run_in_threadpool(_chat_rules, request, conn, user, body.messages[-1].text)
+    if rules is not None:
+        return rules
+    prep = await run_in_threadpool(_prepare_chat, request, conn, user, body)
+    if dry_run:
+        return prep.dry_run(request.app.version)
+    return await run_chat(request, conn, user, prep, body, background)
+
+
 @router.post("/consent")
 def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Agree to send data to the provider that serves you now, for text or for photos (R9 step 3)."""
@@ -621,7 +797,7 @@ def give_consent(body: ConsentBody, request: Request, user: CurrentUser, conn: s
 
 @router.delete("/consent/{provider_id}", status_code=204, response_class=Response)
 def withdraw_consent(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)], request: Request, user: CurrentUser,
-                     purpose: Literal["text", "photos"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+                     purpose: Literal["text", "photos", "chat"] | None = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     if not K.withdraw_consent(conn, user.id, provider_id, purpose):
         raise HTTPException(status_code=404, detail="no consent for this provider")
     conn.commit()

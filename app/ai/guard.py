@@ -46,17 +46,23 @@ FALLBACK_TEXT = M.AI_FALLBACK  # V8 (one wording for guidance and AI)
 NO_FIT_TEXT = "The AI found nothing that fits your targets for this meal, so these are the app's own ideas."
 NOTICE = "AI idea · {label} · {model} · checked against your targets · not medical advice"  # G13
 
+# Binder and potassium-binder generic and brand names. The names blocklist below and the Ask chat's dose check
+# (app/ai/chat.py) both read these, so the two lists cannot drift apart.
+MEDICINE_NAMES_GENERIC = "sevelamer|lanthanum|calcium acetate|patiromer|zirconium"
+MEDICINE_NAMES_BRAND = ("renvela|renagel|fosrenol|velphoro|auryxia|phoslo|phoslyra|lokelma|veltassa|kayexalate|xphozah|"
+                        "tenapanor|sucroferric|ferric citrate")
+MEDICINE_NAMES = f"{MEDICINE_NAMES_GENERIC}|{MEDICINE_NAMES_BRAND}"
+
 # V6 blocklist (R7 with word boundaries, so "pumpkin", "dosa", "basil", "penne" and "Skippy" pass). §9 A2's
 # expanded list is applied to every model text that is shown in v0.3 (describe-a-meal phrases and plate names;
 # packaging text is an injection source, §9.2): "shot", "pen", "skip", "delay", medicines and binder brand names,
 # and "extra"/"more"/"double" only as advice ("eat 3 extra bananas"), so "extra virgin olive oil" and
 # "extra-lean beef" still pass. "tablets" is not blocked: glucose tablets are a food here.
 BLOCKLIST = re.compile(
-    r"\b(insulin\w*|bolus\w*|basal|units?|ratios?|corrections?|dos(?:e|es|ed|ing|age)|pumps?|binders?|sevelamer|lanthanum|"
-    r"calcium acetate|patiromer|zirconium|supplements?|diagnos\w*|lab results?|safe to eat|unlimited|as much as|"
+    r"\b(insulin\w*|bolus\w*|basal|units?|ratios?|corrections?|dos(?:e|es|ed|ing|age)|pumps?|binders?|"
+    + MEDICINE_NAMES_GENERIC + r"|supplements?|diagnos\w*|lab results?|safe to eat|unlimited|as much as|"
     r"don'?t worry|no need to|inject\w*|shots?|pens?|skip(?:s|ped|ping)?|delay(?:s|ed|ing)?|pills?|capsules?|"
-    r"medicines?|medications?|meds|prescri\w*|renvela|renagel|fosrenol|velphoro|auryxia|phoslo|phoslyra|lokelma|"
-    r"veltassa|kayexalate|xphozah|tenapanor|sucroferric|ferric citrate|"
+    r"medicines?|medications?|meds|prescri\w*|" + MEDICINE_NAMES_BRAND + r"|"
     r"(?:eat|have|take|drink|add|use)\s+(?:(?:\d+|an?|one|two|three|four|five|some|another)\s+)?(?:extra|more|double)|"
     r"(?:\d+|one|two|three|four|five|six)\s+(?:extra|more)|double\s+(?:your|the|it|up)|"
     r"(?:is|are|it'?s|that'?s)\s+(?:fine|ok(?:ay)?|safe))\b",

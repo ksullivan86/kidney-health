@@ -9,8 +9,11 @@ token. The plan, its rules and its parts are in
 
 **Where this stands.** Step 1 is in place: personal access tokens (part A), the **MCP server** at `/mcp` with four
 tools that read your numbers and check a meal (part B), and, only for a token made with **Can also save food and
-recipes**, two tools that save (part C): `log_food` and `save_recipe`. A chat screen inside the app (step 2) is a
-later step ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
+recipes**, two tools that save (part C): `log_food` and `save_recipe`. **Step 2, part A** is in place too: an
+**Ask** screen inside the app, a text chat that uses the same read tools and checks every answer in code before it
+is shown ([The Ask screen](#the-ask-screen-the-chat-inside-the-app); plan
+[`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)). Voice and "Add to plan" from the chat are later
+parts ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 
 ## Contents
 
@@ -27,6 +30,7 @@ later step ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 * [Connect a Hermes Agent profile](#connect-a-hermes-agent-profile)
 * [System prompt template](#system-prompt-template)
 * [Check that it works](#check-that-it-works)
+* [The Ask screen (the chat inside the app)](#the-ask-screen-the-chat-inside-the-app)
 * [Honest limits](#honest-limits)
 * [The endpoint, for the person running the server](#the-endpoint-for-the-person-running-the-server)
 
@@ -272,12 +276,64 @@ The answer lists `safety_check`, `get_today`, `search_foods` and `check_meal`, a
 revoked or expired; `404` means assistant access is off. Maintainers can run `python tools/e2e/mcp_smoke.py`,
 which starts a server and speaks the protocol to it end to end ([tools/e2e/README.md](../tools/e2e/README.md)).
 
+## The Ask screen (the chat inside the app)
+
+A text chat in the app itself (**Ask**, a sixth tab), for people who want the answer without setting up a chat
+client. It asks the same questions of the same app functions as the MCP tools above (`get_today`, `search_foods`,
+`check_meal`; never the saving tools), and it adds what an outside chat cannot: **the app checks the answer in code
+before you see it.** It uses the AI provider your admin set up for the other AI features ([`ai.md`](ai.md)); the
+assistant of this page's token and MCP sections is a separate way in and needs no AI provider on the server.
+
+**Switch it on.** Optional AI must be on and set up ([`ai.md`](ai.md)). Then the admin turns on **Server administration
+→ Server settings → Optional AI → Ask (a chat with the AI inside the app)** (`ai.chat_enabled`, `AI_CHAT_ENABLED`; off by
+default). Each person who has chosen **Use AI ideas** then sees the **Ask** tab. Switched off, the tab is not shown and
+`POST /api/ai/chat` answers 404.
+
+**Using it.** Type a question and press Enter (Shift+Enter starts a new line). The first time, a sheet asks you to agree to
+send your messages and the numbers the assistant looks up to the provider, and "What will be sent?" shows the exact
+request. The assistant looks up your targets and your day with its tools and answers in a few plain sentences; under the
+answer, **From the app** lists the figures the app itself worked out (the day's totals and what is left, a checked meal's
+totals, foods found), so you always see the app's own numbers. **New conversation** starts again. The conversation lives in
+the page only: reloading or signing out forgets it, and the server keeps no transcript.
+
+**What the app does with each message.**
+
+1. **The rules answer first, with no AI call.** Words that may describe a low get your Treating a low card (with your own
+   grams) and "Treat the low first. When you feel better, ask again."; emergency words get the Get help now card. Nothing in
+   the chat ever warns against, delays or questions treating a low. Such a message, and the answer after it, is also left
+   out of what is sent to the model on later turns.
+2. **The model asks, the app answers.** The model replies with one JSON step: a call to a read-only tool, or an answer. The
+   app runs the tool for you and sends the result back. At most 6 tool calls per question, then the model must answer; if it
+   still asks for more, you get "The assistant could not finish; here are the app's numbers." Each model call counts against
+   your daily AI limit and shows in the AI activity list (without any text).
+3. **The answer is checked.** Links are removed (except the app's own `/learn/...` pages), the text is cut to 1200
+   characters, and the answer is **withheld** (you see a notice and the app's numbers instead) if it touches on insulin or
+   medicine doses or advises skipping, delaying or avoiding insulin, medicine or a low treatment ("This answer was not shown
+   because it touched on medicine or insulin doses. Ask your care team about doses."), or if it has a number with a unit (mg,
+   g, ml, l, kcal, %) that the tools did not return and you did not type ("The assistant's answer had a number the app did not
+   work out, so it is not shown. Here are the app's own numbers."). Ordinary food talk ("have more rice", "choose
+   low-sodium bread") is not withheld. Lab words add "Lab results are for your care team to interpret."
+
+**What is sent, what is kept.** Your messages in this conversation (the last 20) and the app's own numbers the assistant
+looks up: targets, totals, food names and nutrients. Never your name, user name, e-mail, weight, height, exact age or notes
+(the person block of the other AI features: stage, dialysis, diabetes, your preferences text, and an age band and sex only if
+you chose to share them). The AI activity list keeps no request, no answer and no message text for Ask, only that a call
+happened (when, which provider and model, the step and the tool name, the outcome). Details: [`privacy.md`](privacy.md).
+
+**Limits.** One question can take up to 7 model calls, so the shared daily limit (30 by default) goes faster; a limit reached
+after the first call ends that question with the numbers gathered so far. Small local models may not follow the one-JSON-step
+protocol; `python scripts/ai_eval.py --chat` measures that (the owner runs it with a live model; [`ai.md`](ai.md)).
+
+**Not in this part** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next"): voice (part B: the browser's
+speech recognition with its own consent wording, the reply read aloud), saving from the chat (an "Add to plan" button you
+press, through the normal log API) and recipe pages.
+
 ## Honest limits
 
 * **The app cannot check what the chat model finally says.** The tools answer with the app's numbers and rules,
   and the prompt asks the model to use them; a model can still skip a tool, misread a number or add advice of its
-  own. Only the app's own screens enforce the rules in code (and the in-app chat of step 2 will). This is why
-  step 1 is meant for one informed person who knows to check numbers in the app.
+  own. Only the app's own screens enforce the rules in code, and the Ask screen does (below). This is why
+  the external chat of step 1 is meant for one informed person who knows to check numbers in the app.
 * **Voice and the transcript stay in the chat client.** Open WebUI or Hermes keep the conversation (and any
   recordings) under their own settings and retention; the app never sees or stores them. The app's activity list
   shows when tokens were made and revoked, and Settings shows when a token was last used, but not what was asked.

@@ -22,6 +22,7 @@ from typing import Any
 import pytest
 
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
+from app.ai import chat as ask_chat
 from app.ai import guard, prompts, schemas
 from app.config import AiEnv
 from app.main import create_app
@@ -184,6 +185,17 @@ def _fingerprint() -> str:
                     schemas.plate_schema()],
         "blocklist": guard.BLOCKLIST.pattern, "reasons": guard.REASON_TEXT, "themes": guard.THEME_TITLE,
         "refused": guard.REFUSED_TEXT, "notice": guard.NOTICE,
+        # The Ask chat (assistant step 2): its prompt, tool notes, step protocol, the answer checks and their fixed texts.
+        "chat_prompt": prompts.CHAT_SYSTEM_PROMPT, "chat_tools": dict(prompts.CHAT_TOOL_NOTES),
+        "chat_messages": [prompts.CHAT_TOOL_RESULT, prompts.CHAT_TOOL_ERROR, prompts.CHAT_NO_CALLS_LEFT,
+                          prompts.CHAT_UNKNOWN_TOOL, prompts.CHAT_TOOL_FAILED],
+        "chat_step": schemas.chat_step_schema(ask_chat.CHAT_TOOLS),
+        "chat_checks": {"texts": [ask_chat.WITHHELD_DOSE_TEXT, ask_chat.WITHHELD_NUMBER_TEXT, ask_chat.UNFINISHED_TEXT,
+                                  ask_chat.TREAT_LOW_TEXT, ask_chat.GET_HELP_TEXT, ask_chat.LAB_NOTE, ask_chat.NOTICE],
+                        "limits": [ask_chat.MAX_MESSAGES, ask_chat.MAX_MESSAGE_CHARS, ask_chat.MAX_TOOL_CALLS, ask_chat.MAX_ANSWER_CHARS],
+                        "dose": [p.pattern for p in (ask_chat._INSULIN, ask_chat._DOSE, ask_chat._MEDICINE_NAME, ask_chat._SKIP_MEDICINE,
+                                                     ask_chat._CHANGE_MEDICINE, ask_chat._LOW_CONTEXT, ask_chat._RESTRICT)],
+                        "lab": ask_chat._LAB_WORDS.pattern, "unit": ask_chat._UNIT},
     }
     return hashlib.sha256(json.dumps(parts, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 

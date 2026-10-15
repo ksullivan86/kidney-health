@@ -34,7 +34,9 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   data to, their own AI provider (its key encrypted), a per-day count of AI calls and tokens, and their
   **AI activity**: what each call sent and received (kept 30 days by default, then only the time,
   provider and outcome; photos are never stored, only their fingerprint and size). The person sees and
-  can delete their AI activity in Settings; admins see only the counts.
+  can delete their AI activity in Settings; admins see only the counts. The **Ask** chat is the exception:
+  its calls keep no request, answer or message text, only the time, provider, model, the step and tool name and
+  the outcome, and the conversation is not stored on the server at all;
 
 **On the person's own device** (the browser's storage for the app's address, never on another
 device): the app's offline copy, the days, foods and settings it last showed (13 days back to 7 ahead)
@@ -48,6 +50,15 @@ Nothing is sent anywhere unless a feature that needs the internet is used (USDA 
 lookups or the optional AI the admin turns on), and then only what that feature needs. The AI sends
 nothing until the person opts in and agrees to the destination shown, and never sends their name,
 account, weight, height, exact age, dates or notes ([ai.md](ai.md#what-is-sent-and-what-never-is)).
+
+If the admin turns on the **Ask** chat ([assistant.md](assistant.md#the-ask-screen-the-chat-inside-the-app)) and a
+person agrees to it (its own consent, separate from meal data and photos), each question sends the AI provider the
+person's messages in that conversation (the last 20, kept in the page only, never on the server) and the app's own
+numbers the assistant looks up with its read-only tools: targets, a day's totals, food names and nutrients, plus the
+same stage, dialysis, diabetes and preferences block as the other AI features. Never the name, user name, e-mail,
+weight, height, exact age or notes. A message that sounds like a low or an emergency is answered by the app and
+never sent. A question can take up to seven calls to the provider. What the provider does with it follows the
+policy line the consent sheet shows ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 
 If the admin turns on assistant access and a person connects a chat assistant with their own token
 ([assistant.md](assistant.md)), the server answers that assistant's questions with the person's own numbers:

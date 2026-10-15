@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Mapping, Sequence
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from ..nutrients import NUTRIENT_KEYS
 
@@ -39,6 +39,8 @@ MAX_PLATE_ITEMS = 8
 MAX_NAME_CHARS = 80
 MAX_TEXT_CHARS = 300
 MAX_HANDBOOK = 2
+MAX_CHAT_ANSWER = 6000  # the Ask chat's model text before the app cuts it to its own limit (app/ai/chat.py)
+MAX_TOOL_NAME = 64
 
 Status = Literal["ok", "refused"]
 Refusal = Literal["none", "outside_scope", "no_fit"]
@@ -156,6 +158,16 @@ def plate_schema() -> dict[str, Any]:
         "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
     })
     return _object({"status": {"type": "string", "enum": ["ok", "no_food", "unsure"]}, "items": _array(item, hi=MAX_PLATE_ITEMS)})
+
+
+def chat_step_schema(tool_names: Sequence[str]) -> dict[str, Any]:
+    """The Ask chat's step protocol, as the system prompt describes it: exactly one of a tool call or an answer.
+
+    A description for the model, not a strict ``response_format``: free-form tool arguments cannot be written in
+    OpenAI's strict subset, so the chat asks providers for plain JSON mode and checks the reply with
+    :class:`ChatStep` (an unknown tool name is told to the model, not a schema failure)."""
+    call = _object({"tool": {"type": "string", "enum": list(tool_names)}, "arguments": {"type": "object"}})
+    return {"oneOf": [_object({"call": call}), _object({"answer": _str()})]}
 
 
 # --------------------------------------------------------------------------- #
@@ -290,6 +302,28 @@ class PlateAnswer(BaseModel):
     model_config = _FORBID
     status: Literal["ok", "no_food", "unsure"]
     items: Annotated[list[PlateItem], Field(max_length=MAX_PLATE_ITEMS)]
+
+
+class ChatCall(BaseModel):
+    model_config = _FORBID
+    tool: Annotated[str, StringConstraints(min_length=1, max_length=MAX_TOOL_NAME)]
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChatStep(BaseModel):
+    """One reply of the Ask chat's model: exactly one of ``call`` and ``answer`` (null counts as absent)."""
+
+    model_config = _FORBID
+    call: ChatCall | None = None
+    answer: Annotated[str, StringConstraints(max_length=MAX_CHAT_ANSWER)] | None = None
+
+    @model_validator(mode="after")
+    def exactly_one(self) -> "ChatStep":
+        if (self.call is None) == (self.answer is None):
+            raise ValueError("reply with exactly one of call and answer")
+        if self.answer is not None and not self.answer.strip():
+            raise ValueError("answer is empty")
+        return self
 
 
 def model_validator_for(model: type[BaseModel]):

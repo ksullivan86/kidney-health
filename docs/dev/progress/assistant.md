@@ -1,4 +1,89 @@
-Status: complete (part C: the `assistant:log` scope, `log_food`, `save_recipe`; parts A and B below are complete)
+Status: complete (step 2, part A: the in-app Ask chat, text; steps 1 A, B and C below are complete too)
+
+# Assistant, step 2, part A: the in-app Ask chat (text)
+
+Spec: `docs/dev/plans/assistant-step2.md`. Worktree branch `worktree-agent-a231292c156f5e6db` (based on `main` at
+`0a54b19`). Commit only: no push, no PR from here.
+
+## Plan (sub-steps; each ends with a commit)
+
+1. Plan document and this note (done).
+2. Backend core: migration step 12 (`chat` consent purpose), settings key `ai.chat_enabled` (registry, JS twin,
+   vectors), `app/ai/chat.py` (step protocol, answer checks, numbers), prompt text and `PROMPT_VERSION`, the route
+   `POST /api/ai/chat`, status/consent changes.
+3. Backend tests.
+4. Ask screen (`views/ask.js`, `css/ask.css`, tab, consent text, demo note) and its static test.
+5. `scripts/ai_eval.py` chat cases; docs (ARCHITECTURE, ai.md, assistant.md, privacy, handbook, CHANGELOG, ROADMAP).
+6. Full test run, Chromium check, final report.
+
+## Done
+
+* Sub-step 1 (plan) committed.
+* Sub-step 2+3 (backend and its tests): schema step 12 (`m012_ai_consent_chat.py`: `ai_consents` rebuilt so `chat` is a
+  purpose), `ai.chat_enabled` (registry, JS twin, vectors, admin list), `app/ai/chat.py` (history, step loop, text
+  policy, dose check, number check, lab note, "From the app" figures), `ChatStep` in `schemas.py`, chat prompt text in
+  `prompts.py` (`PROMPT_VERSION` 2026-10-15.1, pin recorded), `guard.MEDICINE_NAMES` shared with the blocklist (its
+  pattern text is unchanged), `POST /api/ai/chat` in `routes.py`, status `features.chat` and `consent.chat`.
+  Verified: `tests/test_ai_chat_checks.py` (pure), `tests/test_ai_chat.py` (route, 48 tests), `tests/test_migration_m012.py`,
+  the related existing AI, settings and migration test files, `node tests/js/run_vectors.mjs`.
+
+* Sub-step 4 (Ask screen): `views/ask.js`, `css/ask.css`, the sixth tab and `#view-ask` in `index.html` (tab hidden until
+  `GET /api/ai/status` says `features.chat`; always shown in the demo with a note and no input), `core.js` (`TAB_VIEWS`,
+  arrow keys skip a hidden tab), `main.js` (refresh after sign-in), `ai.js` (`api.chat`, `cardEl`, the `chat` consent text,
+  "Never sent" line, Settings list/withdraw labels, `forget()` refreshes the tab), `sw.js` shell list, `tools/e2e/sandbox.py`
+  and `parity.py` (the chat route is 404 while AI is off on both sides). Verified: `tests/test_ask_ui.py`, the UI shell
+  tests, `python tools/e2e/parity.py --sections 14` (15/15), and a Chromium script (scratchpad `ask_check.py`) against a
+  real server and a fake provider at 375 px light and 1280 px dark: tab shown only with the chat on, Shift+Enter, consent
+  sheet before any send, answer with "From the app", a low answered without the provider, a withheld answer, New
+  conversation, arrow keys, no sideways scroll, no console errors; the demo at 320 and 375 px (tab fits, note, no input).
+
+* Sub-step 5 (eval and docs): `scripts/ai_eval.py --chat` (nine chat cases, `chat_pass_rate` and
+  `chat_no_unsafe_text` gates, only with the flag; `tests/test_ai_eval_script.py` drives it with a scripted model), the
+  Settings AI intro no longer says "It cannot chat", ARCHITECTURE ("Ask chat", schema step 12, route table, file map,
+  frontend), `docs/ai.md`, `docs/assistant.md` ("The Ask screen"), `docs/privacy.md`, `docs/deployment.md`, the handbook AI
+  page and configuration page, CHANGELOG, ROADMAP status line. Handbook/doc tests pass.
+
+* Sub-step 6 (checks): `python -m pytest -q -x -p no:cacheprovider` all pass (3825 tests, exit 0, no network; run with the
+  step-11 stand-in described below); `node tests/js/run_vectors.mjs` and `gen_settings_vectors.py --check` current;
+  `python tools/e2e/ask.py` (new harness, 38 checks: 375 px light and 1280 px dark, demo at 320 and 375 px), `python
+  tools/e2e/parity.py --sections 14` (15/15), `python tools/e2e/sandbox.py --only top-phone-light-none` (0 issues after
+  teaching its ready-selector the Ask view), `python tools/e2e/mcp_smoke.py` (26/26). Not run: `mkdocs build --strict`
+  (mkdocs is not installed; CI's handbook job runs it), the live `scripts/ai_eval.py --chat` (owner, with a live model).
+
+## Next
+
+* Part B (voice), saving from the chat ("Add to plan"), recipe pages in `check_meal`: see `dev/plans/assistant-step2.md`.
+
+## Dependency on another change (migration numbering)
+
+The coordinator told this branch (during the work) that another change merges first and adds schema step 11
+(`m011_assistant_request_keys.py`), so this part's migration is **step 12** (`m012_ai_consent_chat.py`). This branch
+therefore has a gap at 11 on its own (`app.migrations` refuses a gap) and needs that change merged or rebased in first.
+Verified here with an uncommitted no-op stand-in for step 11 (removed afterwards): the full suite passes with it. The
+tests build their "before" database with `steps()[:11]`, whatever step 11 does. Overlapping files (their edits and mine are
+in separate paragraphs): `ARCHITECTURE.md` (migration table row 12 and the new "Ask chat" sections), `CHANGELOG.md`, this note.
+
+## Decisions (and why)
+
+* **Schema step 12.** `ai_consents.purpose` had a CHECK for `text` and `photos`; the only way to store a `chat`
+  consent is to rebuild the table. Owner to confirm that one schema change is acceptable.
+* The activity rows keep no request or response bodies (`keep_bodies` false), whatever `ai.audit_retention_days`
+  says: "the server stores no transcript". One row per model call (step, tool name, outcome).
+* `cards` is a list: a message with emergency and low wording gets both, so the Treating a low card is never dropped.
+* Provider mode `json_schema` is sent as `json_object` for the chat (free-form tool arguments cannot be a strict schema).
+* Links in an answer are removed (not withheld); an answer that is nothing but a link is an error.
+* A message that matched a safety rule (and the answer that followed it) is left out of the history sent on later turns.
+* The number check is unit-agnostic (a number with a unit must be in the results or the person's words; no conversion),
+  and an exact rounding tie (22.5) accepts both roundings.
+* Validation errors are 400 like the rest of the app (not 422).
+
+## Checks
+
+    python -m pytest -q -x tests/test_ai_chat*.py
+    node tests/js/run_vectors.mjs
+
+---
+
 
 # Assistant follow-up: duplicate guard (`request_key`) and admin revoke of a person's tokens
 

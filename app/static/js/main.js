@@ -17,6 +17,8 @@
     await Promise.all([KH.loadProfile().catch(toastError), KH.learn ? KH.learn.load() : null]);
     // Entries saved on this device while the server was unreachable sync now (js/offline.js, note 02 R5).
     if (KH.offline) KH.offline.start().catch((e) => console.warn('Offline outbox:', e));
+    // The Ask tab appears only when the server's chat is available (opened at #ask without it, the view goes to Today).
+    if (KH.views.ask && KH.views.ask.refreshTab) KH.views.ask.refreshTab().catch(() => false);
     const initial = view || location.hash.replace('#', '');
     router.show(router.VIEWS.includes(initial) ? initial : 'today');
     // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).

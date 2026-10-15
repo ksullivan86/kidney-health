@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-14
+last_checked: 2026-10-15
 fact_checked: 2026-10-05
 sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
 ---
@@ -29,7 +29,8 @@ Three choices make up every AI setup (Settings → AI ideas starts with the same
    internet (such as OpenAI or OpenRouter), or a home "Hermes" agent. Your admin may also let you add
    your own key.
 2. **What it may do.** Your admin switches AI on, and then you opt in. AI can suggest meals, turn a
-   typed meal into food searches, and read a label photo. It cannot chat, give doses or save anything.
+   typed meal into food searches, and read a label photo. If your admin also switches on **Ask**, it can
+   answer a short question about your food and numbers. It cannot give doses or save anything.
 3. **Who sees your request.** The consent sheet names where your request goes and who can read it.
    **What will be sent?** shows the exact request before it goes.
 
@@ -43,7 +44,8 @@ the consent sheet says so before you agree.
 | Pick and order meal ideas, using **only** foods the rules already allowed | Invent a food or a nutrient number: every number comes from the app's food list |
 | Split "describe a meal" text into search words; you pick each match | Save anything: you tap **Add to plan** and the normal rules run again |
 | Copy printed numbers from a label photo into a draft food you check, marked "from photo" | Estimate nutrients from a plate photo: it gives food **names** and a rough weight; the numbers come from your food list |
-| Name foods it sees on a plate photo | Chat freely, answer medical questions, or read your lab results |
+| Name foods it sees on a plate photo | Give doses, answer medical questions, or read your lab results |
+| In **Ask**, answer a short question after looking up your own numbers in the app | Make up a number: the app checks every number in an answer before you see it |
 
 ### Safety rules that always apply
 
@@ -55,8 +57,9 @@ the consent sheet says so before you agree.
   "seizure", the app shows a **Get help now** card (call your emergency number; treat a low first)
   instead.
 - **AI never overrides a warning.** An idea that would push your day over a limit is dropped.
-- **No free text from AI.** The reasons you read under an idea ("Low in potassium; fits your
-  dinner carbohydrate goal") are written by the app's maintainers, not by the AI.
+- **No free text from AI in the meal features.** The reasons you read under an idea ("Low in potassium; fits your
+  dinner carbohydrate goal") are written by the app's maintainers, not by the AI. **Ask** is the one place
+  where the AI writes sentences, and the app checks them before you see them (see "Ask" below).
 - Every AI card says **"AI idea · provider · model · checked against your targets · not medical
   advice"**.
 
@@ -74,6 +77,7 @@ the consent sheet says so before you agree.
 | Your food preferences, if you wrote any (up to 200 characters) | Anything when you have not opted in |
 | Age in 10-year bands and sex, **only if you tick "share age and sex"** | |
 | A label or plate photo (photo features only), with location and camera data removed | |
+| Your messages in an **Ask** conversation, and the numbers the assistant looks up for it (your targets, today's totals, food names and nutrients), **only after you agree to it separately** | |
 
 Before anything is sent the first time, a consent sheet shows the **provider**, the **server address**
 it goes to, a line about how that provider handles data, and the **exact text** that will be sent. Every
@@ -103,7 +107,8 @@ own provider fails, the app never sends your data to the shared one instead
 When AI is on for you, the **Add** screen shows **AI meal ideas**, **Describe a meal (AI)**, **Read a
 label (AI)** and, if your admin allows it, **Plate photo (AI)**, with the number of shared AI calls left
 today. Each AI idea shows its foods with their warnings, the totals, what is left of your day after it,
-and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead.
+and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead. If your admin
+has switched on **Ask**, a tab called **Ask** is there too.
 
 ## Turn it on
 
@@ -113,7 +118,7 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
 4. Decide whether to share age band and sex. It is off by default.
 5. Optional: write preferences such as "vegetarian, no fish".
 6. The first time you use an AI button, read the consent sheet and the exact text, then accept. Photos
-   have their own consent. You can also ask to see the request before every AI call.
+   have their own consent, and so does **Ask**. You can also ask to see the request before every AI call.
 
 ## Take it back
 
@@ -133,7 +138,29 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
 - Portions guessed from a plate photo were off by about a third on average in a 2025 test, and too
   small for big plates ([Fridolfsson 2025][FRIDOLFSSON25]). Do not count carbohydrate for insulin from a
   photo guess.
-- There is a daily limit on shared AI use (30 calls per person by default).
+- There is a daily limit on shared AI use (30 calls per person by default). One question in Ask can use
+  several of those calls, so the limit runs out sooner.
+
+## Ask: a chat inside the app (optional)
+
+If your admin switches on **Ask**, a tab called **Ask** appears for people who use AI ideas. You type a question,
+for example "How much potassium do I have left today?" or "Can I have a banana as a snack?", and press Enter.
+
+- The assistant **looks up your own numbers in the app** (your targets, your day, a food) and answers in a few
+  plain sentences. Under the answer, **From the app** shows the figures the app itself worked out.
+- If your message sounds like a **low**, the app shows its own **Treating a low** card at once. If it sounds like
+  an emergency, it shows **Get help now**. The AI is not asked, and nothing in Ask ever tells you to wait or skip
+  treating a low.
+- The app **checks every answer** before you see it. If an answer touched on insulin or medicine doses, or had a
+  number the app did not work out, you see a short notice instead, with the app's own numbers. Ask your care
+  team about doses and about lab results.
+- Ask does not save anything. To add food, use the **Add** screen.
+- The conversation stays on the page. **New conversation**, reloading or signing out clears it, and the server
+  keeps no copy of what you wrote. Your AI activity shows that a call happened, not what was said.
+- The first time, a sheet asks you to agree to send your messages and the numbers it looks up. **What will be
+  sent?** shows the exact request first.
+- Ask answers can be wrong or slow, like any AI. If a number matters, check it on **Today**. It does not replace
+  your care team.
 
 ## Talk to an assistant (optional)
 
@@ -164,6 +191,12 @@ How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs you
   failed the rules. Use the app's ideas.
 - **"This is outside what the app's AI helps with. Your care team can answer it."** The question is
   medical. Ask your team.
+- **"This answer was not shown because it touched on medicine or insulin doses."** (in Ask) The app does not
+  show answers about doses. Ask your care team.
+- **"The assistant's answer had a number the app did not work out, so it is not shown."** (in Ask) The app shows
+  its own numbers instead. Ask again, or look on **Today**.
+- **"The assistant could not finish; here are the app's numbers."** (in Ask) The AI needed too many steps. Try a
+  shorter question.
 - **AI is missing.** Your admin has not switched it on, or today's shared limit is used up.
 
 ## Related pages

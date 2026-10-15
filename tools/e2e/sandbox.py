@@ -513,7 +513,7 @@ class Run:
             self.F = page.main_frame
         else:
             self.F = page.wait_for_selector("iframe#app").content_frame()
-        self.F.wait_for_selector("#status-bars .stat, #view-plan:not([hidden]) .plan-day, #charts .chart-card, #view-profile:not([hidden]) #pf-weight, #food-results .row-btn, #view-settings:not([hidden]) #set-account-body .kv, #view-labs:not([hidden]) #labs-history .lab-row", timeout=10000)
+        self.F.wait_for_selector("#status-bars .stat, #view-plan:not([hidden]) .plan-day, #charts .chart-card, #view-profile:not([hidden]) #pf-weight, #food-results .row-btn, #view-settings:not([hidden]) #set-account-body .kv, #view-labs:not([hidden]) #labs-history .lab-row, #view-ask:not([hidden]) #ask-demo:not([hidden])", timeout=10000)
         self.load_ms = int((time.time() - t0) * 1000)
 
     def finish(self):
@@ -1013,7 +1013,7 @@ def sweep(port, ctx_kind, vp, scheme, host_theme):
         page.on("dialog", lambda d: (run.console.append(f"dialog: {d.type}"), d.dismiss()))
         clicked = 0
         try:
-            for view in ("today", "add", "plan", "trends", "profile", "labs", "settings"):
+            for view in ("today", "add", "plan", "trends", "ask", "profile", "labs", "settings"):
                 run.load(page, view)
                 page.wait_for_timeout(400)
                 labels = run.F.evaluate(LIST_BUTTONS_JS)
@@ -1219,7 +1219,7 @@ def probes(port):
             ctx = browser.new_context(viewport={"width": 320, "height": 640}, is_mobile=True, has_touch=True, device_scale_factor=2)
             page = ctx.new_page()
             r.page = page
-            for view in ("today", "add", "plan", "trends", "profile", "labs", "settings"):
+            for view in ("today", "add", "plan", "trends", "ask", "profile", "labs", "settings"):
                 r.load(page, view)
                 page.wait_for_timeout(500)
                 c = r.F.evaluate(CHECKS_JS, {"taps": False, "contrast": False})

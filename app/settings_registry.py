@@ -524,6 +524,17 @@ register(
         "a Hermes profile whose tool check passes.",
     ),
     SettingDef(
+        key="ai.chat_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_CHAT_ENABLED",
+        label="Ask (a chat with the AI inside the app)",
+        help="Off by default. Needs AI on. When on, people who opted in get an Ask screen: they type a question, the AI "
+        "looks up the app's own numbers, and the app checks the answer before it is shown. Lows and emergencies are "
+        "answered by the app's rules without asking the AI. Each question can use several AI calls.",
+    ),
+    SettingDef(
         key="ai",
         model=AiPreferences,
         default=AiPreferences(),
@@ -534,7 +545,7 @@ register(
 )
 NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
-     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent"}
+     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled"}
 )
 
 

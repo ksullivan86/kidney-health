@@ -7,6 +7,8 @@
      sent?" (the server's dry run: destination, headers without the key, body, photo size).
    * The Add view's AI buttons (#ai-add-slot): AI meal ideas, describe a meal, read a label, plate photo.
      Guidance can show AI ideas too: KH.ai.openIdeas({date, meal}) or KH.ai.mountIdeas(el, {date, meal}).
+   * The Ask screen (js/views/ask.js) uses this file's consent flow (withConsent with purpose 'chat'), its API
+     object (api.chat) and its alert cards (cardEl).
 
    Rules: AI answers are rendered with textContent only (titles and sentences come from the server's
    templates; numbers from its rule check); nothing is logged or saved without a tap, and then through
@@ -25,8 +27,16 @@
   const PURPOSE_TEXT = {
     text: 'your meal data (stage, targets, today\'s totals, candidate foods) or the meal you describe',
     photos: 'your photo (location and camera data removed)',
+    chat: 'your messages in this conversation, and the app\'s own numbers the assistant looks up (your targets, today\'s totals, food names and nutrients)',
   };
-  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo' };
+  // What the consent sheet adds under "Never sent", by purpose.
+  const NEVER_SENT_TEXT = {
+    chat: 'Never sent: your name, user name, e-mail, weight, height, exact age or notes. Each question can take several AI calls. '
+      + 'AI never gives insulin doses or medicine advice, and the app checks every number in an answer before you see it.',
+  };
+  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask' };
+  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations' };
+  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations' };
   const CONFIDENCE_TEXT = { low: 'not sure', medium: 'fairly sure', high: 'sure' };
   // Why the rules left an AI idea out (app/guidance/ai_bridge.py, app/ai/guard.py reason codes).
   const DROP_TEXT = {
@@ -74,6 +84,7 @@
     deleteAudit: () => request('DELETE', '/api/ai/audit'),
     nextMeal: (b, dry) => request('POST', `/api/ai/next-meal${dry ? '?dry_run=true' : ''}`, b),
     parseMeal: (b, dry) => request('POST', `/api/ai/parse-meal${dry ? '?dry_run=true' : ''}`, b),
+    chat: (b, dry) => request('POST', `/api/ai/chat${dry ? '?dry_run=true' : ''}`, b),
     providers: () => request('GET', '/api/admin/ai-providers'),
     createProvider: (b) => request('POST', '/api/admin/ai-providers', b),
     updateProvider: (id, b) => request('PUT', `/api/admin/ai-providers/${id}`, b),
@@ -126,7 +137,12 @@
     statusAt = Date.now();
     return statusCache;
   }
-  function forget() { statusCache = null; statusAt = 0; }
+  // After a change of the AI choices, consent or switches: the Ask tab follows what the server now says.
+  function forget() {
+    statusCache = null;
+    statusAt = 0;
+    if (KH.views.ask && typeof KH.views.ask.refreshTab === 'function') KH.views.ask.refreshTab();
+  }
 
   // ---------------------------------------------------------------------------
   // Small DOM helpers
@@ -250,7 +266,7 @@
       h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
         ' at ', h('strong', { class: 'ai-host' }, consent.host), '.'),
       note('caution', h('p', {}, consent.policy)),
-      h('p', { class: 'hint' }, 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
+      h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
       check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.'));
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Not now');
@@ -310,12 +326,15 @@
     if (answer && answer.claims_corrected) out.push(h('p', { class: 'hint' }, `The app removed ${answer.claims_corrected} ${answer.claims_corrected === 1 ? 'reason' : 'reasons'} the AI gave that the numbers did not support.`));
     return out;
   }
-  function cardsBlock(answer) {
-    // Pre-filter cards (G7, G8): shown instead of an AI answer.
-    return (answer.cards || []).map((card) => h('section', { class: `ai-card-alert ${answer.status === 'red_flag' ? 'danger' : 'low'}`, role: 'alert' },
+  // One rule-based card (G7 "Treating a low", G8 "Get help now"): shown instead of an AI answer, here and in the Ask screen.
+  function cardEl(card, danger) {
+    return h('section', { class: `ai-card-alert ${danger ? 'danger' : 'low'}`, role: 'alert' },
       h('h3', {}, card.title),
       h('ul', {}, card.lines.map((line) => h('li', {}, line))),
-      learnLink({ url: card.url, title: card.title })));
+      learnLink({ url: card.url, title: card.title }));
+  }
+  function cardsBlock(answer) {
+    return (answer.cards || []).map((card) => cardEl(card, answer.status === 'red_flag'));
   }
 
   function itemRow(it) {
@@ -810,8 +829,8 @@
         h('li', {}, h('b', {}, 'What may it do? '),
           'Only what you switch on below: meal ideas, swaps and day plans made from foods the app\'s rules already allowed '
           + '(and checked again), turning what you describe into search words, reading a label photo into a draft you check '
-          + 'and, if your admin allows it, naming the foods in a plate photo. It cannot chat, give insulin or medicine doses, '
-          + 'or save anything by itself.'),
+          + 'and, if your admin allows it, naming the foods in a plate photo or answering a short question in Ask (the app checks '
+          + 'every answer before you see it). It cannot give insulin or medicine doses, or save anything by itself.'),
         h('li', {}, h('b', {}, 'Whose key pays, and who can read the request? '),
           'With the server\'s shared provider, the server\'s key pays and your admin can read what is sent. With your own key, '
           + 'your account at that company pays. Before you start, the consent step says where requests go, and '
@@ -975,11 +994,11 @@
     const list = h('ul', { class: 'device-list' });
     for (const c of me.consents) {
       const row = h('li', { class: 'device' },
-        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, `${c.purpose === 'photos' ? 'Photos' : 'Meal data'} → ${c.provider_label} (${c.host})`),
+        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, `${CONSENT_NAME[c.purpose] || 'Meal data'} → ${c.provider_label} (${c.host})`),
           h('span', { class: 'muted small' }, `Agreed ${util.fmtDateShort(c.at.slice(0, 10))}${c.current ? '' : ' · the policy text changed: you will be asked again'}${c.skip_preview ? '' : ' · request shown before each call'}`)));
       const btn = h('button', { class: 'btn secondary', type: 'button' }, 'Withdraw');
       btn.addEventListener('click', () => confirm.inline(btn, btn, {
-        message: `Stop sending ${c.purpose === 'photos' ? 'photos' : 'meal data'} to ${c.host}?`, confirmText: 'Withdraw',
+        message: `Stop sending ${CONSENT_STOP[c.purpose] || 'meal data'} to ${c.host}?`, confirmText: 'Withdraw',
         onConfirm: async () => { await api.withdraw(c.provider_id, c.purpose); forget(); row.remove(); toast('Consent withdrawn'); return true; },
       }));
       row.append(btn);
@@ -1181,6 +1200,6 @@
   whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+  KH.ai = { status, forget, cardEl, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
     uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();
