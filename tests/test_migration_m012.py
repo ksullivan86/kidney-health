@@ -61,8 +61,9 @@ def test_populated_v11_database_upgrades_keeps_every_consent_and_is_idempotent(t
     path = tmp_path / "kidney.db"
     first, second = build_v11_with_data(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == [12]
-    assert db.get_schema_version(conn) == 12
+    applied = db.migrate(conn)
+    assert applied[0] == 12 and applied == list(range(12, db.SCHEMA_VERSION + 1))  # step 12, then any later step
+    assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     rows = conn.execute("SELECT user_id, provider_id, purpose, host, policy_version, skip_preview, created_at "
                         "FROM ai_consents ORDER BY user_id, provider_id, purpose").fetchall()
     assert [tuple(r) for r in rows] == [
@@ -115,7 +116,7 @@ def test_the_new_table_keeps_the_constraints_and_the_cascades(tmp_path):
 
 def test_a_fresh_database_accepts_chat_and_the_step_is_safe_without_the_table(tmp_path):
     conn = db.connect(tmp_path / "fresh.db")
-    assert db.migrate(conn)[-1] == 12
+    assert db.migrate(conn)[-1] == db.SCHEMA_VERSION
     insert_users(conn, [(5, "kim")])
     consent(conn, 5, provider(conn), "chat")
     conn.commit()

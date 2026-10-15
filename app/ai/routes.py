@@ -20,6 +20,7 @@ import copy
 import logging
 import sqlite3
 import time
+import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime, timedelta, timezone
@@ -49,6 +50,7 @@ from ..mcp import tools as T
 from ..models import MAX_SQLITE_INT, Meal
 from ..settings_store import SettingsStore
 from . import chat as CH
+from . import chat_save as CS
 from . import client as C
 from . import config as K
 from .cache import AnswerCache, CachedAnswer
@@ -564,8 +566,17 @@ def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connectio
         "features": {"next_meal": available, "parse_meal": available, "label": available and photos,
                      "plate": available and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
                      "chat": available and bool(state.store.get(conn, "ai.chat_enabled"))},
+        "trust": _trust_view(conn, state, prefs),
         "prompt_version": PROMPT_VERSION,
     }
+
+
+def _trust_view(conn: sqlite3.Connection, state: AiState, prefs: dict[str, Any]) -> dict[str, Any]:
+    """How much the person trusts Ask to save (``setting``), whether the admin allows trusted saves (``allowed``), and
+    what counts before the page's own conversation choice (``effective``: ``ask`` when not allowed)."""
+    allowed = bool(state.store.get(conn, "ai.allow_trusted_saves"))
+    setting = str(prefs.get("trust") or "ask")
+    return {"setting": setting, "allowed": allowed, "effective": setting if allowed else "ask"}
 
 
 def _photos_allowed(conn: sqlite3.Connection, state: AiState, cfg: C.ProviderConfig) -> bool:
@@ -626,10 +637,19 @@ class ChatMessage(BaseModel):
 
 
 class ChatBody(BaseModel):
-    """The conversation so far, kept in the page only: the server stores no transcript."""
+    """The conversation so far, kept in the page only: the server stores no transcript.
+
+    ``request_id`` is made by the page for each send (and kept when the same text is sent again after a failure): a save
+    the model makes in this request carries a key made from it, so a request sent twice saves once. ``trust:
+    "conversation"`` is the page saying this conversation is trusted (it forgets that at New conversation and after 12
+    hours); the server honours it only for a person who chose "Trust it for this conversation" and only while the admin
+    switch ``ai.allow_trusted_saves`` is on (:func:`app.ai.chat_save.effective_trust`)."""
 
     model_config = ConfigDict(extra="forbid")
     messages: Annotated[list[ChatMessage], Field(min_length=1, max_length=CH.MAX_MESSAGES)]
+    request_id: Annotated[str, StringConstraints(min_length=CS.REQUEST_ID_MIN, max_length=CS.REQUEST_ID_MAX,
+                                                 pattern=CS.REQUEST_ID_PATTERN)] | None = None
+    trust: Literal["ask", "conversation"] | None = None
 
     @field_validator("messages")
     @classmethod
@@ -641,7 +661,8 @@ class ChatBody(BaseModel):
 
 def _chat_answer(kind: str, text: str | None, *, cards: Any = (), numbers: Any = (), notes: Any = (),
                  cfg: C.ProviderConfig | None = None, model: str = "", model_calls: int = 0, tool_calls: int = 0,
-                 audit_id: int | None = None) -> dict[str, Any]:
+                 audit_id: int | None = None, trust: str | None = None, pending_save: dict[str, Any] | None = None,
+                 saved: Any = (), questions: Any = ()) -> dict[str, Any]:
     """The Ask answer (V9: where it came from). ``label`` says the AI wrote it and the app checked it; for the
     app's own rules (a low, an emergency) it says the AI was not asked."""
     if cfg is None:
@@ -652,7 +673,8 @@ def _chat_answer(kind: str, text: str | None, *, cards: Any = (), numbers: Any =
         provider = {"id": cfg.id, "label": cfg.label, "model": model, "host": cfg.host}
     return {"feature": "chat", "kind": kind, "text": text, "cards": list(cards), "numbers": list(numbers), "notes": list(notes),
             "label": label, "provider": provider, "ai_called": cfg is not None, "model_calls": model_calls,
-            "tool_calls": tool_calls, "prompt_version": PROMPT_VERSION, "audit_id": audit_id}
+            "tool_calls": tool_calls, "prompt_version": PROMPT_VERSION, "audit_id": audit_id,
+            "trust": trust, "pending_save": pending_save, "saved": list(saved), "questions": list(questions)}
 
 
 def _chat_rules(request: Request, conn: sqlite3.Connection, user: User, text: str) -> dict[str, Any] | None:
@@ -676,8 +698,8 @@ def _prepare_chat(request: Request, conn: sqlite3.Connection, user: User, body: 
     history = CH.history_messages([m.model_dump() for m in body.messages])
     if not history or history[-1]["role"] != "user":
         raise HTTPException(status_code=400, detail="The last message is empty")
-    schema = schemas.chat_step_schema(CH.CHAT_TOOLS)
-    system = prompts.chat_system(CH.tools_text({name: T.TOOLS_BY_NAME[name].input_schema for name in CH.CHAT_TOOLS}), schema,
+    schema = schemas.chat_step_schema(CH.OFFERED_TOOLS)
+    system = prompts.chat_system(CH.tools_text({name: T.TOOLS_BY_NAME[name].input_schema for name in CH.OFFERED_TOOLS}), schema,
                                  _person(conn, state, user.id))
     mode = "json_object" if cfg.structured == "json_schema" else cfg.structured  # free-form arguments: see chat_step_schema
 
@@ -724,10 +746,20 @@ def _finish_chat(conn: sqlite3.Connection, state: AiState, user: User, prep: F.P
     return audit_id
 
 
+def _trust_for(request: Request, conn: sqlite3.Connection, user: User, body: ChatBody) -> str:
+    """``ask``, ``conversation`` or ``always`` for this request (:func:`app.ai.chat_save.effective_trust`)."""
+    state = ai_state(request)
+    return CS.effective_trust(admin_allows=bool(state.store.get(conn, "ai.allow_trusted_saves")),
+                              stored=K.trust_setting(conn, state.store, user.id), requested=body.trust)
+
+
 async def run_chat(request: Request, conn: sqlite3.Connection, user: User, prep: F.Prepared, body: ChatBody,
-                   background: BackgroundTasks | None = None) -> dict[str, Any]:
+                   background: BackgroundTasks | None = None, *, trust: str = "ask") -> dict[str, Any]:
     """Consent → the person's slot → tool check → the step loop (:func:`app.ai.chat.converse`) with one unit of
-    quota, one activity row and one provider timeout per model call → the checked answer. Nothing is saved."""
+    quota, one activity row and one provider timeout per model call → the checked answer.
+
+    A save the model asks for follows ``trust``: ``ask`` saves nothing and answers ``confirm_save`` with the card; the
+    other two save at once (all or nothing) and answer with what was saved. See :mod:`app.ai.chat_save`."""
     state = ai_state(request)
     client = _client_for(request)
     await run_in_threadpool(_check_consent, conn, user, prep)
@@ -747,23 +779,34 @@ async def run_chat(request: Request, conn: sqlite3.Connection, user: User, prep:
     async def record(result: C.CallResult, info: dict[str, Any]) -> int:
         return await run_in_threadpool(_finish_chat, conn, state, user, prep, result, info)
 
+    request_id = body.request_id or uuid.uuid4().hex  # no id from the page: this request still saves at most once per call
+    newest = body.messages[-1].text
+
+    async def run_save(name: str, arguments: dict[str, Any], n: int) -> CH.SaveStep:
+        return await run_in_threadpool(CS.run_save, request, conn, user, name, arguments, n, mode=trust,
+                                       request_id=request_id, newest=newest)
+
     async with ai_slot(request, conn, user.id):
         await tool_gate(request, conn, prep, client)
         outcome = await CH.converse(
-            prep.body, person_texts=[m.text for m in body.messages if m.role == "user"], newest=body.messages[-1].text,
-            complete=complete, run_tool=run_tool, record=record, fits=lambda request_body: F._fits(prep.cfg, request_body))
+            prep.body, person_texts=[m.text for m in body.messages if m.role == "user"], newest=newest,
+            complete=complete, run_tool=run_tool, record=record, fits=lambda request_body: F._fits(prep.cfg, request_body),
+            run_save=run_save)
     text = outcome.text
     if outcome.kind == "error":
         text = guard.REFUSED_TEXT if outcome.refused else ERROR_TEXT.get(outcome.error or "", "The AI request failed.")
     if (background is not None and state.auto_reprobe and prep.cfg.scope == "shared"
             and await run_in_threadpool(_claim_reprobe, conn, state, prep.cfg.id)):
         background.add_task(maintenance_probe, request.app, prep.cfg.id, _server_port(request))
-    log.info("ai call feature=chat provider=%s preset=%s model=%s host=%s model_calls=%d tool_calls=%d kind=%s reason=%s",
+    log.info("ai call feature=chat provider=%s preset=%s model=%s host=%s model_calls=%d tool_calls=%d kind=%s reason=%s "
+             "trust=%s saves=%d",
              prep.cfg.id, prep.cfg.preset, prep.model, prep.cfg.host, outcome.model_calls, outcome.tool_calls, outcome.kind,
-             outcome.reason)
+             outcome.reason, trust, len(outcome.saves))
+    shown_questions = outcome.questions if not outcome.saves and outcome.pending is None else []
     return _chat_answer(outcome.kind, text, numbers=CH.numbers_view(outcome.runs), notes=outcome.notes, cfg=prep.cfg,
                         model=prep.model, model_calls=outcome.model_calls, tool_calls=outcome.tool_calls,
-                        audit_id=outcome.audit_id)
+                        audit_id=outcome.audit_id, trust=trust, pending_save=outcome.pending, saved=outcome.saves,
+                        questions=shown_questions)
 
 
 @router.post("/chat", dependencies=[Depends(require_chat_enabled)])
@@ -777,7 +820,8 @@ async def chat(body: ChatBody, request: Request, user: CurrentUser, background: 
     prep = await run_in_threadpool(_prepare_chat, request, conn, user, body)
     if dry_run:
         return prep.dry_run(request.app.version)
-    return await run_chat(request, conn, user, prep, body, background)
+    trust = await run_in_threadpool(_trust_for, request, conn, user, body)
+    return await run_chat(request, conn, user, prep, body, background, trust=trust)
 
 
 @router.post("/consent")
@@ -836,6 +880,7 @@ class MeAiPatch(BaseModel):
     provider: Annotated[str, StringConstraints(pattern=r"^(auto|own|shared:[1-9][0-9]{0,17})$")] | None = None
     share_age_sex: bool | None = None
     preferences: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+    trust: Annotated[str, StringConstraints(pattern=r"^(ask|conversation|always)$")] | None = None
 
 
 class OwnProviderBody(BaseModel):
@@ -877,6 +922,8 @@ def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str,
     return {
         "enabled": enabled,
         "settings": K.ai_prefs(conn, state.store, user.id),
+        "chat_enabled": bool(state.store.get(conn, "ai.chat_enabled")),
+        "trusted_saves_allowed": bool(state.store.get(conn, "ai.allow_trusted_saves")),
         "user_keys_allowed": bool(state.store.get(conn, "ai.user_keys_allowed")),
         "allow_user_base_url": allow_custom,
         "own": None if own is None else K.provider_view(own, keyring, state.settings),
@@ -896,11 +943,13 @@ def read_my_ai(request: Request, user: CurrentUser, conn: sqlite3.Connection = D
 @me_router.patch("")
 def update_my_ai(body: MeAiPatch, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     state = ai_state(request)
-    merged = {**K.ai_prefs(conn, state.store, user.id), **body.model_dump(exclude_none=True)}
+    before = K.ai_prefs(conn, state.store, user.id)
+    merged = {**before, **body.model_dump(exclude_none=True)}
     from ..settings_store import InvalidSettingValue
 
     try:
         state.store.set_user(conn, user.id, "ai", merged)
+        K.audit_trust_change(conn, user.id, before.get("trust") or "ask", merged.get("trust") or "ask", ip=request_ip(request))
     except InvalidSettingValue as exc:
         conn.rollback()
         raise ApiProblem(400, str(exc)) from None

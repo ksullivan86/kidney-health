@@ -741,6 +741,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 10 | `m010_api_tokens.py` | assistant step 1 | `api_tokens`: assistant access tokens, hashes only (`docs/dev/plans/assistant-step1.md` part A; "Assistant access tokens" below) |
 | 11 | `m011_assistant_request_keys.py` | assistant step 1 | `assistant_request_keys`: the duplicate guard of `log_food` and `save_recipe`, hashes only ("Retries" under "Assistant MCP server" below) |
 | 12 | `m012_ai_consent_chat.py` | assistant step 2 | `ai_consents.purpose` accepts `chat` (table rebuilt; `docs/dev/plans/assistant-step2.md`; "Ask chat" above) |
+| 13 | `m013_assistant_ask_keys.py` | assistant step 2, part C | `assistant_ask_keys`: the duplicate guard of the Ask chat's saves, hashes only ("Saving from the chat" below) |
 
 ## Backend file ownership
 
@@ -755,7 +756,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
-| Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py` |
+| Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -1831,10 +1832,11 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   `AI_SHARED_DAILY_LIMIT`), `ai.max_concurrency` (2, 1–32, `AI_MAX_CONCURRENCY`), `ai.audit_retention_days`
   (30, 0–365, `AI_AUDIT_RETENTION_DAYS`), `ai.vision_plate_enabled` (`false`, `AI_VISION_PLATE_ENABLED`),
   `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), `ai.chat_enabled` (`false`, `AI_CHAT_ENABLED`; the Ask screen,
-  "Ask chat" below), and the person's object `ai` (scope `user`):
-  `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200)}`
-  with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the nine `ai.*` instance
-  keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
+  "Ask chat" below), `ai.allow_trusted_saves` (`false`, `AI_ALLOW_TRUSTED_SAVES`; lets a person trust the Ask chat to save
+  without asking, "Saving from the chat" below), and the person's object `ai` (scope `user`):
+  `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200), trust: "ask" |
+  "conversation" | "always" ("ask")}` with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the ten
+  `ai.*` instance keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
 * **Environment only** (`app/config.py` `AiEnv`; never runtime-editable): `AI_PROVIDER` (a preset),
   `AI_BASE_URL`, `AI_API_KEY[_FILE]` (`OPENAI_API_KEY[_FILE]` accepted when `AI_PROVIDER=openai`),
   `AI_MODEL` (default `gpt-6-luna` for `openai`, required otherwise), `AI_VISION_MODEL` (empty = photo
@@ -1870,18 +1872,18 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat}, prompt_version}`; `features.chat` is true only with the person set up for AI **and** `ai.chat_enabled` on |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat}, trust: {setting, allowed, effective}, prompt_version}`; `features.chat` is true only with the person set up for AI **and** `ai.chat_enabled` on; `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
-| `POST /api/ai/chat` | `{messages: [{role: "user" \| "assistant", text (1–2000)}] (1–20, the last from the person)}` (`?dry_run=true`) → the Ask answer, or the rule-based card for a low or an emergency; 404 while `ai.chat_enabled` is off ("Ask chat" below) |
+| `POST /api/ai/chat` | `{messages: [{role: "user" \| "assistant", text (1–2000)}] (1–20, the last from the person), request_id? (8–48 of A–Z a–z 0–9 _ -), trust? ("ask" \| "conversation")}` (`?dry_run=true`) → the Ask answer, or the rule-based card for a low or an emergency; 404 while `ai.chat_enabled` is off ("Ask chat" below; `request_id` and `trust`: "Saving from the chat") |
 | `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
 | `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat` (all when left out) → 204; 404 when there is none |
 | `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
 | `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
-| `GET /api/me/ai` | → `{enabled, settings, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], presets, consents, daily_limit, remaining_today}` |
-| `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences}` → the view above |
+| `GET /api/me/ai` | → `{enabled, settings, chat_enabled, trusted_saves_allowed, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], presets, consents, daily_limit, remaining_today}` |
+| `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences, trust}` → the view above; a change of `trust` writes one `ai.trust_changed` activity row (so does `PATCH /api/me/settings` with an `ai` object) |
 | `PUT /api/me/ai/provider` *(re-auth)* | `{preset, model, base_url?, vision_model?, api_key?, remove_key?}` → the view; `403` when personal providers are off; `api_key` write-only |
 | `DELETE /api/me/ai/provider` *(re-auth)* | → 204 (`provider` falls back to `auto`) |
 | `POST /api/me/ai/probe` | → `{probe}`: Test connection for the person's own provider (5 per hour; counted in the usage) |
@@ -1990,7 +1992,7 @@ the body, into one buffer within 60 s (408), held in that slot through the call;
 are bounded by `ai.max_concurrency`, not by open connections (the shipped profiles cap the container at
 512 MiB).
 
-### Ask chat (assistant step 2, part A)
+### Ask chat (assistant step 2, parts A and C)
 
 Spec `docs/dev/plans/assistant-step2.md`; code `app/ai/chat.py` (pure but for the callbacks the route gives it),
 `ChatStep` and `chat_step_schema` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `POST /api/ai/chat` in
@@ -2017,16 +2019,19 @@ tool functions of `app/mcp/tools.py`.
   turns. Nothing in the chat warns against, delays or questions a low treatment.
 * **Answer** (`label` after V9): `{feature: "chat", kind, text, cards: [{title, lines, handbook, url}], numbers:
   [{title, rows: [{label, value, detail}]}], notes: [str], label: {source: "ai" | "app", provider_label, model, checked,
-  notice}, provider: {id, label, model, host} | null, ai_called, model_calls, tool_calls, prompt_version, audit_id}`. `kind`:
+  notice}, provider: {id, label, model, host} | null, ai_called, model_calls, tool_calls, prompt_version, audit_id, trust,
+  pending_save, saved: [card], questions: [{food, question}]}` (the last four: "Saving from the chat"). `kind`:
   `answer` (a checked answer), `withheld` (the dose or number check failed; `text` is the fixed sentence), `unfinished`
   (the step limit or the quota ended the loop, or the conversation no longer fit the prompt budget; the text is "The
   assistant could not finish; here are the app's numbers."), `error` (the provider failed or refused; the sentence of the
-  other features), `treat_low`, `get_help_now`. `cards` is a list because a message may need both cards.
+  other features), `confirm_save` (ask mode: the model asked to save and the card in `pending_save` waits for the person's
+  Save), `treat_low`, `get_help_now`. `cards` is a list because a message may need both cards.
 * **The loop** (`chat.converse`; not provider-native tool calling, so it works with every provider). Each step the model
   returns exactly one JSON object, `{"call": {"tool", "arguments"}}` or `{"answer"}`, validated by `ChatStep`
   (`extra="forbid"`; one repair turn inside `complete_json`). Allowed tools: `get_today`, `search_foods`, `check_meal`
-  (never the saving tools or `safety_check`), run for the person through `app.mcp.tools.run` in the thread pool and put
-  into the next request as a labelled, cleaned, escaped data block. An unknown tool or bad arguments are told to the model
+  run for the person through `app.mcp.tools.run` in the thread pool and put into the next request as a labelled, cleaned,
+  escaped data block; since part C the model may also call `log_food` and `save_recipe`, which `run_save` handles
+  ("Saving from the chat" below), and never `safety_check`. An unknown tool or bad arguments are told to the model
   (it counts toward the limit) and it may try again. At most 6 tool calls; after the sixth result the model is told to
   answer, and a call after that ends the loop as `unfinished`. So a message makes at most 7 model calls. Each model call
   takes one unit of the person's quota (a quota that runs out after the first call ends the loop as `unfinished`), the
@@ -2035,7 +2040,8 @@ tool functions of `app/mcp/tools.py`.
   in `json_schema` mode is asked for `json_object` (free-form arguments cannot be a strict schema); the protocol and its
   schema are in the system prompt in every mode. History that does not fit `context_tokens` is trimmed from the oldest end;
   not even the newest message fitting is `503 context_too_small`.
-* **The prompt** (`PROMPT_VERSION` 2026-10-15.1): the rules (every number from a tool, null is unknown and not zero, fetch
+* **The prompt** (`PROMPT_VERSION` 2026-10-15.2; .2 added the saving tools and rule 10, which allows a save only when the person
+  asked in the conversation and forbids saying anything is saved unless a tool result says `"saved": true`): the rules (every number from a tool, null is unknown and not zero, fetch
   again each turn, no insulin or medicine doses, no medicine advice, no lab interpretation, a plain warning and "check with
   your care team" for salt substitutes, anti-inflammatory pain medicines and big protein or fluid changes, short plain
   words), the step schema, the three tools with their argument schemas read from the step-1 tools, and the person block
@@ -2064,6 +2070,68 @@ tool functions of `app/mcp/tools.py`.
 * **No new clinical numbers.** The chat adds no threshold of its own; every figure it shows is a tool result. Its limits
   (20 messages, 2000 characters, 6 tool calls, 1200 characters of answer) are sizes of the conversation.
 
+### Saving from the chat (assistant step 2, part C)
+
+Spec `docs/dev/plans/assistant-step2.md` "Part C"; code `app/ai/chat_save.py` (the database-facing half), `run_save`,
+`SaveStep` and the loop changes in `app/ai/chat.py`, `AiPreferences.trust` and `ai.allow_trusted_saves` in
+`app/settings_registry.py`, `app/mcp/tools.py` (`Asker`), `app/mcp/request_keys.py`, schema step 13; the screens
+`js/views/ai.js` (the choice and the warning sheet) and `js/views/ask.js` (the cards); people: `docs/assistant.md`, `docs/ai.md`,
+the handbook's AI page; tests `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py`, `tests/test_ask_ui.py`. The
+owner's words: "I want to have a few options to 'trust AI' or not, so I don't have to babysit it by confirming every response.
+I would like this to be a toggle with a warning." Least trust is the default.
+
+* **Two switches.** The admin's `ai.allow_trusted_saves` (default off) and the person's `trust` (`ask` default, `conversation`,
+  `always`; a field of the `ai` setting, so no column). `chat_save.effective_trust`: `ask` unless the admin switch is on **and**
+  the person chose it; `always` is the stored choice alone; `conversation` also needs the chat request to carry `trust:
+  "conversation"` (the page says so only while the person has trusted this conversation: it ends with New conversation, a
+  reload and 12 hours, all page memory, nothing stored). A page claiming more than the stored choice gets `ask`; the body
+  refuses `trust: "always"` (400). Turning the admin switch off ends trusted saves at once (the stored choice is kept and
+  applies again when it is switched on). Every change of the choice, from `PATCH /api/me/ai` or `PATCH /api/me/settings`,
+  is one `ai.trust_changed` row (`old`, `new`) in the person's own activity (`config.audit_trust_change`); an unchanged
+  value writes none. Choosing `conversation` or `always` in Settings opens the warning sheet first ("The assistant will save
+  food and recipes without asking you first. It can pick the wrong food or the wrong amount. Every number still comes from the
+  app. The low and emergency rules and the dose checks always stay on. You can undo each save, from the chat or from Today.
+  Photo and label readings are always shown to you to check first."; the focus starts on "Keep asking me").
+* **What the model may call.** `log_food` and `save_recipe` with the MCP tools' own arguments (`CH.OFFERED_TOOLS`); the system
+  prompt shows their schemas without `request_key`, and a `request_key` the model sends anyway is dropped: the app makes the
+  key. At most `MAX_SAVES` (2) save calls per message, each also a tool call of the 6. `run_save` refuses outright when the
+  newest message matches a safety rule (it never gets that far: the rules answer first and the model is not called).
+* **Ask mode.** The save call is **not executed**. `chat_save.propose` validates the arguments like the tool does, places
+  the items with `place_items` and writes nothing (no entry, no meal, no food, no key). The loop ends at once:
+  `kind: "confirm_save"`, `text` the fixed sentence "Nothing has been saved yet. Check this, then press a Save button, or
+  Cancel.", and `pending_save`: `{tool, date, meal, status, purpose, items: [{name, brand, as_asked, servings, grams, food_id,
+  fdc_id, new_food, counted_as_treating_a_low}], imports: [fdc_id], numbers: [{title, rows}], payload}`; `payload` is the
+  exact body of the normal route (`POST /api/log/batch` `{entries: [...]}` with a stable `client_id` per entry, or `POST
+  /api/meals` `{name, note, items}`). The page posts it with the status the person chose (Save as eaten / Save as planned; the
+  model's choice is the primary button) through the shared API object with the CSRF header, like any save; a USDA food not in
+  the person's list yet is first added with `POST /api/foods/usda/import`. An item the app cannot place gives no card: `questions`
+  (the app's own words, `chat_save.person_questions`) and the model is told as the tool tells it.
+* **Trusted mode** (`conversation` or `always`, switch on). `chat_save.save_now` runs the MCP tool with `request_key =
+  "<request_id>-<n>"` (`n`: the save's number in this message; no `request_id` from the page: a random one). The tool's own code
+  does the rest: all or nothing in one transaction (`write_once`; USDA foods added in it), and the key is written inside it.
+  Activity rows are the MCP ones (`assistant.food_logged`, `assistant.recipe_saved`) with `via: "Ask"` (`tools.Asker`; never
+  a token name; a food save has no target). The answer's `saved` holds one card per save: `{tool, date, meal, status, items,
+  numbers, added_to_foods, duplicate, undo: {entry_ids} | {meal_id}}`, built from the tool's own answer (read back from the
+  database). **Undo** is the page calling `DELETE /api/log/{id}` for each id (or `DELETE /api/meals/{id}`): the normal routes,
+  scoped to the person, so another person's id is a 404; USDA foods a save added stay in the list. A withheld, unfinished or
+  failed answer keeps its `saved` cards. The tool result the model sees is the MCP result; numbers in it are in the number
+  check's pool (`entry_id`, `entry_ids` and `meal_id` are not figures).
+* **A request sent twice saves once.** The key lives in `assistant_ask_keys` (schema step 13) as the SHA-256 of the person's id and
+  the key; `request_keys.find` / `remember` take `token_id=None` for it. A repeat answers with what the first save made, read from
+  the database again (`duplicate: true`, the card still has Undo), and the model is told it may not save again in that
+  message (`SaveStep.closes`; its note without the "send a new request_key" advice). The page keeps the `request_id` of a send
+  that got no answer and reuses it when the same text is sent again. Keys older than 24 hours are ignored and purged with
+  step 11's.
+* **Unchanged in both modes.** `purpose: "hypo"` is saved like any other and no card or message warns about it; the dose and
+  number checks run on the model's text; photo and label readings are not touched (trust never covers them); the activity log
+  of model calls still holds no message text (its `tool` is now `log_food` / `save_recipe` and its outcome may be
+  `confirm_save`); the MCP server and tokens are unchanged (their confirmation is a prompt instruction; the trust setting
+  applies to the Ask screen only).
+* **Frontend.** Settings → AI ideas shows the choice (three radios, "Ask me before every save (recommended)" first; the two others
+  disabled with a note while the admin switch is off) only while `ai.chat_enabled` is on. The Ask screen shows one line (what
+  is in force, and the admin's switch when it is off), "Change this in Settings", and, for a person who chose `conversation`,
+  "Trust it for this conversation" / "Stop trusting". Cards are built with `h()` text nodes only.
+
 ### Schema step 6 (`m006_ai.py`)
 
 `ai_providers` (scope/owner `CHECK`, `locked` only for shared, one per person, one env row,
@@ -2076,6 +2144,14 @@ provider_id)` with `key_scope`, and `ai_audit`. Every user reference has `ON DEL
 `ai_consents.purpose` was `CHECK (purpose IN ('text','photos'))`; SQLite cannot change a CHECK, so the step rebuilds the table
 (copy, drop, rename, recreate `ai_consents_provider`) with the purposes `text`, `photos` and `chat`. Same columns, key and
 cascades; every row is kept; atomic, `foreign_key_check`, idempotent (a table that already allows `chat` is left alone).
+
+### Schema step 13 (`m013_assistant_ask_keys.py`)
+
+`assistant_ask_keys (key_hash PRIMARY KEY CHECK (length = 64), user_id → users ON DELETE CASCADE, tool, saved_json, created_at)` with
+indexes on `created_at` and `user_id`: the duplicate guard of the Ask chat's trusted saves (step 11's table needs a token and an Ask
+save has none). `key_hash` is the SHA-256 of the person's id and the key; the plain key is never stored. Atomic,
+`foreign_key_check`, idempotent (`IF NOT EXISTS`). The trust choice itself is not in the schema (it is a field of the person's
+`ai` setting).
 
 ### Data, export, deletion and retention
 
@@ -2133,6 +2209,10 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   number is the app's own. Not medical advice." The last 20 messages are sent each time; nothing is stored in the browser.
   A question that was not answered (consent declined, 429, 503) goes back into the box. Demo and preview: the tab shows a
   note that the chat works in the installed app with an AI provider, and no input (no mock answers).
+  Saving (part C, the self-contained section "Saving from the chat" of `ask.js`): the trust line `#ask-trust`, the confirm card
+  (`pending_save`: Save as eaten / Save as planned / Cancel), the saved card with Undo, and the app's questions; Save, import and
+  Undo use only `KH.ai.api` (`logBatch`, `createMeal`, `importUsda`, `deleteEntry`, `deleteMeal`: the app's normal routes), so the page
+  has no URL of its own. The warning sheet `#sheet-ai-trust` is `KH.ai.confirmTrust`.
   `tests/test_ask_ui.py` checks the shell, the CSP rules and these behaviours.
 
 ### Parity (demo/preview mode)
@@ -2484,9 +2564,12 @@ instructions tell the model to send a fresh key per intended save and to reuse i
 * Every lookup is scoped by `user_id`, `token_id` and the hash, so another token or another person with the same key
   text is independent. Rows older than 24 hours are ignored, deleted by the next keyed save and by the daily
   housekeeping (`purge_old`, like `api_tokens.purge_ended`). The person's activity is unchanged: a duplicate is not a save.
+* The in-app Ask chat saves through the same two functions with `request_key` made from its own `request_id` and no token:
+  `request_keys.find` / `remember` with `token_id=None` use `assistant_ask_keys` (schema step 13, "Saving from the chat"
+  above); the MCP side is unchanged.
 
 ### Not in parts B and C
 
-The assistant cannot edit or delete anything; no MCP resources or prompts; no
+The assistant (through a token) cannot edit or delete anything; no MCP resources or prompts; no
 activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 

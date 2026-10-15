@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Mapping
 
+from ..audit import audit
 from ..config import ConfigError, Settings
 from ..crypto import InvalidToken, Keyring
 from ..db import table_exists, utcnow
@@ -478,6 +479,19 @@ MESSAGES = {
 def ai_prefs(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> dict[str, Any]:
     value = store.get(conn, "ai", user_id)
     return value.model_dump() if hasattr(value, "model_dump") else dict(value or {})
+
+
+def trust_setting(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> str:
+    """What the person chose for how much the Ask chat may save without asking: ``ask`` (default), ``conversation`` or
+    ``always``. The choice alone; whether it counts is :func:`app.ai.chat_save.effective_trust`."""
+    return str(ai_prefs(conn, store, user_id).get("trust") or "ask")
+
+
+def audit_trust_change(conn: sqlite3.Connection, user_id: int, old: str, new: str, *, ip: str | None = None) -> None:
+    """One activity-log row (``ai.trust_changed``, visible to the person) when the choice changed; no commit. Every route
+    that can write the person's ``ai`` setting calls this, so no change of the choice goes unrecorded."""
+    if old != new:
+        audit(conn, user_id, "ai.trust_changed", None, None, ip=ip, old=old, new=new)
 
 
 def usable(row: Mapping[str, Any]) -> bool:

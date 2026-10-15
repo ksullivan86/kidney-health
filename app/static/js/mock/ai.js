@@ -14,7 +14,9 @@
   route('GET', '/api/me/ai', function () {
     return {
       enabled: false,
-      settings: { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '' },
+      settings: { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '', trust: 'ask' },
+      chat_enabled: false,
+      trusted_saves_allowed: false,
       user_keys_allowed: true,
       allow_user_base_url: false,
       own: null,

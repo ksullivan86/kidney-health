@@ -13,6 +13,10 @@ still there).
 * Rows older than :data:`KEEP` are ignored by :func:`find`, deleted by the next keyed save and by the daily
   housekeeping (:func:`purge_old`).
 
+The Ask chat (assistant step 2, part C) saves with the same two tools and has no token: its keys are made from the
+chat request's own ``request_id`` and live in ``assistant_ask_keys`` (schema step 13), selected by passing
+``token_id=None``. The hash there covers the person's id and the key, so another person's identical key is another key.
+
 Functions never commit unless they say so.
 """
 from __future__ import annotations
@@ -49,12 +53,24 @@ def key_hash(token_id: int, key: str) -> str:
     return hashlib.sha256(f"request-key\x00{int(token_id)}\x00{key}".encode("utf-8")).hexdigest()
 
 
+def ask_key_hash(user_id: int, key: str) -> str:
+    """The same for the Ask chat, which has no token: SHA-256 of the person's id and the key."""
+    return hashlib.sha256(f"ask-request-key\x00{int(user_id)}\x00{key}".encode("utf-8")).hexdigest()
+
+
 def _cutoff() -> str:
     return clock.iso(clock.now() - KEEP)
 
 
-def find(conn: sqlite3.Connection, user_id: int, token_id: int, key: str) -> Seen | None:
-    """The save this token made with ``key`` in the last 24 hours, or None. Read-only."""
+def find(conn: sqlite3.Connection, user_id: int, token_id: int | None, key: str) -> Seen | None:
+    """The save this token (``None``: the Ask chat) made with ``key`` in the last 24 hours, or None. Read-only."""
+    if token_id is None:
+        row = conn.execute(
+            """SELECT tool, saved_json, created_at FROM assistant_ask_keys
+               WHERE key_hash = ? AND user_id = ? AND created_at > ?""",
+            (ask_key_hash(user_id, key), int(user_id), _cutoff()),
+        ).fetchone()
+        return None if row is None else Seen(row["tool"], json.loads(row["saved_json"]), row["created_at"])
     row = conn.execute(
         """SELECT tool, saved_json, created_at FROM assistant_request_keys
            WHERE key_hash = ? AND user_id = ? AND token_id = ? AND created_at > ?""",
@@ -65,9 +81,17 @@ def find(conn: sqlite3.Connection, user_id: int, token_id: int, key: str) -> See
     return Seen(row["tool"], json.loads(row["saved_json"]), row["created_at"])
 
 
-def remember(conn: sqlite3.Connection, user_id: int, token_id: int, tool: str, key: str, saved: dict[str, Any]) -> None:
+def remember(conn: sqlite3.Connection, user_id: int, token_id: int | None, tool: str, key: str,
+             saved: dict[str, Any]) -> None:
     """Write the key in the save's own transaction (no commit), after deleting the rows older than 24 hours."""
     conn.execute("DELETE FROM assistant_request_keys WHERE created_at <= ?", (_cutoff(),))
+    conn.execute("DELETE FROM assistant_ask_keys WHERE created_at <= ?", (_cutoff(),))
+    if token_id is None:
+        conn.execute(
+            """INSERT INTO assistant_ask_keys (key_hash, user_id, tool, saved_json, created_at) VALUES (?, ?, ?, ?, ?)""",
+            (ask_key_hash(user_id, key), int(user_id), tool, json.dumps(saved, separators=(",", ":")), clock.now_iso()),
+        )
+        return
     conn.execute(
         """INSERT INTO assistant_request_keys (key_hash, user_id, token_id, tool, saved_json, created_at)
            VALUES (?, ?, ?, ?, ?, ?)""",
@@ -77,12 +101,13 @@ def remember(conn: sqlite3.Connection, user_id: int, token_id: int, tool: str, k
 
 
 def purge_old(conn: sqlite3.Connection) -> int:
-    """Delete keys older than 24 hours (commits). Returns how many."""
-    if not table_exists(conn, "assistant_request_keys"):
-        return 0
-    cur = conn.execute("DELETE FROM assistant_request_keys WHERE created_at <= ?", (_cutoff(),))
+    """Delete keys older than 24 hours, a token's and the Ask chat's (commits). Returns how many."""
+    removed = 0
+    for table in ("assistant_request_keys", "assistant_ask_keys"):
+        if table_exists(conn, table):
+            removed += int(conn.execute(f"DELETE FROM {table} WHERE created_at <= ?", (_cutoff(),)).rowcount or 0)
     conn.commit()
-    return int(cur.rowcount or 0)
+    return removed
 
 
 housekeeping.register_daily("assistant_request_keys", lambda conn, ctx: purge_old(conn))

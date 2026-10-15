@@ -74,6 +74,7 @@ ACTIONS: set[str] = {
     "api_token.revoked",
     "assistant.food_logged",  # a token with assistant:log saved food or a recipe (app/mcp/tools.py)
     "assistant.recipe_saved",
+    "ai.trust_changed",  # a person changed how much the Ask chat may save without asking (app/ai/routes.py)
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -94,6 +95,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "api_token.revoked",
         "assistant.food_logged",
         "assistant.recipe_saved",
+        "ai.trust_changed",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

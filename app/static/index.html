@@ -521,8 +521,13 @@
       <h2 class="card-title" id="ask-title">Ask</h2>
       <button class="btn secondary" type="button" id="ask-new" hidden>New conversation</button>
     </div>
-    <p class="muted small" id="ask-intro">Ask about today's numbers, a food, or what fits in the rest of your day. The assistant looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <p class="muted small" id="ask-intro">Ask about today's numbers, a food, or what fits in the rest of your day. You can also ask it to log or plan a food, or to save a recipe. The assistant looks up your own targets and food log, and the app checks its answer before you see it.</p>
     <div class="settings-note caution" id="ask-demo" role="note" hidden></div>
+    <!-- Saving from the chat (js/views/ask.js): what the person chose, and the way to change it. -->
+    <div class="ask-trust" id="ask-trust" hidden>
+      <p class="hint ask-trust-line" id="ask-trust-line"></p>
+      <div class="ask-trust-actions" id="ask-trust-actions"></div>
+    </div>
     <div class="ask-thread" id="ask-thread" role="log" aria-label="Conversation"></div>
     <p class="sr-only" id="ask-live" role="status" aria-live="polite"></p>
     <div class="ask-dock" id="ask-composer">
@@ -1622,6 +1627,24 @@
     <div class="sheet-foot"></div>
   </form>
 </dialog>
+<!-- The warning before the assistant is trusted to save without asking (js/views/ai.js confirmTrust): Settings → AI ideas
+     and the Ask screen's "Trust it for this conversation". -->
+<dialog id="sheet-ai-trust" class="sheet" aria-labelledby="sheet-ai-trust-title">
+  <form method="dialog" class="sheet-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-ai-trust-title" class="sheet-title">Trust the assistant to save for you?</h2>
+        <div class="sheet-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"></div>
+  </form>
+</dialog>
+
 <dialog id="sheet-ai-sent" class="sheet" aria-labelledby="sheet-ai-sent-title">
   <form method="dialog" class="sheet-form" novalidate>
     <div class="sheet-head">

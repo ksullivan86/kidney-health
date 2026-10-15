@@ -127,6 +127,8 @@ def chat_model(request: Any) -> Any:
     if 'You are "Ask"' not in body["messages"][0]["content"]:
         return scripted_model(request)
     last = body["messages"][-1]["content"]
+    if last == "Log a banana for breakfast.":  # a request to save: the default trust turns it into a card
+        return chat({"call": {"tool": "log_food", "arguments": {"items": [{"food": "banana"}], "meal": "breakfast"}}})
     if last.startswith("RESULT of get_today"):
         data = json.loads(last.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
         limit = data["nutrients"]["potassium_mg"]["target"]["max"]
@@ -168,3 +170,10 @@ def test_the_chat_judge_flags_what_a_case_expects():
     lab = next(c for c in ai_eval.CHAT_SET if c.id == "chat-lab")
     assert ai_eval.judge_chat(lab, 200, {"kind": "answer", "text": "Ask your team.", "notes": []})[0] == ["no lab note"]
     assert ai_eval.judge_chat(lab, 429, {})[0] == ["http 429"]
+    log = next(c for c in ai_eval.CHAT_SET if c.id == "chat-log-banana")
+    card = {"items": [{"name": "Banana, raw"}]}
+    assert ai_eval.judge_chat(log, 200, {"kind": "confirm_save", "tool_calls": 1, "pending_save": card}) == ([], False)
+    problems, _ = ai_eval.judge_chat(log, 200, {"kind": "confirm_save", "tool_calls": 1, "pending_save": None})
+    assert problems == ["no card to confirm"]
+    problems, _ = ai_eval.judge_chat(log, 200, {"kind": "answer", "tool_calls": 1, "saved": [{"tool": "log_food"}]})
+    assert "saved without being asked" in problems and any("kind answer" in p for p in problems)

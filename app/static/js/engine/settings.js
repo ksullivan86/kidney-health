@@ -23,14 +23,19 @@
     // Optional AI (note 04 R4, §9 A5–A7; app/settings_registry.py "Note 04"). Providers and keys are rows of
     // ai_providers, never settings: the person's `ai` object has no key field (§9 A6).
     { key: 'ai', type: 'object', model: 'AiPreferences', scope: 'user', env: null,
-      default: { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '' },
+      default: { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '', trust: 'ask' },
       fields: [
         { name: 'opt_in', type: 'bool', default: false },
         { name: 'provider', type: 'str', pattern: '^(auto|own|shared:[1-9][0-9]{0,17})$', strip: false, default: 'auto' },
         { name: 'share_age_sex', type: 'bool', default: false },
         { name: 'preferences', type: 'str', maxLength: 200, default: '' },
+        { name: 'trust', type: 'str', pattern: '^(ask|conversation|always)$', strip: false, default: 'ask' },
       ],
-      label: 'AI ideas', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex and preferences (at most 200 characters).' },
+      label: 'AI ideas', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust (ask, conversation or always).' },
+    { key: 'ai.allow_trusted_saves', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_TRUSTED_SAVES',
+      label: 'Let people trust Ask to save without asking',
+      help: 'Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and recipes at once (for one conversation, or always), after a warning. '
+        + 'Off: Ask always shows a card and saves only when the person presses Save. Either way the app\'s numbers, the low and emergency rules and the dose checks stay on, and every save can be undone.' },
     { key: 'ai.allow_user_base_url', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_USER_BASE_URL',
       label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
     { key: 'ai.audit_retention_days', type: 'int', min: 0, max: 365, default: 30, scope: 'instance', env: 'AI_AUDIT_RETENTION_DAYS',

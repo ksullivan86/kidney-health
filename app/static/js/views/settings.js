@@ -647,7 +647,10 @@
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe',
+    'ai.trust_changed': 'Trust in the assistant changed',
   };
+  // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
+  const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
     account_deleted: 'account deleted', admin: 'revoked by an admin' };
   function eventDetail(ev) {
@@ -666,6 +669,7 @@
     }
     if (ev.action === 'assistant.food_logged') return `${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}, ${d.status}, ${d.meal} on ${d.date}, with “${d.via}”`;
     if (ev.action === 'assistant.recipe_saved') return `“${d.name}” (${d.ingredients} ingredients), with “${d.via}”`;
+    if (ev.action === 'ai.trust_changed') return `${TRUST_NAME[d.old] || d.old} → ${TRUST_NAME[d.new] || d.new}`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -1438,7 +1442,7 @@
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
     // The master switch first: Settings → AI ideas sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
-      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.audit_retention_days', 'assistant.enabled']],
+      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.allow_trusted_saves', 'ai.audit_retention_days', 'assistant.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
   const CHOICE_LABEL = {

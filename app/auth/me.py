@@ -199,9 +199,15 @@ def read_my_settings(request: Request, user: CurrentUser, conn: sqlite3.Connecti
 @router.patch("/settings")
 def update_my_settings(request: Request, user: CurrentUser, body: dict[str, Any] = Body(...),
                        conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    from ..ai import config as ai_config  # lazy: app.ai imports this package
+
     store = auth_context(request).store
     try:
+        before = ai_config.trust_setting(conn, store, user.id) if "ai" in body else None
         view = store.update_user(conn, user.id, body)
+        if before is not None:  # the Ask chat's trust choice lives in the ``ai`` setting: a change is always recorded
+            ai_config.audit_trust_change(conn, user.id, before, ai_config.trust_setting(conn, store, user.id),
+                                         ip=request_ip(request))
     except (KeyError, SettingLocked, SettingNotEditable, InvalidSettingValue, SettingsUnavailable) as exc:
         conn.rollback()
         raise settings_error(exc) from None
