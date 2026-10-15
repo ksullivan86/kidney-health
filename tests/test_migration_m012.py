@@ -80,7 +80,7 @@ def test_populated_v11_database_upgrades_keeps_every_consent_and_is_idempotent(t
     assert "WITHOUT ROWID" in sql and "'chat'" in sql
     m012.migrate(conn)  # a re-run changes nothing
     conn.commit()
-    assert db.migrate(conn) == []
+    assert db.migrate(conn, migrations.steps()[:12]) == []
     assert conn.execute("SELECT COUNT(*) FROM ai_consents").fetchone()[0] == 3
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     conn.close()
@@ -90,7 +90,7 @@ def test_the_new_table_keeps_the_constraints_and_the_cascades(tmp_path):
     path = tmp_path / "kidney.db"
     first, second = build_v11_with_data(path)
     conn = db.connect(path)
-    db.migrate(conn)
+    db.migrate(conn, migrations.steps()[:12])
     consent(conn, 2, second, "chat")
     conn.commit()
     with pytest.raises(sqlite3.IntegrityError):  # one row per person, provider and purpose

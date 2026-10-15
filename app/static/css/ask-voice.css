@@ -1,0 +1,30 @@
+/* Voice for the Ask screen (js/views/ask-voice.js): the microphone button, the "Recording" row and the read-aloud
+   switch. Colours are the app's tokens, so light and dark both work; nothing here is positioned or sized in a way
+   that can push the page sideways at 320 px. */
+
+.ask-mic { padding: 0 12px; min-width: var(--tap); display: inline-flex; align-items: center; justify-content: center; }
+.ask-mic-icon { width: 22px; height: 22px; display: block; }
+.ask-mic-body { fill: currentColor; }
+.ask-mic-stand { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ask-mic.recording { background: var(--over-tint); color: var(--over-text); border-color: var(--over-text); }
+.ask-mic:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* While recording or sending: a row you cannot miss, with the time and a way out. */
+.ask-voice-bar {
+  display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; min-width: 0;
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.ask-rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--over-text); flex: none; animation: ask-rec-pulse 1.2s ease-in-out infinite; }
+@keyframes ask-rec-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .ask-rec-dot { animation: none; } }
+.ask-voice-what { flex: 1 1 11em; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ask-rec-time { font-variant-numeric: tabular-nums; color: var(--text-2); flex: none; }
+.ask-voice-cancel { flex: none; min-height: var(--tap); }
+
+.ask-voice-line { overflow-wrap: anywhere; }
+.ask-voice-problem { color: var(--over-text); }
+
+.ask-voice-opts { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 12px; min-width: 0; }
+.ask-read-label { flex: 1 1 14em; min-width: 0; }
+.ask-stop-reading { flex: none; min-height: var(--tap); }
+.ask-read-note { margin: 0; overflow-wrap: anywhere; }

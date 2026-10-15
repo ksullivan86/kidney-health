@@ -142,6 +142,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `OFF_ENABLED`, `OFF_CONTACT` | off; the project URL | Open Food Facts barcode lookups (only the barcode digits go to `world.openfoodfacts.org`, and only for people who agreed in Settings → Food data) and the contact sent in their `User-Agent`. `OFF_RATE_PER_MINUTE` (10, at most 15), `BARCODE_NEGATIVE_TTL_HOURS` (24) and `USDA_BRANDED_BARCODE` (`true`: with a USDA key, a barcode Open Food Facts does not know, or knows without nutrition facts, is looked up in USDA's branded foods) tune them. See [barcode-and-photos.md](barcode-and-photos.md). |
 | `GUIDANCE_ENABLED` | `true` | Rule-based meal guidance (What fits now, swaps, Plan the rest of my day, insights). It runs on the server and sends nothing out. `GUIDANCE_POOL_PER_ROLE` (200) and `GUIDANCE_BEAM_WIDTH` (16) make planning cheaper on a small server. See [guidance.md](guidance.md). |
 | `AI_ENABLED` and the other `AI_*` | AI off | Optional AI ideas. `AI_ENABLED` is the server-wide switch (also in Server administration); the provider is env-only: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL`, `AI_API_KEY_FILE`, `AI_PRIVATE_HOSTS` for a server on your LAN. `AI_CHAT_ENABLED` (off by default) adds the Ask chat screen. Each person still opts in. Full list and recipes: [ai.md](ai.md); a local Ollama: `deploy/compose.ai-ollama.yaml`. |
+| `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY_FILE`, `AI_VOICE_ENABLED` | voice off | Speech to text for the Ask **microphone**: one OpenAI-compatible transcription server (`{STT_BASE_URL}/audio/transcriptions`, the base ends in `/v1`), its model name and, if it wants one, its key as a file. The address follows the AI rules: a LAN host must be in `AI_PRIVATE_HOSTS`. `AI_VOICE_ENABLED` (off by default; also in Server administration; needs Ask) switches the button on; each person agrees on first use. `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100 per person per day) and `STT_MAX_AUDIO_BYTES` (1.5 MiB) tune it. Recordings are transcribed and deleted, never stored; the browser's own speech recognition is never used. A local container: `deploy/compose.stt-whisper.yaml`. See [ai.md](ai.md#voice-input-speech-to-text). |
 | `ASSISTANT_ENABLED` | `false` | Assistant access: each person may make personal tokens (Settings → Assistant access) for a chat assistant that reads their own food log and targets and, if the person ticks "Can also save food and recipes" for that token, saves food and recipes. Also in Server administration → Server settings. Nothing leaves the server for it. See [assistant.md](assistant.md). |
 | `INSTANCE_NAME`, `REGISTRATION_MODE`, `AUDIT_RETENTION_DAYS`, `USDA_SHARED_DAILY_LIMIT` | Kidney Health, `invite`, 365, 200 | Server settings an admin can also change in Server administration → Server settings, unless set here. |
 
@@ -256,7 +257,10 @@ relabels the secrets (`x-podman.relabel: Z`).
 With `restart: always`, enable `systemctl --user enable --now podman-restart.service` so Podman
 starts the container after a reboot, or use Quadlet. Optional overlays:
 `-f deploy/compose.caddy.yaml` (HTTPS with Caddy, [`https.md`](https.md) tier 1) and
-`-f deploy/compose.ai-ollama.yaml` (a local Ollama on an internal network).
+`-f deploy/compose.ai-ollama.yaml` (a local Ollama on an internal network) and
+`-f deploy/compose.stt-whisper.yaml` (a local speech-to-text server for the Ask microphone, also on an internal network with no
+route out; its image is pinned by a digest you verify and its model is put in a volume once beforehand, see the file's header
+and [ai.md](ai.md#voice-input-speech-to-text)).
 
 ## Rootless Docker
 

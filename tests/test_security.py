@@ -28,7 +28,7 @@ SPEC_CSP = (
 EXPECTED_HEADERS = {
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
-    "permissions-policy": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+    "permissions-policy": "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), browsing-topics=()",
     "cross-origin-opener-policy": "same-origin",
     "cross-origin-resource-policy": "same-origin",
     "x-frame-options": "DENY",

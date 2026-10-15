@@ -542,6 +542,17 @@ register(
         "answered by the app's rules without asking the AI. Each question can use several AI calls.",
     ),
     SettingDef(
+        key="ai.voice_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_VOICE_ENABLED",
+        label="Voice input for Ask (a microphone button)",
+        help="Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record "
+        "a question; the recording goes to that server to become text, is deleted at once, and the text appears in the "
+        "box for them to read and edit before anything is sent to the AI.",
+    ),
+    SettingDef(
         key="ai.allow_trusted_saves",
         model=bool,
         default=False,
@@ -565,7 +576,7 @@ register(
 )
 NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
-     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled",
+     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled", "ai.voice_enabled",
      "ai.allow_trusted_saves"}
 )
 

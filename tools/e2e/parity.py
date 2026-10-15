@@ -1051,7 +1051,8 @@ class Harness:
                   ("POST", "/api/ai/parse-meal", {"text": "toast"}), ("POST", "/api/ai/chat", {"messages": [{"role": "user", "text": "hi"}]}),
                   ("POST", "/api/ai/consent", {"provider_id": 1, "purpose": "text"}),
                   ("DELETE", "/api/ai/consent/1", None), ("GET", "/api/ai/audit", None), ("DELETE", "/api/ai/audit", None),
-                  ("POST", "/api/vision/label", None), ("POST", "/api/vision/plate", None), ("POST", "/api/me/ai/probe", None))
+                  ("POST", "/api/vision/label", None), ("POST", "/api/vision/plate", None), ("POST", "/api/me/ai/probe", None),
+                  ("POST", "/api/ai/transcribe", None))
         for method, path, body in routes:
             rs, rm = self.server.call(method, path, body), self.mock.call(method, path, body)
             self.rec.compare(S, f"{method} {path} while AI is off", {"status": rs["status"], "detail": rs.get("detail")},

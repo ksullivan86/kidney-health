@@ -12,6 +12,7 @@ upgrades: [`docs/deployment.md`](../docs/deployment.md). HTTPS for phones: [`doc
 | `compose.yaml`, `.env.example`, `secrets/` | podman-compose / docker compose; secrets are files in `secrets/` (git-ignored) |
 | `compose.caddy.yaml`, `caddy/` | Optional overlay: Caddy with a DNS-01 wildcard certificate (HTTPS tier 1) |
 | `compose.ai-ollama.yaml` | Optional overlay: a local Ollama on an internal network, for the optional AI features |
+| `compose.stt-whisper.yaml` | Optional overlay: a local speech-to-text server on an internal network with no route out, for the Ask microphone (image pinned by a digest you verify; the model is put in a volume once, beforehand) |
 | `docker-rootless-run.sh` | The same hardening as plain `docker run` flags for rootless Docker |
 | `k8s/` | Kustomize base for Kubernetes (Talos): PSA restricted, read-only root, NetworkPolicy, HTTPRoute (`kubectl apply -k deploy/k8s`) |
 | `../scripts/verify-image.sh` | Verify a published image's signature and attestations, print the digest to pin |

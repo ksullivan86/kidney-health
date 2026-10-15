@@ -41,6 +41,9 @@ Keys (defaults in brackets):
   ``AI_PRIVATE_HOSTS``, ``AI_DENY_CIDRS``, ``AI_MAX_RESPONSE_BYTES`` [262144], ``AI_HTTP_PROXY``. These are
   env-only on purpose (an SSRF allowlist is never runtime-editable); the switches (``AI_ENABLED`` …) are
   settings-registry keys with env locks. ``app/ai/config.py`` checks the values at start-up.
+* Speech to text for the Ask microphone (assistant step 2, part B; ``app/ai/stt.py``), also in :class:`AiEnv`:
+  ``STT_BASE_URL`` (ends in ``/v1``, same address rules as ``AI_BASE_URL``), ``STT_API_KEY[_FILE]`` (optional),
+  ``STT_MODEL``, ``STT_TIMEOUT_S`` [60], ``STT_DAILY_LIMIT`` [100]; and ``STT_MAX_AUDIO_BYTES`` [1.5 MiB] (``Settings.max_audio_bytes``).
 * ``OFF_BASE_URL`` [``https://world.openfoodfacts.org``]: the Open Food Facts server barcode lookups
   ask (staging ``https://world.openfoodfacts.net`` or a self-hosted Product Opener). Env only, never a
   runtime setting (note 03 §9 B5): ``https://`` (plain ``http://`` only for localhost), no path. A
@@ -124,6 +127,13 @@ class AiEnv:
     max_response_bytes: int = 262_144
     http_proxy: str | None = None  # AI_HTTP_PROXY; HTTP(S)_PROXY are ignored for AI calls
     openrouter_zdr: bool = False
+    # Speech to text for the Ask screen's microphone (assistant step 2, part B; app/ai/stt.py): one OpenAI-compatible
+    # ``{STT_BASE_URL}/audio/transcriptions`` endpoint, under the same address rules as the AI provider.
+    stt_base_url: str | None = None  # STT_BASE_URL, ends in /v1 like AI_BASE_URL
+    stt_api_key: str | None = field(default=None, repr=False)  # STT_API_KEY_FILE (optional; never returned by any API)
+    stt_model: str | None = None  # STT_MODEL
+    stt_timeout_s: float = 60.0  # STT_TIMEOUT_S: how long the transcription server may take
+    stt_daily_limit: int = 100  # STT_DAILY_LIMIT: recordings per person per day (0 = unlimited)
 
 
 def _parse_float(env: Mapping[str, str], name: str, lo: float, hi: float) -> float | None:
@@ -147,6 +157,8 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
         key, _, _ = read_secret(env, "OPENAI_API_KEY")  # note 01's name, accepted as an alias for OpenAI
     key = (key or "").strip() or None
     vision_timeout = _parse_float(env, "AI_VISION_TIMEOUT_S", 5.0, 600.0)
+    stt_key = (read_secret(env, "STT_API_KEY")[0] or "").strip() or None
+    stt_timeout = _parse_float(env, "STT_TIMEOUT_S", 5.0, 300.0)
     return AiEnv(
         provider=provider,
         base_url=_raw(env, "AI_BASE_URL"),
@@ -164,6 +176,11 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
         max_response_bytes=parse_int(env, "AI_MAX_RESPONSE_BYTES", 262_144, 4096, 16 * 1024 * 1024),
         http_proxy=_raw(env, "AI_HTTP_PROXY"),
         openrouter_zdr=parse_bool(env, "AI_OPENROUTER_ZDR", False),
+        stt_base_url=_raw(env, "STT_BASE_URL"),
+        stt_api_key=stt_key,
+        stt_model=_raw(env, "STT_MODEL"),
+        stt_timeout_s=60.0 if stt_timeout is None else stt_timeout,
+        stt_daily_limit=parse_int(env, "STT_DAILY_LIMIT", 100, 0, 10_000),
     )
 
 
@@ -220,6 +237,7 @@ class Settings:
     docs_enabled: bool = False
     max_body_bytes: int = 1_048_576
     max_image_bytes: int = 4_194_304
+    max_audio_bytes: int = 1_572_864  # one voice clip for POST /api/ai/transcribe (STT_MAX_AUDIO_BYTES)
     max_import_bytes: int = 16_777_216  # POST /api/me/import only (app/data_import.py): an export of several years
     hsts_max_age: int = 31_536_000
     pwa_enabled: bool = True
@@ -263,7 +281,8 @@ class Settings:
 
     def secret_values(self) -> list[str]:
         """Every secret value loaded from the environment, for the log-redaction filter."""
-        values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key]
+        values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
+                  self.ai.stt_api_key]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -568,6 +587,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         docs_enabled=docs_enabled,
         max_body_bytes=parse_int(env, "MAX_BODY_BYTES", 1_048_576, 1024, 64 * 1024 * 1024),
         max_image_bytes=parse_int(env, "MAX_IMAGE_BYTES", 4_194_304, 1024, 64 * 1024 * 1024),
+        max_audio_bytes=parse_int(env, "STT_MAX_AUDIO_BYTES", 1_572_864, 65_536, 8 * 1024 * 1024),
         max_import_bytes=parse_int(env, "MAX_IMPORT_BYTES", 16_777_216, 1024 * 1024, 64 * 1024 * 1024),
         hsts_max_age=parse_int(env, "HSTS_MAX_AGE", 31_536_000, 0, 63_072_000),
         pwa_enabled=parse_bool(env, "PWA_ENABLED", True),

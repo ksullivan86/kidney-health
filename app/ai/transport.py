@@ -237,8 +237,13 @@ async def send_json(
     max_bytes: int,
     transport_factory: TransportFactory | None = None,
     error_snippet: Callable[[bytes], None] | None = None,
+    content: bytes | None = None,
+    content_type: str | None = None,
 ) -> HttpResult:
     """One request to ``{base}/{path}``; the parsed JSON answer or :class:`AiTransportError`.
+
+    ``body`` is sent as JSON. ``content`` (with its ``content_type``) is sent as it is instead: the speech-to-text
+    call's multipart form (``app/ai/stt.py``). Both go through the same pinned transport and the same answer rules.
 
     ``error_snippet`` (shared providers' admin probe only) receives at most the first 300 bytes of a
     non-2xx body; everyone else gets the category only (R5 step 6).
@@ -251,10 +256,13 @@ async def send_json(
     try:
         with anyio.fail_after(read_timeout_s + DEADLINE_EXTRA_S):
             async with httpx2.AsyncClient(transport=transport, timeout=timeout, follow_redirects=False, trust_env=False) as client:
-                content = None if body is None else json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-                if content is not None:
+                payload = content
+                if payload is not None:
+                    send_headers["Content-Type"] = content_type or "application/octet-stream"
+                elif body is not None:
+                    payload = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
                     send_headers["Content-Type"] = "application/json"
-                request = client.build_request(method, base.endpoint(path), content=content, headers=send_headers)
+                request = client.build_request(method, base.endpoint(path), content=payload, headers=send_headers)
                 response = await client.send(request, stream=True)
                 try:
                     status = response.status_code

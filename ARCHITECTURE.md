@@ -58,7 +58,7 @@ tests/test_planning.py      planned entries, saved meals, summary, shopping (API
 tests/test_migrations.py    v0.1 database upgrades in place
 tests/test_food_db.py       invariants of the committed data/foods.json (flags vs numbers, guide records)
 deploy/Containerfile        published image (Chainguard by digest); Containerfile.debian = CI-built fallback
-deploy/compose.yaml         rootless compose (+ compose.caddy.yaml, compose.ai-ollama.yaml overlays)
+deploy/compose.yaml         rootless compose (+ compose.caddy.yaml, compose.ai-ollama.yaml, compose.stt-whisper.yaml overlays)
 deploy/quadlet/kidney-health.container
 deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRoute
 .github/workflows/ci.yml    pytest 3.12+3.14, JS parity, linters, image smoke test + Grype gate (never pushes)
@@ -742,6 +742,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 11 | `m011_assistant_request_keys.py` | assistant step 1 | `assistant_request_keys`: the duplicate guard of `log_food` and `save_recipe`, hashes only ("Retries" under "Assistant MCP server" below) |
 | 12 | `m012_ai_consent_chat.py` | assistant step 2 | `ai_consents.purpose` accepts `chat` (table rebuilt; `docs/dev/plans/assistant-step2.md`; "Ask chat" above) |
 | 13 | `m013_assistant_ask_keys.py` | assistant step 2, part C | `assistant_ask_keys`: the duplicate guard of the Ask chat's saves, hashes only ("Saving from the chat" below) |
+| 14 | `m014_ai_consent_voice.py` | assistant step 2, part B | `ai_consents.purpose` accepts `voice` (table rebuilt from its stored definition; "Voice input" below). |
 
 ## Backend file ownership
 
@@ -757,6 +758,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
+| Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
 Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
@@ -1833,9 +1835,10 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   (30, 0–365, `AI_AUDIT_RETENTION_DAYS`), `ai.vision_plate_enabled` (`false`, `AI_VISION_PLATE_ENABLED`),
   `ai.vision_allow_agent` (`false`, `AI_VISION_ALLOW_AGENT`), `ai.chat_enabled` (`false`, `AI_CHAT_ENABLED`; the Ask screen,
   "Ask chat" below), `ai.allow_trusted_saves` (`false`, `AI_ALLOW_TRUSTED_SAVES`; lets a person trust the Ask chat to save
-  without asking, "Saving from the chat" below), and the person's object `ai` (scope `user`):
+  without asking, "Saving from the chat" below), `ai.voice_enabled` (`false`, `AI_VOICE_ENABLED`; the Ask microphone,
+  "Voice input" below), and the person's object `ai` (scope `user`):
   `{opt_in: false, provider: "auto" | "own" | "shared:<id>", share_age_sex: false, preferences: "" (≤ 200), trust: "ask" |
-  "conversation" | "always" ("ask")}` with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the ten
+  "conversation" | "always" ("ask")}` with **no key field** (§9 A6; unknown fields refused). With `AUTH_MODE=none` the eleven
   `ai.*` instance keys are env-only: `PATCH /api/admin/settings` answers `403` for them (§9 A7).
 * **Environment only** (`app/config.py` `AiEnv`; never runtime-editable): `AI_PROVIDER` (a preset),
   `AI_BASE_URL`, `AI_API_KEY[_FILE]` (`OPENAI_API_KEY[_FILE]` accepted when `AI_PROVIDER=openai`),
@@ -1843,7 +1846,9 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   features off), `AI_TIMEOUT_S` (preset read timeout), `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500,
   64–32768), `AI_STRUCTURED_OUTPUT` (`auto` | `json_schema` | `json_object` | `prompt`), `AI_REASONING_EFFORT`,
   `AI_CONTEXT_TOKENS` (8192 self-hosted/agent/custom, 32768 cloud), `AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
-  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB). A bad
+  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB); and the speech-to-text
+  server of the Ask microphone, `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY[_FILE]`, `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100),
+  `STT_MAX_AUDIO_BYTES` (1.5 MiB; `Settings.max_audio_bytes`; "Voice input" below). A bad
   value stops the start with a message naming the variable; `ALLOW_PRIVATE_AI_HOSTS` is refused (no alias,
   no wildcard). An https env provider without CA certificates stops the start (R12 self-check); CI's image smoke test runs the same check inside the built image.
 * **Presets** (`app/ai/presets.py`): `openai`, `openrouter`, `nous_portal` (cloud; a person may use them
@@ -1872,12 +1877,13 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat}, trust: {setting, allowed, effective}, prompt_version}`; `features.chat` is true only with the person set up for AI **and** `ai.chat_enabled` on; `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, voice?}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `features.voice` (and `voice`, and `consent.voice`) only with the chat available, `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI **and** `ai.chat_enabled` on; `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
 | `POST /api/ai/chat` | `{messages: [{role: "user" \| "assistant", text (1–2000)}] (1–20, the last from the person), request_id? (8–48 of A–Z a–z 0–9 _ -), trust? ("ask" \| "conversation")}` (`?dry_run=true`) → the Ask answer, or the rule-based card for a low or an emergency; 404 while `ai.chat_enabled` is off ("Ask chat" below; `request_id` and `trust`: "Saving from the chat") |
-| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
-| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat` (all when left out) → 204; 404 when there is none |
+| `POST /api/ai/transcribe` | the body is one clip (`Content-Type` `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/wav`, at most `STT_MAX_AUDIO_BYTES`), `?seconds=0..60` (the page's own length, for the activity row only) → `{text}`; 404 before the body unless voice is on and configured ("Voice input" below) |
+| `POST /api/ai/consent` | `{provider_id, purpose: "text" \| "photos" \| "chat" \| "voice", skip_preview}` → `{consent: {host, policy_version, skip_preview, at}, provider_id, provider_label, host, purpose, policy, policy_version, kind}`; `409` when the provider that serves the person changed |
+| `DELETE /api/ai/consent/{provider_id}` | `?purpose=text\|photos\|chat\|voice` (all when left out) → 204; 404 when there is none |
 | `GET /api/ai/audit` | `before`, `limit` 1–200 (50) → `{events: [{id, created_at, feature, provider_id, model, destination_host, prompt_version, request_json, response_text, verdict_json, latency_ms, status}]}` (the person's own) |
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
@@ -1887,7 +1893,8 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `PUT /api/me/ai/provider` *(re-auth)* | `{preset, model, base_url?, vision_model?, api_key?, remove_key?}` → the view; `403` when personal providers are off; `api_key` write-only |
 | `DELETE /api/me/ai/provider` *(re-auth)* | → 204 (`provider` falls back to `auto`) |
 | `POST /api/me/ai/probe` | → `{probe}`: Test connection for the person's own provider (5 per hour; counted in the usage) |
-| `GET /api/admin/ai-providers` | → `{providers: [Provider], presets, private_hosts, deny_cidrs, proxy, env_provider, writable}` |
+| `GET /api/admin/ai-providers` | → `{providers: [Provider], presets, private_hosts, deny_cidrs, proxy, env_provider, writable, voice: {configured, enabled, host?, model?, key_set?, local?, daily_limit?, max_seconds?, max_bytes?, problem?}}` (the transcription server read-only; its key never) |
+| `POST /api/admin/ai-voice/probe` *(re-auth)* | → `{probe: {ok, latency_ms} \| {ok: false, error, message}}`: one second of silence through the transcription transport (20 per hour with the other tests; 404 unless AI is on and `STT_BASE_URL` is set; the answer's text is neither returned nor kept) |
 | `POST /api/admin/ai-providers` *(re-auth)* | `{preset, model, label?, base_url?, vision_model?, api_key?, timeout_s?, max_tokens?, context_tokens?, structured, reasoning_effort?, enabled}` → 201 `Provider` |
 | `PUT /api/admin/ai-providers/{id}` *(re-auth)* | same body (+ `remove_key`) → `Provider`; `409` for the env provider; a new host deletes its consents |
 | `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for the env provider |
@@ -2132,6 +2139,76 @@ I would like this to be a toggle with a warning." Least trust is the default.
   is in force, and the admin's switch when it is off), "Change this in Settings", and, for a person who chose `conversation`,
   "Trust it for this conversation" / "Stop trusting". Cards are built with `h()` text nodes only.
 
+### Voice input (assistant step 2, part B)
+
+Spec `docs/dev/plans/assistant-step2.md` (part B); code `app/ai/stt.py` (pure), `app/ai/voice.py` (the route), the screen part
+`js/views/ask-voice.js` and `css/ask-voice.css`, the consent text in `js/views/ai.js`, schema step 14; people: `docs/ai.md`
+"Voice input", `docs/assistant.md`, `docs/privacy.md`, the handbook's AI page; operators: `docs/deployment.md`,
+`docs/network-allowlist.md`, `deploy/compose.stt-whisper.yaml`; tests `tests/test_ai_voice.py`, `tests/test_migration_m014.py`,
+`tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py`, and the Chromium harness `tools/e2e/ask_voice.py`.
+
+* **One provider, chosen by the admin, never by the browser.** The page records with `MediaRecorder` and the app forwards the
+  clip to **one OpenAI-compatible transcription endpoint**: `POST {STT_BASE_URL}/audio/transcriptions` (so
+  `STT_BASE_URL` ends in `/v1`, like `AI_BASE_URL`), multipart with `model` (`STT_MODEL`), `response_format=json` and `file`
+  (the app's own file name and type, never the browser's). A local Speaches or whisper.cpp-style server and the cloud services
+  (OpenAI, Groq) all speak it. **The browser's own speech recognition is never used**: Chrome sends that audio to Google
+  and Safari to Apple, outside the owner's control (a static test fails if any shipped file names it). Environment only:
+  `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY[_FILE]` (optional; redacted in logs, never returned by any API: the admin view
+  says only `key_set`), `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100 recordings per person per day, 0 = unlimited),
+  `STT_MAX_AUDIO_BYTES` (1.5 MiB; the body limit of this exact path, `register_body_limit`). The admin switch
+  `ai.voice_enabled` (default off) must be on, and `ai.chat_enabled` too (the microphone lives in Ask).
+* **The same address rules, no second outbound path.** The call is `app.ai.transport.send_json` (resolve at request time,
+  check every address, connect to the checked one, no redirects, answer size cap `AI_MAX_RESPONSE_BYTES`, no
+  `HTTP(S)_PROXY`) with scope `shared`: a private or LAN address, and plain `http`, only when `AI_PRIVATE_HOSTS` lists
+  the host (`stt:8000`), exactly as an Ollama host. `send_json` gained `content` and `content_type` for the multipart body.
+  Start-up validates the URL (a wrong value stops the start; a host the policy would refuse is a warning; the admin view
+  shows it as `problem`). Failures are coarse categories with plain messages; no response body is echoed, and a recording
+  is sent once (no retry).
+* **Checks, in order** (all before the audio is read). Signed in (401) → `ai.enabled` (404) → `ai.voice_enabled`,
+  `ai.chat_enabled` and `STT_BASE_URL` (404 `Not Found`) → the person can use AI (503 with the reasons of the other
+  features, `not_opted_in` first) → the content type (415) and a declared size (413) → consent for purpose `voice` to this
+  host (`409 consent_required` with the sheet's text) → the person's single AI slot (`429 busy_*`) → the body is read in
+  memory within 30 seconds (`408`; over the limit `413`) → the first bytes must be the declared container (EBML for webm,
+  `OggS`, `ftyp` for mp4, `RIFF`..`WAVE`; `400`; under 64 bytes is `400 empty`) and a WAV longer than a minute is `413` (the
+  other containers' minute is the page's limit and the byte limit; the server cannot read it without decoding) → the daily
+  limit (`429 quota_exhausted`; a refused clip is not counted) → the transcription → `{text}`.
+* **Nothing is kept.** The audio and the transcript are never written to disk or to the database and never logged (the
+  log line holds host, model, a length bucket and the outcome). The transcript is cleaned by the chat's text policy (NFKC,
+  `Cc`/`Cf` removed, spaces collapsed, at most 2000 characters). One `ai_audit` row per recording, **no request or response body
+  whatever `ai.audit_retention_days` says**: `feature "voice"`, `provider_id` NULL, the transcription model and host, and a
+  verdict `{duration: "under 10 s" | "10 to 30 s" | "30 to 60 s" | "unknown", outcome}` (the length is the page's `seconds`, or
+  a WAV's own header). The admin's "Test transcription" sends one second of generated silence and writes no row.
+* **Daily limit.** Counted in `ai_usage` under provider id 0 with `key_scope = 'own'`, so `ai.shared_daily_limit` (the shared AI
+  calls) never includes voice and the admin's usage list shows the row as "speech to text". Counted when the clip is
+  forwarded, whether the server answers or not.
+* **Consent purpose `voice`.** Its own sheet: "Your recording is sent to <host> to turn it into text, then deleted. Nothing
+  is kept." (plus whether the host is on the operator's own network); no "show me the request" choice, since there is no
+  request before the recording exists; consent is asked **before the microphone is opened**. The row in `ai_consents` keeps
+  the transcription **host** in `host` and, for its key, the id of the AI provider that serves the person (the table's
+  foreign key needs a provider row; no row is made for the transcription server). A changed host, AI provider or
+  wording (`stt.POLICY_VERSION`) asks again; Settings lists it as "Voice recordings → Speech to text (host)" and can
+  withdraw it.
+* **Headers.** `Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), browsing-topics=()`:
+  the microphone for this origin only (it was `microphone=()`); everything else is unchanged. `connect-src 'self'` already
+  covers the upload.
+* **The page** (`js/views/ask-voice.js`, attached by two hook lines in `ask.js`). The microphone button appears only when
+  `GET /api/ai/status` says `features.voice`. Tap to record, tap again to stop (or at 60 seconds); a visible "Recording"
+  row shows the time with Discard; leaving the tab or the page, or Escape, discards a recording; every track is stopped
+  after each recording; the audio stays in memory and is dropped after the upload (no file, no object URL, no playback). The
+  text goes **into the question box**, after anything already typed, for the person to read and edit; nothing in the code
+  presses Send. Without `MediaRecorder` (or a secure context) or with the microphone refused, one plain line explains.
+  **Read answers aloud** is a per-device switch (`localStorage`, in `try`) that speaks the checked answer text with
+  `speechSynthesis` using only voices with `localService === true` (an online voice would send the answer to the browser's
+  maker); with none, the switch is hidden and a note says why. Only `answer.text` of an answer, a low, an emergency or
+  a save card (the app's fixed "Nothing has been saved yet. Check this, then press a Save button, or Cancel.") is spoken,
+  with links, handbook paths and addresses removed; never the cards themselves, the figures or the notices. Saving stays a
+  button press: nothing in the voice code presses a Save button or changes the trust choice.
+* **No new clinical numbers and no dosing.** Voice adds no threshold or advice; the transcript is only the person's words,
+  and the rules (a low, an emergency) still run first on whatever is sent.
+* **Deployment example.** `deploy/compose.stt-whisper.yaml`: a speech-to-text container on an `internal` network with no
+  route out, pinned by digest (a marked placeholder until the owner verifies one), read-only, no capabilities, no new
+  privileges, a non-root user, limits and a health check, the model put in a volume once beforehand.
+
 ### Schema step 6 (`m006_ai.py`)
 
 `ai_providers` (scope/owner `CHECK`, `locked` only for shared, one per person, one env row,
@@ -2152,6 +2229,14 @@ indexes on `created_at` and `user_id`: the duplicate guard of the Ask chat's tru
 save has none). `key_hash` is the SHA-256 of the person's id and the key; the plain key is never stored. Atomic,
 `foreign_key_check`, idempotent (`IF NOT EXISTS`). The trust choice itself is not in the schema (it is a field of the person's
 `ai` setting).
+
+### Schema step 14 (`m014_ai_consent_voice.py`)
+
+`ai_consents.purpose` accepts `voice` besides `text`, `photos` and `chat`. SQLite cannot change a CHECK, so the table is rebuilt
+as step 12 did, but from the **stored definition** of the old table with `'voice'` added to that one list (not a second copy
+of the DDL), so a column or constraint that a step between 12 and 14 added is kept; every row is copied; atomic,
+`foreign_key_check`, idempotent. A voice row keeps the transcription host in `host` and the AI provider's id in
+`provider_id` ("Voice input" above).
 
 ### Data, export, deletion and retention
 
@@ -2219,8 +2304,8 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
 
 The `ai.*` keys are in `tests/data/settings_vectors.json` and `js/engine/settings.js`. Demo mode never
 calls a provider: `js/mock/ai.js` answers like a server with AI off (`GET /api/me/ai` → `enabled: false`;
-every `/api/ai/*` (`/api/ai/chat` too) and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
-app. `ai.chat_enabled` is a registry key like the others (vectors and twin). The Ask screen has no twin: the demo shows its note.
+every `/api/ai/*` (`/api/ai/chat` and `/api/ai/transcribe` too) and `/api/vision/*` route 404), and Settings → AI ideas says AI runs in the installed
+app. `ai.chat_enabled` and `ai.voice_enabled` are registry keys like the others (vectors and twin). The Ask screen has no twin: the demo shows its note, and no microphone or read-aloud switch.
 
 ## M3: the handbook at `/learn`
 

@@ -30,15 +30,18 @@
     text: 'your meal data (stage, targets, today\'s totals, candidate foods) or the meal you describe',
     photos: 'your photo (location and camera data removed)',
     chat: 'your messages in this conversation, and the app\'s own numbers the assistant looks up (your targets, today\'s totals, food names and nutrients)',
+    voice: 'your voice recording (up to a minute)',
   };
   // What the consent sheet adds under "Never sent", by purpose.
   const NEVER_SENT_TEXT = {
     chat: 'Never sent: your name, user name, e-mail, weight, height, exact age or notes. Each question can take several AI calls. '
       + 'AI never gives insulin doses or medicine advice, and the app checks every number in an answer before you see it.',
+    voice: 'Nothing but the recording is sent: no name, user name, e-mail or account details. The words come back into the question box for you to read and edit; '
+      + 'nothing goes to the AI until you press Send. The recording is not kept on this device or on the server.',
   };
-  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask' };
-  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations' };
-  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations' };
+  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask', voice: 'Voice' };
+  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations', voice: 'Voice recordings' };
+  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations', voice: 'your voice recordings' };
   const CONFIDENCE_TEXT = { low: 'not sure', medium: 'fairly sure', high: 'sure' };
   // Why the rules left an AI idea out (app/guidance/ai_bridge.py, app/ai/guard.py reason codes).
   const DROP_TEXT = {
@@ -93,6 +96,7 @@
     deleteProvider: (id) => request('DELETE', `/api/admin/ai-providers/${id}`),
     probeProvider: (id) => request('POST', `/api/admin/ai-providers/${id}/probe`),
     usage: () => request('GET', '/api/admin/ai-usage?days=30'),
+    probeVoice: () => request('POST', '/api/admin/ai-voice/probe'),
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
     createFood: (b) => request('POST', '/api/foods', b),
     addEntry: (b) => request('POST', '/api/log', b),
@@ -268,19 +272,22 @@
 
   // The consent sheet (note 04 R9 step 3): provider, destination host, policy line, the exact request.
   async function askConsent(consent, dry, trigger) {
-    const { body, foot } = fillSheet(consentEl, 'Before anything is sent', `${consent.provider_label} · ${consent.host}`);
+    // A voice recording goes to the speech-to-text server, not to the AI provider, and there is no request to preview
+    // before it exists: its sheet says where it goes and what comes back, with no "show me the request" choice.
+    const voice = consent.purpose === 'voice';
+    const { body, foot } = fillSheet(consentEl, voice ? 'Before your recording is sent' : 'Before anything is sent', `${consent.provider_label} · ${consent.host}`);
     const showId = uid('ai-preview');
     const showEach = h('input', { type: 'checkbox', id: showId });
-    body.append(
-      h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
+    body.append(...[ // an absent part is null: leave it out (append(null) would write the word "null")
+      voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
         ' at ', h('strong', { class: 'ai-host' }, consent.host), '.'),
       note('caution', h('p', {}, consent.policy)),
       h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
-      check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.'));
+      voice ? null : check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.')].filter(Boolean));
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Not now');
     cancel.addEventListener('click', () => consentEl.close());
-    const ok = h('button', { class: 'btn primary', type: 'button' }, 'Agree and send');
+    const ok = h('button', { class: 'btn primary', type: 'button' }, voice ? 'Agree and record' : 'Agree and send');
     foot.append(h('span', { class: 'spacer' }), cancel, ok);
     const agreed = await awaitChoice(consentEl, ok, trigger);
     if (!agreed) return false;
@@ -1122,8 +1129,20 @@
       list, more, actions);
     return box;
   }
+  // A voice row holds no content at all: the host, the model, a length bucket and the outcome.
+  function voiceRow(ev, when) {
+    const verdict = ev.verdict_json || {};
+    return h('details', { class: 'settings-details ai-event' },
+      h('summary', {}, `${when} · Voice · ${ev.destination_host} · ${ev.status === 'ok' ? 'turned into text' : statusText(ev.status)}`),
+      h('dl', { class: 'kv' },
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Model'), h('dd', {}, ev.model || '')),
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Length'), h('dd', {}, String(verdict.duration || 'unknown'))),
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Took'), h('dd', {}, `${((ev.latency_ms || 0) / 1000).toFixed(1)} s`))),
+      h('p', { class: 'hint' }, 'Your recording and its words are not kept anywhere: not on this device, not on the server.'));
+  }
   function activityRow(ev) {
     const when = `${util.fmtDateShort(ev.created_at.slice(0, 10))} ${ev.created_at.slice(11, 16)} UTC`;
+    if (ev.feature === 'voice') return voiceRow(ev, when);
     const feature = FEATURE_TEXT[ev.feature.split(':')[0]] || ev.feature;
     return h('details', { class: 'settings-details ai-event' },
       h('summary', {}, `${when} · ${feature} · ${ev.destination_host} · ${statusText(ev.status)}`),
@@ -1164,7 +1183,35 @@
       data.private_hosts.length ? h('ul', {}, data.private_hosts.map((x) => h('li', {}, h('code', {}, x)))) : h('p', { class: 'muted small' }, 'None.'),
       data.deny_cidrs.length ? h('p', { class: 'hint' }, `Never contacted (AI_DENY_CIDRS): ${data.deny_cidrs.join(', ')}`) : null,
       data.proxy ? h('p', { class: 'hint' }, 'AI calls go through AI_HTTP_PROXY; personal server addresses are off.') : null));
+    if (data.voice) box.append(voicePart(data.voice));
     box.append(usagePart());
+    return box;
+  }
+
+  // The speech-to-text server for the Ask microphone: set in the environment, shown read-only (the key never), with a
+  // test that sends one second of silence.
+  function voicePart(v) {
+    const box = h('details', { class: 'settings-details ai-voice-admin' }, h('summary', {}, 'Speech to text (voice input)'));
+    if (!v.configured) {
+      box.append(h('p', { class: 'hint' }, 'No transcription server is set. Voice input for Ask needs STT_BASE_URL and STT_MODEL in the environment (docs/ai.md, "Voice input").'));
+      return box;
+    }
+    box.append(h('dl', { class: 'kv' },
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Server'), h('dd', {}, `${v.host} · ${v.local ? 'on your own network' : 'online service'}`)),
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Model'), h('dd', {}, v.model)),
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Key'), h('dd', {}, v.key_set ? 'set (never shown)' : 'none')),
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Limits'), h('dd', {}, `${v.max_seconds} seconds per recording${v.daily_limit ? `, ${v.daily_limit} per person per day` : ', no daily limit'}`)),
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Voice input'), h('dd', {}, v.enabled ? 'On' : 'Off (Server settings → Optional AI → Voice input for Ask)'))));
+    box.append(h('p', { class: 'hint' }, 'Set with STT_BASE_URL, STT_MODEL and STT_API_KEY_FILE; the address follows the same rules as an AI provider (a private host must be listed in AI_PRIVATE_HOSTS). Recordings are transcribed and deleted, never stored.'));
+    if (v.problem) box.append(note('caution', h('p', {}, `This server will be refused: ${v.problem}.`)));
+    const msg = statusMsg();
+    box.append(h('div', { class: 'settings-actions' }, button('Test transcription', 'secondary', async (btn) => {
+      btn.textContent = 'Testing…';
+      try {
+        const r = (await api.probeVoice()).probe;
+        msg.textContent = r.ok ? `The server answered a test recording in ${(r.latency_ms / 1000).toFixed(1)} s.` : `Test failed: ${r.message}`;
+      } finally { btn.textContent = 'Test transcription'; }
+    })), msg);
     return box;
   }
 
@@ -1267,7 +1314,7 @@
         const res = await api.usage();
         if (!res.usage.length) list.append(h('p', { class: 'muted small ai-pad' }, 'No AI calls in the last 30 days.'));
         for (const u of res.usage) {
-          list.append(h('div', { class: 'usage' }, h('span', {}, `${u.username || `#${u.user_id}`} · provider ${u.provider_id} (${u.key_scope === 'own' ? 'own key' : 'shared'})`),
+          list.append(h('div', { class: 'usage' }, h('span', {}, `${u.username || `#${u.user_id}`} · ${u.provider_id === 0 ? 'speech to text' : `provider ${u.provider_id} (${u.key_scope === 'own' ? 'own key' : 'shared'})`}`),
             h('span', { class: 'num' }, `${u.requests} calls`), h('span', { class: 'num muted small' }, `${u.prompt_tokens + u.completion_tokens} tokens`)));
         }
       } catch (err) { list.append(h('p', { class: 'form-error' }, err.detail || err.message)); }
@@ -1288,6 +1335,6 @@
   whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
     uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();

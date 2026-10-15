@@ -1,9 +1,9 @@
 # Assistant, step 2, parts A and C: the in-app Ask chat (text) and saving from it
 
-Status: part A built (2026-10-15); part C (saving from the chat, with a trust setting) built (2026-10-15); voice and the other follow-ups below are not. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
+Status: part A built (2026-10-15); part C (saving from the chat, with a trust setting) built (2026-10-15); part B (voice, below) built (2026-10-15); the other follow-ups under "Next" are not. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
 front end. Step 2 puts a chat inside the app, behind the same rules: the model never supplies a number, lows and
 red flags are answered by rules without a model call, and the answer is checked in code before it is shown.
-Part A is the text chat. Part B (voice) and the follow-ups are listed under "Next".
+Part A is the text chat. Part B (voice) is described after the tests below; the follow-ups are listed under "Next".
 
 ## Rules that do not change
 
@@ -222,11 +222,60 @@ messages, audit of the choice), `tests/test_migration_m013.py`, `tests/test_ask_
 inline scripts, text set with textContent), the settings twin vectors, and `tools/e2e/ask.py` (a confirm card and a
 trusted save with Undo in Chromium).
 
+## Part B: voice (the microphone and read aloud)
+
+Decided by the owner (least trust, high security): **no browser speech recognition** (Chrome sends that audio to Google and Safari to
+Apple; a test keeps every name of the API out of the shipped page). Speech to text is a **server-side provider, off by default**.
+
+1. **Provider.** Environment only: `STT_BASE_URL` (an OpenAI-compatible base ending in `/v1`; the app calls `{base}/audio/transcriptions`),
+   `STT_MODEL`, `STT_API_KEY[_FILE]` (optional, write-only, never returned by any API), `STT_TIMEOUT_S`, `STT_DAILY_LIMIT`,
+   `STT_MAX_AUDIO_BYTES`; the admin switch `ai.voice_enabled` (registry, default false, `AI_VOICE_ENABLED`; needs `ai.chat_enabled`).
+   The host goes through the **same SSRF transport and netpolicy** as AI providers (`send_json`, scope `shared`: a LAN host only when
+   `AI_PRIVATE_HOSTS` lists it); no new outbound path. Server administration shows the host, model and limits read-only (never the key)
+   and a **Test transcription** button (one second of generated silence; cheap, so it is there).
+2. **Route.** `POST /api/ai/transcribe` (`app/ai/voice.py`; logic in `app/ai/stt.py`): cookie session and CSRF, `current_user`, **404 when AI,
+   Ask or voice is off or `STT_BASE_URL` is unset, before the body**; 503 for a person who cannot use AI; the content type must be
+   `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/wav` (415) and the first bytes must be that container (400); at most
+   `STT_MAX_AUDIO_BYTES` (1.5 MiB; the body limit is registered for this exact path; 413) and a WAV at most a minute (the other
+   containers' minute is the page's limit plus the byte limit); one AI slot per person; the clip is forwarded as multipart (`model`,
+   `response_format=json`, `file` under the app's own name) and `{text}` comes back cleaned by the chat's text policy (NFKC, control
+   characters out, at most 2000 characters). **The audio and the transcript are never written to disk or the database and never
+   logged**; one `ai_audit` row without content (`feature "voice"`, host, model, a length bucket, the outcome). A per-person daily limit
+   (`STT_DAILY_LIMIT`, 100; counted in `ai_usage` under provider 0 with `key_scope 'own'`, so `ai.shared_daily_limit` never includes it).
+3. **Consent.** Purpose `voice` in `ai_consents` (schema step **14**, the table rebuilt from its stored definition with `'voice'` added, so a
+   column added by another step is kept). The row keeps the transcription **host** in `host` and, for its key, the id of the AI
+   provider that serves the person (the foreign key needs a provider row; no `ai_providers` row is made for the transcription server).
+   Its own sheet: "Your recording is sent to <host> to turn it into text, then deleted. Nothing is kept."; no "show me the request"
+   choice (there is no request yet); asked **before the microphone is opened**.
+4. **Browser** (`js/views/ask-voice.js`, attached to Ask by two hook lines in `ask.js`). The microphone button appears only when
+   `GET /api/ai/status` says `features.voice`. Tap to record (`MediaRecorder`, 32 kbit/s), tap again to stop or at 60 seconds; a visible
+   "Recording" row with the time and Discard; leaving the tab or page or pressing Escape discards; the microphone is released after every
+   recording; the audio stays in memory. The transcript goes **into the question box** (after anything typed) for the person to read and
+   edit, **never sent automatically**. No `MediaRecorder`, no secure context or a refused microphone: one plain line.
+5. **Read aloud.** A per-device switch "Read answers aloud" (`localStorage` in `try`, off by default) using `speechSynthesis` **only with
+   voices whose `localService === true`**; none: the switch is hidden with a note. Only the checked answer text of an answer, a low or an
+   emergency is spoken, links and handbook paths removed; never the cards or the figures.
+6. **Header.** `Permissions-Policy: ... microphone=(self) ...`; everything else unchanged.
+7. **Deployment.** `deploy/compose.stt-whisper.yaml`: an optional overlay; the container on an `internal` network with no route out, image
+   pinned by digest (a marked placeholder until the deployer verifies one), `read_only`, `cap_drop: [ALL]`, `no-new-privileges`, a non-root
+   user, a model volume mounted read-only (filled once beforehand), limits, a health check; the app points at it with `AI_PRIVATE_HOSTS`.
+
+**Tests.** `tests/test_ai_voice.py` (the 404s before the body, sign-in, consent 409 and per-person consent, type and first bytes, the size
+limit declared and streamed, the multipart form and the key as a bearer token, the cleaned transcript, upstream failures, the address
+rules for a private or metadata address, plain http and the allowlist, the daily limit, **nothing stored or logged** by scanning the data
+directory, every table and the captured logs, the activity row, the key never returned, the admin view and test, the environment),
+`tests/test_migration_m014.py` (built on `steps()[:13]`), `tests/test_ask_voice_ui.py` (static: no speech recognition under any
+spelling, transcript to the input and never sent, device voices only, no inline script, text only, no storage of audio, the header),
+`tests/test_deploy_stt.py`, the settings vectors (`ai.voice_enabled`), and `python tools/e2e/ask_voice.py` in Chromium (82 checks).
+
+**Open for the owner.** Verify the container image's digest and a real whisper container on the home lab; try the microphone on a real
+iPhone (Safari) and an Android phone; decide the daily limit; the owner may prefer to key the voice consent to something other than the AI
+provider's id (a schema change for a nullable key) if that is ever needed.
+
 ## Next (not in this part)
 
-* **Part B, voice**: a microphone button using the browser's speech recognition (Chrome sends the audio to Google
-  and Safari to Apple, Firefox has none: the consent wording must say so), the transcript shown before it is sent,
-  and the reply read aloud with the browser's own voice; later a transcription-provider setting.
+* ~~**Part B, voice**~~: built; see "Part B: voice" above. (The first idea, the browser's speech recognition, was rejected:
+  Chrome sends that audio to Google and Safari to Apple, outside the owner's control.)
 * ~~Saving from chat~~: done in part C above (a card the person presses, or trusted saves behind a switch and a warning).
 * **Recipe pages** in `check_meal` (step 1's follow-up), so the chat can work from a recipe link.
 * A live golden run of the chat cases and a prompt wording from the profile (kidney-only) belong to the owner.

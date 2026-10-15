@@ -94,7 +94,7 @@ DOCS_CONTENT_SECURITY_POLICY = "; ".join(
 STATIC_HEADERS: tuple[tuple[str, str], ...] = (
     ("X-Content-Type-Options", "nosniff"),
     ("Referrer-Policy", "no-referrer"),
-    ("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()"),
+    ("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), browsing-topics=()"),
     ("Cross-Origin-Opener-Policy", "same-origin"),
     ("Cross-Origin-Resource-Policy", "same-origin"),
     ("X-Frame-Options", "DENY"),

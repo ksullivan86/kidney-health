@@ -21,6 +21,7 @@ from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
 from . import vision  # M2 ai: POST /api/vision/label, /api/vision/plate
+from .ai import voice as ai_voice  # assistant step 2, part B: POST /api/ai/transcribe
 from .ai import routes as ai_routes  # M2 ai: /api/ai, /api/me/ai, /api/admin/ai-providers
 from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP server for a chat assistant
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
@@ -112,6 +113,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(barcode.router)
     ai_routes.install(app, settings, store, app_version=APP_VERSION)  # M2 ai: checks the AI env, adds its routers
     app.include_router(vision.router)
+    app.include_router(ai_voice.router)
+    app.include_router(ai_voice.admin_router)
     app.include_router(assistant_mcp.router)
     app.include_router(data_import.router)
 

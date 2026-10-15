@@ -173,6 +173,21 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
 - Ask answers can be wrong or slow, like any AI. If a number matters, check it on **Today**. It does not replace
   your care team.
 
+### Talking to Ask (optional)
+
+If your admin has set up speech to text, a **microphone** button sits next to **Send**.
+
+- Tap it, speak, and tap it again to stop (it stops by itself after a minute). **Discard** throws the recording away.
+- The first time, a sheet tells you where your recording goes: **to the speech-to-text server your admin chose, to turn it
+  into text, and then it is deleted. Nothing is kept.** Nothing is recorded before you agree.
+- Your words appear **in the question box**. Read them, fix anything that is wrong, then press **Send**. Nothing goes to
+  the AI until you do.
+- If your browser cannot record, or you said no to the microphone, a line tells you and you can type instead.
+- **Read answers aloud** (a switch under the box, off until you turn it on) speaks the answer with a voice built into your
+  device. If your device has none, the switch is hidden: the app does not use an online voice, because that would send the
+  answer to someone else.
+- The app does not use your browser's own speech recognition (some browsers send that audio to Google or Apple).
+
 ## Talk to an assistant (optional)
 
 Some people like to ask about food in a chat, by typing or by talking. If your admin turns on **assistant

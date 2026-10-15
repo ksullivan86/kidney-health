@@ -12,8 +12,9 @@ tools that read your numbers and check a meal (part B), and, only for a token ma
 recipes**, two tools that save (part C): `log_food` and `save_recipe`. **Step 2, part A** is in place too: an
 **Ask** screen inside the app, a text chat that uses the same read tools and checks every answer in code before it
 is shown ([The Ask screen](#the-ask-screen-the-chat-inside-the-app); plan
-[`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)). Voice and "Add to plan" from the chat are later
-parts ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
+[`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)), and **part B** adds a **microphone** to it
+([Talking to Ask](#talking-to-ask-voice), off until the admin sets up speech to text). "Add to plan" from the chat is a later
+part ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 
 ## Contents
 
@@ -31,6 +32,7 @@ parts ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 * [System prompt template](#system-prompt-template)
 * [Check that it works](#check-that-it-works)
 * [The Ask screen (the chat inside the app)](#the-ask-screen-the-chat-inside-the-app)
+  * [Talking to Ask (voice)](#talking-to-ask-voice)
 * [Honest limits](#honest-limits)
 * [The endpoint, for the person running the server](#the-endpoint-for-the-person-running-the-server)
 
@@ -191,7 +193,8 @@ servers), then:
   keeps a system prompt per model).
 * The connection must come from the Open WebUI **server**. A connection made from the browser on another site
   carries that site's `Origin` and is refused (`403`).
-* Voice: Open WebUI's own speech-to-text and text-to-speech work as usual; the app never receives audio.
+* Voice: Open WebUI's own speech-to-text and text-to-speech work as usual; the app never receives audio. (The app's own Ask screen
+  has a microphone too, [below](#talking-to-ask-voice); it is a separate path and never sends audio to Open WebUI.)
 
 **One token is one person's log.** A tool server that the Open WebUI admin sets up for everyone uses that one
 token for every Open WebUI user who may use it, so they would all read that person's food log. Limit the tool
@@ -359,8 +362,24 @@ happened (when, which provider and model, the step and the tool name, the outcom
 after the first call ends that question with the numbers gathered so far. Small local models may not follow the one-JSON-step
 protocol; `python scripts/ai_eval.py --chat` measures that (the owner runs it with a live model; [`ai.md`](ai.md)).
 
-**Not in this part** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next"): voice (part B: the browser's
-speech recognition with its own consent wording, the reply read aloud) and recipe pages.
+### Talking to Ask (voice)
+
+Part B adds two small things to the Ask screen, both optional and off until switched on. They are about **speech**, not about the AI:
+the words you speak become text in the question box, and you press Send as always.
+
+* **The microphone.** Needs a transcription server set up by your admin (`STT_BASE_URL`; [`ai.md`](ai.md#voice-input-speech-to-text)) and
+  **Voice input for Ask** switched on (`ai.voice_enabled`, off by default). A button beside Send then records: tap, speak, tap again
+  (a minute at most; **Discard** or Escape throws it away). The first time, a sheet says where the recording goes ("Your recording is
+  sent to <host> to turn it into text, then deleted. Nothing is kept.") and nothing is recorded before you agree. The recording is
+  sent to that server only, turned into text and deleted: not stored, not logged, no playback. **The words appear in the question
+  box for you to read and edit; nothing goes to the AI until you press Send**, and the rules (a low, an emergency) still look at
+  what you send first. The app does **not** use the browser's own speech recognition: Chrome would send your voice to Google and
+  Safari to Apple.
+* **Read answers aloud.** A switch under the box (off by default, remembered on this device only) speaks the checked answer, with
+  a voice built into your device. A voice that works over the internet is never used; with no built-in voice the switch is hidden.
+  Only the answer's words are spoken: not the cards, the figures or any link.
+
+**Not in this part** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next"): recipe pages.
 
 ## Honest limits
 
