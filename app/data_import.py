@@ -537,6 +537,24 @@ def _refusal(exc: ValidationError) -> ImportRefused:
     return ImportRefused(f"{where}: {message}" if where else message, kind=kind, index=index)
 
 
+MAX_DEPTH = 32  # a real export is about 5 levels deep
+TOO_DEEP = "This is not a Kidney Health export: the file is nested too deeply."
+
+
+def nested_deeper_than(value: Any, limit: int) -> bool:
+    """Whether lists and objects in ``value`` nest more than ``limit`` levels (no recursion, so any depth is safe)."""
+    stack = [(value, 1)]
+    while stack:
+        item, depth = stack.pop()
+        if depth > limit:
+            return True
+        if isinstance(item, dict):
+            stack.extend((v, depth + 1) for v in item.values())
+        elif isinstance(item, list):
+            stack.extend((v, depth + 1) for v in item)
+    return False
+
+
 def parse_export(raw: bytes) -> ExportFile:
     """The validated file, or :class:`ImportRefused` (nothing has touched the database yet)."""
     try:
@@ -544,8 +562,12 @@ def parse_export(raw: bytes) -> ExportFile:
     except NotFinite:
         raise ImportRefused("The file holds a value that is not a finite number (NaN, Infinity or too large). "
                             "A real export never does; nothing was imported.") from None
-    except (ValueError, RecursionError):  # includes UnicodeDecodeError, JSONDecodeError and int digit limits
+    except RecursionError:  # Python 3.12's parser; 3.14's parses deep nesting, so the depth check below catches it
+        raise ImportRefused(TOO_DEEP) from None
+    except ValueError:  # includes UnicodeDecodeError, JSONDecodeError and int digit limits
         raise ImportRefused("This is not a valid JSON file. Choose the export.json from your export.") from None
+    if nested_deeper_than(data, MAX_DEPTH):
+        raise ImportRefused(TOO_DEEP)
     if not isinstance(data, dict):
         raise ImportRefused("This is not a Kidney Health export: the file must hold one JSON object.")
     fmt = data.get("format")

@@ -316,7 +316,9 @@ def test_only_this_format_and_version_are_read(client, fresh):
         assert r.status_code == 400 and text in r.json()["detail"], (text, r.text)
     reset_limits(fresh)
     for raw, text in [(b"", "empty"), (b"not json", "valid JSON"), (b"[1, 2]", "one JSON object"), (b"\xff\xfe\x00", "valid JSON"),
-                      (b"[" * 5000 + b"]" * 5000, "valid JSON"), (b'{"format": "kidney-health-export", "version": 1', "valid JSON")]:
+                      (b"[" * 5000 + b"]" * 5000, "nested too deeply"),
+                      (b'{"format": ' + b"[" * 5000 + b"]" * 5000 + b"}", "nested too deeply"),
+                      (b'{"a": ' + b"[" * 40 + b"]" * 40 + b"}", "nested too deeply"), (b'{"format": "kidney-health-export", "version": 1', "valid JSON")]:
         r = post_import(fresh, None, raw=raw)
         assert r.status_code == 400 and text in r.json()["detail"], (raw[:20], r.text)
     assert post_import(fresh, doc, headers={"content-type": "text/plain"}).status_code == 415
