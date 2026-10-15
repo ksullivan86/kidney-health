@@ -95,7 +95,12 @@ def test_fields_that_are_never_sent(client):
     assert secret_food.status_code == 201
     client.patch("/api/me", json={"display_name": "Margaret Example"})
     log(client, "Chicken breast, roasted", note="felt dizzy after lunch, call Dr Example")
-    sent = json.dumps(dry_run(client), ensure_ascii=False)
+    shown = dry_run(client)
+    # The pseudonymous safety identifier is random hex, so it can contain "168" or "1961" by chance; check its shape
+    # and leave it out of the search.
+    identifier = shown["body"].pop("safety_identifier", None)
+    assert identifier is None or re.fullmatch(r"[0-9a-f]{32}", identifier)
+    sent = json.dumps(shown, ensure_ascii=False)
     for never in ("admin", "Margaret", "Example", "71.3", "168", "1961", DAY, "2026-10-04", "dizzy", "Sam's secret stew",
                   "user_id", "username", "email", "weight", "height", "birth"):
         assert never not in sent, never
