@@ -114,6 +114,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   those two are not listed and calling one is an error result that saves nothing. `search_foods` results from
   USDA can be named by `fdc_id` in `check_meal` (read only), `log_food` and `save_recipe` (added to the person's
   list). No schema change. `ASSISTANT_ENABLED` is listed (commented out) in the Quadlet and Kubernetes examples.
+* **A retried save is not saved twice; an admin can revoke a person's assistant tokens.** `log_food` and
+  `save_recipe` take an optional `request_key`: a second call with the same key by the same token within 24 hours
+  saves nothing and answers with what the first call saved (as it is in the app now). Schema step 11 adds
+  `assistant_request_keys` (hashes only; rows older than 24 hours are deleted). Server administration → People →
+  Manage gains **Revoke assistant tokens (n)**, shown while assistant access is on and the person has active tokens
+  (`POST /api/admin/users/{id}/revoke-tokens`); it appears in that person's activity. See
+  [docs/assistant.md](docs/assistant.md).
 * The image is about 1 MB smaller: the handbook's search support for other languages
   (`/learn/assets/javascripts/lunr/`: lunr-languages, TinySegmenter, wordcut; 964 KB) is left out of the
   image and the GitHub Pages copy, as the source maps already were. The handbook searches in English only,

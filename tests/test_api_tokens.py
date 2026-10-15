@@ -545,3 +545,112 @@ def test_a_saving_token_still_reads_and_authenticates_like_any_token(admin):
     assert bearer(admin.app, saver).status_code == 200
     assert api_tokens.parse_scopes("assistant:read assistant:log") == api_tokens.SCOPES
     assert api_tokens.scopes_for(False) == (api_tokens.READ,) and api_tokens.scopes_for(True) == api_tokens.SCOPES
+
+
+# --------------------------------------------------------------------------- an admin revokes a person's tokens
+
+
+def person_id(client: TestClient) -> int:
+    return int(client.get("/api/me").json()["id"])
+
+
+def revoke_tokens_of(admin: TestClient, user_id: int | str) -> Any:
+    return admin.post(f"/api/admin/users/{user_id}/revoke-tokens")
+
+
+def test_an_admin_revokes_every_active_token_of_one_person_and_no_one_elses(pair):
+    admin, sam = pair
+    sam_id, admin_id = person_id(sam), person_id(admin)
+    mine = make(admin, "Admin's")["token"]
+    one, two, saver = make(sam, "One"), make(sam, "Two"), make(sam, "Saver", can_log=True)
+    assert sam.delete(f"/api/me/tokens/{one['id']}").status_code == 204  # revoked by the person earlier: not counted
+    r = revoke_tokens_of(admin, sam_id)
+    assert r.status_code == 200 and r.json() == {"revoked": 2}
+    for token in (two["token"], saver["token"], one["token"]):
+        assert bearer(admin.app, token).status_code == 401
+    assert bearer(admin.app, mine).status_code == 200  # the admin's own token, and everyone else's, are untouched
+    listed = {t["name"]: t for t in sam.get("/api/me/tokens").json()["tokens"]}  # the person sees them revoked
+    assert {t["state"] for t in listed.values()} == {"revoked"} and listed["Two"]["revoked_at"]
+    assert [t["state"] for t in admin.get("/api/me/tokens").json()["tokens"]] == ["active"]
+    rows = audit_rows(admin, "api_token.revoked")  # one by the person, one by the admin
+    assert [(r_["actor_user_id"], r_["target_type"], r_["target_id"]) for r_ in rows] == [
+        (sam_id, "api_token", str(one["id"])), (admin_id, "user", str(sam_id))]
+    assert rows[1]["details"] == {"reason": "admin", "count": 2}
+    events = sam.get("/api/me/activity").json()["events"]  # and sees who did it in their own activity
+    assert any(e["action"] == "api_token.revoked" and e["details"] == {"reason": "admin", "count": 2}
+               and str(e["actor_user_id"]) == str(admin_id) for e in events)
+    # nothing left to revoke: a second press changes nothing and writes no second row
+    assert revoke_tokens_of(admin, sam_id).json() == {"revoked": 0}
+    assert len(audit_rows(admin, "api_token.revoked")) == 2
+    # the person can make a new one
+    fresh = make(sam, "Fresh")
+    assert bearer(admin.app, fresh["token"]).status_code == 200
+
+
+def test_an_admin_can_revoke_their_own_tokens_and_while_the_switch_is_off(pair):
+    admin, sam = pair
+    mine, theirs = make(admin, "Admin's"), make(sam, "Sam's")
+    switch(admin, False)
+    assert revoke_tokens_of(admin, person_id(admin)).json() == {"revoked": 1}
+    assert revoke_tokens_of(admin, person_id(sam)).json() == {"revoked": 1}
+    assert [t["state"] for t in admin.get("/api/me/tokens").json()["tokens"]] == ["revoked"]
+    assert [t["state"] for t in sam.get("/api/me/tokens").json()["tokens"]] == ["revoked"]
+    switch(admin, True)
+    assert bearer(admin.app, mine["token"]).status_code == 401 and bearer(admin.app, theirs["token"]).status_code == 401
+
+
+def test_only_an_admin_who_entered_the_password_lately_can_revoke_a_persons_tokens(pair, fake_clock):
+    admin, sam = pair
+    token = make(sam, "Sam's")["token"]
+    sam_id = person_id(sam)
+    r = revoke_tokens_of(sam, sam_id)  # a member cannot, not even for themselves
+    assert r.status_code == 403 and r.json()["detail"] == "Admins only"
+    r = revoke_tokens_of(sam, person_id(admin))
+    assert r.status_code == 403
+    anon = TestClient(admin.app, base_url="https://localhost")
+    assert anon.post(f"/api/admin/users/{sam_id}/revoke-tokens").status_code == 401
+    assert bearer(admin.app, token).status_code == 200  # none of that revoked anything
+    fake_clock.advance(minutes=11)  # REAUTH_MINUTES is 10
+    stale = revoke_tokens_of(admin, sam_id)
+    assert stale.status_code == 403 and stale.json()["reauth_required"] is True
+    assert bearer(admin.app, token).status_code == 200
+    assert admin.post("/api/auth/reauth", json={"password": ADMIN_PASSWORD}).status_code == 200
+    assert revoke_tokens_of(admin, sam_id).json() == {"revoked": 1}
+    assert bearer(admin.app, token).status_code == 401
+
+
+@pytest.mark.parametrize("missing", [9999, 2**70, 0])
+def test_revoking_the_tokens_of_a_person_who_does_not_exist_is_404_and_changes_nothing(pair, missing):
+    admin, sam = pair
+    token = make(sam, "Sam's")["token"]
+    r = revoke_tokens_of(admin, missing)
+    assert r.status_code == 404
+    assert bearer(admin.app, token).status_code == 200 and len(audit_rows(admin, "api_token.revoked")) == 0
+    assert revoke_tokens_of(admin, "not-a-number").status_code == 400  # a bad id is a validation error
+
+
+def test_the_admin_list_shows_how_many_assistant_tokens_each_person_has_active(pair, fake_clock):
+    admin, sam = pair
+    sam_id, admin_id = person_id(sam), person_id(admin)
+
+    def counts() -> dict[int, int]:
+        users = admin.get("/api/admin/users").json()["users"]
+        assert all(set(u) >= {"assistant_tokens", "reset_link", "can_use_shared"} for u in users)
+        return {u["id"]: u["assistant_tokens"] for u in users}
+
+    assert counts() == {admin_id: 0, sam_id: 0}
+    make(sam, "Short", days=30)
+    long = make(sam, "Long", days=365)
+    make(admin, "Admin's")
+    assert counts() == {admin_id: 1, sam_id: 2}
+    assert sam.delete(f"/api/me/tokens/{long['id']}").status_code == 204  # revoked tokens are not counted
+    assert counts() == {admin_id: 1, sam_id: 1}
+    fake_clock.advance(days=31)  # expired ones are not counted either (asked of the code: the session is old by now)
+    conn = db(admin)
+    try:
+        assert api_tokens.active_counts(conn) == {admin_id: 1}
+    finally:
+        conn.close()
+    # only a number: no token, hash or prefix reaches the admin
+    dump = json.dumps(admin.get("/api/admin/users").json())
+    assert "kha_" not in dump and "token_hash" not in dump

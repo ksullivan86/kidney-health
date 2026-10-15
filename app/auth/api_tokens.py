@@ -19,8 +19,8 @@ whole token is stored, as hex, with its first 12 characters for display. The pla
 * **Limits.** Expiry 30, 90 (default) or 365 days; at most :data:`MAX_ACTIVE` active tokens a person;
   ``last_used_at`` is written at most once a minute per token.
 * **Revocation.** The person revokes one in Settings (``DELETE /api/me/tokens/{id}``); :func:`revoke_all`
-  ends every token of a person when their password is changed or reset and when the account is disabled or
-  deleted. Revoked and expired tokens stay in the list for :data:`KEEP_ENDED_DAYS` days, then the daily
+  ends every token of a person when their password is changed or reset, when the account is disabled or
+  deleted and when an admin uses ``POST /api/admin/users/{id}/revoke-tokens``. Revoked and expired tokens stay in the list for :data:`KEEP_ENDED_DAYS` days, then the daily
   housekeeping deletes them.
 
 Functions never commit unless they say so; the routes commit.
@@ -65,8 +65,9 @@ CHALLENGE = 'Bearer realm="kidney-health"'
 DENIED = "A valid assistant token is required (Settings → Assistant access)."
 SWITCHED_OFF = "Assistant access is turned off on this server. Ask your admin to turn it on."
 
-# Why every token of a person ended at once (the activity log's "reason"); "self" = revoked in Settings.
-REASONS = ("self", "password_changed", "password_reset", "account_disabled", "account_deleted")
+# Why every token of a person ended at once (the activity log's "reason"); "self" = revoked in Settings, "admin" =
+# an admin used Server administration → People → Revoke assistant tokens.
+REASONS = ("self", "password_changed", "password_reset", "account_disabled", "account_deleted", "admin")
 
 # Making tokens: a person may make a few in a row while setting up, not a stream (each one is audited).
 register_limit("api_tokens", 20, 3600, "Too many new tokens. Try again later.")
@@ -171,6 +172,16 @@ def active_count(conn: sqlite3.Connection, user_id: int) -> int:
         (int(user_id), clock.now_iso()),
     ).fetchone()
     return int(row[0])
+
+
+def active_counts(conn: sqlite3.Connection) -> dict[int, int]:
+    """How many active tokens each person has (people with none are not in the answer): Server administration
+    shows the count next to "Revoke assistant tokens"."""
+    rows = conn.execute(
+        "SELECT user_id, COUNT(*) AS n FROM api_tokens WHERE revoked_at IS NULL AND expires_at > ? GROUP BY user_id",
+        (clock.now_iso(),),
+    ).fetchall()
+    return {int(r["user_id"]): int(r["n"]) for r in rows}
 
 
 def create(conn: sqlite3.Connection, user_id: int, name: str, days: int,

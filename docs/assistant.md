@@ -81,6 +81,8 @@ name, how many entries (or which recipe), the day and the meal.
 * You change your password, or it is changed with a reset link (from an admin or the server's command line):
   every token of yours is revoked, because whoever knew the old password might have made one.
 * An admin disables or deletes your account (enabling it again brings no token back).
+* An admin uses **Revoke assistant tokens** on your row in Server administration → People: every active token of
+  yours ends at once (your activity says "revoked by an admin"), and you can make new ones.
 * While an admin requires you to choose a new password, your tokens do not work; the change then revokes them.
 * While the admin has assistant access **turned off**, no token works and no new one can be made. You can still
   see and revoke yours. When it is turned on again, tokens that have not expired or been revoked work again.
@@ -91,6 +93,10 @@ For each token: its name, its first 12 characters, the dates (made, last used, e
 **hash** of the whole token (SHA-256). The token itself is never stored, logged or sent again; a lost token cannot
 be recovered, only replaced. Tokens are not in your data export (like your sign-in sessions, they are a way in, not
 your data). Deleting your account deletes them.
+
+For 24 hours the server also keeps, for each save that carried a `request_key`, a one-way hash of the token's id and
+the key (never the key), what was saved (the entry ids or the saved meal's id) and when, so that a retry is
+recognised ([Tools that save](#tools-that-save)).
 
 ### For the person running the server
 
@@ -104,6 +110,9 @@ your data). Deleting your account deletes them.
   stops tokens of accounts that cannot sign in under the new one.
 * Use HTTPS beyond your own computer: the token travels in a request header, like a password.
 * `python -m app.admin reset-password <name> --stdin` and `disable-user <name>` revoke the account's tokens too.
+* **Revoke a person's tokens:** Server administration → People → Manage → **Revoke assistant tokens (n)** (shown while
+  the switch is on and the person has active tokens; `n` is how many; it asks once more). It ends all of that person's
+  active tokens, nobody else's, and is listed in their activity. Needs a recent password, like the other actions there.
 
 ### Security rules
 
@@ -142,8 +151,8 @@ works too), so what the assistant checked is what is saved.
 
 | Tool | What it does |
 |---|---|
-| `log_food(items, meal, date?, status?, purpose?)` | Saves up to 20 items as log entries for `meal` (breakfast, lunch, dinner or snack) on `date` (default today; any date the log accepts), `status` `eaten` (default) or `planned`. **All or nothing:** if any item is unresolved or ambiguous, nothing is saved (not even the foods that were found) and the answer is `{"saved": false, "unresolved": [...]}` with the questions to ask the person. Otherwise the answer lists the saved entries (id, food, amount, nutrients with unknown as `null`), the totals of what was saved and **the day's figures after saving** (the same answer as `get_today`). The entries are made by the same function as the log API, so they are ordinary entries: the person can edit or delete them in the app. A USDA food (an item with `fdc_id` that is not in the person's list yet) is **added to the person's food list first**, as the Food screen's USDA import would, in the same all-or-nothing step. `purpose`: `hypo` marks food eaten to treat a low (it counts in the day's totals, never toward a meal's carbohydrate goal, and is saved at once like any other entry: nothing is blocked, delayed or warned about); `none` clears the mark the app would add for a food it knows treats a low. |
-| `save_recipe(name, ingredients, servings, source_url?)` | Saves a recipe as a **saved meal** (Food → Saved meals). `ingredients` are placed like `check_meal` items; if any is unresolved nothing is saved. `name` is 1–60 characters, `servings` is how many servings the whole recipe makes (more than 0, at most 100). A saved meal has no servings count, so it holds the ingredients **for the whole recipe** and its note says "Makes N servings." and, if `source_url` was given, "Source: <link>". The link must be an `http` or `https` address of at most 900 characters, with no spaces or password; it is kept as text and **never opened** by the server. The answer gives the saved meal and the totals for the whole recipe and per serving (`null` means not listed, never 0). Nothing is eaten: use the app, or `log_food`, to log a share of it. |
+| `log_food(items, meal, date?, status?, purpose?, request_key?)` | Saves up to 20 items as log entries for `meal` (breakfast, lunch, dinner or snack) on `date` (default today; any date the log accepts), `status` `eaten` (default) or `planned`. **All or nothing:** if any item is unresolved or ambiguous, nothing is saved (not even the foods that were found) and the answer is `{"saved": false, "unresolved": [...]}` with the questions to ask the person. Otherwise the answer lists the saved entries (id, food, amount, nutrients with unknown as `null`), the totals of what was saved and **the day's figures after saving** (the same answer as `get_today`). The entries are made by the same function as the log API, so they are ordinary entries: the person can edit or delete them in the app. A USDA food (an item with `fdc_id` that is not in the person's list yet) is **added to the person's food list first**, as the Food screen's USDA import would, in the same all-or-nothing step. `purpose`: `hypo` marks food eaten to treat a low (it counts in the day's totals, never toward a meal's carbohydrate goal, and is saved at once like any other entry: nothing is blocked, delayed or warned about); `none` clears the mark the app would add for a food it knows treats a low. |
+| `save_recipe(name, ingredients, servings, source_url?, request_key?)` | Saves a recipe as a **saved meal** (Food → Saved meals). `ingredients` are placed like `check_meal` items; if any is unresolved nothing is saved. `name` is 1–60 characters, `servings` is how many servings the whole recipe makes (more than 0, at most 100). A saved meal has no servings count, so it holds the ingredients **for the whole recipe** and its note says "Makes N servings." and, if `source_url` was given, "Source: <link>". The link must be an `http` or `https` address of at most 900 characters, with no spaces or password; it is kept as text and **never opened** by the server. The answer gives the saved meal and the totals for the whole recipe and per serving (`null` means not listed, never 0). Nothing is eaten: use the app, or `log_food`, to log a share of it. |
 
 Rules for both:
 
@@ -154,6 +163,14 @@ Rules for both:
   name), never the token.
 * Saves count in the same **60 requests a minute** per token as everything else, so a model that loops on
   `log_food` stops after a minute's worth. There is no stricter limit for saving.
+* **Retries do not save twice (`request_key`).** Both tools take an optional `request_key` (8 to 64 letters, digits,
+  `-` or `_`). The tool descriptions tell the model to send a fresh one with each save it means to make, and to send
+  the same one again only to retry that save after an error or no answer. A second call by the same token with the
+  same key within 24 hours saves **nothing** and answers `{"saved": true, "duplicate": true, …}` with what the first
+  call saved (the same entry ids or saved meal), read from your data again, so it shows edits. If you deleted what the
+  first call saved, the answer says so (`"saved": false`) and still saves nothing; a new key saves. The server keeps
+  only a one-way hash of the token's id and the key, for 24 hours. Without a key a repeated call saves again. A bad key
+  is an error that saves nothing, and so is the same key on the other tool.
 * Neither tool edits or deletes anything, and neither returns insulin or medicine doses, medicine advice or lab
   interpretation.
 
@@ -288,7 +305,8 @@ which starts a server and speaks the protocol to it end to end ([tools/e2e/READM
   `Origin` with the public address. The usual `TRUSTED_PROXIES` rules apply ([security.md](security.md)).
 * Every request needs `assistant:read`. `tools/list` lists `log_food` and `save_recipe` only for a token that also
   has `assistant:log` (they carry the annotations `readOnlyHint: false`, `destructiveHint: false`,
-  `idempotentHint: false`, `openWorldHint: false`: a repeated call saves again), and the `initialize` instructions
+  `idempotentHint: false`, `openWorldHint: false`: a repeated call saves again unless it carries the same
+  `request_key`), and the `initialize` instructions
   of such a token add the confirm-first rule. A call to a saving tool with a read-only token is a tool result with
   `isError: true`, not a protocol error.
 * The server logs neither questions nor answers; a failing tool is logged with its name and the error only.

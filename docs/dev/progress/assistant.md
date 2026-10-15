@@ -1,5 +1,53 @@
 Status: complete (part C: the `assistant:log` scope, `log_food`, `save_recipe`; parts A and B below are complete)
 
+# Assistant follow-up: duplicate guard (`request_key`) and admin revoke of a person's tokens
+
+Status: complete (both changes done and tested; not pushed, no PR from here: the caller opens it). Worktree branch
+`worktree-agent-aca1796d63b29f262`, based on `main` at `0a54b19`.
+
+## What
+
+1. `log_food` and `save_recipe` take an optional `request_key` (8-64 of `A-Za-z0-9_-`). A second call by the same
+   token with the same key within 24 hours saves nothing and answers `{saved: true, duplicate: true, ...}` with what
+   the first call saved, read from the database again for that person (edits show; deleted rows are left out with a
+   note; if none is left: `saved: false, duplicate: true`, still nothing saved). Schema step 11 `assistant_request_keys`
+   (`m011_assistant_request_keys.py`): `key_hash` = SHA-256 of token id + key, `user_id`, `token_id`, `tool`,
+   `saved_json`, `created_at`. Code: `app/mcp/request_keys.py`, `app/mcp/tools.py` (`earlier_save`, `AlreadySaved`,
+   `logged_again`, `recipe_again`, `logged_answer`, `recipe_answer`).
+2. Server administration -> People -> Manage -> "Revoke assistant tokens (n)" (switch on and n > 0; inline confirm):
+   `POST /api/admin/users/{id}/revoke-tokens` (`RecentAdmin`, 404 unknown id, `api_tokens.revoke_all(reason="admin")`
+   which audits `api_token.revoked`), `assistant_tokens` (active count) in `GET /api/admin/users`; demo twin in
+   `js/mock/auth.js` (always 0, route answers `{revoked: 0}`).
+
+## Decisions (and why)
+
+* The key is written in the save's own transaction (`write_once`), so a failed or unresolved save stores no key. A
+  retry that raced the first call is caught inside the write lock (`AlreadySaved` rolls back and answers as a duplicate).
+* The same key on the other saving tool is an `isError` result (the model reused a key for something else), never a
+  silent mix-up. The items of a repeat are not compared with the first call's; the note tells the model to use a new
+  key if it was a different save.
+* All gone -> `saved: false` (not `true`) with `duplicate: true` and a note: the model must not tell the person the
+  food is in the log when it is not. A new key saves.
+* `saved_json` also keeps `added_to_foods` (and, for a recipe, `servings_made`, `source_url`) so the repeat's answer is
+  as complete as the first (the model may never have seen the first answer, which is why it retried).
+* The admin route reuses `revoke_all` (one audit row `api_token.revoked`, actor the admin, target the person, reason
+  `admin`) rather than a new audit action; it works while the switch is off; zero active tokens writes no row.
+* `tests/test_migration_m010.py` now expects "step 10 and any later step" (like `test_migration_m007.py`) because step 11
+  exists; the released step itself is untouched.
+
+## Verified
+
+    python -m pytest -q -p no:cacheprovider tests/test_mcp_write.py tests/test_migration_m011.py tests/test_api_tokens.py \
+        tests/test_auth_coverage.py tests/test_auth_modes.py tests/test_isolation_v03.py tests/test_settings_ui.py
+    node tests/js/run_vectors.mjs
+    # real browser (scratchpad script admin_revoke_e2e.py, Chromium from /opt/pw-browsers): 375x812 light and
+    # 1280x800 dark with the switch on (button with count, confirm, revoke, tokens revoked, activity entry, no console
+    # errors, no sideways scroll); switch off: no button.
+
+## Next (not done here)
+
+* Nothing pending for these two changes.
+
 # Assistant, step 1, part C: writes with a separate scope (`assistant:log`)
 
 Spec: `docs/dev/plans/assistant-step1.md` part C. Worktree branch `worktree-agent-a43b80dd0f8d1c1d8`. Its HEAD was

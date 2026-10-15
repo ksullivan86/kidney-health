@@ -45,6 +45,7 @@
     resetLink: (id) => request('POST', `/api/admin/users/${id}/reset-link`),
     revokeResetLink: (id) => request('DELETE', `/api/admin/users/${id}/reset-link`),
     revokeUser: (id) => request('POST', `/api/admin/users/${id}/revoke-sessions`),
+    revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
     deleteInvite: (id) => request('DELETE', `/api/admin/invites/${encodeURIComponent(id)}`),
@@ -502,7 +503,7 @@
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe',
   };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
-    account_deleted: 'account deleted' };
+    account_deleted: 'account deleted', admin: 'revoked by an admin' };
   function eventDetail(ev) {
     const d = ev.details || {};
     if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}`;
@@ -1035,6 +1036,11 @@
     li.append(userManage(u, self));
     return li;
   }
+  // The instance switch assistant.enabled as the admin's settings list has it (the demo has no such setting).
+  function assistantSwitchOn() {
+    const all = cache.adminSettings;
+    return !!(all && !(all instanceof Error) && all['assistant.enabled'] && all['assistant.enabled'].value === true);
+  }
   function userManage(u, self) {
     const name = u.display_name || u.username;
     const err = formError();
@@ -1089,6 +1095,22 @@
       if (self) { await KH.auth.signOut(); return; } // this device too: show the sign-in screen now
       await loadPeople();
     }));
+    // Assistant tokens (docs/assistant.md): only while the admin switch is on and the person has active ones.
+    const assistantTokens = Number(u.assistant_tokens) || 0;
+    if (assistantSwitchOn() && assistantTokens > 0) {
+      const rev = h('button', { class: 'btn secondary', type: 'button' }, `Revoke assistant tokens (${assistantTokens})`);
+      rev.addEventListener('click', () => confirm.inline(actions, rev, {
+        message: `Revoke ${assistantTokens === 1 ? 'the 1 active assistant token' : `all ${assistantTokens} active assistant tokens`} of ${name}? `
+          + `Any chat assistant using ${assistantTokens === 1 ? 'it' : 'them'} stops working at once. ${name} can make new ones in Settings.`,
+        confirmText: 'Revoke',
+        onConfirm: async () => {
+          const r = await A.revokeUserTokens(u.id);
+          await done(r.revoked === 1 ? `Revoked 1 assistant token of ${name}` : `Revoked ${r.revoked} assistant tokens of ${name}`);
+          return true;
+        },
+      }));
+      actions.append(rev);
+    }
     if (!self && u.status === 'active') {
       const dis = h('button', { class: 'btn danger', type: 'button' }, 'Disable account');
       dis.addEventListener('click', () => confirm.inline(actions, dis, {
@@ -1330,7 +1352,10 @@
           if (typeof KH.ai.renderAdmin === 'function') KH.ai.renderAdmin().catch((e2) => console.warn('AI providers:', e2));
           if (typeof KH.ai.renderAddSlot === 'function') KH.ai.renderAddSlot().catch((e2) => console.warn('AI buttons:', e2));
         }
-        if (key === 'assistant.enabled') renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
+        if (key === 'assistant.enabled') {
+          renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
+          loadPeople(); // "Revoke assistant tokens" shows only while the switch is on
+        }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
           loadPeople();

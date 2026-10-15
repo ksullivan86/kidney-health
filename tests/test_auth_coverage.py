@@ -13,7 +13,7 @@ from typing import Any, Iterable
 
 import pytest
 
-from conftest import TestClient
+from conftest import HTTPS_URL, TestClient
 
 PUBLIC = {
     ("get", "/api/auth/status"),
@@ -128,6 +128,25 @@ def test_the_assistant_token_routes_exist_and_need_a_session(anon_client):
     for method, path in sorted(ASSISTANT_TOKEN_ROUTES):
         r = anon_client.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
         assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+
+
+# An admin ends all of one person's assistant tokens (ARCHITECTURE.md "Assistant access tokens"): an admin route like
+# the other per-person ones (reset-link, revoke-sessions), so a session, the admin role and a recent password.
+ASSISTANT_ADMIN_ROUTES = {("post", "/api/admin/users/{user_id}/revoke-tokens")}
+
+
+def test_the_admin_route_that_revokes_assistant_tokens_exists_and_is_for_admins_only(two_clients):
+    admin, sam = two_clients
+    ops = api_operations(admin.app)
+    assert ASSISTANT_ADMIN_ROUTES <= ops, sorted(ASSISTANT_ADMIN_ROUTES - ops)
+    assert not ASSISTANT_ADMIN_ROUTES & PUBLIC
+    anon = TestClient(admin.app, base_url=HTTPS_URL)
+    for method, path in sorted(ASSISTANT_ADMIN_ROUTES):
+        url = re.sub(r"\{[^}]+\}", "1", path)
+        r = anon.request(method.upper(), url, json={})
+        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+        r = sam.request(method.upper(), url, json={})
+        assert r.status_code == 403 and r.json()["detail"] == "Admins only", (method, path, r.status_code)
 
 
 def test_a_valid_assistant_token_opens_no_api_route(client):
