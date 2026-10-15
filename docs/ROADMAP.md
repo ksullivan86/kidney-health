@@ -16,7 +16,7 @@ section. Last reviewed for the v0.3.0 release (2026-10-07).
 * A second factor for local sign-in: one-time codes (TOTP, `pyotp`; the biggest security gain left for a password-only health app, 3–5M) and/or passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * Read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency) — note 07 §6 "Later (v0.4)".
-* Import of `export.json` into another instance (`POST /api/me/import`; the v0.3 export format was designed for it) — note 07 §4.14 and §6 "Later (v0.4)".
+* Let **Import from a file** take the export `.zip` itself (small): read `export.json` out of the archive in the browser (`DecompressionStream('deflate-raw')` over the zip's central directory, with the size checked while reading) so nobody has to open the archive first; today the page says to. Follows the import (`app/data_import.py`).
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
 * One SQLite file per person (strongest isolation, deletion = removing a file) — note 07 §3.7 ("Revisit for v1.0").
 

@@ -24,7 +24,7 @@
   const PUBLIC_AUTH = new Set(['GET /api/auth/status', 'POST /api/auth/login', 'POST /api/auth/setup', 'POST /api/auth/register', 'POST /api/auth/reset',
     'POST /api/auth/reset/info']);
   const USER_VISIBLE_ACTIONS = new Set(['login.succeeded', 'login.failed', 'user.locked', 'user.password_changed', 'user.reset_link_issued',
-    'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created']);
+    'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created', 'data.imported']);
   const LINK_INVALID = 'This link is not valid any more. Ask your admin for a new one.';
   const APP_WORDS = ['kidneyhealth', 'kidney health', 'kidney-health', 'kidney_health', 'kidney health food log'];
   const SEQUENCES = ['abcdefghijklmnopqrstuvwxyz', '0123456789', 'qwertyuiopasdfghjklzxcvbnm', 'qwertzuiopasdfghjklyxcvbnm',

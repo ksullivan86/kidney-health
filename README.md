@@ -74,7 +74,7 @@ their own key). Each person in the household has their own account and their own
 * **Optional, off by default**: barcode lookups in Open Food Facts and USDA FoodData Central, and AI
   meal ideas and label photos through a provider your admin chooses ([below](#optional-barcode-lookups-and-ai)).
 * **Your data, your choice**: export everything you entered as a zip (JSON and CSV for your dietitian),
-  delete your account, see your own sign-in and AI activity.
+  import it into another server, delete your account, see your own sign-in and AI activity.
 * **No CDN, no tracking**: plain HTML/JS/CSS served by the app, light and dark themes, keyboard and
   screen-reader friendly, 44-pixel tap targets.
 
@@ -349,6 +349,7 @@ app/
   settings_registry.py    every runtime setting with its scope and default; settings_store.py resolves them
   crypto.py, credentials.py   encrypted API keys and per-request key resolution
   audit.py, account.py    activity log; data export and account deletion
+  data_import.py          import of a person's own export.json (POST /api/me/import)
   admin.py                admin CLI (python -m app.admin ...)
   db.py, migrations/      SQLite connection + append-only schema steps (1-7)
   nutrients.py, periods.py    pure rules: warnings, daily status, period maths

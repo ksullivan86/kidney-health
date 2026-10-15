@@ -61,7 +61,7 @@ Do not remove a line unless you understand what it stops.
 | **uvicorn `--no-proxy-headers`**; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXIES` | Clients cannot fake their address (to dodge rate limits) or fake HTTPS. |
 | **Host allowlist**: localhost, IP literals, the `PUBLIC_URL` host and `ALLOWED_HOSTS` | DNS rebinding: a web page whose name re-resolves to your server would otherwise be "same-origin" with the app. Unknown names get `400 Unknown host` and one log line naming the host to add. |
 | **Security headers** on every response: strict CSP, `frame-ancestors 'none'`, Trusted Types, `nosniff`, `no-referrer`, COOP/CORP; HSTS over HTTPS | Script injection, clickjacking, referrer leaks. The patient handbook at `/learn` gets its own, slightly looser policy ([below](#the-handbook-at-learn-its-own-policy-and-its-own-origin)). |
-| **`--limit-concurrency 64`**, `MAX_BODY_BYTES` 1 MiB, photos `MAX_IMAGE_BYTES` 4 MiB with a header check | Connection floods and oversized bodies. |
+| **`--limit-concurrency 64`**, `MAX_BODY_BYTES` 1 MiB, photos `MAX_IMAGE_BYTES` 4 MiB with a header check, an import of a person's own export `MAX_IMPORT_BYTES` 16 MiB (that one path only; the file is strictly validated and written in one transaction, `app/data_import.py`) | Connection floods and oversized bodies. |
 | **Local accounts by default** (`AUTH_MODE=local`) with a one-time setup code | No "first visitor becomes admin" race. Passwords of at least 15 characters (NIST SP 800-63B-4), Argon2id, throttling. |
 
 ### The handbook at `/learn`: its own policy, and its own origin

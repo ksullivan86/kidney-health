@@ -35,6 +35,8 @@
     changePassword: (b) => request('POST', '/api/me/password', b),
     deleteMe: (b) => request('DELETE', '/api/me', b),
     activity: () => request('GET', '/api/me/activity?limit=20'),
+    // The file is the person's own export.json; dry_run only counts, nothing is kept (app/data_import.py).
+    importData: (body, o) => request('POST', `/api/me/import?${['dry_run', 'merge', 'replace_profile'].filter((k) => o[k]).map((k) => `${k}=1`).join('&')}`, body),
     tokens: () => request('GET', '/api/me/tokens'),
     createToken: (b) => request('POST', '/api/me/tokens', b),
     revokeToken: (id) => request('DELETE', `/api/me/tokens/${encodeURIComponent(id)}`),
@@ -445,6 +447,7 @@
         msg.textContent = `Saved ${res.name} (${fmtBytes(res.bytes)}). Keep it somewhere private: it holds your health data.`;
       } catch (err) { msg.textContent = ''; throw err; }
     }, { id: 'set-export' })), msg);
+    wrap.append(importBlock());
 
     // Delete the account (not in AUTH_MODE=none: every request is user 1 there, which must stay)
     if (authMode() === 'none') {
@@ -489,6 +492,148 @@
     return wrap;
   }
 
+  // ---------------------------------------------------------------------------
+  // Import from a file (POST /api/me/import, app/data_import.py). The file is read in this browser, checked by the
+  // server with ?dry_run=1 (nothing is kept), and only imported when the person presses Import.
+  // ---------------------------------------------------------------------------
+  // The server's own limit is MAX_IMPORT_BYTES (16 MiB unless the admin changed it); this only saves a pointless upload.
+  const IMPORT_MAX_BYTES = 16 * 1024 * 1024;
+  // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider'];
+  const IMPORT_KINDS = [
+    ['log_entries', 'log entry', 'log entries'],
+    ['custom_foods', 'food of yours', 'foods of yours'],
+    ['shared_foods_kept_as_own', 'shared food kept as your own copy', 'shared foods kept as your own copies'],
+    ['shared_foods_linked', 'shared food linked to you', 'shared foods linked to you'],
+    ['meal_templates', 'saved meal', 'saved meals'],
+    ['lab_results', 'lab result', 'lab results'],
+    ['food_preferences', '“Not for me” food', '“Not for me” foods'],
+    ['settings', 'setting', 'settings'],
+  ];
+  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', food_preferences: '“Not for me” food', settings: 'Setting' };
+  const IMPORT_SKIP_SHOWN = 12;
+  const importCount = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  function importLines(counts) {
+    const lines = IMPORT_KINDS.filter(([k]) => counts[k] > 0).map(([k, one, many]) => importCount(counts[k], one, many));
+    if (counts.profile) lines.push('your profile and targets');
+    return lines;
+  }
+  // "2 log entries, 1 food of yours, 1 saved meal, 0 lab results" for the sizes of a file or an account.
+  function importSizes(r) {
+    return [importCount(r.log_entries || 0, 'log entry', 'log entries'), importCount(r.custom_foods || 0, 'food of yours', 'foods of yours'),
+      importCount(r.meal_templates || 0, 'saved meal', 'saved meals'), importCount(r.lab_results || 0, 'lab result', 'lab results')].join(', ');
+  }
+  function importBlock() {
+    const wrap = h('div', { class: 'import-block', id: 'set-import' }, subtitle('Import from a file', 'set-import-h'));
+    wrap.append(h('p', {}, 'Moving to another server, or starting again? Choose the export.json from an export of yours (open the .zip first). You see what would be added before anything is changed.'));
+    const msg = statusMsg('set-import-msg');
+    if (MOCK) {
+      wrap.append(h('p', { class: 'hint', id: 'set-import-demo' }, 'The preview has no server to import into. In the installed app you choose the export.json here, check what would be added, then import it.'), msg);
+      return wrap;
+    }
+    const fileId = 'set-import-file';
+    const input = h('input', { type: 'file', id: fileId, class: 'ai-file', accept: '.json,application/json', 'aria-describedby': 'set-import-hint set-import-msg' });
+    const result = h('div', { class: 'import-result', id: 'set-import-result' });
+    wrap.append(h('div', { class: 'field' }, h('label', { for: fileId }, 'export.json'), input,
+      h('span', { class: 'hint', id: 'set-import-hint' }, `Up to ${fmtBytes(IMPORT_MAX_BYTES)}. Passwords, sign-in sessions, assistant tokens and keys are never imported, even if a file has them.`)), msg, result);
+
+    let payload = null; // the parsed file, kept only while the person decides
+    const options = { merge: false, replace_profile: false };
+    // Forget the file and what was chosen; `keepFile` leaves the file input alone (the person has just picked a new one).
+    let latest = 0; // an answer to an older check is dropped
+    const reset = (keepFile) => { latest += 1; payload = null; options.merge = false; options.replace_profile = false; if (!keepFile) input.value = ''; clear(result); };
+
+    async function check(focusId) {
+      const mine = ++latest;
+      msg.textContent = 'Checking the file…';
+      try {
+        const res = await A.importData(payload, { ...options, dry_run: true });
+        if (mine !== latest) return;
+        msg.textContent = '';
+        render(res, focusId);
+      } catch (err) {
+        if (mine !== latest) return;
+        clear(result);
+        msg.textContent = err && err.cancelled ? 'Not checked: the password prompt was closed.' : '';
+        if (!err.handled && !err.cancelled) result.append(h('div', { class: 'form-error', role: 'alert' }, h('p', {}, err.detail || err.message)));
+      }
+    }
+    function option(id, key, label, help, checked) {
+      const box = h('input', { type: 'checkbox', id, 'aria-describedby': `${id}-help` });
+      box.checked = checked;
+      box.addEventListener('change', () => { options[key] = box.checked; check(id); });
+      return h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, label, h('span', { class: 'hint', id: `${id}-help` }, help)));
+    }
+    function list(items) { return h('ul', { class: 'about-list' }, items.map((t) => h('li', {}, t))); }
+    function render(res, focusId) {
+      clear(result);
+      const f = res.file || {};
+      const rec = f.records || {};
+      const heading = h('h4', { class: 'import-title', tabindex: '-1', id: 'set-import-title' }, 'What this file would add');
+      result.append(heading,
+        h('p', {}, `Exported ${f.exported_at ? fmtDate(f.exported_at) : 'at an unknown time'}${f.app_version ? ` by version ${f.app_version}` : ''}: ${importSizes(rec)}.`));
+      if (res.blocked) {
+        const e = res.blocked.existing || {};
+        result.append(note('caution', h('p', {}, `This account already has data (${importSizes(e)}), so nothing is imported unless you choose “Add to my existing data”.`)));
+      }
+      result.append(option('set-import-merge', 'merge', 'Add to my existing data', 'Whatever is already here is left out, so importing the same file again adds nothing.', options.merge));
+      if (rec.profile) {
+        result.append(option('set-import-profile', 'replace_profile', 'Also replace my profile, targets and settings',
+          'Off by default: targets and meal-guidance settings may have been agreed with your care team on this server. Your Open Food Facts and AI choices are never imported.', options.replace_profile));
+      }
+      if (res.can_import) {
+        const lines = importLines(res.counts);
+        result.append(h('p', { class: 'import-sub' }, lines.length ? 'Will be added:' : 'Nothing new to add.'));
+        if (lines.length) result.append(list(lines));
+        const there = IMPORT_KINDS.filter(([k]) => (res.already_there || {})[k] > 0).map(([k, one, many]) => importCount(res.already_there[k], one, many));
+        if (there.length) result.append(h('p', { class: 'import-sub' }, 'Already here, so left out:'), list(there));
+        const sk = res.skipped || { total: 0, shown: [] };
+        if (sk.total) {
+          result.append(h('p', { class: 'import-sub', id: 'set-import-skipped-h' }, `${sk.total} ${sk.total === 1 ? 'item' : 'items'} cannot be matched and will be left out:`),
+            list(sk.shown.slice(0, IMPORT_SKIP_SHOWN).map((s) => `${IMPORT_SKIP_WHAT[s.kind] || s.kind} ${s.label ? `“${s.label}”` : ''}: ${s.reason}.`)));
+          if (sk.total > IMPORT_SKIP_SHOWN) result.append(h('p', { class: 'hint' }, `And ${sk.total - IMPORT_SKIP_SHOWN} more.`));
+        }
+        if ((res.not_selected || []).length) result.append(h('p', { class: 'hint' }, `Not imported, because you did not choose it: ${res.not_selected.join(' and ')}.`));
+      }
+      result.append(h('details', { class: 'settings-details', id: 'set-import-never' }, h('summary', {}, 'What is never imported'), list(res.not_imported || [])),
+        h('details', { class: 'settings-details', id: 'set-import-rule' }, h('summary', {}, 'How duplicates are handled'), h('p', {}, res.rule || '')));
+      const go = action('Import', 'primary', async () => {
+        const done = await A.importData(payload, { ...options, dry_run: false });
+        const lines = importLines(done.counts);
+        const sentence = lines.length ? `Imported ${lines.join(', ')}.` : 'Nothing new was imported.';
+        reset();
+        msg.textContent = sentence;
+        toast(sentence, 'ok');
+        // Everything the other views keep is stale now.
+        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null; state.meals = null;
+        if (KH.labs) KH.labs.invalidate();
+        try { await KH.loadProfile(true); } catch (e) { /* the next visit loads it */ }
+      }, { id: 'set-import-go' });
+      go.disabled = !res.can_import;
+      const cancel = action('Cancel', 'secondary', async () => { reset(); msg.textContent = 'Nothing was imported.'; }, { id: 'set-import-cancel' });
+      result.append(h('div', { class: 'settings-actions' }, go, cancel));
+      const target = focusId ? $(`#${focusId}`) : heading;
+      if (target) target.focus();
+    }
+
+    input.addEventListener('change', async () => {
+      const file = input.files && input.files[0];
+      reset(true);
+      msg.textContent = '';
+      if (!file) return;
+      if (/\.zip$/i.test(file.name) || file.type === 'application/zip') { msg.textContent = 'That is the whole export. Open the .zip on your device and choose the export.json inside it.'; return; }
+      if (file.size > IMPORT_MAX_BYTES) { msg.textContent = `That file is ${fmtBytes(file.size)}; the largest this app imports is ${fmtBytes(IMPORT_MAX_BYTES)}.`; return; }
+      msg.textContent = 'Reading the file…';
+      let doc = null;
+      try { doc = JSON.parse(await file.text()); } catch (e) { doc = null; }
+      if (!doc || typeof doc !== 'object' || Array.isArray(doc)) { msg.textContent = 'This is not an export.json file (it is not JSON). Choose the export.json from your export.'; return; }
+      for (const key of IMPORT_NEVER_SENT) delete doc[key];
+      payload = doc;
+      await check(null);
+    });
+    return wrap;
+  }
+
   const ACTION_LABEL = {
     'setup.completed': 'Server set up', 'login.succeeded': 'Signed in', 'login.failed': 'Wrong password entered', 'user.locked': 'Account locked',
     'user.invited': 'Invite or account created', 'invite.revoked': 'Invite revoked', 'user.registered': 'Account registered',
@@ -498,6 +643,7 @@
     'user.password_changed': 'Password changed', 'user.must_change_password': 'New password required', 'sessions.revoked': 'Devices signed out',
     'session.revoked_reauth': 'Signed out after wrong passwords', 'proxy.username_conflict': 'Sign-in proxy name clash', 'settings.changed': 'Setting changed',
     'secret.set': 'Key saved', 'secret.removed': 'Key removed', 'ai_provider.changed': 'AI provider changed', 'export.created': 'Data exported',
+    'data.imported': 'Data imported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe',
@@ -514,6 +660,10 @@
     if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
+    if (ev.action === 'data.imported') {
+      return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results']]
+        .filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`).join(', ') || 'nothing new';
+    }
     if (ev.action === 'assistant.food_logged') return `${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}, ${d.status}, ${d.meal} on ${d.date}, with “${d.via}”`;
     if (ev.action === 'assistant.recipe_saved') return `“${d.name}” (${d.ingredients} ingredients), with “${d.via}”`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;

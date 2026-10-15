@@ -5,6 +5,7 @@ Registered limits (name: requests per window, keyed by the caller):
 * ``register``: 3 per client IP per hour (open registration, §4.9)
 * ``keys_test``: 10 per user per hour (``PUT /api/me/keys/*`` with ``test``: a key-checking oracle)
 * ``export``: 10 per user per hour (``GET /api/me/export.zip``)
+* ``import``: 20 per user per hour (``POST /api/me/import``: a check and then the import, each one request)
 * ``ai_probe``: 5 per user per hour (note 04 A5), ``barcode``: 60 per user per hour (note 03)
 
 Login, setup, reset and re-auth have their own layered throttle (:mod:`app.auth.throttle`).
@@ -40,6 +41,7 @@ def register_limit(name: str, max_requests: int, window_s: float, message: str =
 register_limit("register", 3, 3600, "Too many new accounts from this address. Try again later.")
 register_limit("keys_test", 10, 3600, "Too many key tests. Try again later.")
 register_limit("export", 10, 3600, "Too many exports. Try again later.")
+register_limit("import", 20, 3600, "Too many imports. Try again later.")
 register_limit("ai_probe", 5, 3600)
 register_limit("barcode", 60, 3600)
 

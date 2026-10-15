@@ -45,6 +45,7 @@ app/log.py                  log entries (eaten/planned), day/range/period summar
 app/periods.py              PURE FUNCTIONS (v0.2): period averages, previous period, interdialytic interval, week bounds
 app/meals.py                saved meals (templates), from-log, apply, shopping list (v0.2)
 app/profile.py              profile + targets (+ dialysis days, week start)
+app/data_import.py          import of a person's own export.json: POST /api/me/import ("Import of `export.json`")
 app/static/index.html       shell; v0.3 scripts in js/ and styles in css/ ("Frontend modules" below)
 data/foods.json             builtin food database (generated, committed)
 scripts/build_food_db.py    downloads USDA SR Legacy CSV zip and writes data/foods.json
@@ -1014,6 +1015,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes); 409 switch off, 400 five active, 429 after 20 in an hour |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `README.txt`; no passwords, sessions or keys |
+| `POST /api/me/import?dry_run=&merge=&replace_profile=` | user *(re-auth)* | body: the `export.json` file as `application/json` (up to `MAX_IMPORT_BYTES`, 16 MiB, for this path only) → the report below; 400 the file is refused (naming the record kind and position), 409 the account has data and `merge` was not set, 413 too large, 415 not JSON, 429 after 20 in an hour. See "Import of `export.json`" |
 
 ```json
 KeyItem = {"provider": "usda", "label": "USDA FoodData Central",
@@ -1023,8 +1025,84 @@ KeyItem = {"provider": "usda", "label": "USDA FoodData Central",
 export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
                "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
                "custom_foods", "linked_foods", "meal_templates", "lab_results", "ai_audit", "activity",
-               "food_preferences"}   // food_preferences: v0.3 guidance "Not for me" foods (schema step 5)
+               "food_preferences",   // food_preferences: v0.3 guidance "Not for me" foods (schema step 5)
+               "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
+               "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and "Not for me" list use (import)
+// linked_foods items: {id, name, source, fdc_id, linked_at, gtin, food}; food = the whole record, shaped like a custom_foods item (import)
 ```
+
+### Import of `export.json` (`POST /api/me/import`, `app/data_import.py`)
+
+The body is the exact JSON file the export wrote. The browser (`js/views/settings.js`, Settings → Account → Your
+data → Import from a file) reads it, leaves out the sections the import never reads (`user`, `ai_audit`,
+`activity`, `ai_usage`, `ai_consents`, `ai_provider`), calls it with `dry_run=1`, shows the report and imports
+with a second call. Both calls need the password entered recently, the app header (CSRF) and the signed-in
+person; they act on that person only (`user.id`), never on a name or id in the file.
+
+* **Reading the file** (`parse_export`, nothing is written until all of it is good). `json.loads` refuses NaN,
+  Infinity and numbers beyond a float. `format` must be `kidney-health-export` and `version` `1` (others: 400 with
+  the version named). Then pydantic models with `extra="forbid"`, strict types and bounded lists and strings, built
+  on the API's own limits and validators (`FoodCreate`'s bounds and `validate_nutrients`/`validate_flags`/
+  `validate_gtin`, `LogCreate`'s servings, grams, date and 500-character note, `MealTemplateCreate`'s name and
+  note, `LabCreate` for every lab result, `ProfileUpdate` for the profile with its targets, the settings
+  registry's own models for the settings), so an imported record is never one the API would refuse. Lists are
+  capped (30,000 entries, 5,000 own foods, 5,000 linked foods, 1,000 saved meals of at most 100 foods, 5,000 labs,
+  500 "Not for me" foods, 200 settings). Timestamps must be real UTC times from 2000 to tomorrow. A source address
+  must be an Open Food Facts product page or the FoodData Central address, a licence one the app writes. The first
+  problem refuses the whole file: `400 {"detail": "The file was not imported. log_entries[17].servings: …", "kind":
+  "log_entries", "index": 17}`; messages are cut at 200 characters and never repeat a value. Food ids must be
+  unique across `custom_foods`, `linked_foods` and `builtin_foods`. Top-level keys the export does not write are
+  refused. `user`, `ai_audit`, `activity`, `ai_usage`, `ai_consents` and `ai_provider` are accepted and **never read**.
+* **Never imported, even if present:** the `user` section, passwords, sessions, assistant tokens, AI keys, providers,
+  consents and usage, AI and sign-in activity, other people's data, instance settings, and the personal settings that
+  are consents (`food.off_consent`, `ai`). Ids are never taken from the file. The ids of entries, saved meals and labs
+  are dropped; `client_id` is dropped (a replay token of the device that made it).
+* **Foods first** (`Importer.resolve_foods`), each file id mapped to an id here: an own food equal to one the person
+  already has (name, brand, category, serving, values, flags, notes, barcode, hidden) is reused, else inserted by
+  `foods.insert_food` after the additive scan of `POST /api/foods`; a linked USDA food (`fdc_id`) or Open Food Facts
+  food (barcode) is linked with `foods.link_food` when this server has the same shared row (and its name, or serving
+  weight when the file has the record, agrees), otherwise it is kept as an own food made like `POST
+  /api/foods/{id}/copy` when the file carries its record, and otherwise reported as skipped. **A shared row is never
+  created from a file.** A built-in food is found by `builtin_foods[].fdc_id` (or its name when it has none); in a file
+  without `builtin_foods` an id that the file describes nowhere is tried as a built-in food id, and must carry one of
+  the names the file gives it. Only `source = 'builtin'` rows are ever matched by id.
+* **Then** entries (`insert_entry` with the file's `created_at`/`updated_at`, `purpose` kept as it was, `grams`
+  dropped for a food whose serving weight does not describe its values), saved meals (`insert_template`; a food that
+  cannot be matched is dropped from the meal, listed, and named in the meal's note ("Imported without 1 food that
+  could not be matched: …") so its totals never read as complete; a meal left with none is skipped), labs (the canonical value
+  recomputed from `entered_value` and `entered_unit`), "Not for me" (the app's limit of 500). **The nutrient numbers
+  of an entry are recomputed from its food and servings, never taken from the file.** An entry, saved-meal food or
+  "Not for me" food that cannot be matched is skipped and listed (kind, position, a short label and the reason).
+* **Duplicates.** If the account has any log entry, own food, saved meal or lab result and `merge` is not set, nothing is
+  imported: a dry run answers `200` with `can_import: false` and `blocked: {code: "account_not_empty", existing}`, the
+  import `409`. With `merge=1` what is already there is left out, counted against what the account had before the
+  import (so a file with the same entry twice adds one when the account has one): an entry by (date, meal, food,
+  servings, grams, status, created time), an own food as above, a saved meal by (name, note, slot, foods and servings),
+  a lab result by (test, date, value as shown), a "Not for me" food and a shared-food link by their keys.
+* **Profile.** Only with `replace_profile=1` (default off): the profile fields, the targets (replaced, not merged;
+  `profile.apply_profile_changes`, the body of `PUT /api/profile`; a stage or diabetes type the file marks "not chosen
+  yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs` and `food.scan_prefer_camera`
+  (validated by the registry; a locked one is skipped and listed). They are clinical settings the person may have
+  agreed with their care team on this server.
+* **One transaction.** After parsing, `BEGIN IMMEDIATE`, then everything above, then (import only) the audit row and
+  `COMMIT`; any error rolls back. A dry run does the same work and rolls it back, so its answer is exactly what the
+  import would do and it writes nothing (no row, no id, no revision). A locked database answers 503.
+* **Report** (both calls): `{dry_run, imported, can_import, blocked, file: {format, version, exported_at, app_version,
+  records}, options: {merge, replace_profile}, counts: {log_entries, custom_foods, shared_foods_kept_as_own,
+  shared_foods_linked, built_in_foods_matched, meal_templates, lab_results, food_preferences, profile, settings},
+  already_there: {…}, skipped: {total, shown (≤ 100 of {kind, index, label, reason}), by_kind, more}, not_selected,
+  not_imported, rule}`.
+* **Activity.** One `data.imported` row (user-visible) with `log_entries`, `custom_foods`, `meal_templates`,
+  `lab_results`, `food_preferences`, `merge` and `profile`: counts only, no content.
+* **Size and cost.** `MAX_IMPORT_BYTES` (16 MiB) is registered with `security.register_body_limit` for exactly
+  `/api/me/import`; every other path keeps `MAX_BODY_BYTES`. Measured: a year at eight entries a day is 3.5 MB as
+  the export writes it (2.2 MB minified); a 15 MB file with 13,000 entries imports in about 1.5 s and needs about
+  90 MB of extra memory (the shipped containers are limited to 512 MB). Twenty requests per person per hour
+  (`import` in `app/auth/ratelimit.py`), dry runs included.
+* **Tests:** `tests/test_data_import.py` (round trip into a fresh server, dry run writes nothing, all or nothing,
+  extra fields, version, NaN, 413, secrets in a crafted file, another person's rows and colliding ids, duplicates,
+  built-in and USDA foods, re-authentication, CSRF, the activity row), `tests/test_data_import_ui.py`,
+  `tests/test_auth_coverage.py`, and `test_isolation_v03.py` (every table the import writes).
 
 `last4` is shown only for keys of 20 characters or more. Keys are never returned, logged or
 audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/crypto.py`).

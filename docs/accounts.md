@@ -166,7 +166,7 @@ their next sign-in). Say so to the people you invite; [privacy.md](privacy.md) h
 
 The audit log (Admin → Activity) records sign-ins, failed sign-ins on existing accounts, invites,
 role and status changes, password resets, setting changes (old and new values), key changes
-(provider only, never the key), exports and deletions, each with who did it and which account it
+(provider only, never the key), exports, imports (counts only) and deletions, each with who did it and which account it
 concerned. It never holds health data or typed usernames of unknown accounts, and keeps entries for
 365 days (`AUDIT_RETENTION_DAYS`). A person's own "Recent sign-in activity" lists only events about
 their account (including what an admin did to it), never an admin's actions on other accounts.

@@ -66,6 +66,7 @@ ACTIONS: set[str] = {
     "secret.removed",
     "ai_provider.changed",
     "export.created",
+    "data.imported",  # a person's own export file was imported (app/data_import.py); counts only
     "account.deleted",
     "secret_key.rotated",
     "backup.created",
@@ -88,6 +89,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "secret.set",
         "secret.removed",
         "export.created",
+        "data.imported",
         "api_token.created",
         "api_token.revoked",
         "assistant.food_logged",

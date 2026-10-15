@@ -1111,7 +1111,10 @@ only), `secret.set` / `secret.removed` (provider and scope, **never** the value 
   Headers: `Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`,
   `Cache-Control: no-store`. `GET /api/log/export.csv` stays (scoped) for the dietitian.
 * Import of `export.json` into another instance: v0.4 (`POST /api/me/import`), designed against this
-  format now.
+  format now. *Built after v0.3.0: the contract is ARCHITECTURE.md "Import of `export.json`". Writing it
+  showed the file above could not say which built-in food an id was, nor carry the data of a shared food, so
+  the export also lists `builtin_foods` and gives each `linked_foods` item its `gtin` and whole `food`
+  record; version 1 stays.*
 * `DELETE /api/me` `{"password": "…", "confirm": "DELETE"}` (re-auth): refused with 409 for the last
   active admin ("Make someone else an admin first"). Otherwise, in one transaction, `audit
   account.deleted` then `DELETE FROM users WHERE id = ?` (cascades, prototyped), then

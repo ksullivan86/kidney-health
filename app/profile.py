@@ -142,18 +142,11 @@ def read_profile(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) 
     return get_profile(conn, user.id)
 
 
-@router.put("", response_model=Profile)
-def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Merge the provided fields into the profile.
-
-    ``targets`` is merged key by key: keys that are sent overwrite (``null`` means
-    "not tracked"), keys that are not sent keep their stored value. ``dialysis_days``
-    replaces the whole list (``null`` or ``[]`` clears it) and is stored for any
-    ``dialysis`` value; only the hemodialysis summary uses it.
-    """
-    current = get_profile(conn, user.id)
-    data = body.model_dump(exclude_unset=True)
-
+def apply_profile_changes(conn: sqlite3.Connection, user_id: int, data: dict[str, Any], current: dict[str, Any],
+                          *, replace_targets: bool = False) -> None:
+    """Write the fields of ``data`` (a validated :class:`ProfileUpdate` dump, set fields only) into the person's
+    profile row; the caller commits. ``current`` is :func:`get_profile` from before. ``replace_targets`` replaces the
+    stored targets instead of merging them key by key (an import of the person's own export, ``app/data_import.py``)."""
     sets: list[str] = []
     params: list[Any] = []
     for col in _NULLABLE_COLUMNS:
@@ -175,7 +168,7 @@ def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connect
             sets.append(f"{col} = ?")
             params.append(int(value) if col in _BOOL_COLUMNS else value)
     if data.get("targets") is not None:
-        merged = dict(current["targets"])
+        merged = {} if replace_targets else dict(current["targets"])
         merged.update(data["targets"])
         sets.append("targets_json = ?")
         params.append(json.dumps(merged))
@@ -184,8 +177,21 @@ def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connect
         params.append(json.dumps(data["dialysis_days"] or []))
 
     sets += ["updated_at = ?", "updated_by = ?"]
-    params += [utcnow(), user.id]
-    conn.execute(f"UPDATE user_profiles SET {', '.join(sets)} WHERE user_id = ?", [*params, user.id])
+    params += [utcnow(), user_id]
+    conn.execute(f"UPDATE user_profiles SET {', '.join(sets)} WHERE user_id = ?", [*params, user_id])
+
+
+@router.put("", response_model=Profile)
+def update_profile(body: ProfileUpdate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Merge the provided fields into the profile.
+
+    ``targets`` is merged key by key: keys that are sent overwrite (``null`` means
+    "not tracked"), keys that are not sent keep their stored value. ``dialysis_days``
+    replaces the whole list (``null`` or ``[]`` clears it) and is stored for any
+    ``dialysis`` value; only the hemodialysis summary uses it.
+    """
+    current = get_profile(conn, user.id)
+    apply_profile_changes(conn, user.id, body.model_dump(exclude_unset=True), current)
     conn.commit()
     return get_profile(conn, user.id)
 

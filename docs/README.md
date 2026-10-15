@@ -24,7 +24,7 @@ using the app; the pages below are for the people who run, maintain and check it
   checklists per runtime, secrets, residual risks.
 * [Accounts](accounts.md): sign-in modes, first start, passwords, adding people, lost passwords, keys,
   admin commands.
-* [Privacy](privacy.md): what the server stores, who can see it, export and deletion.
+* [Privacy](privacy.md): what the server stores, who can see it, export, import and deletion.
 * [Network allowlist](network-allowlist.md): every outbound host the app, the image build, CI and the
   development environment need, and when.
 * [Deployment assets](../deploy/README.md): what each file in `deploy/` is for.

@@ -283,21 +283,25 @@ def insert_entry(
     status: str = "eaten",
     purpose: str | None = None,
     client_id: str | None = None,
+    created_at: str | None = None,
+    updated_at: str | None = None,
 ) -> int:
     """Insert one entry with its nutrient snapshot; the caller commits. A ``client_id`` the person
-    already used raises ``sqlite3.IntegrityError`` (index ``log_client_id``)."""
+    already used raises ``sqlite3.IntegrityError`` (index ``log_client_id``). ``created_at`` and ``updated_at``
+    are for an import of the person's own export (``app/data_import.py``); left out they are now."""
     if status not in ENTRY_STATUSES:
         raise ValueError(f"status must be one of {', '.join(ENTRY_STATUSES)}")
     if purpose not in (None, HYPO_PURPOSE):
         raise ValueError("purpose must be 'hypo' or None")
     snapshot = scale_nutrients(raw_nutrients(food), servings)
     now = utcnow()
+    created = created_at or now
     cur = conn.execute(
         f"""INSERT INTO log_entries (user_id, date, meal, food_id, food_name, servings, grams, note, status,
                 {_NUTRIENT_COLS}, purpose, client_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?)""",
         (int(user_id), date, meal, food["id"], food["name"], servings, grams, note, status,
-         *[snapshot[k] for k in NUTRIENT_KEYS], purpose, client_id, now, now),
+         *[snapshot[k] for k in NUTRIENT_KEYS], purpose, client_id, created, updated_at or created),
     )
     return int(cur.lastrowid)
 
