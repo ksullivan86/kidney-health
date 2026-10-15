@@ -14,7 +14,6 @@ import pytest
 from conftest import insert_users
 
 from app import admin, audit, credentials, crypto, db
-from app.settings_store import create_settings_tables
 
 REPO = Path(__file__).resolve().parent.parent
 KEY_OLD = "o" * 40

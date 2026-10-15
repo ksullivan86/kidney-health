@@ -24,7 +24,7 @@ from ..nutrients import NUTRIENT_KEYS, build_projected_alerts, daily_status, rou
 from . import messages as M
 from . import rules as R
 from .budget import Room, day_totals, meal_room
-from .fits import eligible_foods, familiar_option, food_core, public, resolve_items, room_json, saved_meals_for, \
+from .fits import eligible_foods, familiar_option, food_core, resolve_items, room_json, saved_meals_for, \
     totals_json, usual_meals_for
 from .score import (
     Counter,

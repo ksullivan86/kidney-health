@@ -43,7 +43,6 @@ import argparse
 import difflib
 import json
 import re
-import shutil
 import sys
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
