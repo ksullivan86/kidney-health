@@ -433,6 +433,12 @@ NO_SIGNIN_ENV_ONLY: set[str] = set()
 
 AiPreferencesText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
 
+# How much a person trusts the Ask chat to save for them (assistant step 2, part C): "ask" = a card to confirm before
+# every save (the default), "conversation" = saves at once in a conversation the person trusted (the page holds that,
+# ends with New conversation or after 12 hours), "always" = saves at once. Both of the last two need the admin switch
+# ``ai.allow_trusted_saves``; with it off the effective choice is "ask" whatever is stored.
+TRUST_CHOICES: tuple[str, ...] = ("ask", "conversation", "always")
+
 
 class AiPreferences(BaseModel):
     """The person's AI choices (note 04 R4 "User settings"; Settings → AI ideas). No key field (§9 A6):
@@ -444,6 +450,7 @@ class AiPreferences(BaseModel):
     provider: Annotated[str, StringConstraints(pattern=r"^(auto|own|shared:[1-9][0-9]{0,17})$")] = "auto"
     share_age_sex: bool = False  # send a 10-year age band and sex with meal requests
     preferences: AiPreferencesText = ""  # e.g. "vegetarian, no fish" (sent as untrusted data)
+    trust: Annotated[str, StringConstraints(pattern=r"^(ask|conversation|always)$")] = "ask"  # TRUST_CHOICES; Settings → AI
 
 
 register(
@@ -535,17 +542,31 @@ register(
         "answered by the app's rules without asking the AI. Each question can use several AI calls.",
     ),
     SettingDef(
+        key="ai.allow_trusted_saves",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_ALLOW_TRUSTED_SAVES",
+        label="Let people trust Ask to save without asking",
+        help="Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and "
+        "recipes at once (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only "
+        "when the person presses Save. Either way the app's numbers, the low and emergency rules and the dose checks stay "
+        "on, and every save can be undone.",
+    ),
+    SettingDef(
         key="ai",
         model=AiPreferences,
         default=AiPreferences(),
         scope="user",
         label="AI ideas",
-        help="opt_in, provider (auto, own or shared:<id>), share_age_sex and preferences (at most 200 characters).",
+        help="opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust "
+        "(ask, conversation or always).",
     ),
 )
 NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
-     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled"}
+     "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled",
+     "ai.allow_trusted_saves"}
 )
 
 

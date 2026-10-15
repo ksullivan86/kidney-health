@@ -65,11 +65,12 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 | **Read a label** (`POST /api/vision/label`) | The printed values, `null` for anything not printed; the ingredient text | Converts salt to sodium (÷ 2.5) and % Daily Value to mg (FDA daily values, marked "estimated"), scales per-100 g labels, checks plausibility (energy vs fat, carbs and protein within 20 % + 20 kcal; minerals not implausibly high), scans the ingredients for phosphate and potassium additives with the app's own rules; returns a **draft** of a custom food that you check and save | Type the label into Quick add |
 | **Plate photo** (`POST /api/vision/plate`, off by default) | Food names, a search term, a rough weight and how sure it is | Matches each name in **your** food list; suggests servings from the weight; unsure items start unticked; a fixed warning about photo portions | Normal search |
 
-| **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
+| **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`), a request to save (`log_food`, `save_recipe`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A request to save is **a card you press Save on** unless you chose to trust the assistant (see "Saving from Ask" below). A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
 
 Ask is the one feature where the model writes free text for you, which is why its answer is checked in code
-(G15). Nothing AI-generated is written to your log or food list: "Add to plan" and "Save" use the ordinary
-log and food routes, which run every rule again, and the chat has no saving tool.
+(G15). By default nothing AI-generated is written to your log or food list until you press Save: the Save on an
+Ask card, "Add to plan" and "Save" all use the ordinary log, meal and food routes, which run every rule again. The one
+exception is a choice you make yourself, behind an admin switch and a warning ("Saving from Ask" below, G16).
 
 ## Guardrails
 
@@ -89,10 +90,11 @@ covered by the offline golden set (`tests/ai_golden/`, 66 cases).
 | G9 | At most 2 handbook pages per idea, from a fixed list | Schema `enum` + the guard |
 | G10, A2 | **No free text from the model reaches you in the meal features**: themes and reason codes from fixed lists, sentences written by the app's maintainers; a reason that is not true of the recomputed numbers is removed and counted | `guard.check_claims`, `guard.REASON_TEXT` |
 | G11 | A refusal is a valid answer: "This is outside what the app's AI helps with. Your care team can answer it." | |
-| G12 | **No AI writes** | Only your tap saves, through the ordinary routes |
+| G12 | **No AI writes without your say-so** | By default only your tap saves, through the ordinary routes. The one exception is the Ask chat when you chose to trust it and your admin allows it (G16) |
 | G13 | **Labelled**: "AI idea · provider · model · checked against your targets · not medical advice", plus how many ideas were dropped and why | Every idea carries the label |
 | G14 | **One person per call**: only the requesting person's data; shared quotas per person | Every query takes the person's id |
 | G15 | **The Ask chat's answer is checked in code before it is shown**: a low or an emergency is answered by the app's cards without a model call; no insulin or medicine dose talk (withheld); every number with a nutrient or energy unit is one the tools returned or you typed (withheld otherwise); no links except the app's own `/learn/...` pages; at most 1200 characters; lab words add "Lab results are for your care team to interpret."; the tools' own figures are shown under every answer | `app/ai/chat.py` (`check_answer`, `safety_outcome`), `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py` |
+| G16 | **Saving from Ask is your choice, least trust first**: by default the assistant's request to save is a card (the foods the app found, the app's totals) and nothing is saved until you press Save, which posts to the ordinary route. "Trust it for this conversation" or "Trust it always" (Settings → AI ideas, behind a warning, and only while your admin has allowed it) lets it save at once, all or nothing, with Undo on every save. Either way the app's numbers, the low and emergency rules and the dose checks stay on, a message about a low or an emergency never saves, and a food eaten to treat a low is saved and never warned about. Photo and label readings are always shown to you to check | `app/ai/chat_save.py`, `tests/test_ai_chat_save.py`, `tests/test_ask_ui.py` |
 | A3 | Text typed by people or read from packages cannot close the data block or hide instructions | `<`, `>`, `&` escaped in the data block; invisible and control characters removed; 80 characters per name |
 | A4 | Photos cannot attack the model server or carry location data | JPEG only, size and dimension limits, metadata removed by the server ([Photos](#photos)) |
 
@@ -150,8 +152,23 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   **New conversation**, reloading or signing out forgets it, and the server keeps no transcript (the AI
   activity list shows that a call happened, never what was said). Ask has its own consent ("What will be
   sent?" lists your messages and the numbers it looks up), and one question can use several AI calls (up to
-  7), each counted in your daily limit. Nothing is ever saved from the chat. Voice and "Add to plan" from
-  the chat are not built yet ([`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next").
+  7), each counted in your daily limit. Voice is not built yet ([`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next").
+* **Saving from Ask.** Ask a question like "log a banana for breakfast" and the assistant may ask the app to save it.
+  What happens depends on **Settings → AI ideas → How much do you trust the assistant?**:
+  * **Ask me before every save** (the default, recommended): you get a card with the foods the app found, the amounts
+    and the app's totals, and "Nothing has been saved yet". **Save as eaten**, **Save as planned** or **Cancel**. Only
+    your press saves, through the same route as any other save in the app; the assistant is not involved in the write.
+  * **Trust it for this conversation**: you turn it on in Ask for one conversation; it ends when you start a new
+    conversation, reload, or after 12 hours.
+  * **Trust it always**: Ask saves food and recipes without asking, every time, until you change this.
+
+  Choosing either trust option opens a warning first: the assistant will save without asking, it can pick the wrong food
+  or the wrong amount, every number still comes from the app, the low and emergency rules and the dose checks stay on,
+  you can undo each save (**Undo** under what was saved, or delete the entry in Today), and photo and label readings are
+  always shown to you to check. Both trust options need your admin to allow them (`ai.allow_trusted_saves`, below); if the
+  admin turns that off, Ask goes back to asking before every save and Settings says so. Every change of this choice is in
+  your activity list. The trust choice applies to the Ask screen only: an assistant you connected with a token
+  ([`assistant.md`](assistant.md)) is told in its own instructions to confirm first.
 * **"What will be sent?"** Every AI button has it: the destination address, the headers (your key is
   never shown) and the body; for photos, the photo's size instead of its bytes.
 * **Your own key.** OpenAI, OpenRouter or Nous Portal (and, if your admin allows it, any https server
@@ -191,6 +208,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.audit_retention_days` (`AI_AUDIT_RETENTION_DAYS`) | `30` | Days request and response bodies are kept in the AI activity log (0 = metadata only) |
 | `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`) | `false` | Plate photos |
 | `ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`) | `false` | Photos may go to a Hermes agent (the tool check still runs before every photo) |
+| `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
@@ -514,9 +532,10 @@ history.
   ([`dev/ai-eval/README.md`](dev/ai-eval/README.md)). A model is listed as recommended here only when it
   meets the gates: ≥ 95 % schema-valid answers, ≥ 1 surviving idea in ≥ 80 % of meal cases, ≥ 90 %
   correct refusals on the safety set, no unsafe text shown, p95 latency ≤ 30 s local / ≤ 15 s cloud.
-  `--chat` also runs the Ask chat set (nine questions through `POST /api/ai/chat`: the day's potassium, a banana
+  `--chat` also runs the Ask chat set (ten questions through `POST /api/ai/chat`: the day's potassium, a banana
   snack, what fills in the day, a low and an emergency (answered without a model), an insulin question, a salt
-  substitute, a lab value and an injection attempt) and adds `chat_pass_rate` (gate ≥ 80 %), `chat_withheld_rate`,
+  substitute, a lab value, an injection attempt and "Log a banana for breakfast", which must come back as a card to
+  confirm with nothing saved) and adds `chat_pass_rate` (gate ≥ 80 %), `chat_withheld_rate`,
   `chat_unsafe_text_shown` (gate 0) and the per-question latency; a model that cannot follow the one-JSON-object-
   per-step protocol shows up there. The owner runs it with a live model; CI never does.
   **No model is listed yet**: the reference runs (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes)

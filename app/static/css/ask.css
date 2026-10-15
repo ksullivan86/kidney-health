@@ -39,3 +39,27 @@
 .ask-composer textarea:focus { outline: 3px solid var(--focus); outline-offset: 0; border-color: transparent; }
 .ask-composer .btn { flex: none; min-height: var(--tap); }
 .ask-line { margin: 0; }
+
+/* Saving from the chat (js/views/ask.js "Saving from the chat"): the trust line, the confirm card, the saved card. */
+.ask-trust { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); min-width: 0; }
+.ask-trust-line { margin: 0; overflow-wrap: anywhere; }
+.ask-trust-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ask-trust-actions .btn { min-height: var(--tap); }
+
+.ask-save { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ask-save.ask-pending { border-left-color: var(--caution); }
+.ask-save h3 { margin: 0; font-size: 0.95rem; overflow-wrap: anywhere; }
+.ask-save-items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ask-save-items li { display: flex; flex-direction: column; gap: 1px; padding-bottom: 6px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.ask-save-items li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ask-save-name { font-weight: 600; }
+.ask-save-amount { font-variant-numeric: tabular-nums; }
+.ask-save-meta, .ask-save-status, .ask-save-error, .ask-save-note { margin: 0; }
+.ask-save-error:empty, .ask-save-status:empty { display: none; }
+.ask-save-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-save-actions .btn { min-height: var(--tap); flex: 1 1 auto; }
+
+/* The warning sheet (js/views/ai.js confirmTrust) and the choice in Settings. */
+.trust-points { margin: 8px 0; padding-left: 1.3em; list-style: disc; font-size: 0.95rem; }
+.trust-points li { margin: 0 0 4px; padding-left: 2px; }
+.ai-trust { min-width: 0; }

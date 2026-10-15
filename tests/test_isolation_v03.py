@@ -21,6 +21,7 @@ from typing import Any, Iterator
 
 import pytest
 
+import test_ai_chat_save
 import test_ai_routes as ai_tests
 import test_api_tokens
 import test_auth_coverage
@@ -67,6 +68,7 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "ai_audit": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "api_tokens": ("test_api_tokens.test_another_persons_tokens_are_invisible_and_404",),  # assistant access, step 10
     "assistant_request_keys": ("test_mcp_write.test_a_key_is_independent_for_another_token_and_for_another_person",),  # step 11
+    "assistant_ask_keys": ("test_ai_chat_save.test_a_request_id_is_independent_for_another_person",),  # step 13
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -80,7 +82,8 @@ SHARED_OR_SYSTEM = {
 }
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
-           "test_mcp_write": test_mcp_write, "test_data_import": test_data_import}
+           "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
+           "test_ai_chat_save": test_ai_chat_save}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

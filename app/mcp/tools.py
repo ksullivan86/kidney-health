@@ -84,11 +84,25 @@ class ToolError(Exception):
     """A short, safe message for the model (an ``isError`` result)."""
 
 
+ASK_VIA = "Ask"
+
+
+@dataclass(frozen=True)
+class Asker:
+    """The in-app Ask chat saving for the person (assistant step 2, part C): no token, so its saves are audited as
+    ``via: "Ask"`` (never a token name) and its duplicate keys live in ``assistant_ask_keys``. Quacks like the token
+    info the saving tools read (``id`` None, ``name``)."""
+
+    id: None = None
+    name: str = ASK_VIA
+
+
 @dataclass(frozen=True)
 class Call:
     request: Request
     conn: sqlite3.Connection
     user: User
+    asker: Asker | None = None  # set only by the Ask chat, for log_food and save_recipe
 
 
 # --------------------------------------------------------------------------- #
@@ -883,8 +897,13 @@ class RecipeArgs(_Args):
     check_url = field_validator("source_url")(check_source_url)
 
 
-def token_info(call: Call) -> api_tokens.TokenInfo:
-    return call.request.state.api_token
+def token_info(call: Call) -> api_tokens.TokenInfo | Asker:
+    return call.asker if call.asker is not None else call.request.state.api_token
+
+
+def audit_target(token: api_tokens.TokenInfo | Asker) -> tuple[str | None, int | None]:
+    """What a food-log activity row points at: the token that saved; the Ask chat has none (the row says ``via: Ask``)."""
+    return ("api_token", token.id) if token.id is not None else (None, None)
 
 
 def write_once(call: Call, placed: list[Placed], body: Callable[[list[dict[str, Any]]], Any]) -> Any:
@@ -990,7 +1009,8 @@ def log_food(call: Call, args: LogArgs) -> dict[str, Any]:
                 date=day, meal=args.meal, food_id=one.food_id, status=args.status, purpose=args.purpose,
                 servings=None if one.by_grams else one.servings, grams=one.quantity if one.by_grams else None)
             ids.append(food_log.insert_logged(call.conn, call.user.id, create))
-        audit(call.conn, call.user.id, "assistant.food_logged", "api_token", token.id, ip=request_ip(call.request),
+        target_type, target_id = audit_target(token)
+        audit(call.conn, call.user.id, "assistant.food_logged", target_type, target_id, ip=request_ip(call.request),
               via=token.name, entries=len(ids), status=args.status, meal=args.meal, date=day, foods_added=len(added))
         if key is not None:
             request_keys.remember(call.conn, call.user.id, token.id, "log_food", key,

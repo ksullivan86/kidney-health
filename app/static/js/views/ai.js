@@ -8,7 +8,9 @@
    * The Add view's AI buttons (#ai-add-slot): AI meal ideas, describe a meal, read a label, plate photo.
      Guidance can show AI ideas too: KH.ai.openIdeas({date, meal}) or KH.ai.mountIdeas(el, {date, meal}).
    * The Ask screen (js/views/ask.js) uses this file's consent flow (withConsent with purpose 'chat'), its API
-     object (api.chat) and its alert cards (cardEl).
+     object (api.chat and the routes a saved card uses) and its alert cards (cardEl).
+   * How much the person trusts the assistant to save (Settings → AI ideas, assistant step 2 part C): the choice
+     (ask | conversation | always), and the warning sheet (confirmTrust) that comes before conversation or always.
 
    Rules: AI answers are rendered with textContent only (titles and sentences come from the server's
    templates; numbers from its rule check); nothing is logged or saved without a tap, and then through
@@ -94,6 +96,11 @@
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
     createFood: (b) => request('POST', '/api/foods', b),
     addEntry: (b) => request('POST', '/api/log', b),
+    // The routes the Ask screen's cards use (the normal save, import and delete routes; the model is never involved).
+    importUsda: (fdcId) => request('POST', '/api/foods/usda/import', { fdc_id: fdcId }),
+    createMeal: (b) => request('POST', '/api/meals', b),
+    deleteEntry: (id) => request('DELETE', `/api/log/${id}`),
+    deleteMeal: (id) => request('DELETE', `/api/meals/${id}`),
   };
 
   // A photo goes as the raw JPEG body (no multipart, note 03 R8): the shared JSON client cannot send it.
@@ -209,7 +216,8 @@
   const sheetEl = $('#sheet-ai');
   const consentEl = $('#sheet-ai-consent');
   const sentEl = $('#sheet-ai-sent');
-  for (const d of [sheetEl, consentEl, sentEl]) if (d) sheets.setup(d);
+  const trustEl = $('#sheet-ai-trust');
+  for (const d of [sheetEl, consentEl, sentEl, trustEl]) if (d) sheets.setup(d);
 
   function fillSheet(dlg, title, sub) {
     $('.sheet-title', dlg).textContent = title;
@@ -218,14 +226,15 @@
     subEl.hidden = !sub;
     return { body: clear($('.sheet-body', dlg)), foot: clear($('.sheet-foot', dlg)) };
   }
-  // Resolves true when `okButton` is pressed, false when the sheet closes otherwise.
-  function awaitChoice(dlg, okButton, trigger) {
+  // Resolves true when `okButton` is pressed, false when the sheet closes otherwise. `focus` is the button that has
+  // the focus when the sheet opens (the OK button unless a caller wants the safe choice first).
+  function awaitChoice(dlg, okButton, trigger, focus = okButton) {
     return new Promise((resolve) => {
       let done = false;
       const finish = (v) => { if (!done) { done = true; resolve(v); } };
       okButton.addEventListener('click', () => { finish(true); dlg.close(); });
       dlg.addEventListener('close', () => finish(false), { once: true });
-      sheets.open(dlg, trigger, okButton);
+      sheets.open(dlg, trigger, focus);
     });
   }
 
@@ -830,12 +839,90 @@
           'Only what you switch on below: meal ideas, swaps and day plans made from foods the app\'s rules already allowed '
           + '(and checked again), turning what you describe into search words, reading a label photo into a draft you check '
           + 'and, if your admin allows it, naming the foods in a plate photo or answering a short question in Ask (the app checks '
-          + 'every answer before you see it). It cannot give insulin or medicine doses, or save anything by itself.'),
+          + 'every answer before you see it). It cannot give insulin or medicine doses. In Ask it can propose saving food or a recipe; '
+          + 'by default nothing is saved until you press Save, and you can choose to trust it to save without asking if your admin allows that.'),
         h('li', {}, h('b', {}, 'Whose key pays, and who can read the request? '),
           'With the server\'s shared provider, the server\'s key pays and your admin can read what is sent. With your own key, '
           + 'your account at that company pays. Before you start, the consent step says where requests go, and '
           + '“What will be sent?” shows each request before it leaves.')),
       more ? h('p', { class: 'notes-learn' }, more) : null);
+  }
+
+  // ---------------------------------------------------------------------------
+  // How much the person trusts the assistant to save (docs/dev/plans/assistant-step2.md "Part C")
+  // ---------------------------------------------------------------------------
+  const TRUST_CHOICES = [
+    ['ask', 'Ask me before every save (recommended)',
+      'Ask shows a card with what it would save. Nothing is saved until you press Save.'],
+    ['conversation', 'Trust it for this conversation',
+      'Ask saves food and recipes without asking while you chat. You turn this on in Ask; it ends when you start a new conversation or after 12 hours.'],
+    ['always', 'Trust it always',
+      'Ask saves food and recipes without asking, every time, until you change this.'],
+  ];
+  const TRUST_DONE = {
+    ask: 'Ask will ask you before every save.',
+    conversation: 'Ask can be trusted for one conversation at a time. Turn it on in Ask.',
+    always: 'Ask will save food and recipes without asking you. Each save can be undone.',
+  };
+  const TRUST_WARNING = 'The assistant will save food and recipes without asking you first. It can pick the wrong food or the wrong amount.';
+  const TRUST_POINTS = [
+    'Every number still comes from the app. The low and emergency rules and the dose checks always stay on.',
+    'You can undo each save, from the chat or from Today.',
+    'Photo and label readings are always shown to you to check first.',
+  ];
+  const TRUST_SCOPE = {
+    conversation: 'This lasts for one conversation: it ends when you start a new conversation or after 12 hours.',
+    always: 'This stays on until you change it here.',
+  };
+  // The warning sheet. Resolves true only when "I understand, trust it" is pressed; closing it any other way (Keep asking
+  // me, Escape, the close button) is false and changes nothing. The focus starts on the safe button.
+  async function confirmTrust(kind, trigger) {
+    if (!trustEl) return false;
+    const { body, foot } = fillSheet(trustEl, 'Trust the assistant to save for you?',
+      kind === 'always' ? 'Trust it always' : 'Trust it for this conversation');
+    body.append(note('caution', h('p', {}, TRUST_WARNING)),
+      h('ul', { class: 'trust-points' }, TRUST_POINTS.map((t) => h('li', {}, t))),
+      h('p', { class: 'hint' }, TRUST_SCOPE[kind] || ''));
+    const keep = h('button', { class: 'btn secondary', type: 'button' }, 'Keep asking me');
+    keep.addEventListener('click', () => trustEl.close());
+    const ok = h('button', { class: 'btn primary', type: 'button' }, 'I understand, trust it');
+    foot.append(h('span', { class: 'spacer' }), keep, ok);
+    return awaitChoice(trustEl, ok, trigger, keep);
+  }
+
+  // The choice in Settings → AI ideas. `save(patch, text)` is the section's own saver; the server writes the
+  // activity-log row for every change. Shown only while the admin has the Ask chat on.
+  function trustPart(me, save) {
+    const current = () => (me.settings && me.settings.trust) || 'ask';
+    const allowed = !!me.trusted_saves_allowed;
+    const name = uid('ai-trust');
+    const fs = h('fieldset', { class: 'field ai-trust', id: 'set-ai-trust' }, h('legend', {}, 'How much do you trust the assistant?'));
+    fs.append(h('p', { class: 'hint' }, 'This is about Ask, the chat. Photo and label readings are always shown to you to check, whatever you choose.'));
+    const radios = new Map();
+    const show = () => { for (const [value, radio] of radios) radio.checked = value === current(); };
+    for (const [value, label, hint] of TRUST_CHOICES) {
+      const id = uid('ai-trust-opt');
+      const radio = h('input', { type: 'radio', name, id, value, checked: value === current(), disabled: value !== 'ask' && !allowed });
+      radio.addEventListener('change', async () => {
+        if (!radio.checked || value === current()) return;
+        if (value !== 'ask' && !(await confirmTrust(value, radio))) { show(); return; }
+        try {
+          await save({ trust: value }, TRUST_DONE[value]);
+          me.settings.trust = value;
+          if (KH.views.ask && typeof KH.views.ask.endTrust === 'function') KH.views.ask.endTrust(); // a changed choice ends any trusted conversation
+        } catch (e) { /* shown by save */ }
+        show();
+      });
+      radios.set(value, radio);
+      fs.append(check(label, radio, hint));
+    }
+    if (!allowed) {
+      const kept = TRUST_CHOICES.find((c) => c[0] === current())[1].replace(' (recommended)', '');
+      fs.append(note('caution', h('p', {}, current() === 'ask'
+        ? 'Your admin has not turned on trusted saves, so Ask always asks you before it saves.'
+        : `Your admin turned trusted saves off, so Ask asks you before every save for now. Your choice (${kept}) is kept and applies again if your admin turns it back on.`)));
+    }
+    return fs;
   }
 
   // Server administration → AI providers (admins only). Overlapping renders keep only the newest, as above.
@@ -905,6 +992,7 @@
     wrap.append(h('div', { class: 'field' }, h('label', { for: prefId }, 'Food preferences for AI ideas'),
       h('div', { class: 'inline-row' }, pref, prefSave), h('span', { class: 'hint' }, 'Up to 200 characters, sent with meal ideas.')));
     if (me.daily_limit) wrap.append(h('p', { class: 'muted small' }, `Shared AI calls left today: ${me.remaining_today} of ${me.daily_limit}.`));
+    if (me.chat_enabled) wrap.append(trustPart(me, save));
     wrap.append(msg, err);
     if (me.user_keys_allowed || me.own) wrap.append(ownProviderPart(me));
     wrap.append(consentsPart(me), activityPart());
@@ -1200,6 +1288,6 @@
   whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, cardEl, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
     uploadPhoto, droppedNotes }; // uploadPhoto: js/scan.js reads a label photo into Quick add
 })();

@@ -1,6 +1,6 @@
-# Assistant, step 2, part A: the in-app Ask chat (text)
+# Assistant, step 2, parts A and C: the in-app Ask chat (text) and saving from it
 
-Status: part A built (2026-10-15); voice and the follow-ups below are not. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
+Status: part A built (2026-10-15); part C (saving from the chat, with a trust setting) built (2026-10-15); voice and the other follow-ups below are not. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
 front end. Step 2 puts a chat inside the app, behind the same rules: the model never supplies a number, lows and
 red flags are answered by rules without a model call, and the answer is checked in code before it is shown.
 Part A is the text chat. Part B (voice) and the follow-ups are listed under "Next".
@@ -145,12 +145,88 @@ made up, ranges, user-supplied); lab note; no message text in the activity log; 
 migration (old table with rows, fresh database, idempotent); a static UI test for the Ask view; settings twin
 vectors; chat golden cases in `scripts/ai_eval.py` for the owner's live run.
 
+## Part C: the Ask chat can save, with a trust setting
+
+The owner's words: "I want to have a few options to 'trust AI' or not, so I don't have to babysit it by confirming every
+response. I would like this to be a toggle with a warning." Least trust stays the default: the chat only proposes, and
+the person presses Save. Trusting it is a person's own choice, behind an admin switch, behind a warning.
+
+### C1. The two switches
+
+* **Admin**: `ai.allow_trusted_saves` (bool, default false, env `AI_ALLOW_TRUSTED_SAVES`, in Server administration next
+  to the other AI switches; in `NO_SIGNIN_ENV_ONLY` like them). Off: nobody can trust the assistant to save; every save
+  is a card to confirm.
+* **Person**: Settings → AI ideas → "How much do you trust the assistant?" (and a short link to it from the Ask screen),
+  stored in the person's `ai` setting as `trust` (no new column): `ask` ("Ask me before every save", the default,
+  marked recommended) | `conversation` ("Trust it for this conversation") | `always` ("Trust it always"). Choosing
+  `conversation` or `always` first opens a warning sheet ("The assistant will save food and recipes without asking you
+  first. It can pick the wrong food or the wrong amount. Every number still comes from the app, the low and emergency
+  rules and the dose checks always stay on, and each save can be undone from the chat or from Today. Photo and label
+  readings are always shown to you to check."), with "I understand, trust it" and "Keep asking me". Every change of
+  the choice is a row in the person's activity log (`ai.trust_changed`, old and new), whichever route wrote it
+  (`PATCH /api/me/ai` or `PATCH /api/me/settings`). If the admin switch is turned off later the effective choice is
+  `ask` and Settings says the admin turned trusted saves off.
+* **Effective trust** (`app.ai.chat_save.effective_trust`): `ask` unless the admin switch is on **and** the person
+  chose it: `always` is the stored choice alone; `conversation` needs the stored choice **and** the page sending
+  `trust: "conversation"` in the chat request. The page holds that grant in memory only: it ends with New
+  conversation, a reload, or 12 hours after it was given. The server cannot extend or verify it, only refuse it (a
+  page's claim counts for nothing without the stored choice and the admin switch).
+
+### C2. What the model may do
+
+* It may call `log_food` and `save_recipe` (the MCP tools' own arguments and code; the app removes any `request_key` the
+  model sends and makes its own). Never `safety_check`, still never doses. `PROMPT_VERSION` 2026-10-15.2. The prompt
+  allows a save only when the person asked in the conversation to log, plan or save something, with exactly what they
+  asked, and forbids saying anything is saved unless a tool result says `"saved": true`.
+* At most 2 save calls per message (a third is told "At most 2 saves..."). A save counts toward the 6 tool calls.
+* A message that matched a low or emergency rule is answered by the rules before any of this, so a save never happens
+  for it; the save code also refuses a safety message on its own (defence in depth).
+
+### C3. Ask mode (the default): a card, nothing written
+
+The model's save call is not executed. The loop places the items with `place_items` (exactly as the tool would) and ends
+at once with `kind: "confirm_save"` and the fixed text "Nothing has been saved yet. Check this, then press a Save
+button, or Cancel." (the model's words are not used). `pending_save` carries the resolved foods (name, amount as asked,
+servings, grams, whether it is a USDA food not in the list yet), the date, meal and status the model asked for, the
+purpose, the app's totals ("This adds"; for a recipe "Whole recipe" and "Per serving"), and `payload`: the exact body of
+the normal save route (`POST /api/log/batch` with stable `client_id`s so a double press adds nothing, or `POST
+/api/meals`). The page shows **Save as eaten**, **Save as planned** (the model's choice preselected) and **Cancel**; Save
+posts the payload with the status chosen, with CSRF, like any other save; for a USDA food the page first adds it to the
+person's foods with `POST /api/foods/usda/import`. If an item cannot be placed there is no card: `questions` hold the
+app's own questions (the model is told too and may ask in its answer).
+
+### C4. Trusted mode: saved at once, with Undo
+
+The call runs through `log_food` / `save_recipe` themselves (all or nothing, one transaction, USDA foods added in it by
+`write_once`). The request key is `<request_id>-<n>` (`n` is the save's number in this message) in the new table
+`assistant_ask_keys` (schema step 13: no token, so not step 11's table), so a chat request sent twice saves once and the
+second answer still shows the saved card with Undo; after a repeat the model may not save again in that message. The
+activity log gets `assistant.food_logged` / `assistant.recipe_saved` with `via: "Ask"` (never a token name). The answer
+has `saved`: one card per save with the foods and amounts, the totals, and the ids **Undo** deletes through
+`DELETE /api/log/{id}` (each entry) or `DELETE /api/meals/{id}`: scoped to the person, 404 for anyone else's. USDA foods
+a save added to the person's list stay in the list. A withheld, unfinished or failed answer keeps its saved cards.
+
+### C5. Unchanged in both modes
+
+`purpose: "hypo"` (food eaten to treat a low) is saved like any other and never warned about, and no card or message
+here warns, delays or questions it; the dose check and the number check still run on the answer text (the numbers a save
+returns are in the pool); photo and label readings keep their own review screens (trust never covers them); the activity
+log of model calls (`ai_audit`) still holds no message text, now with the step `log_food` / `save_recipe` and the outcome
+`confirm_save`; the MCP tools and tokens are unchanged (their confirmation is a prompt instruction; the trust setting
+applies to the Ask screen only).
+
+### C6. Tests
+
+`tests/test_ai_chat_save.py` (effective-trust matrix, ask mode, trusted mode, retries, Undo, isolation, hypo, safety
+messages, audit of the choice), `tests/test_migration_m013.py`, `tests/test_ask_ui.py` (the cards, the warning sheet, no
+inline scripts, text set with textContent), the settings twin vectors, and `tools/e2e/ask.py` (a confirm card and a
+trusted save with Undo in Chromium).
+
 ## Next (not in this part)
 
 * **Part B, voice**: a microphone button using the browser's speech recognition (Chrome sends the audio to Google
   and Safari to Apple, Firefox has none: the consent wording must say so), the transcript shown before it is sent,
   and the reply read aloud with the browser's own voice; later a transcription-provider setting.
-* **Saving from chat**: an "Add to plan" button the person presses, calling the normal log API (the model never
-  saves); the saving tools stay out of the chat.
+* ~~Saving from chat~~: done in part C above (a card the person presses, or trusted saves behind a switch and a warning).
 * **Recipe pages** in `check_meal` (step 1's follow-up), so the chat can work from a recipe link.
 * A live golden run of the chat cases and a prompt wording from the profile (kidney-only) belong to the owner.

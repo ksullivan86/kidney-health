@@ -19,9 +19,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
   notice and the app's own numbers; links are removed; lab words add "Lab results are for your care team to
   interpret." The conversation stays in the page (**New conversation**, reloading or signing out clears it; the server
   keeps no transcript). Ask has its own consent ("What will be sent?" shows the exact request) and one question can
-  use up to 7 AI calls, each counted in the daily limit. Nothing is ever saved from the chat; voice and "Add to plan"
-  from the chat are later parts. The demo shows the tab with a note and no input. See
-  [docs/assistant.md](docs/assistant.md#the-ask-screen-the-chat-inside-the-app).
+  use up to 7 AI calls, each counted in the daily limit. Voice is a later part. The demo shows the tab with a note and
+  no input. See [docs/assistant.md](docs/assistant.md#the-ask-screen-the-chat-inside-the-app).
+* **Ask can save food and recipes, with a trust setting you control.** Ask the assistant to "log a banana for
+  breakfast" or to save a recipe. By default (**Settings → AI ideas → How much do you trust the assistant? → Ask me
+  before every save**) it shows a **card**: the foods the app found, the amounts, the app's totals and "Nothing has been
+  saved yet", with **Save as eaten**, **Save as planned** and **Cancel**. Only your press saves, through the same route
+  as any other save. If you would rather not confirm every time, you can choose **Trust it for this conversation** (you
+  switch it on in Ask; it ends with **New conversation**, a reload or after 12 hours) or **Trust it always**, after a
+  warning: the assistant can pick the wrong food or the wrong amount. Then it saves at once, all or nothing, and every
+  save shows what was saved with **Undo**. Both options need your admin to allow them; with that off, Ask always asks
+  first. The app's numbers, the low and emergency rules and the dose checks stay on in every mode; a message about a low
+  never saves; a food eaten to treat a low is saved and never warned about; photo and label readings are always shown to
+  you to check. Every change of your choice, and every save by Ask, is in your activity list (saves read "with Ask").
 * **Assistant access tokens** (when the admin turns assistant access on). **Settings → Assistant access** makes
   personal tokens for a chat assistant you connect: it may read your own food log and targets and cannot change
   anything unless you tick **Can also save food and recipes** (off by default; see below). Give a token a name
@@ -130,6 +140,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   `PROMPT_VERSION` is
   2026-10-15.1 (the Ask prompt): run `python scripts/ai_eval.py --chat` with your provider to see how well its model
   follows the one-JSON-step protocol. Small local models may not; see [docs/ai.md](docs/ai.md).
+* **Let people trust Ask to save without asking** is a new switch, **off by default**: Server administration → Server
+  settings → Optional AI → *Let people trust Ask to save without asking*, or `AI_ALLOW_TRUSTED_SAVES=true`. It needs Ask
+  on. While it is off, every save the assistant asks for in Ask is a card the person presses Save on, whatever people
+  chose before (their choice is kept and applies again if you turn it on). **Schema step 13**: a new table,
+  `assistant_ask_keys`, remembers for 24 hours (as hashes) which chat request already saved, so a request sent twice
+  saves once; nothing existing changes (as always, back up before upgrading). `PROMPT_VERSION` is 2026-10-15.2 (the Ask
+  prompt now allows `log_food` and `save_recipe`): run `python scripts/ai_eval.py --chat` with your provider again.
 * **Assistant access** is a new switch, **off by default**: Server administration → Server settings → Optional
   AI → *Assistant access (personal tokens for a chat assistant)*, or `ASSISTANT_ENABLED=true` (passed through by
   `deploy/compose.yaml`). While it is off nothing changes for anyone (members do not see the Settings card) and
@@ -217,6 +234,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   `guard.MEDICINE_NAMES` is now shared by the names blocklist (its pattern is unchanged) and the dose check. Tests:
   `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`;
   `scripts/ai_eval.py --chat` is the live check (manual, owner). Plan: `docs/dev/plans/assistant-step2.md`.
+* Saving from the chat (part C) is `app/ai/chat_save.py` (trust, the confirm card, trusted saves), `run_save` and
+  `SaveStep` in `app/ai/chat.py`, `trust` in the person's `ai` setting and `ai.allow_trusted_saves` in
+  `app/settings_registry.py` (with the JS twin and vectors), `Asker` in `app/mcp/tools.py` (the saving tools' own code runs
+  for the chat, audited as `via: "Ask"`), `token_id=None` in `app/mcp/request_keys.py` (table `assistant_ask_keys`),
+  `ai.trust_changed` in `app/audit.py`, the choice and warning sheet in `js/views/ai.js` and the cards in `js/views/ask.js`
+  (self-contained section). Tests: `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py`, `tests/test_ask_ui.py`,
+  `tools/e2e/ask.py`.
 * `app.auth.api_tokens.AssistantUser` is the only dependency that reads `Authorization: Bearer`; a route on the
   assistant surface takes `user: AssistantUser` and gets `request.state.api_token` for its own limits.
   `current_user` stays cookie-only, and `tests/test_auth_coverage.py` walks every `/api` route with a valid

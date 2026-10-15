@@ -60,6 +60,15 @@ weight, height, exact age or notes. A message that sounds like a low or an emerg
 never sent. A question can take up to seven calls to the provider. What the provider does with it follows the
 policy line the consent sheet shows ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 
+When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
+entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses
+Save on a card; the person can instead choose to trust it for a conversation or always (Settings → AI ideas, only while the
+admin allows it). The server then keeps three small things: the person's choice (with their other AI settings), a row in
+their activity list for every change of the choice and for every save ("with Ask"; no food names, only how many entries,
+the meal and the day, or the recipe's name), and, for 24 hours, a remembered key (a hash, never the key itself) with the ids
+of what that chat request saved, so a request sent twice saves once. None of this is sent to the AI provider, and Ask's
+conversation is still not stored.
+
 If the admin turns on assistant access and a person connects a chat assistant with their own token
 ([assistant.md](assistant.md)), the server answers that assistant's questions with the person's own numbers:
 targets, the day's totals, food values and checked meals. Those answers go to the chat client the person

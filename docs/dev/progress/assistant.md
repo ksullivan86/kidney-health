@@ -1,4 +1,86 @@
-Status: complete (step 2, part A: the in-app Ask chat, text; steps 1 A, B and C below are complete too)
+Status: complete (step 2, part C: the Ask chat can save, with a trust setting; steps 1 and 2 part A below are complete too)
+
+# Assistant, step 2, part C: the Ask chat can save, with a trust setting
+
+Spec: `docs/dev/plans/assistant-step2.md` "Part C". Worktree branch `worktree-agent-a447dbaad57f4d90f`, fast-forwarded to
+the branch that holds part A (`935930c`); commit only: no push, no PR from here. Migration is **step 13** (the voice work
+uses 14). Keep `ask.js` edits in self-contained functions (the voice agent hooks into the same file).
+
+## Plan (sub-steps; each ends with a commit)
+
+1. Backend: admin switch + `trust` in the person's `ai` setting (registry, JS twin, vectors), schema step 13
+   (`assistant_ask_keys`), `Asker` identity in `app/mcp/tools.py`, `app/ai/chat_save.py`, loop changes in `chat.py`,
+   prompt + `PROMPT_VERSION` 2026-10-15.2, `routes.py` (body fields, effective trust, status, me view, audit of the choice).
+2. Backend tests (`tests/test_ai_chat_save.py`, `tests/test_migration_m013.py`, isolation matrix, prompt pin).
+3. UI: Settings -> AI trust choice + warning sheet (`ai.js`, `index.html`), Ask screen cards (`ask.js`, `ask.css`),
+   activity-log labels (`settings.js`), static UI tests.
+4. `tools/e2e/ask.py`, docs (ARCHITECTURE, ai.md, assistant.md, privacy, handbook AI page, CHANGELOG, ROADMAP).
+5. Full test run; final report.
+
+## Done
+
+* Sub-step 1 + 2 (backend and its tests): see the plan. Verified: `tests/test_ai_chat_save.py` (55 tests),
+  `tests/test_migration_m013.py`, `tests/test_migration_m012.py` (now "step 12 and any later step"),
+  `tests/test_ai_chat.py` (two assertions updated: `safety_check` is the never-offered tool; the prompt offers the saving
+  tools; the small-budget test uses 6500 tokens because the system prompt grew), `tests/test_ai_prompts.py` (pin recorded
+  with `KH_UPDATE_SNAPSHOTS=1`), `tests/test_isolation_v03.py` (matrix row for `assistant_ask_keys`), the settings vectors
+  (`node tests/js/run_vectors.mjs`, `python tests/data/gen_settings_vectors.py --check`).
+
+* Sub-step 3 (UI): Settings -> AI ideas "How much do you trust the assistant?" with the warning sheet (`ai.js`
+  `confirmTrust`, `trustPart`; `#sheet-ai-trust` in `index.html`; the focus starts on "Keep asking me"), the Ask screen
+  (`ask.js` section "Saving from the chat": trust line, confirm card, saved card with Undo, questions; `#ask-trust`),
+  `ask.css`, the activity-log label (`settings.js`), the demo's `/api/me/ai` mock keys, the Settings intro sentence
+  ("It cannot ... save anything by itself" became "by default nothing is saved until you press Save"; its test updated).
+  Verified: `tests/test_ask_ui.py` (7 new static tests), `tests/test_ai_setup_intro.py`, `tests/test_settings_ui.py`,
+  `tests/test_ai_ui.py` and the other shell tests; `python tools/e2e/ask.py` (104 checks: confirm card + Save as eaten +
+  Undo + Cancel, trusted conversation, New conversation ends trust, always, the warning sheet in Settings with "Keep
+  asking me" and "I understand, trust it", the activity row; 375 px light and 1280 px dark, no sideways scroll, no console
+  errors) after teaching its fake provider a `log_food` call.
+
+* Sub-step 4 (docs, eval, e2e): ARCHITECTURE ("Saving from the chat", schema step 13, routes, registry, frontend, file
+  ownership), `docs/ai.md` (G12 reworded, G16, "Saving from Ask", the switch), `docs/assistant.md` (the trust table),
+  `docs/privacy.md`, the handbook AI page, CHANGELOG, ROADMAP status line, the plan file (Part C), `tools/e2e/README.md`;
+  `scripts/ai_eval.py --chat` has a tenth case ("Log a banana for breakfast" must be a card, nothing saved).
+* Sub-step 5 (checks): full suite `python -m pytest -q -x -p no:cacheprovider` exit 0 (no network); the UI tests re-run on
+  the final JS (247 passed); `python tools/e2e/ask.py` 108 checks pass (it also checks that Today shows a trusted save and
+  stops showing it after Undo); `python tools/e2e/parity.py --sections 14` 15/15; `node tests/js/run_vectors.mjs` and
+  `gen_settings_vectors.py --check` current. Not run: the live `scripts/ai_eval.py --chat` (owner, with a live model; the
+  prompt is now 2026-10-15.2), `mkdocs build --strict` (mkdocs not installed; CI builds the handbook).
+
+## Next
+
+* Nothing pending for part C. Owner: the live `--chat` run, and the decisions below. Other agents: the `export.json`
+  import must not restore `trust` other than `ask` (it is a field of the exported `ai` setting).
+
+## Decisions (and why)
+
+* **Trust is the `trust` field of the person's `ai` setting**, not a column: no schema change for the choice itself.
+  Step 13 is only the duplicate guard's table (step 11's table needs a token).
+* **`conversation` needs the stored choice and the page's claim**; the page alone (or `always` sent by a page) never grants
+  anything. A page claiming `trust: "always"` is a 400.
+* **Ask mode ends the loop at the first resolvable save** with fixed app text; the model's words are not used because
+  nothing was saved and a model could say it was.
+* **After a repeat of a request's save the model may not save again in that message** (a non-deterministic model replaying a
+  retried request must not turn it into a second, different save).
+* The audit row of a food save by Ask has no target (`target_type` null); a recipe's targets the meal like the MCP one.
+* `PATCH /api/me/settings` with an `ai` object lacking `trust` resets it to `ask` (safe direction) and is audited.
+* **Undo and the Save press share one card.** After a pressed Save the card becomes a "Saved" card with Undo (same as a
+  trusted save); a save or an Undo makes Today, Plan and Trends reload their day (`KH.ai.refreshDayCaches`).
+* **The per-conversation grant is one tap without the warning sheet** (the sheet comes when the person chooses the option in
+  Settings; the grant button's label and the line under it say what it does). Changing the choice in Settings ends a grant.
+* **Residual risk, not closed in code**: a food name from USDA or Open Food Facts reaches the model as untrusted data (cleaned,
+  cut, escaped, marked); in a trusted mode a prompt injection could still make it ask for a save. Mitigations: off by default,
+  warning, at most 2 saves a message, all or nothing, Undo, the activity row, and the rule that a save follows the person's
+  own request (prompt only: a code check for "the person asked to log" would be a brittle word list).
+* Trust is not reset when the provider changes or a consent is withdrawn (withdrawing the chat consent stops Ask altogether).
+
+## Checks
+
+    python -m pytest -q -x -p no:cacheprovider tests/test_ai_chat_save.py tests/test_migration_m013.py tests/test_ai_chat.py
+    node tests/js/run_vectors.mjs
+
+---
+
 
 # Assistant, step 2, part A: the in-app Ask chat (text)
 

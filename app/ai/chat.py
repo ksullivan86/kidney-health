@@ -13,6 +13,11 @@ before it is shown (the chat's V6, the way :mod:`app.ai.guard` checks the meal f
    shown, a number in this message's tool results or in the person's own messages.
 4. Lab words add a fixed note. The tools' own figures are shown under every answer ("From the app").
 
+Saving (part C): the model may also call ``log_food`` and ``save_recipe``. What happens to such a call is the
+route's decision, made by the ``run_save`` callback (:mod:`app.ai.chat_save`): in **ask** mode nothing is saved, the
+loop ends with ``kind: "confirm_save"`` and the card the person presses Save on; in a **trusted** mode the save runs at
+once (the MCP tools' own code) and the model is told the result. ``safety_check`` is never offered.
+
 Pure apart from the callbacks :func:`converse` is given: no database, no network, no clock. The route
 (:mod:`app.ai.routes`) supplies the quota, the model call, the tools and the activity log.
 """
@@ -37,7 +42,10 @@ MAX_MESSAGES = 20
 MAX_MESSAGE_CHARS = 2000
 MAX_TOOL_CALLS = 6
 MAX_ANSWER_CHARS = 1200
-CHAT_TOOLS: tuple[str, ...] = ("get_today", "search_foods", "check_meal")  # read-only; never the saving tools
+CHAT_TOOLS: tuple[str, ...] = ("get_today", "search_foods", "check_meal")  # read-only
+SAVE_TOOLS: tuple[str, ...] = ("log_food", "save_recipe")  # saving: run only through ``run_save`` (never safety_check)
+OFFERED_TOOLS: tuple[str, ...] = CHAT_TOOLS + SAVE_TOOLS
+MAX_SAVES = 2  # save calls the model may make for one message
 MAX_NUMBER_GROUPS = 4
 MAX_FOODS_SHOWN = 5
 SHOWN_NUTRIENTS = ("calories_kcal", "protein_g", "carbs_g", "potassium_mg", "phosphorus_mg", "sodium_mg", "fluid_ml")
@@ -49,6 +57,9 @@ WITHHELD_DOSE_TEXT = ("This answer was not shown because it touched on medicine 
 WITHHELD_NUMBER_TEXT = ("The assistant's answer had a number the app did not work out, so it is not shown. "
                         "Here are the app's own numbers.")
 UNFINISHED_TEXT = "The assistant could not finish; here are the app's numbers."
+CONFIRM_TEXT = "Nothing has been saved yet. Check this, then press a Save button, or Cancel."
+SAVE_LIMIT_ERROR = (f"At most {MAX_SAVES} saves can be made for one message. Tell the person what was saved and answer.")
+SAVES_CLOSED_ERROR = "This message's save was already made once. Tell the person what was saved and answer; do not save again."
 EMPTY_TEXT = "The assistant's answer could not be used."
 LAB_NOTE = "Lab results are for your care team to interpret."
 NOTICE = "AI answer · {label} · {model} · every number checked by the app · not medical advice"
@@ -103,11 +114,15 @@ def fit_history(history: list[dict[str, str]], fits: Callable[[list[dict[str, st
 
 
 def tools_text(tools: Mapping[str, Mapping[str, Any]]) -> str:
-    """``- name: note`` and its argument schema, for the system prompt. ``tools`` maps a name to its input schema."""
+    """``- name: note`` and its argument schema, for the system prompt. ``tools`` maps a name to its input schema. The
+    saving tools' ``request_key`` is left out: the app makes the key for each save, the model never chooses one."""
     lines = []
-    for name in CHAT_TOOLS:
+    for name in OFFERED_TOOLS:
+        schema = _plain_schema(tools[name])
+        if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
+            schema["properties"].pop("request_key", None)
         lines.append(f"- {name}: {prompts.CHAT_TOOL_NOTES[name]}")
-        lines.append("  arguments: " + json.dumps(_plain_schema(tools[name]), sort_keys=True, separators=(",", ":")))
+        lines.append("  arguments: " + json.dumps(schema, sort_keys=True, separators=(",", ":")))
     return "\n".join(lines)
 
 
@@ -153,7 +168,7 @@ _NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+"
 _NUM_RE = re.compile(_NUM)
 _DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 # Counts and ids are not figures an answer may quote: a made-up "5 g" must not pass because a result has "id": 5.
-_NOT_FIGURES = frozenset({"id", "food_id", "fdc_id", "not_listed_by", "limit", "found"})
+_NOT_FIGURES = frozenset({"id", "food_id", "fdc_id", "not_listed_by", "limit", "found", "entry_id", "entry_ids", "meal_id"})
 _UNIT = (r"(?:mg|mcg|µg|μg|ug|g|grams?|milligrams?|micrograms?|ml|millilit(?:re|er)s?|l|lit(?:re|er)s?|kcal|"
          r"kilocalories?|calories?|cal|kj|kilojoules?|%|percent)")
 _QUANTITY = re.compile(rf"(?<![\w.])(?P<a>{_NUM})(?:\s*(?:-|–|—|to|and|or)\s*(?P<b>{_NUM}))?\s*(?P<unit>{_UNIT})(?![A-Za-z])",
@@ -444,20 +459,25 @@ def _today_group(result: Mapping[str, Any]) -> dict[str, Any]:
     return {"title": "Today so far" if result.get("is_today") else f"The day {day}", "rows": rows}
 
 
+def totals_rows(totals: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The shown nutrients of a totals object (``{key: {"value", "not_listed_by"}}``) as screen rows; unknown is unknown."""
+    rows = []
+    for key in SHOWN_NUTRIENTS:
+        meta = NUTRIENT_BY_KEY.get(key)
+        amount = totals.get(key)
+        if meta is None or not isinstance(amount, Mapping):
+            continue
+        if amount.get("value") is None and not amount.get("not_listed_by"):
+            continue
+        rows.append({"label": meta.label, "value": amount_text(amount, meta.unit), "detail": ""})
+    return rows
+
+
 def _meal_groups(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     groups = []
     totals = result.get("totals")
     if isinstance(totals, Mapping):
-        rows = []
-        for key in SHOWN_NUTRIENTS:
-            meta = NUTRIENT_BY_KEY.get(key)
-            amount = totals.get(key)
-            if meta is None or not isinstance(amount, Mapping):
-                continue
-            if amount.get("value") is None and not amount.get("not_listed_by"):
-                continue
-            rows.append({"label": meta.label, "value": amount_text(amount, meta.unit), "detail": ""})
-        groups.append({"title": "This meal", "rows": rows})
+        groups.append({"title": "This meal", "rows": totals_rows(totals)})
     day = result.get("day_with_these_items")
     if isinstance(day, Mapping):
         rows = []
@@ -504,6 +524,8 @@ def numbers_view(runs: Sequence["ToolRun"]) -> list[dict[str, Any]]:
             groups[("get_today", str(run.result.get("date")))] = [_today_group(run.result)]
         elif run.tool == "check_meal":
             groups[("check_meal", str(run.result.get("date")))] = _meal_groups(run.result)
+        elif run.tool == "log_food" and isinstance(run.result.get("day"), Mapping):  # after a save: the day as it is now
+            groups[("get_today", str(run.result["day"].get("date")))] = [_today_group(run.result["day"])]
         elif run.tool == "search_foods":
             groups[("search_foods", str(run.result.get("query")))] = [_foods_group(run.result)]
     flat = [g for value in groups.values() for g in value if g["rows"]]
@@ -542,7 +564,7 @@ class ToolRun:
 
 @dataclass
 class Outcome:
-    kind: str  # answer | withheld | unfinished | error
+    kind: str  # answer | withheld | unfinished | error | confirm_save
     text: str | None
     notes: list[str] = field(default_factory=list)
     runs: list[ToolRun] = field(default_factory=list)
@@ -552,6 +574,25 @@ class Outcome:
     error: str | None = None  # a provider error category (app.ai.routes.ERROR_TEXT), kind "error" only
     refused: bool = False
     audit_id: int | None = None
+    pending: dict[str, Any] | None = None  # ask mode: the save the person is asked to confirm (kind "confirm_save")
+    saves: list[dict[str, Any]] = field(default_factory=list)  # trusted mode: what was saved (each with its undo)
+    questions: list[dict[str, Any]] = field(default_factory=list)  # what the app could not place, in its own words
+    save_calls: int = 0
+
+
+@dataclass
+class SaveStep:
+    """What :func:`converse` gets back from ``run_save`` for one save call of the model. ``result`` is the tool's
+    answer for the model (or ``error``, a short message for it). ``pending``: ask mode, nothing was saved, this is
+    the card to confirm: the loop ends. ``saved``: trusted mode, what was saved. ``questions``: what could not be
+    placed (``[]`` clears earlier ones)."""
+
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    pending: dict[str, Any] | None = None
+    saved: dict[str, Any] | None = None
+    questions: list[dict[str, Any]] | None = None
+    closes: bool = False  # a repeat of an earlier save: no further save in this message
 
 
 class StopLoop(Exception):
@@ -565,20 +606,28 @@ class StopLoop(Exception):
 Complete = Callable[[dict[str, Any], int], Awaitable[CallResult]]
 RunTool = Callable[[str, dict[str, Any]], Awaitable[tuple[dict[str, Any] | None, str | None]]]
 Record = Callable[[CallResult, dict[str, Any]], Awaitable[int]]
+RunSave = Callable[[str, dict[str, Any], int], Awaitable[SaveStep]]
 
 
 async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], newest: str, complete: Complete,
-                   run_tool: RunTool, record: Record, fits: Callable[[dict[str, Any]], bool]) -> Outcome:
+                   run_tool: RunTool, record: Record, fits: Callable[[dict[str, Any]], bool],
+                   run_save: RunSave | None = None) -> Outcome:
     """Run the step protocol for one message from the person.
 
     ``complete(body, index)`` makes one model call (the route takes the quota first); ``run_tool(name, arguments)``
     runs an allowed tool for this person and returns ``(result, error)``; ``record(call result, info)`` writes the
     activity row (``info``: step, tool, outcome; never message text) and returns its id. Each model call is
     validated as a :class:`~app.ai.schemas.ChatStep`. At most :data:`MAX_TOOL_CALLS` tools run; after the last
-    result the model is told to answer, and a call after that ends the loop as ``unfinished``."""
+    result the model is told to answer, and a call after that ends the loop as ``unfinished``.
+
+    ``run_save(name, arguments, n)`` handles the model's ``n``-th (1-based) call of a saving tool (at most
+    :data:`MAX_SAVES` per message); without it the saving tools are not offered. A :class:`SaveStep` with ``pending``
+    ends the loop at once with ``kind: "confirm_save"`` and the fixed :data:`CONFIRM_TEXT` (the model's words are
+    not used: nothing was saved, and the card says exactly what would be)."""
     messages = list(base_body["messages"])
     runs: list[ToolRun] = []
     out = Outcome(kind="unfinished", text=UNFINISHED_TEXT, runs=runs)
+    closed = False  # a repeat of an earlier save was answered: no more saves in this message
 
     def unfinished(reason: str) -> Outcome:
         out.reason = reason
@@ -619,12 +668,37 @@ async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], ne
         out.tool_calls += 1
         left = MAX_TOOL_CALLS - out.tool_calls
         run = ToolRun(tool=name, arguments=arguments)
-        if name not in CHAT_TOOLS:
-            run.error = prompts.CHAT_UNKNOWN_TOOL.format(name=prompts.clean(name, 40), names=", ".join(CHAT_TOOLS))
+        offered = OFFERED_TOOLS if run_save is not None else CHAT_TOOLS
+        saving = name in SAVE_TOOLS and run_save is not None
+        if name not in offered:
+            run.error = prompts.CHAT_UNKNOWN_TOOL.format(name=prompts.clean(name, 40), names=", ".join(offered))
+        elif saving:
+            assert run_save is not None
+            if out.save_calls >= MAX_SAVES:
+                run.error = SAVE_LIMIT_ERROR
+            elif closed:
+                run.error = SAVES_CLOSED_ERROR
+            else:
+                out.save_calls += 1
+                taken = await run_save(name, arguments, out.save_calls)
+                run.result, run.error = taken.result, taken.error
+                closed = closed or taken.closes
+                if taken.saved is not None:
+                    out.saves.append(taken.saved)
+                if taken.questions is not None:
+                    out.questions = taken.questions
+                if taken.pending is not None:  # ask mode: nothing saved; the person confirms on the card
+                    run.result = None
+                    runs.append(run)
+                    out.pending = taken.pending
+                    out.audit_id = await record(result, {"step": index, "tool": name, "outcome": "confirm_save"})
+                    out.kind, out.text, out.reason = "confirm_save", CONFIRM_TEXT, None
+                    out.notes = [LAB_NOTE] if lab_words(newest) else []
+                    return out
         else:
             run.result, run.error = await run_tool(name, arguments)
         runs.append(run)
-        out.audit_id = await record(result, {"step": index, "tool": name if name in CHAT_TOOLS else "unknown", "outcome": "call",
+        out.audit_id = await record(result, {"step": index, "tool": name if name in offered else "unknown", "outcome": "call",
                                              "tool_ok": run.result is not None})
         messages.append(step_message(step))
         messages.append(tool_result_message(name, run.result, left) if run.result is not None

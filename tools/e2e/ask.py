@@ -15,7 +15,12 @@ first-run setup, sets targets and opts the person in, then drives the page at 37
 * "I feel shaky and low" gets the Treating a low card and the line under it without any call to the provider;
 * an answer about insulin doses is withheld (the notice, never the text), "New conversation" clears the list, the arrow
   keys move between the visible tabs, no sideways scroll at any step, no console errors;
-* the demo (``/?mock=1#ask``) shows the tab with a note about the installed app and no input.
+* the demo (``/?mock=1#ask``) shows the tab with a note about the installed app and no input;
+* saving from the chat (assistant step 2, part C), after the walk: by default a "log a banana" request is a confirm card
+  and nothing is saved until Save as eaten (then Undo removes it; Cancel saves nothing); with "Trust it for this
+  conversation" chosen the person trusts one conversation (a confirm card until then), the save is made at once with Undo,
+  and New conversation ends the trust; with "Trust it always" the save is at once; in Settings the warning sheet opens
+  first, "Keep asking me" changes nothing and "I understand, trust it" does.
 
 Nothing leaves the machine (an outbound proxy that points nowhere). Prints PASS / FAIL lines, writes
 ``<out>/report.json`` and screenshots in ``<out>/shots/``; exit status 1 on any failure. The server and the fake
@@ -55,6 +60,7 @@ class FakeAi:
 
     def __init__(self, port: int) -> None:
         self.requests: list[dict[str, Any]] = []
+        self.banana_id = 0  # set by the harness once the food list exists
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -87,9 +93,13 @@ class FakeAi:
     def chat_requests(self) -> list[dict[str, Any]]:
         return [r for r in self.requests if 'You are "Ask"' in str(r["messages"][0]["content"])]
 
-    @staticmethod
-    def reply(body: dict[str, Any]) -> dict[str, Any]:
+    def reply(self, body: dict[str, Any]) -> dict[str, Any]:
         last = str(body["messages"][-1]["content"])
+        if last.startswith("RESULT of log_food"):
+            return {"answer": "Saved your banana for breakfast."}
+        if "log a banana" in last:  # a save: the harness gives the food_id (an exact food, so nothing is ambiguous)
+            return {"call": {"tool": "log_food", "arguments": {"items": [{"food": "banana", "food_id": self.banana_id, "amount": 1}],
+                                                               "meal": "breakfast"}}}
         if last.startswith("RESULT of get_today"):
             data = json.loads(last.split("<data>\n", 1)[1].split("\n</data>", 1)[0].replace("\\u003c", "<"))
             limit = data["nutrients"]["potassium_mg"]["target"]["max"]
@@ -176,6 +186,161 @@ def walk(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: in
     ctx.close()
 
 
+def entries_today(admin: Any) -> list[dict[str, Any]]:
+    return admin.json("GET", "/api/log")["entries"]
+
+
+def send_text(page: Any, text: str) -> None:
+    page.fill("#ask-input", text)
+    page.press("#ask-input", "Enter")
+
+
+def open_ask(page: Any) -> None:
+    page.goto("/")
+    page.wait_for_selector("#tab-ask:not([hidden])", timeout=15000)
+    page.click("#tab-ask")
+    page.wait_for_selector("#view-ask:not([hidden])")
+    page.wait_for_function("() => document.querySelector('#ask-trust') && !document.querySelector('#ask-trust').hidden")
+
+
+def saving(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: int, height: int, scheme: str) -> None:
+    tag = f"save-{width}-{scheme}"
+    ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, base_url=base)
+    ctx.add_cookies([{"name": k, "value": v, "url": base} for k, v in admin.cookies().items()])
+    page = ctx.new_page()
+    errors: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "409" not in m.text else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    for entry in entries_today(admin):
+        admin.call("DELETE", f"/api/log/{entry['id']}")
+    admin.json("PATCH", "/api/me/ai", {"trust": "ask"})
+
+    # --- the default: a card, nothing saved until Save ---------------------------------------------------------------
+    open_ask(page)
+    check(f"[{tag}] the default line: Ask asks first, and there is no trust button",
+          "Ask asks you before it saves." in page.inner_text("#ask-trust-line") and page.locator("#ask-trust-actions .btn").count() == 0)
+    check(f"[{tag}] the link to the choice is there", page.is_visible("#ask-trust-actions >> text=Change this in Settings"))
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-pending", timeout=20000)
+    card = page.inner_text(".ask-pending")
+    check(f"[{tag}] the confirm card names the food, the meal and the app's totals", "Banana" in card and "Breakfast" in card and "Potassium" in card, card[:300])
+    check(f"[{tag}] the text says nothing is saved yet", "Nothing has been saved yet." in page.inner_text(".kind-confirm_save .ask-text"))
+    check(f"[{tag}] the card has Save as eaten, Save as planned and Cancel",
+          all(page.locator(".ask-pending").get_by_role("button", name=n).count() == 1 for n in ("Save as eaten", "Save as planned", "Cancel")))
+    check(f"[{tag}] nothing is in the log before Save is pressed", entries_today(admin) == [])
+    check(f"[{tag}] no sideways scroll with the confirm card", not overflow(page))
+    page.screenshot(path=str(out / "shots" / f"confirm-{tag}.png"))
+    page.locator(".ask-pending").get_by_role("button", name="Save as eaten").click()
+    page.wait_for_selector(".ask-saved")
+    saved = entries_today(admin)
+    check(f"[{tag}] Save as eaten saved exactly that", len(saved) == 1 and saved[0]["status"] == "eaten" and saved[0]["meal"] == "breakfast"
+          and saved[0]["food_name"].startswith("Banana"), json.dumps(saved)[:200])
+    check(f"[{tag}] the saved card says what was saved and has Undo", "Saved to your log" in page.inner_text(".ask-saved")
+          and page.locator(".ask-saved").get_by_role("button", name="Undo").count() == 1)
+    page.screenshot(path=str(out / "shots" / f"saved-{tag}.png"))
+    page.locator(".ask-saved").get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Undone.")
+    check(f"[{tag}] Undo removed it", entries_today(admin) == [])
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-pending:visible >> text=Cancel", timeout=20000)
+    page.locator(".ask-pending").last.get_by_role("button", name="Cancel").click()
+    check(f"[{tag}] Cancel saves nothing", page.locator(".ask-pending").count() == 0 and "Not saved." in page.inner_text("#ask-thread")
+          and entries_today(admin) == [])
+    check(f"[{tag}] the confirm flow made no console errors", not errors, "; ".join(errors[:3]))
+
+    # --- trust for this conversation ---------------------------------------------------------------------------------
+    admin.json("PATCH", "/api/me/ai", {"trust": "conversation"})
+    open_ask(page)
+    check(f"[{tag}] with 'this conversation' chosen the page offers it",
+          page.is_visible("#ask-trust-actions >> text=Trust it for this conversation"))
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-pending", timeout=20000)
+    check(f"[{tag}] until the person trusts the conversation it is still a card", entries_today(admin) == [])
+    page.locator(".ask-pending").get_by_role("button", name="Cancel").click()
+    page.click("#ask-trust-actions >> text=Trust it for this conversation")
+    check(f"[{tag}] the line says this conversation is trusted", "Trusted for this conversation" in page.inner_text("#ask-trust-line")
+          and page.is_visible("#ask-trust-actions >> text=Stop trusting"))
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-saved", timeout=20000)
+    saved = entries_today(admin)
+    check(f"[{tag}] trusted: saved at once, with the assistant's words and Undo", len(saved) == 1 and page.locator(".ask-pending").count() == 0
+          and "Saved your banana for breakfast." in page.inner_text(".kind-answer .ask-text"), json.dumps(saved)[:200])
+    check(f"[{tag}] no sideways scroll with the saved card", not overflow(page))
+    page.screenshot(path=str(out / "shots" / f"trusted-{tag}.png"))
+    page.click("#tab-today")
+    page.wait_for_selector("#view-today:not([hidden])")
+    page.wait_for_function("() => document.querySelector('#view-today').innerText.includes('Banana')", timeout=10000)
+    check(f"[{tag}] Today shows what Ask saved, without a reload", True)
+    page.click("#tab-ask")
+    page.wait_for_selector("#view-ask:not([hidden])")
+    page.locator(".ask-saved").get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Undone.")
+    check(f"[{tag}] Undo removed the trusted save", entries_today(admin) == [])
+    page.click("#tab-today")
+    page.wait_for_function("() => !document.querySelector('#view-today').innerText.includes('Banana')", timeout=10000)
+    check(f"[{tag}] and Today no longer shows it", True)
+    page.click("#tab-ask")
+    page.wait_for_selector("#view-ask:not([hidden])")
+    page.click("#ask-new")
+    check(f"[{tag}] New conversation ends the trust", "Ask asks you before it saves." in page.inner_text("#ask-trust-line")
+          and page.is_visible("#ask-trust-actions >> text=Trust it for this conversation"))
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-pending", timeout=20000)
+    check(f"[{tag}] and the next request is a card again", entries_today(admin) == [])
+
+    # --- trust always ------------------------------------------------------------------------------------------------
+    admin.json("PATCH", "/api/me/ai", {"trust": "always"})
+    open_ask(page)
+    check(f"[{tag}] 'always' says so", "Trusted always" in page.inner_text("#ask-trust-line"))
+    send_text(page, "log a banana for breakfast")
+    page.wait_for_selector(".ask-saved", timeout=20000)
+    check(f"[{tag}] always: saved at once", len(entries_today(admin)) == 1)
+    page.locator(".ask-saved").get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Undone.")
+    check(f"[{tag}] and undone", entries_today(admin) == [])
+
+    # --- the warning sheet in Settings ---------------------------------------------------------------------------------
+    admin.json("PATCH", "/api/me/ai", {"trust": "ask"})
+    page.goto("/")
+    page.wait_for_selector("#settings-open:not([hidden])", timeout=15000)
+    page.click("#settings-open")
+    page.wait_for_selector("#set-ai-trust", timeout=15000)
+    check(f"[{tag}] three choices, the default marked recommended",
+          page.locator("#set-ai-trust input[type=radio]").count() == 3 and "(recommended)" in page.inner_text("#set-ai-trust")
+          and page.locator("#set-ai-trust input[value=ask]").is_checked())
+    page.locator("#set-ai-trust label.check", has_text="Trust it always").click()
+    page.wait_for_selector("#sheet-ai-trust[open]")
+    sheet = page.inner_text("#sheet-ai-trust")
+    check(f"[{tag}] the warning opens first", "The assistant will save food and recipes without asking you first." in sheet
+          and "It can pick the wrong food or the wrong amount." in sheet and "undo each save" in sheet and "Photo and label readings" in sheet, sheet[:300])
+    check(f"[{tag}] nothing is changed while the warning is open", admin.json("GET", "/api/me/ai")["settings"]["trust"] == "ask")
+    try:  # the sheet moves the focus a moment after it opens
+        page.wait_for_function("() => document.activeElement && document.activeElement.textContent === 'Keep asking me'", timeout=3000)
+        focused = True
+    except Exception:  # noqa: BLE001 - reported as a failed check
+        focused = False
+    check(f"[{tag}] the focus starts on 'Keep asking me'", focused)
+    check(f"[{tag}] no sideways scroll in the sheet", not overflow(page))
+    page.screenshot(path=str(out / "shots" / f"warning-{tag}.png"))
+    page.click("#sheet-ai-trust >> text=Keep asking me")
+    page.wait_for_function("() => !document.querySelector('#sheet-ai-trust').open")
+    check(f"[{tag}] 'Keep asking me' changes nothing", admin.json("GET", "/api/me/ai")["settings"]["trust"] == "ask"
+          and page.locator("#set-ai-trust input[value=ask]").is_checked())
+    page.locator("#set-ai-trust label.check", has_text="Trust it always").click()
+    page.wait_for_selector("#sheet-ai-trust[open]")
+    page.click("#sheet-ai-trust >> text=I understand, trust it")
+    page.wait_for_function("() => document.querySelector('#set-ai-trust input[value=always]').checked")
+    check(f"[{tag}] 'I understand, trust it' saves the choice", admin.json("GET", "/api/me/ai")["settings"]["trust"] == "always")
+    events = [e for e in admin.json("GET", "/api/me/activity")["events"] if e["action"] == "ai.trust_changed"]
+    check(f"[{tag}] the change is in the activity log", events and events[0]["details"] == {"old": "ask", "new": "always"}, json.dumps(events[:1]))
+    page.locator("#set-ai-trust label.check", has_text="Ask me before every save").click()
+    page.wait_for_function("() => document.querySelector('#set-ai-trust input[value=ask]').checked")
+    check(f"[{tag}] going back to asking needs no warning", admin.json("GET", "/api/me/ai")["settings"]["trust"] == "ask"
+          and not page.evaluate("() => document.querySelector('#sheet-ai-trust').open"))
+    check(f"[{tag}] no console or page errors while saving", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def demo(browser: Any, base: str, out: Path) -> None:
     for width, scheme in ((320, "light"), (375, "dark")):
         ctx = browser.new_context(viewport={"width": width, "height": 640}, color_scheme=scheme, base_url=base, is_mobile=True, has_touch=True)
@@ -205,7 +370,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     out = khserver.free_dir(args.out)
     (out / "shots").mkdir()
-    env = {"AI_ENABLED": "true", "AI_CHAT_ENABLED": "true", "AI_PROVIDER": "openai_compatible",
+    env = {"AI_ENABLED": "true", "AI_CHAT_ENABLED": "true", "AI_ALLOW_TRUSTED_SAVES": "true", "AI_PROVIDER": "openai_compatible",
            "AI_BASE_URL": f"http://127.0.0.1:{args.ai_port}/v1", "AI_MODEL": "fake-text",
            "AI_PRIVATE_HOSTS": f"127.0.0.1:{args.ai_port}", "AI_SHARED_DAILY_LIMIT": "0",
            # No call may leave this machine: a proxy that does not exist for anything but the local servers.
@@ -219,12 +384,15 @@ def main(argv: list[str] | None = None) -> int:
         admin = first_admin(server, "ask")
         admin.json("PUT", "/api/profile", {"weight_kg": 70, "targets": {"potassium_mg": 2500, "phosphorus_mg": 1000, "sodium_mg": 2000}})
         admin.json("PATCH", "/api/me/ai", {"opt_in": True})
+        fake.banana_id = admin.json("GET", "/api/foods", params={"q": "Banana, raw"})["foods"][0]["id"]
         base = f"http://localhost:{args.port}"
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
                 for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
                     walk(browser, admin, fake, base, out, width, height, scheme)
+                for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
+                    saving(browser, admin, fake, base, out, width, height, scheme)
                 demo(browser, base, out)
             finally:
                 browser.close()

@@ -280,8 +280,9 @@ which starts a server and speaks the protocol to it end to end ([tools/e2e/READM
 
 A text chat in the app itself (**Ask**, a sixth tab), for people who want the answer without setting up a chat
 client. It asks the same questions of the same app functions as the MCP tools above (`get_today`, `search_foods`,
-`check_meal`; never the saving tools), and it adds what an outside chat cannot: **the app checks the answer in code
-before you see it.** It uses the AI provider your admin set up for the other AI features ([`ai.md`](ai.md)); the
+`check_meal`, and, when you ask it to log or save something, `log_food` and `save_recipe` as described below; never
+`safety_check`, which the app's own rules replace), and it adds what an outside chat cannot: **the app checks the answer
+in code before you see it.** It uses the AI provider your admin set up for the other AI features ([`ai.md`](ai.md)); the
 assistant of this page's token and MCP sections is a separate way in and needs no AI provider on the server.
 
 **Switch it on.** Optional AI must be on and set up ([`ai.md`](ai.md)). Then the admin turns on **Server administration
@@ -314,6 +315,40 @@ the page only: reloading or signing out forgets it, and the server keeps no tran
    work out, so it is not shown. Here are the app's own numbers."). Ordinary food talk ("have more rice", "choose
    low-sodium bread") is not withheld. Lab words add "Lab results are for your care team to interpret."
 
+**Saving from Ask, and how much you trust the assistant.** Ask the assistant to log, plan or save something ("log a banana
+for breakfast", "save my soup recipe, it makes 4 servings") and it may ask the app to save it. You decide how much it may do
+without asking, in **Settings → AI ideas → How much do you trust the assistant?** (the Ask screen has a short line about
+it and a link to it):
+
+| Your choice | What happens when the assistant asks to save |
+|---|---|
+| **Ask me before every save** (default, recommended) | Nothing is written. You get a card: the foods the app found, the amounts, the meal and day, the app's totals, and "Nothing has been saved yet". **Save as eaten**, **Save as planned** or **Cancel**; the one the assistant asked for is preselected. Save posts to the app's normal save route (`POST /api/log/batch`, or `POST /api/meals` for a recipe), like any other save; the assistant is not involved in the write. If the app could not place a food, you get its questions instead and nothing is saved. |
+| **Trust it for this conversation** | In Ask, press "Trust it for this conversation": until you start a new conversation, reload, or 12 hours pass, the save happens at once. The page holds this; nothing is stored. |
+| **Trust it always** | The save happens at once, every time. |
+
+When it saves at once, it is all or nothing (if one food cannot be placed nothing is saved and you see the app's question),
+the answer says what was saved with the app's totals, and **Undo** deletes exactly those entries (or that saved meal)
+through the normal delete routes; you can also delete an entry in Today. A request sent twice (a lost answer, a second tap)
+saves once. The activity list gets the same "Assistant saved food / a recipe" rows as a token's saves, with "Ask" as the
+name (never a token name), and every change of the choice is a row too.
+
+* Choosing either trust option opens a warning first, with **I understand, trust it** and **Keep asking me**. It says the
+  assistant will save without asking, can pick the wrong food or the wrong amount, that every number still comes from the
+  app, that the low and emergency rules and the dose checks stay on, that every save can be undone, and that photo and label
+  readings are always shown to you to check.
+* Both trust options need your admin to allow them: **Server administration → Server settings → Optional AI → Let people
+  trust Ask to save without asking** (`ai.allow_trusted_saves`, `AI_ALLOW_TRUSTED_SAVES`; off by default). With it off the
+  choices are greyed out and Ask always asks first, whatever you chose before; the choice is kept and applies again if the
+  admin turns it back on.
+* What never changes: no insulin or medicine doses (the dose check runs on the assistant's words), the app's numbers (every
+  figure is the app's), and a message about a low or an emergency is answered by the app's cards first and never saves. A
+  food eaten to treat a low can be logged like any other food and is never warned about. The assistant may save only when
+  you asked it to in this conversation. Trust never covers photo and label readings: they keep their own screens, where
+  you check them.
+* The trust choice is about the Ask screen. An assistant you connect with a token (above) is told in its instructions to
+  read the items back and wait for your yes before it saves; that is an instruction to the assistant, not something the app
+  can enforce, and it is unchanged.
+
 **What is sent, what is kept.** Your messages in this conversation (the last 20) and the app's own numbers the assistant
 looks up: targets, totals, food names and nutrients. Never your name, user name, e-mail, weight, height, exact age or notes
 (the person block of the other AI features: stage, dialysis, diabetes, your preferences text, and an age band and sex only if
@@ -325,8 +360,7 @@ after the first call ends that question with the numbers gathered so far. Small 
 protocol; `python scripts/ai_eval.py --chat` measures that (the owner runs it with a live model; [`ai.md`](ai.md)).
 
 **Not in this part** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next"): voice (part B: the browser's
-speech recognition with its own consent wording, the reply read aloud), saving from the chat (an "Add to plan" button you
-press, through the normal log API) and recipe pages.
+speech recognition with its own consent wording, the reply read aloud) and recipe pages.
 
 ## Honest limits
 

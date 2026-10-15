@@ -404,3 +404,11 @@ def test_the_assistant_card_offers_saving_as_a_separate_choice_and_says_what_eac
     assert "'Read and save' : 'Read only'" in block
     assert "'assistant.food_logged': 'Assistant saved food'" in SETTINGS_JS
     assert "'assistant.recipe_saved': 'Assistant saved a recipe'" in SETTINGS_JS
+
+
+def test_the_activity_list_names_a_change_of_the_assistant_trust_choice() -> None:
+    """Assistant step 2, part C: every change of "How much do you trust the assistant?" is an ``ai.trust_changed`` row;
+    the activity list shows it in the choice's own words, and Ask's saves read "with “Ask”"."""
+    assert "'ai.trust_changed': 'Trust in the assistant changed'" in SETTINGS_JS
+    assert "const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };" in SETTINGS_JS
+    assert "if (ev.action === 'ai.trust_changed') return `${TRUST_NAME[d.old] || d.old} → ${TRUST_NAME[d.new] || d.new}`;" in SETTINGS_JS

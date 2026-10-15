@@ -347,7 +347,7 @@ def test_lab_words_add_the_fixed_note(ask_client):
 
 def test_an_unknown_tool_and_bad_arguments_are_told_to_the_model_which_may_retry(ask_client):
     c = ask_client
-    script = [step_call("log_food", items=[{"food": "banana"}], meal="lunch"),   # a saving tool: not offered
+    script = [step_call("safety_check", message="hi"),                           # never offered to the chat
               step_call("check_meal", items=[]),                                   # bad arguments
               step_call("check_meal", items=[{"food": "banana", "amount": 1}]),
               step_answer("Checked.")]
@@ -355,7 +355,7 @@ def test_an_unknown_tool_and_bad_arguments_are_told_to_the_model_which_may_retry
         body = ask(c, "is a banana ok").json()
         bodies = provider.bodies()
     assert body["kind"] == "answer" and (body["model_calls"], body["tool_calls"]) == (4, 3)
-    assert 'There is no tool called "log_food"' in bodies[1]["messages"][-1]["content"]
+    assert 'There is no tool called "safety_check"' in bodies[1]["messages"][-1]["content"]
     assert "ERROR from check_meal: Invalid arguments" in bodies[2]["messages"][-1]["content"]
     assert "RESULT of check_meal" in bodies[3]["messages"][-1]["content"]
     assert c.get("/api/log", params={"date": DAY}).json()["entries"] == []  # nothing was saved
@@ -513,9 +513,10 @@ def test_the_prompt_has_no_identity_and_the_dry_run_shows_the_first_request(ask_
     assert dry["body"] == sent  # the dry run is exactly what is sent
     text = json.dumps(sent)
     system = sent["messages"][0]["content"]
-    for tool in ("get_today", "search_foods", "check_meal"):
+    for tool in ("get_today", "search_foods", "check_meal", "log_food", "save_recipe"):
         assert tool in system
-    assert "log_food" not in system and "save_recipe" not in system and "safety_check" not in system  # never offered
+    assert "safety_check" not in system  # never offered: the app's rules answer a low first
+    assert "request_key" not in system  # the app makes the key of a save; the model never does
     assert "At most" not in system and "at most 6 tool calls" in system and "PERSON:" in system
     assert '"ckd_stage":"4"' in system and '"diabetes":"type1"' in system and "vegetarian, no fish" in system
     assert '"age_band":null' in system and '"sex":null' in system  # not shared: null, not the value
@@ -556,7 +557,7 @@ def test_the_activity_log_and_the_database_keep_no_message_text(ask_client):
 
 
 def test_a_small_prompt_budget_drops_the_oldest_messages_and_then_refuses(tmp_path, foods_json):
-    with TestClient(create_app(ai_settings(tmp_path, foods_json, context_tokens=5000)), base_url=HTTPS_URL) as c:
+    with TestClient(create_app(ai_settings(tmp_path, foods_json, context_tokens=6500)), base_url=HTTPS_URL) as c:
         sign_in(c)
         enable(c, **{"ai.chat_enabled": True})
         become_ready(c)

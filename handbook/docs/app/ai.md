@@ -42,7 +42,7 @@ the consent sheet says so before you agree.
 | AI can | AI cannot |
 |---|---|
 | Pick and order meal ideas, using **only** foods the rules already allowed | Invent a food or a nutrient number: every number comes from the app's food list |
-| Split "describe a meal" text into search words; you pick each match | Save anything: you tap **Add to plan** and the normal rules run again |
+| Split "describe a meal" text into search words; you pick each match | Save anything on its own, unless you chose to trust it in **Ask** (below): you tap **Add to plan** or **Save** and the normal rules run again |
 | Copy printed numbers from a label photo into a draft food you check, marked "from photo" | Estimate nutrients from a plate photo: it gives food **names** and a rough weight; the numbers come from your food list |
 | Name foods it sees on a plate photo | Give doses, answer medical questions, or read your lab results |
 | In **Ask**, answer a short question after looking up your own numbers in the app | Make up a number: the app checks every number in an answer before you see it |
@@ -154,7 +154,18 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
 - The app **checks every answer** before you see it. If an answer touched on insulin or medicine doses, or had a
   number the app did not work out, you see a short notice instead, with the app's own numbers. Ask your care
   team about doses and about lab results.
-- Ask does not save anything. To add food, use the **Add** screen.
+- **Saving from Ask.** If you ask it to log, plan or save something ("log a banana for breakfast"), it does not
+  save it by itself. By default it shows a **card**: the foods the app found, the amounts and the app's totals,
+  with the words "Nothing has been saved yet". Press **Save as eaten**, **Save as planned** or **Cancel**; only your
+  press saves. You can also use the **Add** screen as always.
+- **How much do you trust the assistant?** In **Settings → AI ideas** you can choose **Ask me before every save**
+  (the default, and the one we recommend), **Trust it for this conversation** or **Trust it always**. The last two
+  save at once without asking, so you do not have to confirm every time, and they come with a warning first: the
+  assistant can pick the wrong food or the wrong amount. Every number still comes from the app, the low and emergency
+  rules and the dose checks stay on, and you can **Undo** each save (or delete it on **Today**). Photo and label
+  readings are always shown to you to check, whatever you choose. These two options only work if your admin has
+  allowed them; if not, Ask always asks first. "This conversation" ends when you start a new conversation or after
+  12 hours.
 - The conversation stays on the page. **New conversation**, reloading or signing out clears it, and the server
   keeps no copy of what you wrote. Your AI activity shows that a call happened, not what was said.
 - The first time, a sheet asks you to agree to send your messages and the numbers it looks up. **What will be
