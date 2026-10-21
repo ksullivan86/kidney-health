@@ -26,7 +26,7 @@ or delete it.
 | Your account: user name, display name, password **hash** | server | the password itself is never stored |
 | Profile, targets and lab results | server | |
 | Symptoms you write down (the symptom, the date, how bad, your note) | server | in your export; never sent to an AI provider or to an assistant |
-| Every log entry, your own foods, saved meals, foods you marked "Not for me" | server | |
+| Every log entry, your own foods, saved meals, your food preferences (More like this, Less often, Not for me) | server | what the app learns from your log is worked out each time and not stored |
 | Settings, and your own API keys **encrypted** | server | keys are write-only ([Settings and keys](settings-and-keys.md)) |
 | Your activity: sign-ins, password and key changes, exports | server | kept for 365 days by default |
 | AI requests and answers, if you use AI | server | kept for 30 days by default; you can delete them ([Optional AI](ai.md)) |
@@ -72,7 +72,7 @@ The handbook (**Learn**) loads nothing from the internet either.
 - **Trends → Export CSV** saves every entry for the days on screen, for your dietitian
   ([Reports for your care team](reports-for-your-team.md)).
 - **Settings → Account → Your data → Export my data (.zip)** downloads one file with everything you
-  entered: profile, settings, every entry, your foods, saved meals, lab results, symptoms, "Not for me" foods, AI
+  entered: profile, settings, every entry, your foods, saved meals, lab results, symptoms, food preferences, AI
   history and activity, as JSON and CSV, plus a `README.txt` that explains the files. No passwords,
   sessions or keys are included. You may need to enter your password again first
   ([design note 07][NOTE07]).
@@ -91,7 +91,7 @@ The handbook (**Learn**) loads nothing from the internet either.
    food this way says so in its note, so its totals do not look complete.
 4. Press **Import**. Everything is added, or nothing is.
 
-What comes across: your log entries, the foods you made, saved meals, lab results, symptoms and "Not for me" foods,
+What comes across: your log entries, the foods you made, saved meals, lab results, symptoms and food preferences,
 and the USDA and Open Food Facts foods you used (kept as your own copies if the new server does not have
 them, with their licence note). The numbers of an entry are worked out again from its food and amount, as
 for any entry you log.

@@ -109,10 +109,11 @@
       label: 'Also look barcodes up in USDA FoodData Central',
       help: "Uses the person's USDA key or the shared one, when Open Food Facts does not know a product, has no nutrition facts "
         + 'for it, or lacks potassium or sodium for a US product.' },
-    // Meal guidance (note 06 §4.14; app/settings_registry.py GuidancePreferences). "Not for me" foods are not here:
-    // they are rows of food_preferences (PUT/DELETE /api/guidance/not-for-me/{food_id}).
+    // Meal guidance (note 06 §4.14; note 09 §4.2; app/settings_registry.py GuidancePreferences). Food preferences are not here:
+    // they are rows of food_preferences (PUT/DELETE /api/guidance/preferences/{food_id}, aliases /not-for-me/{food_id}).
     { key: 'guidance', type: 'object', model: 'GuidancePreferences', scope: 'user', env: null,
-      default: { enabled: true, carb_tolerance_g: 10, hypo_dose_g: 15, exclude_categories: [], show_plan_builder: true, show_insights: true, ai_enrich: false },
+      default: { enabled: true, carb_tolerance_g: 10, hypo_dose_g: 15, exclude_categories: [], show_plan_builder: true, show_insights: true, ai_enrich: false,
+        learn_from_log: true, like_categories: [], less_categories: [], hidden_usual_meals: [] },
       fields: [
         { name: 'enabled', type: 'bool', default: true },
         { name: 'carb_tolerance_g', type: 'int', min: 5, max: 20, default: 10 },
@@ -121,7 +122,23 @@
         { name: 'show_plan_builder', type: 'bool', default: true },
         { name: 'show_insights', type: 'bool', default: true },
         { name: 'ai_enrich', type: 'bool', default: false },
+        { name: 'learn_from_log', type: 'bool', default: true },
+        { name: 'like_categories', type: 'list', item: { type: 'str', minLength: 1, maxLength: 100 }, maxItems: 50, unique: true, default: [] },
+        { name: 'less_categories', type: 'list', item: { type: 'str', minLength: 1, maxLength: 100 }, maxItems: 50, unique: true, default: [] },
+        // A usual meal's key, "<meal>:<food id>x<quarter servings>,…" (GE.fits.usualMealKey); integers only, so both sides write the same text.
+        { name: 'hidden_usual_meals', type: 'list', maxItems: 50, unique: true, default: [],
+          item: { type: 'str', minLength: 1, maxLength: 400, pattern: '^(?:breakfast|lunch|dinner|snack):[0-9]+x[0-9]+(?:,[0-9]+x[0-9]+)*$' } },
       ],
+      // The model validator: a food group is liked, ranked lower or never suggested, not two of them (runs when every field is valid).
+      check(out) {
+        const seen = new Set();
+        const clash = [];
+        for (const name of [...out.like_categories, ...out.less_categories, ...out.exclude_categories]) {
+          if (seen.has(name) && !clash.includes(name)) clash.push(name);
+          seen.add(name);
+        }
+        return clash.length ? `a food group can be in only one of Like, Less often and Never suggest: ${clash.join(', ')}` : null;
+      },
       label: 'Meal guidance preferences', help: 'carb_tolerance_g (5–20) and hypo_dose_g (5–30) come from your diabetes team.' },
     { key: 'guidance.beam_width', type: 'int', min: 1, max: 64, default: 16, scope: 'instance', env: 'GUIDANCE_BEAM_WIDTH',
       label: 'Plan builder: search width', help: 'Partial meals kept at each step. 8 is about 15 % faster and finds slightly worse meals.' },
@@ -251,6 +268,10 @@
           if (r.error) errors.push(r.error); else out[f.name] = r.value;
         }
         for (const k of Object.keys(value)) if (!def.fields.some((f) => f.name === k)) errors.push('Extra inputs are not permitted');
+        if (!errors.length && def.check) {  // a pydantic model validator (mode "after") runs only when every field is valid
+          const msg = def.check(out);
+          if (msg) return { error: `Value error, ${msg}` };
+        }
         return errors.length ? { error: errors.join('; ') } : { value: out };
       }
       default:

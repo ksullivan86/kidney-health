@@ -25,7 +25,8 @@ from conftest import (ADMIN_PASSWORD, DAY, FIXTURE_FOODS, HTTPS_URL, TestClient,
 JSON = {"content-type": "application/json"}
 SECOND_DAY = "2026-10-06"
 GUIDANCE = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclude_categories": ["Sweets & Snacks"],
-            "show_plan_builder": True, "show_insights": False, "ai_enrich": False}
+            "show_plan_builder": True, "show_insights": False, "ai_enrich": False, "learn_from_log": False,
+            "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"]}
 # Tables a person's rows live in; "what is stored" below compares them as a whole.
 DATA_TABLES = ("log_entries", "foods", "meal_templates", "lab_results", "food_preferences", "user_food_links",
                "user_profiles", "user_settings", "audit_log")
@@ -131,8 +132,8 @@ def populate(client: TestClient) -> dict[str, Any]:
     assert client.put("/api/profile", json={"name": "Sam", "weight_kg": 70, "ckd_stage": "4", "dialysis_days": [0, 3],
                                             "targets": {"potassium_mg": 2500, "protein_g": {"min": 50, "max": 60}}}).status_code == 200
     assert client.patch("/api/me/settings", json={"guidance": GUIDANCE, "ui.theme": "dark"}).status_code == 200
-    assert client.put(f"/api/guidance/not-for-me/{soup['id']}").status_code == 200
-    assert client.put(f"/api/guidance/not-for-me/{banana['id']}").status_code == 200
+    assert client.put(f"/api/guidance/not-for-me/{soup['id']}").status_code == 200  # the older route: a "Not for me" row
+    assert client.put(f"/api/guidance/preferences/{banana['id']}", json={"preference": "like", "source": "ask"}).status_code == 200
     return {"banana": banana, "tablets": tablets, "soup": soup, "gel": gel, "old": old}
 
 
@@ -172,6 +173,11 @@ def test_round_trip_into_a_fresh_server_matches(client, fresh):
     assert scrub(fresh.get("/api/labs").json()) == scrub(client.get("/api/labs").json())
     assert scrub(fresh.get("/api/guidance/not-for-me").json(), ("id", "food_id", "created_at")) == \
         scrub(client.get("/api/guidance/not-for-me").json(), ("id", "food_id", "created_at"))
+    kept = fresh.get("/api/guidance/preferences").json()
+    assert [(f["name"], f["preference"], f["source"]) for f in kept["foods"]] == [("Banana, raw", "like", "ask"), ("My soup", "not_for_me", "person")]
+    assert scrub(kept) == scrub(client.get("/api/guidance/preferences").json())  # created_at, updated_at and source came along
+    assert kept["groups"] == {"like": ["Fruits"], "less": ["Dairy & Alternatives"], "never": ["Sweets & Snacks"]}
+    assert kept["learn_from_log"] is False
     a_profile, b_profile = client.get("/api/profile").json(), fresh.get("/api/profile").json()
     for key in ("id", "updated_at"):
         a_profile.pop(key), b_profile.pop(key)
@@ -229,6 +235,8 @@ def test_a_bad_record_in_the_middle_refuses_the_whole_file(client, fresh):
         (lambda d: d["profile"]["targets"].__setitem__("potassium_mg", -1), "profile.targets"),
         (lambda d: d["settings"]["guidance"].__setitem__("hypo_dose_g", 5000), "settings"),
         (lambda d: d["food_preferences"][1].__setitem__("preference", "love"), "food_preferences[1].preference"),
+        (lambda d: d["food_preferences"][1].__setitem__("source", "robot"), "food_preferences[1].source"),
+        (lambda d: d["food_preferences"][1].__setitem__("updated_at", "yesterday"), "food_preferences[1].updated_at"),
         (lambda d: d["log_entries"][5].__setitem__("created_at", "yesterday"), "log_entries[5].created_at"),
     ]
     for edit, where in cases:
@@ -471,7 +479,7 @@ def test_a_year_of_heavy_use_is_over_the_default_limit_and_imports(client, fresh
 def test_lists_are_bounded(client, fresh):
     populate(client)
     doc = export_doc(client)
-    many = [{"food_id": 1, "name": "x", "preference": "not_for_me", "created_at": "2026-10-05T10:00:00.000000Z"}] * 501
+    many = [{"food_id": 1, "name": "x", "preference": "like", "created_at": "2026-10-05T10:00:00.000000Z"}] * 1001
     for edit, where in [
         (lambda d: d.__setitem__("food_preferences", many), "food_preferences"),
         (lambda d: d["meal_templates"][0].__setitem__("items", d["meal_templates"][0]["items"] * 60), "meal_templates[0].items"),
@@ -1000,3 +1008,87 @@ def test_the_curated_foods_with_a_negative_id_survive_an_export_and_an_import(tm
         # and a number beyond what the database holds is refused as before
         doc["builtin_foods"][0]["fdc_id"] = -(2**63)
         assert post_import(b, doc, dry_run=True, merge=True).status_code == 400
+
+
+# --------------------------------------------------------------------------- food preferences (schema step 17, note 09)
+
+
+def preference_file(client: TestClient) -> dict[str, Any]:
+    """A file whose ``food_preferences`` holds all four values, made from real API calls."""
+    for name, pref, source in (("banana", "like", "person"), ("glucose tablets", "less", "ask"), ("chicken breast", "not_for_me", "person"),
+                               ("apple", "neutral", "ask")):
+        assert client.put(f"/api/guidance/preferences/{find_food(client, name)['id']}",
+                          json={"preference": pref, "source": source}).status_code == 200
+    return export_doc(client)
+
+
+def test_all_four_values_come_across_with_who_set_them_and_when(client, fresh):
+    doc = preference_file(client)
+    assert sorted((p["preference"], p["source"]) for p in doc["food_preferences"]) == [
+        ("less", "ask"), ("like", "person"), ("neutral", "ask"), ("not_for_me", "person")]
+    assert all(set(p) == {"food_id", "name", "preference", "created_at", "source", "updated_at"} for p in doc["food_preferences"])
+    dry = post_import(fresh, doc, dry_run=True).json()
+    assert dry["counts"]["food_preferences"] == 4 and dry["file"]["records"]["food_preferences"] == 4
+    answer = post_import(fresh, doc).json()
+    assert answer["counts"]["food_preferences"] == 4 and answer["skipped"]["total"] == 0
+    mine = scrub(client.get("/api/guidance/preferences").json())
+    assert scrub(fresh.get("/api/guidance/preferences").json()) == mine and len(mine["foods"]) == 4
+    # merging the same file again adds nothing and says so
+    again = post_import(fresh, doc, merge=True).json()
+    assert again["counts"]["food_preferences"] == 0 and again["already_there"]["food_preferences"] == 4
+
+
+def test_a_file_from_before_step_17_imports_as_the_persons_own(client, fresh):
+    doc = preference_file(client)
+    for p in doc["food_preferences"]:
+        p["preference"] = "not_for_me"
+        del p["source"], p["updated_at"]
+    answer = post_import(fresh, doc).json()
+    assert answer["counts"]["food_preferences"] == 4
+    foods = fresh.get("/api/guidance/preferences").json()["foods"]
+    assert {f["source"] for f in foods} == {"person"} and all(f["updated_at"] == f["created_at"] for f in foods)
+    assert {f["preference"] for f in foods} == {"not_for_me"}
+
+
+def test_the_preference_limits_skip_and_say_why(client, fresh, monkeypatch):
+    import app.data_import as data_import
+
+    doc = preference_file(client)
+    monkeypatch.setattr(data_import, "MAX_FOOD_PREFERENCES", 3)
+    monkeypatch.setattr(data_import, "MAX_NOT_FOR_ME", 1)
+    order = {"not_for_me": 0, "like": 1, "less": 2, "neutral": 3}
+    doc["food_preferences"].sort(key=lambda p: order[p["preference"]])
+    second_never = {**doc["food_preferences"][1], "preference": "not_for_me"}  # a second "Not for me" row of another food
+    doc["food_preferences"].insert(1, second_never)
+    answer = post_import(fresh, doc).json()
+    reasons = [s["reason"] for s in answer["skipped"]["shown"] if s["kind"] == "food_preferences"]
+    assert answer["counts"]["food_preferences"] == 3 and len(reasons) == 2
+    assert any('the "Not for me" list is full (1 foods)' in r for r in reasons)
+    assert any("your food preferences are full (3 foods)" in r for r in reasons)
+    foods = fresh.get("/api/guidance/preferences").json()["foods"]
+    assert len(foods) == 3 and sum(f["preference"] == "not_for_me" for f in foods) == 1
+
+
+def test_the_preferences_in_a_file_are_capped_at_1000(client, fresh):
+    doc = preference_file(client)
+    doc["food_preferences"] = [doc["food_preferences"][0]] * 1001
+    assert post_import(fresh, doc).status_code == 400
+    doc["food_preferences"] = [doc["food_preferences"][0]] * 1000
+    assert post_import(fresh, doc, dry_run=True).status_code == 200
+
+
+def test_the_group_choices_come_across_only_with_the_profile_box(client, fresh):
+    populate(client)
+    doc = export_doc(client)
+    post_import(fresh, doc)  # without "replace my profile and settings": no guidance setting comes across
+    assert fresh.get("/api/me/settings").json()["settings"]["guidance"]["value"]["like_categories"] == []
+    reset_limits(fresh)
+    post_import(fresh, doc, merge=True, replace_profile=True)
+    got = fresh.get("/api/me/settings").json()["settings"]["guidance"]["value"]
+    assert got["like_categories"] == ["Fruits"] and got["learn_from_log"] is False and got["hidden_usual_meals"] == ["dinner:5x4,9x2"]
+    # a file whose group sits in two lists is refused as a whole, like any invalid setting
+    bad = copy.deepcopy(doc)
+    bad["settings"]["guidance"]["like_categories"] = ["Sweets & Snacks"]
+    reset_limits(fresh)
+    r = post_import(fresh, bad, dry_run=True, replace_profile=True)
+    assert r.status_code == 400, r.text

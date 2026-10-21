@@ -33,9 +33,9 @@ from ..foods import access_clause, access_params, parse_flags
 from ..meals import parse_items
 from ..nutrients import NUTRIENT_KEYS
 from ..profile import get_profile
-from ..settings_store import SettingsStore
+from ..settings_store import SettingsStore, default_store
 from . import rules as R
-from .state import Combo, DayEntry, GuidanceContext, HistoryEntry, Prefs, Profile, SavedMeal, Tunables
+from .state import Combo, DayEntry, GuidanceContext, HistoryEntry, PlannedEntry, Prefs, Profile, SavedMeal, Tunables
 from .vectors import FoodVec, build_vectors, food_from_row
 
 log = logging.getLogger("kidney_health.guidance")
@@ -43,7 +43,11 @@ log = logging.getLogger("kidney_health.guidance")
 COMBOS_JSON = REPO_ROOT / "data" / "combos.json"
 FOODS_REV_KEY = "foods_rev"
 PREFERENCE_NOT_FOR_ME = "not_for_me"
-MAX_NOT_FOR_ME = 500  # note 06 §4.14: "≤ 500 ids"
+PREFERENCE_VALUES = ("like", "less", PREFERENCE_NOT_FOR_ME, "neutral")  # food_preferences.preference (note 09 §4.2)
+PREFERENCE_SOURCES = ("person", "ask")  # food_preferences.source
+MAX_NOT_FOR_ME = 500  # note 06 §4.14: "≤ 500 ids"; the "Not for me" rows alone
+MAX_FOOD_PREFERENCES = 1000  # note 09 §4.2: every preference row of a person together
+EXPLICIT_PER_LIST = 10  # names per list that ``explicit_preferences`` returns
 
 
 # --------------------------------------------------------------------------- #
@@ -98,14 +102,56 @@ def not_for_me_ids(conn: sqlite3.Connection, user_id: int) -> frozenset[int]:
     return frozenset(int(r["food_id"]) for r in rows)
 
 
+def food_preferences(conn: sqlite3.Connection, user_id: int) -> tuple[frozenset[int], dict[int, str]]:
+    """``(the "Not for me" food ids, {food id: like | less | neutral})`` of one person (one query, at most 1,000 rows)."""
+    rows = conn.execute("SELECT food_id, preference FROM food_preferences WHERE user_id = ?", (int(user_id),)).fetchall()
+    never = frozenset(int(r["food_id"]) for r in rows if r["preference"] == PREFERENCE_NOT_FOR_ME)
+    soft = {int(r["food_id"]): r["preference"] for r in rows if r["preference"] in ("like", "less", "neutral")}
+    return never, soft
+
+
 def load_prefs(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> Prefs:
     settings = user_settings(conn, store, user_id)
+    never, soft = food_preferences(conn, user_id)
     return Prefs(
         carb_tolerance_g=float(setting_value(settings, "carb_tolerance_g", R.CARB_TOLERANCE_G)),
         hypo_dose_g=float(setting_value(settings, "hypo_dose_g", R.HYPO_DOSE_G)),
-        exclude_food_ids=not_for_me_ids(conn, user_id),
+        exclude_food_ids=never,
         exclude_categories=frozenset(setting_value(settings, "exclude_categories", ()) or ()),
+        food_pref=soft,
+        like_categories=frozenset(setting_value(settings, "like_categories", ()) or ()),
+        less_categories=frozenset(setting_value(settings, "less_categories", ()) or ()),
+        learn_from_log=bool(setting_value(settings, "learn_from_log", True)),
+        hidden_usual_meals=frozenset(setting_value(settings, "hidden_usual_meals", ()) or ()),
     )
+
+
+def explicit_preferences(conn: sqlite3.Connection, user_id: int, store: SettingsStore | None = None) -> dict[str, list[str]]:
+    """What the person has said about taste, by name, for the optional AI (note 09 §4.7; part C).
+
+    ``{"likes": [...], "less_often": [...], "not_for_me": [...]}``: the names of the foods the person marked (``like``,
+    ``less``, ``not_for_me``) followed by the names of the food groups they liked, wanted less often or never want
+    (``like_categories``, ``less_categories``, ``exclude_categories``). Foods come most recently changed first, groups in
+    the reverse of the order they were added (a group has no time of its own); each list holds at most 10 names. Only
+    what the person chose: a ``neutral`` row, a learned signal and a hidden usual meal are never in it."""
+    rows = conn.execute(
+        """SELECT p.preference, f.name FROM food_preferences p JOIN foods f ON f.id = p.food_id
+           WHERE p.user_id = ? AND p.preference IN ('like', 'less', 'not_for_me')
+           ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.rowid DESC""",
+        (int(user_id),),
+    ).fetchall()
+    settings = user_settings(conn, store or default_store(), user_id)
+
+    def groups(name: str) -> list[str]:
+        return list(reversed(list(setting_value(settings, name, ()) or ())))
+
+    def names(kind: str, setting: str) -> list[str]:
+        out = [r["name"] for r in rows if r["preference"] == kind]
+        out += [g for g in groups(setting) if g not in out]
+        return out[:EXPLICIT_PER_LIST]
+
+    return {"likes": names("like", "like_categories"), "less_often": names("less", "less_categories"),
+            "not_for_me": names(PREFERENCE_NOT_FOR_ME, "exclude_categories")}
 
 
 def load_tunables(conn: sqlite3.Connection, store: SettingsStore) -> Tunables:
@@ -289,6 +335,19 @@ def load_history(conn: sqlite3.Connection, user_id: int, start: str, end: str) -
     return tuple(out)
 
 
+def load_planned(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> tuple[PlannedEntry, ...]:
+    """The person's entries still ``planned`` on ``start``…``end`` (both inclusive; past days), low treatments left out.
+
+    The raw input of "planned but not eaten" (note 09 §4.4); one indexed read (``log_user_date``)."""
+    rows = conn.execute(
+        """SELECT food_id, date, meal FROM log_entries
+           WHERE user_id = ? AND status = 'planned' AND date >= ? AND date <= ? AND (purpose IS NULL OR purpose != 'hypo')
+           ORDER BY date, id""",
+        (int(user_id), start, end),
+    ).fetchall()
+    return tuple(PlannedEntry(food_id=int(r["food_id"]), date=r["date"], meal=r["meal"]) for r in rows)
+
+
 def load_saved_meals(conn: sqlite3.Connection, user_id: int) -> tuple[SavedMeal, ...]:
     rows = conn.execute(
         "SELECT id, name, meal_hint, items_json FROM meal_templates WHERE user_id = ? ORDER BY name COLLATE NOCASE, id",
@@ -374,14 +433,26 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
         history = tuple(h for h in all_history if h.date >= start14) if options.history else ()
         history60 = all_history if options.history60 else ()
     combos = resolve_combos(foods, read_combos()) if options.combos else ()
+    prefs = load_prefs(conn, store, user_id)
+    planned30: tuple[PlannedEntry, ...] = ()
+    eaten30: tuple[HistoryEntry, ...] | None = None
+    if prefs.learn_from_log and (options.history or options.history60):
+        # "Planned but not eaten" (note 09 §4.4): one narrow read, and the eaten rows of the same 30 days only when
+        # something is planned and the 60 days were not loaded anyway.
+        start30, yesterday = _days_before(day, R.SKIP_WINDOW_DAYS), _days_before(day, 1)
+        planned30 = load_planned(conn, user_id, start30, yesterday)
+        if planned30 and not options.history60:
+            eaten30 = load_history(conn, user_id, start30, yesterday)
     return GuidanceContext(
         date=day,
         profile=load_profile(conn, user_id),
-        prefs=load_prefs(conn, store, user_id),
+        prefs=prefs,
         foods=foods,
         day=entries,
         history=history,
         history60=history60,
+        planned30=planned30,
+        eaten30=eaten30,
         saved_meals=load_saved_meals(conn, user_id) if options.saved_meals else (),
         combos=combos,
         tunables=load_tunables(conn, store),

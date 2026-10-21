@@ -65,6 +65,25 @@ VALUES = {
     "str": ["My server", "  padded name  ", "", "   ", "x" * 80, "x" * 81, 5, None],
     "choice": [None, 5, "nope"],
 }
+# The meal guidance object (note 09 §4.2): the preference profile's lists, limits and the one-list-per-group rule.
+GUIDANCE_VALUES = [
+    {}, {"learn_from_log": False}, {"learn_from_log": "no"}, {"learn_from_log": None},
+    {"like_categories": ["Fruits", "Vegetables"], "less_categories": ["Sweets & Snacks"], "exclude_categories": ["Beverages"]},
+    {"like_categories": ["Fruits", "Fruits", " Fruits "]},
+    {"like_categories": ["Fruits"], "exclude_categories": ["Fruits"]},
+    {"like_categories": ["Fruits", "Dairy & Alternatives"], "less_categories": ["Dairy & Alternatives", "Fruits"], "exclude_categories": ["Fruits"]},
+    {"less_categories": ["Beverages"], "exclude_categories": ["Beverages"]},
+    {"like_categories": [""]}, {"less_categories": ["x" * 101]}, {"like_categories": [f"c{i}" for i in range(50)]},
+    {"like_categories": [f"c{i}" for i in range(51)]}, {"less_categories": "Fruits"}, {"like_categories": [5]},
+    {"hidden_usual_meals": ["lunch:12x4,30x2", "dinner:7x2", "lunch:12x4,30x2"]},
+    {"hidden_usual_meals": ["  breakfast:3x4,9x1  "]},
+    {"hidden_usual_meals": ["brunch:3x4"]}, {"hidden_usual_meals": ["lunch:12x4,"]}, {"hidden_usual_meals": ["lunch:"]},
+    {"hidden_usual_meals": [""]}, {"hidden_usual_meals": ["lunch:" + ",".join(f"{i}x4" for i in range(1, 200))]},
+    {"hidden_usual_meals": [f"snack:{i}x4" for i in range(50)]}, {"hidden_usual_meals": [f"snack:{i}x4" for i in range(51)]},
+    {"hidden_usual_meals": "lunch:1x4"}, {"hidden_usual_meals": [7]},
+    {"unknown_field": 1}, {"like_categories": ["a"], "unknown_field": 1},
+    {"carb_tolerance_g": 4, "like_categories": ["Fruits"], "exclude_categories": ["Fruits"]},
+]
 # Extra strings for a key with a pattern: the JS twin checks it after the length (as pydantic does).
 PATTERN_VALUES = ["admin@example.org", "Mum's server, mum@example.org", "a(b)c", "back\\slash", "x\r\nX-Evil: 1",
                   "tab\there", "café@example.org", "  ab(  ", "ok@example.org\n"]
@@ -81,6 +100,8 @@ def validation_vectors() -> list[dict]:
                 values += [v for v in ("local_then_cloud", "cloud", "any") if v not in item["options"]]
         if item.get("pattern"):
             values += PATTERN_VALUES
+        if item["key"] == "guidance":
+            values += GUIDANCE_VALUES
         for value in values:
             try:
                 out.append({"key": d.key, "input": value, "value": d.to_python_json(d.validate(value))})

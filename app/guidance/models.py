@@ -419,3 +419,61 @@ class NotForMeList(_Out):
     rules_version: str
     foods: list[NotForMeFood]
     limit: int
+
+
+# --------------------------------------------------------------------------- #
+# The preference profile (note 09 §4.10): GET /preferences, PUT and DELETE /preferences/{food_id}, GET /learned
+# --------------------------------------------------------------------------- #
+
+FoodPreference = Literal["like", "less", "not_for_me", "neutral"]
+PreferenceSource = Literal["person", "ask"]
+
+
+class PreferenceFood(_Out):
+    food_id: int
+    name: str
+    category: str | None
+    preference: FoodPreference
+    source: PreferenceSource
+    created_at: str
+    updated_at: str
+
+
+class PreferenceGroups(_Out):
+    like: list[str]
+    less: list[str]
+    never: list[str]  # the "Never suggest" groups (``guidance.exclude_categories``)
+
+
+class PreferenceList(_Out):
+    rules_version: str
+    limit: int  # preference rows of all kinds together
+    not_for_me_limit: int  # the "Not for me" rows alone
+    foods: list[PreferenceFood]
+    groups: PreferenceGroups
+    learn_from_log: bool
+
+
+class PreferenceBody(BaseModel):
+    """``PUT /preferences/{food_id}``: what the person says about one food, or what Ask proposed and they confirmed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    preference: FoodPreference
+    source: PreferenceSource = "person"
+
+
+class LearnedItem(_Out):
+    kind: Literal["often", "slot", "usual_meal", "planned_not_eaten"]
+    food_id: int | None = None  # a food item; null for a usual meal
+    name: str
+    meal: Meal | None = None  # a slot or usual-meal item
+    key: str | None = None  # a usual meal's key, for ``hidden_usual_meals``
+    reason: str
+    effect: Literal["more", "less"]
+
+
+class LearnedList(_Out):
+    rules_version: str
+    learn_from_log: bool
+    items: list[LearnedItem]

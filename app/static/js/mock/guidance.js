@@ -2,13 +2,14 @@
    twin of the engine, js/engine/guidance/*.js).
 
    Routes (ARCHITECTURE.md "M2 API: guidance"): GET /api/guidance/next-meal, /swaps, /hypo-options,
-   /insights/day, /insights/period, /rules, /not-for-me; POST /plan-day; PUT and DELETE
-   /not-for-me/{food_id}. Query and body validation give the server's 400 texts (FastAPI query
+   /insights/day, /insights/period, /rules, /preferences, /learned, /not-for-me; POST /plan-day; PUT and DELETE
+   /preferences/{food_id} and, as aliases of its not_for_me rows, /not-for-me/{food_id}. Query and body validation give the server's 400 texts (FastAPI query
    parameters in signature order, then the route's own checks); the answers are serialised like the
    server's response models (optional fields present as null). The demo person's context is loaded the
    way app/guidance/context.py loads it: the day's entries in log order, eaten history of the previous
    14 and 60 days, saved meals by name, the starter combos of data/combos.json (a copy below; pytest
-   checks it), the "Not for me" foods and the guidance settings. AI is never available in the demo.
+   checks it), the food preferences (like, less often, "Not for me", neutral: a Map of food id → row, as food_preferences),
+   the entries still planned on the last 30 days and the guidance settings. AI is never available in the demo.
 
    Parity: tools/e2e/parity.py section 12 compares every route with a real server. */
 (() => {
@@ -22,6 +23,9 @@
   const { route, MockApi, Check, fail, failFields, validDate, pydanticInt, pydanticFloat, nocaseCompare, MEAL_RANK } = M;
 
   const MAX_NOT_FOR_ME = 500;
+  const MAX_FOOD_PREFERENCES = 1000;
+  const PREFERENCES = ['like', 'less', 'not_for_me', 'neutral'];
+  const PREFERENCE_SOURCES = ['person', 'ask'];
   const MAX_ID = 9223372036854775807n;
   const MAX_ID_TEXT = '9223372036854775807';
   const DISABLED_BY_USER = 'Meal guidance is switched off in your settings.';
@@ -120,7 +124,35 @@
 
   Object.assign(MockApi.prototype, {
     _guidanceSetting(key) { return this._effectiveSetting(key, this._currentUser().id).value; },
-    _foodPreferences() { if (!this._notForMe) this._notForMe = new Map(); return this._notForMe; },
+    // food_preferences: a Map of food id → { preference, source, created_at, updated_at }, created lazily (so a copy saved by the
+    // demo needs no schema step). A copy saved before the preference profile held "Not for me" foods as id → creation time in
+    // `_notForMe`; they become rows of the person's own, last changed when they were made.
+    _foodPreferences() {
+      if (!this._foodPrefs) {
+        this._foodPrefs = new Map();
+        if (this._notForMe) {
+          for (const [id, v] of this._notForMe) {
+            this._foodPrefs.set(id, typeof v === 'string' ? { preference: 'not_for_me', source: 'person', created_at: v, updated_at: v } : v);
+          }
+          delete this._notForMe;
+        }
+      }
+      return this._foodPrefs;
+    },
+    // PUT /preferences/{food_id} and its alias: one row, the limits checked first (api._store_preference). The same value again changes nothing.
+    _storePreference(foodId, preference, source) {
+      const prefs = this._foodPreferences();
+      const row = prefs.get(foodId);
+      if (row && row.preference === preference) return;
+      let never = 0;
+      for (const v of prefs.values()) if (v.preference === 'not_for_me') never += 1;
+      if (preference === 'not_for_me' && never >= MAX_NOT_FOR_ME) fail(409, `the "Not for me" list is full (${MAX_NOT_FOR_ME} foods); remove one first`);
+      const now = this._stamp();
+      if (!row) {
+        if (prefs.size >= MAX_FOOD_PREFERENCES) fail(409, `your food preferences are full (${MAX_FOOD_PREFERENCES} foods); remove one first`);
+        prefs.set(foodId, { preference, source, created_at: now, updated_at: now });
+      } else prefs.set(foodId, { ...row, preference, source, updated_at: now });
+    },
     // The engine's food vectors, rebuilt only when a food changed (the server keys its cache by meta.foods_rev).
     _guidanceFoods() {
       let latest = '';
@@ -156,9 +188,15 @@
     },
     _guidancePrefs() {
       const s = this._guidanceSetting('guidance') || {};
+      const never = [], soft = [];
+      for (const [id, row] of this._foodPreferences()) {
+        if (row.preference === 'not_for_me') never.push(id); else soft.push([id, row.preference]);
+      }
       return { carb_tolerance_g: Number(s.carb_tolerance_g == null ? R.CARB_TOLERANCE_G : s.carb_tolerance_g),
         hypo_dose_g: Number(s.hypo_dose_g == null ? R.HYPO_DOSE_G : s.hypo_dose_g),
-        exclude_food_ids: [...this._foodPreferences().keys()], exclude_categories: [...(s.exclude_categories || [])] };
+        exclude_food_ids: never, exclude_categories: [...(s.exclude_categories || [])], food_pref: new Map(soft),
+        like_categories: [...(s.like_categories || [])], less_categories: [...(s.less_categories || [])],
+        learn_from_log: s.learn_from_log !== false, hidden_usual_meals: [...(s.hidden_usual_meals || [])] };
     },
     // context.load(conn, user_id, day, options)
     _guidanceContext(day, { history = true, history60 = true, savedMeals = true, combos = true } = {}) {
@@ -183,8 +221,18 @@
         starters = COMBOS.filter((c) => c.items.every(([fdc]) => byFdc.has(fdc)))
           .map((c) => ({ id: c.id, name: c.name, meal: c.meal, source: c.source, items: c.items.map(([fdc, q]) => [byFdc.get(fdc), Number(q)]) }));
       }
-      return GE.makeContext({ date: day, profile: this._guidanceProfile(), prefs: this._guidancePrefs(), foods, day: entries, history: hist,
-        history60: hist60, saved_meals: saved, combos: starters,
+      // "Planned but not eaten" (note 09 §4.4): the entries still planned on the last 30 days, and the eaten rows of the same days
+      // only when something is planned and the 60 days were not loaded (context.load).
+      const prefs = this._guidancePrefs();
+      let planned30 = [], eaten30 = null;
+      if (prefs.learn_from_log && (history || history60)) {
+        const start30 = R.addDays(day, -R.SKIP_WINDOW_DAYS), yesterday = R.addDays(day, -1);
+        planned30 = this._guidanceRows(start30, yesterday, false).filter((e) => e.status === 'planned' && e.purpose !== 'hypo')
+          .map((e) => ({ food_id: e.food_id, date: e.date, meal: e.meal }));
+        if (planned30.length && !history60) eaten30 = this._guidanceHistory(foods, start30, yesterday);
+      }
+      return GE.makeContext({ date: day, profile: this._guidanceProfile(), prefs, foods, day: entries, history: hist,
+        history60: hist60, planned30, eaten30, saved_meals: saved, combos: starters,
         tunables: { pool_per_role: this._effectiveSetting('guidance.pool_per_role', null).value, beam_width: this._effectiveSetting('guidance.beam_width', null).value } });
     },
     // api.gate: the server switch first, then the person's own switches.
@@ -205,12 +253,29 @@
     },
     _notForMeList() {
       const rows = [];
-      for (const [foodId, createdAt] of this._foodPreferences()) {
-        const f = this._food(foodId);
-        if (f) rows.push({ food_id: foodId, name: f.name, category: f.category, created_at: createdAt });
+      for (const [foodId, row] of this._foodPreferences()) {
+        const f = row.preference === 'not_for_me' ? this._food(foodId) : null;
+        if (f) rows.push({ food_id: foodId, name: f.name, category: f.category, created_at: row.created_at });
       }
       rows.sort((a, b) => nocaseCompare(a.name, b.name) || a.food_id - b.food_id);
       return { rules_version: R.RULES_VERSION, foods: rows, limit: MAX_NOT_FOR_ME };
+    },
+    _preferenceRow(foodId, row, f) {
+      return { food_id: foodId, name: f.name, category: f.category, preference: row.preference, source: row.source || 'person',
+        created_at: row.created_at, updated_at: row.updated_at || row.created_at };
+    },
+    // GET /api/guidance/preferences
+    _preferenceList() {
+      const rows = [];
+      for (const [foodId, row] of this._foodPreferences()) {
+        const f = this._food(foodId);
+        if (f) rows.push(this._preferenceRow(foodId, row, f));
+      }
+      rows.sort((a, b) => nocaseCompare(a.name, b.name) || a.food_id - b.food_id);
+      const s = this._guidanceSetting('guidance') || {};
+      return { rules_version: R.RULES_VERSION, limit: MAX_FOOD_PREFERENCES, not_for_me_limit: MAX_NOT_FOR_ME, foods: rows,
+        groups: { like: [...(s.like_categories || [])], less: [...(s.less_categories || [])], never: [...(s.exclude_categories || [])] },
+        learn_from_log: s.learn_from_log !== false };
     },
   });
 
@@ -355,25 +420,72 @@
       tips: GE.T.ALL_TIPS.map((t) => ({ code: t.code, handbook: t.slug, text: t.text })) };
   });
 
+  // GET /api/guidance/learned: what the ranking learned from the log, each with a plain reason (fits.learned); computed, never stored.
+  route('GET', '/api/guidance/learned', function () {
+    this._currentUser();
+    const result = GE.learned(this._guidanceContext(todayStr(), { savedMeals: false, combos: false }));
+    for (const item of result.items) withNulls(item, ['food_id', 'meal', 'key']);
+    return result;
+  });
+
+  route('GET', '/api/guidance/preferences', function () { this._currentUser(); return this._preferenceList(); });
+  // The path int of /preferences/{food_id} and /not-for-me/{food_id}: any sign, parsed like FastAPI; an id beyond SQLite's is not found.
+  function pathFoodId(raw) {
+    const big = bigOf(raw);
+    return { big, foodId: big <= MAX_ID && big >= -MAX_ID ? Number(big) : NaN };
+  }
+  const PATH_INT = 'food_id: Input should be a valid integer, unable to parse string as an integer';
+  // PUT / DELETE /api/guidance/preferences/{food_id}: the body of a PUT is { preference, source? } (PreferenceBody, extra fields refused).
+  route('*', /^\/api\/guidance\/preferences\/([^/]+)$/, function ({ method, id, body }) {
+    this._currentUser();
+    if (method !== 'PUT' && method !== 'DELETE') fail(405, 'Method Not Allowed');
+    const raw = decodeURIComponent(id);
+    const errors = pydanticInt(raw) === undefined ? [PATH_INT] : [];
+    let out = null;
+    if (method === 'PUT') {
+      // FastAPI collects the path error and the body errors together; Check fails at once for a body that is no object.
+      if (body == null) errors.push('Field required');
+      else if (!M.isDict(body)) errors.push('Input should be a valid dictionary or object to extract fields from');
+      else {
+        const c = new Check(body);
+        c.choice('preference', PREFERENCES, { required: true });
+        c.choice('source', PREFERENCE_SOURCES, { def: 'person' });
+        for (const k of Object.keys(c.body)) if (k !== 'preference' && k !== 'source') c.err(k, 'Extra inputs are not permitted');
+        errors.push(...c.errors);
+        out = c.out;
+      }
+    }
+    if (errors.length) failFields(errors);
+    const { big, foodId } = pathFoodId(raw);
+    const prefs = this._foodPreferences();
+    if (method === 'PUT') {
+      const food = Number.isSafeInteger(foodId) ? this._food(foodId) : null;
+      if (!food) fail(404, `food ${big} not found`);
+      this._storePreference(foodId, out.preference, out.source);
+      return this._preferenceRow(foodId, prefs.get(foodId), food);
+    }
+    if (!Number.isSafeInteger(foodId) || !prefs.has(foodId)) fail(404, `food ${big} has no preference of yours`);
+    prefs.delete(foodId);
+    return null;
+  });
+
+  // The older routes stay as aliases of the not_for_me rows (GET returns only those; PUT replaces another preference on the food;
+  // DELETE leaves a like or a less often alone).
   route('GET', '/api/guidance/not-for-me', function () { this._currentUser(); return this._notForMeList(); });
-  // PUT / DELETE /api/guidance/not-for-me/{food_id}: a path int (any sign); not yours or unknown → 404.
   route('*', /^\/api\/guidance\/not-for-me\/([^/]+)$/, function ({ method, id }) {
     this._currentUser();
     if (method !== 'PUT' && method !== 'DELETE') fail(405, 'Method Not Allowed');
     const raw = decodeURIComponent(id);
-    if (pydanticInt(raw) === undefined) failFields(['food_id: Input should be a valid integer, unable to parse string as an integer']);
-    const big = bigOf(raw);
-    const foodId = big <= MAX_ID && big >= -MAX_ID ? Number(big) : NaN;
+    if (pydanticInt(raw) === undefined) failFields([PATH_INT]);
+    const { big, foodId } = pathFoodId(raw);
     const prefs = this._foodPreferences();
     if (method === 'PUT') {
       if (!Number.isSafeInteger(foodId) || !this._food(foodId)) fail(404, `food ${big} not found`);
-      if (!prefs.has(foodId)) {
-        if (prefs.size >= MAX_NOT_FOR_ME) fail(409, `the "Not for me" list is full (${MAX_NOT_FOR_ME} foods); remove one first`);
-        prefs.set(foodId, this._stamp());
-      }
+      this._storePreference(foodId, 'not_for_me', 'person');
       return this._notForMeList();
     }
-    if (!Number.isSafeInteger(foodId) || !prefs.has(foodId)) fail(404, `food ${big} is not on your list`);
+    const row = Number.isSafeInteger(foodId) ? prefs.get(foodId) : null;
+    if (!row || row.preference !== 'not_for_me') fail(404, `food ${big} is not on your list`);
     prefs.delete(foodId);
     return null;
   });

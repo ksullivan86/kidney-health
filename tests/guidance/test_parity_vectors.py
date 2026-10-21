@@ -44,11 +44,18 @@ def test_vectors_cover_every_engine_function_and_the_note_06_cases():
     doc = json.loads(VECTORS.read_text(encoding="utf-8"))
     fns = {c["call"]["fn"] for c in doc["cases"]}
     assert fns == {"meal_room", "what_fits", "find_swaps", "hypo_options", "plan_day", "day_insights", "period_insights",
-                   "prefilter"}
+                   "prefilter", "learned"}
     ids = {c["id"].split(" ")[0] for c in doc["cases"]}
     for vector in ("TV-B4", "TV-B5", "TV-B6", "TV-B7", "TV-F8", "TV-S1", "TV-S2", "TV-S3", "TV-S4", "TV-S5", "TV-S6",
                    "TV-P1", "TV-P2", "TV-P6", "TV-P7", "TV-I1", "TV-I2", "TV-I3", "TV-I5"):
         assert vector in ids, vector
+    # Note 09 §6: the preference properties and the two hand-computed vectors are in the file.
+    assert "TV-PREF-2" in ids
+    titles = " | ".join(c["id"] for c in doc["cases"])
+    for needle in ("PREF likes, less often", "a neutral food", "learn from my log off", "hidden usual meal", "Not for me food",
+                   "Never suggest group", "planned but not eaten", "hypo options ignore every soft preference",
+                   "the whole list is shown with a note", "learned list"):
+        assert needle in titles, needle
     # Plain JSON: no NaN or Infinity anywhere, inputs carry their snapshots.
     text = VECTORS.read_text(encoding="utf-8")
     assert "NaN" not in text and "Infinity" not in text

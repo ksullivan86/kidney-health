@@ -24,13 +24,14 @@ from ..nutrients import NUTRIENT_KEYS, build_projected_alerts, daily_status, rou
 from . import messages as M
 from . import rules as R
 from .budget import Room, day_totals, meal_room
-from .fits import eligible_foods, familiar_option, food_core, resolve_items, room_json, saved_meals_for, \
-    totals_json, usual_meals_for
+from .fits import eligible_foods, familiar_excluded, familiar_option, food_core, resolve_items, room_json, \
+    saved_meals_for, totals_json, usual_meals_for
 from .score import (
     Counter,
     Evaluation,
     HabitStats,
     MealItem,
+    PrefTerms,
     Scorer,
     TodayStats,
     check_meal,
@@ -59,7 +60,8 @@ def build_pools(ctx: GuidanceContext, habit: HabitStats, today: TodayStats, pool
     for f in eligible_foods(ctx):
         pools[f.role].append(f)
     for role, foods in pools.items():
-        foods.sort(key=lambda f: (_LEVEL_RANK[f.level1], -static_term(f, habit, today),
+        # The preference term joins the static term, so a liked food is not cut from a long list (note 09 §4.5).
+        foods.sort(key=lambda f: (_LEVEL_RANK[f.level1], -(static_term(f, habit, today) + habit.pref.of(f)),
                                   f.k if f.k is not None else float("inf"), f.name_fold, f.id))
         del foods[pool_size:]
     return pools
@@ -126,7 +128,8 @@ def beam_build(room: Room, scorer: Scorer, today: TodayStats, dialysis: bool, st
                beam_width: int, counter: Counter, *, snack: bool = False, relaxed: bool = False) -> list[Built]:
     """Beam search over the role steps; each step may be skipped. ``relaxed`` skips the meal check
     (used only to find the closest meal when nothing fits)."""
-    empty = Built((), score_meal((), room, today, dialysis, counter=counter), 0.0)
+    pref = scorer.habit.pref
+    empty = Built((), score_meal((), room, today, dialysis, counter=counter, pref=pref), 0.0)
     beam = [empty]
     for index, candidates in enumerate(steps):
         children: dict[tuple, Built] = {}
@@ -146,17 +149,18 @@ def beam_build(room: Room, scorer: Scorer, today: TodayStats, dialysis: bool, st
                     totals = meal_totals(items)
                     if not relaxed and not check_meal(items, room, "built", totals).ok:
                         continue
-                    children[key] = Built(items, score_meal(items, room, today, dialysis, counter=counter, totals=totals),
-                                          totals[0][R.K])
+                    children[key] = Built(items, score_meal(items, room, today, dialysis, counter=counter, totals=totals,
+                                                            pref=pref), totals[0][R.K])
         beam = _rank(list(beam) + list(children.values()))[:beam_width]
-    finals = [fine_tune(b, room, today, dialysis, counter, relaxed) for b in beam if b.items]
+    finals = [fine_tune(b, room, today, dialysis, counter, relaxed, pref) for b in beam if b.items]
     unique: dict[tuple, Built] = {}
     for b in finals:
         unique.setdefault(b.key, b)
     return _rank(unique.values())
 
 
-def fine_tune(b: Built, room: Room, today: TodayStats, dialysis: bool, counter: Counter, relaxed: bool) -> Built:
+def fine_tune(b: Built, room: Room, today: TodayStats, dialysis: bool, counter: Counter, relaxed: bool,
+              pref: PrefTerms | None = None) -> Built:
     """Move the starch portion over ¼–3 servings to bring carbohydrate closest to the meal's goal."""
     if room.carbs is None:
         return b
@@ -177,7 +181,7 @@ def fine_tune(b: Built, room: Room, today: TodayStats, dialysis: bool, counter: 
     if best_q == q0:
         return b
     items = b.items[:idx] + ((f, best_q),) + b.items[idx + 1:]
-    return Built(items, score_meal(items, room, today, dialysis, counter=counter), _k(items))
+    return Built(items, score_meal(items, room, today, dialysis, counter=counter, pref=pref), _k(items))
 
 
 # --------------------------------------------------------------------------- #
@@ -227,18 +231,18 @@ def _day_totals12(day: Iterable[DayEntry]) -> dict[str, float]:
 
 
 def _familiar_options(ctx: GuidanceContext, slot: str, room: Room, today: TodayStats, counter: Counter,
-                      use_saved: bool, use_usual: bool, use_starters: bool) -> list[dict[str, Any]]:
+                      use_saved: bool, use_usual: bool, use_starters: bool, pref: PrefTerms) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = []
     if use_saved:
         for template_id, name, items in saved_meals_for(ctx, slot):
             opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter,
-                                  detail=False)
+                                  detail=False, pref=pref)
             if opt is not None:
                 options.append(opt)
     if use_usual:
         for name, items in usual_meals_for(ctx, slot):
             opt = familiar_option(ctx, room, today, items, kind="usual", name=name, template_id=None, counter=counter,
-                                  detail=False)
+                                  detail=False, pref=pref)
             if opt is not None:
                 options.append(opt)
     if use_starters:
@@ -246,10 +250,10 @@ def _familiar_options(ctx: GuidanceContext, slot: str, room: Room, today: TodayS
             if combo.meal != slot:
                 continue
             items = resolve_items(ctx, combo.items)
-            if not items or any(f.hidden for f, _ in items):
-                continue
+            if not items or any(f.hidden for f, _ in items) or familiar_excluded(ctx, items):
+                continue  # a starter meal with a "Not for me" food or a "Never suggest" group is not offered (note 09 §4.6)
             opt = familiar_option(ctx, room, today, items, kind="starter", name=combo.name, template_id=None,
-                                  counter=counter, detail=False)
+                                  counter=counter, detail=False, pref=pref)
             if opt is not None:
                 options.append(opt)
     options.sort(key=lambda o: (-o["score"], o["_k"], o["name"].casefold()))
@@ -289,7 +293,8 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
         ]
     width = max(R.BEAM_WIDTH_RANGE[0], min(int(ctx.tunables.beam_width), R.BEAM_WIDTH_RANGE[1]))
     built = beam_build(room, scorer, today, dialysis, steps, width, counter, snack=snack)
-    familiar = _familiar_options(ctx, slot, room, today, counter, use_saved, use_usual, use_starters)
+    pref = habit.pref
+    familiar = _familiar_options(ctx, slot, room, today, counter, use_saved, use_usual, use_starters, pref)
 
     # "Show me another plan": variant n skips the first n built options.
     built_choices = built[min(variant, len(built) - 1):] if built else []
@@ -330,7 +335,8 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
                 if snack:
                     break
         if fallback:
-            relaxed = [Built(tuple(fallback), score_meal(fallback, room, today, dialysis, counter=counter), _k(fallback))]
+            relaxed = [Built(tuple(fallback), score_meal(fallback, room, today, dialysis, counter=counter, pref=pref),
+                             _k(fallback))]
     closest = None
     reason = None
     if relaxed:
@@ -340,7 +346,8 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
             check = check_meal(scaled_items, room, "built")
             if check.ok:
                 plan = SlotPlan(slot, room, "ok", source="built",
-                                score=score_meal(scaled_items, room, today, dialysis, counter=counter), items=scaled_items)
+                                score=score_meal(scaled_items, room, today, dialysis, counter=counter, pref=pref),
+                                items=scaled_items)
                 return plan, [plan]
             if reason is None:
                 reason = check.reason
@@ -527,7 +534,7 @@ def plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_sa
     dialysis = ctx.profile.dialysis != "none"
     for plan in plans:  # re-score what the repair or the top-up changed, so the score matches the items
         if plan.modified and plan.items and plan.today is not None:
-            plan.score = score_meal(plan.items, plan.room, plan.today, dialysis, counter=counter)
+            plan.score = score_meal(plan.items, plan.room, plan.today, dialysis, counter=counter, pref=habit.pref)
     projected = _day_totals12(_day_with(ctx, plans))
     after = daily_status(projected, targets, warn)
     # New "over" alerts only: a plan that brings the day near (not over) a goal is what was asked for.

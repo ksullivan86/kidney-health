@@ -16,8 +16,13 @@
      "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "ai_audit", "activity",
      "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
 
-``food_preferences`` (v0.3, schema step 5) lists the foods the person marked "Not for me" in meal
-guidance: ``[{food_id, name, preference, created_at}]``.
+``food_preferences`` (v0.3, schema steps 5 and 17) lists the foods the person told meal guidance about:
+``[{food_id, name, preference, created_at, source, updated_at}]``. ``preference`` is ``like``, ``less``, ``not_for_me`` or
+``neutral`` ("stop using what you learned about this food"); ``source`` is ``person`` or ``ask`` (a change the Ask chat
+proposed and the person confirmed); ``updated_at`` is when the row last changed. A file written before step 17 has only
+``not_for_me`` rows without ``source`` and ``updated_at``, and still imports. What the app learned from the log is not
+stored and so not exported: it is computed again from the exported log. The food-group choices and the "Learn from my
+log" switch are in ``settings.guidance``.
 
 ``symptoms`` (schema step 15) lists the symptoms the person recorded, oldest day first: ``[{id, date, symptom, label,
 severity, note, created_at}]`` (the stored columns; ``severity`` is 1 mild, 2 moderate, 3 severe; ``label`` is the
@@ -67,9 +72,10 @@ This archive holds everything this server stores about your account, in two form
 * labs.csv     - your lab results (empty if you have none).
 * symptoms.csv - the symptoms you recorded, with date and severity (1 mild, 2 moderate, 3 severe; empty if none).
 
-export.json also holds your AI activity (what the app sent to an AI provider for you and what came
-back, for as long as the server keeps it; never photos), your daily AI call counts and the AI
-providers you agreed to send data to.
+export.json also holds your food preferences (the foods you marked More like this, Less often or Not for me,
+and the foods where you switched off what the app learned from your log; the food groups you chose are in
+"settings"), your AI activity (what the app sent to an AI provider for you and what came back, for as long as
+the server keeps it; never photos), your daily AI call counts and the AI providers you agreed to send data to.
 
 What is NOT in it: your password, your sign-in sessions, your assistant access tokens and any
 API keys you stored (not even part of them). The person who runs the server keeps backups of the
@@ -97,11 +103,13 @@ def _per_user_table(conn: sqlite3.Connection, table: str, user_id: int) -> list[
 
 
 def _food_preferences(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
-    """The person's "Not for me" foods (schema step 5); [] on an older schema."""
+    """The person's food preferences (schema steps 5 and 17: like, less, "Not for me", neutral); [] on an older schema."""
     if not table_exists(conn, "food_preferences"):
         return []
-    return _rows(conn, """SELECT p.food_id, f.name, p.preference, p.created_at FROM food_preferences p
-                          JOIN foods f ON f.id = p.food_id WHERE p.user_id = ? ORDER BY p.food_id""", (int(user_id),))
+    return _rows(conn, """SELECT p.food_id, f.name, p.preference, p.created_at, COALESCE(p.source, 'person') AS source,
+                                 COALESCE(p.updated_at, p.created_at) AS updated_at
+                          FROM food_preferences p JOIN foods f ON f.id = p.food_id WHERE p.user_id = ? ORDER BY p.food_id""",
+                 (int(user_id),))
 
 
 def _ai_rows(conn: sqlite3.Connection, table: str, user_id: int, order: str) -> list[dict[str, Any]]:

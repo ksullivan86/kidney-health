@@ -16,12 +16,14 @@ current. Plain JSON in, plain JSON out, no clock, no randomness:
 * ``cases``: ``{id, input, call, output}``. ``input`` is everything a request loads for one person:
   ``date``, ``food_set`` (``fixture``: ids below 101, ``real``: 101 and up, ``all``), ``profile`` (``targets``, ``warn_fraction``, ``dialysis``, ``dialysis_days``,
   ``diabetes``), ``prefs`` (``carb_tolerance_g``, ``hypo_dose_g``, ``exclude_food_ids``,
-  ``exclude_categories``), ``tunables``, ``day`` (entries with their nutrient snapshot already
-  multiplied by ``servings``), ``history`` (eaten entries of the previous 14 days), ``history60``,
-  ``saved_meals`` and ``combos`` (items as ``[food_id, servings]``). ``call.fn`` names the engine
-  function: ``meal_room``, ``what_fits``, ``find_swaps``, ``hypo_options``, ``plan_day``,
-  ``day_insights``, ``period_insights`` or ``prefilter``; ``output`` is its JSON answer exactly as the
-  API body (before the API adds ``ai`` and ``targets``).
+  ``exclude_categories``, and the food preferences of note 09: ``food_pref`` as ``[food_id, "like" | "less" |
+  "neutral"]`` pairs, ``like_categories``, ``less_categories``, ``learn_from_log``, ``hidden_usual_meals``),
+  ``tunables``, ``day`` (entries with their nutrient snapshot already multiplied by ``servings``), ``history``
+  (eaten entries of the previous 14 days), ``history60``, ``planned30`` (``[food_id, date, meal]`` of the entries
+  still planned on the last 30 days), ``saved_meals`` and ``combos`` (items as ``[food_id, servings]``).
+  ``call.fn`` names the engine function: ``meal_room``, ``what_fits``, ``find_swaps``, ``hypo_options``,
+  ``plan_day``, ``day_insights``, ``period_insights``, ``learned`` or ``prefilter``; ``output`` is its JSON answer
+  exactly as the API body (before the API adds ``ai`` and ``targets``).
 
 Numbers: every output number is already rounded by the engine (scores with JavaScript ``Math.round``
 semantics to 2 decimals, milligrams to integers and grams to 1 decimal with the app's half-up display
@@ -48,7 +50,7 @@ from app.guidance import fits, hypo, insights, planner, swaps  # noqa: E402
 from app.guidance import rules as R  # noqa: E402
 from app.guidance.budget import meal_room  # noqa: E402
 from app.guidance.state import (  # noqa: E402
-    Combo, DayEntry, GuidanceContext, HistoryEntry, Prefs, Profile, SavedMeal, Tunables,
+    Combo, DayEntry, GuidanceContext, HistoryEntry, PlannedEntry, Prefs, Profile, SavedMeal, Tunables,
 )
 from app.guidance.vectors import FoodVec, make_food  # noqa: E402
 from app.nutrients import NUTRIENT_KEYS, suggest_targets  # noqa: E402
@@ -127,11 +129,17 @@ def context_from(inp: Mapping[str, Any], all_foods: Mapping[int, FoodVec]) -> Gu
                         dialysis_days=tuple(profile["dialysis_days"]), diabetes=profile["diabetes"]),
         prefs=Prefs(carb_tolerance_g=prefs["carb_tolerance_g"], hypo_dose_g=prefs["hypo_dose_g"],
                     exclude_food_ids=frozenset(prefs["exclude_food_ids"]),
-                    exclude_categories=frozenset(prefs["exclude_categories"])),
+                    exclude_categories=frozenset(prefs["exclude_categories"]),
+                    food_pref={int(fid): kind for fid, kind in prefs.get("food_pref", [])},
+                    like_categories=frozenset(prefs.get("like_categories", [])),
+                    less_categories=frozenset(prefs.get("less_categories", [])),
+                    learn_from_log=bool(prefs.get("learn_from_log", True)),
+                    hidden_usual_meals=frozenset(prefs.get("hidden_usual_meals", []))),
         foods=foods,
         day=tuple(day_entry(e) for e in inp["day"]),
         history=history,
         history60=tuple(history_entry(h) for h in inp["history60"]) if inp.get("history60") is not None else history,
+        planned30=tuple(PlannedEntry(food_id=p[0], date=p[1], meal=p[2]) for p in inp.get("planned30", [])),
         saved_meals=tuple(SavedMeal(id=m["id"], name=m["name"], meal_hint=m["meal_hint"],
                                     items=tuple((i[0], i[1]) for i in m["items"])) for m in inp["saved_meals"]),
         combos=tuple(Combo(id=c["id"], name=c["name"], meal=c["meal"], items=tuple((i[0], i[1]) for i in c["items"]),
@@ -174,6 +182,8 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
                                 variant=spec.get("variant", 0))
     if fn == "day_insights":
         return insights.day_insights(ctx)
+    if fn == "learned":
+        return fits.learned(ctx)
     raise ValueError(f"unknown fn {fn!r}")
 
 
@@ -219,19 +229,23 @@ def base_input(**kw: Any) -> dict[str, Any]:
         "food_set": "fixture",
         "profile": {"targets": FIXTURE_TARGETS, "warn_fraction": 0.8, "dialysis": "none", "dialysis_days": [],
                     "diabetes": "type1"},
-        "prefs": {"carb_tolerance_g": 10.0, "hypo_dose_g": 15.0, "exclude_food_ids": [], "exclude_categories": []},
+        "prefs": {"carb_tolerance_g": 10.0, "hypo_dose_g": 15.0, "exclude_food_ids": [], "exclude_categories": [],
+                  "food_pref": [], "like_categories": [], "less_categories": [], "learn_from_log": True,
+                  "hidden_usual_meals": []},
         "tunables": {"pool_per_role": R.POOL_PER_ROLE, "beam_width": R.BEAM_WIDTH},
         "day": [entry(1, 13, "breakfast"), entry(2, 14, "lunch", status="planned")],
         "history": [hist(d, 13, "breakfast", override={"phosphorus_mg": 1100.0, "protein_g": 49.0})
                     for d in ("2026-10-04", "2026-10-03", "2026-10-01", "2026-09-29")],
         "history60": None,
+        "planned30": [],
         "saved_meals": [{"id": 1, "name": "Usual dinner", "meal_hint": "dinner", "items": [[3, 1.0], [1, 1.0], [5, 1.0]]}],
         "combos": [],
     }
     for key, value in kw.items():
         if key in ("targets", "dialysis", "dialysis_days", "diabetes", "warn_fraction"):
             out["profile"] = {**out["profile"], key: value}
-        elif key in ("carb_tolerance_g", "hypo_dose_g", "exclude_food_ids", "exclude_categories"):
+        elif key in ("carb_tolerance_g", "hypo_dose_g", "exclude_food_ids", "exclude_categories", "food_pref", "like_categories",
+                     "less_categories", "learn_from_log", "hidden_usual_meals"):
             out["prefs"] = {**out["prefs"], key: value}
         else:
             out[key] = value
@@ -260,6 +274,136 @@ def tv_i2_entries() -> list[dict[str, Any]]:
         if d in ("2026-09-28", "2026-09-30", "2026-10-02", "2026-10-03"):
             out += [hist(d, rid("Cheese, cheddar"), "dinner"), hist(d, rid("Cola, regular"), "snack")]
     return out
+
+
+def usual_dinner() -> tuple[list[dict[str, Any]], str]:
+    """Three dinners of chicken, rice and green beans (a usual meal, 2026-09-30…10-02) and the meal's key."""
+    names = ("Chicken breast, roasted, skinless", "Rice, white, long-grain, cooked", "Green beans, boiled")
+    rows = [hist(d, rid(n), "dinner") for d in ("2026-09-30", "2026-10-01", "2026-10-02") for n in names]
+    return rows, R.usual_meal_key("dinner", [(rid(n), 1.0) for n in names])
+
+
+def skipped_green_beans(planned_dates: tuple[str, ...], other_dates: tuple[str, ...], eaten_dates: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Fixture person who plans green beans (food 5) for dinner on ``planned_dates`` and leaves them planned; on
+    ``other_dates`` they ate rice (food 1) at dinner instead, and they ate green beans on ``eaten_dates``."""
+    rows = [hist(d, 1, "dinner") for d in other_dates] + [hist(d, 5, "lunch") for d in eaten_dates]
+    return {"day": [], "history": rows, "history60": rows, "planned30": [[5, d, "dinner"] for d in planned_dates], "saved_meals": []}
+
+
+def preference_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """Note 09 §6: P1-P7 and the hand-computed TV-PREF-1 and TV-PREF-2, on the fixture and on the real list."""
+    rice, beans, bread = rid("Rice, white, long-grain, cooked"), rid("Green beans, boiled"), rid("Bread, white")
+    usual_rows, usual_key = usual_dinner()
+    dinners = ("2026-09-28", "2026-09-30", "2026-10-02", "2026-10-03")
+    four = skipped_green_beans(dinners, dinners)
+    soft = {"food_pref": [[10, "less"], [12, "neutral"], [1, "like"]], "like_categories": ["Beverages"],
+            "less_categories": ["Diabetes supplies"], "learn_from_log": False, "hidden_usual_meals": ["dinner:1x4,3x4,5x4"]}
+    # The meal the planner builds for an empty day's dinner, as a starter meal: it wins (it scores the same), unless it holds
+    # a food the person does not want.
+    combo = {"id": "starter-dinner", "name": "Starter dinner: beef, pasta and green beans", "meal": "dinner",
+             "items": [[rid("Beef, chuck pot roast, braised"), 1.0], [rid("Pasta, cooked"), 1.5], [beans, 0.5]],
+             "source": "diet-guide §6"}
+    return [
+        # P-terms: the food, the group and the clamp
+        ("PREF likes, less often and two food groups (explain)", base_input(
+            food_pref=[[4, "like"], [11, "like"], [1, "less"]], like_categories=["Fruits"], less_categories=["Vegetables"]),
+         {"fn": "what_fits", "meal": "dinner", "explain": True}),
+        ("TV-PREF-2 a green food that is less often and in a less-often group is clamped at -2.5", base_input(
+            food_pref=[[5, "less"]], less_categories=["Vegetables"]), {"fn": "what_fits", "meal": "dinner", "explain": True}),
+        ("PREF a like lifts a food but not over better ones (real list)", real_input(
+            food_pref=[[rid("Apple, raw, with skin"), "like"], [rid("Cheese, cheddar"), "like"], [bread, "like"]]),
+         {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),
+        ("PREF less often on a grain and its group drops it behind the others (real list)", real_input(
+            food_pref=[[rice, "less"]], less_categories=["Grains & Breads"]),
+         {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),
+        ("PREF a liked group lifts every food in it (real list)", real_input(like_categories=["Fruits"]),
+         {"fn": "what_fits", "meal": "snack", "limit": 20, "explain": True}),
+        # P5: neutral
+        ("PREF breakfast habit (control)", base_input(day=[]), {"fn": "what_fits", "meal": "breakfast", "explain": True}),
+        ("PREF a neutral food: no habit history, slot habit or often reason", base_input(day=[], food_pref=[[13, "neutral"]]),
+         {"fn": "what_fits", "meal": "breakfast", "explain": True}),
+        # P6: learn from my log off, hidden usual meals
+        ("PREF learn from my log off: no habit history, slot habit or often reason; the saved meal stays", base_input(
+            day=[], learn_from_log=False), {"fn": "what_fits", "meal": "breakfast", "explain": True}),
+        ("PREF learn from my log off: the saved meal still ranks, no usual meal", real_input(
+            history=usual_rows, learn_from_log=False, saved_meals=[{"id": 1, "name": "Usual dinner", "meal_hint": "dinner",
+                                                                    "items": [[rid("Chicken breast, roasted, skinless"), 1.0],
+                                                                              [rice, 1.0], [beans, 1.0]]}]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a usual dinner (control)", real_input(history=usual_rows), {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a hidden usual meal is not offered", real_input(history=usual_rows, hidden_usual_meals=[usual_key]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF another meal's key hides nothing", real_input(history=usual_rows, hidden_usual_meals=["lunch:101x4,109x4,117x4"]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a hidden usual meal is not planned", real_input(history=usual_rows, hidden_usual_meals=[usual_key]),
+         {"fn": "plan_day", "meals": ["dinner"]}),
+        # P7: familiar meals and "Not for me"
+        ("PREF a usual meal with a Not for me food is not offered", real_input(history=usual_rows, exclude_food_ids=[beans]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a usual meal with a Never suggest group is not offered", real_input(history=usual_rows,
+                                                                                   exclude_categories=["Vegetables"]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a usual meal with a Not for me food is not planned", real_input(history=usual_rows, exclude_food_ids=[beans]),
+         {"fn": "plan_day", "meals": ["dinner"]}),
+        ("PREF a saved meal with a Not for me food is still offered", base_input(exclude_food_ids=[5]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 3}),
+        ("PREF a starter meal (control)", real_input(combos=[combo]), {"fn": "plan_day", "meals": ["dinner"]}),
+        ("PREF a starter meal with a Never suggest group is not planned", real_input(
+            combos=[combo], exclude_categories=["Vegetables"]), {"fn": "plan_day", "meals": ["dinner"]}),
+        ("PREF a starter meal with a Not for me food is not planned", real_input(combos=[combo], exclude_food_ids=[beans]),
+         {"fn": "plan_day", "meals": ["dinner"]}),
+        # plan and swaps use the same term
+        ("PREF plan the rest of the day with likes and less often", base_input(
+            food_pref=[[4, "like"], [7, "like"], [1, "less"]], less_categories=["Vegetables"]), {"fn": "plan_day"}),
+        ("PREF real list: plan the day with likes and a less-often group", real_input(
+            food_pref=[[rid("Tofu, firm"), "like"], [rid("Egg white"), "less"], [rid("Pasta, cooked"), "like"]],
+            like_categories=["Fruits"], less_categories=["Sweets & Snacks"]), {"fn": "plan_day"}),
+        ("PREF swaps for baked potato with a like and a less often (explain)", base_input(
+            food_pref=[[5, "like"], [7, "less"]], like_categories=["Grains & Breads"]),
+         {"fn": "find_swaps", "meal": "dinner", "food_id": 2, "servings": 1.0, "explain": True}),
+        # planned but not eaten (decision Q5, refined): skipped on dates, eaten on fewer than half of the planned dates
+        ("PREF planned but not eaten: green beans skipped on four dinners (explain)", base_input(**four),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF planned but not eaten, learned list", base_input(**four), {"fn": "learned"}),
+        ("PREF planned, eaten once: still skipped", base_input(**skipped_green_beans(dinners, dinners, ("2026-10-01",))),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF planned and eaten on half of the dates: not skipped", base_input(
+            **skipped_green_beans(dinners, dinners, ("2026-10-01", "2026-10-04"))), {"fn": "what_fits", "meal": "dinner",
+                                                                                     "explain": True}),
+        ("PREF planned, but nothing was eaten in those meals: nothing inferred", base_input(
+            **skipped_green_beans(dinners, ())), {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF skipped on one date only: nothing inferred", base_input(**skipped_green_beans(dinners[:1], dinners[:1])),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF skipped, but a neutral food: nothing learned", base_input(**four, food_pref=[[5, "neutral"]]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF skipped, but learn from my log is off", base_input(**four, learn_from_log=False),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        ("PREF skipped and also less often: -2.0 -0.5", base_input(**four, food_pref=[[5, "less"]]),
+         {"fn": "what_fits", "meal": "dinner", "limit": 7, "explain": True}),
+        # the learned list
+        ("PREF learned list: breakfast habit", base_input(day=[]), {"fn": "learned"}),
+        ("PREF learned list: a usual dinner", real_input(history=usual_rows), {"fn": "learned"}),
+        ("PREF learned list: a hidden usual meal and a neutral food are not listed", real_input(
+            history=usual_rows + [hist(d, rid("Banana, raw"), "snack") for d in ("2026-10-01", "2026-10-02")],
+            hidden_usual_meals=[usual_key], food_pref=[[rid("Banana, raw"), "neutral"]]), {"fn": "learned"}),
+        ("PREF learned list: learn from my log off is empty", real_input(history=usual_rows, learn_from_log=False),
+         {"fn": "learned"}),
+        # low treatments never read a preference (P4) and the floor (decision Q1)
+        ("PREF hypo options ignore every soft preference", base_input(**soft), {"fn": "hypo_options"}),
+        ("PREF hypo options: one of two low treatments is Not for me", base_input(exclude_food_ids=[10]), {"fn": "hypo_options"}),
+        ("PREF hypo options: both are Not for me, the whole list is shown with a note", base_input(exclude_food_ids=[10, 12]),
+         {"fn": "hypo_options"}),
+        ("PREF hypo options: their groups are never suggested, the whole list is shown with a note", base_input(
+            exclude_categories=["Diabetes supplies", "Beverages"]), {"fn": "hypo_options"}),
+        ("PREF real list: every low treatment is Not for me", real_input(
+            exclude_food_ids=[rid("Glucose tablet (4 g carb)"), rid("Glucose gel (15 g carb tube)"), rid("Orange juice"),
+                              rid("Apple juice"), rid("Cola, regular"), rid("Root beer")]), {"fn": "hypo_options"}),
+        ("PREF a low-treatment swap ignores every soft preference", base_input(**soft),
+         {"fn": "find_swaps", "meal": "snack", "food_id": 11, "servings": 1.0, "purpose": "hypo"}),
+        ("PREF day insights ignore soft preferences", base_input(food_pref=[[10, "less"]], learn_from_log=False,
+                                                                 day=tv_i1_day(), history=[], food_set="all"),
+         {"fn": "day_insights"}),
+    ]
 
 
 def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
@@ -385,6 +529,7 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
                               "I'm at 58, what should I eat", "61 mg/dL", "soup with 60 mg sodium", "sodium 60 mg",
                               "tea with sugar 2 tsp", "lunch at 12:30", "at 1.5 cups", "only ٤٨")):
         out.append((f"prefilter {i + 1}", base_input(), {"fn": "prefilter", "text": text}))
+    out += preference_cases()
     return out
 
 

@@ -33,7 +33,7 @@ from .fits import (
     totals_json,
 )
 from .planner import plan_day
-from .score import Counter, Scorer, check_meal, habit_stats, meal_totals, score_meal, today_stats
+from .score import Counter, Scorer, check_meal, habit_stats, meal_totals, pref_terms, score_meal, today_stats
 from .state import GuidanceContext
 from .vectors import FoodVec, renal_level
 from .swaps import find_swaps
@@ -118,13 +118,17 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
     for i, (best, std) in enumerate(picked, start=1):
         f, q = best.food, best.servings
         reasons, _ = reasons_for(best, scorer, room, std, habit)
+        codes = [r["code"] for r in reasons]
         a = scaled(f, q)
         foods.append({
             "ref": f"f{i}", "food_id": f.id, "name": M.safe_name(f.name), "untrusted": f.source in UNTRUSTED_SOURCES,
             "group": f.group, "portion": q, "per_portion": _per_portion(f, q),
             "renal_rating": renal_level(a[R.K], a[R.P], a[R.NA], f.additive),
             "fit_text": M.fit_text(a, tracked, room.carbs is not None),
-            "reasons": [r["code"] for r in reasons],
+            # "You said you like this" is a taste the person stated, not one of the app's reasons the AI may claim:
+            # it stays out of ``reasons`` (the AI layer's closed list of codes) and travels as its own bit.
+            "reasons": [c for c in codes if c != "you_like"],
+            "liked": "you_like" in codes,
         })
     meals = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter, limit=R.AI_MEALS_MAX)]
     for i, m in enumerate(meals, start=1):
@@ -199,6 +203,7 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
     totals = day_totals(ctx.day)
     room = meal_room(ctx, meal, totals=totals)
     today = today_stats(ctx.day)
+    pref = pref_terms(ctx)
     accepted: list[dict[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     for index, idea in enumerate(ideas):
@@ -237,7 +242,7 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
             "index": index,
             "items": [food_core(f, q) for f, q in items],
             "totals": totals_json(meal_t, room),
-            "score": score_meal(items, room, today, ctx.profile.dialysis != "none"),
+            "score": score_meal(items, room, today, ctx.profile.dialysis != "none", pref=pref),
             "checked": True,
         })
     note = M.AI_FALLBACK if not accepted else None

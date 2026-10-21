@@ -57,7 +57,7 @@ from .auth.deps import RecentUser, current_user
 from .auth.errors import ApiProblem, busy
 from .db import get_db, utcnow
 from .foods import Provenance, link_food, scan_custom_food, stored_food_values
-from .guidance.context import MAX_NOT_FOR_ME, PREFERENCE_NOT_FOR_ME
+from .guidance.context import MAX_FOOD_PREFERENCES, MAX_NOT_FOR_ME, PREFERENCE_NOT_FOR_ME
 from .log import insert_entry
 from .meals import insert_template, parse_items
 from .models import (
@@ -129,7 +129,7 @@ NOT_IMPORTED: tuple[str, ...] = (
 )
 
 RULE = (
-    "Your file's foods, log entries, saved meals, lab results, symptoms and \"Not for me\" foods are added to this "
+    "Your file's foods, log entries, saved meals, lab results, symptoms and food preferences are added to this "
     "account. If the account already has entries, foods of your own, saved meals, lab results or symptoms, nothing is "
     "imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with "
     "the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a "
@@ -466,15 +466,20 @@ class ImportSymptom(_Strict):
 
 
 class ImportFoodPreference(_Strict):
+    """A food preference of ``export.json`` (:mod:`app.account`). A file from before schema step 17 holds only
+    ``not_for_me`` rows without ``source`` and ``updated_at``; they import as the person's own, changed when made."""
+
     food_id: Id
     name: _short(200)
-    preference: Literal["not_for_me"]
+    preference: Literal["like", "less", "not_for_me", "neutral"]
     created_at: Timestamp
+    source: Literal["person", "ask"] | None = None
+    updated_at: Timestamp | None = None
 
-    @field_validator("created_at")
+    @field_validator("created_at", "updated_at")
     @classmethod
-    def _time(cls, v: str) -> str:
-        return parse_timestamp(v)
+    def _time(cls, v: str | None) -> str | None:
+        return None if v is None else parse_timestamp(v)
 
 
 class ImportProfile(ProfileUpdate):
@@ -506,7 +511,7 @@ class ExportFile(_Strict):
     meal_templates: Annotated[list[ImportMeal], Field(max_length=MAX_MEALS)] = []
     lab_results: Annotated[list[ImportLab], Field(max_length=MAX_LABS)] = []
     symptoms: Annotated[list[ImportSymptom], Field(max_length=MAX_SYMPTOMS)] = []
-    food_preferences: Annotated[list[ImportFoodPreference], Field(max_length=MAX_NOT_FOR_ME)] = []
+    food_preferences: Annotated[list[ImportFoodPreference], Field(max_length=MAX_FOOD_PREFERENCES)] = []
     # Accepted without looking inside, never read or stored.
     user: Any = None
     ai_audit: Any = None
@@ -932,10 +937,12 @@ class Importer:
             per_day[s.date] += 1
             self.counts["symptoms"] += 1
 
-    # -- "Not for me" -----------------------------------------------------------------------------------------------
+    # -- food preferences (like, less often, "Not for me", neutral) -------------------------------------------------
     def import_preferences(self) -> None:
         c = self.conn
         count = c.execute("SELECT COUNT(*) FROM food_preferences WHERE user_id = ?", (self.uid,)).fetchone()[0]
+        never = c.execute("SELECT COUNT(*) FROM food_preferences WHERE user_id = ? AND preference = ?",
+                          (self.uid, PREFERENCE_NOT_FOR_ME)).fetchone()[0]
         for index, p in enumerate(self.doc.food_preferences):
             target = self.food_map.get(p.food_id)
             if target is None:
@@ -944,12 +951,17 @@ class Importer:
             if c.execute("SELECT 1 FROM food_preferences WHERE user_id = ? AND food_id = ?", (self.uid, target)).fetchone():
                 self.already["food_preferences"] += 1
                 continue
-            if count >= MAX_NOT_FOR_ME:
+            if p.preference == PREFERENCE_NOT_FOR_ME and never >= MAX_NOT_FOR_ME:
                 self.skip("food_preferences", index, p.name, f"the \"Not for me\" list is full ({MAX_NOT_FOR_ME} foods)")
                 continue
-            c.execute("INSERT INTO food_preferences (user_id, food_id, preference, created_at) VALUES (?, ?, ?, ?)",
-                      (self.uid, target, PREFERENCE_NOT_FOR_ME, p.created_at))
+            if count >= MAX_FOOD_PREFERENCES:
+                self.skip("food_preferences", index, p.name, f"your food preferences are full ({MAX_FOOD_PREFERENCES} foods)")
+                continue
+            c.execute("""INSERT INTO food_preferences (user_id, food_id, preference, created_at, source, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?)""",
+                      (self.uid, target, p.preference, p.created_at, p.source or "person", p.updated_at or p.created_at))
             count += 1
+            never += p.preference == PREFERENCE_NOT_FOR_ME
             self.counts["food_preferences"] += 1
 
     # -- profile, targets, settings -----------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ makes no difference while the mode is on (there is no server to reach).
 
 * **Settings → Your data → Export my data (export.json)** (or **Export export.json** in the sheet) downloads the file the
   server's export holds, `export.json`: the same format (`kidney-health-export`, version 1), the same keys in the same order,
-  with your log, own foods, saved meals, lab results, symptoms, "Not for me" foods, profile and settings. It never holds a
+  with your log, own foods, saved meals, lab results, symptoms, food preferences ("Not for me", "More like this", "Less often"), profile and settings. It never holds a
   password, session or key. The AI sections are empty (the demo has no AI). The server's own export is a `.zip` with CSV
   files too; the demo gives the JSON only.
 * **Settings → Your data → Import from a file** takes an `export.json` from this demo **or from a real server** and works

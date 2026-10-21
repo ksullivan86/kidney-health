@@ -3,7 +3,7 @@
 Every route needs a signed-in person (``current_user``) and reads only that person's log, foods,
 saved meals, profile and preferences (:mod:`app.guidance.context`); a food or entry that is not theirs
 answers 404 like one that does not exist. Routes are sync ``def`` (pure Python plus SQLite) and write
-nothing except the "Not for me" list. Every computed response carries ``rules_version``; ``/api/*``
+nothing except the person's food preferences (``/preferences``, and ``/not-for-me`` as its older alias). Every computed response carries ``rules_version``; ``/api/*``
 responses are ``Cache-Control: no-store`` (``app/security.py``).
 
 Two answers instead of a result: ``{"status": "no_targets"}`` when the profile has no numeric
@@ -33,16 +33,20 @@ from . import messages as M
 from . import rules as R
 from . import topics as T
 from .ai_bridge import ai_status
-from .fits import what_fits
+from .fits import learned, what_fits
 from .models import (
     DayInsightsResponse,
     GuidanceUnavailable,
     HypoOptionsResponse,
+    LearnedList,
     NextMealResponse,
     NotForMeList,
     PeriodInsightsResponse,
     PlanDayRequest,
     PlanDayResponse,
+    PreferenceBody,
+    PreferenceFood,
+    PreferenceList,
     RulesResponse,
     SwapResponse,
 )
@@ -296,7 +300,119 @@ def rules() -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
-# "Not for me" (§4.14): foods guidance never suggests to this person
+# What the log taught the ranking (note 09 §4.4)
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/learned", response_model=LearnedList)
+def learned_signals(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The signals the ranking learned from this person's log, each with a plain reason (note 09 §4.4): foods eaten
+    often, foods usually eaten in one meal, usual meals, foods planned again and again but not eaten. Computed on the
+    spot by the same rules the ranking uses, never stored; empty with "Learn from my log" off."""
+    ctx = load_ctx(request, conn, user.id, today_local(), C.LoadOptions(saved_meals=False, combos=False))
+    return learned(ctx)
+
+
+# --------------------------------------------------------------------------- #
+# Food preferences (note 09 §4.10): like, less often, "Not for me", neutral
+# --------------------------------------------------------------------------- #
+
+_PREFERENCE_COLUMNS = """p.food_id, f.name, f.category, p.preference, COALESCE(p.source, 'person') AS source,
+                         p.created_at, COALESCE(p.updated_at, p.created_at) AS updated_at"""
+
+
+def _preference_food(row: sqlite3.Row) -> dict[str, Any]:
+    return {k: row[k] for k in ("food_id", "name", "category", "preference", "source", "created_at", "updated_at")}
+
+
+def _preference_list(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> dict[str, Any]:
+    rows = conn.execute(
+        f"""SELECT {_PREFERENCE_COLUMNS} FROM food_preferences p JOIN foods f ON f.id = p.food_id
+            WHERE p.user_id = ? ORDER BY f.name COLLATE NOCASE, p.food_id""",
+        (int(user_id),),
+    ).fetchall()
+    settings = C.user_settings(conn, store, user_id)
+    return {
+        "rules_version": R.RULES_VERSION,
+        "limit": C.MAX_FOOD_PREFERENCES,
+        "not_for_me_limit": C.MAX_NOT_FOR_ME,
+        "foods": [_preference_food(r) for r in rows],
+        "groups": {"like": list(C.setting_value(settings, "like_categories", ()) or ()),
+                   "less": list(C.setting_value(settings, "less_categories", ()) or ()),
+                   "never": list(C.setting_value(settings, "exclude_categories", ()) or ())},
+        "learn_from_log": bool(C.setting_value(settings, "learn_from_log", True)),
+    }
+
+
+def _store_preference(conn: sqlite3.Connection, user_id: int, food_id: int, preference: str, source: str) -> None:
+    """Insert or change one preference row under ``BEGIN IMMEDIATE`` (the limits are checked in the same transaction).
+
+    The same value again changes nothing (idempotent, ``updated_at`` stays). 409 at 500 "Not for me" foods and at 1,000
+    preferences in all; a row that is only changing its value does not add to the total."""
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute("SELECT preference FROM food_preferences WHERE user_id = ? AND food_id = ?",
+                           (user_id, food_id)).fetchone()
+        if row is None or row["preference"] != preference:
+            total, never = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(preference = ?), 0) FROM food_preferences WHERE user_id = ?",
+                (C.PREFERENCE_NOT_FOR_ME, user_id)).fetchone()
+            if preference == C.PREFERENCE_NOT_FOR_ME and never >= C.MAX_NOT_FOR_ME:
+                raise HTTPException(status_code=409, detail=f"the \"Not for me\" list is full ({C.MAX_NOT_FOR_ME} foods); "
+                                                            "remove one first")
+            now = utcnow()
+            if row is None:
+                if total >= C.MAX_FOOD_PREFERENCES:
+                    raise HTTPException(status_code=409, detail=f"your food preferences are full ({C.MAX_FOOD_PREFERENCES} foods); "
+                                                                "remove one first")
+                conn.execute(
+                    """INSERT INTO food_preferences (user_id, food_id, preference, created_at, source, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?)""", (user_id, food_id, preference, now, source, now))
+            else:
+                conn.execute("UPDATE food_preferences SET preference = ?, source = ?, updated_at = ? "
+                             "WHERE user_id = ? AND food_id = ?", (preference, source, now, user_id, food_id))
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+@router.get("/preferences", response_model=PreferenceList)
+def list_preferences(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The person's food preferences by name, their food-group choices and the "Learn from my log" switch."""
+    return _preference_list(conn, settings_store(request), user.id)
+
+
+@router.put("/preferences/{food_id}", response_model=PreferenceFood)
+def put_preference(food_id: int, body: PreferenceBody, user: CurrentUser,
+                   conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Say ``like``, ``less`` (less often), ``not_for_me`` or ``neutral`` (stop using what was learned) about one food,
+    replacing what was there. ``source`` is ``ask`` for a change the Ask chat proposed and the person confirmed. 404
+    for a food the person cannot use; 409 at the limits."""
+    if fetch_user_food(conn, user.id, food_id) is None:
+        raise HTTPException(status_code=404, detail=f"food {food_id} not found")
+    _store_preference(conn, user.id, food_id, body.preference, body.source)
+    row = conn.execute(
+        f"""SELECT {_PREFERENCE_COLUMNS} FROM food_preferences p JOIN foods f ON f.id = p.food_id
+            WHERE p.user_id = ? AND p.food_id = ?""", (user.id, food_id)).fetchone()
+    return _preference_food(row)
+
+
+@router.delete("/preferences/{food_id}", status_code=204, response_class=Response)
+def delete_preference(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    """Forget what was said about this food. 404 when there is nothing."""
+    try:
+        cur = conn.execute("DELETE FROM food_preferences WHERE user_id = ? AND food_id = ?", (user.id, food_id))
+    except OverflowError:
+        raise HTTPException(status_code=404, detail=f"food {food_id} has no preference of yours") from None
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail=f"food {food_id} has no preference of yours")
+    conn.commit()
+    return Response(status_code=204)
+
+
+# --------------------------------------------------------------------------- #
+# "Not for me" (§4.14): the older routes, kept as aliases of the ``not_for_me`` rows of /preferences
 # --------------------------------------------------------------------------- #
 
 
@@ -318,33 +434,20 @@ def list_not_for_me(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db
 
 @router.put("/not-for-me/{food_id}", response_model=NotForMeList)
 def add_not_for_me(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Never suggest this food again (it stays searchable and loggable). 404 for a food the person
-    cannot use; 409 at the limit of 500."""
+    """Never suggest this food again (it stays searchable and loggable); replaces another preference on the food.
+    404 for a food the person cannot use; 409 at the limit of 500."""
     if fetch_user_food(conn, user.id, food_id) is None:
         raise HTTPException(status_code=404, detail=f"food {food_id} not found")
-    conn.execute("BEGIN IMMEDIATE")
-    try:
-        exists = conn.execute("SELECT 1 FROM food_preferences WHERE user_id = ? AND food_id = ?",
-                              (user.id, food_id)).fetchone()
-        if exists is None:
-            count = conn.execute("SELECT COUNT(*) FROM food_preferences WHERE user_id = ?", (user.id,)).fetchone()[0]
-            if count >= C.MAX_NOT_FOR_ME:
-                raise HTTPException(status_code=409, detail=f"the \"Not for me\" list is full ({C.MAX_NOT_FOR_ME} foods); "
-                                                            "remove one first")
-            conn.execute("INSERT INTO food_preferences (user_id, food_id, preference, created_at) VALUES (?, ?, ?, ?)",
-                         (user.id, food_id, C.PREFERENCE_NOT_FOR_ME, utcnow()))
-        conn.commit()
-    except BaseException:
-        conn.rollback()
-        raise
+    _store_preference(conn, user.id, food_id, C.PREFERENCE_NOT_FOR_ME, "person")
     return _not_for_me(conn, user.id)
 
 
 @router.delete("/not-for-me/{food_id}", status_code=204, response_class=Response)
 def remove_not_for_me(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    """Suggest this food again. 404 when it is not on the person's list."""
+    """Suggest this food again. 404 when it is not on the person's "Not for me" list (another preference stays)."""
     try:
-        cur = conn.execute("DELETE FROM food_preferences WHERE user_id = ? AND food_id = ?", (user.id, food_id))
+        cur = conn.execute("DELETE FROM food_preferences WHERE user_id = ? AND food_id = ? AND preference = ?",
+                           (user.id, food_id, C.PREFERENCE_NOT_FOR_ME))
     except OverflowError:
         raise HTTPException(status_code=404, detail=f"food {food_id} is not on your list") from None
     if cur.rowcount == 0:

@@ -85,8 +85,12 @@ def test_every_fixed_template_passes_the_wording_lint():
         assert not M.BANNED_PATTERN.search(line), line
     for text in (M.DISCLAIMER, M.AI_FALLBACK, M.NO_TARGETS, M.DISABLED, M.NEEDS_CONNECTION):
         lint(text)
-    for code in ("adds_missing_group", "you_eat_often", "half_portion", "unknown"):
+    for code in ("adds_missing_group", "you_like", "you_eat_often", "half_portion", "unknown"):
         lint(M.reason_text(code, group="protein", meal="dinner", nutrient="potassium", Nutrient="Potassium"))
+    lint(M.note_text("shown_despite_exclusions"))
+    for kind, values in (("often", {"days": 6}), ("slot", {"meal": "breakfast"}), ("usual_meal", {"meal": "lunch", "days": 3}),
+                         ("planned_not_eaten", {"planned": 4, "eaten": 1}), ("planned_not_eaten", {"planned": 3, "eaten": 0})):
+        lint(M.learned_reason(kind, **values))
 
 
 def test_the_low_card_follows_the_persons_amount_and_never_mentions_insulin():

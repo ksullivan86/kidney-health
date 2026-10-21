@@ -22,6 +22,15 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   only to work out suggested targets and the kidney-function card, are never written to the server's
   log, are part of the export, and are deleted with the account
   ([Personalised targets and labs](targets-and-labs.md));
+* the person's **food preferences** (schema steps 5 and 17): for a food, *More like this*, *Less often*, *Not for me* or
+  *Stop using what you learned*, with who set it (the person, or the Ask chat after they confirmed) and when, and in their
+  settings the food groups they like, want less of or never want, the *Learn from my log* switch and the learned usual
+  meals they hid. They shape only the order of meal suggestions, are shown only to that person, are part of the export and
+  import, and are deleted with the account. **What the app learns from the log is not stored**: the app's own code works it
+  out from the log each time it makes a suggestion, with a plain reason, and it is not a diagnosis or an allergy
+  list. In this version no preference is put into a request to an AI provider, the Ask chat or an assistant: the foods
+  marked *Not for me* are only left out of the candidate list the app builds, and the code that writes the request reads
+  no preference (a later feature that does must say so here first);
 * the **symptoms** the person chooses to record (schema step 15): which symptom (from a short list, or a name of
   their own up to 60 characters for "other"), the date, how bad (mild, moderate or severe) and an optional note up to
   300 characters. This is a new kind of health data. It is shown only to that person, on Today and Trends; it is part of
@@ -174,7 +183,8 @@ your account on the server you are signed in to. Your browser reads the file and
 server over the same connection as everything else; nothing is sent anywhere else. Before anything changes
 the server checks the file and shows what would be added and what would be left out.
 
-* **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms and "Not for me" foods; the
+* **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms and food preferences (More like this,
+  Less often, Not for me); the
   shared USDA and Open Food Facts foods you used (linked if the new server has them, otherwise kept as your
   own copies, with their licence note). If you also tick *Also replace my profile, targets and settings*: your
   profile, targets, meal-guidance settings and display settings. That box is off by default because your

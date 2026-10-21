@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, field_validator, model_validator
 
 Scope = Literal["instance", "user", "user_default"]
 SCOPES: tuple[str, ...] = ("instance", "user", "user_default")
@@ -354,10 +354,15 @@ register(
 # --------------------------------------------------------------------------- #
 
 CategoryName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+# A usual meal's key (note 09 §4.2): ``"<meal>:<food id>x<quarter servings>,…"`` over its items sorted by food id,
+# e.g. ``lunch:12x4,30x2``. Integers only, so the server and the browser twin write the same text.
+USUAL_MEAL_KEY_PATTERN = r"^(?:breakfast|lunch|dinner|snack):[0-9]+x[0-9]+(?:,[0-9]+x[0-9]+)*$"
+UsualMealKey = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=400, pattern=USUAL_MEAL_KEY_PATTERN)]
+CATEGORY_CONFLICT = "a food group can be in only one of Like, Less often and Never suggest: "
 
 
 class GuidancePreferences(BaseModel):
-    """The person's guidance settings (one object, note 07 §3.10)."""
+    """The person's guidance settings (one object, note 07 §3.10; the preference profile of note 09 §4.2)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -368,8 +373,12 @@ class GuidancePreferences(BaseModel):
     show_plan_builder: bool = True
     show_insights: bool = True
     ai_enrich: bool = False  # note 04: AI may re-rank and explain the rule results (opt-in)
+    learn_from_log: bool = True  # "Learn from my log": off removes every learned term (note 09 §4.4)
+    like_categories: Annotated[list[CategoryName], Field(max_length=50)] = []  # food groups ranked a little higher
+    less_categories: Annotated[list[CategoryName], Field(max_length=50)] = []  # food groups ranked lower, never hidden
+    hidden_usual_meals: Annotated[list[UsualMealKey], Field(max_length=50)] = []  # "Not this meal" on a learned usual meal
 
-    @field_validator("exclude_categories")
+    @field_validator("exclude_categories", "like_categories", "less_categories", "hidden_usual_meals")
     @classmethod
     def _unique(cls, value: list[str]) -> list[str]:
         out: list[str] = []
@@ -377,6 +386,19 @@ class GuidancePreferences(BaseModel):
             if name not in out:
                 out.append(name)
         return out
+
+    @model_validator(mode="after")
+    def _one_list_per_group(self) -> "GuidancePreferences":
+        """A food group is liked, ranked lower or never suggested, not two of them (note 09 §4.2)."""
+        seen: set[str] = set()
+        clash: list[str] = []
+        for name in (*self.like_categories, *self.less_categories, *self.exclude_categories):
+            if name in seen and name not in clash:
+                clash.append(name)
+            seen.add(name)
+        if clash:
+            raise ValueError(CATEGORY_CONFLICT + ", ".join(clash))
+        return self
 
 
 register(

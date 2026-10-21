@@ -21,10 +21,10 @@
   const GE = KH.guidanceEngine || (KH.guidanceEngine = {});
   const { NUTRIENT_KEYS } = KH.rules;
 
-  const RULES_VERSION = '2026-10-07.1';
+  const RULES_VERSION = '2026-10-21.1';
   // rules.rules_hash() of this RULES_VERSION (sha256 over the sorted JSON of the rules table, first 16 hex
   // digits). The runner checks it against the vectors and tests/test_guidance_ui.py against the server.
-  const RULES_HASH = '8514c677136c30ea';
+  const RULES_HASH = '5ec3de3f29059521';
 
   const MAIN_MEALS = ['breakfast', 'lunch', 'dinner'];
   const SNACK = 'snack';
@@ -76,6 +76,17 @@
   const HISTORY_DAYS = 14;
   const USUAL_HISTORY_DAYS = 60;
   const USUAL_MIN_ITEMS = 2, USUAL_MAX_ITEMS = 6, USUAL_MIN_DATES = 2;
+  // Food preferences and what the log teaches (note 09 §4.4, §4.5): one term per food, added after the hard filters.
+  const PREF_LIKE = 1.0;
+  const PREF_LESS = -2.0;
+  const PREF_GROUP_LIKE = 0.5;
+  const PREF_GROUP_LESS = -1.0;
+  const PREF_SKIPPED = -0.5;
+  const PREF_FOOD_CLAMP = [-2.5, 1.0];
+  const PREF_MEAL_CLAMP = [-1.5, 1.0];
+  const SKIP_WINDOW_DAYS = 30;
+  const SKIP_MIN_DATES = 2;
+  const LEARNED_MAX = 30;
   const SWAP_MIN_REDUCTION = 0.25;
   const SWAP_CARB_MATCH = [5.0, 0.10];
   const SWAP_PROTEIN_MATCH = [3.0, 0.15];
@@ -170,6 +181,11 @@
     return (Math.ceil(units) + 0) * step; // math.ceil is an int too
   }
   function clamp(value, lo, hi) { return value < lo ? lo : value > hi ? hi : value; }
+  // rules.usual_meal_key: "<meal>:<food id>x<quarter servings>,…" over the items sorted by food id, e.g. "lunch:12x4,30x2".
+  function usualMealKey(meal, items) {
+    const parts = [...items].sort((a, b) => a[0] - b[0]).map(([foodId, servings]) => `${foodId}x${jsRound(servings * 4.0)}`);
+    return `${meal}:${parts.join(',')}`;
+  }
 
   // -------------------------------------------------------------------------
   // Python string semantics: str.casefold() and code-point ordering
@@ -371,8 +387,18 @@
   function virtualEntry(food, meal, servings) {
     return dayEntry({ id: null, meal, status: 'planned', food, servings, nutrients: scaledValues(food, servings), purpose: null });
   }
-  // GuidanceContext: { date, profile, prefs, foods (Map id → food), day, history, history60, saved_meals, combos, tunables }.
-  function makeContext({ date, profile, prefs = {}, foods, day = [], history = [], history60 = null, saved_meals = [], combos = [], tunables = {} }) {
+  // [[key, value], …] of a Map, a list of pairs or a plain object (a Map built in another realm is not `instanceof Map` here).
+  function pairsOf(v) {
+    if (v == null) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v.entries === 'function' && typeof v.get === 'function') return [...v.entries()];
+    return Object.entries(v);
+  }
+  // GuidanceContext: { date, profile, prefs, foods (Map id → food), day, history, history60, planned30, eaten30, saved_meals, combos,
+  // tunables }. prefs.food_pref is a Map food id → like | less | neutral ("Not for me" stays in exclude_food_ids); planned30 is a list
+  // of { food_id, date, meal } (entries still planned on the last 30 days); eaten30 is null unless history60 was not loaded.
+  function makeContext({ date, profile, prefs = {}, foods, day = [], history = [], history60 = null, planned30 = [], eaten30 = null,
+    saved_meals = [], combos = [], tunables = {} }) {
     return {
       date,
       profile: { targets: profile.targets || {}, warn_fraction: profile.warn_fraction == null ? 0.8 : Number(profile.warn_fraction),
@@ -380,11 +406,17 @@
         targets_updated_at: profile.targets_updated_at == null ? null : profile.targets_updated_at },
       prefs: { carb_tolerance_g: Number(prefs.carb_tolerance_g == null ? CARB_TOLERANCE_G : prefs.carb_tolerance_g),
         hypo_dose_g: Number(prefs.hypo_dose_g == null ? HYPO_DOSE_G : prefs.hypo_dose_g),
-        exclude_food_ids: new Set((prefs.exclude_food_ids || []).map(Number)), exclude_categories: new Set(prefs.exclude_categories || []) },
+        exclude_food_ids: new Set((prefs.exclude_food_ids || []).map(Number)), exclude_categories: new Set(prefs.exclude_categories || []),
+        food_pref: new Map(pairsOf(prefs.food_pref).map(([k, v]) => [Number(k), v])),
+        like_categories: new Set(prefs.like_categories || []), less_categories: new Set(prefs.less_categories || []),
+        learn_from_log: prefs.learn_from_log == null ? true : !!prefs.learn_from_log,
+        hidden_usual_meals: new Set(prefs.hidden_usual_meals || []) },
       foods,
       day,
       history,
       history60: history60 == null ? history : history60,
+      planned30: planned30.map((p) => ({ food_id: Number(p.food_id), date: p.date, meal: p.meal })),
+      eaten30,
       saved_meals,
       combos,
       tunables: { pool_per_role: tunables.pool_per_role == null ? POOL_PER_ROLE : Number(tunables.pool_per_role),
@@ -440,6 +472,16 @@
     ['USUAL_MIN_ITEMS', 'Fewest foods in a usual meal'],
     ['USUAL_MAX_ITEMS', 'Most foods in a usual meal'],
     ['USUAL_MIN_DATES', 'A usual meal was eaten on at least this many dates'],
+    ['PREF_LIKE', 'Score of a food the person marked "More like this": the size of the slot-habit bonus, half the green-to-yellow gap (note 09 §4.5)'],
+    ['PREF_LESS', 'Score of a food marked "Less often": a green food then ranks like an otherwise equal yellow one, still never hidden (note 09 §4.5)'],
+    ['PREF_GROUP_LIKE', 'Score of a food whose food group the person likes'],
+    ['PREF_GROUP_LESS', 'Score of a food whose food group the person wants less often'],
+    ['PREF_SKIPPED', 'Score of a food that is planned again and again but not eaten (learned from the log; off with "Learn from my log")'],
+    ['PREF_FOOD_CLAMP', 'A food\'s preference terms together stay inside this range: a liked food gains at most +1, a food that is both less often and in a less-often group never vanishes (that is what "Not for me" is for)'],
+    ['PREF_MEAL_CLAMP', "A whole meal's preference term, the mean of its foods' terms, stays inside this range"],
+    ['SKIP_WINDOW_DAYS', 'Days before today in which a planned entry left planned counts as skipped'],
+    ['SKIP_MIN_DATES', 'A food counts as skipped after this many different dates (and eaten on fewer than half of the dates it was planned)'],
+    ['LEARNED_MAX', 'Most items of each kind that "Learned from your log" lists'],
     ['SWAP_MIN_REDUCTION', 'A swap lowers every nutrient that triggered it by at least this fraction'],
     ['SWAP_CARB_MATCH', "A swap's carbs stay within max(min_g, fraction × original): the insulin arithmetic stays the same (F4)"],
     ['SWAP_PROTEIN_MATCH', 'A swap matched on protein stays within max(min_g, fraction × original)'],
@@ -499,7 +541,9 @@
     HYPO_DOSE_RANGE, HIGH_K_ENTRY_MG, PROTEIN_ROLE_MIN_G, STARCH_ROLE_MIN_CARBS_G, P_PER_G_PROTEIN, K_PER_G_PROTEIN,
     PROTEIN_AIM_FLOOR_G, MIN_SHOW_SCORE, GROUP_LIMITS, CATEGORY_LIMIT, DEFAULT_LIMIT, MAX_LIMIT, BEAM_WIDTH, BEAM_WIDTH_RANGE,
     PER_ROLE, POOL_PER_ROLE, POOL_PER_ROLE_RANGE, FAMILIAR_MARGIN, SLOT_HABIT_BONUS, SLOT_HABIT_MIN_DAYS, OFTEN_MIN_DAYS,
-    HISTORY_DAYS, USUAL_HISTORY_DAYS, USUAL_MIN_ITEMS, USUAL_MAX_ITEMS, USUAL_MIN_DATES, SWAP_MIN_REDUCTION, SWAP_CARB_MATCH,
+    HISTORY_DAYS, USUAL_HISTORY_DAYS, USUAL_MIN_ITEMS, USUAL_MAX_ITEMS, USUAL_MIN_DATES, PREF_LIKE, PREF_LESS, PREF_GROUP_LIKE,
+    PREF_GROUP_LESS, PREF_SKIPPED, PREF_FOOD_CLAMP, PREF_MEAL_CLAMP, SKIP_WINDOW_DAYS, SKIP_MIN_DATES, LEARNED_MAX,
+    SWAP_MIN_REDUCTION, SWAP_CARB_MATCH,
     SWAP_PROTEIN_MATCH, SWAP_MATCH_CARBS_MIN_G, SWAP_MATCH_PROTEIN_MIN_G, SWAP_MAX, SWAP_AI_MAX, PORTION_RANGE: [PORTION_MIN, PORTION_MAX],
     PORTION_MIN, PORTION_MAX, PORTION_OPTION_FRACTIONS, HYPO_PORTION_MAX, HYPO_WHOLE_UNITS, HYPO_SWAP_TRIGGER_MG, HYPO_INSIGHT_K_MG,
     HYPO_BEST_MAX_K_MG, INSIGHT_MAX, SOURCE_MIN_SHARE, SOURCE_MAX, MIN_LOGGED_DAYS, PERIOD_DEFAULT_DAYS, PERIOD_MAX_DAYS,
@@ -522,6 +566,6 @@
     jsRound, roundTo, roundScore, roundToQuarter, ceilToStep, clamp, casefold, cmpStr, cmp, sortBy, maxBy, minBy, pySum,
     familyOf, addDays, daysBetween, weekday, roleOf, groupOf, portionsFor, textHasAny, isDict, targetMax, targetMin,
     isWholeUnitServing, hypoPortionStep, renalLevel, isHigh, proteinQuality, makeFood, dayEntry, historyEntry, scaledValues,
-    virtualEntry, makeContext, withDay, rulesTable, ruleNotes,
+    virtualEntry, makeContext, withDay, rulesTable, ruleNotes, usualMealKey,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

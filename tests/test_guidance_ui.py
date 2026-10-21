@@ -96,8 +96,10 @@ def test_the_demo_answers_every_guidance_route() -> None:
     for r in guidance_api.router.routes:
         for method in r.methods:
             if "{food_id}" in r.path:
-                # PUT / DELETE /api/guidance/not-for-me/{food_id}: one regex route for any method
-                assert re.search(r"route\('\*', /\^\\/api\\/guidance\\/not-for-me\\/", MOCK), r.path
+                # PUT / DELETE /api/guidance/preferences/{food_id} and its alias /not-for-me/{food_id}: one regex route for any method
+                segment = r.path.split("/")[3]
+                assert segment in ("preferences", "not-for-me"), r.path
+                assert re.search(rf"route\('\*', /\^\\/api\\/guidance\\/{segment}\\/", MOCK), r.path
                 assert f"method !== '{method}'" in MOCK or f"method === '{method}'" in MOCK, (method, r.path)
             else:
                 assert (method, r.path) in routes, f"js/mock/guidance.js has no {method} {r.path}"
@@ -109,6 +111,12 @@ def test_demo_texts_and_limits_are_the_servers() -> None:
     assert _js_string(MOCK, "PLAN_OFF") == guidance_api.PLAN_OFF
     assert _js_string(MOCK, "INSIGHTS_OFF") == guidance_api.INSIGHTS_OFF
     assert _js_number(MOCK, "MAX_NOT_FOR_ME") == guidance_context.MAX_NOT_FOR_ME
+    assert _js_number(MOCK, "MAX_FOOD_PREFERENCES") == guidance_context.MAX_FOOD_PREFERENCES
+    assert tuple(re.findall(r"'([a-z_]+)'", re.search(r"const PREFERENCES = \[(.*?)\];", MOCK).group(1))) == guidance_context.PREFERENCE_VALUES
+    assert tuple(re.findall(r"'([a-z]+)'", re.search(r"const PREFERENCE_SOURCES = \[(.*?)\];", MOCK).group(1))) == guidance_context.PREFERENCE_SOURCES
+    for name in ("NOTE_TEXTS",):
+        assert re.search(r"shown_despite_exclusions: '([^']+)'", ENGINE_MESSAGES).group(1) == \
+            guidance_messages.NOTE_TEXTS["shown_despite_exclusions"], name
     assert _js_number(MOCK_LOG, "MAX_LOG_BATCH") == models.MAX_LOG_BATCH
     shown = re.search(r"const TARGET_KEYS_SHOWN = \[(.*?)\];", MOCK).group(1)
     names = {"R.K": guidance_rules.K, "R.P": guidance_rules.P, "R.NA": guidance_rules.NA, "R.FLUID": guidance_rules.FLUID,
@@ -249,9 +257,14 @@ def test_settings_view_lists_the_guidance_keys() -> None:
     for key in ("guidance.enabled", "guidance.pool_per_role", "guidance.beam_width"):
         assert key in settings_registry.REGISTRY, key
         assert f"'{key}'" in SETTINGS_VIEW, f"Admin → Server settings does not group {key}"
+    # The preference profile's fields (note 09 §4.2) have their screen in part B; until then the form must keep them when it
+    # saves another field (it sends the whole object), so a like or a hidden usual meal set through the API is not lost.
+    profile_fields = {"learn_from_log", "like_categories", "less_categories", "hidden_usual_meals"}
     fields = set(settings_registry.GuidancePreferences.model_fields)
-    for field in fields:
+    assert profile_fields <= fields
+    for field in fields - profile_fields:
         assert re.search(rf"\b{field}\b", VIEW), f"Settings → Meal guidance has no control for {field}"
+    assert "const next = { ...v, ...patch };" in VIEW
 
 
 def _fn(source: str, name: str) -> str:

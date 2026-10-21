@@ -44,7 +44,8 @@ from app.nutrients import NUTRIENT_KEYS  # noqa: E402
 D1, D2 = "2026-10-05", "2026-10-06"
 T1, T2 = "2026-10-05T12:30:00.123456Z", "2026-10-06T08:00:00Z"
 GUIDANCE = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclude_categories": ["Sweets & Snacks"],
-            "show_plan_builder": True, "show_insights": False, "ai_enrich": False}
+            "show_plan_builder": True, "show_insights": False, "ai_enrich": False, "learn_from_log": False,
+            "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"]}
 VOLATILE = {"id", "food_id", "created_at", "updated_at", "version", "linked_at", "client_id"}
 
 
@@ -129,8 +130,11 @@ def base_doc(ids: dict[str, int]) -> dict[str, Any]:
         "lab_results": [lab(1, "potassium", 4.8, "mmol/L", "2026-10-01"), lab(2, "creatinine", 110, "µmol/L", "2026-09-20", note="fasting")],
         "symptoms": [symptom(1, "swelling", D1, 2, note="ankles"), symptom(2, "other", D1, 1, label="Cramps"),
                      *[symptom(10 + n, "itching", D2, 1, note=f"n{n}") for n in range(31)]],
-        "food_preferences": [{"food_id": 101, "name": "My soup", "preference": "not_for_me", "created_at": T1},
+        "food_preferences": [{"food_id": 101, "name": "My soup", "preference": "like", "created_at": T1, "source": "ask", "updated_at": T2},
                              {"food_id": banana, "name": "Banana, raw", "preference": "not_for_me", "created_at": T1},
+                             {"food_id": tablets, "name": "Glucose tablet (4 g carb)", "preference": "neutral", "created_at": T1,
+                              "source": "person", "updated_at": T1},
+                             {"food_id": 102, "name": "Home gel", "preference": "less", "created_at": T2},
                              {"food_id": 777, "name": "A food nobody has", "preference": "not_for_me", "created_at": T1}],
         "ai_audit": [{"prompt": "x"}], "activity": [], "ai_usage": [], "ai_consents": [], "ai_provider": {"api_key": "secret"},
     }
@@ -348,10 +352,15 @@ def refusals() -> list[tuple[str, list[dict[str, Any]]]]:
         ("a symptom with a control character in the note", s("symptoms.0.note", "a\x07b")),
         ("a symptom with a tab in the note", s("symptoms.0.note", "a\tb")),
         ("food_preferences not a list", s("food_preferences", 1)),
-        ("a preference that is not not_for_me", s("food_preferences.0.preference", "love")),
+        ("a preference that is none of the four", s("food_preferences.0.preference", "love")),
+        ("a preference with no value", s("food_preferences.0.preference", None)),
+        ("a preference with a source that is not person or ask", s("food_preferences.0.source", "robot")),
+        ("a preference with a null source", s("food_preferences.0.source", None)),
+        ("a preference with an updated_at that is not a time", s("food_preferences.0.updated_at", "yesterday")),
+        ("a preference with an updated_at in the far future", s("food_preferences.0.updated_at", "2999-01-01T00:00:00Z")),
         ("a preference with an unknown field", s("food_preferences.0.colour", 1)),
-        ("a preference with 501 foods", s("food_preferences", [{"food_id": 101, "name": "My soup", "preference": "not_for_me", "created_at": T1}] * 501)),
-        ("a preference with 520 foods", s("food_preferences", [{"food_id": 101, "name": "My soup", "preference": "not_for_me", "created_at": T1}] * 520)),
+        ("a preference with 1001 foods", s("food_preferences", [{"food_id": 101, "name": "My soup", "preference": "like", "created_at": T1}] * 1001)),
+        ("a preference with 1020 foods", s("food_preferences", [{"food_id": 101, "name": "My soup", "preference": "less", "created_at": T1}] * 1020)),
         ("the profile is not an object", s("profile", [])),
         ("the profile has an unknown field", s("profile.colour", "red")),
         ("the profile weight is text", s("profile.weight_kg", "70")),
@@ -454,6 +463,7 @@ def script(ids: dict[str, int]) -> list[dict[str, Any]]:
     add("read back: lab results", None, raw_path="/api/labs", method="GET")
     add("read back: symptoms", None, raw_path=f"/api/symptoms?start={D1}&end={D2}", method="GET")
     add("read back: Not for me", None, raw_path="/api/guidance/not-for-me", method="GET")
+    add("read back: food preferences", None, raw_path="/api/guidance/preferences", method="GET")
     add("read back: the profile", None, raw_path="/api/profile", method="GET")
     return steps
 

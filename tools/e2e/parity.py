@@ -36,7 +36,7 @@ Sections
      their code) over a matrix of profiles x lab results x the targets.* settings
   12 meal guidance (v0.3 M2, note 06): every /api/guidance route (what fits, swaps for foods and entries,
      the plan builder and its variants, day and period insights, low-treatment options, the rules table,
-     "Not for me") with their validation and the person's and admin's guidance settings, over a history
+     "Not for me", food preferences and what the app learned from the log, note 09) with their validation and the person's and admin's guidance settings, over a history
      with usual meals, saved meals with meal_hint and treated lows; the log's purpose and client_id
      (POST /api/log, /quick, /batch, PUT, copy-day, CSV) and POST /api/log/batch's all-or-nothing rule
   13 barcodes (v0.3 M3, note 03): foods with a gtin and an ingredient list (the additive scan, the gtin rules,
@@ -269,7 +269,7 @@ HELPERS_JS = r"""
       m._entries = []; m._nextEntryId = 1;
       m._templates = []; m._nextTemplateId = 1;
       m._labs = []; m._nextLabId = 1;
-      m._notForMe = new Map();
+      m._foodPrefs = new Map(); delete m._notForMe;  // food_preferences (js/mock/guidance.js)
       // The demo's default profile (js/mock/core.js): "Not chosen yet" (schema step 8), no "about" tolerance (step 9).
       m._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1',
         warn_fraction: 0.8, about_tolerance_pct: 0, ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [],
@@ -1341,9 +1341,10 @@ class Harness:
         return self.both(section, label, method, path, body, ignore=self.GIGNORE)
 
     def _clear_not_for_me(self, section: str) -> None:
+        """Every food preference of the person (like, less often, "Not for me", neutral) on both sides."""
         for caller in (self.server, self.mock):
-            for row in caller.call("GET", "/api/guidance/not-for-me")["body"]["foods"]:
-                caller.call("DELETE", f"/api/guidance/not-for-me/{row['food_id']}")
+            for row in caller.call("GET", "/api/guidance/preferences")["body"]["foods"]:
+                caller.call("DELETE", f"/api/guidance/preferences/{row['food_id']}")
 
     def section12(self) -> None:
         """Meal guidance (ARCHITECTURE.md "M2 API: guidance") over the browser twin js/engine/guidance/*.js."""
@@ -1549,6 +1550,49 @@ class Harness:
         self.gboth(S, "DELETE green beans again (404)", "DELETE", f"/api/guidance/not-for-me/{f('Green beans, boiled')}")
         self.gboth(S, "GET list", "GET", "/api/guidance/not-for-me")
         self._clear_not_for_me(S)
+
+        S = "12g2 food preferences (note 09)"
+        rice, beans, banana = f("Rice, white, long-grain, cooked"), f("Green beans, boiled"), f("Banana, raw")
+        self.gboth(S, "GET empty", "GET", "/api/guidance/preferences")
+        self.gboth(S, "GET learned (empty)", "GET", "/api/guidance/learned")
+        for name, value, extra in [("rice like", "like", {}), ("beans less (ask)", "less", {"source": "ask"}),
+                                   ("banana not_for_me", "not_for_me", {}), ("rice neutral", "neutral", {}), ("banana like again", "like", {})]:
+            fid = {"rice": rice, "beans": beans, "banana": banana}[name.split()[0]]
+            self.gboth(S, f"PUT {name}", "PUT", f"/api/guidance/preferences/{fid}", {"preference": value, **extra})
+        self.gboth(S, "PUT same value again (idempotent)", "PUT", f"/api/guidance/preferences/{beans}", {"preference": "less", "source": "person"})
+        self.gboth(S, "GET list", "GET", "/api/guidance/preferences")
+        self.gboth(S, "alias list shows only Not for me", "GET", "/api/guidance/not-for-me")
+        self.gboth(S, "alias PUT replaces a like", "PUT", f"/api/guidance/not-for-me/{banana}")
+        self.gboth(S, "alias DELETE leaves a less often alone (404)", "DELETE", f"/api/guidance/not-for-me/{beans}")
+        self.gboth(S, "GET list after the alias", "GET", "/api/guidance/preferences")
+        for label, body in [("empty body", {}), ("unknown value", {"preference": "love"}), ("null value", {"preference": None}),
+                            ("bad source", {"preference": "like", "source": "robot"}), ("extra field", {"preference": "like", "colour": 1}),
+                            ("number", {"preference": 5}), ("list body", [])]:
+            self.gboth(S, f"PUT {label}", "PUT", f"/api/guidance/preferences/{rice}", body)
+        for label, path in [("unknown food", "/api/guidance/preferences/999999"), ("0", "/api/guidance/preferences/0"),
+                            ("negative", "/api/guidance/preferences/-5"), ("2**63", "/api/guidance/preferences/9223372036854775808"),
+                            ("huge", "/api/guidance/preferences/99999999999999999999999"), ("abc", "/api/guidance/preferences/abc")]:
+            self.gboth(S, f"PUT {label}", "PUT", path, {"preference": "like"})
+            self.gboth(S, f"DELETE {label}", "DELETE", path)
+        self.gboth(S, "PUT bad path and bad body together", "PUT", "/api/guidance/preferences/abc", {"preference": "love"})
+        self.gboth(S, "next-meal dinner with preferences", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}&explain=true")
+        self.gboth(S, "plan-day with preferences", "POST", "/api/guidance/plan-day", {"date": G})
+        self.gboth(S, "hypo-options with preferences", "GET", "/api/guidance/hypo-options")
+        self.gboth(S, "DELETE rice", "DELETE", f"/api/guidance/preferences/{rice}")
+        self.gboth(S, "DELETE rice again (404)", "DELETE", f"/api/guidance/preferences/{rice}")
+        self._clear_not_for_me(S)
+        for label, patch in [
+            ("groups and the switch", {"like_categories": ["Fruits", "Fruits"], "less_categories": ["Dairy & Alternatives"], "learn_from_log": False,
+                                       "hidden_usual_meals": ["dinner:1x4,3x4", "dinner:1x4,3x4"]}),
+            ("a group in two lists", {"like_categories": ["Fruits"], "exclude_categories": ["Fruits"]}),
+            ("bad usual-meal key", {"hidden_usual_meals": ["brunch:1x4"]}),
+            ("51 groups", {"like_categories": [f"c{i}" for i in range(51)]}),
+            ("back to the defaults", {"like_categories": [], "less_categories": [], "exclude_categories": [], "learn_from_log": True, "hidden_usual_meals": []}),
+        ]:
+            self.both(S, f"PATCH guidance {label}", "PATCH", "/api/me/settings", {"guidance": patch}, ignore=frozenset({"settings"}))
+            self.gboth(S, f"GET preferences [{label}]", "GET", "/api/guidance/preferences")
+            self.gboth(S, f"GET learned [{label}]", "GET", "/api/guidance/learned")
+            self.gboth(S, f"next-meal dinner [{label}]", "GET", f"/api/guidance/next-meal?meal=dinner&date={G}")
 
         S = "12h guidance settings"
         for label, patch in [

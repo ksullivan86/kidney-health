@@ -111,12 +111,27 @@
     low_potassium: (v) => `Low in potassium (${v.k} mg)`,
     low_phosphorus: (v) => `Low in phosphorus (${v.p} mg)`,
     protein_quality: (v) => `${v.protein} g protein with little phosphorus (${v.ratio} mg per g)`,
+    you_like: () => 'You said you like this.',
     you_eat_often: () => 'You often have this',
     free_food: (v) => `Almost no carbs (${v.carbs} g)`,
     half_portion: (v) => `A half portion fits; a full one would use more ${v.nutrient} than is left for ${v.meal}`,
     unknown: (v) => `${v.Nutrient} is not listed for this food; check the label`,
   };
   function reasonText(code, values = {}) { return REASONS[code](values); }
+  // messages.NOTE_TEXTS: a note the answer adds to `notes` (plain sentences, like DISCLAIMER); the code is the key.
+  const NOTE_TEXTS = {
+    shown_despite_exclusions: 'Shown although you marked them Not for me.',
+  };
+  function noteText(code) { return NOTE_TEXTS[code]; }
+  function times(n) { return n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`; }
+  // messages.learned_reason: the plain sentence under a "Learned from your log" item (what the app saw, never what it "knows").
+  function learnedReason(kind, { days = 0, meal = '', planned = 0, eaten = 0 } = {}) {
+    if (kind === 'often') return `Eaten on ${days} of the last ${R.HISTORY_DAYS} days`;
+    if (kind === 'slot') return `Usually at ${meal}`;
+    if (kind === 'usual_meal') return `Eaten together at ${meal} on ${days} days`;
+    if (kind === 'planned_not_eaten') return `Planned ${times(planned)} in ${R.SKIP_WINDOW_DAYS} days, ${eaten === 0 ? 'not eaten' : `eaten ${times(eaten)}`}`;
+    throw new Error(`unknown kind ${kind}`);
+  }
   // messages.room_line: a room built on a total that misses values some foods do not list is an upper bound.
   function roomLine(meal, room) {
     const parts = [];
@@ -315,7 +330,7 @@
   GE.M = {
     DISCLAIMER, AI_FALLBACK, NO_TARGETS, DISABLED, NEEDS_CONNECTION, NUTRIENT_WORD,
     whole, fmtInt, fmtG, fmtAmount, withUnit, pct, joinAnd, capitalise, fmtServings, shortServing, portionText, portionShort,
-    fractionWord, sizeWord, safeName, fitText, reasonText, roomLine, noFitText, savedMealNote, swapText, swapAvoidText,
+    fractionWord, sizeWord, safeName, fitText, reasonText, NOTE_TEXTS, noteText, learnedReason, roomLine, noFitText, savedMealNote, swapText, swapAvoidText,
     swapHypoText, portionOptionText, planWhyCarbs, planWhyRoom, usualMealName, energyNoteText, partialText, treatingALowCard,
   };
   GE.T = { LEARN_PREFIX, TOPIC_PAGES, NUTRIENT_TOPIC, TIPS, LEACHING_TIP, ADDITIVES_TIP, HYPO_TIP, ALL_TIPS, page, pages, tipJson, format };

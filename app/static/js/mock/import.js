@@ -27,6 +27,7 @@
   const MAX_ENTRIES = 30000, MAX_CUSTOM_FOODS = 5000, MAX_LINKED_FOODS = 5000, MAX_BUILTIN_REFS = 5000, MAX_MEALS = 1000, MAX_MEAL_ITEMS = 100;
   const MAX_LABS = 5000, MAX_SYMPTOMS = 20000, MAX_SETTINGS = 200, MAX_SKIPPED_SHOWN = 100, MAX_MESSAGE_CHARS = 200, MAX_NOTE_CHARS = 1000;
   const MAX_NOT_FOR_ME = 500;
+  const MAX_FOOD_PREFERENCES = 1000;
   const MAX_DEPTH = 32;
   const MAX_IMPORT_BYTES = 16 * 1024 * 1024;
   const MIN_SERVING_G = 0.1, MAX_SERVING_G = 100000, MAX_SERVINGS = 1000, MAX_GRAMS = 100000, MAX_NUTRIENT_VALUE = 1000000;
@@ -39,7 +40,7 @@
     'Your sign-in activity list',
     'Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)',
   ];
-  const RULE = 'Your file\'s foods, log entries, saved meals, lab results, symptoms and "Not for me" foods are added to this account. If the account already has '
+  const RULE = 'Your file\'s foods, log entries, saved meals, lab results, symptoms and food preferences are added to this account. If the account already has '
     + 'entries, foods of your own, saved meals, lab results or symptoms, nothing is imported unless you choose "Add to my existing data". Then whatever is already '
     + 'here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with '
     + 'the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note. So importing the same file '
@@ -264,7 +265,10 @@
     ['id', ID, required], ['date', T.str(), required], ['symptom', T.lit(KH.symptomRules.KEYS), required], ['label', short$(KH.symptomRules.MAX_LABEL, 0, true)],
     ['severity', T.int({ ge: 1, le: 3 }), required], ['note', short$(KH.symptomRules.MAX_NOTE, 0, true)], ['created_at', TS, required]], {
     after: (r) => { viaRequestBody(() => M.instance._symptomBody({ date: r.date, symptom: r.symptom, severity: r.severity, label: r.label || '', note: r.note || '' }), 'symptom'); return r; } });
-  const preferenceModel = T.model('ImportFoodPreference', [['food_id', ID, required], ['name', short$(200), required], ['preference', T.lit(['not_for_me']), required], ['created_at', TS, required]]);
+  // A file from before schema step 17 holds only not_for_me rows without source and updated_at.
+  const preferenceModel = T.model('ImportFoodPreference', [['food_id', ID, required], ['name', short$(200), required],
+    ['preference', T.lit(['like', 'less', 'not_for_me', 'neutral']), required], ['created_at', TS, required],
+    ['source', T.lit(['person', 'ask'], { nullable: true })], ['updated_at', tsOrNull]]);
 
   // The profile, as GET /api/profile shows it, checked like PUT /api/profile (strict types here, then the same rules as the route).
   const orNull = (check) => (v, loc) => (v == null ? null : check(v, loc));
@@ -342,7 +346,7 @@
     ['profile', (v, loc) => (v == null ? null : checkProfile(v, loc))], ['settings', checkSettings],
     kind('log_entries', entryModel, MAX_ENTRIES), kind('custom_foods', foodModel, MAX_CUSTOM_FOODS), kind('linked_foods', linkedModel, MAX_LINKED_FOODS),
     kind('builtin_foods', builtinRefModel, MAX_BUILTIN_REFS), kind('meal_templates', mealModel, MAX_MEALS), kind('lab_results', labModel, MAX_LABS),
-    kind('symptoms', symptomModel, MAX_SYMPTOMS), kind('food_preferences', preferenceModel, MAX_NOT_FOR_ME),
+    kind('symptoms', symptomModel, MAX_SYMPTOMS), kind('food_preferences', preferenceModel, MAX_FOOD_PREFERENCES),
     ...SKIPPED_SECTIONS.map((name) => [name, (v) => v]),
   ], {
     after: (doc) => {
@@ -607,17 +611,21 @@
         bump(this.counts, 'symptoms');
       });
     }
-    // -- "Not for me"
+    // -- food preferences (like, less often, "Not for me", neutral)
     importPreferences() {
       const prefs = this.api._foodPreferences();
       let count = prefs.size;
+      let never = 0;
+      for (const row of prefs.values()) if (row.preference === 'not_for_me') never += 1;
       this.doc.food_preferences.forEach((p, index) => {
         const target = this.foodMap.get(p.food_id);
         if (target === undefined) { this.skip('food_preferences', index, p.name, this.reasonFor(p.food_id)); return; }
         if (prefs.has(target)) { bump(this.already, 'food_preferences'); return; }
-        if (count >= MAX_NOT_FOR_ME) { this.skip('food_preferences', index, p.name, `the "Not for me" list is full (${MAX_NOT_FOR_ME} foods)`); return; }
-        prefs.set(target, p.created_at);
+        if (p.preference === 'not_for_me' && never >= MAX_NOT_FOR_ME) { this.skip('food_preferences', index, p.name, `the "Not for me" list is full (${MAX_NOT_FOR_ME} foods)`); return; }
+        if (count >= MAX_FOOD_PREFERENCES) { this.skip('food_preferences', index, p.name, `your food preferences are full (${MAX_FOOD_PREFERENCES} foods)`); return; }
+        prefs.set(target, { preference: p.preference, source: p.source || 'person', created_at: p.created_at, updated_at: p.updated_at || p.created_at });
         count += 1;
+        if (p.preference === 'not_for_me') never += 1;
         bump(this.counts, 'food_preferences');
       });
     }
@@ -676,8 +684,9 @@
 
   // What the import touches, so a dry run can put it all back (the server runs it in a transaction it then rolls back).
   const TABLES = ['_foods', '_foodById', '_nextFoodId', '_entries', '_nextEntryId', '_templates', '_nextTemplateId', '_labs', '_nextLabId', '_symptoms', '_nextSymptomId',
-    '_notForMe', '_links', '_profile', '_settings', '_lastUs'];
+    '_foodPrefs', '_links', '_profile', '_settings', '_lastUs'];
   function snapshotTables(api) {
+    api._foodPreferences(); // a copy saved before the preference profile (`_notForMe`) is converted first, so a dry run puts the new shape back
     const snap = {};
     for (const k of TABLES) {
       const v = api[k];

@@ -26,7 +26,7 @@ import re
 from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-07.1"
+RULES_VERSION = "2026-10-21.1"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -90,6 +90,18 @@ OFTEN_MIN_DAYS = 2
 HISTORY_DAYS = 14
 USUAL_HISTORY_DAYS = 60
 USUAL_MIN_ITEMS, USUAL_MAX_ITEMS, USUAL_MIN_DATES = 2, 6, 2
+# Food preferences and what the log teaches (note 09 §4.4, §4.5). One term per food, added after the hard filters, so a
+# preference only reorders foods that already passed every kidney and carbohydrate check.
+PREF_LIKE = 1.0
+PREF_LESS = -2.0
+PREF_GROUP_LIKE = 0.5
+PREF_GROUP_LESS = -1.0
+PREF_SKIPPED = -0.5
+PREF_FOOD_CLAMP: tuple[float, float] = (-2.5, 1.0)
+PREF_MEAL_CLAMP: tuple[float, float] = (-1.5, 1.0)
+SKIP_WINDOW_DAYS = 30
+SKIP_MIN_DATES = 2
+LEARNED_MAX = 30
 SWAP_MIN_REDUCTION = 0.25
 SWAP_CARB_MATCH: tuple[float, float] = (5.0, 0.10)  # ± max(5 g, 10 %)
 SWAP_PROTEIN_MATCH: tuple[float, float] = (3.0, 0.15)  # ± max(3 g, 15 %)
@@ -241,6 +253,13 @@ def clamp(value: float, lo: float, hi: float) -> float:
     return lo if value < lo else hi if value > hi else value
 
 
+def usual_meal_key(meal: str, items: Iterable[tuple[int, float]]) -> str:
+    """The identity of a usual meal (note 09 §4.2): ``"<meal>:<food id>x<quarter servings>,…"`` over the items sorted by
+    food id, e.g. ``lunch:12x4,30x2``. Whole numbers only, so the browser twin writes the same text."""
+    parts = [f"{int(food_id)}x{int(js_round(servings * 4.0))}" for food_id, servings in sorted(items, key=lambda it: it[0])]
+    return f"{meal}:" + ",".join(parts)
+
+
 # --------------------------------------------------------------------------- #
 # Names, roles, eligibility
 # --------------------------------------------------------------------------- #
@@ -380,6 +399,16 @@ RULE_DOCS: tuple[tuple[str, str], ...] = (
     ("USUAL_MIN_ITEMS", "Fewest foods in a usual meal"),
     ("USUAL_MAX_ITEMS", "Most foods in a usual meal"),
     ("USUAL_MIN_DATES", "A usual meal was eaten on at least this many dates"),
+    ("PREF_LIKE", "Score of a food the person marked \"More like this\": the size of the slot-habit bonus, half the green-to-yellow gap (note 09 §4.5)"),
+    ("PREF_LESS", "Score of a food marked \"Less often\": a green food then ranks like an otherwise equal yellow one, still never hidden (note 09 §4.5)"),
+    ("PREF_GROUP_LIKE", "Score of a food whose food group the person likes"),
+    ("PREF_GROUP_LESS", "Score of a food whose food group the person wants less often"),
+    ("PREF_SKIPPED", "Score of a food that is planned again and again but not eaten (learned from the log; off with \"Learn from my log\")"),
+    ("PREF_FOOD_CLAMP", "A food's preference terms together stay inside this range: a liked food gains at most +1, a food that is both less often and in a less-often group never vanishes (that is what \"Not for me\" is for)"),
+    ("PREF_MEAL_CLAMP", "A whole meal's preference term, the mean of its foods' terms, stays inside this range"),
+    ("SKIP_WINDOW_DAYS", "Days before today in which a planned entry left planned counts as skipped"),
+    ("SKIP_MIN_DATES", "A food counts as skipped after this many different dates (and eaten on fewer than half of the dates it was planned)"),
+    ("LEARNED_MAX", "Most items of each kind that \"Learned from your log\" lists"),
     ("SWAP_MIN_REDUCTION", "A swap lowers every nutrient that triggered it by at least this fraction"),
     ("SWAP_CARB_MATCH", "A swap's carbs stay within max(min_g, fraction × original): the insulin arithmetic stays the same (F4)"),
     ("SWAP_PROTEIN_MATCH", "A swap matched on protein stays within max(min_g, fraction × original)"),

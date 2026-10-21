@@ -171,7 +171,9 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
     trigger_keys = [t["nutrient"] for t in triggers if t["nutrient"] in R.ROOM_KEYS]
     p_trigger = R.P in trigger_keys
     orig_high = {k: is_high(k, orig[k]) or (k == R.P and food.additive) for k in R.RENAL_KEYS}
-    habit = habit_stats(ctx)
+    # A low treatment is never ranked by taste: in hypo mode no preference and nothing learned is read (note 09 §4.9).
+    habit = habit_stats(ctx, soft=mode != "hypo")
+    pref = habit.pref
     today = today_stats(ctx.day)
     weights = dict(R.USAGE_WEIGHT)
     weights.update(room.usage_weight)
@@ -228,7 +230,7 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
         score = (reduction + _RENAL_SWAP_SCORE[level] + (1.0 if same_category else 0.0)
                  + (1.0 if same_family else 0.0) + (1.0 if fits else 0.0)
                  + min(1.0, max(0.0, static_term(cand, habit, today))) - (1.0 if cand.processed else 0.0)
-                 - 0.1 * carb_diff)
+                 - 0.1 * carb_diff + pref.of(cand))  # the same preference term as What fits now; the kidney test is above
         score = R.round_score(score)
         k_amount = new[R.K] if new[R.K] is not None else float("inf")
         if mode == "hypo":
@@ -297,14 +299,18 @@ def portion_option(food: FoodVec, servings: float, room: Room, triggers: Sequenc
 
 def hypo_options(ctx: GuidanceContext) -> dict[str, Any]:
     """The person's low-treatment foods at the amount that treats a low (``hypo_dose_g`` rounded up
-    to ¼ serving, or to whole items such as tablets), lowest potassium first. Never filtered by a budget or a target (§4.6)."""
+    to ¼ serving, or to whole items such as tablets), lowest potassium first. Never filtered by a budget or a target (§4.6).
+
+    Only the person's "Not for me" foods and "Never suggest" groups leave the list; no soft preference, learned signal or
+    hidden usual meal is read (note 09 §4.9), so the list is the same for any combination of them. Floor (§8 Q1): when
+    those exclusions would leave nothing while some low treatment exists, the whole list is shown with one note, because
+    someone treating a low must always have something to take."""
     dose = float(ctx.prefs.hypo_dose_g)
     fluid_tracked = R.target_max(ctx.profile.targets.get(R.FLUID)) is not None
-    rows: list[tuple[tuple, dict[str, Any]]] = []
+    kept: list[tuple[tuple, dict[str, Any]]] = []
+    excluded: list[tuple[tuple, dict[str, Any]]] = []
     for f in ctx.foods.values():
-        if not f.hypo or f.hidden or f.avoid or f.id in ctx.prefs.exclude_food_ids:
-            continue
-        if (f.category or "") in ctx.prefs.exclude_categories:
+        if not f.hypo or f.hidden or f.avoid:
             continue
         q = candidate_portion(f, "carbs", dose, "hypo")
         if q is None:
@@ -315,7 +321,16 @@ def hypo_options(ctx: GuidanceContext) -> dict[str, Any]:
         k = a[R.K] if a[R.K] is not None else float("inf")
         p = a[R.P] if a[R.P] is not None else float("inf")
         fl = (a[R.FLUID] or 0.0) if fluid_tracked else 0.0
-        rows.append(((k, p, fl, f.name_fold, f.id), item))
+        row = ((k, p, fl, f.name_fold, f.id), item)
+        if f.id in ctx.prefs.exclude_food_ids or (f.category or "") in ctx.prefs.exclude_categories:
+            excluded.append(row)
+        else:
+            kept.append(row)
+    notes = [M.DISCLAIMER]
+    rows = kept
+    if not kept and excluded:
+        rows = excluded
+        notes.append(M.note_text("shown_despite_exclusions"))
     rows.sort(key=lambda pair: pair[0])
     return {
         "status": "ok",
@@ -323,5 +338,5 @@ def hypo_options(ctx: GuidanceContext) -> dict[str, Any]:
         "dose_g": round_value(R.CARBS, dose),
         "options": [item for _, item in rows],
         "card": M.treating_a_low_card(dose),
-        "notes": [M.DISCLAIMER],
+        "notes": notes,
     }
