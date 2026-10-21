@@ -765,7 +765,7 @@ def test_the_prompt_line_names_every_test_the_app_keeps_and_gives_no_advice():
     assert "never say whether a value is normal, high or low" in low and "never copy a name, date of birth or record number" in low
     for word in ("should", "recommend", "dose", "units of insulin", "take your", "diagnos"):
         assert word not in low, word
-    assert prompts.PROMPT_VERSION == "2026-10-15.4"
+    assert prompts.PROMPT_VERSION >= "2026-10-15.4"  # the lab report line arrived with this version; later versions keep it
     assert prompts.TASK_SYSTEM_PROMPT.startswith("You are a small helper")  # the shared system prompt is unchanged by this feature
 
 

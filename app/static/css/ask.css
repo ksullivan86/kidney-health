@@ -55,6 +55,7 @@
 .ask-save-name { font-weight: 600; }
 .ask-save-amount { font-variant-numeric: tabular-nums; }
 .ask-save-meta, .ask-save-status, .ask-save-error, .ask-save-note { margin: 0; }
+.ask-taste-line { font-weight: 600; overflow-wrap: anywhere; }
 .ask-save-error:empty, .ask-save-status:empty { display: none; }
 .ask-save-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .ask-save-actions .btn { min-height: var(--tap); flex: 1 1 auto; }

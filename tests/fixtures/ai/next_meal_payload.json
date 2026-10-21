@@ -5,6 +5,7 @@
    "flags": [],
    "group": "protein",
    "id": 8,
+   "liked": false,
    "name": "Egg white, raw",
    "often": false,
    "per_portion": {
@@ -31,6 +32,7 @@
    "flags": [],
    "group": "protein",
    "id": 7,
+   "liked": false,
    "name": "Chicken breast, roasted",
    "often": false,
    "per_portion": {
@@ -64,6 +66,7 @@
    ],
    "group": "extra",
    "id": 6,
+   "liked": false,
    "name": "Water, tap",
    "often": false,
    "per_portion": {
@@ -92,6 +95,7 @@
    ],
    "group": "veg_fruit",
    "id": 2,
+   "liked": false,
    "name": "Apple, raw, with skin",
    "often": false,
    "per_portion": {
@@ -228,6 +232,9 @@
   "ckd_stage": "4",
   "diabetes": "type1",
   "dialysis": "none",
+  "less_often": null,
+  "likes": null,
+  "not_for_me": null,
   "preferences": "vegetarian, no fish",
   "sex": null
  },

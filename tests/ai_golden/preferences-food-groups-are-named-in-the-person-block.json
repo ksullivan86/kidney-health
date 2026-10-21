@@ -1,0 +1,55 @@
+{
+  "id": "preferences-food-groups-are-named-in-the-person-block",
+  "category": "preferences",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "settings": {
+      "guidance": {
+        "like_categories": [
+          "Vegetables"
+        ],
+        "less_categories": [
+          "Fruits"
+        ],
+        "exclude_categories": [
+          "Beverages"
+        ]
+      }
+    },
+    "food_preferences": [
+      [
+        "Egg, hard-boiled",
+        "neutral"
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\",\"low_sodium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "claims_corrected": 0,
+    "payload_includes": [
+      "\\\"likes\\\":[\\\"Vegetables\\\"]",
+      "\\\"less_often\\\":[\\\"Fruits\\\"]",
+      "\\\"not_for_me\\\":[\\\"Beverages\\\"]"
+    ],
+    "payload_excludes": [
+      "Egg, hard-boiled"
+    ]
+  }
+}

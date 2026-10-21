@@ -457,6 +457,11 @@
     updateMe: (b) => request('PATCH', '/api/me', b),
     mySettings: () => request('GET', '/api/me/settings'),
     updateMySettings: (b) => request('PATCH', '/api/me/settings', b),
+    // food preferences (ARCHITECTURE.md "Food preferences"): the Ask screen's Remember and Undo for a taste use these, with the
+    // person's own session like any other save; a preference of a food group is the "guidance" setting above
+    foodPreferences: () => request('GET', '/api/guidance/preferences'),
+    setFoodPreference: (foodId, b) => request('PUT', `/api/guidance/preferences/${encodeURIComponent(foodId)}`, b),
+    clearFoodPreference: (foodId) => request('DELETE', `/api/guidance/preferences/${encodeURIComponent(foodId)}`),
     myKeys: () => request('GET', '/api/me/keys'),
     setMyKey: (provider, b) => request('PUT', `/api/me/keys/${encodeURIComponent(provider)}`, b),
     deleteMyKey: (provider) => request('DELETE', `/api/me/keys/${encodeURIComponent(provider)}`),

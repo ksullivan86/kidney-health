@@ -5,14 +5,21 @@ reaches the network.
 
 Case format (README in ``tests/ai_golden/``)::
 
-    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report",
+    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report" | "chat",
      "fixture": {"profile": {...}, "targets": {...} | "<preset>", "entries": [[meal, food name, servings, status?, purpose?]],
                  "history": [[days before, meal, food name, servings]], "custom_foods": [{...}], "other_custom_foods": [{...}],
-                 "settings": {"ai": {...}}, "meal", "mode", "text", "image", "swap_entry": index},
+                 "food_preferences": [[food name, "like" | "less" | "not_for_me" | "neutral"]],
+                 "settings": {"ai": {...}, "guidance": {...}}, "meal", "mode", "text", "image", "swap_entry": index,
+                 "message": the person's text (feature chat)},
      "model_outputs": [<content string> | {"content", "finish_reason", "refusal", "reasoning_content", "status"}],
-     "expect": {"http", "status", "calls", "shown_food_names", "not_shown_food_names", "dropped_reasons_include",
+     "expect": {"http", "status", "calls", "shown_food_names", "not_shown_food_names", "not_first_food_names",
+                "idea_reason_codes_include", "idea_reason_codes_exclude", "dropped_reasons_include",
                 "claims_corrected", "rule_fallback", "repaired", "response_excludes", "payload_includes",
-                "payload_excludes", "cards", "draft", "items", "rows", "dropped"}}
+                "payload_excludes", "cards", "draft", "items", "rows", "dropped",
+                "kind", "pending": {"tool", "preference", "target"}, "nothing_saved"}}
+
+``feature: "chat"`` runs ``POST /api/ai/chat`` (Ask) with the person's ``message``; ``kind`` is the answer's kind, ``pending``
+the card the person is asked to confirm, ``nothing_saved`` that no preference, log entry, saved meal or setting changed.
 
 Placeholders in model outputs are resolved from the request the app actually sent:
 ``"{{id:<food name>}}"`` → that candidate's id, ``"{{ref:<food name>}}"`` → its ref (``f3``, ``s1``),
@@ -61,7 +68,7 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
     assert len(cases) >= 40
     categories = {c["category"] for c in cases}
     assert {"grounding", "rules", "safety_text", "refusal", "prefilter", "injection", "format", "privacy", "fallback",
-            "modes", "vision", "kidney_only", "lab_report"} <= categories
+            "modes", "vision", "kidney_only", "lab_report", "preferences"} <= categories
     assert len({c["id"] for c in cases}) == len(cases)
 
 
@@ -73,7 +80,8 @@ def golden(tmp_path_factory) -> Iterator[tuple[TestClient, TestClient]]:
                                                          private_hosts=(LOCAL_HOST,)))
     with TestClient(create_app(settings), base_url=HTTPS_URL) as admin:
         sign_in(admin)
-        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.shared_daily_limit": 0, "ai.vision_plate_enabled": True})
+        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.shared_daily_limit": 0,
+                                                     "ai.vision_plate_enabled": True, "ai.chat_enabled": True})
         assert r.status_code == 200, r.text
         # Lab report photos run only on a local AI (privacy tier 1): the cases of category lab_report use this one.
         r = admin.post("/api/admin/ai-providers", json={"preset": "ollama", "model": "gemma", "vision_model": "llava",
@@ -113,6 +121,18 @@ def reset(client: TestClient) -> None:
     client.app.state.ai.answers = AnswerCache()
 
 
+def snapshot(client: TestClient) -> dict[str, list[tuple[Any, ...]]]:
+    """Every table a preference, a log entry, a saved meal or a setting would be written to (a case's ``nothing_saved``)."""
+    from app.db import connect
+
+    conn = connect(client.app.state.settings.db_path)
+    try:
+        return {t: [tuple(r) for r in conn.execute(f"SELECT * FROM {t} ORDER BY 1, 2")]
+                for t in ("food_preferences", "log_entries", "meal_templates", "user_settings", "assistant_ask_keys")}
+    finally:
+        conn.close()
+
+
 def day_before(n: int) -> str:
     from datetime import date, timedelta
 
@@ -127,10 +147,11 @@ def prepare(admin: TestClient, sam: TestClient, fx: dict[str, Any]) -> dict[str,
     profile["targets"] = TARGET_PRESETS[targets] if isinstance(targets, str) else targets
     r = admin.put("/api/profile", json=profile)
     assert r.status_code == 200, r.text
-    ctx: dict[str, Any] = {"other": {}, "entries": []}
+    ctx: dict[str, Any] = {"other": {}, "entries": [], "custom": {}}
     for item in fx.get("custom_foods", []):
         r = admin.post("/api/foods", json=item)
         assert r.status_code == 201, r.text
+        ctx["custom"][item["name"]] = r.json()["id"]
     for item in fx.get("other_custom_foods", []):
         r = sam.post("/api/foods", json=item)
         assert r.status_code == 201, r.text
@@ -153,8 +174,11 @@ def prepare(admin: TestClient, sam: TestClient, fx: dict[str, Any]) -> dict[str,
     if "guidance" in settings:
         r = admin.patch("/api/me/settings", json={"guidance": settings["guidance"]})
         assert r.status_code == 200, r.text
+    for name, preference in fx.get("food_preferences", []):  # what the person said about taste (note 09), by food name
+        r = admin.put(f"/api/guidance/preferences/{ctx['custom'].get(name) or food_id(admin, name)}", json={"preference": preference})
+        assert r.status_code == 200, r.text
     status = admin.get("/api/ai/status").json()
-    for purpose in ("text", "photos"):
+    for purpose in ("text", "photos", "chat"):
         r = admin.post("/api/ai/consent", json={"provider_id": status["provider"]["id"], "purpose": purpose})
         assert r.status_code == 200, r.text
     labs = status["routes"]["labs"]["runs_on"]  # the local AI, when this server has one
@@ -242,9 +266,12 @@ def test_golden_case(path: Path, golden):
     case_ctx["food_ids"] = {name: food_id(admin, name) for name in fx.get("ids_needed", [])}
     provider = stub(case, case_ctx)
     expect = case["expect"]
+    before = snapshot(admin)
     with attach(admin.app, provider):
         feature = case["feature"]
-        if feature == "next_meal":
+        if feature == "chat":
+            r = admin.post("/api/ai/chat", json={"messages": [{"role": "user", "text": fx["message"]}], "request_id": "golden-chat-0001"})
+        elif feature == "next_meal":
             body: dict[str, Any] = {"meal": fx.get("meal", "dinner"), "mode": fx.get("mode", "ideas"), "date": DAY}
             if "swap_entry" in fx:
                 body["entry_id"] = case_ctx["entries"][fx["swap_entry"]]
@@ -272,6 +299,29 @@ def test_golden_case(path: Path, golden):
         assert name in names, (case["id"], names)
     for name in expect.get("not_shown_food_names", []):
         assert name not in names, (case["id"], names)
+    ideas = result.get("ideas") or []
+    first_names = {i["name"] for i in ideas[0]["items"]} if ideas else set()
+    for name in expect.get("not_first_food_names", []):  # a food the person wants less often is not the first thing recommended
+        assert name not in first_names, (case["id"], first_names)
+    codes = [c for idea in ideas for c in idea["reason_codes"]]
+    for code in expect.get("idea_reason_codes_include", []):
+        assert code in codes, (case["id"], codes)
+    for code in expect.get("idea_reason_codes_exclude", []):
+        assert code not in codes, (case["id"], codes)
+    if "kind" in expect:
+        assert result.get("kind") == expect["kind"], (case["id"], result.get("kind"), text[:600])
+    if "pending" in expect:  # Ask: the card the person is asked to confirm
+        card = result.get("pending_save") or {}
+        want = expect["pending"]
+        assert card.get("tool") == want["tool"], (case["id"], card)
+        if "preference" in want:
+            assert card.get("preference") == want["preference"], (case["id"], card)
+        if "target" in want:
+            assert (card.get("target") or {}).get("name") == want["target"], (case["id"], card)
+    elif feature == "chat":
+        assert result.get("pending_save") is None, (case["id"], result.get("pending_save"))
+    if expect.get("nothing_saved"):  # no preference, log entry, saved meal or setting was written
+        assert snapshot(admin) == before, case["id"]
     dropped = result.get("dropped", [])
     reasons = [d["reason"] for d in dropped] if isinstance(dropped, list) else []  # a lab report counts its dropped lines instead
     for prefix in expect.get("dropped_reasons_include", []):

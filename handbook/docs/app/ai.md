@@ -7,7 +7,7 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-15
+last_checked: 2026-10-21
 fact_checked: 2026-10-05
 sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
 ---
@@ -100,6 +100,7 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
 | Your targets and today's totals and status | Your weight, height, exact age or dates |
 | Up to 40 candidate foods with their numbers | Entry notes, other people's data |
 | Your food preferences, if you wrote any (up to 200 characters) | Anything when you have not opted in |
+| The foods and food groups **you** marked *More like this*, *Less often* or *Not for me*, by name, to meal ideas and **Ask** only | What the app learned from your log; anything for describe a meal, photos or lab report photos |
 | Age in 10-year bands and sex, **only if you tick "share age and sex"** | |
 | A label or plate photo (photo features only), with location and camera data removed | |
 | A photo of a lab report, **only to the AI at home** and only after you agree to it separately. The report may show your name, date of birth and record numbers, which the app cannot remove from a photo: crop it to the results table if you can | |
@@ -216,6 +217,13 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
   readings are always shown to you to check, whatever you choose. These two options only work if your admin has
   allowed them; if not, Ask always asks first. "This conversation" ends when you start a new conversation or after
   12 hours.
+- **Telling Ask what you like.** Say "I don't really like salmon" and Ask may offer to remember it for your meal
+  suggestions. This is **always a card, even if you chose to trust Ask**: "Remember this for your suggestions?
+  Salmon: less often." with **Remember** and **Cancel**. Nothing changes until you press **Remember**, and **Undo**
+  puts back what was there. It only changes the order of suggestions, never a limit or a warning, and it is a taste,
+  not an allergy filter: the app cannot tell whether a food contains an allergen, so check labels. Ask is told which
+  foods and groups you marked (not what the app learned from your log), and only offers this when you say a taste in
+  the conversation.
 - The conversation stays on the page. **New conversation**, reloading or signing out clears it, and the server
   keeps no copy of what you wrote. Your AI activity shows that a call happened, not what was said.
 - The first time, a sheet asks you to agree to send your messages and the numbers it looks up. **What will be

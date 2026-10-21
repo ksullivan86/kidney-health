@@ -535,8 +535,11 @@ def prepare_plate(cfg: ProviderConfig, image: CheckedImage, *, search: Callable[
                     judge=judge, purpose="photos", vision=True, images=[image])
 
 
-def person_for(profile: Mapping[str, Any], prefs: Mapping[str, Any], today: _date) -> dict[str, Any]:
-    return prompts.person_block(profile, prefs, today)
+def person_for(profile: Mapping[str, Any], prefs: Mapping[str, Any], today: _date,
+               tastes: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """The ``person`` object of meal ideas and Ask. ``tastes`` is :func:`app.guidance.context.explicit_preferences`: what the
+    person chose (Like, Less often, Not for me), never what the app learned."""
+    return prompts.person_block(profile, prefs, today, tastes)
 
 
 def search_function(conn: sqlite3.Connection, user_id: int) -> Callable[[str], list[dict[str, Any]]]:

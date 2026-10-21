@@ -7,11 +7,15 @@
   checks (``app.guidance.ai_bridge.validate_ai_items``: candidate ids only, ¼–3 servings in quarters,
   duplicates merged, ≤ 5 items, ≤ 3 ideas, then ``check_meal`` — no new ``over``, no ``avoid_ckd`` or
   low treatment, no ``high`` portion of a nutrient that is not ok today, at most one serving of a
-  ``high`` food — and ``score_meal``). Every number shown comes from the food rows.
+  ``high`` food — and ``score_meal``). Every number shown comes from the food rows. Before that, an idea with a food
+  the person marked Not for me (or one of a group they never want suggested) is dropped whatever the model's
+  reason (:func:`person_excluded`; note 09 §4.7: a food of a saved meal is a candidate id, but the person said no).
 * **V6 Text policy.** The meal features return no free text (§9 A2): an idea's ``theme`` and
   ``reason_codes`` are checked against the recomputed numbers (:func:`true_reasons`) and the sentence a
   person reads is written here from maintainer templates (:data:`REASON_TEXT`). A false claim is
-  removed and counted (``claims_corrected``). A "low in …" claim holds only when every portion is low by
+  removed and counted (``claims_corrected``). "Uses foods you often have" (``you_eat_often``) and "uses a food you said
+  you like" (``you_like``) are about the person: they hold only for a food of a candidate that carried the ``often`` or
+  ``liked`` bit the model was shown (:func:`often_ids`, :func:`liked_ids`). A "low in …" claim holds only when every portion is low by
   the guidance engine's own definition (potassium ≤ 100 mg, phosphorus ≤ 50 mg, sodium ≤ 140 mg per
   portion) and the idea uses at most half of what is left today; its sentence prints the number.
   Model text that must be shown (food names and search terms from photos or a described meal) goes
@@ -91,6 +95,7 @@ REASON_TEXT = {
     "adds_protein": "adds a protein portion",
     "adds_missing_group": "adds what this {meal} is missing",
     "you_eat_often": "uses foods you often have",
+    "you_like": "uses a food you said you like",
 }
 LOW_SODIUM_PORTION_MG = 140.0  # FDA "low sodium" per serving
 # "Low in …" per portion, the guidance engine's own definitions (fits.py reasons; note 06 line 522).
@@ -132,8 +137,11 @@ def name_policy(text: Any, limit: int = 80) -> tuple[str | None, str | None]:
 # --------------------------------------------------------------------------- #
 
 
-def true_reasons(items: Sequence[tuple[FoodVec, float]], room: Room, often: Iterable[int]) -> set[str]:
-    """The reason codes that hold for ``items`` in ``room`` (recomputed from the food rows)."""
+def true_reasons(items: Sequence[tuple[FoodVec, float]], room: Room, often: Iterable[int],
+                 liked: Iterable[int] = ()) -> set[str]:
+    """The reason codes that hold for ``items`` in ``room`` (recomputed from the food rows). ``often`` and ``liked`` are the
+    ids of the candidates that carried the bit (:func:`often_ids`, :func:`liked_ids`): "you eat this often" and "you said you
+    like this" are about the person, not the food, so they hold only for a food the app itself marked so."""
     totals, unknown = meal_totals(items)
     out: set[str] = set()
 
@@ -170,6 +178,9 @@ def true_reasons(items: Sequence[tuple[FoodVec, float]], room: Room, often: Iter
     often_ids = set(often)
     if any(f.id in often_ids for f, _ in items):
         out.add("you_eat_often")
+    liked_ids = set(liked)
+    if any(f.id in liked_ids for f, _ in items):
+        out.add("you_like")
     return out
 
 
@@ -204,10 +215,11 @@ def sentence(codes: Sequence[str], meal: str, items: Sequence[tuple[FoodVec, flo
 
 
 def check_claims(claimed: Sequence[str], items: Sequence[tuple[FoodVec, float]], room: Room,
-                 often: Iterable[int]) -> tuple[list[str], int]:
+                 often: Iterable[int], liked: Iterable[int] = ()) -> tuple[list[str], int]:
     """Keep the claimed codes that are true (order kept, unknown codes ignored); fall back to the true
-    ones when none survive. Returns ``(codes, number corrected)``."""
-    truth = true_reasons(items, room, often)
+    ones when none survive. A ``you_like`` claim is removed (and counted) unless one of the foods is a candidate the person
+    marked Like. Returns ``(codes, number corrected)``."""
+    truth = true_reasons(items, room, often, liked)
     kept = [c for c in dict.fromkeys(claimed) if c in REASON_CODES and c in truth]
     corrected = len([c for c in dict.fromkeys(claimed) if c not in kept])
     if not kept:
@@ -230,6 +242,34 @@ def handbook_refs(slugs: Iterable[Any]) -> tuple[list[dict[str, str]], int]:
 
 def often_ids(bridge: Mapping[str, Any]) -> set[int]:
     return {int(f["food_id"]) for f in bridge.get("foods", []) if "you_eat_often" in (f.get("reasons") or ())}
+
+
+def liked_ids(bridge: Mapping[str, Any]) -> set[int]:
+    """The candidates the person marked Like (the ``liked`` bit of :func:`app.guidance.ai_bridge.candidates_for_ai`, the one the
+    model is shown): the only foods a "you said you like this" claim may name. A food that is in no candidate (for instance one
+    that only appears inside a saved meal) is not in this set, so a claim about it is removed."""
+    return {int(f["food_id"]) for f in bridge.get("foods", []) if f.get("liked") is True}
+
+
+# What the person said no to is never part of an AI idea, wherever the model found the food (a candidate is already filtered by
+# the rules; the foods of a saved meal are not, because the person built that meal themselves).
+NOT_FOR_ME_REASONS = ("not_for_me", "excluded_category")
+
+
+def person_excluded(ctx: Any, food_ids: Iterable[int]) -> str | None:
+    """``not_for_me`` or ``excluded_category`` when one of ``food_ids`` is a food the person marked Not for me, or one of a
+    food group they never want suggested (``app.guidance.fits.ineligible_reason``'s two choices of the person), else ``None``.
+    An id the context does not know is left to the rules gate."""
+    from ..guidance.fits import ineligible_reason
+
+    for fid in food_ids:
+        food = ctx.foods.get(fid)
+        if food is None:
+            continue
+        reason = ineligible_reason(food, ctx)
+        if reason in NOT_FOR_ME_REASONS:
+            return reason
+    return None
 
 
 def label(provider_label: str, model: str) -> dict[str, Any]:
@@ -290,10 +330,14 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
         if len({i["food_id"] for i in items}) > 5:
             dropped.append({"index": index, "reason": "too_many_items"})
             continue
+        excluded = person_excluded(ctx, [i["food_id"] for i in items])
+        if excluded is not None:
+            dropped.append({"index": index, "reason": excluded})
+            continue
         parsed.append((index, raw, items))
     checked = validate_ai_items(ctx, meal, [items for _, _, items in parsed], candidate_ids)
     room = meal_room(ctx, meal, totals=day_totals(ctx.day))
-    often = often_ids(bridge)
+    often, liked = often_ids(bridge), liked_ids(bridge)
     accepted_by_pos = {a["index"]: a for a in checked["ideas"]}
     for d in checked["dropped"]:
         dropped.append({"index": parsed[d["index"]][0] if d["index"] < len(parsed) else d["index"], "reason": d["reason"]})
@@ -304,7 +348,7 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
         if accepted is None:
             continue
         vec_items = [(ctx.foods[it["food_id"]], float(it["servings"])) for it in accepted["items"]]
-        codes, corrected = check_claims([c for c in raw.get("reason_codes") or [] if isinstance(c, str)], vec_items, room, often)
+        codes, corrected = check_claims([c for c in raw.get("reason_codes") or [] if isinstance(c, str)], vec_items, room, often, liked)
         theme_claim = raw.get("theme") if raw.get("theme") in THEMES else "light"
         theme = true_theme(vec_items, theme_claim, often)
         corrected += int(theme != theme_claim)
@@ -375,13 +419,13 @@ def judge_rerank(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping
     foods = {f["ref"]: f for f in bridge.get("foods", [])}
     picks, dropped = _ref_picks(answer.get("order") or [], foods, 12)
     room = meal_room(ctx, meal, totals=day_totals(ctx.day))
-    often = often_ids(bridge)
+    often, liked = often_ids(bridge), liked_ids(bridge)
     order: list[dict[str, Any]] = []
     corrected_total = 0
     for rank, (ref, claimed) in enumerate(picks, start=1):
         f = foods[ref]
         vec = [(ctx.foods[int(f["food_id"])], float(f["portion"]))]
-        codes, corrected = check_claims(claimed, vec, room, often)
+        codes, corrected = check_claims(claimed, vec, room, often, liked)
         corrected_total += corrected
         order.append({"ref": ref, "food_id": int(f["food_id"]), "ai_rank": rank, "reason_codes": codes, "why": sentence(codes, meal, vec)})
     rest = [{"ref": r, "food_id": int(f["food_id"])} for r, f in foods.items() if r not in {p[0] for p in picks}]
@@ -400,13 +444,13 @@ def judge_swap(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[s
     swaps = {s["ref"]: s for s in bridge.get("swaps", [])}
     picks, dropped = _ref_picks(answer.get("pick") or [], swaps, 3)
     room = meal_room(ctx, meal, totals=day_totals(ctx.day))
-    often = often_ids(bridge)
+    often, liked = often_ids(bridge), liked_ids(bridge)
     shown = []
     corrected_total = 0
     for ref, claimed in picks:
         s = swaps[ref]
         vec = [(ctx.foods[int(s["food_id"])], float(s["servings"]))]
-        codes, corrected = check_claims(claimed, vec, room, often)
+        codes, corrected = check_claims(claimed, vec, room, often, liked)
         corrected_total += corrected
         shown.append({**label(provider_label, model), "ref": ref, "food_id": int(s["food_id"]), "name": s["name"],
                       "servings": s["servings"], "renal_rating": s.get("renal_rating"), "text": s.get("text"),

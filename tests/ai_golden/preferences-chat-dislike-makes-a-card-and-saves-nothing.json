@@ -1,0 +1,36 @@
+{
+  "id": "preferences-chat-dislike-makes-a-card-and-saves-nothing",
+  "category": "preferences",
+  "feature": "chat",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ]
+    ],
+    "message": "I don't really like salmon.",
+    "ids_needed": [
+      "Salmon, Atlantic, farmed, cooked"
+    ]
+  },
+  "model_outputs": [
+    "{\"call\":{\"tool\":\"search_foods\",\"arguments\":{\"query\":\"salmon\"}}}",
+    "{\"call\":{\"tool\":\"set_food_preference\",\"arguments\":{\"food_id\":\"{{id:#Salmon, Atlantic, farmed, cooked}}\",\"preference\":\"less\"}}}"
+  ],
+  "expect": {
+    "calls": 2,
+    "kind": "confirm_save",
+    "pending": {
+      "tool": "set_food_preference",
+      "preference": "less",
+      "target": "Salmon, Atlantic, farmed, cooked"
+    },
+    "nothing_saved": true,
+    "response_excludes": [
+      "has been remembered."
+    ]
+  }
+}

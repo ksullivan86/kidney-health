@@ -1,0 +1,24 @@
+{
+  "id": "preferences-chat-an-allergy-is-not-a-taste",
+  "category": "preferences",
+  "feature": "chat",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ]
+    ],
+    "message": "I'm allergic to shellfish."
+  },
+  "model_outputs": [
+    "{\"answer\":\"The app cannot check for allergens, so please read labels and ask your care team about it. I have not saved anything.\"}"
+  ],
+  "expect": {
+    "calls": 1,
+    "kind": "answer",
+    "nothing_saved": true
+  }
+}

@@ -28,7 +28,7 @@ import pytest
 
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
 from app.ai import chat as ask_chat
-from app.ai import guard, prompts, schemas
+from app.ai import chat_save, guard, prompts, schemas
 from app.config import AiEnv
 from app.main import create_app
 
@@ -89,7 +89,7 @@ def test_the_next_meal_payload_matches_its_snapshot(client):
     assert sorted(data) == ["candidates", "handbook_pages", "judged", "meal", "meal_budget", "meals_left", "person",
                             "saved_meals", "targets", "today", "week_avg"]
     for c in data["candidates"]:
-        assert sorted(c) == ["category", "flags", "group", "id", "name", "often", "per_portion", "portion_quarters",
+        assert sorted(c) == ["category", "flags", "group", "id", "liked", "name", "often", "per_portion", "portion_quarters",
                              "rating", "reasons", "ref", "serving", "source", "warnings"]
 
 
@@ -111,7 +111,8 @@ def test_fields_that_are_never_sent(client):
         assert never not in sent, never
     person = data_of(dry_run(client)["body"])["person"]
     assert person == {"age_band": None, "ckd_stage": "4", "diabetes": "type1", "dialysis": "none",
-                      "preferences": "vegetarian, no fish", "sex": None}
+                      "preferences": "vegetarian, no fish", "sex": None,
+                      "likes": None, "less_often": None, "not_for_me": None}  # no food preference chosen: the three lists are null
 
 
 def test_age_band_and_sex_only_with_consent(client):
@@ -333,8 +334,14 @@ def _fingerprint() -> str:
         "chat_messages": [prompts.CHAT_TOOL_RESULT, prompts.CHAT_TOOL_ERROR, prompts.CHAT_NO_CALLS_LEFT,
                           prompts.CHAT_UNKNOWN_TOOL, prompts.CHAT_TOOL_FAILED],
         "chat_step": schemas.chat_step_schema(ask_chat.CHAT_TOOLS),
+        # the tools Ask offers with their argument schemas (the MCP tools' own, and set_food_preference's, which MCP never lists)
+        "chat_offered": {"step": schemas.chat_step_schema(ask_chat.OFFERED_TOOLS), "tools": chat_save.tool_schemas(),
+                         "saving": list(ask_chat.SAVE_TOOLS), "max_saves": ask_chat.MAX_SAVES},
+        # what the person block carries about taste (note 09 §4.7)
+        "tastes": {"keys": list(prompts.TASTE_KEYS), "chars": prompts.TASTE_NAME_CHARS, "names": prompts.TASTE_NAMES_MAX},
         "chat_checks": {"texts": [ask_chat.WITHHELD_DOSE_TEXT, ask_chat.WITHHELD_NUMBER_TEXT, ask_chat.UNFINISHED_TEXT,
-                                  ask_chat.TREAT_LOW_TEXT, ask_chat.GET_HELP_TEXT, ask_chat.LAB_NOTE, ask_chat.NOTICE],
+                                  ask_chat.TREAT_LOW_TEXT, ask_chat.GET_HELP_TEXT, ask_chat.LAB_NOTE, ask_chat.NOTICE,
+                                  ask_chat.CONFIRM_TEXT, ask_chat.CONFIRM_PREFERENCE_TEXT],
                         "limits": [ask_chat.MAX_MESSAGES, ask_chat.MAX_MESSAGE_CHARS, ask_chat.MAX_TOOL_CALLS, ask_chat.MAX_ANSWER_CHARS],
                         "dose": [p.pattern for p in (ask_chat._INSULIN, ask_chat._DOSE, ask_chat._MEDICINE_NAME, ask_chat._SKIP_MEDICINE,
                                                      ask_chat._CHANGE_MEDICINE, ask_chat._LOW_CONTEXT, ask_chat._RESTRICT)],

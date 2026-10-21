@@ -1015,15 +1015,20 @@ def list_foods(
     return {"foods": search_foods(conn, user.id, q=q, category=category, source=source, limit=limit)}
 
 
-@router.get("/categories", response_model=Categories)
-def list_categories(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def visible_categories(conn: sqlite3.Connection, user_id: int) -> list[str]:
+    """The food groups ``user_id`` can pick: the contract's twelve, then any other category on a food they can see."""
     rows = conn.execute(
         f"""SELECT DISTINCT f.category FROM foods f
             WHERE f.category IS NOT NULL AND f.category != '' AND f.hidden = 0 AND {access_clause('f')}""",
-        access_params(user.id),
+        access_params(user_id),
     ).fetchall()
     extras = sorted({r["category"] for r in rows} - set(CATEGORIES))
-    return {"categories": [*CATEGORIES, *extras]}
+    return [*CATEGORIES, *extras]
+
+
+@router.get("/categories", response_model=Categories)
+def list_categories(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    return {"categories": visible_categories(conn, user.id)}
 
 
 def builtin_food_list(conn: sqlite3.Connection) -> list[dict[str, Any]]:
