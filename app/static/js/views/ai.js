@@ -1054,11 +1054,10 @@
     age.addEventListener('change', () => save({ share_age_sex: age.checked }, age.checked ? 'Your age band and sex will be sent.' : 'Your age band and sex are not sent.').catch(() => { age.checked = !age.checked; }));
     wrap.append(check('Share my age band (10 years) and sex', age, 'Off by default. Your exact age and birth month are never sent.'));
 
-    const prefId = uid('ai-pref');
-    const pref = h('input', { type: 'text', id: prefId, maxlength: '200', value: s.preferences || '', placeholder: 'e.g. vegetarian, no fish' });
-    const prefSave = button('Save', 'secondary', () => save({ preferences: pref.value.trim() }, 'Preferences saved.'));
-    wrap.append(h('div', { class: 'field' }, h('label', { for: prefId }, 'Food preferences for AI ideas'),
-      h('div', { class: 'inline-row' }, pref, prefSave), h('span', { class: 'hint' }, 'Up to 200 characters, sent with meal ideas.')));
+    // The text for AI ideas moved to Settings → Meal guidance → Your food preferences (note 09 part B); same setting, ai.preferences.
+    const moved = h('button', { class: 'link-btn', type: 'button' }, 'Settings → Meal guidance → Your food preferences');
+    moved.addEventListener('click', () => { if (KH.guidance && typeof KH.guidance.openPreferences === 'function') KH.guidance.openPreferences(); });
+    wrap.append(h('p', { class: 'hint ai-pref-moved', id: 'set-ai-pref-moved' }, 'Your food preferences for AI ideas are in ', moved, '.'));
     if (me.daily_limit) wrap.append(h('p', { class: 'muted small' }, `Shared AI calls left today: ${me.remaining_today} of ${me.daily_limit}.`));
     if (me.chat_enabled) wrap.append(trustPart(me, save));
     wrap.append(msg, err);
@@ -1067,6 +1066,27 @@
     if (me.user_keys_allowed || me.own) wrap.append(ownProviderPart(me));
     wrap.append(consentsPart(me), activityPart());
     return wrap;
+  }
+
+  // "Food preferences for AI ideas" (setting ai.preferences, up to 200 characters): the field shown in Settings → Meal guidance → Your
+  // food preferences (js/views/guidance.js asks for it), only when this server offers AI, like the rest of the AI choices. It saves
+  // through the same call as before (PATCH /api/me/ai). Resolves to null in the demo and when AI is off.
+  async function preferencesField() {
+    if (MOCK) return null;
+    let me;
+    try { me = await api.me(); } catch (err) { return null; }
+    if (!me || !me.enabled || !me.settings) return null;
+    const msg = statusMsg();
+    const err = formError();
+    const id = uid('ai-pref');
+    const pref = h('input', { type: 'text', id, maxlength: '200', value: me.settings.preferences || '', placeholder: 'e.g. vegetarian, no fish', 'aria-describedby': `${id}-hint` });
+    const save = button('Save', 'secondary', async () => {
+      clear(err);
+      try { await api.updateMe({ preferences: pref.value.trim() }); forget(); msg.textContent = 'Preferences saved.'; } catch (e) { if (!e.handled) showError(err, e); }
+    });
+    pref.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
+    return h('div', { class: 'field ai-pref' }, h('label', { for: id }, 'Food preferences for AI ideas'),
+      h('div', { class: 'inline-row' }, pref, save), h('span', { class: 'hint', id: `${id}-hint` }, 'Up to 200 characters, sent with meal ideas when AI ideas are on for you (Settings → AI ideas). The app’s own suggestions do not read it.'), msg, err);
   }
 
   function ownProviderPart(me) {
@@ -1411,6 +1431,6 @@
   whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg,
+  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg, preferencesField,
     uploadPhoto, fallbackNotes, droppedNotes }; // uploadPhoto, fallbackNotes: js/scan.js reads a label photo into Quick add
 })();

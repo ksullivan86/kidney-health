@@ -15,8 +15,12 @@
      cards (a past day, or today once breakfast, lunch and dinner are logged or after 19:00).
    * Plan view and Today: the plan sheet ("Use this plan" → POST /api/log/batch with client_ids, "Show
      another" → the next variant).
-   * Trends: period insights above the charts. Settings: the person's guidance preferences and the
-     "Not for me" list.
+   * Trends: period insights above the charts. Settings → Meal guidance: the person's guidance settings and "Your
+     food preferences" (note 09 part B): More like this, Less often and Not for me per food, Like / Less often /
+     Never suggest per kind of food, what the app learned from the log (Keep, Stop using this, Save as a meal,
+     Not this meal), the Learn from my log switch and the text for AI ideas. The same "⋯" menu (More like this,
+     Less often, Not for me, each a toggle that shows the current state) is on a suggestion, a swap and a plan item.
+     Preferences are saved only online (like the rest of Settings): offline the save says so, nothing is queued.
    * Offline: the last answer of each kind is kept in memory with its time and shown with "Saved at …";
      without one, "Guidance needs a connection to your server." The "Treating a low" card is drawn from
      the browser twin of the server's text (KH.guidanceEngine.M) when the server cannot be reached, so
@@ -61,9 +65,10 @@
     planDay: (body) => request('POST', '/api/guidance/plan-day', body),
     insightsDay: (date) => request('GET', `/api/guidance/insights/day?${qs({ date })}`),
     insightsPeriod: (start, end) => request('GET', `/api/guidance/insights/period?${qs({ start, end })}`),
-    notForMe: () => request('GET', '/api/guidance/not-for-me'),
-    addNotForMe: (foodId) => request('PUT', `/api/guidance/not-for-me/${encodeURIComponent(foodId)}`),
-    removeNotForMe: (foodId) => request('DELETE', `/api/guidance/not-for-me/${encodeURIComponent(foodId)}`),
+    preferences: () => request('GET', '/api/guidance/preferences'),
+    setPreference: (foodId, preference) => request('PUT', `/api/guidance/preferences/${encodeURIComponent(foodId)}`, { preference }),
+    clearPreference: (foodId) => request('DELETE', `/api/guidance/preferences/${encodeURIComponent(foodId)}`),
+    learned: () => request('GET', '/api/guidance/learned'),
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
   };
 
@@ -106,13 +111,16 @@
   // ---------------------------------------------------------------------------
   let prefsCache = null; // { item: {value, source, editable}, at }
   let serverOff = false; // an answer said the admin switched guidance off
+  let prefsError = null; // why the last read of the settings failed (status 0: offline), for Settings → Meal guidance
   async function loadPrefs(force = false) {
     if (prefsCache && !force) return prefsCache.item;
     try {
       const res = await KH.api.mySettings();
       const item = res && res.settings ? res.settings.guidance : null;
       prefsCache = { item: item || null };
+      prefsError = null;
     } catch (err) {
+      prefsError = err;
       if (!prefsCache) prefsCache = { item: null };
       if (!(err && err.handled) && err && err.status !== 0) console.warn('Guidance settings unavailable:', err.detail || err);
     }
@@ -228,6 +236,15 @@
       if (head) { head.setAttribute('tabindex', '-1'); head.scrollIntoView({ block: 'start' }); head.focus({ preventScroll: true }); }
     }, 60);
   }
+  // From Settings → AI ideas: the text for AI ideas now lives in Settings → Meal guidance → Your food preferences.
+  function openPreferences() {
+    const go = (tries) => {
+      const head = $('#set-g-prefs-h');
+      if (head) { head.scrollIntoView({ block: 'start' }); head.focus({ preventScroll: true }); } else if (tries > 0) setTimeout(() => go(tries - 1), 100);
+    };
+    if (state.view !== 'settings') router.show('settings');
+    go(20);
+  }
   // Four key numbers of a portion: "45 g carbs · 55 mg potassium · 70 mg phosphorus · 0 mg sodium".
   function keyNumbers(n) {
     if (!n) return '';
@@ -249,31 +266,84 @@
     } catch (err) { toastError(err); }
   }
 
-  // "⋯" row menu with "Not for me" (a disclosure: the button controls a small inline action row).
-  function rowMenu(item, { onHidden }) {
+  // ---------------------------------------------------------------------------
+  // Food preferences (note 09; GET/PUT/DELETE /api/guidance/preferences): the "⋯" menu here, the lists in Settings
+  // ---------------------------------------------------------------------------
+  const PREF_ORDER = ['like', 'less', 'not_for_me'];
+  const PREF_WORD = { like: 'More like this', less: 'Less often', not_for_me: 'Not for me' };
+  const PREF_HINT = 'More like this and Less often only change the order of suggestions. Not for me never suggests this food again. '
+    + 'It stays in search, and Settings → Meal guidance can bring it back.';
+  // What a toast says after a change (value null: the preference was cleared).
+  function prefToast(name, value) {
+    if (value === 'like') return `${name}: more like this. Settings → Meal guidance lists it.`;
+    if (value === 'less') return `${name} will be suggested less often. Settings → Meal guidance lists it.`;
+    if (value === 'not_for_me') return `${name} will not be suggested again. Settings → Meal guidance lists it.`;
+    return `${name}: no preference now.`;
+  }
+  // The person's own preference for one food (like, less, not_for_me), or null; a "neutral" row ("stop using what you
+  // learned") is not a taste. Read from the list: there is no route for one food.
+  async function preferenceOf(foodId) {
+    const res = await api.preferences();
+    const row = ((res && res.foods) || []).find((f) => f.food_id === foodId);
+    return row && PREF_ORDER.includes(row.preference) ? row.preference : null;
+  }
+
+  // The "⋯" menu of a food (a suggestion, a swap, a plan item, a row in Settings): More like this, Less often and Not for
+  // me. Each is a toggle that shows the current state ("✓ More like this") and clears it when pressed again. A
+  // disclosure: the button controls a small inline row. `current` is the food's preference when the caller knows it
+  // (Settings); otherwise it is read when the menu opens (an offline read leaves the state blank, and the save then says
+  // it needs a connection). `onChange(value, before)` runs after a change that was saved (value null: cleared).
+  function rowMenu(item, { current, onChange = null, label = `More for ${item.name}` } = {}) {
     const menuId = uid('g-menu');
-    const more = h('button', { class: 'icon-btn g-more', type: 'button', 'aria-expanded': 'false', 'aria-controls': menuId,
-      'aria-label': `More for ${item.name}` }, moreIcon());
-    const nfm = h('button', { class: 'btn secondary g-nfm', type: 'button' }, 'Not for me');
-    const menu = h('div', { class: 'g-menu', id: menuId, hidden: true },
-      nfm, h('span', { class: 'hint' }, 'Never suggest this food again. It stays in search, and Settings → Meal guidance can bring it back.'));
+    const more = h('button', { class: 'icon-btn g-more', type: 'button', 'aria-expanded': 'false', 'aria-controls': menuId, 'aria-label': label },
+      moreIcon());
+    const buttons = {};
+    for (const value of PREF_ORDER) {
+      buttons[value] = h('button', { class: `btn secondary g-pref${value === 'not_for_me' ? ' g-nfm' : ''}`, type: 'button', 'aria-pressed': 'false',
+        'data-pref': value }, PREF_WORD[value]);
+    }
+    const menu = h('div', { class: 'g-menu', id: menuId, role: 'group', 'aria-label': `Your taste for ${item.name}`, hidden: true },
+      PREF_ORDER.map((value) => buttons[value]), h('span', { class: 'hint' }, PREF_HINT));
+    let now = null;
+    let ready = null;
+    let busy = false;
+    const show = (value) => {
+      now = value;
+      for (const [key, b] of Object.entries(buttons)) b.setAttribute('aria-pressed', key === value ? 'true' : 'false');
+    };
+    if (current !== undefined) show(current);
+    const refresh = () => {
+      if (current !== undefined) return;
+      menu.setAttribute('aria-busy', 'true');
+      ready = preferenceOf(item.food_id).then(show, () => null).then(() => menu.removeAttribute('aria-busy'));
+    };
     const close = (refocus) => { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); if (refocus) more.focus(); };
     more.addEventListener('click', () => {
       const open = menu.hidden;
       menu.hidden = !open;
       more.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (open) nfm.focus();
+      if (open) { buttons.like.focus(); refresh(); }
     });
     menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); } });
-    nfm.addEventListener('click', async () => {
-      nfm.disabled = true;
+    const choose = async (value) => {
+      if (busy) return;
+      busy = true;
       try {
-        await api.addNotForMe(item.food_id);
+        if (ready) await ready;
+        const before = now;
+        if (before === value) {
+          try { await api.clearPreference(item.food_id); } catch (err) { if (!(err && err.status === 404)) throw err; } // already cleared elsewhere
+          show(null);
+        } else {
+          await api.setPreference(item.food_id, value);
+          show(value);
+        }
         forgetAnswers();
-        toast(`${item.name} will not be suggested again. Settings → Meal guidance lists it.`, 'ok');
-        if (onHidden) onHidden();
-      } catch (err) { toastError(err); nfm.disabled = false; }
-    });
+        toast(prefToast(item.name, now), 'ok');
+        if (onChange) onChange(now, before);
+      } catch (err) { toastError(err); } finally { busy = false; }
+    };
+    for (const value of PREF_ORDER) buttons[value].addEventListener('click', () => choose(value));
     return { more, menu };
   }
   function moreIcon() {
@@ -288,13 +358,14 @@
     const status = defaultStatusFor(date);
     const reason = item.reasons && item.reasons.length ? item.reasons[0].text : null;
     const nameId = uid('g-food');
-    const { more, menu } = rowMenu(item, { onHidden: onChange });
+    // The list loads again only when the food leaves it (Not for me); a like or a "less often" keeps the order until the next load.
+    const { more, menu } = rowMenu(item, { onChange: (value) => { if (value === 'not_for_me' && onChange) onChange(); } });
     const add = btn('Add', 'secondary g-act', (e) => openEntryFor(item, { meal, status: 'eaten', trigger: e.currentTarget }),
       { 'aria-describedby': nameId, 'aria-label': `Add ${item.name}, ${item.portion_text}, to ${MEAL_LABEL[meal].toLowerCase()}` });
     const plan = btn('Plan', 'secondary g-act', (e) => openEntryFor(item, { meal, status: 'planned', trigger: e.currentTarget }),
       { 'aria-label': `Plan ${item.name}, ${item.portion_text}, for ${MEAL_LABEL[meal].toLowerCase()}` });
     const actions = h('div', { class: 'g-actions' }, status === 'planned' ? [plan, add] : [add, plan], more);
-    return h('li', { class: 'g-food' },
+    return h('li', { class: 'g-food', 'data-food-id': item.food_id },
       h('div', { class: 'g-food-main' }, ratingOf(item),
         h('div', { class: 'g-food-text' },
           h('div', { class: 'row-title', id: nameId }, item.name),
@@ -784,7 +855,7 @@
         ratingIcon(m.status === 'no_fit' ? 'over' : 'caution', { label: m.status === 'no_fit' ? 'Nothing fits' : 'Partly fits' }),
         h('div', {}, m.message)));
     }
-    if (m.items && m.items.length) sec.append(portionList(m.items));
+    if (m.items && m.items.length) sec.append(portionList(m.items, { menus: true }));
     if (m.totals) sec.append(h('p', { class: 'g-totals tabular' }, `Meal: ${keyNumbers(m.totals)}`));
     if (m.why && m.why.length) sec.append(list('g-why', m.why.map((w) => h('li', {}, w))));
     if (m.status === 'no_fit' && m.closest && m.closest.items && m.closest.items.length) {
@@ -792,15 +863,31 @@
     }
     return sec;
   }
-  function portionList(items) {
-    return list('compact-items g-portions', items.map((it) => h('li', {},
-      ratingIcon(it.renal_rating || 'green'),
-      h('span', { class: 'ci-name' }, it.name, h('span', { class: 'muted small' }, ` · ${it.portion_text}`)),
-      h('span', { class: 'ci-amt muted tabular' }, it.nutrients && it.nutrients.carbs_g != null ? `${fmtNum(it.nutrients.carbs_g, 'carbs_g')} g carbs` : ''))));
+  // The foods of a plan meal. With `menus`, each carries the "⋯" menu (More like this, Less often, Not for me): Not for me
+  // plans the day again without the food; a like or a "less often" is for the next plan.
+  function portionList(items, { menus = false } = {}) {
+    return list('compact-items g-portions', items.map((it) => {
+      const li = h('li', { 'data-food-id': it.food_id },
+        ratingIcon(it.renal_rating || 'green'),
+        h('span', { class: 'ci-name' }, it.name, h('span', { class: 'muted small' }, ` · ${it.portion_text}`)),
+        h('span', { class: 'ci-amt muted tabular' }, it.nutrients && it.nutrients.carbs_g != null ? `${fmtNum(it.nutrients.carbs_g, 'carbs_g')} g carbs` : ''));
+      if (menus && it.food_id != null) {
+        const { more, menu } = rowMenu(it, { onChange: (value) => { if (value === 'not_for_me') replanAfterHiding(); } });
+        li.append(more, menu);
+      }
+      return li;
+    }));
+  }
+  // Not for me on a plan item: the plan is made again without it (same option number), and the focus stays in the sheet.
+  async function replanAfterHiding() {
+    if (sheetEl.dataset.kind !== 'plan') return;
+    await runPlan();
+    const another = $('#g-plan-another');
+    if (another && !another.disabled) another.focus(); else { const use = $('#g-plan-use'); if (use) use.focus(); }
   }
   function energyNote(e) {
     const box = h('div', { class: 'g-tip' }, h('p', {}, e.text));
-    if (e.foods && e.foods.length) box.append(portionList(e.foods));
+    if (e.foods && e.foods.length) box.append(portionList(e.foods, { menus: true }));
     const page = GE && GE.T && GE.T.TOPIC_PAGES[e.handbook];
     if (page) { const l = learnFor(page.url, page.title); if (l) box.append(l); }
     return box;
@@ -1235,13 +1322,14 @@
   }
   function swapRow(s, res, c) {
     const nameId = uid('g-swap');
-    const row = h('li', { class: 'g-food' },
+    const row = h('li', { class: 'g-food', 'data-food-id': s.food_id },
       h('div', { class: 'g-food-main' }, ratingOf(s),
         h('div', { class: 'g-food-text' }, h('div', { class: 'row-title', id: nameId }, s.name), h('div', { class: 'g-reason' }, s.text))));
+    const actions = h('div', { class: 'g-actions' });
     // On a new entry the swap can replace the food in the sheet; an entry already saved keeps its food
     // (the ideas are for next time) — delete it and add the other food to change it.
     if (c.mode === 'add' && res.mode !== 'hypo') {
-      row.append(h('div', { class: 'g-actions' }, btn('Use this instead', 'secondary g-act', async (e) => {
+      actions.append(btn('Use this instead', 'secondary g-act', async (e) => {
         const b = e.currentTarget;
         b.disabled = true;
         try {
@@ -1249,14 +1337,67 @@
           KH.views.add.openEntrySheet('add', { food, meal: c.meal, servings: s.servings, status: c.status, trigger: $('#sheet-entry')._returnFocus || null });
           toast(`Switched to ${s.name} (${s.portion_text})`, 'ok');
         } catch (err) { toastError(err); if (document.contains(b)) b.disabled = false; }
-      }, { 'aria-label': `Use ${s.name}, ${s.portion_text}, instead` })));
+      }, { 'aria-label': `Use ${s.name}, ${s.portion_text}, instead` }));
+    }
+    // Taste is for a meal's ideas, never for a low: no menu on the options for the next low (note 09 §4.9).
+    if (res.mode !== 'hypo') {
+      const { more, menu } = rowMenu(s, { onChange: (value) => { if (value === 'not_for_me') { entryCtl.swapKey = null; loadSwaps(); } } });
+      actions.append(more);
+      row.append(actions, menu);
     }
     return row;
   }
 
   // ---------------------------------------------------------------------------
-  // Settings → Meal guidance (the person's "guidance" object and the "Not for me" list)
+  // Settings → Meal guidance: the person's "guidance" object, then "Your food preferences" (note 09 §4.1, §4.10)
   // ---------------------------------------------------------------------------
+  // The sentence of note 09 §4.10, word for word. It is the one place that says what taste is not: a preference is never a safety filter.
+  const TASTE_NOTE = 'Less often and Not for me are about taste. They are not an allergy filter: the app cannot tell whether a food contains an allergen, so check labels.';
+  const LEARN_OFF_HINT = 'Off: suggestions use only your limits and variety, not what you usually eat.';
+  const LEARNED_SHOWN = 5; // learned items per kind before "Show more"
+  const LEARNED_KINDS = [
+    ['often', 'Foods you eat often'],
+    ['slot', 'Foods you usually have at one meal'],
+    ['usual_meal', 'Meals you often have'],
+    ['planned_not_eaten', 'Foods you plan but pass over'],
+  ];
+  const KIND_CHOICES = [['none', 'None'], ['like', 'Like'], ['less', 'Less often'], ['exclude', 'Never suggest']];
+  const KIND_FIELDS = { like: 'like_categories', less: 'less_categories', exclude: 'exclude_categories' };
+  const PREF_EMPTY = {
+    like: 'None yet. Use “⋯ → More like this” on a suggestion, or Keep something the app learned below.',
+    less: 'None yet. Use “⋯ → Less often” on a suggestion.',
+    not_for_me: 'None. Use “⋯ → Not for me” on a suggestion to hide a food from guidance.',
+  };
+  const USUAL_KEY = /^(breakfast|lunch|dinner|snack):(\d+x\d+(?:,\d+x\d+)*)$/;
+
+  // "lunch:12x4,30x2" → { meal: 'lunch', items: [[12, 4], [30, 2]] } (food id, quarter servings), or null (rules.usual_meal_key).
+  function parseUsualKey(key) {
+    const m = USUAL_KEY.exec(String(key || ''));
+    if (!m) return null;
+    return { meal: m[1], items: m[2].split(',').map((part) => part.split('x').map(Number)) };
+  }
+  const KIND_FIELD_NAMES = new Set(Object.values(KIND_FIELDS));
+  // The id of the control that shows an error for one field of the guidance object.
+  function settingControlId(field) {
+    return KIND_FIELD_NAMES.has(field) ? 'set-g-kinds' : `set-g-${field.replace(/_/g, '-')}`;
+  }
+
+  // "Show 3 more" under a list: rows beyond `shown` stay hidden until it is pressed.
+  function capRows(ul, rows, shown, noun) {
+    if (rows.length <= shown) return null;
+    const extra = rows.slice(shown);
+    for (const r of extra) r.hidden = true;
+    ul.id = ul.id || uid('g-list');
+    const more = linkBtn(`Show ${extra.length} more`, () => {
+      const open = more.getAttribute('aria-expanded') !== 'true';
+      for (const r of extra) r.hidden = !open;
+      more.setAttribute('aria-expanded', open ? 'true' : 'false');
+      more.textContent = open ? 'Show fewer' : `Show ${extra.length} more`;
+      if (open) { const first = $('button', extra[0]); if (first) first.focus(); }
+    }, { 'aria-expanded': 'false', 'aria-controls': ul.id, 'aria-label': `Show ${extra.length} more ${noun}` });
+    return more;
+  }
+
   // "Let AI re-order and explain" (guidance.ai_enrich, note 04): shown when this server offers AI.
   function aiEnrichRow(check) {
     const slot = h('div', { class: 'g-ai-setting' });
@@ -1269,20 +1410,37 @@
     }
     return slot;
   }
+  // The text for AI ideas (setting ai.preferences) lives in this section when the server offers AI (js/views/ai.js builds
+  // the field; it is empty in the demo and when AI is off).
+  function aiPreferencesSlot() {
+    const slot = h('div', { class: 'g-ai-pref' });
+    if (KH.ai && typeof KH.ai.preferencesField === 'function') {
+      KH.ai.preferencesField().then((field) => { if (field && document.contains(slot)) slot.append(field); }).catch(() => null);
+    }
+    return slot;
+  }
+
   async function renderSettings() {
     const body = $('#set-guidance-body');
     if (!body) return;
     clear(body).append(loadingNote('Loading…'));
-    const [item, nfm, cats] = await Promise.allSettled([loadPrefs(true), api.notForMe(), KH.api.categories()]);
+    const [item, cats] = await Promise.allSettled([loadPrefs(true), KH.api.categories()]);
     clear(body);
     const setting = item.status === 'fulfilled' ? item.value : null;
-    if (!setting) { body.append(h('p', { class: 'form-error' }, 'Your guidance settings could not load.')); return; }
+    if (!setting) {
+      body.append(prefsError && prefsError.status === 0
+        ? h('p', { class: 'g-offline', role: 'note' }, NEEDS_CONNECTION)
+        : h('p', { class: 'form-error' }, 'Your guidance settings could not load.'));
+      return;
+    }
     const v = { ...(KH.settings.BY_KEY.guidance ? KH.settings.BY_KEY.guidance.default : {}), ...(setting.value || {}) };
     const locked = setting.editable === false;
     const msg = h('p', { class: 'status-msg', id: 'set-guidance-msg', role: 'status', 'aria-live': 'polite' });
     const err = h('div', { class: 'form-error', role: 'alert', id: 'set-guidance-error' });
-    const save = async (patch, control) => {
-      clear(err);
+    // Saves the whole guidance object (the server refuses a food group in two lists, and unknown fields). `out` is where
+    // "Saved." and an error are written: the top of the section, or the place beside the control that was used.
+    const save = async (patch, control, out = { msg, err }) => {
+      clear(out.err);
       KH.forms.clearFieldErrors(body);
       const next = { ...v, ...patch };
       try {
@@ -1290,31 +1448,32 @@
         prefsCache = { item: res.settings.guidance };
         Object.assign(v, res.settings.guidance.value);
         forgetAnswers();
-        msg.textContent = 'Saved.';
+        out.msg.textContent = 'Saved.';
         return true;
       } catch (e) {
         if (e.handled) return false;
         const parts = KH.forms.splitFieldErrors(String(e.detail || e.message).replace(/^guidance: /, ''));
         let shown = false;
         for (const p of parts) {
-          const field = p.field && $(`#set-g-${p.field.split('.')[0].replace(/_/g, '-')}`, body);
+          const field = p.field && $(`#${settingControlId(p.field.split('.')[0])}`, body);
           if (field) { KH.forms.fieldError(field, p.message); shown = true; }
         }
-        if (!shown) err.append(h('p', {}, e.detail || e.message));
+        if (!shown) out.err.append(h('p', {}, e.detail || e.message));
         if (control && control.focus) control.focus();
         return false;
       }
     };
-    const check = (key, label, hint) => {
+    const check = (key, label, hint, onSaved = null, out = undefined) => {
       const id = `set-g-${key.replace(/_/g, '-')}`;
       const box = h('input', { type: 'checkbox', id, 'aria-describedby': hint ? `${id}-hint` : null });
       box.checked = v[key] !== false;
       box.disabled = locked;
       box.addEventListener('change', async () => {
         box.disabled = true;
-        const ok = await save({ [key]: box.checked }, box);
+        const ok = await save({ [key]: box.checked }, box, out);
         if (!ok) box.checked = !box.checked;
         box.disabled = locked;
+        if (ok && onSaved) onSaved();
       });
       return h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, label, hint ? h('span', { class: 'hint', id: `${id}-hint` }, hint) : null));
     };
@@ -1354,59 +1513,261 @@
         ? [h('p', { class: 'hint', id: 'set-g-kidney-only' }, 'Your profile says you do not have diabetes, so meals have no carbohydrate goal and there is no low-treatment card. The carbohydrate tolerance and the carbs you take for a low appear here if you choose a diabetes type in Profile.')]
         : [number('carb_tolerance_g', 'How close to my meal carb goal counts as on target (g)', 'Ask your diabetes team. 5 to 20 g; the app uses 10 g if you are not sure. Today\'s per-meal carbohydrate alert uses it too.', 5, 20),
           number('hypo_dose_g', 'Carbs I take to treat a low (g)', 'The amount your diabetes team gave you, 5 to 30 g. Low-treatment options are sized to it.', 5, 30)]));
-    // Never suggest (categories)
-    const catList = cats.status === 'fulfilled' ? cats.value.categories || [] : [];
-    if (catList.length) {
-      const excluded = new Set(v.exclude_categories || []);
-      const fs = h('fieldset', { class: 'field', id: 'set-g-exclude-categories', 'aria-describedby': 'set-g-exclude-hint' },
-        h('legend', {}, 'Never suggest these kinds of food'), h('span', { class: 'hint', id: 'set-g-exclude-hint' }, 'They stay in search and can still be logged.'));
-      const grid = h('div', { class: 'checks' });
-      catList.forEach((cat, i) => {
-        const id = `set-g-cat-${i}`;
-        const box = h('input', { type: 'checkbox', id, value: cat });
-        box.checked = excluded.has(cat);
-        box.disabled = locked;
-        box.addEventListener('change', async () => {
-          box.disabled = true;
-          const chosen = $$('input:checked', grid).map((x) => x.value);
-          const ok = await save({ exclude_categories: chosen }, box);
-          if (!ok) box.checked = !box.checked;
-          box.disabled = locked;
-        });
-        grid.append(h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, cat)));
-      });
-      fs.append(grid);
-      body.append(fs);
-    }
     const src = KH.settings.SOURCE_LABEL[setting.source] || setting.source || '';
     body.append(h('span', { class: `setting-source src-${setting.source}` }, src), msg, err);
-    // Not for me
-    body.append(h('h3', { class: 'settings-subtitle', id: 'set-g-nfm-h' }, '“Not for me” foods'));
-    const nfmList = list('list g-nfm-list', []);
-    nfmList.setAttribute('aria-labelledby', 'set-g-nfm-h');
-    const fill = (data) => {
-      clear(nfmList);
-      const foods = (data && data.foods) || [];
-      if (!foods.length) nfmList.append(h('li', { class: 'empty-state' }, 'None. Use “⋯ → Not for me” on a suggestion to hide a food from guidance.'));
-      for (const f of foods) {
-        const rm = btn('Suggest again', 'secondary g-act', async () => {
-          rm.disabled = true;
-          try {
-            await api.removeNotForMe(f.food_id);
-            forgetAnswers();
-            fill(await api.notForMe());
-            msg.textContent = `${f.name} can be suggested again.`;
-            const first = $('button', nfmList);
-            (first || $('#set-g-nfm-h')).focus();
-          } catch (e) { toastError(e); rm.disabled = false; }
-        }, { 'aria-label': `Suggest ${f.name} again` });
-        nfmList.append(h('li', { class: 'g-nfm' }, h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, f.name), h('div', { class: 'row-sub' }, f.category || '')), rm));
-      }
-      if (data && foods.length) nfmList.append(h('li', { class: 'hint g-nfm-count' }, `${foods.length} of ${data.limit} foods`));
+    body.append(prefsSection({ v, locked, save, check, catList: cats.status === 'fulfilled' ? cats.value.categories || [] : [] }));
+  }
+
+  // "Your food preferences": the lists of foods, the kinds of food, what the app learned from the log and the text for AI.
+  function prefsSection({ v, locked, save, check, catList }) {
+    const root = h('section', { class: 'g-prefs', 'aria-labelledby': 'set-g-prefs-h' });
+    const pair = (id) => ({
+      msg: h('p', { class: 'status-msg', id: `${id}-msg`, role: 'status', 'aria-live': 'polite' }),
+      err: h('div', { class: 'form-error', role: 'alert', id: `${id}-error` }),
+    });
+    const head = (text, id) => h('h4', { class: 'g-pref-head', id, tabindex: '-1' }, text);
+    const prefsHead = h('h3', { class: 'settings-subtitle', id: 'set-g-prefs-h', tabindex: '-1' }, 'Your food preferences');
+    root.append(prefsHead,
+      h('p', { class: 'hint g-prefs-intro' }, 'Tell the app what you like. It only changes the order of foods that already fit your limits: it never makes a food fit.'),
+      h('p', { class: 'g-taste-note', role: 'note' }, TASTE_NOTE));
+    if (v.enabled === false) root.append(h('p', { class: 'hint' }, 'Meal guidance is switched off above, so these choices change nothing until you switch it on.'));
+
+    // ---- foods: More like this, Less often, Not for me --------------------------------------------------
+    const foodsBox = h('div', { class: 'g-pref-foods' }, loadingNote('Loading…'));
+    const learnedBox = h('div', { class: 'g-learned' }, loadingNote('Loading…'));
+    let prefsAnswer = null;
+    let learnedAnswer = null;
+
+    // Reads both lists again and draws them; `focus` is a function that returns the element to focus afterwards.
+    let loads = 0;
+    const reload = async (focus = null) => {
+      const mine = ++loads;
+      const [p, l] = await Promise.allSettled([api.preferences(), api.learned()]);
+      if (mine !== loads) return; // a newer read is on its way: draw only that one
+      prefsAnswer = p.status === 'fulfilled' ? { ok: p.value } : { err: p.reason };
+      learnedAnswer = l.status === 'fulfilled' ? { ok: l.value } : { err: l.reason };
+      drawFoods();
+      drawLearned();
+      if (focus) { const el = focus(); if (el) el.focus(); }
     };
-    if (nfm.status === 'fulfilled') fill(nfm.value);
-    else nfmList.append(h('li', { class: 'form-error' }, 'The list could not load.'));
-    body.append(nfmList);
+    // After a change in a row's menu the food has moved to another list (or left them): the focus goes to its "⋯" again.
+    const refocus = (foodId, fallback) => reload(() => $(`[data-food-id="${foodId}"] .g-more`, foodsBox) || fallback());
+    const headOf = (value) => $(`#set-g-pref-${value}-h`, root);
+
+    function prefRow(f) {
+      const sub = [f.category, f.source === 'ask' ? 'added in Ask' : ''].filter(Boolean).join(' · ');
+      const again = f.preference === 'not_for_me';
+      const rm = btn(again ? 'Suggest again' : 'Remove', 'secondary g-act', async () => {
+        rm.disabled = true;
+        try {
+          await api.clearPreference(f.food_id);
+          forgetAnswers();
+          toast(again ? `${f.name} can be suggested again.` : `${f.name} was removed from “${PREF_WORD[f.preference]}”.`, 'ok');
+          await reload(() => $('button', $('#set-g-pref-list-' + f.preference, root)) || headOf(f.preference));
+        } catch (e) { toastError(e); rm.disabled = false; }
+      }, { 'aria-label': again ? `Suggest ${f.name} again` : `Remove ${f.name} from ${PREF_WORD[f.preference]}` });
+      const { more, menu } = rowMenu({ food_id: f.food_id, name: f.name }, { current: f.preference, label: `Change ${f.name}`,
+        onChange: () => refocus(f.food_id, () => headOf(f.preference)) });
+      return h('li', { class: 'g-pref-row g-food', 'data-food-id': f.food_id },
+        h('div', { class: 'g-food-main' }, h('div', { class: 'g-food-text' }, h('div', { class: 'row-title' }, f.name), sub ? h('div', { class: 'row-sub' }, sub) : null)),
+        h('div', { class: 'g-actions' }, rm, more), menu);
+    }
+    function drawFoods() {
+      clear(foodsBox);
+      if (!prefsAnswer.ok) { foodsBox.append(failure(prefsAnswer.err)); return; }
+      const data = prefsAnswer.ok;
+      const rows = { like: [], less: [], not_for_me: [] };
+      for (const f of data.foods || []) if (rows[f.preference]) rows[f.preference].push(f);
+      for (const value of PREF_ORDER) {
+        const ul = list('list g-pref-list', rows[value].length ? rows[value].map(prefRow) : [h('li', { class: 'empty-state' }, PREF_EMPTY[value])]);
+        ul.id = `set-g-pref-list-${value}`;
+        ul.setAttribute('aria-labelledby', `set-g-pref-${value}-h`);
+        foodsBox.append(h('div', { class: 'g-pref-group' }, head(PREF_WORD[value], `set-g-pref-${value}-h`), ul));
+      }
+      const total = (data.foods || []).length;
+      foodsBox.append(h('p', { class: 'hint g-pref-count' },
+        `${total} of ${data.limit} food preferences · ${rows.not_for_me.length} of ${data.not_for_me_limit} “Not for me”`));
+    }
+
+    // ---- kinds of food: None, Like, Less often, Never suggest -------------------------------------------
+    function kindsFieldset(out) {
+      const known = new Set(catList);
+      const chosen = new Map();
+      const extra = { like: [], less: [], exclude: [] }; // a kind the food list no longer has stays in the setting
+      for (const [key, field] of Object.entries(KIND_FIELDS)) {
+        for (const cat of v[field] || []) {
+          if (!known.has(cat)) extra[key].push(cat);
+          else if (!chosen.has(cat)) chosen.set(cat, key);
+        }
+      }
+      for (const cat of catList) if (!chosen.has(cat)) chosen.set(cat, 'none');
+      const collect = () => Object.fromEntries(Object.entries(KIND_FIELDS).map(([key, field]) =>
+        [field, [...extra[key], ...catList.filter((c) => chosen.get(c) === key)]]));
+      const fs = h('fieldset', { class: 'field g-kinds', id: 'set-g-kinds', 'aria-describedby': 'set-g-kinds-hint' },
+        h('legend', {}, 'Kinds of food'),
+        h('span', { class: 'hint', id: 'set-g-kinds-hint' }, 'Like and Less often change the order a little. Never suggest keeps the whole kind out of suggestions; it stays in search and can still be logged.'));
+      const grid = h('div', { class: 'g-kind-list' });
+      catList.forEach((cat, i) => {
+        const one = h('fieldset', { class: 'g-kind' }, h('legend', { class: 'g-kind-name' }, cat));
+        const seg = h('div', { class: 'segmented meal-seg g-kind-seg' });
+        for (const [value, text] of KIND_CHOICES) {
+          const id = `set-g-kind-${i}-${value}`;
+          const radio = h('input', { type: 'radio', name: `set-g-kind-${i}`, id, value });
+          radio.checked = chosen.get(cat) === value;
+          radio.disabled = locked;
+          radio.addEventListener('change', async () => {
+            if (!radio.checked) return;
+            const before = chosen.get(cat);
+            chosen.set(cat, value);
+            const ok = await save(collect(), radio, out);
+            if (!ok) {
+              chosen.set(cat, before);
+              const back = $(`input[value="${before}"]`, one);
+              if (back) back.checked = true;
+            }
+          });
+          seg.append(radio, h('label', { for: id }, text));
+        }
+        one.append(seg);
+        grid.append(one);
+      });
+      fs.append(grid);
+      return fs;
+    }
+
+    // ---- learned from the log ---------------------------------------------------------------------------
+    const learnedHead = head('Learned from your log', 'set-g-learned-h');
+    const keptAs = (foodId) => {
+      const row = prefsAnswer && prefsAnswer.ok ? (prefsAnswer.ok.foods || []).find((f) => f.food_id === foodId) : null;
+      return row && (row.preference === 'like' || row.preference === 'less') ? row.preference : null;
+    };
+    // Keep (an explicit like, or "less often" for a food the app lowered) and Stop using this (neutral) are one row each.
+    const setFood = async (it, value, button) => {
+      button.disabled = true;
+      try {
+        await api.setPreference(it.food_id, value);
+        forgetAnswers();
+        toast(value === 'neutral' ? `${it.name}: the app will stop using what it saw in your log.` : `${it.name} is now under “${PREF_WORD[value]}”.`, 'ok');
+        await reload(() => (value === 'neutral' ? learnedHead : $(`#set-g-learned-${it.kind}-${it.food_id}`, root) || learnedHead));
+      } catch (e) { toastError(e); button.disabled = false; }
+    };
+    const saveUsualMeal = async (it, button) => {
+      const parsed = parseUsualKey(it.key);
+      const plan = KH.views.plan;
+      if (!parsed || !plan || typeof plan.openMealEditor !== 'function') { toast('This meal cannot be saved from here.', 'error'); return; }
+      button.disabled = true;
+      try {
+        const found = await Promise.allSettled(parsed.items.map(([id]) => KH.api.food(id)));
+        const foods = [];
+        found.forEach((r, i) => { if (r.status === 'fulfilled' && r.value) foods.push({ food: r.value, servings: parsed.items[i][1] / 4 }); });
+        if (!foods.length) throw new Error('None of the foods of this meal could be found.');
+        plan.openMealEditor(null, button, { name: String(it.name).slice(0, 80), meal_hint: parsed.meal, foods });
+      } catch (e) { toastError(e); } finally { if (document.contains(button)) button.disabled = false; }
+    };
+    const hideUsualMeal = async (it, button, out) => {
+      button.disabled = true;
+      const ok = await save({ hidden_usual_meals: [...(v.hidden_usual_meals || []).filter((k) => k !== it.key), it.key] }, button, out);
+      if (ok) {
+        toast(`${it.name} will not be offered as a usual meal.`, 'ok');
+        await reload(() => learnedHead);
+      } else if (document.contains(button)) button.disabled = false;
+    };
+
+    function learnedRow(it, out) {
+      const effect = it.effect === 'less' ? 'suggested a little less' : 'suggested a little more';
+      const isMeal = it.kind === 'usual_meal';
+      const text = h('div', { class: 'g-food-text' }, h('div', { class: 'row-title' }, it.name), h('div', { class: 'row-sub' }, `${it.reason} · ${effect}`));
+      const actions = h('div', { class: 'g-actions' });
+      const li = h('li', { class: 'g-pref-row g-food', id: isMeal ? null : `set-g-learned-${it.kind}-${it.food_id}`, tabindex: '-1' },
+        h('div', { class: 'g-food-main' }, text));
+      if (isMeal) {
+        li.append(actions);
+        actions.append(
+          btn('Save as a meal', 'secondary g-act', (e) => saveUsualMeal(it, e.currentTarget), { 'aria-label': `Save ${it.name} as a meal` }),
+          btn('Not this meal', 'secondary g-act', (e) => hideUsualMeal(it, e.currentTarget, out), { 'aria-label': `Not this meal: ${it.name}` }));
+        return li;
+      }
+      const kept = keptAs(it.food_id);
+      if (kept) {
+        text.append(h('div', { class: 'row-sub g-kept' }, `Kept: ${PREF_WORD[kept]}`));
+        return li;
+      }
+      const value = it.effect === 'less' ? 'less' : 'like';
+      li.append(actions);
+      actions.append(
+        btn('Keep', 'secondary g-act', (e) => setFood(it, value, e.currentTarget), { 'aria-label': `Keep ${it.name} as ${PREF_WORD[value].toLowerCase()}` }),
+        btn('Stop using this', 'secondary g-act', (e) => setFood(it, 'neutral', e.currentTarget), { 'aria-label': `Stop using what the app saw about ${it.name}` }));
+      return li;
+    }
+    function drawLearned() {
+      clear(learnedBox);
+      learnedBox.append(learnedHead);
+      const out = pair('set-g-learned');
+      if (!learnedAnswer.ok) { learnedBox.append(failure(learnedAnswer.err)); return; }
+      const data = learnedAnswer.ok;
+      if (data.learn_from_log === false) {
+        learnedBox.append(h('p', { class: 'hint' }, 'Learning from your log is off, so nothing here changes your suggestions.'));
+      } else if (!(data.items || []).length) {
+        learnedBox.append(h('p', { class: 'empty-state' }, 'Nothing yet. After a few days of logging, the foods and meals the app notices show here, each with the reason.'));
+      } else {
+        learnedBox.append(h('p', { class: 'hint' }, 'What the app saw in what you logged. It only changes the order of foods that already fit your limits. Keep makes it your own choice; Stop using this makes the app ignore what it saw about that food.'));
+        for (const [kind, title] of LEARNED_KINDS) {
+          const items = data.items.filter((it) => it.kind === kind);
+          if (!items.length) continue;
+          const hid = uid('set-g-learned-kind');
+          const rows = items.map((it) => learnedRow(it, out));
+          const ul = list('list g-pref-list g-learned-list', rows);
+          ul.setAttribute('aria-labelledby', hid);
+          const more = capRows(ul, rows, LEARNED_SHOWN, title.toLowerCase());
+          learnedBox.append(h('div', { class: 'g-pref-group' }, h('h5', { class: 'g-pref-kind', id: hid }, title), ul, more));
+        }
+      }
+      // Foods the person told the app to stop learning about (neutral): visible, with a way back.
+      const neutral = prefsAnswer && prefsAnswer.ok ? (prefsAnswer.ok.foods || []).filter((f) => f.preference === 'neutral') : [];
+      if (neutral.length) {
+        const nid = 'set-g-neutral-h';
+        const rows = neutral.map((f) => h('li', { class: 'g-pref-row g-food', 'data-food-id': f.food_id },
+          h('div', { class: 'g-food-main' }, h('div', { class: 'g-food-text' }, h('div', { class: 'row-title' }, f.name), f.category ? h('div', { class: 'row-sub' }, f.category) : null)),
+          h('div', { class: 'g-actions' }, btn('Learn again', 'secondary g-act', async (e) => {
+            const b = e.currentTarget;
+            b.disabled = true;
+            try {
+              await api.clearPreference(f.food_id);
+              forgetAnswers();
+              toast(`${f.name}: the app can use your log for this food again.`, 'ok');
+              await reload(() => $('#set-g-neutral-list button', root) || learnedHead);
+            } catch (er) { toastError(er); b.disabled = false; }
+          }, { 'aria-label': `Learn about ${f.name} again` }))));
+        const ul = list('list g-pref-list', rows);
+        ul.id = 'set-g-neutral-list';
+        ul.setAttribute('aria-labelledby', nid);
+        learnedBox.append(h('div', { class: 'g-pref-group' }, h('h5', { class: 'g-pref-kind', id: nid }, 'Not learning about'),
+          h('p', { class: 'hint' }, 'You told the app to ignore what it saw in your log about these foods.'), ul));
+      }
+      const hidden = v.hidden_usual_meals || [];
+      if (hidden.length) {
+        const again = btn('Show them again', 'secondary g-act', async (e) => {
+          e.currentTarget.disabled = true;
+          const ok = await save({ hidden_usual_meals: [] }, e.currentTarget, out);
+          if (ok) { toast('Usual meals you hid can be offered again.', 'ok'); await reload(() => learnedHead); } else e.currentTarget.disabled = false;
+        });
+        learnedBox.append(h('div', { class: 'g-hidden-meals', id: 'set-g-hidden-usual-meals' },
+          h('p', {}, `You hid ${hidden.length} usual ${hidden.length === 1 ? 'meal' : 'meals'}: they are not offered.`), again));
+      }
+      learnedBox.append(out.msg, out.err);
+    }
+
+    // ---- assemble ---------------------------------------------------------------------------------------
+    root.append(foodsBox);
+    if (catList.length) {
+      const kindsOut = pair('set-g-kinds');
+      root.append(kindsFieldset(kindsOut), kindsOut.msg, kindsOut.err);
+    }
+    const learnOut = pair('set-g-learn');
+    root.append(check('learn_from_log', 'Learn from my log', LEARN_OFF_HINT, () => reload(), learnOut), learnOut.msg, learnOut.err, learnedBox, aiPreferencesSlot());
+    root.id = 'set-g-prefs';
+    reload();
+    return root;
   }
 
   // ---------------------------------------------------------------------------
@@ -1426,6 +1787,7 @@
     openPlan,
     openLow,
     renderSettings,
+    openPreferences,
     entry: { open: entryOpen, update: entryUpdate, isHypo: entryIsHypo, purpose: entryPurpose, renderHypoNote: entryHypoNote },
     dayIsDone,
   };

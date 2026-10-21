@@ -68,9 +68,9 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 | **Treating a low**: the card and the person's low treatments at their dose, with "Log it" | Today's Meal ideas card (people with diabetes), even with guidance off; offline from the browser twin of the card | `GET /api/guidance/hypo-options` |
 | **Plan the rest of my day**: one option per open meal, "Show another", "Use this plan" | Today's Meal ideas card; Plan → "Plan a day…" | `POST /api/guidance/plan-day`, then `POST /api/log/batch` |
 | **Insights**: end of day and weekly, in plain language with numbers | Today (a past day, or once breakfast, lunch and dinner are eaten or after 19:00), Trends (the chosen days ending yesterday) | `GET /api/guidance/insights/day`, `/insights/period` |
-| **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/not-for-me/{food_id}` (an alias of the preference routes below) |
-| **Food preferences**: *More like this*, *Less often*, *Not for me* and *Stop using what you learned* per food; *Like* and *Less often* per food group | The screens for these come in the next step; the API and the ranking are in place | `GET /api/guidance/preferences`, `PUT/DELETE /api/guidance/preferences/{food_id}`, the `guidance` setting |
-| **Learned from your log**: what the ranking learned, each with a plain reason, and a switch to turn it off | The screen comes in the next step | `GET /api/guidance/learned`, the `learn_from_log` setting |
+| **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion, a swap and a plan item; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/preferences/{food_id}` (the older `/not-for-me` routes are aliases) |
+| **Food preferences**: *More like this*, *Less often*, *Not for me* and *Stop using what you learned* per food; *Like* and *Less often* per food group | The "⋯" menu of a suggestion, of a swap and of a plan item; Settings → Meal guidance → Your food preferences (see "Your food preferences: the screens" below) | `GET /api/guidance/preferences`, `PUT/DELETE /api/guidance/preferences/{food_id}`, the `guidance` setting |
+| **Learned from your log**: what the ranking learned, each with a plain reason, and a switch to turn it off | Settings → Meal guidance → Your food preferences → Learned from your log, and the *Learn from my log* switch | `GET /api/guidance/learned`, the `learn_from_log` setting |
 | **The rules**: every number below, its basis, the handbook pages | Docs, contributors | `GET /api/guidance/rules` |
 
 When the profile has no numeric potassium, phosphorus or sodium target and no meal carbohydrate goal,
@@ -193,6 +193,39 @@ food-group choice, no *Learn from my log*, no hidden meal and nothing learned. T
 `hypo_options` is a food the person put on "Not for me" or a food group they never want; when that would leave nothing
 while a low treatment exists, the whole list is shown with the line "Shown although you marked them Not for me.", because
 someone treating a low must always have something to take.
+
+### Your food preferences: the screens
+
+Code: `js/views/guidance.js` (`rowMenu`, `prefsSection`), `js/views/ai.js` (`preferencesField`), `js/views/plan.js`
+(`openMealEditor` with a draft), `css/guidance.css`; the demo answers the same routes in `js/mock/guidance.js`. Walked in
+Chromium by `tools/e2e/prefs.py`.
+
+* **The "⋯" menu.** A suggestion in *What fits now*, a swap row (not on the options for the next low) and a food of the plan
+  sheet each have *More like this*, *Less often* and *Not for me*. Each is a toggle: the button shows its state
+  ("✓ More like this", `aria-pressed`), the state is read from `GET /api/guidance/preferences` when the menu opens, and pressing
+  the pressed one clears it (`DELETE`). A toast says what changed. *Not for me* takes the food out of the list (a swap list
+  loads again; a plan is made again without the food); a like or a "less often" keeps the order until the list loads again.
+  A food the person had put on "stop using what you learned" (`neutral`) shows no state and is replaced by the choice.
+* **Settings → Meal guidance → Your food preferences.** The foods under *More like this*, *Less often* and *Not for me*, each
+  row with *Remove* (*Suggest again* for "Not for me"), the same menu to change it, and a count against the limits (1,000 in
+  all, 500 "Not for me"). *Kinds of food*: one radio group per category with *None*, *Like*, *Less often* and *Never suggest*
+  (it replaces the old "Never suggest" checkboxes); each choice saves the whole `guidance` object, and one choice per kind
+  makes "a kind in two lists" impossible. *Learn from my log* with the line "Off: suggestions use only your limits and
+  variety, not what you usually eat." *Learned from your log* (`GET /api/guidance/learned`, at most five of each kind shown,
+  then *Show more*): each item with its reason and *a little more* or *a little less*; a food has *Keep* (stores `like`, or
+  `less` for a food the app lowered) and *Stop using this* (stores `neutral`); a usual meal has *Save as a meal* (the
+  saved-meal editor opens with the meal's foods, read from the item's key, and its meal; nothing is saved until *Save meal*)
+  and *Not this meal* (its key joins `hidden_usual_meals`). A food that was kept shows "Kept: …" instead of the buttons.
+  *Not learning about* lists the `neutral` foods with *Learn again*, and a line says how many usual meals are hidden with
+  *Show them again*. The sentence of note 09 §4.10 stands above the lists: "Less often and Not for me are about taste. They
+  are not an allergy filter: the app cannot tell whether a food contains an allergen, so check labels." No other text calls a
+  preference an allergy.
+* **The text for AI ideas** (setting `ai.preferences`, up to 200 characters) is at the end of this section when the server
+  offers AI, and saves through the same call as before (`PATCH /api/me/ai`). Settings → AI ideas keeps one line that points
+  here. The app's own suggestions never read it.
+* **Offline.** Settings are online-only by decision, so nothing is queued: a save says "Your server cannot be reached, so this
+  change was not saved: it needs a connection…" and changes nothing; where the lists would be, the screen says "Guidance needs a
+  connection to your server."
 
 ## Swap ideas
 

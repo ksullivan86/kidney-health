@@ -165,7 +165,7 @@ and your saved targets stay as they are until you save new ones in Profile. Talk
 2. Tick **Use AI ideas**.
 3. Choose the provider your admin offers, or your own key if allowed.
 4. Decide whether to share age band and sex. It is off by default.
-5. Optional: write preferences such as "vegetarian, no fish".
+5. Optional: write food preferences such as "vegetarian, no fish" in **Settings → Meal guidance → Your food preferences** (the field is there when your server offers AI).
 6. The first time you use an AI button, read the consent sheet and the exact text, then accept. Photos
    have their own consent, and so do **Ask** and lab report photos. You can also ask to see the request before every AI call.
 

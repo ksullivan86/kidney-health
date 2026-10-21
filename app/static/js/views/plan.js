@@ -391,14 +391,18 @@
     for (const n of NUTRIENTS) { const v = it.nutrients ? it.nutrients[n.key] : null; out[n.key] = v == null || !it.servings ? v : v / it.servings; }
     return out;
   }
-  function openMealEditor(t, trigger) {
+  // `t` is the saved meal to edit, or null for a new one. `draft` ({ name, meal_hint, foods: [{ food, servings }] }, with `food`
+  // as GET /api/foods/{id} answers) starts a new meal with those foods: Settings → Meal guidance → "Save as a meal" on a usual meal.
+  function openMealEditor(t, trigger, draft = null) {
     mealEd.id = t ? t.id : null;
     mealEd.items = t ? t.items.map((it) => ({ food_id: it.food_id, food_name: it.food_name, serving_desc: it.serving_desc, servings: it.servings,
-      per: perServingOfItem(it), kidney_rating: it.kidney_rating, hidden: !!it.hidden })) : [];
+      per: perServingOfItem(it), kidney_rating: it.kidney_rating, hidden: !!it.hidden }))
+      : draft ? draft.foods.map(({ food, servings }) => ({ food_id: food.id, food_name: food.name, serving_desc: food.serving_desc, servings,
+        per: food.nutrients, kidney_rating: food.kidney_rating, hidden: !!food.hidden })) : [];
     $('#sheet-meal-title').textContent = t ? 'Edit saved meal' : 'New saved meal';
-    $('#meal-name').value = t ? t.name : '';
+    $('#meal-name').value = t ? t.name : draft ? draft.name : '';
     $('#meal-note').value = t && t.note ? t.note : '';
-    $('#meal-hint').value = t && t.meal_hint ? t.meal_hint : ''; // v0.3: the meal it is meant for (meal guidance)
+    $('#meal-hint').value = t && t.meal_hint ? t.meal_hint : draft && draft.meal_hint ? draft.meal_hint : ''; // v0.3: the meal it is meant for (meal guidance)
     $('#meal-delete').hidden = !t;
     $('#meal-search').value = '';
     clear($('#meal-search-results'));

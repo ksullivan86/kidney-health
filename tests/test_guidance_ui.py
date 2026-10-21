@@ -5,7 +5,9 @@ Static checks of ``app/static`` (no browser): the demo API (``js/mock/guidance.j
 starter meals; the browser engine's version and hash are the server's; the views call only routes the
 server has; the page has a labelled control for every guidance setting and for "Used to treat a low";
 the scripts load in the order the engine needs; and the guidance view builds DOM without HTML sinks.
-The numbers are checked by ``tests/data/guidance_vectors.json`` (``node tests/js/run_vectors.mjs``),
+The preference screens (note 09 part B: Settings → Meal guidance → Your food preferences, and the "⋯" menu of a suggestion,
+a swap and a plan item) are pinned below by their texts, controls, limits and the routes they call; their behaviour in Chromium
+is walked by ``tools/e2e/prefs.py``. The numbers are checked by ``tests/data/guidance_vectors.json`` (``node tests/js/run_vectors.mjs``),
 whole answers by ``tools/e2e/parity.py`` section 12, the flows in Chromium by ``tools/e2e/journey.py``
 (What fits now, Not for me, a swap, Plan the rest of my day) and ``tools/e2e/sandbox.py`` (the preview).
 """
@@ -17,6 +19,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import get_args
 
+from app import foods as foods_module
 from app import log as log_module
 from app import models, settings_registry
 from app.guidance import api as guidance_api
@@ -257,12 +260,10 @@ def test_settings_view_lists_the_guidance_keys() -> None:
     for key in ("guidance.enabled", "guidance.pool_per_role", "guidance.beam_width"):
         assert key in settings_registry.REGISTRY, key
         assert f"'{key}'" in SETTINGS_VIEW, f"Admin → Server settings does not group {key}"
-    # The preference profile's fields (note 09 §4.2) have their screen in part B; until then the form must keep them when it
-    # saves another field (it sends the whole object), so a like or a hidden usual meal set through the API is not lost.
-    profile_fields = {"learn_from_log", "like_categories", "less_categories", "hidden_usual_meals"}
+    # Every field of the person's guidance object has its control in Settings → Meal guidance (the form sends the whole object,
+    # so a field without a control would still be kept; the note-09 fields have theirs since part B).
     fields = set(settings_registry.GuidancePreferences.model_fields)
-    assert profile_fields <= fields
-    for field in fields - profile_fields:
+    for field in fields:
         assert re.search(rf"\b{field}\b", VIEW), f"Settings → Meal guidance has no control for {field}"
     assert "const next = { ...v, ...patch };" in VIEW
 
@@ -289,3 +290,164 @@ def test_every_guidance_ai_button_has_what_will_be_sent_and_says_what_was_droppe
     ai = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
     assert "function droppedNotes(answer, what = null)" in ai and "droppedNotes };" in ai
     assert "return out.concat(droppedNotes(answer));" in ai  # the AI cards use the same lines
+
+
+# --------------------------------------------------------------------------- #
+# Your food preferences (note 09 §4.1, §4.4, §4.10; part B)
+# --------------------------------------------------------------------------- #
+
+AI_VIEW = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
+PLAN_VIEW = (STATIC / "js" / "views" / "plan.js").read_text(encoding="utf-8")
+GUIDANCE_CSS = (STATIC / "css" / "guidance.css").read_text(encoding="utf-8")
+TASTE_NOTE = ("Less often and Not for me are about taste. They are not an allergy filter: the app cannot tell whether a food "
+              "contains an allergen, so check labels.")
+
+
+def test_the_preference_screens_use_the_preference_routes() -> None:
+    """New code uses the new routes: the "⋯" menu and Settings read and write /preferences and read /learned; the older
+    /not-for-me aliases are the demo's and older pages' business, not this view's."""
+    for call in ("request('GET', '/api/guidance/preferences')", "request('GET', '/api/guidance/learned')",
+                 "request('PUT', `/api/guidance/preferences/${encodeURIComponent(foodId)}`, { preference })",
+                 "request('DELETE', `/api/guidance/preferences/${encodeURIComponent(foodId)}`)"):
+        assert call in VIEW, call
+    assert "not-for-me" not in VIEW
+
+
+def test_the_preference_wording_is_the_specifications() -> None:
+    """The sentences of note 09 §4.10, word for word, and the one place the word for an allergy appears."""
+    assert f"const TASTE_NOTE = '{TASTE_NOTE}';" in VIEW
+    assert "const LEARN_OFF_HINT = 'Off: suggestions use only your limits and variety, not what you usually eat.';" in VIEW
+    assert "check('learn_from_log', 'Learn from my log', LEARN_OFF_HINT" in VIEW
+    # a preference is never called an allergy anywhere else (the app cannot tell what a food contains)
+    for name, source in (("views/guidance.js", VIEW), ("views/ai.js", AI_VIEW), ("views/plan.js", PLAN_VIEW), ("mock/guidance.js", MOCK)):
+        assert not re.search(r"allerg", source.replace(TASTE_NOTE, ""), re.I), name
+    assert VIEW.count("TASTE_NOTE") == 2  # defined once, shown once
+    # the section and its parts
+    for text in ("'Your food preferences'", "'Learned from your log'", "'Not learning about'", "'Learn again'", "'Suggest again'",
+                 "'Remove'", "'Keep'", "'Stop using this'", "'Save as a meal'", "'Not this meal'", "'Show them again'", "'Kinds of food'"):
+        assert text in VIEW, text
+    assert "const PREF_WORD = { like: 'More like this', less: 'Less often', not_for_me: 'Not for me' };" in VIEW
+    assert "const KIND_CHOICES = [['none', 'None'], ['like', 'Like'], ['less', 'Less often'], ['exclude', 'Never suggest']];" in VIEW
+    kinds = re.search(r"const LEARNED_KINDS = \[(.*?)\];", VIEW, re.S).group(1)
+    assert re.findall(r"\['(\w+)',", kinds) == ["often", "slot", "usual_meal", "planned_not_eaten"]
+
+
+def test_the_limits_shown_are_the_servers() -> None:
+    """The counts under the lists read the limits from the answer (1,000 preferences, 500 "Not for me"), so the screen never
+    states a number of its own; the answer carries both, the demo's equal the server's (test above), and the errors the server gives
+    for a full list or a full list of hidden meals reach the person in its words."""
+    from app.guidance import models as guidance_models
+
+    assert {"limit", "not_for_me_limit"} <= set(guidance_models.PreferenceList.model_fields)
+    assert guidance_context.MAX_FOOD_PREFERENCES == 1000 and guidance_context.MAX_NOT_FOR_ME == 500
+    assert "of ${data.limit} food preferences" in VIEW and "of ${data.not_for_me_limit} “Not for me”" in VIEW
+    assert not re.search(r"\b(1000|1,000|500)\b", _fn(VIEW, "prefsSection")), "the screen must not repeat the server's limits"
+    # a 409 (full) is the server's sentence in a toast; a 400 on the hidden meals (50) lands beside the line that lists them
+    assert "toastError(err)" in _fn(VIEW, "rowMenu") and "id: 'set-g-hidden-usual-meals'" in VIEW
+    assert settings_registry.GuidancePreferences.model_fields["hidden_usual_meals"].metadata[0].max_length == 50
+
+
+def test_the_food_group_choice_covers_the_three_lists_and_the_server_categories() -> None:
+    """Like / Less often / Never suggest per kind of food write the three settings fields; a kind is in one list at most."""
+    block = re.search(r"const KIND_FIELDS = \{(.*?)\};", VIEW, re.S).group(1)
+    pairs = dict(re.findall(r"(\w+): '(\w+_categories)'", block))
+    assert pairs == {"like": "like_categories", "less": "less_categories", "exclude": "exclude_categories"}
+    assert set(pairs.values()) <= set(settings_registry.GuidancePreferences.model_fields)
+    # one radio group per kind, so a kind cannot be chosen twice; the whole object is saved (the server refuses a kind in two lists)
+    assert "type: 'radio', name: `set-g-kind-${i}`" in VIEW and "save(collect(), radio, out)" in VIEW
+    assert "kindsFieldset(kindsOut)" in VIEW
+    assert len(foods_module.CATEGORIES) <= 50  # each list holds at most 50 kinds; the screen offers the server's own categories
+    assert "KH.api.categories()" in VIEW
+
+
+def test_learned_items_and_their_actions_follow_the_note() -> None:
+    """§4.4: a food has Keep (stores like; "less" for a food the app lowered) and Stop using this (stores neutral); a usual meal has
+    Save as a meal (the existing saved-meal editor, started with the meal's foods) and Not this meal (its key joins
+    hidden_usual_meals); foods marked neutral are listed with a way back (DELETE the row)."""
+    row = _fn(VIEW, "learnedRow")
+    assert "setFood(it, value, e.currentTarget)" in row and "setFood(it, 'neutral', e.currentTarget)" in row
+    assert "const value = it.effect === 'less' ? 'less' : 'like';" in row
+    assert "saveUsualMeal(it, e.currentTarget)" in row and "hideUsualMeal(it, e.currentTarget, out)" in row
+    assert "hidden_usual_meals: [...(v.hidden_usual_meals || []).filter((k) => k !== it.key), it.key]" in VIEW
+    assert "plan.openMealEditor(null, button, { name: String(it.name).slice(0, 80), meal_hint: parsed.meal, foods })" in VIEW
+    assert "function openMealEditor(t, trigger, draft = null)" in PLAN_VIEW and "KH.views.plan = {" in PLAN_VIEW
+    assert "await api.clearPreference(f.food_id);" in VIEW[VIEW.index("'Learn again'") - 400: VIEW.index("'Learn again'") + 400]
+    # what the server says about a learned item is shown as it says it: its reason, never a claim to know
+    assert "`${it.reason} · ${effect}`" in row
+
+
+def test_the_usual_meal_key_is_read_like_the_server_writes_it() -> None:
+    """"Save as a meal" rebuilds a usual meal's foods from its key (the learned item carries nothing else)."""
+    rx = re.compile(re.search(r"const USUAL_KEY = /(.*)/;", VIEW).group(1))
+    for meal, items in (("lunch", [(12, 1.0), (30, 0.5)]), ("breakfast", [(7, 0.25), (9, 3.0), (101, 1.5)]), ("snack", [(2, 0.75), (3, 1.0)])):
+        key = guidance_rules.usual_meal_key(meal, items)
+        m = rx.match(key)
+        assert m and m.group(1) == meal, key
+        assert [tuple(int(x) for x in part.split("x")) for part in m.group(2).split(",")] == [(i, int(q * 4)) for i, q in sorted(items)]
+    assert rx.match("dinner:") is None and rx.match("brunch:1x4,2x4") is None and rx.match("lunch:1x4;2x4") is None
+
+
+def test_the_menu_is_on_suggestions_swaps_and_plan_items_and_never_on_a_low() -> None:
+    """The "⋯" menu (More like this, Less often, Not for me: toggles that show the current state and clear it) is on a suggestion in
+    What fits now, a swap row and a plan item; the Treating a low options and the swaps for the next low never carry one, because
+    taste does not rank a low treatment (note 09 §4.9)."""
+    menu = _fn(VIEW, "rowMenu")
+    assert "'aria-pressed': 'false'" in menu and "setAttribute('aria-pressed', key === value ? 'true' : 'false')" in menu
+    assert "api.clearPreference(item.food_id)" in menu and "api.setPreference(item.food_id, value)" in menu
+    assert "const PREF_ORDER = ['like', 'less', 'not_for_me'];" in VIEW
+    assert "preferenceOf(item.food_id)" in menu  # the state is read when the menu opens (Settings passes it in)
+    assert "role: 'group'" in menu and "'aria-expanded': 'false'" in menu and "e.key === 'Escape'" in menu
+    assert "rowMenu(item, {" in _fn(VIEW, "foodRow")
+    swap = _fn(VIEW, "swapRow")
+    assert swap.index("res.mode !== 'hypo'") < swap.index("rowMenu(s,")
+    assert "portionList(m.items, { menus: true })" in VIEW and "portionList(m.closest.items)" in VIEW
+    assert "rowMenu" not in _fn(VIEW, "lowOption") and "rowMenu" not in _fn(VIEW, "lowCard")
+    # a toast confirms each change, in the words of the menu
+    for text in ("more like this. Settings → Meal guidance lists it.", "will be suggested less often.", "will not be suggested again.",
+                 "no preference now."):
+        assert text in VIEW, text
+    # the pressed state shows a check mark as well as a colour; the controls are 44 px (.btn and .icon-btn)
+    assert '.g-pref[aria-pressed="true"]::before { content: "✓";' in GUIDANCE_CSS
+    assert "btn secondary g-pref" in menu and "class: 'icon-btn g-more'" in menu
+
+
+def test_a_not_for_me_from_a_swap_or_a_plan_item_refreshes_what_it_came_from() -> None:
+    assert "if (value === 'not_for_me') { entryCtl.swapKey = null; loadSwaps(); }" in _fn(VIEW, "swapRow")
+    assert "if (value === 'not_for_me') replanAfterHiding();" in _fn(VIEW, "portionList")
+    assert "await runPlan();" in _fn(VIEW, "replanAfterHiding")
+    assert "if (value === 'not_for_me' && onChange) onChange();" in _fn(VIEW, "foodRow")
+
+
+def test_preferences_are_saved_online_only() -> None:
+    """Settings are online-only by decision, so Not for me and the rest are never queued: the writes go through the plain API client
+    (which the outbox does not queue) and offline the person sees the existing messages: the server-unreachable error on a save and
+    "Guidance needs a connection to your server." where the lists would be."""
+    for name in ("KH.offline", "KH.net", "enqueue", "indexedDB"):
+        assert name not in VIEW, name
+    offline = (STATIC / "js" / "offline.js").read_text(encoding="utf-8")
+    assert "/api/guidance" not in offline
+    settings = _fn(VIEW, "renderSettings")
+    assert "prefsError && prefsError.status === 0" in settings and "NEEDS_CONNECTION" in settings
+    assert "foodsBox.append(failure(prefsAnswer.err))" in VIEW  # offline: "Guidance needs a connection to your server."
+    assert "toastError(err)" in _fn(VIEW, "rowMenu")  # a refused or unreachable save says so
+
+
+def test_the_text_for_ai_ideas_moved_but_keeps_its_setting() -> None:
+    """Settings → Meal guidance shows "Food preferences for AI ideas" when the server offers AI, saved through the same call
+    (PATCH /api/me/ai {preferences}, setting ai.preferences, 200 characters); Settings → AI ideas has one line pointing there."""
+    field = _fn(AI_VIEW, "preferencesField")
+    assert "'Food preferences for AI ideas'" in field and "api.updateMe({ preferences: pref.value.trim() })" in field
+    assert "maxlength: '200'" in field and "if (MOCK) return null;" in field and "!me.enabled" in field
+    assert "preferencesField" in AI_VIEW[AI_VIEW.index("KH.ai = {"):]
+    personal = _fn(AI_VIEW, "personalPart")
+    assert "'Food preferences for AI ideas'" not in personal and "api.updateMe({ preferences" not in personal
+    assert "Settings → Meal guidance → Your food preferences" in personal and "KH.guidance.openPreferences()" in personal
+    assert "openPreferences," in VIEW
+    assert "KH.ai.preferencesField()" in VIEW and "aiPreferencesSlot()" in _fn(VIEW, "prefsSection")
+    assert settings_registry.AiPreferencesText.__metadata__[0].max_length == 200
+
+
+def test_the_preference_css_is_there() -> None:
+    for rule in (".g-prefs {", ".g-pref-list {", ".g-kind-list {", ".g-kind-seg { position: relative; }", ".g-portions li .g-menu"):
+        assert rule in GUIDANCE_CSS, rule
+    assert 'content: "✓" / "";' in GUIDANCE_CSS  # the check mark is decoration: the name stays "More like this" (aria-pressed says the rest)

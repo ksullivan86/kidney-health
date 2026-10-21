@@ -468,7 +468,7 @@ class Journey:
         row = page.locator("#guidance-fits-body .g-food").nth(1)
         nfm_name = row.locator(".row-title").inner_text()
         row.locator("button.g-more").click()
-        with page.expect_response(lambda r: "/api/guidance/not-for-me/" in r.url and r.request.method == "PUT"):
+        with page.expect_response(lambda r: "/api/guidance/preferences/" in r.url and r.request.method == "PUT"):
             row.locator("button.g-nfm").click()
         self.state["not_for_me"] = nfm_name
         listed = [f["name"] for f in admin.json("GET", "/api/guidance/not-for-me")["foods"]]

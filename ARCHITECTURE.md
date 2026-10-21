@@ -1694,7 +1694,7 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   `profile_updated_at`: "Using the targets in your profile, saved …" with *Check them in Profile*; note 06 R10),
   foods by group (two per group, then "Show more"), each with portion,
   `fit_text`, the first reason, the renal dot, **Add** / **Plan** (the entry sheet, prefilled) and a "⋯"
-  disclosure with **Not for me**; saved/usual meals that fit as chips (a sheet: add or plan them, saved
+  disclosure with **More like this**, **Less often** and **Not for me** (below); saved/usual meals that fit as chips (a sheet: add or plan them, saved
   ones through `/apply`, usual ones through `/api/log/batch`); tips; `KH.ai.mountIdeas` when `ai.available`.
 * **Entry sheet** (`js/views/add.js` calls `KH.guidance.entry`): **Used to treat a low** (`#entry-hypo`) shows
   for low-treatment foods, entries stored as one and people with diabetes; pre-ticked for low-treatment
@@ -1702,7 +1702,7 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   note with the numbers, the rating pill is hidden, and "For your next low" (`/swaps?purpose=hypo`: the card
   and lower-potassium low treatments) replaces swap ideas. Otherwise a K/P/Na warning (or day overflow)
   shows "Lower-… ideas" (`/swaps`, fetched when opened): **Use this instead** (new entries) and **Use this
-  amount** (`portion_option`).
+  amount** (`portion_option`). Each normal swap row has the same "⋯" menu; the options for the next low (`mode: "hypo"`) never do.
 * **Today**: the Meal ideas card (`#guidance-today`: What fits <meal>, Plan the rest of my day, Treating a
   low for people with diabetes), "What fits" under each meal, a "treated a low" badge, and end-of-day
   insights (`#guidance-day-insights`) for a past day or today once breakfast, lunch and dinner are eaten or
@@ -1711,13 +1711,34 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   server's open slots first), where ideas come from (saved / usual / starters), each meal with its items,
   totals and why-lines, the day with the plan, the targets it used (as in What fits now), the energy note; **Show another** cycles `variant` 0–4;
   **Use this plan** sends `apply.entries` to `POST /api/log/batch` with a fresh `client_id` each (one retry
-  after a network error is answered `existing`).
+  after a network error is answered `existing`). Each food of a plan meal (and of the energy note) has the "⋯" menu; *Not for me*
+  on one plans the day again (same option number) without it.
 * **Treating a low** (`GET /hypo-options`): the card, the person's options at their dose with **Log it**
   (`purpose: "hypo"`); never filtered, never warned against, available with guidance off; offline the card
   is drawn from `KH.guidanceEngine.M.treatingALowCard`.
 * **Trends**: period insights (`#guidance-period`) for the chosen 7/14/30 days ending yesterday.
-* **Settings → Meal guidance** (`#set-guidance`): the `guidance` object's fields (labelled, errors under the
-  field) and the "Not for me" list (**Suggest again**); Admin → Server settings groups `guidance.*`.
+* **Settings → Meal guidance** (`#set-guidance`): the `guidance` object's first fields (labelled, errors under the field), then
+  **Your food preferences** (`prefsSection`, note 09 part B; walked by `tools/e2e/prefs.py`); Admin → Server settings groups
+  `guidance.*`. The section reads `GET /preferences` and `GET /learned` together and draws, in order: the sentence of note 09
+  §4.10 ("Less often and Not for me are about taste. They are not an allergy filter: …", the only place the UI says it), the
+  foods under **More like this**, **Less often** and **Not for me** (a row each with **Remove** / **Suggest again**, the "⋯" menu
+  and the counts against 1,000 and 500), **Kinds of food** (a radio group per category: *None*, *Like*, *Less often*, *Never
+  suggest*; each change saves the whole `guidance` object with `PATCH /api/me/settings`, `like_categories`, `less_categories` and
+  `exclude_categories`; this replaces the old "Never suggest" checkboxes), the **Learn from my log** switch ("Off: suggestions use
+  only your limits and variety, not what you usually eat."), **Learned from your log** (items by kind with their `reason` and
+  effect; a food has **Keep** (`PUT like`, or `less` when the effect is `less`) and **Stop using this** (`PUT neutral`); a usual
+  meal has **Save as a meal** (`KH.views.plan.openMealEditor(null, trigger, draft)`: the foods and servings are read from the
+  item's `key`, `<meal>:<food id>x<quarters>,…`, each food fetched with `GET /api/foods/{id}`) and **Not this meal** (the key joins
+  `hidden_usual_meals`); a kept food shows "Kept: …"; **Not learning about** lists the `neutral` rows with **Learn again**
+  (`DELETE`); "You hid N usual meals" with **Show them again**), and the text for AI ideas (`KH.ai.preferencesField()`, setting
+  `ai.preferences`, `PATCH /api/me/ai`, only when the server offers AI; Settings → AI ideas keeps one line that points here).
+* **The "⋯" menu** (`rowMenu` in `js/views/guidance.js`; a suggestion, a normal swap row, a plan item, a row in Settings):
+  **More like this**, **Less often** and **Not for me** are toggles (`aria-pressed`, a check mark in the pressed one); the state is
+  read from `GET /preferences` when the menu opens (Settings passes it in), a press `PUT`s `{preference}` or, on the pressed
+  one, `DELETE`s the row, and a toast confirms. *Not for me* reloads what it came from; a like or a "less often" waits for the
+  next load. Never on a low-treatment row (note 09 §4.9). Preferences are saved online only: offline the change is refused with
+  the outbox's message ("Your server cannot be reached, so this change was not saved: …"), nothing is queued, and the lists say
+  "Guidance needs a connection to your server." (`KH.guidance.openPreferences()` takes a person to the section).
 * **Optional AI** (only with `ai_enrich` and AI available; `KH.ai.withConsent`): "AI order" (rerank) over the
   same list, "Ask AI to pick" under rule swaps (never for a low), "Let AI choose" in the plan ("AI's pick").
   Each has its own "What will be sent?" (the same body with `dry_run`, shown by `KH.ai.showSent`; the plan's
