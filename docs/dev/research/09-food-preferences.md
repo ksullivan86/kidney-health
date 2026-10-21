@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decision note, proposed. No application code has been changed. |
+| Status | Decided 2026-10-21 (§8); being built in three parts (§7). |
 | Date researched | 2026-10-21, against `main` at `1e512b5` |
 | Scope | What the person can tell the app about taste (likes, "less often", food groups), what the app may learn from the log by its own code, how both change the ranking in meal guidance, what the optional AI is told, how Ask can propose a change, storage, API, settings, export/import/delete, the browser twin and tests. |
 | Out of scope | Diet patterns that need per-food tags (vegetarian, pescatarian: ROADMAP "Meal guidance", note 06 §4.14), allergies (§4.10), cuisine data for built-in foods, the MCP server's tools for external assistants (a later step with its own token scope), the per-meal caps and score weights of note 06 (unchanged). |
@@ -407,19 +407,19 @@ from the chat"; `docs/ai.md`, `docs/assistant.md`.
 
 ---
 
-## 8. Open questions for the owner
+## 8. Decisions (owner, 2026-10-21)
 
-* **Q1. "Not for me" and the Treating a low options.** Today a "Not for me" food (or a "Never suggest" category) is left
-  out of the low-treatment options; if a person excluded every one, the list would be empty (the card still shows).
-  Recommendation: keep the person's choice, but when the exclusions would leave no option, show the full list with one
-  line ("Shown although you marked them Not for me"). Changes existing behaviour; needs your decision.
-* **Q2. Ask always asks for preference changes**, even with trust "always". Recommendation: yes (§4.8).
-* **Q3. Explicit likes and dislikes go to the AI** under the existing consent. Recommendation: yes, explicit only (§4.7).
-* **Q4. The weights** (+1.0 like, −2.0 less, ±group, −0.5 planned-not-eaten, clamps). Recommendation: as written; adjust
-  after a month of real use.
-* **Q5. Planned-but-not-eaten in part A**, or later. Recommendation: in part A, with the ≥ 50 % condition.
-* **Q6. Diet patterns** need per-food tags (ROADMAP "Vegetarian and pescatarian patterns"). Recommendation: a separate item
-  after this one; the profile screen is where it will live.
+The owner accepted every recommendation of the proposal ("go with your recommendations"):
+
+* **Q1. "Not for me" and the Treating a low options: a floor.** The person's exclusions still apply, but when they
+  would leave no option, `hypo_options` returns the full list with the note `shown_despite_exclusions` ("Shown
+  although you marked them Not for me."). The card is unchanged. Built in part A.
+* **Q2. Ask always asks** before a preference change, whatever the trust setting (§4.8). Part C.
+* **Q3. Explicit likes and dislikes go to the AI** under the existing consent; learned signals never do (§4.7). Part C.
+* **Q4. The weights of §4.5** as written (+1.0 like, −2.0 less often, +0.5 / −1.0 per group, −0.5 planned but not
+  eaten, clamps −2.5 … +1.0 per food and −1.5 … +1.0 per meal); revisit after a month of real use.
+* **Q5. Planned but not eaten is in part A**, with the ≥ 50 % condition of §4.4.
+* **Q6. Diet patterns stay a separate ROADMAP item** (per-food tags first).
 
 ---
 
