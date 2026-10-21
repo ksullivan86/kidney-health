@@ -39,13 +39,29 @@ To stop a food from coming up, open **⋯** next to it and choose **Not for me**
 food you marked **Not for me** (or a kind of food you chose **Never suggest**) is not offered either; a meal you
 saved yourself still is, because you built it.
 
-The app can also take your taste into account: a food you like is lifted a little, a food you want
-less often is lowered, and a kind of food can be liked or wanted less often. Taste only changes the order of
-foods that already fit your limits. It never hides a food (only **Not for me** and **Never suggest** do), it never
-makes a food fit, and it is not an allergy filter: the app cannot tell whether a food contains an allergen, so
-check labels. The app can also tell you what it saw in your log, for example "Eaten on 6 of the last 14 days" or
-"Planned 4 times in 30 days, eaten once", and you can switch learning off. The buttons and lists for these
-choices come in a later update of the app; the ordering already follows them.
+## Tell the app what you like
+
+Open **⋯** next to a food in **What fits now**, in the swap ideas or in a plan, and choose **More like this**,
+**Less often** or **Not for me**. The one you chose shows a check mark (✓); choose it again to take it back, and a
+message at the bottom of the screen says what changed. A food you like is lifted a little in the suggestions and a
+food you want less often is lowered. In **Settings → Meal guidance → Your food preferences** you see all your choices,
+with **Remove** next to each, and you can set a whole kind of food (fruits, grains and so on) to **Like**, **Less
+often** or **Never suggest**.
+
+Taste only changes the order of foods that already fit your limits. It never hides a food (only **Not for me** and
+**Never suggest** do), it never makes a food fit, and it is not an allergy filter: the app cannot tell whether a food
+contains an allergen, so check labels. **More like this**, **Less often** and what the app learned never change
+**Treating a low**.
+
+**What the app learned from your log.** Under **Learned from your log**, in the same place, the app lists what it
+noticed, each with its reason, for example "Eaten on 6 of the last 14 days", "Usually at breakfast", "Eaten together
+at lunch on 3 days" or "Planned 4 times in 30 days, eaten once". For a food, **Keep** makes it your own choice
+and **Stop using this** tells the app to ignore what it saw about that food (it is then listed under **Not learning
+about**, where **Learn again** undoes it). For a meal you often have, **Save as a meal** opens the saved-meal form with
+its foods, and **Not this meal** stops it from being offered (**Show them again** brings back the ones you hid). The
+switch **Learn from my log** turns all of this off: suggestions then use only your limits and variety, not what you
+usually eat. Nothing the app learned is stored; it is worked out again each time from your log. Changing a choice
+needs a connection to your server: without one the app says so and changes nothing.
 
 ## How the rules decide
 
@@ -152,9 +168,11 @@ In **Settings → Meal guidance**:
 | Show insights on Today and Trends | on | hides the insight notes when off |
 | How close to my meal carb goal counts as on target | 10 g | 5–20 g; ask your diabetes team |
 | Carbs I take to treat a low | 15 g | 5–30 g, from your diabetes team; sizes the low-treatment options |
-| Never suggest these kinds of food | none | food categories to leave out, for example Fish & Seafood |
+| Kinds of food: None, Like, Less often, Never suggest | None | one choice for each food category, for example Fish & Seafood. **Never suggest** leaves the whole kind out of suggestions (it stays searchable and loggable); **Like** and **Less often** only change the order |
 | Let AI re-order and explain suggestions | off | shown when your server offers AI; see below |
-| "Not for me" foods | none | single foods (up to 500), added from any suggestion; they stay searchable and loggable; **Suggest again** removes one |
+| Learn from my log | on | when off, suggestions use only your limits and variety, not what you usually eat |
+| More like this, Less often and "Not for me" foods | none | single foods (up to 1,000 in all, of which up to 500 "Not for me"), added from the **⋯** menu of any suggestion; they stay searchable and loggable; **Remove** or **Suggest again** takes one back |
+| Food preferences for AI ideas | empty | shown when your server offers AI; up to 200 characters of your own words, such as "vegetarian, no fish", sent with AI meal ideas only when AI ideas are on for you ([Optional AI](ai.md)) |
 
 ## What to do
 

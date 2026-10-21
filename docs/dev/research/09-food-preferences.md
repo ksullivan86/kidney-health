@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-10-21 (§8). **Part A (server and engine) is built** (§7); parts B (screens) and C (AI and Ask) follow. |
+| Status | Decided 2026-10-21 (§8). **Parts A (server and engine) and B (screens) are built** (§7); part C (AI and Ask) follows. |
 | Date researched | 2026-10-21, against `main` at `1e512b5` |
 | Scope | What the person can tell the app about taste (likes, "less often", food groups), what the app may learn from the log by its own code, how both change the ranking in meal guidance, what the optional AI is told, how Ask can propose a change, storage, API, settings, export/import/delete, the browser twin and tests. |
 | Out of scope | Diet patterns that need per-food tags (vegetarian, pescatarian: ROADMAP "Meal guidance", note 06 §4.14), allergies (§4.10), cuisine data for built-in foods, the MCP server's tools for external assistants (a later step with its own token scope), the per-meal caps and score weights of note 06 (unchanged). |
@@ -416,6 +416,21 @@ of §8 Q1; the pool pre-rank of the planner includes the preference term so a li
 
 **Part B, the screens (about 0.5–1M).** The profile section, the learned list, the "⋯" menu items, the switch and the
 wording of §4.10; Chromium checks at 375 and 1280 px in light and dark; the handbook's app page.
+
+*Built (2026-10-21).* Notes for part C and the integrator: the screens are in `js/views/guidance.js` (`rowMenu`, `prefsSection`),
+the AI text field in `js/views/ai.js` (`KH.ai.preferencesField()`; Settings → AI ideas keeps one line that points to the new
+place), `js/views/plan.js` (`openMealEditor(t, trigger, draft)` for "Save as a meal") and `css/guidance.css`; the demo needed no
+change. Decisions: **Keep** on a food the app *lowered* (`effect: less`, planned but not eaten) stores `less`, not `like` (a
+"Keep" that turned a skipped food into a like would say the opposite of what the item says); a kept food shows "Kept: …" and no
+buttons (a `neutral` would replace its like); the "⋯" menu reads the state from `GET /preferences` when it opens (there is no
+route for one food) and a like or a "less often" does not reload the list it came from, only *Not for me* does; the menu is on a
+suggestion, a normal swap row, a plan item and a Settings row, never on a Treating a low row; a usual meal's foods for
+"Save as a meal" are rebuilt from its key (the learned item carries nothing else) and the saved-meal editor opens as a new
+meal, nothing is saved until the person presses *Save meal*; the sentence of §4.10 is shown once, in Settings, and the menu says
+nothing about allergies; preferences are saved online only (the outbox's own refusal message, nothing queued). For part C: a
+preference Ask writes with `source = "ask"` shows in these lists as "added in Ask" and is changed or removed like any other;
+after a card writes one, `KH.guidance.forgetAnswers()` is enough to make the next list load fresh (the "⋯" menu always reads
+the server when it opens). `tools/e2e/prefs.py` walks all of it (real server and demo).
 
 **Part C, AI and Ask (about 1–1.5M).** Person block and candidate bit with guard; `set_food_preference` with its card,
 Undo and tests (`tests/test_ai_chat_save.py`); prompt rule 10; `PROMPT_VERSION`; golden cases; ARCHITECTURE "Saving

@@ -45,7 +45,11 @@
   grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
   padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2);
 }
-.g-menu .hint { margin: 0; flex: 1 1 200px; }
+.g-menu .hint { margin: 0; flex: 1 1 100%; }
+/* More like this / Less often / Not for me: a toggle shows its state with a check mark as well as the colour (note 09 §4.10). */
+.g-pref[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.g-pref[aria-pressed="true"]::before { content: "✓"; content: "✓" / ""; }
+.g-menu[aria-busy="true"] { opacity: 0.7; }
 @media (max-width: 560px) {
   .g-food { grid-template-columns: 1fr; }
   .g-actions { padding-left: 34px; flex-wrap: wrap; }
@@ -134,9 +138,38 @@
 .g-ai-plan-note { margin: 0 0 8px; }
 .g-ai-msg:empty, .g-ai-setting:empty { display: none; }
 
-/* ---------- Settings → Meal guidance ---------- */
-#set-guidance-body .checks { margin-top: 4px; }
-.g-nfm-list { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; }
-.g-nfm { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-.g-nfm .row-main { flex: 1; }
-.g-nfm-list .empty-state, .g-nfm-count { padding: 10px 2px; }
+/* ---------- Settings → Meal guidance → Your food preferences ---------- */
+.g-prefs { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--border); }
+.g-prefs > .settings-subtitle { margin: 0; padding: 0; border: 0; scroll-margin-top: 72px; }
+.g-prefs-intro, .g-taste-note { margin: 0; }
+.g-taste-note { background: var(--accent-tint); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.9rem; }
+.g-pref-foods, .g-learned { display: flex; flex-direction: column; gap: 14px; }
+.g-pref-group { display: flex; flex-direction: column; gap: 4px; }
+.g-pref-head { font-size: 0.95rem; margin: 0; }
+.g-learned > .g-pref-head { margin-top: 2px; }
+.g-pref-kind { font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 0 0; }
+.g-prefs > .settings-subtitle:focus, .g-pref-head:focus, .g-pref-kind:focus, .g-pref-row:focus { outline: none; }
+.g-prefs > .settings-subtitle:focus-visible, .g-pref-head:focus-visible, .g-pref-kind:focus-visible, .g-pref-row:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px;
+}
+.g-pref-list { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; }
+.g-pref-list > li + li { border-top: 1px solid var(--border); }
+.g-pref-list .empty-state, .g-pref-count { padding: 10px 2px; margin: 0; }
+@media (max-width: 560px) { .g-pref-row .g-actions { padding-left: 0; } } /* no rating icon to line up with */
+.g-kept { font-weight: 600; color: var(--text); }
+.g-pref-group > .hint { margin: 0; }
+.g-hidden-meals { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.g-hidden-meals p { margin: 0; flex: 1 1 220px; }
+.g-prefs .status-msg:empty, .g-prefs .form-error:empty { display: none; }
+.g-ai-pref:empty { display: none; }
+.g-ai-pref .status-msg { margin: 4px 0 0; }
+/* Kinds of food: a row per kind with None / Like / Less often / Never suggest (radios drawn as the meal picker's segments). */
+.g-kinds > .hint { margin: 0 0 8px; }
+.g-kind-list { display: grid; grid-template-columns: 1fr; gap: 10px 20px; }
+.g-kind { border: 0; padding: 0; margin: 0; min-width: 0; }
+.g-kind-name { padding: 0; margin-bottom: 4px; font-size: 0.85rem; font-weight: 600; color: var(--text-2); }
+.g-kind-seg { position: relative; }
+@media (min-width: 900px) { .g-kind-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* The "⋯" menu inside a plan item (the sheet's compact list): the menu takes a line of its own. */
+.g-portions li { flex-wrap: wrap; }
+.g-portions li .g-menu { flex: 1 1 100%; }

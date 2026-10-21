@@ -9,7 +9,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
-* **Food preferences and what the app learns from your log (the screens come next).** Meal guidance can now take your
+* **Food preferences and what the app learns from your log.** Meal guidance can now take your
   taste into account. For each food you can say *More like this*, *Less often*, *Not for me* or *Stop using what you
   learned about this food*; for each kind of food (fruits, grains, …) *Like* or *Less often* next to the existing *Never
   suggest*. A like lifts a food a little in the suggestions and a "less often" lowers it; neither can make a food fit
@@ -18,9 +18,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   labels. The app also reads your log and can tell you what it saw ("Eaten on 6 of the last 14 days", "Usually at
   breakfast", "Eaten together at lunch on 3 days", and one new one: "Planned 4 times in 30 days, eaten once" for a food you plan
   again and again but pass over, which lowers it slightly); each can be stopped, and a switch, *Learn from my log*, turns
-  every learned signal off. Nothing learned is stored; it is worked out each time from your log. **The buttons and lists for
-  all of this are not in the app yet** (they come in the next step): this release adds the settings, the lists the screens
-  will show and the ranking behind them, in the app and in the online demo, and keeps them in your export and import.
+  every learned signal off. Nothing learned is stored; it is worked out each time from your log. It works in the app and in
+  the online demo, and your choices are part of your export and import.
+* **Tell the app what you like, and see what it learned.** The **⋯** next to a suggestion, a swap idea or a food in a plan now
+  has **More like this**, **Less often** and **Not for me**; the one you chose shows a check mark, choosing it again takes it
+  back, and a message confirms each change. **Settings → Meal guidance → Your food preferences** lists your choices (change or
+  remove each), lets you set every kind of food to **None**, **Like**, **Less often** or **Never suggest**, and shows what the
+  app learned from your log with the reason: **Keep** or **Stop using this** for a food, **Save as a meal** or **Not this meal**
+  for a meal you often have, and the **Learn from my log** switch. The text for AI ideas ("Food preferences for AI ideas") moved
+  there from **Settings → AI ideas**. Less often and Not for me are about taste, not an allergy filter: the app cannot tell
+  whether a food contains an allergen, so check labels. Changing a choice needs a connection to your server (nothing is queued).
+  Treating a low never shows these buttons.
 * **Meals you usually have, or the starter meals, no longer come up when they hold a food you marked *Not for me* or a kind
   of food you never want.** Before, only single foods were left out. A meal you saved yourself is still offered (you built
   it; edit it to change it).
