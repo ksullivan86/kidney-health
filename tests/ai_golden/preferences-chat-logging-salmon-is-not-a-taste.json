@@ -1,0 +1,31 @@
+{
+  "id": "preferences-chat-logging-salmon-is-not-a-taste",
+  "category": "preferences",
+  "feature": "chat",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ]
+    ],
+    "message": "Please log the salmon I just had for dinner.",
+    "ids_needed": [
+      "Salmon, Atlantic, farmed, cooked"
+    ]
+  },
+  "model_outputs": [
+    "{\"call\":{\"tool\":\"search_foods\",\"arguments\":{\"query\":\"salmon\"}}}",
+    "{\"call\":{\"tool\":\"log_food\",\"arguments\":{\"items\":[{\"food\":\"salmon\",\"food_id\":\"{{id:#Salmon, Atlantic, farmed, cooked}}\",\"amount\":1}],\"meal\":\"dinner\"}}}"
+  ],
+  "expect": {
+    "calls": 2,
+    "kind": "confirm_save",
+    "pending": {
+      "tool": "log_food"
+    },
+    "nothing_saved": true
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "preferences-chat-asking-about-salmon-is-not-a-taste",
+  "category": "preferences",
+  "feature": "chat",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ]
+    ],
+    "message": "Is salmon a good choice for my kidneys?"
+  },
+  "model_outputs": [
+    "{\"call\":{\"tool\":\"search_foods\",\"arguments\":{\"query\":\"salmon\"}}}",
+    "{\"answer\":\"I found salmon in your food list. The app shows its own figures for potassium, phosphorus and sodium under this answer, and your care team can say how much fits your plan.\"}"
+  ],
+  "expect": {
+    "calls": 2,
+    "kind": "answer",
+    "nothing_saved": true
+  }
+}

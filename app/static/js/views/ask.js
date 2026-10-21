@@ -21,6 +21,12 @@
      exactly those rows through the normal DELETE routes. Trust "for this conversation" lives in this page only: it
      ends with New conversation, a reload, or after 12 hours.
 
+   * Tastes (note 09 §4.8; the section "tastes" below). The assistant may propose to remember that the person likes a food or
+     food group, wants it less often, does not want it, or wants it forgotten. That is a card ("Remember this for your
+     suggestions? Salmon: less often." with Remember and Cancel) whatever the person trusts: the server never writes it, and
+     this page applies it only on Remember, through the normal preference route (a food) or the whole "guidance" setting (a
+     food group). Undo puts back exactly what was there.
+
    Rules: no inline scripts or styles (CSP); Enter sends and Shift+Enter makes a new line; every save is the person's
    own press on a card or the person's own choice to trust the assistant, and always undoable. */
 (() => {
@@ -315,7 +321,7 @@
 
   function savingNodes(answer, entry) {
     const nodes = [];
-    if (answer.pending_save) nodes.push(pendingCard(answer.pending_save, entry));
+    if (answer.pending_save) nodes.push(answer.pending_save.tool === TASTE_TOOL ? tastePendingCard(answer.pending_save, entry) : pendingCard(answer.pending_save, entry));
     if ((answer.saved || []).length) dayChanged(); // a trusted save already happened on the server
     for (const card of answer.saved || []) nodes.push(savedCard(card, entry));
     if ((answer.questions || []).length) nodes.push(questionsBlock(answer.questions));
@@ -474,6 +480,150 @@
     const list = h('ul', { class: 'ask-save-items' });
     for (const q of questions) list.append(h('li', {}, q.question));
     box.append(list);
+    return box;
+  }
+
+  // ---- tastes (note 09 §4.8, decision Q2) ----------------------------------
+  // The assistant may propose "remember that I don't like salmon". That is always a card, whatever the person trusts: nothing
+  // is written until Remember is pressed, and then this page (not the model) uses the app's normal routes: for a food PUT
+  // /api/guidance/preferences/{id} with { preference, source: 'ask' } (DELETE to clear); for a food group it reads the person's
+  // current "guidance" setting at that moment, moves only that group between the three lists and saves the whole object
+  // (PATCH /api/me/settings). Undo puts back the state that was there when Remember was pressed. The words are the app's own,
+  // built here from the card's fixed fields; the model's text is never an action label.
+  const TASTE_TOOL = 'set_food_preference';
+  const TASTE_WORDS = { like: 'liked', less: 'less often', not_for_me: 'not for me', clear: 'no preference', none: 'not set' };
+  const GROUP_WORDS = { ...TASTE_WORDS, not_for_me: 'never suggest' };
+  const GROUP_LIST = { like: 'like_categories', less: 'less_categories', not_for_me: 'exclude_categories' };
+  const TASTE_NOT_ALLERGY = 'Less often and not for me are about taste. They are not an allergy filter: the app cannot tell whether a food contains an allergen, so check labels.';
+
+  const isGroup = (card) => card.target && card.target.kind === 'group';
+  function tasteWords(card, value) {
+    if (value === 'neutral') return 'ignoring what the app learned from your log';
+    return (isGroup(card) ? GROUP_WORDS : TASTE_WORDS)[value] || String(value);
+  }
+  function tasteSubject(card) { return isGroup(card) ? `${card.target.name} (food group)` : card.target.name; }
+  function tasteLine(card, value) { return `${tasteSubject(card)}: ${tasteWords(card, value)}.`; }
+
+  // The state of one food now: { value: 'none' | 'like' | 'less' | 'not_for_me' | 'neutral', source }.
+  async function foodStateNow(foodId) {
+    const res = await KH.api.foodPreferences();
+    const row = ((res && res.foods) || []).find((f) => f.food_id === foodId);
+    return row ? { value: row.preference, source: row.source || 'person' } : { value: 'none', source: null };
+  }
+  async function writeFood(foodId, state, source) {
+    if (state === 'none') {
+      try { await KH.api.clearFoodPreference(foodId); } catch (err) { if (!(err && err.status === 404)) throw err; } // already gone is gone
+      return;
+    }
+    await KH.api.setFoodPreference(foodId, { preference: state, source });
+  }
+  // The person's whole "guidance" setting as it is now. A group is changed by saving this object with only its lists moved.
+  async function guidanceNow() {
+    const res = await KH.api.mySettings();
+    const item = res && res.settings && res.settings.guidance;
+    if (!item || !item.value || item.editable === false) throw new Error('Your food group choices could not be read, so nothing was changed.');
+    return item.value;
+  }
+  function groupStateIn(guidance, name) {
+    for (const [state, list] of Object.entries(GROUP_LIST)) if ((guidance[list] || []).includes(name)) return state;
+    return 'none';
+  }
+  function withGroupState(guidance, name, state) {
+    const next = { ...guidance };
+    for (const list of Object.values(GROUP_LIST)) next[list] = (guidance[list] || []).filter((n) => n !== name);
+    if (GROUP_LIST[state]) next[GROUP_LIST[state]] = [...next[GROUP_LIST[state]], name];
+    return next;
+  }
+  // A preference changed: the suggestions the other screens remember are out of date.
+  function tasteChanged() {
+    try {
+      if (KH.guidance && KH.guidance.forgetAnswers) KH.guidance.forgetAnswers();
+      if (KH.guidance && KH.guidance.loadPrefs) Promise.resolve(KH.guidance.loadPrefs(true)).catch(() => {});
+    } catch (err) { /* the other screens refresh themselves on their next load */ }
+  }
+
+  // Remember: read the state now, write the new one, and return what was there (Undo puts it back).
+  async function rememberTaste(card) {
+    if (isGroup(card)) {
+      const name = card.target.name;
+      const now = await guidanceNow();
+      const before = groupStateIn(now, name);
+      await KH.api.updateMySettings({ guidance: withGroupState(now, name, card.preference === 'clear' ? 'none' : card.preference) });
+      return { state: before, source: null };
+    }
+    const id = card.target.food_id;
+    const before = await foodStateNow(id);
+    if (card.preference === 'clear') {
+      if (before.value === 'neutral') return before; // "stop using what you learned" is not a taste: nothing to forget, and it stays
+      await writeFood(id, 'none', 'ask');
+    } else {
+      await writeFood(id, card.preference, 'ask'); // the source is the page's own word: this change came from Ask, confirmed by the person
+    }
+    return { state: before.value, source: before.source };
+  }
+  async function undoTaste(card, before) {
+    if (isGroup(card)) {
+      const now = await guidanceNow();
+      await KH.api.updateMySettings({ guidance: withGroupState(now, card.target.name, before.state) });
+      return;
+    }
+    await writeFood(card.target.food_id, before.state, before.source || 'person');
+  }
+
+  // What the assistant asked to remember, nothing written yet.
+  function tastePendingCard(card, entry) {
+    const box = h('section', { class: 'ask-save ask-pending ask-taste', 'aria-label': 'Remember this?' });
+    box.append(h('h3', {}, 'Remember this for your suggestions?'));
+    box.append(h('p', { class: 'ask-save-meta ask-taste-line' }, tasteLine(card, card.preference)));
+    box.append(h('p', { class: 'hint ask-save-meta' }, `Now: ${tasteWords(card, card.previous)}.`));
+    if (card.preference === 'less' || card.preference === 'not_for_me') box.append(h('p', { class: 'hint ask-save-meta' }, TASTE_NOT_ALLERGY));
+    const message = h('p', { class: 'form-error ask-save-error', role: 'alert' });
+    const all = [];
+    const remember = button('Remember', 'primary', async () => {
+      for (const b of all) b.disabled = true;
+      clear(message);
+      try {
+        const before = await rememberTaste(card);
+        tasteChanged();
+        entry.text = `Remembered: ${tasteLine(card, card.preference)}`;
+        swap(box, tasteSavedCard(card, before, entry));
+      } catch (err) {
+        if (err && err.handled) return;
+        message.textContent = errorText(err);
+        for (const b of all) b.disabled = false;
+      }
+    });
+    const cancel = button('Cancel', 'secondary', () => {
+      entry.text = 'Not remembered: the person cancelled.';
+      swap(box, h('p', { class: 'hint ask-save-note', role: 'status' }, 'Not remembered.'));
+    });
+    all.push(remember, cancel);
+    box.append(message, h('div', { class: 'ask-save-actions' }, ...all));
+    return box;
+  }
+
+  // Remembered, with Undo: puts back exactly what was there before Remember.
+  function tasteSavedCard(card, before, entry) {
+    const box = h('section', { class: 'ask-save ask-saved ask-taste', 'aria-label': 'Remembered' });
+    box.append(h('h3', {}, 'Remembered for your suggestions'));
+    box.append(h('p', { class: 'ask-save-meta ask-taste-line' }, tasteLine(card, card.preference)));
+    box.append(h('p', { class: 'hint ask-save-meta' }, 'Suggestions use this from now on. It only changes the order of suggestions: your limits and warnings stay as they are.'));
+    const status = h('p', { class: 'hint ask-save-status', role: 'status' });
+    const undo = button('Undo', 'secondary', async (btn) => {
+      btn.disabled = true;
+      clear(status);
+      try {
+        await undoTaste(card, before);
+        tasteChanged();
+        entry.text = `The change to ${tasteSubject(card)} was undone.`;
+        swap(box, h('p', { class: 'hint ask-save-note', role: 'status' }, `Undone. ${tasteSubject(card)} is back to: ${tasteWords(card, before.state)}.`));
+      } catch (err) {
+        if (err && err.handled) return;
+        status.textContent = errorText(err);
+        btn.disabled = false;
+      }
+    });
+    box.append(h('div', { class: 'ask-save-actions' }, undo), status);
     return box;
   }
 

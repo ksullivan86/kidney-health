@@ -283,7 +283,8 @@ which starts a server and speaks the protocol to it end to end ([tools/e2e/READM
 
 A text chat in the app itself (**Ask**, a sixth tab), for people who want the answer without setting up a chat
 client. It asks the same questions of the same app functions as the MCP tools above (`get_today`, `search_foods`,
-`check_meal`, and, when you ask it to log or save something, `log_food` and `save_recipe` as described below; never
+`check_meal`, and, when you ask it to log or save something, `log_food` and `save_recipe`, and when you tell it a taste,
+`set_food_preference`, as described below; never
 `safety_check`, which the app's own rules replace), and it adds what an outside chat cannot: **the app checks the answer
 in code before you see it.** It uses the AI provider your admin set up for the other AI features ([`ai.md`](ai.md)); the
 assistant of this page's token and MCP sections is a separate way in and needs no AI provider on the server.
@@ -343,6 +344,21 @@ name (never a token name), and every change of the choice is a row too.
   trust Ask to save without asking** (`ai.allow_trusted_saves`, `AI_ALLOW_TRUSTED_SAVES`; off by default). With it off the
   choices are greyed out and Ask always asks first, whatever you chose before; the choice is kept and applies again if the
   admin turns it back on.
+
+**Telling Ask a taste: always a card, whatever you trust.** Say "I don't really like salmon", "I like lentils" or "I'd like
+fewer sweets" and the assistant may ask the app to remember it for your meal suggestions (the tool is called
+`set_food_preference`: one food or one food group, and *like*, *less often*, *not for me* or *forget it*). A taste quietly
+changes every later suggestion, so unlike a log entry **it is a card even if you chose "Trust it always"**:
+**Remember this for your suggestions? Salmon: less often.** with **Remember** and **Cancel**. The app has changed nothing
+until you press **Remember**, and then your own page (not the assistant) saves it with the same routes the preference
+screens use. The words on the card come from the app, not from the assistant. **Undo** puts back exactly what was there
+before, even if you changed it somewhere else while the card was open. The assistant offers this only when you say a taste in
+the conversation, never because of what you log or ask about, and it never says a taste is remembered: it says it asked you.
+A taste is not an allergy: the app cannot check allergens, and if you mention one the assistant is told to say so and to point
+you to labels and your care team instead. The assistant is also told which foods and food groups you marked
+([What is sent](ai.md#what-is-sent-and-what-never-is)), never what the app learned from your log. A taste only changes the
+order of suggestions: it never relaxes a limit or a warning, and it has no part in the Treating a low card. **This tool is
+not offered to an assistant connected with a token** (the MCP server, above); that needs its own permission, in a later step.
 * What never changes: no insulin or medicine doses (the dose check runs on the assistant's words), the app's numbers (every
   figure is the app's), and a message about a low or an emergency is answered by the app's cards first and never saves. A
   food eaten to treat a low can be logged like any other food and is never warned about. The assistant may save only when

@@ -682,9 +682,15 @@ class ConsentBody(BaseModel):
 
 
 def _person(conn: sqlite3.Connection, state: AiState, user_id: int) -> dict[str, Any]:
+    """The ``person`` object of the two features that send one (meal ideas and Ask), behind the gates they already pass: the AI is
+    on, the person opted in, the feature's route and the per-host consent for ``text`` or ``chat`` (checked before the request
+    is sent; the dry run shows this object). Besides the profile it carries the foods and groups the person marked Like, Less
+    often and Not for me (note 09 §4.7): their explicit choices by name, never a learned signal. Describe-a-meal, the photo
+    features and lab reports never call this."""
     from ..profile import get_profile
 
-    return F.person_for(get_profile(conn, user_id), K.ai_prefs(conn, state.store, user_id), _date.today())
+    return F.person_for(get_profile(conn, user_id), K.ai_prefs(conn, state.store, user_id), _date.today(),
+                        guidance_context.explicit_preferences(conn, user_id, state.store))
 
 
 def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, body: NextMealBody) -> F.Prepared | dict[str, Any]:
@@ -936,8 +942,7 @@ def _prepare_chat(request: Request, conn: sqlite3.Connection, user: User, body: 
     if not history or history[-1]["role"] != "user":
         raise HTTPException(status_code=400, detail="The last message is empty")
     schema = schemas.chat_step_schema(CH.OFFERED_TOOLS)
-    system = prompts.chat_system(CH.tools_text({name: T.TOOLS_BY_NAME[name].input_schema for name in CH.OFFERED_TOOLS}), schema,
-                                 _person(conn, state, user.id))
+    system = prompts.chat_system(CH.tools_text(CS.tool_schemas()), schema, _person(conn, state, user.id))
     mode = "json_object" if cfg.structured == "json_schema" else cfg.structured  # free-form arguments: see chat_step_schema
 
     def make(messages: list[dict[str, str]]) -> dict[str, Any]:

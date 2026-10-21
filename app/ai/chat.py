@@ -18,6 +18,10 @@ route's decision, made by the ``run_save`` callback (:mod:`app.ai.chat_save`): i
 loop ends with ``kind: "confirm_save"`` and the card the person presses Save on; in a **trusted** mode the save runs at
 once (the MCP tools' own code) and the model is told the result. ``safety_check`` is never offered.
 
+Tastes (note 09 §4.8): the model may call ``set_food_preference``. It is a saving tool for the loop (it counts toward
+:data:`MAX_SAVES` and ends the loop with ``confirm_save``), but it is **always a card**, in every trust mode: the callback
+never runs it, and the page applies it only when the person presses Remember.
+
 Pure apart from the callbacks :func:`converse` is given: no database, no network, no clock. The route
 (:mod:`app.ai.routes`) supplies the quota, the model call, the tools and the activity log.
 """
@@ -43,7 +47,8 @@ MAX_MESSAGE_CHARS = 2000
 MAX_TOOL_CALLS = 6
 MAX_ANSWER_CHARS = 1200
 CHAT_TOOLS: tuple[str, ...] = ("get_today", "search_foods", "check_meal")  # read-only
-SAVE_TOOLS: tuple[str, ...] = ("log_food", "save_recipe")  # saving: run only through ``run_save`` (never safety_check)
+PREFERENCE_TOOL = "set_food_preference"  # a taste (note 09 §4.8): always a card, whatever the trust setting
+SAVE_TOOLS: tuple[str, ...] = ("log_food", "save_recipe", PREFERENCE_TOOL)  # saving: run only through ``run_save`` (never safety_check)
 OFFERED_TOOLS: tuple[str, ...] = CHAT_TOOLS + SAVE_TOOLS
 MAX_SAVES = 2  # save calls the model may make for one message
 MAX_NUMBER_GROUPS = 4
@@ -58,6 +63,7 @@ WITHHELD_NUMBER_TEXT = ("The assistant's answer had a number the app did not wor
                         "Here are the app's own numbers.")
 UNFINISHED_TEXT = "The assistant could not finish; here are the app's numbers."
 CONFIRM_TEXT = "Nothing has been saved yet. Check this, then press a Save button, or Cancel."
+CONFIRM_PREFERENCE_TEXT = "Nothing has been remembered yet. Check this, then press Remember, or Cancel."
 SAVE_LIMIT_ERROR = (f"At most {MAX_SAVES} saves can be made for one message. Tell the person what was saved and answer.")
 SAVES_CLOSED_ERROR = "This message's save was already made once. Tell the person what was saved and answer; do not save again."
 EMPTY_TEXT = "The assistant's answer could not be used."
@@ -621,9 +627,10 @@ async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], ne
     result the model is told to answer, and a call after that ends the loop as ``unfinished``.
 
     ``run_save(name, arguments, n)`` handles the model's ``n``-th (1-based) call of a saving tool (at most
-    :data:`MAX_SAVES` per message); without it the saving tools are not offered. A :class:`SaveStep` with ``pending``
-    ends the loop at once with ``kind: "confirm_save"`` and the fixed :data:`CONFIRM_TEXT` (the model's words are
-    not used: nothing was saved, and the card says exactly what would be)."""
+    :data:`MAX_SAVES` per message, a taste counts too); without it the saving tools are not offered. A :class:`SaveStep` with
+    ``pending`` ends the loop at once with ``kind: "confirm_save"`` and the fixed :data:`CONFIRM_TEXT` (or
+    :data:`CONFIRM_PREFERENCE_TEXT` for a taste); the model's words are not used: nothing was saved, and the card says
+    exactly what would be."""
     messages = list(base_body["messages"])
     runs: list[ToolRun] = []
     out = Outcome(kind="unfinished", text=UNFINISHED_TEXT, runs=runs)
@@ -692,7 +699,8 @@ async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], ne
                     runs.append(run)
                     out.pending = taken.pending
                     out.audit_id = await record(result, {"step": index, "tool": name, "outcome": "confirm_save"})
-                    out.kind, out.text, out.reason = "confirm_save", CONFIRM_TEXT, None
+                    out.kind, out.reason = "confirm_save", None
+                    out.text = CONFIRM_PREFERENCE_TEXT if name == PREFERENCE_TOOL else CONFIRM_TEXT
                     out.notes = [LAB_NOTE] if lab_words(newest) else []
                     return out
         else:

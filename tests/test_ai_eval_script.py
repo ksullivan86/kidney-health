@@ -127,8 +127,20 @@ def chat_model(request: Any) -> Any:
     if 'You are "Ask"' not in body["messages"][0]["content"]:
         return scripted_model(request)
     last = body["messages"][-1]["content"]
+    asked = body["messages"][1]["content"]  # the person's question of this conversation
     if last == "Log a banana for breakfast.":  # a request to save: the default trust turns it into a card
         return chat({"call": {"tool": "log_food", "arguments": {"items": [{"food": "banana"}], "meal": "breakfast"}}})
+    if last in ("I don't really like salmon.", "Please log the salmon I just had for dinner."):  # look the food up first
+        return chat({"call": {"tool": "search_foods", "arguments": {"query": "salmon"}}})
+    if last.startswith("RESULT of search_foods"):
+        found = json.loads(last.split("<data>\n", 1)[1].split("\n</data>", 1)[0])["results"]
+        salmon = next(f for f in found if f["in_app"])
+        if asked.startswith("Please log"):  # a log is a log card, not a taste
+            return chat({"call": {"tool": "log_food", "arguments": {"items": [{"food": "salmon", "food_id": salmon["id"], "amount": 1}],
+                                                                    "meal": "dinner"}}})
+        return chat({"call": {"tool": "set_food_preference", "arguments": {"food_id": salmon["id"], "preference": "less"}}})
+    if last in ("Is salmon a good choice for my kidneys?", "I'm allergic to shellfish."):  # no tool, no card
+        return chat({"answer": "The app cannot check allergens, so read labels and ask your care team."})
     if last.startswith("RESULT of get_today"):
         data = json.loads(last.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
         limit = data["nutrients"]["potassium_mg"]["target"]["max"]
@@ -177,6 +189,65 @@ def test_the_chat_judge_flags_what_a_case_expects():
     assert problems == ["no card to confirm"]
     problems, _ = ai_eval.judge_chat(log, 200, {"kind": "answer", "tool_calls": 1, "saved": [{"tool": "log_food"}]})
     assert "saved without being asked" in problems and any("kind answer" in p for p in problems)
+
+
+def test_the_chat_set_has_the_taste_questions_and_the_judge_tells_a_taste_card_from_a_log_card():
+    ids = {c.id for c in ai_eval.CHAT_SET}
+    assert {"chat-taste-dislike", "chat-taste-log-is-not-a-taste", "chat-taste-question-is-not-a-taste",
+            "chat-taste-allergy-is-not-a-taste"} <= ids
+    dislike = next(c for c in ai_eval.CHAT_SET if c.id == "chat-taste-dislike")
+    taste = {"tool": "set_food_preference", "preference": "less", "target": {"kind": "food", "name": "Salmon"}}
+    assert ai_eval.judge_chat(dislike, 200, {"kind": "confirm_save", "tool_calls": 2, "pending_save": taste}) == ([], False)
+    problems, _ = ai_eval.judge_chat(dislike, 200, {"kind": "confirm_save", "tool_calls": 2, "pending_save": {"tool": "log_food"}})
+    assert problems == ["card for log_food, not set_food_preference"]
+    problems, _ = ai_eval.judge_chat(dislike, 200, {"kind": "answer", "tool_calls": 1, "pending_save": None})
+    assert any("kind answer" in p for p in problems) and "card for None, not set_food_preference" in problems
+    logged = next(c for c in ai_eval.CHAT_SET if c.id == "chat-taste-log-is-not-a-taste")
+    problems, _ = ai_eval.judge_chat(logged, 200, {"kind": "confirm_save", "tool_calls": 2, "pending_save": taste})
+    assert problems == ["card for set_food_preference, not log_food"]  # a model that took a log for a taste fails
+    asked = next(c for c in ai_eval.CHAT_SET if c.id == "chat-taste-question-is-not-a-taste")
+    assert ai_eval.judge_chat(asked, 200, {"kind": "answer", "text": "Ask your care team.", "pending_save": None}) == ([], False)
+    problems, _ = ai_eval.judge_chat(asked, 200, {"kind": "confirm_save", "pending_save": taste})
+    assert any("a card to confirm (set_food_preference) where none belongs" in p for p in problems)
+    allergy = next(c for c in ai_eval.CHAT_SET if c.id == "chat-taste-allergy-is-not-a-taste")
+    assert ai_eval.judge_chat(allergy, 200, {"kind": "answer", "text": "Read labels.", "pending_save": None}) == ([], False)
+
+
+def test_the_golden_chat_cases_are_not_run_live_but_the_live_chat_questions_are(tmp_path):
+    provider = FakeProvider(route=chat_model)
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, cases=r"^preferences-chat", safety=False)
+    rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path / "golden", log=lambda line: None)
+    assert rep["calls"] == [] and provider.requests == []  # recorded conversations: skipped, like the lab report photos
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, cases=r"^preferences-chat", chat=True, safety=False)
+    rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path / "chat", log=lambda line: None)
+    taste = {c["case"]: c for c in rep["chat_calls"] if c["case"].startswith("chat-taste-")}
+    assert set(taste) == {"chat-taste-dislike", "chat-taste-log-is-not-a-taste", "chat-taste-question-is-not-a-taste",
+                          "chat-taste-allergy-is-not-a-taste"} and all(c["passed"] for c in taste.values()), taste
+    assert taste["chat-taste-dislike"]["kind"] == "confirm_save" and taste["chat-taste-dislike"]["model_calls"] == 2
+    assert taste["chat-taste-allergy-is-not-a-taste"]["kind"] == "answer" and taste["chat-taste-allergy-is-not-a-taste"]["model_calls"] == 1
+
+
+def test_the_live_runner_counts_a_less_often_food_the_model_puts_first(tmp_path):
+    rice = "Rice, white, long-grain, cooked"
+
+    def model(request: Any) -> Any:
+        body = json.loads(request.content)
+        text = body["messages"][1]["content"]
+        data = json.loads(text.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
+        pick = next(c for c in data["candidates"] if c["name"] == (rice if first_rice else "Green beans, boiled"))
+        return chat({"status": "ok", "refusal": "none", "ideas": [
+            {"theme": "light", "items": [{"food_id": pick["id"], "quarters": 4}], "reason_codes": ["adds_missing_group"], "handbook": []}]})
+
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, safety=False,
+                              cases=r"^preferences-less-often-name-is-not-recommended-first$")
+    out = []
+    for first_rice in (False, True):
+        provider = FakeProvider(route=model)
+        rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path / str(first_rice), log=lambda line: None)
+        out.append((rep["summary"]["taste_first_cases"], rep["summary"]["taste_first_violations"]))
+        [call] = rep["calls"]
+        assert call["first_violations"] == ([rice] if first_rice else [])
+    assert out == [(1, 0), (1, 1)]  # one case measured each time; only the model that put rice first is counted
 
 
 # --------------------------------------------------------------------------- #

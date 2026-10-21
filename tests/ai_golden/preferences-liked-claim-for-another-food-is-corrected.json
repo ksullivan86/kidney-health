@@ -1,0 +1,43 @@
+{
+  "id": "preferences-liked-claim-for-another-food-is-corrected",
+  "category": "preferences",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "food_preferences": [
+      [
+        "Green beans, boiled",
+        "like"
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4}],\"reason_codes\":[\"you_like\",\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Rice, white, long-grain, cooked"
+    ],
+    "claims_corrected": 1,
+    "idea_reason_codes_exclude": [
+      "you_like"
+    ],
+    "response_excludes": [
+      "you said you like"
+    ]
+  }
+}

@@ -581,8 +581,9 @@ def test_the_prompt_tells_the_model_when_it_may_save_and_never_to_claim_a_save()
 
 
 def test_the_tool_text_offers_the_saving_tools_without_a_request_key_and_never_safety_check():
-    text = CH.tools_text({name: T.TOOLS_BY_NAME[name].input_schema for name in CH.OFFERED_TOOLS})
+    text = CH.tools_text(CS.tool_schemas())
     assert "- log_food:" in text and "- save_recipe:" in text and "request_key" not in text and "safety_check" not in text
+    assert "- set_food_preference:" in text  # a taste (note 09 §4.8); its tests are in tests/test_ai_chat_preference.py
     assert T.TOOLS_BY_NAME["log_food"].input_schema["properties"]["request_key"]  # the MCP tool itself keeps it
 
 

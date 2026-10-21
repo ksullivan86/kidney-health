@@ -1,0 +1,52 @@
+{
+  "id": "preferences-not-for-me-name-is-never-suggested",
+  "category": "preferences",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "food_preferences": [
+      [
+        "Rice, white, long-grain, cooked",
+        "not_for_me"
+      ]
+    ],
+    "ids_needed": [
+      "Rice, white, long-grain, cooked"
+    ]
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[]},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Pasta, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"adds_missing_group\"],\"handbook\":[]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Pasta, cooked",
+      "Green beans, boiled"
+    ],
+    "not_shown_food_names": [
+      "Rice, white, long-grain, cooked"
+    ],
+    "dropped_reasons_include": [
+      "not_for_me"
+    ],
+    "payload_includes": [
+      "\\\"not_for_me\\\":[\\\"Rice, white, long-grain, cooked\\\"]"
+    ],
+    "payload_excludes": [
+      "\\\"name\\\":\\\"Rice, white, long-grain, cooked\\\""
+    ]
+  }
+}

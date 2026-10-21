@@ -20,7 +20,12 @@ first-run setup, sets targets and opts the person in, then drives the page at 37
   and nothing is saved until Save as eaten (then Undo removes it; Cancel saves nothing); with "Trust it for this
   conversation" chosen the person trusts one conversation (a confirm card until then), the save is made at once with Undo,
   and New conversation ends the trust; with "Trust it always" the save is at once; in Settings the warning sheet opens
-  first, "Keep asking me" changes nothing and "I understand, trust it" does.
+  first, "Keep asking me" changes nothing and "I understand, trust it" does;
+* telling Ask a taste (food preferences, note 09 §4.8), with "Trust it always" chosen: "I do not really like salmon" is still a
+  card ("Remember this for your suggestions? Salmon (test): less often." with Remember and Cancel), nothing is written until
+  Remember (then the preference exists with source "ask"), Undo puts back what was there (nothing, or a Like), Cancel writes
+  nothing, and a food group ("I eat less fish these days") moves only that group in the whole "guidance" setting and Undo moves
+  it back, at 375 and 1280 px.
 
 Nothing leaves the machine (an outbound proxy that points nowhere). Prints PASS / FAIL lines, writes
 ``<out>/report.json`` and screenshots in ``<out>/shots/``; exit status 1 on any failure. The server and the fake
@@ -61,6 +66,7 @@ class FakeAi:
     def __init__(self, port: int) -> None:
         self.requests: list[dict[str, Any]] = []
         self.banana_id = 0  # set by the harness once the food list exists
+        self.salmon_id = 0  # a food of the person's own, for the taste card
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -100,6 +106,10 @@ class FakeAi:
         if "log a banana" in last:  # a save: the harness gives the food_id (an exact food, so nothing is ambiguous)
             return {"call": {"tool": "log_food", "arguments": {"items": [{"food": "banana", "food_id": self.banana_id, "amount": 1}],
                                                                "meal": "breakfast"}}}
+        if last == "I do not really like salmon":  # a taste (note 09 §4.8): always a card, whatever the person trusts
+            return {"call": {"tool": "set_food_preference", "arguments": {"food_id": self.salmon_id, "preference": "less"}}}
+        if last == "I eat less fish these days":
+            return {"call": {"tool": "set_food_preference", "arguments": {"category": "Fish & Seafood", "preference": "less"}}}
         if last.startswith("RESULT of get_today"):
             data = json.loads(last.split("<data>\n", 1)[1].split("\n</data>", 1)[0].replace("\\u003c", "<"))
             limit = data["nutrients"]["potassium_mg"]["target"]["max"]
@@ -341,6 +351,96 @@ def saving(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: 
     ctx.close()
 
 
+def guidance_now(admin: Any) -> dict[str, Any]:
+    return admin.json("GET", "/api/me/settings")["settings"]["guidance"]["value"]
+
+
+def food_prefs(admin: Any) -> dict[int, tuple[str, str]]:
+    return {r["food_id"]: (r["preference"], r["source"]) for r in admin.json("GET", "/api/guidance/preferences")["foods"]}
+
+
+def tastes(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: int, height: int, scheme: str) -> None:
+    """Ask proposes a taste (note 09 §4.8): always a card, even when the person trusts Ask always; Remember writes it through the
+    normal routes, Undo puts back what was there, Cancel writes nothing."""
+    tag = f"taste-{width}-{scheme}"
+    ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, base_url=base)
+    ctx.add_cookies([{"name": k, "value": v, "url": base} for k, v in admin.cookies().items()])
+    page = ctx.new_page()
+    errors: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "409" not in m.text else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    for foods_id in list(food_prefs(admin)):
+        admin.call("DELETE", f"/api/guidance/preferences/{foods_id}")
+    admin.json("PATCH", "/api/me/settings", {"guidance": {**guidance_now(admin), "like_categories": [], "less_categories": [], "exclude_categories": []}})
+    admin.json("PATCH", "/api/me/ai", {"trust": "always"})  # the strongest trust: a taste is still a card
+    sid = fake.salmon_id
+
+    open_ask(page)
+    check(f"[{tag}] trust is 'always'", "Trusted always" in page.inner_text("#ask-trust-line"))
+    send_text(page, "I do not really like salmon")
+    page.wait_for_selector(".ask-taste.ask-pending", timeout=20000)
+    card = page.inner_text(".ask-taste.ask-pending")
+    check(f"[{tag}] the card says what will change in the app's words",
+          "Remember this for your suggestions?" in card and "Salmon (test): less often." in card and "Now: not set." in card, card[:300])
+    check(f"[{tag}] it says a taste is not an allergy filter", "not an allergy filter" in card)
+    check(f"[{tag}] the text says nothing has been remembered yet",
+          "Nothing has been remembered yet. Check this, then press Remember, or Cancel." in page.inner_text(".kind-confirm_save .ask-text"))
+    check(f"[{tag}] the card has Remember and Cancel and nothing else",
+          [b.inner_text() for b in page.locator(".ask-taste.ask-pending button").all()] == ["Remember", "Cancel"])
+    check(f"[{tag}] nothing is written before Remember, even when Ask is trusted always", food_prefs(admin) == {})
+    check(f"[{tag}] no sideways scroll with the taste card", not overflow(page))
+    page.screenshot(path=str(out / "shots" / f"taste-card-{tag}.png"))
+    page.locator(".ask-taste.ask-pending").get_by_role("button", name="Remember").click()
+    page.wait_for_selector(".ask-taste.ask-saved")
+    check(f"[{tag}] Remember wrote it through the normal route, from Ask", food_prefs(admin) == {sid: ("less", "ask")}, str(food_prefs(admin)))
+    saved = page.inner_text(".ask-taste.ask-saved")
+    check(f"[{tag}] the saved card says what was remembered and has Undo",
+          "Salmon (test): less often." in saved and page.locator(".ask-taste.ask-saved").get_by_role("button", name="Undo").count() == 1, saved[:200])
+    page.screenshot(path=str(out / "shots" / f"taste-saved-{tag}.png"))
+    page.locator(".ask-taste.ask-saved").get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Undone.")
+    check(f"[{tag}] Undo put back what was there (nothing)", food_prefs(admin) == {})
+
+    # a food that was liked: the card says so, and Undo gives the like back
+    admin.json("PUT", f"/api/guidance/preferences/{sid}", {"preference": "like"})
+    send_text(page, "I do not really like salmon")
+    page.wait_for_selector(".ask-taste.ask-pending >> text=Now: liked.", timeout=20000)
+    page.locator(".ask-taste.ask-pending").last.get_by_role("button", name="Remember").click()
+    page.wait_for_selector(".ask-taste.ask-saved")
+    check(f"[{tag}] over a Like it is now less often", food_prefs(admin) == {sid: ("less", "ask")})
+    page.locator(".ask-taste.ask-saved").last.get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Salmon (test) is back to: liked.")
+    check(f"[{tag}] Undo gave the Like back", food_prefs(admin) == {sid: ("like", "person")}, str(food_prefs(admin)))
+    admin.call("DELETE", f"/api/guidance/preferences/{sid}")
+
+    # Cancel writes nothing
+    send_text(page, "I do not really like salmon")
+    page.wait_for_selector(".ask-taste.ask-pending", timeout=20000)
+    page.locator(".ask-taste.ask-pending").last.get_by_role("button", name="Cancel").click()
+    page.wait_for_selector("text=Not remembered.")
+    check(f"[{tag}] Cancel writes nothing and the card goes away", food_prefs(admin) == {} and page.locator(".ask-taste.ask-pending").count() == 0)
+
+    # a food group: the whole guidance setting, only that group moves
+    admin.json("PATCH", "/api/me/settings", {"guidance": {**guidance_now(admin), "like_categories": ["Fruits"], "carb_tolerance_g": 12}})
+    send_text(page, "I eat less fish these days")
+    page.wait_for_selector(".ask-taste.ask-pending >> text=Fish & Seafood (food group): less often.", timeout=20000)
+    check(f"[{tag}] the group card names the group", True)
+    page.locator(".ask-taste.ask-pending").last.get_by_role("button", name="Remember").click()
+    page.wait_for_selector(".ask-taste.ask-saved")
+    now = guidance_now(admin)
+    check(f"[{tag}] only that group moved; the other choices and settings stayed",
+          now["less_categories"] == ["Fish & Seafood"] and now["like_categories"] == ["Fruits"] and now["carb_tolerance_g"] == 12, json.dumps(now))
+    page.locator(".ask-taste.ask-saved").last.get_by_role("button", name="Undo").click()
+    page.wait_for_selector("text=Fish & Seafood (food group) is back to: not set.")
+    now = guidance_now(admin)
+    check(f"[{tag}] Undo took the group out again", now["less_categories"] == [] and now["like_categories"] == ["Fruits"], json.dumps(now))
+    check(f"[{tag}] no sideways scroll at the end", not overflow(page))
+    page.screenshot(path=str(out / "shots" / f"taste-end-{tag}.png"))
+    check(f"[{tag}] no console or page errors with the taste cards", not errors, "; ".join(errors[:3]))
+    admin.json("PATCH", "/api/me/ai", {"trust": "ask"})
+    ctx.close()
+
+
 def demo(browser: Any, base: str, out: Path) -> None:
     for width, scheme in ((320, "light"), (375, "dark")):
         ctx = browser.new_context(viewport={"width": width, "height": 640}, color_scheme=scheme, base_url=base, is_mobile=True, has_touch=True)
@@ -386,6 +486,8 @@ def main(argv: list[str] | None = None) -> int:
         admin.json("PUT", "/api/profile", {"weight_kg": 70, "targets": {"potassium_mg": 2500, "phosphorus_mg": 1000, "sodium_mg": 2000}})
         admin.json("PATCH", "/api/me/ai", {"opt_in": True})
         fake.banana_id = admin.json("GET", "/api/foods", params={"q": "Banana, raw"})["foods"][0]["id"]
+        fake.salmon_id = admin.json("POST", "/api/foods", {"name": "Salmon (test)", "category": "Fish & Seafood", "serving_desc": "3 oz (85 g)",
+                                                           "serving_g": 85, "nutrients": {"potassium_mg": 300, "phosphorus_mg": 220}})["id"]
         base = f"http://localhost:{args.port}"
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
@@ -394,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
                     walk(browser, admin, fake, base, out, width, height, scheme)
                 for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
                     saving(browser, admin, fake, base, out, width, height, scheme)
+                for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
+                    tastes(browser, admin, fake, base, out, width, height, scheme)
                 demo(browser, base, out)
             finally:
                 browser.close()

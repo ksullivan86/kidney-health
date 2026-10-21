@@ -9,6 +9,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Ask can remember what you tell it you like, and the optional AI knows your tastes.** Tell Ask "I don't really like
+  salmon" (or "I like lentils", "fewer sweets") and it may offer to remember it for your meal suggestions. This is **always
+  a card, even if you chose to trust Ask**: "Remember this for your suggestions? Salmon: less often." with **Remember** and
+  **Cancel**. Nothing changes until you press **Remember**; **Undo** puts back exactly what was there. It works for one
+  food or a whole food group, and Ask only offers it when you say a taste, never from what you log or ask about. A taste
+  only changes the order of suggestions, never a limit, a warning or the Treating a low card, and it is not an allergy
+  filter. Meal ideas and Ask are now told, by name, the foods and food groups **you** marked *More like this*, *Less
+  often* or *Not for me* (at most 10 of each), only with the consent you already gave for them and shown in "What will be
+  sent?"; what the app learned from your log is never sent, and describe a meal, photos and lab report photos get none of it.
+  An AI idea may say "uses a food you said you like" only for a food you marked, and an idea that uses a food you said *Not
+  for me* is dropped. A chat assistant connected with a token cannot do any of this.
 * **Food preferences and what the app learns from your log.** Meal guidance can now take your
   taste into account. For each food you can say *More like this*, *Less often*, *Not for me* or *Stop using what you
   learned about this food*; for each kind of food (fruits, grains, …) *Like* or *Less often* next to the existing *Never
@@ -465,6 +476,24 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **Learn my food preferences, part C** ([note 09](docs/dev/research/09-food-preferences.md) §4.7, §4.8; the optional AI and
+  Ask). `PROMPT_VERSION` is `2026-10-21.1` (the owner's live `python scripts/ai_eval.py --chat` for it is still to do).
+  `prompts.person_block` gains `likes`, `less_often` and `not_for_me` (`taste_names`: NFKC, no `Cc`/`Cf`, 60 characters, at most
+  10, null when empty) from `context.explicit_preferences`, read by `routes._person` for meal ideas and Ask only; candidates
+  carry `liked` next to `often` (`ai_bridge` now sets it from the person's Like itself, not from whether the card had room to
+  show `you_like`); `you_like` joins `schemas.REASON_CODES`, the `Code` literal and `guard.REASON_TEXT`, and
+  `guard.true_reasons` / `check_claims` / `liked_ids` keep it only for a liked candidate; `guard.person_excluded` drops an idea
+  with a Not for me food or a never-suggest group (also when the food came from a saved meal). Rule 9 of the meal prompt and
+  the "Tastes" paragraph of Ask's rule 10. `set_food_preference` (`app/ai/chat_preference.py`: `{food_id | category, preference:
+  like | less | not_for_me | clear}`, in `chat.SAVE_TOOLS`, counted in `MAX_SAVES`) is always a card in every trust mode:
+  `chat_save.run_save` dispatches it before the mode, `save_now` refuses it, `propose` writes nothing, `foods.visible_categories`
+  is shared with `GET /api/foods/categories`; it is **not** in `app/mcp/tools.py`, so `tools/list` never shows it and
+  `tools/call` says "unknown tool" for every token scope. The page applies Remember through `api.setFoodPreference` /
+  `clearFoodPreference` (`js/core.js`) or the whole `guidance` setting, and Undo restores the state read at that moment
+  (`js/views/ask.js`, tested in Node by `tests/js/ask_taste_page.mjs`). Golden: ten `preferences-*` / `injection-preference-name`
+  cases, `feature: "chat"` support in `tests/test_ai_golden.py` (`nothing_saved`, `pending`); `scripts/ai_eval.py` skips the
+  `chat` golden cases, gains four `chat-taste-*` questions in `CHAT_SET` and reports `taste_first_violations`. New tests:
+  `tests/test_ai_preferences.py`, `test_ai_guard_preferences.py`, `test_ai_chat_preference.py`, `test_ask_taste_ui.py`.
 * **Learn my food preferences, part A** ([note 09](docs/dev/research/09-food-preferences.md); server and engine). Schema step
   17; `GuidancePreferences` gains `learn_from_log`, `like_categories`, `less_categories` and `hidden_usual_meals` (a model
   validator keeps a group in one list); the preference term `pref(f) = clamp(P_food + P_group + L, -2.5, +1.0)` in

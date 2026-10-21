@@ -25,6 +25,7 @@ from ..units import ANALYTE_KEYS as LAB_ANALYTES  # the app's own lab test codes
 THEMES: tuple[str, ...] = ("light", "hearty", "familiar", "new_idea")
 REASON_CODES: tuple[str, ...] = (
     "low_potassium", "low_phosphorus", "low_sodium", "fits_carb_goal", "adds_protein", "adds_missing_group", "you_eat_often",
+    "you_like",  # note 09 §4.7: true only for a candidate with the "liked" bit (a food the person marked Like)
 )
 MEAL_SLOTS: tuple[str, ...] = ("breakfast", "lunch", "dinner", "snack")
 UNITS: tuple[str, ...] = ("serving", "g", "ml", "cup", "tbsp", "tsp", "slice", "piece", "oz", "fl_oz", "none")
@@ -197,7 +198,8 @@ def chat_step_schema(tool_names: Sequence[str]) -> dict[str, Any]:
 _FORBID = ConfigDict(extra="forbid", strict=False)
 Quarter = Annotated[int, Field(ge=1, le=12, strict=True)]
 FoodId = Annotated[int, Field(ge=1, le=2**63 - 1, strict=True)]
-Code = Literal["low_potassium", "low_phosphorus", "low_sodium", "fits_carb_goal", "adds_protein", "adds_missing_group", "you_eat_often"]
+Code = Literal["low_potassium", "low_phosphorus", "low_sodium", "fits_carb_goal", "adds_protein", "adds_missing_group", "you_eat_often",
+               "you_like"]
 ShortText = Annotated[str, StringConstraints(max_length=MAX_TEXT_CHARS)]
 Number = Annotated[float, Field(ge=0, le=1_000_000, allow_inf_nan=False)]
 

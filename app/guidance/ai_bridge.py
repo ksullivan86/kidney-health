@@ -125,10 +125,12 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
             "group": f.group, "portion": q, "per_portion": _per_portion(f, q),
             "renal_rating": renal_level(a[R.K], a[R.P], a[R.NA], f.additive),
             "fit_text": M.fit_text(a, tracked, room.carbs is not None),
-            # "You said you like this" is a taste the person stated, not one of the app's reasons the AI may claim:
-            # it stays out of ``reasons`` (the AI layer's closed list of codes) and travels as its own bit.
+            # "You said you like this" is a taste the person stated, not one of the app's reasons: it stays out of
+            # ``reasons`` and travels as its own bit, which the AI layer shows the model and checks its "you_like"
+            # claim against. The bit is the person's Like itself, not whether the card had room to show the reason (a
+            # card shows at most two, so a food with two kidney reasons would otherwise read as not liked).
             "reasons": [c for c in codes if c != "you_like"],
-            "liked": "you_like" in codes,
+            "liked": f.id in habit.pref.liked,
         })
     meals = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter, limit=R.AI_MEALS_MAX)]
     for i, m in enumerate(meals, start=1):

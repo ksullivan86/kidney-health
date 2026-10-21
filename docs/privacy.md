@@ -28,9 +28,14 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   meals they hid. They shape only the order of meal suggestions, are shown only to that person, are part of the export and
   import, and are deleted with the account. **What the app learns from the log is not stored**: the app's own code works it
   out from the log each time it makes a suggestion, with a plain reason, and it is not a diagnosis or an allergy
-  list. In this version no preference is put into a request to an AI provider, the Ask chat or an assistant: the foods
-  marked *Not for me* are only left out of the candidate list the app builds, and the code that writes the request reads
-  no preference (a later feature that does must say so here first);
+  list. **Only the person's own explicit choices can be sent to an AI**, and only to the two features that already send a
+  profile: when the optional AI is on, the person opted in and agreed to the destination, **meal ideas and Ask** are told, by
+  name, the foods and food groups the person marked *More like this*, *Less often* or *Not for me* (at most 10 of each,
+  each name cut to 60 characters, as untrusted data), and "What will be sent?" shows them. **What the app learned from the
+  log is never sent**, nor a food the person told the app to stop learning about, nor the hidden usual meals; describe a meal,
+  photos, lab report photos and an assistant connected with a token never get any of it (a test checks that the code that
+  builds those requests does not read a preference). The Ask chat can also *propose* a change ("I don't really like
+  salmon"): the app shows a card and writes nothing until the person presses Remember, whatever they trust;
 * the **symptoms** the person chooses to record (schema step 15): which symptom (from a short list, or a name of
   their own up to 60 characters for "other"), the date, how bad (mild, moderate or severe) and an optional note up to
   300 characters. This is a new kind of health data. It is shown only to that person, on Today and Trends; it is part of
@@ -98,8 +103,9 @@ If the admin turns on the **Ask** chat ([assistant.md](assistant.md#the-ask-scre
 person agrees to it (its own consent, separate from meal data and photos), each question sends the AI provider the
 person's messages in that conversation (the last 20, kept in the page only, never on the server) and the app's own
 numbers the assistant looks up with its read-only tools: targets, a day's totals, food names and nutrients, plus the
-same stage, dialysis, diabetes and preferences block as the other AI features. Never the name, user name, e-mail,
-weight, height, exact age or notes. A message that sounds like a low or an emergency is answered by the app and
+same stage, dialysis, diabetes and preferences block as the other AI features (the preferences text and the foods and food
+groups the person marked Like, Less often or Not for me, never what the app learned from the log). Never the name, user name,
+e-mail, weight, height, exact age or notes. A message that sounds like a low or an emergency is answered by the app and
 never sent. A question can take up to seven calls to the provider. What the provider does with it follows the
 policy line the consent sheet shows ([ai.md](ai.md#what-is-sent-and-what-never-is)).
 

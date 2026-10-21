@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-10-21 (§8). **Parts A (server and engine) and B (screens) are built** (§7); part C (AI and Ask) follows. |
+| Status | Decided 2026-10-21 (§8). **All three parts are built** (§7): A (server and engine), B (screens) and C (the optional AI and Ask). |
 | Date researched | 2026-10-21, against `main` at `1e512b5` |
 | Scope | What the person can tell the app about taste (likes, "less often", food groups), what the app may learn from the log by its own code, how both change the ranking in meal guidance, what the optional AI is told, how Ask can propose a change, storage, API, settings, export/import/delete, the browser twin and tests. |
 | Out of scope | Diet patterns that need per-food tags (vegetarian, pescatarian: ROADMAP "Meal guidance", note 06 §4.14), allergies (§4.10), cuisine data for built-in foods, the MCP server's tools for external assistants (a later step with its own token scope), the per-meal caps and score weights of note 06 (unchanged). |
@@ -435,6 +435,27 @@ the server when it opens). `tools/e2e/prefs.py` walks all of it (real server and
 **Part C, AI and Ask (about 1–1.5M).** Person block and candidate bit with guard; `set_food_preference` with its card,
 Undo and tests (`tests/test_ai_chat_save.py`); prompt rule 10; `PROMPT_VERSION`; golden cases; ARCHITECTURE "Saving
 from the chat"; `docs/ai.md`, `docs/assistant.md`.
+
+*Built (2026-10-21).* `PROMPT_VERSION` is `2026-10-21.1`; the owner's live `python scripts/ai_eval.py --chat` for it is still
+to do (the four `chat-taste-*` questions and `taste_first_violations` are new in it). What differs from, or adds to, §4.7 and
+§4.8:
+
+* The three lists (`likes`, `less_often`, `not_for_me`) are always keys of the `person` object, null when empty (the block's
+  convention), and sit behind exactly the gates of the person block: `routes._person` is called by meal ideas and Ask only.
+* The `liked` bit is the person's own Like (`food id in habit.pref.liked`). Part A set it from "`you_like` is among the
+  two reasons a card shows", so a liked food with two kidney reasons read as not liked; fixed in `ai_bridge` (the `often` bit
+  has the same two-reason limit and was left as it is).
+* Beyond rejecting a false `you_like` claim, the guard drops an AI idea that uses a Not for me food or a never-suggest group
+  (`guard.person_excluded`), because the foods of a saved meal are candidate ids even when the person said no to one of them.
+  "A `less_often` food is not the first idea" cannot be enforced (the app does not order the model's ideas): it is in the
+  prompt, recorded in a golden case and measured by the live script. A food marked `less` (-2.0) usually scores below
+  `MIN_SHOW_SCORE` and is not a candidate at all; a `less` group (-1.0) still is.
+* `set_food_preference` lives in `app/ai/chat_preference.py`, not in `app/mcp/tools.py`, so the MCP server cannot list or
+  call it for any token scope (a test pins that). `clear` over a `neutral` row is "nothing to forget" (a `neutral` row is the
+  "stop learning" switch, not a taste). The page re-reads the current state when Remember is pressed, and Undo restores that.
+* Ask's taste card is applied by the page through `PUT`/`DELETE /api/guidance/preferences/{food_id}` or the whole `guidance`
+  setting; the API calls are in `js/core.js` (`api.foodPreferences`, `setFoodPreference`, `clearFoodPreference`), not in
+  `views/ai.js` (part B edits it).
 
 ---
 

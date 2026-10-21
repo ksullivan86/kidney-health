@@ -1,0 +1,45 @@
+{
+  "id": "preferences-less-often-name-is-not-recommended-first",
+  "category": "preferences",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner",
+    "settings": {
+      "guidance": {
+        "less_categories": [
+          "Grains & Breads"
+        ]
+      }
+    }
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4},{\"food_id\":\"{{id:Apple, raw, with skin}}\",\"quarters\":4}],\"reason_codes\":[\"adds_missing_group\"],\"handbook\":[]},{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4}],\"reason_codes\":[\"adds_missing_group\"],\"handbook\":[]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "shown_food_names": [
+      "Green beans, boiled",
+      "Apple, raw, with skin",
+      "Rice, white, long-grain, cooked"
+    ],
+    "not_first_food_names": [
+      "Rice, white, long-grain, cooked"
+    ],
+    "payload_includes": [
+      "\\\"less_often\\\":[\\\"Grains \\\\u0026 Breads\\\"]"
+    ]
+  }
+}

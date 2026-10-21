@@ -19,6 +19,11 @@ person trusts the assistant (:func:`effective_trust`):
 Either way: a food eaten to treat a low (``purpose: "hypo"``) is saved like any other and never warned about, no
 card or message here carries a warning about it, a message that matched a low or emergency rule never reaches this
 code (the rules answer first), and nothing here creates a number: totals are the app's (:func:`app.mcp.tools.saved_totals`).
+
+**Tastes are the exception to the trust setting** (note 09 §4.8, decision Q2). The model's third saving tool,
+``set_food_preference`` (:mod:`app.ai.chat_preference`), is a card in all three modes: :func:`run_save` hands it to
+:func:`app.ai.chat_preference.propose` before it looks at the mode, :func:`effective_trust` is not consulted for it, and
+:func:`save_now` refuses it. The page applies it only when the person presses Remember.
 """
 from __future__ import annotations
 
@@ -38,6 +43,7 @@ from ..nutrients import scale_nutrients
 from ..settings_registry import TRUST_CHOICES
 from ..textclean import clean_label
 from . import chat as CH
+from . import chat_preference as PREF
 from . import prompts
 
 log = logging.getLogger("kidney_health.ai")
@@ -65,6 +71,12 @@ def effective_trust(*, admin_allows: bool, stored: str, requested: str | None) -
     if stored == "conversation" and requested == "conversation":
         return "conversation"
     return "ask"
+
+
+def tool_schemas() -> dict[str, dict[str, Any]]:
+    """The input schema of every tool the chat offers (:data:`app.ai.chat.OFFERED_TOOLS`): the MCP tools' own, so they cannot
+    drift, and ``set_food_preference``'s, which is not an MCP tool (the MCP server never lists it)."""
+    return {name: PREF.INPUT_SCHEMA if name == PREF.TOOL_NAME else T.TOOLS_BY_NAME[name].input_schema for name in CH.OFFERED_TOOLS}
 
 
 def save_key(request_id: str, n: int) -> str:
@@ -224,7 +236,10 @@ def saved_card(name: str, result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def save_now(call: T.Call, name: str, arguments: Mapping[str, Any], key: str) -> CH.SaveStep:
-    """Trusted mode: run ``log_food`` or ``save_recipe`` (the MCP tool, all or nothing) with the request's key."""
+    """Trusted mode: run ``log_food`` or ``save_recipe`` (the MCP tool, all or nothing) with the request's key. Never a
+    taste: ``set_food_preference`` is a card in every mode, so it is refused here whoever calls this."""
+    if name == PREF.TOOL_NAME or name not in T.TOOLS_BY_NAME or not T.TOOLS_BY_NAME[name].writes:
+        raise T.ToolError("This needs the person's confirmation on a card; it is never saved without it.")
     result = T.run(T.TOOLS_BY_NAME[name], call, {**arguments, "request_key": key})
     questions: list[dict[str, Any]] | None = None
     saved: dict[str, Any] | None = None
@@ -241,12 +256,15 @@ def save_now(call: T.Call, name: str, arguments: Mapping[str, Any], key: str) ->
 def run_save(request: Request, conn: sqlite3.Connection, user: User, name: str, arguments: Mapping[str, Any], n: int, *,
              mode: str, request_id: str, newest: str) -> CH.SaveStep:
     """The model's ``n``-th save call of this message, in a worker thread. ``mode`` is :func:`effective_trust`'s answer.
-    A short message for the model on a refused or invalid call; a bug never ends the conversation with a 500."""
+    A taste (``set_food_preference``) ignores ``mode``: it is a card whatever the person trusts. A short message for the model
+    on a refused or invalid call; a bug never ends the conversation with a 500."""
     if CH.is_safety_text(newest):  # cannot happen (the rules answer such a message first); a save never follows one
         return CH.SaveStep(error=SAFETY_ERROR)
     call = T.Call(request, conn, user, T.Asker())
     args = {k: v for k, v in arguments.items() if k != "request_key"}  # the app makes the key; the model never does
     try:
+        if name == PREF.TOOL_NAME:  # always a card, in every mode (note 09 §4.8); writes nothing
+            return PREF.propose(call, args)
         if mode == "ask":
             return propose(call, name, args, request_id)
         return save_now(call, name, args, save_key(request_id, n))
