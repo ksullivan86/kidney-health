@@ -65,7 +65,8 @@ def test_populated_v4_database_upgrades_and_keeps_every_row(tmp_path):
     assert [tuple(r) for r in rows] == [(1, "Rice", None, None), (2, "Glucose tablets", None, None)]
     template = conn.execute("SELECT name, meal_hint FROM meal_templates").fetchone()
     assert tuple(template) == ("Usual lunch", None)
-    assert {"user_id", "food_id", "preference", "created_at"} == db.table_columns(conn, "food_preferences")
+    # Step 5 made these four; step 17 added source and updated_at (tests/test_migration_m017.py).
+    assert {"user_id", "food_id", "preference", "created_at"} <= db.table_columns(conn, "food_preferences")
     index = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'log_client_id'").fetchone()[0]
     assert "UNIQUE" in index and "user_id, client_id" in index and "client_id IS NOT NULL" in index
     assert foods_rev(conn) >= 0
@@ -109,10 +110,10 @@ def test_food_preferences_cascade_with_the_food_and_the_account(tmp_path):
     build_v4_with_data(path)
     db.init_db(path)
     conn = db.connect(path)
-    conn.execute("INSERT INTO food_preferences VALUES (1, 1, 'not_for_me', ?)", (NOW,))
-    conn.execute("INSERT INTO food_preferences VALUES (2, 2, 'not_for_me', ?)", (NOW,))
+    conn.execute("INSERT INTO food_preferences (user_id, food_id, preference, created_at) VALUES (1, 1, 'not_for_me', ?)", (NOW,))
+    conn.execute("INSERT INTO food_preferences (user_id, food_id, preference, created_at) VALUES (2, 2, 'not_for_me', ?)", (NOW,))
     with pytest.raises(sqlite3.IntegrityError):  # one row per person and food
-        conn.execute("INSERT INTO food_preferences VALUES (1, 1, 'not_for_me', ?)", (NOW,))
+        conn.execute("INSERT INTO food_preferences (user_id, food_id, preference, created_at) VALUES (1, 1, 'not_for_me', ?)", (NOW,))
     conn.execute("DELETE FROM log_entries WHERE food_id = 2")
     conn.execute("DELETE FROM foods WHERE id = 2")
     assert [tuple(r) for r in conn.execute("SELECT user_id, food_id FROM food_preferences")] == [(1, 1)]

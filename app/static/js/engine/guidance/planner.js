@@ -35,7 +35,8 @@
     for (const role of R.ROLES) pools[role] = [];
     for (const f of F.eligibleFoods(ctx)) pools[f.role].push(f);
     for (const role of Object.keys(pools)) {
-      pools[role] = R.sortBy(pools[role], (f) => [LEVEL_RANK[f.level1], -S.staticTerm(f, habit, today),
+      // The preference term joins the static term, so a liked food is not cut from a long list (note 09 §4.5).
+      pools[role] = R.sortBy(pools[role], (f) => [LEVEL_RANK[f.level1], -(S.staticTerm(f, habit, today) + habit.pref.of(f)),
         f.k != null ? f.k : Infinity, f.name_fold, f.id]).slice(0, poolSize);
     }
     return pools;
@@ -71,7 +72,8 @@
   function rank(states) { return R.sortBy([...states], (b) => [-b.score, b.k_total, b.key]); }
 
   function beamBuild(room, scorer, today, dialysis, steps, beamWidth, counter, { snack = false, relaxed = false } = {}) {
-    const empty = built([], S.scoreMeal([], room, today, dialysis, 1.0, counter), 0.0);
+    const pref = scorer.habit.pref;
+    const empty = built([], S.scoreMeal([], room, today, dialysis, 1.0, counter, null, pref), 0.0);
     let beam = [empty];
     steps.forEach((candidates, index) => {
       const children = new Map();
@@ -87,19 +89,19 @@
             if (children.has(key)) continue;
             const totals = S.mealTotals(items);
             if (!relaxed && !S.checkMeal(items, room, 'built', totals).ok) continue;
-            children.set(key, built(items, S.scoreMeal(items, room, today, dialysis, 1.0, counter, totals), totals[0][R.K]));
+            children.set(key, built(items, S.scoreMeal(items, room, today, dialysis, 1.0, counter, totals, pref), totals[0][R.K]));
           }
         }
       }
       beam = rank([...beam, ...children.values()]).slice(0, beamWidth);
     });
-    const finals = beam.filter((b) => b.items.length).map((b) => fineTune(b, room, today, dialysis, counter, relaxed));
+    const finals = beam.filter((b) => b.items.length).map((b) => fineTune(b, room, today, dialysis, counter, relaxed, pref));
     const unique = new Map();
     for (const b of finals) { const id = idOf(b.items); if (!unique.has(id)) unique.set(id, b); }
     return rank(unique.values());
   }
 
-  function fineTune(b, room, today, dialysis, counter, relaxed) {
+  function fineTune(b, room, today, dialysis, counter, relaxed, pref = null) {
     if (room.carbs == null) return b;
     const idx = b.items.findIndex(([f]) => f.role === 'starch' && f.carbs);
     if (idx < 0) return b;
@@ -117,7 +119,7 @@
     }
     if (bestQ === q0) return b;
     const items = [...b.items.slice(0, idx), [f, bestQ], ...b.items.slice(idx + 1)];
-    return built(items, S.scoreMeal(items, room, today, dialysis, 1.0, counter), sumK(items));
+    return built(items, S.scoreMeal(items, room, today, dialysis, 1.0, counter, null, pref), sumK(items));
   }
 
   // ---- the plan ----------------------------------------------------------------------------------
@@ -140,17 +142,17 @@
     return totals;
   }
 
-  function familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters) {
+  function familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref) {
     let options = [];
     if (useSaved) {
       for (const [templateId, name, items] of F.savedMealsFor(ctx, slot)) {
-        const opt = F.familiarOption(ctx, room, today, items, { kind: 'saved', name, templateId, counter, detail: false });
+        const opt = F.familiarOption(ctx, room, today, items, { kind: 'saved', name, templateId, counter, detail: false, pref });
         if (opt != null) options.push(opt);
       }
     }
     if (useUsual) {
       for (const [name, items] of F.usualMealsFor(ctx, slot)) {
-        const opt = F.familiarOption(ctx, room, today, items, { kind: 'usual', name, templateId: null, counter, detail: false });
+        const opt = F.familiarOption(ctx, room, today, items, { kind: 'usual', name, templateId: null, counter, detail: false, pref });
         if (opt != null) options.push(opt);
       }
     }
@@ -158,8 +160,8 @@
       for (const combo of ctx.combos) {
         if (combo.meal !== slot) continue;
         const items = F.resolveItems(ctx, combo.items);
-        if (!items || !items.length || items.some(([f]) => f.hidden)) continue;
-        const opt = F.familiarOption(ctx, room, today, items, { kind: 'starter', name: combo.name, templateId: null, counter, detail: false });
+        if (!items || !items.length || items.some(([f]) => f.hidden) || F.familiarExcluded(ctx, items)) continue;  // note 09 §4.6
+        const opt = F.familiarOption(ctx, room, today, items, { kind: 'starter', name: combo.name, templateId: null, counter, detail: false, pref });
         if (opt != null) options.push(opt);
       }
     }
@@ -192,7 +194,8 @@
     }
     const width = Math.max(R.BEAM_WIDTH_RANGE[0], Math.min(Math.trunc(ctx.tunables.beam_width), R.BEAM_WIDTH_RANGE[1]));
     const builtMeals = beamBuild(room, scorer, today, dialysis, steps, width, counter, { snack });
-    const familiar = familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters);
+    const pref = habit.pref;
+    const familiar = familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref);
 
     const builtChoices = builtMeals.length ? builtMeals.slice(Math.min(variant, builtMeals.length - 1)) : [];
     const bestBuilt = builtChoices.length ? builtChoices[0] : null;
@@ -229,7 +232,7 @@
           if (snack) break;
         }
       }
-      if (fallback.length) relaxed = [built(fallback, S.scoreMeal(fallback, room, today, dialysis, 1.0, counter), sumK(fallback))];
+      if (fallback.length) relaxed = [built(fallback, S.scoreMeal(fallback, room, today, dialysis, 1.0, counter, null, pref), sumK(fallback))];
     }
     let closest = null, reason = null;
     if (relaxed.length) {
@@ -238,7 +241,7 @@
         const scaledItems = mealItems.map(([f, q]) => [f, q * scale]);
         const check = S.checkMeal(scaledItems, room, 'built');
         if (check.ok) {
-          const plan = slotPlan(slot, room, 'ok', { source: 'built', score: S.scoreMeal(scaledItems, room, today, dialysis, 1.0, counter), items: scaledItems });
+          const plan = slotPlan(slot, room, 'ok', { source: 'built', score: S.scoreMeal(scaledItems, room, today, dialysis, 1.0, counter, null, pref), items: scaledItems });
           return [plan, [plan]];
         }
         if (reason == null) reason = check.reason;
@@ -397,7 +400,7 @@
     const dialysis = ctx.profile.dialysis !== 'none';
     for (const plan of plans) {
       if (plan.modified && plan.items && plan.items.length && plan.today != null) {
-        plan.score = S.scoreMeal(plan.items, plan.room, plan.today, dialysis, 1.0, counter);
+        plan.score = S.scoreMeal(plan.items, plan.room, plan.today, dialysis, 1.0, counter, null, habit.pref);
       }
     }
     const projected = dayTotals12(dayWith(ctx, plans));

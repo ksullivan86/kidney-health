@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-10-21 (§8); being built in three parts (§7). |
+| Status | Decided 2026-10-21 (§8). **Part A (server and engine) is built** (§7); parts B (screens) and C (AI and Ask) follow. |
 | Date researched | 2026-10-21, against `main` at `1e512b5` |
 | Scope | What the person can tell the app about taste (likes, "less often", food groups), what the app may learn from the log by its own code, how both change the ranking in meal guidance, what the optional AI is told, how Ask can propose a change, storage, API, settings, export/import/delete, the browser twin and tests. |
 | Out of scope | Diet patterns that need per-food tags (vegetarian, pescatarian: ROADMAP "Meal guidance", note 06 §4.14), allergies (§4.10), cuisine data for built-in foods, the MCP server's tools for external assistants (a later step with its own token scope), the per-meal caps and score weights of note 06 (unchanged). |
@@ -96,10 +96,10 @@ give a clearer signal than any amount of inference. **Decision: no impression tr
 
 ### F3. One learned negative signal is cheap and honest: planned but not eaten
 
-A planned entry that stays `planned` after its date has passed is already in the database. If the person normally
-marks planned food as eaten, a food that is planned again and again but rarely eaten is a fair "you skip this" hint.
-If the person never uses "mark eaten", every planned entry looks skipped, so the signal must only switch on for a
-person who marks most of their planned entries (§4.4).
+A planned entry that stays `planned` after its date has passed is already in the database. A food that is planned
+again and again but rarely eaten is a fair "you skip this" hint. A person who never uses "mark eaten" would make every
+planned entry look skipped, so an entry counts as skipped only on a date and meal where the person logged something
+else they ate: they were logging that day and chose another food (§4.4, refined in part A).
 
 ### F4. A bounded term added after the hard filters cannot make a food fit
 
@@ -217,10 +217,17 @@ Computed in `context.load` from data the engine already reads, plus one query, o
 | Eaten often | 14-day history (exists) | unchanged | habit term and "You often have this", unchanged |
 | Slot habit | 14-day history (exists) | unchanged | `+1.0` in that slot, unchanged |
 | Usual meals | 60-day history (exists) | unchanged, minus §4.6 | offered as today |
-| **Planned but not eaten** (new) | `log_entries` with `status = 'planned'` and `date` in the 30 days before today | food planned on ≥ 2 distinct dates, eaten (`status = 'eaten'`, same food) on fewer than half of those dates, **and** the person marked ≥ 50 % of all their planned entries of those 30 days as eaten | `-0.5` |
+| **Planned but not eaten** (new) | `log_entries` with `status = 'planned'` on a past date in `[today − 30, today − 1]` (`ctx.planned30`), and the `eaten`, non-hypo rows of the same window | A food is *skipped on a date* when an entry of it is still `planned` on that date and, on the same date and meal slot, at least one `eaten` non-hypo entry of a **different** food exists. A food is "planned but not eaten" when it was skipped on ≥ 2 distinct dates **and** was eaten (any meal, not a hypo treatment) on fewer than half of the distinct dates it was planned. There is no condition on the rest of the person's log. | `-0.5` |
 
-The new query is one indexed read (`log_user_date`) of planned and eaten rows in a 30-day window, grouped by food in
-SQL; it returns at most a few hundred rows. `learn_from_log = false` sets the habit term's history part, the slot
+*Refined in part A.* The first draft switched the signal on only for a person who marked ≥ 50 % of all their planned
+entries as eaten. That depends on the person's habits elsewhere and lets one unrelated week switch a food's signal on or
+off. The skipped-on-a-date rule looks at the entry itself: the slot has an eaten entry of another food, so the person was
+logging that day and passed over the planned food. It is computed in the pure engine (`score.skip_stats`, with the JS
+twin `skipStats`) from `planned30` and the eaten rows, so server and browser agree.
+
+The new input is one more indexed read (`log_user_date`) of the `planned` rows of the 30 days before today (a few dozen
+rows at most); the eaten rows of that window are read (`eaten30`) only when the 60-day history is not loaded anyway.
+`learn_from_log = false` sets the habit term's history part, the slot
 habit, "often", usual meals and planned-not-eaten to zero or empty for every food. The variety penalties (already
 today, previous two days, same family) are not preferences and stay.
 
@@ -339,7 +346,7 @@ UI (behaviour; the front-end owner decides the layout):
 
 `engine/guidance/score.js` (`staticTerm`, `evaluate`, `scoreMeal`), `fits.js` (`reasonsFor`, `usualMealsFor`, combos),
 `rules.js` (`makeContext`: `prefs.food_pref`, `prefs.like_categories`, `prefs.less_categories`, `prefs.learn_from_log`,
-`prefs.hidden_usual_meals`, `planned_stats`), `mock/guidance.js` (the in-memory preference map and the 30-day planned counts), `mock/export.js`,
+`prefs.hidden_usual_meals`, `planned30`, `eaten30`; `score.js` `prefTerms`, `skipStats`), `mock/guidance.js` (the in-memory preference map and the 30-day planned and eaten rows), `mock/export.js`,
 `mock/import.js`. `gen_guidance_vectors.py` gains cases for every property of §6; `run_vectors.mjs` `contextFrom` reads
 the new inputs.
 
@@ -351,7 +358,7 @@ the new inputs.
 |---|---|
 | A preference outweighs kidney fit | Added after the hard filters; bounded at +1.0 up and −2.5 down; P2 and P3 |
 | A filter bubble: the same liked foods every day | The variety penalties stay (−1.5 if already eaten today, −0.5 per day of the previous two, −0.75 for the same family) and the like bonus is capped at +1.0, so a liked food still loses ground on the days after it was eaten |
-| A wrong learned signal (the person plans but never marks eaten) | Planned-not-eaten only switches on for a person who marks ≥ 50 % of planned entries; every learned item shows its reason and can be stopped |
+| A wrong learned signal (the person plans but never marks eaten) | An entry counts as skipped only on a date and meal where an eaten entry of another food exists, on ≥ 2 dates, and the food is eaten on fewer than half of the dates it was planned; the term is only -0.5; every learned item shows its reason and can be stopped |
 | A model writes a preference from a misread message | Always a card (§4.8); the model never sees learned signals |
 | Injection through a liked food's name in a prompt | The existing cleaning, escaping and untrusted `<data>` block; a golden case |
 | "Less often" read as an allergy filter | The wording of §4.10; the app never uses the word allergy for a preference |
@@ -398,6 +405,15 @@ Three pull requests, each green and merged before the next:
 vectors, `RULES_VERSION`, the JS twins and the demo mock; `docs/guidance.md`, ARCHITECTURE (migration table, guidance
 API, export), `docs/privacy.md`, CHANGELOG.
 
+*Built (2026-10-21).* Notes for parts B and C: the planned-but-not-eaten rule is the refined one of §4.4; invalid values
+and bodies return 400 like the rest of the settings API (not 422), including a group in two lists; `GET /preferences` and
+`GET /learned` are not gated by `guidance.enabled`; `you_like` is the last of the reasons, so with the two-reason cap it
+shows mainly when no kidney reason competes (the screens can show the preference itself next to a food); the AI bridge
+keeps `you_like` out of the candidates' `reasons` and passes a separate `liked` bit that `app/ai` does not read yet (part C
+decides); `context.explicit_preferences(conn, user_id)` is the helper part C reads; the low-treatment options, their card
+and their swaps never read a like, a "less often" or a learned signal, only "Not for me" and "Never suggest" with the floor
+of §8 Q1; the pool pre-rank of the planner includes the preference term so a liked food can enter the day plan.
+
 **Part B, the screens (about 0.5–1M).** The profile section, the learned list, the "⋯" menu items, the switch and the
 wording of §4.10; Chromium checks at 375 and 1280 px in light and dark; the handbook's app page.
 
@@ -416,9 +432,11 @@ The owner accepted every recommendation of the proposal ("go with your recommend
   although you marked them Not for me."). The card is unchanged. Built in part A.
 * **Q2. Ask always asks** before a preference change, whatever the trust setting (§4.8). Part C.
 * **Q3. Explicit likes and dislikes go to the AI** under the existing consent; learned signals never do (§4.7). Part C.
-* **Q4. The weights of §4.5** as written (+1.0 like, −2.0 less often, +0.5 / −1.0 per group, −0.5 planned but not
+* **Q4. The weights of §4.5**, built as written (+1.0 like, −2.0 less often, +0.5 / −1.0 per group, −0.5 planned but not
   eaten, clamps −2.5 … +1.0 per food and −1.5 … +1.0 per meal); revisit after a month of real use.
-* **Q5. Planned but not eaten is in part A**, with the ≥ 50 % condition of §4.4.
+* **Q5. Planned but not eaten is in part A.** Built with a refined rule: the proposal's "≥ 50 % of planned entries
+  marked eaten" cannot be computed (marking eaten only changes `status`), so a food counts as skipped on a date only
+  when something else was eaten in that meal (§4.4).
 * **Q6. Diet patterns stay a separate ROADMAP item** (per-food tags first).
 
 ---

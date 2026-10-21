@@ -99,6 +99,7 @@
     if (R.PROTEIN_ROLES.has(f.role) && quality.p_grade === 'good') {
       candidates.push(['protein_quality', M.reasonText('protein_quality', { protein: M.fmtG(apr), ratio: M.fmtInt(quality.p_per_g) }), REASON_TOPIC.protein_quality]);
     }
+    if (habit.pref.liked.has(f.id)) candidates.push(['you_like', M.reasonText('you_like'), null]);  // after the kidney reasons, before "you often have this"
     if ((habit.days_14.get(f.id) || 0) >= R.OFTEN_MIN_DAYS) candidates.push(['you_eat_often', M.reasonText('you_eat_often'), null]);
     if (room.carbs != null && ac != null && gap <= tol && ac <= R.FREE_FOOD_CARBS_G) {
       candidates.push(['free_food', M.reasonText('free_food', { carbs: M.fmtG(ac) }), REASON_TOPIC.free_food]);
@@ -173,12 +174,17 @@
     }
     return [null, firstReason];
   }
-  function familiarOption(ctx, room, today, items, { kind, name, templateId, counter = null, detail = true }) {
+  // True when a meal holds a "Not for me" food or a food of a "Never suggest" group: a usual or starter meal like that is not
+  // offered (note 09 §4.6); a saved meal still is.
+  function familiarExcluded(ctx, items) {
+    return items.some(([f]) => ctx.prefs.exclude_food_ids.has(f.id) || ctx.prefs.exclude_categories.has(f.category || ''));
+  }
+  function familiarOption(ctx, room, today, items, { kind, name, templateId, counter = null, detail = true, pref = null }) {
     if (items.some(([f]) => f.avoid)) return null;
     const [scale, reason] = bestScale(items, room, kind);
     if (scale == null) return null;
     const scaledItems = items.map(([f, q]) => [f, q * scale]);
-    const score = S.scoreMeal(scaledItems, room, today, ctx.profile.dialysis !== 'none', scale, counter);
+    const score = S.scoreMeal(scaledItems, room, today, ctx.profile.dialysis !== 'none', scale, counter, null, pref != null ? pref : S.prefTerms(ctx));
     const totals = S.mealTotals(scaledItems)[0];
     const option = { template_id: templateId, name, source: kind, scale, score, _items: scaledItems, _k: roundValue(R.K, totals[R.K]) || 0 };
     if (!detail) return option;
@@ -208,7 +214,10 @@
     const heads = names.map((n) => R.casefold(M.safeName(n).split(',')[0].trim()));
     return names.map((name, i) => (heads.filter((h) => h === heads[i]).length > 1 ? R.casefold(M.safeName(name)) : heads[i]));
   }
-  function usualMealsFor(ctx, meal) {
+  // fits.usual_meal_entries: usual meals as { key, meal, dates, name, items }; none with learn_from_log off, none holding a "Not for me"
+  // food or a "Never suggest" group, none the person hid with "Not this meal" (hidden_usual_meals).
+  function usualMealEntries(ctx, meal) {
+    if (!ctx.prefs.learn_from_log) return [];
     const byDay = new Map();
     for (const h of ctx.history60) {
       if (h.meal !== meal || h.hypo) continue;
@@ -231,20 +240,24 @@
     for (const [key, n] of R.sortBy([...counts.values()], ([k, c]) => [-c, k])) {
       if (n < R.USUAL_MIN_DATES) continue;
       let items = resolveItems(ctx, key);
-      if (!items || !items.length || items.some(([f]) => f.hidden)) continue;
+      if (!items || !items.length || items.some(([f]) => f.hidden) || familiarExcluded(ctx, items)) continue;
+      const mealKey = R.usualMealKey(meal, key);
+      if (ctx.prefs.hidden_usual_meals.has(mealKey)) continue;
       items = R.sortBy(items, ([f]) => [R.ROLES.indexOf(f.role), f.name_fold, f.id]);
-      out.push([M.usualMealName(meal, shortNames(items.map(([f]) => f.name))), items]);
+      out.push({ key: mealKey, meal, dates: n, name: M.usualMealName(meal, shortNames(items.map(([f]) => f.name))), items });
     }
     return out;
   }
-  function fittingSavedMeals(ctx, meal, room, today, counter = null, limit = R.SAVED_MEALS_MAX) {
+  function usualMealsFor(ctx, meal) { return usualMealEntries(ctx, meal).map((u) => [u.name, u.items]); }
+  function fittingSavedMeals(ctx, meal, room, today, counter = null, limit = R.SAVED_MEALS_MAX, pref = null) {
     let options = [];
+    pref = pref != null ? pref : S.prefTerms(ctx);
     for (const [templateId, name, items] of savedMealsFor(ctx, meal)) {
-      const opt = familiarOption(ctx, room, today, items, { kind: 'saved', name, templateId, counter });
+      const opt = familiarOption(ctx, room, today, items, { kind: 'saved', name, templateId, counter, pref });
       if (opt != null) options.push(opt);
     }
     for (const [name, items] of usualMealsFor(ctx, meal)) {
-      const opt = familiarOption(ctx, room, today, items, { kind: 'usual', name, templateId: null, counter });
+      const opt = familiarOption(ctx, room, today, items, { kind: 'usual', name, templateId: null, counter, pref });
       if (opt != null) options.push(opt);
     }
     options = R.sortBy(options, (o) => [-o.score, R.casefold(o.name), o.template_id || 0]);
@@ -306,7 +319,7 @@
       if (explain) item.explain = { components: best.components || {} };
       foods.push(item);
     }
-    const saved = fittingSavedMeals(ctx, meal, room, today, counter).map(publicOption);
+    const saved = fittingSavedMeals(ctx, meal, room, today, counter, R.SAVED_MEALS_MAX, habit.pref).map(publicOption);
     const rj = roomJson(room);
     const result = {
       status: 'ok', rules_version: R.RULES_VERSION, date: ctx.date, meal, open_meals: [...room.open_meals], room: rj,
@@ -324,7 +337,51 @@
     return result;
   }
 
+  // ---- what the log teaches the ranking ----------------------------------------------------------
+  // fits.learned: the signals the ranking learned from the log, each with a plain reason (GET /api/guidance/learned, note 09 §4.4).
+  function learned(ctx) {
+    const items = [];
+    if (ctx.prefs.learn_from_log) {
+      const habit = S.habitStats(ctx);
+      const listed = (foodId) => { const f = ctx.foods.get(foodId); return f != null && eligibleForMeals(f, ctx) ? f : null; };
+      const often = [];
+      for (const [fid, days] of habit.days_14) {
+        const f = days >= R.OFTEN_MIN_DAYS ? listed(fid) : null;
+        if (f != null) often.push([days, f]);
+      }
+      for (const [days, f] of R.sortBy(often, (p) => [-p[0], p[1].name_fold, p[1].id]).slice(0, R.LEARNED_MAX)) {
+        items.push({ kind: 'often', food_id: f.id, name: f.name, reason: M.learnedReason('often', { days }), effect: 'more' });
+      }
+      const slots = [];
+      for (const [slotKey, days] of habit.slot_days) {
+        const bar = slotKey.indexOf('|');
+        const f = days >= R.SLOT_HABIT_MIN_DAYS ? listed(Number(slotKey.slice(0, bar))) : null;
+        if (f != null) slots.push([days, slotKey.slice(bar + 1), f]);
+      }
+      const slotRank = (meal) => (R.SLOT_ORDER.includes(meal) ? R.SLOT_ORDER.indexOf(meal) : R.SLOT_ORDER.length);
+      for (const [, meal, f] of R.sortBy(slots, (p) => [-p[0], slotRank(p[1]), p[2].name_fold, p[2].id]).slice(0, R.LEARNED_MAX)) {
+        items.push({ kind: 'slot', food_id: f.id, name: f.name, meal, reason: M.learnedReason('slot', { meal }), effect: 'more' });
+      }
+      const usual = [];
+      for (const meal of R.SLOT_ORDER) for (const u of usualMealEntries(ctx, meal)) usual.push(u);
+      for (const u of usual.slice(0, R.LEARNED_MAX)) {
+        items.push({ kind: 'usual_meal', name: u.name, meal: u.meal, key: u.key,
+          reason: M.learnedReason('usual_meal', { meal: u.meal, days: u.dates }), effect: 'more' });
+      }
+      const skipped = [];
+      for (const [fid, st] of S.skipStats(ctx)) {
+        const f = st.learned && ctx.prefs.food_pref.get(fid) !== 'neutral' ? listed(fid) : null;
+        if (f != null) skipped.push([st, f]);
+      }
+      for (const [st, f] of R.sortBy(skipped, (p) => [-p[0].skipped, -p[0].planned, p[1].name_fold, p[1].id]).slice(0, R.LEARNED_MAX)) {
+        items.push({ kind: 'planned_not_eaten', food_id: f.id, name: f.name,
+          reason: M.learnedReason('planned_not_eaten', { planned: st.planned, eaten: st.eaten }), effect: 'less' });
+      }
+    }
+    return { rules_version: R.RULES_VERSION, learn_from_log: !!ctx.prefs.learn_from_log, items };
+  }
+
   GE.fits = { ineligibleReason, eligibleForMeals, eligibleFoods, scaled, gramsOf, foodCore, trackedKeys, roomJson, totalsJson,
-    reasonsFor, dayTips, resolveItems, bestScale, familiarOption, savedMealsFor, shortNames, usualMealsFor, fittingSavedMeals,
-    publicOption, rankFoods, select, whatFits };
+    reasonsFor, dayTips, resolveItems, bestScale, familiarExcluded, familiarOption, savedMealsFor, shortNames, usualMealEntries,
+    usualMealsFor, fittingSavedMeals, publicOption, rankFoods, select, whatFits, learned };
 })(typeof window !== 'undefined' ? window : globalThis);

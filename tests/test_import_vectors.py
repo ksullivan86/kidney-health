@@ -18,7 +18,7 @@ import pytest
 
 from app import data_import
 from app.config import Settings
-from app.guidance.context import MAX_NOT_FOR_ME
+from app.guidance.context import MAX_FOOD_PREFERENCES, MAX_NOT_FOR_ME
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "tests" / "data"
@@ -61,6 +61,7 @@ def test_the_limits_in_the_twin_are_the_servers():
                  "MAX_SETTINGS", "MAX_SKIPPED_SHOWN", "MAX_MESSAGE_CHARS", "MAX_NOTE_CHARS", "MAX_DEPTH"):
         assert js_number(name) == getattr(data_import, name), name
     assert js_number("MAX_NOT_FOR_ME") == MAX_NOT_FOR_ME
+    assert js_number("MAX_FOOD_PREFERENCES") == MAX_FOOD_PREFERENCES
     assert js_number("MAX_IMPORT_BYTES") == Settings.__dataclass_fields__["max_import_bytes"].default
     for name in ("IMPORTED_SETTINGS", "SKIPPED_SECTIONS"):
         listed = re.search(rf"const {name} = \[([^\]]*)\]", IMPORT_JS)

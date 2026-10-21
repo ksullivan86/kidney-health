@@ -66,6 +66,18 @@ class HistoryEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class PlannedEntry:
+    """An entry still ``planned`` on a day that has passed (note 09 §4.4): the raw input of "planned but not eaten".
+
+    The log cannot say which eaten entries were once planned, so the only trace of a plan not followed is a planned
+    entry left behind; the engine reads these with the eaten rows of the same days."""
+
+    food_id: int
+    date: str
+    meal: str
+
+
+@dataclass(frozen=True, slots=True)
 class SavedMeal:
     id: int
     name: str
@@ -86,12 +98,22 @@ class Combo:
 
 @dataclass(frozen=True, slots=True)
 class Prefs:
-    """The person's guidance settings (note 06 §4.14; registry key ``guidance``) and "Not for me" foods."""
+    """The person's guidance settings (note 06 §4.14; registry key ``guidance``) and their food preferences (note 09 §4.2).
+
+    ``exclude_food_ids`` holds the "Not for me" foods (never suggested); ``food_pref`` the soft ones, food id → ``like``,
+    ``less`` or ``neutral`` (``neutral``: nothing learned from the log counts for this food). ``like_categories`` and
+    ``less_categories`` nudge a whole food group; ``learn_from_log`` switches every learned signal off; ``hidden_usual_meals``
+    holds the keys of learned usual meals the person said "Not this meal" to (``rules.usual_meal_key``)."""
 
     carb_tolerance_g: float = float(R.CARB_TOLERANCE_G)
     hypo_dose_g: float = float(R.HYPO_DOSE_G)
     exclude_food_ids: frozenset[int] = frozenset()
     exclude_categories: frozenset[str] = frozenset()
+    food_pref: Mapping[int, str] = field(default_factory=dict)
+    like_categories: frozenset[str] = frozenset()
+    less_categories: frozenset[str] = frozenset()
+    learn_from_log: bool = True
+    hidden_usual_meals: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,8 +145,10 @@ class GuidanceContext:
     prefs: Prefs
     foods: Mapping[int, FoodVec]  # every food the person may use (hidden ones too, for old entries)
     day: tuple[DayEntry, ...] = ()
-    history: tuple[HistoryEntry, ...] = ()  # eaten entries of date-13 … date-1
+    history: tuple[HistoryEntry, ...] = ()  # eaten entries of date-14 … date-1
     history60: tuple[HistoryEntry, ...] = ()  # eaten entries of date-60 … date-1 (usual meals)
+    planned30: tuple[PlannedEntry, ...] = ()  # entries still planned on date-30 … date-1 (planned but not eaten)
+    eaten30: tuple[HistoryEntry, ...] | None = None  # eaten entries of date-30 … date-1 when ``history60`` was not loaded
     saved_meals: tuple[SavedMeal, ...] = ()
     combos: tuple[Combo, ...] = ()
     tunables: Tunables = field(default_factory=Tunables)
@@ -133,8 +157,8 @@ class GuidanceContext:
         """A copy with another day (the planner's virtual entries, a swap without the entry itself)."""
         return GuidanceContext(
             date=self.date, profile=self.profile, prefs=self.prefs, foods=self.foods, day=day,
-            history=self.history, history60=self.history60, saved_meals=self.saved_meals, combos=self.combos,
-            tunables=self.tunables,
+            history=self.history, history60=self.history60, planned30=self.planned30, eaten30=self.eaten30,
+            saved_meals=self.saved_meals, combos=self.combos, tunables=self.tunables,
         )
 
 

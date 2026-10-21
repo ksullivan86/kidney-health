@@ -5,6 +5,7 @@ returned foods. Everything returned is JSON-ready and deterministic (every sort 
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
 
 from ..nutrients import food_warnings, round_nutrients, round_value
@@ -17,13 +18,16 @@ from .score import (
     Evaluation,
     HabitStats,
     MealItem,
+    PrefTerms,
     Scorer,
     TodayStats,
     check_meal,
     food_order_key,
     habit_stats,
     meal_totals,
+    pref_terms,
     score_meal,
+    skip_stats,
     today_stats,
 )
 from .state import GuidanceContext
@@ -197,6 +201,8 @@ def reasons_for(ev: Evaluation, scorer: Scorer, room: Room, standard: Evaluation
         candidates.append(("protein_quality", M.reason_text("protein_quality", protein=M.fmt_g(apr),
                                                            ratio=M.fmt_int(quality["p_per_g"])),
                            _REASON_TOPIC["protein_quality"]))
+    if f.id in habit.pref.liked:  # after the kidney reasons, before "you often have this" (note 09 §4.5)
+        candidates.append(("you_like", M.reason_text("you_like"), None))
     if habit.days_14.get(f.id, 0) >= R.OFTEN_MIN_DAYS:
         candidates.append(("you_eat_often", M.reason_text("you_eat_often"), None))
     if room.carbs is not None and ac is not None and room.gap <= room.tolerance and ac <= R.FREE_FOOD_CARBS_G:
@@ -292,13 +298,22 @@ def best_scale(items: Sequence[MealItem], room: Room, kind: str) -> tuple[float 
     return None, first_reason
 
 
+def familiar_excluded(ctx: GuidanceContext, items: Iterable[MealItem]) -> bool:
+    """True when a meal holds a food the person marked "Not for me" or a food of a "Never suggest" group (note 09 §4.6).
+
+    A usual meal and a starter meal holding one is never offered; a saved meal still is (the person built it, and
+    editing it is the fix)."""
+    return any(f.id in ctx.prefs.exclude_food_ids or (f.category or "") in ctx.prefs.exclude_categories for f, _ in items)
+
+
 def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: Sequence[MealItem], *, kind: str,
                     name: str, template_id: int | None, counter: Counter | None = None,
-                    detail: bool = True) -> dict[str, Any] | None:
+                    detail: bool = True, pref: PrefTerms | None = None) -> dict[str, Any] | None:
     """A saved, usual or starter meal at its best scale, scored; ``None`` when no scale fits.
 
     ``detail=False`` (the planner, which compares many options and shows its own items) leaves out the
     display fields (``items``, ``totals``, ``note``); ``_items`` and ``_k`` (shown potassium) are always set.
+    ``pref`` is the request's :class:`~app.guidance.score.PrefTerms` (computed here when the caller has none).
     """
     if any(f.avoid for f, _ in items):
         return None
@@ -306,7 +321,8 @@ def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: 
     if scale is None:
         return None
     scaled_items = [(f, q * scale) for f, q in items]
-    score = score_meal(scaled_items, room, today, ctx.profile.dialysis != "none", scale, counter)
+    score = score_meal(scaled_items, room, today, ctx.profile.dialysis != "none", scale, counter,
+                       pref=pref if pref is not None else pref_terms(ctx))
     totals, _ = meal_totals(scaled_items)
     option: dict[str, Any] = {
         "template_id": template_id,
@@ -344,10 +360,26 @@ def saved_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[int, str, lis
     return out
 
 
-def usual_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[str, list[MealItem]]]:
+@dataclass(frozen=True, eq=False)
+class UsualMeal:
+    """A learned usual meal: its identity (``rules.usual_meal_key``), the dates it was eaten on, its name and items."""
+
+    key: str
+    meal: str
+    dates: int
+    name: str
+    items: list[MealItem]
+
+
+def usual_meal_entries(ctx: GuidanceContext, meal: str) -> list[UsualMeal]:
     """Usual meals (§4.7 option 2): sets of 2–6 ``(food, servings to ¼)`` eaten together in this slot
     on at least 2 different dates of the last 60 days. Low treatments and alcoholic drinks are not part
-    of a suggested meal (the rest of the meal still counts)."""
+    of a suggested meal (the rest of the meal still counts).
+
+    Learned from the log, so none with ``learn_from_log`` off. One holding a "Not for me" food or a food of a "Never
+    suggest" group is not offered (note 09 §4.6), nor one the person hid with "Not this meal" (``hidden_usual_meals``)."""
+    if not ctx.prefs.learn_from_log:
+        return []
     by_day: dict[str, dict[int, float]] = {}
     for h in ctx.history60:
         if h.meal != meal or h.hypo:
@@ -362,17 +394,25 @@ def usual_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[str, list[Mea
         key = tuple(sorted((fid, R.round_to_quarter(s)) for fid, s in foods.items()))
         if R.USUAL_MIN_ITEMS <= len(key) <= R.USUAL_MAX_ITEMS and all(q > 0 for _, q in key):
             counts[key] = counts.get(key, 0) + 1
-    out: list[tuple[str, list[MealItem]]] = []
+    out: list[UsualMeal] = []
     for key, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
         if n < R.USUAL_MIN_DATES:
             continue
         items = resolve_items(ctx, key)
-        if not items or any(f.hidden for f, _ in items):
+        if not items or any(f.hidden for f, _ in items) or familiar_excluded(ctx, items):
+            continue
+        meal_key = R.usual_meal_key(meal, key)
+        if meal_key in ctx.prefs.hidden_usual_meals:
             continue
         items.sort(key=lambda it: (R.ROLES.index(it[0].role), it[0].name_fold, it[0].id))  # protein, starch, veg…
         names = short_names([f.name for f, _ in items])
-        out.append((M.usual_meal_name(meal, names), items))
+        out.append(UsualMeal(meal_key, meal, n, M.usual_meal_name(meal, names), items))
     return out
+
+
+def usual_meals_for(ctx: GuidanceContext, meal: str) -> list[tuple[str, list[MealItem]]]:
+    """``[(name, items)]`` of :func:`usual_meal_entries`."""
+    return [(u.name, u.items) for u in usual_meal_entries(ctx, meal)]
 
 
 def short_names(names: Sequence[str]) -> list[str]:
@@ -386,15 +426,18 @@ def short_names(names: Sequence[str]) -> list[str]:
 
 
 def fitting_saved_meals(ctx: GuidanceContext, meal: str, room: Room, today: TodayStats,
-                        counter: Counter | None = None, limit: int = R.SAVED_MEALS_MAX) -> list[dict[str, Any]]:
+                        counter: Counter | None = None, limit: int = R.SAVED_MEALS_MAX,
+                        pref: PrefTerms | None = None) -> list[dict[str, Any]]:
     """Saved meals (``meal_hint`` = ``meal``, or none for a main meal) and usual meals that fit."""
     options: list[dict[str, Any]] = []
+    pref = pref if pref is not None else pref_terms(ctx)
     for template_id, name, items in saved_meals_for(ctx, meal):
-        opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter)
+        opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter,
+                              pref=pref)
         if opt is not None:
             options.append(opt)
     for name, items in usual_meals_for(ctx, meal):
-        opt = familiar_option(ctx, room, today, items, kind="usual", name=name, template_id=None, counter=counter)
+        opt = familiar_option(ctx, room, today, items, kind="usual", name=name, template_id=None, counter=counter, pref=pref)
         if opt is not None:
             options.append(opt)
     options.sort(key=lambda o: (-o["score"], o["name"].casefold(), o["template_id"] or 0))
@@ -475,7 +518,7 @@ def what_fits(ctx: GuidanceContext, meal: str, limit: int = R.DEFAULT_LIMIT, exp
         if explain:
             item["explain"] = {"components": best.components or {}}
         foods.append(item)
-    saved = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter)]
+    saved = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter, pref=habit.pref)]
     result: dict[str, Any] = {
         "status": "ok",
         "rules_version": R.RULES_VERSION,
@@ -500,3 +543,50 @@ def what_fits(ctx: GuidanceContext, meal: str, limit: int = R.DEFAULT_LIMIT, exp
             "eligible": len(ranked) + len(why_not),
         }
     return result
+
+
+# --------------------------------------------------------------------------- #
+# What the log teaches the ranking
+# --------------------------------------------------------------------------- #
+
+
+def learned(ctx: GuidanceContext) -> dict[str, Any]:
+    """The signals the ranking learned from the log, each with a plain reason (``GET /api/guidance/learned``, note 09 §4.4).
+
+    ``kind`` is ``often`` (eaten on enough of the last 14 days), ``slot`` (usually in one meal), ``usual_meal`` (the same
+    foods together in a meal) or ``planned_not_eaten`` (planned again and again, not eaten); ``effect`` says whether the
+    ranking now favours (``more``) or lowers (``less``) it. Computed from the same inputs and rules the scorer uses, so
+    the list is exactly what the ranking uses: empty with ``learn_from_log`` off, no ``neutral`` food, no hidden usual
+    meal, and only foods that can be suggested. Nothing here is stored."""
+    items: list[dict[str, Any]] = []
+    if ctx.prefs.learn_from_log:
+        habit = habit_stats(ctx)
+
+        def listed(food_id: int) -> FoodVec | None:
+            f = ctx.foods.get(food_id)
+            return f if f is not None and eligible_for_meals(f, ctx) else None
+
+        often = sorted(((days, f) for fid, days in habit.days_14.items()
+                        if days >= R.OFTEN_MIN_DAYS and (f := listed(fid)) is not None),
+                       key=lambda p: (-p[0], p[1].name_fold, p[1].id))
+        for days, f in often[: R.LEARNED_MAX]:
+            items.append({"kind": "often", "food_id": f.id, "name": f.name,
+                          "reason": M.learned_reason("often", days=days), "effect": "more"})
+        slots = sorted(((days, meal, f) for (fid, meal), days in habit.slot_days.items()
+                        if days >= R.SLOT_HABIT_MIN_DAYS and (f := listed(fid)) is not None),
+                       key=lambda p: (-p[0], R.SLOT_ORDER.index(p[1]) if p[1] in R.SLOT_ORDER else len(R.SLOT_ORDER),
+                                      p[2].name_fold, p[2].id))
+        for days, meal, f in slots[: R.LEARNED_MAX]:
+            items.append({"kind": "slot", "food_id": f.id, "name": f.name, "meal": meal,
+                          "reason": M.learned_reason("slot", meal=meal), "effect": "more"})
+        usual = [u for meal in R.SLOT_ORDER for u in usual_meal_entries(ctx, meal)]
+        for u in usual[: R.LEARNED_MAX]:
+            items.append({"kind": "usual_meal", "name": u.name, "meal": u.meal, "key": u.key,
+                          "reason": M.learned_reason("usual_meal", meal=u.meal, days=u.dates), "effect": "more"})
+        skipped = sorted(((st, f) for fid, st in skip_stats(ctx).items()
+                          if st.learned and ctx.prefs.food_pref.get(fid) != "neutral" and (f := listed(fid)) is not None),
+                         key=lambda p: (-p[0].skipped, -p[0].planned, p[1].name_fold, p[1].id))
+        for st, f in skipped[: R.LEARNED_MAX]:
+            items.append({"kind": "planned_not_eaten", "food_id": f.id, "name": f.name,
+                          "reason": M.learned_reason("planned_not_eaten", planned=st.planned, eaten=st.eaten), "effect": "less"})
+    return {"rules_version": R.RULES_VERSION, "learn_from_log": bool(ctx.prefs.learn_from_log), "items": items}

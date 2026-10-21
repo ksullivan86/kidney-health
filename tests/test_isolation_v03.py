@@ -40,7 +40,8 @@ from app.main import create_app
 CLIENT_ID = "6f1c2a9e-3b7d-4e8a-9c0f-1d2e3f4a5b6c"
 OWN_KEY = "sk-own-isolation-0123456789abcdefXYZ9"
 GUIDANCE_A = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclude_categories": ["Sweets & Snacks"],
-              "show_plan_builder": True, "show_insights": False, "ai_enrich": False}
+              "show_plan_builder": True, "show_insights": False, "ai_enrich": False, "learn_from_log": False,
+              "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"]}
 
 # Every table with a person's rows (a ``user_id`` or ``owner_user_id`` column) and the tests that prove a
 # second person can neither see nor change them. Tables without a person (``barcode_cache`` holds product
@@ -67,7 +68,9 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "lab_results": ("test_isolation_v03.test_lab_results_are_per_person", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
     "symptoms": ("test_symptoms.test_a_second_person_never_sees_or_changes_the_first_persons_symptoms",
                  "test_symptoms.test_deleting_an_account_deletes_its_symptoms_and_only_its_own"),  # step 15
-    "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person", "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
+    "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person",
+                         "test_isolation_v03.test_food_preferences_the_learned_list_and_the_group_choices_never_cross_between_people",  # note 09: /preferences, /learned
+                         "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
     "ai_providers": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",),
     "ai_consents": ("test_isolation_v03.test_ai_activity_and_own_provider_are_per_person",
                     "test_lab_photo.test_consent_and_activity_are_per_person_and_the_other_person_reads_nothing_of_it"),  # lab report photos: consent purpose "labs" (step 16)
@@ -177,6 +180,53 @@ def test_guidance_preferences_are_per_person(pair):
     r = b.get("/api/guidance/next-meal", params={"meal": "lunch", "date": DAY, "explain": "true"}).json()
     assert r["status"] == "ok"
     assert r["explain"]["not_eligible"].get(str(banana)) != "not_for_me"  # A's "Not for me" is not B's
+
+
+def test_food_preferences_the_learned_list_and_the_group_choices_never_cross_between_people(pair):
+    """Note 09: person A sets every kind of preference and food-group choice and logs a habit; person B's suggestions, plan,
+    low-treatment options, lists and learned items are exactly what they were, and B cannot read, change or delete A's rows."""
+    a, b, t = pair
+    banana = t["banana"]["id"]
+    b.put("/api/profile", json={"targets": ai_tests.TARGETS})
+    a.put("/api/profile", json={"targets": ai_tests.TARGETS})
+    q = {"meal": "lunch", "date": DAY, "limit": 20, "explain": "true"}
+
+    def b_view() -> dict[str, Any]:
+        return {"fits": b.get("/api/guidance/next-meal", params=q).json(),
+                "plan": b.post("/api/guidance/plan-day", json={"date": DAY}).json(),
+                "low": b.get("/api/guidance/hypo-options").json(), "prefs": b.get("/api/guidance/preferences").json(),
+                "learned": b.get("/api/guidance/learned").json(), "not_for_me": b.get("/api/guidance/not-for-me").json(),
+                "settings": b.get("/api/me/settings").json()["settings"]["guidance"]}
+
+    before = b_view()
+    assert before["prefs"]["foods"] == [] and before["learned"]["items"] == [] and before["not_for_me"]["foods"] == []
+    # A: a like (replacing the "Not for me" the fixture set), a less often, a neutral, group choices, the switch, and a habit
+    assert a.put(f"/api/guidance/preferences/{banana}", json={"preference": "like"}).status_code == 200
+    apple, water = find_food(a, "apple"), find_food(a, "water")
+    assert a.put(f"/api/guidance/preferences/{apple['id']}", json={"preference": "less", "source": "ask"}).status_code == 200
+    assert a.put(f"/api/guidance/preferences/{water['id']}", json={"preference": "neutral"}).status_code == 200
+    for day in ("2026-10-01", "2026-10-02", "2026-10-03"):
+        assert a.post("/api/log", json={"date": day, "meal": "lunch", "food_id": banana}).status_code == 201
+    assert b_view() == before
+    assert a.get("/api/guidance/learned").json()["learn_from_log"] is False  # GUIDANCE_A switched it off
+    a_rows = {f["food_id"]: (f["preference"], f["source"]) for f in a.get("/api/guidance/preferences").json()["foods"]}
+    assert a_rows == {banana: ("like", "person"), apple["id"]: ("less", "ask"), water["id"]: ("neutral", "person")}
+    # B cannot see, change or delete A's rows, and A's custom entry food is not B's to mark
+    assert b.delete(f"/api/guidance/preferences/{banana}").status_code == 404
+    assert b.delete(f"/api/guidance/not-for-me/{banana}").status_code == 404
+    own = a.post("/api/log/quick", json={"date": DAY, "meal": "lunch", "name": "A's own stew",
+                                          "nutrients": {"carbs_g": 20, "protein_g": 10, "potassium_mg": 50}}).json()["food_id"]
+    assert b.put(f"/api/guidance/preferences/{own}", json={"preference": "like"}).status_code == 404
+    assert a.put(f"/api/guidance/preferences/{own}", json={"preference": "like"}).status_code == 200
+    assert "A's own stew" not in json.dumps(b_view())
+    # B's own choice on the same shared food is B's alone and A's row is untouched
+    assert b.put(f"/api/guidance/preferences/{banana}", json={"preference": "not_for_me"}).status_code == 200
+    assert a.get("/api/guidance/preferences").json()["foods"][0]["preference"] in ("like", "less", "neutral")
+    assert {f["food_id"]: f["preference"] for f in a.get("/api/guidance/preferences").json()["foods"]}[banana] == "like"
+    # B's export holds only B's rows
+    with zipfile.ZipFile(io.BytesIO(b.get("/api/me/export.zip").content)) as z:
+        rows = json.loads(z.read("export.json"))["food_preferences"]
+    assert [(r["food_id"], r["preference"]) for r in rows] == [(banana, "not_for_me")]
 
 
 def test_client_ids_are_per_person(pair):

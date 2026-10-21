@@ -9,6 +9,25 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Food preferences and what the app learns from your log (the screens come next).** Meal guidance can now take your
+  taste into account. For each food you can say *More like this*, *Less often*, *Not for me* or *Stop using what you
+  learned about this food*; for each kind of food (fruits, grains, …) *Like* or *Less often* next to the existing *Never
+  suggest*. A like lifts a food a little in the suggestions and a "less often" lowers it; neither can make a food fit
+  that does not fit your limits, and neither hides anything (only *Not for me* and *Never suggest* do). A liked food shows
+  "You said you like this." It is not an allergy filter: the app cannot tell whether a food contains an allergen, so check
+  labels. The app also reads your log and can tell you what it saw ("Eaten on 6 of the last 14 days", "Usually at
+  breakfast", "Eaten together at lunch on 3 days", and one new one: "Planned 4 times in 30 days, eaten once" for a food you plan
+  again and again but pass over, which lowers it slightly); each can be stopped, and a switch, *Learn from my log*, turns
+  every learned signal off. Nothing learned is stored; it is worked out each time from your log. **The buttons and lists for
+  all of this are not in the app yet** (they come in the next step): this release adds the settings, the lists the screens
+  will show and the ranking behind them, in the app and in the online demo, and keeps them in your export and import.
+* **Meals you usually have, or the starter meals, no longer come up when they hold a food you marked *Not for me* or a kind
+  of food you never want.** Before, only single foods were left out. A meal you saved yourself is still offered (you built
+  it; edit it to change it).
+* **The *Treating a low* options are never empty.** If you had marked every low-treatment food *Not for me* (or their food
+  groups *Never suggest*), the options list came up empty. Now the whole list is shown with one line, "Shown although you
+  marked them Not for me.", because you must always have something to take. Taste (likes, "less often", what the app
+  learned) never changes the low-treatment options, the card or its swaps. Nothing delays or blocks treating a low.
 * **A message at the bottom of the screen no longer blocks a tap.** The short message that appears for a few seconds
   (for example "2 entries were changed on another device" after you come back online) could cover the conflict
   card's buttons on a phone and swallow the tap; taps now go through to what is under it.
@@ -255,6 +274,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Schema step 17** (`food_preferences.source` and `updated_at`, back-filled; nothing is removed) runs at the next start,
+  in one transaction. Take a backup first as for any upgrade. The "Not for me" routes keep their shapes; new routes are
+  `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}` and `GET /api/guidance/learned`.
+  `export.json` → `food_preferences` now carries all four values with `source` and `updated_at`, and the import reads files
+  from before the change. The guidance rules version is `2026-10-21.1`. Per request the ranking reads one more indexed query
+  (the entries still planned on the last 30 days); the guidance performance budget is unchanged.
 * **The Content-Security-Policy names one more Trusted Types policy: `trusted-types kh-sw kh-xml`.** The patient-portal
   (C-CDA) lab import parses the .xml file in the browser, and the browser's XML parser is a Trusted Types sink; the new
   `kh-xml` policy is created once by the app and passes only files without a DOCTYPE or ENTITY declaration. If you set
@@ -432,6 +457,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **Learn my food preferences, part A** ([note 09](docs/dev/research/09-food-preferences.md); server and engine). Schema step
+  17; `GuidancePreferences` gains `learn_from_log`, `like_categories`, `less_categories` and `hidden_usual_meals` (a model
+  validator keeps a group in one list); the preference term `pref(f) = clamp(P_food + P_group + L, -2.5, +1.0)` in
+  `score.py` (`PrefTerms`, `pref_terms`, `skip_stats`, `HabitStats.pref`, `Scorer.pref`, the clamped mean in `score_meal`),
+  added after the hard filters and reported as the explain component `preference`; `neutral` and `learn_from_log` gate the
+  habit history in `habit_stats`; `you_like` in `fits.reasons_for`; `fits.usual_meal_entries` (key, filters), `fits.learned`;
+  the low-treatment floor in `swaps.hypo_options`; `context.load` reads `planned30` (and `eaten30`),
+  `context.explicit_preferences` is the helper for the AI step. The browser twin (`engine/guidance/*.js`, `mock/guidance.js`,
+  `mock/export.js`, `mock/import.js`) and the vectors (`guidance_vectors.json` +43 cases, `settings_vectors.json`,
+  `import_vectors.json`) follow; `RULES_VERSION` is `2026-10-21.1`. `ai_bridge` keeps `you_like` out of the candidates'
+  `reasons` and passes a `liked` bit. New tests: `tests/guidance/test_preferences.py`, `test_preferences_api.py`,
+  `tests/test_migration_m017.py`, and additions to the import, isolation, export and parity tests.
 * **Demo: keep the data in the browser** (`app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`,
   `views/demo_local.js`, `css/demo-local.css`; [docs/demo.md](docs/demo.md), [ARCHITECTURE.md](ARCHITECTURE.md#keep-my-data-in-this-browser-demo-only)).
   The mode is reachable only where `window.KDL_PREVIEW` is set (the Pages build and the preview). `MockApi` takes `seed: false`

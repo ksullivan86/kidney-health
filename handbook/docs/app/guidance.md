@@ -35,7 +35,17 @@ Nothing is saved until you tap a button, and everything you add goes through the
 other food ([architecture contract][ARCH]).
 
 To stop a food from coming up, open **⋯** next to it and choose **Not for me**. It stays in search, and
-**Settings → Meal guidance** lists it with **Suggest again**.
+**Settings → Meal guidance** lists it with **Suggest again**. A meal you usually have, or a starter meal, that holds a
+food you marked **Not for me** (or a kind of food you chose **Never suggest**) is not offered either; a meal you
+saved yourself still is, because you built it.
+
+The app can also take your taste into account: a food you like is lifted a little, a food you want
+less often is lowered, and a kind of food can be liked or wanted less often. Taste only changes the order of
+foods that already fit your limits. It never hides a food (only **Not for me** and **Never suggest** do), it never
+makes a food fit, and it is not an allergy filter: the app cannot tell whether a food contains an allergen, so
+check labels. The app can also tell you what it saw in your log, for example "Eaten on 6 of the last 14 days" or
+"Planned 4 times in 30 days, eaten once", and you can switch learning off. The buttons and lists for these
+choices come in a later update of the app; the ordering already follows them.
 
 ## How the rules decide
 
@@ -75,7 +85,9 @@ your own meals.
   with insulin, alcohol can cause a low hours later ([ADA 2026][A26-5], Recs 5.18–5.19). A saved meal of
   yours keeps its drink, and you can still log one yourself.
 - It never offers glucose tablets or juice as a **meal**, and it never limits, delays or "swaps down" a
-  low treatment.
+  low treatment. What you like or want less often never changes the low-treatment list or card. If you had
+  marked every low-treatment food **Not for me**, the list still shows them all, with the line "Shown although you
+  marked them Not for me.", because you must always have something to take.
 - It never mentions insulin, units, ratios, doses, medicines or lab values. Carbohydrate is always in
   grams ([design note 06][NOTE06]).
 - It never calls a food "safe" or "unlimited", and it never removes a warning.

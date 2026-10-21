@@ -16,22 +16,90 @@
   const [P_GOOD, P_POOR] = R.P_PER_G_PROTEIN;
   const [K_GOOD, K_POOR] = R.K_PER_G_PROTEIN;
 
+  // ---- preferences (note 09 §4.5) ----------------------------------------------------------------
+  // The preference term of every food for one request: `food` is P_food + L per food id (sparse), `of(f)` adds the food-group part
+  // and clamps: clamp(P_food + P_group + L, -2.5, +1.0). `active` is false for a person with no preference and no learned signal.
+  const NO_PREFERENCES = { food: new Map(), liked: new Set(), like_categories: new Set(), less_categories: new Set(), active: false, of() { return 0.0; } };
+  function makePrefTerms(food, liked, likeCategories, lessCategories) {
+    const [lo, hi] = R.PREF_FOOD_CLAMP;
+    return { food, liked, like_categories: likeCategories, less_categories: lessCategories, active: true,
+      of(f) {
+        let v = food.get(f.id);
+        if (v === undefined) v = 0.0;
+        const cat = f.category || '';
+        if (likeCategories.has(cat)) v += R.PREF_GROUP_LIKE;
+        if (lessCategories.has(cat)) v += R.PREF_GROUP_LESS;
+        return v < lo ? lo : v > hi ? hi : v;
+      } };
+  }
+  // Planned but not eaten, per food, in distinct dates (score.skip_stats): a food is skipped on a date when an entry of it is still
+  // planned on a day of date-30 … date-1 and, in that date and meal slot, the person ate something else (not a low treatment).
+  function skipStats(ctx) {
+    const out = new Map();
+    if (!ctx.planned30 || !ctx.planned30.length) return out;
+    const start = R.addDays(ctx.date, -R.SKIP_WINDOW_DAYS);
+    const eatenRows = ctx.eaten30 != null ? ctx.eaten30 : ctx.history60;
+    const bySlot = new Map(), eatenDates = new Map();
+    const add = (map, key, value) => { let s = map.get(key); if (!s) map.set(key, (s = new Set())); s.add(value); };
+    for (const h of eatenRows) {
+      if (h.hypo || !(start <= h.date && h.date < ctx.date)) continue;
+      add(bySlot, `${h.date}|${h.meal}`, h.food_id);
+      add(eatenDates, h.food_id, h.date);
+    }
+    const planned = new Map(), skipped = new Map();
+    for (const p of ctx.planned30) {
+      if (!(start <= p.date && p.date < ctx.date)) continue;
+      add(planned, p.food_id, p.date);
+      const here = bySlot.get(`${p.date}|${p.meal}`);
+      if (here && (here.size > 1 || !here.has(p.food_id))) add(skipped, p.food_id, p.date);
+    }
+    for (const [fid, dates] of planned) {
+      const sk = skipped.has(fid) ? skipped.get(fid).size : 0;
+      const eaten = eatenDates.has(fid) ? eatenDates.get(fid).size : 0;
+      out.set(fid, { planned: dates.size, skipped: sk, eaten, learned: sk >= R.SKIP_MIN_DATES && 2 * eaten < dates.size });
+    }
+    return out;
+  }
+  // score.pref_terms: like +1.0, less -2.0, plus -0.5 for a skipped food (not for a neutral food, nor with learn_from_log off).
+  function prefTerms(ctx) {
+    const p = ctx.prefs;
+    const food = new Map(), liked = new Set();
+    for (const [fid, kind] of p.food_pref) {
+      if (kind === 'like') { food.set(fid, R.PREF_LIKE); liked.add(fid); }
+      else if (kind === 'less') food.set(fid, R.PREF_LESS);
+    }
+    if (p.learn_from_log) {
+      for (const [fid, st] of skipStats(ctx)) {
+        if (st.learned && p.food_pref.get(fid) !== 'neutral') food.set(fid, (food.has(fid) ? food.get(fid) : 0.0) + R.PREF_SKIPPED);
+      }
+    }
+    if (!(food.size || p.like_categories.size || p.less_categories.size)) return NO_PREFERENCES;
+    return makePrefTerms(food, liked, p.like_categories, p.less_categories);
+  }
+
   // ---- habit and variety (the static term) -------------------------------------------------------
-  function habitStats(ctx) {
+  // With learn_from_log off, and for a neutral food, the history part of the habit term, the slot habit and the "often" reason are empty;
+  // the previous-two-days variety penalty stays. soft = false ignores every preference (how a low treatment is ranked).
+  function habitStats(ctx, soft = true) {
     const start14 = R.addDays(ctx.date, -R.HISTORY_DAYS);
     const start2 = R.addDays(ctx.date, -2);
+    const learn = ctx.prefs.learn_from_log || !soft;
+    const neutral = new Set();
+    if (soft) for (const [fid, kind] of ctx.prefs.food_pref) if (kind === 'neutral') neutral.add(fid);
     const days = new Map(), prev2 = new Map(), slots = new Map();
     const add = (map, key, value) => { let s = map.get(key); if (!s) map.set(key, (s = new Set())); s.add(value); };
     for (const h of ctx.history) {
       if (h.hypo || !(start14 <= h.date && h.date < ctx.date)) continue;
-      add(days, h.food_id, h.date);
-      add(slots, `${h.food_id}|${h.meal}`, h.date);
+      if (learn && !neutral.has(h.food_id)) {
+        add(days, h.food_id, h.date);
+        add(slots, `${h.food_id}|${h.meal}`, h.date);
+      }
       if (h.date >= start2) add(prev2, h.food_id, h.date);
     }
     const saved = new Set();
     for (const m of ctx.saved_meals) for (const [fid] of m.items) saved.add(fid);
     const count = (map) => { const out = new Map(); for (const [k, v] of map) out.set(k, v.size); return out; };
-    return { days_14: count(days), prev2: count(prev2), slot_days: count(slots), saved_ids: saved };
+    return { days_14: count(days), prev2: count(prev2), slot_days: count(slots), saved_ids: saved, pref: soft ? prefTerms(ctx) : NO_PREFERENCES };
   }
   function todayStats(day) {
     const ids = new Set();
@@ -99,11 +167,18 @@
       this.meal_high_k = room.meal_high_k;
       this.day_high_k = room.day_high_k;
       this._static = new Map();
+      this._pref = new Map();
     }
     static(f) {
       let s = this._static.get(f.id);
       if (s === undefined) { s = staticTerm(f, this.habit, this.today); this._static.set(f.id, s); }
       return s;
+    }
+    // The preference term of f (§4.5), cached with the static term; 0 for a person with no preference.
+    pref(f) {
+      let p = this._pref.get(f.id);
+      if (p === undefined) { p = this.habit.pref.of(f); this._pref.set(f.id, p); }
+      return p;
     }
     slotHabit(f) { return (this.habit.slot_days.get(`${f.id}|${this.meal}`) || 0) >= R.SLOT_HABIT_MIN_DAYS; }
 
@@ -165,6 +240,7 @@
         base = level === 'green' ? 3.0 : level === 'yellow' ? 1.0 : -3.0;
       }
       const stat = this.static(f);
+      const pref = this.pref(f);  // after every hard filter: a preference only reorders what already passed
       const unknownPen = R.UNKNOWN_PENALTY * unknown.length;
       const portion = 0.5 * Math.abs(q - 1.0);
       let usage = 0.0;
@@ -194,12 +270,12 @@
         if (this.meal_high_k > 0) highK -= 2.0;
         if (this.day_high_k >= 2) highK -= 1.0;
       }
-      const s = base + stat - unknownPen - portion - usage + carbsTerm + free + gi + missingGroup + proteinTerm + habit + highK;
+      const s = base + stat - unknownPen - portion - usage + carbsTerm + free + gi + missingGroup + proteinTerm + habit + highK + pref;
       let comp = null;
       if (explain) {
         comp = { base: roundTo4(base), static: roundTo4(stat), unknown: roundTo4(-unknownPen), portion: roundTo4(-portion),
           usage: roundTo4(-usage), carbs: roundTo4(carbsTerm), free_food: roundTo4(free), high_gi: roundTo4(gi),
-          missing_group: roundTo4(missingGroup), protein: roundTo4(proteinTerm), slot_habit: roundTo4(habit), high_potassium: roundTo4(highK) };
+          missing_group: roundTo4(missingGroup), protein: roundTo4(proteinTerm), slot_habit: roundTo4(habit), high_potassium: roundTo4(highK), preference: roundTo4(pref) };
       }
       // R.roundScore inlined (hot path); `+ 0` because Python's math.floor returns an int (never -0).
       const x = s * 100.0;
@@ -309,7 +385,8 @@
   }
 
   // The meal score of §4.7, rounded to 2 decimals.
-  function scoreMeal(items, room, today, dialysis, scale = 1.0, counter = null, totals = null) {
+  // pref (score.PrefTerms) adds the clamped mean of the items' preference terms (note 09 §4.5).
+  function scoreMeal(items, room, today, dialysis, scale = 1.0, counter = null, totals = null, pref = null) {
     if (counter != null) counter.meals += 1;
     const tot = (totals != null ? totals : mealTotals(items))[0];
     let s = 10.0;
@@ -343,10 +420,17 @@
     }
     if (hasProtein) s += 1.0;
     if (hasVeg) s += 0.5;
+    if (pref != null && pref.active && items.length) {
+      let sum = 0;
+      for (const [f] of items) sum += pref.of(f);
+      const mean = sum / items.length;
+      const [lo, hi] = R.PREF_MEAL_CLAMP;
+      s += mean < lo ? lo : mean > hi ? hi : mean;
+    }
     s -= 1.0 - scale;
     return R.roundScore(s);
   }
 
   GE.score = { habitStats, todayStats, staticTerm, Scorer, newCounter, foodOrderKey, portionKey, mealTotals, checkMeal, isPoor,
-    scoreMeal, otherInFamily };
+    scoreMeal, otherInFamily, prefTerms, skipStats, NO_PREFERENCES };
 })(typeof window !== 'undefined' ? window : globalThis);

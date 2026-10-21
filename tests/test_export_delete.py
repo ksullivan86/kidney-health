@@ -59,6 +59,7 @@ def test_export_zip_contents_shape_and_no_secrets(client):
     assert b"PRIVATE-KEY" not in blob and b"$argon2id$" not in blob and ADMIN_PASSWORD.encode() not in blob
     readme = files["README.txt"].decode()
     assert "password" in readme and "API keys" in readme
+    assert "food preferences" in readme and "Not for me" in readme
     # the export is audited
     assert "export.created" in [e["action"] for e in client.get("/api/me/activity").json()["events"]]
 

@@ -6,6 +6,8 @@
 * :func:`check_meal` is the one gate every meal passes: plan-day options, saved and usual meals,
   starter combos and AI ideas (note 04 V5 via :mod:`app.guidance.ai_bridge`).
 * :func:`score_meal` ranks whole meals.
+* :class:`PrefTerms` (note 09 §4.5) is the preference term of every food: explicit likes and "less often", food-group
+  nudges and the one learned signal (planned but not eaten). It is added after the hard filters, so it only reorders.
 
 Every score is rounded to 2 decimals (``rules.round_score``) before it is compared.
 """
@@ -13,7 +15,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from math import floor as _floor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date as _date, timedelta
 from typing import Iterable, Mapping, Sequence
 
@@ -36,6 +38,36 @@ _K_GOOD, _K_POOR = R.K_PER_G_PROTEIN
 
 
 @dataclass(frozen=True)
+class PrefTerms:
+    """The preference term of every food for one request (note 09 §4.5), plain numbers for the hot path.
+
+    ``food`` holds ``P_food + L`` for the foods that have either (sparse); the food-group part is added by :meth:`of`.
+    ``active`` is false for a person with no preference and no learned signal, so their requests do no extra work."""
+
+    food: Mapping[int, float] = field(default_factory=dict)
+    liked: frozenset[int] = frozenset()
+    like_categories: frozenset[str] = frozenset()
+    less_categories: frozenset[str] = frozenset()
+    active: bool = False
+
+    def of(self, f: FoodVec) -> float:
+        """``clamp(P_food + P_group + L, -2.5, +1.0)`` for ``f``."""
+        if not self.active:
+            return 0.0
+        v = self.food.get(f.id, 0.0)
+        cat = f.category or ""
+        if cat in self.like_categories:
+            v += R.PREF_GROUP_LIKE
+        if cat in self.less_categories:
+            v += R.PREF_GROUP_LESS
+        lo, hi = R.PREF_FOOD_CLAMP
+        return lo if v < lo else hi if v > hi else v
+
+
+NO_PREFERENCES = PrefTerms()
+
+
+@dataclass(frozen=True)
 class HabitStats:
     """Per-person history facts used by ``static(f)`` (computed once per request)."""
 
@@ -43,6 +75,7 @@ class HabitStats:
     prev2: Mapping[int, int]  # how many of the previous 2 days each food was eaten
     slot_days: Mapping[tuple[int, str], int]  # distinct days per (food, meal slot) in the last 14
     saved_ids: frozenset[int]
+    pref: PrefTerms = NO_PREFERENCES  # the preference term of every food
 
 
 @dataclass(frozen=True)
@@ -53,18 +86,93 @@ class TodayStats:
     families: Mapping[str, frozenset[int]]
 
 
-def habit_stats(ctx: GuidanceContext) -> HabitStats:
-    """Low treatments (``purpose = 'hypo'``) are not meals and do not count as habits."""
+@dataclass(frozen=True)
+class SkipStat:
+    """Planned but not eaten, for one food in the last 30 days (note 09 §4.4), counted in distinct dates."""
+
+    planned: int  # dates with an entry of the food still planned
+    skipped: int  # ... of those, dates on which the same meal slot holds an eaten entry of another food
+    eaten: int  # dates the food was eaten, in any meal
+
+    @property
+    def learned(self) -> bool:
+        """Skipped on at least ``SKIP_MIN_DATES`` dates and eaten on fewer than half of the dates it was planned."""
+        return self.skipped >= R.SKIP_MIN_DATES and 2 * self.eaten < self.planned
+
+
+def skip_stats(ctx: GuidanceContext) -> dict[int, SkipStat]:
+    """The raw inputs of "planned but not eaten" turned into counts per food (``ctx.planned30`` and the eaten rows).
+
+    A food is *skipped on a date* when an entry of it is still ``planned`` on a day of the last 30 (``date-30 ... date-1``)
+    and, on that date and meal slot, the person ate something else that was not a low treatment. A person who does not log
+    what they eat has no such rows, so nothing is ever inferred for them. Empty and cheap when nothing is planned."""
+    if not ctx.planned30:
+        return {}
+    start = (_date.fromisoformat(ctx.date) - timedelta(days=R.SKIP_WINDOW_DAYS)).isoformat()
+    eaten_rows = ctx.eaten30 if ctx.eaten30 is not None else ctx.history60
+    by_slot: dict[tuple[str, str], set[int]] = defaultdict(set)
+    eaten_dates: dict[int, set[str]] = defaultdict(set)
+    for h in eaten_rows:
+        if h.hypo or not (start <= h.date < ctx.date):
+            continue
+        by_slot[(h.date, h.meal)].add(h.food_id)
+        eaten_dates[h.food_id].add(h.date)
+    planned: dict[int, set[str]] = defaultdict(set)
+    skipped: dict[int, set[str]] = defaultdict(set)
+    for p in ctx.planned30:
+        if not (start <= p.date < ctx.date):
+            continue
+        planned[p.food_id].add(p.date)
+        eaten_here = by_slot.get((p.date, p.meal))
+        if eaten_here and (len(eaten_here) > 1 or p.food_id not in eaten_here):
+            skipped[p.food_id].add(p.date)  # something other than this food was eaten in this slot
+    return {fid: SkipStat(len(dates), len(skipped.get(fid, ())), len(eaten_dates.get(fid, ())))
+            for fid, dates in planned.items()}
+
+
+def pref_terms(ctx: GuidanceContext) -> PrefTerms:
+    """The preference terms of the request (§4.5): ``like`` +1.0, ``less`` -2.0, plus -0.5 for a skipped food.
+
+    A ``neutral`` food, and everyone who switched ``learn_from_log`` off, gets no learned term. ``not_for_me`` never
+    reaches the scorer (it is not eligible)."""
+    p = ctx.prefs
+    food: dict[int, float] = {}
+    liked: set[int] = set()
+    for fid, kind in p.food_pref.items():
+        if kind == "like":
+            food[fid] = R.PREF_LIKE
+            liked.add(fid)
+        elif kind == "less":
+            food[fid] = R.PREF_LESS
+    if p.learn_from_log:
+        for fid, stat in skip_stats(ctx).items():
+            if stat.learned and p.food_pref.get(fid) != "neutral":
+                food[fid] = food.get(fid, 0.0) + R.PREF_SKIPPED
+    if not (food or p.like_categories or p.less_categories):
+        return NO_PREFERENCES
+    return PrefTerms(food=food, liked=frozenset(liked), like_categories=p.like_categories,
+                     less_categories=p.less_categories, active=True)
+
+
+def habit_stats(ctx: GuidanceContext, soft: bool = True) -> HabitStats:
+    """Low treatments (``purpose = 'hypo'``) are not meals and do not count as habits.
+
+    With ``learn_from_log`` off, and for a ``neutral`` food, the history part of the habit term, the slot habit and the
+    "often" reason are empty; the previous-two-days variety penalty stays (variety is not a preference). ``soft=False``
+    ignores every preference, which is how a low treatment is ranked: it never reads a soft preference."""
     start14 = (_date.fromisoformat(ctx.date) - timedelta(days=R.HISTORY_DAYS)).isoformat()
     start2 = (_date.fromisoformat(ctx.date) - timedelta(days=2)).isoformat()
+    learn = ctx.prefs.learn_from_log or not soft
+    neutral = frozenset(fid for fid, kind in ctx.prefs.food_pref.items() if kind == "neutral") if soft else frozenset()
     days: dict[int, set[str]] = defaultdict(set)
     prev2: dict[int, set[str]] = defaultdict(set)
     slots: dict[tuple[int, str], set[str]] = defaultdict(set)
     for h in ctx.history:
         if h.hypo or not (start14 <= h.date < ctx.date):
             continue
-        days[h.food_id].add(h.date)
-        slots[(h.food_id, h.meal)].add(h.date)
+        if learn and h.food_id not in neutral:
+            days[h.food_id].add(h.date)
+            slots[(h.food_id, h.meal)].add(h.date)
         if h.date >= start2:
             prev2[h.food_id].add(h.date)
     saved = frozenset(fid for m in ctx.saved_meals for fid, _ in m.items)
@@ -73,6 +181,7 @@ def habit_stats(ctx: GuidanceContext) -> HabitStats:
         prev2={k: len(v) for k, v in prev2.items()},
         slot_days={k: len(v) for k, v in slots.items()},
         saved_ids=saved,
+        pref=pref_terms(ctx) if soft else NO_PREFERENCES,
     )
 
 
@@ -164,6 +273,7 @@ class Scorer:
         self.meal_high_k = room.meal_high_k
         self.day_high_k = room.day_high_k
         self._static: dict[int, float] = {}
+        self._pref: dict[int, float] = {}
 
     def static(self, f: FoodVec) -> float:
         s = self._static.get(f.id)
@@ -171,6 +281,13 @@ class Scorer:
             s = static_term(f, self.habit, self.today)
             self._static[f.id] = s
         return s
+
+    def pref(self, f: FoodVec) -> float:
+        """The preference term of ``f`` (§4.5), cached with the static term; 0 for a person with no preference."""
+        p = self._pref.get(f.id)
+        if p is None:
+            p = self._pref[f.id] = self.habit.pref.of(f)
+        return p
 
     def slot_habit(self, f: FoodVec) -> bool:
         return self.habit.slot_days.get((f.id, self.meal), 0) >= R.SLOT_HABIT_MIN_DAYS
@@ -251,6 +368,7 @@ class Scorer:
             level = renal_level(ak, ap, ana, f.additive)
             base = 3.0 if level == "green" else 1.0 if level == "yellow" else -3.0
         static = self.static(f)
+        pref = self.pref(f)  # after every hard filter: a preference only reorders what already passed (note 09 §4.5)
         unknown_pen = R.UNKNOWN_PENALTY * len(unknown)
         portion = 0.5 * abs(q - 1.0)
         usage = 0.0
@@ -296,13 +414,13 @@ class Scorer:
             if self.day_high_k >= 2:
                 high_k -= 1.0
         s = (base + static - unknown_pen - portion - usage + carbs_term + free + gi + missing_group + protein_term
-             + habit + high_k)
+             + habit + high_k + pref)
         comp = None
         if explain:
             comp = {k: R.round_to(v, 4) for k, v in {
                 "base": base, "static": static, "unknown": -unknown_pen, "portion": -portion, "usage": -usage,
                 "carbs": carbs_term, "free_food": free, "high_gi": gi, "missing_group": missing_group,
-                "protein": protein_term, "slot_habit": habit, "high_potassium": high_k,
+                "protein": protein_term, "slot_habit": habit, "high_potassium": high_k, "preference": pref,
             }.items()}
         # R.round_score inlined (hot path): JavaScript Math.round of s × 100, exact at .5 (§4.12).
         x = s * 100.0
@@ -489,9 +607,11 @@ def is_poor(f: FoodVec, q: float) -> bool:
 
 
 def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysis: bool, scale: float = 1.0,
-               counter: Counter | None = None, totals: tuple[dict[str, float], frozenset[str]] | None = None) -> float:
+               counter: Counter | None = None, totals: tuple[dict[str, float], frozenset[str]] | None = None,
+               pref: PrefTerms | None = None) -> float:
     """The meal score of §4.7, rounded to 2 decimals (TV-F7, TV-P1). ``totals`` may pass the
-    :func:`meal_totals` the caller already computed for :func:`check_meal`."""
+    :func:`meal_totals` the caller already computed for :func:`check_meal`. ``pref`` adds the clamped mean of the
+    items' preference terms (note 09 §4.5), so a usual or saved meal full of "less often" foods ranks lower."""
     if counter is not None:
         counter.meals += 1
     totals, _ = totals if totals is not None else meal_totals(items)
@@ -530,5 +650,9 @@ def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysi
         s += 1.0
     if has_veg:
         s += 0.5
+    if pref is not None and pref.active and items:
+        mean = sum(pref.of(f) for f, _ in items) / len(items)
+        lo, hi = R.PREF_MEAL_CLAMP
+        s += lo if mean < lo else hi if mean > hi else mean
     s -= 1.0 - scale
     return R.round_score(s)

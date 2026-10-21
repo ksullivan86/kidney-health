@@ -183,12 +183,42 @@ def reason_text(code: str, **v: object) -> str:
         "low_potassium": "Low in potassium ({k} mg)",
         "low_phosphorus": "Low in phosphorus ({p} mg)",
         "protein_quality": "{protein} g protein with little phosphorus ({ratio} mg per g)",
+        "you_like": "You said you like this.",
         "you_eat_often": "You often have this",
         "free_food": "Almost no carbs ({carbs} g)",
         "half_portion": "A half portion fits; a full one would use more {nutrient} than is left for {meal}",
         "unknown": "{Nutrient} is not listed for this food; check the label",
     }
     return templates[code].format(**v)
+
+
+# A note the answer adds to ``notes`` (plain sentences, like DISCLAIMER). The code is the key; the API carries the text.
+NOTE_TEXTS = {
+    # The low-treatment options when every one of them was marked "Not for me" (or sits in a "Never suggest" group):
+    # the full list is shown, because a person treating a low must always have something to take (note 09 §8 Q1).
+    "shown_despite_exclusions": "Shown although you marked them Not for me.",
+}
+
+
+def note_text(code: str) -> str:
+    return NOTE_TEXTS[code]
+
+
+def _times(n: int) -> str:
+    return "once" if n == 1 else "twice" if n == 2 else f"{n} times"
+
+
+def learned_reason(kind: str, *, days: int = 0, meal: str = "", planned: int = 0, eaten: int = 0) -> str:
+    """The plain sentence under a "Learned from your log" item (note 09 §4.4): what the app saw, never what it "knows"."""
+    if kind == "often":
+        return f"Eaten on {days} of the last {R.HISTORY_DAYS} days"
+    if kind == "slot":
+        return f"Usually at {meal}"
+    if kind == "usual_meal":
+        return f"Eaten together at {meal} on {days} days"
+    if kind == "planned_not_eaten":
+        return f"Planned {_times(planned)} in {R.SKIP_WINDOW_DAYS} days, " + ("not eaten" if eaten == 0 else f"eaten {_times(eaten)}")
+    raise KeyError(kind)
 
 
 def room_line(meal: str, room: Mapping[str, object]) -> str:

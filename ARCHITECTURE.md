@@ -750,6 +750,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 14 | `m014_ai_consent_voice.py` | assistant step 2, part B | `ai_consents.purpose` accepts `voice` (table rebuilt from its stored definition; "Voice input" below). |
 | 15 | `m015_symptoms.py` | symptoms log | `symptoms`: a person's symptoms by date and severity, no list of keys in the table ("Symptoms log" below). |
 | 16 | `m016_ai_consent_labs.py` | lab report photos | `ai_consents.purpose` accepts `labs` (table rebuilt from its stored definition; "Lab report photos" below). Needs step 15 in place (the numbering has no gaps). |
+| 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
 
 ## Backend file ownership
 
@@ -1057,9 +1058,9 @@ export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "a
                "custom_foods", "linked_foods", "meal_templates", "lab_results",
                "symptoms",           // [{id, date, symptom, label, severity, note, created_at}] oldest day first (schema step 15); an optional list added to version 1
                "ai_audit", "activity",
-               "food_preferences",   // food_preferences: v0.3 guidance "Not for me" foods (schema step 5)
+               "food_preferences",   // [{food_id, name, preference, created_at, source, updated_at}] (schema steps 5 and 17): preference like | less | not_for_me | neutral, source person | ask
                "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
-               "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and "Not for me" list use (import)
+               "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and food preferences use (import)
 // linked_foods items: {id, name, source, fdc_id, linked_at, gtin, food}; food = the whole record, shaped like a custom_foods item (import)
 // log_entries items: the API's Entry without "version" (it is worked out from the content, so a new export stays importable by an older
 //   server); the import accepts and ignores a "version" key
@@ -1081,7 +1082,7 @@ person; they act on that person only (`user.id`), never on a name or id in the f
   note, `LabCreate` for every lab result, `ProfileUpdate` for the profile with its targets, the settings
   registry's own models for the settings), so an imported record is never one the API would refuse. Lists are
   capped (30,000 entries, 5,000 own foods, 5,000 linked foods, 1,000 saved meals of at most 100 foods, 5,000 labs,
-  500 "Not for me" foods, 200 settings). Timestamps must be real UTC times from 2000 to tomorrow. A source address
+  1,000 food preferences, 200 settings). Timestamps must be real UTC times from 2000 to tomorrow. A source address
   must be an Open Food Facts product page or the FoodData Central address, a licence one the app writes. The first
   problem refuses the whole file: `400 {"detail": "The file was not imported. log_entries[17].servings: …", "kind":
   "log_entries", "index": 17}`; messages are cut at 200 characters and never repeat a value. Food ids must be
@@ -1104,15 +1105,17 @@ person; they act on that person only (`user.id`), never on a name or id in the f
   dropped for a food whose serving weight does not describe its values), saved meals (`insert_template`; a food that
   cannot be matched is dropped from the meal, listed, and named in the meal's note ("Imported without 1 food that
   could not be matched: …") so its totals never read as complete; a meal left with none is skipped), labs (the canonical value
-  recomputed from `entered_value` and `entered_unit`), "Not for me" (the app's limit of 500). **The nutrient numbers
+  recomputed from `entered_value` and `entered_unit`), food preferences (`like`, `less`, `not_for_me` or `neutral`
+  with the file's `source` and `updated_at`; a file from before schema step 17 has neither, and its rows import as
+  `person`, changed when made; the app's limits are 1,000 in all and 500 "Not for me"). **The nutrient numbers
   of an entry are recomputed from its food and servings, never taken from the file.** An entry, saved-meal food or
-  "Not for me" food that cannot be matched is skipped and listed (kind, position, a short label and the reason).
+  food preference that cannot be matched is skipped and listed (kind, position, a short label and the reason).
 * **Duplicates.** If the account has any log entry, own food, saved meal or lab result and `merge` is not set, nothing is
   imported: a dry run answers `200` with `can_import: false` and `blocked: {code: "account_not_empty", existing}`, the
   import `409`. With `merge=1` what is already there is left out, counted against what the account had before the
   import (so a file with the same entry twice adds one when the account has one): an entry by (date, meal, food,
   servings, grams, status, created time), an own food as above, a saved meal by (name, note, slot, foods and servings),
-  a lab result by (test, date, value as shown), a "Not for me" food and a shared-food link by their keys.
+  a lab result by (test, date, value as shown), a food preference (by food, whatever its value) and a shared-food link by their keys.
 * **Profile.** Only with `replace_profile=1` (default off): the profile fields, the targets (replaced, not merged;
   `profile.apply_profile_changes`, the body of `PUT /api/profile`; a stage or diabetes type the file marks "not chosen
   yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs` and `food.scan_prefer_camera`
@@ -1479,7 +1482,7 @@ Code: the package `app/guidance/` — pure modules `rules`, `vectors`, `state`, 
 person's data) and `api` (the routes); response shapes in `app/guidance/models.py` (package-owned; the
 log-side models are in `app/models.py`). Schema step 5 (`app/migrations/m005_guidance_log.py`). People-
 and contributor-facing explanation: `docs/guidance.md`. Every route needs a signed-in person, reads only
-that person's rows, writes nothing except the "Not for me" list, and answers 404 for a food or entry
+that person's rows, writes nothing except the person's food preferences, and answers 404 for a food or entry
 that is not theirs. Responses are `Cache-Control: no-store` like every `/api` route.
 
 ### Routes (`/api/guidance`)
@@ -1488,14 +1491,18 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 |---|---|
 | `GET /api/guidance/next-meal` | `meal` (required), `date` (default today), `limit` 1–20 (11), `explain` → `NextMeal` |
 | `GET /api/guidance/swaps` | `food_id` + `meal` + `servings` or `grams` (+ `date`), **or** `entry_id`; `purpose` `hypo`\|`none` (default: `hypo` for a `hypo_treatment` food, else the entry's); `explain` → `Swaps`. 400 without exactly one of `food_id`/`entry_id`; 404 for a food or entry that is not the person's |
-| `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off |
+| `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off; reads no soft preference and is never empty while a low treatment exists (the floor under "Food preferences" below) |
 | `POST /api/guidance/plan-day` | `{date, meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, explain?}` → `Plan`; computes only |
 | `GET /api/guidance/insights/day` | `date` → `{status, rules_version, date, insights: [Insight] (≤ 6), planned_excluded, notes}` |
 | `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
 | `GET /api/guidance/rules` | → `{rules_version, rules_hash, rules: {NAME: value}, notes: {NAME: basis}, topic_pages: {slug: {slug, title, url}}, tips}` |
-| `GET /api/guidance/not-for-me` | → `{rules_version, limit: 500, foods: [{food_id, name, category, created_at}]}` |
-| `PUT /api/guidance/not-for-me/{food_id}` | → the list (idempotent); 404 for a food the person cannot use; 409 at 500 foods |
-| `DELETE /api/guidance/not-for-me/{food_id}` | → 204; 404 when not on the list |
+| `GET /api/guidance/preferences` | → `{rules_version, limit: 1000, not_for_me_limit: 500, foods: [{food_id, name, category, preference, source, created_at, updated_at}] (by name), groups: {like, less, never}, learn_from_log}`; `groups.never` is `exclude_categories` |
+| `PUT /api/guidance/preferences/{food_id}` | `{preference: like\|less\|not_for_me\|neutral, source?: person\|ask (person)}` → the row; the same value again changes nothing; 404 for a food the person cannot use; 409 at 1,000 preferences or 500 "Not for me" foods; one `BEGIN IMMEDIATE` transaction |
+| `DELETE /api/guidance/preferences/{food_id}` | → 204; 404 when the person has no preference on the food |
+| `GET /api/guidance/learned` | → `{rules_version, learn_from_log, items: [{kind: often\|slot\|usual_meal\|planned_not_eaten, food_id \| null, name, meal \| null, key \| null, reason, effect: more\|less}]}` (≤ 30 items of each kind); computed on the spot, never stored; `items` is empty with `learn_from_log` off |
+| `GET /api/guidance/not-for-me` | alias: → `{rules_version, limit: 500, foods: [{food_id, name, category, created_at}]}`, the `not_for_me` rows only |
+| `PUT /api/guidance/not-for-me/{food_id}` | alias: → the list (idempotent; replaces another preference on the food); 404 for a food the person cannot use; 409 at 500 foods |
+| `DELETE /api/guidance/not-for-me/{food_id}` | alias: → 204; 404 when the food is not on the "Not for me" list (another preference on it stays) |
 
 Instead of a result, `next-meal`, `swaps`, `plan-day` and the insights answer 200
 `{"status": "no_targets" | "disabled", "rules_version", "message"}`: `no_targets` when the profile has no
@@ -1580,14 +1587,74 @@ triggers on `foods` and `AFTER INSERT/DELETE` on `user_food_links` (the guidance
 every write path invalidates it). Existing entries keep `purpose` empty. Note 06's `guidance_json`
 profile column is superseded by the settings registry (below).
 
+### Schema step 17 (`m017_food_preference_source.py`)
+
+`food_preferences.source TEXT` (`person` or `ask`; existing rows `person`) and `food_preferences.updated_at TEXT` (existing rows
+their `created_at`), added with `add_column_if_missing` and a back-fill that touches only `NULL`s, so a re-run changes
+nothing. `preference` is validated by the API (`like`, `less`, `not_for_me`, `neutral`), not by a `CHECK`. The key
+`(user_id, food_id)` and both cascades stay, so a person has one state per food and deleting an account or a food removes the row.
+
 ### Settings (registered in `app/settings_registry.py`)
 
 `guidance.enabled` (instance, `true`, env `GUIDANCE_ENABLED`), `guidance.pool_per_role` (instance, 200,
 20–2000, env `GUIDANCE_POOL_PER_ROLE`), `guidance.beam_width` (instance, 16, 1–64, env
 `GUIDANCE_BEAM_WIDTH`), and the person's object `guidance` (scope `user`): `{enabled: true,
 carb_tolerance_g: 10 (5–20), hypo_dose_g: 15 (5–30), exclude_categories: [] (≤ 50), show_plan_builder:
-true, show_insights: true, ai_enrich: false}`, unknown fields refused. "Not for me" foods are
-`food_preferences` rows (≤ 500), exported as `export.json` → `food_preferences`.
+true, show_insights: true, ai_enrich: false, learn_from_log: true, like_categories: [] (≤ 50),
+less_categories: [] (≤ 50), hidden_usual_meals: [] (≤ 50 usual-meal keys of at most 400 characters)}`, unknown
+fields refused, each list de-duplicated. A food group may be in at most one of `like_categories`,
+`less_categories` and `exclude_categories`; otherwise the update is refused with `guidance: Value error, a food group
+can be in only one of Like, Less often and Never suggest: <groups>` (`400` like every invalid setting). A usual-meal key
+is `<meal>:<food id>x<quarter servings>,…` over the items sorted by food id, e.g. `lunch:12x4,30x2`
+(`rules.usual_meal_key` and `fits.usualMealKey`: whole numbers only, so both sides write the same text). Food
+preferences are `food_preferences` rows (≤ 1,000 in all, ≤ 500 of them "Not for me"), exported as `export.json` →
+`food_preferences`.
+
+### Food preferences and what the log teaches (note 09, part A)
+
+Taste ranks; it never filters, and it never touches a low. Everything below is in the pure engine and its browser twin.
+
+* **Inputs** (`state.Prefs`, `GE.makeContext`): `food_pref` (food id → `like` | `less` | `neutral`; "Not for me" stays in
+  `exclude_food_ids`), `like_categories`, `less_categories`, `learn_from_log`, `hidden_usual_meals`; `planned30` (the
+  entries still `planned` on `date-30 … date-1`: food, date, meal; low treatments left out) and, only when the 60-day
+  history was not loaded, `eaten30` (the eaten rows of the same days). `context.load` reads one more narrow query
+  (`log_user_date`) for `planned30`, and the eaten rows only when something is planned.
+* **The term**: `pref(f) = clamp(P_food + P_group + L, -2.5, +1.0)` with `P_food` like +1.0 / less -2.0 / neutral 0,
+  `P_group` +0.5 in `like_categories` / -1.0 in `less_categories`, and `L` = -0.5 for a skipped food (below). It is computed
+  once per request (`score.pref_terms`, held by `HabitStats.pref`), cached per food with the static term, added in
+  `Scorer.evaluate` **after** every hard filter (so a food that fails a filter fails it whatever its preference) and
+  reported as the explain component `preference`. `score_meal` adds `clamp(mean(pref of the items), -1.5, +1.0)`, so saved,
+  usual and starter meals follow the same taste. Swaps add the same term to their score (the swap's kidney test is
+  unchanged); the plan builder's pool pre-ranking adds it to the static term. A person with no preference and no
+  skipped food has an inactive term and pays nothing.
+* **Skipped food** (`score.skip_stats`; the owner's decision Q5, refined because the log cannot say which eaten entries were
+  planned): a food is *skipped on a date* when an entry of it is still `planned` for a past day of the last 30 and, on that
+  date and meal slot, the person ate (`eaten`, not a low treatment) something else. `L = -0.5` when it was skipped on at
+  least 2 different dates and eaten (any meal) on fewer than half of the dates it was planned. Nothing is inferred for a
+  person who does not log what they eat.
+* **`neutral`** ("stop using this"): for that food the history part of the habit term, the slot habit, the "You often have
+  this" reason and `L` are 0. **`learn_from_log` off**: the same for every food, and no usual meals; the saved-meal bonus
+  and the variety penalties (today, the previous two days, the same family) stay. Both are in `score.habit_stats`.
+* **Reason**: `you_like` ("You said you like this."), only for a food the person marked, ranked after the kidney reasons
+  and before `you_eat_often`; a suggestion still shows at most two positive reasons. The AI bridge keeps it out of the
+  candidates' `reasons` (the AI layer's closed list) and passes it as a `liked` bit.
+* **Familiar meals** (§4.6): a usual meal or a starter combo that holds a "Not for me" food or a food of a "Never suggest"
+  group is never offered; a saved meal still is. A usual meal whose key is in `hidden_usual_meals` is never offered.
+  `fits.usual_meal_entries` returns the key, the number of dates and the items.
+* **Low treatments** (§4.9, decision Q1): `hypo.prefilter`, the card and `safety_check` read no preference. `swaps.hypo_options`,
+  `insights.best_hypo_food` and the hypo mode of `find_swaps` read no `food_pref`, group, `learn_from_log`, hidden meal or
+  learned signal; only "Not for me" and "Never suggest" leave `hypo_options`, and when they would leave it empty while
+  a low treatment exists the whole list is returned with the note "Shown although you marked them Not for me." (`notes`
+  are plain sentences; the code `shown_despite_exclusions` is the key of `messages.NOTE_TEXTS`).
+* **Learned list** (`fits.learned`, `GET /learned`): `often` (eaten on at least 2 of the last 14 days: "Eaten on 6 of the last
+  14 days"), `slot` ("Usually at breakfast"), `usual_meal` ("Eaten together at lunch on 3 days", with the key for
+  `hidden_usual_meals`) and `planned_not_eaten` ("Planned 4 times in 30 days, eaten once"); only foods that can be
+  suggested, none for a `neutral` food or a hidden meal, at most `LEARNED_MAX` (30) of each kind.
+* **For the AI** (part C): `context.explicit_preferences(conn, user_id)` returns `{likes, less_often, not_for_me}` as names,
+  foods (newest change first) then groups, each list at most 10, never a learned signal.
+* **Parity**: `tests/data/guidance_vectors.json` carries the new inputs (`prefs.food_pref` as `[id, value]` pairs,
+  `like_categories`, `less_categories`, `learn_from_log`, `hidden_usual_meals`, `planned30`) and the call `learned`;
+  `RULES_VERSION` is `2026-10-21.1`.
 
 ### Targets
 
@@ -1614,7 +1681,7 @@ The browser twin (`js/engine/guidance.js` + `js/mock/guidance.js`, frontend buil
 engine (`tests/guidance/test_parity_vectors.py` fails when it is stale): plain-JSON inputs (a fixed food
 subset, the person's profile, preferences, day, history, saved meals, combos) and the engine's JSON
 answers for `meal_room`, `what_fits`, `find_swaps`, `hypo_options`, `plan_day`, `day_insights`,
-`period_insights` and `prefilter`. The engine is `js/engine/guidance/*.js` (one file per Python module,
+`period_insights`, `learned` and `prefilter`. The engine is `js/engine/guidance/*.js` (one file per Python module,
 `KH.guidanceEngine`); `tools/e2e/parity.py` section 12 compares every guidance route, `POST /api/log/batch`,
 `purpose`/`client_id` and `meal_hint` with a real server, and `tests/test_guidance_ui.py` keeps the demo's
 texts, limits and starter-meal copy equal to the server's. `tools/e2e/guidance_perf.py` holds the twin to

@@ -38,10 +38,12 @@
         entered_value: r.entered_value, entered_unit: r.entered_unit, taken_on: r.taken_on, note: r.note, created_at: r.created_at }));
       const symptoms = this._symptomsOf(uid).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id)).map((r) => ({
         id: r.id, date: r.date, symptom: r.symptom, label: r.label, severity: r.severity, note: r.note, created_at: r.created_at }));
-      const prefs = [...this._foodPreferences().entries()].map(([foodId, createdAt]) => ({ food: this._food(foodId), createdAt }))
+      // food_preferences (schema steps 5 and 17): every preference of the person, with who set it and when it last changed.
+      const prefs = [...this._foodPreferences().entries()].map(([foodId, row]) => ({ food: this._food(foodId), row }))
         .filter((p) => p.food).sort((a, b) => a.food.id - b.food.id)
-        .map((p) => ({ food_id: p.food.id, name: p.food.name, preference: 'not_for_me', created_at: p.createdAt }));
-      // The built-in foods the entries, saved meals and "Not for me" list point at, so another server can find them by FoodData Central id.
+        .map((p) => ({ food_id: p.food.id, name: p.food.name, preference: p.row.preference, created_at: p.row.created_at,
+          source: p.row.source || 'person', updated_at: p.row.updated_at || p.row.created_at }));
+      // The built-in foods the entries, saved meals and food preferences point at, so another server can find them by FoodData Central id.
       const used = new Set(entries.map((e) => e.food_id));
       for (const t of this._templates) for (const it of t.items) used.add(it.food_id);
       for (const p of prefs) used.add(p.food_id);

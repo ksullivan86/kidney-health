@@ -112,7 +112,9 @@
     const pTrigger = triggerKeys.includes(R.P);
     const origHigh = {};
     for (const k of R.RENAL_KEYS) origHigh[k] = R.isHigh(k, orig[k]) || (k === R.P && food.additive);
-    const habit = S.habitStats(ctx);
+    // A low treatment is never ranked by taste: in hypo mode no preference and nothing learned is read (note 09 §4.9).
+    const habit = S.habitStats(ctx, mode !== 'hypo');
+    const pref = habit.pref;
     const today = S.todayStats(ctx.day);
     const weights = { ...R.USAGE_WEIGHT, ...room.usage_weight };
     let found = [];
@@ -151,7 +153,7 @@
       const fits = fitsRoom(neu, room);
       const carbDiff = Math.abs((neu[R.CARBS] || 0.0) - (orig[R.CARBS] || 0.0));
       let score = (reduction + RENAL_SWAP_SCORE[level] + (sameCategory ? 1.0 : 0.0) + (sameFamily ? 1.0 : 0.0) + (fits ? 1.0 : 0.0)
-        + Math.min(1.0, Math.max(0.0, S.staticTerm(cand, habit, today))) - (cand.processed ? 1.0 : 0.0) - 0.1 * carbDiff);
+        + Math.min(1.0, Math.max(0.0, S.staticTerm(cand, habit, today))) - (cand.processed ? 1.0 : 0.0) - 0.1 * carbDiff + pref.of(cand));
       score = R.roundScore(score);
       const kAmount = neu[R.K] != null ? neu[R.K] : Infinity;
       let key;
@@ -208,14 +210,15 @@
     return null;
   }
 
-  // The person's low-treatment foods at the amount that treats a low, lowest potassium first; never filtered by a budget.
+  // The person's low-treatment foods at the amount that treats a low, lowest potassium first; never filtered by a budget. Only "Not for me"
+  // foods and "Never suggest" groups leave the list (no soft preference, learned signal or hidden usual meal is read, note 09 §4.9);
+  // when they would leave nothing while some low treatment exists, the whole list is shown with one note (the floor, §8 Q1).
   function hypoOptions(ctx) {
     const dose = Number(ctx.prefs.hypo_dose_g);
     const fluidTracked = R.targetMax(ctx.profile.targets[R.FLUID]) != null;
-    let rows = [];
+    const kept = [], excluded = [];
     for (const f of ctx.foods.values()) {
-      if (!f.hypo || f.hidden || f.avoid || ctx.prefs.exclude_food_ids.has(f.id)) continue;
-      if (ctx.prefs.exclude_categories.has(f.category || '')) continue;
+      if (!f.hypo || f.hidden || f.avoid) continue;
       const q = candidatePortion(f, 'carbs', dose, 'hypo');
       if (q == null) continue;
       const a = amounts(f, q);
@@ -224,11 +227,15 @@
       const k = a[R.K] != null ? a[R.K] : Infinity;
       const p = a[R.P] != null ? a[R.P] : Infinity;
       const fl = fluidTracked ? (a[R.FLUID] || 0.0) : 0.0;
-      rows.push([[k, p, fl, f.name_fold, f.id], item]);
+      const row = [[k, p, fl, f.name_fold, f.id], item];
+      if (ctx.prefs.exclude_food_ids.has(f.id) || ctx.prefs.exclude_categories.has(f.category || '')) excluded.push(row); else kept.push(row);
     }
+    const notes = [M.DISCLAIMER];
+    let rows = kept;
+    if (!kept.length && excluded.length) { rows = excluded; notes.push(M.noteText('shown_despite_exclusions')); }
     rows = R.sortBy(rows, (pair) => pair[0]);
     return { status: 'ok', rules_version: R.RULES_VERSION, dose_g: roundValue(R.CARBS, dose), options: rows.map((r) => r[1]),
-      card: M.treatingALowCard(dose), notes: [M.DISCLAIMER] };
+      card: M.treatingALowCard(dose), notes };
   }
 
   GE.swaps = { resolveMode, triggersFor, matchDimension, candidatePortion, fitsRoom, eligibleSwap, findSwaps, portionOption, hypoOptions };

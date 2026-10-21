@@ -126,6 +126,6 @@
     mealRoom: GE.budget.mealRoom, roomJson: GE.fits.roomJson,
     whatFits: GE.fits.whatFits, findSwaps: GE.swaps.findSwaps, hypoOptions: GE.swaps.hypoOptions, planDay: GE.planner.planDay,
     dayInsights: GE.insights.dayInsights, periodInsights: GE.insights.periodInsights, periodBounds: GE.insights.periodBounds,
-    prefilter, mentionsLow,
+    learned: GE.fits.learned, prefilter, mentionsLow,
   });
 })(typeof window !== 'undefined' ? window : globalThis);

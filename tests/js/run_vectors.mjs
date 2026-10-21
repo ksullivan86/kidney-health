@@ -285,8 +285,10 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
     const day = inp.day.map((e) => GE.dayEntry({ id: e.id, meal: e.meal, status: e.status, food: foods.get(e.food_id), name: e.name,
       servings: e.servings, nutrients: { ...e.nutrients }, purpose: e.purpose }));
     const hist = history(inp.history, foods);
-    return GE.makeContext({ date: inp.date, profile: inp.profile, prefs: inp.prefs, foods, day, history: hist,
-      history60: inp.history60 != null ? history(inp.history60, foods) : null,
+    // prefs.food_pref is [[food_id, "like" | "less" | "neutral"], …]; planned30 is [[food_id, date, meal], …] (note 09).
+    return GE.makeContext({ date: inp.date, profile: inp.profile, prefs: { ...inp.prefs, food_pref: new Map(inp.prefs.food_pref || []) },
+      foods, day, history: hist, history60: inp.history60 != null ? history(inp.history60, foods) : null,
+      planned30: (inp.planned30 || []).map(([food_id, date, meal]) => ({ food_id, date, meal })),
       saved_meals: inp.saved_meals.map((m) => ({ id: m.id, name: m.name, meal_hint: m.meal_hint, items: m.items.map(([f, q]) => [f, q]) })),
       combos: inp.combos.map((c) => ({ ...c, items: c.items.map(([f, q]) => [f, q]) })), tunables: inp.tunables });
   };
@@ -313,6 +315,7 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
         useStarters: spec.use_starters !== false, variant: spec.variant || 0 });
     }
     if (fn === 'day_insights') return GE.dayInsights(ctx);
+    if (fn === 'learned') return GE.learned(ctx);
     throw new Error(`unknown fn ${fn}`);
   };
   const counts = {};

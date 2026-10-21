@@ -523,10 +523,10 @@
     ['meal_templates', 'saved meal', 'saved meals'],
     ['lab_results', 'lab result', 'lab results'],
     ['symptoms', 'symptom', 'symptoms'],
-    ['food_preferences', '“Not for me” food', '“Not for me” foods'],
+    ['food_preferences', 'food preference', 'food preferences'],
     ['settings', 'setting', 'settings'],
   ];
-  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', symptoms: 'Symptom', food_preferences: '“Not for me” food', settings: 'Setting' };
+  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', symptoms: 'Symptom', food_preferences: 'Food preference', settings: 'Setting' };
   const IMPORT_SKIP_SHOWN = 12;
   const importCount = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function importLines(counts) {

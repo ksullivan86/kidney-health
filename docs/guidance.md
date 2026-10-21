@@ -44,6 +44,12 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
   spirits; Open Food Facts `en:alcoholic-beverages`; USDA records with ethanol; any custom food the person
   flags) is never in What fits, a swap, a built plan, the energy note, a usual meal or an AI idea. It can
   still be searched for and logged, and a meal the person saved keeps it.
+* **Taste only ranks.** A like, a "less often", a food group the person likes or wants less of, and the one thing
+  learned from the log (a food planned again and again but not eaten) are a small number added to a food's score
+  *after* every kidney and carbohydrate check, and never more than +1 or less than −2.5, so a preference can
+  reorder foods that already fit but can never make one fit. They are not an allergy filter: the app cannot tell
+  whether a food contains an allergen, so check labels. "Not for me" and "Never suggest" are the only things that remove a food.
+  The "Treating a low" options, card and every low-treatment swap read no preference and no learned signal at all.
 * **Never says "safe".** No "safe", "bad", "cheat", "unlimited", "don't worry"; every "high" or "low"
   comes with its number (CDC Clear Communication Index items 15–16).
 * **Never writes on its own.** Every guidance request computes only; "Use this plan" sends the plan
@@ -62,7 +68,9 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 | **Treating a low**: the card and the person's low treatments at their dose, with "Log it" | Today's Meal ideas card (people with diabetes), even with guidance off; offline from the browser twin of the card | `GET /api/guidance/hypo-options` |
 | **Plan the rest of my day**: one option per open meal, "Show another", "Use this plan" | Today's Meal ideas card; Plan → "Plan a day…" | `POST /api/guidance/plan-day`, then `POST /api/log/batch` |
 | **Insights**: end of day and weekly, in plain language with numbers | Today (a past day, or once breakfast, lunch and dinner are eaten or after 19:00), Trends (the chosen days ending yesterday) | `GET /api/guidance/insights/day`, `/insights/period` |
-| **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/not-for-me/{food_id}` |
+| **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/not-for-me/{food_id}` (an alias of the preference routes below) |
+| **Food preferences**: *More like this*, *Less often*, *Not for me* and *Stop using what you learned* per food; *Like* and *Less often* per food group | The screens for these come in the next step; the API and the ranking are in place | `GET /api/guidance/preferences`, `PUT/DELETE /api/guidance/preferences/{food_id}`, the `guidance` setting |
+| **Learned from your log**: what the ranking learned, each with a plain reason, and a switch to turn it off | The screen comes in the next step | `GET /api/guidance/learned`, the `learn_from_log` setting |
 | **The rules**: every number below, its basis, the handbook pages | Docs, contributors | `GET /api/guidance/rules` |
 
 When the profile has no numeric potassium, phosphorus or sodium target and no meal carbohydrate goal,
@@ -112,7 +120,7 @@ Guidance first works out how much potassium, phosphorus, sodium and fluid are le
 
 `fits.py` (§4.5). For every eligible food (not hidden, not `avoid_ckd`, not a low treatment, not an
 `ingredient` such as flour or oil, not an `alcohol` drink, not a diabetes supply, not "Not for me", not an
-excluded category)
+excluded category; a food the person only likes less is still here)
 at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
 
 1. **Hard filters**, the first failure is the reason code shown with `?explain=true`:
@@ -127,20 +135,64 @@ at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
    room, a bonus for filling the carb gap with starch, fruit or vegetables (never sweets or drinks),
    the food group the meal is missing, the protein aim, the meal slot the person usually eats it in,
    and penalties for several high-potassium portions in one meal or day (AKF/UW: avoid several
-   high-potassium foods a day). Rounded to 2 decimals before any comparison.
+   high-potassium foods a day), and the food-preference term (below). Rounded to 2 decimals before any comparison.
 3. **Selection**: best portion per food, sorted by score, then less potassium, phosphorus, sodium,
    name and id; at most 3 per group (2 extras), 2 per category, 11 in all; nothing below a score of 0.
 4. Each food carries `fit_text` ("Fits: 45 g carbs · 55 mg potassium · …"), up to two reasons and one
    caution ("Low in potassium (55 mg)", "Brings dinner to 45 of your 60 g carbs", …) and links to the
    handbook pages behind them.
 5. **Saved and usual meals that fit**: saved meals for this slot (or without a slot, for main meals) and
-   "usual meals" mined from the last 60 days (2–6 foods eaten together in this slot on at least 2 dates),
+   "usual meals" mined from the last 60 days (2–6 foods eaten together in this slot on at least 2 dates;
+   none that holds a "Not for me" food or a food of a "Never suggest" group, none the person hid with "Not this meal",
+   and none with "Learn from my log" off; a saved meal is still offered whatever it holds, because the person built it),
    tried at full, ¾ and ½ size; the first size that passes the meal check is kept, with a note such as
    "Fits at half size (25 g carbs, 35 g under your 60 g goal): this week's phosphorus leaves 167 mg for
    dinner."
 6. **Tips** (at most 2) from a maintainer-written table: potassium leaching when potassium is at caution,
    phosphate additives when this week's phosphorus is, hidden sodium, fluid on dialysis, an extra protein
    portion on dialysis, free foods when the meal's carbs are done.
+
+## Food preferences and what the log teaches
+
+Design: `docs/dev/research/09-food-preferences.md`. Stored: one row per person and food in `food_preferences`
+(`like`, `less`, `not_for_me`, `neutral`, who set it and when; at most 1,000 rows, 500 of them "Not for me"); the food-group
+choices, the *Learn from my log* switch and the hidden usual meals are fields of the `guidance` setting. Nothing the app
+learned is stored: it is computed from the log on every request.
+
+| Term | Value | Meaning |
+|---|---|---|
+| food `like` | +1.0 | "More like this" (as large as the slot-habit bonus; half the gap between a green and a yellow food) |
+| food `less` | −2.0 | "Less often": a green food then ranks like an otherwise equal yellow one; it is lowered, never hidden |
+| food group in `like_categories` / `less_categories` | +0.5 / −1.0 | a nudge for every food of the group |
+| skipped food | −0.5 | planned again and again, not eaten (below); only with *Learn from my log*, never for a `neutral` food |
+| together | clamped to −2.5 … +1.0 | `pref(f) = clamp(P_food + P_group + L, −2.5, +1.0)` |
+| a whole meal | clamped mean of its foods, −1.5 … +1.0 | saved, usual and starter meals follow the same taste |
+
+The term is added in `Scorer.evaluate` after every hard filter, is computed once per food and request, and is shown in
+`?explain=true` as the component `preference`. A food the person liked shows the reason "You said you like this." after the
+kidney reasons and before "You often have this" (a suggestion shows at most two reasons). Swaps rank with the same term; the
+plan builder's candidate pool does too. The "Not for me" list is the only soft-looking thing that removes a food, and only from
+suggestions: the food stays in search and can still be logged.
+
+**Learned from your log.** Existing signals are now visible and can be corrected: foods eaten on at least 2 of the last
+14 days ("Eaten on 6 of the last 14 days"), the meal a food is usually eaten in ("Usually at breakfast"), usual meals
+("Eaten together at lunch on 3 days"), and one new signal. A food is *skipped on a date* when an entry of it is still
+`planned` on one of the last 30 days and, in the same meal that day, the person ate something else (not a low treatment).
+Skipped on at least 2 different dates, and eaten in any meal on fewer than half of the dates it was planned, it gets −0.5:
+"Planned 4 times in 30 days, eaten once". The log does not say which eaten entries were planned, so this is the only
+trace of a plan not followed; a person who does not log what they eat is never inferred about. *Stop using this* stores
+`neutral`, which sets the habit history, the slot habit, the "You often have this" reason and the skipped term to zero
+for that food (the usual meals and the saved-meal bonus are separate and stay); *Learn from my log* off does so for every
+food and also removes usual meals, but keeps the saved-meal bonus and the variety penalties (today, the previous two
+days, the same food family), which are not preferences. `GET /api/guidance/learned` lists exactly what the ranking uses
+(at most 30 of each kind; none for a `neutral` food or a hidden usual meal).
+
+**Low treatments never read a preference.** `hypo.prefilter`, the "Treating a low" card and Ask's `safety_check` do not
+read one; `swaps.hypo_options`, `insights.best_hypo_food` and the low-treatment mode of the swaps read no like, no
+food-group choice, no *Learn from my log*, no hidden meal and nothing learned. The one thing that still leaves
+`hypo_options` is a food the person put on "Not for me" or a food group they never want; when that would leave nothing
+while a low treatment exists, the whole list is shown with the line "Shown although you marked them Not for me.", because
+someone treating a low must always have something to take.
 
 ## Swap ideas
 
@@ -160,7 +212,8 @@ at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
   "high" portion). Low treatments are candidates for drinks only (orange juice → apple juice) and the
   only candidates in low-treatment mode.
 * **Rank** by the weighted reduction, renal rating, same category and name family, fitting the meal,
-  habit, minus processed foods and carb difference; at most 5.
+  habit, minus processed foods and carb difference, plus the food-preference term (not in low-treatment
+  mode); at most 5.
 * **Fallbacks**: a smaller portion of the same food (¾ when it clears every trigger, else ½ when it fits
   the room; none for a phosphate additive, none for a low treatment) and tips (leaching for potatoes,
   sweet potatoes, yams, carrots, beets and winter squash; additives; the low-treatment card).
@@ -170,7 +223,8 @@ at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
 `GET /api/guidance/hypo-options` lists the person's low-treatment foods at the amount that treats a low
 (`hypo_dose_g`, default 15 g, the rule of 15 — ADA 2026 Rec 6.15; 5–10 g is typical on automated insulin
 delivery, which is why it is a personal setting "from my diabetes team"), lowest potassium first, then
-phosphorus and fluid, **never filtered by any budget**, with the rule-based card of the diet guide §4 and
+phosphorus and fluid, **never filtered by any budget** (and never by taste: only "Not for me" foods and "Never
+suggest" groups leave the list, and never all of it, see "Food preferences and what the log teaches"), with the rule-based card of the diet guide §4 and
 the handbook page `t1d/treating-a-low`. The same card is what `app/ai/` must show **instead of calling
 an AI** when free text may describe a low (`app.guidance.hypo.prefilter`: "low", "hypo", "shaky",
 "sweaty", "dropped", "crashed", "fell", "need sugar", "glucose < 70", a reading under 70 mg/dL or
@@ -191,7 +245,7 @@ servings; built meals and AI ideas never hold a low treatment, an ingredient or 
 
 1. saved meals for the slot, 2. usual meals, 3. starter combos from `data/combos.json` (the four meals
 of the diet guide's §6 sample day, mapped to builtin foods by USDA id; offered only when every food
-exists), 4. a meal **built** by beam search (protein → starch → vegetable or fruit; one item for the
+exists and none is a "Not for me" food or in a "Never suggest" group), 4. a meal **built** by beam search (protein → starch → vegetable or fruit; one item for the
 snack slot; width 16 over the 6 best foods per role from a pool of 200 pre-ranked foods; a final
 carbohydrate fine-tune of the starch in ¼ servings). Against an exhaustive search over the same
 candidates on 40 seeded random days the beam is at most 0.5 points worse (`tests/guidance/test_planner.py`).
@@ -235,9 +289,13 @@ The `guidance` object: `enabled` (true), `carb_tolerance_g` (10, 5–20; since v
 carbohydrate alert uses it too, whether guidance is on or off: ARCHITECTURE.md "Tolerances (v0.3.1)"), `hypo_dose_g` (15, 5–30;
 with a kidney-only profile, diabetes "None", the form explains these two instead of showing them),
 `exclude_categories` (food categories never suggested, ≤ 50), `show_plan_builder` (true), `show_insights`
-(true), `ai_enrich` (false; read by the optional AI layer, note 04). "Not for me" foods are separate rows
-(`food_preferences`, ≤ 500 per person) so a deleted food disappears from the list by itself; they are
-part of the account export (`export.json` → `food_preferences`).
+(true), `ai_enrich` (false; read by the optional AI layer, note 04), `learn_from_log` (true; off removes every
+learned term and the usual meals), `like_categories` and `less_categories` (food categories ranked a little higher or lower,
+≤ 50 each; a category may be in only one of these two and `exclude_categories`: the update is refused otherwise) and
+`hidden_usual_meals` (the keys of learned usual meals the person said "Not this meal" to, ≤ 50; a key is
+`<meal>:<food id>x<quarter servings>,…` over the items sorted by food id, e.g. `lunch:12x4,30x2`). Food preferences are
+separate rows (`food_preferences`, ≤ 1,000 per person of which ≤ 500 "Not for me") so a deleted food disappears from the list by
+itself; they are part of the account export (`export.json` → `food_preferences`, with who set each and when).
 
 ## Data the engine reads
 
@@ -251,13 +309,14 @@ part of the account export (`export.json` → `food_preferences`).
 * **Foods** the person may use, as vectors cached per database and `meta.foods_rev` (bumped by database
   triggers on every food or link write, schema step 5); curated `role` overrides and the `ingredient`
   flag come from `data/foods.json`.
-* The day's entries (eaten and planned, with `purpose`), eaten history of the last 14 and 60 days, saved
-  meals (with `meal_hint`) and the starter combos.
+* The day's entries (eaten and planned, with `purpose`), eaten history of the last 14 and 60 days, the
+  entries still planned on the last 30 days (for "planned but not eaten"), saved meals (with `meal_hint`), the
+  starter combos and the person's food preferences.
 
 Schema step 5 (`app/migrations/m005_guidance_log.py`) adds `log_entries.purpose`, `log_entries.client_id`
 (with a per-person unique index for the offline outbox), `meal_templates.meal_hint`, `food_preferences`
 and the `foods_rev` triggers. Old entries keep `purpose` empty: the upgrade does not guess which were
-low treatments.
+low treatments. Schema step 17 (`m017_food_preference_source.py`) adds `food_preferences.source` and `updated_at`.
 
 ## Optional AI (the contract)
 
@@ -343,7 +402,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-07.1** (hash `8514c677136c30ea`).
+Rules version **2026-10-21.1** (hash `5ec3de3f29059521`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -390,6 +449,16 @@ Rules version **2026-10-07.1** (hash `8514c677136c30ea`).
 | `USUAL_MIN_ITEMS` | `2` | Fewest foods in a usual meal |
 | `USUAL_MAX_ITEMS` | `6` | Most foods in a usual meal |
 | `USUAL_MIN_DATES` | `2` | A usual meal was eaten on at least this many dates |
+| `PREF_LIKE` | `1.0` | Score of a food the person marked "More like this": the size of the slot-habit bonus, half the green-to-yellow gap (note 09 §4.5) |
+| `PREF_LESS` | `-2.0` | Score of a food marked "Less often": a green food then ranks like an otherwise equal yellow one, still never hidden (note 09 §4.5) |
+| `PREF_GROUP_LIKE` | `0.5` | Score of a food whose food group the person likes |
+| `PREF_GROUP_LESS` | `-1.0` | Score of a food whose food group the person wants less often |
+| `PREF_SKIPPED` | `-0.5` | Score of a food that is planned again and again but not eaten (learned from the log; off with "Learn from my log") |
+| `PREF_FOOD_CLAMP` | `[-2.5, 1.0]` | A food's preference terms together stay inside this range: a liked food gains at most +1, a food that is both less often and in a less-often group never vanishes (that is what "Not for me" is for) |
+| `PREF_MEAL_CLAMP` | `[-1.5, 1.0]` | A whole meal's preference term, the mean of its foods' terms, stays inside this range |
+| `SKIP_WINDOW_DAYS` | `30` | Days before today in which a planned entry left planned counts as skipped |
+| `SKIP_MIN_DATES` | `2` | A food counts as skipped after this many different dates (and eaten on fewer than half of the dates it was planned) |
+| `LEARNED_MAX` | `30` | Most items of each kind that "Learned from your log" lists |
 | `SWAP_MIN_REDUCTION` | `0.25` | A swap lowers every nutrient that triggered it by at least this fraction |
 | `SWAP_CARB_MATCH` | `[5.0, 0.1]` | A swap's carbs stay within max(min_g, fraction × original): the insulin arithmetic stays the same (F4) |
 | `SWAP_PROTEIN_MATCH` | `[3.0, 0.15]` | A swap matched on protein stays within max(min_g, fraction × original) |
