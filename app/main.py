@@ -33,7 +33,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger("kidney_health")
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
