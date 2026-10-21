@@ -81,6 +81,7 @@ using the app; the pages below are for the people who run, maintain and check it
 * [06 Rule-based meal guidance](dev/research/06-meal-guidance.md)
 * [07 Accounts, settings and secrets](dev/research/07-accounts-settings-secrets.md)
 * [08 The patient handbook site at `/learn`](dev/research/08-handbook-site.md)
+* [09 Learn my food preferences (proposed)](dev/research/09-food-preferences.md)
 
 ## Research behind the numbers
 
