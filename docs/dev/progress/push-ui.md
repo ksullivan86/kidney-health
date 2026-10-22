@@ -1,4 +1,4 @@
-Status: in progress (role push-ui; the UI step of design note 12)
+Status: complete (role push-ui; the UI step of design note 12)
 
 # push-ui: Settings → Phone shortcuts, "from a shortcut (name)", the demo's twin, the handbook recipe
 
@@ -27,11 +27,12 @@ Spec: `docs/dev/research/12-phone-push-tokens.md` §4.4, §4.5, §4.6 and the UI
 * `tools/e2e/parity.py` section 10 compares both token families, the 400 for another family, the 404 for an unknown id and the refusal to make
   a token (13 checks in the section, all matching; `--sections 10`).
 
-## In progress / next
+## Final checks (all green at the last commit)
 
-* Docs: ARCHITECTURE (UI part of "Device tokens and /push/v1"), `docs/push.md`, `docs/body.md`, CHANGELOG, ROADMAP; a server test that a
-  self-revoke of a device token audits `family: "device"`.
-* Final checks: full pytest (background, 30 to 40 minutes), `node tests/js/run_vectors.mjs`, `ruff check .`, handbook check, the walk.
+* `python -m pytest -q -p no:cacheprovider -x`: exit 0 (5,584 tests collected), no network.
+* `node tests/js/run_vectors.mjs`, `ruff check .`, `python scripts/build_handbook.py --check`: pass.
+* `tools/e2e/push.py`: 97 PASS, 0 FAIL. `tools/e2e/parity.py --sections 10`: 13 of 13 in section 10.
+* Left for the owner: the handbook's Shortcut recipe on a real iPhone (`handbook/REVIEW.md`, `docs/maintainers.md` release checklist).
 
 ## Decisions
 
