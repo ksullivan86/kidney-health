@@ -149,7 +149,7 @@ def call_tool(tool: T.Tool, call: T.Call, arguments: Mapping[str, Any]) -> dict[
                           "to use the app directly.")
 
 
-@router.post(PATH, summary="Assistant MCP server (JSON-RPC 2.0, bearer token)", response_class=JSONResponse)
+@router.post(PATH, summary="Assistant MCP server (JSON-RPC 2.0, bearer token)", response_class=JSONResponse, operation_id="mcp_post")
 async def mcp_post(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """MCP Streamable HTTP (JSON answers, stateless) for a chat assistant with an assistant access token."""
     ctx = auth_context(request)

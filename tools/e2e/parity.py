@@ -29,7 +29,9 @@ Sections
   9 custom foods (create/edit/copy/hide/delete, grams re-derivation), target variants, LIKE metacharacters
   10 accounts: the demo's /api/auth/status, /api/me, /api/me/settings and /api/me/keys answer with the
      same keys and value types as the server's (values differ: the demo is a demo admin); /api/handbook
-     has the same keys and link groups (the demo serves no handbook); /api/me/tokens for both families
+     has the same keys and link groups (the demo serves no handbook); /api/meta (design note 14 change 4) has the same keys and
+     value types, the same API version and app version, the nutrient registry and the meals word for word and the same capabilities
+     (all false on both sides, `handbook` aside); /api/me/tokens for both families
      (assistant, device) answers alike while the switches are off (the demo makes no tokens), a bad family
      is the same 400, an unknown token id (and its body-rows) the same 404, and making one is refused on both
   11 personalised targets and labs (v0.3 M2): the "About you" profile fields and their validation, lab
@@ -1062,6 +1064,23 @@ class Harness:
             self.rec.compare(S, "GET /api/handbook shape", top(rs["body"]), top(rm["body"]), ignore=frozenset())
             self.rec.compare(S, "GET /api/handbook link groups", sorted(rs["body"]["links"]), sorted(rm["body"]["links"]),
                              ignore=frozenset())
+
+        # GET /api/meta (app/meta.py; the demo's twin is js/mock/meta.js; design note 14 change 4): the same keys and value types, the same versions,
+        # the nutrient registry and the meals word for word (the screens will read them from here), and the same capabilities while nothing
+        # optional is switched on. `handbook` is left out of the values: a server may serve the built handbook, the demo never does.
+        rs, rm = self.server.call("GET", "/api/meta"), self.mock.call("GET", "/api/meta")
+        if rs["status"] != 200 or rm["status"] != 200:
+            self.rec.compare(S, "GET /api/meta status", rs["status"], rm["status"])
+        else:
+            bs, bm = rs["body"], rm["body"]
+            self.rec.compare(S, "GET /api/meta shape", shape(bs), shape(bm), ignore=frozenset())
+            self.rec.compare(S, "GET /api/meta versions", {k: bs[k] for k in ("app_version", "api_version")},
+                             {k: bm[k] for k in ("app_version", "api_version")}, ignore=frozenset())
+            self.rec.compare(S, "GET /api/meta nutrients", bs["nutrients"], bm["nutrients"], ignore=frozenset())
+            self.rec.compare(S, "GET /api/meta meals", bs["meals"], bm["meals"], ignore=frozenset())
+            self.rec.compare(S, "GET /api/meta capability keys", list(bs["capabilities"]), list(bm["capabilities"]), ignore=frozenset())
+            without = lambda caps: {k: v for k, v in caps.items() if k != "handbook"}  # noqa: E731
+            self.rec.compare(S, "GET /api/meta capabilities", without(bs["capabilities"]), without(bm["capabilities"]), ignore=frozenset())
 
         # Access tokens, both families (app/auth/api_tokens.py; docs/dev/research/12-phone-push-tokens.md §4.6): the demo makes no
         # tokens, so its lists answer like a server's while the switch is off (this server runs with both switches at their default,

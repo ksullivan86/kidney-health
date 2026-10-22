@@ -28,6 +28,8 @@ from .ai import voice as ai_voice  # assistant step 2, part B: POST /api/ai/tran
 from .ai import routes as ai_routes  # M2 ai: /api/ai, /api/me/ai, /api/admin/ai-providers
 from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP server for a chat assistant
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
+from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
+from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
@@ -94,7 +96,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs" if docs else None,
         redoc_url="/redoc" if docs else None,
         openapi_url="/openapi.json" if docs else None,
+        generate_unique_id_function=openapi_doc.operation_id,
     )
+    openapi_doc.install(app)  # app.openapi(): the rewritten document (docs/api/openapi.json is made from it)
     app.state.settings = settings
     app.state.settings_store = store
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
@@ -125,6 +129,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.router)  # bearer-only like /mcp, outside /api
     app.include_router(push.api_router)
     app.include_router(data_import.router)
+    app.include_router(meta.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

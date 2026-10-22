@@ -119,6 +119,24 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the
   introduction and four screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after
   a change to those screens. `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.
+* **An honest, checked-in OpenAPI document** ([design note 14](docs/dev/research/14-reuse-map.md) change 2; guide: [`docs/api/README.md`](docs/api/README.md)).
+  `python scripts/gen_openapi.py` writes `docs/api/openapi.json` (sorted keys, 2-space indent) from `create_app()` in-process, with no server and no network;
+  `--check` exits 1 with a short list of what differs, and `tests/test_openapi_snapshot.py` runs it, so **changed a route? run the script** (one line in
+  CONTRIBUTING). `ENABLE_API_DOCS` is unchanged: the live `/openapi.json` and `/docs` stay off by default. The document was wrong in four ways and is now
+  built by `app/openapi_doc.py`: operation ids are `<first tag>_<route function>` (`auth_login`, `log_create_entry`) instead of
+  `login_api_auth_login_post`, and a test holds them unique; validation errors are the **400** `{detail, errors: [{type, loc, msg}]}` the handler really
+  sends (FastAPI's 422 is gone; the one real 422, the out-of-scope refusal of suggested targets, stays); every error status points at a shared
+  `components.responses` entry with the one `Problem` shape (`{detail, ...}`), with a `default` on every `/api` operation; and `securitySchemes`
+  `session` (the cookie and the `X-Requested-With` header it needs), `assistantToken` (`kha_`, `/mcp`) and `deviceToken` (`khd_`, `/push/v1/body`) are applied
+  from each route's dependencies. `info.version` is the app's version and the new `info.x-api-version` is `API_VERSION` (`app/api_version.py`, `1`):
+  raise it on a breaking change only, an additive change keeps it. No route behaves differently; `POST /mcp` gained `operation_id="mcp_post"`.
+* **`GET /api/meta`** (design note 14 change 4; `app/meta.py`): signed in only, it answers `{app_version, api_version, capabilities, nutrients, meals}`: booleans for what the
+  signed-in person can use now (`ai` and each AI feature, `chat`, `voice`, `assistant`, `push`, `barcode`, `barcode_off`, `barcode_usda`, `handbook`), each read from the
+  switch or status function that already exists (the AI ones from the new `status_view` behind `GET /api/ai/status`, the barcode ones from the new
+  `barcode.providers_available`), the nutrient registry (`key`, `label`, `unit`, `role`) in the server's order, and the meal names. It holds no secret, host or
+  other person's data. The demo answers it from `js/mock/meta.js` (nothing optional switched on), pinned by `tests/data/meta_vectors.json`
+  (`gen_meta_vectors.py`; `node tests/js/run_vectors.mjs`) and compared by `tools/e2e/parity.py` section 10. The screens do not read it yet (ROADMAP "Open items").
+  New tests: `tests/test_openapi_snapshot.py`, `tests/test_meta.py`.
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 * **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
   before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and
