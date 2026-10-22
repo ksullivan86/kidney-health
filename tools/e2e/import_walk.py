@@ -73,7 +73,8 @@ ALICE = "alice"
 SCREENS = (("375-light", 375, 812, "light", "bea"), ("1280-dark", 1280, 800, "dark", "cal"))
 ALICE_SETTINGS = {"guidance": {"carb_tolerance_g": 15}, "user.units.labs": "si"}
 # What the page says for A's file (5 entries, 2 foods of hers, 1 saved meal, 2 lab results, 1 symptom, 1 food preference).
-SIZES = "5 log entries, 2 foods of yours, 1 saved meal, 2 lab results, 1 symptom"
+# The summary also counts weights and blood pressure readings (weight and blood pressure, part A), even when there are none.
+SIZES = "5 log entries, 2 foods of yours, 1 saved meal, 2 lab results, 1 symptom, 0 weights, 0 blood pressure readings"
 ADDED = "5 log entries, 2 foods of yours, 1 saved meal, 2 lab results, 1 symptom, 1 food preference"
 
 
