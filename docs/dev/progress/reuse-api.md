@@ -1,4 +1,4 @@
-Status: in progress (role reuse-api; design note 14 changes 2 and 4); code, tests and docs written, final checks running
+Status: complete (role reuse-api; design note 14 changes 2 and 4)
 
 # reuse-api: a checked-in OpenAPI document (change 2) and GET /api/meta (change 4)
 
@@ -40,6 +40,10 @@ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers python tools/e2e/parity.py --sections 
 python -m pytest -q          # the full suite, in the background
 ```
 
-## Next
+## Final checks (all green at the last commit)
 
-Final full run, `build_handbook.py --check`, parity section 10, then mark this note complete.
+* `python -m pytest -q`: 5,636 tests, exit 0 (run in the background, about 40 minutes with a second job beside it); the two new files are 52 of them.
+* `node tests/js/run_vectors.mjs` (the new `meta` group: 7 checks), `ruff check .`, `python scripts/build_handbook.py --check`,
+  `python scripts/gen_openapi.py --check` and `python tests/data/gen_meta_vectors.py --check`: all exit 0.
+* `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers python tools/e2e/parity.py --sections 10`: 19 checks in section 10, all matching (13 before, 6 for `/api/meta`).
+* The snapshot is byte-identical under pydantic 2.13.4 (this machine) and the locked 2.14.0 (checked in a scratch `--target` directory).
