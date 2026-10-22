@@ -66,6 +66,15 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   providers, notes, every other record) and the file names are not read, kept or sent, nothing is kept in the browser's storage,
   and the code makes no other network request (a test checks that). The files are not sent to an AI provider, the Ask chat or an
   assistant either;
+* **Weights and blood pressure from the Apple Health export** (Import from Apple Health, [Weight and blood pressure](body.md#import-from-the-iphone-health-app))
+  are read **in the browser, on the device, and nothing is uploaded while the file is read**. The person unzips the Health app's export in the
+  Files app and chooses `export.xml`; the page streams it as text (it can be hundreds of megabytes, so it is never held whole and never given
+  to an XML parser), keeps only weights and blood pressure readings and shows what it found. Only the rows the person keeps (the date and time,
+  the value or values, when it was taken, the source `apple_health` and a key that stops a second import adding it twice) are sent, to the
+  person's own server, through `POST /api/body/weights/batch` and `/blood-pressure/batch`. The name of the app or device that wrote a reading,
+  the file name and every other record in the file (heart rate, steps, blood glucose, insulin, workouts, the person's name) are not kept or
+  sent, nothing is kept in the browser's storage, and the code makes no other network request (a test checks that). Readings from a watch are
+  not ticked until the person ticks them. Nothing from the file reaches an AI provider, the Ask chat or an assistant;
 * **Lab results from a patient-portal C-CDA file** (Labs → Import from a patient portal file, [Personalised targets and labs](targets-and-labs.md))
   are read and **parsed in the browser, on the device, and nothing is uploaded**, so the server never sees the XML and has no XML parser.
   The person downloads the health summary from the portal and chooses the `.xml` file (up to 20 files of 5 MB; a larger one is not

@@ -54,6 +54,7 @@ python tools/e2e/sandbox.py --workers 4        # add --only top-phone-light-none
 python tools/e2e/guidance_perf.py              # add --rate 6 for a slower phone
 python tools/e2e/demo_local.py                 # the Pages demo's "Keep my data in this browser"; no server, no port; add --only keep,export,tabs,private,newer
 python tools/e2e/import_walk.py                # Settings → Your data → Import from a file against a real server; port 8086
+python tools/e2e/body_import.py               # the Health app import sheet for weights and blood pressure, a real server and the demo; port 8087
 python tools/e2e/device.py                     # add --only outbox,live for some sections
 python tools/e2e/journey.py --site handbook/site   # after building the handbook; --only setup,profile,labs,...
 python tools/e2e/upgrade.py                    # add --only v0.2 or --only v3
@@ -69,7 +70,7 @@ Options shared by the harnesses:
 * `--port N` — `parity.py` runs the server on 8061 and the preview site on 8062 (`--static-port`);
   `regress.py` uses 8063, `learn.py` 8064, `guidance_perf.py` 8065, `device.py` 8066 (and 8067 for its fake
   AI server, `--ai-port`), `journey.py` 8068 (fake AI 8069, fake Open Food Facts 8070), `upgrade.py` 8071 and 8072,
-  `mcp_smoke.py` 8073, `ask.py` 8074 (fake AI 8075), `prefs.py` 8085, `import_walk.py` 8086; `sandbox.py` picks a free port unless given one. A harness stops if its
+  `mcp_smoke.py` 8073, `ask.py` 8074 (fake AI 8075), `prefs.py` 8085, `import_walk.py` 8086, `body_import.py` 8087; `sandbox.py` picks a free port unless given one. A harness stops if its
   port is already taken, so two can run at once with different ports.
 * `parity.py --server-python PATH` runs the server on another interpreter (for example the
   image's Python) while the harness itself stays on yours.
@@ -113,6 +114,7 @@ setup_required`. So:
   the preview, the refusal for an account that has data, the profile option, the end) and `<out>/files/` (the zip, the `export.json` and the files it chose). It
   writes one value into the server's database itself, `sessions.reauth_at` of the person under test, to make the last password entry old without waiting
   `REAUTH_MINUTES`. What it cannot show: a real phone's file picker.
+* `body_import.py` prints `PASS` / `FAIL` lines per check, tagged `[375-light]`, `[1280-dark]`, `[375-dark]`, `[1280-light]` or `[demo-…]` for the pass; `<out>/report.json`, `<out>/shots/` (the review at its top and its end, the result, the refused batch, the crowded day, the cancelled read) and `<out>/files/` (the generated `export.xml`, a 25-weight day, a file for the refusal, a 40 MB file of ignored records for Cancel, an `export.zip` and an `export_cda.xml` to be turned away). It slows the file stream in the page for the Cancel step (a wrapper of `Blob.prototype.stream` added with `add_init_script`) and routes one request to answer 400. What it cannot show: a real phone's file picker, and a real export from an iPhone (the generated records are hand-written).
 * `upgrade.py` prints `PASS` / `FAIL` lines per starting point; `<out>/report.json`; the old versions' sources,
   data directories and server logs stay in `<out>` for a look after a failure.
 

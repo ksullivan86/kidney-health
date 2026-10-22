@@ -330,7 +330,7 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
     page.goto("/?mock=1" if mock else "/")
     page.wait_for_selector("#tab-today", state="visible", timeout=30000)
     page.wait_for_function("() => typeof KH !== 'undefined' && KH.bodyImport && typeof KH.bodyImport.open === 'function'", timeout=20000)
-    main, crowded, refusal = main_export(), crowded_export(), refusal_export()
+    main = main_export()  # what the page must find, written independently of the page
 
     # ---- the sheet, its steps, and the files it refuses
     open_sheet(page)
