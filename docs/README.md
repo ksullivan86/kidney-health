@@ -8,7 +8,7 @@ using the app; the pages below are for the people who run, maintain and check it
 
 * [README](../README.md): what the app is and is not, features, quick start, licences.
 * [CHANGELOG](../CHANGELOG.md): what changed in each version, upgrade notes, known limitations.
-* [ROADMAP](ROADMAP.md): work the design notes defer to later versions, with the section that defers it.
+* [ROADMAP](ROADMAP.md): the owner's next build (a native iOS app, in steps), then work the design notes defer to later versions, with the section that defers it.
 * [SECURITY](../SECURITY.md): how to report a vulnerability, supported versions, verifying the image.
 * [LICENSE](../LICENSE) (code, PolyForm Noncommercial 1.0.0) and [handbook/LICENSE](../handbook/LICENSE)
   (handbook text, CC BY-NC-SA 4.0); the data and third-party licences are listed in the
@@ -17,7 +17,7 @@ using the app; the pages below are for the people who run, maintain and check it
 ## Running a server
 
 * [Deployment](deployment.md): rootless Podman (Quadlet), compose, rootless Docker, Kubernetes; every
-  setting; first run; backups, restore and upgrades (from v0.3 and from v0.2); troubleshooting.
+  setting; first run; backups, restore and upgrades (from v0.4, v0.3 and v0.2); troubleshooting.
 * [HTTPS](https.md): HTTPS for a homelab (own domain + Caddy, Tailscale, a private CA, cert-manager), so
   phones can install the app.
 * [Security guide](security.md): threat model, the defaults and why, `TRUSTED_PROXIES` per topology,

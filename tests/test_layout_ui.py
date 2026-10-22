@@ -1,4 +1,4 @@
-"""Layout rules found by looking at every screen of the demo (docs/dev/progress/visual-qa.md).
+"""Layout rules found by looking at every screen of the demo (CHANGELOG.md 0.5.0, "Tidier screens"; what is left is in docs/ROADMAP.md).
 
 Each test pins one fix in the stylesheets or the page, so the bug does not come back. They are source checks; the measuring is
 done in a browser: ``tools/e2e/sandbox.py`` (probes 7 and 8) checks the header at 19 widths and the Plan week's badges, and its walk

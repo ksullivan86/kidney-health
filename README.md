@@ -51,10 +51,11 @@ tells you to hold back on treating a low blood sugar.
   This part works without AI.
 * **Treating a low.** A card with what to take for a low blood sugar, which also works offline.
 * **Lab results.** Enter results in US or SI units and see your eGFR and kidney stage. You can also
-  bring them in from a spreadsheet, the iPhone Health app, a patient portal file, or a photo of a
-  report.
-* **Weight and blood pressure.** Log them, see them on charts, and keep the alarm and goal your care
-  team gave you. A very high reading shows the handbook's advice on when to call 911.
+  bring them in from a spreadsheet, the iPhone Health app, a patient portal file, or a photo or PDF
+  of a report.
+* **Weight and blood pressure.** Log them, bring them in from the iPhone Health app or send them from
+  a phone shortcut, see them on charts, and keep the alarm and goal your care team gave you. A very
+  high reading shows the handbook's advice on when to call 911.
 * **Symptoms and visit prep.** Note symptoms as they happen, then print one page with your averages,
   latest labs, symptoms and questions to take to your next appointment.
 * **Works offline.** Install it on your phone's home screen. Food you log without a connection is
@@ -63,7 +64,7 @@ tells you to hold back on treating a low blood sugar.
   move it to another server, or delete your account.
 
 AI features are there if you want them, and off until an admin turns them on. They include an
-**Ask** chat, meal ideas, and reading label photos. You can choose to keep the AI on your own home
+**Ask** chat, meal ideas, and reading label photos and lab report PDFs. You can choose to keep the AI on your own home
 network. See [docs/ai.md](docs/ai.md).
 
 ## Run it yourself
@@ -92,7 +93,7 @@ fill in **Profile**, press **Suggest targets**, check them with your care team, 
 invite the rest of the household from **Server administration** (the shield icon).
 
 Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
-camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.4.0`
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.5.0`
 ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
 upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
@@ -123,16 +124,20 @@ running a local AI model next to the app. See [docs/deployment.md](docs/deployme
 
 ### Upgrading
 
-**From 0.3:** back up `kidney.db` first
-(`podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db`), change the image tag
-from `:0.3` to `:0.4`, and start it. The first start updates the database. Nothing new is turned on
-for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-03-read-this-first).
+**From 0.4:** back up `kidney.db` first
+(`podman exec kidney-health python -m app.admin backup /data/before-0.5.0.db`), change the image tag
+from `:0.4` to `:0.5`, and start it. The first start updates the database. Nothing new is turned on
+for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-04-read-this-first).
+
+**From 0.3:** do the same with the tag `:0.5`, and read the notes for both steps:
+[0.3 to 0.4](CHANGELOG.md#upgrading-from-03-read-this-first) and
+[0.4 to 0.5](CHANGELOG.md#upgrading-from-04-read-this-first). The database updates for both run in one start.
 
 **From 0.2:** if your server updates itself (the old Quadlet file with `Image=...:latest` and
 `AutoUpdate=registry`), replace that file with the one in `deploy/quadlet/` before the next update,
 or pin the old image and stop `podman-auto-update.timer` until you're ready. The newer image has no
 shell, so the old health check would keep restarting it. Then follow
-[CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first) and the 0.3 steps above.
+[CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first) and the steps above.
 
 ## The handbook
 

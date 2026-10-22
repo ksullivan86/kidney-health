@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed, 2026-10-22: the owner decides (§7).** Nothing is built. |
+| Status | **Next on the roadmap (the owner, 2026-10-22):** option A, starting with step 1. Decisions 3 and 4 are open. Nothing is built. |
 | Date researched | 2026-10-22, against `main` with notes 10–14 |
 | Scope | What a native iPhone app adds to the Home Screen web app, the smallest first version, how it reuses the server and the tests, what it needs from the owner (an Apple Developer account, signing, TestFlight), and how it is built without a Mac. |
 | Out of scope | An App Store listing (a separate decision: review, a privacy policy, Apple's health-data rules and a regulatory opinion, ROADMAP); Android (later, the same pattern with Health Connect); glucose, insulin and medicines (CLAUDE.md: no dosing data, ever; the app never reads those HealthKit types); push notifications from the server. |
@@ -112,5 +112,8 @@ That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for th
 
 1. **Option A first** (recommended), or the full WKWebView shell (B)?
 2. Is building `KidneyHealthCore` and its Linux vector tests now (step 1) fine before there is an Apple account? (Recommended: yes; it also checks the server's rules from a second language.)
+
+Decided 2026-10-22: the owner put option A next on the roadmap, Swift package first.
+
 3. When to buy the Apple Developer Program membership and add the signing secrets (step 3)?
 4. Pairing by QR code, or pasting the token only?

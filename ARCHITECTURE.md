@@ -981,6 +981,15 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
+**Status (2026-10-22): v0.5.0 is prepared.** Everything merged after v0.4.0 ships in it: weight and blood pressure (schema
+step 18, `/api/body`, the screens and the Health app import), the imports that take the `.zip` itself, lab results from a PDF
+report, phone shortcuts (device tokens, `POST /push/v1/body`, schema step 19), the assistant's taste tool behind the
+`assistant:prefs` scope, the checked-in OpenAPI document and `GET /api/meta`, the brand strings in one place, the kidney rules
+in their own module, and the screen fixes. What it could not verify is listed under "Known limitations" in CHANGELOG.md 0.5.0,
+the checks a maintainer runs before tagging are in `docs/maintainers.md`, and everything deferred or left open, with its owner,
+is in `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
+(`docs/dev/progress/README.md`).
+
 ## M1 API
 
 Built in M1 (backend-core accounts) from note 07 §4.4–§4.17 and its §9 security review, plus the
@@ -4085,7 +4094,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.4.0", "api_version": 1,
+{"app_version": "0.5.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

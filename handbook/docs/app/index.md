@@ -40,6 +40,7 @@ that server is called the **admin** in these pages.
 | Tell the app what you like to eat, and see what it noticed in your log | **⋯** next to a suggestion, **Settings** → **Meal guidance** | [Meal guidance](guidance.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
 | Write down your weight and blood pressure, enter the numbers your care team gave you, and see them on a chart | **Today** → **Weight and blood pressure**, **Settings** → **Weight and blood pressure**, **Trends** | [Weight and blood pressure](weight-and-blood-pressure.md) |
+| Send your weight and blood pressure from an iPhone Shortcut, when your admin has turned it on | **Settings** → **Account** → **Your data** → **Phone shortcuts** | [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut) |
 | Write down a symptom, and show how it went | **Today** → **Symptoms**, then **Trends** | [Reports for your care team](reports-for-your-team.md#symptoms-you-write-down) |
 | Print one page for an appointment | **Trends** → **Get ready for a visit** | [Reports for your care team](reports-for-your-team.md#visit-prep-one-page-for-an-appointment) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |
@@ -96,6 +97,18 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
   ([design note 04][NOTE04]).
 - You can download everything you logged, and you can delete your account
   ([Privacy and your data](privacy.md)).
+
+## New in version 0.5
+
+- Weight and blood pressure: a card on **Today**, charts in **Trends**, the two numbers your care team gives you, and the
+  handbook's own words for a very high reading ([Weight and blood pressure](weight-and-blood-pressure.md)).
+- Bring your past weights and blood pressure in from the iPhone Health app, or send the latest from an iPhone Shortcut
+  ([Targets and warnings](targets-and-warnings.md), [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut)).
+- Choose the `.zip` itself when you import: you no longer have to unzip it first ([Privacy and your data](privacy.md)).
+- Read a lab report from the PDF your lab's website gives you, on the AI at home only ([Optional AI](ai.md)).
+- A chat assistant you have connected can remember what you like to eat, if you allow it with a separate box
+  ([Optional AI](ai.md)).
+- Tidier screens on a phone and on a computer.
 
 ## New in version 0.4
 
