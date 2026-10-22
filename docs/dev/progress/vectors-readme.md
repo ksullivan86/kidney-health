@@ -24,6 +24,20 @@ Base: `283c497`. Spec: `docs/dev/research/14-reuse-map.md` ยง3 (iOS needs) and ย
   * Rounding is decimal half-up on the shortest repr (`26.95` -> `27.0`).
   * `barcode_vectors.json` `textclean_cases` holds 161 values with lone surrogates; `max_len` counts code points.
 
+* Steps 2 and 3 done: `tests/data/README.md` (17 sections, `Top-level keys:` lists, regeneration table, replay rules) and
+  `tests/test_vectors_readme.py` (23 tests). Broke the README seven ways (renamed a section, invented a key, dropped a key, wrong generator
+  path, a section for a missing file, wrong repo path, dropped a generator mention): each failed the right test, then restored.
+* Verified the commands in the README: `--check` on the 11 Python generators and `gen_apple_health_vectors.mjs` exits 0; the other three `.mjs`
+  generators rewrite identical files (`git status` clean).
+* Step 4: nothing else lists `tests/data` (no test, Containerfile or `.dockerignore` entry; the image allowlist already leaves `tests/` out).
+
+## Decisions
+
+* The "Top-level keys:" list is bullets that start with the key in backticks (name and meaning in one place), not an inline list.
+* Only sets are compared for keys (not order). No counts in the prose (they would go stale without a test noticing).
+* Hypoglycaemia wording follows `app/rules_kidney.py` and `docs/guidance.md`: no carbohydrate warning and never blocked, delayed or sent to an
+  AI; potassium, phosphorus and sodium warnings on low treatments stay (the vectors have them).
+
 ## Next
 
-Step 2 onwards.
+Step 5 (note 14 row, CHANGELOG, CONTRIBUTING), then step 6 (all checks), then mark this note complete.
