@@ -153,7 +153,7 @@ def base_doc(ids: dict[str, int]) -> dict[str, Any]:
                              {"food_id": banana, "name": "Banana, raw", "preference": "not_for_me", "created_at": T1},
                              {"food_id": tablets, "name": "Glucose tablet (4 g carb)", "preference": "neutral", "created_at": T1,
                               "source": "person", "updated_at": T1},
-                             {"food_id": 102, "name": "Home gel", "preference": "less", "created_at": T2},
+                             {"food_id": 102, "name": "Home gel", "preference": "less", "created_at": T2, "source": "assistant"},
                              {"food_id": 777, "name": "A food nobody has", "preference": "not_for_me", "created_at": T1}],
         "ai_audit": [{"prompt": "x"}], "activity": [], "ai_usage": [], "ai_consents": [], "ai_provider": {"api_key": "secret"},
     }
@@ -431,7 +431,7 @@ def refusals() -> list[tuple[str, list[dict[str, Any]]]]:
         ("food_preferences not a list", s("food_preferences", 1)),
         ("a preference that is none of the four", s("food_preferences.0.preference", "love")),
         ("a preference with no value", s("food_preferences.0.preference", None)),
-        ("a preference with a source that is not person or ask", s("food_preferences.0.source", "robot")),
+        ("a preference with a source that is not person, ask or assistant", s("food_preferences.0.source", "robot")),
         ("a preference with a null source", s("food_preferences.0.source", None)),
         ("a preference with an updated_at that is not a time", s("food_preferences.0.updated_at", "yesterday")),
         ("a preference with an updated_at in the far future", s("food_preferences.0.updated_at", "2999-01-01T00:00:00Z")),

@@ -19,8 +19,9 @@
 
 ``food_preferences`` (v0.3, schema steps 5 and 17) lists the foods the person told meal guidance about:
 ``[{food_id, name, preference, created_at, source, updated_at}]``. ``preference`` is ``like``, ``less``, ``not_for_me`` or
-``neutral`` ("stop using what you learned about this food"); ``source`` is ``person`` or ``ask`` (a change the Ask chat
-proposed and the person confirmed); ``updated_at`` is when the row last changed. A file written before step 17 has only
+``neutral`` ("stop using what you learned about this food"); ``source`` is ``person``, ``ask`` (a change the Ask chat
+proposed and the person confirmed) or ``assistant`` (a change the person's own assistant made over MCP with an
+``assistant:prefs`` token); ``updated_at`` is when the row last changed. A file written before step 17 has only
 ``not_for_me`` rows without ``source`` and ``updated_at``, and still imports. What the app learned from the log is not
 stored and so not exported: it is computed again from the exported log. The food-group choices and the "Learn from my
 log" switch are in ``settings.guidance``.

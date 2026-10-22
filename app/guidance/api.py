@@ -344,33 +344,55 @@ def _preference_list(conn: sqlite3.Connection, store: SettingsStore, user_id: in
     }
 
 
-def _store_preference(conn: sqlite3.Connection, user_id: int, food_id: int, preference: str, source: str) -> None:
-    """Insert or change one preference row under ``BEGIN IMMEDIATE`` (the limits are checked in the same transaction).
+def apply_preference(conn: sqlite3.Connection, user_id: int, food_id: int, preference: str, source: str) -> str | None:
+    """Insert or change one preference row inside the write transaction the caller has open; no commit. Returns the value that
+    was there before (``None``: no row). The caller has checked that the food is the person's to use.
 
-    The same value again changes nothing (idempotent, ``updated_at`` stays). 409 at 500 "Not for me" foods and at 1,000
-    preferences in all; a row that is only changing its value does not add to the total."""
-    conn.execute("BEGIN IMMEDIATE")
+    The same value again changes nothing (idempotent, ``updated_at`` and ``source`` stay). 409 at 500 "Not for me" foods and
+    at 1,000 preferences in all; a row that is only changing its value does not add to the total. The PUT routes and the MCP
+    tool ``set_food_preference`` (``app/mcp/preference_tool.py``) both end here."""
+    row = conn.execute("SELECT preference FROM food_preferences WHERE user_id = ? AND food_id = ?",
+                       (user_id, food_id)).fetchone()
+    if row is None or row["preference"] != preference:
+        total, never = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(preference = ?), 0) FROM food_preferences WHERE user_id = ?",
+            (C.PREFERENCE_NOT_FOR_ME, user_id)).fetchone()
+        if preference == C.PREFERENCE_NOT_FOR_ME and never >= C.MAX_NOT_FOR_ME:
+            raise HTTPException(status_code=409, detail=f"the \"Not for me\" list is full ({C.MAX_NOT_FOR_ME} foods); "
+                                                        "remove one first")
+        now = utcnow()
+        if row is None:
+            if total >= C.MAX_FOOD_PREFERENCES:
+                raise HTTPException(status_code=409, detail=f"your food preferences are full ({C.MAX_FOOD_PREFERENCES} foods); "
+                                                            "remove one first")
+            conn.execute(
+                """INSERT INTO food_preferences (user_id, food_id, preference, created_at, source, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""", (user_id, food_id, preference, now, source, now))
+        else:
+            conn.execute("UPDATE food_preferences SET preference = ?, source = ?, updated_at = ? "
+                         "WHERE user_id = ? AND food_id = ?", (preference, source, now, user_id, food_id))
+    return None if row is None else str(row["preference"])
+
+
+def drop_preference(conn: sqlite3.Connection, user_id: int, food_id: int) -> str | None:
+    """Delete the person's preference row for a food inside the caller's transaction; no commit. Returns the value that was
+    there, or ``None`` when there was no row (``OverflowError`` for an id SQLite cannot hold, which has no row either)."""
     try:
         row = conn.execute("SELECT preference FROM food_preferences WHERE user_id = ? AND food_id = ?",
                            (user_id, food_id)).fetchone()
-        if row is None or row["preference"] != preference:
-            total, never = conn.execute(
-                "SELECT COUNT(*), COALESCE(SUM(preference = ?), 0) FROM food_preferences WHERE user_id = ?",
-                (C.PREFERENCE_NOT_FOR_ME, user_id)).fetchone()
-            if preference == C.PREFERENCE_NOT_FOR_ME and never >= C.MAX_NOT_FOR_ME:
-                raise HTTPException(status_code=409, detail=f"the \"Not for me\" list is full ({C.MAX_NOT_FOR_ME} foods); "
-                                                            "remove one first")
-            now = utcnow()
-            if row is None:
-                if total >= C.MAX_FOOD_PREFERENCES:
-                    raise HTTPException(status_code=409, detail=f"your food preferences are full ({C.MAX_FOOD_PREFERENCES} foods); "
-                                                                "remove one first")
-                conn.execute(
-                    """INSERT INTO food_preferences (user_id, food_id, preference, created_at, source, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?)""", (user_id, food_id, preference, now, source, now))
-            else:
-                conn.execute("UPDATE food_preferences SET preference = ?, source = ?, updated_at = ? "
-                             "WHERE user_id = ? AND food_id = ?", (preference, source, now, user_id, food_id))
+        if row is None:
+            return None
+        conn.execute("DELETE FROM food_preferences WHERE user_id = ? AND food_id = ?", (user_id, food_id))
+    except OverflowError:
+        return None
+    return str(row["preference"])
+
+
+def _store_preference(conn: sqlite3.Connection, user_id: int, food_id: int, preference: str, source: str) -> None:
+    """:func:`apply_preference` under ``BEGIN IMMEDIATE`` (the limits are checked in the same transaction), then commit."""
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        apply_preference(conn, user_id, food_id, preference, source)
         conn.commit()
     except BaseException:
         conn.rollback()
@@ -401,11 +423,7 @@ def put_preference(food_id: int, body: PreferenceBody, user: CurrentUser,
 @router.delete("/preferences/{food_id}", status_code=204, response_class=Response)
 def delete_preference(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """Forget what was said about this food. 404 when there is nothing."""
-    try:
-        cur = conn.execute("DELETE FROM food_preferences WHERE user_id = ? AND food_id = ?", (user.id, food_id))
-    except OverflowError:
-        raise HTTPException(status_code=404, detail=f"food {food_id} has no preference of yours") from None
-    if cur.rowcount == 0:
+    if drop_preference(conn, user.id, food_id) is None:
         raise HTTPException(status_code=404, detail=f"food {food_id} has no preference of yours")
     conn.commit()
     return Response(status_code=204)

@@ -46,12 +46,15 @@ def switch(admin: TestClient, on: bool) -> None:
     assert r.json()["settings"]["assistant.enabled"]["value"] is on
 
 
-def make(client: TestClient, name: str = "Open WebUI", days: int | None = None, can_log: bool | None = None) -> dict[str, Any]:
+def make(client: TestClient, name: str = "Open WebUI", days: int | None = None, can_log: bool | None = None,
+         can_prefs: bool | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"name": name}
     if days is not None:
         body["expires_in_days"] = days
     if can_log is not None:
         body["can_log"] = can_log
+    if can_prefs is not None:
+        body["can_prefs"] = can_prefs
     r = client.post("/api/me/tokens", json=body)
     assert r.status_code == 201, r.text
     return r.json()
@@ -546,8 +549,8 @@ def test_scopes_cannot_be_sent_by_name_and_can_log_must_be_a_boolean(admin):
 def test_a_saving_token_still_reads_and_authenticates_like_any_token(admin):
     saver = make(admin, "saver", can_log=True)["token"]
     assert bearer(admin.app, saver).status_code == 200
-    assert api_tokens.parse_scopes("assistant:read assistant:log") == api_tokens.SCOPES
-    assert api_tokens.scopes_for(False) == (api_tokens.READ,) and api_tokens.scopes_for(True) == api_tokens.SCOPES
+    assert api_tokens.parse_scopes("assistant:read assistant:log") == (api_tokens.READ, api_tokens.LOG)
+    assert api_tokens.scopes_for(False) == (api_tokens.READ,) and api_tokens.scopes_for(True) == (api_tokens.READ, api_tokens.LOG)
 
 
 # --------------------------------------------------------------------------- an admin revokes a person's tokens

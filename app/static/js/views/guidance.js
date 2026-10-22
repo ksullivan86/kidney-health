@@ -271,6 +271,8 @@
   // ---------------------------------------------------------------------------
   const PREF_ORDER = ['like', 'less', 'not_for_me'];
   const PREF_WORD = { like: 'More like this', less: 'Less often', not_for_me: 'Not for me' };
+  // Who set a row when it was not the person themselves (a row the person set has no note).
+  const SOURCE_NOTE = { ask: 'added in Ask', assistant: 'from your assistant' };
   const PREF_HINT = 'More like this and Less often only change the order of suggestions. Not for me never suggests this food again. '
     + 'It stays in search, and Settings → Meal guidance can bring it back.';
   // What a toast says after a change (value null: the preference was cleared).
@@ -1555,7 +1557,7 @@
     const headOf = (value) => $(`#set-g-pref-${value}-h`, root);
 
     function prefRow(f) {
-      const sub = [f.category, f.source === 'ask' ? 'added in Ask' : ''].filter(Boolean).join(' · ');
+      const sub = [f.category, SOURCE_NOTE[f.source] || ''].filter(Boolean).join(' · ');
       const again = f.preference === 'not_for_me';
       const rm = btn(again ? 'Suggest again' : 'Remove', 'secondary g-act', async () => {
         rm.disabled = true;

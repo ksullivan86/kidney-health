@@ -2097,7 +2097,8 @@
     "food_id": 102,
     "name": "Home gel",
     "preference": "less",
-    "created_at": "2026-10-06T08:00:00Z"
+    "created_at": "2026-10-06T08:00:00Z",
+    "source": "assistant"
    },
    {
     "food_id": 777,
@@ -17700,7 +17701,7 @@
    }
   },
   {
-   "name": "a preference with a source that is not person or ask",
+   "name": "a preference with a source that is not person, ask or assistant",
    "method": "POST",
    "path": "/api/me/import?dry_run=1",
    "edits": [
@@ -17717,7 +17718,7 @@
    "answer": {
     "status": 400,
     "body": {
-     "detail": "The file was not imported. food_preferences[0].source: Input should be 'person' or 'ask'",
+     "detail": "The file was not imported. food_preferences[0].source: Input should be 'person', 'ask' or 'assistant'",
      "kind": "food_preferences",
      "index": 0
     }
@@ -38592,7 +38593,7 @@
        "name": "Home gel",
        "category": null,
        "preference": "less",
-       "source": "person"
+       "source": "assistant"
       },
       {
        "name": "My soup",

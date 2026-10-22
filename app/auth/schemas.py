@@ -101,14 +101,16 @@ TOKEN_NAME_MAX = 60
 
 class TokenCreate(BaseModel):
     """``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one
-    way to ask for ``assistant:log`` (it saves food and recipes; ``assistant:read`` is always included). ``family`` is
-    ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's token, whose
-    one scope, ``body:write``, is not a choice: ``can_log`` is refused for it)."""
+    way to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``
+    (it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.
+    ``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's
+    token, whose one scope, ``body:write``, is not a choice: ``can_log`` and ``can_prefs`` are refused for it)."""
 
     model_config = ConfigDict(extra="forbid", str_max_length=4096)
 
     name: str = Field(min_length=1, max_length=TOKEN_NAME_MAX)
     expires_in_days: ExpiryDays = 90
     can_log: bool = False
+    can_prefs: bool = False
     family: TokenFamily = "assistant"
 

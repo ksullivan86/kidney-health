@@ -561,7 +561,7 @@ class ImportFoodPreference(_Strict):
     name: _short(200)
     preference: Literal["like", "less", "not_for_me", "neutral"]
     created_at: Timestamp
-    source: Literal["person", "ask"] | None = None
+    source: Literal["person", "ask", "assistant"] | None = None  # "assistant": set over MCP with an assistant:prefs token
     updated_at: Timestamp | None = None
 
     @field_validator("created_at", "updated_at")

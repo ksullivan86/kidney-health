@@ -30,6 +30,7 @@ SAFETY_FILES = (
     "tests/test_lab_photo.py",
     "tests/test_mcp.py",
     "tests/test_mcp_write.py",
+    "tests/test_mcp_prefs.py",
     "tests/guidance/test_messages.py",
     # the AI guard, the dose check, the prefilter and the golden safety cases
     "tests/test_ai_guard.py",

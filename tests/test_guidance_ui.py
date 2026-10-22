@@ -327,6 +327,9 @@ def test_the_preference_wording_is_the_specifications() -> None:
                  "'Remove'", "'Keep'", "'Stop using this'", "'Save as a meal'", "'Not this meal'", "'Show them again'", "'Kinds of food'"):
         assert text in VIEW, text
     assert "const PREF_WORD = { like: 'More like this', less: 'Less often', not_for_me: 'Not for me' };" in VIEW
+    # a row the person did not set says who did (note 09 §4.8b); a row of the person's own has no note
+    assert "const SOURCE_NOTE = { ask: 'added in Ask', assistant: 'from your assistant' };" in VIEW
+    assert "const sub = [f.category, SOURCE_NOTE[f.source] || ''].filter(Boolean).join(' · ');" in VIEW
     assert "const KIND_CHOICES = [['none', 'None'], ['like', 'Like'], ['less', 'Less often'], ['exclude', 'Never suggest']];" in VIEW
     kinds = re.search(r"const LEARNED_KINDS = \[(.*?)\];", VIEW, re.S).group(1)
     assert re.findall(r"\['(\w+)',", kinds) == ["often", "slot", "usual_meal", "planned_not_eaten"]
