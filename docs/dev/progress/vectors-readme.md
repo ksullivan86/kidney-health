@@ -38,6 +38,21 @@ Base: `283c497`. Spec: `docs/dev/research/14-reuse-map.md` ยง3 (iOS needs) and ย
 * Hypoglycaemia wording follows `app/rules_kidney.py` and `docs/guidance.md`: no carbohydrate warning and never blocked, delayed or sent to an
   AI; potassium, phosphorus and sodium warnings on low treatments stay (the vectors have them).
 
+* Step 5 done: note 14 change 6 row ("Done in part"), `CHANGELOG.md` (Unreleased, For contributors), `CONTRIBUTING.md` (one sentence in "The parity
+  rule"), and one sentence in `ARCHITECTURE.md` next to the parity rule (the same pointer).
+* Step 6 checks passed: `python -m pytest tests/test_vectors_readme.py` and the vector-currency, e2e, deploy and safety-set tests; `node tests/js/run_vectors.mjs`
+  (all groups pass); `ruff check .`. The full `python -m pytest -q` was started in the background (see the last line of this note for its result).
+
+## Reproduce
+
+```bash
+python -m pytest tests/test_vectors_readme.py -q
+node tests/js/run_vectors.mjs
+ruff check .
+for g in barcode body entry_version guidance import kidney_function meta rules settings symptoms targets; do python3 tests/data/gen_${g}_vectors.py --check; done
+node tests/js/gen_apple_health_vectors.mjs --check
+```
+
 ## Next
 
-Step 5 (note 14 row, CHANGELOG, CONTRIBUTING), then step 6 (all checks), then mark this note complete.
+Nothing, once the full run is green. A Swift test target is out of scope (waits for the iOS design note).

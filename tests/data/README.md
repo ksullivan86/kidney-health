@@ -108,7 +108,7 @@ What a replayer must get right:
 * `kg` is the value in kilograms, or pounds times `kg_per_lb`, rounded half up to 0.01 (see "Rounding" below). A reading is two records
   with the same `startDate` and source. Half a pair is skipped and counted.
 * `context` comes from the time of day. The edges are in `context_cases` of `body_vectors.json`, which the runner also replays against this reader.
-* Rows come out sorted by date, time and source. Types other than weight and blood pressure are ignored without being read.
+* Rows come out sorted by date, time and source. Types other than weight and blood pressure are ignored without being read. The cases include heart rate, steps, glucose and insulin records, which the app never takes.
 * `summary.skipped` counts what was left out and why. Those counts are part of the answer.
 * A HealthKit client has no XML, so the chunk and entity cases do not apply to it. The row, key, rounding, range, pairing, context and watch cases do.
 
@@ -565,7 +565,7 @@ A step is `{name: string, method: string, path: string, body?: any, answer: obje
 
 ### Safety
 
-Some vectors carry the app's health-data rules. Treating a low is never blocked, delayed or sent to an AI, and gets no carbohydrate warning (`guidance_vectors.json`, `rules_vectors.json`).
+Some vectors carry the app's health-data rules. Treating a low (hypoglycaemia) is never blocked, delayed or sent to an AI, and gets no carbohydrate warning (`guidance_vectors.json`, `rules_vectors.json`).
 Red flags and alerts are shown (`body_vectors.json`, `symptoms_vectors.json`, `targets_vectors.json`). An additive cannot hide behind an invisible character (`barcode_vectors.json`).
 A client must not drop, shorten or soften these cases to make a replay pass. If one fails, the client is wrong.
 

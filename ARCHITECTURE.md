@@ -901,6 +901,7 @@ handbook Pages workflow builds it into `site/demo/` before the link check, and t
 announce bar links to it (`extra.demo_link` in `handbook/mkdocs.pages.yml`; empty in the `/learn` copy). **Parity rule:** every JS twin of server logic (`js/engine/*`,
 `js/mock/*`) is checked against the server by shared vector files in `tests/data/*.json`, run by
 pytest on the Python side and by `node tests/js/run_vectors.mjs` on the JS side (CI runs both).
+`tests/data/README.md` describes each vector file and how to replay it in another client.
 The mock routes as a whole are checked against a real, signed-in server by `tools/e2e/parity.py`
 (run by hand; see `tools/e2e/README.md`).
 In demo/preview mode the user is a signed-in demo admin; AI, Open Food Facts and USDA calls
