@@ -392,7 +392,8 @@ a file with a DOCTYPE is refused anyway. One consequence: the app's CSP has `req
 is a Trusted Types sink (a plain string throws), so the CSP now lists a second named policy, **`kh-xml`**
 (`trusted-types kh-sw kh-xml`, `app/security.py`). It is created once in `js/engine/ccda_labs.js`, its `createHTML` accepts only a
 string without a DOCTYPE or ENTITY and returns it unchanged, and its output goes straight to the parser and nowhere else; no default
-policy, no duplicates, and `tests/test_frontend_shell.py` fails if any other file creates a policy or calls the parser. A malformed
+policy, no duplicates, and `tests/test_frontend_shell.py` fails if any other file creates a policy or calls the parser (a third name, `kh-pdf`,
+followed for PDF lab reports: `js/engine/pdf_pages.js`, [`ai.md`](ai.md#lab-report-photos)). A malformed
 file makes Chromium build an error document with inline styles that the page's CSP refuses, so a broken file shows as a
 "Refused to apply inline style" line in the browser's console; the page itself shows "not valid XML".
 
@@ -402,8 +403,9 @@ expectations, `tests/js/gen_ccda_labs_vectors.mjs`, parsed in Node by the dev-on
 `tools/e2e/regress.py` runs a sample through real Chromium's `DOMParser`. The samples are hand-written: **no real portal export has been tried**
 (see the roadmap and [maintainers](maintainers.md)); a real one may use codes or units this table lacks, which the headline counts.
 
-**Read a lab report photo** (on the same view, below the spreadsheet import; only when the optional AI has a **local**
-AI that reads photos, [`ai.md`](ai.md#lab-report-photos)): a photo or screenshot of a report is read by the AI on the
+**Read a lab report photo or PDF** (on the same view, below the spreadsheet import; only when the optional AI has a **local**
+AI that reads photos, [`ai.md`](ai.md#lab-report-photos)): a photo or screenshot of a report, or the PDF a lab's website
+gives out (opened on your device, the pages you tick drawn there and sent as pictures, the file itself never sent), is read by the AI on the
 admin's own network, which copies the printed results of the nine tests above. The app keeps the tests and units it
 knows and numbers inside the plausible range (the checks `POST /api/labs` makes), never a future date, and says how many
 lines it left out. The rows appear in the same table as a spreadsheet import, **all unticked**, under "Read by AI from your

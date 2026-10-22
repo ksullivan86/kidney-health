@@ -278,13 +278,14 @@ leaves your device, and how far to trust it.
 
 ### Lab report photos
 
-*Labs → Read a lab report photo*, shown only when your admin has a **local AI** (one on your own network) that can read
+*Labs → Read a lab report photo or PDF*, shown only when your admin has a **local AI** (one on your own network) that can read
 photos and you have turned on AI ideas; otherwise the card says why ("Needs a local AI on your own network, which is not
 set up on this server, so it is off.") and nothing can be sent. A lab report can show your name, your date of birth and
 your record numbers, and the app cannot remove them from a photo, so it is read **only** by the local AI: never by a
 cloud AI, and never by a provider of your own, even if you chose one.
 
-1. Take a photo or choose a screenshot of the report (a PDF can be screenshotted). Crop it to the results table if you can.
+1. Take a photo or choose a screenshot of the report, **or choose the PDF** your lab's website gives you (see below). Crop a
+   photo to the results table if you can.
 2. The first time, a consent sheet says where the photo goes (your local AI, by host name), that the report may show your
    name, date of birth and record numbers, that the photo is not kept, and to crop it. "What will be sent?" shows the exact
    request first, without the photo's bytes.
@@ -300,6 +301,34 @@ cloud AI, and never by a provider of your own, even if you chose one.
 The photo is not kept: not on the server, not in the activity list (which holds its fingerprint and size only), and not in
 the page once you save or discard. The AI never says whether a result is normal, high or low; ask your care team. If the
 photo is not a lab report, or cannot be read, you are told and nothing is shown.
+
+**A PDF** (design note 13). Most lab websites give the report as a PDF; you can choose that file in the same card.
+
+* **The PDF never leaves your device and the server never reads one.** Your browser opens it (with pdf.js, a PDF reader that
+  ships with the app and runs in a separate worker in your browser: no eval, no scripts, no forms, no downloads) and shows a list,
+  "Page 1", "Page 2", ... Pages 1 to 6 start ticked and you can tick at most 10: "Reading a page takes a while on your own AI;
+  choose the pages with results." Only the pages you tick are drawn, **on your device**, and sent **as pictures** (one request
+  each, checked and cleaned like any photo, to the local AI only, under the same consent). The consent sheet adds: "Each page
+  you tick is drawn on this device and sent as a picture; the PDF file itself is not sent."
+* **Page by page.** "Reading page 2 of 4…" with a **Cancel** button that stops between pages and gives up on the page being
+  read. Each page counts as one AI call (`ai.shared_daily_limit`, `ai.max_concurrency`), and a small local model may take a
+  minute or more for one. If you set "Show me the request before every AI call", you see each page's request first.
+* **One table.** The rows of all the pages are one list, all unticked, each saying which page it came from
+  ("page 2 of your PDF"); a row that is the same as an earlier one (same test, value, unit and date: a header repeated on every
+  page, for example) is shown once, with the first page's number. A page that could not be read says so ("Page 3 could not be
+  read: ...") and the other pages still count; a page with no result the app keeps says that ("Page 2: ...").
+* **What is refused, in plain words:** a file over 20 MB; a file that is not a PDF; a PDF with a **password** ("Open it on your
+  device and take a screenshot of each page instead": the app never asks for a PDF password); a damaged one; one with more than
+  50 pages; a browser that cannot run the reader (it needs a recent one: Safari 18 or later, Chrome or Firefox of the last
+  years). Then take a screenshot of each page instead, as before.
+* **Limits worth knowing.** A scanned report made of JPEG 2000 or JBIG2 images can come out blank (those decoders are not
+  shipped, so that nothing is ever fetched); a PDF that has real text but fonts it does not embed is drawn with your device's fonts,
+  which does not change digits. The pictures are redrawn at most 1600 px on the longer side, like every AI photo, so a very small
+  print may be easier to read from a screenshot of a zoomed page. Reading the PDF's own text (faster and exact when it exists) is
+  a later idea (ROADMAP).
+* **For the person running the server:** nothing to switch on or configure: the same routing (`ai.route.labs`, local or off),
+  consent and limits as photos, no new setting, route or schema step. The only change is one more named Trusted Types policy in
+  the page's CSP, `kh-pdf` (see [security.md](security.md) and, behind your own reverse proxy that sets a CSP, [deployment.md](deployment.md)).
 
 ## For the person running the server
 

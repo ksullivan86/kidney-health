@@ -156,7 +156,7 @@ first fails the checks; every answer says which AI gave it, and the AI activity 
 cloud is exactly what a feature pinned to the cloud would send, no more, and never to a person's own provider. Ask is not
 offered this way (it is several calls in a row) and **lab report photos never are**: they stay on the local AI only.
 
-**A photo of a lab report** (Labs → Read a lab report photo, [ai.md](ai.md#lab-report-photos)) can show a person's name,
+**A photo of a lab report, or a PDF** (Labs → Read a lab report photo or PDF, [ai.md](ai.md#lab-report-photos)) can show a person's name,
 date of birth, record numbers and clinic, and the app cannot take them out of an image. So it is read **only by the local
 AI**: never by a cloud AI and never by a provider the person added themselves, whatever the admin's routing says (the setting
 accepts only `local` and `off`), and with no local AI the feature is off and says so. It has its own consent
@@ -166,6 +166,11 @@ location data like every AI photo, never written to disk or logged, and not kept
 fingerprint and size and **none** of what the AI copied. The AI only copies printed results; the app keeps the tests and
 units it knows and shows them as rows that start unticked; nothing is saved to the person's lab results until they tick a
 row and press Save, and then it is stored like any lab result they typed (in their export, deleted with their account).
+
+**A PDF lab report** is opened **in the person's browser** (the bundled pdf.js, in a worker the page makes itself: no eval, no scripting, no
+forms, nothing fetched). **The PDF file is never sent to the server or anywhere else**; only the pages the person ticks (at most 10) are drawn
+in the browser and sent, each as a JPEG, through the same route, local AI, consent and checks as a photo, and the drawn pages and the PDF are let
+go when the person saves, discards, picks another file or cancels. A password-protected PDF is refused (the app never asks for the password).
 
 When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
 entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses

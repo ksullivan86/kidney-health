@@ -71,7 +71,8 @@ database. Each step checks before it changes anything, so a restart in the middl
 3. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and the cloud fallback are off until an
    admin turns them on. The release notes list every new setting.
 4. **Your own Content-Security-Policy?** If a reverse proxy sets it instead of the app, add the Trusted Types policy name
-   `kh-xml` (`trusted-types kh-sw kh-xml`), or the patient-portal lab import cannot read a file.
+   `kh-xml` (`trusted-types kh-sw kh-xml`), or the patient-portal lab import cannot read a file. Releases after 0.4.0 also create
+   `kh-pdf` (reading a PDF lab report): list `trusted-types kh-sw kh-xml kh-pdf`; a name that is listed and not used does no harm.
 5. **Kubernetes:** the base in `deploy/k8s` is cluster-neutral now; copy the example overlay and move your values into it.
 
 ## From v0.2 to v0.3
