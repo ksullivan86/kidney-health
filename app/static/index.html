@@ -1755,8 +1755,9 @@
 </dialog>
 
 <!-- ===================== IMPORT FROM THE HEALTH APP: WEIGHTS AND BLOOD PRESSURE (js/views/body_import.js, js/engine/apple_health.js) =====================
-     Opened by KH.bodyImport.open() (Trends, Settings → Your data). The Health app's export.xml is read on this device, as text, and never
-     uploaded; only the weights and blood pressure readings the person keeps are sent (POST /api/body/weights/batch, /blood-pressure/batch). -->
+     Opened by KH.bodyImport.open() (Trends, Settings → Your data). The Health app's export.zip (or its export.xml) is read on this device, as text, and never
+     uploaded (the .zip is opened here too, js/engine/zip.js); only the weights and blood pressure readings the person keeps are sent
+     (POST /api/body/weights/batch, /blood-pressure/batch). -->
 <dialog id="sheet-body-import" class="sheet" aria-labelledby="sheet-body-import-title" aria-describedby="sheet-body-import-sub">
   <div class="sheet-form">
     <div class="sheet-head">
@@ -1772,14 +1773,13 @@
       <div id="body-import-pick">
         <ol class="small lab-fhir-steps" id="body-import-steps">
           <li>In the <strong>Health</strong> app, tap your picture (top right), then <strong>Export All Health Data</strong>, and save the zip to <strong>Files</strong>.</li>
-          <li>In <strong>Files</strong>, tap <strong>export.zip</strong> to unzip it.</li>
-          <li>Back here, choose <strong>apple_health_export/export.xml</strong> below.</li>
+          <li>Back here, choose <strong>export.zip</strong> below. If you already unzipped it in <strong>Files</strong>, choose <strong>apple_health_export/export.xml</strong> instead.</li>
         </ol>
         <p class="muted small">Only weights and blood pressure readings are read. Nothing else in the file is looked at: not heart rate, steps, blood glucose or insulin.</p>
         <div class="field">
-          <label for="body-import-file">export.xml</label>
-          <input id="body-import-file" class="ai-file" type="file" accept=".xml,text/xml,application/xml" aria-describedby="body-import-hint">
-          <span class="hint" id="body-import-hint">The file can be hundreds of megabytes. It is read in pieces, so a large one is fine; it can take a minute or two.</span>
+          <label for="body-import-file">export.zip (or export.xml)</label>
+          <input id="body-import-file" class="ai-file" type="file" accept=".zip,.xml,application/zip,text/xml,application/xml" aria-describedby="body-import-hint">
+          <span class="hint" id="body-import-hint">The file can be hundreds of megabytes. It is opened and read in pieces here, so a large one is fine; it can take a minute or two.</span>
         </div>
       </div>
       <p class="form-error" id="body-import-problem" role="alert" hidden></p>

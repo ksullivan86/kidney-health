@@ -7,11 +7,14 @@
 // default period, what goes up (no source name, source apple_health), the per-day trimming against the rows the person already has, a refusal
 // in the middle (the server's words and what was already added), Cancel and Stop, that text from the file is drawn as text, and that nothing
 // calls the network except through KH.api. The helpers the file takes from KH (h, $, clear, api, state, toast, router, sheets, util) are
-// stand-ins with the contract of js/core.js.
+// stand-ins with the contract of js/core.js. The export.zip picks (docs/dev/research/11-reading-a-zip-in-the-browser.md section 4.5) run the real
+// js/engine/zip.js on archives made in memory by tests/js/zip_writer.mjs: the same rows as the same export.xml picked by itself, each message,
+// Cancel while a .zip is being read, and a browser without DecompressionStream.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { makeZip } from './zip_writer.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (...p) => readFileSync(join(ROOT, 'app', 'static', ...p), 'utf8');
@@ -132,12 +135,12 @@ const KH = {
   util: { todayStr: () => TODAY, addDays, parseDate },
 };
 const trap = (name) => (...args) => { log.network.push([name, String(args[0])]); throw new Error(`${name} must not be called`); };
-const win = { KH, TextEncoder, crypto: globalThis.crypto };
+const win = { KH, TextEncoder, TextDecoder, crypto: globalThis.crypto, ReadableStream, TransformStream, DecompressionStream, DOMException };
 const context = vm.createContext({
   window: win, console, TextDecoderStream, AbortController, ReadableStream,
   fetch: trap('fetch'), XMLHttpRequest: trap('XMLHttpRequest'), WebSocket: trap('WebSocket'), navigator: { sendBeacon: trap('sendBeacon') },
 });
-for (const file of [['js', 'engine', 'rules.js'], ['js', 'engine', 'apple_health.js'], ['js', 'engine', 'body.js'], ['js', 'views', 'body_import.js']]) {
+for (const file of [['js', 'engine', 'rules.js'], ['js', 'engine', 'apple_health.js'], ['js', 'engine', 'zip.js'], ['js', 'engine', 'body.js'], ['js', 'views', 'body_import.js']]) {
   vm.runInContext(read(...file), context, { filename: file.join('/') });
 }
 const BI = win.KH.bodyImport;
@@ -169,6 +172,54 @@ const fileOf = (name, xml, { chunk = 2048, delay = 0, type = 'text/xml' } = {}) 
   };
   return file;
 };
+
+// An export.zip as the file box hands it over: a File-like with name, type, size and slice(), whose streams log what is done with them. `chunk` and
+// `delay` make its streams slow, so that Cancel can come while it is being read. `entries` are zip_writer.mjs entries, or raw bytes (a file that is not a zip).
+const zipFileOf = (name, entries, { type = 'application/zip', chunk = 0, delay = 0 } = {}) => {
+  const bytes = Buffer.isBuffer(entries) ? entries : makeZip(entries);
+  const blob = new Blob([bytes]);
+  const file = { name, type, size: bytes.length, opened: 0, cancelled: 0, finished: 0, over: 0, pulls: 0, slices: [] };
+  file.slice = (from, to) => {
+    file.slices.push([from, to]);
+    const part = blob.slice(from, to);
+    return {
+      arrayBuffer: () => part.arrayBuffer(),
+      stream() {
+        file.opened += 1;
+        const reader = part.stream().getReader();
+        let held = new Uint8Array(0);
+        let over = false;
+        const end = (what) => { file[what] += 1; if (!over) { over = true; file.over += 1; } };
+        return new ReadableStream({
+          async pull(controller) {
+            file.pulls += 1;
+            if (delay) await sleep(delay);
+            if (held.length === 0) {
+              const r = await reader.read();
+              if (r.done) { end('finished'); controller.close(); return; }
+              held = r.value;
+            }
+            const n = chunk > 0 ? chunk : held.length;
+            controller.enqueue(held.subarray(0, n));
+            held = held.subarray(n);
+          },
+          cancel(why) { end('cancelled'); return reader.cancel(why); },
+        }, { highWaterMark: 0 });
+      },
+    };
+  };
+  return file;
+};
+// the entries of the Health app's export.zip around an export.xml: the other files it holds, an encrypted one among them, and the macOS extras
+const healthEntries = (xml, more = []) => [
+  { name: 'apple_health_export/', data: '', method: 'store' },
+  { name: 'apple_health_export/export.xml', data: xml },
+  { name: 'apple_health_export/export_cda.xml', data: '<ClinicalDocument/>' },
+  { name: 'apple_health_export/clinical-records/Observation-1.json', data: '{"resourceType": "Observation"}' },
+  { name: 'apple_health_export/workout-routes/route_1.gpx', data: 'not readable', flags: 1, method: 'store' },
+  { name: '__MACOSX/apple_health_export/._export.xml', data: 'AppleDouble', method: 'store' },
+  ...more,
+];
 
 const MAIN = exportXml(
   weightRec('2026-10-20', '07:30', '70.2', 'kg', 'Withings Body+'), weightRec('2026-10-15', '07:30', '154.3', 'lb', 'Withings Body+'),
@@ -216,7 +267,7 @@ const out = {};
 {
   openFresh();
   out.opened = { open: dlg.open, focus: log.opened, cancel: text(cancelBtn), pickHidden: pickEl.hidden, reviewHidden: reviewEl.hidden, goHidden: goBtn.hidden };
-  await pick(fileOf('export.zip', 'PK', { type: 'application/zip' }));
+  await pick(zipFileOf('export.zip', Buffer.from('PK\x03\x04 this only starts like a zip')));
   out.zip = { problem: snapshot().problem, input: input.value, reviewHidden: reviewEl.hidden };
   await pick(fileOf('export_cda.xml', '<ClinicalDocument/>'));
   out.cda = { problem: snapshot().problem, input: input.value };
@@ -533,6 +584,97 @@ const crowdedXml = () => {
     other_day_rows: t(day('2026-10-02', 25), 20, [{ date: '2026-10-05', time: '06:00', source: 'manual' }]),
     empty: t([], 20, null),
   };
+}
+
+// 12. An export.zip: the same review and the same rows as the export.xml inside it, picked by itself
+{
+  fresh(backend());
+  openFresh();
+  const zipped = zipFileOf('export.zip', healthEntries(MAIN));
+  await pick(zipped);
+  out.zipReview = { ...snapshot(), tags: allTags(), calls: be.st.calls.length, lists: be.st.lists.length, networkTrapped: log.network.length };
+  out.zipRead = { opened: zipped.opened, over: zipped.over, slices: zipped.slices.length, size: zipped.size };
+  dlg.close();
+
+  fresh(backend());
+  openFresh();
+  await pick(zipFileOf('Health export.ZIP', healthEntries(MAIN, [{ name: 'apple_health_export/clinical-records/Observation-2.json', data: '{}' }])));
+  await goBtn.fire('click');
+  out.zipImported = {
+    posted: posted(), sources: [...new Set(be.st.calls.flatMap((c) => c.rows.map((r) => r.source)))],
+    weights: be.st.calls[0].rows.map((r) => [r.date, r.time, r.kg, r.context]), readings: be.st.calls[1].rows.map((r) => [r.date, r.time, r.systolic, r.diastolic, r.context]),
+    keys: be.st.calls.map((c) => [...new Set(c.rows.flatMap((r) => Object.keys(r)))].sort()), result: resultText(), shown: [...log.shown],
+  };
+  dlg.close();
+
+  // by type alone (no .zip in the name), and a re-zipped folder (the file one level down, a __MACOSX copy beside it)
+  fresh(backend());
+  openFresh();
+  await pick(zipFileOf('download', [{ name: 'Health Data/export.xml', data: MAIN }, { name: '__MACOSX/Health Data/._export.xml', data: 'x', method: 'store' }], { type: 'application/zip' }));
+  out.zipByType = { headline: snapshot().headline, problem: snapshot().problem };
+  dlg.close();
+
+  // what is wrong with a .zip, in words, and nothing was sent
+  fresh(backend());
+  openFresh();
+  out.zips = {};
+  const wrong = {
+    missing: zipFileOf('export.zip', [{ name: 'apple_health_export/export_other.xml', data: '<HealthData/>' }, { name: 'apple_health_export/workout-routes/a.gpx', data: 'x' }]),
+    cdaOnly: zipFileOf('export.zip', [{ name: 'apple_health_export/export_cda.xml', data: '<ClinicalDocument/>' }]),
+    twoExports: zipFileOf('export.zip', [{ name: 'a/export.xml', data: MAIN }, { name: 'b/export.xml', data: MAIN }]),
+    damaged: zipFileOf('export.zip', [{ name: 'apple_health_export/export.xml', data: MAIN, crcXor: 1 }]),
+    encrypted: zipFileOf('export.zip', [{ name: 'apple_health_export/export.xml', data: MAIN, flags: 1 }]),
+    cutOff: zipFileOf('export.zip', makeZip(healthEntries(MAIN)).subarray(0, 700)),
+    empty: zipFileOf('export.zip', Buffer.alloc(0)),
+  };
+  for (const [key, file] of Object.entries(wrong)) {
+    await pick(file);
+    const snap = snapshot();
+    out.zips[key] = { problem: snap.problem, input: input.value, pickHidden: snap.pickHidden, reviewHidden: snap.reviewHidden, status: snap.status, cancel: snap.cancel, calls: be.st.calls.length, lists: be.st.lists.length };
+  }
+  // a browser without DecompressionStream: the old advice, and the archive is not even opened
+  delete win.DecompressionStream;
+  const untouched = zipFileOf('export.zip', healthEntries(MAIN));
+  await pick(untouched);
+  out.zips.browser = { problem: snapshot().problem, input: input.value, slices: untouched.slices.length, opened: untouched.opened };
+  win.DecompressionStream = DecompressionStream;
+  // the sheet works again once the browser can (the same file is chosen again)
+  await pick(untouched);
+  out.zips.afterwards = { headline: snapshot().headline };
+  dlg.close();
+}
+{
+  // Cancel while a .zip is being read: the stream of the file is let go of, nothing is sent, the name is text
+  fresh(backend());
+  openFresh();
+  let many = '';
+  for (let i = 0; i < 3000; i += 1) many += weightRec(addDays('2026-10-01', -Math.floor(i / 10)), `0${i % 10}:15`, (60 + ((i * 7) % 100) / 10).toFixed(1), 'kg', `Scale ${i % 97}`);
+  const slow = zipFileOf('<img src=x onerror=alert(1)>.zip', healthEntries(exportXml(many)), { chunk: 512, delay: 4 });
+  input.files = [slow];
+  input.value = `C:\\fakepath\\${slow.name}`;
+  const reading = input.fire('change');
+  await sleep(120);
+  const during = snapshot();
+  const imgs = find(statusEl, (e) => e.tag === 'img').length + find(problemEl, (e) => e.tag === 'img').length;
+  await cancelBtn.fire('click');
+  await reading;
+  await sleep(60);
+  const after = snapshot();
+  out.zipCancelled = {
+    during: { status: during.status, cancel: during.cancel, pickHidden: during.pickHidden, reviewHidden: during.reviewHidden, go: during.go.hidden, imgs },
+    after: { status: after.status, pickHidden: after.pickHidden, reviewHidden: after.reviewHidden, problem: after.problem, focused: after.focused },
+    opened: slow.opened, over: slow.over, size: slow.size, input: input.value, calls: be.st.calls.length, lists: be.st.lists.length,
+  };
+  // closing the sheet while a .zip is being read does the same
+  const slow2 = zipFileOf('export.zip', healthEntries(exportXml(many)), { chunk: 512, delay: 4 });
+  openFresh();
+  input.files = [slow2];
+  const reading2 = input.fire('change');
+  await sleep(120);
+  dlg.close();
+  await reading2;
+  await sleep(60);
+  out.zipClosedWhileReading = { opened: slow2.opened, over: slow2.over, reviewHidden: reviewEl.hidden, status: statusEl.textContent, calls: be.st.calls.length };
 }
 
 out.network = log.network;

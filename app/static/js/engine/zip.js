@@ -238,7 +238,7 @@
     // 4. Read it and parse it entry by entry.
     const bytes = new Uint8Array(await readBytes(blob, directoryStart, directoryStart + directorySize));
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const names = new TextDecoder('utf-8', { fatal: false });
+    const names = new root.TextDecoder('utf-8', { fatal: false });
     const entries = [];
     let pos = 0;
     let lowest = Infinity;
@@ -501,7 +501,7 @@
       reader.releaseLock();
     }
     try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      return new root.TextDecoder('utf-8', { fatal: true }).decode(bytes);
     } catch (e) {
       throw fail('damaged', 'the text is not UTF-8');
     }
