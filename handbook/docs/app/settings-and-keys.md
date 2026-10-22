@@ -109,7 +109,14 @@ assistant you connect. A token lets that assistant read your own food log and ta
 anything, and it never sees anyone else's data, unless you tick **Can also save food and recipes** when you make
 it. Then the assistant can also add food to your log and save recipes as saved meals (it still cannot edit or
 delete anything). The box is off by default, and a token's choice cannot be changed later: make a new token. The
-list says **Read only** or **Read and save** for each token, and your activity lists what an assistant saved.
+list says **Read only**, **Read and save**, **Read and tastes** or **Read, save and tastes** for each token, and your
+activity lists what an assistant saved.
+
+A second box, **Also let it remember tastes (likes and dislikes)**, is separate and also off by default. Ticked, the
+assistant can remember that you like a food or a kind of food, want it less often or do not want it, or forget one of
+these, after it asks you. It cannot do anything else with that box, and it never changes **Treating a low**. Each
+change is listed in your activity, and a food it set shows in **Settings → Meal guidance → Your food preferences** as
+"from your assistant", where you can remove or change it.
 
 - Give the token a name (the app or device it is for) and choose when it expires: 30 days, 90 days or 1 year.
 - The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown

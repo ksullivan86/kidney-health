@@ -293,6 +293,20 @@ def test_the_person_sees_the_row_as_from_the_assistant_and_removes_or_changes_it
     assert [(r["name"], r["preference"], r["source"]) for r in exported] == [("Banana, raw", "like", "assistant")]
 
 
+def test_asks_undo_puts_back_a_row_the_assistant_set_with_the_source_it_had(admin, taster):
+    """Ask's Remember replaces the row (source ask); its Undo writes the previous state back through the same PUT, with the previous
+    source, and that source can be "assistant". A bad word is still refused."""
+    banana = food_id(admin, "banana")
+    taste(admin.app, taster, food_id=banana, preference="less")
+    put = lambda body: admin.put(f"/api/guidance/preferences/{banana}", json=body)  # noqa: E731
+    assert put({"preference": "like", "source": "ask"}).status_code == 200  # Remember
+    assert rows(admin) == {"Banana, raw": ("like", "ask")}
+    back = put({"preference": "less", "source": "assistant"})  # Undo
+    assert back.status_code == 200 and back.json()["source"] == "assistant"
+    assert rows(admin) == {"Banana, raw": ("less", "assistant")}
+    assert put({"preference": "less", "source": "robot"}).status_code == 400
+
+
 def test_a_change_to_the_same_value_changes_nothing_and_leaves_the_persons_own_row_alone(admin, taster):
     banana = food_id(admin, "banana")
     person_puts(admin, banana, "like")

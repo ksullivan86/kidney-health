@@ -9,12 +9,12 @@ token. The plan, its rules and its parts are in
 
 **Where this stands.** All of it is built. Step 1: personal access tokens, the **MCP server** at `/mcp` with four tools that read
 your numbers and check a meal, and, only for a token made with **Can also save food and recipes**, two tools that save
-(`log_food` and `save_recipe`). Step 2: an **Ask** screen inside the app, a text chat that uses the same read tools and checks
+(`log_food` and `save_recipe`), and, only for a token made with **Also let it remember tastes**, one tool that remembers a like or
+dislike (`set_food_preference`). Step 2: an **Ask** screen inside the app, a text chat that uses the same read tools and checks
 every answer in code before it is shown ([The Ask screen](#the-ask-screen-the-chat-inside-the-app); plan
 [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)); saving from that chat, as a card you press Save on or, if you
 choose, at once with Undo; and a **microphone** ([Talking to Ask](#talking-to-ask-voice), off until the admin sets up speech to
-text). Not built: recipe pages read by `check_meal`, and offering the "remember a taste" tool to an assistant connected with a
-token ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
+text). Not built: recipe pages read by `check_meal` ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 
 ## Contents
 
@@ -27,6 +27,7 @@ token ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
   * [Security rules](#security-rules)
 * [What the assistant can ask the app](#what-the-assistant-can-ask-the-app)
   * [Tools that save](#tools-that-save)
+  * [The tool that remembers a taste](#the-tool-that-remembers-a-taste)
 * [Connect Open WebUI](#connect-open-webui)
 * [Connect a Hermes Agent profile](#connect-a-hermes-agent-profile)
 * [System prompt template](#system-prompt-template)
@@ -57,8 +58,11 @@ A token is a long secret, `kha_` followed by 43 letters, digits, `-` and `_`, th
 assistant you connect. By default it gives that assistant **read-only** access to **your own** food log and
 targets (scope `assistant:read`): it cannot change anything. If you tick **Can also save food and recipes** when
 you make the token, it also has the scope `assistant:log`: the assistant can then add entries to your food log and
-save recipes as saved meals, after it has asked you (see [Tools that save](#tools-that-save)). It never sees
-anyone else's data, and it cannot edit or delete anything.
+save recipes as saved meals, after it has asked you (see [Tools that save](#tools-that-save)). If you tick **Also let it remember
+tastes (likes and dislikes)**, it also has the scope `assistant:prefs`: the assistant can then remember that you like or dislike a
+food or a kind of food (see [The tool that remembers a taste](#the-tool-that-remembers-a-taste)). The two ticks are separate:
+neither gives the other, and both are off by default. It never sees anyone else's data, and it cannot edit or delete anything
+(the one thing it can replace or clear is a taste, with the second tick).
 
 ### For people using the app
 
@@ -66,20 +70,22 @@ anyone else's data, and it cannot edit or delete anything.
 
 1. Under **New token**, give the token a **name** (for example the app or device it is for, so you know which one
    to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year. Tick **Can also
-   save food and recipes** only if you want the assistant to be able to save for you; it is off by default, and a
-   token cannot be changed later (make a new one instead).
+   save food and recipes** only if you want the assistant to be able to save for you, and **Also let it remember tastes** only if
+   you want it to be able to remember your likes and dislikes; both are off by default, and a token cannot be changed later (make
+   a new one instead).
 2. Select **Create token**. The app may ask for your password again first, as it does before saving a key.
 3. The token appears once, with **Copy token**. Paste it into your assistant's settings now: **it is not shown
    again**. If it is lost, revoke it and make a new one.
 
-The list shows each token's name, whether it is **Read only** or **Read and save**, its first characters
+The list shows each token's name, whether it is **Read only**, **Read and save**, **Read and tastes** or **Read, save and tastes**, its first characters
 (`kha_AbCd1234…`), when it was made, when it was last used (or "never used") and when it expires. **Revoke** asks once more and then ends the token at once; the assistant
 using it gets "not allowed" from then on. You can have at most **5** active tokens. Revoked and expired tokens stay
 in the list for 30 days, then disappear.
 
 Your activity list (Settings → Account → Recent sign-in activity) shows when a token was made (and whether it can
-save) and when tokens were revoked, and why. It also shows **every time an assistant saved something**: the token's
-name, how many entries (or which recipe), the day and the meal.
+save or remember tastes) and when tokens were revoked, and why. It also shows **every time an assistant saved something**: the
+token's name, how many entries (or which recipe), the day and the meal; and **every taste it changed**, as "Assistant remembered a
+taste": the food or kind of food, what it was and what it is now, and the token's name.
 
 ### What ends a token
 
@@ -100,9 +106,9 @@ For each token: its name, its first 12 characters, the dates (made, last used, e
 be recovered, only replaced. Tokens are not in your data export (like your sign-in sessions, they are a way in, not
 your data). Deleting your account deletes them.
 
-For 24 hours the server also keeps, for each save that carried a `request_key`, a one-way hash of the token's id and
-the key (never the key), what was saved (the entry ids or the saved meal's id) and when, so that a retry is
-recognised ([Tools that save](#tools-that-save)).
+For 24 hours the server also keeps, for each save or taste change that carried a `request_key`, a one-way hash of the token's id and
+the key (never the key), what was saved (the entry ids or the saved meal's id, or the food or kind of food and the taste) and
+when, so that a retry is recognised ([Tools that save](#tools-that-save)).
 
 ### For the person running the server
 
@@ -139,7 +145,8 @@ recognised ([Tools that save](#tools-that-save)).
 
 ## What the assistant can ask the app
 
-The MCP server offers four **read-only** tools to every token, and two that save to a token that can save. Every number in their answers comes from the app's own code (the
+The MCP server offers four **read-only** tools to every token, two that save to a token that can save, and one that remembers a
+taste to a token that can do that (a different permission). Every number in their answers comes from the app's own code (the
 same functions as the Today screen, the food search and the entry sheet), never from the chat model. Each answer is
 one JSON object with `"source": "kidney-health"` and the reminder "Numbers come from the app; fetch them again
 after any change." A value a food does not list is `null` (unknown, never 0), and every total says how many foods
@@ -184,6 +191,45 @@ Rules for both:
 * Neither tool edits or deletes anything, and neither returns insulin or medicine doses, medicine advice or lab
   interpretation.
 
+### The tool that remembers a taste
+
+Only a token made with **Also let it remember tastes (likes and dislikes)** (scope `assistant:prefs`) lists this tool. With any
+other token, including one that can save food and recipes, `tools/list` leaves it out and calling it is the same "Unknown tool"
+answer as for a tool that does not exist. The tick gives nothing else: that token can read, and it cannot save food or recipes
+unless you also ticked the first box.
+
+| Tool | What it does |
+|---|---|
+| `set_food_preference(food_id or category, preference, request_key)` | Remembers a taste for the person's meal suggestions: exactly one of `food_id` (a food the person may use, from a `search_foods` result with `in_app: true`) and `category` (one of the person's food groups, for example "Fish & Seafood"), and `preference` `like` (more like this), `less` (less often), `not_for_me` (do not suggest it) or `clear` (forget what was said). `request_key` is required. It is the same thing as a tap in **Settings → Meal guidance → Your food preferences**: it only changes what the app suggests (More like this and Less often reorder the foods; Not for me keeps a food out of the suggestions, though it stays in search and can still be logged). A food it sets is listed there as "from your assistant", with the usual **Remove** (**Suggest again** for Not for me); a food group is moved between the group choices in the same screen (**Kinds of food**). The answer is short: what was set and where to undo it. It never lists your other foods or preferences. |
+
+Rules for it:
+
+* **It is the assistant's job to ask first, and the app does not enforce that.** The tool description and the `initialize`
+  instructions tell the model to use it only when you say the taste yourself in this conversation, after reading it back and
+  hearing yes; never to guess a taste from what you log or ask about; and never for an allergy (a taste is not an allergy: the app
+  cannot check allergens). Unlike the Ask screen, which always shows you a card to confirm, an assistant connected with a token has
+  no card. That is why this is a separate tick, why every change is in your activity list and why it is limited.
+* **A low is never touched.** The tool has no part in treating a low: it does not read or change the Treating a low card, its
+  options or the low pre-filter. Your own **Not for me** (and a kind of food you set to **Never suggest**) also take a food out of the
+  Treating a low options in the app; so the tool **refuses Not for me** for a food that can treat a low (glucose tablets and gel,
+  juice, regular soda, candy, honey and the like) and for a kind of food that holds one ("Beverages", "Sweets & Snacks", "Diabetes
+  supplies" in the built-in list), says only you can do that in the app, and changes nothing. Liking, wanting less of, and forgetting
+  such a food are allowed: they never change the options.
+* **At most 30 changes a day per token.** The 31st is refused with the limit's `429` and `Retry-After` ("Too many changes from this
+  assistant today. Try again later."); the 60 requests a minute apply too. A retry that carries a `request_key` already used, a
+  refused call and the read tools do not count.
+* **Retries do not change twice (`request_key`).** Required here, 8 to 64 letters, digits, `-` or `_`, a fresh one per change. A
+  second call by the same token with the same key within 24 hours changes nothing and answers `{"saved": true, "duplicate": true,
+  …}`. The same key on another tool is refused.
+* **What it never does.** It does not use "stop using what the app learned" (`neutral`, which is your own switch), does not change
+  limits, targets, warnings or any number, and cannot reach the learned list or the "Learn from my log" switch. Asking for what is already set changes
+  nothing, writes no activity row and leaves a taste you set yourself marked as yours.
+* **It replaces and clears.** A taste it sets replaces what was there for that food or group (your own earlier choice included), and
+  `clear` removes it. The activity row says what it was and what it became, so you can put it back in the app.
+* **Every change is in your activity list** ("Assistant remembered a taste": the food or kind of food, old and new, the token's name).
+  A change to a kind of food has no "from your assistant" mark in the preferences screen (that setting records no source); the activity
+  list is where it shows.
+
 ## Connect Open WebUI
 
 Recent Open WebUI versions can use an MCP server as a tool server over **Streamable HTTP**. Menus change between
@@ -220,12 +266,12 @@ mcp_servers:
     headers:
       Authorization: "Bearer kha_your_token_here"
     tools:
-      include: [safety_check, get_today, search_foods, check_meal]  # add log_food, save_recipe to let it save
+      include: [safety_check, get_today, search_foods, check_meal]  # add log_food, save_recipe to let it save, set_food_preference to let it remember tastes
 ```
 
 * `tools.include` lists the tools the profile may use, so a later version of the app that offers more tools changes
   nothing until you add them here. `log_food` and `save_recipe` work only with a token made with **Can also save
-  food and recipes**.
+  food and recipes**, and `set_food_preference` only with one made with **Also let it remember tastes**.
 * The token is a password: keep the profile's files readable only by you, and revoke the token in the app if the
   file leaks.
 * Put the [system prompt](#system-prompt-template) in the profile's personality or system prompt.
@@ -265,7 +311,13 @@ only source of numbers.
 6. Memory: remember preferences, foods the person likes or avoids, routines and recipes that worked. Never
    remember targets, lab values or totals: fetch them from the tools every time, because the care team may have
    changed them.
-7. Keep answers short and in plain words.
+7. Tastes (only if set_food_preference is in your tool list; otherwise you cannot change the person's food
+   preferences in the app). Use it only when the person tells you a taste in this conversation ("I don't like
+   salmon", "more lentils please"): read it back, wait for their yes, then call it with a new request_key and say
+   what you set. Never guess a taste from what they log or ask about. A taste is not an allergy: if they mention
+   an allergy, say the app cannot check allergens and point them to labels and their care team. It only changes what
+   the app suggests and has no part in treating a low.
+8. Keep answers short and in plain words.
 ```
 
 ## Check that it works
@@ -278,8 +330,8 @@ curl -sS https://food.example.org/mcp \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
-The answer lists `safety_check`, `get_today`, `search_foods` and `check_meal`, and, for a token that can save,
-`log_food` and `save_recipe`. `401` means the token is wrong,
+The answer lists `safety_check`, `get_today`, `search_foods` and `check_meal`, for a token that can save,
+`log_food` and `save_recipe`, and, for a token that can remember tastes, `set_food_preference`. `401` means the token is wrong,
 revoked or expired; `404` means assistant access is off. Maintainers can run `python tools/e2e/mcp_smoke.py`,
 which starts a server and speaks the protocol to it end to end ([tools/e2e/README.md](../tools/e2e/README.md)).
 
@@ -361,8 +413,10 @@ the conversation, never because of what you log or ask about, and it never says 
 A taste is not an allergy: the app cannot check allergens, and if you mention one the assistant is told to say so and to point
 you to labels and your care team instead. The assistant is also told which foods and food groups you marked
 ([What is sent](ai.md#what-is-sent-and-what-never-is)), never what the app learned from your log. A taste only changes the
-order of suggestions: it never relaxes a limit or a warning, and it has no part in the Treating a low card. **This tool is
-not offered to an assistant connected with a token** (the MCP server, above); that needs its own permission, in a later step.
+order of suggestions: it never relaxes a limit or a warning, and it has no part in the Treating a low card. **An assistant
+connected with a token gets a tool of the same name only if you ticked "Also let it remember tastes" when you made the token**
+([above](#the-tool-that-remembers-a-taste)); it has no card, so it is limited and listed in your activity. Ask itself is not
+changed by it: Ask still shows a card for every taste.
 * What never changes: no insulin or medicine doses (the dose check runs on the assistant's words), the app's numbers (every
   figure is the app's), and a message about a low or an emergency is answered by the app's cards first and never saves. A
   food eaten to treat a low can be logged like any other food and is never warned about. The assistant may save only when
@@ -424,8 +478,13 @@ the words you speak become text in the question box, and you press Send as alway
   as good as the model's following it. Every save is in the activity list, and every entry or saved meal can be
   edited or deleted in the app. If you do not want an assistant to be able to save, make the token without **Can
   also save food and recipes** (the default).
-* The assistant cannot edit or delete anything, see lab results, the activity log or settings, or anyone else's
-  data.
+* **A model can remember the wrong taste** (a misheard food, a joke taken seriously, or a food name that carries instructions): the
+  confirmation is only as good as the model's following it. A taste only changes what the app suggests, never a limit,
+  a warning or the Treating a low options, and it can be changed or removed in Settings; every change is in the activity list and
+  the tool is limited to 30 a day per token. If you do not want an assistant to change your preferences, make the token without
+  **Also let it remember tastes** (the default).
+* The assistant cannot edit or delete anything (the one thing it can replace or clear is a taste, with the second tick), see lab
+  results, the activity log or settings, or anyone else's data.
 
 ## The endpoint, for the person running the server
 
@@ -438,7 +497,9 @@ the words you speak become text in the question box, and you press Send as alway
   counts) or for an address blocked after refused tokens.
 * Behind a reverse proxy, pass the `Authorization` header through, and set `PUBLIC_URL` if a client sends an
   `Origin` with the public address. The usual `TRUSTED_PROXIES` rules apply ([security.md](security.md)).
-* Every request needs `assistant:read`. `tools/list` lists `log_food` and `save_recipe` only for a token that also
+* Every request needs `assistant:read`. `tools/list` lists `set_food_preference` only for a token that has `assistant:prefs`
+  (annotations `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: true`; a token without the scope is told
+  "Unknown tool"; past 30 changes a day per token it is the limit's `429` with `Retry-After`), and it lists `log_food` and `save_recipe` only for a token that also
   has `assistant:log` (they carry the annotations `readOnlyHint: false`, `destructiveHint: false`,
   `idempotentHint: false`, `openWorldHint: false`: a repeated call saves again unless it carries the same
   `request_key`), and the `initialize` instructions

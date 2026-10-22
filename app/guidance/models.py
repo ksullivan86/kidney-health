@@ -427,10 +427,9 @@ class NotForMeList(_Out):
 
 FoodPreference = Literal["like", "less", "not_for_me", "neutral"]
 # Who set a preference, as the lists, the export and the import carry it: the person themselves, a change Ask proposed and the
-# person confirmed, or a change the person's own assistant made over MCP with an ``assistant:prefs`` token (note 09 §4.8b).
+# person confirmed, or a change the person's own assistant made over MCP with an ``assistant:prefs`` token (note 09 §4.8b). The
+# PUT body takes all three: Ask's Undo puts a row back exactly as it was, with the source it had, and that can be "assistant".
 PreferenceSource = Literal["person", "ask", "assistant"]
-# What a signed-in page may send: it can say "ask" (its own confirmed card) but never "assistant", which only the MCP tool writes.
-PreferenceBodySource = Literal["person", "ask"]
 
 
 class PreferenceFood(_Out):
@@ -464,7 +463,7 @@ class PreferenceBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     preference: FoodPreference
-    source: PreferenceBodySource = "person"
+    source: PreferenceSource = "person"
 
 
 class LearnedItem(_Out):

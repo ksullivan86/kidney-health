@@ -68,7 +68,6 @@ section. Last reviewed for the v0.4.0 release (2026-10-22).
 * The three reference live evaluations (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes Agent) committed under `docs/dev/ai-eval/` before a model is listed as recommended in `docs/ai.md` — note 04 §6 Phase 5 (a maintainer action: no build has had an Ollama server, OpenAI key or Hermes Agent to run them against).
 * Re-check whether Hermes Agent's `GET /v1/toolsets` lists tools of configured MCP servers, and tighten the tool check if it does — note 04 §9 A1 (b) and §7.
 * Live runs of the 0.4.0 AI features that tests only fake (a maintainer action, steps in [`maintainers.md`](maintainers.md)): a photo of a real lab report on the local vision model, the route `local_then_cloud` with a real Ollama and a cloud key (`scripts/ai_eval.py` does not exercise routing), and the speech-to-text overlay (its image digest in `deploy/compose.stt-whisper.yaml` is a placeholder; a real whisper container; the microphone on an iPhone and an Android phone).
-* Offer `set_food_preference` ("remember a taste") to an assistant connected with a token: it needs its own token scope, because a preference silently shapes every later suggestion — note 09 §4.8. Today only the in-app Ask chat has it, and always as a card.
 
 ## Scanning, label photos and the offline outbox in the browser (notes 02 R5/R7, 03 R7–R9)
 

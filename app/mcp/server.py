@@ -75,7 +75,7 @@ PREFS_INSTRUCTIONS = (
     "it less often, or does not want it, or clears one of those. Use it only when the person says so in this conversation, "
     "after you read it back and they said yes; never infer a taste from what they log or ask about, and never use it for an "
     "allergy (the app cannot check allergens). Send a new request_key with each change, and say what you set: the person can "
-    "change or remove it in the app. It only changes the order of the app's suggestions and has no part in treating a low."
+    "change or remove it in the app. It only changes what the app suggests and has no part in treating a low."
 )
 
 RATE_LIMIT = "mcp"

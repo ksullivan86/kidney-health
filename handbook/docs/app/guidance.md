@@ -46,7 +46,9 @@ Open **⋯** next to a food in **What fits now**, in the swap ideas or in a plan
 message at the bottom of the screen says what changed. A food you like is lifted a little in the suggestions and a
 food you want less often is lowered. In **Settings → Meal guidance → Your food preferences** you see all your choices,
 with **Remove** next to each, and you can set a whole kind of food (fruits, grains and so on) to **Like**, **Less
-often** or **Never suggest**.
+often** or **Never suggest**. A food that Ask added is marked "added in Ask", and one that an assistant you connected
+added (only if you allowed that when you made its token) is marked "from your assistant". Either way it is your list:
+**Remove** takes it away.
 
 Taste only changes the order of foods that already fit your limits. It never hides a food (only **Not for me** and
 **Never suggest** do), it never makes a food fit, and it is not an allergy filter: the app cannot tell whether a food

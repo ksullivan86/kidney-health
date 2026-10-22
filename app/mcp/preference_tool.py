@@ -69,7 +69,8 @@ DESCRIPTION = (
     "themselves in this conversation, and only after you read it back and they said yes; never infer a taste from what they log "
     "or ask about, and never for an allergy (the app cannot check allergens). Give exactly one of food_id (from search_foods, a "
     "result with in_app true) and category (one of the person's food groups, for example \"Fish & Seafood\"). It only changes "
-    "the order of the app's suggestions: it changes no limit, warning or number, and has no part in treating a low (a food or "
+    "what the app suggests (like and less reorder it; not_for_me keeps a food out of the suggestions, though it stays in search "
+    "and can still be logged): it changes no limit, warning or number, and has no part in treating a low (a food or "
     "group that can treat a low cannot be set to not_for_me here; the person does that in the app). The answer says what was "
     "set: tell the person, and that they can change or remove it in the app (" + WHERE_FOOD + "). At most "
     f"{DAILY_MAX} changes a day per token. " + T.RETRY_ADVICE
@@ -126,7 +127,7 @@ def answer(kind: str, name: str, preference: str, *, duplicate: bool = False) ->
     return {
         "saved": True, **({"duplicate": True} if duplicate else {}),
         "target": {"kind": kind, "name": name}, "preference": preference,
-        "note": f"{said} It only changes the order of suggestions. The person can change or undo it in the app ({where}). "
+        "note": f"{said} It only changes what the app suggests. The person can change or undo it in the app ({where}). "
                 "Tell the person what you set.",
     }
 

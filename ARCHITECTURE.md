@@ -765,7 +765,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 14 | `m014_ai_consent_voice.py` | assistant step 2, part B | `ai_consents.purpose` accepts `voice` (table rebuilt from its stored definition; "Voice input" below). |
 | 15 | `m015_symptoms.py` | symptoms log | `symptoms`: a person's symptoms by date and severity, no list of keys in the table ("Symptoms log" below). |
 | 16 | `m016_ai_consent_labs.py` | lab report photos | `ai_consents.purpose` accepts `labs` (table rebuilt from its stored definition; "Lab report photos" below). Needs step 15 in place (the numbering has no gaps). |
-| 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
+| 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`; `assistant` later, code only) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
 | 18 | `m018_body_measurements.py` | weight and blood pressure | `weights` and `blood_pressures`: a person's weighings and readings by date, kilograms and mmHg, a `source_key` an import de-duplicates on, no `CHECK` on a context or a source ("Weight and blood pressure" below). |
 | 19 | `m019_body_token.py` | phone push (note 12) | `weights.api_token_id` and `blood_pressures.api_token_id` (`REFERENCES api_tokens(id) ON DELETE SET NULL`, NULL for every earlier row) and two partial indexes `(user_id, api_token_id) WHERE api_token_id IS NOT NULL`; no `(user_id, date, time)` index (step 18's `(user_id, date)` serves the same-reading check) ("Device tokens and `/push/v1`" below). |
 
@@ -1088,7 +1088,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
 | `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
 | `GET /api/me/tokens?family=` | user | `family` is `assistant` (default, so the Assistant access screen is unchanged) or `device` (else 400) → `{family, enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}` for that family only; `enabled` is that family's switch (`assistant.enabled` / `push.enabled`); works while it is off. A device token's item also holds `sent: {weights, readings}` ("Assistant access tokens", "Device tokens and `/push/v1`") |
-| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false, family?: "assistant"\|"device" = "assistant"}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes) and is a 400 for a device token, whose one scope `body:write` is never chosen; 409 that family's switch is off, 400 five active **in that family**, 429 after 20 in an hour (both families together) |
+| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false, can_prefs?: bool = false, family?: "assistant"\|"device" = "assistant"}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes) and `can_prefs` the scope `assistant:prefs` (remember tastes: `set_food_preference`), two separate choices, neither giving the other (both give `assistant:read`); both are a 400 for a device token, whose one scope `body:write` is never chosen; 409 that family's switch is off, 400 five active **in that family**, 429 after 20 in an hour (both families together) |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
 | `DELETE /api/me/tokens/{id}/body-rows` | user | "Delete what it sent": → `{deleted: {weights, readings}}` after deleting every weight and reading the person's **device** token `id` sent (`api_token_id`), nothing else; works for a revoked or expired token still listed; audit `body.token_rows_deleted`; 404 if not yours, not a device token or already purged |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `weights.csv`, `blood_pressure.csv`, `README.txt`; no passwords, sessions or keys |
@@ -1106,7 +1106,7 @@ export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "a
                "weights",            // [{id, date, time, kg, context, note, source, source_key, created_at, updated_at}] oldest day first (schema step 18); optional, likewise
                "blood_pressures",    // [{id, date, time, systolic, diastolic, pulse, context, note, source, source_key, created_at, updated_at}] (schema step 18); optional, likewise
                "ai_audit", "activity",
-               "food_preferences",   // [{food_id, name, preference, created_at, source, updated_at}] (schema steps 5 and 17): preference like | less | not_for_me | neutral, source person | ask
+               "food_preferences",   // [{food_id, name, preference, created_at, source, updated_at}] (schema steps 5 and 17): preference like | less | not_for_me | neutral, source person | ask | assistant
                "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
                "builtin_foods"}      // [{id, name, fdc_id}]: the built-in foods the person's entries, meals and food preferences use (import)
 // linked_foods items: {id, name, source, fdc_id, linked_at, gtin, food}; food = the whole record, shaped like a custom_foods item (import)
@@ -1589,7 +1589,7 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 | `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
 | `GET /api/guidance/rules` | → `{rules_version, rules_hash, rules: {NAME: value}, notes: {NAME: basis}, topic_pages: {slug: {slug, title, url}}, tips}` |
 | `GET /api/guidance/preferences` | → `{rules_version, limit: 1000, not_for_me_limit: 500, foods: [{food_id, name, category, preference, source, created_at, updated_at}] (by name), groups: {like, less, never}, learn_from_log}`; `groups.never` is `exclude_categories` |
-| `PUT /api/guidance/preferences/{food_id}` | `{preference: like\|less\|not_for_me\|neutral, source?: person\|ask (person)}` → the row; the same value again changes nothing; 404 for a food the person cannot use; 409 at 1,000 preferences or 500 "Not for me" foods; one `BEGIN IMMEDIATE` transaction |
+| `PUT /api/guidance/preferences/{food_id}` | `{preference: like\|less\|not_for_me\|neutral, source?: person\|ask\|assistant (person)}` → the row (`assistant` is written by the MCP tool `set_food_preference` with an `assistant:prefs` token; the page sends it only when Ask's Undo puts back a row it replaced, with the source that row had); the same value again changes nothing; 404 for a food the person cannot use; 409 at 1,000 preferences or 500 "Not for me" foods; one `BEGIN IMMEDIATE` transaction |
 | `DELETE /api/guidance/preferences/{food_id}` | → 204; 404 when the person has no preference on the food |
 | `GET /api/guidance/learned` | → `{rules_version, learn_from_log, items: [{kind: often\|slot\|usual_meal\|planned_not_eaten, food_id \| null, name, meal \| null, key \| null, reason, effect: more\|less}]}` (≤ 30 items of each kind); computed on the spot, never stored; `items` is empty with `learn_from_log` off |
 | `GET /api/guidance/not-for-me` | alias: → `{rules_version, limit: 500, foods: [{food_id, name, category, created_at}]}`, the `not_for_me` rows only |
@@ -1681,7 +1681,8 @@ profile column is superseded by the settings registry (below).
 
 ### Schema step 17 (`m017_food_preference_source.py`)
 
-`food_preferences.source TEXT` (`person` or `ask`; existing rows `person`) and `food_preferences.updated_at TEXT` (existing rows
+`food_preferences.source TEXT` (`person` or `ask`; existing rows `person`; the MCP tool later writes `assistant` with no new step: the column
+is free text, validated by the code) and `food_preferences.updated_at TEXT` (existing rows
 their `created_at`), added with `add_column_if_missing` and a back-fill that touches only `NULL`s, so a re-run changes
 nothing. `preference` is validated by the API (`like`, `less`, `not_for_me`, `neutral`), not by a `CHECK`. The key
 `(user_id, food_id)` and both cascades stay, so a person has one state per food and deleting an account or a food removes the row.
@@ -2753,8 +2754,9 @@ setting: `set_food_preference` is always a card** (the last bullet, "Tastes").
   forgets the guidance screens' remembered answers. The card's words are the app's own ("Remember this for your suggestions?
   Salmon: less often." with Remember and Cancel; a group is "Fish & Seafood (food group)", Not for me on a group is "never
   suggest"), with the line that less often and not for me are tastes, not an allergy filter. The tool is **not** in
-  `app/mcp/tools.py`, so `tools/list` never shows it and `tools/call` answers "unknown tool" for every token scope (pinned in
-  `tests/test_ai_chat_preference.py`); external assistants get their own scope for it in a later step. Rule 10 of the Ask prompt
+  `app/mcp/tools.py`: an assistant connected with a token gets the same-named MCP tool only with the separate scope
+  `assistant:prefs` ("Remembering a taste" under "Assistant MCP server"; `app/mcp/preference_tool.py` reuses this module's checks),
+  and a token's tool never changes Ask, which stays a card (`tests/test_ai_chat_preference.py`). Rule 10 of the Ask prompt
   names it: only when the person states a taste in this conversation, never inferred from what they log or ask, never claimed
   as remembered, never for an allergy. The model never sees a learned signal (the person block holds explicit choices only).
   The rule-based answers for a low or an emergency run before any model and read no preference; nothing here touches
@@ -3540,8 +3542,9 @@ shows one line saying the feature is in the installed app (no mock tokens).
 
 `id INTEGER PRIMARY KEY AUTOINCREMENT`, `user_id → users(id) ON DELETE CASCADE`, `name` (1–60 characters after
 cleaning: NFC, no control characters, single spaces), `token_hash` (`UNIQUE`, the SHA-256 hex of the whole token),
-`prefix` (its first 12 characters), `scopes` (space-separated known scopes: `assistant:read`, and `assistant:log` for a
-token made with `can_log`, which always has `assistant:read` too; `body:write` for a device token; an unknown word
+`prefix` (its first 12 characters), `scopes` (space-separated known scopes: `assistant:read`; `assistant:log` for a
+token made with `can_log` and `assistant:prefs` for one made with `can_prefs`, each always with `assistant:read` too and neither
+giving the other; `body:write` for a device token; an unknown word
 grants nothing, and a row that names scopes of both families grants nothing; a token's scopes are fixed when it is
 made), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
 
@@ -3551,6 +3554,15 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
              "state": "active" | "expired" | "revoked"}
 ```
 
+* **Scopes of an assistant token** (`SCOPES`: `assistant:read`, `assistant:log`, `assistant:prefs`; `scopes_for(can_log, can_prefs)`).
+  `parse_scopes` adds `assistant:read` for `assistant:log` and for `assistant:prefs` and implies nothing else: `log` does not give `prefs`
+  and `prefs` does not give `log`. Each is a separate tick when the token is made (Settings → Assistant access: "Can also save food and
+  recipes", "Also let it remember tastes (likes and dislikes)", both off by default; `POST /api/me/tokens` takes `can_log` and
+  `can_prefs`, booleans; a scope is never sent by name). The family rules are as strict as before: `assistant:prefs` is an
+  assistant-family scope, so a device token can never hold it, a row naming it together with `body:write` grants nothing, and
+  `create_my_token` refuses `can_prefs` for a device token (400, `field: can_prefs`). Tokens made before the scope existed keep exactly
+  the scopes in their row. The list item says what a token can do ("Read only", "Read and save", "Read and tastes", "Read, save
+  and tastes"); `api_token.created` records `scopes`.
 * A token is `kha_` + 43 base64url characters (`secrets.token_urlsafe(32)`). The plain token is in the `POST`
   answer only; no route returns it or its hash again, and log lines redact `kha_…` (`app/security.py`).
 * At most 5 active (not revoked, not expired) tokens a person **in each family**; expiry 30, 90 (default) or 365 days; making one
@@ -3585,16 +3597,19 @@ then the cascade removes the rows) and an admin's "Revoke tokens" in Server admi
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`, `family`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of
-part C are the one place a token's name is kept: `assistant.food_logged` and `assistant.recipe_saved` below.)
+part C are the one place a token's name is kept: `assistant.food_logged` and `assistant.recipe_saved` below, and
+`assistant.preference_set` for a taste.)
 
 ## Assistant MCP server (assistant step 1, parts B and C)
 
 Spec `docs/dev/plans/assistant-step1.md` parts B and C; code `app/mcp/` (`server.py`: transport and JSON-RPC; `tools.py`:
 the four read tools and, for a token with `assistant:log`, `log_food` and `save_recipe`; `measures.py`: household
-measures); guide `docs/assistant.md`; tests `tests/test_mcp.py`, `tests/test_mcp_write.py` and `tools/e2e/mcp_smoke.py`.
-No schema change, no new dependency, no JS twin (the demo has no assistant). The in-app Ask chat's `set_food_preference` (food
-preferences, "Saving from the chat") is **not** an MCP tool and no token scope can list or call it: it lives in
-`app/ai/chat_preference.py`, not in `TOOLS`. An external assistant gets its own scope for it in a later step.
+measures; `preference_tool.py`: `set_food_preference`, below); guide `docs/assistant.md`; tests `tests/test_mcp.py`,
+`tests/test_mcp_write.py`, `tests/test_mcp_prefs.py` and `tools/e2e/mcp_smoke.py`. No schema change, no new dependency, no JS twin (the
+demo has no assistant). The in-app Ask chat's `set_food_preference` (food preferences, "Saving from the chat") stays in
+`app/ai/chat_preference.py` and stays a card. An external assistant gets the same-named tool only with the separate scope
+`assistant:prefs` (note 09 §4.8b): it lives in `app/mcp/preference_tool.py`, not in `tools.TOOLS`, because it reuses Ask's checks
+(which import `tools`); `server.all_tools()` puts the list together and `Tool.needs` says which scope each tool needs.
 
 ### Transport
 
@@ -3623,18 +3638,24 @@ JSON-RPC:
   title, version: <app version>}, instructions}` (call `safety_check` first, every number from the tools, never doses
   or lab interpretation; a token with `assistant:log` also gets `WRITE_INSTRUCTIONS`: read the items back and ask the
   person to confirm before saving, say what was saved after, and the confirmation never comes before treating a low).
-  `ping` → `{}`. `tools/list` → the four read tools, and `log_food` and `save_recipe` **only for a token that has
-  `assistant:log`**, with `name`, `title`, `description`, `inputSchema` (`additionalProperties: false`) and
+  `ping` → `{}`. `tools/list` → the four read tools, `log_food` and `save_recipe` **only for a token that has
+  `assistant:log`**, and `set_food_preference` **only for a token that has `assistant:prefs`**, with `name`, `title`, `description`, `inputSchema` (`additionalProperties: false`) and
   `annotations: {title, readOnlyHint: true, openWorldHint: false}` (the read tools) or `{title, readOnlyHint: false,
-  destructiveHint: false, idempotentHint: false, openWorldHint: false}` (the two that save); no `outputSchema`.
+  destructiveHint: false, idempotentHint: false, openWorldHint: false}` (the two that save) or `{title, readOnlyHint: false,
+  destructiveHint: true, idempotentHint: true, openWorldHint: false}` (the taste tool: it replaces or removes what was there); no
+  `outputSchema`. A token with `assistant:prefs` also gets `PREFS_INSTRUCTIONS` in `initialize` (use it only when the person says a
+  taste in this conversation, after reading it back; never infer one; never for an allergy; a new `request_key` per change; it has
+  no part in treating a low).
 * `tools/call` → `{content: [{type: "text", text: <the result as JSON>}], structuredContent: <the result>,
   isError: false}`. Wrong arguments (strict types, unknown keys refused) or a failing tool → `{content: [{type:
   "text", text: <short message>}], isError: true}`: the field and the rule, never a value (the server log has the
   exception). An unknown tool or `params` that are not an object → `-32602`; any other method → `-32601` (HTTP 200).
   Calling `log_food` or `save_recipe` with a token that lacks `assistant:log` → a tool result with `isError: true` and
   the text "This token can only read. The person can make a token that can also save in Settings → Assistant
-  access." (checked before the arguments; nothing is saved). A failure inside a saving tool answers "…could not save
-  this time and nothing was saved…": every save is one transaction.
+  access." (checked before the arguments; nothing is saved). Calling `set_food_preference` with a token that lacks
+  `assistant:prefs` → `-32602` "Unknown tool: set_food_preference", as if there were no such tool (nothing is said about the scope).
+  A failure inside a saving tool answers "…could not save this time and nothing was saved…": every save is one transaction. A limit
+  refusal inside a tool (the daily cap of `set_food_preference`) is that limit's own `429` with `Retry-After`, not a tool result.
 
 ### Tools
 
@@ -3749,6 +3770,51 @@ rolls everything back. Nothing is edited or deleted; a repeated call saves again
   because the person needs to know which assistant saved; never the token or its prefix. A refused or unresolved
   call writes no row.
 
+### Remembering a taste (scope `assistant:prefs`; note 09 §4.8b)
+
+Code `app/mcp/preference_tool.py`; tests `tests/test_mcp_prefs.py`, `tests/test_assistant_ui.py`, `tools/e2e/mcp_smoke.py`. One tool,
+`set_food_preference {food_id | category, preference: like | less | not_for_me | clear, request_key}`: exactly one of `food_id` and
+`category`, `request_key` required (the same 8 to 64 characters as `log_food`'s), `neutral` not offered (the person's "stop learning"
+switch is not a taste). The schema is Ask's (`chat_preference.INPUT_SCHEMA`) plus `request_key`.
+
+* **Checks** are Ask's own, extracted from `chat_preference` and shared (`resolve_food`, `resolve_group`, `held_preference`,
+  `group_state`, `check_food_room`, `check_group_room`, `unchanged`): a food the person may use (`foods.fetch_user_food`: another
+  person's food and an unknown id give the same words), a category of the person's (`foods.visible_categories`, matched ignoring case
+  and spacing), the 1,000 / 500 / 50 limits told to the model, and a request that changes nothing changes nothing.
+* **A low treatment is never narrowed.** `not_for_me` is refused (an `isError` result that says only the person can do it, in the app;
+  nothing written, no key, no audit row, not counted) for a food flagged `hypo_treatment` and for a food group that holds such a
+  food visible to the person. The person's own "Not for me" and "Never suggest" leave `hypo_options` and `best_hypo_food` (note 09 §8
+  Q1, with its floor), so an assistant's would have changed what a person reads when they are low. `like`, `less` and `clear` are
+  allowed (never read there). The module reads no low-treatment code (`hypo`, `swaps`, `insights`, `messages`; a test reads its names).
+* **The write** is one `BEGIN IMMEDIATE` transaction (`begin_immediate`): a food through `guidance.api.apply_preference(conn, user_id,
+  food_id, preference, 'assistant')`, the code `PUT /api/guidance/preferences/{id}` runs (it returns the previous value and does not
+  commit; `_store_preference` is it plus the transaction), `clear` through `drop_preference` (`DELETE`); a food group by reading the
+  person's `guidance` setting and writing it whole through `SettingsStore.update_user`, moving only that group among the three lists
+  (what the page does with `PATCH /api/me/settings`; an env lock or an invalid value is told to the model); then, only if something
+  changed, the audit row; then the `request_key`; then commit. A group has no `source` (the setting does not carry one).
+* **Audit** `assistant.preference_set` (target `api_token` id, actor the person, in the person's own activity list): details `via` (the
+  token's name), `kind` (`food` or `group`), `name`, `old` and `new` (`none | like | less | not_for_me | neutral`; `new` is `none` for
+  `clear`), `food_id` for a food. A request that changes nothing writes no row and leaves the person's own row (and its `source`) as it was.
+* **Retries.** The key is stored as for `log_food` (`assistant_request_keys`, tool `set_food_preference`, `saved_json` `{kind, name,
+  preference}`; no migration). A second call by the same token with the same key within 24 hours is looked up first (before the
+  checks and the cap): `{saved: true, duplicate: true, target, preference, note}` where the note says nothing was changed again; it is
+  not a new change, and the same key on another tool is refused as before.
+* **Limits.** The per-token 60 requests a minute (every request counts), and **30 changes a day per token**: `ratelimit`
+  `mcp_prefs`, a sliding 24 hours keyed `token:<id>`, taken after validation, the low-treatment rule and the duplicate lookup, before
+  the write (so refused calls and retries do not count; a repeat of the same value that passes does). Past it: `429`, `Retry-After`, `{"detail":
+  "Too many changes from this assistant today. Try again later.", "retry_after": n}`. In memory, so a restart empties it, like the other limits.
+* **The answer** is `{saved: true, target: {kind, name}, preference, note}` (plus `duplicate: true` for a retry), about 400 characters:
+  what was set (`Remembered: Salmon (food): less often.`, a group's `not_for_me` is "never suggest"; `Cleared: nothing is saved for the food
+  Salmon now.`) and where to undo it (Settings → Meal guidance → Your food preferences, or "→ Kinds of food" for a group). It carries
+  no other food, no preference list and no previous value, and no `source` or `reminder` key (there are no numbers in it).
+* **Seen in the app.** Settings → Meal guidance → Your food preferences lists a row with `source = 'assistant'` as "from your
+  assistant" (the list shows no token name) with the usual Remove / Suggest again (`views/guidance.js` `SOURCE_NOTE`); the activity list
+  says "Assistant remembered a taste" with the name, `old → new` and the token's name (`views/settings.js`). `GET /api/guidance/preferences`
+  answers `source: assistant`, `export.json` carries it and `ImportFoodPreference` accepts it (`mock/import.js` and
+  `tests/data/import_vectors.json` follow). The browser sees no new route and the demo no new shape.
+* Ask never runs this tool (`Call.asker` set → refused) and a token never changes Ask. Ask's **Undo** of a card that replaced a row the
+  assistant set puts that row back with `source: assistant` (the PUT takes the three sources), so the label survives an undo.
+
 ### Retries (`request_key`, schema step 11)
 
 Chat clients retry tool calls, so `log_food` and `save_recipe` take an optional `request_key` (string, 8–64 characters
@@ -3780,7 +3846,8 @@ instructions tell the model to send a fresh key per intended save and to reuse i
 
 ### Not in parts B and C
 
-The assistant (through a token) cannot edit or delete anything; no MCP resources or prompts; no
+The assistant (through a token) cannot edit or delete anything, apart from the one value `set_food_preference` replaces or clears
+for a token with `assistant:prefs`; no MCP resources or prompts; no
 activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 
 
@@ -3804,7 +3871,7 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
 | | assistant | device |
 |---|---|---|
 | prefix and pattern | `kha_` + 43 base64url characters | `khd_` + 43 base64url characters |
-| scopes | `assistant:read`, `assistant:log` (implies read) | exactly `body:write`; never the person's choice |
+| scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | exactly `body:write`; never the person's choice |
 | instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`) |
 | accepted at | `POST /mcp` | `POST /push/v1/body` |
 | made in | Settings → Assistant access | Settings → Phone shortcuts |

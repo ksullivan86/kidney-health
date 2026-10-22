@@ -291,7 +291,63 @@ behaviour change for existing users and goes in the CHANGELOG.
   value. `chat_save.effective_trust` is not consulted for this tool.
 * Prompt rule 10 names the tool and says when to use it (only when the person states a taste in this conversation;
   never infer it from what they log or ask about). The model never sees the learned signals.
-* Not for the MCP server in this step: external assistants need their own token scope for it (later).
+* Not for the MCP server in this step: external assistants need their own token scope for it. Built later, as §4.8b.
+
+### 4.8b Addendum (2026-10-22): the MCP tool, behind its own token scope
+
+§4.8 left "external assistants need their own token scope for it" for later. The owner's standing instruction is the
+least-trust choice at every fork, and these are the decisions that followed from it. Built as `app/mcp/preference_tool.py`
+(tests `tests/test_mcp_prefs.py`, `tests/test_assistant_ui.py`; ARCHITECTURE "Assistant access tokens" and "Assistant MCP server").
+
+1. **A new assistant scope, `assistant:prefs`.** Opt-in when a token is made: a second tick next to "Can also save food and
+   recipes", "Also let it remember tastes (likes and dislikes)", off by default (`POST /api/me/tokens` takes `can_prefs`, a boolean;
+   a scope is still never sent by name). It implies `assistant:read` and nothing else; `assistant:log` does not imply it and it
+   does not imply `assistant:log`. It belongs to the assistant family, so `parse_scopes` and the family rules are unchanged and strict:
+   a device token (`body:write`) can never hold it, and a row that mixes the two families grants nothing. Existing tokens keep their
+   scopes (a stored row names its scopes; none gains the new word).
+2. **A new MCP tool, `set_food_preference`,** listed and callable only for a token with `assistant:prefs`. A token without it is told
+   "Unknown tool" (`-32602`), exactly as before the scope existed. Input `{food_id | category, preference: like | less | not_for_me |
+   clear, request_key}`: exactly one of `food_id` and `category`, and `request_key` is required (8 to 64 of `A-Z a-z 0-9 _ -`, as for
+   `log_food`). `neutral` ("stop using what was learned") is not offered: it is the person's switch, not a taste. The checks are
+   Ask's own (`chat_preference.resolve_food`, `resolve_group`, `held_preference`, `group_state`, the room checks, `unchanged`),
+   extracted so both callers use one copy: a food is one the person may use (`foods.fetch_user_food`: another person's food and an
+   unknown id are refused with the same words), a category is one of the person's food groups.
+3. **What it writes.** The function the page's confirmed card ends in: a food through `guidance.api.apply_preference` (the code of
+   `PUT /preferences/{id}`, now callable inside a transaction the caller opened) with `source = 'assistant'`, `clear` through
+   `drop_preference` (`DELETE`); a food group through the person's `guidance` setting, moving only that group between
+   `like_categories`, `less_categories` and `exclude_categories` (what the page does with `PATCH /api/me/settings`). The write, the
+   audit row and the `request_key` are one transaction. No schema change: `food_preferences.source` is free text since step 17, so
+   there is no migration; `'assistant'` is added to the allowed sources in code (the answer model, the import, the export docs).
+   `PUT /preferences/{id}` takes `assistant` as a `source` too (and the demo's twin the same three), because Ask's Undo puts a row back
+   exactly as it was, with the source it had, and that can be `assistant`; otherwise only the MCP tool writes it. A repeat with the same key
+   within 24 hours changes nothing and answers `duplicate: true`; asking for what is already set changes nothing, writes no audit row
+   and leaves the person's own row (and its source) alone. It is audited as `assistant.preference_set` (the food or group, old and new,
+   the token's name; target `api_token`), in the person's own activity list. The answer is short: what was set and where to undo it
+   (Settings → Meal guidance → Your food preferences), never another food and never a list; the tool reads only the one food or group,
+   its current value and the room left.
+4. **Limits.** The server's 60 requests a minute per token apply, and a cap of **30 changes a day per token** (`register_limit`
+   `mcp_prefs`, key `token:<id>`, a sliding 24 hours, in memory like the other limits). Past it the limit's own `429` with
+   `Retry-After` answers ("Too many changes from this assistant today. Try again later."), the same shape as the per-minute limit; a
+   retry with a known key, a refused call and the read tools do not count or stop. Bulk shaping is a job for the person's screens.
+5. **What it must never touch.** It never reads or changes `hypo.prefilter`, `swaps.hypo_options`, `insights.best_hypo_food` or the
+   Treating a low card (a test reads the module's names). **A finding that changed one rule:** the brief says a `not_for_me` on a
+   food that treats a low "still leaves it listed under Treating a low". It does not: §8 Q1 keeps the person's exclusions in
+   `hypo_options` and `best_hypo_food` (a "Not for me" food, or a "Never suggest" group, leaves the options) and only the floor shows
+   them all again when an exclusion would leave nothing (`tests/guidance/test_preferences_api.py` pins it). So an assistant's
+   `not_for_me` on a low treatment, or on a group that holds one (`Beverages`, `Sweets & Snacks` and `Diabetes supplies` in the built-in
+   list), could quietly narrow the options a person reads when they are low. To make "a taste never changes what treating a low
+   shows" true, the tool **refuses `not_for_me` for a food flagged `hypo_treatment` and for a group that holds such a food**, saying
+   that only the person can do it, in the app, and writes nothing. `like`, `less` and `clear` are allowed for them: soft preferences
+   are never read there (§4.9), and `clear` only returns options. The person's own choice in the app is unchanged (Q1, the floor).
+   Safety test: `test_tastes_never_change_what_treating_a_low_shows` (`@pytest.mark.safety`) compares the options, the card, the
+   day's insights and the assistant's own `safety_check` answer before and after every call; `tests/test_safety_set.py` lists the file.
+6. **Seen in the app.** Settings → Meal guidance → Your food preferences lists a row set this way as "from your assistant" (the row
+   keeps no token name, so the list shows none), with the usual Remove / Suggest again. A food group has no source in the `guidance`
+   setting, so a group set this way carries no label there; the activity list ("Assistant remembered a taste", with the token's name,
+   old and new) is where it shows. The export carries `source: assistant` and the import accepts it (the demo's twin
+   `mock/import.js` and `tests/data/import_vectors.json` follow). The demo has no MCP server and no tokens; the parity harness
+   compares nothing that changed.
+7. **Ask is unchanged.** It still always shows a card, whatever the trust setting and whatever tokens exist (§8 Q2).
 
 ### 4.9 What preferences never touch
 
@@ -450,8 +506,9 @@ to do (the four `chat-taste-*` questions and `taste_first_violations` are new in
   "A `less_often` food is not the first idea" cannot be enforced (the app does not order the model's ideas): it is in the
   prompt, recorded in a golden case and measured by the live script. A food marked `less` (-2.0) usually scores below
   `MIN_SHOW_SCORE` and is not a candidate at all; a `less` group (-1.0) still is.
-* `set_food_preference` lives in `app/ai/chat_preference.py`, not in `app/mcp/tools.py`, so the MCP server cannot list or
-  call it for any token scope (a test pins that). `clear` over a `neutral` row is "nothing to forget" (a `neutral` row is the
+* `set_food_preference` lives in `app/ai/chat_preference.py`, not in `app/mcp/tools.py`, so the MCP server could not list or
+  call it for any token scope (a test pinned that); §4.8b later added the separate `assistant:prefs` scope and an MCP tool of the
+  same name that reuses this module's checks. `clear` over a `neutral` row is "nothing to forget" (a `neutral` row is the
   "stop learning" switch, not a taste). The page re-reads the current state when Remember is pressed, and Undo restores that.
 * Ask's taste card is applied by the page through `PUT`/`DELETE /api/guidance/preferences/{food_id}` or the whole `guidance`
   setting; the API calls are in `js/core.js` (`api.foodPreferences`, `setFoodPreference`, `clearFoodPreference`), not in

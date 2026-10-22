@@ -17,7 +17,11 @@ first-run setup as the first admin, switches assistant access on through the adm
   the read-only token's call to ``log_food`` is refused and saves nothing; ``log_food`` saves banana and rice for
   lunch (the same entries ``GET /api/log`` shows, the day's figures in the answer), an unresolved item saves
   nothing at all, ``save_recipe`` makes a saved meal the meals API shows, the activity list names both saves, and
-  revoking the token stops it (401).
+  revoking the token stops it (401);
+* a third token made with "remember tastes" (``can_prefs``, scope ``assistant:prefs``): only it lists ``set_food_preference``
+  (a read-only token is told "Unknown tool"); the tool sets a food "less often" (the preferences list says "assistant"), a repeat
+  with the same ``request_key`` changes nothing, a food group is moved, the activity list names the change, a food that treats a
+  low cannot be set to "Not for me" and the Treating a low options are the same as before, and revoking the token stops it (401).
 
 Nothing leaves the machine: no USDA key, Open Food Facts off, no AI. Prints PASS / FAIL lines, writes
 ``<out>/report.json``; exit status 1 on any failure. The server is always stopped.
@@ -42,6 +46,7 @@ PORT = 8073
 PROTOCOL = "2025-06-18"
 TOOLS = {"get_today", "search_foods", "check_meal", "safety_check"}
 WRITE_TOOLS = {"log_food", "save_recipe"}
+PREFS_TOOL = "set_food_preference"
 RESULTS: list[dict[str, Any]] = []
 
 
@@ -161,6 +166,7 @@ def run_as(server: Server, admin: khserver.Api) -> None:
         check("safety_check: an ordinary question is none", neutral.get("action") == "none")
 
         saving_part(server, admin, mcp)
+        tastes_part(server, admin, mcp)
     finally:
         mcp.close()
 
@@ -216,6 +222,62 @@ def saving_part(server: Server, admin: khserver.Api, reader: Mcp) -> None:
               r.status_code == 401 and len(admin.json("GET", "/api/log", None, params={"date": today})["entries"]) == 2)
     finally:
         saver.close()
+
+
+def tastes_part(server: Server, admin: khserver.Api, reader: Mcp) -> None:
+    """The scope ``assistant:prefs`` and the tool ``set_food_preference`` (note 09 §4.8b)."""
+    asked = reader.post({"jsonrpc": "2.0", "id": 90, "method": "tools/call", "params": {"name": PREFS_TOOL, "arguments": {
+        "category": "Fruits", "preference": "like", "request_key": "smoke-taste-0"}}})
+    check("a token without assistant:prefs is told Unknown tool, and nothing is saved",
+          asked.status_code == 200 and asked.json().get("error", {}).get("code") == -32602
+          and "Unknown tool" in asked.json()["error"]["message"]
+          and admin.json("GET", "/api/guidance/preferences")["groups"] == {"like": [], "less": [], "never": []})
+
+    made = admin.json("POST", "/api/me/tokens", {"name": "MCP smoke taster", "expires_in_days": 30, "can_prefs": True})
+    check("a token made with can_prefs has read and prefs, not log", made["scopes"] == ["assistant:read", "assistant:prefs"])
+    taster = Mcp(server.base, made["token"])
+    try:
+        taster.version = PROTOCOL
+        names = {t["name"] for t in taster.request("tools/list")["tools"]}
+        check("only a token with assistant:prefs lists set_food_preference", names == TOOLS | {PREFS_TOOL}, str(sorted(names)))
+
+        def food(query: str) -> dict:
+            return admin.json("GET", "/api/foods", None, params={"q": query})["foods"][0]
+
+        salmon, juice = food("Salmon"), food("Apple juice")
+        low_before = admin.json("GET", "/api/guidance/hypo-options")
+        got = taster.call(PREFS_TOOL, food_id=salmon["id"], preference="less", request_key="smoke-taste-1")
+        row = {f["food_id"]: f for f in admin.json("GET", "/api/guidance/preferences")["foods"]}.get(salmon["id"], {})
+        check("set_food_preference sets a food less often, and the list says it came from the assistant",
+              got["saved"] is True and got["target"] == {"kind": "food", "name": salmon["name"]}
+              and row.get("preference") == "less" and row.get("source") == "assistant", json.dumps(got)[:300])
+        again = taster.call(PREFS_TOOL, food_id=salmon["id"], preference="less", request_key="smoke-taste-1")
+        check("a repeat with the same request_key is a no-op that says so",
+              again.get("duplicate") is True and len(admin.json("GET", "/api/guidance/preferences")["foods"]) == 1)
+        group = taster.call(PREFS_TOOL, category="Dairy & Alternatives", preference="not_for_me", request_key="smoke-taste-2")
+        check("a food group is moved to Never suggest",
+              group["target"]["kind"] == "group"
+              and admin.json("GET", "/api/guidance/preferences")["groups"]["never"] == ["Dairy & Alternatives"])
+        refused = taster.request("tools/call", {"name": PREFS_TOOL, "arguments": {
+            "food_id": juice["id"], "preference": "not_for_me", "request_key": "smoke-taste-3"}})
+        check("a food that treats a low cannot be set to Not for me, and nothing is written",
+              refused.get("isError") is True and "only the person can mark it Not for me" in refused["content"][0]["text"]
+              and juice["id"] not in {f["food_id"] for f in admin.json("GET", "/api/guidance/preferences")["foods"]})
+        taster.call(PREFS_TOOL, food_id=juice["id"], preference="less", request_key="smoke-taste-4")
+        check("the Treating a low options and card are the same after every taste",
+              admin.json("GET", "/api/guidance/hypo-options") == low_before)
+        events = [e for e in admin.json("GET", "/api/me/activity")["events"] if e["action"] == "assistant.preference_set"]
+        check("the activity list names each change with the token's name, old and new",
+              len(events) == 3 and all(e["details"]["via"] == "MCP smoke taster" for e in events)
+              and {(e["details"]["name"], e["details"]["old"], e["details"]["new"]) for e in events} >= {
+                  (salmon["name"], "none", "less"), ("Dairy & Alternatives", "none", "not_for_me")}, json.dumps(events)[:300])
+        admin.json("DELETE", f"/api/me/tokens/{made['id']}")
+        r = taster.post({"jsonrpc": "2.0", "id": 98, "method": "tools/call", "params": {"name": PREFS_TOOL, "arguments": {
+            "food_id": salmon["id"], "preference": "like", "request_key": "smoke-taste-5"}}})
+        check("a revoked token cannot change a taste: 401, nothing changed",
+              r.status_code == 401 and {f["food_id"]: f["preference"] for f in admin.json("GET", "/api/guidance/preferences")["foods"]}.get(salmon["id"]) == "less")
+    finally:
+        taster.close()
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -25,7 +25,7 @@
   const MAX_NOT_FOR_ME = 500;
   const MAX_FOOD_PREFERENCES = 1000;
   const PREFERENCES = ['like', 'less', 'not_for_me', 'neutral'];
-  const PREFERENCE_SOURCES = ['person', 'ask'];
+  const PREFERENCE_SOURCES = ['person', 'ask', 'assistant'];
   const MAX_ID = 9223372036854775807n;
   const MAX_ID_TEXT = '9223372036854775807';
   const DISABLED_BY_USER = 'Meal guidance is switched off in your settings.';

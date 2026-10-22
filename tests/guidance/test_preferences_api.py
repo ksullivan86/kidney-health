@@ -536,4 +536,4 @@ def test_explicit_preferences_lists_names_the_newest_first_capped_at_ten_and_nev
 
 def test_the_default_limits_are_the_decided_ones():
     assert (C.MAX_FOOD_PREFERENCES, C.MAX_NOT_FOR_ME) == (1000, 500)
-    assert C.PREFERENCE_VALUES == ("like", "less", "not_for_me", "neutral") and C.PREFERENCE_SOURCES == ("person", "ask")
+    assert C.PREFERENCE_VALUES == ("like", "less", "not_for_me", "neutral") and C.PREFERENCE_SOURCES == ("person", "ask", "assistant")
