@@ -10,9 +10,9 @@ service worker, ``POST /api/ai/read-lab-report`` and the consent for it (``app/a
 
 Starts ``uvicorn app.main:app`` on a fresh ``DATA_DIR`` with ``AI_ENABLED`` and a fake OpenAI-compatible server this script runs as the
 local AI (listed in ``AI_PRIVATE_HOSTS``; it answers lab report photos with scripted rows, one answer per page, and remembers what it
-was sent). The PDFs are written by a tiny PDF writer in this file (no library): a two-page report, an encrypted one (RC4, user
-password), a damaged one, a 51-page one and a 21 MB one. Then, on 375x812 light (no service worker) and 1280x800 dark (service worker
-allowed, so the module, the worker and their cache take the installed app's path):
+was sent). The PDFs are written by a tiny PDF writer in this file (no library): a two-page report, a password-protected one (a
+security handler whose password check never passes), a damaged one, a 51-page one and a 21 MB one. Then, on 375x812 light (no
+service worker) and 1280x800 dark (service worker allowed, so the module, the worker and their cache take the installed app's path):
 
 * the card says a PDF works too and the file input accepts it; choosing the report lists "Page 1" and "Page 2", both ticked, with the
   line that each page is drawn here and sent as a picture; nothing is sent by choosing it;
@@ -78,23 +78,12 @@ def check(name: str, ok: Any, detail: str = "") -> bool:
 
 # --------------------------------------------------------------------------- a tiny PDF writer (no library)
 
-_PAD = bytes.fromhex("28BF4E5E4E758A4164004E56FFFA01082E2E00B6D0683E802F0CA9FE6453697A")  # the standard security handler's padding string
-
-
-def _rc4(key: bytes, data: bytes) -> bytes:
-    s = list(range(256))
-    j = 0
-    for i in range(256):
-        j = (j + s[i] + key[i % len(key)]) % 256
-        s[i], s[j] = s[j], s[i]
-    out = bytearray()
-    i = j = 0
-    for byte in data:
-        i = (i + 1) % 256
-        j = (j + s[i]) % 256
-        s[i], s[j] = s[j], s[i]
-        out.append(byte ^ s[(s[i] + s[j]) % 256])
-    return bytes(out)
+# A fixed file identifier, and the /O and /U values of a password-protected file. They are plain constants, not derived from any
+# password: pdf.js checks an empty password against /U (and as the owner password against /O), neither check passes, so it asks for
+# a password and the page gets its PasswordException. Nothing in the file is encrypted, because nothing ever opens it.
+_DOC_ID = bytes.fromhex("6b69646e65792d6865616c7468206c61")
+_LOCKED_O = bytes(range(32))
+_LOCKED_U = bytes(range(32, 64))
 
 
 def _escape(text: str) -> str:
@@ -113,23 +102,14 @@ def page_content(lines: Sequence[str]) -> bytes:
     return "\n".join(ops).encode("latin-1")
 
 
-def make_pdf(pages: Sequence[Sequence[str]], *, size: tuple[int, int] = (612, 792), user_password: str | None = None) -> bytes:
-    """A PDF 1.4 file with Helvetica text on each page. With ``user_password`` it is encrypted (standard security handler, revision 2,
-    40-bit RC4): the streams are encrypted, an empty password does not open it."""
-    doc_id = hashlib.md5(b"kidney-health lab_pdf.py").digest()
+def make_pdf(pages: Sequence[Sequence[str]], *, size: tuple[int, int] = (612, 792), locked: bool = False) -> bytes:
+    """A PDF 1.4 file with Helvetica text on each page. ``locked`` adds a standard security handler (revision 2) whose password check
+    never passes (see ``_LOCKED_U``), so a reader asks for a password; the streams themselves are left as they are."""
+    doc_id = _DOC_ID
     n_pages = len(pages)
     page_ids = [4 + 2 * i for i in range(n_pages)]
     encrypt_id = 4 + 2 * n_pages
-    key = b""
-    encrypt_dict = b""
-    if user_password is not None:
-        up = (user_password.encode("latin-1") + _PAD)[:32]
-        owner = hashlib.md5((b"owner-only secret" + _PAD)[:32]).digest()[:5]
-        o_value = _rc4(owner, up)
-        p_value = -44
-        key = hashlib.md5(up + o_value + struct.pack("<i", p_value) + doc_id).digest()[:5]
-        u_value = _rc4(key, _PAD)
-        encrypt_dict = (f"<< /Filter /Standard /V 1 /R 2 /O <{o_value.hex()}> /U <{u_value.hex()}> /P {p_value} >>").encode("ascii")
+    encrypt_dict = f"<< /Filter /Standard /V 1 /R 2 /O <{_LOCKED_O.hex()}> /U <{_LOCKED_U.hex()}> /P -44 >>".encode("ascii")
     objects: dict[int, bytes] = {
         1: b"<< /Type /Catalog /Pages 2 0 R >>",
         2: ("<< /Type /Pages /Count %d /Kids [%s] >>" % (n_pages, " ".join(f"{i} 0 R" for i in page_ids))).encode("ascii"),
@@ -139,10 +119,8 @@ def make_pdf(pages: Sequence[Sequence[str]], *, size: tuple[int, int] = (612, 79
         objects[page_id] = (f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {size[0]} {size[1]}] /Resources << /Font << /F1 3 0 R >> >> "
                             f"/Contents {page_id + 1} 0 R >>").encode("ascii")
         data = page_content(lines) if lines else b""
-        if user_password is not None:
-            data = _rc4(hashlib.md5(key + struct.pack("<I", page_id + 1)[:3] + b"\x00\x00").digest()[:10], data)
         objects[page_id + 1] = b"<< /Length %d >>\nstream\n" % len(data) + data + b"\nendstream"
-    if user_password is not None:
+    if locked:
         objects[encrypt_id] = encrypt_dict
     out = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
     offsets: dict[int, int] = {}
@@ -155,7 +133,7 @@ def make_pdf(pages: Sequence[Sequence[str]], *, size: tuple[int, int] = (612, 79
     for number in range(1, top):
         out += b"%010d 00000 n \n" % offsets[number]
     trailer = f"trailer\n<< /Size {top} /Root 1 0 R /ID [<{doc_id.hex()}> <{doc_id.hex()}>]"
-    if user_password is not None:
+    if locked:
         trailer += f" /Encrypt {encrypt_id} 0 R"
     out += (trailer + f" >>\nstartxref\n{xref}\n%%EOF\n").encode("ascii")
     return bytes(out)
@@ -165,7 +143,7 @@ REPORT = make_pdf([
     ["Harness Clinic Laboratory", "Potassium   5.4 mmol/L   2026-10-07", "Phosphate   1.2 mmol/L   2026-10-07", "Sodium 139 mmol/L", "Chloride 101 mmol/L"],
     ["Harness Clinic Laboratory, page 2", "eGFR   58 mL/min/1.73m2   2026-10-07", "Creatinine   88 umol/L", "Potassium   5.4 mmol/L   2026-10-07"],
 ])
-ENCRYPTED = make_pdf([["Protected report", "Potassium 5.4 mmol/L"]], user_password="secret")
+ENCRYPTED = make_pdf([["Protected report", "Potassium 5.4 mmol/L"]], locked=True)
 FIFTY_ONE = make_pdf([[] for _ in range(51)], size=(200, 200))
 DAMAGED = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R\n"  # cut off: no pages, no trailer
 NOT_A_PDF = b"This is a text file that was named .pdf by mistake.\n"

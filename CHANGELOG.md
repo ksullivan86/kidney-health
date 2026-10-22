@@ -117,8 +117,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   starting** (found by the browser walk, not by a test): `tests/test_pdf_pages.py` now runs `node --check` on `sw.js`, `pdf_pages.js`,
   `lab_photo.js` and `ai.js`.
 * **`tools/e2e/lab_pdf.py`: a browser walk of a PDF lab report** (ports 8089 and 8090, Chromium at 375×812 light and 1280×800 dark with the
-  service worker allowed on the second, about a minute). A tiny PDF writer in the harness (no new dependency) makes a two-page report, an
-  encrypted one (RC4), a damaged one, a 51-page one and a 21 MB one; a fake local AI answers lab report photos with scripted rows. It checks the
+  service worker allowed on the second, about a minute). A tiny PDF writer in the harness (no new dependency) makes a two-page report, a
+  password-protected one (a security handler whose check never passes, so no cipher is needed), a damaged one, a 51-page one and a
+  21 MB one; a fake local AI answers lab report photos with scripted rows. It checks the
   page list, the consent sheet's extra line, that each page reached the AI as its own drawn JPEG (no EXIF, within 2048 px, dark pixels, the two
   different) and that no request body starts with `%PDF-`, the merged table, the date entry and Save through `POST /api/labs/import`, Cancel,
   the five refusals (including pdf.js's real `PasswordException`), that only the library and its worker were requested from
