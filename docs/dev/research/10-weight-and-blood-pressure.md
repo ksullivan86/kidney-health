@@ -273,6 +273,40 @@ these to it is a ROADMAP line.
 same validation (and the per-day limits), "Add to my existing data" skips rows whose `source_key` exists and adds manual rows
 as new; replacing removes the person's rows first. The export version stays 1 (older files have neither list).
 
+### 4.12 Decisions made while building Part A (where the code's pattern or a detail the note left open decided)
+
+Each follows the symptoms log (the established pattern) unless it says otherwise; the code and `ARCHITECTURE.md` "Weight and blood pressure" are the
+contract.
+
+* **Storage.** `id` is `INTEGER PRIMARY KEY AUTOINCREMENT` (ids are never reused, as in every other table) rather than the note's plain `INTEGER PRIMARY
+  KEY`; no `CHECK` beyond `NOT NULL`, as §4.1 says (the symptoms table has some, these have none on purpose). A note is stored as `''` (never `NULL`); `time`
+  and `source_key` are `NULL` when there is none. The unique index is partial (`WHERE source_key IS NOT NULL`), as §4.1 says.
+* **API.** A blank `time` means no time. `kg` is kilograms only (Part B converts what the person types and shows). `source_key` is internal: it is in the
+  export, not in `WeightOut` / `BloodPressureOut`. The batch routes answer **200** `{added, skipped}` (nothing is "created" as one resource; `POST /api/log/batch`'s
+  201 is for entries) and refuse the whole request on the first row that is not valid or would overfill a day, naming it `rows.N.field: …` with **all** of that
+  row's problems (`rows.N: …` for the top-below-bottom rule). A batch row's `source` is `apple_health` or `import` (default `import`), never `manual`. The one
+  `body_batch` limit (60 an hour per person) covers both routes. `PUT` sets `updated_at` and makes the row `manual`; there is no activity row for weights or
+  readings, as for symptoms (§4.9's "added a weight with no value" is not recorded: nothing about them is).
+* **Summary** (`GET /api/body/summary?date=`; `date` required): the note's `{weight: {latest, previous, gain, alarm}, bp: {latest, week, goal, flagged_today},
+  units}` is `{date, units, weight: {latest, previous, gain: {kg, since} | null, alarm | null}, bp: {latest, week: {count, systolic, diastolic, above_goal,
+  above: {systolic, diastolic}, few}, goal, flagged_today}}`. `alarm` is the §4.4 check (`status`, `reference_kind`, `reference`, `reference_kg`, `gain_kg`,
+  `over_alarm`, `message`, `flag`); `flagged_today` is the latest flagged reading dated that day; `above_goal` is true when either number's mean is at or
+  above its goal number (`above` says which). The "dry weight in Profile" is used **only while the profile says hemodialysis**.
+* **Settings.** The goal also refuses a top number that is not above the bottom one (as a reading does). `user.units.weight` is in the admin's "Default for
+  everyone" group like `user.units.labs`. All three are carried over by an import with `replace_profile` (so the care team's numbers move with the person),
+  and the "not selected" line names them.
+* **Flags.** Both are `{level, text, href, link_text, prominent}` like a symptom's `red_flag`; the blood pressure flag's `level` is `emergency` (it points to both
+  groups). The weight flag is `today`, not prominent. The 911 line on the page follows NHLBI (a sign **and** a second reading that is also high after 5
+  minutes), and the wallet card carries both lines.
+* **Import and export** (§4.11). There is **no "replace my data" mode** in the code (an account that has data is a 409 unless `merge=1`, for every kind), so
+  that part of §4.11 is not built; a row with a `source_key` is left out when the person has that key, a typed row when an identical one is there, a day over
+  its limit is skipped and listed (like symptoms), and the lists are capped at 20,000 rows each. `weights` and `blood_pressures` follow `symptoms` in
+  `export.json`.
+* **The demo.** `index.html` lists the two new scripts and `sw.js` precaches them (needed for the twin to load; no screen). The sample data are two weeks with a
+  sample alarm (1 kg in a day; on hemodialysis 2 kg between sessions) and goal (130/80), today's weight over the alarm and no reading at 180/120.
+* **Not in Part A:** every screen, the Profile helpers, the visit prep section, the handbook page "Using the app", the Apple Health import. The import
+  summary lines in Settings (`IMPORT_KINDS` in `js/views/settings.js`) and the "Data imported" activity line do not name weights and readings yet (Part B).
+
 ---
 
 ## 5. Risks

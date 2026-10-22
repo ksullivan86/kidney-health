@@ -46,6 +46,10 @@ Sections
   14 optional AI while it is off (the demo never calls a provider): GET /api/me/ai has the same shape, enabled false and
      the same personal settings; every /api/ai/* and /api/vision/* route (and the personal probe) answers 404 on both sides
 
+  16 weight and blood pressure (note 10, schema step 18): every /api/body route with the request script of tests/data/gen_body_vectors.py
+     (the same one the frozen vectors replay): recording, listing, updating and deleting weights and readings, the flags, the per-day
+     limits, the batch routes (known keys, repeats, the first refused row), the summary against the person's alarm, goal and unit and the
+     profile's dry weight, and every refusal with its text; runs before 15 so the export holds the rows
   15 the export of the demo's "Keep my data in this browser" (GET /api/me/export.json on the demo, export.json inside GET /api/me/export.zip on
      the server), after everything the sections above did: the same keys in the same order and the same records (log entries, own foods, linked
      foods, saved meals, lab results, symptoms, "Not for me", profile, settings, built-in food references); ids and times are left out as everywhere
@@ -269,6 +273,9 @@ HELPERS_JS = r"""
       m._entries = []; m._nextEntryId = 1;
       m._templates = []; m._nextTemplateId = 1;
       m._labs = []; m._nextLabId = 1;
+      m._weights = []; m._nextWeightId = 1; m._readings = []; m._nextReadingId = 1;  // the log of weights and readings (js/mock/body.js)
+      // the demo's sample alarm and goal (js/mock/seed.js) are the person's own values; a fresh server has none
+      if (m._settings) for (const own of Object.values(m._settings.users || {})) { delete own['body.weight_alarm']; delete own['body.bp_goal']; }
       m._foodPrefs = new Map(); delete m._notForMe;  // food_preferences (js/mock/guidance.js)
       // The demo's default profile (js/mock/core.js): "Not chosen yet" (schema step 8), no "about" tolerance (step 9).
       m._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1',
@@ -1111,11 +1118,39 @@ class Harness:
         for key in ("format", "version", "app_version"):
             self.rec.compare(S, key, doc_s[key], doc_m[key], ignore=frozenset())
         ignore = IGNORE | {"linked_at"}
-        for key in ("profile", "settings", "log_entries", "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "food_preferences",
-                    "builtin_foods"):
+        for key in ("profile", "settings", "log_entries", "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "weights",
+                    "blood_pressures", "food_preferences", "builtin_foods"):
             self.rec.compare(S, f"{key} ({len(doc_s[key]) if isinstance(doc_s[key], list) else 'object'})", doc_s[key], doc_m[key], ignore=ignore)
         for key in ("ai_audit", "ai_usage", "ai_consents", "ai_provider"):
             self.rec.compare(S, f"{key} is empty on both sides", doc_s[key], doc_m[key], ignore=frozenset())
+
+    def section16(self) -> None:
+        """Weight and blood pressure (note 10, schema step 18; ARCHITECTURE.md "Weight and blood pressure"): the request script of
+        tests/data/gen_body_vectors.py, run on the live server and on the demo in the page, every answer compared (ids and times left
+        out). A step marked ``quiet`` is set-up (a setting, the profile): only whether it worked is compared."""
+        import importlib.util
+
+        S = "16 weight and blood pressure"
+        spec = importlib.util.spec_from_file_location("gen_body_vectors", REPO / "tests" / "data" / "gen_body_vectors.py")
+        assert spec is not None and spec.loader is not None
+        gen = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gen)
+        today = date.today()
+        steps = gen.script()
+        for step in steps:
+            path = gen.with_dates(step["path"], today)
+            body = gen.with_dates(step["body"], today) if "body" in step else None
+            rs, rm = self.server.call(step["method"], path, body), self.mock.call(step["method"], path, body)
+            label = f"{step['method']} {path.split('?')[0]} {step['name']}"
+            if step.get("quiet") and 200 <= rs["status"] < 300 and 200 <= rm["status"] < 300:
+                self.rec.compare(S, label, {"status": rs["status"]}, {"status": rm["status"]}, ignore=frozenset())
+            else:
+                self.rec.compare_resp(S, label, rs, rm)
+        # the lists after everything, over the whole range the script used
+        for kind, key in (("weights", "weights"), ("blood-pressure", "readings")):
+            rs = self.server.call("GET", f"/api/body/{kind}?start=2025-03-01&end=2025-04-30")
+            rm = self.mock.call("GET", f"/api/body/{kind}?start=2025-03-01&end=2025-04-30")
+            self.rec.compare_resp(S, f"GET /api/body/{kind} over the whole script ({len(rs.get('body', {}).get(key, []))} rows)", rs, rm)
 
     def section11(self) -> None:
         """Personalised targets and labs (note 05; ARCHITECTURE.md "M2 API: targets and labs")."""
@@ -1803,7 +1838,7 @@ def main(argv: list[str] | None = None) -> int:
                 steps = [("0", h.section0), ("1", h.section1), ("1b", h.section1b), ("2", h.section2), ("3", h.section3),
                          ("4", h.section4), ("5", h.section5), ("2b", lambda: h.section2("2b search (with history)")),
                          ("6", h.section6), ("7", h.section7), ("8", h.section8), ("9", h.section9), ("10", h.section10),
-                         ("11", h.section11), ("12", h.section12), ("13", h.section13), ("14", h.section14), ("15", h.section15)]
+                         ("11", h.section11), ("12", h.section12), ("13", h.section13), ("14", h.section14), ("16", h.section16), ("15", h.section15)]
                 if args.sections:
                     wanted = {"1", *args.sections.split(",")}
                     steps = [(name, fn) for name, fn in steps if name in wanted]

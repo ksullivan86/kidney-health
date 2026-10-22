@@ -12,6 +12,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
   kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
   the box.
+* Nothing to see yet except one thing in the handbook: **Get help now** gained two lines about a blood pressure of 180/120 or
+  higher (rest 5 minutes and check again; with a sudden severe headache, trouble breathing, pain in the chest, belly or back,
+  numbness or weakness, a sudden change in vision or trouble talking, call 911), from the US National Heart, Lung, and Blood
+  Institute, and the printable wallet card carries them in a few words. The weight and blood pressure log itself, with the numbers
+  your care team gave you, arrives in the next part; your export already holds anything recorded through it.
+
+### For people who run a server
+
+* **Schema step 18** (`m018_body_measurements.py`): two new tables, `weights` and `blood_pressures`, deleted with the account. It runs
+  at the first start of this version and changes nothing that exists (take a backup first, as for any upgrade).
+* The export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`); the export version stays 1 and older
+  files still import. Three new personal settings (`user.units.weight`, `body.weight_alarm`, `body.bp_goal`) are carried over by an
+  import with "Also replace my profile, targets and settings"; the unit's default for everyone is in Server administration.
+  The new routes under `/api/body` allow 60 batch requests an hour per person. Nothing leaves the server: weights and readings are
+  never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)).
 
 ### For contributors
 
@@ -30,6 +45,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
   duplicate, only what is missing is added back) and "Also replace my profile, targets and settings", with B's state checked through
   the API against A's. It is listed in `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist
   (`docs/maintainers.md`), which now leaves only a phone's own file picker to a person; the two ROADMAP items it closes are removed.
+* `app/body.py` (routes `/api/body/weights`, `/blood-pressure`, their `/batch` imports and `/summary`; pure functions for pounds and
+  kilograms, the weight-gain alarm, the 7-day means against the goal, the six-month change and the flags), the `Weight*`,
+  `BloodPressure*` and `Body*` models, `user.units.weight`, `body.weight_alarm` and `body.bp_goal` in the settings registry, and
+  `weights` / `blood_pressures` in the export and the import. The browser twin is `js/engine/body.js` and `js/mock/body.js` (with sample
+  data in the demo), checked by `tests/data/body_vectors.json` (`tests/data/gen_body_vectors.py`) and `tools/e2e/parity.py` section 16.
+  The settings twin gained a float type with null (`engine/settings.js`). [docs/body.md](docs/body.md) and ARCHITECTURE.md
+  "Weight and blood pressure" describe it; the handbook source `NHLBI-BPS` and an open clinician question are in `handbook/REVIEW.md`.
+
 
 ## 0.4.0 — 2026-10-22
 

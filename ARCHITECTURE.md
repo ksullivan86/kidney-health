@@ -751,6 +751,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 15 | `m015_symptoms.py` | symptoms log | `symptoms`: a person's symptoms by date and severity, no list of keys in the table ("Symptoms log" below). |
 | 16 | `m016_ai_consent_labs.py` | lab report photos | `ai_consents.purpose` accepts `labs` (table rebuilt from its stored definition; "Lab report photos" below). Needs step 15 in place (the numbering has no gaps). |
 | 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
+| 18 | `m018_body_measurements.py` | weight and blood pressure | `weights` and `blood_pressures`: a person's weighings and readings by date, kilograms and mmHg, a `source_key` an import de-duplicates on, no `CHECK` on a context or a source ("Weight and blood pressure" below). |
 
 ## Backend file ownership
 
@@ -765,6 +766,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
+| Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B adds the screens (note 10) |
 | Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
@@ -815,6 +817,9 @@ app/static/
                         trends.js call KH.symptoms.today(date) and KH.symptoms.trends(start, end)
   js/engine/symptoms.js KH.symptomRules: the browser twin of app/symptoms.py (list, severities, limits, the handbook's red flags, the API shape) and
                         the Trends grouping; tests/data/symptoms_vectors.json. js/mock/symptoms.js: the demo's /api/symptoms routes. css/symptoms.css
+  js/engine/body.js     KH.bodyRules: the browser twin of the pure part of app/body.py (kg and lb, the weight-gain alarm, the 7-day blood pressure means, the
+                        six-month change, the handbook's words, the summary); tests/data/body_vectors.json. js/mock/body.js: the demo's /api/body routes
+                        (weight and blood pressure log; Part A has no screens, Part B adds them)
                         labs.js: the Lab results view (#labs, no tab; opened from Profile) and KH.labs (helpers Profile uses)
                         guidance.js: KH.guidance, the meal guidance UI (M2 guidance; see "M2 API: guidance" → Frontend)
   css/labs.css          Lab results view, the potassium safety banner, Profile's lab summary (M2 targets)
@@ -1054,7 +1059,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/tokens` | user | → `{enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}`; works while `assistant.enabled` is off ("Assistant access tokens") |
 | `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes); 409 switch off, 400 five active, 429 after 20 in an hour |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
-| `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `README.txt`; no passwords, sessions or keys |
+| `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `weights.csv`, `blood_pressure.csv`, `README.txt`; no passwords, sessions or keys |
 | `POST /api/me/import?dry_run=&merge=&replace_profile=` | user *(re-auth)* | body: the `export.json` file as `application/json` (up to `MAX_IMPORT_BYTES`, 16 MiB, for this path only) → the report below; 400 the file is refused (naming the record kind and position), 409 the account has data and `merge` was not set, 413 too large, 415 not JSON, 429 after 20 in an hour. See "Import of `export.json`" |
 
 ```json
@@ -1066,6 +1071,8 @@ export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "a
                "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
                "custom_foods", "linked_foods", "meal_templates", "lab_results",
                "symptoms",           // [{id, date, symptom, label, severity, note, created_at}] oldest day first (schema step 15); an optional list added to version 1
+               "weights",            // [{id, date, time, kg, context, note, source, source_key, created_at, updated_at}] oldest day first (schema step 18); optional, likewise
+               "blood_pressures",    // [{id, date, time, systolic, diastolic, pulse, context, note, source, source_key, created_at, updated_at}] (schema step 18); optional, likewise
                "ai_audit", "activity",
                "food_preferences",   // [{food_id, name, preference, created_at, source, updated_at}] (schema steps 5 and 17): preference like | less | not_for_me | neutral, source person | ask
                "ai_usage", "ai_consents", "ai_provider",   // AI (schema step 6), see "Data, export, deletion and retention"
@@ -1119,27 +1126,30 @@ person; they act on that person only (`user.id`), never on a name or id in the f
   `person`, changed when made; the app's limits are 1,000 in all and 500 "Not for me"). **The nutrient numbers
   of an entry are recomputed from its food and servings, never taken from the file.** An entry, saved-meal food or
   food preference that cannot be matched is skipped and listed (kind, position, a short label and the reason).
-* **Duplicates.** If the account has any log entry, own food, saved meal or lab result and `merge` is not set, nothing is
+* **Duplicates.** If the account has any log entry, own food, saved meal, lab result, symptom, weight or blood pressure reading and `merge` is not set, nothing is
   imported: a dry run answers `200` with `can_import: false` and `blocked: {code: "account_not_empty", existing}`, the
   import `409`. With `merge=1` what is already there is left out, counted against what the account had before the
   import (so a file with the same entry twice adds one when the account has one): an entry by (date, meal, food,
   servings, grams, status, created time), an own food as above, a saved meal by (name, note, slot, foods and servings),
-  a lab result by (test, date, value as shown), a food preference (by food, whatever its value) and a shared-food link by their keys.
+  a lab result by (test, date, value as shown), a weight or blood pressure reading that came from an import by its `source_key` (a typed one by
+  its date, time, numbers, context and note; a 21st weight or 31st reading of a day is skipped and listed), a food preference (by food, whatever
+  its value) and a shared-food link by their keys. There is no "replace my data" mode: the choices are the ones above.
 * **Profile.** Only with `replace_profile=1` (default off): the profile fields, the targets (replaced, not merged;
   `profile.apply_profile_changes`, the body of `PUT /api/profile`; a stage or diabetes type the file marks "not chosen
-  yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs` and `food.scan_prefer_camera`
-  (validated by the registry; a locked one is skipped and listed). They are clinical settings the person may have
+  yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`,
+  `body.weight_alarm` and `body.bp_goal` (the last two are the numbers the person's care team gave them; validated by the registry; a locked one
+  is skipped and listed). They are clinical settings the person may have
   agreed with their care team on this server.
 * **One transaction.** After parsing, `BEGIN IMMEDIATE`, then everything above, then (import only) the audit row and
   `COMMIT`; any error rolls back. A dry run does the same work and rolls it back, so its answer is exactly what the
   import would do and it writes nothing (no row, no id, no revision). A locked database answers 503.
 * **Report** (both calls): `{dry_run, imported, can_import, blocked, file: {format, version, exported_at, app_version,
   records}, options: {merge, replace_profile}, counts: {log_entries, custom_foods, shared_foods_kept_as_own,
-  shared_foods_linked, built_in_foods_matched, meal_templates, lab_results, symptoms, food_preferences, profile, settings},
+  shared_foods_linked, built_in_foods_matched, meal_templates, lab_results, symptoms, weights, blood_pressures, food_preferences, profile, settings},
   already_there: {…}, skipped: {total, shown (≤ 100 of {kind, index, label, reason}), by_kind, more}, not_selected,
   not_imported, rule}`.
 * **Activity.** One `data.imported` row (user-visible) with `log_entries`, `custom_foods`, `meal_templates`,
-  `lab_results`, `symptoms`, `food_preferences`, `merge` and `profile`: counts only, no content.
+  `lab_results`, `symptoms`, `weights`, `blood_pressures`, `food_preferences`, `merge` and `profile`: counts only, no content.
 * **Size and cost.** `MAX_IMPORT_BYTES` (16 MiB) is registered with `security.register_body_limit` for exactly
   `/api/me/import`; every other path keeps `MAX_BODY_BYTES`. Measured: a year at eight entries a day is 3.5 MB as
   the export writes it (2.2 MB minified); a 15 MB file with 13,000 entries imports in about 1.5 s and needs about
@@ -3057,6 +3067,123 @@ fails when the file is stale. The demo has no sample symptoms: its ids start at 
 fails when the file is stale. `python tools/e2e/symptoms.py` drives the screens in Chromium (375 px light, 1280 px dark,
 the demo): no sideways scroll, no console error, no request to another host.
 
+## Weight and blood pressure (schema step 18)
+
+Design note: `docs/dev/research/10-weight-and-blood-pressure.md` (the facts F1 to F7 each number traces to, the decisions Q1 to Q8). **Part A (this
+section) is the server, the demo's twin, the settings, the export and import and the handbook's two lines; it has no screens.** Part B adds the Today card,
+the sheets, the Trends charts, the Settings section, the Profile helpers and the visit prep section; Part C the import from the iPhone Health app
+(`export.xml`). A person records a weight (when it was taken: morning, before or after dialysis, other) and a blood pressure reading (top and bottom
+number, optional pulse); the app records and shows, works out a few plain numbers, and points to the handbook when a number is past a limit. **It never
+suggests a weight-gain alarm, a blood pressure goal or a dry weight (those are the care team's, entered in Settings), and says nothing about a cause, a
+treatment or a medicine.** Code: `app/body.py` (router, pure functions, the handbook's words), the `Weight*`, `BloodPressure*` and `Body*` models in
+`app/models.py`, `app/migrations/m018_body_measurements.py`. A guide for people who run or change the code: `docs/body.md`.
+
+### Tables (schema step 18, `m018_body_measurements.py`)
+
+`weights (id AUTOINCREMENT, user_id → users ON DELETE CASCADE, date 'YYYY-MM-DD', time 'HH:MM' or NULL, kg REAL (kilograms, two decimals), context TEXT, note
+TEXT, source TEXT 'manual', source_key TEXT or NULL, created_at, updated_at)` and `blood_pressures (…, systolic INTEGER, diastolic INTEGER, pulse INTEGER or
+NULL, context, note, source, source_key, created_at, updated_at)`, each with the index `(user_id, date)` and a **unique index `(user_id, source_key)
+WHERE source_key IS NOT NULL`** (the key an import de-duplicates on; NULL for a typed row). `weights.context` is `morning`, `before_dialysis`,
+`after_dialysis` or `other`; `blood_pressures.context` also has `evening`; `source` is `manual`, `apple_health` or `import`. **No `CHECK`** beyond `NOT NULL`:
+the lists and the ranges live in the models (a later context or source must not need a table rebuild), and a row with a value this version does not know is
+kept, left out of the lists and the summary, and included in the export. The unit the person types and sees (`user.units.weight`) is display and entry
+only: storage is kilograms. The note is stored as text (`''`, never NULL).
+
+### Routes (`/api/body`; every one `current_user`, scoped by `user.id`, not yours is 404, CSRF header on writes)
+
+| Route | Answer |
+|---|---|
+| `GET /api/body/weights?start=&end=` | `{weights: [WeightOut]}` oldest day first, then by time (a row with no time last), then id; `start` and `end` required, at most 366 days (the log's range rules and messages) |
+| `POST /api/body/weights` `WeightCreate` | 201 `WeightOut` (`source: manual`) |
+| `PUT /api/body/weights/{id}` `WeightCreate` | 200 `WeightOut`: replaces the editable fields; the row becomes `manual` and keeps `created_at` and its `source_key` (so a second import does not bring the old value back); the body is checked before the id is looked up |
+| `DELETE /api/body/weights/{id}` | 204 |
+| `POST /api/body/weights/batch` `{rows: [WeightBatchRow]}` | 200 `{added, skipped}`: 1 to 1,000 rows, each the `WeightCreate` fields plus `source` (`apple_health` or `import`, default `import`) and a `source_key` (1 to 64 characters, one line); **the whole request is checked first and refused, writing nothing, on the first row that is not valid** (`400 "rows.3.kg: Input should be …; rows.3.context: …"`: all of that row's problems) or would be the 21st weight of its day (`rows.N: too many weights for one day (max 20)`); rows whose `source_key` the person has, and repeats inside the request, are skipped and counted |
+| `GET`, `POST`, `PUT`, `DELETE /api/body/blood-pressure…` | the same for readings: `{readings: [BloodPressureOut]}`, `BloodPressureCreate`, `POST /api/body/blood-pressure/batch` (the 31st reading of a day is the limit) |
+| `GET /api/body/summary?date=` | `BodySummary` (below) |
+
+`WeightCreate` (`extra="forbid"`, strings stripped): `date` (not in the future with a day of time-zone slack, 1900 or later: `validate_past_date`), `time`
+(optional, `HH:MM` 00:00 to 23:59; blank or null is no time), `kg` (20 to 400), `context`, `note` (≤ 200 characters, plain text: control characters refused, tab,
+newline and carriage return allowed; null is empty). `BloodPressureCreate`: the same `date`, `time`, `context` (five values) and `note`, `systolic` (50 to
+300), `diastolic` (20 to 200), **`systolic > diastolic`** (a model rule: `400 "systolic must be greater than diastolic"`) and an optional `pulse` (20 to
+250). **The ranges are the project's own plausibility choice** (they keep a typing error out of the log), not clinical numbers (note 10 §3); `kg` is the
+profile's `weight_6_months_ago_kg` range. One person holds at most 20 weights and 30 readings per date (`MAX_WEIGHTS_PER_DAY`, `MAX_READINGS_PER_DAY`:
+bounds on storage; a 21st / 31st, or a move into a full day, is a 400). `kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
+note, source, created_at, updated_at}`; `BloodPressureOut` adds `systolic`, `diastolic`, `pulse` and **`flag`**. `source_key` is internal (it is in the export).
+The two batch routes share one limit, `body_batch`: **60 requests an hour per person** (`app/auth/ratelimit.py`; 60,000 rows an hour, room for years of daily
+weights; the project's own number) and keep the default 1 MiB body limit.
+
+### What the app works out (pure functions in `app/body.py`; the browser twin is `js/engine/body.js`)
+
+* **Units.** `kg = lb × 0.45359237` (exactly: the international pound, NIST SP 811), stored rounded half up to 0.01 kg (`round_kg`, `lb_to_kg`); shown in the
+  person's unit to one decimal, **half up** (`shown_weight`, `format_weight`: 154.25 lb shows 154.3, where Python's `round()` would give 154.2), through
+  `nutrients._half_up` and `KH.rules.halfUp`, the project's pair.
+* **Weight gain against the alarm** (`weight_alarm_check`; only with an alarm number): `between_sessions` (hemodialysis) compares the latest weight with the
+  latest `after_dialysis` weight **before it** dated in the 7 days before (the same day counts when it is earlier in time); without one, with the profile's dry
+  weight ("Compared with your dry weight in Profile"; used **only while `dialysis` is `hemodialysis`**, because only then is the profile weight a dry weight);
+  without either, "Add a weight after a session to compare". `days` compares with the latest weight **with the same context** dated on or before the
+  latest date minus `days`, looking back at most `2 × days` days; without one, "Not enough weights to compare yet". The gain is the difference rounded to
+  0.01 kg and is **over the alarm only when it is more than** `amount_kg` (strictly). The answer names the two weights (`reference`, `message`).
+* **Blood pressure week** (`blood_pressure_week`): the readings dated the day and the 6 days before it; count, the mean top and bottom number (each rounded
+  half up to a whole number) and whether a mean is **at or above** the person's goal number ("under 130/80": 130 is not under) per number (`above`) and
+  together (`above_goal`). Fewer than 3 readings: the means with `few: true` and no verdict.
+* **Six-month change** (`six_month_change`; visit prep and the Profile helper in Part B): the latest weight against the weight dated closest to 182 days
+  before it, within ±30 days (a tie goes to the earlier day, then to the later weight of that day): kg and percent (one decimal). No alert (GLIM's 5 % rule
+  reads it only if the person copies it into Profile).
+* **`GET /api/body/summary?date=`** (`summarise`): `{date, units, weight: {latest, previous, gain: {kg, since} | null, alarm | null}, bp: {latest, week: {count,
+  systolic, diastolic, above_goal, above, few}, goal: {systolic, diastolic}, flagged_today}}`. `latest` is the last row dated on or before `date`;
+  `alarm` is null with no alarm number (`status` is `compared` or `no_reference`); `flagged_today` is the latest flagged reading dated exactly `date`.
+  The server reads the newest 400 weights and 250 readings on or before the date (enough for the widest window).
+
+### Settings (registered in `app/settings_registry.py`)
+
+`user.units.weight` (`user_default`, `kg` or `lb`, default `lb`), `body.weight_alarm` (`user`; `{amount_kg: 0.2 to 10 or null, over: "between_sessions" |
+"days", days: 1 to 7}`, default `{null, "days", 1}`) and `body.bp_goal` (`user`; `{systolic: 80 to 200 or null, diastolic: 40 to 130 or null}`, default both
+null; **the top number must be above the bottom one** when both are set). There is **no default alarm and no default goal**: the right numbers are the
+care team's (note 10 §2 and F3: KDIGO's 120 is for standardized office readings). They are in the export's `settings` and carried over by an import with
+`replace_profile`. The unit's default for everyone is in Admin → Server settings → Default for everyone. The browser twin is `js/engine/settings.js` (a `num`
+type for the float, `nullable` fields), checked by `tests/data/settings_vectors.json`.
+
+### The handbook's words (what the app says, and where it comes from)
+
+A weight over the alarm carries `flag` in the summary's `alarm`; a reading with a top number of 180 or more **or** a bottom number of 120 or more carries `flag`
+(NHLBI's "180/120", read as either number: the project's cautious choice, an open item in `handbook/REVIEW.md`). A flag is `{level, text, href:
+"/learn/get-help-now/", link_text: "Get help now", prominent}`; the table is `app.body.RED_FLAGS`, each line built only from phrases copied from the page:
+
+| Flag | Page group (`level`) | Quoted from the page | `prominent` |
+|---|---|---|---|
+| weight over the alarm | "Call your care team today" (`today`) | "weight gain above the alarm number your team gave you" | no (the person set the number) |
+| blood pressure at 180 or 120 | both; `level` is `emergency` | "A blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes" (today); "A blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking" (911) | yes; the text also says to rest 5 minutes and measure again |
+
+Part A added the two blood pressure lines to `handbook/docs/get-help-now.md` (source `NHLBI-BPS`, read 2026-10-22; the page's clause about a medicine or a
+dose change is deliberately not repeated), to the shared wallet card and to `handbook/REVIEW.md` for the clinician review. `tests/test_body.py` reads the page
+and fails when a quoted phrase is no longer under its heading, and when a line names a cause, a treatment or a dose.
+
+### Export, import, deletion, privacy
+
+* **Export and import**: `export.json` → `weights` and `blood_pressures` (after `symptoms`, oldest day first, `source_key` kept) and `weights.csv` /
+  `blood_pressure.csv` (formula-escaped, README lines); the version stays 1. The import (`ImportWeight`, `ImportBloodPressure`, `app/data_import.py`) checks
+  every record like the API (`WeightCreate` / `BloodPressureCreate`, text cleaned the same way), never uses the id in the file, counts `weights` and
+  `blood_pressures` in the report, treats an account with either as having data (409 without `merge=1`), leaves out rows as the Import section says, and keeps
+  the file's `source`, `source_key`, `created_at` and `updated_at`.
+* **Deleted with the account** (`ON DELETE CASCADE`); in the isolation matrix (`tests/test_isolation_v03.py`).
+* **Never logged** (no activity row either, as for symptoms; a test greps the logs), **never read** by `app/ai/`, `app/mcp/`, `app/guidance/` or `app/vision.py`
+  (a test greps them), so no AI provider and no assistant ever receives a weight or a reading. A later feature that wants to must change `docs/privacy.md`
+  first (a ROADMAP line).
+* No offline outbox for them in this version (like symptoms): a save needs the connection.
+
+### Parity (demo/preview mode)
+
+`js/engine/body.js` (`KH.bodyRules`) and the demo routes `js/mock/body.js` are checked against `tests/data/body_vectors.json`, generated by
+`tests/data/gen_body_vectors.py` from the server itself: the tables, one call of each pure function with what the server answers (units and rounding, 35 alarm
+cases, the week and the goal boundary, the six-month match, the flag boundaries, rows in their API shape, summaries), and **one request script run against a
+fresh server and a fresh demo account** (every route, every refusal and its exact text, the per-day limits, the batch rules, ids that pydantic reads as numbers,
+`{{today:N}}` dates for the "not in the future" boundary, the settings the summary reads). `node tests/js/run_vectors.mjs` replays them and checks that a row of
+another person is invisible and a 404 and the shape of the demo's sample data; `tests/test_body_vectors.py` fails when the file is stale;
+`tools/e2e/parity.py` section 16 runs the same script against the live server and the demo in Chromium. The demo differs in two ways: no rate limit on the batch
+routes, no body-size limit. **The demo's sample data** (`js/mock/seed.js`, note 10 §4.7): two weeks of morning weights (on hemodialysis the weights before and
+after sessions) and readings, a sample alarm of 1 kg in a day (2 kg between sessions) and a sample goal of 130/80 "from the care team", today's weight over the
+alarm and **no reading at 180/120**, so the demo never shows the emergency block unasked.
+
 ## Visit prep
 
 Was the ROADMAP item "Visit prep" (done 2026-10-15, so no longer listed there). A printable one-page summary for an appointment, made **in the browser from reads the app already
@@ -3528,7 +3655,7 @@ server stays the full version; this mode never exists in the installed app.
   when the page is hidden). A copy is read at start (`applyState` replaces the instance's properties) before the first request. Rules:
   * `schema` is the shape of `state`. A copy with a **newer** schema, or one that cannot be read, is **not loaded and never overwritten or deleted**
     by this page (`status().blocked`; the banner and sheet say why; no turn-on, no stop). Changing the state's shape in a way an old copy cannot
-    satisfy bumps `SCHEMA` and adds a step to `migrate()`; properties the mock creates lazily (`_auth`, `_labs`, `_symptoms`, `_settings`, ...) need none.
+    satisfy bumps `SCHEMA` and adds a step to `migrate()`; properties the mock creates lazily (`_auth`, `_labs`, `_symptoms`, `_weights`, `_readings`, `_settings`, ...) need none.
   * `rev` counts the saves. A save is **one transaction** that reads the stored record and writes the next revision only if the stored `rev` is the
     one this page loaded or wrote last (`'none'` when turning on): a second tab that saved first makes this page set `conflict`, **stop saving**
     and say so, so a tab never overwrites another's data. A failed save (quota, a refusing browser) sets `error`, keeps the data in the page and
@@ -3539,7 +3666,7 @@ server stays the full version; this mode never exists in the installed app.
     never wait in the demo's in-memory outbox.
 * **Export** (`js/mock/export.js`): `GET /api/me/export.json` is a demo-only route returning the document of `app/account.py export_data`: the
   same keys in the same order (`tests/test_demo_local_storage.py` compares them), `log_entries` without the derived `version`, `custom_foods`,
-  `linked_foods` (`linked_at: null`), `meal_templates`, `lab_results` and `symptoms` in the export shapes, `food_preferences`, `builtin_foods`, the
+  `linked_foods` (`linked_at: null`), `meal_templates`, `lab_results`, `symptoms`, `weights` and `blood_pressures` in the export shapes, `food_preferences`, `builtin_foods`, the
   person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads it as `export.json`
   (`KH.demoLocal.exportFile()`; Settings → Your data shows **Export my data (export.json)** while the mode is on, and says what is needed
   otherwise). The server's zip also has CSV files and a README; the demo gives the JSON only.
@@ -3547,8 +3674,8 @@ server stays the full version; this mode never exists in the installed app.
   "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
   rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
   with `extra="forbid"`, strict types, bounded lists and strings) checked in the same order, so the **first problem is the same one**, named by record
-  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the four
-  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`) and only with `replace_profile` (`ai` and the consents never);
+  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the seven
+  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal`) and only with `replace_profile` (`ai` and the consents never);
   ids remapped; an own food identical to one already there is reused; built-in foods found by FoodData Central id (older files: id and name);
   shared foods linked or kept as the person's own copy or reported; an account that has data is refused (409, or `can_import: false` on a dry
   run) unless `merge`; what is already there is left out; the profile and targets are replaced, not merged; a dry run runs the same code and puts
