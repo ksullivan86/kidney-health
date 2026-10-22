@@ -37,6 +37,12 @@ pages, and tick it here.
       "any ketones with vomiting so you cannot keep fluids down" (narrower than the old "ketones with
       vomiting") (P2; see S5, T1)
 
+- [ ] Blood pressure 180/120 or higher (new 2026-10-22, NHLBI): the "call your care team today" line
+      (rest 5 minutes, check again, then call), the 911 line (a stroke-type sign with 180/120 or higher
+      means 911 at once, without measuring again: MedlinePlus, against a literal reading of NHLBI), and reading "180/120" as
+      a top number of 180 or more or a bottom number of 120 or more; the two lines on the wallet card
+      (S8)
+
 **Glucose, A1c and CGM** (reviewer: diabetes specialist or CDCES)
 
 - [ ] CGM goals at G4–G5 and on dialysis: lead with the high-risk target or the JBDS 2022 dialysis
@@ -217,6 +223,32 @@ Counts: **high 0, medium 3, low 16.**
 * Spec 08 §5.1 "glucose above about 250 mg/dL (13.9 mmol/L) not falling for 2 h": no cited source gives this number (CDC uses 250 mg/dL only as a trigger to check ketones).
 * KDIGO 2022 chapter 1's reason for the dapagliflozin withdrawal conflicts with the regulator (finding 3). Any page that paraphrases K22 on this point should use `MHRA-DAPA`.
 
+### Added 2026-10-22: blood pressure of 180/120 or higher (the weight and blood pressure log, part A)
+
+The app's blood pressure log points to this page for a very high reading (`app/body.py`, `RED_FLAGS`), so the page gained two
+lines, cited to a new source, `NHLBI-BPS` (NHLBI, "High Blood Pressure – Symptoms", last updated 25 April 2024). The page text
+was read on 2026-10-22: above 180/120 "is too high and requires medical attention, especially if you have symptoms"; at
+180/120 without symptoms "wait 5 minutes and check your blood pressure again. If it is still high, call your healthcare
+provider"; "if the second measurement is also high and if you have any of these symptoms, call 9-1-1" (a sudden, severe
+headache; difficulty breathing; sudden, severe pain in the abdomen, chest or back; numbness or weakness; a sudden change in
+vision; problems talking); "Do not wait to see if your pressure comes down on its own."
+
+* **Call 911 now:** "A blood pressure of 180/120 or higher with" the six signs, and "Call even if you have not measured again".
+  NHLBI's wording ("if the second measurement is also high and if you have any of these symptoms, call 9-1-1") could be read as
+  waiting 5 minutes with emergency signs; the handbook follows MedlinePlus (`MEDLINE-BPM`: over 180/120 with those signs, call 911)
+  and NHLBI's "Do not wait", the safer reading, and the page's stroke and chest-pain lines above say 911 at once anyway.
+* **Call your care team today** (new group "Blood pressure"): "A blood pressure of 180/120 or higher that is still that high
+  when you check again after resting 5 minutes", with none of the signs above.
+* **Not repeated:** the page also says the provider "may recommend starting a medicine or changing your dose". The handbook
+  gives no medicine advice, so that clause is left out.
+* **Wallet card** (`includes/help-card.md`, shared with `reference/wallet-card`): the 911 line and the today line each gained the
+  blood pressure sign, and the today line "weight gain above my alarm weight" (the card already had "My alarm weight"). NHLBI's
+  own "My Blood Pressure Wallet Card" (NIH Publication 20-HL-8136, October 2020) was read for consistency: it is a diary and a
+  list of questions, gives "less than 120/80" as usually healthy for most adults and a line for "My Blood Pressure Goal", and
+  has no emergency number, so it neither agrees nor disagrees with the new lines.
+
+Counts: **high 0, medium 0, low 0** (an addition, not a correction).
+
 ### For a clinician to decide
 
 1. **Transplant fever tier.** Is fever with shaking chills after a transplant a 911 sign (as now), or "call the transplant center right away" first? Should fever or rigors with a tunnelled hemodialysis catheter also go in the 911 tier? KDOQI vascular access 2019 was not re-read for this.
@@ -226,6 +258,12 @@ Counts: **high 0, medium 3, low 16.**
 5. **DKA on dialysis.** HC24 reports lower ketone levels in DKA with kidney failure. The page says symptoms count even below 3.0 mmol/L. Confirm, and decide whether to give a lower 911 ketone threshold for people on dialysis.
 6. **ACE inhibitor or ARB in type 1 diabetes with A2 albuminuria and normal blood pressure.** The pages follow KDIGO 2024 Rec 3.6.3, which recommends it whatever the blood pressure. KDIGO 2022 Rec 1.2.1 and ADA rec 11.6a are written for people with hypertension. Confirm the wording.
 7. **A1c goal on dialysis.** The page gives the KDIGO 2022 range for people not on dialysis only, and points to CGM. Confirm that no dialysis A1c goal should be stated.
+8. **Blood pressure of 180/120 or higher (added 2026-10-22).** (a) NHLBI writes "above 180/120" in one place and "is 180/120" in
+   another and does not say whether one number is enough; the page and the app read it as a top number of 180 or more **or** a
+   bottom number of 120 or more. Confirm. (b) The 911 line follows NHLBI: a sign and a second reading that is also high, after
+   5 minutes' rest. Should a sudden severe headache, chest pain or trouble breathing with a reading that high go to 911 at once?
+   (c) The "today" line says to rest and check again before calling. Confirm for people on dialysis, whose usual readings differ
+   before and after a session. (d) The wallet card carries both lines in a few words.
 
 ## Fact-check: stages/ (2026-10-05)
 

@@ -1455,7 +1455,7 @@
     ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days']],
     ['Food data', ['food.off_enabled', 'food.off_contact', 'food.off_rate_per_minute', 'food.barcode_negative_ttl_hours', 'food.usda_branded_barcode',
       'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
-    ['Default for everyone', ['ui.theme', 'user.units.labs']],
+    ['Default for everyone', ['ui.theme', 'user.units.labs', 'user.units.weight']],
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
@@ -1473,6 +1473,7 @@
     'registration.mode': { invite: 'Invite links (recommended)', closed: 'Closed: admins create accounts', open: 'Open: anyone who can reach the page (HTTPS only)' },
     'ui.theme': { system: 'Match each device', light: 'Light', dark: 'Dark' },
     'user.units.labs': { us: 'US: mg/dL, g/dL, mg/g, %', si: 'SI: mmol/L, µmol/L, g/L, mg/mmol, mmol/mol' },
+    'user.units.weight': { lb: 'Pounds (lb)', kg: 'Kilograms (kg)' },
     'targets.default_activity': { inactive: 'Inactive', low_active: 'Low active', active: 'Active', very_active: 'Very active' },
   };
   function valueText(key, value) {

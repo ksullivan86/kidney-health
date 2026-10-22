@@ -162,7 +162,7 @@ def test_round_trip_into_a_fresh_server_matches(client, fresh):
     assert answer["imported"] is True and answer["dry_run"] is False and answer["blocked"] is None
     assert answer["counts"] == {"log_entries": 7, "custom_foods": 3, "shared_foods_kept_as_own": 0, "shared_foods_linked": 0,
                                 "built_in_foods_matched": 2, "meal_templates": 1, "lab_results": 2, "symptoms": 0,
-                                "food_preferences": 2, "profile": 1, "settings": 2}
+                                "weights": 0, "blood_pressures": 0, "food_preferences": 2, "profile": 1, "settings": 2}
     assert answer["skipped"]["total"] == 0 and answer["already_there"] == dict.fromkeys(answer["already_there"], 0)
     for day in (DAY, SECOND_DAY):
         assert scrub(fresh.get("/api/log", params={"date": day}).json()) == scrub(client.get("/api/log", params={"date": day}).json())
@@ -195,7 +195,7 @@ def test_round_trip_into_a_fresh_server_matches(client, fresh):
     events = [e for e in fresh.get("/api/me/activity").json()["events"] if e["action"] == "data.imported"]
     assert len(events) == 1
     assert events[0]["details"] == {"log_entries": 7, "custom_foods": 3, "meal_templates": 1, "lab_results": 2,
-                                    "symptoms": 0, "food_preferences": 2, "merge": False, "profile": True}
+                                    "symptoms": 0, "weights": 0, "blood_pressures": 0, "food_preferences": 2, "merge": False, "profile": True}
 
 
 def test_a_dry_run_writes_nothing_and_says_what_would_happen(client, fresh):
@@ -506,7 +506,7 @@ def test_an_account_with_data_needs_add_to_my_existing_data(client, fresh):
     r = post_import(fresh, doc)
     assert r.status_code == 409 and r.json()["blocked"]["code"] == "account_not_empty"
     assert r.json()["blocked"]["existing"] == {"log_entries": 7, "custom_foods": 3, "meal_templates": 1, "lab_results": 2,
-                                                     "symptoms": 0}
+                                                     "symptoms": 0, "weights": 0, "blood_pressures": 0}
     r = post_import(fresh, doc, dry_run=True)
     assert r.status_code == 200 and r.json()["can_import"] is False and r.json()["blocked"]["code"] == "account_not_empty"
     assert r.json()["file"]["records"]["log_entries"] == 7
@@ -517,7 +517,7 @@ def test_an_account_with_data_needs_add_to_my_existing_data(client, fresh):
     answer = r.json()
     assert answer["counts"] == dict.fromkeys(answer["counts"], 0) | {"built_in_foods_matched": 2}
     assert answer["already_there"] == {"log_entries": 7, "custom_foods": 3, "shared_foods_linked": 0, "meal_templates": 1,
-                                       "lab_results": 2, "symptoms": 0, "food_preferences": 2}
+                                       "lab_results": 2, "symptoms": 0, "weights": 0, "blood_pressures": 0, "food_preferences": 2}
     after = stored(fresh)
     for table in ("log_entries", "foods", "meal_templates", "lab_results", "food_preferences"):
         assert after[table] == state[table], table
@@ -866,7 +866,7 @@ def test_the_profile_targets_and_settings_are_replaced_only_when_asked(client, f
     doc = export_doc(client)
     dry = post_import(fresh, doc, dry_run=True, merge=True).json()
     assert dry["counts"]["profile"] == 0 and dry["counts"]["settings"] == 0
-    assert dry["not_selected"] == ["your profile and targets", "your meal-guidance and display settings"]
+    assert dry["not_selected"] == ["your profile and targets", "your meal-guidance, display, weight and blood pressure settings"]
     r = post_import(fresh, doc, merge=True)
     assert r.status_code == 200
     assert fresh.get("/api/profile").json()["name"] == "Local" and fresh.get("/api/profile").json()["targets"]["sodium_mg"] == 1500

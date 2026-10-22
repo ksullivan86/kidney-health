@@ -66,7 +66,7 @@ Non-goals (and why):
 | F2 | On hemodialysis, gains between sessions above 3.5 % of body weight are linked to death. | Cabrera 2015 (handbook source DG28a) | Handbook text only (an example of what a team's limit may be). Not an app default. |
 | F3 | KDIGO 2021 blood pressure in CKD: rec. 1.1 standardized office measurement in preference to routine office measurement; rec. 1.2 home or ambulatory readings *complement* standardized office readings; rec. 3.1.1 a systolic target under 120 when tolerated, **using standardized office measurement**. | KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in CKD, Kidney Int 2021;99(3S):S1–S87 | Why the app has no home goal of its own (§2). |
 | F4 | Home monitoring with a validated upper-arm (oscillometric) cuff is recommended; cuffless devices (watches, rings) are not recommended for clinical blood pressure assessment; severe hypertension is above 180/120. | 2025 AHA/ACC/AANP/… Guideline for the Prevention, Detection, Evaluation and Management of High Blood Pressure in Adults, Hypertension 2025;82(10):e212–e316, doi 10.1161/HYP.0000000000000249 (re-verify the wording against the full text) | The handbook page's "how to measure" and "which device" lines. |
-| F5 | "If your blood pressure is 180/120 but you don't have symptoms, wait 5 minutes and check your blood pressure again. If it is still high, call your healthcare provider." With a sudden severe headache, difficulty breathing, sudden severe pain in the abdomen, chest or back, numbness or weakness, a sudden change in vision or problems talking: call 911; "Do not wait to see if your pressure comes down on its own." | NHLBI, "High Blood Pressure – Symptoms", last updated 2024-04-25 (https://www.nhlbi.nih.gov/health/high-blood-pressure/symptoms) | The new Get help now lines (§4.5) and the app's pointer for a reading at or above 180 or 120. |
+| F5 | "If your blood pressure is 180/120 but you don't have symptoms, wait 5 minutes and check your blood pressure again. If it is still high, call your healthcare provider…" ("who may recommend starting a medicine or changing your dose": not repeated in the handbook). If the second measurement is also high and there is a sudden severe headache, difficulty breathing, sudden severe pain in the abdomen, chest or back, numbness or weakness, a sudden change in vision or problems talking: call 911; "Do not wait to see if your pressure comes down on its own." | NHLBI, "High Blood Pressure – Symptoms", last updated 2024-04-25 (https://www.nhlbi.nih.gov/health/high-blood-pressure/symptoms) | The new Get help now lines (§4.5) and the app's pointer for a reading at or above 180 or 120. |
 | F6 | How to measure at home: rest about five minutes in a chair, sit up straight, legs uncrossed and feet flat, an upper-arm cuff that fits snugly, the same time of day each time. | MedlinePlus, "Measuring Blood Pressure", last updated 2024-08-26 (https://medlineplus.gov/lab-tests/measuring-blood-pressure/) | The handbook page and the sheet's one-line hint. |
 | F7 | 1 lb = 0.45359237 kg exactly. | The international pound (1959); NIST SP 811 Appendix B | Unit conversion (§4.4). |
 
@@ -169,16 +169,24 @@ constraints in SQL beyond `NOT NULL` (the project keeps enums in the models so a
 
 * **Weight over the alarm**: the line quotes the existing Get help now phrase — "The handbook lists “weight gain above the alarm
   number your team gave you” under “Call your care team today”." — with the link. Not prominent (the person set the number).
-* **Blood pressure at or above 180 top or 120 bottom** (a single reading; F5's "180/120"): Part B adds two lines to
-  `get-help-now.md`, cited to NHLBI (F5): under **Call your care team today**: "**A blood pressure of 180/120 or higher** that
-  is still that high when you check again after resting 5 minutes"; under **Call 911 now**: "**A blood pressure of 180/120 or
-  higher with** a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or
-  weakness, a sudden change in vision or problems talking. Do not wait to see if it comes down." The reading's `flag`
-  quotes both, says to rest 5 minutes and measure again, links to the page, and is **prominent**. A second reading within 15
-  minutes that is still that high changes nothing in the app's words (the page already says what to do).
-* `tests/test_body.py` checks every quoted phrase against the page (like `tests/test_symptoms.py`), so the app never quotes
-  words the page no longer has. `handbook/REVIEW.md` gets the new lines under "Emergency tiers and red flags" for the
-  clinician review.
+* **Blood pressure at or above 180 top or 120 bottom** (a single reading; F5's "180/120"): Part A added two lines to
+  `get-help-now.md`, cited to NHLBI (F5, source id `NHLBI-BPS`, page read 2026-10-22): under **Call your care team today**
+  (a new group "Blood pressure"): "**A blood pressure of 180/120 or higher** that is still that high when you check again after
+  resting 5 minutes"; under **Call 911 now**: "**A blood pressure of 180/120 or higher with** a sudden severe headache, trouble
+  breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems
+  talking. Call even if you have not measured again, and do not wait to see if it comes down on its own" (MedlinePlus
+  `MEDLINE-BPM`: over 180/120 with those signs, call 911; and NHLBI's "Do not wait"; NHLBI's own "if the second measurement is
+  also high and if you have any of these symptoms" could be read as waiting with emergency signs, so the handbook takes the safer
+  reading, decided 2026-10-22 at review). The page's clause that the provider "may recommend starting a medicine or
+  changing your dose" is **not** repeated (no medicine advice). The wallet card (`includes/help-card.md`) carries both in a few
+  words. The reading's `flag` quotes the 911 line **first**, then says that without those signs a person rests 5 minutes and
+  measures again, quoting the care-team line; it links to the page and is **prominent**. A second reading within 15 minutes that is still that high changes nothing in the app's words (the page
+  already says what to do). Reading "180/120" as a top number of 180 or more **or** a bottom number of 120 or more is the
+  project's cautious choice (NHLBI does not say), and is an open item for the clinician review (`handbook/REVIEW.md`,
+  "Emergency tiers and red flags").
+* `tests/test_body.py` checks every quoted phrase against the page, under the group it is quoted for (like
+  `tests/test_symptoms.py`), so the app never quotes words the page no longer has. `handbook/REVIEW.md` has the new lines under
+  "Emergency tiers and red flags" for the clinician review (done in Part A).
 * Low blood pressure has no number in the app: the handbook already lists dizziness on standing (a symptom, `stages/g3a.md`);
   a reading below the plausibility range is refused as a typing error.
 
@@ -205,7 +213,7 @@ constraints in SQL beyond `NOT NULL` (the project keeps enums in the models so a
 * **Handbook**: a "Using the app" page `app/weight-and-blood-pressure.md` (what to record, how to measure (F6), which device
   (F4), the alarm and goal are the team's (F3), what the app shows and does not); `app/first-setup.md` loses "The app has no
   field for your weight-gain limit"; `stages/hemodialysis-in-centre.md`'s "enter them in the app" links to the new page; Get
-  help now gains the two lines of §4.5. Every new handbook sentence with a number cites F2–F6.
+  help now gained the two lines of §4.5 in Part A. Every new handbook sentence with a number cites F2–F6.
 
 ### 4.7 The demo (GitHub Pages) and parity
 
@@ -283,6 +291,40 @@ these to it is a ROADMAP line.
 same validation (and the per-day limits), "Add to my existing data" skips rows whose `source_key` exists and adds manual rows
 as new; replacing removes the person's rows first. The export version stays 1 (older files have neither list).
 
+### 4.12 Decisions made while building Part A (where the code's pattern or a detail the note left open decided)
+
+Each follows the symptoms log (the established pattern) unless it says otherwise; the code and `ARCHITECTURE.md` "Weight and blood pressure" are the
+contract.
+
+* **Storage.** `id` is `INTEGER PRIMARY KEY AUTOINCREMENT` (ids are never reused, as in every other table) rather than the note's plain `INTEGER PRIMARY
+  KEY`; no `CHECK` beyond `NOT NULL`, as §4.1 says (the symptoms table has some, these have none on purpose). A note is stored as `''` (never `NULL`); `time`
+  and `source_key` are `NULL` when there is none. The unique index is partial (`WHERE source_key IS NOT NULL`), as §4.1 says.
+* **API.** A blank `time` means no time. `kg` is kilograms only (Part B converts what the person types and shows). `source_key` is internal: it is in the
+  export, not in `WeightOut` / `BloodPressureOut`. The batch routes answer **200** `{added, skipped}` (nothing is "created" as one resource; `POST /api/log/batch`'s
+  201 is for entries) and refuse the whole request on the first row that is not valid or would overfill a day, naming it `rows.N.field: …` with **all** of that
+  row's problems (`rows.N: …` for the top-below-bottom rule). A batch row's `source` is `apple_health` or `import` (default `import`), never `manual`. The one
+  `body_batch` limit (60 an hour per person) covers both routes. `PUT` sets `updated_at` and makes the row `manual`; there is no activity row for weights or
+  readings, as for symptoms (§4.9's "added a weight with no value" is not recorded: nothing about them is).
+* **Summary** (`GET /api/body/summary?date=`; `date` required): the note's `{weight: {latest, previous, gain, alarm}, bp: {latest, week, goal, flagged_today},
+  units}` is `{date, units, weight: {latest, previous, gain: {kg, since} | null, alarm | null}, bp: {latest, week: {count, systolic, diastolic, above_goal,
+  above: {systolic, diastolic}, few}, goal, flagged_today}}`. `alarm` is the §4.4 check (`status`, `reference_kind`, `reference`, `reference_kg`, `gain_kg`,
+  `over_alarm`, `message`, `flag`); `flagged_today` is the latest flagged reading dated that day; `above_goal` is true when either number's mean is at or
+  above its goal number (`above` says which). The "dry weight in Profile" is used **only while the profile says hemodialysis**.
+* **Settings.** The goal also refuses a top number that is not above the bottom one (as a reading does). `user.units.weight` is in the admin's "Default for
+  everyone" group like `user.units.labs`. All three are carried over by an import with `replace_profile` (so the care team's numbers move with the person),
+  and the "not selected" line names them.
+* **Flags.** Both are `{level, text, href, link_text, prominent}` like a symptom's `red_flag`; the blood pressure flag's `level` is `emergency` (it points to both
+  groups). The weight flag is `today`, not prominent. The 911 line on the page needs no second reading when a sign is there (MedlinePlus; see §4.5), the
+  flag's text puts it first, and the wallet card carries both lines.
+* **Import and export** (§4.11). There is **no "replace my data" mode** in the code (an account that has data is a 409 unless `merge=1`, for every kind), so
+  that part of §4.11 is not built; a row with a `source_key` is left out when the person has that key, a typed row when an identical one is there, a day over
+  its limit is skipped and listed (like symptoms), and the lists are capped at 20,000 rows each. `weights` and `blood_pressures` follow `symptoms` in
+  `export.json`.
+* **The demo.** `index.html` lists the two new scripts and `sw.js` precaches them (needed for the twin to load; no screen). The sample data are two weeks with a
+  sample alarm (1 kg in a day; on hemodialysis 2 kg between sessions) and goal (130/80), today's weight over the alarm and no reading at 180/120.
+* **Not in Part A:** every screen, the Profile helpers, the visit prep section, the handbook page "Using the app", the Apple Health import. The import
+  summary lines in Settings (`IMPORT_KINDS` in `js/views/settings.js`) and the "Data imported" activity line do not name weights and readings yet (Part B).
+
 ---
 
 ## 5. Risks
@@ -301,8 +343,8 @@ as new; replacing removes the person's rows first. The export version stays 1 (o
 
 * **A**: migration m018 on a populated step-17 database (`tests/test_migration_m018.py`); validation boundaries (every range
   end, `systolic > diastolic`, future dates, per-day limits, unknown fields); CRUD and batch with two users (not yours → 404,
-  batch de-duplication, all-or-nothing); summary cases; `flag` phrases checked against `get-help-now.md` (Part A asserts
-  only the existing weight phrase; Part B adds the blood pressure lines and their test); export/import round trip; settings
+  batch de-duplication, all-or-nothing); summary cases; `flag` phrases checked against `get-help-now.md` (Part A asserts the
+  existing weight phrase and the two blood pressure lines it added); export/import round trip; settings
   validation and the settings vectors; the AI, MCP and guidance packages never read the tables; body vectors in Python and JS;
   the mock matches the server on the vectors' requests.
 * **B**: the UI tests in the style of `tests/test_symptoms_ui.py` (no `innerHTML`, sheet fields, Profile helpers, Settings
@@ -319,8 +361,8 @@ as new; replacing removes the person's rows first. The export version stays 1 (o
 
 | Part | Contents | Rough size |
 |---|---|---|
-| A | m018, `app/body.py` (routes, summary, flags, validation), models, settings keys, export/import, auth coverage, `js/engine/body.js`, `js/mock/body.js`, seed data, `core.js` API helpers, vectors and generator, tests, ARCHITECTURE (schema table, "Weight and blood pressure" section, module map), docs page `docs/body.md`, CHANGELOG | 1.5–2M |
-| B | Today card and sheets, Trends charts, Settings section, Profile helpers, visit prep section, CSS, the handbook page and the Get help now lines (with citations and REVIEW.md), `tools/e2e/body.py`, UI tests, docs and CHANGELOG | 1.5–2M |
+| A | m018, `app/body.py` (routes, summary, flags, validation), models, settings keys, export/import, auth coverage, `js/engine/body.js`, `js/mock/body.js`, seed data, `core.js` API helpers, vectors and generator, tests, the two Get help now lines (with `NHLBI-BPS`, the wallet card and REVIEW.md), ARCHITECTURE (schema table, "Weight and blood pressure" section, module map), docs page `docs/body.md`, CHANGELOG | 1.5–2M |
+| B | Today card and sheets, Trends charts, Settings section, Profile helpers, visit prep section, CSS, the handbook page (`app/weight-and-blood-pressure.md`), `tools/e2e/body.py`, UI tests, docs and CHANGELOG | 1.5–2M |
 | C | `js/engine/apple_health.js`, the import sheet, vectors, the large-file test, harness steps, docs and CHANGELOG | 1–1.5M |
 
 A first (B and C need its routes and twin); B and C can be built in parallel after A merges (they touch different views;

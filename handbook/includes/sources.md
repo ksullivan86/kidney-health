@@ -77,6 +77,8 @@
 [CDC-STROKE]: https://www.cdc.gov/stroke/signs-symptoms/index.html "CDC: stroke signs and symptoms"
 [MEDLINE-K]: https://medlineplus.gov/ency/article/001179.htm "MedlinePlus: high potassium level"
 [MEDLINE-PE]: https://medlineplus.gov/ency/article/000140.htm "MedlinePlus: pulmonary edema"
+[NHLBI-BPS]: https://www.nhlbi.nih.gov/health/high-blood-pressure/symptoms "NHLBI: high blood pressure symptoms"
+[MEDLINE-BPM]: https://medlineplus.gov/lab-tests/measuring-blood-pressure/ "MedlinePlus: measuring blood pressure"
 [AKF-bleed]: https://www.kidneyfund.org/article/dialysis-fistula-and-graft-bleeds-what-are-they-and-how-can-they-be-prevented-and-treated "AKF: fistula and graft bleeds"
 [NKF-CKDEPI]: https://www.kidney.org/professionals/ckd-epi-creatinine-equation-2021 "NKF: CKD-EPI 2021 equation"
 [MEDLINE-BUN]: https://medlineplus.gov/ency/article/003474.htm "MedlinePlus: BUN blood test"

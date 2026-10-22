@@ -163,6 +163,36 @@
       lab(12, 'potassium', 4.8, 'mmol/L', 'Clinic visit'); lab(12, 'phosphate', 1.58, 'mmol/L'); lab(12, 'bicarbonate', 21, 'mmol/L');
       lab(12, 'creatinine', 212, 'µmol/L'); lab(12, 'egfr', 25, 'mL/min/1.73 m²'); lab(12, 'uacr', 25, 'mg/mmol');
     }
+    // Weight and blood pressure (note 10 §4.7): two weeks of sample weights and readings, with a sample weight-gain alarm and blood
+    // pressure goal as if "from the care team" (the demo makes the numbers up; the app never suggests either). Exactly one weight is
+    // over the alarm (today's) and no reading is at 180/120, so the demo never shows the emergency block unasked.
+    const stampOf = (daysAgo, hhmm) => api._stamp(new Date(Math.min(at(addDays(today, -daysAgo), hhmm), cap)));
+    const MORNING_KG = [70.2, 70.0, 70.3, 70.1, 69.9, 70.2, 70.4, 70.1, 70.0, 70.3, 70.2, 70.1, 70.3, 70.2, 71.5]; // 14 days ago … today
+    const MORNING_BP = [[126, 76, 64], [130, 80, 66], [132, 82, 68], [128, 78, 63], [134, 84, 70], [129, 79, 65], [131, 80, 64], [127, 77, 62], [133, 83, 69],
+      [130, 79, 66], [128, 78, 64], [135, 85, 71], [129, 78, 65], [131, 81, 67], [132, 80, 66]];
+    const EVENING_BP = { 12: [138, 86, 72], 9: [136, 84, 70], 6: [140, 88, 74], 3: [134, 82, 69], 1: [137, 85, 71] };
+    const dialysisDays = hemodialysis ? [0, 2, 4] : [];
+    const weekday = (daysAgo) => (parseDate(addDays(today, -daysAgo)).getDay() + 6) % 7; // 0 = Monday, as dialysis_days
+    MORNING_KG.forEach((kg, i) => {
+      const back = 14 - i;
+      const date = addDays(today, -back);
+      if (hemodialysis && dialysisDays.includes(weekday(back))) { // before and after a session instead of a morning weight
+        const before = back === 0 ? 72.6 : 71.0 + (i % 3) * 0.2; // today's weight is the one over the sample alarm of 2 kg, before a session or at home (against the last one after a session)
+        api._insertWeight(labUser, { date, time: '06:40', kg: before, context: 'before_dialysis', note: '' }, { createdAt: stampOf(back, 6.4) });
+        api._insertWeight(labUser, { date, time: '11:20', kg: 70.2 - (i % 2) * 0.1, context: 'after_dialysis', note: '' }, { createdAt: stampOf(back, 11.2) });
+      } else {
+        api._insertWeight(labUser, { date, time: '07:15', kg: hemodialysis && back === 0 ? 72.4 : kg, context: 'morning', note: '' }, { createdAt: stampOf(back, 7.15) });
+      }
+      const [systolic, diastolic, pulse] = MORNING_BP[i];
+      api._insertReading(labUser, { date, time: '07:20', systolic, diastolic, pulse, context: 'morning', note: '' }, { createdAt: stampOf(back, 7.2) });
+      if (EVENING_BP[back]) {
+        const [es, ed, ep] = EVENING_BP[back];
+        api._insertReading(labUser, { date, time: '19:10', systolic: es, diastolic: ed, pulse: ep, context: 'evening', note: '' }, { createdAt: stampOf(back, 19.1) });
+      }
+    });
+    api._patchSettings(hemodialysis
+      ? { 'body.weight_alarm': { amount_kg: 2, over: 'between_sessions', days: 1 }, 'body.bp_goal': { systolic: 130, diastolic: 80 } }
+      : { 'body.weight_alarm': { amount_kg: 1, over: 'days', days: 1 }, 'body.bp_goal': { systolic: 130, diastolic: 80 } }, { admin: false, userId: labUser });
     api._updateProfile({ targets: api._suggested().targets });
   }
 

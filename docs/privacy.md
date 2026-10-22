@@ -45,6 +45,17 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   records and shows a symptom; it does not say what it means. A symptom that the handbook's Get help now page lists
   as a warning sign shows the handbook's own words and a link to that page; that is computed from the symptom's name
   alone, on the server, and sends nothing anywhere ([Symptoms](../handbook/docs/app/reports-for-your-team.md));
+* the **weights and blood pressure readings** the person chooses to record (schema step 18; design note 10): the date, an optional time,
+  the weight in kilograms (or the top and bottom blood pressure number and an optional pulse), when it was taken (morning, before or after
+  dialysis, other) and an optional note up to 200 characters, and where a row came from (typed, or imported with a key that stops a second
+  import adding it twice). Two numbers the person's **care team** gave them are kept as personal settings: a weight-gain alarm and a blood
+  pressure goal (the app never suggests either). This is health data. It is shown only to that person; it is part of the export
+  (`export.json`, `weights.csv` and `blood_pressure.csv`) and of the import; it is never written to the server's log or the activity list,
+  and it is deleted with the account. **It is never sent to an AI provider, the Ask chat or an assistant: the code that builds those
+  requests does not read it** (a test checks that), and a later feature must say so here before it does. The app records and shows
+  numbers; it does not say what they mean. A weight past the person's alarm, or a reading with a top number of 180 or more or a bottom
+  number of 120 or more, shows the handbook's own words from its Get help now page and a link to it; that is computed on the server from the
+  numbers alone and sends nothing anywhere ([the design](body.md));
 * **Visit prep** (Trends → Get ready for a visit) stores nothing and sends nothing: it is drawn in the browser from the summary, lab results and symptoms the person already has, with the person's own questions kept in the open page's memory only (not in the browser's storage, not on the server, never sent to an AI); it is printed or saved as a PDF by the browser. The code that builds requests to an AI provider or an assistant does not read it ([Reports for your care team](../handbook/docs/app/reports-for-your-team.md));
 * **Lab results from Apple Health clinical records** (Labs → Import from Apple Health, [Personalised targets and labs](targets-and-labs.md))
   are read **in the browser, on the device, and nothing is uploaded**. The person unzips the Health app's export in the Files app and
@@ -189,11 +200,11 @@ your account on the server you are signed in to. Your browser reads the file and
 server over the same connection as everything else; nothing is sent anywhere else. Before anything changes
 the server checks the file and shows what would be added and what would be left out.
 
-* **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms and food preferences (More like this,
-  Less often, Not for me); the
+* **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms, weights and blood pressure readings and
+  food preferences (More like this, Less often, Not for me); the
   shared USDA and Open Food Facts foods you used (linked if the new server has them, otherwise kept as your
   own copies, with their licence note). If you also tick *Also replace my profile, targets and settings*: your
-  profile, targets, meal-guidance settings and display settings. That box is off by default because your
+  profile, targets, meal-guidance settings, display settings and the weight alarm and blood pressure goal. That box is off by default because your
   targets may have been agreed with your care team on the server you are importing into.
 * **Not carried over, even if a file has them:** your username, password and sign-in sessions; assistant
   access tokens and every API key; your AI activity, AI call counts, the AI providers you agreed to send
@@ -205,7 +216,7 @@ the server checks the file and shows what would be added and what would be left 
   everyone, only for you.
 * **The numbers of an entry are recalculated** from its food and amount, as for any entry you log, so they
   follow the foods on the new server.
-* **No double counting.** An account that already has entries, foods, saved meals, lab results or symptoms refuses
+* **No double counting.** An account that already has entries, foods, saved meals, lab results, symptoms, weights or blood pressure readings refuses
   an import unless you tick *Add to my existing data*; then whatever is already there is left out, so
   importing the same file twice adds nothing. A food that is neither in the file nor built in is listed as
   left out, never guessed; a saved meal that loses a food that way says so in its note.

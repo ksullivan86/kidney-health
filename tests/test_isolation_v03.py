@@ -31,6 +31,7 @@ import test_isolation
 import test_lab_photo
 import test_log_if_match
 import test_mcp_write
+import test_body
 import test_symptoms
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
@@ -68,6 +69,10 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "lab_results": ("test_isolation_v03.test_lab_results_are_per_person", "test_data_import.test_importing_another_persons_file_gives_you_copies_and_changes_nothing_of_theirs"),
     "symptoms": ("test_symptoms.test_a_second_person_never_sees_or_changes_the_first_persons_symptoms",
                  "test_symptoms.test_deleting_an_account_deletes_its_symptoms_and_only_its_own"),  # step 15
+    "weights": ("test_body.test_a_second_person_never_sees_or_changes_the_first_persons_rows",
+                "test_body.test_deleting_an_account_deletes_its_rows_and_only_its_own"),  # step 18
+    "blood_pressures": ("test_body.test_a_second_person_never_sees_or_changes_the_first_persons_rows",
+                        "test_body.test_deleting_an_account_deletes_its_rows_and_only_its_own"),  # step 18
     "food_preferences": ("test_isolation_v03.test_guidance_preferences_are_per_person",
                          "test_isolation_v03.test_food_preferences_the_learned_list_and_the_group_choices_never_cross_between_people",  # note 09: /preferences, /learned
                          "test_data_import.test_a_crafted_food_id_never_reaches_another_persons_food"),
@@ -94,7 +99,7 @@ SHARED_OR_SYSTEM = {
 MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
-           "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_lab_photo": test_lab_photo,
+           "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
            "test_log_if_match": test_log_if_match}
 
 

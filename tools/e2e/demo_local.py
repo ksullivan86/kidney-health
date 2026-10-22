@@ -49,8 +49,8 @@ RESULTS: list[dict[str, Any]] = []
 SECTIONS = ("keep", "export", "stop", "tabs", "private", "newer")
 # app/account.py export_data, in its order (tests/test_demo_local_ui.py keeps this list equal to the server's)
 EXPORT_KEYS = ["format", "version", "exported_at", "app_version", "user", "profile", "settings", "log_entries", "custom_foods", "linked_foods",
-               "meal_templates", "lab_results", "symptoms", "ai_audit", "activity", "food_preferences", "ai_usage", "ai_consents", "ai_provider",
-               "builtin_foods"]
+               "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit", "activity", "food_preferences", "ai_usage",
+               "ai_consents", "ai_provider", "builtin_foods"]
 ENTRY = "Oat bar for the test"
 # a browser that grants the request (and remembers it across a reload, as persisted() does)
 PERSIST_YES = ("() => { Object.defineProperty(navigator, 'storage', { value: { persist: async () => { sessionStorage.setItem('stub-persisted', '1'); return true; }, "

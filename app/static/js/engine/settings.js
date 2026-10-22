@@ -17,8 +17,9 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const KH = root.KH || (root.KH = {});
 
-  // type: 'bool' | 'int' (min/max) | 'str' (minLength/maxLength/pattern, stripped unless strip: false) | 'choice' (options) |
-  //       'object' (a pydantic model with extra="forbid": `fields`, each a scalar type above or 'list' of one)
+  // type: 'bool' | 'int' (min/max) | 'num' (a float in lax mode: min/max, never inf or nan) | 'str' (minLength/maxLength/pattern, stripped
+  //       unless strip: false) | 'choice' (options) | 'object' (a pydantic model with extra="forbid": `fields`, each a scalar type above
+  //       or 'list' of one). A key with `nullable: true` also takes null (pydantic `X | None`).
   const DEFS = [
     // Optional AI (note 04 R4, §9 A5–A7; app/settings_registry.py "Note 04"). Providers and keys are rows of
     // ai_providers, never settings: the person's `ai` object has no key field (§9 A6).
@@ -83,6 +84,27 @@
         + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
+    // Weight and blood pressure (note 10 §4.3; app/settings_registry.py "Note 10"). The alarm and the goal are the numbers the person's care
+    // team gave them: no default, and the app never suggests either.
+    { key: 'body.bp_goal', type: 'object', model: 'BpGoal', scope: 'user', env: null,
+      default: { systolic: null, diastolic: null },
+      fields: [
+        { name: 'systolic', type: 'int', min: 80, max: 200, nullable: true, default: null },
+        { name: 'diastolic', type: 'int', min: 40, max: 130, nullable: true, default: null },
+      ],
+      // The model validator: a goal "under 130/80" has a top number above the bottom one (runs when every field is valid).
+      check(out) { return out.systolic != null && out.diastolic != null && out.systolic <= out.diastolic ? 'systolic must be greater than diastolic' : null; },
+      label: 'My blood pressure goal (from my care team)',
+      help: 'systolic (80–200) and diastolic (40–130), or null for none. The app never suggests a goal: enter the numbers your team gave you.' },
+    { key: 'body.weight_alarm', type: 'object', model: 'WeightAlarm', scope: 'user', env: null,
+      default: { amount_kg: null, over: 'days', days: 1 },
+      fields: [
+        { name: 'amount_kg', type: 'num', min: 0.2, max: 10, nullable: true, default: null },
+        { name: 'over', type: 'choice', options: ['between_sessions', 'days'], default: 'days' },
+        { name: 'days', type: 'int', min: 1, max: 7, default: 1 },
+      ],
+      label: 'My weight-gain alarm (from my care team)',
+      help: 'amount_kg (0.2–10, or null for none), over (between_sessions, on hemodialysis, or days) and days (1–7). The app never suggests a number: enter the one your team gave you.' },
     { key: 'food.barcode_negative_ttl_hours', type: 'int', min: 1, max: 720, default: 24, scope: 'instance', env: 'BARCODE_NEGATIVE_TTL_HOURS',
       label: 'Remember barcodes that were not found for (hours)',
       help: 'A barcode that Open Food Facts or USDA did not know is not asked again for this long.' },
@@ -181,6 +203,9 @@
       label: 'Units for lab results',
       help: 'us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, '
         + 'mmol/mol. Only the unit offered first changes; any unit can still be entered.' },
+    { key: 'user.units.weight', type: 'choice', options: ['kg', 'lb'], default: 'lb', scope: 'user_default', env: null,
+      label: 'Units for weight',
+      help: "lb or kg (the app's US default is lb). Only how a weight is shown and typed changes; weights are stored in kilograms." },
   ];
   const BY_KEY = Object.fromEntries(DEFS.map((d) => [d.key, d]));
 
@@ -203,7 +228,22 @@
   const BOOL_FALSE = ['0', 'off', 'f', 'false', 'n', 'no'];
   // The key's pydantic type in lax mode, as TypeAdapter.validate_python applies it to a JSON value:
   // returns { value } or { error } (the server's InvalidSettingValue text without the "key: " prefix).
+  // pydantic-core float from str: Rust's f64 grammar after trimming; on failure it retries with the underscores removed unless one
+  // leads, trails or doubles. undefined = unable to parse (js/mock/core.js has the same).
+  const PY_SPECIAL_FLOAT = /^[+-]?(?:inf|infinity|nan)$/i;
+  const RUST_FLOAT = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+  function pydanticFloat(s) {
+    const t = s.trim();
+    if (PY_SPECIAL_FLOAT.test(t)) return /nan/i.test(t) ? NaN : t[0] === '-' ? -Infinity : Infinity;
+    if (RUST_FLOAT.test(t)) return Number(t);
+    if (t && !t.startsWith('_') && !t.endsWith('_') && !t.includes('__')) {
+      const u = t.replace(/_/g, '');
+      if (RUST_FLOAT.test(u)) return Number(u);
+    }
+    return undefined;
+  }
   function validate(def, value) {
+    if (def.nullable && value === null) return { value: null };
     switch (def.type) {
       case 'bool': {
         if (typeof value === 'boolean') return { value };
@@ -226,6 +266,19 @@
           n = Number(t.replace(/_/g, '').replace(/\.0+$/, ''));
         } else if (typeof value !== 'number' || !Number.isFinite(value)) return { error: 'Input should be a valid integer' };
         if (!Number.isInteger(n)) return { error: 'Input should be a valid integer, got a number with a fractional part' };
+        if (def.min != null && n < def.min) return { error: `Input should be greater than or equal to ${def.min}` };
+        if (def.max != null && n > def.max) return { error: `Input should be less than or equal to ${def.max}` };
+        return { value: n };
+      }
+      case 'num': {
+        let n;
+        if (typeof value === 'boolean') n = value ? 1 : 0;
+        else if (typeof value === 'number') n = value;
+        else if (typeof value === 'string') {
+          n = pydanticFloat(value);
+          if (n === undefined) return { error: 'Input should be a valid number, unable to parse string as a number' };
+        } else return { error: 'Input should be a valid number' };
+        if (!Number.isFinite(n)) return { error: 'Input should be a finite number' };
         if (def.min != null && n < def.min) return { error: `Input should be greater than or equal to ${def.min}` };
         if (def.max != null && n > def.max) return { error: `Input should be less than or equal to ${def.max}` };
         return { value: n };
