@@ -118,8 +118,9 @@ change to the frontend, the demo API or the server's routes (Playwright for Pyth
 their README): `parity.py` (the demo API against a real server, about 6,500 comparisons), `sandbox.py`
 (the preview inside an emulated sandboxed host), `regress.py` (the installed app end to end),
 `learn.py` (the handbook at `/learn`, also in CI), `device.py` (barcodes, photos, AI cards, the offline
-outbox) and `guidance_perf.py` (the guidance twin's speed with a slowed-down CPU). Say in your pull
-request which ones you ran.
+outbox, offline edits) and `guidance_perf.py` (the guidance twin's speed with a slowed-down CPU), and one
+harness per feature (`prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`, `symptoms.py`, `visitprep.py`, `menuplan.py`,
+`demo_local.py`, `mcp_smoke.py`). Say in your pull request which ones you ran.
 
 ## The preview build
 

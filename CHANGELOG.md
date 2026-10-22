@@ -28,7 +28,7 @@ carbohydrate and "about" tolerances, "Not chosen yet" in the profile, the online
 * **Save from the chat, with a trust setting you control.** By default Ask shows a card and saves only when you press Save. If you
   would rather not confirm every time, an admin can allow "Trust it for this conversation" or "Trust it always"; every save then
   shows Undo, and the app's numbers, the low and emergency rules and the dose checks stay on.
-* **An assistant of your own, through MCP.** Settings → Assistant access makes personal tokens so a chat assistant you already use
+* **An assistant of your own, through MCP** (an admin turns it on). Settings → Assistant access makes personal tokens so a chat assistant you already use
   (Open WebUI, a Hermes Agent profile) can ask the app for your numbers instead of guessing them: today's figures, a food search,
   "check this meal", and a safety check. It reads only, unless you tick "Can also save food and recipes" for that token.
 * **Symptoms log and visit prep.** Write down a symptom with a severity; the app records and shows it and never says what it
