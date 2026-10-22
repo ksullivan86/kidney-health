@@ -92,7 +92,7 @@ fill in **Profile**, press **Suggest targets**, check them with your care team, 
 invite the rest of the household from **Server administration** (the shield icon).
 
 Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
-camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.4.0`
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.5.0`
 ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
 upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
@@ -123,16 +123,20 @@ running a local AI model next to the app. See [docs/deployment.md](docs/deployme
 
 ### Upgrading
 
-**From 0.3:** back up `kidney.db` first
-(`podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db`), change the image tag
-from `:0.3` to `:0.4`, and start it. The first start updates the database. Nothing new is turned on
-for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-03-read-this-first).
+**From 0.4:** back up `kidney.db` first
+(`podman exec kidney-health python -m app.admin backup /data/before-0.5.0.db`), change the image tag
+from `:0.4` to `:0.5`, and start it. The first start updates the database. Nothing new is turned on
+for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-04-read-this-first).
+
+**From 0.3:** do the same with the tag `:0.5`, and read the notes for both steps:
+[0.3 to 0.4](CHANGELOG.md#upgrading-from-03-read-this-first) and
+[0.4 to 0.5](CHANGELOG.md#upgrading-from-04-read-this-first). The database updates for both run in one start.
 
 **From 0.2:** if your server updates itself (the old Quadlet file with `Image=...:latest` and
 `AutoUpdate=registry`), replace that file with the one in `deploy/quadlet/` before the next update,
 or pin the old image and stop `podman-auto-update.timer` until you're ready. The newer image has no
 shell, so the old health check would keep restarting it. Then follow
-[CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first) and the 0.3 steps above.
+[CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first) and the steps above.
 
 ## The handbook
 

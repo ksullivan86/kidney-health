@@ -141,10 +141,10 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
 
 7. **Afterwards**: open `## Unreleased` in `CHANGELOG.md`; watch the next weekly image scan.
 
-**Patch releases of an older minor version** (for example 0.3.4 after 0.4.0 shipped): branch
-`release/0.3` from the last `v0.3.*` tag, fix, and tag from that branch. `release.yml` moves `:latest`
+**Patch releases of an older minor version** (for example 0.4.4 after 0.5.0 shipped): branch
+`release/0.4` from the last `v0.4.*` tag, fix, and tag from that branch. `release.yml` moves `:latest`
 on *every* non-pre-release tag, so set `HOLD_LATEST=true` before pushing such a tag and remove it
-afterwards; otherwise `:latest` would go back to 0.3.
+afterwards; otherwise `:latest` would go back to 0.4.
 
 **If the release workflow fails:** no tag moved (tags move last). Fix the cause on `main`, then either
 re-run the failed jobs (same digest) or, if the code had to change, delete the unreleased git tag and
@@ -200,6 +200,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.4.0: not held.** The release runs schema steps 8 to 17 at start without an automatic copy, and moves the shipped files from
   `:0.3` to `:0.4`. A host that auto-updates `:latest` migrates its database at the next pull; one that tracks `:0.3` stays on 0.3.x.
   CHANGELOG.md, "Upgrading from 0.3", says to take a backup first.
+* **v0.5.0: not held.** The release runs schema steps 18 and 19 at start without an automatic copy, and moves the shipped files from
+  `:0.4` to `:0.5`. A host that auto-updates `:latest` migrates its database at the next pull; one that tracks `:0.4` stays on 0.4.x.
+  CHANGELOG.md, "Upgrading from 0.4", says to take a backup first.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest
