@@ -200,7 +200,7 @@ Albuminuria (KDIGO 2024 Table 3) uses the unit it was entered in: A1 below 30 mg
   (opens the Labs view).
 * **Daily targets**: the editor (protein and calcium as minimum–maximum; the same number in both boxes
   reads "about X"; fiber as "at least", a goal that is never "over"), *Warn at*, *"About" targets: on target up
-  to (% above)* (v0.3.1, 0–10 %, default 0; see ARCHITECTURE.md "Tolerances (v0.3.1)") and *Week starts on*.
+  to (% above)* (since 0.4.0, 0–10 %, default 0; see ARCHITECTURE.md "Tolerances (v0.3.1)") and *Week starts on*.
 
 **Suggest targets** works from the *saved* profile: when the form differs from it the app asks the
 person to save first. The answer fills the editor (not saved) and shows, in order: a very-high-potassium
@@ -230,7 +230,7 @@ and the suggestion never disagree. The *Kidney function* card shows the eGFR wit
 not set), the albuminuria category, and the server's message. *History* lists every result by test,
 newest first, with a filter and deletion (confirmed in the page).
 
-**Import from a spreadsheet** (v0.3.1, on the Lab results view): choose a CSV file with a date column and
+**Import from a spreadsheet** (since 0.4.0, on the Lab results view): choose a CSV file with a date column and
 one column per test, for example `Date, Potassium (mmol/L), Creatinine (umol/L)`. The file is read in the
 browser; nothing is sent until **Save**, and then only the ticked results (test, value, unit and date),
 never the file or its other columns. Every result is listed with its conversion before saving; a column

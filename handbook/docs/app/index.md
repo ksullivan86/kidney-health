@@ -36,14 +36,16 @@ that server is called the **admin** in these pages.
 | Plan the week, reuse meals, make a shopping list | **Plan** | [Planning meals and using the menus](planning-and-menus.md) |
 | Ask "what fits in my dinner?" | **What fits now** on **Add**, **What fits** on **Today** | [Meal guidance](guidance.md) |
 | Get optional AI ideas | **Settings** → **AI ideas** | [Optional AI](ai.md) |
+| Ask a question in plain words, by typing or speaking, when your admin has turned it on | **Ask** | [Optional AI](ai.md#ask-a-chat-inside-the-app-optional) |
+| Tell the app what you like to eat, and see what it noticed in your log | **⋯** next to a suggestion, **Settings** → **Meal guidance** | [Meal guidance](guidance.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
 | Write down a symptom, and show how it went | **Today** → **Symptoms**, then **Trends** | [Reports for your care team](reports-for-your-team.md#symptoms-you-write-down) |
 | Print one page for an appointment | **Trends** → **Get ready for a visit** | [Reports for your care team](reports-for-your-team.md#visit-prep-one-page-for-an-appointment) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |
 | See, export or delete your data | **Settings** → **Account** | [Privacy and your data](privacy.md) |
 
-The screens at the bottom of the app are **Today**, **Add**, **Plan**, **Trends** and **Profile**
-([architecture contract][ARCH]). This handbook opens from the **Learn** entry (the book icon) at the top of
+The screens at the bottom of the app are **Today**, **Add**, **Plan**, **Trends** and **Profile**, and **Ask**
+when your admin has turned it on ([architecture contract][ARCH]). This handbook opens from the **Learn** entry (the book icon) at the top of
 the app and from **Settings → About & privacy**, at `/learn/` on the same server; warnings and notes in the
 app link to the page that explains them.
 
@@ -93,6 +95,17 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
   ([design note 04][NOTE04]).
 - You can download everything you logged, and you can delete your account
   ([Privacy and your data](privacy.md)).
+
+## New in version 0.4
+
+- **Ask**, a chat inside the app that answers from your own numbers, by typing or by speaking, if your admin turns it on
+  ([Optional AI](ai.md)).
+- Symptoms you write down, and one page to print for an appointment ([Reports for your care team](reports-for-your-team.md)).
+- Lab results from a spreadsheet, the iPhone Health app, a patient-portal file or a photo of a report
+  ([Targets and warnings](targets-and-warnings.md)).
+- Changing or deleting an entry works without a connection too ([Logging food](logging.md)).
+- Suggestions that learn what you like, with the reason shown ([Meal guidance](guidance.md)).
+- Move your data to another server ([Privacy and your data](privacy.md)).
 
 ## New in version 0.3
 

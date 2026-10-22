@@ -1,6 +1,6 @@
 # Assistant, step 2, parts A and C: the in-app Ask chat (text) and saving from it
 
-Status: part A built (2026-10-15); part C (saving from the chat, with a trust setting) built (2026-10-15); part B (voice, below) built (2026-10-15); the other follow-ups under "Next" are not. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
+Status: done, shipped in 0.4.0: part A (the text chat), part C (saving from the chat, with a trust setting) and part B (voice, below) were built on 2026-10-15; the follow-ups under "Next" that are not built are in `docs/ROADMAP.md`. Step 1 (`assistant-step1.md`) made the app an MCP server for an external chat
 front end. Step 2 puts a chat inside the app, behind the same rules: the model never supplies a number, lows and
 red flags are answered by rules without a model call, and the answer is checked in code before it is shown.
 Part A is the text chat. Part B (voice) is described after the tests below; the follow-ups are listed under "Next".
