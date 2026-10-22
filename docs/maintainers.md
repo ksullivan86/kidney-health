@@ -60,8 +60,8 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
      plain HTTP (barcode photo, typed digits), with an entry edited and another deleted while offline and a conflict made from
      a second device (the card in Settings → This device), Settings → Your data → Import from a file with the phone's own file
-     picker (choose an `export.json` kept in the Files app or Android's picker; after closing the password prompt, check what
-     happens when the same file is chosen again), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results, the
+     picker (choose an `export.json` kept in the Files app or Android's picker; after closing the password prompt, choosing the same
+     file again asks for the password again), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results, the
      entry sheet and Settings;
    * Settings → Account → Your data → **Import from a file** is covered by `import_walk.py` in Chromium (export from one
      account, import the `export.json` into a fresh account with and without "Add to my existing data" and "Also replace

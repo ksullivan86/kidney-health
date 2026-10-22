@@ -7,6 +7,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people using the app
+
+* **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
+  kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
+  the box.
+
 ### For contributors
 
 * **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside

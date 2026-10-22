@@ -199,18 +199,6 @@ def open_import(page: Page) -> None:
     page.locator("#set-import").scroll_into_view_if_needed()
 
 
-def reopen_settings(page: Page) -> None:
-    """Leave Settings and come back: the Import block is drawn fresh, with an empty file box.
-
-    A person needs this after closing the password prompt: the file box still holds the file, and choosing the same file
-    again fires no ``change`` event in Chromium, so nothing happens (there is no Retry). The walk takes the way out a
-    person has; it is reported in the pull request, not asserted here.
-    """
-    page.click("#tab-today")
-    page.wait_for_selector("#view-today:not([hidden])")
-    open_import(page)
-
-
 def text_of(page: Page, selector: str) -> str:
     """What a person reads in the element: its visible text with the blank space collapsed."""
     return page.evaluate("(sel) => { const el = document.querySelector(sel); return el ? el.innerText.replace(/\\s+/g, ' ').trim() : ''; }", selector)
@@ -368,9 +356,10 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
         check(f"{tag} Cancel: 'Not checked: the password prompt was closed.', no preview, nothing written",
               "Not checked: the password prompt was closed." in text_of(page, "#set-import-msg") and page.locator("#set-import-title").count() == 0
               and data_of(bea) == empty, text_of(page, "#set-import-msg"))
-        reopen_settings(page)
+        check(f"{tag} Cancel also empties the file box, so the same file can be chosen again",
+              page.input_value("#set-import-file") == "", page.input_value("#set-import-file"))
         choose(page, files / "export.json")
-        check(f"{tag} choosing the file again asks again", sheet_open(page))
+        check(f"{tag} choosing the same file again asks again", sheet_open(page))
         page.fill("#reauth-password", "this is not my password 9")
         page.click("#reauth-submit")
         wait_text(page, "#reauth-error", "not right")

@@ -571,6 +571,8 @@
       } catch (err) {
         if (mine !== latest) return;
         clear(result);
+        // A closed password prompt forgets the file too, so choosing the same file again fires `change` and checks it again.
+        if (err && err.cancelled) reset(false);
         msg.textContent = err && err.cancelled ? 'Not checked: the password prompt was closed.' : '';
         if (!err.handled && !err.cancelled) result.append(h('div', { class: 'form-error', role: 'alert' }, h('p', {}, err.detail || err.message)));
       }
