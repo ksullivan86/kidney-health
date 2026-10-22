@@ -607,7 +607,11 @@ const crowdedXml = () => {
   dlg.close();
 }
 {
-  // Cancel while a .zip is being read: the stream of the file is let go of, nothing is sent, the name is text
+  // Cancel while a .zip is being read: the stream of the file is let go of, nothing is sent, the name is text. Each step waits until
+  // the sheet says it is reading (a fixed wait let a fast machine finish the read first).
+  const whileReading = async () => {
+    for (let waited = 0; waited < 3000 && !String(statusEl.textContent || '').startsWith('Reading'); waited += 5) await sleep(5);
+  };
   fresh(backend());
   openFresh();
   let many = '';
@@ -616,7 +620,7 @@ const crowdedXml = () => {
   input.files = [slow];
   input.value = `C:\\fakepath\\${slow.name}`;
   const reading = input.fire('change');
-  await sleep(120);
+  await whileReading();
   const during = snapshot();
   const imgs = find(statusEl, (e) => e.tag === 'img').length + find(problemEl, (e) => e.tag === 'img').length;
   await cancelBtn.fire('click');
@@ -633,7 +637,7 @@ const crowdedXml = () => {
   openFresh();
   input.files = [slow2];
   const reading2 = input.fire('change');
-  await sleep(120);
+  await whileReading();
   dlg.close();
   await reading2;
   await sleep(60);

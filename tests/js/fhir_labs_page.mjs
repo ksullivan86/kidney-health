@@ -318,20 +318,25 @@ const shown = () => ({ error: find(box, (e) => e.attrs.role === 'alert').map(tex
 }
 {
   // a newer pick wins over a .zip that is still being read; Cancel during a .zip lets go of it
-  const slow = zipFile('export.zip', Array.from({ length: 40 }, (_, i) => entryOf(`o-${i}.json`, obs('2823-3', 4.4, 'mmol/L', '2026-10-01'))), { chunk: 64, delay: 3 });
+  // The archive streams 64 bytes every 20 ms, and each step waits until the page says it is reading, so a fast machine cannot
+  // finish the read before the newer pick (a fixed wait made this depend on the machine's speed).
+  const reading = async () => {
+    for (let waited = 0; waited < 3000 && !text(box).startsWith('Read '); waited += 5) await new Promise((resolve) => setTimeout(resolve, 5));
+  };
+  const slow = zipFile('export.zip', Array.from({ length: 40 }, (_, i) => entryOf(`o-${i}.json`, obs('2823-3', 4.4, 'mmol/L', '2026-10-01'))), { chunk: 64, delay: 20 });
   input.files = [slow]; input.value = 'x';
   const first = input.fire('change');
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  await reading();
   input.files = [fileOf('fast.json', obs('2160-0', 1.2, 'mg/dL', '2026-10-02'))];
   await input.fire('change');
   await first;
   await new Promise((resolve) => setTimeout(resolve, 200));
   out.zipNewerWins = { rows: find(box, (e) => e.attrs.class === 'lab-row-value').map(text), opened: slow.opened, over: slow.over };
   await byText('Cancel').fire('click');
-  const slow2 = zipFile('export.zip', Array.from({ length: 40 }, (_, i) => entryOf(`o-${i}.json`, obs('2823-3', 4.4, 'mmol/L', '2026-10-01'))), { chunk: 64, delay: 3 });
+  const slow2 = zipFile('export.zip', Array.from({ length: 40 }, (_, i) => entryOf(`o-${i}.json`, obs('2823-3', 4.4, 'mmol/L', '2026-10-01'))), { chunk: 64, delay: 20 });
   input.files = [slow2]; input.value = 'x';
   const second = input.fire('change');
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  await reading();
   const during = shown();
   // there is no Cancel button while reading; choosing nothing (the picker cancelled) drops it
   input.files = []; await input.fire('change');
