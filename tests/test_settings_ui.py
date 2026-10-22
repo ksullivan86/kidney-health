@@ -377,20 +377,24 @@ def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> No
         assert call in SETTINGS_JS, call
 
 
-def test_the_people_list_offers_to_revoke_a_persons_assistant_tokens_only_while_the_switch_is_on() -> None:
-    """Server administration → People → Manage: "Revoke assistant tokens (n)" with an inline confirm, shown only while
-    the admin switch assistant.enabled is on and the person has active tokens; the demo makes no tokens."""
-    block = SETTINGS_JS[SETTINGS_JS.index("function assistantSwitchOn()"):SETTINGS_JS.index("function inviteBlock(")]
-    assert "all['assistant.enabled'].value === true" in block
-    assert "assistantSwitchOn() && assistantTokens > 0" in block
-    assert "`Revoke assistant tokens (${assistantTokens})`" in block
+def test_the_people_list_offers_to_revoke_a_persons_tokens_only_while_a_token_switch_is_on() -> None:
+    """Server administration → People → Manage: "Revoke tokens (n)" with an inline confirm, n = assistant_tokens + device_tokens
+    (the server ends both families), shown only while assistant.enabled or push.enabled is on and the person has active tokens;
+    the demo makes no tokens."""
+    block = SETTINGS_JS[SETTINGS_JS.index("function adminSwitchOn(key)"):SETTINGS_JS.index("function inviteBlock(")]
+    assert "all[key].value === true" in block
+    assert "adminSwitchOn('assistant.enabled')" in block and "adminSwitchOn('push.enabled')" in block
+    assert "(Number(u.assistant_tokens) || 0) + (Number(u.device_tokens) || 0)" in block
+    assert "(assistantSwitchOn() || pushSwitchOn()) && tokenCount > 0" in block
+    assert "`Revoke tokens (${tokenCount})`" in block and "Revoke assistant tokens" not in block
     assert "confirm.inline(actions, rev" in block and "confirmText: 'Revoke'" in block
     assert "A.revokeUserTokens(u.id)" in block
     assert "revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`)" in SETTINGS_JS
     assert "admin: 'revoked by an admin'" in SETTINGS_JS  # the person's activity says who ended the tokens
-    assert "loadPeople(); // \"Revoke assistant tokens\" shows only while the switch is on" in SETTINGS_JS
+    assert "loadPeople(); // \"Revoke tokens\" shows only while a token switch is on" in SETTINGS_JS
+    assert "if (pushHost) renderPush(pushHost)" in SETTINGS_JS  # the Phone shortcuts block follows the admin's switch
     assert "onclick" not in block and "javascript:" not in block  # no inline handlers: the CSP forbids inline scripts
-    assert "route('POST', userIdRoute('/revoke-tokens')" in MOCK_AUTH_JS and "assistant_tokens: 0" in MOCK_AUTH_JS
+    assert "route('POST', userIdRoute('/revoke-tokens')" in MOCK_AUTH_JS and "assistant_tokens: 0, device_tokens: 0" in MOCK_AUTH_JS
 
 
 def test_the_assistant_card_offers_saving_as_a_separate_choice_and_says_what_each_token_can_do() -> None:

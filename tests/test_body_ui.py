@@ -249,15 +249,14 @@ def test_the_chart_colours_are_checked_and_the_words_carry_the_meaning():
 
 
 def test_the_apple_health_button_exists_only_when_another_module_provides_the_import():
-    # Trends
+    # Trends: the button passes itself to the sheet (so focus comes back to it)
     assert "KH.bodyImport && typeof KH.bodyImport.open === 'function'" in TRENDS_CODE and "slot.hidden = !there" in TRENDS_CODE
     assert "'Import from Apple Health'" in TRENDS_CODE and "KH.bodyImport.open(btn)" in TRENDS_CODE
     # Settings → Your data
     block = SETTINGS[SETTINGS.index("function bodyImportBlock"):SETTINGS.index("// Import from a file (POST /api/me/import")]
     assert "KH.bodyImport && typeof KH.bodyImport.open === 'function'" in block and "wrap.hidden = true" in block
     assert "'Import from Apple Health'" in block and "KH.bodyImport.open(b)" in block and "wrap.append(bodyImportBlock());" in SETTINGS
-    # this change does not build the import: no reader and no sheet of its own
-    assert not (STATIC / "js" / "views" / "body_import.js").exists() or "KH.bodyImport" in read("js", "views", "body_import.js")
+    # the reader and the sheet are another module's (js/views/body_import.js): these two files never define KH.bodyImport or read the export
     for code in (VIEW_CODE, TRENDS_CODE):
         assert "KH.bodyImport =" not in code and "apple_health" not in code.lower()
     assert 'id="sheet-body-import"' not in INDEX or "body_import.js" in INDEX

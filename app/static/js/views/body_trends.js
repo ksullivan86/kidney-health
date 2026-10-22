@@ -128,14 +128,21 @@
     return h('details', { class: 'inline-details' }, h('summary', {}, summaryText),
       h('div', { class: 'body-table-wrap', tabindex: '0', role: 'region', 'aria-label': label }, table));
   }
+  // A "From" column ("from a shortcut (Morning weight)", "from the Health app", "from a file") only when some row in the period was not typed.
   function weightTable(weights, unit) {
-    return tableOf('Show as table', 'Table of weights', [['Date'], ['Time'], [`Weight (${unit})`, true], ['When']],
-      U.weightRows(weights, unit).map((r) => [[fmtMonthDay(r.date)], [r.time || '—'], [r.value, 'num'], [r.context]]));
+    const rows = U.weightRows(weights, unit);
+    const from = rows.some((r) => r.origin);
+    return tableOf('Show as table', 'Table of weights', [['Date'], ['Time'], [`Weight (${unit})`, true], ['When'], ...(from ? [['From']] : [])],
+      rows.map((r) => [[fmtMonthDay(r.date)], [r.time || '—'], [r.value, 'num'], [r.context], ...(from ? [[r.origin || '—']] : [])]));
   }
   function bpTable(readings) {
-    return tableOf('Show as table', 'Table of blood pressure readings', [['Date'], ['Time'], ['Top', true], ['Bottom', true], ['Pulse', true], ['When'], ['Handbook note']],
-      U.readingRows(readings).map((r) => [[fmtMonthDay(r.date)], [r.time || '—'], [String(r.systolic), 'num'], [String(r.diastolic), 'num'],
-        [r.pulse === '' ? '—' : String(r.pulse), 'num'], [r.context], [r.flagged ? 'Yes, see Today' : '', r.flagged ? 'flagged' : null]]));
+    const rows = U.readingRows(readings);
+    const from = rows.some((r) => r.origin);
+    return tableOf('Show as table', 'Table of blood pressure readings',
+      [['Date'], ['Time'], ['Top', true], ['Bottom', true], ['Pulse', true], ['When'], ...(from ? [['From']] : []), ['Handbook note']],
+      rows.map((r) => [[fmtMonthDay(r.date)], [r.time || '—'], [String(r.systolic), 'num'], [String(r.diastolic), 'num'],
+        [r.pulse === '' ? '—' : String(r.pulse), 'num'], [r.context], ...(from ? [[r.origin || '—']] : []),
+        [r.flagged ? 'Yes, see Today' : '', r.flagged ? 'flagged' : null]]));
   }
 
   // ---- the two blocks -----------------------------------------------------------------------------------------------------------
