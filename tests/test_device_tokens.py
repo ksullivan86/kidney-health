@@ -277,6 +277,20 @@ def test_the_audit_rows_say_which_family(admin):
     assert {e["details"]["family"] for e in events if e["action"] == "api_token.created"} == {"assistant", "device"}
 
 
+def test_a_person_revoking_one_token_is_audited_with_its_family_for_the_activity_list(admin):
+    """The activity list says "Phone shortcut token revoked" or "Assistant token revoked" by ``details.family`` (Settings, js/views/settings.js)."""
+    a, d = make(admin, "A"), make_device(admin, "D")
+    assert admin.delete(f"/api/me/tokens/{d['id']}").status_code == 204
+    assert admin.delete(f"/api/me/tokens/{a['id']}").status_code == 204
+    revoked = {r["target_id"]: r["details"] for r in audit_rows(admin, "api_token.revoked")}
+    assert revoked == {str(d["id"]): {"reason": "self", "family": "device"}, str(a["id"]): {"reason": "self", "family": "assistant"}}
+    events = admin.get("/api/me/activity").json()["events"]
+    assert {e["details"]["family"] for e in events if e["action"] == "api_token.revoked"} == {"assistant", "device"}
+    assert admin.delete(f"/api/me/tokens/{d['id']}").status_code == 204  # revoking an ended token is a no-op: one row each, still
+    assert len(audit_rows(admin, "api_token.revoked")) == 2
+    assert admin.delete("/api/me/tokens/999999").status_code == 404
+
+
 # --------------------------------------------------------------------------- revoke_all ends both families
 
 

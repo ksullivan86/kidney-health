@@ -6,9 +6,10 @@ blood pressure readings to its owner's log: it cannot read anything, change or d
 
 This page is for the person who runs the server and for people who change the code. The contract is in
 [`ARCHITECTURE.md`](../ARCHITECTURE.md) ("Device tokens and `/push/v1`") and the design note is
-[`dev/research/12-phone-push-tokens.md`](dev/research/12-phone-push-tokens.md). *What is built so far is the server: the route, the
-tokens and their limits. The Settings screen that makes the tokens, the "from a shortcut (name)" label on the weight and blood pressure
-screens and the Shortcut recipe in the handbook come in a following step; until then a token is made with `POST /api/me/tokens` (below).*
+[`dev/research/12-phone-push-tokens.md`](dev/research/12-phone-push-tokens.md). The person's side is **Settings → Account → Your data →
+Phone shortcuts** (make, list, revoke, delete what a token sent), the weight and blood pressure screens mark such rows "from a shortcut
+(name)", and the handbook has the Shortcut recipe ("From a phone shortcut" on its Weight and blood pressure page). What nobody has done yet
+is run that recipe on a real iPhone: the handbook says so and `handbook/REVIEW.md` lists the check.
 
 ## Turn it on (admin)
 
@@ -18,7 +19,9 @@ It is **off** until you turn it on, like [assistant access](assistant.md):
 * `PUSH_ENABLED=true` in the environment (`deploy/.env.example`; the setting is then locked in Server administration).
 
 While it is off nothing can be made or used: `POST /push/v1/body` answers `401` to every request, without looking anything up. Turned on
-again, tokens that have not expired or been revoked work again.
+again, tokens that have not expired or been revoked work again. The Phone shortcuts block in Settings is still there while the switch is
+off: it says "Your admin has not turned this on", shows no form, and lets a person revoke the tokens they have and delete what they sent
+(an admin also sees where the switch is). Turning the switch on or off redraws the block and the People list at once.
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the route
@@ -30,14 +33,23 @@ is `POST /push/v1/body` only.
   scopes. The plain token is shown **once**, when it is made; the server keeps only its SHA-256.
 * A person has at most **5 active device tokens** (5 assistant tokens besides), valid **30, 90 (default) or 365 days**. Making one needs a
   recent password (like saving a key) and is limited to 20 tokens an hour in all.
-* A token has a name (for example "Morning weight"), shows when it was last used, and is **revoked** at once in Settings. Every token
+* A token has a name (for example "Morning weight"), shows when it was last used and how many weights and readings it sent that are still in
+  the log, and is **revoked** at once in Settings. Every token
   also ends when its owner's password is changed or reset, when the account is disabled or deleted and when an admin presses **Revoke
   tokens** for the person (Server administration → People: it ends assistant and device tokens alike).
 * The rows a token sent are marked `source: shortcut` and linked to it, so the person can see where a row came from and **delete
   everything one token sent** in one step (`DELETE /api/me/tokens/{id}/body-rows`). If the token is purged 30 days after it ended, the rows
   stay and only lose its name.
 
-Making a token before the Settings block exists (a signed-in browser session; the switch on):
+**In Settings** (Account → Your data → Phone shortcuts): give the token a name, choose when it ends (30 days, 90 days or 1 year) and press
+Make token. After a few minutes without a password the app asks for it again first. The token is shown **once**, with **Copy token** and
+the address to send to (this server's address followed by `/push/v1/body`); paste both into the Shortcut ([the
+recipe](../handbook/docs/app/weight-and-blood-pressure.md#from-a-phone-shortcut)). The list below shows each token's name, its first
+characters, when it was made, last used and expires, and what it sent. **Revoke** ends it at once; **Delete what it sent** asks (naming the
+count) and removes only the rows that token sent, never ones the person typed or imported. For a lost phone press Revoke, then Delete what
+it sent; an ended token stays in the list for a while and still offers the second.
+
+The screen uses these routes (a signed-in browser session; the switch on), which a script can call as well:
 
 ```
 POST /api/me/tokens        {"name": "Morning weight", "family": "device", "expires_in_days": 90}
@@ -45,6 +57,13 @@ GET  /api/me/tokens?family=device
 DELETE /api/me/tokens/{id}                  revoke
 DELETE /api/me/tokens/{id}/body-rows        delete what it sent
 ```
+
+**On the weight and blood pressure screens** a row a token sent says "from a shortcut (Morning weight)" on Today, and the tables under the
+Trends charts get a "From" column while some row of the period has an origin ("from a shortcut (name)", "from the Health app" or "from a
+file"). Editing a row makes it the person's own and the label goes. The label is the token's name drawn as text; a token that was purged
+after it ended leaves the rows with "from a shortcut".
+
+**The demo** (the preview build) has no server to send to: the block says so, makes no token and sends no request.
 
 ## The route
 
@@ -104,7 +123,12 @@ are never sent to an AI provider or the assistant, like the rest of the weight a
 ## For contributors
 
 * Code: `app/push.py`, the device family in `app/auth/api_tokens.py`, `context_for` / `is_watch_source` / the same-reading check in
-  `app/body.py`, schema step 19 (`app/migrations/m019_body_token.py`), the `push.enabled` key in `app/settings_registry.py`.
+  `app/body.py`, schema step 19 (`app/migrations/m019_body_token.py`), the `push.enabled` key in `app/settings_registry.py`. The screens:
+  `pushBlock` and the admin People and Activity changes in `app/static/js/views/settings.js`, `originText` in `app/static/js/engine/body_ui.js`
+  (drawn by `views/body.js` and `views/body_trends.js`), the demo's routes in `app/static/js/mock/auth.js`.
+* UI tests: `tests/test_push_ui.py` (runs `tests/js/push_page.mjs`, which executes the block against a fake page: make, shown once, copy,
+  list, revoke, delete what it sent, the switch-off text, the demo text, `via` as text), the source checks in `tests/test_settings_ui.py` and
+  `tests/test_body_ui.py`, and the browser walk `tools/e2e/push.py` (a real Chromium and a harness that posts like a Shortcut).
 * Tests: `tests/test_push.py` (the route), `tests/test_device_tokens.py` (the family, limits, revocation, "Delete what it sent"),
   `tests/test_migration_m019.py`, the two additions in `tests/test_auth_coverage.py`, and `context_cases` / `watch_cases` in
   `tests/data/body_vectors.json` (generated by `tests/data/gen_body_vectors.py`; `node tests/js/run_vectors.mjs` holds the Apple Health
