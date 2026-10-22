@@ -161,7 +161,7 @@ iOS versions**, so look for the action that does the same thing. Apple's guide t
 
 !!! note "Written from Apple's guide, not yet tried on every iPhone"
     These steps have not been checked on a real iPhone yet (the review log has the check that is still to do). If a step
-    does not match your phone, stop, and ask whoever runs your server or your care team's app contact. Nothing
+    does not match your phone, stop, and ask whoever runs your server. Nothing
     breaks: until the token is pasted in, nothing is sent.
 
 1. In **Settings → Account → Your data → Phone shortcuts** make a token and **Copy token**. Keep the page open: you need the
