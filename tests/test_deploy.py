@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -282,6 +284,59 @@ def test_release_moves_tags_only_after_scan_and_gates_public_only_steps():
     assert "actions/checkout@" not in notes and "gh release edit" in notes and "<!-- image-digest -->" in notes
     assert not re.search(r"^\s+contents: write", jobs["build"] + jobs["scan"] + publish, re.M)
 
+
+def _notes_step_script() -> str:
+    text = read(".github/workflows/release.yml")
+    start = text.index("      - name: Append the index digest to the release notes\n        run: |\n")
+    lines = text[start:].splitlines()[2:]
+    body = []
+    for line in lines:
+        if line.strip() and not line.startswith(" " * 10):
+            break
+        body.append(line[10:])
+    return "\n".join(body) + "\n"
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@pytest.mark.parametrize(
+    ("body", "edits", "says"),
+    [
+        ("Short notes.", True, "appended the digest"),
+        ("x" * 124_500, False, "::warning title=Release notes too long"),
+        ("Notes\n<!-- image-digest -->\n### Image", False, "already carry the digest"),
+    ],
+    ids=["short", "too-long", "already-there"],
+)
+def test_release_notes_job_appends_or_warns(tmp_path, body, edits, says):
+    # The v0.4.0 notes were pasted as the rendered page's HTML and reached GitHub's 125,000-character
+    # cap, so `gh release edit` got a 422 and the run went red after the image was published. Now an
+    # over-long body warns and prints the block; nothing is edited and the job passes.
+    (tmp_path / "body.txt").write_text(body)
+    fake = tmp_path / "bin" / "gh"
+    fake.parent.mkdir()
+    fake.write_text(
+        "#!/bin/bash\n"
+        'if [ "$1 $2" = "release view" ]; then cat "$RUNNER_TEMP/body.txt"; exit 0; fi\n'
+        'if [ "$1 $2" = "release edit" ]; then cp "$5" "$RUNNER_TEMP/edited.md"; exit 0; fi\n'
+        "exit 1\n"
+    )
+    fake.chmod(0o755)
+    env = {
+        "PATH": f"{fake.parent}{os.pathsep}{os.environ['PATH']}",
+        "RUNNER_TEMP": str(tmp_path),
+        "IMAGE": "ghcr.io/example/kidney-health",
+        "TAG": "v9.8.7",
+        "DIGEST": "sha256:" + "a" * 64,
+    }
+    run = subprocess.run(["bash", "-c", _notes_step_script()], env=env, capture_output=True, text=True, timeout=30)
+    assert run.returncode == 0, run.stderr
+    assert says in run.stdout
+    edited = tmp_path / "edited.md"
+    assert edited.exists() is edits
+    if edits:
+        assert edited.read_text().startswith(body) and "<!-- image-digest -->" in edited.read_text()
+    elif "too long" in says:
+        assert "ghcr.io/example/kidney-health:9.8.7@sha256:" in run.stdout
 
 def test_codeql_runs_only_for_public_repositories():
     codeql = read(".github/workflows/codeql.yml")

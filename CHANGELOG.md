@@ -154,6 +154,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   other person's data. The demo answers it from `js/mock/meta.js` (nothing optional switched on), pinned by `tests/data/meta_vectors.json`
   (`gen_meta_vectors.py`; `node tests/js/run_vectors.mjs`) and compared by `tools/e2e/parity.py` section 10. The screens do not read it yet (ROADMAP "Open items").
   New tests: `tests/test_openapi_snapshot.py`, `tests/test_meta.py`.
+* **The release run no longer goes red over long release notes.** GitHub refuses release notes over 125,000 characters, and
+  0.4.0's (pasted from the rendered changelog, with its HTML) reached that cap, so the `release notes (image digest)` job's
+  `gh release edit` got a 422 after the image had already been built, scanned, signed and tagged. The job now counts the notes
+  with the Image section first and, if they would be too long, warns and prints the block to paste by hand. A test in
+  `tests/test_deploy.py` runs the job's script against a fake `gh` (short notes, too long, already there), and
+  `docs/maintainers.md` says to paste the section as Markdown.
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 * **`set_food_preference` over MCP** (note 09 §4.8b): `app/mcp/preference_tool.py` (in `server.all_tools()`, not in `tools.TOOLS`, because it
   reuses Ask's checks, which import `tools`; `Tool.needs` says which scope a tool needs), `api_tokens.PREFS`, `parse_scopes`/`scopes_for`,
