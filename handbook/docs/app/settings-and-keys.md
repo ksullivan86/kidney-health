@@ -22,7 +22,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Signed-in devices**, **Your data** (export, delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -115,8 +115,8 @@ list says **Read only** or **Read and save** for each token, and your activity l
 - The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown
   again. If it is lost, **Revoke** it and make a new one.
 - You can have 5 at a time. **Revoke** ends one at once. Changing your password, a password reset, or your
-  account being disabled revokes all of them, and so does an admin who uses **Revoke assistant tokens** on your
-  account (your activity says so).
+  account being disabled revokes all of them, and so does an admin who uses **Revoke tokens** on your
+  account (your activity says so). That ends your phone shortcut tokens too.
 - If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
 - Treat a token like a password: never send it by text message or email.
 

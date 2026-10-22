@@ -29,7 +29,9 @@ Sections
   9 custom foods (create/edit/copy/hide/delete, grams re-derivation), target variants, LIKE metacharacters
   10 accounts: the demo's /api/auth/status, /api/me, /api/me/settings and /api/me/keys answer with the
      same keys and value types as the server's (values differ: the demo is a demo admin); /api/handbook
-     has the same keys and link groups (the demo serves no handbook)
+     has the same keys and link groups (the demo serves no handbook); /api/me/tokens for both families
+     (assistant, device) answers alike while the switches are off (the demo makes no tokens), a bad family
+     is the same 400, an unknown token id (and its body-rows) the same 404, and making one is refused on both
   11 personalised targets and labs (v0.3 M2): the "About you" profile fields and their validation, lab
      entry with unit conversion and its validation, history filters, deletion, the kidney-function card
      for several profiles, and the suggestion (targets, notes, rules, derived, alerts, 422 refusals with
@@ -1060,6 +1062,20 @@ class Harness:
             self.rec.compare(S, "GET /api/handbook shape", top(rs["body"]), top(rm["body"]), ignore=frozenset())
             self.rec.compare(S, "GET /api/handbook link groups", sorted(rs["body"]["links"]), sorted(rm["body"]["links"]),
                              ignore=frozenset())
+
+        # Access tokens, both families (app/auth/api_tokens.py; docs/dev/research/12-phone-push-tokens.md §4.6): the demo makes no
+        # tokens, so its lists answer like a server's while the switch is off (this server runs with both switches at their default,
+        # off): the same keys and values, `tokens` empty, `enabled` false. Making one is refused on both sides (the words differ by
+        # design: the demo says it has no server to send readings to), and any id is a token the person does not have.
+        for family in ("device", "assistant"):
+            self.both(S, f"GET /api/me/tokens?family={family}", "GET", f"/api/me/tokens?family={family}", ignore=frozenset())
+        self.both(S, "GET /api/me/tokens (no family: assistant)", "GET", "/api/me/tokens", ignore=frozenset())
+        self.both(S, "GET /api/me/tokens?family=bogus", "GET", "/api/me/tokens?family=bogus")
+        for path in ("/api/me/tokens/999999", "/api/me/tokens/999999/body-rows"):
+            self.both(S, f"DELETE {path}", "DELETE", path)
+        make = {"name": "Morning weight", "expires_in_days": 90, "family": "device"}
+        rs, rm = self.server.call("POST", "/api/me/tokens", make), self.mock.call("POST", "/api/me/tokens", make)
+        self.rec.compare(S, "POST /api/me/tokens (device) status", rs["status"], rm["status"], ignore=frozenset())
 
 
     def section14(self) -> None:

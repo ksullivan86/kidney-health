@@ -471,6 +471,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: Public domain (US government work). Checked 2026-10-05. *Returns 403 to automated checkers; works in a browser.*
 - **CCI**: Centers for Disease Control and Prevention. The CDC Clear Communication Index. <https://www.cdc.gov/ccindex/index.html>  
   Licence: Public domain (US government work). Checked 2026-10-05.
+- **APPLE-SHORTCUTS**: Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations). <https://support.apple.com/guide/shortcuts/welcome/ios>  
+  Licence: © Apple: link and paraphrase. Checked 2026-10-22. *Named in design note 12 (P1). The articles were not re-read for this page and the steps were not tried on a phone: action names can differ between iOS versions, and handbook/REVIEW.md holds the owner's real-iPhone check.*
 - **MATERIAL**: Material for MkDocs 9.7.7 (MIT licence). <https://squidfunk.github.io/mkdocs-material/>  
   Licence: MIT. Checked 2026-10-05.
 - **MKDOCS**: MkDocs 1.6.1 (BSD-2-Clause licence). <https://www.mkdocs.org/>  
@@ -543,6 +545,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
 - **NOTE08**: kidney-health design note 08: the patient handbook site. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **NOTE10**: kidney-health design note 10: weight and blood pressure. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/10-weight-and-blood-pressure.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-22.
+- **NOTE12**: kidney-health design note 12: sending weights and blood pressure from an iPhone. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/12-phone-push-tokens.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-22.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
