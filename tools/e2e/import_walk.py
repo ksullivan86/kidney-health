@@ -12,10 +12,13 @@ banana and two foods of her own, five entries (eaten and planned, today and yest
 lab results, a symptom, a liked food, a profile with targets and two settings (the lab units and a meal-guidance
 tolerance). A signs in on the page and presses **Export my data (.zip)**; the harness opens the zip, takes ``export.json``
 out of it and checks what it holds. Then, on each of two screens (375x812 light and 1280x800 dark), a fresh person B
-(invited, no data) signs in on the page and walks the import:
+(invited, no data) signs in on the page and walks the import, choosing the downloaded ``.zip`` itself (the page opens it on the
+device, docs/dev/research/11-reading-a-zip-in-the-browser.md) and, once, the bare ``export.json`` from inside it, which gives
+the same preview:
 
-* the files a person can pick by mistake: the whole ``.zip``, a text file and a JSON list are turned away in the page
-  (nothing is sent); a JSON file that is not an export and an export of another version are refused in the server's words;
+* the files a person can pick by mistake: a ``.zip`` with no export.json in it, a cut-off copy of the real one, a text file and
+  a JSON list are turned away in the page (nothing is sent); a JSON file that is not an export and an export of another version
+  are refused in the server's words;
 * the recent-password requirement: B's last password entry is made older than ``REAUTH_MINUTES`` (a stored time, as a wait
   leaves it); choosing the file opens "Enter your password again"; Cancel says it was not checked; a wrong password is
   refused in the sheet; the right one carries on and the file is checked. It is asked for again when Import is pressed
@@ -282,8 +285,13 @@ def export_as_alice(browser: Any, base: str, files: Path) -> Path:
         with zipfile.ZipFile(saved) as z:
             names = sorted(z.namelist())
             raw = z.read("export.json")
-        (files / "export.json").write_bytes(raw)  # "open the .zip first"
-        check("[export] the zip holds export.json and the CSV files", names == ["README.txt", "export.json", "foods.csv", "labs.csv", "log.csv", "meals.csv", "symptoms.csv"], str(names))
+        (files / "export.json").write_bytes(raw)  # what opening the .zip gives: the bare file is still taken (one check)
+        saved_bytes = saved.read_bytes()
+        (files / "cut-off.zip").write_bytes(saved_bytes[:-40])  # a download that stopped before the end
+        with zipfile.ZipFile(files / "no-export.zip", "w", zipfile.ZIP_DEFLATED) as other:
+            other.writestr("log.csv", "date,meal\n")
+            other.writestr("README.txt", "this zip is not an export of this app")
+        check("[export] the zip holds export.json and the CSV files", names == ["README.txt", "blood_pressure.csv", "export.json", "foods.csv", "labs.csv", "log.csv", "meals.csv", "symptoms.csv", "weights.csv"], str(names))
         doc = json.loads(raw)
         check("[export] export.json holds A's records", (doc["format"], doc["version"]) == ("kidney-health-export", 1)
               and (len(doc["log_entries"]), len(doc["custom_foods"]), len(doc["meal_templates"]), len(doc["lab_results"]), len(doc["symptoms"]),
@@ -330,11 +338,21 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
               and page.locator("#set-import-file").count() == 1 and "export.json" in text_of(page, "#set-import label"), block[:200])
         check(f"{tag} nothing is chosen yet, so there is no preview", page.locator("#set-import-title").count() == 0)
 
+        check(f"{tag} the file box takes the .zip itself or the export.json, and says so",
+              page.get_attribute("#set-import-file", "accept") == ".zip,.json,application/zip,application/json"
+              and "Your export (.zip or export.json)" in text_of(page, "#set-import label")
+              and "Choose the .zip from an export of yours, or the export.json inside it." in block, block[:300])
+
         # ---- files a person can pick by mistake: turned away in the page, nothing sent
-        choose(page, zipped)
-        wait_text(page, "#set-import-msg", "whole export")
-        check(f"{tag} the whole .zip is turned away: 'Open the .zip on your device and choose the export.json inside it'",
-              "That is the whole export. Open the .zip on your device and choose the export.json inside it." in text_of(page, "#set-import-msg"), text_of(page, "#set-import-msg"))
+        choose(page, files / "no-export.zip")
+        wait_text(page, "#set-import-msg", "no export.json")
+        check(f"{tag} a .zip with no export.json in it: 'so it is not an export from this app'",
+              "This .zip has no export.json in it, so it is not an export from this app." in text_of(page, "#set-import-msg"), text_of(page, "#set-import-msg"))
+        choose(page, files / "cut-off.zip")
+        wait_text(page, "#set-import-msg", "could not be read")
+        check(f"{tag} a .zip cut off before its end: 'may be damaged or not finished downloading'",
+              "This .zip could not be read (it may be damaged or not finished downloading). Download the export again, or open it on your device and choose the export.json inside it."
+              in text_of(page, "#set-import-msg"), text_of(page, "#set-import-msg"))
         choose(page, files / "shopping.txt")
         wait_text(page, "#set-import-msg", "not JSON")
         check(f"{tag} a text file is not JSON: 'Choose the export.json from your export'",
@@ -346,7 +364,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
 
         # ---- the recent-password requirement
         make_password_old(server, name)
-        choose(page, files / "export.json")
+        choose(page, zipped)
         check(f"{tag} choosing the file after a long wait opens 'Enter your password again'", sheet_open(page))
         check(f"{tag} the sheet says why", "Enter your password again" in text_of(page, "#sheet-reauth-title")
               and "needs your password because you have not entered it in the last few minutes" in text_of(page, "#sheet-reauth-sub"), text_of(page, "#sheet-reauth"))
@@ -358,7 +376,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
               and data_of(bea) == empty, text_of(page, "#set-import-msg"))
         check(f"{tag} Cancel also empties the file box, so the same file can be chosen again",
               page.input_value("#set-import-file") == "", page.input_value("#set-import-file"))
-        choose(page, files / "export.json")
+        choose(page, zipped)
         check(f"{tag} choosing the same file again asks again", sheet_open(page))
         page.fill("#reauth-password", "this is not my password 9")
         page.click("#reauth-submit")
@@ -382,7 +400,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
               "This export is version 2 of the format; this server reads version 1." in text_of(page, "#set-import-result"), text_of(page, "#set-import-result"))
         check(f"{tag} still nothing written", data_of(bea) == empty)
 
-        choose(page, files / "export.json")
+        choose(page, zipped)
         preview = wait_preview(page)
         page.screenshot(path=str(shots / f"preview-{label}.png"), full_page=True)
         check(f"{tag} the preview says what the file holds: {SIZES}", f": {SIZES}." in preview and preview.startswith("What this file would add Exported "), preview[:260])
@@ -393,7 +411,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
               and page.locator("#set-import-profile").count() == 1 and not page.is_checked("#set-import-profile")
               and "Also replace my profile, targets and settings" in preview and "Add to my existing data" in preview)
         check(f"{tag} it says what was not chosen: profile, targets and settings",
-              "Not imported, because you did not choose it: your profile and targets and your meal-guidance and display settings." in preview, preview[-400:])
+              "Not imported, because you did not choose it: your profile and targets and your meal-guidance, display, weight and blood pressure settings." in preview, preview[-400:])
         check(f"{tag} 'What is never imported' and 'How duplicates are handled' are there", page.locator("#set-import-never").count() == 1 and page.locator("#set-import-rule").count() == 1)
         check(f"{tag} Import is enabled and the server has not been changed", page.is_enabled("#set-import-go") and data_of(bea) == empty)
 
@@ -419,12 +437,17 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
         open_import(page)
 
         # ---- the same file again, without and with "Add to my existing data"
-        choose(page, files / "export.json")
+        choose(page, zipped)
         blocked = wait_preview(page)
         check(f"{tag} the same file again: 'This account already has data (...), so nothing is imported unless you choose “Add to my existing data”'",
               f"This account already has data ({SIZES}), so nothing is imported unless you choose “Add to my existing data”." in blocked, blocked[:400])
         check(f"{tag} Import is disabled and nothing is written", page.is_disabled("#set-import-go") and data_of(bea) == alice["data"])
         page.screenshot(path=str(shots / f"blocked-{label}.png"), full_page=True)
+        # the bare export.json (what opening the .zip gives) is still taken, and says the same thing as the .zip it came from
+        choose(page, files / "export.json")
+        bare = wait_preview(page)
+        check(f"{tag} the bare export.json from inside the .zip is still taken, with the same preview as the .zip", bare == blocked and page.is_disabled("#set-import-go"),
+              f"{bare[:200]} != {blocked[:200]}")
         merged = tick(page, "set-import-merge")
         check(f"{tag} with 'Add to my existing data': 'Nothing new to add.' and everything is 'Already here, so left out'",
               "Nothing new to add." in merged and "Already here, so left out:" in merged and "Will be added:" not in merged
@@ -441,7 +464,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
         bea.json("DELETE", f"/api/labs/{lab['id']}")
         short = data_of(bea)
         check(f"{tag} (B removes one entry and one lab result through the API)", counts_of(short)["entries"] == 4 and counts_of(short)["labs"] == 1, str(counts_of(short)))
-        choose(page, files / "export.json")
+        choose(page, zipped)
         wait_preview(page)
         merged = tick(page, "set-import-merge")
         check(f"{tag} with 'Add to my existing data' the preview adds only what is missing: 1 log entry and 1 lab result",
@@ -452,7 +475,7 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
 
         # ---- Also replace my profile, targets and settings
         check(f"{tag} (B's profile and settings are still her own)", profile_of(bea) == own_before["profile"] and settings_of(bea) == own_before["settings"])
-        choose(page, files / "export.json")
+        choose(page, zipped)
         wait_preview(page)
         tick(page, "set-import-merge")
         replaced = tick(page, "set-import-profile")

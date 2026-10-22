@@ -9,23 +9,28 @@ loudly), finishes first-run setup and then, for each of 375x812 light, 1280x800 
 fresh person and opens the sheet with ``KH.bodyImport.open()`` (the Trends and Settings buttons are another part's). A small
 generated ``export.xml`` (a DTD at the top, kg and lb weights, blood pressure in a Correlation and loose, a lone half, an
 out-of-range weight and reading, a weight in grams, a source named with markup, readings from "Sam's Apple Watch", and heart rate,
-glucose, insulin and step records that must be ignored) is chosen, and:
+glucose, insulin and step records that must be ignored) is chosen, inside an ``export.zip`` built the way the Health app builds its own
+(``apple_health_export/export.xml`` beside ``export_cda.xml``, a ``clinical-records`` folder and a workout route, and the macOS
+``__MACOSX`` extras) and bare, and:
 
-* the steps are on the sheet; export.zip and export_cda.xml are refused with a reason; nothing is written while the file is read
-  or reviewed;
+* the steps are on the sheet; export.zip is read (the sheet opens it on the device, note 11), a .zip with no export.xml, one that
+  has only export_cda.xml, a damaged one, a cut-off one, and export_cda.xml itself are refused with a reason, and so is a .zip in
+  a browser without DecompressionStream; nothing is written while the file is read or reviewed;
 * the review says what was found, kept and left out in words, the date range, the last 3 months by default with its counts,
   "everything" with its own, the watch readings listed apart and unticked with the cuffless line, the sources as text (a name
   made of markup is text and runs nothing); at the phone width the Import button is in view and nothing scrolls sideways;
 * Import adds the weights and readings of the period (the server's rows are read back through the API: values, contexts,
   ``source`` apple_health, none from the watch), the batch bodies carry no ``sourceName`` and no file name, and the page
   reloads Today;
-* the same file again adds 0 ("already here"); "everything" with the watch ticked adds the rest;
+* the same file again, this time as the bare export.xml, adds 0 ("already here": the rows read out of the .zip are the rows of the
+  file); "everything" with the watch ticked adds the rest;
 * a file with a day of 25 weights: the review says how many will be left out, the server ends with 20 on that day (the earliest
   by time; with 3 weights typed in by hand on that day, 17 of the file's), the result says "n more on 1 day were left out",
   and the same file again adds 0;
 * a refusal from the server in the middle (the blood pressure batch answers 400) stops with the server's words and says what was
   already added; pressing Import again carries on without repeating the weights;
 * Cancel while a slow read is in progress aborts it (the stream is cancelled), shows the progress line first, and sends nothing;
+  the same for a big .zip (its export.xml stored, so that reading it takes a while);
 * no console error, no CSP violation, no dialog, no request to any other host.
 
 The demo (``/?mock=1``, the sheet against ``js/mock/body.js``) runs the same steps at 375x812 light and 1280x800 dark, except the
@@ -205,6 +210,30 @@ def refusal_export() -> Export:
     return x
 
 
+def health_zip(path: Path, xml: Path | None, *, compression: int = zipfile.ZIP_DEFLATED, cda: bool = True, xml_name: str = "apple_health_export/export.xml") -> Path:
+    """An export.zip as the Health app builds it: apple_health_export/ with export.xml, export_cda.xml, a clinical-records folder and a workout
+    route, and the __MACOSX copies a re-zip on a Mac adds. ``xml`` None leaves export.xml out."""
+    with zipfile.ZipFile(path, "w", compression) as z:
+        if xml is not None:
+            z.write(xml, xml_name)
+        if cda:
+            z.writestr("apple_health_export/export_cda.xml", "<ClinicalDocument/>", zipfile.ZIP_DEFLATED)
+        z.writestr("apple_health_export/clinical-records/Observation-1.json", json.dumps({"resourceType": "Observation", "id": "1"}), zipfile.ZIP_DEFLATED)
+        z.writestr("apple_health_export/workout-routes/route_2026-10-01.gpx", "<gpx/>", zipfile.ZIP_STORED)
+        z.writestr("__MACOSX/apple_health_export/._export.xml", b"\x00\x05\x16\x07 AppleDouble", zipfile.ZIP_STORED)
+    return path
+
+
+def flip_crc(path: Path) -> Path:
+    """A copy of a zip whose first directory entry has a CRC-32 that does not match its data (a download that went wrong)."""
+    data = bytearray(path.read_bytes())
+    at = data.index(b"PK\x01\x02")
+    data[at + 16] ^= 0x01
+    damaged = path.with_name("damaged-" + path.name)
+    damaged.write_bytes(bytes(data))
+    return damaged
+
+
 def big_export(path: Path, megabytes: int = 40) -> Path:
     """Mostly heart-rate records (ignored by the app), so reading takes a while."""
     line = f'<Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Health" unit="count/min" startDate="{day(1)} 07:15:00 -0400" value="61"/>\n'
@@ -335,15 +364,36 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
     # ---- the sheet, its steps, and the files it refuses
     open_sheet(page)
     steps = page.inner_text("#body-import-steps")
-    check(f"[{tag}] the sheet shows the steps to export.xml", all(w in steps for w in ("Health", "Export All Health Data", "Files", "export.zip", "apple_health_export/export.xml")), steps)
-    check(f"[{tag}] the file chooser takes one XML file and cannot capture", page.get_attribute("#body-import-file", "accept") == ".xml,text/xml,application/xml"
+    check(f"[{tag}] the sheet shows the steps: export.zip, or export.xml if it was already unzipped",
+          all(w in steps for w in ("Health", "Export All Health Data", "Files", "choose export.zip", "already unzipped", "apple_health_export/export.xml")) and "to unzip it" not in steps, steps)
+    check(f"[{tag}] the file chooser takes one .zip or .xml file and cannot capture",
+          page.get_attribute("#body-import-file", "accept") == ".zip,.xml,application/zip,text/xml,application/xml"
           and page.get_attribute("#body-import-file", "multiple") is None and page.get_attribute("#body-import-file", "capture") is None)
-    zpath = out / "files" / "export.zip"
-    with zipfile.ZipFile(zpath, "w") as z:
-        z.writestr("apple_health_export/export.xml", "<HealthData/>")
-    choose(page, zpath)
+    # an export.zip with no weights in it is read, and says so
+    choose(page, files["empty_zip"])
+    text = await_review(page)
+    check(f"[{tag}] an export.zip is opened on the device: one with no weights or readings says so", "No weights or blood pressure readings were found in this file." in text, text[:200])
+    page.click("#body-import-cancel")
+    # a .zip that is not usable is turned away with a reason, and nothing is written
+    writes_zip = len(watch.writes)
+    wrong = {
+        "no_xml": ("This .zip has no export.xml in it. Choose the export.zip you get from the Health app (tap your picture, then Export All Health Data).", files["no_xml_zip"]),
+        "cda_only": ("This .zip has the clinical documents file (export_cda.xml) but no export.xml.", files["cda_zip"]),
+        "damaged": ("This .zip could not be read (it may be damaged or not finished downloading).", files["damaged_zip"]),
+        "cut_off": ("This .zip could not be read (it may be damaged or not finished downloading).", files["cut_zip"]),
+    }
+    for key, (message, path) in wrong.items():
+        choose(page, path)
+        page.wait_for_selector("#body-import-problem:not([hidden])", timeout=60000)
+        shown = page.inner_text("#body-import-problem")
+        check(f"[{tag}] a {key.replace('_', ' ')} .zip is refused with a reason", message in shown and not page.is_visible("#body-import-summary") and page.input_value("#body-import-file") == "", shown)
+    check(f"[{tag}] and none of them wrote anything", len(watch.writes) == writes_zip, str(watch.writes[writes_zip:]))
+    page.evaluate("() => { window.__ds = window.DecompressionStream; delete window.DecompressionStream; }")
+    choose(page, files["main_zip"])
     page.wait_for_selector("#body-import-problem:not([hidden])", timeout=10000)
-    check(f"[{tag}] export.zip is refused with a reason", "whole export" in page.inner_text("#body-import-problem"), page.inner_text("#body-import-problem"))
+    check(f"[{tag}] without DecompressionStream the .zip gets the unzip advice", "This browser cannot open a .zip here. In Files, tap export.zip to unzip it, then choose apple_health_export/export.xml."
+          in page.inner_text("#body-import-problem"), page.inner_text("#body-import-problem"))
+    page.evaluate("() => { window.DecompressionStream = window.__ds; }")
     cda = out / "files" / "export_cda.xml"
     cda.write_text("<ClinicalDocument/>", encoding="utf-8")
     choose(page, cda)
@@ -353,7 +403,7 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
     # ---- the review of the main file
     before = rows_of(page)
     writes_before = len(watch.writes)
-    choose(page, files["main"])
+    choose(page, files["main_zip"])
     text = await_review(page)
     sk = main.counts
     found = f"Found {sk['found_w']} weights and {sk['found_r']} blood pressure readings. The app can keep {len(main.weights)} weights and {len(main.readings)} readings."
@@ -418,18 +468,18 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
     # ---- the same file again adds nothing
     close_sheet(page)
     open_sheet(page)
-    choose(page, files["main"])
+    choose(page, files["main"])  # the bare export.xml: the rows read out of the .zip were the rows of the file, so all are already here
     await_review(page)
     sent = len(watch.batches)
     result = import_now(page)
     already = n_recent_w + n_recent_r
-    check(f"[{tag}] the same file again adds nothing", f"Added 0 weights and 0 readings; {already} were already here." in result, result[:300])
+    check(f"[{tag}] the same file again, as the bare export.xml, adds nothing", f"Added 0 weights and 0 readings; {already} were already here." in result, result[:300])
     check(f"[{tag}] and the rows are the same", rows_of(page)["weights"] == after["weights"] and rows_of(page)["readings"] == after["readings"])
 
     # ---- everything, with the watch ticked
     close_sheet(page)
     open_sheet(page)
-    choose(page, files["main"])
+    choose(page, files["main_zip"])
     await_review(page)
     page.check("#body-import-period-all")
     page.check("#body-import-watch-0")
@@ -503,25 +553,26 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
     page.screenshot(path=str(out / "shots" / f"crowded-{tag}.png"))
     close_sheet(page)
 
-    # ---- Cancel while reading
-    open_sheet(page)
-    page.evaluate("() => { window.__slow = 20; window.__cancelled = false; }")
-    writes_before = len(watch.writes)
-    choose(page, files["big"])
-    page.wait_for_function("() => /about/.test(document.querySelector('#body-import-status').innerText)", timeout=60000)
-    progress = page.inner_text("#body-import-status")
-    check(f"[{tag}] a long read shows a progress line", "Reading big.xml: about" in progress and "MB of" in progress, progress)
-    check(f"[{tag}] and its button says Cancel", page.inner_text("#body-import-cancel") == "Cancel")
-    page.click("#body-import-cancel")
-    page.wait_for_function("() => window.__cancelled === true", timeout=20000)
-    page.evaluate("() => { window.__slow = 0; }")
-    check(f"[{tag}] Cancel aborts the read (the file stream is cancelled) and returns to the file chooser",
-          page.is_visible("#body-import-file") and "Cancelled. Nothing was read or saved." in page.inner_text("#body-import-status")
-          and not page.is_visible("#body-import-summary"), page.inner_text("#body-import-status"))
-    page.wait_for_timeout(300)
-    check(f"[{tag}] nothing was sent after Cancel", len(watch.writes) == writes_before, str(watch.writes[writes_before:]))
-    page.screenshot(path=str(out / "shots" / f"cancelled-{tag}.png"))
-    close_sheet(page)
+    # ---- Cancel while reading (the bare file, then a big .zip)
+    for what, name, label in (("bare export.xml", "big", "Reading big.xml: about"), ("export.zip", "big_zip", "Reading export.xml in big.zip: about")):
+        open_sheet(page)
+        page.evaluate("() => { window.__slow = 20; window.__cancelled = false; }")
+        writes_before = len(watch.writes)
+        choose(page, files[name])
+        page.wait_for_function("() => /about/.test(document.querySelector('#body-import-status').innerText)", timeout=60000)
+        progress = page.inner_text("#body-import-status")
+        check(f"[{tag}] a long read of the {what} shows a progress line", label in progress and "MB of" in progress, progress)
+        check(f"[{tag}] and its button says Cancel", page.inner_text("#body-import-cancel") == "Cancel")
+        page.click("#body-import-cancel")
+        page.wait_for_function("() => window.__cancelled === true", timeout=20000)
+        page.evaluate("() => { window.__slow = 0; }")
+        check(f"[{tag}] Cancel aborts the read of the {what} (the file stream is cancelled) and returns to the file chooser",
+              page.is_visible("#body-import-file") and "Cancelled. Nothing was read or saved." in page.inner_text("#body-import-status")
+              and not page.is_visible("#body-import-summary"), page.inner_text("#body-import-status"))
+        page.wait_for_timeout(300)
+        check(f"[{tag}] nothing was sent after Cancel of the {what}", len(watch.writes) == writes_before, str(watch.writes[writes_before:]))
+        page.screenshot(path=str(out / "shots" / f"cancelled-{name}-{tag}.png"))
+        close_sheet(page)
 
     # ---- the whole pass
     check(f"[{tag}] no console error, no CSP violation, no dialog", not watch.errors and not watch.dialogs and page.evaluate("() => window.__csp.length") == 0,
@@ -551,6 +602,18 @@ def main(argv: list[str] | None = None) -> int:
         "refusal": refusal_export().write(out / "files" / "refusal.xml"),
         "big": big_export(out / "files" / "big.xml"),
     }
+    files["main_zip"] = health_zip(out / "files" / "export.zip", files["main"])
+    # a big export.xml whose zip stores it as it is, so that reading it takes as long as the bare file and Cancel has time to come
+    files["big_zip"] = health_zip(out / "files" / "big.zip", files["big"], compression=zipfile.ZIP_STORED)
+    empty = out / "files" / "empty.xml"
+    empty.write_text('<?xml version="1.0"?>\n<HealthData locale="en_US"/>\n', encoding="utf-8")
+    files["empty_zip"] = health_zip(out / "files" / "empty.zip", empty)
+    files["no_xml_zip"] = health_zip(out / "files" / "no-xml.zip", None, cda=False)
+    files["cda_zip"] = health_zip(out / "files" / "cda.zip", None)
+    files["damaged_zip"] = flip_crc(health_zip(out / "files" / "damaged.zip", files["main"]))
+    cut = out / "files" / "cut.zip"
+    cut.write_bytes(files["main_zip"].read_bytes()[:-60])
+    files["cut_zip"] = cut
     env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "ALL_PROXY": "http://127.0.0.1:9",
            "https_proxy": "http://127.0.0.1:9", "http_proxy": "http://127.0.0.1:9", "all_proxy": "http://127.0.0.1:9",
            "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"}

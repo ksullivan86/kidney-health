@@ -2,6 +2,7 @@
 in ``index.html``, its view ``app/static/js/views/body_import.js`` (``KH.bodyImport.open()``) and what it needs from the reader
 ``js/engine/apple_health.js`` and the batch routes of ``app/body.py``.
 
+The export.zip is chosen as it is (``js/engine/zip.js``, note 11: only its export.xml is read, as a stream, by the same scan), or the export.xml inside it.
 The file is read on the device and nothing is uploaded while it is read or reviewed; Import sends only the rows the person keeps, in batches of 1,000,
 without the source name, with ``source`` ``apple_health``. Nothing in the view is an inline script, handler, style or HTML string, it makes no network
 call of its own (only ``KH.api``), it keeps nothing in the browser's storage, and what it does is checked by running it against a fake page, a fake
@@ -54,18 +55,21 @@ def test_the_files_are_in_the_shell_in_dependency_order_and_in_the_service_worke
     assert "const KH = window.KH;" in VIEW and "KH.appleHealth" in VIEW and "KH.bodyRules.LIMITS" in VIEW
 
 
-def test_the_sheet_explains_the_steps_and_takes_one_xml_file():
+def test_the_sheet_explains_the_steps_and_takes_one_zip_or_xml_file():
     assert SHEET.startswith('<dialog id="sheet-body-import" class="sheet" aria-labelledby="sheet-body-import-title" aria-describedby="sheet-body-import-sub">')
     steps = re.search(r'<ol class="small lab-fhir-steps" id="body-import-steps">(.*?)</ol>', SHEET, re.S)
     assert steps
     plain = re.sub(r"<[^>]+>", "", steps.group(1))
-    # Health app -> your picture -> Export All Health Data -> in Files, tap export.zip to unzip it -> choose apple_health_export/export.xml
-    for words in ("In the Health app, tap your picture", "Export All Health Data", "Files", "tap export.zip to unzip it", "choose apple_health_export/export.xml"):
+    # Health app -> your picture -> Export All Health Data -> choose export.zip (or, if it was already unzipped in Files, apple_health_export/export.xml)
+    for words in ("In the Health app, tap your picture", "Export All Health Data", "Files", "choose export.zip below", "already unzipped it in Files",
+                  "choose apple_health_export/export.xml instead"):
         assert words in plain, words
-    order = [plain.index(w) for w in ("Export All Health Data", "tap export.zip", "apple_health_export/export.xml")]
+    assert "tap export.zip to unzip it" not in plain  # nobody has to unzip it first any more
+    order = [plain.index(w) for w in ("Export All Health Data", "choose export.zip below", "apple_health_export/export.xml")]
     assert order == sorted(order)  # the steps are in the order a person does them
     assert "Only weights and blood pressure readings are read" in SHEET and "not heart rate, steps, blood glucose or insulin" in SHEET
-    assert re.search(r'<input id="body-import-file" class="ai-file" type="file" accept="\.xml,text/xml,application/xml"', SHEET)
+    assert re.search(r'<input id="body-import-file" class="ai-file" type="file" accept="\.zip,\.xml,application/zip,text/xml,application/xml"', SHEET)
+    assert '<label for="body-import-file">export.zip (or export.xml)</label>' in SHEET
     assert "multiple" not in SHEET and "capture=" not in SHEET and "<form" not in SHEET and "action=" not in SHEET  # the chooser hands one file to the page
     for needed in ('id="body-import-problem" role="alert"', 'id="body-import-status" role="status"', 'id="body-import-review"', 'id="body-import-cancel"',
                    'id="body-import-go"', 'id="body-import-pick"', "data-close"):
@@ -95,7 +99,9 @@ def test_the_view_calls_no_network_of_its_own_and_keeps_nothing_in_the_browser()
         assert f"{name}:" in CORE
     assert "/api/body/weights/batch" in CORE and "/api/body/blood-pressure/batch" in CORE
     # the file is read as a stream of text by the reader, never as a whole and never parsed
-    assert "file.stream().pipeThrough(new TextDecoderStream())" in VIEW and "file.text()" not in VIEW and "arrayBuffer" not in VIEW
+    assert "bytes = file.stream();" in VIEW and "bytes.pipeThrough(new TextDecoderStream())" in VIEW and "file.text()" not in VIEW and "arrayBuffer" not in VIEW
+    # and so is the export.xml of a .zip: opened by KH.zip, then streamed (never given to text()), with the scan's own AbortController
+    assert "bytes = KH.zip.stream(archive, entry, { signal: ctrl.signal });" in VIEW and "KH.zip.text(" not in VIEW
     assert "AH.scan(" in VIEW and "signal: ctrl.signal" in VIEW and "today: todayStr()" in VIEW and "onProgress" in VIEW
 
 
@@ -140,6 +146,10 @@ def test_the_demo_has_the_routes_the_sheet_uses():
 
 # --------------------------------------------------------------------------- the view run in Node
 
+ZIP_UNREADABLE = ("This .zip could not be read (it may be damaged or not finished downloading). Export from the Health app again, or unzip it in "
+                  "Files and choose apple_health_export/export.xml.")
+FROM_THE_HEALTH_APP = "Choose the export.zip you get from the Health app (tap your picture, then Export All Health Data)."
+
 
 @pytest.fixture(scope="module")
 def page():
@@ -148,11 +158,11 @@ def page():
     return json.loads(done.stdout)
 
 
-def test_opening_the_sheet_starts_at_the_file_chooser_and_refuses_the_zip_the_cda_file_and_an_empty_file(page):
+def test_opening_the_sheet_starts_at_the_file_chooser_and_refuses_a_file_that_only_looks_like_a_zip_the_cda_file_and_an_empty_file(page):
     opened = page["opened"]
     assert opened["open"] is True and opened["focus"][0] == "body-import-file" and opened["cancel"] == "Close"
     assert opened["pickHidden"] is False and opened["reviewHidden"] is True and opened["goHidden"] is True
-    assert page["zip"]["problem"] == ["That is the whole export. In Files, tap export.zip to unzip it, then choose apple_health_export/export.xml."]
+    assert page["zip"]["problem"] == [ZIP_UNREADABLE]
     assert page["cda"]["problem"] == ["That is the clinical documents file (export_cda.xml). Choose export.xml from the same folder."]
     assert page["empty"]["problem"] == ["That file is empty. Choose export.xml from the unzipped export folder."]
     assert page["zip"]["input"] == page["cda"]["input"] == page["empty"]["input"] == ""  # the choice is dropped, so the same file can be chosen again
@@ -366,3 +376,68 @@ def test_trim_days_on_its_own(page):
 
 def test_the_page_makes_no_network_call_of_its_own(page):
     assert page["network"] == []  # fetch, XMLHttpRequest, WebSocket and sendBeacon were all trapped; none was touched
+
+
+# --------------------------------------------------------------------------- an export.zip
+
+
+def test_an_export_zip_gives_the_same_review_as_the_export_xml_inside_it_and_reads_nothing_else_of_it(page):
+    plain, zipped = page["review"], page["zipReview"]
+    for key in ("headline", "range", "sources", "leftOut", "periods", "watch", "days", "go", "cancel", "status", "problem", "focused", "tags", "reviewHidden", "pickHidden"):
+        assert zipped[key] == plain[key], key
+    assert zipped["calls"] == 0 and zipped["lists"] == 0 and zipped["networkTrapped"] == 0  # nothing is sent while a .zip is read and reviewed
+    # the archive was read through one stream (the export.xml), once, to its end; the encrypted file beside it was never selected
+    assert page["zipRead"]["opened"] == 1 and page["zipRead"]["over"] == 1
+
+
+def test_importing_from_an_export_zip_sends_the_same_rows_as_the_export_xml(page):
+    plain, zipped = page["imported"], page["zipImported"]
+    assert zipped["posted"] == plain["posted"] and zipped["weights"] == plain["weights"] and zipped["readings"] == plain["readings"]
+    assert zipped["sources"] == ["apple_health"] and zipped["keys"] == plain["rowKeys"] and zipped["result"] == plain["result"] and zipped["shown"] == plain["shown"]
+    # by type alone, and from a re-zipped folder with the macOS copy beside it
+    assert page["zipByType"] == {"headline": page["review"]["headline"], "problem": None}
+
+
+def test_each_way_an_export_zip_can_fail_is_told_in_plain_words_and_nothing_is_sent(page):
+    zips = page["zips"]
+    want = {
+        "missing": f"This .zip has no export.xml in it. {FROM_THE_HEALTH_APP}",
+        "cdaOnly": f"This .zip has the clinical documents file (export_cda.xml) but no export.xml. {FROM_THE_HEALTH_APP}",
+        "twoExports": "This .zip holds more than one export.xml. In Files, tap the .zip to unzip it, then choose the one you want.",
+        "damaged": ZIP_UNREADABLE,  # the checksum is wrong: told once the end is reached, no rows are shown
+        "encrypted": ZIP_UNREADABLE,
+        "cutOff": ZIP_UNREADABLE,
+        "empty": ZIP_UNREADABLE,
+    }
+    for key, message in want.items():
+        got = zips[key]
+        assert got["problem"] == [message], key
+        assert got["input"] == "" and got["pickHidden"] is False and got["reviewHidden"] is True and got["status"] == "" and got["cancel"] == "Close", key
+        assert got["calls"] == 0 and got["lists"] == 0, key
+    browser = zips["browser"]
+    assert browser["problem"] == ["This browser cannot open a .zip here. In Files, tap export.zip to unzip it, then choose apple_health_export/export.xml."]
+    assert browser["slices"] == 0 and browser["opened"] == 0 and browser["input"] == ""  # the archive was not even opened
+    assert zips["afterwards"]["headline"] == page["review"]["headline"]
+
+
+def test_cancel_while_an_export_zip_is_being_read_lets_go_of_the_file_and_the_name_is_text(page):
+    cancelled = page["zipCancelled"]
+    during = cancelled["during"]
+    assert during["status"] == "Reading export.xml in <img src=x onerror=alert(1)>.zip (0.4 MB) on this device…" and during["imgs"] == 0
+    assert during["cancel"] == "Cancel" and during["pickHidden"] is True and during["reviewHidden"] is True and during["go"] is True
+    assert cancelled["after"] == {"status": "Cancelled. Nothing was read or saved.", "pickHidden": False, "reviewHidden": True, "problem": None, "focused": "body-import-file"}
+    assert cancelled["opened"] == 1 and cancelled["over"] == 1  # its stream was cancelled (or had been read to the end): none is left open
+    assert cancelled["input"] == "" and cancelled["calls"] == 0 and cancelled["lists"] == 0
+    closed = page["zipClosedWhileReading"]
+    assert closed["opened"] == 1 and closed["over"] == 1 and closed["reviewHidden"] is True and closed["status"] == "" and closed["calls"] == 0
+
+
+def test_the_zip_path_of_the_view_opens_one_entry_and_tells_only_its_own_words():
+    code = code_of(VIEW)
+    assert "KH.zip.open(file)" in code and "zip.find(archive, zip.RULES.healthXml)" in code and "zip.list(archive, zip.RULES.healthCda)" in code
+    assert "!KH.zip.supported()" in code  # an older browser gets the unzip advice, the archive is not opened
+    # every message of the reading comes from a table of the page, never from the archive or the error
+    reading = code_of(VIEW[VIEW.index("async function onPick"):VIEW.index("// The rows for a period")])
+    assert "err.message" not in reading and "entry.name" not in reading and "ZIP_MESSAGE[err && err.code] || ZIP_UNREADABLE" in reading
+    zip_words = VIEW[VIEW.index("const ZIP_MESSAGE"):VIEW.index("const isZipFile")]
+    assert "Export from the Health app again, or unzip it in Files" in zip_words and "damaged or not finished downloading" in zip_words

@@ -884,19 +884,19 @@
       <div id="lab-import-preview" class="lab-import-preview"></div>
     </section>
 
-    <!-- Import from Apple Health (js/views/lab_fhir.js, js/engine/fhir_labs.js): the clinical-records JSON files of the Health app's export are
-         read on this device, never uploaded; the same review table as the spreadsheet import, and only the rows kept are sent. -->
+    <!-- Import from Apple Health (js/views/lab_fhir.js, js/engine/fhir_labs.js): the clinical-records JSON files of the Health app's export (chosen
+         one by one, or as the export.zip itself, which js/engine/zip.js opens here) are read on this device, never uploaded; the same review table as the spreadsheet import, and only the rows kept are sent. -->
     <section class="card" id="lab-fhir" aria-labelledby="lab-fhir-h">
       <h2 class="card-title" id="lab-fhir-h">Import from Apple Health (clinical records)</h2>
       <p class="muted small">If you linked your health system in the iPhone Health app, its lab results are in the Health export as small files. They are read on this device and <strong>nothing is uploaded</strong>: you check every result before saving, and only the results you keep are sent.</p>
       <ol class="small lab-fhir-steps">
         <li>In the <strong>Health</strong> app, tap your picture (top right), then <strong>Export All Health Data</strong>, and save the zip to <strong>Files</strong>.</li>
-        <li>In <strong>Files</strong>, tap the zip to unzip it, then open <strong>apple_health_export</strong> and <strong>clinical-records</strong>.</li>
-        <li>Back here, choose the files below, go to <strong>clinical-records</strong>, tap <strong>Select</strong>, then <strong>Select All</strong>.</li>
+        <li>Back here, choose <strong>export.zip</strong> below.</li>
+        <li>If you already unzipped it in <strong>Files</strong>: open <strong>apple_health_export</strong> and <strong>clinical-records</strong>, and in the file box below go to <strong>clinical-records</strong>, tap <strong>Select</strong>, then <strong>Select All</strong>.</li>
       </ol>
       <div class="field">
-        <label for="lab-fhir-file">Clinical-records files (.json)</label>
-        <input id="lab-fhir-file" class="ai-file" type="file" multiple accept=".json,application/json,application/fhir+json" aria-describedby="lab-fhir-hint">
+        <label for="lab-fhir-file">Clinical records: export.zip (or the .json files)</label>
+        <input id="lab-fhir-file" class="ai-file" type="file" multiple accept=".zip,.json,application/zip,application/json,application/fhir+json" aria-describedby="lab-fhir-hint">
         <span class="hint" id="lab-fhir-hint">Up to 2,000 files, 1 MB each. Only lab results the app keeps are read; names and other details in the files are ignored.</span>
       </div>
       <div id="lab-fhir-preview" class="lab-import-preview"></div>
@@ -1755,8 +1755,9 @@
 </dialog>
 
 <!-- ===================== IMPORT FROM THE HEALTH APP: WEIGHTS AND BLOOD PRESSURE (js/views/body_import.js, js/engine/apple_health.js) =====================
-     Opened by KH.bodyImport.open() (Trends, Settings → Your data). The Health app's export.xml is read on this device, as text, and never
-     uploaded; only the weights and blood pressure readings the person keeps are sent (POST /api/body/weights/batch, /blood-pressure/batch). -->
+     Opened by KH.bodyImport.open() (Trends, Settings → Your data). The Health app's export.zip (or its export.xml) is read on this device, as text, and never
+     uploaded (the .zip is opened here too, js/engine/zip.js); only the weights and blood pressure readings the person keeps are sent
+     (POST /api/body/weights/batch, /blood-pressure/batch). -->
 <dialog id="sheet-body-import" class="sheet" aria-labelledby="sheet-body-import-title" aria-describedby="sheet-body-import-sub">
   <div class="sheet-form">
     <div class="sheet-head">
@@ -1772,14 +1773,13 @@
       <div id="body-import-pick">
         <ol class="small lab-fhir-steps" id="body-import-steps">
           <li>In the <strong>Health</strong> app, tap your picture (top right), then <strong>Export All Health Data</strong>, and save the zip to <strong>Files</strong>.</li>
-          <li>In <strong>Files</strong>, tap <strong>export.zip</strong> to unzip it.</li>
-          <li>Back here, choose <strong>apple_health_export/export.xml</strong> below.</li>
+          <li>Back here, choose <strong>export.zip</strong> below. If you already unzipped it in <strong>Files</strong>, choose <strong>apple_health_export/export.xml</strong> instead.</li>
         </ol>
         <p class="muted small">Only weights and blood pressure readings are read. Nothing else in the file is looked at: not heart rate, steps, blood glucose or insulin.</p>
         <div class="field">
-          <label for="body-import-file">export.xml</label>
-          <input id="body-import-file" class="ai-file" type="file" accept=".xml,text/xml,application/xml" aria-describedby="body-import-hint">
-          <span class="hint" id="body-import-hint">The file can be hundreds of megabytes. It is read in pieces, so a large one is fine; it can take a minute or two.</span>
+          <label for="body-import-file">export.zip (or export.xml)</label>
+          <input id="body-import-file" class="ai-file" type="file" accept=".zip,.xml,application/zip,text/xml,application/xml" aria-describedby="body-import-hint">
+          <span class="hint" id="body-import-hint">The file can be hundreds of megabytes. It is opened and read in pieces here, so a large one is fine; it can take a minute or two.</span>
         </div>
       </div>
       <p class="form-error" id="body-import-problem" role="alert" hidden></p>
@@ -2012,6 +2012,7 @@
      out of the preview build), boot. -->
 <script src="js/engine/rules.js"></script>
 <script src="js/engine/apple_health.js"></script>
+<script src="js/engine/zip.js"></script>
 <script src="js/engine/kidney_function.js"></script>
 <script src="js/engine/lab_import.js"></script>
 <script src="js/engine/fhir_labs.js"></script>

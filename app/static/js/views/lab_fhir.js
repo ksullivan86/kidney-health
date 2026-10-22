@@ -1,10 +1,14 @@
 /* Kidney Diet Log — lab results from Apple Health clinical records (KH.labFhir; ARCHITECTURE.md "Lab results from Apple Health clinical
    records", docs/targets-and-labs.md). Lives in the Labs view, below "Import from a spreadsheet".
 
-   * The person unzips the Health app's "Export All Health Data" zip in the Files app, opens apple_health_export/clinical-records/ and
-     chooses its JSON files here (a pick of up to 2,000 files, 1 MB each). THE FILES ARE READ ON THIS DEVICE and never uploaded: each is
-     read with File.text(), handed to KH.fhirLabs (js/engine/fhir_labs.js) and let go of; a file over 1 MB is not even read. Names, ids and
-     providers inside the files are never looked at, and no file or file name is sent anywhere.
+   * The person chooses the Health app's "Export All Health Data" zip (export.zip) itself, or, if it was already unzipped in the Files
+     app, the JSON files of apple_health_export/clinical-records/ (a pick of up to 2,000 files, 1 MB each). THE FILES ARE READ ON THIS
+     DEVICE and never uploaded: each is read with File.text(), handed to KH.fhirLabs (js/engine/fhir_labs.js) and let go of; a file over
+     1 MB is not even read. Names, ids and providers inside the files are never looked at, and no file or file name is sent anywhere.
+   * A .zip is opened here by KH.zip (js/engine/zip.js, docs/dev/research/11-reading-a-zip-in-the-browser.md): only its
+     clinical-records/*.json entries are read, one at a time through the same loop, the same caps (2,000 files, 1 MB each; a bigger
+     entry is not read, a damaged or unreadable one is counted as a file that could not be read) and the same engine. Nothing else in
+     the .zip is looked at. A .zip without a clinical-records folder, or that cannot be read, is told so in plain words.
    * What the engine finds is shown in the same kind of table as the CSV import, with a headline ("41 results found in 380 files; ...")
      and the refusals with their reasons. The data comes from the person's health system, not from an AI, so the new results start
      TICKED (as in the CSV import); results already saved are not. Nothing is saved until Save; then only the ticked rows (test, value,
@@ -20,6 +24,12 @@
   const FL = KH.fhirLabs;
 
   const BATCH = 16; // files read at the same time
+  const ZIP_BROWSER = 'This browser cannot open a .zip here. In Files, tap the zip to unzip it, then choose the files in apple_health_export/clinical-records.';
+  const ZIP_UNREADABLE = 'This .zip could not be read (it may be damaged or not finished downloading). Export from the Health app again, or unzip it in Files and choose the files in apple_health_export/clinical-records.';
+  const ZIP_NO_FOLDER = 'This .zip has no clinical-records folder. It is there only if you linked your health system in the Health app.';
+  const ZIP_AND_FILES = 'Choose either one .zip or the .json files, not both.';
+  const zipTooMany = (n) => `This .zip has ${n.toLocaleString('en-US')} clinical-record files; the app reads up to ${FL.MAX_FILES.toLocaleString('en-US')} at a time. In Files, tap the zip to unzip it, then choose only some of the files, for example the Observation files.`;
+  const isZipFile = (file) => /\.zip$/i.test(String((file && file.name) || '')) || (file && file.type) === 'application/zip';
   const plural = (n, singular, other) => `${n} ${n === 1 ? singular : other}`;
   const fmtDay = (iso) => (KH.views && KH.views.labs && KH.views.labs.fmtDay ? KH.views.labs.fmtDay(iso) : iso);
 
@@ -31,6 +41,12 @@
     clear(box).append(h('p', { class: 'form-error', role: 'alert' }, message));
   }
 
+  // A .zip that cannot be used: the reason, and the file box is emptied so that a new export with the same name can be chosen.
+  function refuseZip(message) {
+    if (input) input.value = '';
+    showError(message);
+  }
+
   /* One file for the engine: {name, size, text}; {name, size} when it is over the limit (never read); {name, unreadable: true}. */
   async function readOne(file) {
     const name = file && file.name ? String(file.name) : '';
@@ -38,6 +54,18 @@
     if (file.size > FL.MAX_FILE_BYTES) return { name, size: file.size };
     try {
       return { name, size: file.size, text: await file.text() };
+    } catch (e) {
+      return { name, unreadable: true };
+    }
+  }
+
+  /* One entry of a .zip for the engine, the way readOne gives a file: {name, size, text}; {name, size} when it is over the limit (never read);
+     {name, unreadable: true} when it is damaged, encrypted or cannot be read. The name is the entry's own file name, for the list of refusals. */
+  async function readEntry(archive, entry) {
+    const name = String(entry.name).split('/').pop();
+    if (entry.size > FL.MAX_FILE_BYTES) return { name, size: entry.size };
+    try {
+      return { name, size: entry.size, text: await KH.zip.text(archive, entry, { maxBytes: FL.MAX_FILE_BYTES }) };
     } catch (e) {
       return { name, unreadable: true };
     }
@@ -123,28 +151,62 @@
     clear(box);
     const files = Array.from((input && input.files) || []);
     if (!files.length) return;
+    if (files.some(isZipFile)) {
+      if (files.length > 1) refuseZip(ZIP_AND_FILES); else await readZip(files[0], mine);
+      return;
+    }
     if (files.length > FL.MAX_FILES) { showError(FL.tooManyFiles(files.length)); return; }
+    await readAll(files, mine, (part) => Promise.all(part.map(readOne)), `Reading ${plural(files.length, 'file', 'files')} on this device…`,
+      'The files could not be read. Choose them again.');
+  }
+
+  // The loop of both picks: `items` (files, or entries of a .zip) are read BATCH at a time by `readPart`, handed to the engine and let go of.
+  async function readAll(items, mine, readPart, first, failure) {
+    const count = items.length;
     const existing = await savedRows();
     if (mine !== pick) return;
     const run = FL.start({ today: KH.util.todayStr(), existing });
-    const progress = h('p', { class: 'muted small' }, `Reading ${plural(files.length, 'file', 'files')} on this device…`);
+    const progress = h('p', { class: 'muted small' }, first);
     clear(box).append(progress);
     box.setAttribute('aria-busy', 'true');
     try {
-      for (let i = 0; i < files.length; i += BATCH) {
-        const part = await Promise.all(files.slice(i, i + BATCH).map(readOne));
+      for (let i = 0; i < count; i += BATCH) {
+        const part = await readPart(items.slice(i, i + BATCH));
         if (mine !== pick) return; // a newer pick (or Cancel) took over
         for (const f of part) run.add(f);
-        progress.textContent = `Read ${Math.min(i + BATCH, files.length)} of ${plural(files.length, 'file', 'files')}…`;
+        progress.textContent = `Read ${Math.min(i + BATCH, count)} of ${plural(count, 'file', 'files')}…`;
       }
       const analysis = run.finish();
       const view = review(box, analysis, { onSave, onCancel });
       if (view.headline && view.headline.focus) view.headline.focus(); // the headline is read out; Tab goes on to the first result
     } catch (e) {
-      showError('The files could not be read. Choose them again.');
+      showError(failure);
     } finally {
       box.removeAttribute('aria-busy');
     }
+  }
+
+  // One export.zip: its clinical-records/*.json entries go through the same loop and the same caps as picked files.
+  async function readZip(file, mine) {
+    if (!KH.zip || !KH.zip.supported()) { refuseZip(ZIP_BROWSER); return; }
+    clear(box).append(h('p', { class: 'muted small' }, `Opening ${file.name} on this device…`));
+    box.setAttribute('aria-busy', 'true');
+    let archive = null;
+    let entries = null;
+    try {
+      archive = await KH.zip.open(file);
+      entries = KH.zip.list(archive, KH.zip.RULES.clinicalRecords);
+    } catch (e) {
+      if (mine === pick) refuseZip(ZIP_UNREADABLE);
+      return;
+    } finally {
+      box.removeAttribute('aria-busy');
+    }
+    if (mine !== pick) return;
+    if (!entries.length) { refuseZip(ZIP_NO_FOLDER); return; }
+    if (entries.length > FL.MAX_FILES) { refuseZip(zipTooMany(entries.length)); return; }
+    await readAll(entries, mine, (part) => Promise.all(part.map((entry) => readEntry(archive, entry))),
+      `Reading ${plural(entries.length, 'file', 'files')} in ${file.name} on this device…`, ZIP_UNREADABLE);
   }
 
   function onCancel() {
@@ -166,5 +228,5 @@
 
   if (input) input.addEventListener('change', onPick);
 
-  KH.labFhir = { review, readOne, onPick };
+  KH.labFhir = { review, readOne, readEntry, onPick };
 })();

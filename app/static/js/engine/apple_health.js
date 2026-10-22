@@ -1,5 +1,6 @@
 /* Kidney Diet Log — weights and blood pressure readings from the iPhone Health app's export.xml (docs/dev/research/10-weight-and-blood-pressure.md
-   section 4.8, Part C). The person exports from the Health app, unzips the file in the Files app and picks apple_health_export/export.xml.
+   section 4.8, Part C). The person exports from the Health app and picks export.zip (opened by js/engine/zip.js, which hands this module the stream of
+   its export.xml) or, if it was already unzipped in the Files app, apple_health_export/export.xml.
    This module reads it HERE, on the device, as a stream of text; the import sheet that shows the rows and posts the ones the person keeps
    (to POST /api/body/weights/batch and /api/body/blood-pressure/batch) is a separate file. Nothing is uploaded by this module.
 

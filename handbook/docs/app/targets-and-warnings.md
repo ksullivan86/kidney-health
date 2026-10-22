@@ -208,14 +208,17 @@ every result, and only the results you keep are saved on your server.
 
 1. In the **Health** app, tap your picture (top right), then **Export All Health Data**. It can take a few minutes. Save the
    zip file to the **Files** app.
-2. In **Files**, tap the zip file to unzip it. Open the new folder **apple_health_export**, then **clinical-records**. It holds
-   one small file per record (lab results, medicines, visits). You do not need to open them.
-3. In this app, go to **Profile → Lab results** and find **Import from Apple Health (clinical records)**. Tap **Choose Files**,
-   go to the **clinical-records** folder in Files, tap **Select**, then **Select All**, and tap **Open**.
-4. The app reads the files and shows a line such as "41 results found in 380 files". Below it are the results it
+2. In this app, go to **Profile → Lab results** and find **Import from Apple Health (clinical records)**. Tap **Choose Files**,
+   choose the **export.zip** you saved, and tap **Open**. The app opens the zip on your phone and reads only the small files in its
+   **clinical-records** folder (one per record: lab results, medicines, visits). You do not need to unzip it or open them.
+3. The app reads the files and shows a line such as "41 results found in 380 files". Below it are the results it
    recognised, each converted to the app's units. The results you do not have yet are **ticked**: untick any you do not want.
    A result you already saved is not ticked.
-5. Tap **Save**. A potassium of 6.0 mmol/L or more shows the same urgent warning as when you type it.
+4. Tap **Save**. A potassium of 6.0 mmol/L or more shows the same urgent warning as when you type it.
+
+If the app says it cannot open a zip (an older browser), or you already unzipped it, do this for step 2 instead: in **Files**, tap the
+zip file to unzip it and open the new folder **apple_health_export**, then **clinical-records**. In the app, tap **Choose Files**, go to
+the **clinical-records** folder, tap **Select**, then **Select All**, and tap **Open**.
 
 What to know:
 
@@ -268,14 +271,17 @@ what was found first, and only the weights and readings you keep are saved on yo
 
 1. In the **Health** app, tap your picture (top right), then **Export All Health Data**. It can take a few minutes. Save the zip
    file to the **Files** app.
-2. In **Files**, tap **export.zip** to unzip it. Open the new folder **apple_health_export**. The file you need is **export.xml**
-   (not `export_cda.xml`). It can be very large, hundreds of megabytes; that is normal.
-3. In this app, tap **Import from Apple Health** (in **Trends**, under your weight and blood pressure, or in **Settings → Your
-   data**). Choose **export.xml**. The app reads it in pieces and shows how far it has got. **Cancel** stops it.
-4. The app shows a line such as "Found 412 weights and 168 blood pressure readings", the dates the file covers, and what it left out
+2. In this app, tap **Import from Apple Health** (in **Trends**, under your weight and blood pressure, or in **Settings → Your
+   data**). Choose the **export.zip** you saved. The app opens it on your phone and reads only the file called **export.xml** inside
+   it. That file can be very large, hundreds of megabytes; that is normal. The app reads it in pieces and shows how far it has got.
+   **Cancel** stops it.
+3. The app shows a line such as "Found 412 weights and 168 blood pressure readings", the dates the file covers, and what it left out
    and why. Choose **the last 3 months** (the default) or **everything in the file**, then tap **Import**.
-5. The app says how many weights and readings it added. If you import the same file again, nothing is added twice: what is
+4. The app says how many weights and readings it added. If you import the same file again, nothing is added twice: what is
    already in your log is skipped.
+
+If the app says it cannot open a zip (an older browser), or you already unzipped it, choose the file itself instead: in **Files**, tap
+**export.zip** to unzip it, open the new folder **apple_health_export**, and choose **export.xml** (not `export_cda.xml`).
 
 What to know:
 

@@ -105,7 +105,10 @@ app"; the specification is note 10 §4.8.
 
 * **Opening it.** `KH.bodyImport.open()` (`js/views/body_import.js`) opens the sheet `#sheet-body-import`. The buttons that call it are in Trends
   (Weight and blood pressure → Import from Apple Health) and Settings → Your data (Part B); the sheet itself has no button of its own.
-* **Reading.** The person picks `apple_health_export/export.xml` (after unzipping `export.zip` in the Files app). The reader `KH.appleHealth.scan`
+* **Reading.** The person picks `export.zip` itself (or `apple_health_export/export.xml`, if it was already unzipped in the Files app). A `.zip` is opened
+  on the device by `KH.zip` (`js/engine/zip.js`, [note 11](dev/research/11-reading-a-zip-in-the-browser.md)): only its `export.xml` is read, as a
+  stream checked against its size and CRC-32 as it comes out, into the same scan; a `.zip` with no `export.xml`, a damaged one and a browser
+  without `DecompressionStream` get a plain reason (the last, the old advice to unzip it in Files). The reader `KH.appleHealth.scan`
   (`js/engine/apple_health.js`; its header comment is its full specification) streams the file as text, finds the `<Record ` start tags of the
   three types it keeps and reads their attributes by hand. **There is no XML parser**: the file can be hundreds of megabytes and starts with an
   internal DTD, so nothing is parsed or expanded. It keeps weights in kg or lb and blood pressure (a systolic and a diastolic record with the same

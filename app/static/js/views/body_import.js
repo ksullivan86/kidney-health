@@ -2,9 +2,13 @@
    10-weight-and-blood-pressure.md section 4.8, ARCHITECTURE.md "Weight and blood pressure", docs/body.md). Opened with KH.bodyImport.open()
    from Trends and from Settings → Your data; the markup is <dialog id="sheet-body-import"> in index.html.
 
-   * The person exports from the Health app, unzips export.zip in the Files app and chooses apple_health_export/export.xml. THE FILE IS READ
-     ON THIS DEVICE, as a stream of text, by KH.appleHealth (js/engine/apple_health.js); it can be hundreds of megabytes, so it is never
-     held whole and never given to an XML parser. Nothing is uploaded while it is read. A Cancel aborts the scan.
+   * The person exports from the Health app and chooses export.zip itself (or apple_health_export/export.xml, if it was already unzipped in
+     the Files app). THE FILE IS READ ON THIS DEVICE, as a stream of text, by KH.appleHealth (js/engine/apple_health.js); it can be hundreds
+     of megabytes, so it is never held whole and never given to an XML parser. Nothing is uploaded while it is read. A Cancel aborts the scan.
+   * A .zip is opened here by KH.zip (js/engine/zip.js, docs/dev/research/11-reading-a-zip-in-the-browser.md): only export.xml is read out of
+     it, as a stream (checked against its size and CRC-32 as it comes out), through TextDecoderStream into the same scan, with the same
+     AbortController and a progress line in the unzipped size. Nothing else in the .zip is looked at. A .zip that cannot be read, or has no
+     export.xml, is told so in plain words (ZIP_MESSAGE); the other files of the Health export (export_cda.xml, workout routes) are never read.
    * The review shows what was found, what was left out and why (plain words), the date range, a period (the last 3 months by default, or
      everything), the counts for the period, and the sources. Readings from a source whose name contains "Watch" are listed apart and
      UNTICKED (note 10 F4: cuffless devices are not recommended for checking blood pressure); the person decides. A source name comes from
@@ -39,6 +43,18 @@
   const WATCH_NOTE = 'Cuffless devices such as watches and rings are not recommended for checking blood pressure (2025 AHA/ACC guideline). '
     + 'These readings are not ticked. Tick a source only if you want its readings in your log.';
   const CANCEL_LABEL = { pick: 'Close', reading: 'Cancel', review: 'Cancel', importing: 'Stop', done: 'Close' };
+  // What the person is told about an export.zip that cannot be used, by KH.zip's error code ('cda' is a .zip with export_cda.xml and no export.xml).
+  const UNZIP_ADVICE = 'In Files, tap export.zip to unzip it, then choose apple_health_export/export.xml.';
+  const FROM_THE_HEALTH_APP = 'Choose the export.zip you get from the Health app (tap your picture, then Export All Health Data).';
+  const ZIP_MESSAGE = {
+    missing: `This .zip has no export.xml in it. ${FROM_THE_HEALTH_APP}`,
+    cda: `This .zip has the clinical documents file (export_cda.xml) but no export.xml. ${FROM_THE_HEALTH_APP}`,
+    ambiguous: 'This .zip holds more than one export.xml. In Files, tap the .zip to unzip it, then choose the one you want.',
+    browser: `This browser cannot open a .zip here. ${UNZIP_ADVICE}`,
+  };
+  const ZIP_UNREADABLE = 'This .zip could not be read (it may be damaged or not finished downloading). Export from the Health app again, or unzip it in Files and choose apple_health_export/export.xml.';
+  const FILE_UNREADABLE = 'The file could not be read. Make sure it is on this device (in Files, tap it once so it downloads), then choose it again.';
+  const isZipFile = (file) => /\.zip$/i.test(String(file.name || '')) || file.type === 'application/zip';
 
   const fmt = (n) => Number(n).toLocaleString('en-US');
   const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
@@ -242,8 +258,9 @@
     problem(null);
     status('');
     const name = String(file.name || '');
-    if (/\.zip$/i.test(name) || file.type === 'application/zip') {
-      refuse('That is the whole export. In Files, tap export.zip to unzip it, then choose apple_health_export/export.xml.');
+    if (isZipFile(file)) {
+      if (!KH.zip || !KH.zip.supported() || typeof TextDecoderStream !== 'function') refuse(ZIP_MESSAGE.browser);
+      else await startScan(file, true);
     } else if (/cda/i.test(name)) {
       refuse('That is the clinical documents file (export_cda.xml). Choose export.xml from the same folder.');
     } else if (!file.size) {
@@ -251,26 +268,51 @@
     } else if (typeof file.stream !== 'function' || typeof TextDecoderStream !== 'function') {
       refuse('This browser cannot read a file this large here. Update it, or open the app in a newer browser.');
     } else {
-      await startScan(file);
+      await startScan(file, false);
     }
   }
 
-  async function startScan(file) {
+  // The export.xml entry of an archive (KH.zip); a .zip with export_cda.xml and no export.xml gets its own words.
+  function exportXmlOf(archive) {
+    const zip = KH.zip;
+    try {
+      return zip.find(archive, zip.RULES.healthXml);
+    } catch (err) {
+      if (err && err.code === 'missing' && zip.list(archive, zip.RULES.healthCda).length) throw Object.assign(new Error('export_cda.xml only'), { code: 'cda' });
+      throw err;
+    }
+  }
+
+  // Reads a picked file: its export.xml, or (zipped) the export.xml inside the .zip, as a stream of text into the scan.
+  async function startScan(file, zipped) {
     imp.seq += 1;
     const mine = imp.seq;
     const ctrl = new AbortController();
     imp.ctrl = ctrl;
     const name = String(file.name);
     setPhase('reading');
-    status(`Reading ${name} (${megabytes(file.size)}) on this device…`);
     try {
-      const text = file.stream().pipeThrough(new TextDecoderStream());
-      const res = await AH.scan(text, {
+      let label = name;
+      let size = file.size;
+      let bytes = null;
+      if (zipped) {
+        status(`Opening ${name} on this device…`);
+        const archive = await KH.zip.open(file);
+        if (mine !== imp.seq) return; // Cancel, or a newer pick, took over
+        const entry = exportXmlOf(archive);
+        label = `export.xml in ${name}`;
+        size = entry.size; // the unzipped size: what the progress line counts
+        bytes = KH.zip.stream(archive, entry, { signal: ctrl.signal });
+      } else {
+        bytes = file.stream();
+      }
+      status(`Reading ${label} (${megabytes(size)}) on this device…`);
+      const res = await AH.scan(bytes.pipeThrough(new TextDecoderStream()), {
         today: todayStr(),
         signal: ctrl.signal,
-        onProgress: ({ chars }) => { if (mine === imp.seq) status(`Reading ${name}: about ${megabytes(Math.min(chars, file.size))} of ${megabytes(file.size)}…`); },
+        onProgress: ({ chars }) => { if (mine === imp.seq) status(`Reading ${label}: about ${megabytes(Math.min(chars, size))} of ${megabytes(size)}…`); },
       });
-      if (mine !== imp.seq) return; // Cancel, or a newer pick, took over
+      if (mine !== imp.seq) return;
       imp.ctrl = null;
       imp.res = res;
       status('');
@@ -281,8 +323,8 @@
       input.value = '';
       setPhase('pick');
       status('');
-      problem(err && err.name === 'AbortError' ? 'The reading was cancelled. Nothing was saved.'
-        : 'The file could not be read. Make sure it is on this device (in Files, tap it once so it downloads), then choose it again.');
+      if (err && err.name === 'AbortError') problem('The reading was cancelled. Nothing was saved.');
+      else problem(zipped ? ZIP_MESSAGE[err && err.code] || ZIP_UNREADABLE : FILE_UNREADABLE);
     }
   }
 
@@ -338,7 +380,7 @@
         : `Found ${weightsText(s.found.weights)} and ${readingsText(s.found.readings, true)}. The app can keep ${weightsText(s.kept.weights)} and ${readingsText(s.kept.readings)}.`);
     reviewEl.append(headline);
     if (found === 0) {
-      reviewEl.append(h('p', { class: 'hint' }, 'Choose export.xml from the unzipped Health export (the apple_health_export folder). If it is the right file, it holds no weights or blood pressure readings in kg, lb or mmHg.'));
+      reviewEl.append(h('p', { class: 'hint' }, 'Choose export.zip from the Health app (or export.xml from the apple_health_export folder). If it is the right file, it holds no weights or blood pressure readings in kg, lb or mmHg.'));
     }
     if (kept > 0) {
       reviewEl.append(h('p', { class: 'bi-range', id: 'body-import-range' },

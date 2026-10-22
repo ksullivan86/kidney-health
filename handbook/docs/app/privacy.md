@@ -81,10 +81,13 @@ The handbook (**Learn**) loads nothing from the internet either.
 
 ## Move to another server
 
-1. On the old server, press **Export my data (.zip)** and open the `.zip` on your device. The file you need
-   is `export.json`; the CSV files are for reading in a spreadsheet.
+1. On the old server, press **Export my data (.zip)**. The `.zip` holds `export.json`, which is what the new
+   server needs, and CSV files, which are for reading in a spreadsheet. You do not need to open it.
 2. On the new server, sign in (you need an account there first), then go to **Settings → Account → Your
-   data → Import from a file** and choose `export.json`. Your password is asked for again.
+   data → Import from a file** and choose the `.zip` itself. The app opens it on your device, reads only
+   `export.json` out of it, and never sends the `.zip` anywhere. Your password is asked for again. If the
+   app says your browser cannot open a `.zip` (an older browser), open the `.zip` on your device and choose the
+   `export.json` inside it instead; that works everywhere.
 3. The app first shows what would happen and changes nothing: what would be added, what is already there
    and left out, and any items it cannot match (each listed with the reason). A food that is not in the
    file and is not one of the app's built-in foods is listed, never guessed. A saved meal that loses a

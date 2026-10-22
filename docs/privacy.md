@@ -58,17 +58,19 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   numbers alone and sends nothing anywhere ([the design](body.md));
 * **Visit prep** (Trends → Get ready for a visit) stores nothing and sends nothing: it is drawn in the browser from the summary, lab results and symptoms the person already has, with the person's own questions kept in the open page's memory only (not in the browser's storage, not on the server, never sent to an AI); it is printed or saved as a PDF by the browser. The code that builds requests to an AI provider or an assistant does not read it ([Reports for your care team](../handbook/docs/app/reports-for-your-team.md));
 * **Lab results from Apple Health clinical records** (Labs → Import from Apple Health, [Personalised targets and labs](targets-and-labs.md))
-  are read **in the browser, on the device, and nothing is uploaded**. The person unzips the Health app's export in the Files app and
-  chooses the `clinical-records` JSON files; the page opens each one with the browser's file reader (a file over 1 MB is not even
-  opened), parses it there, shows the lab results it recognises, and lets go of the file. Only the rows the person keeps (the test,
+  are read **in the browser, on the device, and nothing is uploaded**. The person chooses the Health app's `export.zip` (or, if it was
+  already unzipped in the Files app, the `clinical-records` JSON files); the page opens the zip itself with the browser's own
+  decompression (the archive never leaves the device) and reads only the `clinical-records` entries, or opens each picked file with the
+  browser's file reader (a file over 1 MB is not even opened), parses it there, shows the lab results it recognises, and lets go of the file. Only the rows the person keeps (the test,
   the value, the unit and the day) are sent, to the person's own server, through the same `POST /api/labs/import` as a typed or
   spreadsheet result, and are then stored and exported like any lab result. The files' other contents (the patient's name and ids,
   providers, notes, every other record) and the file names are not read, kept or sent, nothing is kept in the browser's storage,
   and the code makes no other network request (a test checks that). The files are not sent to an AI provider, the Ask chat or an
   assistant either;
 * **Weights and blood pressure from the Apple Health export** (Import from Apple Health, [Weight and blood pressure](body.md#import-from-the-iphone-health-app))
-  are read **in the browser, on the device, and nothing is uploaded while the file is read**. The person unzips the Health app's export in the
-  Files app and chooses `export.xml`; the page streams it as text (it can be hundreds of megabytes, so it is never held whole and never given
+  are read **in the browser, on the device, and nothing is uploaded while the file is read**. The person chooses the Health app's `export.zip`
+  (or `export.xml`, if it was already unzipped in the Files app); the page opens the zip itself and reads only `export.xml` out of it,
+  streaming it as text (it can be hundreds of megabytes, so it is never held whole and never given
   to an XML parser), keeps only weights and blood pressure readings and shows what it found. Only the rows the person keeps (the date and time,
   the value or values, when it was taken, the source `apple_health` and a key that stops a second import adding it twice) are sent, to the
   person's own server, through `POST /api/body/weights/batch` and `/blood-pressure/batch`. The name of the app or device that wrote a reading,
