@@ -78,6 +78,7 @@
 .lab-photo-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .lab-photo-fieldset legend { font-weight: 600; padding: 0; margin: 0 0 2px; }
 .lab-photo-page-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0 12px; max-height: 15rem; overflow-y: auto; margin: 6px 0; padding: 0; }
+.lab-photo-page-list > li + li { border-top: 0; }
 .lab-photo-page { display: flex; align-items: center; gap: 8px; min-height: var(--tap); }
 .lab-photo-page input[type=checkbox] { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
 .lab-photo-page label { min-width: 0; }

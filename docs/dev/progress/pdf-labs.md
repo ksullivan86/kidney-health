@@ -13,7 +13,7 @@ Spec: `docs/dev/research/13-lab-results-from-a-pdf.md` (decided 2026-10-22). Bra
 3. [x] CSP: `trusted-types kh-sw kh-xml kh-pdf` in `app/security.py` + every test that pins the string + policy-owner test.
 4. [x] `index.html` (script tag, file input accept, card text) and `sw.js` (precache `pdf_pages.js`, comments).
 5. [x] `lab_photo.js` PDF flow + extended `tests/js/lab_photo_page.mjs` / `tests/test_lab_photo_ui.py`.
-6. [ ] Browser walk `tools/e2e/lab_pdf.py` (no lab-photo walk existed; this one starts a fake local AI like `fallback.py`),
+6. [x] Browser walk `tools/e2e/lab_pdf.py` (no lab-photo walk existed; this one starts a fake local AI like `fallback.py`),
        listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
 7. [ ] Docs: ARCHITECTURE, docs/ai.md, handbook page, docs/security.md, docs/deployment.md + handbook upgrades page (CSP string),
        ROADMAP, CHANGELOG (`## Unreleased`), maintainers/README mentions; `python scripts/build_handbook.py --check`.

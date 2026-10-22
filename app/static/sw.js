@@ -18,8 +18,8 @@
 
    SHELL_URLS lists every file index.html loads (tests/test_frontend_shell.py keeps the two in
    step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. The PDF
-   reader (js/engine/pdf_pages.js is in the list; the pdf.js library and its worker under
-   /vendor/pdfjs-dist-*/, about 1.8 MB, are not) is fetched when the first lab report PDF is picked and
+   reader (js/engine/pdf_pages.js is in the list; the pdf.js library and its worker, two files under
+   /vendor/ of about 1.8 MB together, are not) is fetched when the first lab report PDF is picked and
    kept by the same /vendor/ rule below. */
 'use strict';
 

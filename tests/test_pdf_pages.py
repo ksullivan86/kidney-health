@@ -115,6 +115,14 @@ def test_the_header_documents_every_option_and_every_error_code_and_limit():
         assert re.search(rf"^\s+{code}\s", header, flags=re.M), code
 
 
+@pytest.mark.parametrize("path", ["sw.js", "js/engine/pdf_pages.js", "js/views/lab_photo.js", "js/views/ai.js"])
+def test_the_files_this_feature_touches_still_parse(path):
+    """A comment that contained the two characters that end a comment once stopped the service worker from starting: it is parsed here."""
+    assert shutil.which("node"), "Node.js 22 is needed to run the browser code (CLAUDE.md, Parity)"
+    done = subprocess.run(["node", "--check", str(STATIC / path)], capture_output=True, text=True, timeout=60, check=False)
+    assert done.returncode == 0, done.stderr
+
+
 # --------------------------------------------------------------------------- the file run in Node
 def test_exports_and_limits(ran):
     assert ran["exports"] == ["ERROR_CODES", "LIMITS", "PDFJS_URL", "WORKER_URL", "open", "planScale", "supported"]
