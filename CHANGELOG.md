@@ -108,6 +108,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the
+  introduction and four screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after
+  a change to those screens. `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 * **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
   before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and

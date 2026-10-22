@@ -1,436 +1,253 @@
-# Kidney Health food log
+# Kidney Health
 
-A self-hosted food log for **people living with chronic kidney disease (CKD) and type 1 diabetes**,
-and for the household around them. You log what you eat; the app totals the nutrients a kidney diet
-restricts (potassium, phosphorus, sodium, protein, fluid) and the carbohydrate a person with type 1
-diabetes counts per meal, compares them with the targets set with your care team, and warns when a
-single food or the day's running total needs careful consideration. It suggests what fits your next
-meal, plans the rest of the day, reads barcodes, keeps logging without a connection, and comes with a
-plain-language patient handbook.
+A food log for people living with chronic kidney disease (CKD), with extra help for those who also
+have type 1 diabetes. You write down what you eat. The app adds up the things a kidney diet watches,
+like potassium, phosphorus, sodium, protein and fluid, plus the carbs you count for insulin. It shows
+how your day compares with the targets you set with your care team.
 
-It runs as one rootless container with one SQLite file on your own server, installs on a phone's home
-screen, and makes no outbound request until someone turns a lookup on (an admin, or a person adding
-their own key). Each person in the household has their own account and their own log.
+You run it on your own computer or home server, and everyone in the household gets their own login.
+It works on a phone like a normal app, and your data stays with you.
 
-**What it is not:**
+## [Try the demo in your browser](https://ksullivan86.github.io/kidney-health/demo/)
 
-* **Not a medical device and not medical advice.** Every target should come from a nephrologist or
-  renal dietitian; the app's suggestions are guideline starting points labelled "discuss with your care
-  team" ([Disclaimer](#disclaimer)).
-* **Never a dose calculator.** It gives no insulin or medicine doses, ratios or corrections, and it never
-  warns against, limits or delays treating a low blood sugar.
-* **Not a cloud service.** There is no account with the project, no telemetry and nothing loaded from a
-  CDN: your data stays on your server.
+Nothing to install and no sign-up. The demo runs entirely in your browser with a made-up person,
+Sam, so you can click around and add food. Nothing you type is sent anywhere, and reloading the page
+starts over.
 
-> **Version 0.4.0** (2026-10-22): the Ask chat (by text or voice) and an assistant of your own, a symptoms log and visit prep,
-> lab results from a spreadsheet, the iPhone Health app, a patient-portal file or a photo of a report, offline edits, privacy
-> tiers for the optional AI, and meal guidance that learns what you like. See [CHANGELOG.md](CHANGELOG.md).
-> **Upgrading from 0.3? Read [Upgrading from v0.3](#upgrading-from-v03) first; an auto-updating v0.2 server needs
-> [Upgrading from v0.2](#upgrading-from-v02).**
+<table>
+  <tr>
+    <td><img src="docs/screenshots/today.png" width="200" alt="Today: a note that protein is near the day's target, and bars for carbohydrate, potassium and phosphorus"></td>
+    <td><img src="docs/screenshots/what-fits.png" width="200" alt="What fits now: what is left for dinner, and foods that fit it"></td>
+    <td><img src="docs/screenshots/trends.png" width="200" alt="Trends: a weight chart and a blood pressure chart for the last 14 days"></td>
+    <td><img src="docs/screenshots/labs-dark.png" width="200" alt="Lab results in dark mode: potassium, phosphate, eGFR and more"></td>
+  </tr>
+  <tr>
+    <td align="center">Today</td>
+    <td align="center">What fits now</td>
+    <td align="center">Trends</td>
+    <td align="center">Lab results (dark mode)</td>
+  </tr>
+</table>
 
-## Contents
+There is also a plain-language [patient handbook](https://ksullivan86.github.io/kidney-health/)
+about kidney disease, eating well, lab results and living with type 1 diabetes and CKD.
 
-* [Features](#features)
-* [Quick start](#quick-start): [rootless Podman](#run-it-with-rootless-podman-recommended),
-  [phone](#install-it-on-your-phone), [from source](#try-it-on-your-computer),
-  [other runtimes](#other-runtimes), [upgrading from v0.3](#upgrading-from-v03) and
-  [from v0.2](#upgrading-from-v02)
-* [Learn: the patient handbook](#learn-the-patient-handbook)
-* [Optional: barcode lookups and AI](#optional-barcode-lookups-and-ai)
-* [Security in short](#security-in-short) · [Configuration](#configuration) ·
-  [How targets and warnings work](#how-targets-and-warnings-work)
-* [Documentation](#documentation) · [Contributing](#contributing) · [Project layout](#project-layout)
-* [Disclaimer](#disclaimer) · [Licences](#licences)
+**Please note:** this is not medical advice and not a medical device. Your targets should come from
+your nephrologist or renal dietitian. The app never works out insulin or medicine doses, and it never
+tells you to hold back on treating a low blood sugar.
 
-## Features
+## What it does
 
-* **Accounts for a household.** A one-time setup code makes the first admin; the admin invites everyone
-  else by link. Each person sees only their own log, foods, saved meals, profile, lab results and keys;
-  an admin cannot read anyone else's data. Sign-in can also come from a reverse proxy (Authelia,
-  Authentik, `tailscale serve`) or be switched off for a single trusted device.
-* **Food logging** by servings or grams, per meal, from a 395-food builtin database built from USDA SR
-  Legacy, your own custom foods, a quick add from a nutrition label, or a **barcode**. Entries keep a
-  nutrient snapshot, so later edits to a food never rewrite history.
-* **Per-serving warnings** (`medium` / `high`) for potassium, phosphorus, sodium, carbohydrate and
-  protein, plus flags for phosphate and potassium additives, high glycaemic index, star fruit and
-  potassium-chloride salt substitutes (`avoid_ckd`) and low treatments. Each food gets a green / yellow /
-  red rating, shown *before* you save, with a link to the handbook page that explains it.
-* **Personalised targets.** "Suggest targets" works out starting points from your weight, height, age,
-  sex, activity, CKD stage, dialysis or transplant, and recent lab results; every number has "Why this
-  number?" with its rule and source, and nothing is saved until you save it.
-* **Lab results and kidney function.** Enter potassium, phosphate, albumin, bicarbonate, urine
-  albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c in US or SI units; see eGFR
-  (CKD-EPI 2021) and the albuminuria category, or import past results from a spreadsheet (CSV), the iPhone
-  Health app's clinical records or a patient-portal file (all read on your device, nothing uploaded), or from a photo of a
-  report (only on an AI on your own network); you tick the results to keep. A potassium of 6.0 mmol/L or more always shows
-  an urgent banner.
-* **Symptoms log.** Write down a symptom (swelling, itching, tiredness, cramps, nausea, breathlessness, poor
-  appetite, or one of your own) with a date and how bad it is; Today shows the day's, Trends lists the days, and the
-  export holds them. The app records and shows; it never says what a symptom means. The two that the handbook's Get help
-  now page lists as warning signs show its own words and a link to it.
-* **Weight and blood pressure.** Write down a weight (pounds or kilograms) and a blood pressure reading; Today shows the
-  day's, Trends has a chart of each with a table under it, Profile offers your latest logged weight, and the export holds them. You can
-  enter the weight-gain alarm and the blood pressure goal your care team gave you; the app never suggests either. A reading at
-  180/120 or higher shows the handbook's own words (call 911 with the warning signs) in a red block. Never sent to an AI.
-* **Visit prep.** Trends → Get ready for a visit makes one page to print or save as a PDF: your averages against your targets,
-  your latest lab results, your symptoms, your weight and blood pressure, your own questions and the handbook's checklist. Nothing is sent anywhere.
-* **Meal guidance without AI**: "What fits now" for your next meal, lower-potassium, -phosphorus or
-  -sodium swaps with the same carbohydrate, "Plan the rest of my day", end-of-day and weekly insights,
-  and a "Treating a low" card that works even offline. Arithmetic on your care team's targets; it never
-  writes anything without your tap. It learns what you like (*More like this*, *Less often*, *Not for me*, and what your log
-  shows), each with its reason, and only ever reorders what already fits your limits.
-* **Meal planning**: planned entries, the projected day, a 7-day Plan grid, copy day, saved meals
-  ("Usual breakfast") and a shopping list; **weekly summaries** and, on hemodialysis, the totals since
-  your last session.
-* **Installable and offline**: add it to the home screen of an iPhone, Android phone or computer. Over
-  HTTPS it opens without a connection, and food you log, edit or delete offline waits on the device and syncs exactly
-  once when the server is back; if an entry changed elsewhere meanwhile, nothing is overwritten and you choose.
-* **Learn**: the patient handbook at `/learn`, served by your server with no internet needed.
-* **Optional, off by default**: barcode lookups in Open Food Facts and USDA FoodData Central, and AI
-  meal ideas, label photos and the **Ask** chat (typed or spoken, with answers checked in code, and saving that you confirm or
-  choose to trust) through a provider your admin chooses, with each feature pinned to an AI on your own network, a cloud AI
-  or off ([below](#optional-barcode-lookups-and-ai)). A chat assistant you already use can read your numbers over MCP with a
-  personal token ([docs/assistant.md](docs/assistant.md)).
-* **Your data, your choice**: export everything you entered as a zip (JSON and CSV for your dietitian),
-  import it into another server, delete your account, see your own sign-in and AI activity. The online demo can keep your data
-  in your browser, if you choose ([docs/demo.md](docs/demo.md)).
-* **No CDN, no tracking**: plain HTML/JS/CSS served by the app, light and dark themes, keyboard and
-  screen-reader friendly, 44-pixel tap targets.
+* **Food log.** Add food by searching about 400 common foods, scanning a barcode, copying a nutrition
+  label or making your own. Each food gets a green, yellow or red rating before you save it, with a
+  link that explains why.
+* **Your targets.** Fill in your profile and the app suggests starting targets from published
+  guidelines. Every number has a "Why this number?" note. Nothing is saved until you say so, and you
+  can change anything to match what your care team told you.
+* **Daily totals and warnings.** Today shows how close you are to each limit, including the food you
+  have planned but not eaten yet.
+* **Meal help.** "What fits now" lists foods that fit what is left of your day. It can suggest swaps
+  with less potassium, phosphorus or sodium, plan the rest of the day, and it learns what you like.
+  This part works without AI.
+* **Treating a low.** A card with what to take for a low blood sugar, which also works offline.
+* **Lab results.** Enter results in US or SI units and see your eGFR and kidney stage. You can also
+  bring them in from a spreadsheet, the iPhone Health app, a patient portal file, or a photo of a
+  report.
+* **Weight and blood pressure.** Log them, see them on charts, and keep the alarm and goal your care
+  team gave you. A very high reading shows the handbook's advice on when to call 911.
+* **Symptoms and visit prep.** Note symptoms as they happen, then print one page with your averages,
+  latest labs, symptoms and questions to take to your next appointment.
+* **Works offline.** Install it on your phone's home screen. Food you log without a connection is
+  saved and sent when you're back online.
+* **Your data is yours.** Export everything as a zip file (JSON and CSV your dietitian can open),
+  move it to another server, or delete your account.
 
-## Quick start
+AI features are there if you want them, and off until an admin turns them on. They include an
+**Ask** chat, meal ideas, and reading label photos. You can choose to keep the AI on your own home
+network. See [docs/ai.md](docs/ai.md).
 
-### Run it with rootless Podman (recommended)
+## Run it yourself
 
-The image runs as UID 10001 with no shell, a read-only root filesystem and no capabilities, on Linux
-amd64 or arm64 (which includes the Raspberry Pi 4 and 5). The Quadlet unit turns it into a systemd user service
-that starts at boot and follows the `:0.4` tag:
+The app is a single container with one database file. It runs on Linux, including a Raspberry Pi 4
+or 5. It only listens on the machine itself (`127.0.0.1`), so to use it from your phone you put a web
+server with HTTPS in front of it.
+
+### With rootless Podman (recommended)
 
 ```bash
 git clone https://github.com/ksullivan86/kidney-health.git && cd kidney-health
 mkdir -p ~/.config/containers/systemd
 cp deploy/quadlet/kidney-health.container deploy/quadlet/kidney-health.volume ~/.config/containers/systemd/
 python3 -c "import secrets; print(secrets.token_urlsafe(32))" | podman secret create kidney-secret-key -
-$EDITOR ~/.config/containers/systemd/kidney-health.container     # PUBLIC_URL, TRUSTED_PROXIES
+$EDITOR ~/.config/containers/systemd/kidney-health.container     # set PUBLIC_URL and TRUSTED_PROXIES
 systemctl --user daemon-reload && systemctl --user start kidney-health
-sudo loginctl enable-linger "$USER"                                  # keep it running after logout
-journalctl --user -u kidney-health | grep 'FIRST-RUN SETUP'          # the setup code
+sudo loginctl enable-linger "$USER"                                  # keep it running after you log out
+journalctl --user -u kidney-health | grep 'FIRST-RUN SETUP'          # shows the one-time setup code
 ```
 
-The log line looks like this (the code is valid for 60 minutes; restart or run
-`podman exec kidney-health python -m app.admin setup-code` for a new one):
+Open the address from that log line and enter the setup code. The code works for 60 minutes; to get
+a new one, restart the service or run `podman exec kidney-health python -m app.admin setup-code`.
+Pick a user name and a password of at least 15 characters (a few unrelated words is easiest). Then
+fill in **Profile**, press **Suggest targets**, check them with your care team, and save. You can
+invite the rest of the household from **Server administration** (the shield icon).
 
-```
-FIRST-RUN SETUP: open https://food.home.example.net/#/setup and enter the code 7KQ2-M9XD-PL4R-T6WN (valid 60 min; restart or run "python -m app.admin setup-code" for a new one)
-```
+Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.4.0`
+([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
+upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
-Open the app, enter the code, choose the admin's user name and a password of at least 15 characters (a
-few unrelated words work well), and decide whether barcode lookups may use Open Food Facts. Then fill in
-**Profile**, press **Suggest targets**, review them with your care team, save, and start logging. Invite
-the rest of the household from **Server administration** (the shield button next to Settings, admins only).
+### On your phone
 
-The app listens on `127.0.0.1:8000` only; put HTTPS in front of it ([docs/https.md](docs/https.md)) so
-phones can install it, scan with the camera and keep your password encrypted. Verify a released image
-before you run it with `scripts/verify-image.sh 0.4.0` ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)).
-Prerequisites (subordinate IDs, linger, cgroup v2, pasta), volumes, every setting, backups, upgrades and
-troubleshooting: **[docs/deployment.md](docs/deployment.md)**.
+Open the app's HTTPS address and sign in. On an iPhone or iPad, tap Share and then **Add to Home
+Screen**. On Android, choose **Install app** in Chrome. More detail, including how offline logging
+works: [docs/install-on-your-phone.md](docs/install-on-your-phone.md).
 
-### Install it on your phone
+### On your own computer, for a quick look
 
-Open the app's HTTPS address on the phone and sign in, then: **iPhone and iPad**: Safari → Share → **Add
-to Home Screen**; **Android**: Chrome → **Install app**; **computer**: the install icon in Chrome or
-Edge's address bar, or File → Add to Dock in Safari. Step by step, what works over plain HTTP, and how
-offline logging behaves: [docs/install-on-your-phone.md](docs/install-on-your-phone.md).
-
-### Try it on your computer
-
-Python 3.11 or newer:
+You need Python 3.11 or newer.
 
 ```bash
 git clone https://github.com/ksullivan86/kidney-health.git && cd kidney-health
 python3 -m venv .venv && . .venv/bin/activate
 pip install --require-hashes --no-deps -r requirements-dev.lock
-python -m pytest                                   # the test suite, no network needed
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
-Open <http://localhost:8000> and enter the setup code from the terminal. The database lands in
-`./data-local/kidney.db`. Without the code: set `ADMIN_USERNAME` and `ADMIN_PASSWORD_FILE` before the
-first start, or run `python -m app.admin create-admin NAME` (password on stdin). The handbook at
-`/learn` appears once you build it ([handbook/README.md](handbook/README.md#build-and-check)).
+Open <http://localhost:8000> and enter the setup code printed in the terminal. The database is saved
+in `./data-local/kidney.db`.
 
-### Other runtimes
+### Other ways to run it
 
-```bash
-# Compose (podman-compose 1.5+ or docker compose); secrets are files in deploy/secrets/
-install -d -m 0700 deploy/secrets
-python3 -c "import secrets; print(secrets.token_urlsafe(32))" > deploy/secrets/secret_key
-: > deploy/secrets/usda_api_key && chmod 0644 deploy/secrets/*
-cp deploy/.env.example deploy/.env && $EDITOR deploy/.env
-podman-compose -f deploy/compose.yaml up -d
+There are ready-made files for Compose, rootless Docker and Kubernetes in `deploy/`, and a recipe for
+running a local AI model next to the app. See [docs/deployment.md](docs/deployment.md).
 
-# Rootless Docker: every hardening flag spelled out; refuses a rootful daemon
-deploy/docker-rootless-run.sh
+### Upgrading
 
-# Kubernetes (Talos or any other distribution): Pod Security "restricted", one replica; a
-# cluster-neutral base plus your overlay (host, Gateway, TRUSTED_PROXIES). Create the secret first
-# (deploy/k8s/secret.example.yaml, docs/deployment.md)
-cp -r deploy/k8s-overlays/example deploy/k8s-overlays/home && $EDITOR deploy/k8s-overlays/home/*.yaml
-kubectl apply -k deploy/k8s-overlays/home
-```
+**From 0.3:** back up `kidney.db` first
+(`podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db`), change the image tag
+from `:0.3` to `:0.4`, and start it. The first start updates the database. Nothing new is turned on
+for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-03-read-this-first).
 
-A local AI model can run next to the app with `deploy/compose.ai-ollama.yaml` ([docs/ai.md](docs/ai.md#recipes)).
+**From 0.2:** if your server updates itself (the old Quadlet file with `Image=...:latest` and
+`AutoUpdate=registry`), replace that file with the one in `deploy/quadlet/` before the next update,
+or pin the old image and stop `podman-auto-update.timer` until you're ready. The newer image has no
+shell, so the old health check would keep restarting it. Then follow
+[CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first) and the 0.3 steps above.
 
-### Upgrading from v0.3
+## The handbook
 
-Back up `kidney.db` (`podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db`), change the image tag from
-`:0.3` to `:0.4` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.4`; `:0.3` stays on 0.3.x) and start.
-The first start migrates the database (schema steps 8 to 17) with no automatic copy. Nothing new is switched on. Read the notes
-for the new settings, the changed headers (`kh-xml`, the microphone), the Kubernetes base that is now cluster-neutral and the
-defaults that change: [CHANGELOG.md](CHANGELOG.md#upgrading-from-03-read-this-first),
-[docs/deployment.md](docs/deployment.md#from-v03-to-v04).
+The app comes with a patient handbook at `/learn`. It covers kidney disease and its stages, eating
+well (potassium, phosphorus, sodium, protein, fluid, carb counting, reading labels), lab results, type
+1 diabetes with CKD, medicines, getting ready for dialysis or a transplant, and day-to-day life. The
+warnings in the app link straight to the page that explains them, and it works without internet.
 
-### Upgrading from v0.2
+Every medical statement in it cites its source, such as KDIGO, KDOQI or the ADA, and was checked
+against that source. **No clinician has reviewed it yet**, and each page says so at the top. If you
+are a clinician and could review a section, that help would mean a lot
+([CONTRIBUTING.md](CONTRIBUTING.md#clinical-content-policy-and-sign-off)).
 
-Go straight to the current release: do the steps below with the current files, then read "Upgrading from v0.3".
+## Privacy and security
 
-**If your v0.2 host auto-updates** (the v0.2 Quadlet unit: `Image=...:latest`, `AutoUpdate=registry`),
-replace its `.container` file with the current one **before** the next update. `:latest` has moved to v0.3.0 and later,
-whose image has no shell, and the old unit's shell `HealthCmd=` would kill and restart it every couple
-of minutes. Install the unit from `deploy/quadlet/` (`Image=...:0.4`, an exec-form `HealthCmd`), or
-pin the v0.2 image by digest and stop `podman-auto-update.timer` until you upgrade
-([docs/deployment.md](docs/deployment.md#from-v02-to-v03)).
+* Nothing leaves your server unless an admin turns on a lookup (Open Food Facts, USDA) or an AI
+  provider. Even then, each person decides for themselves whether to use it.
+* Each person sees only their own data. Admins can't read anyone else's log.
+* No tracking, no analytics, and nothing loaded from other websites.
+* The container runs without root, with a read-only file system and no shell. Releases are signed,
+  and come with a list of what's inside.
 
-Back up `kidney.db`, then start the current version on the same data. The first start copies the database to
-`kidney.db.pre-v3.bak` (mode 0600, deleted automatically after 30 days) and all existing data becomes
-the first account's. If `APP_PASSWORD` was set, it is imported once as the password of the admin `admin`
-(or `ADMIN_USERNAME`); a password shorter than today's rules must be changed at the first sign-in. HTTP
-Basic sign-in is gone; remove `APP_PASSWORD` afterwards. Without `APP_PASSWORD`, finish setup with the
-code from the log and the data is yours. Add a `SECRET_KEY_FILE`, set `PUBLIC_URL` when you use a host
-name, and note the new image tags (`main` → `:edge`, releases → `:X.Y.Z`, `:X.Y` and `:latest`). Every
-step: [CHANGELOG.md](CHANGELOG.md#upgrading-from-02-read-this-first).
+The details are in [docs/security.md](docs/security.md) and [docs/privacy.md](docs/privacy.md). To
+report a security problem, see [SECURITY.md](SECURITY.md).
 
-## Learn: the patient handbook
+## Settings you'll most likely need
 
-The app serves a plain-language handbook at **`/learn/`**, with no sign-in and no internet needed: kidney
-disease and its stages, eating well (potassium, phosphorus, sodium, protein, fluid, carb counting,
-reading labels, menus and recipes), lab results, type 1 diabetes with CKD (treating a low, sick days,
-insulin and dialysis), medicines, preparing for dialysis or a transplant, living well, using the app and
-running your own server. It opens from the **Learn** (book) icon at the top of the app; warnings, alerts
-and target notes link straight to the page that explains them.
+Settings are environment variables, and secrets are read from files. These are the common ones:
 
-Every clinical statement cites its source (KDIGO, KDOQI, ADA, FDA labels and others) and was
-fact-checked against it ([handbook/REVIEW.md](handbook/REVIEW.md)). **Every page is still a draft that
-no clinician has reviewed yet**, and says so at the top. Clinicians who would review a section are very
-welcome ([CONTRIBUTING.md](CONTRIBUTING.md#clinical-content-policy-and-sign-off)). Source and build
-instructions: [handbook/](handbook/README.md).
-
-## Optional: barcode lookups and AI
-
-Nothing leaves your server until a feature is turned on: by an admin for the server, or by a person who
-adds their own USDA or AI key where the admin allows it. Each person then decides for themselves.
-Every outbound call is made by the server (never the browser) through a transport that refuses private
-and cloud-metadata addresses unless the operator listed them. All hosts: [docs/network-allowlist.md](docs/network-allowlist.md).
-
-**Barcodes** ([docs/barcode-and-photos.md](docs/barcode-and-photos.md)). **Add → Scan** reads a barcode
-with the camera (HTTPS), from a photo, or as typed digits; decoding happens on the device and only the
-digits reach your server. Your own foods with that barcode are always found. Two optional sources:
-
-| Source | Turn it on | What it receives |
+| Variable | Default | What it does |
 |---|---|---|
-| **Open Food Facts** (product data under ODbL) | `OFF_ENABLED=true`, the first-run checkbox or Server administration; then each person agrees in Settings → Food data | the barcode digits and the server's User-Agent |
-| **USDA FoodData Central** branded foods (public domain) | a USDA key: `USDA_API_KEY_FILE` (shared) or each person's own in Settings → Food data | the barcode digits and the key |
+| `PUBLIC_URL` | not set | The address people type, like `https://food.home.example.net`. Set it whenever you use a host name. |
+| `TRUSTED_PROXIES` | `127.0.0.1,::1` | Which reverse proxies to trust. It depends on your setup ([docs/security.md](docs/security.md#4-proxy-trust-trusted_proxies-per-topology)). |
+| `AUTH_MODE` | `local` | `local` for normal logins, `proxy` if a sign-in proxy handles it, `none` for one trusted device with no login. |
+| `SECRET_KEY_FILE` | made for you in the data folder | Used to encrypt saved API keys. Keep a copy with your backups. |
+| `USDA_API_KEY_FILE` | not set | A shared key for USDA food search. People can also add their own. |
+| `OFF_ENABLED` | `false` | Barcode lookups in Open Food Facts. |
+| `AI_ENABLED` | `false` | The optional AI features ([docs/ai.md](docs/ai.md)). |
+| `DATA_DIR` | `/data` | Where the database lives. |
 
-Scanned foods show where their data came from, the quality notes ("potassium not listed") and the
-additives found in the ingredients; a potassium additive with no potassium value gets a warning.
+Everything else is in [docs/deployment.md](docs/deployment.md#configuration). Most settings can also
+be changed inside the app, under Server administration.
 
-**AI** ([docs/ai.md](docs/ai.md)). Off unless the admin sets `AI_ENABLED=true` and a provider: a local
-Ollama, LM Studio, llama.cpp, vLLM or LiteLLM server, OpenAI, OpenRouter, Nous Portal, a tool-free Hermes
-Agent profile, or any OpenAI-compatible server. Each person opts in under Settings → AI ideas, agrees per
-destination before anything is sent, and can see the exact request first ("What will be sent?"). AI can
-pick and order meal ideas among foods the rules already allowed, split a typed meal into searches,
-read a nutrition-label photo into a draft you check, name the foods on a plate photo (off by default), copy
-the results off a photo of a lab report (only on an AI on your own network) and, in the **Ask** chat, answer
-questions from your own numbers. An admin can keep one AI on the home network and one in the cloud and pin each
-feature to local, cloud or off, or try the local one first and the cloud only when its answer fails the checks
-([docs/ai.md](docs/ai.md#which-ai-does-each-feature-use)). Its own words are never shown in the one-shot features, every
-number comes from the food list or the app, and text that may describe a low or an emergency gets the rule-based card instead
-of an AI call. No model is recommended yet: the live evaluations are still to be run ([docs/ROADMAP.md](docs/ROADMAP.md)).
+## How the targets and warnings work
 
-## Security in short
+Suggested targets are starting points from published guidelines (KDIGO, KDOQI, the ADA and the
+Dietary Reference Intakes), worked out from your weight, age, CKD stage, dialysis and recent lab
+results. The warnings on each food follow the cut-offs renal dietitians commonly use. Foods used to
+treat a low blood sugar never get a carbohydrate warning.
 
-The full operator guide is **[docs/security.md](docs/security.md)** (threat model, defaults,
-`TRUSTED_PROXIES` per topology, checklists per runtime); how to report a vulnerability is in
-[SECURITY.md](SECURITY.md).
+The numbers and their sources are listed in [docs/targets-and-labs.md](docs/targets-and-labs.md) and
+[docs/guidance.md](docs/guidance.md), and explained in plain words in the handbook. Some of the rules
+are marked "expert opinion" and still need review by a renal dietitian
+([docs/ROADMAP.md](docs/ROADMAP.md)).
 
-* **Runtime:** rootless engine with the default user namespace (never `keep-id`), UID 10001, Chainguard
-  Python base with no shell and no package manager, read-only root filesystem, `cap_drop: ALL`,
-  `no-new-privileges`, 512 MiB / 128 PIDs, published on `127.0.0.1` only. Secrets (`SECRET_KEY_FILE`,
-  `USDA_API_KEY_FILE`, `AI_API_KEY_FILE`, ...) are files from the engine's secret store, never
-  environment variables.
-* **Accounts:** local accounts by default with a one-time setup code (no "first visitor becomes admin"),
-  passwords of 15–128 characters checked against a list of common passwords (NIST SP 800-63B),
-  Argon2id, sign-in throttling per account and per address, re-entering the password for sensitive
-  changes. Sessions are opaque server-side tokens in an `HttpOnly`, `SameSite=Lax` cookie
-  (`__Host-kh_session`, `Secure`, over HTTPS); sign-out clears the device's cached and offline data.
-* **Isolation:** every query is scoped to the signed-in person; someone else's entry, food, meal or lab
-  result answers 404. API keys are encrypted at rest and never shown again (only the last 4
-  characters). An append-only activity log records sign-ins, settings and key changes, never health data.
-* **Browser:** strict Content Security Policy with Trusted Types and no inline script, `X-Frame-Options:
-  DENY`, `no-referrer`, HSTS over HTTPS, a Host allowlist against DNS rebinding, CSRF checks
-  (`Sec-Fetch-Site`, `Origin` and a required `X-Requested-With` header), `Cache-Control: no-store` on the
-  API. Nothing is loaded from a CDN; the barcode decoder and the PDF reader (pdf.js) are vendored and pinned by SHA-256.
-* **Outbound traffic:** none until you turn on USDA, Open Food Facts or AI; every call goes through an
-  SSRF-checked transport that never follows redirects. Photos for AI are stripped of all metadata on the
-  server and never stored.
-* **Supply chain:** hash-locked Python wheels, base images pinned by digest, GitHub Actions pinned to
-  commit SHAs, a vulnerability gate before any tag moves, and release images signed with cosign and
-  published with SLSA provenance and an SBOM.
+## More documentation
 
-More: [docs/accounts.md](docs/accounts.md) (sign-in modes, adding people, lost passwords, keys),
-[docs/privacy.md](docs/privacy.md) (what is stored and who can see it) and
-[docs/https.md](docs/https.md) (HTTPS for a homelab: own domain + Caddy, Tailscale, a private CA,
-cert-manager).
-
-## Configuration
-
-All settings are environment variables; secrets are files given by their `*_FILE` variable. The ones
-most installs touch:
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PUBLIC_URL` | unset | The address people type, e.g. `https://food.home.example.net`. Set it whenever you use a host name: it passes the Host check, and invite links and the setup line use it. |
-| `TRUSTED_PROXIES` | `127.0.0.1,::1` | Addresses whose `X-Forwarded-For`/`-Proto` are believed. Depends on your engine ([docs/security.md §4](docs/security.md#4-proxy-trust-trusted_proxies-per-topology)). |
-| `AUTH_MODE` | `local` | `local` (accounts with passwords), `proxy` (identity header from your sign-in proxy), `none` (no sign-in: one trusted device only; the app shows a red banner). |
-| `SECRET_KEY_FILE` | auto-generated `$DATA_DIR/secret.key` with a warning | Encrypts stored API keys. Keep it outside the data volume and with your backups. |
-| `USDA_API_KEY_FILE` | unset | A shared key for USDA search and branded barcode lookups (people can also add their own in Settings). |
-| `OFF_ENABLED` | `false` | Barcode lookups in Open Food Facts (each person still agrees). Related: `OFF_CONTACT` (the contact in the User-Agent; an admin e-mail address is best), `OFF_RATE_PER_MINUTE` (10), `BARCODE_NEGATIVE_TTL_HOURS` (24), `USDA_BRANDED_BARCODE` (`true`), and the env-only `OFF_BASE_URL`. |
-| `AI_ENABLED` | `false` | The optional AI layer; the provider comes from `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY_FILE` and friends ([docs/ai.md](docs/ai.md#switches)). |
-| `GUIDANCE_ENABLED` | `true` | Rule-based meal guidance for the whole server (each person can also switch it off). |
-| `DATA_DIR` | `/data` in the image, `./data-local` outside | Where `kidney.db` lives. |
-
-The complete list (sessions, password rules, size limits, HSTS, proxy headers, AI network policy,
-handbook, ...) is in [docs/deployment.md](docs/deployment.md#configuration) and at the top of
-[`app/config.py`](app/config.py). Settings that are not set in the environment can be changed in the app
-(Server administration → Server settings); the ones set in the environment are shown as locked.
-
-## How targets and warnings work
-
-* **Suggested targets** are starting points from published guidelines, worked out in
-  [`app/targets.py`](app/targets.py) with every number, source and note in
-  [`app/target_rules.py`](app/target_rules.py) (all of it explained in
-  [docs/targets-and-labs.md](docs/targets-and-labs.md)). In short: calories from the 2023 Dietary
-  Reference Intakes kept within 25–35 kcal/kg; protein 0.8 g/kg with diabetes at stages 3a–5 before
-  dialysis (never lower; ADA 2026, KDIGO 2022 and 2024), 0.8–1.0 at stages 1–2 and after a transplant,
-  1.0–1.2 on dialysis; potassium review ceilings of 4,000 → 3,500 → 3,000 → 2,500 mg from stage 3a to
-  stage 5 and hemodialysis (3,500 on peritoneal dialysis), adjusted by a recent blood potassium;
-  phosphorus 1,000 mg (900 at stage 5 before dialysis, 800 with a high phosphate); sodium 2,000 mg;
-  carbohydrate 45 % of calories split over the meals; a fluid limit only on dialysis. Per kg means per
-  kg of a reference weight (the actual weight between BMI 18.5 and 25). Every potassium note says *"Only
-  restrict potassium if your blood potassium is high; your care team sets the number."* No targets are
-  suggested in pregnancy, under 18, or in the first 12 weeks after a transplant.
-* **Per-serving warnings** use renal-dietitian conventions: potassium 101–200 mg medium, > 200 mg high
-  (and medium for a potassium additive with potassium not listed); phosphorus 101–150 mg medium, > 150
-  mg high, or **any** food flagged `phosphate_additive`; sodium 141–400 mg medium, > 400 mg high;
-  carbohydrate 15–30 g medium ("1–2 carb choices"), > 30 g high, with `high_gi` upgrading to high from
-  one carb choice (≥ 15 g); protein 15–25 g medium, > 25 g high. Foods flagged `avoid_ckd` (star
-  fruit, potassium-chloride salt substitutes) are always high. Foods flagged `hypo_treatment` (glucose
-  tablets, apple juice …) get **no carbohydrate warning**: treating a low is never warned against; their
-  potassium warning stays so the lowest-potassium option can be chosen.
-* **Daily status**: `ok` below 80 % of a target (the profile's `warn_fraction`), `caution` between 80
-  and 100 %, `over` above. Potassium, sodium, fluid and carbohydrate are judged **day by day**;
-  phosphorus, protein, calories and calcium on the **weekly average**.
-* **Meal guidance** applies the same numbers to the next meal; its rules of thumb and weights are listed
-  with their sources in [docs/guidance.md](docs/guidance.md).
-
-The reasoning in plain words, the eat / limit / avoid lists, carb counting with kidney-friendly swaps and
-treating a low on a kidney diet are in the handbook at `/learn`. The rules marked "expert opinion" and
-the guidance weights are still waiting for review by a renal dietitian ([docs/ROADMAP.md](docs/ROADMAP.md)).
-
-## Documentation
-
-* **[docs/README.md](docs/README.md)**: every guide in one list (deployment, HTTPS, security, accounts,
-  privacy, phone install, targets and labs, meal guidance, AI, barcodes and photos, network allowlist).
-* **[docs/ROADMAP.md](docs/ROADMAP.md)**: what is planned for later versions, and the clinical reviews
-  still to be done.
-* **[CHANGELOG.md](CHANGELOG.md)**: what changed in each version, with upgrade notes.
-* **[SECURITY.md](SECURITY.md)**: reporting a vulnerability, supported versions, verifying images.
+* [docs/README.md](docs/README.md): every guide in one list.
+* [docs/ROADMAP.md](docs/ROADMAP.md): what's planned next.
+* [CHANGELOG.md](CHANGELOG.md): what changed in each version.
+* [docs/demo.md](docs/demo.md): the online demo, and keeping your demo data in your browser.
 
 ## Contributing
 
-Contributions are welcome: bug reports, clinical corrections with a source, docs, handbook pages and
-code. Start with **[CONTRIBUTING.md](CONTRIBUTING.md)** (setup, tests, the parity rule, safety and
-security rules, how to add a food, a handbook page, a guidance rule or an AI preset) and the
-[Code of Conduct](CODE_OF_CONDUCT.md). [`ARCHITECTURE.md`](ARCHITECTURE.md) is the contract every change
-follows; AI coding agents also read [`AGENTS.md`](AGENTS.md). Maintainers: [docs/maintainers.md](docs/maintainers.md).
+Bug reports, corrections with a source, docs, handbook pages and code are all welcome. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+[ARCHITECTURE.md](ARCHITECTURE.md) describes how everything fits together, and
+[docs/maintainers.md](docs/maintainers.md) covers releases.
 
 ```bash
-python -m pytest                       # the whole suite, no network
-node tests/js/run_vectors.mjs          # the browser's copies of the rules match the server's
-python scripts/build_preview.py        # build/kidney-diet-log.html: the self-contained demo
-python scripts/build_preview.py --pages build/demo   # the same demo as a static site (the Pages demo)
-                                       # the Pages demo can keep its data in the browser, if you choose: docs/demo.md
+python -m pytest                       # all the tests, no network needed
+node tests/js/run_vectors.mjs          # checks the browser's copy of the rules matches the server's
+python scripts/build_preview.py --pages build/demo   # builds the demo
 ```
 
-## Project layout
+<details>
+<summary>Project layout</summary>
 
 ```
-ARCHITECTURE.md           the contract: API shapes, data model, rules, UI behaviour, v0.3 decisions
-app/
-  main.py                 FastAPI app factory: security middleware, routers, static mount, start-up
-  config.py               settings from the environment (secrets from *_FILE)
-  security.py, egress.py  headers, CSP, Host allowlist, proxies, CSRF, limits; the SSRF-checked transport
-  auth/                   accounts, sessions, throttling, invites, /api/auth, /api/me, /api/admin
-  settings_registry.py    every runtime setting with its scope and default; settings_store.py resolves them
-  crypto.py, credentials.py   encrypted API keys and per-request key resolution
-  audit.py, account.py    activity log; data export and account deletion
-  data_import.py          import of a person's own export.json (POST /api/me/import)
-  admin.py                admin CLI (python -m app.admin ...)
-  db.py, migrations/      SQLite connection + append-only schema steps (1-19)
-  nutrients.py, periods.py    pure rules: daily status, alerts, period maths
-  rules_kidney.py         the kidney/T1D rule pack of nutrients.py: warnings, kidney rating, meal-carb alerts, suggested targets
-  nutrient_core.py        the nutrient registry and rounding that nutrients.py and rules_kidney.py share
-  targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
-  symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
-  body.py                 the weight and blood pressure log (routes, kg and lb, the alarm and goal checks, the handbook's words; the screens are js/views/body.js and body_trends.js)
-  guidance/               rule-based meal guidance (pure engine + routes)
-  gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
-  ai/, vision.py, imagecheck.py   optional AI (presets, routing, network policy, guard, routes, the Ask chat) and photo checks
-  mcp/                    the assistant's MCP server (POST /mcp) and its tools
-  push.py                 phone shortcuts: POST /push/v1/body with a device token (add weights and blood pressure readings, nothing else)
-  foods.py, log.py, meals.py, profile.py   the data routes, scoped to the signed-in person
-  pwa.py, handbook.py     service worker and manifest headers; the handbook at /learn
-  static/                 index.html, js/ (KH modules: engine twins, mock demo API, views), css/, vendor/
-data/                     builtin food database (generated) and starter meal combos
-deploy/                   Containerfile(s), compose (+ Caddy, Ollama overlays), Quadlet, Kubernetes
-docs/                     operator and feature guides (index: docs/README.md); dev/research: design notes
-handbook/                 patient handbook (MkDocs); built into the image and served at /learn
-scripts/                  food database, preview, handbook build, locks, image verification, benchmarks
-tests/                    pytest suite; tests/data and tests/js hold the parity vectors
-tools/e2e/                browser harnesses (parity, sandbox, regress, learn, device, guidance_perf, and one per feature)
+ARCHITECTURE.md           how the app is put together: API, data model, rules, screens
+app/                      the server (FastAPI) and, in app/static/, the web app
+  auth/                   accounts, sessions, invites
+  migrations/             database changes, one step per file
+  guidance/               meal help without AI
+  ai/, mcp/               the optional AI features and the assistant connection
+  static/                 index.html, js/, css/ and the vendored barcode and PDF readers
+data/                     the built-in food database
+deploy/                   container files, Compose, Quadlet and Kubernetes examples
+docs/                     guides for running and using the app; docs/dev/research holds the design notes
+handbook/                 the patient handbook, served at /learn
+scripts/                  building the food database, the demo and the handbook; image checks
+tests/                    the test suite
+tools/e2e/                browser tests that are run by hand
 ```
+
+</details>
 
 ## Disclaimer
 
-This software is a logging aid, not medical advice and not a medical device. Nutrient targets, limits
-and warnings must come from your nephrologist and renal dietitian, insulin decisions from your diabetes
-care team; the suggested targets are published guideline starting points that your care team should
-overwrite. The food database is reference data (USDA and, when enabled, Open Food Facts, which is
-crowd-sourced): check labels and portions. AI ideas are optional suggestions checked against your
-targets, not advice. Never delay or under-treat low blood glucose because of a potassium or phosphorus
-number.
+This software helps you keep a log. It is not medical advice and not a medical device. Nutrient
+targets, limits and warnings must come from your nephrologist and renal dietitian, and insulin
+decisions from your diabetes care team. The food data comes from the USDA and, if turned on, Open
+Food Facts, which anyone can edit, so check labels and portions. Never delay or under-treat a low
+blood sugar because of a potassium or phosphorus number.
 
 ## Licences
 
-* **Code**: [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, copy, modify and share it for
-  personal and other noncommercial purposes, free of charge. **Any commercial use requires the written
-  permission of the author.**
+* **Code:** [PolyForm Noncommercial License 1.0.0](LICENSE). You can use, copy, change and share it
+  for personal and other noncommercial use, for free. **Commercial use needs the author's written
+  permission.**
 * **Handbook text** (`handbook/docs/`, `handbook/includes/`, `handbook/data/`):
   [CC BY-NC-SA 4.0](handbook/LICENSE). Clinics, charities and families may copy, print, translate and
-  adapt it for non-commercial use, with credit and under the same licence.
-* **Food data**: USDA FoodData Central (SR Legacy and Branded Foods) is in the public domain (CC0 1.0).
-  **Open Food Facts** product data, when an admin turns lookups on, is under the
-  [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/); the app shows the
-  attribution with each product and includes the notice in data exports.
-* **Third-party code** keeps its own licence: the vendored barcode decoder is MIT (barcode-detector)
-  and Apache-2.0 (ZXing-C++), the vendored PDF reader is Apache-2.0 (pdf.js), listed in [app/static/vendor/README.md](app/static/vendor/README.md); the
-  handbook's theme, Material for MkDocs, is MIT.
+  adapt it for noncommercial use, with credit and under the same licence.
+* **Food data:** USDA FoodData Central is public domain (CC0 1.0). Open Food Facts data, when turned
+  on, is under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/), and the app
+  shows the credit with each product.
+* **Third-party code** keeps its own licence: the barcode reader is MIT and Apache-2.0, and the PDF
+  reader (pdf.js) is Apache-2.0. See [app/static/vendor/README.md](app/static/vendor/README.md).
