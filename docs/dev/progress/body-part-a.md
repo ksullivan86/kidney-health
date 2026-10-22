@@ -20,10 +20,17 @@ Local WIP commits only, never push / PR / tag. Delete this file in the last comm
 * Export/import: `app/account.py`, `app/data_import.py` (weights, blood_pressures; IMPORTED_SETTINGS gained the 3 settings).
 * `tests/test_body.py` (143 tests pass), isolation matrix, auth coverage, export/import tests updated.
 
-## Next
+## Done (continued)
+* JS twin: `engine/body.js`, `mock/body.js`, seed (two weeks, sample alarm + goal, one weight over the alarm, no 180/120), `core.js` helpers,
+  `engine/settings.js` (new `num` type, `nullable`, three keys), `mock/export.js`, `mock/import.js`, `index.html` + `sw.js` script entries,
+  `views/settings.js` admin group (one list entry + one label, the registry/UI contract test needs it).
+* Vectors: `gen_body_vectors.py` -> `body_vectors.json`, `gen_settings_vectors.py`, `gen_import_vectors.py` regenerated; `run_vectors.mjs` (body section),
+  `tests/test_body_vectors.py`. `node tests/js/run_vectors.mjs`: all sections pass.
+
+## Next (old list, JS part done)
 1. JS: `js/engine/body.js`, `js/mock/body.js`, seed, core.js helpers, `js/engine/settings.js` DEFS (+ float type), `js/mock/export.js`, `js/mock/import.js`,
    script tags in `index.html` and `sw.js` SHELL_URLS (needed for the demo to load them; no screens).
-2. Vectors: `tests/data/gen_body_vectors.py`, `gen_settings_vectors.py` (body values), `gen_import_vectors.py`, `tests/js/run_vectors.mjs`, `tests/test_body_vectors.py`.
+2. (done) Vectors.
 3. `tools/e2e/parity.py`, then docs (ARCHITECTURE, docs/body.md, docs/README.md, CHANGELOG), note 10 section "Decisions while building Part A".
 4. All checks, then delete this file in the last commit.
 

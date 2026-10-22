@@ -1053,7 +1053,7 @@ class Importer:
                     self.already["weights"] += 1
                     continue
             if per_day[rec.date] >= MAX_WEIGHTS_PER_DAY:
-                self.skip("weights", index, f"{kg} kg on {rec.date}", f"that day already has {MAX_WEIGHTS_PER_DAY} weights, the most one day holds")
+                self.skip("weights", index, f"{kg:.2f} kg on {rec.date}", f"that day already has {MAX_WEIGHTS_PER_DAY} weights, the most one day holds")
                 continue
             c.execute(
                 "INSERT INTO weights (user_id, date, time, kg, context, note, source, source_key, created_at, updated_at) "
