@@ -9,9 +9,13 @@
    * the latest result of each lab test with its date, the one before it and an arrow (↑ ↓ →) and nothing more;
    * the symptoms log for the period, grouped by symptom, with the handbook's lines for the warning signs exactly as the
      symptoms screens show them (KH.symptoms.flagEl);
+   * the weights and blood pressure readings the person recorded (note 10 §4.6): the latest weight and the change over six
+     months, on hemodialysis the gains between the last sessions (against the alarm their care team gave them, when set), the
+     7-day and 30-day blood pressure averages, how many readings were at or above their goal, and any reading the handbook points
+     to, with the handbook's words as the Today card shows them (KH.body.flagBlock). The sums are js/engine/visitprep.js bodyPage;
    * the person's own questions, and the handbook's checklist as boxes to tick.
 
-   Nothing leaves the device: the only requests are the three reads above (the app's own API); printing is window.print()
+   Nothing leaves the device: the only requests are the reads above (the app's own API); printing is window.print()
    (called here, no inline handler). The questions and the ticks live in this page's memory only: they are not written to
    localStorage, sessionStorage, IndexedDB or the server, are never sent to the AI and are gone on reload and on sign-out.
    That is the least-trust choice: a shared browser keeps nothing of them.
@@ -144,6 +148,77 @@
     body.append(note('The notes you wrote stay in the symptoms log.', 'small muted'));
   }
 
+  // ---- weights and blood pressure --------------------------------------------------------------------------------
+  const goalAboveWords = (goal) => {
+    const top = goal.systolic != null ? `a top number at or above ${goal.systolic}` : null;
+    const bottom = goal.diastolic != null ? `a bottom number at or above ${goal.diastolic}` : null;
+    return [top, bottom].filter(Boolean).join(' or ');
+  };
+  const readingWhen = (r) => `${fmtDay(r.date)}${r.time ? `, ${KH.bodyUi.fmtTime(r.time)}` : ''}`;
+  function renderBody(res, err) {
+    const body = clear($('#visit-body-body'));
+    if (err || !res) { body.append(loadError('The weights and blood pressure', err)); return; }
+    const R = KH.bodyRules, B = KH.bodyUi;
+    const profile = state.profile || {};
+    const page = V.bodyPage({ weights: res.weights, readings: res.readings, summary: res.summary, today: todayStr(), periodDays: S.days,
+      dialysis: profile.dialysis || 'none', dryWeightKg: profile.weight_kg == null ? null : profile.weight_kg });
+    if (page.empty) { body.append(note('No weights or blood pressure readings were recorded.')); return; }
+    const unit = page.units;
+    const kind = (key) => B.contextLabel('weight', key).toLowerCase();
+
+    // -- weight
+    body.append(h('p', { class: 'visit-body-sub' }, 'Weight'));
+    const list = h('ul', { class: 'visit-body-list' });
+    if (page.latest) list.append(h('li', {}, 'Latest weight: ', h('b', {}, R.formatWeight(page.latest.kg, unit)), ` on ${fmtDay(page.latest.date)}, ${kind(page.latest.context)}.`));
+    else list.append(h('li', {}, 'No weights were recorded.'));
+    if (page.latest) {
+      const c = page.sixMonth;
+      list.append(c
+        ? h('li', {}, `Change over ${plural(c.days, 'day', 'days')}: `, h('b', {}, B.gainText(c.change_kg, unit)), ` (${Math.abs(c.change_pct).toFixed(1)} %), from ${R.formatWeight(c.earlier.kg, unit)} on ${fmtDay(c.earlier.date)}.`)
+        : h('li', {}, 'No weight was recorded about six months before the latest one, so there is no six-month change to show.'));
+    }
+    body.append(list);
+    if (page.sessions) {
+      const { alarm, rows } = page.sessions;
+      body.append(h('p', { class: 'visit-body-sub visit-body-sessions' }, 'Gains between the last sessions'));
+      body.append(note(!alarm ? 'No weight-gain alarm is set.' : alarm.over === 'between_sessions' ? `Your alarm from your care team: ${B.alarmSentence(alarm, unit)}.`
+        : `Your alarm from your care team is set as ${B.alarmSentence(alarm, unit)}, so the gains below are not compared with it.`));
+      if (!rows.length) body.append(note('No weights before dialysis were recorded.'));
+      else {
+        const gains = h('ul', { class: 'visit-body-gains' });
+        for (const r of rows) {
+          const against = r.reference_kind === 'after_dialysis' ? `${R.formatWeight(r.reference_kg, unit)} after dialysis on ${fmtDay(r.reference.date)}`
+            : r.reference_kind === 'dry_weight' ? `your dry weight in Profile, ${R.formatWeight(r.reference_kg, unit)}` : null;
+          gains.append(h('li', {},
+            h('b', {}, fmtDay(r.weight.date)),
+            r.gain_kg == null ? h('span', {}, 'no weight after a session to compare with') : h('span', {}, B.gainText(r.gain_kg, unit)),
+            h('span', { class: 'muted' }, `${R.formatWeight(r.weight.kg, unit)} before dialysis${against ? `, compared with ${against}` : ''}`),
+            r.over_alarm ? h('span', { class: 'over' }, 'over your alarm') : null));
+        }
+        body.append(gains);
+      }
+    }
+
+    // -- blood pressure
+    body.append(h('p', { class: 'visit-body-sub' }, 'Blood pressure'));
+    const bp = page.bp;
+    const lines = h('ul', { class: 'visit-body-list' });
+    const avg = (w, label) => (w.count
+      ? h('li', {}, `${label}: average `, h('b', {}, `${w.systolic}/${w.diastolic}`), ` from ${plural(w.count, 'reading', 'readings')}.${w.few ? ' Only a few readings.' : ''}`)
+      : h('li', {}, `${label}: no readings.`));
+    lines.append(avg(bp.week, 'Blood pressure, last 7 days'), avg(bp.month, `Blood pressure, last ${bp.month.days} days`));
+    const goalText = B.goalText(bp.goal);
+    if (goalText) {
+      lines.append(h('li', {}, `Goal from your care team: ${goalText}. `, bp.month.count
+        ? [h('b', {}, `${bp.month.at_or_above} of ${bp.month.count}`), ` readings in the last ${bp.month.days} days had ${goalAboveWords(bp.goal)}.`] : 'No readings to compare.'));
+    } else lines.append(h('li', {}, 'No blood pressure goal is set.'));
+    lines.append(h('li', {}, `Readings with a top number of ${R.FLAG_SYSTOLIC} or more, or a bottom number of ${R.FLAG_DIASTOLIC} or more, in this period: `,
+      bp.flagged.length ? bp.flagged.map((r, i) => [i ? '; ' : '', h('b', {}, `${r.systolic}/${r.diastolic}`), ` on ${readingWhen(r)}`]) : 'none', '.'));
+    body.append(lines);
+    if (bp.flag && KH.body) body.append(KH.body.flagBlock(bp.flag));
+    body.append(note('The app records and shows these numbers. It does not say what a weight or a reading means: your care team does.', 'small muted visit-body-foot'));
+  }
+
   // ---- my questions (memory only) -------------------------------------------------------------------------------
   const qInput = $('#visit-q-input');
   const qError = $('#visit-q-error');
@@ -202,18 +277,25 @@
     const req = ++S.req;
     const range = V.periodRange(todayStr(), S.days, addDays);
     renderHead(range);
-    for (const id of ['#visit-avg-body', '#visit-labs-body', '#visit-sym-body']) clear($(id)).append(note('Loading…', 'muted'));
+    for (const id of ['#visit-avg-body', '#visit-labs-body', '#visit-sym-body', '#visit-body-body']) clear($(id)).append(note('Loading…', 'muted'));
     $('#visit-avg-sub').textContent = '';
     const settle = (p) => p.then((v) => ({ ok: v }), (e) => ({ err: e }));
-    const [sum, labs, sym] = await Promise.all([
+    const today = todayStr();
+    const [sum, labs, sym, bodySum, weights, readings, prof] = await Promise.all([
       settle(api.summary(range.start, range.end)),
       settle(api.labs({ limit: 1000 })),
       settle(api.symptoms(range.start, range.end)),
+      settle(api.bodySummary(today)),
+      settle(api.bodyWeights(addDays(today, -365), today)), // the six-month change needs the half year before the latest weight
+      settle(api.bloodPressures(addDays(today, -(Math.max(S.days, V.BODY_MONTH_DAYS) - 1)), today)),
+      settle(state.profile ? Promise.resolve(state.profile) : KH.loadProfile()), // the dialysis setting and the dry weight
     ]);
     if (req !== S.req) return; // a newer period was chosen meanwhile
     renderAverages(sum.ok, sum.err);
     renderLabs(labs.ok, labs.err);
     renderSymptoms(sym.ok, sym.err);
+    const bodyErr = [bodySum, weights, readings, prof].find((x) => x.err);
+    renderBody(bodyErr ? null : { summary: bodySum.ok, weights: weights.ok.weights || [], readings: readings.ok.readings || [] }, bodyErr ? bodyErr.err : null);
     live(`Visit summary ready for the ${lower(V.PERIODS.find((p) => p.days === S.days).label)}.`);
   }
 
@@ -236,5 +318,5 @@
     load();
   });
 
-  KH.views.visit = { load, renderAverages, renderLabs, renderSymptoms };
+  KH.views.visit = { load, renderAverages, renderLabs, renderSymptoms, renderBody };
 })();

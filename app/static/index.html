@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/labs.css">
 <link rel="stylesheet" href="css/symptoms.css">
+<link rel="stylesheet" href="css/body.css">
 <link rel="stylesheet" href="css/visit.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/auth.css">
@@ -334,6 +335,25 @@
       <div id="symptoms-today-body" class="symptoms-body"></div>
     </section>
 
+    <!-- Weight and blood pressure (js/views/body.js): the day's weights and readings, the numbers the care team gave, and what the handbook says about a very high reading. The app records and shows them; it never says what a number means. -->
+    <section class="card body-card" id="body-today" aria-labelledby="body-today-h">
+      <div class="card-head">
+        <h2 id="body-today-h" class="card-title">Weight and blood pressure</h2>
+      </div>
+      <div class="body-actions">
+        <button class="btn secondary" type="button" id="body-add-weight">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Add weight
+        </button>
+        <button class="btn secondary" type="button" id="body-add-bp">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Add blood pressure
+        </button>
+      </div>
+      <p class="sr-only" id="body-live" role="status"></p>
+      <div id="body-today-body" class="body-body"></div>
+    </section>
+
     <!-- Meal guidance (js/views/guidance.js): what fits now, plan the day, treating a low -->
     <section class="card guidance-today" id="guidance-today" aria-labelledby="guidance-today-h" hidden>
       <div class="card-head">
@@ -531,6 +551,15 @@
       </div>
       <div id="symptoms-trends-body" class="symptoms-body"></div>
     </section>
+    <!-- Weight and blood pressure over the chosen period (js/views/body_trends.js): two plain SVG charts, each with its table under it -->
+    <section class="card body-card" id="body-trends" aria-labelledby="body-trends-h">
+      <div class="card-head">
+        <h3 id="body-trends-h" class="card-title">Weight and blood pressure</h3>
+        <span class="muted small" id="body-trends-sub"></span>
+      </div>
+      <div class="body-actions" id="body-trends-actions" hidden></div>
+      <div id="body-trends-body" class="body-body"></div>
+    </section>
     <p class="muted small chart-legend">
       Daily totals against your target (dashed line). Bars:
       <span class="legend-key"><i class="swatch level-ok"></i>OK</span>
@@ -597,11 +626,13 @@
             <label for="pf-weight" id="pf-weight-label">Weight (kg)</label>
             <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70" aria-describedby="pf-weight-hint">
             <span class="hint" id="pf-weight-hint">Calories and protein are worked out from it.</span>
+            <p class="body-use" id="pf-weight-log" hidden></p>
           </div>
           <div class="field">
             <label for="pf-weight-6mo">Weight 6 months ago (kg)</label>
             <input id="pf-weight-6mo" name="weight_6_months_ago_kg" type="number" inputmode="decimal" min="20" max="400" step="0.1" placeholder="Optional" aria-describedby="pf-weight-6mo-hint">
             <span class="hint" id="pf-weight-6mo-hint">Losing more than 5 % without trying is a sign of malnutrition risk.</span>
+            <p class="body-use" id="pf-weight-6mo-log" hidden></p>
           </div>
           <div class="field span-2">
             <label for="pf-sex">Sex used in medical formulas</label>
@@ -1019,6 +1050,11 @@
         <div id="visit-sym-body"></div>
       </section>
 
+      <section class="visit-section" aria-labelledby="visit-body-h">
+        <h3 class="visit-h" id="visit-body-h">Weight and blood pressure I recorded</h3>
+        <div id="visit-body-body"></div>
+      </section>
+
       <section class="visit-section" aria-labelledby="visit-q-h">
         <h3 class="visit-h" id="visit-q-h">My questions</h3>
         <p class="muted small screen-only">Write what you want to ask. The list stays on this page only: it is not saved on this device, not sent to your server and never seen by the AI. Print it or save it as a PDF before you leave the page.</p>
@@ -1093,6 +1129,12 @@
         </div>
         <p class="status-msg" id="set-prefs-status" role="status" aria-live="polite"></p>
       </div>
+    </section>
+
+    <!-- Weight and blood pressure (js/views/body.js renderSettings): the unit, the weight-gain alarm and the blood pressure goal, both the care team's numbers -->
+    <section class="card settings-section" id="set-body" data-title="Weight and blood pressure" aria-labelledby="set-body-h">
+      <h2 class="card-title" id="set-body-h">Weight and blood pressure</h2>
+      <div id="set-body-body" class="settings-body"></div>
     </section>
 
     <section class="card settings-section" id="set-guidance" data-title="Meal guidance" aria-labelledby="set-guidance-h">
@@ -1923,6 +1965,113 @@
   </form>
 </dialog>
 
+<!-- ===================== WEIGHT SHEET (js/views/body.js: add or edit one weight; nothing is saved until Save) ===================== -->
+<dialog id="sheet-weight" class="sheet" aria-labelledby="sheet-weight-title" aria-describedby="sheet-weight-sub">
+  <form method="dialog" class="sheet-form" id="weight-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-weight-title" class="sheet-title">Add a weight</h2>
+        <div class="sheet-sub" id="sheet-weight-sub">A record for you and your care team. The app does not say what a weight means.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-error" id="weight-error" role="alert" hidden></div>
+      <div class="field">
+        <label for="weight-value" id="weight-label">Weight</label>
+        <input id="weight-value" type="text" inputmode="decimal" autocomplete="off" maxlength="8" aria-describedby="weight-echo weight-hint">
+        <p class="body-echo" id="weight-echo" aria-live="polite"></p>
+        <span class="hint" id="weight-hint"></span>
+      </div>
+      <fieldset class="field">
+        <legend>When was it taken?</legend>
+        <div class="body-seg" id="weight-context" role="radiogroup" aria-label="When the weight was taken"></div>
+      </fieldset>
+      <div class="form-grid">
+        <div class="field">
+          <label for="weight-date">Date</label>
+          <input id="weight-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="weight-time">Time (optional)</label>
+          <input id="weight-time" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <label for="weight-note">Note (optional)</label>
+        <textarea id="weight-note" rows="2" maxlength="200" aria-describedby="weight-note-hint"></textarea>
+        <span class="hint" id="weight-note-hint">Up to 200 characters, for example which scale.</span>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="weight-save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== BLOOD PRESSURE SHEET (js/views/body.js: add or edit one reading; nothing is saved until Save) ===================== -->
+<dialog id="sheet-bp" class="sheet" aria-labelledby="sheet-bp-title" aria-describedby="sheet-bp-sub">
+  <form method="dialog" class="sheet-form" id="bp-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-bp-title" class="sheet-title">Add a blood pressure reading</h2>
+        <div class="sheet-sub" id="sheet-bp-sub">A record for you and your care team. The app does not say what a reading means.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-error" id="bp-error" role="alert" hidden></div>
+      <p class="hint body-bp-hint" id="bp-hint"></p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="bp-systolic">Top number (systolic)</label>
+          <input id="bp-systolic" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="e.g. 120" aria-describedby="bp-echo">
+        </div>
+        <div class="field">
+          <label for="bp-diastolic">Bottom number (diastolic)</label>
+          <input id="bp-diastolic" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="e.g. 80" aria-describedby="bp-echo">
+        </div>
+        <div class="field span-2">
+          <label for="bp-pulse">Pulse (optional, beats a minute)</label>
+          <input id="bp-pulse" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="e.g. 64" aria-describedby="bp-echo">
+        </div>
+      </div>
+      <p class="body-echo" id="bp-echo" aria-live="polite"></p>
+      <div id="bp-flag" aria-live="polite"></div>
+      <fieldset class="field">
+        <legend>When was it taken?</legend>
+        <div class="body-seg" id="bp-context" role="radiogroup" aria-label="When the reading was taken"></div>
+      </fieldset>
+      <div class="form-grid">
+        <div class="field">
+          <label for="bp-date">Date</label>
+          <input id="bp-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="bp-time">Time (optional)</label>
+          <input id="bp-time" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <label for="bp-note">Note (optional)</label>
+        <textarea id="bp-note" rows="2" maxlength="200" aria-describedby="bp-note-hint"></textarea>
+        <span class="hint" id="bp-note-hint">Up to 200 characters, for example which arm.</span>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="bp-save">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===================== GUIDANCE SHEET (js/views/guidance.js fills it: plan the day, a meal that fits, treating a low) ===================== -->
 <dialog id="sheet-guidance" class="sheet guidance-sheet" aria-labelledby="sheet-guidance-title" aria-describedby="sheet-guidance-sub">
   <form method="dialog" class="sheet-form" novalidate>
@@ -2027,6 +2176,7 @@
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/body.js"></script>
 <script src="js/engine/visitprep.js"></script>
+<script src="js/engine/body_ui.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -2070,6 +2220,8 @@
 <script src="js/views/menuplan.js"></script>
 <script src="js/views/trends.js"></script>
 <script src="js/views/symptoms.js"></script>
+<script src="js/views/body.js"></script>
+<script src="js/views/body_trends.js"></script>
 <script src="js/views/labs.js"></script>
 <script src="js/views/lab_photo.js"></script>
 <script src="js/views/lab_fhir.js"></script>

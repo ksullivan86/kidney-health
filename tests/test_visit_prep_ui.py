@@ -98,7 +98,9 @@ def test_the_page_is_reached_from_trends_and_goes_back_to_it():
 
 
 def test_it_reads_only_the_apps_own_api_and_sends_nothing():
-    assert re.findall(r"api\.(\w+)\(", VIEW_CODE) == ["summary", "labs", "symptoms"]  # three reads, in this order
+    # six reads of the app's own API, in this order: the period summary, the labs, the symptoms and (note 10 Part B) the weight and blood
+    # pressure summary and lists; the profile comes through KH.loadProfile (the dialysis setting and the dry weight)
+    assert re.findall(r"api\.(\w+)\(", VIEW_CODE) == ["summary", "labs", "symptoms", "bodySummary", "bodyWeights", "bloodPressures"]
     for forbidden in (r"\bfetch\s*\(", r"XMLHttpRequest", r"sendBeacon", r"WebSocket", r"EventSource", r"KH\.request\(", r"\bapi\.(add|update|delete|post|put|save|import)\w*\(",
                       r"KH\.ai\b", r"/api/ai", r"\bimport\s*\(", r"https?://"):
         assert not re.search(forbidden, VIEW_CODE), forbidden

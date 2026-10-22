@@ -6,18 +6,22 @@
 
 Starts ``uvicorn app.main:app`` on a fresh ``DATA_DIR``, finishes first-run setup with a display name, gives the person
 targets, five days of food (one food that does not list potassium), lab results, symptoms, and invites a second person with
-a symptom and a lab result of their own. Then, at 375x812 light and 1280x800 dark:
+a symptom, a lab result and a weight of their own, and gives the first person five weights and four blood pressure readings with
+a goal of 130/80. Then, at 375x812 light and 1280x800 dark:
 
 * Trends has "Get ready for a visit"; it opens Visit prep with the period, the date it was made and the chosen name;
 * the averages equal ``GET /api/log/summary`` for the period (the average, the target, the days over, the counts of foods that
   do not list a value; potassium reads "≥" with its counts, never 0); the lab rows show the newest result, the one before and
   an arrow; the symptoms are grouped with the handbook's line for a severe breathlessness; the other person's data is nowhere;
+* the weight and blood pressure section has the latest weight and the six-month change, the 7-day and 30-day averages, how many
+  readings were at or above the goal and "none" for a reading at 180/120, and no other person's weight;
 * a question is added with Enter, shown as text (markup stays text), removed, and gone after a reload; nothing is written to
   localStorage, sessionStorage or the server; the handbook checklist has its six items and can be ticked;
 * the period buttons change the summary request (14 days, 90 days); Print / Save as PDF calls ``window.print()`` once (stubbed)
   and adds a question that was typed but not yet added;
 * printed (``emulate_media print``): the header, tabs, controls and banners are gone, text is black on white even in the dark
-  theme, and a PDF of the page is made (its sheet count is reported, A4 and Letter);
+  theme, and PDFs of the page are made (A4 and Letter): one sheet each without the weight and blood pressure section, and with it one
+  on A4 and at most two on Letter;
 * the browser asks no other host and sends no write (POST, PUT, DELETE); no console error, no dialog, no sideways scroll;
 * the demo (``/?mock=1``) shows the page from its own data with the same numbers as its period summary.
 
@@ -107,6 +111,13 @@ def seed(admin: Any, sam: Any) -> None:
     admin.json("POST", "/api/symptoms", {"date": day(2), "symptom": "breathlessness", "severity": 3})
     admin.json("POST", "/api/symptoms", {"date": day(4), "symptom": "itching", "severity": 1})
     admin.json("POST", "/api/symptoms", {"date": day(6), "symptom": "itching", "severity": 2})
+    # weights and blood pressure (note 10 Part B): five weights (one about six months before the latest), four readings, a goal of 130/80
+    for n, kg in ((1, 70.4), (3, 70.1), (5, 70.0), (8, 70.3), (190, 72.0)):
+        admin.json("POST", "/api/body/weights", {"date": day(n), "time": "07:15", "kg": kg, "context": "morning"})
+    for n, top, bottom in ((1, 134, 84), (3, 128, 78), (6, 131, 80), (9, 126, 76)):
+        admin.json("POST", "/api/body/blood-pressure", {"date": day(n), "time": "07:20", "systolic": top, "diastolic": bottom, "context": "morning"})
+    admin.json("PATCH", "/api/me/settings", {"body.bp_goal": {"systolic": 130, "diastolic": 80}})
+    sam.json("POST", "/api/body/weights", {"date": day(1), "kg": 99.77, "context": "morning", "note": "Sam's secret weight"})
     sam.json("POST", "/api/symptoms", {"date": day(1), "symptom": "other", "label": "Sam's secret symptom", "severity": 2})
     sam.json("POST", "/api/labs", {"analyte": "potassium", "value": 3.1, "unit": "mmol/L", "taken_on": day(1)})
 
@@ -217,6 +228,18 @@ def visit_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
         link = groups.first.locator("a")
         check(f"[{tag}] the Get help now link is the one the symptoms screens use", link.count() == 1 and link.get_attribute("href") == HANDBOOK + "get-help-now/")
         check(f"[{tag}] the itching has no handbook line", groups.nth(1).locator(".sym-flag").count() == 0)
+    # ---- weight and blood pressure
+    bodytext = page.inner_text("#visit-body-body")
+    if not mock:
+        check(f"[{tag}] the weight and blood pressure section: the latest weight and the change over six months", "Latest weight: 155.2 lb" in bodytext and "Change over 189 days" in bodytext
+              and "down 3.5 lb" in bodytext and "(2.2 %), from 158.7 lb on" in bodytext, bodytext)
+        check(f"[{tag}] the 7-day and 30-day averages, the readings at or above the goal and none at 180/120",
+              "Blood pressure, last 7 days: average 131/81 from 3 readings" in bodytext and "Blood pressure, last 30 days: average 130/80 from 4 readings" in bodytext
+              and "Goal from your care team: under 130/80. 2 of 4 readings in the last 30 days had a top number at or above 130 or a bottom number at or above 80" in bodytext
+              and "in this period: none" in bodytext and "Gains between the last sessions" not in bodytext, bodytext)
+        check(f"[{tag}] nobody else's weight is on the page", "99.8" not in page.inner_text("#visit-page") and "219.9" not in page.inner_text("#visit-page"))
+    else:
+        check(f"[{tag}] the demo's page has the section from its own data", "Latest weight:" in bodytext and "last 7 days: average" in bodytext and "last 30 days: average" in bodytext, bodytext)
     # ---- questions
     q = page.locator("#visit-q-input")
     q.fill("Who do I call with questions between visits?")
@@ -275,11 +298,24 @@ def visit_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
     check(f"[{tag}] printed: the handbook's line for the severe breathlessness is still there" if not mock else f"[{tag}] printed: the page is there",
           page.is_visible("#visit-page") and ((not mock and "Call 911 now" in page.inner_text(".visit-sym")) or mock), "")
     if width == 1280:
+        # The page as it was before the weight and blood pressure section (the section hidden): a person with five targets, four tests and
+        # two symptoms still fits one sheet on A4 and on Letter. With the section (this person logged weights and readings), A4 still holds
+        # one sheet; on the shorter Letter sheet the checklist and the closing line may move together to a second one.
+        page.evaluate("document.querySelector('#visit-body-body').closest('section').hidden = true")
         for fmt in ("A4", "Letter"):
             pdf = page.pdf(format=fmt, print_background=False, prefer_css_page_size=False)
             sheets = len(re.findall(rb"/Type\s*/Page[^s]", pdf))
             (out / "shots" / f"visit-{fmt}.pdf").write_bytes(pdf)
-            check(f"[{tag}] the page makes a PDF on {fmt} ({sheets} sheet{'s' if sheets != 1 else ''})", pdf.startswith(b"%PDF") and sheets == 1, f"{sheets} (this person has five targets, four tests and two symptoms: one sheet is expected)")
+            check(f"[{tag}] the page without logged weights makes a PDF on {fmt} ({sheets} sheet{'s' if sheets != 1 else ''})", pdf.startswith(b"%PDF") and sheets == 1,
+                  f"{sheets} (this person has five targets, four tests and two symptoms: one sheet is expected)")
+            RESULTS[-1]["sheets"] = sheets
+        page.evaluate("document.querySelector('#visit-body-body').closest('section').hidden = false")
+        for fmt in ("A4", "Letter"):
+            pdf = page.pdf(format=fmt, print_background=False, prefer_css_page_size=False)
+            sheets = len(re.findall(rb"/Type\s*/Page[^s]", pdf))
+            (out / "shots" / f"visit-body-{fmt}.pdf").write_bytes(pdf)
+            check(f"[{tag}] the page with weights and readings makes a PDF on {fmt} ({sheets} sheet{'s' if sheets != 1 else ''})",
+                  pdf.startswith(b"%PDF") and sheets <= (1 if fmt == "A4" else 2), f"{sheets}")
             RESULTS[-1]["sheets"] = sheets
         page.screenshot(path=str(out / "shots" / f"print-{tag}.png"), full_page=True)
     page.emulate_media(media="screen")
@@ -314,7 +350,9 @@ def main(argv: list[str] | None = None) -> int:
     (out / "shots").mkdir()
     env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "ALL_PROXY": "http://127.0.0.1:9",
            "https_proxy": "http://127.0.0.1:9", "http_proxy": "http://127.0.0.1:9", "all_proxy": "http://127.0.0.1:9",
-           "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "HANDBOOK_PUBLIC_URL": HANDBOOK}
+           "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "HANDBOOK_PUBLIC_URL": HANDBOOK,
+           # an empty folder: a handbook built at handbook/site would be served at /learn and the links would go there
+           "HANDBOOK_DIR": str(out / "no-handbook")}
     server = Server(args.port, out / "data", log_path=out / "server.log", env=env)
     try:
         server.start()

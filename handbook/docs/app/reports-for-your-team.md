@@ -27,6 +27,7 @@ every entry ([architecture contract][ARCH]).
 | Export CSV | **Trends** → **Export CSV** | the dietitian's own analysis in a spreadsheet |
 | Last 7 days strip | bottom of **Today** | a quick look between visits |
 | Symptoms | **Today** → **Symptoms**; **Trends** → **Symptoms** | showing how a symptom went, with its dates |
+| Weight and blood pressure | **Today** → **Weight and blood pressure**; **Trends** → **Weight and blood pressure** | showing weights and readings with the two numbers your team gave you ([Weight and blood pressure](weight-and-blood-pressure.md)) |
 | Visit prep | **Trends** → **Get ready for a visit** | one printable page for an appointment |
 
 ## The period summary
@@ -102,6 +103,11 @@ tabs and buttons are left off. It is made on your device and **nothing is sent a
   care team ([Lab results](../labs/index.md));
 - the **symptoms** you recorded in that period, grouped by symptom with the number of days and the worst
   severity, and the handbook's own words for the warning signs, as in "Symptoms you write down" above;
+- your **weight and blood pressure**: the latest weight and the change over six months, on hemodialysis the gains
+  between your last sessions, your blood pressure averages for the last 7 and 30 days, how many readings were at
+  or above your goal, and any reading the handbook points to, with its date
+  ([Weight and blood pressure](weight-and-blood-pressure.md)). The app records and shows them: what a number means
+  is for your care team;
 - **My questions**: type your own. The list is **not saved** on your device or on your server and is never seen
   by the AI, so it is gone when you leave or reload the page: print it or save the PDF first. Under it are the
   checklist items from [Getting the most from appointments](../living/appointments.md) to tick.

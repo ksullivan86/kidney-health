@@ -132,8 +132,9 @@ suggestion, the app shows **Review suggested targets**. It never changes your sa
 - [ ] Fill in weight, height, stage, dialysis and diabetes, then **Save profile**.
 - [ ] Copy in your team's targets, or use **Suggest targets** and save.
 - [ ] On hemodialysis, tick your dialysis days and enter your fluid allowance in mL
-      (1 cup = 240 mL; 32 oz is about 950 mL). The app has no field for your weight-gain limit:
-      write that one in your notebook ([Fluid](../eat/fluid.md)).
+      (1 cup = 240 mL; 32 oz is about 950 mL). Enter the weight-gain limit your team gives you in
+      **Settings → Weight and blood pressure** ([Weight and blood pressure](weight-and-blood-pressure.md);
+      [Fluid](../eat/fluid.md)).
 - [ ] On peritoneal dialysis, choose **Peritoneal** so the app uses PD starting points.
 - [ ] After a transplant, set **Dialysis** to None, add your **Kidney transplant date** and the stage of
       your new kidney.

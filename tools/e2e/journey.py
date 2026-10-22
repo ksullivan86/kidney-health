@@ -515,13 +515,19 @@ class Journey:
     def offline(self) -> None:
         area = "5 offline"
         page = self.main_page()
+        # the step before ended by showing Today: its cards (symptoms, weight and blood pressure) ask for their rows a moment after the day
+        # has drawn, and a navigation would cut those requests off (net::ERR_ABORTED), so let them answer first
+        page.wait_for_timeout(1000)
+        page.wait_for_load_state("networkidle")
         page.goto(f"{self.base}/")
+        page.wait_for_load_state("networkidle")  # ... and so do these, before a reload cuts them off
         wait_js(page, "navigator.serviceWorker && navigator.serviceWorker.ready.then(() => true)")
         for _ in range(3):
             if page.evaluate("!!navigator.serviceWorker.controller"):
                 break
             page.reload()
             page.wait_for_selector("#view-today:not([hidden])")
+            page.wait_for_load_state("networkidle")
         check(area, "the service worker controls the page", page.evaluate("!!navigator.serviceWorker.controller"))
         self.goto(page, "#add", "#food-search")
         before = {e["id"] for e in self.entries(ADMIN)}
@@ -550,6 +556,7 @@ class Journey:
         check(area, "reconnected: synced exactly once (two new rows, each with its own client_id)",
               sorted(e["food_name"] for e in new) == sorted(names) and len({e["client_id"] for e in new}) == 2, json.dumps([(e["food_name"], e["client_id"]) for e in new]))
         page.evaluate("KH.offline.syncNow()")
+        page.wait_for_load_state("networkidle")  # the cards of Today (symptoms, weight and blood pressure) have all answered before the page is reloaded
         page.reload()
         page.wait_for_selector("#view-today:not([hidden])")
         again = [e for e in self.entries(ADMIN) if e["id"] not in before]

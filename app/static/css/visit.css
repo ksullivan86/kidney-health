@@ -101,7 +101,7 @@
   #view-visit .screen-only { display: none !important; }
   #view-visit .print-only:not([hidden]) { display: block; }
   #view-visit { gap: 0; }
-  #view-visit .visit-page { border: 0; padding: 0; box-shadow: none; border-radius: 0; gap: 6pt; }
+  #view-visit .visit-page { border: 0; padding: 0; box-shadow: none; border-radius: 0; gap: 5pt; }
 
   /* Black on white whatever the theme: text, lines and the level icons (shape black, glyph white). */
   #view-visit, #view-visit * { color: #000 !important; background: transparent !important; box-shadow: none !important; text-shadow: none !important; }
@@ -109,8 +109,8 @@
   #view-visit .visit-avg-row, #view-visit .visit-lab, #view-visit .visit-sym-row { border-color: #777 !important; }
   #view-visit .rating .shape { fill: #000 !important; }
   #view-visit .rating .glyph { fill: #fff !important; }
-  #view-visit .pill, #view-visit .strip-tag, #view-visit .sym-flag, #view-visit .lab-alert { border: 1px solid #000 !important; }
-  #view-visit .sym-flag.prominent, #view-visit .lab-alert { border-width: 2px !important; }
+  #view-visit .pill, #view-visit .strip-tag, #view-visit .sym-flag, #view-visit .body-flag, #view-visit .lab-alert { border: 1px solid #000 !important; }
+  #view-visit .sym-flag.prominent, #view-visit .body-flag.prominent, #view-visit .lab-alert { border-width: 2px !important; }
   #view-visit .learn-more::after { content: none; }
   #view-visit a { text-decoration: none; }
 
@@ -122,19 +122,29 @@
   #view-visit .visit-labs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16pt; }
   #view-visit .visit-lab { padding: 2pt 0; break-inside: avoid; border-top: 0; border-bottom: 1px solid #777; }
   #view-visit .visit-lab-trend { font-size: 12pt; }
-  #view-visit .visit-checklist { display: block; column-count: 2; column-gap: 16pt; }
+  #view-visit .visit-checklist { display: block; column-count: 3; column-gap: 12pt; }
   #view-visit .visit-check { break-inside: avoid; }
-  #view-visit .visit-doc-head { padding-bottom: 3pt; gap: 0; }
+  #view-visit .visit-doc-head { padding-bottom: 3pt; gap: 0 14pt; flex-direction: row; flex-wrap: wrap; align-items: baseline; } /* the name and the period beside the title: two lines for the head */
   #view-visit .visit-avg-row { gap: 0; }
   #view-visit .visit-section > p { margin-bottom: 2pt; }
   #view-visit .visit-sym-row { padding: 2pt 0; }
   #view-visit .visit-q-list { margin-top: 3pt; gap: 1pt; }
-  #view-visit .sym-flag, #view-visit .sym-flag.prominent { padding: 4pt 8pt; margin-top: 2pt; font-size: 9pt; }
+  #view-visit .sym-flag, #view-visit .sym-flag.prominent, #view-visit .body-flag, #view-visit .body-flag.prominent { padding: 4pt 8pt; margin-top: 2pt; font-size: 9pt; }
+  /* The weight and blood pressure sentences name what they are about, so on paper they run on as short paragraphs (the section is
+     what a typical page has least room for: it must not push the page to a second sheet). */
+  #view-visit .visit-body-sub:not(.visit-body-sessions), #view-visit .visit-body-foot { display: none; }
+  #view-visit .visit-body-sub { margin: 3pt 0 1pt; }
+  #view-visit .visit-body-list { display: inline; font-size: 8.5pt; line-height: 1.2; }
+  #view-visit .visit-body-list li { display: inline; margin-right: 5pt; }
+  #view-visit .visit-body-gains li { padding: 1pt 0; border-color: #777 !important; }
   #view-visit .visit-note { margin-top: 2pt; font-size: 8.5pt; }
   #view-visit .visit-foot { padding-top: 4pt; font-size: 8.5pt; }
   #view-visit .visit-sym-row { padding: 3pt 0; }
   #view-visit .visit-section { break-inside: auto; }
   #view-visit .visit-h { break-after: avoid; }
+  /* If the page needs a second sheet, the checklist and the closing line go there together, never the closing line alone. */
+  #view-visit .visit-checklist { break-inside: avoid; }
+  #view-visit .visit-foot { break-before: avoid; }
   #view-visit .visit-q { break-inside: avoid; }
   #view-visit .visit-check { gap: 6pt; }
   #view-visit .visit-check input { width: 11pt; height: 11pt; margin-top: 2pt; accent-color: #000; }

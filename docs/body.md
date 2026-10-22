@@ -6,10 +6,10 @@ leaves (export) and comes in (import), what it never does, and how the browser t
 [design note 10](dev/research/10-weight-and-blood-pressure.md); the contract is [ARCHITECTURE.md](../ARCHITECTURE.md), "Weight and blood
 pressure". The code is `app/body.py`, the models in `app/models.py` and `app/migrations/m018_body_measurements.py`.
 
-> **Built in three parts (note 10 §7).** Part A, described here, is the server, the demo's twin, the settings, the export and import and the
-> handbook's two lines for a very high reading: **it has no screens yet**. Part B adds the Today card and its sheets, the Trends charts, the
-> Settings section, the Profile helpers, the visit prep section and the handbook's "Using the app" page; Part C an import from the iPhone
-> Health app's `export.xml`. Until Part B ships, the log is reachable through the API (and the demo's twin of it) and appears in the export.
+> **Built in three parts (note 10 §7).** Part A is the server, the demo's twin, the settings, the export and import and the handbook's two lines
+> for a very high reading. Part B, "The screens" below, is the Today card and its sheets, the Trends charts, the Settings section, the Profile
+> helpers, the visit prep section and the handbook's "Using the app" page. Part C is an import from the iPhone Health app's `export.xml`
+> (the buttons for it exist only when its module does).
 
 ## What the app does and does not do
 
@@ -24,7 +24,7 @@ other). The app **records and shows**, works out a few plain numbers, and points
 * **It says nothing about a cause, a treatment or a medicine.** The warning-sign lines are the handbook's own words with a link; there
   is no advice on taking, skipping or changing a medicine, and nothing about insulin or glucose (CLAUDE.md).
 * **It never changes the Profile weight.** That weight moves the protein and calorie targets and, on dialysis, is the dry weight the unit
-  sets; a scale reading is not that. (Part B offers to fill a field only when the person taps "Use this".)
+  sets; a scale reading is not that. Profile offers to fill a field only when the person taps "Use this", and saving is still Save profile.
 
 ## What is stored
 
@@ -58,7 +58,8 @@ header on writes. The full table is in ARCHITECTURE.md; in short: `GET`/`POST`/`
   up, and whether a mean is **at or above** the goal number ("under 130/80": 130 is not under). With fewer than 3 readings the means are
   shown and nothing is said against the goal.
 * **Six-month change**: the latest weight against the weight closest to 182 days before it (within 30 days): kg and percent. Visit prep
-  (Part B) shows it; the GLIM weight-loss rule reads it only if the person copies it into Profile.
+  shows it, and Profile offers that earlier weight under "Weight 6 months ago"; the GLIM weight-loss rule reads it only if the person copies it
+  into Profile.
 
 ## The handbook's words
 
@@ -72,6 +73,26 @@ a medicine or changing your dose"; the handbook leaves that out on purpose. Read
 (NHLBI does not say) and is an open question in `handbook/REVIEW.md` ("Emergency tiers and red flags", S8) for the clinician review.
 `tests/test_body.py` reads the page and fails when a quoted phrase is no longer under its heading, so the app never quotes words the page no
 longer has. Changing these lines needs the same clinical review as the page itself.
+
+## The screens (Part B)
+
+Where a person sees it; the code is `js/views/body.js` (`KH.body`), `js/views/body_trends.js` (`KH.bodyTrends`) and `js/engine/body_ui.js` (`KH.bodyUi`, pure),
+the styles `css/body.css`, the cards and sheets in `index.html`. No screen adds a route; the full description is ARCHITECTURE.md "Weight and blood pressure", "Where it shows".
+
+| Where | What |
+|---|---|
+| **Today**, the card *Weight and blood pressure* (under Symptoms) | the day's weights and readings with **Edit** and **Delete** (asked in the page); **Add weight** and **Add blood pressure** open sheets, and nothing is saved until **Save**; the alarm line (how the weight changed, the alarm as the care team gave it, the two weights compared as the server names them) and the goal line (the goal and the last 7 days' average against it) when set; **a reading at 180 top or 120 bottom or more is the first block, prominent**, with the server's `flag.text` as it is (the 911 line first) and a link to Get help now; the same block shows in the sheet before Save. A save offline says the connection is needed |
+| The **weight sheet** | the unit from `user.units.weight` with the other unit echoed ("154.3 lb = 70.0 kg"); when it was taken (morning, before dialysis, after dialysis, other: the dialysis choices only when the profile is on dialysis; **nothing is pre-ticked**); date, optional time and note. A note-only edit keeps the stored weight to the hundredth |
+| The **blood pressure sheet** | the top number (systolic) then the bottom number (diastolic), an optional pulse, the one line from MedlinePlus about measuring, an echo of what was typed ("Top 180, bottom 95") so a slip is seen, and the same choices of when it was measured |
+| **Trends**, the card *Weight and blood pressure* | a weight chart (one line, a diamond per weight after dialysis, a dashed line for the profile's dry weight on hemodialysis) and a blood pressure chart (two lines, the goal as dashed lines), plain SVG built with the DOM, each with a **table under it** and a legend; the 7-day averages (each kind of weight on its own) |
+| **Settings → Weight and blood pressure** | the unit, the alarm ("Call my team if my weight goes up by more than [ ] [kg/lb] [between sessions \| in [n] days]", between sessions only on hemodialysis) and the goal ("My blood pressure goal from my team: under [ ] / [ ]"), each saying it is the care team's number and that the app suggests none, and a link to the handbook page |
+| **Settings → Your data** | the import counts, the skipped rows and the "Data imported" activity line name weights and readings; **Import from Apple Health** is a button only when `KH.bodyImport` exists (Part C) |
+| **Profile** | under Weight: "Latest in your log: 70.2 kg on Oct 20 — Use this" (not on dialysis, where Profile holds the dry weight); under Weight 6 months ago: "In your log: 74.0 kg on Apr 21 — Use this". Using one fills the box; Save profile still saves |
+| **Visit prep** | the latest weight and the six-month change; on hemodialysis the gains between the last sessions (up to 6, with the alarm if set); the 7-day and 30-day blood pressure averages, how many readings were at or above the goal and any flagged reading with its date and the handbook's block |
+| The **handbook** | *Using the app → Weight and blood pressure* (what to record, how to measure, which device, that the alarm and goal are the team's numbers, what the app shows and does not, a pointer to Get help now); First setup and the hemodialysis page link to it |
+
+The words for a flagged number are never written by a screen: `flagBlock` draws `flag.text` from the server (the demo: the twin's copy, kept equal by the
+vectors). A screen says nothing about a cause, a treatment or a medicine (`tests/test_body_ui.py` greps the code and the markup for such words).
 
 ## Settings
 
@@ -142,8 +163,10 @@ The Pages demo runs `js/mock/body.js` over `js/engine/body.js` in the page: the 
 alarm and **no reading at 180/120** (so the demo never shows the emergency block unasked). The demo has no rate limit on the batch routes.
 The import sheet works against it too (`tools/e2e/body_import.py` runs it in the demo as well).
 
-Checks, all without a network: `python -m pytest` (`tests/test_body.py`, `test_body_vectors.py`, `test_migration_m018.py`, and the
-isolation, auth coverage, export and import tests), `node tests/js/run_vectors.mjs` (`tests/data/body_vectors.json`, generated from the
+Checks, all without a network: `python -m pytest` (`tests/test_body.py`, `test_body_vectors.py`, `test_migration_m018.py`, `test_body_ui.py` and
+`test_body_ui_numbers.py` for the screens (the latter runs `js/engine/body_ui.js` and the visit prep section through `tests/js/body_ui_runner.mjs` and compares with the
+server's models, settings and functions), and the isolation, auth coverage, export and import tests), `node tests/js/run_vectors.mjs` (`tests/data/body_vectors.json`, generated from the
 server by `tests/data/gen_body_vectors.py`; regenerate it with `python tests/data/gen_body_vectors.py` after a change to `app/body.py` or
-the body models, then make the browser twin agree), and the browser harness `python tools/e2e/parity.py` (section 16 runs the same
-request script on the live server and the demo).
+the body models, then make the browser twin agree), and the browser harnesses `python tools/e2e/parity.py` (section 16 runs the same
+request script on the live server and the demo) and `python tools/e2e/body.py` (the screens in Chromium at 375 px and 1280 px, light and dark, against a real server and the
+demo).

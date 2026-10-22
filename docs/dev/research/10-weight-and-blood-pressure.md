@@ -325,6 +325,33 @@ contract.
 * **Not in Part A:** every screen, the Profile helpers, the visit prep section, the handbook page "Using the app", the Apple Health import. The import
   summary lines in Settings (`IMPORT_KINDS` in `js/views/settings.js`) and the "Data imported" activity line do not name weights and readings yet (Part B).
 
+### 4.13 Decisions made while building Part B (the screens)
+
+The code and `ARCHITECTURE.md` "Weight and blood pressure → Where it shows" are the contract; these are the calls the note left open.
+
+* **Nothing is pre-ticked.** The sheets make the person choose when a weight or reading was taken (as the symptoms sheet makes them choose a severity): a guessed
+  "morning" would put a wrong kind into the comparisons of §4.4. The dialysis choices follow the profile's `dialysis` (not only hemodialysis: the note says "on
+  dialysis"), and an edit always keeps its own choice.
+* **Units.** The sheet uses `summary.units` (pounds until the server says otherwise) and a person may type a comma for the decimal mark. A weight is stored in kg to
+  0.01 (`lbToKg`), and an edit that leaves the number as shown keeps the stored weight, so editing a note never moves a weight by a hundredth. The alarm's amount is typed in
+  the unit and stored in kg to 0.01 as well.
+* **Today.** One flag block for the day's flagged readings (the words are the same for every one), headed with the reading or readings, first on the card; the in-sheet
+  copy comes from the twin (`bpFlag`) and is shown only for a valid reading. The alarm line says "Not over your alarm" rather than "OK", and names the two weights from the
+  server's `message` (so its date is the server's ISO date). The goal line shows only when a goal is set; with neither number set a line points to Settings.
+* **Settings.** Both numbers say they are the care team's and show where the value comes from; "between sessions" is offered when the profile is on hemodialysis or when it
+  is already the saved choice (a note says what to change). An empty amount saves "no alarm", empty goal boxes "no goal".
+* **Charts.** The two series colours are the first two slots of the dataviz skill's validated palette (`--body-top`, `--body-bottom`), the marks differ in shape (circle,
+  diamond for after dialysis, square) and every value is in a table under the chart (a `<details>` like the nutrient charts). The 7-day average of weights is per kind of weight.
+* **Profile.** The latest-weight line follows the Dialysis box of the form (not the saved profile), and fills kg to one decimal; the six-month line is shown on dialysis too.
+* **Visit prep.** Reads `bodySummary`, the last 366 days of weights and the longer of the period and 30 days of readings. A session's gain is a weight before dialysis
+  against the latest weight after dialysis in the 7 days before it (else the dry weight in Profile: the server's `between_sessions` rule); "over your alarm" only against a
+  `between_sessions` alarm. "At or above the goal" counts a reading with a top number at or above the goal's or a bottom number at or above its. The six-month change needs a
+  weight in the last 366 days to start from.
+* **Handbook.** The page cites KDIGO 2021 recommendations 1.2 and 3.1.1 (checked against the guideline's PDF: it covers adults with CKD **not on dialysis**) and the 2025
+  AHA/ACC guideline for devices. The guideline's full text could not be fetched (HTTP 403), so the device wording was checked against the AHA's news release of 2025-12-11 and
+  PubMed/Crossref for the citation; the "Re-verify" line of this note's header still stands.
+* **The import.** `KH.bodyImport.open()` is called with no arguments, only when it exists (checked each time a card or Settings is drawn); Part B builds neither the reader nor its sheet.
+
 ---
 
 ## 5. Risks
