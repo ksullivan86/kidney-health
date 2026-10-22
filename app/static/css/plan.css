@@ -17,7 +17,7 @@
   display: flex; flex-direction: column; gap: 8px; min-height: var(--tap); color: var(--text);
 }
 .plan-day-open:hover { background: var(--surface-2); }
-.plan-day-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.plan-day-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 6px; }
 .plan-day-date { display: flex; align-items: baseline; gap: 6px; }
 .plan-wd { font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .plan-dnum { font-size: 1.25rem; font-weight: 700; }

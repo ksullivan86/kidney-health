@@ -160,11 +160,22 @@ svg { display: inline-block; vertical-align: middle; }
 }
 .topbar-inner {
   max-width: 880px; margin: 0 auto; padding: 0 16px;
-  min-height: 56px; display: flex; align-items: center; gap: 12px;
+  min-height: 56px; display: flex; align-items: center; gap: 8px;
 }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; flex: 1; min-width: 0; }
+/* The brand is a size container: the name is drawn only where it fits whole beside the logo (and the Preview pill when there is one),
+   never cut to "K…". Elsewhere it is hidden from the eye and still read aloud. The logo and the pill always keep their room.
+   The name is about 130 px wide; the limits below leave room for a wider font. */
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; flex: 1; min-width: 28px; container: brand / inline-size; }
+.brand:has(#brand-pill:not([hidden])) { min-width: 112px; }
 .brand-icon { width: 28px; height: 28px; flex: none; }
 .brand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@container brand (max-width: 191.98px) {
+  .brand-name { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); }
+}
+@container brand (max-width: 279.98px) {
+  .brand:has(#brand-pill:not([hidden])) .brand-name { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); }
+}
+@media (max-width: 349.98px) { .topbar-inner { gap: 4px; padding: 0 8px; } }
 .brand-pill {
   flex: none; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   padding: 2px 8px; border-radius: 999px; background: var(--accent-tint); color: var(--accent);
@@ -231,7 +242,7 @@ svg { display: inline-block; vertical-align: middle; }
 }
 /* "Learn: Potassium" after a warning, an alert or the target notes (opens in a new tab). */
 .learn-more { display: inline-block; margin-top: 2px; padding: 2px 0; font-weight: 600; font-size: 0.85rem; text-underline-offset: 2px; } /* ≥ 24 px tall: WCAG 2.2 target size; 44 px on touch screens (touch.css) */
-.learn-more::after { content: " \2197"; content: " \2197" / ""; font-weight: 400; } /* arrow: leaves the app; not read aloud */
+.learn-more::after { content: "\00a0\2197"; content: "\00a0\2197" / ""; font-weight: 400; } /* arrow: leaves the app; not read aloud; a no-break space keeps it on the line of the last word */
 #theme-toggle .icon-moon { display: none; }
 :root[data-theme="dark"] #theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] #theme-toggle .icon-moon { display: inline-block; }
@@ -244,16 +255,16 @@ svg { display: inline-block; vertical-align: middle; }
   :root { --tabbar-h: 0px; }
   .tabs { position: static; border: 0; background: none; padding: 0; }
   .tablist { gap: 4px; }
-  .tab { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: var(--tap); padding: 0 10px; font-size: 0.95rem; }
+  .tab { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: var(--tap); padding: 0 8px; font-size: 0.95rem; }
   .tab-icon { width: 20px; height: 20px; }
   .tab[aria-selected="true"] { background: var(--accent-tint); }
   .main { padding: 20px 24px 40px; }
 }
 
-/* Five tabs, the gear and the theme switch leave no room for the app's name between 720 and 960 px:
-   show the icon alone there rather than a name cut to "K…" (the page title still names the app). */
-@media (min-width: 720px) and (max-width: 959.98px) {
-  .brand-name { display: none; }
+/* Six tabs and four icons need about 810 px beside the logo and the Preview pill. Below 880 px only the open tab keeps its word;
+   the others are icons (still named for screen readers) so the header never runs past the window. */
+@media (min-width: 720px) and (max-width: 879.98px) {
+  .tab:not([aria-selected="true"]) > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
 /* ---------- cards & lists ---------- */
@@ -355,6 +366,10 @@ input::placeholder { color: var(--text-3); opacity: 1; }
 input[type="number"] { font-variant-numeric: tabular-nums; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-grid .span-2 { grid-column: 1 / -1; }
+/* Two fields side by side whose labels may wrap differently: the boxes line up on their bottom edge. */
+.form-grid.align-end { align-items: end; }
+/* A field that takes the whole row on a phone, where half a row cuts its words (a select, a placeholder). */
+@media (max-width: 480px) { .form-grid .span-2-narrow { grid-column: 1 / -1; } }
 .range-inputs { display: flex; align-items: center; gap: 8px; }
 .range-inputs input { flex: 1; }
 .req { color: var(--over-text); }

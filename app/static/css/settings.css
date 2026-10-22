@@ -121,6 +121,9 @@
 
 /* ---------- import from a file (Settings → Your data) ---------- */
 .import-block, .import-result { display: flex; flex-direction: column; gap: 10px; }
+/* Your data and Signed-in devices stack their pieces with a gap, so a button never touches the box above it. */
+.data-block, #set-devices { display: flex; flex-direction: column; gap: 12px; }
+.data-block > .settings-actions, #set-devices > .settings-actions { margin: 0; }
 .import-block > p, .import-result p { margin: 0; }
 .import-title { margin: 0; font-size: 1rem; }
 .import-title:focus { outline: none; }

@@ -92,3 +92,4 @@
 .labs-latest-name { font-size: 0.8rem; color: var(--text-2); }
 .labs-summary p { margin: 0; }
 .labs-view .card > .card-title { margin-bottom: 8px; }
+.learn-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; }
