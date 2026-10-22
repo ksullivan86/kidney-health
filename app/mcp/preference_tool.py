@@ -43,6 +43,7 @@ from ..auth import api_tokens
 from ..auth.accounts import begin_immediate
 from ..auth.context import auth_context, request_ip
 from ..auth.ratelimit import register_limit
+from ..brand import LOGGER_NAME  # the name, not the module, as in tools.py
 from ..guidance import api as guidance_api
 from ..guidance import context as guidance_context
 from ..log import HYPO_FLAG
@@ -50,7 +51,7 @@ from ..settings_store import InvalidSettingValue, SettingLocked, SettingNotEdita
 from . import request_keys
 from . import tools as T
 
-logger = logging.getLogger("kidney_health.mcp")
+logger = logging.getLogger(f"{LOGGER_NAME}.mcp")
 
 TOOL_NAME = PREF.TOOL_NAME  # "set_food_preference"
 SOURCE = guidance_context.ASSISTANT_SOURCE  # food_preferences.source of a change made here (note 09 §4.8b)
