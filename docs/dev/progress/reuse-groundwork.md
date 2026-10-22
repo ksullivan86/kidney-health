@@ -1,4 +1,4 @@
-Status: in progress (change 5 committed; change 7 written, final full pytest run under way)
+Status: complete
 
 # reuse-groundwork
 
@@ -47,7 +47,7 @@ each of `app.rules_kidney`, `app.nutrient_core`, `app.nutrients`, `app.targets` 
 `ruff check .`; every `python tests/data/gen_*.py --check` exits 0 (vectors unchanged);
 `node tests/js/run_vectors.mjs` passes.
 
-## Change 7: pytest -m safety (written)
+## Change 7: pytest -m safety (done)
 
 * `pyproject.toml`: `safety` marker registered under `[tool.pytest.ini_options] markers`.
 * Module-level `pytestmark = pytest.mark.safety`: `tests/guidance/test_hypo.py`,
@@ -61,6 +61,13 @@ each of `app.rules_kidney`, `app.nutrient_core`, `app.nutrients`, `app.targets` 
 * A mixed test's mark is a judgment call; the criterion was: its name or docstring states one of the
   rules (no dosing, a low is never blocked or warned against, quoted handbook text, AI guard and
   prefilter, health data never sent to AI).
+
+## Final checks (on the committed tree)
+
+* `python -m pytest`: 5037 passed (the 5033 tests that already existed plus the 4 of `tests/test_safety_set.py`), no network.
+* `python -m pytest -m safety`: 523 passed, 4514 deselected; collection alone takes about a second.
+* `node tests/js/run_vectors.mjs` passes; every `tests/data/gen_*.py --check` exits 0 (no vector file changed);
+  `ruff check .` clean.
 
 ## Commands
 
