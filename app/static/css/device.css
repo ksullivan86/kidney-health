@@ -85,7 +85,8 @@
 @media (prefers-reduced-motion: reduce) { .sync-badge.syncing svg { animation: none; } }
 @keyframes kh-spin { to { transform: rotate(360deg); } }
 .sync-badge-short { display: none; }
-@media (max-width: 480px) {
+/* The header has room for the long form only on a wide window: with four icons and six tabs it would push the gear off the page. */
+@media (max-width: 999.98px) {
   .sync-badge { padding: 0 10px; }
   .sync-badge-long { display: none; }
   .sync-badge-short { display: inline; font-variant-numeric: tabular-nums; }

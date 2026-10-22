@@ -493,7 +493,7 @@
     });
     body.append(h('fieldset', { class: 'field body-goal', id: 'set-body-goal' },
       h('legend', {}, 'My blood pressure goal from my team: under'),
-      h('div', { class: 'form-grid' },
+      h('div', { class: 'form-grid align-end' },
         h('div', { class: 'field' }, h('label', { for: 'set-body-goal-systolic' }, 'Top number (systolic)'), gTop),
         h('div', { class: 'field' }, h('label', { for: 'set-body-goal-diastolic' }, 'Bottom number (diastolic)'), gBottom)),
       h('span', { class: 'hint', id: 'set-body-goal-hint' }, 'The numbers your care team gave you, for example 130 and 80. The app does not suggest a goal, and a home reading is not the same as one taken at the clinic. Leave both empty for no goal.'),

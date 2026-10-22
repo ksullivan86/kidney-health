@@ -983,6 +983,38 @@ class Run:
 # ---------------------------------------------------------------------------
 # Sweep: every visible button in every view, clicked on a fresh load
 # ---------------------------------------------------------------------------
+HEADER_JS = r"""
+(show) => {
+  // show: which optional parts of the header are on: the Preview pill, the admin shield, the Ask tab, the offline badge.
+  const q = (s) => document.querySelector(s);
+  q('#brand-pill').hidden = !show.pill;
+  q('#admin-open').hidden = !show.admin;
+  q('#tab-ask').hidden = !show.ask;
+  q('#sync-badge').hidden = !show.sync;
+  q('#sync-badge-text').textContent = 'Offline · 3 to sync';
+  q('#sync-badge-short').textContent = '3';
+  const vis = (e) => { if (!e) return false; const b = e.getBoundingClientRect(); const cs = getComputedStyle(e); return b.width > 1 && b.height > 1 && cs.display !== 'none' && cs.visibility !== 'hidden' && !e.closest('[hidden]'); };
+  const vw = document.documentElement.clientWidth;
+  const inline = vw >= 720; // from 720 px the tabs sit in the header; below, in the bar at the bottom
+  const name = q('.brand-name');
+  const nameShown = getComputedStyle(name).position !== 'absolute' && name.clientWidth > 3;
+  const parts = [['logo', '.brand-icon'], ['pill', '#brand-pill'], ['sync', '#sync-badge'], ['learn', '#learn-link'], ['theme', '#theme-toggle'],
+                 ['admin', '#admin-open'], ['settings', '#settings-open']];
+  if (inline) for (const t of document.querySelectorAll('.tab')) parts.push([t.id, '#' + t.id]);
+  if (nameShown) parts.push(['name', '.brand-name']);
+  const boxes = [];
+  for (const [k, s] of parts) { const e = q(s); if (vis(e)) { const b = e.getBoundingClientRect(); boxes.push([k, b.left, b.right]); } }
+  const problems = [];
+  if (nameShown && name.scrollWidth > name.clientWidth + 1) problems.push('the app name is cut ("' + name.textContent.trim().slice(0, 1) + '…")');
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    if (Math.min(boxes[i][2], boxes[j][2]) - Math.max(boxes[i][1], boxes[j][1]) > 1) problems.push(boxes[i][0] + ' overlaps ' + boxes[j][0]);
+  }
+  if (boxes.some((b) => b[2] > vw + 1)) problems.push('a part of the header is past the right edge');
+  if (document.documentElement.scrollWidth > vw + 1) problems.push('the page scrolls sideways');
+  return problems;
+}
+"""
+
 LIST_BUTTONS_JS = r"""
 () => {
   const vis = (el) => el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true });
@@ -1224,6 +1256,39 @@ def probes(port):
                 c = r.F.evaluate(CHECKS_JS, {"taps": False, "contrast": False})
                 if c["overflowX"] or c["offscreen"]:
                     issue("layout", f"320 px: overflow in {view}", f"scrollWidth {c['scrollWidth']}; {'; '.join(c['offscreen'][:5])}", "low")
+            ctx.close()
+            # 7. the header at every width, with the optional parts on and off: the app name is whole or hidden (never "K…"), nothing
+            #    in the header overlaps another part or runs past the window, the page never scrolls sideways
+            ctx = browser.new_context(viewport={"width": 1280, "height": 700})
+            page = ctx.new_page()
+            r = Run(port, "iframe", "desktop", "light", "none")
+            r.page = page
+            r.load(page, "")
+            tried = 0
+            for width in (320, 340, 360, 375, 390, 414, 430, 480, 600, 719, 720, 768, 820, 879, 880, 960, 1024, 1280, 1440):
+                page.set_viewport_size({"width": width, "height": 700})
+                page.wait_for_timeout(100)
+                for pill in (True, False):
+                    for admin in (True, False):
+                        for ask in (True, False):
+                            for sync in ((False,) if pill else (False, True)):  # the offline badge is the installed app's: no Preview pill with it
+                                show = {"pill": pill, "admin": admin, "ask": ask, "sync": sync}
+                                found = r.F.evaluate(HEADER_JS, show)
+                                tried += 1
+                                if found:
+                                    issue("layout", f"Header at {width} px: {'; '.join(found[:3])}", f"parts on: {show}", "medium")
+            out["notes"].append(f"header: {tried} width and part combinations checked")
+            # 8. the Plan week: the "Today" badge stays inside its day (it used to stick out of the card on a desktop)
+            for width in (720, 800, 1024, 1280):
+                page.set_viewport_size({"width": width, "height": 800})
+                r.F.locator("#tab-plan").click()
+                r.F.wait_for_function("() => document.querySelectorAll('#plan-grid .plan-day').length === 7", timeout=5000)
+                page.wait_for_timeout(100)
+                stuck = r.F.evaluate("""() => [...document.querySelectorAll('#plan-grid .plan-day')].filter((d) => [...d.querySelectorAll('.badge')].some((b) =>
+                    b.getBoundingClientRect().right > d.getBoundingClientRect().right - 1 || b.getBoundingClientRect().left < d.getBoundingClientRect().left + 1))
+                    .map((d) => d.textContent.trim().slice(0, 12))""")
+                if stuck:
+                    issue("layout", f"Plan week at {width} px: a badge sticks out of its day", ", ".join(stuck), "low")
             ctx.close()
         finally:
             browser.close()

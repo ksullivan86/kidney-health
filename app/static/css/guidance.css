@@ -56,6 +56,8 @@
 }
 .g-meal-chips { padding: 2px 0 4px; }
 .g-meal-chips .meal-chip { max-width: 280px; }
+/* "Your usual dinner: egg white, bread, ..." is long: two lines of it, not one cut at the edge. */
+.g-meal-chips .meal-chip-name { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 
 /* ---------- insights (Today, Trends) ---------- */
 .g-insights { display: flex; flex-direction: column; gap: 8px; }

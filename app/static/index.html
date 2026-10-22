@@ -891,7 +891,7 @@
             <label for="lab-date">Date of the test</label>
             <input id="lab-date" name="taken_on" type="date">
           </div>
-          <div class="field">
+          <div class="field span-2-narrow">
             <label for="lab-note">Note (optional)</label>
             <input id="lab-note" name="note" type="text" maxlength="500" autocomplete="off" placeholder="e.g. before dialysis">
           </div>
@@ -936,7 +936,7 @@
     <!-- Import from a patient portal file (js/views/lab_ccda.js, js/engine/ccda_labs.js): a C-CDA health summary (.xml) downloaded from a patient portal
          is parsed by the browser on this device, never uploaded; the same review table as the spreadsheet import, and only the rows kept are sent. -->
     <section class="card" id="lab-ccda" aria-labelledby="lab-ccda-h">
-      <h2 class="card-title" id="lab-ccda-h">Import from a patient portal file (C-CDA .xml)</h2>
+      <h2 class="card-title" id="lab-ccda-h">Import from a patient portal file (<span class="nobr">C-CDA .xml</span>)</h2>
       <p class="muted small">Patient portals such as MyChart can give you your health summary as an XML file. It is read on this device and <strong>nothing is uploaded</strong>: you check every result before saving, and only the results you keep are sent.</p>
       <ol class="small lab-fhir-steps">
         <li>In your patient portal (for example MyChart), open your <strong>health summary</strong> or a <strong>visit summary</strong> and choose <strong>Download</strong>. If it offers a choice of formats, pick the <strong>XML</strong> one (also called <strong>C-CDA</strong> or <strong>CCD</strong>), not the PDF. The names of the menus differ between portals.</li>
@@ -1539,7 +1539,7 @@
         </div>
       </fieldset>
       <div class="form-grid">
-        <div class="field">
+        <div class="field span-2-narrow">
           <label for="copy-include">Include</label>
           <select id="copy-include">
             <option value="all">Eaten and planned</option>
@@ -2028,7 +2028,7 @@
     <div class="sheet-body">
       <div class="form-error" id="bp-error" role="alert" hidden></div>
       <p class="hint body-bp-hint" id="bp-hint"></p>
-      <div class="form-grid">
+      <div class="form-grid align-end">
         <div class="field">
           <label for="bp-systolic">Top number (systolic)</label>
           <input id="bp-systolic" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="e.g. 120" aria-describedby="bp-echo">

@@ -92,3 +92,9 @@
 .labs-latest-name { font-size: 0.8rem; color: var(--text-2); }
 .labs-summary p { margin: 0; }
 .labs-view .card > .card-title { margin-bottom: 8px; }
+.learn-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; }
+
+/* On a phone the date is always above the value. Side by side only when the value is short, the rows of one list came out in two shapes. */
+@media (max-width: 480px) {
+  .lab-row-main, .lab-import-list label { flex-direction: column; align-items: flex-start; }
+}

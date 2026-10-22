@@ -481,7 +481,7 @@
     box.append(h('p', { class: 'kf-message' }, kf.message));
     if (eg && eg.matches_profile === false) box.append(h('p', { class: 'small' }, 'Your profile keeps the stage you saved; only your nephrologist can say whether it has changed.'));
     const links = [learnLink('egfr', 'Learn: eGFR and creatinine'), al ? learnLink('uacr', 'Learn: urine albumin') : null].filter(Boolean);
-    if (links.length) box.append(h('p', {}, links.flatMap((a, i) => (i ? [' · ', a] : [a]))));
+    if (links.length) box.append(h('p', { class: 'learn-links' }, links)); // side by side while they fit, one under the other when they do not
   }
   function renderHistory(labs) {
     const box = clear($('#labs-history'));

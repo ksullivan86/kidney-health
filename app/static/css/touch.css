@@ -9,7 +9,13 @@
   .meal-item-sv input { min-height: var(--tap); }
   #category-chips { min-height: calc(var(--tap) + 8px); }
   .link-btn { display: inline-flex; align-items: center; }
-  .learn-more { display: inline-flex; align-items: center; min-height: var(--tap); } /* handbook links stand alone on their line */
+  /* Handbook links stand alone on their line. Inline-block, not flex: when the words wrap, the arrow stays at the end of the last line
+     instead of being pushed to the right edge. */
+  .learn-more { display: inline-block; box-sizing: border-box; min-height: var(--tap); padding: 12px 0; }
+  /* After a warning or a flag the link takes its own line: inline, its 44 px box would push the lines of the text above it apart. */
+  .alert .learn-more, .warning .learn-more, .body-flag .learn-more, .sym-flag .learn-more { display: block; width: fit-content; margin-top: 0; }
+  /* A link button that follows a sentence takes its own line, a full 44 px target: beside the words its box would push their lines apart. */
+  .profile-choose-note .link-btn, .g-targets .link-btn { display: flex; margin-left: -8px; }
   .details-card > summary, .inline-details > summary { min-height: var(--tap); display: flex; align-items: center; padding: 4px 0; }
   .check input { margin-top: 12px; }
   .check .check-text { padding-top: 11px; }

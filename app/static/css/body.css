@@ -73,6 +73,8 @@ input[type="time"] {
 .body-echo { margin: 0; min-height: 1.4em; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
 .body-echo:empty { display: none; }
 .body-bp-hint { margin: 0; }
+/* "How to measure" sits in the sentence: a 44 px link there would spread the lines apart (as the Ask answers do). */
+.body-bp-hint a.learn-more { display: inline; min-height: 0; margin: 0; padding: 0; }
 /* When it was taken: a few big choices that wrap on a phone */
 .body-seg { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
 .body-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
