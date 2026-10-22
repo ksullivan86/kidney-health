@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # pdf-labs: lab results from a PDF report (design note 13)
 
@@ -17,7 +17,7 @@ Spec: `docs/dev/research/13-lab-results-from-a-pdf.md` (decided 2026-10-22). Bra
        listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
 7. [x] Docs: ARCHITECTURE, docs/ai.md, handbook page, docs/security.md, docs/deployment.md + handbook upgrades page (CSP string),
        ROADMAP, CHANGELOG (`## Unreleased`), maintainers/README mentions; `python scripts/build_handbook.py --check`.
-8. [ ] Full run: `python -m pytest` (no xdist installed), `node tests/js/run_vectors.mjs`, `ruff check .`.
+8. [x] Full run: `python -m pytest` (no xdist installed), `node tests/js/run_vectors.mjs`, `ruff check .`.
 
 ## Findings so far (pdfjs-dist 6.4.299)
 
@@ -58,3 +58,9 @@ handbook upgrades page (CSP names), targets-and-labs.md, barcode-and-photos.md, 
 idea left), CHANGELOG under the existing `## Unreleased`, maintainers.md, README.md, docs/README.md, vendor-check.yml wording.
 Checks run: `ruff check .`, `node tests/js/run_vectors.mjs`, `python scripts/build_handbook.py --check` (the repo's tool is `scripts/build_handbook.py`),
 `python3 scripts/vendor_barcode.py --check`, `python tools/e2e/lab_pdf.py` (100 checks, 0 failed, both screens). Full `python -m pytest` is step 8.
+
+## Final checks (all green)
+
+Full `python -m pytest` (no xdist installed): exit 0, no failures (only the existing handbook "unused sources" warning). `ruff check .`, `node tests/js/run_vectors.mjs`,
+`python scripts/build_handbook.py --check`, `python3 scripts/vendor_barcode.py --check`: pass. `python tools/e2e/lab_pdf.py` at the final tree: 100 passed, 0 failed.
+Left for the owner: a live run with a real vision model and real portal PDFs on an iPhone and a desktop browser; the text-layer idea (note 13 §6).
