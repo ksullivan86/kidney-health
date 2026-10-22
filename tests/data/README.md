@@ -209,7 +209,7 @@ The version of a logged entry, the `If-Match` rule, and the `PUT` and `DELETE` r
 
 Top-level keys:
 
-* `fields`: the entry fields the version is made of, in order. The 12 nutrient values follow them in registry order.
+* `fields`: the entry fields the version is made of, in order. The nutrient values follow them in registry order.
 * `cases`: `{name: string, entry: object, version: string}`.
 * `match_cases`: `{name: string, header: string | null, version: string, expected: bool}`, whether an `If-Match` header allows a change.
 * `script`: one request script. A step may have `if_match`, the `If-Match` header to send.
