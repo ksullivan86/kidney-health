@@ -761,7 +761,7 @@
   function isPlanned(e) { return e.status === 'planned'; }
 
   // Unrounded, like the server's entry snapshot (food × servings); the display rounds and the
-  // warnings evaluator rounds exactly as app/nutrients.py does.
+  // warnings evaluator rounds exactly as app/nutrient_core.py does.
   function scaledNutrients(perServing, servings) {
     const out = {};
     for (const n of KH.rules.NUTRIENTS) {
@@ -807,7 +807,7 @@
     if (perMeal && day.meals && day.meals[meal]) {
       let mealBase = day.meals[meal].carbs_g || 0;
       if (planned && day.planned_meals && day.planned_meals[meal]) mealBase += day.planned_meals[meal].carbs_g || 0;
-      // Entries that treated a low are left out of the meal's carbohydrate (nutrients.meal_carb_alerts, v0.3.1);
+      // Entries that treated a low are left out of the meal's carbohydrate (rules_kidney.meal_carb_alerts, v0.3.1);
       // an edited entry is taken out once, either way.
       const isHypo = (e) => !!e && e.purpose === 'hypo';
       const hypoBase = (day.entries || []).filter((e) => e.meal === meal && isHypo(e) && (planned || !isPlanned(e)))

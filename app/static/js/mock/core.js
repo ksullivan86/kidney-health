@@ -1,5 +1,5 @@
 /* Kidney Diet Log — demo API core: an in-page copy of the FastAPI server (app/foods.py, log.py,
-   meals.py, profile.py, nutrients.py, periods.py) over in-memory tables. Same routes, same
+   meals.py, profile.py, nutrients.py, rules_kidney.py, periods.py) over in-memory tables. Same routes, same
    numbers, same texts; nothing is persisted. On only with ?mock=1 or in the preview build.
 
    This file holds the request validation (the server's pydantic models, flattened like

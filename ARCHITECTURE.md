@@ -39,7 +39,9 @@ app/main.py                 FastAPI app factory, static mount, routers, startup 
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
 app/db.py                   sqlite connection helper; runs the ordered steps in app/migrations/ ("Database migrations")
 app/models.py               Pydantic request/response models (shapes below)
-app/nutrients.py            PURE FUNCTIONS: nutrient registry, per-serving thresholds, daily status, suggested targets
+app/nutrients.py            PURE FUNCTIONS: nutrient registry, daily status, alerts; also the import surface of the two modules below
+app/nutrient_core.py        the registry, display rounding and number formatting that nutrients.py and rules_kidney.py share (note 14 §2.2)
+app/rules_kidney.py         the kidney/T1D rule pack: per-serving thresholds, food_warnings, kidney_rating, meal-carb alerts, suggested targets
 app/foods.py                food search/CRUD, builtin JSON import, USDA proxy
 app/log.py                  log entries (eaten/planned), day/range/period summaries, mark-eaten, copy-day, CSV export
 app/periods.py              PURE FUNCTIONS (v0.2): period averages, previous period, interdialytic interval, week bounds
@@ -81,6 +83,11 @@ Owners (parallel build): **food-db** owns `scripts/`, `data/`; **backend** owns
 `docs/research/`. Nobody else edits another owner's files.
 
 ## Nutrient registry (single source of truth: `app/nutrients.py`)
+
+The registry and the display rounding are defined in `app/nutrient_core.py`; the kidney and type 1 diabetes rules
+(thresholds, `food_warnings`, `kidney_rating`, the per-meal carbohydrate alerts, `suggest_targets`, the CKD, dialysis and
+diabetes choices and the food flags) in `app/rules_kidney.py` (design note 14 §2.2). `app/nutrients.py` re-exports both,
+so `from .nutrients import X` and `nutrients.X` name every one of them, as before.
 
 Keys are used verbatim in JSON, in `data/foods.json`, in SQLite columns and in the UI.
 
@@ -153,14 +160,14 @@ if `warn_fraction ≤ fraction ≤ 1.0`, `"over"` if > 1.0. For `protein_g` with
 `min`, also `"low"` if end-of-day and below min is **not** computed server-side —
 just report `fraction` against max and include `min` so the UI can show the range.
 
-### Suggested targets (`nutrients.suggest_targets(weight_kg, ckd_stage, dialysis, diabetes, height_cm=None)`)
+### Suggested targets (`nutrients.suggest_targets(weight_kg, ckd_stage, dialysis, diabetes, height_cm=None)`, defined in `app/rules_kidney.py`)
 
 *Rewritten in v0.3 (note 05; see "M2 API: targets and labs" at the end of this file and
 `docs/targets-and-labs.md`).* Starting points only; the UI labels them "discuss with your care team"
 and nothing is saved until the person saves the profile. The rules live in `app/targets.py` (pure,
 `today` injected) with every number, source and note text in `app/target_rules.py`;
-`nutrients.suggest_targets()` keeps its v0.2 signature and `{"targets", "notes"}` shape for existing
-callers and applies the same rules without the v0.3 inputs. `nutrients.dosing_weight()` returns the
+`suggest_targets()` (`app/rules_kidney.py`, importable as `nutrients.suggest_targets`) keeps its v0.2 signature and `{"targets", "notes"}` shape for existing
+callers and applies the same rules without the v0.3 inputs. `dosing_weight()` (same module) returns the
 **reference weight** `(kg, basis)`: per kg means per kg of a sex-neutral reference weight (KDOQI 2020
 leaves the choice to the care team, 1.1.6): the actual weight between BMI 18.5 and 25 or without a
 height, else KDOQI Table 5's adjusted weights on the BMI-25 / BMI-18.5 weight (`adjusted_above_bmi25`,
@@ -477,7 +484,7 @@ Mobile-first single page, five views switched client-side (no router library):
    showing servings, carbs, K, P, Na and its kidney_rating dot; tap to edit servings /
    meal / delete. A prominent **meal carbohydrate total** for each meal (type 1), against
    `carbs_per_meal_g`; the snack against `carbs_per_snack_g` when set (Profile "Carbohydrate per
-   snack"; the alerts too: `nutrients.meal_carb_alerts` says "over the snack goal").
+   snack"; the alerts too: `rules_kidney.meal_carb_alerts` says "over the snack goal").
    Alerts banner at top when any level is `caution`/`over`.
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
@@ -761,10 +768,10 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M1 deploy | `deploy/**`, `.github/**`, `.hadolint.yaml`, `.dockerignore`, `scripts/verify-image.sh`, `SECURITY.md`, `docs/security.md`, `docs/https.md`, `docs/deployment.md`, `docs/network-allowlist.md` |
 | M1 frontend | `app/static/**`, `scripts/build_preview.py`, `scripts/build_icons.py`, `requirements-tools.txt`, `tests/test_preview_build.py`, `tests/js/**`, `docs/install-on-your-phone.md` |
 | Handbook (parallel) | `handbook/**`, `scripts/build_handbook.py`, `tests/test_handbook_content.py` |
-| M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/nutrients.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
+| M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/rules_kidney.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
-| M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
+| M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/rules_kidney.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
 | Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B adds the screens (note 10) |
 | Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
@@ -775,7 +782,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
 
-Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`) may be touched in M2 only for
+Shared files (`app/main.py`, `app/models.py`, `app/nutrients.py`, `app/rules_kidney.py`) may be touched in M2 only for
 the listed additions; each M2 owner registers its router in `app/main.py` with one import line and
 one `include_router` line and its settings keys in `app/settings_registry.py`.
 
@@ -792,7 +799,7 @@ app/static/
   css/base.css, css/<view>.css
   js/core.js            KH.h/s/$, KH.api (fetch wrapper: X-Requested-With, 401 → sign-in, toasts), state, router, sheets, confirm,
                         KH.forms (server "<field>: <message>" errors under their field, aria-describedby + aria-invalid)
-  js/engine/rules.js    warnings, ratings, rounding, number formatting (twin of app/nutrients.py)
+  js/engine/rules.js    warnings, ratings, rounding, number formatting (twin of app/nutrients.py, app/nutrient_core.py and app/rules_kidney.py)
   js/engine/settings.js settings registry + precedence (twin of app/settings_registry.py / settings_store.py)
   js/engine/targets.js, js/engine/kidney_function.js        (M2 targets: KH.targets twin of app/targets.py + target_rules.py;
                         KH.kidney twin of app/units.py + app/kidney_function.py; kidney_function.js loads first)

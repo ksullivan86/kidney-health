@@ -107,7 +107,7 @@ Severity: **HIGH** = unsafe, missing safety advice, or a wrong number in a safet
 
 ## 5. v0.3 addendum: the potassium-additive rule (2026-10-06)
 
-**Rule** (ARCHITECTURE.md v0.3 item 9; design note 03 R5; code `app/nutrients.py`
+**Rule** (ARCHITECTURE.md v0.3 item 9; design note 03 R5; code `app/rules_kidney.py`
 `food_warnings`, twin `app/static/js/engine/rules.js`): a food flagged `potassium_additive` (an
 ingredient list or additive code naming a bulk potassium salt: E508 potassium chloride, E326 lactate,
 E332 citrates, E261 acetates, E340 / E450(v) / E451(ii) / E452(ii) phosphates, E501 carbonates, …;

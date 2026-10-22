@@ -29,6 +29,7 @@ on:
       - "data/foods.json"
       - "docs/research/targets_by_stage.json"
       - "app/nutrients.py"
+      - "app/rules_kidney.py"
       - "app/static/**"
       - "app/security.py"
       - "app/guidance/topics.py"

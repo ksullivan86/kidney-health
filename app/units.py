@@ -15,7 +15,7 @@ Factors (KDIGO 2024 conversion table; re-derived from molar masses in note 05 §
 * HbA1c NGSP % = IFCC mmol/mol ÷ 10.929 + 2.15.
 
 Categories are judged on the **displayed** value (rounded half-up, :data:`DISPLAY_DECIMALS`), like
-the per-serving thresholds in :mod:`app.nutrients`, so a level always matches the number shown.
+the per-serving thresholds in :mod:`app.rules_kidney`, so a level always matches the number shown.
 """
 from __future__ import annotations
 

@@ -31,7 +31,7 @@ are owned elsewhere): ``docs/assets/icon.svg`` from ``app/static/icons/icon.svg`
 and ``docs/assets/licences/{material,material-design-icons,fontawesome}-LICENSE.txt`` from the installed
 mkdocs-material distribution (the theme, and the two icon sets the site inlines).
 
-Targets mirror ``app.nutrients.suggest_targets()`` for the reference person in ``menus.yml`` (70 kg,
+Targets mirror ``app.rules_kidney.suggest_targets()`` for the reference person in ``menus.yml`` (70 kg,
 170 cm, type 1 diabetes; BMI 24.2, so the reference weight is the actual weight): the stage row of
 ``targets_by_stage.json`` × weight, rounded half-up, with the ARCHITECTURE.md v0.3 item 10 diabetes
 floor (protein never below 0.8 g/kg at G3a–G5 without dialysis). The script does not import ``app/``

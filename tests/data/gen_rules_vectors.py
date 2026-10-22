@@ -4,8 +4,8 @@
     python3 tests/data/gen_rules_vectors.py           # rewrite the file
     python3 tests/data/gen_rules_vectors.py --check   # exit 1 when the committed file is stale
 
-The vectors are produced by the server's own pure functions in ``app/nutrients.py``
-(``food_warnings``, ``kidney_rating``, ``round_value`` / ``round_nutrients``) and checked on both
+The vectors are produced by the server's own pure functions in ``app/rules_kidney.py``
+(``food_warnings``, ``kidney_rating``) and ``app/nutrients.py`` (``round_value`` / ``round_nutrients``) and checked on both
 sides of the parity rule (ARCHITECTURE.md, "Frontend modules"):
 
 * Python: ``tests/test_rules_vectors.py`` fails when this file would change (a rule changed

@@ -10,7 +10,7 @@ Every number comes from the app's own functions, never from a copy of the maths:
   Central through the app's own key resolution and record mapping (:func:`app.foods.map_usda_record`); nothing
   is saved.
 * ``check_meal``: the item is found in the app, scaled like a log entry (:func:`app.nutrients.scale_nutrients`),
-  warned about with :func:`app.nutrients.food_warnings`, and the day is projected with
+  warned about with :func:`app.rules_kidney.food_warnings`, and the day is projected with
   :func:`app.log.day_figures` as if the items were planned entries. Nothing is saved.
 * ``log_food`` (writes): the items are placed exactly as ``check_meal`` places them, then saved through
   :func:`app.log.insert_logged`, the function behind ``POST /api/log`` and ``/api/log/batch``, in one transaction
