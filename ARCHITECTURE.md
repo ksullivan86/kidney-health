@@ -817,6 +817,9 @@ app/static/
                         browser; browser only, no Python twin; tests/data/ccda_labs_vectors.json; reuses KH.fhirLabs's LOINC table, units, day rule and
                         collector, so it loads after fhir_labs.js) and js/views/lab_ccda.js (KH.labCcda, its card, after lab_fhir.js, whose review table
                         it draws; "Lab results from a patient-portal C-CDA file" under "M2 API: targets and labs")
+  js/engine/pdf_pages.js  (note 13: KH.pdfPages, the pages of a PDF lab report drawn on the device as JPEGs with the vendored pdf.js in a module
+                        Worker under the Trusted Types policy kh-pdf; browser only, no Python twin; tests/js/pdf_pages_page.mjs; read by js/views/lab_photo.js;
+                        "PDFs" under "Lab report photos")
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
@@ -854,6 +857,8 @@ app/static/
                         gtin, ingredients_text and the v0.3 Food fields
   vendor/barcode-detector-3.2.2/ponyfill.iife.js, vendor/zxing-wasm-3.1.3/zxing_reader.wasm   the WASM barcode
                         reader (MIT, ZXing-C++ Apache-2.0), pinned by SHA-256 in vendor/README.md (scripts/vendor_barcode.py)
+  vendor/pdfjs-dist-6.4.299/pdf.min.mjs, pdf.worker.min.mjs, LICENSE   pdf.js (Apache-2.0, the legacy build), imported and started as a Worker
+                        by js/engine/pdf_pages.js on the first lab report PDF only; not in sw.js's shell list; same pins and script
   js/learn.js           KH.learn: links into the handbook at /learn (M3; see "M3: the handbook at /learn")
   js/views/ai.js, css/ai.css   KH.ai: the optional AI UI (M2 ai; see "M2 API: AI and photos" → Frontend)
   js/views/ai_routing.js   KH.aiRouting: Server administration's "Which AI does each feature use?" table and a person's
@@ -1483,10 +1488,11 @@ parameter (default: the browser's `DOMParser`); Node tests pass the dev-only `te
   performers or notes, which are not read at all: `tests/test_ccda_labs_ui.py` pins the exact element and attribute names the code asks
   for), 1,000 rows, 100 listed refusals; counts stay exact; text from a file reaches the page only through `h()` (text nodes).
 * **Trusted Types (the CSP change).** `require-trusted-types-for 'script'` makes `DOMParser.parseFromString` a sink that throws on a plain
-  string, so `app/security.py` now says `trusted-types kh-sw kh-xml`. `kh-xml` is created once, in `ccda_labs.js` only; its `createHTML`
+  string, so `app/security.py` lists `kh-xml` (the list is now `trusted-types kh-sw kh-xml kh-pdf`; `kh-pdf` is "PDFs" under "Lab report
+  photos"). `kh-xml` is created once, in `ccda_labs.js` only; its `createHTML`
   accepts a string with no DOCTYPE or ENTITY and returns it unchanged, and the result is passed straight to the parser. No default policy,
-  no `allow-duplicates`; `tests/test_frontend_shell.py` allows exactly two files to create a policy (`pwa.js`: `kh-sw`; `ccda_labs.js`:
-  `kh-xml`), exactly one parser call and no other `parseFromString`; `tests/test_security.py` pins the CSP. Without Trusted Types, or when a
+  no `allow-duplicates`; `tests/test_frontend_shell.py` allows exactly three files to create a policy (`pwa.js`: `kh-sw`; `ccda_labs.js`:
+  `kh-xml`; `pdf_pages.js`: `kh-pdf`), exactly one parser call and no other `parseFromString`; `tests/test_security.py` pins the CSP. Without Trusted Types, or when a
   host page's CSP does not list the name (the Artifact-hosted preview), the string is used or the file is counted "could not be read".
 * **Safety.** Nothing here gives advice or says whether a result is normal; the potassium banner and "what this result changed" come from
   the shared save as for a typed result. A real portal export has not been tried (hand-written samples only).
@@ -2443,7 +2449,8 @@ are bounded by `ai.max_concurrency`, not by open connections (the shipped profil
 
 Code: `app/vision.py` (`lab_router`, the route), `app/ai/lab_report.py` (the checks, pure), `features.prepare_read_lab_report`,
 `schemas.lab_report_schema` / `LabReportAnswer`, `prompts.TASK_LINES["lab_report"]`, `routing` (`LOCAL_ONLY`), schema step 16;
-browser `js/views/lab_photo.js` (`KH.labPhoto`) and `KH.views.labs.saveImported` (`js/views/labs.js`). People and operators:
+browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.pdfPages`, a PDF's pages drawn on the device: "PDFs" below) and
+`KH.views.labs.saveImported` (`js/views/labs.js`). People and operators:
 `docs/ai.md` "Lab report photos"; what goes where: `docs/privacy.md`.
 
 * **Local AI only (least trust).** A lab report can show a name, a date of birth, record numbers and a clinic, and the app
@@ -2495,7 +2502,7 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`) and `KH.views.labs.saveImported`
   only). The log line has feature, provider, model, host, latency, tokens and status only.
 * **Nothing is written by this route.** A saved result is the person's tick and the ordinary `POST /api/labs/import`
   (`LabImport`, each row checked again like `POST /api/labs`, duplicates skipped, the potassium alert returned as for a CSV file).
-* **Browser.** The card `#lab-photo` in the Labs view (below "Import from a spreadsheet") is hidden unless `GET /api/ai/status`
+* **Browser.** The card `#lab-photo` ("Read a lab report photo or PDF") in the Labs view (below "Import from a spreadsheet") is hidden unless `GET /api/ai/status`
   says `features.lab_report`; with AI on but the feature unavailable it shows only the server's sentence (`routes.labs.text`; the
   person not opted in; a local AI without a vision model); with AI off, and in the demo and preview, it is not there at all
   (`js/mock/ai.js` answers every `/api/ai/*` route `404`). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
@@ -2506,9 +2513,61 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`) and `KH.views.labs.saveImported`
   shown value. Save sends only the ticked rows through `KH.views.labs.saveImported` (the CSV import's own save: `POST
   /api/labs/import`, counts, refusals, the potassium banner, "what this changed"). Everything from the server is set with
   `textContent`; the photo is held in memory until Save or Discard. `tests/js/lab_photo_page.mjs` runs the file against a fake page.
+* **PDFs (design note 13; `js/engine/pdf_pages.js` = `KH.pdfPages`, the page list and the page-by-page reading in `js/views/lab_photo.js`).** The
+  PDF a lab's website hands out is chosen in the same card (the input takes `image/*,application/pdf,.pdf`), opened and drawn **on the device**,
+  and read one page at a time through the route above exactly as a photo is. **The server never receives or parses a PDF**: no route, setting,
+  migration or server code changed, `local_only=True` stands, and each page is one checked JPEG request like any photo.
+  * *Reading the file* (`KH.pdfPages.open(file, {maxBytes, maxPages, signal})`). At most **20 MiB** (checked from `file.size` before the file
+    is read) and **50 pages**; the first five bytes must be `%PDF-`. The vendored pdf.js is loaded with a dynamic `import()` only when a PDF is
+    chosen and runs in a module Web Worker that `pdf_pages.js` makes itself: `GlobalWorkerOptions.workerPort` is set first, then
+    `getDocument({data, isEvalSupported: false, enableXfa: false, disableAutoFetch: true, disableStream: true, disableRange: true,
+    stopAtErrors: false})` and nothing else: no `url`, `cMapUrl`, `standardFontDataUrl`, `iccUrl`, `wasmUrl`, `password` or `onPassword`, so nothing
+    is fetched (fonts the PDF does not embed fall back to the browser's; JPEG 2000 and JBIG2 images and ICC profiles are not decoded, because
+    no WebAssembly decoder is vendored; a scan made of such images can draw blank). Against pdf.js 6.4.299 `isEvalSupported` is gone (the
+    library has no eval path left; the option is passed anyway, harmlessly) and `render()` takes `canvas` (the old `canvasContext` is deprecated).
+    A password-protected file is refused (`PasswordException` → `password`); the app never asks for a password. Error codes: `too_big`, `not_pdf`,
+    `password`, `damaged`, `too_many_pages`, `browser`; Cancel is `AbortError`. `render(n)` draws a white page with no annotations, form fields or text
+    layer at the largest scale that keeps the longer side at most 2048 px and the area at most 4 MP (`app/imagecheck.py`'s limits; never above
+    4× the page's size, at least 16 px a side), as a JPEG (quality 0.9) that the view passes to `KH.ai.prepareJpeg` (the photo helper: redrawn on
+    the device at most 1600 px on the longer side, no camera data). `close()` destroys the pdf.js task and terminates the worker.
+  * *CSP and Trusted Types.* The page's policy gained one name and nothing else: `trusted-types kh-sw kh-xml kh-pdf`. `kh-pdf` is created once, in
+    `pdf_pages.js` only, never as a default policy and never allowed twice; its `createScriptURL` returns its input only when it is exactly
+    `/vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs` and throws for anything else, and the one `new Worker(...)` (a Trusted Types sink) is called
+    there with its output. `script-src 'self' 'wasm-unsafe-eval'` and `worker-src 'self'` are unchanged: no `'unsafe-eval'` (CVE-2024-4367, pdf.js
+    before 4.2.67, ran font code through `new Function`; this CSP would refuse it and 6.4 has no such path), no `blob:`. With a port pdf.js makes no
+    worker of its own and has no main-thread "fake worker" to fall back to; the module also checks that pdf.js posted to its worker before it hands
+    over any bytes, and refuses (`browser`) if it did not, and when the worker fails to start (it only fires `error`). Without Trusted Types
+    (an older browser) the URL string is used. `tests/test_frontend_shell.py` allows exactly three files to create a policy (`pwa.js`: `kh-sw`;
+    `ccda_labs.js`: `kh-xml`; `pdf_pages.js`: `kh-pdf`), each named in the comment above the directive in `app/security.py`, and one `Worker`
+    constructor; `tests/test_security.py` pins the whole string.
+  * *Vendored files and the service worker.* `scripts/vendor_barcode.py` vendors both groups (the barcode decoder and pdf.js; `--only barcode`
+    or `--only pdfjs`; the weekly `--check-latest` covers both): `pdf.min.mjs` and `pdf.worker.min.mjs` from the **`legacy/build`** of `pdfjs-dist`
+    6.4.299 (the default build is "intended for the latest browsers" and calls `Promise.try`, `Math.sumPrecise` and `Uint8Array.fromBase64` without a
+    polyfill; the evidence is in `app/static/vendor/README.md`) and its `LICENSE`, pinned by SHA-256, the npm tarball checked against its
+    `dist.integrity` first. `tests/test_vendor.py` pins them and checks that neither file has an `eval`, a source-map comment or an address it
+    fetches, that main file and worker name one version, and that `getDocument` still takes every option the page passes. `sw.js` precaches
+    `js/engine/pdf_pages.js` but not the 1.8 MB of pdf.js: the first PDF fetches both files and the existing runtime rule for `/vendor/` (the one
+    the barcode WebAssembly uses) keeps them.
+  * *The screen.* A PDF pick opens the file here (nothing is sent) and lists "Page 1" … "Page N": pages 1 to 6 start ticked and at most 10 can be
+    ticked ("Reading a page takes a while on your own AI; choose the pages with results."), with the line "Each page you tick is drawn on this
+    device and sent as a picture; the PDF file itself is not sent." (also added to the consent sheet's notice before it is drawn). "Read the
+    report" goes through the ticked pages in order: draw, redraw as a photo, `KH.ai.withConsent('labs', …)` and `KH.ai.uploadPhoto('lab-report', …)`
+    for that page alone (so the photo's consent and, if the person asked for it, "What will be sent?" apply to each page), "Reading page 2 of 4…",
+    and Cancel, which stops between pages and aborts the request in flight (`uploadPhoto` takes an `AbortSignal`). The rows of all pages are one review
+    table, every row unticked and saying which page it came from; a row the same as an earlier one (test, value, unit, date) is shown once, with the
+    first page's number. A page that fails ("Page 3 could not be read: …": the route's own message, or that it could not be drawn) or has no result
+    ("Page 2: …", the route's sentence) is a line and the other pages still count; a refusal that would repeat for every page (offline, signed out,
+    `403`, `404`, `429`, `503`) stops the run and says so. Save sends only the ticked rows through `saveImported` ("saved from your PDF"). The messages
+    for a file that cannot be used are fixed sentences in `lab_photo.js`. The pdf.js document and its worker are closed as soon as a run ends (the
+    chosen file stays chosen), and the PDF, its pages and the document are let go on Discard, Save and a new pick; nothing is stored, and the browser
+    asks no other host (`tools/e2e/lab_pdf.py` checks the requests, the Worker, the CSP report and the service worker's cache).
 * **Tests.** `tests/test_lab_photo.py` (routing, consent, filters and counts, "same validation as POST /api/labs", dates, nothing
   written, nothing kept, two people), `tests/test_migration_m016.py`, `tests/test_lab_photo_ui.py`, the golden category `lab_report`
-  (`tests/ai_golden/lab-report-*.json`; `scripts/ai_eval.py` skips them: they are local-only).
+  (`tests/ai_golden/lab-report-*.json`; `scripts/ai_eval.py` skips them: they are local-only). For a PDF: `tests/test_pdf_pages.py` (the module in
+  Node against a fake pdf.js, `tests/js/pdf_pages_page.mjs`: the exact `getDocument` options, `workerPort` before `getDocument`, the policy, the
+  scale for Letter, A4, a receipt and a tiny page, every error code, `close()`, Cancel), `tests/test_lab_photo_ui.py` with
+  `tests/js/lab_photo_page.mjs` (the page list, one request a page, the merge, failures, messages, release), `tests/test_vendor.py`, and the
+  browser walk `tools/e2e/lab_pdf.py` (a two-page PDF from a tiny PDF writer, through the server with a fake local AI, real Chromium).
 
 ### Ask chat (assistant step 2, parts A and C)
 
@@ -2832,7 +2891,7 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   <host>, outside your network"), and Save routing (`PUT /api/admin/ai-routing`, only the changes). Settings → AI ideas
   adds "Where each AI feature runs", one line per feature from `GET /api/me/ai`'s `routing`, and, once routing is set
   up, the provider choice is "The server's AI" or "My own provider".
-* **Labs view**: the card "Read a lab report photo" (`js/views/lab_photo.js`, "Lab report photos" above); `KH.ai.uploadPhoto`
+* **Labs view**: the card "Read a lab report photo or PDF" (`js/views/lab_photo.js`, "Lab report photos" above); `KH.ai.uploadPhoto`
   takes the kind `lab-report` for `POST /api/ai/read-lab-report`, and the consent sheet shows the server's `notice` lines for the
   purpose `labs` instead of the generic text.
 * **Add view**: `#ai-add-slot` shows the features `GET /api/ai/status` reports (AI meal ideas, Describe a

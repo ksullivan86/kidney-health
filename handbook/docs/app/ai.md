@@ -137,10 +137,10 @@ today. Each AI idea shows its foods with their warnings, the totals, what is lef
 and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead. If your admin
 has switched on **Ask**, a tab called **Ask** is there too.
 
-## Read a lab report from a photo
+## Read a lab report from a photo or a PDF
 
-On the **Lab results** screen, below "Import from a spreadsheet", **Read a lab report photo** copies the printed results
-from a photo or a screenshot of your report (a PDF can be screenshotted). It appears only when your admin has an AI at
+On the **Lab results** screen, below "Import from a spreadsheet", **Read a lab report photo or PDF** copies the printed results
+from a photo or a screenshot of your report, or from the PDF your lab's website gives you. It appears only when your admin has an AI at
 home that can read photos and you have turned on AI ideas; otherwise the card says why, for example "Needs a local AI on
 your own network, which is not set up on this server, so it is off."
 
@@ -159,6 +159,22 @@ your own network, which is not set up on this server, so it is off."
 
 The AI never says whether a result is normal, high or low, and it never changes your targets: only you save results,
 and your saved targets stay as they are until you save new ones in Profile. Talk to your care team about what a result means.
+
+### A PDF works too
+
+Most lab websites give you the report as a PDF. Choose that file in the same card instead of a photo.
+
+* **The PDF itself is not sent.** Your browser opens it on your device and lists its pages ("Page 1", "Page 2", ...). Pages 1 to 6 start
+  ticked; you can tick up to 10. "Reading a page takes a while on your own AI; choose the pages with results." Only the pages you tick
+  are drawn, on your device, and sent **as pictures**, one at a time, to the AI at home and nowhere else.
+* **Page by page.** You see "Reading page 2 of 4..." and a **Cancel** button. The rows from all the pages come in one table, all
+  unticked, each saying which page it came from; a row that appears twice (a header on every page, say) is shown once. If one
+  page cannot be read, it says so and the other pages still count.
+* **Some PDFs are refused**, with the reason: a file over 20 MB, a file that is not a PDF, one with more than 50 pages, a damaged
+  one, a browser too old to open it, and a **PDF with a password** (the app never asks for it: open it on your device and take a
+  screenshot of each page instead). A scanned report made of pictures in a few rare formats can come out blank: use a screenshot.
+* Everything else is the same as for a photo: the consent sheet, **What will be sent?**, the unticked rows, the dates you type, and
+  **Save** for the rows you tick.
 
 ## Turn it on
 

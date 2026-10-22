@@ -66,7 +66,7 @@ using the app; the pages below are for the people who run, maintain and check it
 * [AGENTS](../AGENTS.md) and [CLAUDE](../CLAUDE.md): the short rules for AI coding agents.
 * [Progress notes](dev/progress/README.md): how build agents record interrupted work (condensed and removed at each release).
 * [End-to-end harnesses](../tools/e2e/README.md): the browser checks run by hand before a release.
-* [Vendored files](../app/static/vendor/README.md): the barcode decoder the browser uses, its licences
+* [Vendored files](../app/static/vendor/README.md): the barcode decoder and the PDF reader (pdf.js) the browser uses, their licences
   and SHA-256 pins, and how to update it.
 * [Handbook README](../handbook/README.md): building and checking the handbook, editing a page, citing a
   source, house style, clinical review and sign-off.

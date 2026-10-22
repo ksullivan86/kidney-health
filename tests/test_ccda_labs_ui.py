@@ -92,7 +92,7 @@ def test_the_only_parser_is_the_browsers_domparser_as_xml_and_the_view_never_par
     assert "new root.DOMParser().parseFromString(trustedXml(text), 'application/xml')" in code
     # Trusted Types: the CSP lists exactly the policy this file creates (tests/test_frontend_shell.py guards that nothing else does)
     from app import security
-    assert "trusted-types kh-sw kh-xml" in security.CSP_DIRECTIVES
+    assert "trusted-types kh-sw kh-xml kh-pdf" in security.CSP_DIRECTIVES
     assert "tt.createPolicy('kh-xml'" in code and code.count("createPolicy(") == 1
     assert not re.search(r"text/html|text/xml|image/svg|application/xhtml|XSLTProcessor|\.load\(|createDocument|importNode|DOMImplementation", code)
     assert "DOMParser" not in code_of(VIEW) and "parseFromString" not in code_of(VIEW)

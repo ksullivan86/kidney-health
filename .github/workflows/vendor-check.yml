@@ -1,12 +1,13 @@
-# Weekly check of the vendored barcode decoder (docs/dev/research/03-barcode-and-photo.md §6 item 19 and
-# §5 "Vendored code goes stale or vulnerable"): Dependabot cannot see app/static/vendor/, so this job
-# asks the npm registry whether barcode-detector (and the zxing-wasm build it uses) has a newer release,
-# and re-checks the committed files against their SHA-256 pins (scripts/vendor_barcode.py).
+# Weekly check of the vendored files: the barcode decoder (docs/dev/research/03-barcode-and-photo.md §6 item 19 and
+# §5 "Vendored code goes stale or vulnerable") and the PDF reader (docs/dev/research/13-lab-results-from-a-pdf.md §4.1).
+# Dependabot cannot see app/static/vendor/, so this job asks the npm registry whether barcode-detector (and the
+# zxing-wasm build it uses) or pdfjs-dist has a newer release, and re-checks the committed files against their SHA-256
+# pins (scripts/vendor_barcode.py).
 #
 # Warn-only: a newer release is a warning annotation on the run; nothing is written anywhere. Updating is a
 # reviewed change (app/static/vendor/README.md "Updating"). A pin mismatch fails the job: the committed
 # files changed without the script.
-name: Vendored decoder check
+name: Vendored files check
 
 on:
   schedule:
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   vendor:
-    name: Barcode decoder (pins and npm releases)
+    name: Barcode decoder and pdf.js (pins and npm releases)
     if: github.repository == 'ksullivan86/kidney-health'
     runs-on: ubuntu-24.04
     timeout-minutes: 5

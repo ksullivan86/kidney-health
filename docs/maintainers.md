@@ -41,8 +41,8 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
-     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py` and
-     `mcp_smoke.py`
+     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
+     `lab_pdf.py` and `mcp_smoke.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);
@@ -53,7 +53,9 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the live AI evaluations before a model is recommended (`scripts/ai_eval.py`, and `--chat` for Ask, for the current
      `PROMPT_VERSION`; [docs/dev/ai-eval/README.md](dev/ai-eval/README.md)). `ai_eval.py` skips the cases that need the routing,
      so also try, once with a real Ollama and a cloud key: a photo of a real lab report on the local AI (which units and dates a
-     vision model misreads), and the route `local_then_cloud` (the cloud AI asked only when the local answer fails the checks);
+     vision model misreads), the **PDF** a real portal (Quest, Labcorp, a hospital portal) gives out, chosen in Labs on an iPhone
+     (Safari) and on a desktop browser (the pages drawn by the bundled pdf.js, how long a page takes, whether a scanned PDF comes out blank),
+     and the route `local_then_cloud` (the cloud AI asked only when the local answer fails the checks);
    * speech to text: pin the image of `deploy/compose.stt-whisper.yaml` by a digest you checked (`crane digest`; the file carries a
      placeholder), start it with a real model in its volume, check its health check and cache path, and talk to Ask from an
      iPhone (Safari) and an Android phone (Chrome): the first tap asks for the consent, then the microphone;
@@ -281,5 +283,5 @@ and `tests/test_deploy.py` (`test_every_yaml_file_parses`).
 | [`refresh-locks.yml`](../.github/workflows/refresh-locks.yml) | Mondays | Opens a pull request (see above). |
 | [`codeql.yml`](../.github/workflows/codeql.yml) | Mondays and every push | Alerts in Security → Code scanning: fix, or dismiss with a reason and a comment. |
 | [`handbook-links.yml`](../.github/workflows/handbook-links.yml) | Mondays | Opens or comments on an issue labelled `handbook-links`. Update the source in `handbook/sources.yml` (and `checked`), rebuild. |
-| [`vendor-check.yml`](../.github/workflows/vendor-check.yml) | Mondays | A warning when the vendored barcode decoder has a newer release: update it with `scripts/vendor_barcode.py` ([app/static/vendor/README.md](../app/static/vendor/README.md)). A failure means the committed files no longer match their pins. |
+| [`vendor-check.yml`](../.github/workflows/vendor-check.yml) | Mondays | A warning when the vendored barcode decoder or pdf.js has a newer release: update it with `scripts/vendor_barcode.py` ([app/static/vendor/README.md](../app/static/vendor/README.md)). A failure means the committed files no longer match their pins. |
 | [`off-live-check.yml`](../.github/workflows/off-live-check.yml) | Wednesdays | A warning when Open Food Facts' answers no longer map: compare with the recorded fixtures (`tests/fixtures/off/`), adapt `app/off.py`. |

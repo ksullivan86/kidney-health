@@ -66,11 +66,13 @@ CSP_DIRECTIVES: tuple[str, ...] = (
     "form-action 'self'",
     "frame-ancestors 'none'",
     "require-trusted-types-for 'script'",
-    # Two named policies, each created once and used by one file (note 01 §10 S3). kh-sw: the service-worker
+    # Three named policies, each created once and used by one file (note 01 §10 S3). kh-sw: the service-worker
     # registration code (js/pwa.js), allowing only '/sw.js'. kh-xml: the patient-portal file import
     # (js/engine/ccda_labs.js), which hands a C-CDA XML string without a DOCTYPE or ENTITY to the browser's
-    # DOMParser, a Trusted Types sink. Never add 'allow-duplicates' or a 'default' policy.
-    "trusted-types kh-sw kh-xml",
+    # DOMParser, a Trusted Types sink. kh-pdf: the PDF lab report reader (js/engine/pdf_pages.js, note 13), which
+    # makes the vendored pdf.js's Web Worker itself (a Worker URL is a Trusted Types sink) and allows only the one
+    # URL /vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs. Never add 'allow-duplicates' or a 'default' policy.
+    "trusted-types kh-sw kh-xml kh-pdf",
 )
 CONTENT_SECURITY_POLICY = "; ".join(CSP_DIRECTIVES)
 

@@ -29,7 +29,7 @@ that server is called the **admin** in these pages.
 | Sign in, set your stage and get starting targets | **Profile** → **Suggest targets** | [First setup](first-setup.md) |
 | Enter lab results and see your eGFR | **Profile** → **Lab results** | [Targets and warnings](targets-and-warnings.md#personalized-targets) |
 | Bring in lab results from a spreadsheet, the iPhone Health app or a patient-portal file, and check each row | **Profile** → **Lab results** → an **Import from…** card | [Targets and warnings](targets-and-warnings.md#import-lab-results-from-the-iphone-health-app) |
-| Copy lab results from a photo of a report, on the AI at home only | **Profile** → **Lab results** → **Read a lab report photo** | [Optional AI](ai.md#read-a-lab-report-from-a-photo) |
+| Copy lab results from a photo, a screenshot or the PDF of a report, on the AI at home only | **Profile** → **Lab results** → **Read a lab report photo or PDF** | [Optional AI](ai.md#read-a-lab-report-from-a-photo-or-a-pdf) |
 | See why a food is red, yellow or green | the warnings on every food | [Targets and warnings](targets-and-warnings.md) |
 | Log a meal, a snack or a drink | **Add** | [Logging food](logging.md) |
 | Scan a barcode or use a photo of a label | **Add** → **Scan a barcode** or **Quick add** | [Barcodes and label photos](barcode-and-photo.md) |

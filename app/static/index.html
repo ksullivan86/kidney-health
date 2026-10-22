@@ -919,22 +919,27 @@
       <div id="lab-ccda-preview" class="lab-import-preview"></div>
     </section>
 
-    <!-- Read a lab report photo (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
-         The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. -->
+    <!-- Read a lab report photo or PDF (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
+         The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. A PDF is opened
+         on this device (js/engine/pdf_pages.js, the vendored pdf.js): the person ticks pages, each is drawn here and sent as a picture, and the
+         PDF file itself is never sent. -->
     <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
-      <h2 class="card-title" id="lab-photo-h">Read a lab report photo</h2>
+      <h2 class="card-title" id="lab-photo-h">Read a lab report photo or PDF</h2>
       <p id="lab-photo-why" class="muted small" hidden></p>
       <div id="lab-photo-controls" hidden>
-        <p class="muted small">Take a photo or a screenshot of your lab report (a PDF can be screenshotted). The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can.</p>
+        <p class="muted small">Take a photo or a screenshot of your lab report, or choose the PDF from your lab's website. The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can. A PDF stays on this device: you choose the pages, and only those pages are drawn here and sent as pictures.</p>
         <div class="field">
-          <label for="lab-photo-file">Photo or screenshot of the report</label>
-          <input id="lab-photo-file" class="ai-file" type="file" accept="image/*" aria-describedby="lab-photo-hint">
-          <span class="hint" id="lab-photo-hint">The photo is sent to your local AI and is not kept.</span>
+          <label for="lab-photo-file">Photo, screenshot or PDF of the report</label>
+          <input id="lab-photo-file" class="ai-file" type="file" accept="image/*,application/pdf,.pdf" aria-describedby="lab-photo-hint">
+          <span class="hint" id="lab-photo-hint">The photo or the pages you choose are sent to your local AI and are not kept.</span>
         </div>
+        <div id="lab-photo-pages" class="lab-photo-pages" hidden></div>
         <div class="settings-actions">
           <button class="btn secondary" type="button" id="lab-photo-read">Read the report</button>
           <button class="btn secondary" type="button" id="lab-photo-what">What will be sent?</button>
+          <button class="btn secondary" type="button" id="lab-photo-cancel" hidden>Cancel</button>
         </div>
+        <p id="lab-photo-progress" class="hint" role="status" aria-live="polite" hidden></p>
         <div id="lab-photo-error" class="form-error" role="alert"></div>
       </div>
       <div id="lab-photo-results" class="lab-import-preview" aria-live="polite"></div>
@@ -2017,6 +2022,7 @@
 <script src="js/engine/lab_import.js"></script>
 <script src="js/engine/fhir_labs.js"></script>
 <script src="js/engine/ccda_labs.js"></script>
+<script src="js/engine/pdf_pages.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/body.js"></script>

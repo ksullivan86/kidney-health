@@ -139,9 +139,10 @@ reads a CSV file with a date column and one column per test, for example `Date, 
 Creatinine (umol/L)`. The file is read on your device: you see every result, converted, and tick the ones to
 keep; only those are sent, never your name or the file's other columns. Results the app cannot read as one
 number (such as "<0.5" or ">90") are listed and left out, so you can type them by hand if you want them.
-If you have a photo or a screenshot of a lab report instead, **Lab results → Read a lab report photo** can copy the
-printed results for you to check, but only when your admin has an AI on your own network ([Optional AI](ai.md#read-a-lab-report-from-a-photo)):
-every row starts unticked and only the rows you tick are saved.
+If you have a photo or a screenshot of a lab report instead, or the PDF from your lab's website, **Lab results → Read a lab report
+photo or PDF** can copy the printed results for you to check, but only when your admin has an AI on your own network
+([Optional AI](ai.md#read-a-lab-report-from-a-photo-or-a-pdf)): every row starts unticked and only the rows you tick are saved. A PDF
+is opened on your device; only the pages you tick are sent, as pictures.
 If you use an iPhone and linked your health system in the Health app, **Lab results → Import from Apple Health (clinical
 records)** can read those results from the Health export, on your phone ([steps below](#import-lab-results-from-the-iphone-health-app)).
 If your patient portal (MyChart or another) can download your health summary as a file, **Lab results → Import from a patient portal

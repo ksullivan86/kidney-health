@@ -596,7 +596,9 @@ Read **Upgrading from 0.3** in [CHANGELOG.md](../CHANGELOG.md#040--2026-10-22) f
    turns them on; an upgraded server that already had a shared AI provider keeps every AI feature on the old rule (`any`) until an
    admin picks a route; lab report photos start on `local`, which is off while no local AI exists.
 4. **Behind your own Content-Security-Policy?** If a reverse proxy sets the CSP instead of the app, add the Trusted Types policy
-   name `kh-xml` (`trusted-types kh-sw kh-xml`), or the patient-portal lab import cannot read a file; and allow
+   name `kh-xml` (`trusted-types kh-sw kh-xml`), or the patient-portal lab import cannot read a file (releases after 0.4.0 also
+   create `kh-pdf`, for reading a PDF lab report: list `trusted-types kh-sw kh-xml kh-pdf`; a name that is listed and not used does no
+   harm); and allow
    `microphone=(self)` in `Permissions-Policy` if you use voice input ([security.md](security.md)).
 5. **Kubernetes:** the base in `deploy/k8s` is cluster-neutral now. If you applied it directly after editing it, copy
    `deploy/k8s-overlays/example/`, move your values there and apply the overlay.

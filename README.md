@@ -274,7 +274,7 @@ The full operator guide is **[docs/security.md](docs/security.md)** (threat mode
 * **Browser:** strict Content Security Policy with Trusted Types and no inline script, `X-Frame-Options:
   DENY`, `no-referrer`, HSTS over HTTPS, a Host allowlist against DNS rebinding, CSRF checks
   (`Sec-Fetch-Site`, `Origin` and a required `X-Requested-With` header), `Cache-Control: no-store` on the
-  API. Nothing is loaded from a CDN; the barcode decoder is vendored and pinned by SHA-256.
+  API. Nothing is loaded from a CDN; the barcode decoder and the PDF reader (pdf.js) are vendored and pinned by SHA-256.
 * **Outbound traffic:** none until you turn on USDA, Open Food Facts or AI; every call goes through an
   SSRF-checked transport that never follows redirects. Photos for AI are stripped of all metadata on the
   server and never stored.
@@ -428,5 +428,5 @@ number.
   [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/); the app shows the
   attribution with each product and includes the notice in data exports.
 * **Third-party code** keeps its own licence: the vendored barcode decoder is MIT (barcode-detector)
-  and Apache-2.0 (ZXing-C++), listed in [app/static/vendor/README.md](app/static/vendor/README.md); the
+  and Apache-2.0 (ZXing-C++), the vendored PDF reader is Apache-2.0 (pdf.js), listed in [app/static/vendor/README.md](app/static/vendor/README.md); the
   handbook's theme, Material for MkDocs, is MIT.
