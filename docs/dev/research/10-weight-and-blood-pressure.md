@@ -224,7 +224,8 @@ six-month match, the flag boundaries (179/119 → none; 180/80 → flagged; 140/
 * **Reading**: the file can be hundreds of megabytes and starts with an internal DTD, so it is **not** given to an XML parser
   (no `DOMParser`, no `kh-xml` policy, no entity expansion): `js/engine/apple_health.js` streams it as text
   (`file.stream().pipeThrough(new TextDecoderStream())`), finds each `<Record ` start tag of the three types below with a
-  bounded buffer (a tag longer than 8 KiB is skipped and counted), reads its attributes with one regular expression, decodes
+  bounded buffer (a tag longer than 8 KiB is skipped and counted), reads its attributes in one linear pass (a hand-written
+  scanner, not a regular expression: one that may start a name anywhere is quadratic on a hostile 8 KiB tag), decodes
   only the five XML entities and numeric character references (anything else: the record is skipped and counted), and keeps:
   * `HKQuantityTypeIdentifierBodyMass` with `unit` `kg` or `lb` → a weight (context `other`, or `morning` when the time is
     04:00–10:59);
@@ -234,6 +235,21 @@ six-month match, the flag boundaries (179/119 → none; 180/80 → flagged; 140/
 * `date` and `time` come from `startDate` (`YYYY-MM-DD HH:MM:SS ±HHMM`) **as written** (the person's clock when measured).
   `source_key` = the first 32 hex characters of SHA-256 over `type|startDate|value|sourceName` (blood pressure: both values),
   so importing the same export twice adds nothing.
+* **Details settled when the reader was built** (its header comment has them in full; `tests/data/apple_health_vectors.json`
+  pins each): a start tag ends at the first `>` outside quotes, and a `<` inside it ends it early (skipped and counted as
+  unreadable); `type` and `unit` are compared as written (`KG` is an unknown unit) and only `value`, `startDate` and `sourceName`
+  are decoded, so an entity in any other attribute is never looked at; a missing `value`, `startDate` or `sourceName`, a value
+  that is not a plain number, or a `startDate` that is not a real day (before 1900, or, when the page passes today's date, more
+  than one day ahead, the server's own rule, because a batch with one bad row is refused whole) is **unreadable**, a reason of its
+  own in the summary. A systolic or diastolic with no partner, or two different values from one source at one instant (pairing
+  them would be a guess), is a half pair; a top number not above the bottom one counts as out of range; readings are whole mmHg
+  (a fraction rounds half up). The same record twice (type, `startDate`, value and `sourceName` equal, as inside a correlation
+  and again loose) is one, the repeat counted as a duplicate. The `source_key` texts are exactly
+  `HKQuantityTypeIdentifierBodyMass|<startDate>|<value>|<sourceName>` and `BloodPressure|<startDate>|<systolic>/<diastolic>|<sourceName>`,
+  `startDate` and values as written (a weight in pounds stays in pounds) and `sourceName` decoded. Rows carry `sourceName` for
+  the sheet only (`forUpload` drops it) and come out sorted by date, time and source. SHA-256 is `crypto.subtle`, or a small
+  plain-JavaScript SHA-256 where the page has none (a self-hosted app on a plain-HTTP address). `scan` takes an `AbortSignal` and
+  calls back about every 10 MB for the progress line.
 * **Review before saving**: the headline counts what was found, the date range, what was skipped and why (unknown unit,
   half a pair, out of range, already there); the person picks a period (the last 3 months by default, "everything" possible)
   and presses Import; rows go up in batches of 1,000. Readings from a source whose `sourceName` contains "Watch" are listed
