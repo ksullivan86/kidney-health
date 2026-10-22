@@ -1,4 +1,4 @@
-Status: in progress (started 2026-10-22; branch `worktree-mcp-prefs` from 89b97a5; final full-suite run pending)
+Status: complete (2026-10-22; branch `worktree-mcp-prefs` from 89b97a5; full pytest 5639 passed, safety set 528 passed, ruff, vectors, handbook check and the MCP smoke harness green)
 
 # mcp-prefs: `set_food_preference` for an assistant token with `assistant:prefs`
 
@@ -19,7 +19,7 @@ Task: offer Ask's taste tool to an assistant connected with a token, behind a ne
 5. App: "from your assistant" in the preferences list (`views/guidance.js`), the second tick, list words and activity label
    (`views/settings.js`), import/export accept `assistant` (`app/data_import.py`, `mock/import.js`, `tests/data/gen_import_vectors.py`
    then `import_vectors.json`).
-6. Tests: `tests/test_mcp_prefs.py` (47), `tests/test_assistant_ui.py` + `tests/js/assistant_page.mjs`, `tests/test_settings_ui.py`,
+6. Tests: `tests/test_mcp_prefs.py` (48), `tests/test_assistant_ui.py` + `tests/js/assistant_page.mjs`, `tests/test_settings_ui.py`,
    `tests/test_guidance_ui.py`, safety file listed in `tests/test_safety_set.py`; `tools/e2e/mcp_smoke.py` has a taste section.
 7. Docs: note 09 §4.8b, ARCHITECTURE (tokens, MCP, Ask, step 17 wording, API table), `docs/assistant.md`, `docs/privacy.md`,
    `docs/deployment.md`, `docs/ai.md`, handbook (`app/ai.md`, `app/settings-and-keys.md`, `app/guidance.md`,
@@ -31,6 +31,8 @@ Task: offer Ask's taste tool to an assistant connected with a token, behind a ne
   "still leaves it listed under Treating a low"; the existing rule (note 09 §8 Q1; `swaps.hypo_options`, `insights.best_hypo_food`)
   is that a person's Not for me / Never suggest takes the food out of the options unless that would leave none (pinned in
   `tests/guidance/test_preferences_api.py`). Letting an unconfirmed assistant do that would change the options a person reads when low.
+* The PUT body now takes `assistant` as a `source` too (Ask's Undo puts a row back with the source it had, which can be `assistant`; the demo twin
+  `mock/guidance.js` has the same three).
 * `request_key` is required (the brief lists it without `?`); `neutral` is not offered.
 * The public PUT keeps `source` = `person` | `ask`: only the MCP tool writes `assistant`. No migration (the column is free text).
 * A food group has no source, so a group set this way has no "from your assistant" label (only the activity list); the preferences list
