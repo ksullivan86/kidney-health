@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
 from . import labs  # M2 targets: /api/labs
 from . import symptoms  # schema step 15: /api/symptoms
+from . import body  # schema step 18: /api/body (weight and blood pressure)
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
@@ -110,6 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meals.plan_router)
     app.include_router(labs.router)
     app.include_router(symptoms.router)
+    app.include_router(body.router)
     app.include_router(guidance_api.router)
     app.include_router(handbook.router)
     app.include_router(barcode.router)

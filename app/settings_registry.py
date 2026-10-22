@@ -348,6 +348,68 @@ register(
 
 
 # --------------------------------------------------------------------------- #
+# Note 10 (weight and blood pressure), §4.3. Owner: the body log (app/body.py reads them). The alarm and the goal are the numbers
+# the person's care team gave them: there is no default, and the app never suggests either (note 10 §2, F3).
+# --------------------------------------------------------------------------- #
+
+
+class WeightAlarm(BaseModel):
+    """"Call my team if my weight goes up by more than [amount] [between sessions | in [days] days]" (note 10 §4.3, §4.4).
+    ``between_sessions`` is offered only on hemodialysis. Stored in kg whatever unit the person types."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    amount_kg: Annotated[float, Field(ge=0.2, le=10, allow_inf_nan=False)] | None = None  # null: no alarm
+    over: Literal["between_sessions", "days"] = "days"
+    days: Annotated[int, Field(ge=1, le=7)] = 1
+
+
+class BpGoal(BaseModel):
+    """"My blood pressure goal from my team: under [systolic] / [diastolic]" (note 10 §4.3); null leaves a number out."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    systolic: Annotated[int, Field(ge=80, le=200)] | None = None
+    diastolic: Annotated[int, Field(ge=40, le=130)] | None = None
+
+    @model_validator(mode="after")
+    def _top_above_bottom(self) -> "BpGoal":
+        if self.systolic is not None and self.diastolic is not None and self.systolic <= self.diastolic:
+            raise ValueError("systolic must be greater than diastolic")
+        return self
+
+
+register(
+    SettingDef(
+        key="user.units.weight",
+        model=Literal["kg", "lb"],
+        default="lb",
+        scope="user_default",
+        label="Units for weight",
+        help="lb or kg (the app's US default is lb). Only how a weight is shown and typed changes; weights are stored in kilograms.",
+    ),
+    SettingDef(
+        key="body.weight_alarm",
+        model=WeightAlarm,
+        default=WeightAlarm(),
+        scope="user",
+        label="My weight-gain alarm (from my care team)",
+        help="amount_kg (0.2–10, or null for none), over (between_sessions, on hemodialysis, or days) and days (1–7). The app never "
+        "suggests a number: enter the one your team gave you.",
+    ),
+    SettingDef(
+        key="body.bp_goal",
+        model=BpGoal,
+        default=BpGoal(),
+        scope="user",
+        label="My blood pressure goal (from my care team)",
+        help="systolic (80–200) and diastolic (40–130), or null for none. The app never suggests a goal: enter the numbers your "
+        "team gave you.",
+    ),
+)
+
+
+# --------------------------------------------------------------------------- #
 # Note 06 (meal guidance), §4.14 with note 07's key names. Owner: M2 guidance (read by
 # app/guidance/context.py and app/guidance/api.py). "Not for me" foods are rows of food_preferences
 # (schema step 5), not part of this object, so a deleted food disappears from the list by itself.

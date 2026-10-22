@@ -1103,6 +1103,240 @@ class SymptomList(BaseModel):
     symptoms: list[SymptomOut]  # oldest day first, then entry order
 
 
+# --------------------------------------------------------------------------- #
+# Weight and blood pressure log (schema step 18; app/body.py; note 10 §4.1)
+# --------------------------------------------------------------------------- #
+
+WeightContext = Literal["morning", "before_dialysis", "after_dialysis", "other"]
+BloodPressureContext = Literal["morning", "evening", "before_dialysis", "after_dialysis", "other"]
+BodySourceKey = Literal["manual", "apple_health", "import"]  # where a stored row came from
+BodyImportSource = Literal["apple_health", "import"]  # what a batch row may say (a typed row is "manual")
+# The plausibility ranges below are the project's own choice, not clinical numbers (note 10 §3): they only keep a typing
+# error out of the log. 20 to 400 kg is the profile's ``weight_6_months_ago_kg`` range.
+MIN_WEIGHT_KG, MAX_WEIGHT_KG = 20, 400
+MIN_SYSTOLIC, MAX_SYSTOLIC = 50, 300
+MIN_DIASTOLIC, MAX_DIASTOLIC = 20, 200
+MIN_PULSE, MAX_PULSE = 20, 250
+MAX_BODY_NOTE = 200
+MAX_WEIGHTS_PER_DAY = 20  # per person and date: a bound on what one person can store
+MAX_READINGS_PER_DAY = 30
+MAX_BODY_BATCH = 1000  # rows in one POST .../batch
+MAX_SOURCE_KEY = 64
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def validate_clock_time(value: str | None) -> str | None:
+    """``HH:MM`` on the person's clock, 00:00 to 23:59; blank or ``None`` is "no time". Messages leave out the field name."""
+    if value is None or not value.strip():
+        return None
+    if not _TIME_RE.match(value):
+        raise ValueError("must be a time such as 07:30 (HH:MM, 00:00 to 23:59)")
+    return value
+
+
+class _BodyRow(BaseModel):
+    """What a weight and a blood pressure reading share: the day, an optional time and a short plain-text note."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    date: str
+    time: str | None = None
+
+    @field_validator("date")
+    @classmethod
+    def _date(cls, v: str) -> str:
+        return validate_past_date(v)
+
+    @field_validator("time", mode="before")
+    @classmethod
+    def _blank_time_is_none(cls, v: Any) -> Any:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("time")
+    @classmethod
+    def _time(cls, v: str | None) -> str | None:
+        return validate_clock_time(v)
+
+
+def _body_note(v: Any) -> Any:
+    return "" if v is None else v
+
+
+def _check_body_note(v: str) -> str:
+    if _SYMPTOM_TEXT_BAD.search(v):
+        raise ValueError("must be plain text")
+    return v
+
+
+class WeightCreate(_BodyRow):
+    """``POST /api/body/weights`` and ``PUT /api/body/weights/{id}``: one weighing, in kilograms (the unit the person sees
+    and types is display and entry only)."""
+
+    kg: float = Field(ge=MIN_WEIGHT_KG, le=MAX_WEIGHT_KG, allow_inf_nan=False)
+    context: WeightContext
+    note: str = Field(default="", max_length=MAX_BODY_NOTE)
+
+    _note_null = field_validator("note", mode="before")(staticmethod(_body_note))
+    _note_plain = field_validator("note")(staticmethod(_check_body_note))
+
+
+class BloodPressureCreate(_BodyRow):
+    """``POST /api/body/blood-pressure`` and ``PUT /api/body/blood-pressure/{id}``: one reading (top number, bottom number)."""
+
+    systolic: int = Field(ge=MIN_SYSTOLIC, le=MAX_SYSTOLIC)
+    diastolic: int = Field(ge=MIN_DIASTOLIC, le=MAX_DIASTOLIC)
+    pulse: int | None = Field(default=None, ge=MIN_PULSE, le=MAX_PULSE)
+    context: BloodPressureContext
+    note: str = Field(default="", max_length=MAX_BODY_NOTE)
+
+    _note_null = field_validator("note", mode="before")(staticmethod(_body_note))
+    _note_plain = field_validator("note")(staticmethod(_check_body_note))
+
+    @model_validator(mode="after")
+    def _top_above_bottom(self) -> "BloodPressureCreate":
+        if self.systolic <= self.diastolic:
+            raise ValueError("systolic must be greater than diastolic")
+        return self
+
+
+def _check_source_key(v: str) -> str:
+    if _SYMPTOM_LABEL_BAD.search(v):
+        raise ValueError("must be one line of plain text")
+    return v
+
+
+class WeightBatchRow(WeightCreate):
+    """A batch row adds where it came from and the key a second import de-duplicates on."""
+
+    source: BodyImportSource = "import"
+    source_key: str = Field(min_length=1, max_length=MAX_SOURCE_KEY)
+
+    _source_key_plain = field_validator("source_key")(staticmethod(_check_source_key))
+
+
+class BloodPressureBatchRow(BloodPressureCreate):
+    source: BodyImportSource = "import"
+    source_key: str = Field(min_length=1, max_length=MAX_SOURCE_KEY)
+
+    _source_key_plain = field_validator("source_key")(staticmethod(_check_source_key))
+
+
+class BodyBatch(BaseModel):
+    """``POST /api/body/weights/batch`` and ``.../blood-pressure/batch``: rows read from a file on the person's device. The
+    rows are checked one by one by the route (the first problem refuses the whole request and names the row)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rows: list[dict[str, Any]] = Field(min_length=1, max_length=MAX_BODY_BATCH)
+
+
+class BodyBatchResult(BaseModel):
+    added: int
+    skipped: int  # rows whose source_key the person already has, or that repeat an earlier row of the same request
+
+
+class BodyFlag(BaseModel):
+    """The handbook's own words for a warning sign (as :class:`SymptomRedFlag`): the line, the link and whether to show it
+    prominently."""
+
+    level: Literal["emergency", "today"]  # "Call 911 now" / "Call your care team today"
+    text: str
+    href: str
+    link_text: str
+    prominent: bool
+
+
+class WeightOut(BaseModel):
+    id: int
+    date: str
+    time: str | None
+    kg: float
+    context: WeightContext
+    note: str
+    source: BodySourceKey
+    created_at: str
+    updated_at: str
+
+
+class WeightList(BaseModel):
+    weights: list[WeightOut]  # oldest first, then by time (no time last), then id
+
+
+class BloodPressureOut(BaseModel):
+    id: int
+    date: str
+    time: str | None
+    systolic: int
+    diastolic: int
+    pulse: int | None
+    context: BloodPressureContext
+    note: str
+    source: BodySourceKey
+    created_at: str
+    updated_at: str
+    flag: BodyFlag | None  # a reading at 180 top or 120 bottom or more: the handbook's words for it
+
+
+class BloodPressureList(BaseModel):
+    readings: list[BloodPressureOut]
+
+
+class WeightChange(BaseModel):
+    kg: float
+    since: WeightOut  # the weight before the latest one
+
+
+class WeightAlarmCheck(BaseModel):
+    """What the person's weight-gain alarm says about the latest weight (note 10 §4.4)."""
+
+    amount_kg: float
+    over: Literal["between_sessions", "days"]
+    days: int
+    status: Literal["compared", "no_reference"]
+    reference_kind: Literal["after_dialysis", "dry_weight", "same_context"] | None
+    reference: WeightOut | None  # the weight compared with (none for the dry weight in Profile)
+    reference_kg: float | None
+    gain_kg: float | None
+    over_alarm: bool | None
+    message: str  # names what was compared, or why nothing was
+    flag: BodyFlag | None  # only while over the alarm
+
+
+class WeightSummary(BaseModel):
+    latest: WeightOut | None
+    previous: WeightOut | None
+    gain: WeightChange | None  # latest minus previous
+    alarm: WeightAlarmCheck | None  # null while the person has set no alarm
+
+
+class BloodPressureWeek(BaseModel):
+    count: int
+    systolic: int | None  # mean of the readings dated date-6 to date, half up
+    diastolic: int | None
+    above_goal: bool | None  # null with fewer than 3 readings or no goal set
+    above: dict[str, bool | None]  # per number: {"systolic", "diastolic"}
+    few: bool  # fewer than 3 readings: "only n readings", no verdict
+
+
+class BloodPressureGoal(BaseModel):
+    systolic: int | None
+    diastolic: int | None
+
+
+class BloodPressureSummary(BaseModel):
+    latest: BloodPressureOut | None
+    week: BloodPressureWeek
+    goal: BloodPressureGoal
+    flagged_today: BloodPressureOut | None  # the latest flagged reading dated the summary's date
+
+
+class BodySummary(BaseModel):
+    date: str
+    units: Literal["kg", "lb"]
+    weight: WeightSummary
+    bp: BloodPressureSummary
+
+
 class EgfrResult(BaseModel):
     value: int | None
     method: Literal["lab", "ckd_epi_2021_cr_cys", "ckd_epi_2021_cr", "ckd_epi_2012_cys"]
