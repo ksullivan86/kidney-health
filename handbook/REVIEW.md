@@ -65,17 +65,17 @@ pages, and tick it here.
 - [ ] The potassium-additive warning is "medium", not "high", when potassium is not listed
       (ARCHITECTURE v0.3 item 9; A5)
 - [ ] Per-meal caps (30 % per main meal, 15 % per snack) and the ±10 g carbohydrate tolerance (A4).
-      Since v0.3.1 Today's per-meal carbohydrate alert uses the same personal tolerance (5–20 g, default
+      Since 0.4.0 Today's per-meal carbohydrate alert uses the same personal tolerance (5–20 g, default
       10 g) and leaves out carbohydrate eaten to treat a low, so the plan's "close to your goal" dinner
       (60.6 g for a 60 g goal) no longer shows "Projected over"
 - [ ] An "about" target (minimum = maximum, such as protein 56 g at 0.8 g/kg with diabetes): how far
       above it still counts as on target? No cited guideline gives a tolerance, so the app keeps "over"
       above the number by default (the plan builder's ½-serving protein top-up can end at 101 %) and
-      words it "Above target", never "Over limit" (v0.3.0 review L8). Since v0.3.1 a person can set their
+      words it "Above target", never "Over limit" (v0.3.0 review L8). Since 0.4.0 a person can set their
       own tolerance, 0–10 %, from their dietitian (Profile; default 0, so no unsourced number ships).
       Confirm the 10 % ceiling of that setting
 - [ ] Low potassium on PD wording (St8)
-- [ ] "Running high" (v0.3.1): potassium, sodium or fluid over the limit on 2 of the 3 days before a planned
+- [ ] "Running high" (0.4.0): potassium, sodium or fluid over the limit on 2 of the 3 days before a planned
       day that goes over again; on hemodialysis the interval's total against the limit × its days; the 7-day
       phosphorus and protein average of at least 3 logged days with the plan. Display rules of the app, not
       from a guideline: confirm the day counts and which nutrients (`app/periods.py` `pattern_alerts`)

@@ -32,9 +32,22 @@ Base: `a8dd85d` (Learn my food preferences, part C, #62), branch `worktree-agent
   `ref=v0.3.1` -> `v0.4.0`), Security (no vulnerability fix: states that and lists the security-relevant changes), Known
   limitations. No new `## Unreleased`. Links checked with a scratch script (anchors incl. `#from-v03-to-v04`).
 
+* Step 3 (ROADMAP): shipped items removed (the "Done" owner ideas, the Done / Remove-this-line lines, the shipped cost-table
+  rows and the v0.3.1 batch sentence); remainders kept as short lines (health-data imports, PDF upload, recipe pages in
+  `check_meal`, kidney-only owner items, privacy tiers 2 and 4, preferences not built, live AI runs, the token scope for
+  `set_food_preference`); a new "Open items from the v0.4.0 build" section; "Last reviewed" is the 0.4.0 release.
+* Step 4 (progress notes): all 19 notes read; decisions checked against ARCHITECTURE / docs by phrase (they were already
+  there; added the Ask-Undo-never-queued line, the trust-not-reset + residual-risk paragraph, the demo-has-no-sample-symptoms
+  line); owner checks added to `docs/maintainers.md` (live runs, STT overlay, phone matrix additions, server import page,
+  `HOLD_LATEST` decision for 0.4.0); harness-load note in `tools/e2e/README.md`; open items in ROADMAP. Notes deleted,
+  links fixed (ARCHITECTURE ownership rows), `progress/README.md` says they were condensed on 2026-10-21.
+* Step 5 (docs sweep): README (version banner, features, `:0.4`, "Upgrading from v0.3"), docs/assistant.md ("Where this
+  stands"), docs/README.md, network-allowlist (Web Push is not built), install-on-your-phone, handbook `app/index.md`
+  ("New in version 0.4", Ask in the tab list), plan statuses, ARCHITECTURE status paragraph.
+
 ## In progress / next
 
-README, ROADMAP, progress-note condensing, docs sweep (coming / planned / part B/C), checks.
+Run the checks (pytest, vectors, ruff, handbook build, harnesses) and fix real bugs only; final report; delete this note.
 
 ## Decisions
 

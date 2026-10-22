@@ -79,7 +79,7 @@ from other machines ([HTTPS for phones](https.md)).
 
 ## Passwords and lock-outs
 
-- No email in v0.3, so no self-service reset. **Server administration → People → Reset link** (24 hours,
+- The app sends no e-mail, so there is no self-service reset. **Server administration → People → Reset link** (24 hours,
   single use), or `python -m app.admin reset-password USERNAME`. `--stdin` sets a password directly
   (break-glass; also unlocks a locked account).
 - Repeated wrong passwords slow that account down, then block the address for a while (refused
