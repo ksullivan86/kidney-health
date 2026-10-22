@@ -41,7 +41,7 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
-     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py` and `mcp_smoke.py`
+     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py` and `mcp_smoke.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);
@@ -59,12 +59,15 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the manual device matrix of note 02 ("Manual device test matrix"): an iPhone, an iPad, an Android
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
      plain HTTP (barcode photo, typed digits), with an entry edited and another deleted while offline and a conflict made from
-     a second device (the card in Settings → This device), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results,
-     the entry sheet and Settings;
-   * Settings → Account → Your data → **Import from a file** against a real server in a real browser, once: export a zip from
-     one account, open it, import the `export.json` into a fresh account, with and without "Add to my existing data" and
-     "Also replace my profile, targets and settings". No harness drives the server's page (a Node test covers its code and
-     `demo_local.py` the demo's twin);
+     a second device (the card in Settings → This device), Settings → Your data → Import from a file with the phone's own file
+     picker (choose an `export.json` kept in the Files app or Android's picker; after closing the password prompt, check what
+     happens when the same file is chosen again), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results, the
+     entry sheet and Settings;
+   * Settings → Account → Your data → **Import from a file** is covered by `import_walk.py` in Chromium (export from one
+     account, import the `export.json` into a fresh account with and without "Add to my existing data" and "Also replace
+     my profile, targets and settings", the files it refuses and the password prompt); on a phone it is part of the device
+     matrix above, because the harness hands the file to the page and only a phone's own file picker shows how a real one
+     behaves;
    * Labs → Import from Apple Health with a real Health export from an iPhone (Safari, the Files app's Select All in
      `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
      headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
