@@ -9,7 +9,8 @@
 // are not just a copy of what the module said. All records are invented (made-up sources and values; no real person's data).
 // tests/test_apple_health.py recomputes every source_key with hashlib; node tests/js/run_vectors.mjs replays the cases.
 //
-//   node tests/js/gen_apple_health_vectors.mjs
+//   node tests/js/gen_apple_health_vectors.mjs           # rewrite the vectors
+//   node tests/js/gen_apple_health_vectors.mjs --check   # exit 1 if the committed file is not what this script writes
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -773,5 +774,11 @@ const doc_ = {
   upload,
   sha256,
 };
-writeFileSync(OUT, `${JSON.stringify(doc_, null, 1)}\n`);
+const text_ = `${JSON.stringify(doc_, null, 1)}\n`;
+if (process.argv.includes('--check')) { // tests/test_apple_health.py: the committed file is what this script writes
+  const current = readFileSync(OUT, 'utf8') === text_;
+  console.log(current ? `${OUT} is current` : `${OUT} is out of date: run node tests/js/gen_apple_health_vectors.mjs`);
+  process.exit(current ? 0 : 1);
+}
+writeFileSync(OUT, text_);
 console.log(`wrote ${OUT}: ${output.length} cases x ${SIZES.length} chunk sizes, ${defaultSince.length} default_since, ${sha256.length} sha256`);

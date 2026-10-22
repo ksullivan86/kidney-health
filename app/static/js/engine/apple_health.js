@@ -16,6 +16,8 @@
    * A tag longer than 8,192 characters (MAX_TAG) is skipped and counted (tagTooLong); its text is thrown away as it streams past.
    * The text a record is cut from is never held beyond one tag: the carry-over buffer between two chunks is the unfinished start of one
      tag (under 8,192 characters) or the last few characters that may begin "<Record ". Whatever the input, it never grows past that.
+     (What the scan keeps grows only with the weights and readings it finds, a few hundred bytes each; text cut from a chunk is copied
+     first, so a row never keeps a whole chunk alive.)
    * A tag that does not hold the text "HKQuantityTypeIdentifierB" is dropped without being looked at (heart rate, steps, glucose, insulin,
      everything else: CLAUDE.md, no dosing data). Other tags are read by one linear pass over name="value" / name='value' pairs, in any
      order, single or double quotes; only type, unit, value, startDate and sourceName are kept, the first of a repeated name wins.
@@ -109,10 +111,10 @@
   const isLeap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
   const daysIn = (y, m) => (m === 2 ? (isLeap(y) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
 
-  // A copy of a short piece of a big chunk. V8, JavaScriptCore and SpiderMonkey slice a long substring without copying it, so a row
-  // that kept a sourceName cut from a 64 KiB chunk would keep that whole chunk alive, thousands of times over. The JSON round trip
-  // builds a new string of its own in every engine.
-  const detach = (s) => (s.length < 8 ? s : JSON.parse(JSON.stringify(s)));
+  // A copy of a piece of a big chunk. V8, JavaScriptCore and SpiderMonkey slice a substring without copying it (above a few
+  // characters), so a row that kept a sourceName cut from a 64 KiB chunk would keep that whole chunk alive, thousands of times over.
+  // The JSON round trip builds a new string of its own in every engine. Only what a row or a table keeps goes through it.
+  const detach = (s) => JSON.parse(JSON.stringify(s));
 
   const NAMED = new Map([['amp', '&'], ['lt', '<'], ['gt', '>'], ['quot', '"'], ['apos', "'"]]);
   // A character reference, or a name reference, or any other "&" (which is then bad). One pass: the output is never read again.
@@ -255,7 +257,8 @@
 
   /* A scanner fed text a chunk at a time: push(chunk) for each, then finish() (async: the keys are hashed).
      opts.today: 'YYYY-MM-DD' of the caller; a record dated more than a day after it is unreadable. */
-  function createScanner(opts = {}) {
+  function createScanner(opts) {
+    opts = opts || {};
     let todayNumber = null;
     if (opts.today !== undefined && opts.today !== null) {
       const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(opts.today));
@@ -450,7 +453,8 @@
      strings, or one string. A chunk that is not a string is a TypeError.
      opts.today: 'YYYY-MM-DD' (see createScanner). opts.signal: an AbortSignal; aborting rejects with an AbortError after the chunk being
      read, and the stream is cancelled. opts.onProgress({chars}): about every opts.progressEvery (default 10 MiB) characters. */
-  async function scan(source, opts = {}) {
+  async function scan(source, opts) {
+    opts = opts || {};
     const scanner = createScanner(opts);
     const signal = opts.signal;
     const every = opts.progressEvery > 0 ? opts.progressEvery : PROGRESS_STEP;

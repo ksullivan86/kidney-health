@@ -842,6 +842,7 @@ async function appleHealthVectors() {
   }
   // without crypto.subtle (a page served over plain HTTP) the scan gives the same keys
   const plainContext = vm.createContext({ console, TextEncoder });
+  plainContext.window = plainContext; // and as a page has it: the script finds `window` first
   for (const rel of APPLE_HEALTH_ENGINE) vm.runInContext(readFileSync(join(ROOT, rel), 'utf8'), plainContext, { filename: rel });
   const P = vm.runInContext('globalThis.KH.appleHealth', plainContext);
   const fromJs = await P.scan(text);
