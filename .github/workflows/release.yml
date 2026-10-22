@@ -272,6 +272,14 @@ jobs:
             echo "the release notes already carry the digest"
             exit 0
           fi
+          # GitHub refuses a release body over 125,000 characters (HTTP 422). The image is published by
+          # now, so warn and print the block instead of failing the run.
           printf '%s\n%s\n' "$body" "$block" > "$RUNNER_TEMP/notes.md"
+          size="$(LC_ALL=C.UTF-8 wc -m < "$RUNNER_TEMP/notes.md")"
+          if [ "$size" -gt 125000 ]; then
+            echo "::warning title=Release notes too long for the Image block::The ${TAG} notes with the Image block come to ${size} characters; GitHub allows 125,000. Shorten the notes (paste the CHANGELOG section as Markdown, not the rendered page) and re-run this job, or paste the block below by hand."
+            printf '%s\n' "$block"
+            exit 0
+          fi
           gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
           echo "appended the digest to the ${TAG} release notes"
