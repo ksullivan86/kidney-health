@@ -26,9 +26,11 @@ The file is untrusted input (it may have been edited, or made up to look like an
   the new ids; one whose food is neither in the file nor built in is skipped and listed, never guessed.
   An entry's nutrient numbers are recomputed from its food and servings, as every entry is, never taken from the
   file.
-* **Duplicates.** An account that already has entries, own foods, saved meals, lab results or symptoms is refused (409)
-  unless the person chose ``merge=1`` ("Add to my existing data"); then whatever is already here is left out
-  (:data:`RULE`), so importing the same file again adds nothing.
+* **Duplicates.** An account that already has entries, own foods, saved meals, lab results, symptoms, weights or blood
+  pressure readings is refused (409) unless the person chose ``merge=1`` ("Add to my existing data"); then whatever is
+  already here is left out (:data:`RULE`), so importing the same file again adds nothing. A weight or reading that carries a
+  ``source_key`` (it came from an import) is left out when the person has that key; one without a key (typed by the person)
+  is left out when an identical one is here.
 * The person's profile, targets and settings are replaced only with ``replace_profile=1``: they are clinical
   settings the person may have agreed with their care team on this server.
 
@@ -58,6 +60,7 @@ from .auth.errors import ApiProblem, busy
 from .db import get_db, utcnow
 from .foods import Provenance, link_food, scan_custom_food, stored_food_values
 from .guidance.context import MAX_FOOD_PREFERENCES, MAX_NOT_FOR_ME, PREFERENCE_NOT_FOR_ME
+from .body import round_kg
 from .log import insert_entry
 from .meals import insert_template, parse_items
 from .models import (
@@ -67,17 +70,26 @@ from .models import (
     MAX_SERVING_G,
     MAX_SERVINGS,
     MAX_SQLITE_INT,
+    MAX_BODY_NOTE,
+    MAX_READINGS_PER_DAY,
+    MAX_SOURCE_KEY,
     MAX_SYMPTOM_LABEL,
     MAX_SYMPTOM_NOTE,
     MAX_SYMPTOMS_PER_DAY,
+    MAX_WEIGHTS_PER_DAY,
     MIN_SERVING_G,
     Analyte,
+    BloodPressureContext,
+    BloodPressureCreate,
+    BodySourceKey,
     EntryStatus,
     LabCreate,
     Meal,
     ProfileUpdate,
     SymptomCreate,
     SymptomKey,
+    WeightContext,
+    WeightCreate,
     validate_client_id,
     validate_date,
     validate_flags,
@@ -106,15 +118,19 @@ MAX_MEALS = 1_000
 MAX_MEAL_ITEMS = 100
 MAX_LABS = 5_000
 MAX_SYMPTOMS = 20_000
+MAX_WEIGHTS = 20_000
+MAX_BLOOD_PRESSURES = 20_000
 MAX_SETTINGS = 200
 MAX_SKIPPED_SHOWN = 100  # skipped items listed in the answer; the total is always given
 MAX_MESSAGE_CHARS = 200
 MAX_NOTE_CHARS = 1000  # a saved meal's note, as MealTemplateCreate allows
 
 # Personal settings carried over with "replace my profile and targets": the meal-guidance preferences (carb tolerance
-# and the grams the person takes for a low come from their diabetes team) and three display preferences. Consents
+# and the grams the person takes for a low come from their diabetes team), three display preferences and the weight log's
+# three (the unit, and the weight-gain alarm and blood pressure goal the person's care team gave them). Consents
 # (Open Food Facts barcodes, AI) are never carried over: they are agreed again where they take effect.
-IMPORTED_SETTINGS: tuple[str, ...] = ("guidance", "ui.theme", "user.units.labs", "food.scan_prefer_camera")
+IMPORTED_SETTINGS: tuple[str, ...] = ("guidance", "ui.theme", "user.units.labs", "food.scan_prefer_camera", "user.units.weight",
+                                      "body.weight_alarm", "body.bp_goal")
 
 # Sections the export writes that belong to the server, not to the person's records: accepted, never read.
 SKIPPED_SECTIONS: tuple[str, ...] = ("user", "ai_audit", "activity", "ai_usage", "ai_consents", "ai_provider")
@@ -129,12 +145,14 @@ NOT_IMPORTED: tuple[str, ...] = (
 )
 
 RULE = (
-    "Your file's foods, log entries, saved meals, lab results, symptoms and food preferences are added to this "
-    "account. If the account already has entries, foods of your own, saved meals, lab results or symptoms, nothing is "
+    "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food "
+    "preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab "
+    "results, symptoms, weights or blood pressure readings, nothing is "
     "imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with "
     "the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a "
     "saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same "
-    "date, name, severity and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets "
+    "date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or "
+    "one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets "
     "and settings\"."
 )
 
@@ -465,6 +483,76 @@ class ImportSymptom(_Strict):
         return self
 
 
+class ImportWeight(_Strict):
+    """A weight of ``export.json`` (:mod:`app.account`), kilograms. Checked exactly like ``POST /api/body/weights``; the id in
+    the file is never used."""
+
+    id: Id
+    date: str
+    time: str | None = None
+    kg: Annotated[float, Field(allow_inf_nan=False)]
+    context: WeightContext
+    note: _short(MAX_BODY_NOTE) | None = None
+    source: BodySourceKey
+    source_key: _short(MAX_SOURCE_KEY) | None = None
+    created_at: Timestamp
+    updated_at: Timestamp
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return parse_timestamp(v)
+
+    def as_recorded(self) -> WeightCreate:
+        return WeightCreate(date=self.date, time=self.time, kg=self.kg, context=self.context, note=self.note or "")
+
+    @model_validator(mode="after")
+    def _as_recorded(self) -> "ImportWeight":
+        try:
+            self.as_recorded()
+        except ValidationError as exc:
+            first = exc.errors(include_url=False, include_context=False, include_input=False)[0]
+            where = ".".join(str(p) for p in first["loc"]) or "weight"
+            raise ValueError(f"{where}: {str(first['msg']).removeprefix('Value error, ')[:120]}") from None
+        return self
+
+
+class ImportBloodPressure(_Strict):
+    """A blood pressure reading of ``export.json``, checked exactly like ``POST /api/body/blood-pressure``."""
+
+    id: Id
+    date: str
+    time: str | None = None
+    systolic: int
+    diastolic: int
+    pulse: int | None = None
+    context: BloodPressureContext
+    note: _short(MAX_BODY_NOTE) | None = None
+    source: BodySourceKey
+    source_key: _short(MAX_SOURCE_KEY) | None = None
+    created_at: Timestamp
+    updated_at: Timestamp
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return parse_timestamp(v)
+
+    def as_recorded(self) -> BloodPressureCreate:
+        return BloodPressureCreate(date=self.date, time=self.time, systolic=self.systolic, diastolic=self.diastolic,
+                                   pulse=self.pulse, context=self.context, note=self.note or "")
+
+    @model_validator(mode="after")
+    def _as_recorded(self) -> "ImportBloodPressure":
+        try:
+            self.as_recorded()
+        except ValidationError as exc:
+            first = exc.errors(include_url=False, include_context=False, include_input=False)[0]
+            where = ".".join(str(p) for p in first["loc"]) or "reading"
+            raise ValueError(f"{where}: {str(first['msg']).removeprefix('Value error, ')[:120]}") from None
+        return self
+
+
 class ImportFoodPreference(_Strict):
     """A food preference of ``export.json`` (:mod:`app.account`). A file from before schema step 17 holds only
     ``not_for_me`` rows without ``source`` and ``updated_at``; they import as the person's own, changed when made."""
@@ -511,6 +599,8 @@ class ExportFile(_Strict):
     meal_templates: Annotated[list[ImportMeal], Field(max_length=MAX_MEALS)] = []
     lab_results: Annotated[list[ImportLab], Field(max_length=MAX_LABS)] = []
     symptoms: Annotated[list[ImportSymptom], Field(max_length=MAX_SYMPTOMS)] = []
+    weights: Annotated[list[ImportWeight], Field(max_length=MAX_WEIGHTS)] = []
+    blood_pressures: Annotated[list[ImportBloodPressure], Field(max_length=MAX_BLOOD_PRESSURES)] = []
     food_preferences: Annotated[list[ImportFoodPreference], Field(max_length=MAX_FOOD_PREFERENCES)] = []
     # Accepted without looking inside, never read or stored.
     user: Any = None
@@ -707,6 +797,8 @@ class Importer:
             "meal_templates": c.execute("SELECT COUNT(*) FROM meal_templates WHERE user_id = ?", (u,)).fetchone()[0],
             "lab_results": c.execute("SELECT COUNT(*) FROM lab_results WHERE user_id = ?", (u,)).fetchone()[0],
             "symptoms": c.execute("SELECT COUNT(*) FROM symptoms WHERE user_id = ?", (u,)).fetchone()[0],
+            "weights": c.execute("SELECT COUNT(*) FROM weights WHERE user_id = ?", (u,)).fetchone()[0],
+            "blood_pressures": c.execute("SELECT COUNT(*) FROM blood_pressures WHERE user_id = ?", (u,)).fetchone()[0],
         }
 
     # -- foods ----------------------------------------------------------------------------------------------------
@@ -937,6 +1029,77 @@ class Importer:
             per_day[s.date] += 1
             self.counts["symptoms"] += 1
 
+    # -- weights and blood pressure readings (schema step 18) ----------------------------------------------------------
+    def import_weights(self) -> None:
+        """A row with a ``source_key`` is left out when the person has that key; a row without one (typed by the person) is
+        left out when an identical one is here. A crowded day is skipped and reported."""
+        c, u = self.conn, self.uid
+        keys = {r[0] for r in c.execute("SELECT source_key FROM weights WHERE user_id = ? AND source_key IS NOT NULL", (u,))}
+        have: Counter[tuple] = Counter(
+            (r["date"], r["time"], round(float(r["kg"]), 2), r["context"], r["note"] or "")
+            for r in c.execute("SELECT date, time, kg, context, note FROM weights WHERE user_id = ? AND source_key IS NULL", (u,)))
+        per_day: Counter[str] = Counter(r[0] for r in c.execute("SELECT date FROM weights WHERE user_id = ?", (u,)))
+        for index, w in enumerate(self.doc.weights):
+            rec = w.as_recorded()  # the same cleaning as POST /api/body/weights (text stripped, a blank time is none)
+            note, kg, time = rec.note, round_kg(rec.kg), rec.time
+            if w.source_key is not None:
+                if w.source_key in keys:
+                    self.already["weights"] += 1
+                    continue
+            else:
+                identity = (rec.date, time, kg, w.context, note)
+                if have[identity] > 0:
+                    have[identity] -= 1
+                    self.already["weights"] += 1
+                    continue
+            if per_day[rec.date] >= MAX_WEIGHTS_PER_DAY:
+                self.skip("weights", index, f"{kg} kg on {rec.date}", f"that day already has {MAX_WEIGHTS_PER_DAY} weights, the most one day holds")
+                continue
+            c.execute(
+                "INSERT INTO weights (user_id, date, time, kg, context, note, source, source_key, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (u, rec.date, time, kg, w.context, note, w.source, w.source_key, w.created_at, w.updated_at),
+            )
+            if w.source_key is not None:
+                keys.add(w.source_key)
+            per_day[rec.date] += 1
+            self.counts["weights"] += 1
+
+    def import_blood_pressures(self) -> None:
+        c, u = self.conn, self.uid
+        keys = {r[0] for r in c.execute("SELECT source_key FROM blood_pressures WHERE user_id = ? AND source_key IS NOT NULL", (u,))}
+        have: Counter[tuple] = Counter(
+            (r["date"], r["time"], r["systolic"], r["diastolic"], r["pulse"], r["context"], r["note"] or "")
+            for r in c.execute("SELECT date, time, systolic, diastolic, pulse, context, note FROM blood_pressures "
+                               "WHERE user_id = ? AND source_key IS NULL", (u,)))
+        per_day: Counter[str] = Counter(r[0] for r in c.execute("SELECT date FROM blood_pressures WHERE user_id = ?", (u,)))
+        for index, b in enumerate(self.doc.blood_pressures):
+            rec = b.as_recorded()
+            note, time = rec.note, rec.time
+            if b.source_key is not None:
+                if b.source_key in keys:
+                    self.already["blood_pressures"] += 1
+                    continue
+            else:
+                identity = (rec.date, time, b.systolic, b.diastolic, b.pulse, b.context, note)
+                if have[identity] > 0:
+                    have[identity] -= 1
+                    self.already["blood_pressures"] += 1
+                    continue
+            if per_day[rec.date] >= MAX_READINGS_PER_DAY:
+                self.skip("blood_pressures", index, f"{b.systolic}/{b.diastolic} on {rec.date}",
+                          f"that day already has {MAX_READINGS_PER_DAY} blood pressure readings, the most one day holds")
+                continue
+            c.execute(
+                "INSERT INTO blood_pressures (user_id, date, time, systolic, diastolic, pulse, context, note, source, source_key, "
+                "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (u, rec.date, time, b.systolic, b.diastolic, b.pulse, b.context, note, b.source, b.source_key, b.created_at, b.updated_at),
+            )
+            if b.source_key is not None:
+                keys.add(b.source_key)
+            per_day[rec.date] += 1
+            self.counts["blood_pressures"] += 1
+
     # -- food preferences (like, less often, "Not for me", neutral) -------------------------------------------------
     def import_preferences(self) -> None:
         c = self.conn
@@ -971,7 +1134,7 @@ class Importer:
             if doc.profile is not None:
                 self.not_selected.append("your profile and targets")
             if any(key in IMPORTED_SETTINGS for key in doc.settings):
-                self.not_selected.append("your meal-guidance and display settings")
+                self.not_selected.append("your meal-guidance, display, weight and blood pressure settings")
             return
         if doc.profile is not None:
             self.conn.execute("INSERT OR IGNORE INTO user_profiles (user_id, updated_at, updated_by) VALUES (?, ?, ?)",
@@ -1004,6 +1167,8 @@ class Importer:
         self.import_meals()
         self.import_labs()
         self.import_symptoms()
+        self.import_weights()
+        self.import_blood_pressures()
         self.import_preferences()
         self.import_profile_and_settings()
 
@@ -1014,9 +1179,9 @@ class Importer:
 
 
 COUNT_KEYS = ("log_entries", "custom_foods", "shared_foods_kept_as_own", "shared_foods_linked", "built_in_foods_matched",
-              "meal_templates", "lab_results", "symptoms", "food_preferences", "profile", "settings")
+              "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "food_preferences", "profile", "settings")
 ALREADY_KEYS = ("log_entries", "custom_foods", "shared_foods_linked", "meal_templates", "lab_results", "symptoms",
-                "food_preferences")
+                "weights", "blood_pressures", "food_preferences")
 
 
 def _file_summary(doc: ExportFile) -> dict[str, Any]:
@@ -1026,6 +1191,7 @@ def _file_summary(doc: ExportFile) -> dict[str, Any]:
         "records": {"log_entries": len(doc.log_entries), "custom_foods": len(doc.custom_foods),
                     "linked_foods": len(doc.linked_foods), "meal_templates": len(doc.meal_templates),
                     "lab_results": len(doc.lab_results), "symptoms": len(doc.symptoms),
+                    "weights": len(doc.weights), "blood_pressures": len(doc.blood_pressures),
                     "food_preferences": len(doc.food_preferences),
                     "profile": 1 if doc.profile is not None else 0},
     }
@@ -1049,7 +1215,7 @@ def run_import(conn: sqlite3.Connection, user_id: int, raw: bytes, *, dry_run: b
         else:
             audit(conn, user_id, "data.imported", "user", user_id, ip=ip, merge=merge, profile=bool(importer.counts["profile"]),
                   **{k: int(importer.counts[k]) for k in ("log_entries", "custom_foods", "meal_templates", "lab_results",
-                                                          "symptoms", "food_preferences")})
+                                                          "symptoms", "weights", "blood_pressures", "food_preferences")})
             conn.commit()
             committed = True
     except sqlite3.OperationalError as exc:

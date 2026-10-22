@@ -109,7 +109,7 @@ def test_the_vectors_cover_the_flow_and_what_is_never_imported(committed):
     assert replacing["counts"]["settings"] == 4 and replacing["counts"]["profile"] == 1
     skipped = {s["label"] for s in replacing["skipped"]["shown"] if s["kind"] == "settings"}
     assert skipped == {"ai", "food.off_consent"}
-    assert steps["a whole file, as a dry run"]["answer"]["body"]["not_selected"] == ["your profile and targets", "your meal-guidance and display settings"]
+    assert steps["a whole file, as a dry run"]["answer"]["body"]["not_selected"] == ["your profile and targets", "your meal-guidance, display, weight and blood pressure settings"]
     # the account that has data is refused unless "add to my existing data" is chosen
     assert steps["the account is not empty any more"]["answer"]["body"]["can_import"] is False
     assert steps["the account is not empty: the real import is refused"]["answer"]["status"] == 409

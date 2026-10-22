@@ -1,7 +1,8 @@
 """A person's own data: the export archive and account deletion (note 07 §4.14).
 
 * :func:`build_export` returns a ``.zip`` with ``export.json`` (the documented shape below),
-  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv``, ``symptoms.csv`` and ``README.txt``. It never contains
+  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv``, ``symptoms.csv``, ``weights.csv``, ``blood_pressure.csv`` and
+  ``README.txt``. It never contains
   passwords, session data or API keys (not even their last four characters). Every CSV cell that a
   spreadsheet would run as a formula is escaped (:func:`app.log.csv_safe`).
 * :func:`delete_user` audits, then ``DELETE FROM users`` (every personal table cascades: entries,
@@ -13,8 +14,8 @@
 
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
-     "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "ai_audit", "activity",
-     "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
+     "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit",
+     "activity", "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
 
 ``food_preferences`` (v0.3, schema steps 5 and 17) lists the foods the person told meal guidance about:
 ``[{food_id, name, preference, created_at, source, updated_at}]``. ``preference`` is ``like``, ``less``, ``not_for_me`` or
@@ -28,6 +29,14 @@ log" switch are in ``settings.guidance``.
 severity, note, created_at}]`` (the stored columns; ``severity`` is 1 mild, 2 moderate, 3 severe; ``label`` is the
 person's own name for an ``other``). It is an optional list added to version 1: an older file without it still imports,
 and the version stays 1 because nothing that was there changed.
+
+``weights`` and ``blood_pressures`` (schema step 18; note 10 §4.11) list the weighings and blood pressure readings the person
+recorded, oldest day first, as stored: ``[{id, date, time, kg, context, note, source, source_key, created_at, updated_at}]``
+and ``[{id, date, time, systolic, diastolic, pulse, context, note, source, source_key, created_at, updated_at}]`` (``kg`` is
+kilograms; ``time`` is ``HH:MM`` or null; ``source`` is ``manual``, ``apple_health`` or ``import`` and ``source_key`` is the
+key an import de-duplicates on, null for a typed row). Optional lists added to version 1, like ``symptoms``: an older file
+without them still imports, and the version stays 1 because nothing that was there changed. The weight alarm and blood
+pressure goal the person's care team gave them are in ``settings`` (``body.weight_alarm``, ``body.bp_goal``).
 
 Import (``POST /api/me/import``, :mod:`app.data_import`) reads this same file. So that a food can be found on
 another server, ``linked_foods`` items also carry ``gtin`` and ``food`` (the whole food record, shaped like a
@@ -71,6 +80,9 @@ This archive holds everything this server stores about your account, in two form
 * meals.csv    - your saved meals, one line per food.
 * labs.csv     - your lab results (empty if you have none).
 * symptoms.csv - the symptoms you recorded, with date and severity (1 mild, 2 moderate, 3 severe; empty if none).
+* weights.csv  - the weights you recorded, in kilograms, with the date, time and when they were taken (empty if none).
+* blood_pressure.csv - the blood pressure readings you recorded: top number (systolic) and bottom number (diastolic) in mmHg,
+                 pulse, date, time and when they were taken (empty if none).
 
 export.json also holds your food preferences (the foods you marked More like this, Less often or Not for me,
 and the foods where you switched off what the app learned from your log; the food groups you chose are in
@@ -184,6 +196,24 @@ def _symptoms(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
     return export_rows(conn, user_id)
 
 
+def _weights(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """The weight log (schema step 18), oldest day first; [] on an older schema."""
+    if not table_exists(conn, "weights"):
+        return []
+    from .body import export_weights
+
+    return export_weights(conn, user_id)
+
+
+def _blood_pressures(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
+    """The blood pressure log (schema step 18), oldest day first; [] on an older schema."""
+    if not table_exists(conn, "blood_pressures"):
+        return []
+    from .body import export_readings
+
+    return export_readings(conn, user_id)
+
+
 def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
     from .log import csv_safe
 
@@ -224,6 +254,8 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "meal_templates": [row_to_template(conn, r) for r in templates],
         "lab_results": _lab_results(conn, uid),
         "symptoms": _symptoms(conn, uid),
+        "weights": _weights(conn, uid),
+        "blood_pressures": _blood_pressures(conn, uid),
         "ai_audit": _per_user_table(conn, "ai_audit", uid),
         "activity": list_events(conn, actor_user_id=uid, actions=USER_VISIBLE_ACTIONS, limit=500),
         "food_preferences": _food_preferences(conn, uid),
@@ -268,6 +300,11 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
 
     symptoms_csv = _csv(SYMPTOM_CSV_COLUMNS, ([row.get(k) for k in SYMPTOM_CSV_COLUMNS] for row in data["symptoms"]))
 
+    from .body import READING_CSV_COLUMNS, WEIGHT_CSV_COLUMNS
+
+    weights_csv = _csv(WEIGHT_CSV_COLUMNS, ([row.get(k) for k in WEIGHT_CSV_COLUMNS] for row in data["weights"]))
+    blood_pressure_csv = _csv(READING_CSV_COLUMNS, ([row.get(k) for k in READING_CSV_COLUMNS] for row in data["blood_pressures"]))
+
     buffer = io.BytesIO()
     stamp = datetime.now(timezone.utc).timetuple()[:6]
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -278,6 +315,8 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
             ("meals.csv", meals_csv),
             ("labs.csv", labs_csv),
             ("symptoms.csv", symptoms_csv),
+            ("weights.csv", weights_csv),
+            ("blood_pressure.csv", blood_pressure_csv),
             ("README.txt", README),
         ):
             info = zipfile.ZipInfo(name, date_time=stamp)

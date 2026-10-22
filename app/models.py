@@ -1122,14 +1122,14 @@ MAX_WEIGHTS_PER_DAY = 20  # per person and date: a bound on what one person can 
 MAX_READINGS_PER_DAY = 30
 MAX_BODY_BATCH = 1000  # rows in one POST .../batch
 MAX_SOURCE_KEY = 64
-_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_TIME_RE = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")  # ASCII digits only, whole string (the browser twin uses the same)
 
 
 def validate_clock_time(value: str | None) -> str | None:
     """``HH:MM`` on the person's clock, 00:00 to 23:59; blank or ``None`` is "no time". Messages leave out the field name."""
     if value is None or not value.strip():
         return None
-    if not _TIME_RE.match(value):
+    if not _TIME_RE.fullmatch(value):
         raise ValueError("must be a time such as 07:30 (HH:MM, 00:00 to 23:59)")
     return value
 
