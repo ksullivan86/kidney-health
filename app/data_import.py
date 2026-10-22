@@ -57,6 +57,7 @@ from .audit import audit
 from .auth.context import auth_context, request_ip
 from .auth.deps import RecentUser, current_user
 from .auth.errors import ApiProblem, busy
+from .brand import EXPORT_FORMAT, NAME as PRODUCT_NAME  # the names, not the module: ``brand`` is a food's field here
 from .db import get_db, utcnow
 from .foods import Provenance, link_food, scan_custom_food, stored_food_values
 from .guidance.context import MAX_FOOD_PREFERENCES, MAX_NOT_FOR_ME, PREFERENCE_NOT_FOR_ME
@@ -105,7 +106,6 @@ register_body_limit("/api/me/import", "max_import_bytes")
 
 router = APIRouter(prefix="/api/me/import", tags=["me"], dependencies=[Depends(current_user)])
 
-EXPORT_FORMAT = "kidney-health-export"
 SUPPORTED_VERSION = 1
 
 # Bounds on the lists of a file. The body limit (MAX_IMPORT_BYTES) is the first fence; these keep the work and the
@@ -586,7 +586,7 @@ class ExportFile(_Strict):
     """``export.json`` version 1 (:mod:`app.account`). Every section but ``format`` and ``version`` may be missing:
     a file from an earlier build of version 1 has fewer."""
 
-    format: Literal["kidney-health-export"]
+    format: Literal["kidney-health-export"]  # a Literal needs the text itself; tests/test_brand.py keeps it equal to brand.EXPORT_FORMAT
     version: Literal[1]
     exported_at: Timestamp | None = None
     app_version: _short(40) | None = None
@@ -674,7 +674,7 @@ def _refusal(exc: ValidationError) -> ImportRefused:
 
 
 MAX_DEPTH = 32  # a real export is about 5 levels deep
-TOO_DEEP = "This is not a Kidney Health export: the file is nested too deeply."
+TOO_DEEP = f"This is not a {PRODUCT_NAME} export: the file is nested too deeply."
 
 
 def nested_deeper_than(value: Any, limit: int) -> bool:
@@ -705,10 +705,10 @@ def parse_export(raw: bytes) -> ExportFile:
     if nested_deeper_than(data, MAX_DEPTH):
         raise ImportRefused(TOO_DEEP)
     if not isinstance(data, dict):
-        raise ImportRefused("This is not a Kidney Health export: the file must hold one JSON object.")
+        raise ImportRefused(f"This is not a {PRODUCT_NAME} export: the file must hold one JSON object.")
     fmt = data.get("format")
     if fmt != EXPORT_FORMAT:
-        raise ImportRefused("This is not a Kidney Health export (its \"format\" is not \"kidney-health-export\").")
+        raise ImportRefused(f"This is not a {PRODUCT_NAME} export (its \"format\" is not \"{EXPORT_FORMAT}\").")
     version = data.get("version")
     if isinstance(version, bool) or version != SUPPORTED_VERSION:
         shown = short(version, 20) if isinstance(version, (int, float, str)) else "unknown"

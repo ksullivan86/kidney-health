@@ -248,7 +248,7 @@ def test_health_data_lives_in_indexeddb_or_memory_only() -> None:
     for storage in ("localStorage", "sessionStorage", "document.cookie", "caches."):
         assert storage not in OFFLINE, f"js/offline.js uses {storage}"
         assert storage not in SCAN, f"js/scan.js uses {storage}"
-    assert "window.indexedDB.open(DB_NAME" in OFFLINE and "const DB_NAME = 'kdl'" in OFFLINE
+    assert "window.indexedDB.open(DB_NAME" in OFFLINE and "const DB_NAME = KH.brand.idbName;" in OFFLINE
     # Per person: every outbox item and snapshot carries the signed-in user's id; another person's are never sent.
     assert "i.user_id === uid" in OFFLINE
     # Sign-out asks first and then wipes this device's copies; the server also sends Clear-Site-Data.

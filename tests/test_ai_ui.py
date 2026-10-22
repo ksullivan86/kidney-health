@@ -81,7 +81,7 @@ def test_model_text_reaches_the_page_as_text_only():
 def test_photos_are_redrawn_on_the_device_before_upload():
     assert "PHOTO_EDGE = 1600" in AI_JS and "PHOTO_QUALITY = 0.85" in AI_JS
     assert "toBlob(" in AI_JS and "'image/jpeg'" in AI_JS
-    assert "'Content-Type': 'image/jpeg'" in AI_JS and "'X-Requested-With': 'kidney-health'" in AI_JS
+    assert "'Content-Type': 'image/jpeg'" in AI_JS and "'X-Requested-With': KH.brand.csrfHeaderValue" in AI_JS
     assert "URL.revokeObjectURL" in AI_JS  # the preview's object URL is released
 
 

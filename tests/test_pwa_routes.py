@@ -229,6 +229,6 @@ def test_a_newer_server_under_a_cached_shell_asks_the_worker_for_the_update(tmp_
     assert out["newer"] is True and out["again"] is False and out["updates"] == 1
     # The wiring on the other two sides: every KH.api answer is passed on, and the worker answers 'VERSION'.
     core = (static / "js" / "core.js").read_text(encoding="utf-8")
-    assert "KH.pwa.versionSeen(res.headers.get('X-KDL-Version'))" in core
+    assert "KH.pwa.versionSeen(res.headers.get(KH.brand.versionHeader))" in core
     sw = (static / "sw.js").read_text(encoding="utf-8")
     assert "event.data === 'VERSION'" in sw and "type: 'kdl-version', version: VERSION" in sw

@@ -33,7 +33,7 @@
     KH.theme.apply(KH.theme.stored());
     $('#date-input').value = state.date;
     if (MOCK) {
-      document.title = 'Kidney Diet Log';
+      document.title = KH.brand.screenName;
       const pill = $('#brand-pill');
       pill.textContent = PREVIEW ? 'Preview' : 'Demo';
       pill.hidden = false;

@@ -35,6 +35,7 @@ from typing import Any, Callable
 from fastapi import FastAPI
 from fastapi import routing as fastapi_routing
 
+from . import brand
 from .ai.routes import require_ai_enabled
 from .api_version import API_VERSION
 from .auth.deps import current_user
@@ -206,7 +207,7 @@ _RETRY_AFTER = {"Retry-After": {"description": "Seconds to wait before trying ag
 
 def _responses() -> dict[str, Any]:
     retry = _RETRY_AFTER
-    challenge = {"WWW-Authenticate": {"description": 'Always `Bearer realm="kidney-health"`.', "schema": {"type": "string"}}}
+    challenge = {"WWW-Authenticate": {"description": f'Always `Bearer realm="{brand.BEARER_REALM}"`.', "schema": {"type": "string"}}}
     allow = {"Allow": {"description": "The one method the route offers: `POST`.", "schema": {"type": "string"}}}
     return {
         "BadRequest": _problem_response(
@@ -224,7 +225,7 @@ def _responses() -> dict[str, Any]:
             headers=challenge,
         ),
         "Forbidden": _problem_response(
-            "Refused. On `/api`: an unsafe request without the `X-Requested-With: kidney-health` header or from another site; a route "
+            f"Refused. On `/api`: an unsafe request without the `X-Requested-With: {brand.CSRF_HEADER_VALUE}` header or from another site; a route "
             "for admins (`Admins only`); the password must be entered again (`reauth_required`) or changed first (`password_change_required`). "
             "On `/mcp` and `/push/v1/body`: a foreign `Origin` header."
         ),
@@ -256,13 +257,13 @@ def _security_schemes() -> dict[str, Any]:
         SESSION: {
             "type": "apiKey",
             "in": "cookie",
-            "name": "kh_session",
+            "name": brand.SESSION_COOKIE,
             "description": (
-                "The signed-in person's session cookie: `__Host-kh_session` when the server is reached over HTTPS, `kh_session` over plain HTTP "
+                f"The signed-in person's session cookie: `{brand.SESSION_COOKIE_HOST}` when the server is reached over HTTPS, `{brand.SESSION_COOKIE}` over plain HTTP "
                 "(each name is read only on its own scheme; this scheme lists the plain name because OpenAPI allows one). `POST /api/auth/login` "
                 "sets it (HttpOnly, SameSite=Lax; 30 days at most, 14 days idle) and `POST /api/auth/logout` ends it. With `AUTH_MODE=proxy` the "
                 "identity comes from the trusted proxy's header instead, and with `AUTH_MODE=none` nobody signs in.\n\n"
-                "**Every unsafe request (POST, PUT, PATCH, DELETE) to `/api` must also send the header `X-Requested-With: kidney-health`**, and an "
+                f"**Every unsafe request (POST, PUT, PATCH, DELETE) to `/api` must also send the header `X-Requested-With: {brand.CSRF_HEADER_VALUE}`**, and an "
                 "`Origin` it sends must be the server's own; without the header the answer is 403. A request that carries only a bearer token "
                 "(either kind) is anonymous on `/api`: a token is never a sign-in here."
             ),
@@ -270,9 +271,9 @@ def _security_schemes() -> dict[str, Any]:
         ASSISTANT_TOKEN: {
             "type": "http",
             "scheme": "bearer",
-            "bearerFormat": "kha_ followed by 43 characters",
+            "bearerFormat": f"{brand.ASSISTANT_TOKEN_PREFIX} followed by 43 characters",
             "description": (
-                "An assistant access token (`Authorization: Bearer kha_...`), made in Settings, Assistant access, with the scope `assistant:read` and "
+                f"An assistant access token (`Authorization: Bearer {brand.ASSISTANT_TOKEN_PREFIX}...`), made in Settings, Assistant access, with the scope `assistant:read` and "
                 "optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is "
                 "read there, and the cookie checks of `/api` do not apply."
             ),
@@ -280,9 +281,9 @@ def _security_schemes() -> dict[str, Any]:
         DEVICE_TOKEN: {
             "type": "http",
             "scheme": "bearer",
-            "bearerFormat": "khd_ followed by 43 characters",
+            "bearerFormat": f"{brand.DEVICE_TOKEN_PREFIX} followed by 43 characters",
             "description": (
-                "A device token (`Authorization: Bearer khd_...`), made in Settings, Phone shortcuts, with the one scope `body:write`. It works only at "
+                f"A device token (`Authorization: Bearer {brand.DEVICE_TOKEN_PREFIX}...`), made in Settings, Phone shortcuts, with the one scope `body:write`. It works only at "
                 "`POST /push/v1/body`, only while the instance switch `push.enabled` is on, and it can add weights and blood pressure readings and read "
                 "nothing. No cookie is read there."
             ),

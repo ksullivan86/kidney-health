@@ -24,6 +24,7 @@ import time
 import httpx2
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
+from .brand import LOGGER_NAME, USER_AGENT_USDA  # the names, not the module: ``brand`` is a food's field here
 from . import additives, credentials, egress
 from .gtin import loose_gtin14, usda_candidates
 from .off import quality_items
@@ -34,7 +35,7 @@ from .db import get_db, get_meta, set_meta, utcnow
 from .models import Categories, Food, FoodCreate, FoodList, UsdaImport, UsdaSearchResult
 from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, food_warnings, kidney_rating, round_nutrients, round_value
 
-log = logging.getLogger("kidney_health.foods")
+log = logging.getLogger(f"{LOGGER_NAME}.foods")
 router = APIRouter(prefix="/api/foods", tags=["foods"], dependencies=[Depends(current_user)])
 
 # Sources shared between people (read-only; edit = copy). ``off`` arrives with note 03.
@@ -602,7 +603,7 @@ def usda_client() -> httpx2.Client:
         follow_redirects=False,
         trust_env=False,
         transport=egress.CheckedTransport(),
-        headers={"User-Agent": "kidney-health/0.3 (self-hosted food log)", "Accept": "application/json",
+        headers={"User-Agent": USER_AGENT_USDA, "Accept": "application/json",
                  "Accept-Encoding": "gzip"},
     )
 

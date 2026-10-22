@@ -61,7 +61,7 @@
     who.textContent = name ? `For ${name}` : '';
     const period = V.PERIODS.find((p) => p.days === S.days);
     $('#visit-period').textContent = `${period.label}: ${fmtDay(range.start)} – ${fmtDay(range.end)}`;
-    $('#visit-made').textContent = `Made on ${fmtDay(todayStr())} with Kidney Diet Log, on this device.`;
+    $('#visit-made').textContent = `Made on ${fmtDay(todayStr())} with ${KH.brand.screenName}, on this device.`;
   }
 
   // ---- averages against the targets ------------------------------------------------------------------------------

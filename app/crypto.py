@@ -29,9 +29,10 @@ from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
+from . import brand
 from .config import ConfigError, Settings, check_secret_key_lines, parse_secret_key_lines
 
-log = logging.getLogger("kidney_health.crypto")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.crypto")
 
 __all__ = [
     "InvalidToken",
@@ -47,10 +48,10 @@ __all__ = [
     "secret_report",
 ]
 
-SECRETS_INFO = b"kidney-health/v1/secrets"
+SECRETS_INFO = brand.HKDF_SECRETS_INFO
 ENVELOPE_VERSION = 1
 BACKUP_WARNING = (
-    "Back up {path} separately from kidney.db; without it stored API keys cannot be decrypted "
+    "Back up {path} separately from " + brand.DB_FILENAME + "; without it stored API keys cannot be decrypted "
     "(passwords and health data are not affected)."
 )
 AUTO_KEY_WARNING = (

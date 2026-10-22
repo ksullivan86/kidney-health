@@ -22,6 +22,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
+from .. import brand
 from ..auth.deps import CurrentUser, current_user
 from ..db import get_db, utcnow
 from ..foods import WEIGHT_UNKNOWN_DETAIL, fetch_food, fetch_user_food, weight_known
@@ -55,7 +56,7 @@ from .score import Counter
 from .state import GuidanceContext
 from .swaps import find_swaps, hypo_options
 
-log = logging.getLogger("kidney_health.guidance")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.guidance")
 
 router = APIRouter(prefix="/api/guidance", tags=["guidance"], dependencies=[Depends(current_user)])
 

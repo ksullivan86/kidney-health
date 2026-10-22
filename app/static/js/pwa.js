@@ -216,7 +216,7 @@
     if (window.caches && caches.keys) {
       for (const key of await caches.keys()) if (key.startsWith('kdl-')) { await caches.delete(key); removed += 1; }
     }
-    try { if (window.indexedDB) indexedDB.deleteDatabase('kdl'); } catch (e) { /* not created yet */ }
+    try { if (window.indexedDB) indexedDB.deleteDatabase(KH.brand.idbName); } catch (e) { /* not created yet */ }
     if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
       for (const reg of await navigator.serviceWorker.getRegistrations()) { try { await reg.unregister(); } catch (e) { /* already gone */ } }
     }

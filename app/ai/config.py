@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Mapping
 
+from .. import brand
 from ..audit import audit
 from ..config import ConfigError, Settings
 from ..crypto import InvalidToken, Keyring
@@ -41,11 +42,11 @@ from .netpolicy import BaseUrl, NetPolicy, PolicyError, is_private_host, kuberne
 from .transport import ca_store_problem
 from .presets import PRESETS, POLICY_VERSION, STRUCTURED_SETTINGS, REASONING_EFFORTS, Preset, get as get_preset, policy_line
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 LAST4_MIN_LENGTH = 20
-SAFETY_ID_INFO = "kidney-health/v1/openai-safety-id"  # §9 A6
-KEY_FINGERPRINT_INFO = "kidney-health/v1/ai-key-fingerprint"  # tells a changed env key without storing it
+SAFETY_ID_INFO = brand.HKDF_OPENAI_SAFETY_ID_INFO  # §9 A6
+KEY_FINGERPRINT_INFO = brand.HKDF_AI_KEY_FINGERPRINT_INFO  # tells a changed env key without storing it
 REPROBE_EVERY_S = 86_400.0  # R4 step 5: shared providers are tested again daily
 REPROBE_RETRY_S = 3_600.0  # after an attempt (passed, failed or skipped), the next one waits at least this long
 MAX_TOKENS_RANGE = (64, 32_768)

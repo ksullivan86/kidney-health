@@ -30,6 +30,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException,
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_validator
 from starlette.concurrency import run_in_threadpool
 
+from .. import brand
 from ..auth import housekeeping as auth_housekeeping
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import AdminUser, CurrentUser, RecentAdmin, RecentUser, current_user, require_admin
@@ -62,7 +63,7 @@ from . import routing as R
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 register_limit("ai_probe_admin", 20, 3600, "Too many connection tests. Try again later.")
 NONE_MODE_DETAIL = "Set AI providers with environment variables when sign-in is off"  # §9 A7

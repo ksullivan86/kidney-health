@@ -58,6 +58,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError
 
+from . import brand
 from .audit import audit
 from .auth import api_tokens
 from .auth.accounts import begin_immediate
@@ -89,7 +90,7 @@ from .models import (
 )
 from .security import flatten_validation_errors
 
-logger = logging.getLogger("kidney_health.push")
+logger = logging.getLogger(f"{brand.LOGGER_NAME}.push")
 
 PATH = "/body"
 VERSION = "v1"

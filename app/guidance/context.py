@@ -27,6 +27,7 @@ from datetime import date as _date, timedelta
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from .. import brand
 from ..config import REPO_ROOT
 from ..db import database_file, get_meta
 from ..foods import access_clause, access_params, parse_flags
@@ -38,7 +39,7 @@ from . import rules as R
 from .state import Combo, DayEntry, GuidanceContext, HistoryEntry, PlannedEntry, Prefs, Profile, SavedMeal, Tunables
 from .vectors import FoodVec, build_vectors, food_from_row
 
-log = logging.getLogger("kidney_health.guidance")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.guidance")
 
 COMBOS_JSON = REPO_ROOT / "data" / "combos.json"
 FOODS_REV_KEY = "foods_rev"

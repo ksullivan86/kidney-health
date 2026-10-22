@@ -50,6 +50,7 @@ from typing import Annotated, Any, get_args
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 
+from .. import brand
 from ..audit import audit
 from ..db import get_db, table_exists
 from . import clock, housekeeping
@@ -65,10 +66,10 @@ ASSISTANT = "assistant"  # the families (module docstring)
 DEVICE = "device"
 FAMILIES: tuple[str, ...] = (ASSISTANT, DEVICE)
 
-PREFIX = "kha_"  # assistant tokens
-DEVICE_PREFIX = "khd_"  # device tokens ("d" for device)
-TOKEN_RE = re.compile(r"^kha_[A-Za-z0-9_-]{43}$")
-DEVICE_TOKEN_RE = re.compile(r"^khd_[A-Za-z0-9_-]{43}$")
+PREFIX = brand.ASSISTANT_TOKEN_PREFIX  # assistant tokens
+DEVICE_PREFIX = brand.DEVICE_TOKEN_PREFIX  # device tokens ("d" for device)
+TOKEN_RE = re.compile(rf"^{re.escape(PREFIX)}[A-Za-z0-9_-]{{43}}$")
+DEVICE_TOKEN_RE = re.compile(rf"^{re.escape(DEVICE_PREFIX)}[A-Za-z0-9_-]{{43}}$")
 DISPLAY_LENGTH = 12  # the 4-character prefix and the first 8 random characters
 READ = "assistant:read"
 LOG = "assistant:log"  # also save food and recipes (part C); a token that has it always has READ too
@@ -85,7 +86,7 @@ TOUCH_INTERVAL = timedelta(minutes=1)
 SWITCH = "assistant.enabled"  # the assistant family's instance switch (env ASSISTANT_ENABLED)
 DEVICE_SWITCH = "push.enabled"  # the device family's (env PUSH_ENABLED)
 
-CHALLENGE = 'Bearer realm="kidney-health"'
+CHALLENGE = f'Bearer realm="{brand.BEARER_REALM}"'
 DENIED = "A valid assistant token is required (Settings → Assistant access)."
 SWITCHED_OFF = "Assistant access is turned off on this server. Ask your admin to turn it on."
 DEVICE_DENIED = "A valid device token is required (Settings → Phone shortcuts)."

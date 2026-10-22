@@ -20,8 +20,9 @@ import logging
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
+from .. import brand
 
-log = logging.getLogger("kidney_health.auth.policy")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.auth.policy")
 
 MAX_LENGTH = 128
 BLOCKLIST_PATH = Path(__file__).resolve().parent / "password-blocklist.txt.gz"
@@ -94,7 +95,7 @@ def breached(password: str) -> bool:
 
         # Like every outbound request of the app: the SSRF-checked transport (resolve, check, pin; the
         # operator's HTTPS_PROXY honoured), no redirects (CLAUDE.md "Security").
-        with httpx2.Client(timeout=HIBP_TIMEOUT_S, headers={"Add-Padding": "true", "User-Agent": "kidney-health"},
+        with httpx2.Client(timeout=HIBP_TIMEOUT_S, headers={"Add-Padding": "true", "User-Agent": brand.USER_AGENT_HIBP},
                            follow_redirects=False, trust_env=False, transport=egress.CheckedTransport()) as client:
             response = client.get(HIBP_URL + prefix)
     except Exception as exc:  # network errors never block a password change

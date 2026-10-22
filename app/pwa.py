@@ -31,9 +31,10 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from . import brand
 from .config import Settings
 
-log = logging.getLogger("kidney_health.pwa")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.pwa")
 
 # Deterministic types whatever /etc/mime.types says (the runtime image may not have one).
 for _type, _ext in (
@@ -50,7 +51,7 @@ for _type, _ext in (
 SW_TEMPLATE = "sw.js"
 VERSION_PLACEHOLDER = "__VERSION__"
 VERSION_LENGTH = 12
-VERSION_HEADER = "X-KDL-Version"
+VERSION_HEADER = brand.VERSION_HEADER
 
 MANIFEST_PATH = "/manifest.webmanifest"
 MANIFEST_TYPE = "application/manifest+json"

@@ -22,6 +22,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, field_validator, model_validator
 
+from . import brand
+
 Scope = Literal["instance", "user", "user_default"]
 SCOPES: tuple[str, ...] = ("instance", "user", "user_default")
 
@@ -127,7 +129,7 @@ register(
     SettingDef(
         key="instance.name",
         model=InstanceName,
-        default="Kidney Health",
+        default=brand.NAME,
         scope="instance",
         env="INSTANCE_NAME",
         label="Server name",
@@ -242,7 +244,7 @@ register(
     SettingDef(
         key="food.off_contact",
         model=OffContact,
-        default="https://github.com/ksullivan86/kidney-health",
+        default=brand.PROJECT_URL,
         scope="instance",
         env="OFF_CONTACT",
         label="Contact sent to Open Food Facts",

@@ -22,7 +22,7 @@
   const R = KH.rules;
   const { NUTRIENT_KEYS, pyRound } = R;
 
-  const EXPORT_FORMAT = 'kidney-health-export';
+  const EXPORT_FORMAT = KH.brand.exportFormat;
   const SUPPORTED_VERSION = 1;
   const MAX_ENTRIES = 30000, MAX_CUSTOM_FOODS = 5000, MAX_LINKED_FOODS = 5000, MAX_BUILTIN_REFS = 5000, MAX_MEALS = 1000, MAX_MEAL_ITEMS = 100;
   const MAX_LABS = 5000, MAX_SYMPTOMS = 20000, MAX_WEIGHTS = 20000, MAX_BLOOD_PRESSURES = 20000, MAX_SETTINGS = 200, MAX_SKIPPED_SHOWN = 100, MAX_MESSAGE_CHARS = 200, MAX_NOTE_CHARS = 1000;
@@ -50,7 +50,7 @@
   const COUNT_KEYS = ['log_entries', 'custom_foods', 'shared_foods_kept_as_own', 'shared_foods_linked', 'built_in_foods_matched', 'meal_templates', 'lab_results',
     'symptoms', 'weights', 'blood_pressures', 'food_preferences', 'profile', 'settings'];
   const ALREADY_KEYS = ['log_entries', 'custom_foods', 'shared_foods_linked', 'meal_templates', 'lab_results', 'symptoms', 'weights', 'blood_pressures', 'food_preferences'];
-  const TOO_DEEP = 'This is not a Kidney Health export: the file is nested too deeply.';
+  const TOO_DEEP = `This is not a ${KH.brand.name} export: the file is nested too deeply.`;
   const NOT_FINITE = 'The file holds a value that is not a finite number (NaN, Infinity or too large). A real export never does; nothing was imported.';
   const GAVE_UP = 'The file was not imported. ';
 
@@ -411,8 +411,8 @@
   function parseExport(data) {
     if (nonFinite(data)) throw new Refused(NOT_FINITE);
     if (nestedDeeperThan(data, MAX_DEPTH)) throw new Refused(TOO_DEEP);
-    if (!isDict(data)) throw new Refused('This is not a Kidney Health export: the file must hold one JSON object.');
-    if (data.format !== EXPORT_FORMAT) throw new Refused('This is not a Kidney Health export (its "format" is not "kidney-health-export").');
+    if (!isDict(data)) throw new Refused(`This is not a ${KH.brand.name} export: the file must hold one JSON object.`);
+    if (data.format !== EXPORT_FORMAT) throw new Refused(`This is not a ${KH.brand.name} export (its "format" is not "${EXPORT_FORMAT}").`);
     const version = data.version;
     if (typeof version === 'boolean' || version !== SUPPORTED_VERSION) {
       const shown = typeof version === 'boolean' ? (version ? 'True' : 'False') : typeof version === 'number' || typeof version === 'string' ? short(version, 20) : 'unknown';

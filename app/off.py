@@ -34,15 +34,16 @@ from urllib.parse import urlsplit
 
 import httpx2
 
+from .brand import LOGGER_NAME, PROJECT_URL, USER_AGENT_OFF  # the names, not the module: ``brand`` is a food's field here
 from . import additives, egress
 from .gtin import off_code
 from .textclean import clean_label, clean_text
 
-log = logging.getLogger("kidney_health.off")
+log = logging.getLogger(f"{LOGGER_NAME}.off")
 
 OFF_API_VERSION = "3.4"
 DEFAULT_BASE_URL = "https://world.openfoodfacts.org"
-DEFAULT_CONTACT = "https://github.com/ksullivan86/kidney-health"
+DEFAULT_CONTACT = PROJECT_URL
 # The product page is built from this constant, never copied from a payload (note 03 §9 B4).
 PRODUCT_PAGE_PREFIX = "https://world.openfoodfacts.org/product/"
 LICENSE = "ODbL-1.0"
@@ -163,7 +164,7 @@ Status = Literal["found", "not_found", "no_nutrition"]
 
 def user_agent(app_version: str, contact: str) -> str:
     """``KidneyHealth/<version> (<contact>)``, the form Open Food Facts asks API users to send."""
-    return f"KidneyHealth/{app_version} ({contact})"
+    return USER_AGENT_OFF.format(version=app_version, contact=contact)
 
 
 def fields_for(api_version: str = OFF_API_VERSION) -> tuple[str, ...]:

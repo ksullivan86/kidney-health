@@ -43,6 +43,7 @@ import anyio
 from starlette.requests import Request
 from starlette.responses import Response
 
+from .. import brand
 from . import clock
 from .ratelimit import SlidingWindow
 from .sessions import is_https
@@ -51,12 +52,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..config import Settings
     from ..crypto import Keyring
 
-log = logging.getLogger("kidney_health.auth.throttle")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.auth.throttle")
 
-NAME_MAC_INFO = "kidney-health/v1/login-failures"
-DEVICE_INFO = "kidney-health/v1/device"
-DEVICE_HTTPS = "__Host-kh_device"
-DEVICE_HTTP = "kh_device"
+NAME_MAC_INFO = brand.HKDF_LOGIN_FAILURES_INFO
+DEVICE_INFO = brand.HKDF_DEVICE_INFO
+DEVICE_HTTPS = brand.DEVICE_COOKIE_HOST
+DEVICE_HTTP = brand.DEVICE_COOKIE
 DEVICE_MAX_AGE = 365 * 86400
 DEVICE_MAX_FAILURES = 10
 

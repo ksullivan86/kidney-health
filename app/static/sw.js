@@ -52,6 +52,7 @@ const SHELL_URLS = [
   '/css/demo-local.css',
   '/css/touch.css',
   '/js/engine/rules.js',
+  '/js/engine/brand.js',
   '/js/engine/apple_health.js',
   '/js/engine/zip.js',
   '/js/engine/kidney_function.js',

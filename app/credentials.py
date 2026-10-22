@@ -21,13 +21,14 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Literal
 
+from . import brand
 from .config import Settings
 from .crypto import InvalidToken, Keyring
 from .db import table_exists, utcnow
 from .security import register_secret
 from .settings_store import SettingsStore, default_store
 
-log = logging.getLogger("kidney_health.credentials")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.credentials")
 
 CREDENTIALS_DDL = """
 CREATE TABLE IF NOT EXISTS secrets (

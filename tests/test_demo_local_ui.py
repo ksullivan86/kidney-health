@@ -138,7 +138,7 @@ def test_the_harness_lists_the_servers_export_keys():
 
 
 def test_the_export_route_and_the_download_name():
-    assert "route('GET', '/api/me/export.json'" in EXPORT and "kidney-health-export" in EXPORT
+    assert "route('GET', '/api/me/export.json'" in EXPORT and "const EXPORT_FORMAT = KH.brand.exportFormat;" in EXPORT
     assert "const FILE_NAME = 'export.json';" in VIEW and "type: 'application/json'" in VIEW
     assert "route('POST', '/api/me/import'" in IMPORT
     # settings: the export and the import are the mode's, the zip stays the installed app's

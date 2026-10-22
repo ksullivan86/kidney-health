@@ -35,8 +35,9 @@ import urllib.request
 from typing import Callable, Literal
 
 import httpx2
+from . import brand
 
-log = logging.getLogger("kidney_health.egress")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.egress")
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 Resolver = Callable[[str, int], list[str]]

@@ -53,7 +53,7 @@
   const { h, $, clear, state, toast, util, rules } = KH;
   const { MOCK } = KH.flags;
 
-  const DB_NAME = 'kdl';
+  const DB_NAME = KH.brand.idbName;
   const DB_VERSION = 1;
   const FAST_MS = 6000; // R5: every fetch the app can do without the server gives up after 6 s
   const SLOW_MS = 20000; // other reads: still not "minutes"
@@ -743,7 +743,7 @@
     if (last && last.value) headers['If-None-Match'] = last.value;
     // Not KH.request: it has no use for a 304. Same origin only; a newer server still shows the Reload toast.
     const res = await fetch('/api/foods/builtin', { headers, credentials: 'same-origin', cache: 'no-store' });
-    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get('X-KDL-Version'));
+    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get(KH.brand.versionHeader));
     if (res.status === 304) { await res.text(); return; } // read the empty body: an unread one shows as net::ERR_ABORTED
     if (!res.ok) { const err = new Error(`GET /api/foods/builtin answered ${res.status}`); err.detail = err.message; throw err; }
     const data = await res.json();

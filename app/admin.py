@@ -55,6 +55,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence, TextIO
 
+from . import brand
 from .config import ConfigError, Settings, load_settings
 from .crypto import Keyring, load_secret_key, new_key_line, read_secret_key_file, reencrypt_all, secret_report
 
@@ -118,7 +119,7 @@ def _audit(conn: sqlite3.Connection, action: str, **details: Any) -> None:
 # --------------------------------------------------------------------------- #
 
 
-BACKUP_NAME = re.compile(r"^kidney-\d{8}T\d{6}Z\.db$")
+BACKUP_NAME = re.compile(rf"^{re.escape(brand.BACKUP_PREFIX)}\d{{8}}T\d{{6}}Z\.db$")
 
 
 def _backup_into_dir(source: sqlite3.Connection, directory: Path, keep: int | None, now: datetime | None = None) -> tuple[Path, list[Path]]:
@@ -128,7 +129,7 @@ def _backup_into_dir(source: sqlite3.Connection, directory: Path, keep: int | No
     if not directory.is_dir():
         raise CliError(f"{directory} is not a directory (create it, or mount the backup volume there)")
     stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
-    dest = directory / f"kidney-{stamp}.db"
+    dest = directory / f"{brand.BACKUP_PREFIX}{stamp}.db"
     if dest.exists():
         raise CliError(f"{dest} exists; backups are never overwritten (wait a second and run it again)")
     partial = directory / f".{dest.name}.partial"
@@ -170,7 +171,7 @@ def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
         elif args.file == "-":
             stream = sys.stdout.buffer
             if sys.stdout.isatty():
-                raise CliError("refusing to write a database to a terminal; redirect it: backup - > kidney.db")
+                raise CliError(f"refusing to write a database to a terminal; redirect it: backup - > {brand.DB_FILENAME}")
             memory = sqlite3.connect(":memory:")
             source.backup(memory)
             data = rollback_journal_header(memory.serialize())
@@ -790,13 +791,13 @@ def cmd_purge_barcode_cache(args: argparse.Namespace, settings: Settings, out: T
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m app.admin", description="kidney-health operator commands")
-    parser.add_argument("--db", help="database file (default: $DATA_DIR/kidney.db)")
+    parser = argparse.ArgumentParser(prog="python -m app.admin", description=f"{brand.SLUG} operator commands")
+    parser.add_argument("--db", help=f"database file (default: $DATA_DIR/{brand.DB_FILENAME})")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("backup", help="consistent copy of the database (FILE, - for stdout, or --dir DIR)")
     p.add_argument("file", nargs="?")
-    p.add_argument("--dir", help="write DIR/kidney-YYYYMMDDTHHMMSSZ.db instead of FILE")
+    p.add_argument("--dir", help=f"write DIR/{brand.BACKUP_PREFIX}YYYYMMDDTHHMMSSZ.db instead of FILE")
     p.add_argument("--keep", type=int, help="with --dir: keep only the newest N backups in DIR")
     p.set_defaults(func=cmd_backup)
 
@@ -856,7 +857,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all", action="store_true")
     p.set_defaults(func=cmd_revoke_sessions)
 
-    p = sub.add_parser("purge-pre-v3-backup", help="delete kidney.db.pre-v3.bak now")
+    p = sub.add_parser("purge-pre-v3-backup", help=f"delete {brand.DB_FILENAME}.pre-v3.bak now")
     p.set_defaults(func=cmd_purge_pre_v3_backup)
 
     p = sub.add_parser("vacuum", help="rebuild the database file (removes traces of deleted data)")

@@ -47,6 +47,7 @@ from typing import Any, Literal, Mapping
 import httpx2
 from fastapi import APIRouter, Depends, Request
 
+from . import brand
 from . import credentials, foods, off
 from .auth import clock
 from .auth.deps import CurrentUser, current_user
@@ -58,7 +59,7 @@ from .gtin import GtinError, classify, normalize, off_code
 from .models import BarcodeLookup, BarcodeResult
 from .nutrients import NUTRIENT_KEYS
 
-log = logging.getLogger("kidney_health.barcode")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.barcode")
 router = APIRouter(prefix="/api/foods", tags=["barcode"], dependencies=[Depends(current_user)])
 
 REFRESH_AFTER = timedelta(hours=24)  # a found product is asked again at most once a day (note 03 R3)

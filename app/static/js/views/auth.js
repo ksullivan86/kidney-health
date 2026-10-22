@@ -47,7 +47,7 @@
   // Small helpers
   // ---------------------------------------------------------------------------
   function status() { return state.authStatus || {}; }
-  function instanceName() { return status().instance_name || 'Kidney Health'; }
+  function instanceName() { return status().instance_name || KH.brand.name; }
   function minLength() { return Number(status().password_min_length) || 15; }
   function codePoints(s) { return Array.from(String(s || '')).length; }
 
@@ -379,7 +379,7 @@
     setError('');
     $('#view-auth').hidden = true;
     setSignedInChrome(true);
-    try { document.title = 'Kidney Diet Log'; } catch (e) { /* ignore */ }
+    try { document.title = KH.brand.screenName; } catch (e) { /* ignore */ }
     if (notice) toast(notice);
     if (!appStarted) {
       appStarted = true;

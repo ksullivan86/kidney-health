@@ -18,11 +18,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
 from fastapi import Request
+from . import brand
 
 if TYPE_CHECKING:  # pragma: no cover
     from .migrations import Step
 
-log = logging.getLogger("kidney_health.db")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.db")
 
 SCHEMA_VERSION_KEY = "schema_version"
 
