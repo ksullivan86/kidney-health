@@ -92,6 +92,7 @@ def test_a_handbook_link_stays_at_the_end_of_its_words_and_beside_its_arrow() ->
     assert "display: block" in own_line and "width: fit-content" in own_line
     inline = rule(SETTINGS_CSS, "#set-push-recipe .learn-more")  # "How to make the shortcut — the handbook has the steps ..."
     assert "display: inline" in inline and "min-height: 0" in inline
+    assert re.search(r"padding: 1[5-9]px 0", inline), "the padding (not the box) keeps the touch target at 44 px"
     # the arrow is joined to the last word by a no-break space
     assert r'content: "\00a0\2197"' in BASE and r'content: " \2197"' not in BASE
 
@@ -141,13 +142,13 @@ def test_a_message_that_is_its_own_card_keeps_the_cards_padding() -> None:
     assert TODAY_CSS.index(".card.empty-state") > TODAY_CSS.index(".empty-state {")
 
 
-def test_a_link_inside_a_sentence_is_an_inline_link_not_a_44_px_box() -> None:
-    """On a phone the 44 px box of a link button spread the lines of its sentence apart and parked the full stop on its own."""
-    assert "class: 'link-btn inline'" in TODAY_JS.split("profile-choose-note")[1].split("'Choose them in Profile'")[0]
-    assert "class: 'link-btn inline', type: 'button', id: 'body-open-settings'" in BODY_JS
-    assert "display: inline" in block(PROFILE_CSS, "@media (pointer: coarse), (max-width: 719.98px) {\n  .why > summary")
-    guidance = read("js", "views", "guidance.js")  # "Using the targets in your profile, saved ...: potassium 3,000 mg ... Check them in Profile"
-    assert re.search(r"linkBtn\('Check them in Profile'.*\{ class: 'link-btn inline' \}\)", guidance)
+def test_a_link_button_after_a_sentence_takes_its_own_line_at_a_full_44_px() -> None:
+    """On a phone the 44 px box of a link button beside words spread their lines apart. Two buttons end a lead-in sentence ("Using the
+    targets in your profile ... Check them in Profile", "Your CKD stage ... Choose them in Profile"): on a touch screen each is on its own line."""
+    phone = block(TOUCH, "@media (pointer: coarse), (max-width: 719.98px)")
+    declarations = rule(phone, ".profile-choose-note .link-btn, .g-targets .link-btn")
+    assert "display: flex" in declarations
+    assert "link-btn inline" not in TODAY_JS and "link-btn inline" not in read("js", "views", "guidance.js")
 
 
 def test_two_boxes_side_by_side_line_up_in_settings_too() -> None:

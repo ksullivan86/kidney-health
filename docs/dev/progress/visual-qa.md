@@ -34,7 +34,10 @@ layout bugs, report the rest. Screenshots stay outside the repository (the four 
 * "Import from a patient portal file (C-CDA .xml)": broke at the hyphen on a phone. A no-break span. `index.html`.
 * Settings: Export / Keep my data buttons and Sign out everywhere else touched the element above them. `settings.css`.
 * Trends with no targets: the message card had no padding (`.empty-state` came after `.card`). `today.css`.
-* Today with an empty log: two links inside a sentence were 44 px boxes that spread their lines apart; now inline. `today.js`, `body.js`.
+* Today with an empty log ("Choose them in Profile") and What fits now ("Check them in Profile"): a 44 px link button beside the words
+  spread their lines apart; on a phone it now has its own line, still 44 px. `touch.css`. (A try with inline links was refused by
+  the sandbox's 44 px tap check, so it was dropped.) "How to make the shortcut" in Settings is an inline link whose padding keeps
+  44 px. `settings.css`.
 * What fits now, "Meals that fit": a long chip name was cut at one line; two lines now. `guidance.css`.
 
 ## Left, with reasons
@@ -44,6 +47,10 @@ layout bugs, report the rest. Screenshots stay outside the repository (the four 
 * Profile, Daily targets (and About you): in two-column rows, boxes sit at different heights when one label wraps. The rows have
   hints under the box, so `align-items: end` does not fit; a CSS subgrid worked in a try but crowded two hint paragraphs together
   (screenshot in the scratchpad). Left as it is.
+* Today with an empty log: "...enter them in Settings." ends with a 44 px link button, so the full stop sits a little apart and
+  the lines are a little loose. Cosmetic; changing the sentence is not a layout fix.
+* `tools/e2e/import_walk.py` fails four checks (the preview text now ends "..., 0 weights, 0 blood pressure readings"). It fails the
+  same four on the commit before this work: a stale expectation from the weight and blood pressure part A.
 * Admin: an input that shows a long value (the Open Food Facts contact address) cuts it inside the box. Normal for an input.
 * Disabled primary buttons in dark mode (Use this plan, Keep my data in this browser) are dim by design.
 * A malformed C-CDA file makes Chromium draw an error document whose inline styles the CSP refuses: two console errors that

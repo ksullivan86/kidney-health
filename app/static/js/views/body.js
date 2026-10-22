@@ -156,7 +156,7 @@
     if (weights.length) todayBody.append(h('h3', { class: 'body-sub-h' }, 'Weight'), h('ul', { class: 'body-list' }, weights.map(weightItem)));
     if (readings.length) todayBody.append(h('h3', { class: 'body-sub-h' }, 'Blood pressure'), h('ul', { class: 'body-list' }, readings.map(readingItem)));
     if (summary && !alarmSet && !goalSet) {
-      const settings = h('button', { class: 'link-btn inline', type: 'button', id: 'body-open-settings' }, 'Settings');
+      const settings = h('button', { class: 'link-btn', type: 'button', id: 'body-open-settings' }, 'Settings');
       settings.addEventListener('click', () => router.show('settings'));
       todayBody.append(h('p', { class: 'body-hint-line' }, 'To see how a weight or a reading compares with the numbers your care team gave you, enter them in ', settings, '.'));
     }

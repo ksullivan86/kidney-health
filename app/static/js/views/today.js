@@ -73,7 +73,7 @@
     if (p && (p.ckd_stage_chosen === false || p.diabetes_chosen === false)) {
       alertsEl.append(h('p', { class: 'offline-note profile-choose-note', role: 'note' },
         'Your CKD stage and diabetes type are not chosen yet, so the app uses stage 3b and type 1 diabetes for now. ',
-        h('button', { class: 'link-btn inline', type: 'button', onclick: () => router.show('profile') }, 'Choose them in Profile')));
+        h('button', { class: 'link-btn', type: 'button', onclick: () => router.show('profile') }, 'Choose them in Profile')));
     }
     for (const a of day.alerts || []) {
       const lvl = a.level === 'over' ? 'over' : 'caution';

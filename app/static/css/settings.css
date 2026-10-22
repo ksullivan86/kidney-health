@@ -128,5 +128,6 @@
 .import-title { margin: 0; font-size: 1rem; }
 .import-title:focus { outline: none; }
 .import-sub { font-weight: 600; }
-/* "How to make the shortcut" opens a sentence: inline, so a 44 px box does not push its lines apart (as in the Ask answers). */
-#set-push-recipe .learn-more { display: inline; min-height: 0; margin: 0; padding: 0; }
+/* "How to make the shortcut" opens a sentence. Inline, so it does not push the lines apart; its padding (which does not change the line
+   height) keeps the touch target at 44 px. */
+#set-push-recipe .learn-more { display: inline; min-height: 0; margin: 0; padding: 15px 0; }

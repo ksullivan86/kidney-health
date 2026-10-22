@@ -204,7 +204,7 @@
     }
     const saved = savedText(targets.profile_updated_at);
     const lead = saved ? `Using the targets in your profile, saved ${saved}` : 'Using the targets in your profile';
-    const open = linkBtn('Check them in Profile', () => { if (beforeLeave) beforeLeave(); router.show('profile'); }, { class: 'link-btn inline' }); // in the sentence, so not a 44 px box
+    const open = linkBtn('Check them in Profile', () => { if (beforeLeave) beforeLeave(); router.show('profile'); });
     return h('p', { class: 'hint g-targets tabular' }, `${lead}${parts.length ? `: ${parts.join(' · ')}.` : '.'} `, open);
   }
   function timeText(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
