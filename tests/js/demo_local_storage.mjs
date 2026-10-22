@@ -123,8 +123,8 @@ const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `
   await local.boot();
   const doc = await api.request('GET', '/api/me/export.json');
   ok(() => assert.deepEqual(Object.keys(doc), ['format', 'version', 'exported_at', 'app_version', 'user', 'profile', 'settings', 'log_entries',
-    'custom_foods', 'linked_foods', 'meal_templates', 'lab_results', 'symptoms', 'ai_audit', 'activity', 'food_preferences', 'ai_usage',
-    'ai_consents', 'ai_provider', 'builtin_foods']), 'the export has the server\'s keys in the server\'s order');
+    'custom_foods', 'linked_foods', 'meal_templates', 'lab_results', 'symptoms', 'weights', 'blood_pressures', 'ai_audit', 'activity',
+    'food_preferences', 'ai_usage', 'ai_consents', 'ai_provider', 'builtin_foods']), 'the export has the server\'s keys in the server\'s order');
   ok(() => assert.equal(doc.format, 'kidney-health-export'));
   ok(() => assert.equal(doc.version, 1));
   ok(() => assert.ok(doc.log_entries.length > 30 && doc.log_entries.every((e) => !('version' in e))), 'entries without the derived version');

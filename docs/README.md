@@ -35,6 +35,9 @@ using the app; the pages below are for the people who run, maintain and check it
   offline logging; updates (written for the people using the app).
 * [Personalised targets and labs](targets-and-labs.md): how each suggested target is worked out, what lab
   results change, the eGFR card, open clinical review.
+* [Weight and blood pressure](body.md): the log of weights and blood pressure readings: the tables, routes and settings, what the app works out
+  (kilograms and pounds, the weight-gain alarm, the 7-day means against the goal), the handbook's words for a warning sign, export and import,
+  the demo's twin and its checks (screens come in the next part).
 * [Meal guidance](guidance.md): what fits now, swaps, treating a low, plan the day, insights; every rule
   and number with its source; performance.
 * [Optional AI](ai.md): what AI does and never does, what is sent, consent, providers and recipes,

@@ -25,13 +25,13 @@
   const EXPORT_FORMAT = 'kidney-health-export';
   const SUPPORTED_VERSION = 1;
   const MAX_ENTRIES = 30000, MAX_CUSTOM_FOODS = 5000, MAX_LINKED_FOODS = 5000, MAX_BUILTIN_REFS = 5000, MAX_MEALS = 1000, MAX_MEAL_ITEMS = 100;
-  const MAX_LABS = 5000, MAX_SYMPTOMS = 20000, MAX_SETTINGS = 200, MAX_SKIPPED_SHOWN = 100, MAX_MESSAGE_CHARS = 200, MAX_NOTE_CHARS = 1000;
+  const MAX_LABS = 5000, MAX_SYMPTOMS = 20000, MAX_WEIGHTS = 20000, MAX_BLOOD_PRESSURES = 20000, MAX_SETTINGS = 200, MAX_SKIPPED_SHOWN = 100, MAX_MESSAGE_CHARS = 200, MAX_NOTE_CHARS = 1000;
   const MAX_NOT_FOR_ME = 500;
   const MAX_FOOD_PREFERENCES = 1000;
   const MAX_DEPTH = 32;
   const MAX_IMPORT_BYTES = 16 * 1024 * 1024;
   const MIN_SERVING_G = 0.1, MAX_SERVING_G = 100000, MAX_SERVINGS = 1000, MAX_GRAMS = 100000, MAX_NUTRIENT_VALUE = 1000000;
-  const IMPORTED_SETTINGS = ['guidance', 'ui.theme', 'user.units.labs', 'food.scan_prefer_camera'];
+  const IMPORTED_SETTINGS = ['guidance', 'ui.theme', 'user.units.labs', 'food.scan_prefer_camera', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal'];
   const SKIPPED_SECTIONS = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider'];
   const NOT_IMPORTED = [
     'Your username, password and sign-in sessions',
@@ -40,14 +40,16 @@
     'Your sign-in activity list',
     'Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)',
   ];
-  const RULE = 'Your file\'s foods, log entries, saved meals, lab results, symptoms and food preferences are added to this account. If the account already has '
-    + 'entries, foods of your own, saved meals, lab results or symptoms, nothing is imported unless you choose "Add to my existing data". Then whatever is already '
+  const RULE = 'Your file\'s foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. '
+    + 'If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you '
+    + 'choose "Add to my existing data". Then whatever is already '
     + 'here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with '
-    + 'the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note. So importing the same file '
+    + 'the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure '
+    + 'reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file '
     + 'again adds nothing. Your profile, targets and settings are replaced only if you choose "Also replace my profile, targets and settings".';
   const COUNT_KEYS = ['log_entries', 'custom_foods', 'shared_foods_kept_as_own', 'shared_foods_linked', 'built_in_foods_matched', 'meal_templates', 'lab_results',
-    'symptoms', 'food_preferences', 'profile', 'settings'];
-  const ALREADY_KEYS = ['log_entries', 'custom_foods', 'shared_foods_linked', 'meal_templates', 'lab_results', 'symptoms', 'food_preferences'];
+    'symptoms', 'weights', 'blood_pressures', 'food_preferences', 'profile', 'settings'];
+  const ALREADY_KEYS = ['log_entries', 'custom_foods', 'shared_foods_linked', 'meal_templates', 'lab_results', 'symptoms', 'weights', 'blood_pressures', 'food_preferences'];
   const TOO_DEEP = 'This is not a Kidney Health export: the file is nested too deeply.';
   const NOT_FINITE = 'The file holds a value that is not a finite number (NaN, Infinity or too large). A real export never does; nothing was imported.';
   const GAVE_UP = 'The file was not imported. ';
@@ -265,6 +267,21 @@
     ['id', ID, required], ['date', T.str(), required], ['symptom', T.lit(KH.symptomRules.KEYS), required], ['label', short$(KH.symptomRules.MAX_LABEL, 0, true)],
     ['severity', T.int({ ge: 1, le: 3 }), required], ['note', short$(KH.symptomRules.MAX_NOTE, 0, true)], ['created_at', TS, required]], {
     after: (r) => { viaRequestBody(() => M.instance._symptomBody({ date: r.date, symptom: r.symptom, severity: r.severity, label: r.label || '', note: r.note || '' }), 'symptom'); return r; } });
+  // Weights and blood pressure readings (schema step 18): checked exactly like POST /api/body/weights and /blood-pressure; the id is never used.
+  const BR = KH.bodyRules;
+  const weightModel = T.model('ImportWeight', [
+    ['id', ID, required], ['date', T.str(), required], ['time', T.str({ nullable: true })], ['kg', T.num({}), required],
+    ['context', T.lit(BR.WEIGHT_CONTEXTS), required], ['note', short$(BR.LIMITS.max_note, 0, true)], ['source', T.lit(BR.SOURCES), required],
+    ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required]], {
+    after: (r) => { viaRequestBody(() => M.instance._weightBody(weightRequest(r)), 'weight'); return r; } });
+  const readingModel = T.model('ImportBloodPressure', [
+    ['id', ID, required], ['date', T.str(), required], ['time', T.str({ nullable: true })], ['systolic', T.int({}), required], ['diastolic', T.int({}), required],
+    ['pulse', (v, loc) => (v == null ? null : T.int({})(v, loc))], ['context', T.lit(BR.BLOOD_PRESSURE_CONTEXTS), required], ['note', short$(BR.LIMITS.max_note, 0, true)],
+    ['source', T.lit(BR.SOURCES), required], ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required]], {
+    after: (r) => { viaRequestBody(() => M.instance._readingBody(readingRequest(r)), 'reading'); return r; } });
+  const weightRequest = (r) => ({ date: r.date, time: r.time === undefined ? null : r.time, kg: r.kg, context: r.context, note: r.note || '' });
+  const readingRequest = (r) => ({ date: r.date, time: r.time === undefined ? null : r.time, systolic: r.systolic, diastolic: r.diastolic,
+    pulse: r.pulse === undefined ? null : r.pulse, context: r.context, note: r.note || '' });
   // A file from before schema step 17 holds only not_for_me rows without source and updated_at.
   const preferenceModel = T.model('ImportFoodPreference', [['food_id', ID, required], ['name', short$(200), required],
     ['preference', T.lit(['like', 'less', 'not_for_me', 'neutral']), required], ['created_at', TS, required],
@@ -346,7 +363,8 @@
     ['profile', (v, loc) => (v == null ? null : checkProfile(v, loc))], ['settings', checkSettings],
     kind('log_entries', entryModel, MAX_ENTRIES), kind('custom_foods', foodModel, MAX_CUSTOM_FOODS), kind('linked_foods', linkedModel, MAX_LINKED_FOODS),
     kind('builtin_foods', builtinRefModel, MAX_BUILTIN_REFS), kind('meal_templates', mealModel, MAX_MEALS), kind('lab_results', labModel, MAX_LABS),
-    kind('symptoms', symptomModel, MAX_SYMPTOMS), kind('food_preferences', preferenceModel, MAX_FOOD_PREFERENCES),
+    kind('symptoms', symptomModel, MAX_SYMPTOMS), kind('weights', weightModel, MAX_WEIGHTS), kind('blood_pressures', readingModel, MAX_BLOOD_PRESSURES),
+    kind('food_preferences', preferenceModel, MAX_FOOD_PREFERENCES),
     ...SKIPPED_SECTIONS.map((name) => [name, (v) => v]),
   ], {
     after: (doc) => {
@@ -403,7 +421,7 @@
     let doc;
     try { doc = EXPORT_FILE(data, []); } catch (e) { if (e instanceof Bad) throw refusal(e); throw e; }
     for (const key of ['settings']) if (doc[key] === undefined) doc[key] = {};
-    for (const [key] of [['log_entries'], ['custom_foods'], ['linked_foods'], ['builtin_foods'], ['meal_templates'], ['lab_results'], ['symptoms'], ['food_preferences']]) {
+    for (const [key] of [['log_entries'], ['custom_foods'], ['linked_foods'], ['builtin_foods'], ['meal_templates'], ['lab_results'], ['symptoms'], ['weights'], ['blood_pressures'], ['food_preferences']]) {
       if (doc[key] === undefined) doc[key] = [];
     }
     if (doc.profile === undefined) doc.profile = null;
@@ -447,7 +465,8 @@
     existingCounts() {
       const a = this.api;
       return { log_entries: a._entries.length, custom_foods: a._foods.filter((f) => f.source === 'custom').length, meal_templates: a._templates.length,
-        lab_results: a._labsOf(this.userId).length, symptoms: a._symptomsOf(this.userId).length };
+        lab_results: a._labsOf(this.userId).length, symptoms: a._symptomsOf(this.userId).length, weights: a._weightsOf(this.userId).length,
+        blood_pressures: a._readingsOf(this.userId).length };
     }
     // -- foods
     foodKey(name, brand, category, servingDesc, servingG, values, flags, notes, gtin, hidden) {
@@ -611,6 +630,68 @@
         bump(this.counts, 'symptoms');
       });
     }
+    // -- weights and blood pressure readings (schema step 18): a row with a source_key is left out when the person has that key; a row
+    // without one (typed by the person) when an identical one is here; a crowded day is skipped and reported
+    importWeights() {
+      const api = this.api;
+      const keys = api._bodyKeys('weights', this.userId);
+      const have = countOf();
+      const perDay = new Map();
+      for (const r of api._weightsOf(this.userId)) {
+        if (r.source_key == null) bump(have, tupleKey(r.date, r.time, Math.round(r.kg * 100) / 100, r.context, r.note || ''));
+        bump(perDay, r.date);
+      }
+      this.doc.weights.forEach((w, index) => {
+        const rec = api._weightBody(weightRequest(w)); // the same cleaning as POST /api/body/weights
+        const kg = BR.roundKg(rec.kg);
+        if (w.source_key != null) {
+          if (keys.has(w.source_key)) { bump(this.already, 'weights'); return; }
+        } else {
+          const identity = tupleKey(rec.date, rec.time, kg, w.context, rec.note);
+          if ((have.get(identity) || 0) > 0) { have.set(identity, have.get(identity) - 1); bump(this.already, 'weights'); return; }
+        }
+        if ((perDay.get(rec.date) || 0) >= BR.LIMITS.max_weights_per_day) {
+          this.skip('weights', index, `${kg.toFixed(2)} kg on ${rec.date}`, `that day already has ${BR.LIMITS.max_weights_per_day} weights, the most one day holds`);
+          return;
+        }
+        api._insertWeight(this.userId, rec, { source: w.source, sourceKey: w.source_key == null ? null : w.source_key, createdAt: w.created_at });
+        const row = api._weights[api._weights.length - 1];
+        row.updated_at = w.updated_at;
+        if (w.source_key != null) keys.add(w.source_key);
+        bump(perDay, rec.date);
+        bump(this.counts, 'weights');
+      });
+    }
+    importBloodPressures() {
+      const api = this.api;
+      const keys = api._bodyKeys('readings', this.userId);
+      const have = countOf();
+      const perDay = new Map();
+      for (const r of api._readingsOf(this.userId)) {
+        if (r.source_key == null) bump(have, tupleKey(r.date, r.time, r.systolic, r.diastolic, r.pulse, r.context, r.note || ''));
+        bump(perDay, r.date);
+      }
+      this.doc.blood_pressures.forEach((b, index) => {
+        const rec = api._readingBody(readingRequest(b));
+        if (b.source_key != null) {
+          if (keys.has(b.source_key)) { bump(this.already, 'blood_pressures'); return; }
+        } else {
+          const identity = tupleKey(rec.date, rec.time, b.systolic, b.diastolic, rec.pulse, b.context, rec.note);
+          if ((have.get(identity) || 0) > 0) { have.set(identity, have.get(identity) - 1); bump(this.already, 'blood_pressures'); return; }
+        }
+        if ((perDay.get(rec.date) || 0) >= BR.LIMITS.max_readings_per_day) {
+          this.skip('blood_pressures', index, `${b.systolic}/${b.diastolic} on ${rec.date}`,
+            `that day already has ${BR.LIMITS.max_readings_per_day} blood pressure readings, the most one day holds`);
+          return;
+        }
+        api._insertReading(this.userId, rec, { source: b.source, sourceKey: b.source_key == null ? null : b.source_key, createdAt: b.created_at });
+        const row = api._readings[api._readings.length - 1];
+        row.updated_at = b.updated_at;
+        if (b.source_key != null) keys.add(b.source_key);
+        bump(perDay, rec.date);
+        bump(this.counts, 'blood_pressures');
+      });
+    }
     // -- food preferences (like, less often, "Not for me", neutral)
     importPreferences() {
       const prefs = this.api._foodPreferences();
@@ -634,7 +715,7 @@
       const { doc, api } = this;
       if (!this.replaceProfile) {
         if (doc.profile != null) this.notSelected.push('your profile and targets');
-        if (Object.keys(doc.settings).some((k) => IMPORTED_SETTINGS.includes(k))) this.notSelected.push('your meal-guidance and display settings');
+        if (Object.keys(doc.settings).some((k) => IMPORTED_SETTINGS.includes(k))) this.notSelected.push('your meal-guidance, display, weight and blood pressure settings');
         return;
       }
       if (doc.profile != null) {
@@ -661,7 +742,7 @@
     run() {
       const existing = this.existingCounts();
       if (Object.values(existing).some((n) => n > 0) && !this.merge) throw new Blocked(existing);
-      this.resolveFoods(); this.importEntries(); this.importMeals(); this.importLabs(); this.importSymptoms(); this.importPreferences(); this.importProfileAndSettings();
+      this.resolveFoods(); this.importEntries(); this.importMeals(); this.importLabs(); this.importSymptoms(); this.importWeights(); this.importBloodPressures(); this.importPreferences(); this.importProfileAndSettings();
     }
     skippedAnswer() {
       const total = [...this.skippedByKind.values()].reduce((a, b) => a + b, 0);
@@ -672,7 +753,8 @@
   const fileSummary = (doc) => ({
     format: doc.format, version: doc.version, exported_at: doc.exported_at === undefined ? null : doc.exported_at, app_version: doc.app_version ? short(doc.app_version, 40) : null,
     records: { log_entries: doc.log_entries.length, custom_foods: doc.custom_foods.length, linked_foods: doc.linked_foods.length, meal_templates: doc.meal_templates.length,
-      lab_results: doc.lab_results.length, symptoms: doc.symptoms.length, food_preferences: doc.food_preferences.length, profile: doc.profile != null ? 1 : 0 },
+      lab_results: doc.lab_results.length, symptoms: doc.symptoms.length, weights: doc.weights.length, blood_pressures: doc.blood_pressures.length,
+      food_preferences: doc.food_preferences.length, profile: doc.profile != null ? 1 : 0 },
   });
   const zeroed = (keys) => Object.fromEntries(keys.map((k) => [k, 0]));
   const blockedAnswer = (existing, { dryRun, merge, replaceProfile, summary }) => ({
@@ -684,7 +766,7 @@
 
   // What the import touches, so a dry run can put it all back (the server runs it in a transaction it then rolls back).
   const TABLES = ['_foods', '_foodById', '_nextFoodId', '_entries', '_nextEntryId', '_templates', '_nextTemplateId', '_labs', '_nextLabId', '_symptoms', '_nextSymptomId',
-    '_foodPrefs', '_links', '_profile', '_settings', '_lastUs'];
+    '_weights', '_nextWeightId', '_readings', '_nextReadingId', '_foodPrefs', '_links', '_profile', '_settings', '_lastUs'];
   function snapshotTables(api) {
     api._foodPreferences(); // a copy saved before the preference profile (`_notForMe`) is converted first, so a dry run puts the new shape back
     const snap = {};
@@ -723,7 +805,8 @@
       else {
         const c = importer.counts;
         this._audit(user.id, 'data.imported', 'user', user.id, { merge, profile: !!c.get('profile'), log_entries: c.get('log_entries') || 0, custom_foods: c.get('custom_foods') || 0,
-          meal_templates: c.get('meal_templates') || 0, lab_results: c.get('lab_results') || 0, symptoms: c.get('symptoms') || 0, food_preferences: c.get('food_preferences') || 0 });
+          meal_templates: c.get('meal_templates') || 0, lab_results: c.get('lab_results') || 0, symptoms: c.get('symptoms') || 0, weights: c.get('weights') || 0,
+          blood_pressures: c.get('blood_pressures') || 0, food_preferences: c.get('food_preferences') || 0 });
         committed = true;
       }
     } catch (e) {

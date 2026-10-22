@@ -119,6 +119,26 @@ def test_every_v03_route_exists_and_needs_a_session(anon_client):
         assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
 
 
+# The weight and blood pressure log (ARCHITECTURE.md "Weight and blood pressure", schema step 18): every route needs a session.
+BODY_ROUTES = {
+    ("get", "/api/body/weights"), ("post", "/api/body/weights"), ("put", "/api/body/weights/{weight_id}"),
+    ("delete", "/api/body/weights/{weight_id}"), ("post", "/api/body/weights/batch"),
+    ("get", "/api/body/blood-pressure"), ("post", "/api/body/blood-pressure"), ("put", "/api/body/blood-pressure/{reading_id}"),
+    ("delete", "/api/body/blood-pressure/{reading_id}"), ("post", "/api/body/blood-pressure/batch"),
+    ("get", "/api/body/summary"),
+}
+
+
+def test_the_body_routes_exist_and_need_a_session(anon_client):
+    ops = api_operations(anon_client.app)
+    assert BODY_ROUTES <= ops, sorted(BODY_ROUTES - ops)
+    assert {op for op in ops if op[1].startswith("/api/body")} == BODY_ROUTES  # and nothing else under /api/body
+    assert not BODY_ROUTES & PUBLIC
+    for method, path in sorted(BODY_ROUTES):
+        r = anon_client.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
+        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+
+
 # Assistant access tokens (ARCHITECTURE.md "Assistant access tokens"): managing them needs a session like every
 # /api/me route, and a token counts only on the assistant surface (app/auth/api_tokens.py AssistantUser).
 ASSISTANT_TOKEN_ROUTES = {("get", "/api/me/tokens"), ("post", "/api/me/tokens"), ("delete", "/api/me/tokens/{token_id}")}

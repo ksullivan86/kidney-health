@@ -7,6 +7,8 @@ Registered limits (name: requests per window, keyed by the caller):
 * ``export``: 10 per user per hour (``GET /api/me/export.zip``)
 * ``import``: 20 per user per hour (``POST /api/me/import``: a check and then the import, each one request)
 * ``ai_probe``: 5 per user per hour (note 04 A5), ``barcode``: 60 per user per hour (note 03)
+* ``body_batch``: 60 per user per hour (``POST /api/body/weights/batch`` and ``/blood-pressure/batch``: 1,000 rows each, so
+  60,000 rows an hour is room for years of readings; note 10 §4.9)
 
 Login, setup, reset and re-auth have their own layered throttle (:mod:`app.auth.throttle`).
 Other notes add theirs with :func:`register_limit` and call :meth:`RateLimits.take`.
@@ -44,6 +46,7 @@ register_limit("export", 10, 3600, "Too many exports. Try again later.")
 register_limit("import", 20, 3600, "Too many imports. Try again later.")
 register_limit("ai_probe", 5, 3600)
 register_limit("barcode", 60, 3600)
+register_limit("body_batch", 60, 3600, "Too many imports of weights and readings. Try again later.")
 
 
 class SlidingWindow:

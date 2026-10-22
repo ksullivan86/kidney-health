@@ -38,6 +38,13 @@
         entered_value: r.entered_value, entered_unit: r.entered_unit, taken_on: r.taken_on, note: r.note, created_at: r.created_at }));
       const symptoms = this._symptomsOf(uid).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id)).map((r) => ({
         id: r.id, date: r.date, symptom: r.symptom, label: r.label, severity: r.severity, note: r.note, created_at: r.created_at }));
+      // weights and blood_pressures (schema step 18): the stored columns, oldest day first (app/body.py export_weights / export_readings)
+      const BR = KH.bodyRules;
+      const weights = this._weightsOf(uid).slice().sort(BR.compareRows).map((r) => ({ id: r.id, date: r.date, time: r.time, kg: r.kg, context: r.context,
+        note: r.note || '', source: r.source, source_key: r.source_key == null ? null : r.source_key, created_at: r.created_at, updated_at: r.updated_at }));
+      const bloodPressures = this._readingsOf(uid).slice().sort(BR.compareRows).map((r) => ({ id: r.id, date: r.date, time: r.time, systolic: r.systolic,
+        diastolic: r.diastolic, pulse: r.pulse, context: r.context, note: r.note || '', source: r.source, source_key: r.source_key == null ? null : r.source_key,
+        created_at: r.created_at, updated_at: r.updated_at }));
       // food_preferences (schema steps 5 and 17): every preference of the person, with who set it and when it last changed.
       const prefs = [...this._foodPreferences().entries()].map(([foodId, row]) => ({ food: this._food(foodId), row }))
         .filter((p) => p.food).sort((a, b) => a.food.id - b.food.id)
@@ -68,6 +75,8 @@
         meal_templates: templates,
         lab_results: labs,
         symptoms,
+        weights,
+        blood_pressures: bloodPressures,
         ai_audit: [],
         activity,
         food_preferences: prefs,

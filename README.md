@@ -381,10 +381,11 @@ app/
   audit.py, account.py    activity log; data export and account deletion
   data_import.py          import of a person's own export.json (POST /api/me/import)
   admin.py                admin CLI (python -m app.admin ...)
-  db.py, migrations/      SQLite connection + append-only schema steps (1-17)
+  db.py, migrations/      SQLite connection + append-only schema steps (1-18)
   nutrients.py, periods.py    pure rules: warnings, daily status, period maths
   targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
   symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
+  body.py                 the weight and blood pressure log (routes, kg and lb, the alarm and goal checks, the handbook's words; no screens yet)
   guidance/               rule-based meal guidance (pure engine + routes)
   gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
   ai/, vision.py, imagecheck.py   optional AI (presets, routing, network policy, guard, routes, the Ask chat) and photo checks

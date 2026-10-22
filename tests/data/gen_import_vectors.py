@@ -82,6 +82,16 @@ def symptom(i: int, key: str, day: str, severity: int = 1, **kw: Any) -> dict[st
     return {"id": i, "date": day, "symptom": key, "label": None, "severity": severity, "note": None, "created_at": T1, **kw}
 
 
+def weight(i: int, kg: float, day: str, context: str = "morning", **kw: Any) -> dict[str, Any]:
+    return {"id": i, "date": day, "time": None, "kg": kg, "context": context, "note": None, "source": "manual", "source_key": None, "created_at": T1,
+            "updated_at": T1, **kw}
+
+
+def reading(i: int, systolic: int, diastolic: int, day: str, context: str = "morning", **kw: Any) -> dict[str, Any]:
+    return {"id": i, "date": day, "time": None, "systolic": systolic, "diastolic": diastolic, "pulse": None, "context": context, "note": None,
+            "source": "manual", "source_key": None, "created_at": T1, "updated_at": T1, **kw}
+
+
 def base_doc(ids: dict[str, int]) -> dict[str, Any]:
     """A whole, valid file. ``ids``: the built-in foods' ids on the server (the demo has the same list)."""
     banana, tablets, rice = ids["banana"], ids["tablets"], ids["rice"]
@@ -105,7 +115,8 @@ def base_doc(ids: dict[str, int]) -> dict[str, Any]:
                     "weight_6_months_ago_kg": None, "pregnant_or_breastfeeding": False, "hyperkalemia_history": True, "urine_output_ml": None,
                     "pd_uf_ml": None, "pd_dialysate_kcal": None, "ckd_stage_chosen": True, "diabetes_chosen": True, "updated_at": T1},
         "settings": {"guidance": GUIDANCE, "ui.theme": "dark", "user.units.labs": "si", "food.scan_prefer_camera": True, "ai": {"opt_in": True, "provider": "own"},
-                     "food.off_consent": True},
+                     "food.off_consent": True, "user.units.weight": "kg", "body.weight_alarm": {"amount_kg": 1.5, "over": "days", "days": 2},
+                     "body.bp_goal": {"systolic": 130, "diastolic": 80}},
         "log_entries": entries,
         "custom_foods": [food(101, "My soup", brand="Home", category="Prepared & Fast Food", flags=["processed"], kidney_notes="Watch the salt."),
                          food(102, "Home gel", serving_desc="1 pouch", serving_g=32.0, nutrients=nutrients(carbs_g=22, sugar_g=20), flags=["hypo_treatment"]),
@@ -130,6 +141,14 @@ def base_doc(ids: dict[str, int]) -> dict[str, Any]:
         "lab_results": [lab(1, "potassium", 4.8, "mmol/L", "2026-10-01"), lab(2, "creatinine", 110, "µmol/L", "2026-09-20", note="fasting")],
         "symptoms": [symptom(1, "swelling", D1, 2, note="ankles"), symptom(2, "other", D1, 1, label="Cramps"),
                      *[symptom(10 + n, "itching", D2, 1, note=f"n{n}") for n in range(31)]],
+        "weights": [weight(1, 70.25, D1, time="07:30", note="kept"), weight(2, 70.5, D1), weight(3, 70.5, D1),
+                    weight(4, 71.0, D1, "after_dialysis", time="11:20", source="apple_health", source_key="a" * 32, updated_at=T2),
+                    weight(5, 72.0, D2, "other", source="import", source_key="key-2"),
+                    *[weight(10 + n, 60 + n / 10, D2, "other", note=f"n{n}") for n in range(21)]],
+        "blood_pressures": [reading(1, 128, 78, D1, time="07:35", pulse=64), reading(2, 185, 100, D1, "evening", note="rested"),
+                            reading(3, 140, 120, D2, "before_dialysis", source="apple_health", source_key="b" * 32, updated_at=T2),
+                            reading(4, 120, 80, D2, "other", source="import", source_key="key-4"),
+                            *[reading(10 + n, 120 + n % 20, 70, D2, "other", note=f"n{n}") for n in range(31)]],
         "food_preferences": [{"food_id": 101, "name": "My soup", "preference": "like", "created_at": T1, "source": "ask", "updated_at": T2},
                              {"food_id": banana, "name": "Banana, raw", "preference": "not_for_me", "created_at": T1},
                              {"food_id": tablets, "name": "Glucose tablet (4 g carb)", "preference": "neutral", "created_at": T1,
@@ -351,6 +370,64 @@ def refusals() -> list[tuple[str, list[dict[str, Any]]]]:
         ("a symptom with a line break in the label", s("symptoms.1.label", "two\nlines")),
         ("a symptom with a control character in the note", s("symptoms.0.note", "a\x07b")),
         ("a symptom with a tab in the note", s("symptoms.0.note", "a\tb")),
+        ("weights not a list", s("weights", 1)),
+        ("a weight that is not an object", s("weights.0", 5)),
+        ("a weight under the lightest", s("weights.0.kg", 19.99)),
+        ("a weight over the heaviest", s("weights.0.kg", 400.01)),
+        ("a weight of the lightest", s("weights.0.kg", 20)),
+        ("a weight of the heaviest", s("weights.0.kg", 400)),
+        ("a weight as text", s("weights.0.kg", "70")),
+        ("a weight true", s("weights.0.kg", True)),
+        ("a weight null", s("weights.0.kg", None)),
+        ("a weight without kg", s("weights.0.kg", DELETE)),
+        ("a weight with another context", s("weights.0.context", "evening")),
+        ("a weight with a context of the wrong kind", s("weights.0.context", 3)),
+        ("a weight with another source", s("weights.0.source", "withings")),
+        ("a weight without a source", s("weights.0.source", DELETE)),
+        ("a typed weight that keeps a key", [edit("weights.0.source_key", "k1")]),
+        ("a weight in the future", s("weights.0.date", "2999-01-01")),
+        ("a weight before 1900", s("weights.0.date", "1899-12-31")),
+        ("a weight on a day that is not one", s("weights.0.date", "2026-02-30")),
+        ("a weight with a padded date and time is read", [edit("weights.0.date", " 2026-10-05 "), edit("weights.0.time", " 07:30 ")]),
+        ("a weight with a blank time is read", s("weights.0.time", "  ")),
+        ("a weight with a time without its zero", s("weights.0.time", "7:30")),
+        ("a weight with the time 24:00", s("weights.0.time", "24:00")),
+        ("a weight with a time of the wrong kind", s("weights.0.time", 730)),
+        ("a weight with a note over 200", s("weights.0.note", "n" * 201)),
+        ("a weight with 200 emoji in the note is read", s("weights.0.note", "😀" * 200)),
+        ("a weight with a control character in the note", s("weights.0.note", "a\x07b")),
+        ("a weight with a tab in the note", s("weights.0.note", "a\tb")),
+        ("a weight with a source key over 64", s("weights.3.source_key", "k" * 65)),
+        ("a weight with a source key of the wrong kind", s("weights.3.source_key", 5)),
+        ("a weight created at no time", s("weights.0.created_at", "soon")),
+        ("a weight updated in the far future", s("weights.0.updated_at", "2999-01-01T00:00:00Z")),
+        ("a weight with id 0", s("weights.0.id", 0)),
+        ("a weight with an unknown field", s("weights.0.user_id", 2)),
+        ("a weight without a date", s("weights.0.date", DELETE)),
+        ("blood_pressures not a list", s("blood_pressures", {})),
+        ("a reading that is not an object", s("blood_pressures.0", "x")),
+        ("a top number under the lowest", s("blood_pressures.0.systolic", 49)),
+        ("a top number over the highest", s("blood_pressures.0.systolic", 301)),
+        ("a bottom number under the lowest", s("blood_pressures.0.diastolic", 19)),
+        ("a bottom number over the highest", s("blood_pressures.0.diastolic", 201)),
+        ("a top number equal to the bottom number", s("blood_pressures.0.systolic", 78)),
+        ("a top number under the bottom number", s("blood_pressures.0.systolic", 70)),
+        ("a top number as text", s("blood_pressures.0.systolic", "128")),
+        ("a top number with a fraction", s("blood_pressures.0.systolic", 128.5)),
+        ("a top number true", s("blood_pressures.0.systolic", True)),
+        ("a reading without a top number", s("blood_pressures.0.systolic", DELETE)),
+        ("a reading without a bottom number", s("blood_pressures.0.diastolic", DELETE)),
+        ("a pulse under the lowest", s("blood_pressures.0.pulse", 19)),
+        ("a pulse over the highest", s("blood_pressures.0.pulse", 251)),
+        ("a pulse as text", s("blood_pressures.0.pulse", "64")),
+        ("a reading with another context", s("blood_pressures.0.context", "bedtime")),
+        ("a reading with another source", s("blood_pressures.0.source", "omron")),
+        ("a reading in the future", s("blood_pressures.0.date", "2999-01-01")),
+        ("a reading with a bad time", s("blood_pressures.0.time", "99:99")),
+        ("a reading with a long note", s("blood_pressures.0.note", "n" * 201)),
+        ("a reading with a source key over 64", s("blood_pressures.2.source_key", "k" * 65)),
+        ("a reading with a flag field", s("blood_pressures.0.flag", None)),
+        ("a reading with an unknown field", s("blood_pressures.0.user_id", 2)),
         ("food_preferences not a list", s("food_preferences", 1)),
         ("a preference that is none of the four", s("food_preferences.0.preference", "love")),
         ("a preference with no value", s("food_preferences.0.preference", None)),
@@ -398,6 +475,12 @@ def refusals() -> list[tuple[str, list[dict[str, Any]]]]:
         ("a guidance setting out of range", s("settings.guidance", {**GUIDANCE, "carb_tolerance_g": 500})),
         ("a theme that is not one", s(["settings", "ui.theme"], "purple")),
         ("a unit system that is not one", s("settings", {"user.units.labs": "imperial"})),
+        ("a weight unit that is not one", s("settings", {"user.units.weight": "stone"})),
+        ("a weight alarm above the highest", s("settings", {"body.weight_alarm": {"amount_kg": 50}})),
+        ("a weight alarm with an unknown field", s("settings", {"body.weight_alarm": {"amount_kg": 1, "colour": 1}})),
+        ("a weight alarm of the wrong kind", s("settings", {"body.weight_alarm": 5})),
+        ("a blood pressure goal with the top number not above the bottom", s("settings", {"body.bp_goal": {"systolic": 100, "diastolic": 100}})),
+        ("a blood pressure goal is read", s("settings", {"body.bp_goal": {"systolic": 130}})),
         ("the camera choice of the wrong kind", s("settings", {"food.scan_prefer_camera": "yes"})),
         ("the AI setting is ignored without being read", s("settings", {"ai": 5})),
         ("a consent is ignored without being read", s("settings", {"food.off_consent": {"x": 1}})),
@@ -442,6 +525,10 @@ def script(ids: dict[str, int]) -> list[dict[str, Any]]:
     add("a minimal file with a profile only", {**minimal, "profile": {"name": "Pat"}}, "dry_run=1&replace_profile=1")
     add("a file of settings only, replacing", {**minimal, "settings": {"ui.theme": "light", "ai": {"opt_in": True}, "food.off_consent": True, "other": 1}}, "dry_run=1&replace_profile=1")
     add("a file of settings only, not replacing", {**minimal, "settings": {"ui.theme": "light"}})
+    add("a file of weight settings only, replacing", {**minimal, "settings": {"user.units.weight": "lb", "body.weight_alarm": {"amount_kg": 2, "over": "between_sessions"},
+                                                                              "body.bp_goal": {"systolic": 120, "diastolic": 70}}}, "dry_run=1&replace_profile=1")
+    add("a file of weight settings only, not replacing", {**minimal, "settings": {"user.units.weight": "lb"}})
+    add("a file with a weight only", {**minimal, "weights": [weight(1, 70, D1)]})
     # the account is empty: the import itself
     add("the whole file imported, with the profile", base, "replace_profile=1")
     add("the account is not empty any more", base, "dry_run=1")
@@ -450,6 +537,13 @@ def script(ids: dict[str, int]) -> list[dict[str, Any]]:
     add("the same file again, imported", base, "merge=1&replace_profile=1")
     add("a file with an entry more, added", {**base, "log_entries": [*base["log_entries"], entry(20, 101, "My soup", date="2026-10-07", created_at="2026-10-07T07:00:00Z", updated_at="2026-10-07T07:00:00Z")]},
         "merge=1")
+    add("a file with a weight and a reading more, added: typed rows by content, imported rows by key", {
+        **minimal, "weights": [weight(1, 70.25, D1, time="07:30", note="kept"), weight(2, 69.0, D1), weight(3, 71.0, D1, "after_dialysis", time="11:20",
+                                                                                                   source="apple_health", source_key="a" * 32),
+                               weight(4, 68.0, "2026-10-07", source="apple_health", source_key="new-key")],
+        "blood_pressures": [reading(1, 128, 78, D1, time="07:35", pulse=64), reading(2, 130, 80, D1), reading(3, 140, 120, D2, "before_dialysis", source="apple_health",
+                                                                                                           source_key="b" * 32),
+                            reading(4, 126, 76, "2026-10-07", source="import", source_key="new-key-2")]}, "merge=1")
     add("an older file without the list of built-in foods, matched by id and name", {
         **minimal, "log_entries": [entry(1, ids["banana"], "Banana, raw", date="2026-10-08"), entry(2, ids["rice"], "Not the name of this food", date="2026-10-08"),
                                    entry(3, 31, "Banana, raw", date="2026-10-08")],
@@ -462,6 +556,8 @@ def script(ids: dict[str, int]) -> list[dict[str, Any]]:
     add("read back: saved meals", None, raw_path="/api/meals", method="GET")
     add("read back: lab results", None, raw_path="/api/labs", method="GET")
     add("read back: symptoms", None, raw_path=f"/api/symptoms?start={D1}&end={D2}", method="GET")
+    add("read back: weights", None, raw_path=f"/api/body/weights?start={D1}&end={D2}", method="GET")
+    add("read back: blood pressure", None, raw_path=f"/api/body/blood-pressure?start={D1}&end={D2}", method="GET")
     add("read back: Not for me", None, raw_path="/api/guidance/not-for-me", method="GET")
     add("read back: food preferences", None, raw_path="/api/guidance/preferences", method="GET")
     add("read back: the profile", None, raw_path="/api/profile", method="GET")

@@ -84,6 +84,22 @@ GUIDANCE_VALUES = [
     {"unknown_field": 1}, {"like_categories": ["a"], "unknown_field": 1},
     {"carb_tolerance_g": 4, "like_categories": ["Fruits"], "exclude_categories": ["Fruits"]},
 ]
+# The weight-gain alarm and the blood pressure goal (note 10 §4.3): a float that may be null with a range, a choice and a small whole number;
+# the goal's top number must be above the bottom one.
+BODY_ALARM_VALUES = [
+    {}, {"amount_kg": 1}, {"amount_kg": 0.2}, {"amount_kg": 0.19}, {"amount_kg": 10}, {"amount_kg": 10.01}, {"amount_kg": 1.5, "over": "between_sessions"},
+    {"amount_kg": "1.5"}, {"amount_kg": " 1.5 "}, {"amount_kg": "1_0"}, {"amount_kg": "1e1"}, {"amount_kg": ".5"}, {"amount_kg": "5."}, {"amount_kg": "1,5"},
+    {"amount_kg": "x"}, {"amount_kg": ""}, {"amount_kg": "inf"}, {"amount_kg": "nan"}, {"amount_kg": True}, {"amount_kg": False}, {"amount_kg": None},
+    {"amount_kg": [1]}, {"amount_kg": {"a": 1}}, {"over": "days", "days": 1}, {"over": "weeks"}, {"over": None}, {"over": "DAYS"},
+    {"days": 7}, {"days": 8}, {"days": 0}, {"days": 2.5}, {"days": "3"}, {"days": True}, {"days": None},
+    {"amount_kg": 0.1, "over": "weeks", "days": 9}, {"unknown_field": 1}, {"amount_kg": 1, "unknown_field": 1}, {"amount_kg": 0.1, "z": 1, "y": 2},
+]
+BODY_GOAL_VALUES = [
+    {}, {"systolic": 130, "diastolic": 80}, {"systolic": 80, "diastolic": 40}, {"systolic": 200, "diastolic": 130}, {"systolic": 79}, {"systolic": 201},
+    {"diastolic": 39}, {"diastolic": 131}, {"systolic": 130}, {"diastolic": 80}, {"systolic": None, "diastolic": None}, {"systolic": 120, "diastolic": 120},
+    {"systolic": 100, "diastolic": 110}, {"systolic": 121, "diastolic": 120}, {"systolic": "130"}, {"systolic": 130.5}, {"systolic": 130.0}, {"systolic": True},
+    {"systolic": []}, {"unknown_field": 1}, {"systolic": 79, "diastolic": 131, "x": 1},
+]
 # Extra strings for a key with a pattern: the JS twin checks it after the length (as pydantic does).
 PATTERN_VALUES = ["admin@example.org", "Mum's server, mum@example.org", "a(b)c", "back\\slash", "x\r\nX-Evil: 1",
                   "tab\there", "café@example.org", "  ab(  ", "ok@example.org\n"]
@@ -102,6 +118,10 @@ def validation_vectors() -> list[dict]:
             values += PATTERN_VALUES
         if item["key"] == "guidance":
             values += GUIDANCE_VALUES
+        if item["key"] == "body.weight_alarm":
+            values += BODY_ALARM_VALUES
+        if item["key"] == "body.bp_goal":
+            values += BODY_GOAL_VALUES
         for value in values:
             try:
                 out.append({"key": d.key, "input": value, "value": d.to_python_json(d.validate(value))})
