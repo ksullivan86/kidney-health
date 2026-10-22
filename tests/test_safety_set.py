@@ -11,6 +11,7 @@ no longer registered, the set is empty, a file loses its last safety test, or th
 """
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -60,6 +61,18 @@ SAFETY_FILES = (
     "tests/guidance/test_food_safety.py",
 )
 
+# Files that skip as a whole where PyYAML is not installed: Python 3.15, which has no PyYAML wheel yet
+# (requirements-dev.in), so none of their tests is collected there. Below 3.15 a missing PyYAML is a collection
+# error instead, which fails the collection run above.
+NEEDS_YAML = frozenset({"tests/test_handbook_content.py"})
+
+
+def required_files() -> list[str]:
+    """The files of SAFETY_FILES that must hold a collected safety test in this environment."""
+    if importlib.util.find_spec("yaml") is None:
+        return [name for name in SAFETY_FILES if name not in NEEDS_YAML]
+    return list(SAFETY_FILES)
+
 
 @pytest.fixture(scope="module")
 def collected() -> list[str]:
@@ -83,11 +96,12 @@ def test_the_listed_files_exist():
     missing = [name for name in SAFETY_FILES if not (ROOT / name).is_file()]
     assert not missing, f"SAFETY_FILES names files that do not exist: {missing}"
     assert len(set(SAFETY_FILES)) == len(SAFETY_FILES)
+    assert NEEDS_YAML <= set(SAFETY_FILES)
 
 
 def test_every_listed_file_still_has_a_safety_test(collected):
     files = {node.split("::", 1)[0] for node in collected}
-    lost = [name for name in SAFETY_FILES if name not in files]
+    lost = [name for name in required_files() if name not in files]
     assert not lost, (
         f"these files no longer hold a test marked `safety`: {lost}. A safety rule must not lose its test quietly: "
         "restore the mark, or move the rule's test and update SAFETY_FILES in the same change."
