@@ -494,7 +494,7 @@ def candidate_block(item: Mapping[str, Any], food: Any) -> dict[str, Any]:
         "rating": item.get("renal_rating"),
         "warnings": [{"nutrient": n, "level": lv} for n, lv in warnings],
         "flags": sorted(f for f in food.flags if f in SHOWN_FLAGS),
-        "often": "you_eat_often" in (item.get("reasons") or ()),
+        "often": bool(item.get("often")),
         "liked": bool(item.get("liked")),
         "reasons": [r for r in item.get("reasons") or () if ":" not in r],
     }
