@@ -638,6 +638,14 @@ MEDLINE-PE:
   licence: "© A.D.A.M. (licensed to MedlinePlus): link and paraphrase only"
   checked: 2026-10-06
   kind: patient-info
+NHLBI-BPS:
+  cite: "National Heart, Lung, and Blood Institute (US). High blood pressure: symptoms (page last updated 25 April 2024)."
+  short: "NHLBI: high blood pressure symptoms"
+  url: https://www.nhlbi.nih.gov/health/high-blood-pressure/symptoms
+  licence: "Public domain (US government work)"
+  checked: 2026-10-22
+  kind: government
+  note: "Checked 2026-10-22 against the page: blood pressure above 180/120 mm Hg is too high and needs medical attention, especially with symptoms. With a reading of 180/120 and no symptoms, wait 5 minutes and check again; if it is still high, call your healthcare provider. If the second reading is also high and you have a sudden, severe headache, difficulty breathing, sudden, severe pain in your abdomen, chest or back, numbness or weakness, a sudden change in vision or problems talking, call 9-1-1. Do not wait to see if your pressure comes down on its own. The page also says the provider may recommend a medicine or a dose change: the handbook does not repeat that. The handbook reads 180/120 as a top number of 180 or more or a bottom number of 120 or more (the project's cautious choice; the page and its figures are not explicit)."
 AKF-bleed:
   cite: "American Kidney Fund. Dialysis fistula and graft bleeds: what are they and how can they be prevented and treated? (15 August 2025)."
   short: "AKF: fistula and graft bleeds"

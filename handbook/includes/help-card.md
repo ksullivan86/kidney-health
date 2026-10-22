@@ -7,11 +7,14 @@
 fainting, very slow or irregular pulse · lab potassium 6.5 mmol/L or more · stroke signs (note the
 time) · a low I can't treat: glucagon, turn me on my side, call 911 · blood ketones 3.0 mmol/L or
 more, or ketones with vomiting · fistula bleeding not stopped after 10–15 min of firm pressure ·
-fever with confusion or a racing pulse · after a transplant, fever with shaking chills
+fever with confusion or a racing pulse · after a transplant, fever with shaking chills · blood pressure
+180/120 or higher with a sudden severe headache, trouble breathing, chest, belly or back pain, numbness or
+weakness, a sudden vision change or trouble talking (still that high after 5 minutes' rest)
 
 **Call my team now or today:** potassium 6.0–6.4 mmol/L · ketones 1.6–2.9 mmol/L (now; emergency
 room if no answer) · vomiting, diarrhea or not eating · cloudy PD fluid (keep the bag) · no fistula
-buzz · missed dialysis · fever over 100 °F (37.8 °C) after a transplant · lows that keep coming back
+buzz · missed dialysis · fever over 100 °F (37.8 °C) after a transplant · lows that keep coming back ·
+blood pressure 180/120 or higher after resting 5 minutes · weight gain above my alarm weight
 
 Kidney team: ________________ Diabetes team: ________________
 
