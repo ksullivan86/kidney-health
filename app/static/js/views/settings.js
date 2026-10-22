@@ -1603,7 +1603,7 @@
       days.value = String(ttlDefault);
       days.addEventListener('input', () => { days.dataset.touched = '1'; });
       const form = h('form', { class: 'settings-form invite-form', novalidate: true },
-        h('div', { class: 'form-grid' },
+        h('div', { class: 'form-grid align-end' },
           h('div', { class: 'field' }, h('label', { for: roleId }, 'Role'), selectEl(roleId, [['user', 'Member'], ['admin', 'Admin']], 'user')),
           h('div', { class: 'field' }, h('label', { for: daysId }, 'Link works for (days)'), days),
           h('div', { class: 'field span-2' }, h('label', { for: noteId }, 'Note (only admins see it)'),

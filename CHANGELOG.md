@@ -9,6 +9,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Tidier screens.** We looked at every screen, on a phone and on a computer, in light and dark, and fixed what looked wrong.
+  The top bar shows the app's name whole or not at all, never cut to "K…", and it no longer runs past the edge of a narrow window.
+  A handbook link under a warning no longer pushes the lines above it apart, and its arrow stays with the last word. On the blood
+  pressure sheet the two number boxes line up. The **Include** box in Copy a day and the **Note** box in Lab results take the whole
+  row on a phone, so their words are not cut off. In Lab results every row puts the date above the value. A long name under
+  **Meals that fit** wraps to two lines. On Trends, the message about missing targets has its padding back. In Settings the buttons
+  under **Your data** and **Signed-in devices** no longer touch the box above them.
 * **Read a lab report from the PDF your lab's website gives you.** **Lab results → Read a lab report photo or PDF** takes the PDF itself,
   not only a photo or a screenshot. The PDF is opened **on your device** and never sent anywhere: you see "Page 1", "Page 2", ... (pages 1 to 6
   start ticked, up to 10 can be ticked), only the pages you tick are drawn on your device and sent as pictures to the AI at home (the same local
@@ -139,6 +146,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   uses from `KH.brand` (`app/static/js/engine/brand.js`). No value changed. `tests/test_brand.py` pins them all, checks that the Python and browser copies agree and
   fails when a main literal shows up again outside those two files and a short, explained allowlist. A second product changes its values in one place and does not
   have to search for them.
+* **A look at every screen, and checks that keep the fixes.** `tests/test_layout_ui.py` pins each layout fix in the stylesheets and
+  the page. `tools/e2e/sandbox.py` gained two probes: the header at 19 widths with the Preview pill, the admin shield, the Ask tab
+  and the offline badge on and off (the name whole or hidden, nothing overlapping, no sideways scroll), and the Plan week's badges.
+  The four README screenshots were taken again, because they showed the cut name and the spread-out warning lines.
 * **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the
   introduction and four screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after
   a change to those screens. `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.

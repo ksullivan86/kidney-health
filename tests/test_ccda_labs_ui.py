@@ -49,7 +49,7 @@ def test_the_files_are_in_the_shell_in_dependency_order_and_in_the_service_worke
 
 def test_the_card_sits_next_to_the_apple_health_import_and_explains_the_steps():
     assert INDEX.index('id="lab-import"') < INDEX.index('id="lab-fhir"') < INDEX.index('id="lab-ccda"') < INDEX.index('id="lab-photo"')
-    assert "Import from a patient portal file (C-CDA .xml)" in CARD
+    assert "Import from a patient portal file (C-CDA .xml)" in re.sub(r"</?span[^>]*>", "", CARD)  # the name is in a no-break span so it never breaks at its hyphen
     for words in ("MyChart", "health summary", "visit summary", "Download", "XML", "C-CDA", "not the PDF", "nothing is uploaded"):
         assert words in CARD, words
     assert re.search(r'<input id="lab-ccda-file"[^>]* type="file" multiple accept="[^"]*\.xml[^"]*"', CARD, re.IGNORECASE)

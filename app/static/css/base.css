@@ -145,6 +145,7 @@ svg { display: inline-block; vertical-align: middle; }
 .small { font-size: 0.85rem; }
 .hint { display: block; color: var(--text-3); font-size: 0.8rem; margin-top: 4px; line-height: 1.35; }
 .spacer { flex: 1; }
+.nobr { white-space: nowrap; } /* a name with a hyphen that must not break at it (C-CDA) */
 .tabular { font-variant-numeric: tabular-nums; }
 
 /* ---------- layout ---------- */

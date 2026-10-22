@@ -33,6 +33,7 @@
 .stat.has-min .stat-track { margin-bottom: 18px; }
 .stat-foot { grid-column: 1 / -1; font-size: 0.8rem; color: var(--text-3); margin-top: -2px; }
 .empty-state { color: var(--text-3); font-size: 0.9rem; padding: 6px 0; }
+.card.empty-state { padding: 14px 16px; } /* a message that is its own card (Trends with no targets): the card's padding, not none */
 
 .meals { display: flex; flex-direction: column; gap: 12px; }
 .meal { padding: 10px 16px 6px; }

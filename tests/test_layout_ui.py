@@ -123,3 +123,46 @@ def test_a_field_that_would_be_cut_in_half_a_row_takes_the_whole_row_on_a_phone(
 def test_settings_blocks_that_stack_buttons_leave_a_gap() -> None:
     declarations = rule(SETTINGS_CSS, ".data-block, #set-devices")
     assert "display: flex" in declarations and "flex-direction: column" in declarations and re.search(r"gap: \d+px", declarations)
+
+
+# ------------------------------------------------------------------------------------- the rest of the screens
+TODAY_CSS = read("css", "today.css")
+GUIDANCE_CSS = read("css", "guidance.css")
+PROFILE_CSS = read("css", "profile.css")
+TODAY_JS = read("js", "views", "today.js")
+BODY_JS = read("js", "views", "body.js")
+
+
+def test_a_message_that_is_its_own_card_keeps_the_cards_padding() -> None:
+    """Trends with no targets showed its words touching the card's border: `.empty-state` (6px 0) came after `.card`."""
+    assert "padding: 14px 16px" in rule(TODAY_CSS, ".card.empty-state")
+    assert TODAY_CSS.index(".card.empty-state") > TODAY_CSS.index(".empty-state {")
+
+
+def test_a_link_inside_a_sentence_is_an_inline_link_not_a_44_px_box() -> None:
+    """On a phone the 44 px box of a link button spread the lines of its sentence apart and parked the full stop on its own."""
+    assert "class: 'link-btn inline'" in TODAY_JS.split("profile-choose-note")[1].split("'Choose them in Profile'")[0]
+    assert "class: 'link-btn inline', type: 'button', id: 'body-open-settings'" in BODY_JS
+    assert "display: inline" in block(PROFILE_CSS, "@media (pointer: coarse), (max-width: 719.98px) {\n  .why > summary")
+
+
+def test_two_boxes_side_by_side_line_up_in_settings_too() -> None:
+    """Settings → blood pressure goal (top and bottom number) and Admin → Invite someone (Role, Link works for (days))."""
+    assert "h('div', { class: 'form-grid align-end' },\n        h('div', { class: 'field' }, h('label', { for: 'set-body-goal-systolic' }" in BODY_JS
+    settings = read("js", "views", "settings.js")
+    assert "h('div', { class: 'form-grid align-end' },\n          h('div', { class: 'field' }, h('label', { for: roleId }, 'Role')" in settings
+
+
+def test_a_long_saved_meal_name_in_meals_that_fit_wraps_to_two_lines() -> None:
+    declarations = rule(GUIDANCE_CSS, ".g-meal-chips .meal-chip-name")
+    assert "white-space: normal" in declarations and "-webkit-line-clamp: 2" in declarations
+
+
+def test_lab_rows_stack_the_date_above_the_value_on_a_phone() -> None:
+    inner = block(LABS_CSS, "@media (max-width: 480px)")
+    assert ".lab-row-main" in inner and ".lab-import-list label" in inner and "flex-direction: column" in inner
+
+
+def test_c_cda_is_not_broken_at_its_hyphen() -> None:
+    assert 'Import from a patient portal file (<span class="nobr">C-CDA .xml</span>)' in INDEX
+    assert "white-space: nowrap" in rule(BASE, ".nobr")
