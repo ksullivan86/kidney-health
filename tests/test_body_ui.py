@@ -235,6 +235,10 @@ def test_the_trends_charts_are_plain_svg_each_with_a_table_under_it():
     for needle in ("'series top'", "'series bottom'", "'goal-top'", "'goal-bottom'", "`ref ${cls}`", "circle(", "rect("):
         assert needle in TRENDS_CODE, needle
     assert ".body-chart-svg .ref { fill: none; stroke-width: 1.5; stroke-dasharray: 6 4; }" in CSS
+    # the reference lines are named in the legend with their numbers, not by text on the line, which sat on the readings
+    assert "class: 'direct'" not in TRENDS_CODE and "text.direct" not in CSS
+    assert "`Top goal: under ${goal.systolic} (dashed)`" in TRENDS_CODE and "`Bottom goal: under ${goal.diastolic} (dashed)`" in TRENDS_CODE
+    assert "`Dry weight in Profile (${R.formatWeight(dryKg, unit)})`" in TRENDS_CODE
     assert "weekAverages(weights, end)" in TRENDS_CODE and "U.weekSentences(summary.bp.week, summary.bp.goal)" in TRENDS_CODE  # the 7-day averages
 
 

@@ -70,8 +70,7 @@
     frame(svg, ax, dom, start, end);
     if (dry != null) {
       const y = ax.y(dry);
-      svg.append(s('line', { class: 'ref dry', x1: ax.padL, x2: ax.width - ax.padR, y1: y, y2: y }),
-        s('text', { class: 'direct', x: ax.padL + 4, y: y - 4 }, `Dry weight ${R.formatWeight(dryKg, unit)}`));
+      svg.append(s('line', { class: 'ref dry', x1: ax.padL, x2: ax.width - ax.padR, y1: y, y2: y }));
     }
     const points = series.map((p) => ({ x: ax.x(p.date, p.time), y: ax.y(p.value) }));
     svg.append(s('path', { class: 'series weight', d: U.linePath(points) }));
@@ -97,15 +96,15 @@
         + `${Math.min(...series.map((p) => p.diastolic))} and ${Math.max(...series.map((p) => p.diastolic))}`
         + `${U.goalText(goal) ? `, with dashed lines for the goal from your care team, ${U.goalText(goal)}` : ''}. The table under the chart lists every reading.` });
     frame(svg, ax, dom, start, end);
-    // The goal lines, each named at its right end (a number, never only a colour).
-    const ref = (value, cls, label) => {
+    // The goal lines. The legend names each with its number (never only a colour); a label on the line itself sat on the
+    // readings, which are usually close to the goal.
+    const ref = (value, cls) => {
       if (value == null) return;
       const y = ax.y(value);
-      svg.append(s('line', { class: `ref ${cls}`, x1: ax.padL, x2: ax.width - ax.padR, y1: y, y2: y }),
-        s('text', { class: 'direct', x: ax.width - ax.padR - 2, y: y - 4, 'text-anchor': 'end' }, `${label} under ${value}`));
+      svg.append(s('line', { class: `ref ${cls}`, x1: ax.padL, x2: ax.width - ax.padR, y1: y, y2: y }));
     };
-    ref(goal.systolic, 'goal-top', 'Top goal');
-    ref(goal.diastolic, 'goal-bottom', 'Bottom goal');
+    ref(goal.systolic, 'goal-top');
+    ref(goal.diastolic, 'goal-bottom');
     const top = series.map((p) => ({ x: ax.x(p.date, p.time), y: ax.y(p.systolic) }));
     const bottom = series.map((p) => ({ x: ax.x(p.date, p.time), y: ax.y(p.diastolic) }));
     svg.append(s('path', { class: 'series top', d: U.linePath(top) }), s('path', { class: 'series bottom', d: U.linePath(bottom) }));
@@ -167,8 +166,8 @@
     const legend = h('ul', { class: 'body-legend' },
       legendItem(legendLine('top', circle(11, 7, 4, 'mark top')), 'Top number'),
       legendItem(legendLine('bottom', rect(11, 7, 8, 'mark bottom')), 'Bottom number'));
-    if (goal.systolic != null) legend.append(legendItem(legendRef('goal-top'), 'Top goal (dashed)'));
-    if (goal.diastolic != null) legend.append(legendItem(legendRef('goal-bottom'), 'Bottom goal (dashed)'));
+    if (goal.systolic != null) legend.append(legendItem(legendRef('goal-top'), `Top goal: under ${goal.systolic} (dashed)`));
+    if (goal.diastolic != null) legend.append(legendItem(legendRef('goal-bottom'), `Bottom goal: under ${goal.diastolic} (dashed)`));
     block.append(legend, bpTable(readings));
     return block;
   }

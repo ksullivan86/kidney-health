@@ -3309,7 +3309,8 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   (the top and bottom numbers as two lines with a circle and a square per reading, the goal as two dashed lines when set, a heavier outline for a flagged
   reading), both **plain SVG built with the DOM** (`KH.s`: no chart library, no `innerHTML`, no inline style: classes and `css/body.css`), each with a **table under
   it** (`<details>`, every row, a flagged reading says "Yes, see Today") and a legend that names every line and marker, so nothing depends on seeing the chart or on
-  colour. The two series colours are the first two steps of the dataviz palette (tokens `--body-top` and `--body-bottom`, light and dark, validated for the
+  colour. The dashed lines are named in the legend with their numbers ("Top goal: under 130 (dashed)", "Dry weight in Profile (…)"), not by text on the line, where
+  it sat on the readings. The two series colours are the first two steps of the dataviz palette (tokens `--body-top` and `--body-bottom`, light and dark, validated for the
   colour-blind separation and 3:1 against the surface). The stats above them: the latest weight, the mean of **each kind of weight** over the last 7 days
   (`weekAverages`: morning is never averaged with after dialysis) and the server's 7-day blood pressure average with the goal verdict.
 * **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
