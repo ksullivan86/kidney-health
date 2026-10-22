@@ -7,6 +7,10 @@ person kept to ``POST /api/labs/import``), nothing is kept in the browser's stor
 read, more than 2,000 files are refused before any is read, new results start ticked, saved ones do not, only ticked rows are handed to
 the save, and text from a file is drawn as text) is checked by running the file against a fake page in Node
 (``tests/js/fhir_labs_page.mjs``).
+
+The export.zip can be chosen as it is (``js/engine/zip.js``, note 11): its ``clinical-records/*.json`` entries go through the same loop, the same
+caps and the same engine as files picked one by one; a damaged or unreadable entry is a file that could not be read; a .zip with no
+clinical-records folder says so. The same page test runs it on archives made in memory.
 """
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ def test_the_files_are_in_the_shell_in_dependency_order_and_in_the_service_worke
     assert scripts.index("js/engine/kidney_function.js") < scripts.index("js/engine/fhir_labs.js") < scripts.index("js/core.js")
     assert scripts.index("js/engine/lab_import.js") + 1 == scripts.index("js/engine/fhir_labs.js")
     assert scripts.index("js/views/labs.js") < scripts.index("js/views/lab_fhir.js") < scripts.index("js/main.js")  # saveImported exists first
+    assert scripts.index("js/engine/zip.js") < scripts.index("js/views/lab_fhir.js")  # the zip reader is there before the view uses it
     assert "'/js/engine/fhir_labs.js'," in SW and "'/js/views/lab_fhir.js'," in SW
     assert "KH.fhirLabs = {" in ENGINE and "KH.labFhir = {" in VIEW
 
@@ -48,9 +53,13 @@ def test_the_files_are_in_the_shell_in_dependency_order_and_in_the_service_worke
 def test_the_card_sits_next_to_the_csv_import_and_explains_the_steps():
     assert INDEX.index('id="lab-import"') < INDEX.index('id="lab-fhir"') < INDEX.index('id="lab-photo"')
     assert "Import from Apple Health (clinical records)" in CARD
-    for words in ("Export All Health Data", "Files", "unzip", "clinical-records", "Select All", "nothing is uploaded"):
+    for words in ("Export All Health Data", "Files", "already unzipped", "clinical-records", "Select All", "nothing is uploaded"):
         assert words in CARD, words
-    assert re.search(r'<input id="lab-fhir-file"[^>]* type="file" multiple accept="[^"]*\.json[^"]*"', CARD)
+    plain = re.sub(r"<[^>]+>", "", CARD)
+    assert plain.index("choose export.zip below") < plain.index("already unzipped it in Files")  # the zip itself first, the unzip route as the alternative
+    assert "tap the zip to unzip it" not in plain
+    assert '<label for="lab-fhir-file">Clinical records: export.zip (or the .json files)</label>' in CARD
+    assert re.search(r'<input id="lab-fhir-file"[^>]* type="file" multiple accept="\.zip,\.json,application/zip,application/json,application/fhir\+json"', CARD)
     assert 'id="lab-fhir-preview"' in CARD and "Up to 2,000 files, 1 MB each" in CARD
     # no capture attribute, no form, no action: the chooser can only hand files to the page
     assert "<form" not in CARD and "capture=" not in CARD and "action=" not in CARD
@@ -189,3 +198,74 @@ def test_choosing_again_while_reading_drops_the_older_pick(page):
 
 def test_the_page_makes_no_network_call(page):
     assert page["network"] == []  # fetch, XMLHttpRequest, WebSocket and sendBeacon were all trapped; none was touched
+
+
+# --------------------------------------------------------------------------- an export.zip
+ZIP_UNREADABLE = ("This .zip could not be read (it may be damaged or not finished downloading). Export from the Health app again, or unzip it in "
+                  "Files and choose the files in apple_health_export/clinical-records.")
+
+
+def test_an_export_zip_gives_the_same_table_as_the_same_files_picked_one_by_one(page):
+    mixed, zipped = page["mixed"], page["zipMixed"]
+    for key in ("summary", "ticked", "rows", "days", "why", "save", "focused"):
+        assert zipped[key] == mixed[key], key
+    # only the clinical-records entries were opened (one stream each; export.xml, the workout route and the macOS copy never): 8 files, one over 1 MB
+    # (its stream never opened) and none of the 8 left open
+    assert zipped["streams"] == 6 + 0 and zipped["over"] == zipped["streams"] and zipped["read"] == 0 and zipped["busy"] is None
+    assert page["zipSaved"] == page["saved"]  # the same rows to the same save, with no file or entry name in them
+    assert "Observation-" not in json.dumps(page["zipSaved"]["saved"]) and ".json" not in json.dumps(page["zipSaved"]["saved"])
+
+
+def test_a_damaged_or_unreadable_entry_is_a_file_that_could_not_be_read_and_the_rest_still_import(page):
+    damaged = page["zipDamaged"]
+    assert damaged["summary"] == "1 result found in 3 files; 2 files that could not be read."
+    assert damaged["rows"] == ["Potassium 5.4 mmol/L"]
+    assert damaged["noRealElements"] is True and set(damaged["tags"]) <= {"button", "div", "input", "label", "li", "p", "span", "ul"}
+
+
+def test_an_export_zip_with_no_clinical_records_folder_says_so(page):
+    said = "This .zip has no clinical-records folder. It is there only if you linked your health system in the Health app."
+    for key, shown in page["zipNoFolder"].items():
+        assert shown["error"] == [said] and shown["input"] == "" and shown["busy"] is None and shown["opened"] == 0, key
+    # the folder at the top of the archive (a re-zipped clinical-records folder) is fine, and so is a .zip chosen by type alone
+    assert page["zipTopFolder"] == {"summary": "1 result found in 1 file."} and page["zipByType"] == {"summary": "1 result found in 1 file."}
+
+
+def test_a_zip_that_cannot_be_opened_and_a_zip_chosen_with_other_files_are_turned_away_in_words(page):
+    for key, shown in page["zipBroken"].items():
+        assert shown["error"] == [ZIP_UNREADABLE] and shown["input"] == "" and shown["busy"] is None, key
+    both = page["zipAndFiles"]
+    assert both["error"] == ["Choose either one .zip or the .json files, not both."]
+    assert both["read"] == 0 and both["slices"] == 0 and both["opened"] == 0  # nothing was read
+
+
+def test_the_caps_are_the_same_for_a_zip(page):
+    many = page["zipTooMany"]
+    assert many["error"] == ["This .zip has 2,001 clinical-record files; the app reads up to 2,000 at a time. In Files, tap the zip to unzip it, then "
+                             "choose only some of the files, for example the Observation files."]
+    assert many["opened"] == 0 and many["input"] == ""
+    assert page["zipExactly2000"] == {"summary": "1 result found in 2,000 files; 1,999 records that are not lab results.", "opened": 2000, "over": 2000}
+
+
+def test_without_decompressionstream_the_old_advice_is_shown_and_the_archive_is_not_opened(page):
+    browser = page["zipBrowser"]
+    assert browser["error"] == ["This browser cannot open a .zip here. In Files, tap the zip to unzip it, then choose the files in apple_health_export/clinical-records."]
+    assert browser["slices"] == 0 and browser["opened"] == 0 and browser["input"] == ""
+    assert page["zipBrowserBack"] == {"summary": "1 result found in 1 file."}
+
+
+def test_choosing_again_while_a_zip_is_being_read_drops_the_older_pick(page):
+    assert page["zipNewerWins"]["rows"] == ["Creatinine (blood) 1.20 mg/dL"] and page["zipNewerWins"]["opened"] == page["zipNewerWins"]["over"]
+    assert page["zipDropped"]["after"]["box"] == "" and page["zipDropped"]["saved"] == 0
+    assert page["zipDropped"]["during"].startswith("Read ") and page["zipDropped"]["during"].endswith(" of 40 files…")
+
+
+def test_the_zip_path_of_the_view_reads_only_the_clinical_records_through_the_reader() -> None:
+    code = code_of(VIEW)
+    assert "KH.zip.open(file)" in code and "KH.zip.list(archive, KH.zip.RULES.clinicalRecords)" in code
+    assert "KH.zip.text(archive, entry, { maxBytes: FL.MAX_FILE_BYTES })" in code  # each entry capped at the 1 MB of a picked file
+    assert "if (entry.size > FL.MAX_FILE_BYTES) return { name, size: entry.size };" in code  # and one over it is not even read
+    assert "!KH.zip.supported()" in code
+    # no word of the archive's own reaches the page except the entry's file name in the list of refusals (the save's own errors are the server's)
+    reading = code_of(VIEW[VIEW.index("async function readEntry"):VIEW.index("/* review(box, analysis")]) + code_of(VIEW[VIEW.index("// One export.zip"):VIEW.index("function onCancel")])
+    assert "message" not in reading.replace("refuseZip(message)", "").replace("showError(message)", "")

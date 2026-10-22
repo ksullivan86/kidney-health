@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { makeZip } from './zip_writer.mjs';
+import { makeZip, zipFile as zipFileOf } from './zip_writer.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (...p) => readFileSync(join(ROOT, 'app', 'static', ...p), 'utf8');
@@ -173,43 +173,6 @@ const fileOf = (name, xml, { chunk = 2048, delay = 0, type = 'text/xml' } = {}) 
   return file;
 };
 
-// An export.zip as the file box hands it over: a File-like with name, type, size and slice(), whose streams log what is done with them. `chunk` and
-// `delay` make its streams slow, so that Cancel can come while it is being read. `entries` are zip_writer.mjs entries, or raw bytes (a file that is not a zip).
-const zipFileOf = (name, entries, { type = 'application/zip', chunk = 0, delay = 0 } = {}) => {
-  const bytes = Buffer.isBuffer(entries) ? entries : makeZip(entries);
-  const blob = new Blob([bytes]);
-  const file = { name, type, size: bytes.length, opened: 0, cancelled: 0, finished: 0, over: 0, pulls: 0, slices: [] };
-  file.slice = (from, to) => {
-    file.slices.push([from, to]);
-    const part = blob.slice(from, to);
-    return {
-      arrayBuffer: () => part.arrayBuffer(),
-      stream() {
-        file.opened += 1;
-        const reader = part.stream().getReader();
-        let held = new Uint8Array(0);
-        let over = false;
-        const end = (what) => { file[what] += 1; if (!over) { over = true; file.over += 1; } };
-        return new ReadableStream({
-          async pull(controller) {
-            file.pulls += 1;
-            if (delay) await sleep(delay);
-            if (held.length === 0) {
-              const r = await reader.read();
-              if (r.done) { end('finished'); controller.close(); return; }
-              held = r.value;
-            }
-            const n = chunk > 0 ? chunk : held.length;
-            controller.enqueue(held.subarray(0, n));
-            held = held.subarray(n);
-          },
-          cancel(why) { end('cancelled'); return reader.cancel(why); },
-        }, { highWaterMark: 0 });
-      },
-    };
-  };
-  return file;
-};
 // the entries of the Health app's export.zip around an export.xml: the other files it holds, an encrypted one among them, and the macOS extras
 const healthEntries = (xml, more = []) => [
   { name: 'apple_health_export/', data: '', method: 'store' },
