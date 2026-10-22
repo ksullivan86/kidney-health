@@ -202,6 +202,7 @@ def test_today_uses_the_tolerance_from_the_guidance_settings(client):
         "Breakfast carbohydrate is more than 5 g over the per-meal goal: 68 / 60 g"]
 
 
+@pytest.mark.safety
 def test_a_low_treatment_never_makes_a_meal_over(client):
     client.put("/api/profile", json={"targets": {"carbs_per_meal_g": 60, "carbs_per_snack_g": 15}})
     _quick(client, "snack", 20, purpose="hypo", name="Glucose tablets")

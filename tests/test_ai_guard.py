@@ -61,12 +61,14 @@ BLOCKED_TERMS = [
 ]
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("term", BLOCKED_TERMS)
 def test_every_blocklist_term_is_caught(term):
     assert G.blocked(f"Rice with {term} please") is not None
     assert G.name_policy(f"Rice {term}")[0] is None
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", [
     "ins​ulin",          # zero-width space
     "ins­ulin",          # soft hyphen
@@ -80,6 +82,7 @@ def test_obfuscated_terms_are_caught(text):
     assert G.blocked(text) is not None
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", ["Pumpkin soup", "Masala dosa", "Basil chicken", "Unity loaf", "Rationed rice", "Pasta with lentils",
                                   "7-grain bread", "Supper salad", "Extra virgin olive oil", "Extra-lean ground beef",
                                   "Extra sharp cheddar", "Penne arrabbiata", "Skippy peanut butter", "Glucose tablets",
@@ -89,6 +92,7 @@ def test_ordinary_food_names_pass(text):
     assert G.name_policy(text)[0] == text
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text, reason", [
     ("", "empty"), ("   ", "empty"), (None, "empty"),
     ("see https://evil.example/x", "url"), ("www.evil.example", "url"), ("go to evil.com now", "url"), ("me@example.org", "url"),
@@ -104,6 +108,7 @@ def test_name_policy_cleans_and_caps():
     assert len(G.name_policy("r" * 200)[0]) == 80
 
 
+@pytest.mark.safety
 def test_server_templates_never_use_banned_words():
     texts = [G.REFUSED_TEXT, G.FALLBACK_TEXT, G.NO_FIT_TEXT, *G.REASON_TEXT.values(), *G.THEME_TITLE.values()]
     for text in texts:
@@ -177,6 +182,7 @@ def test_sentence():
     assert G.sentence([], "lunch") == "Fits your targets for lunch."
 
 
+@pytest.mark.safety
 def test_a_portion_flagged_high_is_never_called_low():
     """v0.3.0 review: chicken breast (220 mg K a portion, "High potassium" on the same card) read "Low in
     potassium for what is left today" because the claim was judged against half the meal room (375 mg)."""
@@ -245,6 +251,7 @@ def test_grounding_drops(ideas, reason):
     assert result["message"] == G.FALLBACK_TEXT
 
 
+@pytest.mark.safety
 def test_avoid_ckd_and_low_treatments_are_dropped_even_if_named():
     ctx, bridge = setup()
     answer = {"status": "ok", "refusal": "none", "ideas": [idea([(9, 4)]), idea([(10, 4)])]}

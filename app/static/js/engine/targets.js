@@ -708,13 +708,13 @@
   function suggestFromRecords(profile, labs, today, settings = {}) {
     return suggest(inputsFromRecords(profile, labs, today, settings), today);
   }
-  // nutrients.suggest_targets: the v0.2 signature, without the v0.3 inputs -> {targets, notes}.
+  // rules_kidney.suggest_targets (nutrients.suggest_targets): the v0.2 signature, without the v0.3 inputs -> {targets, notes}.
   function suggestTargets(weightKg, stage, dialysis = 'none', diabetes = 'type1', heightCm = null) {
     const today = new Date().toISOString().slice(0, 10); // no birth month, transplant date or labs: the date does not matter
     const result = suggest(makeInputs({ weight_kg: weightKg, ckd_stage: stage, dialysis, diabetes, height_cm: heightCm }), today);
     return { targets: result.targets, notes: result.notes };
   }
-  // nutrients.dosing_weight: [reference weight, basis].
+  // rules_kidney.dosing_weight (nutrients.dosing_weight): [reference weight, basis].
   function dosingWeight(weightKg, heightCm) { const r = referenceWeight(weightKg, heightCm); return [r.weight_kg, r.basis]; }
 
   // The tables as plain data (compared with tests/data/targets_vectors.json "tables").

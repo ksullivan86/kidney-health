@@ -18,7 +18,7 @@ Produced by the server's own pure functions (``app/targets.py`` with the data of
   ``{"error": {"code", "message"}}`` for a refusal (422), or
   ``{"invalid": message}`` for an input the rules cannot use (400). The note 05 §5.1 vectors TV01–TV23
   come first, then every threshold edge, then a fixed-seed random sample;
-* ``wrapper_cases``: the v0.2 ``nutrients.suggest_targets(weight, stage, dialysis, diabetes, height)``.
+* ``wrapper_cases``: the v0.2 ``rules_kidney.suggest_targets(weight, stage, dialysis, diabetes, height)``.
 
 Lab rows look like stored rows: ``{id, analyte, value (canonical), entered_value, entered_unit, taken_on}``.
 Standard library only (plus the app package on the path).

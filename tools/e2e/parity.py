@@ -18,7 +18,7 @@ What it does
 Sections
   0 sanity (profile, healthz, categories, empty day, suggest without weight)
   1 GET /api/foods/{id} for every builtin food, matched by name
-  1b window.__kdlEvaluateWarnings vs app.nutrients.food_warnings (pure-function fuzz, boundaries)
+  1b window.__kdlEvaluateWarnings vs app.rules_kidney.food_warnings (pure-function fuzz, boundaries)
   2 GET /api/foods?q= for 15 queries (fresh history); 2b again after sections 4-5 (with history)
   3 suggested targets: stage x dialysis x height/weight x diabetes (144) + 3b random weights/heights
   4 scripted day: profile, 8 entries (grams-based, 2 planned), GET /api/log?date=

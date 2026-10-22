@@ -164,6 +164,7 @@ def test_tv_p7_nothing_fits_gives_no_fit_with_the_closest_meal():
     assert meal["closest"] is not None and meal["closest"]["reason"].startswith(("would_exceed:", "high_warning:"))
 
 
+@pytest.mark.safety
 def test_plan_writes_nothing_and_never_places_low_treatments_or_ingredients(real_foods):
     ctx = fx.context(food_map=real_foods, targets=fx.HD_TARGETS, dialysis="hemodialysis", day=(), history=(), saved=())
     before = ctx.day

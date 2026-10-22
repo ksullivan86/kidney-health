@@ -40,6 +40,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 * **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
   the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
   show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400
@@ -72,6 +73,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   data in the demo), checked by `tests/data/body_vectors.json` (`tests/data/gen_body_vectors.py`) and `tools/e2e/parity.py` section 16.
   The settings twin gained a float type with null (`engine/settings.js`). [docs/body.md](docs/body.md) and ARCHITECTURE.md
   "Weight and blood pressure" describe it; the handbook source `NHLBI-BPS` and an open clinician question are in `handbook/REVIEW.md`.
+* **The kidney and type 1 diabetes rules moved out of `app/nutrients.py` into `app/rules_kidney.py`** (design note 14 §2.2 and §4 change 5; no
+  behaviour change, no vector change). The thresholds, `food_warnings`, `kidney_rating`, the per-meal carbohydrate alerts, `dosing_weight`,
+  `suggest_targets`, the CKD, dialysis and diabetes choices and the food flags are the same code in a new module; the registry, rounding and
+  number formatting both modules need are in `app/nutrient_core.py`, so there is no import cycle. `app/nutrients.py` re-exports every moved
+  name, so each `from .nutrients import X` and `nutrients.X` still works.
+* **The safety set: `python -m pytest -m safety`** (design note 14 §4 change 7). The tests that enforce the health-data rules of CLAUDE.md
+  (no insulin or medicine dosing, a low is never blocked or warned against, handbook text quoted word for word, the AI guard and the
+  prefilter, nothing about weights, readings or symptoms sent to an AI) carry a registered `safety` marker, including the AI golden
+  `safety-*` and `prefilter-*` cases. `tests/test_safety_set.py` collects the set and fails if it is empty or a listed file loses its
+  last safety test; CONTRIBUTING.md "Tests" explains it. No behaviour change.
 
 
 ## 0.4.0 — 2026-10-22

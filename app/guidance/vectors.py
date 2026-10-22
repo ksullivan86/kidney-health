@@ -8,7 +8,7 @@ generator build them with :func:`make_food`.
 
 :func:`renal_level` is the guidance version of the app's kidney rating (potassium, phosphorus,
 sodium and phosphate additives only), written with float comparisons instead of ``Decimal`` for
-speed; ``tests/guidance/test_vectors.py`` proves it equals ``app.nutrients`` on every builtin food at
+speed; ``tests/guidance/test_vectors.py`` proves it equals ``app.rules_kidney`` on every builtin food at
 every portion from ¼ to 3 servings.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ _K_GOOD, _K_POOR = R.K_PER_G_PROTEIN
 def renal_level(k: float | None, p: float | None, na: float | None, additive: bool) -> str:
     """``green`` / ``yellow`` / ``red`` from potassium, phosphorus and sodium of one portion (§4.3).
 
-    The guidance version of :func:`app.nutrients.kidney_rating`: amounts are judged rounded to whole
+    The guidance version of :func:`app.rules_kidney.kidney_rating`: amounts are judged rounded to whole
     milligrams (like the warnings, on the displayed value); any above "high" or a phosphate additive
     → red; any at "medium" → yellow. Carbohydrate and protein warnings are left out on purpose (F10:
     carbohydrate is handled by the meal goal). ``avoid_ckd`` foods never get here (not eligible).

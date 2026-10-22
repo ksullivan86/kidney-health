@@ -140,7 +140,7 @@
     const mealCarbs = !(state.profile && state.profile.diabetes === 'none');
     const hypoCarbsOf = (list) => list.filter((e) => e.purpose === 'hypo').reduce((a, e) => a + ((e.nutrients && e.nutrients.carbs_g) || 0), 0);
     for (const meal of MEALS) {
-      // The snack has its own carbohydrate goal when the person set one (nutrients.meal_carb_alerts does the same).
+      // The snack has its own carbohydrate goal when the person set one (rules_kidney.meal_carb_alerts does the same).
       const snackOwn = meal.key === 'snack' && snackGoal != null;
       const perMeal = snackOwn ? snackGoal : perMealGoal;
       const goalWords = snackOwn ? 'snack carbohydrate goal' : 'meal carbohydrate target';

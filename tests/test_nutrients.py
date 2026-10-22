@@ -1,4 +1,4 @@
-"""Unit tests for the pure rules in app/nutrients.py."""
+"""Unit tests for the pure rules in app/nutrients.py and app/rules_kidney.py (imported through app.nutrients)."""
 from __future__ import annotations
 
 import re
@@ -125,6 +125,7 @@ def test_high_gi_flag_forces_high_carbs():
     assert n.food_warnings({"carbs_g": 0}, flags=["high_gi"]) == []
 
 
+@pytest.mark.safety
 def test_hypo_treatment_suppresses_carbohydrate_warnings_only():
     """Guide section 7: hypo treatments are never warned against for their (fast) carbohydrate."""
     assert n.food_warnings({"carbs_g": 16}, flags=["hypo_treatment", "high_gi"]) == []

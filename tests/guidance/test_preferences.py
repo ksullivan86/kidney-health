@@ -460,6 +460,7 @@ SOFT_VARIANTS = [
 ]
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("variant", SOFT_VARIANTS)
 def test_p4_hypo_options_the_card_the_prefilter_and_a_low_swap_are_identical_for_any_soft_preference(variant):
     base = fx.context()
@@ -493,6 +494,7 @@ def test_a_normal_swap_does_use_the_term_but_not_the_kidney_test():
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 def test_the_hypo_options_are_never_empty_while_a_low_treatment_exists():
     note = "Shown although you marked them Not for me."
     base = swaps.hypo_options(fx.context())

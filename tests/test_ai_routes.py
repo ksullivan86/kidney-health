@@ -166,6 +166,7 @@ def test_dry_run_is_exactly_the_sent_body_and_sends_nothing(ai_client):
     assert ai_client.get("/api/me/ai").json()["remaining_today"] == 29
 
 
+@pytest.mark.safety
 def test_parse_meal_dry_run_and_prefilter(ai_client):
     ready(ai_client)
     with attach(ai_client.app, FakeProvider([])) as provider:
@@ -207,6 +208,7 @@ def test_disabled_guidance_and_missing_targets(ai_client):
     assert ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}).json()["status"] == "disabled"
 
 
+@pytest.mark.safety
 def test_swap_mode_needs_one_target_and_refuses_low_treatments(ai_client):
     ready(ai_client)
     assert ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "mode": "swap"}).status_code == 400

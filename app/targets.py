@@ -10,7 +10,7 @@ All numbers, equations and note texts live in :mod:`app.target_rules`. All round
 half-up (``app.nutrients._half_up``). ``today`` is always a parameter so results are deterministic.
 
 Callers: ``app.profile`` (``GET /api/profile/suggested-targets``, via :func:`suggest_from_records`),
-``app.nutrients.suggest_targets`` (the v0.2 signature, without the new inputs) and the parity vector
+``app.rules_kidney.suggest_targets`` (the v0.2 signature, without the new inputs) and the parity vector
 generator ``tests/data/gen_targets_vectors.py``, which pins the browser twin to this module.
 """
 from __future__ import annotations

@@ -15,8 +15,12 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.ai import guard as G
 from test_ai_guard import BLOCKED_TERMS
+
+pytestmark = pytest.mark.safety
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "tests" / "js" / "aiguard_twin.mjs"

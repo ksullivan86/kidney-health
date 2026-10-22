@@ -11,7 +11,7 @@ Pure functions, no I/O. :func:`scan` turns a product's additive tags (Open Food 
   phosphate blends: E508 potassium chloride, E326 lactate, E332 citrates, …). Products listing one
   measured 750–1,100 mg potassium per 100 g (Parpia et al., J Ren Nutr 2018;28:83) and additive
   potassium is about 90 % absorbed (KDIGO 2024 Figure 33, from Picard 2021). See
-  ``app/nutrients.py`` for the warning it gives (ARCHITECTURE.md v0.3 item 9).
+  ``app/rules_kidney.py`` for the warning it gives (ARCHITECTURE.md v0.3 item 9).
 * ``avoid_ckd``: the product **is** a salt substitute (potassium chloride is its first ingredient,
   or its name says so).
 

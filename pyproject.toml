@@ -20,6 +20,9 @@ dev = ["pytest>=8,<9"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+  "safety: health-data safety rules that must travel with any reused piece (CLAUDE.md): no dosing, never block or warn against treating a low, quoted handbook text, AI guard and prefilter",
+]
 
 [tool.setuptools.packages.find]
 include = ["app", "app.*"]

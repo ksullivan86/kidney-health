@@ -119,4 +119,3 @@ Left open when v0.3.0 was finished, with the reason; each needs the named owner,
 Left open when v0.4.0 was prepared, with the owner; each is a maintainer's call or run, not a missing feature.
 
 * Move the handbook build stage and the Debian fallback image to Python 3.15 once PyYAML publishes a cp315 wheel (the steps are in [`maintainers.md`](maintainers.md#refreshing-the-lock-files)). Until then Dependabot keeps proposing to move the handbook `FROM` line to the 3.15 digest, and that bump fails the image build (see the comment in `.github/dependabot.yml`); the `latest-dev` digests also move on, so expect a newer pair than the one in `deploy/Containerfile`.
-* Look at pydantic 2.14's behaviour changes at the next lock refresh (enum constructors are called in both validation modes, `multiple_of` must be positive, `NameEmail` rejects newlines): the suite passes unchanged, but nobody has read the release notes against the app's models.

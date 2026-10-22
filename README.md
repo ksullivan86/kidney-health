@@ -382,7 +382,9 @@ app/
   data_import.py          import of a person's own export.json (POST /api/me/import)
   admin.py                admin CLI (python -m app.admin ...)
   db.py, migrations/      SQLite connection + append-only schema steps (1-18)
-  nutrients.py, periods.py    pure rules: warnings, daily status, period maths
+  nutrients.py, periods.py    pure rules: daily status, alerts, period maths
+  rules_kidney.py         the kidney/T1D rule pack of nutrients.py: warnings, kidney rating, meal-carb alerts, suggested targets
+  nutrient_core.py        the nutrient registry and rounding that nutrients.py and rules_kidney.py share
   targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
   symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
   body.py                 the weight and blood pressure log (routes, kg and lb, the alarm and goal checks, the handbook's words; no screens yet)

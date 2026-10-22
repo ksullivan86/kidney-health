@@ -271,6 +271,7 @@ def test_the_liked_food_shows_its_reason(real):
     assert got["score"] == pytest.approx(one["score"] + 1.0, abs=0.0051)
 
 
+@pytest.mark.safety
 def test_hypo_options_are_the_same_with_any_soft_preference_and_never_empty(real):
     base = real.get("/api/guidance/hypo-options").json()
     ids = [o["food_id"] for o in base["options"]]
@@ -291,6 +292,7 @@ def test_hypo_options_are_the_same_with_any_soft_preference_and_never_empty(real
     assert floor["card"] == base["card"] and floor["dose_g"] == base["dose_g"]
 
 
+@pytest.mark.safety
 def test_the_low_treatment_card_and_chat_rule_ignore_preferences(real):
     base = real.get("/api/guidance/hypo-options").json()["card"]
     ids = [o["food_id"] for o in real.get("/api/guidance/hypo-options").json()["options"]]

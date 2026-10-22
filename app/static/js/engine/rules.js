@@ -1,4 +1,4 @@
-/* Kidney Diet Log — rules engine: the browser twin of app/nutrients.py (nutrient registry,
+/* Kidney Diet Log — rules engine: the browser twin of app/nutrients.py, app/nutrient_core.py and app/rules_kidney.py (nutrient registry,
    per-serving warnings, kidney ratings, Python-compatible rounding and number formatting,
    daily status and alerts). The server is authoritative; this copy powers live previews,
    the demo/preview API (js/mock/*) and, later, offline estimates.
@@ -15,7 +15,7 @@
   const KH = root.KH || (root.KH = {});
 
   // ---------------------------------------------------------------------------
-  // Registry (mirrors app/nutrients.py; keys are the contract)
+  // Registry (mirrors app/nutrient_core.py; keys are the contract)
   // ---------------------------------------------------------------------------
   const NUTRIENTS = [
     { key: 'calories_kcal', label: 'Calories', short: 'kcal', unit: 'kcal', role: 'goal' },
@@ -63,7 +63,7 @@
     phosphorus_mg: 'weekly_average', protein_g: 'weekly_average', calories_kcal: 'weekly_average', calcium_mg: 'weekly_average' };
   const ROLE_WORD = { limit: 'limit', range: 'maximum', info: 'maximum', goal: 'goal', track: 'goal' };
 
-  // Per-serving thresholds and the order warnings are reported in (mirror app/nutrients.py
+  // Per-serving thresholds and the order warnings are reported in (mirror app/rules_kidney.py
   // THRESHOLDS / WARNING_ORDER: renal priorities first, then protein, then carbohydrate).
   const THRESHOLDS = {
     potassium_mg: { medium: 101, high: 200 },
@@ -273,7 +273,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Warnings evaluator: a copy of app/nutrients.py food_warnings (the server is authoritative).
+  // Warnings evaluator: a copy of app/rules_kidney.py food_warnings (the server is authoritative).
   // Used for live previews in the app and by the demo API. `scope` is "per serving",
   // "in this entry" or "in this meal" (true / false are accepted for the first two).
   // ---------------------------------------------------------------------------
@@ -344,7 +344,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Totals, daily status and alerts (nutrients.py)
+  // Totals, daily status and alerts (nutrients.py; the meal-carb alerts: rules_kidney.py)
   // ---------------------------------------------------------------------------
   function emptyTotals() { return Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, 0])); }
   function addTotals(acc, values) {
@@ -442,12 +442,12 @@
     alerts.sort((a, b) => (a.level === 'over' ? 0 : 1) - (b.level === 'over' ? 0 : 1));
     return alerts;
   }
-  // nutrients.carb_tolerance: the person's carbohydrate tolerance (guidance.carb_tolerance_g); unusable is 0.
+  // rules_kidney.carb_tolerance: the person's carbohydrate tolerance (guidance.carb_tolerance_g); unusable is 0.
   function carbTolerance(g) {
     const v = Number(g || 0);
     return Number.isFinite(v) && v > 0 ? v : 0;
   }
-  // nutrients.meal_carb_alerts / projected_meal_carb_alerts: the per-meal goal, and for the snack its own goal
+  // rules_kidney.meal_carb_alerts / projected_meal_carb_alerts: the per-meal goal, and for the snack its own goal
   // (targets.carbs_per_snack_g) when set. v0.3.1: an alert only more than the tolerance above the goal, and the
   // carbohydrate of entries that treated a low (hypoCarbs, per meal) left out: treating a low is never warned against.
   function mealCarbAlerts(meals, perMealTarget, projected = false, snackTarget = null, toleranceG = 0, hypoCarbs = null) {

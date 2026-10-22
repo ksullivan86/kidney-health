@@ -78,9 +78,9 @@ def _named(path: str, title: str) -> dict[str, str]:
 # Nutrient pages come from NUTRIENT_TOPIC above; tests/test_learn_links.py checks every path. Pure data, so the
 # GitHub Pages demo (scripts/build_preview.py --pages) carries the same table without the server's packages.
 APP_LINKS: dict[str, dict[str, dict[str, str]]] = {
-    # Per-serving warnings and daily alerts, by nutrient key (app/nutrients.py).
+    # Per-serving warnings and daily alerts, by nutrient key (app/rules_kidney.py, app/nutrients.py).
     "nutrients": {nutrient: _link(slug) for nutrient, slug in NUTRIENT_TOPIC.items()},
-    # Food flags that cause or change a warning (app/nutrients.py FLAGS; potassium_additive: ARCHITECTURE
+    # Food flags that cause or change a warning (app/rules_kidney.py FLAGS; potassium_additive: ARCHITECTURE
     # v0.3 decision 9).
     "flags": {
         "avoid_ckd": _named("eat/food-lists/", "Food lists"),

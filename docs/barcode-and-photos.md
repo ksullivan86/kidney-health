@@ -236,7 +236,7 @@ barcode reader and no camera: type the digits.
   `app/textclean.py` (NFKC, invisible and control characters out, before anything is stored or scanned),
   `app/off.py` (client, pacing, trimming, mapping, quality, the API 3.5+ parser), `app/egress.py`
   (SSRF-checked transport), USDA branded in `app/foods.py`, the route in `app/barcode.py`, schema step
-  `app/migrations/m007_barcode.py`. The warning rule is in `app/nutrients.py` with its browser twin in
+  `app/migrations/m007_barcode.py`. The warning rule is in `app/rules_kidney.py` with its browser twin in
   `app/static/js/engine/rules.js` (parity: `tests/data/rules_vectors.json`).
 * Fixtures are real recorded answers (`scripts/record_barcode_fixtures.py off|usda`); tests replay them
   and never touch the network (`tests/test_off_mapping.py`, `test_usda_branded.py`, `test_barcode_api.py`).

@@ -201,6 +201,7 @@ def test_the_cards_payload_is_accepted_by_the_log_route_as_it_is_and_a_second_pr
     assert sorted(e["status"] for e in entries(c)) == ["eaten", "planned"]
 
 
+@pytest.mark.safety
 def test_the_cards_entries_never_carry_a_warning_and_a_low_treatment_is_kept_as_one(plain_client):
     c = plain_client
     script = [step_call("log_food", items=[{"food": "glucose tablets", "amount": 4}], meal="snack", date=DAY, purpose="hypo")]
@@ -308,6 +309,7 @@ def test_the_answer_may_quote_what_the_save_returned_and_nothing_else(trusting_c
     assert len(body["saved"]) == 1 and body["saved"][0]["undo"]["entry_ids"]  # saved, so Undo is still offered
 
 
+@pytest.mark.safety
 def test_a_dose_answer_after_a_save_is_withheld_but_the_save_card_stays(trusting_client):
     c = trusting_client
     trust(c, "always")
@@ -456,6 +458,7 @@ def test_a_request_id_is_independent_for_another_person(trusting_client):
     assert {r["user_id"] for r in db_rows(c, "assistant_ask_keys")} == {1, 2}
 
 
+@pytest.mark.safety
 def test_a_food_eaten_to_treat_a_low_is_saved_and_never_warned_about(trusting_client):
     c = trusting_client
     trust(c, "always")
@@ -468,6 +471,7 @@ def test_a_food_eaten_to_treat_a_low_is_saved_and_never_warned_about(trusting_cl
     assert not any(word in json.dumps(body).lower() for word in ("warning", "avoid", "careful", "too much"))
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", ["I feel shaky and low, log 4 glucose tablets", "my sugar is 3.2 so log juice", "I have chest pain and can't breathe, log a banana"])
 @pytest.mark.parametrize("who", ["always", "ask"])
 def test_a_message_that_matches_a_safety_rule_never_saves_and_the_model_is_not_called(trusting_client, text, who):
@@ -481,6 +485,7 @@ def test_a_message_that_matches_a_safety_rule_never_saves_and_the_model_is_not_c
     assert unchanged(c) == before
 
 
+@pytest.mark.safety
 def test_a_save_step_never_runs_for_a_safety_message_even_if_called_directly(trusting_client):
     """Defence in depth: the rules answer first, and the save code refuses on its own as well."""
     step = CS.run_save(None, None, None, "log_food", {}, 1, mode="always", request_id=RID, newest="I feel low")  # type: ignore[arg-type]
