@@ -128,3 +128,5 @@
 .import-title { margin: 0; font-size: 1rem; }
 .import-title:focus { outline: none; }
 .import-sub { font-weight: 600; }
+/* "How to make the shortcut" opens a sentence: inline, so a 44 px box does not push its lines apart (as in the Ask answers). */
+#set-push-recipe .learn-more { display: inline; min-height: 0; margin: 0; padding: 0; }

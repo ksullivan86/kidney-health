@@ -11,7 +11,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Tidier screens.** We looked at every screen, on a phone and on a computer, in light and dark, and fixed what looked wrong.
   The top bar shows the app's name whole or not at all, never cut to "K…", and it no longer runs past the edge of a narrow window.
-  A handbook link under a warning no longer pushes the lines above it apart, and its arrow stays with the last word. On the blood
+  A handbook link under a warning no longer pushes the lines above it apart, and its arrow stays with the last word; the same goes
+  for the links inside a sentence ("Check them in Profile", "How to make the shortcut"). On the blood
   pressure sheet the two number boxes line up. The **Include** box in Copy a day and the **Note** box in Lab results take the whole
   row on a phone, so their words are not cut off. In Lab results every row puts the date above the value. A long name under
   **Meals that fit** wraps to two lines. On Trends, the message about missing targets has its padding back. In Settings the buttons

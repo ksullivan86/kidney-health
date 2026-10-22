@@ -88,8 +88,10 @@ def test_a_handbook_link_stays_at_the_end_of_its_words_and_beside_its_arrow() ->
     declarations = rule(phone, ".learn-more")
     assert "display: inline-block" in declarations and "min-height: var(--tap)" in declarations
     assert "inline-flex" not in declarations
-    own_line = rule(phone, ".alert .learn-more, .body-flag .learn-more, .sym-flag .learn-more")
+    own_line = rule(phone, ".alert .learn-more, .warning .learn-more, .body-flag .learn-more, .sym-flag .learn-more")
     assert "display: block" in own_line and "width: fit-content" in own_line
+    inline = rule(SETTINGS_CSS, "#set-push-recipe .learn-more")  # "How to make the shortcut — the handbook has the steps ..."
+    assert "display: inline" in inline and "min-height: 0" in inline
     # the arrow is joined to the last word by a no-break space
     assert r'content: "\00a0\2197"' in BASE and r'content: " \2197"' not in BASE
 
@@ -144,6 +146,8 @@ def test_a_link_inside_a_sentence_is_an_inline_link_not_a_44_px_box() -> None:
     assert "class: 'link-btn inline'" in TODAY_JS.split("profile-choose-note")[1].split("'Choose them in Profile'")[0]
     assert "class: 'link-btn inline', type: 'button', id: 'body-open-settings'" in BODY_JS
     assert "display: inline" in block(PROFILE_CSS, "@media (pointer: coarse), (max-width: 719.98px) {\n  .why > summary")
+    guidance = read("js", "views", "guidance.js")  # "Using the targets in your profile, saved ...: potassium 3,000 mg ... Check them in Profile"
+    assert re.search(r"linkBtn\('Check them in Profile'.*\{ class: 'link-btn inline' \}\)", guidance)
 
 
 def test_two_boxes_side_by_side_line_up_in_settings_too() -> None:
