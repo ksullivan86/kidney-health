@@ -72,6 +72,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **The release run no longer goes red over long release notes.** GitHub refuses release notes over 125,000 characters, and
+  0.4.0's (pasted from the rendered changelog, with its HTML) reached that cap, so the `release notes (image digest)` job's
+  `gh release edit` got a 422 after the image had already been built, scanned, signed and tagged. The job now counts the notes
+  with the Image section first and, if they would be too long, warns and prints the block to paste by hand. A test in
+  `tests/test_deploy.py` runs the job's script against a fake `gh` (short notes, too long, already there), and
+  `docs/maintainers.md` says to paste the section as Markdown.
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 * **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
   before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and

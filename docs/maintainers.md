@@ -110,7 +110,14 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
 6. **Publish the GitHub release** with the changelog section as its notes. The `release notes (image
    digest)` job of `release.yml` appends an **Image** section (the multi-arch index digest to pin, the
    tags that point at it, and the note that anonymous pulls need a public GHCR package) when the
-   release exists by the time the job runs, and it never adds it twice:
+   release exists by the time the job runs, and it never adds it twice. Paste the section as
+   **Markdown** (the file `CHANGELOG.md` itself, or the command below), not copied from the rendered
+   page: a copy of the page carries its HTML and styles, and GitHub cuts the notes off at 125,000
+   characters. If the notes and the Image section together would pass that limit, the job warns
+   ("Release notes too long for the Image block") and prints the block instead of adding it; shorten
+   the notes and re-run the job, or paste the block by hand. A long section (0.4.0's is about 94,000
+   characters) can be cut to the highlights, upgrade steps, security and known limitations, with a
+   link to the full section in `CHANGELOG.md` at the tag.
 
    * **Release first, tag by GitHub** (the UI's "Publish release" with a new tag, or the command below):
      the release exists before the workflow starts, so the Image section is appended automatically.
