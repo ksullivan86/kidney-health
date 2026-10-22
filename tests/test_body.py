@@ -35,8 +35,8 @@ from test_data_import import export_doc, post_import
 
 ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK_PAGE = ROOT / "handbook" / "docs" / "get-help-now.md"
-WEIGHT_KEYS = {"id", "date", "time", "kg", "context", "note", "source", "created_at", "updated_at"}
-READING_KEYS = {"id", "date", "time", "systolic", "diastolic", "pulse", "context", "note", "source", "created_at", "updated_at", "flag"}
+WEIGHT_KEYS = {"id", "date", "time", "kg", "context", "note", "source", "via", "created_at", "updated_at"}
+READING_KEYS = {"id", "date", "time", "systolic", "diastolic", "pulse", "context", "note", "source", "via", "created_at", "updated_at", "flag"}
 FLAG_KEYS = {"level", "text", "href", "link_text", "prominent"}
 
 

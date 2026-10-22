@@ -70,8 +70,9 @@ ACTIONS: set[str] = {
     "account.deleted",
     "secret_key.rotated",
     "backup.created",
-    "api_token.created",  # assistant access tokens (app/auth/api_tokens.py)
+    "api_token.created",  # access tokens of both families, assistant and device (app/auth/api_tokens.py)
     "api_token.revoked",
+    "body.token_rows_deleted",  # "Delete what it sent": a device token's weights and readings removed (app/push.py); counts only
     "assistant.food_logged",  # a token with assistant:log saved food or a recipe (app/mcp/tools.py)
     "assistant.recipe_saved",
     "ai.trust_changed",  # a person changed how much the Ask chat may save without asking (app/ai/routes.py)
@@ -93,6 +94,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "data.imported",
         "api_token.created",
         "api_token.revoked",
+        "body.token_rows_deleted",
         "assistant.food_logged",
         "assistant.recipe_saved",
         "ai.trust_changed",

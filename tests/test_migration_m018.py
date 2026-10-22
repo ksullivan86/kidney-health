@@ -95,8 +95,8 @@ def test_populated_v17_database_upgrades_keeps_every_row_and_is_idempotent(tmp_p
     assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     for table in ("log_entries", "symptoms", "lab_results", "foods"):
         assert conn.execute(f"SELECT COUNT(*) FROM {table} WHERE {'owner_user_id' if table == 'foods' else 'user_id'} = 2").fetchone()[0] == 1
-    assert db.table_columns(conn, "weights") == WEIGHT_COLUMNS
-    assert db.table_columns(conn, "blood_pressures") == BP_COLUMNS
+    assert db.table_columns(conn, "weights") == WEIGHT_COLUMNS | {"api_token_id"}  # step 19 adds the device token's id
+    assert db.table_columns(conn, "blood_pressures") == BP_COLUMNS | {"api_token_id"}
     for table in ("weights", "blood_pressures"):
         assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0
     for table, prefix in (("weights", "weights"), ("blood_pressures", "blood_pressures")):

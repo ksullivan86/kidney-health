@@ -141,7 +141,9 @@ def test_the_body_routes_exist_and_need_a_session(anon_client):
 
 # Assistant access tokens (ARCHITECTURE.md "Assistant access tokens"): managing them needs a session like every
 # /api/me route, and a token counts only on the assistant surface (app/auth/api_tokens.py AssistantUser).
-ASSISTANT_TOKEN_ROUTES = {("get", "/api/me/tokens"), ("post", "/api/me/tokens"), ("delete", "/api/me/tokens/{token_id}")}
+ASSISTANT_TOKEN_ROUTES = {("get", "/api/me/tokens"), ("post", "/api/me/tokens"), ("delete", "/api/me/tokens/{token_id}"),
+                          # design note 12: "Delete what it sent" for a device token (app/push.py), a session route like the rest
+                          ("delete", "/api/me/tokens/{token_id}/body-rows")}
 
 
 def test_the_assistant_token_routes_exist_and_need_a_session(anon_client):
@@ -172,36 +174,62 @@ def test_the_admin_route_that_revokes_assistant_tokens_exists_and_is_for_admins_
         assert r.status_code == 403 and r.json()["detail"] == "Admins only", (method, path, r.status_code)
 
 
-def test_a_valid_assistant_token_opens_no_api_route(client):
-    """Every /api route reads the session cookie only: a request that carries nothing but a valid bearer token
-    (the switch on, the token fresh) is anonymous everywhere, admin routes included."""
+def test_a_valid_assistant_or_device_token_opens_no_api_route(client):
+    """Every /api route reads the session cookie only: a request that carries nothing but a valid bearer token, of either
+    family (the switch on, the token fresh), is anonymous everywhere, admin routes included."""
     from test_api_tokens import bearer
 
-    assert client.patch("/api/admin/settings", json={"assistant.enabled": True}).status_code == 200
-    token = client.post("/api/me/tokens", json={"name": "coverage"}).json()["token"]
-    alone = TestClient(client.app, headers={"Authorization": f"Bearer {token}"})
-    checked = 0
-    for method, path in sorted(api_operations(client.app)):
-        if (method, path) in PUBLIC:
-            continue
-        r = alone.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
-        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
-        checked += 1
-    assert checked > 50
-    assert bearer(client.app, token).status_code == 200  # the token was good all along, on the assistant surface
+    assert client.patch("/api/admin/settings", json={"assistant.enabled": True, "push.enabled": True}).status_code == 200
+    assistant = client.post("/api/me/tokens", json={"name": "coverage"}).json()["token"]
+    device = client.post("/api/me/tokens", json={"name": "coverage", "family": "device"}).json()["token"]
+    assert assistant.startswith("kha_") and device.startswith("khd_")
+    for token in (assistant, device):
+        alone = TestClient(client.app, headers={"Authorization": f"Bearer {token}"})
+        checked = 0
+        for method, path in sorted(api_operations(client.app)):
+            if (method, path) in PUBLIC:
+                continue
+            r = alone.request(method.upper(), re.sub(r"\{[^}]+\}", "1", path), json={})
+            assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (token[:4], method, path, r.status_code)
+            checked += 1
+        assert checked > 50
+    assert bearer(client.app, assistant).status_code == 200  # the token was good all along, on the assistant surface
+    assert bearer(client.app, device).status_code == 401  # and the device token is not an assistant token
 
 
 # The assistant surface (ARCHITECTURE.md "Assistant MCP server", app/mcp): bearer-only routes outside /api. They are
 # the only routes outside /api that take a write method, a session cookie never opens them, and while assistant
 # access is off they answer 404 as if they did not exist.
 BEARER_ROUTES = {("post", "/mcp")}
+# The phone shortcuts' ingest route (design note 12; app/push.py) is the second bearer-only route outside /api: a device token, not
+# an assistant token, and the instance switch push.enabled (off: the generic 401, not a 404).
+PUSH_ROUTES = {("post", "/push/v1/body")}
 
 
 def test_the_bearer_routes_are_the_only_write_routes_outside_the_api(anon_client):
     unsafe = {(m, p) for m, p, _ in _walk(anon_client.app.routes)
               if not p.startswith("/api/") and m in ("post", "put", "patch", "delete")}
-    assert BEARER_ROUTES <= unsafe
-    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES}, sorted(unsafe)  # PUT, PATCH, DELETE /mcp: 405
+    assert BEARER_ROUTES | PUSH_ROUTES <= unsafe
+    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES}, sorted(unsafe)  # PUT, PATCH, DELETE: 405
+
+
+def test_the_push_route_needs_a_device_token_and_never_takes_a_session(client):
+    body = {"weights": [{"at": "2026-10-22T07:15:00-04:00", "value": 70, "unit": "kg", "source": "Health"}]}
+    for method, path in sorted(PUSH_ROUTES):
+        r = client.request(method.upper(), path, json=body)  # switched off: the generic 401, whoever asks
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+    assert client.patch("/api/admin/settings", json={"assistant.enabled": True, "push.enabled": True}).status_code == 200
+    assistant = client.post("/api/me/tokens", json={"name": "coverage"}).json()["token"]
+    device = client.post("/api/me/tokens", json={"name": "coverage", "family": "device"}).json()["token"]
+    for method, path in sorted(PUSH_ROUTES):
+        r = client.request(method.upper(), path, json=body)  # the signed-in admin's cookie, no token
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+        assert TestClient(client.app).request(method.upper(), path, json=body).status_code == 401  # anonymous
+        for wrong in (assistant, "khd_" + "A" * 43):
+            r = TestClient(client.app, headers={"Authorization": f"Bearer {wrong}"}).request(method.upper(), path, json=body)
+            assert r.status_code == 401, (method, path, wrong[:4])
+        right = TestClient(client.app, headers={"Authorization": f"Bearer {device}"})
+        assert right.request(method.upper(), path, json=body).status_code == 200, (method, path)
 
 
 def test_the_bearer_routes_need_a_token_and_never_take_a_session(client):

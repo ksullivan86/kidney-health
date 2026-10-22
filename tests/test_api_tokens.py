@@ -198,7 +198,7 @@ def test_the_database_keeps_only_the_hash_and_logs_never_see_the_token(admin, ca
     # the audit rows name the token by id, never by its text or prefix
     (made,) = audit_rows(admin, "api_token.created")
     assert made["target_type"] == "api_token" and made["target_id"] == str(created["id"])
-    assert made["details"] == {"expires_in_days": 90, "scopes": ["assistant:read"]}
+    assert made["details"] == {"expires_in_days": 90, "scopes": ["assistant:read"], "family": "assistant"}
 
 
 @pytest.mark.parametrize("days", [30, 90, 365])
@@ -344,15 +344,18 @@ def test_failed_tokens_count_toward_the_sign_in_limit_of_the_address(admin):
 def test_a_bearer_token_is_ignored_by_the_rest_of_the_api(pair):
     """The cookie decides who you are; a token next to it changes nothing, and alone it opens nothing."""
     admin, sam = pair
-    token = make(admin)["token"]
-    r = sam.get("/api/me", headers={"Authorization": f"Bearer {token}"})
-    assert r.status_code == 200 and r.json()["username"] == "sam"
-    alone = TestClient(admin.app, base_url="https://localhost", headers={"Authorization": f"Bearer {token}"})
-    for method, path in (("GET", "/api/me"), ("GET", "/api/log?date=2026-10-05"), ("GET", "/api/me/tokens"),
-                         ("POST", "/api/me/tokens"), ("GET", "/api/admin/users"), ("PATCH", "/api/admin/settings"),
-                         ("GET", "/api/profile"), ("GET", "/api/me/export.zip")):
-        r = alone.request(method, path, json={"name": "x"} if method != "GET" else None)
-        assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (method, path, r.status_code)
+    assert admin.patch("/api/admin/settings", json={"push.enabled": True}).status_code == 200
+    device = admin.post("/api/me/tokens", json={"name": "Phone", "family": "device"}).json()["token"]
+    for token in (make(admin)["token"], device):  # a token of either family (kha_ and khd_)
+        r = sam.get("/api/me", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200 and r.json()["username"] == "sam"
+        alone = TestClient(admin.app, base_url="https://localhost", headers={"Authorization": f"Bearer {token}"})
+        for method, path in (("GET", "/api/me"), ("GET", "/api/log?date=2026-10-05"), ("GET", "/api/me/tokens"),
+                             ("POST", "/api/me/tokens"), ("GET", "/api/admin/users"), ("PATCH", "/api/admin/settings"),
+                             ("GET", "/api/profile"), ("GET", "/api/me/export.zip"), ("GET", "/api/body/weights?start=2026-10-01&end=2026-10-31"),
+                             ("POST", "/api/body/weights"), ("DELETE", "/api/me/tokens/1/body-rows")):
+            r = alone.request(method, path, json={"name": "x"} if method != "GET" else None)
+            assert r.status_code == 401 and r.json()["detail"] == "Sign in required", (token[:4], method, path, r.status_code)
 
 
 # --------------------------------------------------------------------------- isolation

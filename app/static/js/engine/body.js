@@ -24,7 +24,7 @@
   const KG_PER_LB = 0.45359237; // exactly: the international pound (1959), NIST SP 811 Appendix B (note 10 F7)
   const WEIGHT_CONTEXTS = ['morning', 'before_dialysis', 'after_dialysis', 'other'];
   const BLOOD_PRESSURE_CONTEXTS = ['morning', 'evening', 'before_dialysis', 'after_dialysis', 'other'];
-  const SOURCES = ['manual', 'apple_health', 'import'];
+  const SOURCES = ['manual', 'apple_health', 'import', 'shortcut'];
   const UNITS = ['kg', 'lb'];
   // app/models.py: the project's own plausibility ranges (not clinical numbers) and the bounds on what one person can store.
   const LIMITS = {
@@ -201,13 +201,13 @@
   // A stored row → the API shape (app/body.py row_to_weight / row_to_reading).
   function rowToWeight(row) {
     return { id: row.id, date: row.date, time: row.time == null ? null : row.time, kg: Number(row.kg), context: row.context, note: row.note || '',
-      source: row.source, created_at: row.created_at, updated_at: row.updated_at };
+      source: row.source, via: row.via == null ? null : row.via, created_at: row.created_at, updated_at: row.updated_at };
   }
   function rowToReading(row) {
     const systolic = Number(row.systolic), diastolic = Number(row.diastolic);
     return { id: row.id, date: row.date, time: row.time == null ? null : row.time, systolic, diastolic, pulse: row.pulse == null ? null : Number(row.pulse),
-      context: row.context, note: row.note || '', source: row.source, created_at: row.created_at, updated_at: row.updated_at,
-      flag: bpFlag(systolic, diastolic) };
+      context: row.context, note: row.note || '', source: row.source, via: row.via == null ? null : row.via, created_at: row.created_at,
+      updated_at: row.updated_at, flag: bpFlag(systolic, diastolic) };
   }
 
   KH.bodyRules = { KG_PER_LB, WEIGHT_CONTEXTS, BLOOD_PRESSURE_CONTEXTS, SOURCES, UNITS, LIMITS, FLAG_SYSTOLIC, FLAG_DIASTOLIC, HREF, LINK_TEXT, RED_FLAGS,

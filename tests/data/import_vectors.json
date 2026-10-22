@@ -15656,7 +15656,7 @@
    "answer": {
     "status": 400,
     "body": {
-     "detail": "The file was not imported. weights[0].source: Input should be 'manual', 'apple_health' or 'import'",
+     "detail": "The file was not imported. weights[0].source: Input should be 'manual', 'apple_health', 'import' or 'shortcut'",
      "kind": "weights",
      "index": 0
     }
@@ -17479,7 +17479,7 @@
    "answer": {
     "status": 400,
     "body": {
-     "detail": "The file was not imported. blood_pressures[0].source: Input should be 'manual', 'apple_health' or 'import'",
+     "detail": "The file was not imported. blood_pressures[0].source: Input should be 'manual', 'apple_health', 'import' or 'shortcut'",
      "kind": "blood_pressures",
      "index": 0
     }
@@ -37900,7 +37900,8 @@
        "kg": 70.25,
        "context": "morning",
        "note": "kept",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-05",
@@ -37908,7 +37909,8 @@
        "kg": 71.0,
        "context": "after_dialysis",
        "note": "",
-       "source": "apple_health"
+       "source": "apple_health",
+       "via": null
       },
       {
        "date": "2026-10-05",
@@ -37916,7 +37918,8 @@
        "kg": 70.5,
        "context": "morning",
        "note": "",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-05",
@@ -37924,7 +37927,8 @@
        "kg": 70.5,
        "context": "morning",
        "note": "",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-05",
@@ -37932,7 +37936,8 @@
        "kg": 69.0,
        "context": "morning",
        "note": "",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37940,7 +37945,8 @@
        "kg": 72.0,
        "context": "other",
        "note": "",
-       "source": "import"
+       "source": "import",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37948,7 +37954,8 @@
        "kg": 60.0,
        "context": "other",
        "note": "n0",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37956,7 +37963,8 @@
        "kg": 60.1,
        "context": "other",
        "note": "n1",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37964,7 +37972,8 @@
        "kg": 60.2,
        "context": "other",
        "note": "n2",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37972,7 +37981,8 @@
        "kg": 60.3,
        "context": "other",
        "note": "n3",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37980,7 +37990,8 @@
        "kg": 60.4,
        "context": "other",
        "note": "n4",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37988,7 +37999,8 @@
        "kg": 60.5,
        "context": "other",
        "note": "n5",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -37996,7 +38008,8 @@
        "kg": 60.6,
        "context": "other",
        "note": "n6",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38004,7 +38017,8 @@
        "kg": 60.7,
        "context": "other",
        "note": "n7",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38012,7 +38026,8 @@
        "kg": 60.8,
        "context": "other",
        "note": "n8",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38020,7 +38035,8 @@
        "kg": 60.9,
        "context": "other",
        "note": "n9",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38028,7 +38044,8 @@
        "kg": 61.0,
        "context": "other",
        "note": "n10",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38036,7 +38053,8 @@
        "kg": 61.1,
        "context": "other",
        "note": "n11",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38044,7 +38062,8 @@
        "kg": 61.2,
        "context": "other",
        "note": "n12",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38052,7 +38071,8 @@
        "kg": 61.3,
        "context": "other",
        "note": "n13",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38060,7 +38080,8 @@
        "kg": 61.4,
        "context": "other",
        "note": "n14",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38068,7 +38089,8 @@
        "kg": 61.5,
        "context": "other",
        "note": "n15",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38076,7 +38098,8 @@
        "kg": 61.6,
        "context": "other",
        "note": "n16",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38084,7 +38107,8 @@
        "kg": 61.7,
        "context": "other",
        "note": "n17",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       },
       {
        "date": "2026-10-06",
@@ -38092,7 +38116,8 @@
        "kg": 61.8,
        "context": "other",
        "note": "n18",
-       "source": "manual"
+       "source": "manual",
+       "via": null
       }
      ]
     }
@@ -38115,6 +38140,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38126,6 +38152,7 @@
        "context": "evening",
        "note": "rested",
        "source": "manual",
+       "via": null,
        "flag": {
         "level": "emergency",
         "text": "The handbook lists “a blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking” under “Call 911 now”. Without those signs, rest for 5 minutes and measure again: it lists “a blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes” under “Call your care team today”.",
@@ -38143,6 +38170,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38154,6 +38182,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "apple_health",
+       "via": null,
        "flag": {
         "level": "emergency",
         "text": "The handbook lists “a blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking” under “Call 911 now”. Without those signs, rest for 5 minutes and measure again: it lists “a blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes” under “Call your care team today”.",
@@ -38171,6 +38200,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "flag": null
       },
       {
@@ -38182,6 +38212,7 @@
        "context": "other",
        "note": "n0",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38193,6 +38224,7 @@
        "context": "other",
        "note": "n1",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38204,6 +38236,7 @@
        "context": "other",
        "note": "n2",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38215,6 +38248,7 @@
        "context": "other",
        "note": "n3",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38226,6 +38260,7 @@
        "context": "other",
        "note": "n4",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38237,6 +38272,7 @@
        "context": "other",
        "note": "n5",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38248,6 +38284,7 @@
        "context": "other",
        "note": "n6",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38259,6 +38296,7 @@
        "context": "other",
        "note": "n7",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38270,6 +38308,7 @@
        "context": "other",
        "note": "n8",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38281,6 +38320,7 @@
        "context": "other",
        "note": "n9",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38292,6 +38332,7 @@
        "context": "other",
        "note": "n10",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38303,6 +38344,7 @@
        "context": "other",
        "note": "n11",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38314,6 +38356,7 @@
        "context": "other",
        "note": "n12",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38325,6 +38368,7 @@
        "context": "other",
        "note": "n13",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38336,6 +38380,7 @@
        "context": "other",
        "note": "n14",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38347,6 +38392,7 @@
        "context": "other",
        "note": "n15",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38358,6 +38404,7 @@
        "context": "other",
        "note": "n16",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38369,6 +38416,7 @@
        "context": "other",
        "note": "n17",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38380,6 +38428,7 @@
        "context": "other",
        "note": "n18",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38391,6 +38440,7 @@
        "context": "other",
        "note": "n19",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38402,6 +38452,7 @@
        "context": "other",
        "note": "n20",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38413,6 +38464,7 @@
        "context": "other",
        "note": "n21",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38424,6 +38476,7 @@
        "context": "other",
        "note": "n22",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38435,6 +38488,7 @@
        "context": "other",
        "note": "n23",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38446,6 +38500,7 @@
        "context": "other",
        "note": "n24",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38457,6 +38512,7 @@
        "context": "other",
        "note": "n25",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38468,6 +38524,7 @@
        "context": "other",
        "note": "n26",
        "source": "manual",
+       "via": null,
        "flag": null
       },
       {
@@ -38479,6 +38536,7 @@
        "context": "other",
        "note": "n27",
        "source": "manual",
+       "via": null,
        "flag": null
       }
      ]

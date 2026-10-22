@@ -57,17 +57,20 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
 
 
 def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict[str, Any]] | None = None,
-               assistant: dict[int, int] | None = None) -> dict[str, Any]:
+               assistant: dict[int, int] | None = None, device: dict[int, int] | None = None) -> dict[str, Any]:
     """``user_admin_dict`` plus ``reset_link``: the open reset or account-setup link for the account
     (``{id, created_by, created_at, expires_at}``, never the token), so an admin can see and revoke a
-    link that someone else issued, including one for their own account; and ``assistant_tokens``, how many
-    active assistant tokens the person has (a number only, never a token) for "Revoke assistant tokens"."""
+    link that someone else issued, including one for their own account; and ``assistant_tokens`` and ``device_tokens``,
+    how many active tokens of each family (assistant tokens, phone-shortcut tokens) the person has (numbers only, never a
+    token) for "Revoke tokens", which ends both families."""
     if links is None:
         links = tokens.open_reset_links(conn)
     if assistant is None:
-        assistant = api_tokens.active_counts(conn)
+        assistant = api_tokens.active_counts(conn, api_tokens.ASSISTANT)
+    if device is None:
+        device = api_tokens.active_counts(conn, api_tokens.DEVICE)
     return {**user_admin_dict(row), "reset_link": links.get(int(row["id"])),
-            "assistant_tokens": assistant.get(int(row["id"]), 0)}
+            "assistant_tokens": assistant.get(int(row["id"]), 0), "device_tokens": device.get(int(row["id"]), 0)}
 
 
 def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
@@ -86,8 +89,9 @@ def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = De
     _no_accounts_in_none_mode(auth_context(request))
     rows = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
     links = tokens.open_reset_links(conn)
-    assistant = api_tokens.active_counts(conn)
-    return {"users": [_user_view(conn, r, links, assistant) for r in rows]}
+    assistant = api_tokens.active_counts(conn, api_tokens.ASSISTANT)
+    device = api_tokens.active_counts(conn, api_tokens.DEVICE)
+    return {"users": [_user_view(conn, r, links, assistant, device) for r in rows]}
 
 
 @router.post("/users", status_code=201)
@@ -243,8 +247,9 @@ def revoke_user_sessions(user_id: int, request: Request, admin: RecentAdmin, con
 
 @router.post("/users/{user_id}/revoke-tokens")
 def revoke_user_tokens(user_id: int, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """End every active assistant token of the person at once (reason ``admin``); they can make new ones. Works while
-    the assistant switch is off too. An unknown id is 404; a person with no active token gets ``{"revoked": 0}``."""
+    """End every active token of the person at once, assistant and device tokens alike (reason ``admin``); they can make
+    new ones. Works while the switches are off too. An unknown id is 404; a person with no active token gets
+    ``{"revoked": 0}``."""
     _no_accounts_in_none_mode(auth_context(request))
     row = _user_or_404(conn, user_id)
     count = api_tokens.revoke_all(conn, int(row["id"]), reason="admin", actor_id=admin.id, ip=request_ip(request))

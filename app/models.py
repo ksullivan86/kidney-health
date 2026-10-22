@@ -1109,7 +1109,7 @@ class SymptomList(BaseModel):
 
 WeightContext = Literal["morning", "before_dialysis", "after_dialysis", "other"]
 BloodPressureContext = Literal["morning", "evening", "before_dialysis", "after_dialysis", "other"]
-BodySourceKey = Literal["manual", "apple_health", "import"]  # where a stored row came from
+BodySourceKey = Literal["manual", "apple_health", "import", "shortcut"]  # where a stored row came from ("shortcut": a phone shortcut's device token, app/push.py)
 BodyImportSource = Literal["apple_health", "import"]  # what a batch row may say (a typed row is "manual")
 # The plausibility ranges below are the project's own choice, not clinical numbers (note 10 §3): they only keep a typing
 # error out of the log. 20 to 400 kg is the profile's ``weight_6_months_ago_kg`` range.
@@ -1254,6 +1254,7 @@ class WeightOut(BaseModel):
     context: WeightContext
     note: str
     source: BodySourceKey
+    via: str | None  # the name of the device token that sent the row (source "shortcut"); null for any other row or once the token is gone
     created_at: str
     updated_at: str
 
@@ -1272,6 +1273,7 @@ class BloodPressureOut(BaseModel):
     context: BloodPressureContext
     note: str
     source: BodySourceKey
+    via: str | None  # as WeightOut.via
     created_at: str
     updated_at: str
     flag: BodyFlag | None  # a reading at 180 top or 120 bottom or more: the handbook's words for it

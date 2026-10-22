@@ -17,7 +17,8 @@
   "sources": [
    "manual",
    "apple_health",
-   "import"
+   "import",
+   "shortcut"
   ],
   "units": [
    "kg",
@@ -4091,6 +4092,7 @@
     "context": "morning",
     "note": "kept",
     "source": "manual",
+    "via": null,
     "created_at": "2026-10-05T12:30:00.000000Z",
     "updated_at": "2026-10-05T12:30:00.000000Z"
    }
@@ -4117,8 +4119,65 @@
     "context": "after_dialysis",
     "note": "",
     "source": "apple_health",
+    "via": null,
     "created_at": "2026-10-05T12:30:00.000000Z",
     "updated_at": "2026-10-06T08:00:00.000000Z"
+   }
+  },
+  {
+   "kind": "weight",
+   "row": {
+    "id": 3,
+    "date": "2025-03-04",
+    "time": "07:15",
+    "kg": 69.99,
+    "context": "morning",
+    "note": "",
+    "source": "shortcut",
+    "source_key": "s",
+    "via": "Morning weight",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "api": {
+    "id": 3,
+    "date": "2025-03-04",
+    "time": "07:15",
+    "kg": 69.99,
+    "context": "morning",
+    "note": "",
+    "source": "shortcut",
+    "via": "Morning weight",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z"
+   }
+  },
+  {
+   "kind": "weight",
+   "row": {
+    "id": 4,
+    "date": "2025-03-04",
+    "time": null,
+    "kg": 70.5,
+    "context": "other",
+    "note": "",
+    "source": "manual",
+    "source_key": null,
+    "via": null,
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "api": {
+    "id": 4,
+    "date": "2025-03-04",
+    "time": null,
+    "kg": 70.5,
+    "context": "other",
+    "note": "",
+    "source": "manual",
+    "via": null,
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z"
    }
   },
   {
@@ -4147,6 +4206,7 @@
     "context": "morning",
     "note": "",
     "source": "manual",
+    "via": null,
     "created_at": "2026-10-05T12:30:00.000000Z",
     "updated_at": "2026-10-05T12:30:00.000000Z",
     "flag": null
@@ -4178,6 +4238,7 @@
     "context": "evening",
     "note": "",
     "source": "import",
+    "via": null,
     "created_at": "2026-10-05T12:30:00.000000Z",
     "updated_at": "2026-10-05T12:30:00.000000Z",
     "flag": {
@@ -4215,6 +4276,7 @@
     "context": "other",
     "note": "x",
     "source": "manual",
+    "via": null,
     "created_at": "2026-10-05T12:30:00.000000Z",
     "updated_at": "2026-10-05T12:30:00.000000Z",
     "flag": {
@@ -4224,6 +4286,39 @@
      "link_text": "Get help now",
      "prominent": true
     }
+   }
+  },
+  {
+   "kind": "reading",
+   "row": {
+    "id": 4,
+    "date": "2025-03-04",
+    "time": "19:40",
+    "systolic": 124,
+    "diastolic": 79,
+    "pulse": null,
+    "context": "evening",
+    "note": "",
+    "source": "shortcut",
+    "source_key": "t",
+    "via": "Evening cuff",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z"
+   },
+   "api": {
+    "id": 4,
+    "date": "2025-03-04",
+    "time": "19:40",
+    "systolic": 124,
+    "diastolic": 79,
+    "pulse": null,
+    "context": "evening",
+    "note": "",
+    "source": "shortcut",
+    "via": "Evening cuff",
+    "created_at": "2026-10-05T12:30:00.000000Z",
+    "updated_at": "2026-10-05T12:30:00.000000Z",
+    "flag": null
    }
   }
  ],
@@ -5918,6 +6013,274 @@
    }
   }
  ],
+ "context_cases": [
+  {
+   "kind": "weight",
+   "time": "00:00",
+   "minutes": 0,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "03:59",
+   "minutes": 239,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "04:00",
+   "minutes": 240,
+   "context": "morning"
+  },
+  {
+   "kind": "weight",
+   "time": "04:01",
+   "minutes": 241,
+   "context": "morning"
+  },
+  {
+   "kind": "weight",
+   "time": "07:30",
+   "minutes": 450,
+   "context": "morning"
+  },
+  {
+   "kind": "weight",
+   "time": "10:58",
+   "minutes": 658,
+   "context": "morning"
+  },
+  {
+   "kind": "weight",
+   "time": "10:59",
+   "minutes": 659,
+   "context": "morning"
+  },
+  {
+   "kind": "weight",
+   "time": "11:00",
+   "minutes": 660,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "12:00",
+   "minutes": 720,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "16:59",
+   "minutes": 1019,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "17:00",
+   "minutes": 1020,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "17:01",
+   "minutes": 1021,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "20:00",
+   "minutes": 1200,
+   "context": "other"
+  },
+  {
+   "kind": "weight",
+   "time": "23:59",
+   "minutes": 1439,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "00:00",
+   "minutes": 0,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "03:59",
+   "minutes": 239,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "04:00",
+   "minutes": 240,
+   "context": "morning"
+  },
+  {
+   "kind": "reading",
+   "time": "04:01",
+   "minutes": 241,
+   "context": "morning"
+  },
+  {
+   "kind": "reading",
+   "time": "07:30",
+   "minutes": 450,
+   "context": "morning"
+  },
+  {
+   "kind": "reading",
+   "time": "10:58",
+   "minutes": 658,
+   "context": "morning"
+  },
+  {
+   "kind": "reading",
+   "time": "10:59",
+   "minutes": 659,
+   "context": "morning"
+  },
+  {
+   "kind": "reading",
+   "time": "11:00",
+   "minutes": 660,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "12:00",
+   "minutes": 720,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "16:59",
+   "minutes": 1019,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": "17:00",
+   "minutes": 1020,
+   "context": "evening"
+  },
+  {
+   "kind": "reading",
+   "time": "17:01",
+   "minutes": 1021,
+   "context": "evening"
+  },
+  {
+   "kind": "reading",
+   "time": "20:00",
+   "minutes": 1200,
+   "context": "evening"
+  },
+  {
+   "kind": "reading",
+   "time": "23:59",
+   "minutes": 1439,
+   "context": "evening"
+  },
+  {
+   "kind": "weight",
+   "time": null,
+   "minutes": null,
+   "context": "other"
+  },
+  {
+   "kind": "reading",
+   "time": null,
+   "minutes": null,
+   "context": "other"
+  }
+ ],
+ "watch_cases": [
+  {
+   "name": "Apple Watch",
+   "watch": true
+  },
+  {
+   "name": "Sandra's Apple Watch",
+   "watch": true
+  },
+  {
+   "name": "watch",
+   "watch": true
+  },
+  {
+   "name": "WATCH",
+   "watch": true
+  },
+  {
+   "name": "wAtCh",
+   "watch": true
+  },
+  {
+   "name": "Stopwatch",
+   "watch": true
+  },
+  {
+   "name": "Watchful",
+   "watch": true
+  },
+  {
+   "name": "Withings",
+   "watch": false
+  },
+  {
+   "name": "Health",
+   "watch": false
+  },
+  {
+   "name": "Omron Connect",
+   "watch": false
+  },
+  {
+   "name": "",
+   "watch": false
+  },
+  {
+   "name": " ",
+   "watch": false
+  },
+  {
+   "name": "Wat ch",
+   "watch": false
+  },
+  {
+   "name": "Wätch",
+   "watch": false
+  },
+  {
+   "name": "Apple Watch",
+   "watch": true
+  },
+  {
+   "name": "iPhone",
+   "watch": false
+  },
+  {
+   "name": "Series 9 (Watch)",
+   "watch": true
+  },
+  {
+   "name": "Garmin Connect",
+   "watch": false
+  },
+  {
+   "name": "Watch",
+   "watch": true
+  },
+  {
+   "name": "wacth",
+   "watch": false
+  },
+  {
+   "name": null,
+   "watch": false
+  }
+ ],
  "script": [
   {
    "name": "a weight with a time and a note, kg to two decimals",
@@ -5940,6 +6303,7 @@
      "context": "morning",
      "note": "after the long night",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -5964,6 +6328,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -5989,6 +6354,7 @@
      "context": "before_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6014,6 +6380,7 @@
      "context": "after_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6038,6 +6405,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6062,6 +6430,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6086,6 +6455,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6111,6 +6481,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6137,6 +6508,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6162,6 +6534,7 @@
      "context": "other",
      "note": "kept",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6186,6 +6559,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6210,6 +6584,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6235,6 +6610,7 @@
      "context": "other",
      "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6260,6 +6636,7 @@
      "context": "other",
      "note": "line one\nline two\tand a tab",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6285,6 +6662,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6310,6 +6688,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6331,6 +6710,7 @@
        "context": "morning",
        "note": "after the long night",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6342,6 +6722,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6353,6 +6734,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6364,6 +6746,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6375,6 +6758,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6386,6 +6770,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6397,6 +6782,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6408,6 +6794,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6419,6 +6806,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6430,6 +6818,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6441,6 +6830,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6452,6 +6842,7 @@
        "context": "other",
        "note": "kept",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6463,6 +6854,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6474,6 +6866,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6485,6 +6878,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6496,6 +6890,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -6519,6 +6914,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6530,6 +6926,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -6624,6 +7021,7 @@
        "context": "morning",
        "note": "after the long night",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6635,6 +7033,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6646,6 +7045,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6657,6 +7057,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6668,6 +7069,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6679,6 +7081,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6690,6 +7093,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6701,6 +7105,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6712,6 +7117,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6723,6 +7129,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6734,6 +7141,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6745,6 +7153,7 @@
        "context": "other",
        "note": "kept",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6756,6 +7165,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6767,6 +7177,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6778,6 +7189,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6789,6 +7201,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -6826,6 +7239,7 @@
      "context": "after_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6851,6 +7265,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -6902,6 +7317,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6913,6 +7329,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6924,6 +7341,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6935,6 +7353,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6946,6 +7365,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6957,6 +7377,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6968,6 +7389,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6979,6 +7401,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -6990,6 +7413,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7001,6 +7425,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7012,6 +7437,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7023,6 +7449,7 @@
        "context": "other",
        "note": "kept",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7034,6 +7461,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7045,6 +7473,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7056,6 +7485,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -7067,6 +7497,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -7449,6 +7880,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -7473,6 +7905,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -7542,6 +7975,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8272,6 +8706,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8283,6 +8718,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8294,6 +8730,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8305,6 +8742,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8316,6 +8754,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8327,6 +8766,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8338,6 +8778,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8349,6 +8790,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8360,6 +8802,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8371,6 +8814,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8382,6 +8826,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8393,6 +8838,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8404,6 +8850,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8415,6 +8862,7 @@
        "context": "other",
        "note": "kept",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8426,6 +8874,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8437,6 +8886,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8448,6 +8898,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -8459,6 +8910,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -8485,6 +8937,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8509,6 +8962,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8533,6 +8987,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8557,6 +9012,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8581,6 +9037,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8605,6 +9062,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8629,6 +9087,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8653,6 +9112,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8677,6 +9137,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8701,6 +9162,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8725,6 +9187,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8749,6 +9212,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8773,6 +9237,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8797,6 +9262,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8821,6 +9287,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8845,6 +9312,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8869,6 +9337,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8893,6 +9362,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8917,6 +9387,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8941,6 +9412,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -8980,6 +9452,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -9019,6 +9492,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -9040,6 +9514,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9051,6 +9526,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9062,6 +9538,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9073,6 +9550,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9084,6 +9562,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9095,6 +9574,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9106,6 +9586,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9117,6 +9598,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9128,6 +9610,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9139,6 +9622,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9150,6 +9634,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9161,6 +9646,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9172,6 +9658,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9183,6 +9670,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9194,6 +9682,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9205,6 +9694,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9216,6 +9706,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9227,6 +9718,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9238,6 +9730,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -9249,6 +9742,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -9281,6 +9775,7 @@
      "context": "morning",
      "note": "seated",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9309,6 +9804,7 @@
      "context": "evening",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9337,6 +9833,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9366,6 +9863,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": {
@@ -9401,6 +9899,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": {
@@ -9437,6 +9936,7 @@
      "context": "before_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": {
@@ -9473,6 +9973,7 @@
      "context": "after_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9502,6 +10003,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9532,6 +10034,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9561,6 +10064,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9585,6 +10089,7 @@
        "context": "morning",
        "note": "seated",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9599,6 +10104,7 @@
        "context": "evening",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9613,6 +10119,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9633,6 +10140,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9653,6 +10161,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9673,6 +10182,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9687,6 +10197,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9701,6 +10212,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9715,6 +10227,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9729,6 +10242,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9755,6 +10269,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9775,6 +10290,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9795,6 +10311,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -9815,6 +10332,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9829,6 +10347,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -9890,6 +10409,7 @@
      "context": "before_dialysis",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": {
@@ -9924,6 +10444,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -9999,6 +10520,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -10019,6 +10541,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -10039,6 +10562,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -10059,6 +10583,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10073,6 +10598,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10087,6 +10613,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10101,6 +10628,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10115,6 +10643,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10129,6 +10658,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -10955,6 +11485,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -10983,6 +11514,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11011,6 +11543,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11039,6 +11572,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11067,6 +11601,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11095,6 +11630,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11123,6 +11659,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11151,6 +11688,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11179,6 +11717,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11207,6 +11746,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11235,6 +11775,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11263,6 +11804,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11291,6 +11833,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11319,6 +11862,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11347,6 +11891,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11375,6 +11920,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11403,6 +11949,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11431,6 +11978,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11459,6 +12007,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11487,6 +12036,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11515,6 +12065,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11543,6 +12094,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11571,6 +12123,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11599,6 +12152,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11627,6 +12181,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11655,6 +12210,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11683,6 +12239,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11711,6 +12268,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11739,6 +12297,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11767,6 +12326,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11811,6 +12371,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -11921,6 +12482,7 @@
        "context": "other",
        "note": "",
        "source": "apple_health",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -11932,6 +12494,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -11943,6 +12506,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -11969,6 +12533,7 @@
      "context": "other",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -12082,6 +12647,7 @@
        "context": "morning",
        "note": "",
        "source": "apple_health",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -12096,6 +12662,7 @@
        "context": "evening",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -13518,6 +14085,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -13529,6 +14097,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -13540,6 +14109,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -13551,6 +14121,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -13720,6 +14291,7 @@
        "context": "morning",
        "note": "",
        "source": "apple_health",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -13734,6 +14306,7 @@
        "context": "evening",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -13754,6 +14327,7 @@
        "context": "morning",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -13810,6 +14384,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -13821,6 +14396,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -13834,6 +14410,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -13851,6 +14428,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -13880,6 +14458,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -13982,6 +14561,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -14007,6 +14587,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -14035,6 +14616,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -14064,6 +14646,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -14093,6 +14676,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": {
@@ -14128,6 +14712,7 @@
      "context": "evening",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -14152,6 +14737,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14163,6 +14749,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14176,6 +14763,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14194,6 +14782,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        },
@@ -14221,6 +14810,7 @@
        "context": "evening",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14250,6 +14840,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -14282,6 +14873,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14293,6 +14885,7 @@
        "context": "other",
        "note": "",
        "source": "import",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14306,6 +14899,7 @@
         "context": "other",
         "note": "",
         "source": "import",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14335,6 +14929,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14377,6 +14972,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14388,6 +14984,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14401,6 +14998,7 @@
         "context": "other",
         "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14430,6 +15028,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14472,6 +15071,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14483,6 +15083,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14496,6 +15097,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14525,6 +15127,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14554,6 +15157,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -14586,6 +15190,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14597,6 +15202,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14610,6 +15216,7 @@
         "context": "other",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14639,6 +15246,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14693,6 +15301,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14704,6 +15313,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14717,6 +15327,7 @@
         "context": "other",
         "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14746,6 +15357,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14788,6 +15400,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14799,6 +15412,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14812,6 +15426,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14830,6 +15445,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        },
@@ -14857,6 +15473,7 @@
        "context": "evening",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -14886,6 +15503,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -14934,6 +15552,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14945,6 +15564,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -14958,6 +15578,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -14987,6 +15608,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15016,6 +15638,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -15061,6 +15684,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15072,6 +15696,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15085,6 +15710,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -15114,6 +15740,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15143,6 +15770,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -15175,6 +15803,7 @@
        "context": "other",
        "note": "line one\nline two\tand a tab",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15186,6 +15815,7 @@
        "context": "other",
        "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15199,6 +15829,7 @@
         "context": "other",
         "note": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -15217,6 +15848,7 @@
         "context": "after_dialysis",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        },
@@ -15238,6 +15870,7 @@
        "context": "other",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15292,6 +15925,7 @@
        "context": "after_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15303,6 +15937,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15316,6 +15951,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -15345,6 +15981,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15374,6 +16011,7 @@
        "context": "before_dialysis",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": {
@@ -15481,6 +16119,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -15505,6 +16144,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>"
     }
@@ -15547,6 +16187,7 @@
      "context": "morning",
      "note": "",
      "source": "manual",
+     "via": null,
      "created_at": "<ts>",
      "updated_at": "<ts>",
      "flag": null
@@ -15585,6 +16226,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       }
@@ -15610,6 +16252,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15636,6 +16279,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15647,6 +16291,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>"
       },
@@ -15660,6 +16305,7 @@
         "context": "morning",
         "note": "",
         "source": "manual",
+        "via": null,
         "created_at": "<ts>",
         "updated_at": "<ts>"
        }
@@ -15689,6 +16335,7 @@
        "context": "morning",
        "note": "",
        "source": "manual",
+       "via": null,
        "created_at": "<ts>",
        "updated_at": "<ts>",
        "flag": null
@@ -15710,6 +16357,659 @@
       },
       "flagged_today": null
      }
+    }
+   }
+  },
+  {
+   "name": "same reading: a first imported weight",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.5,
+      "context": "morning",
+      "time": "07:30",
+      "source": "apple_health",
+      "source_key": "sr1"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: the same weight under another key is skipped",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.5,
+      "context": "morning",
+      "time": "07:30",
+      "source": "import",
+      "source_key": "sr2"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 0,
+     "skipped": 1
+    }
+   }
+  },
+  {
+   "name": "same reading: the same kilograms to the hundredth",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.504,
+      "context": "morning",
+      "time": "07:30",
+      "source": "apple_health",
+      "source_key": "sr2b"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 0,
+     "skipped": 1
+    }
+   }
+  },
+  {
+   "name": "same reading: another weight at the same minute is added",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.6,
+      "context": "morning",
+      "time": "07:30",
+      "source": "apple_health",
+      "source_key": "sr3"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: the same weight a minute later is added",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.5,
+      "context": "morning",
+      "time": "07:31",
+      "source": "apple_health",
+      "source_key": "sr4"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: a typed weight",
+   "method": "POST",
+   "path": "/api/body/weights",
+   "body": {
+    "date": "2025-02-10",
+    "kg": 66.1,
+    "context": "other",
+    "time": "08:00"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 52,
+     "date": "2025-02-10",
+     "time": "08:00",
+     "kg": 66.1,
+     "context": "other",
+     "note": "",
+     "source": "manual",
+     "via": null,
+     "created_at": "<ts>",
+     "updated_at": "<ts>"
+    }
+   }
+  },
+  {
+   "name": "same reading: an imported weight like the typed one is added",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 66.1,
+      "context": "other",
+      "time": "08:00",
+      "source": "apple_health",
+      "source_key": "sr5"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: rows with no time never match",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 65.5,
+      "context": "other",
+      "source": "apple_health",
+      "source_key": "sr6"
+     },
+     {
+      "date": "2025-02-10",
+      "kg": 65.5,
+      "context": "other",
+      "source": "apple_health",
+      "source_key": "sr7"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 2,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: two new rows alike in one request are one",
+   "method": "POST",
+   "path": "/api/body/weights/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "kg": 67.0,
+      "context": "other",
+      "time": "09:00",
+      "source": "apple_health",
+      "source_key": "sr8"
+     },
+     {
+      "date": "2025-02-10",
+      "kg": 67.0,
+      "context": "other",
+      "time": "09:00",
+      "source": "import",
+      "source_key": "sr9"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 1
+    }
+   }
+  },
+  {
+   "name": "same reading: the weights of that day",
+   "method": "GET",
+   "path": "/api/body/weights?start=2025-02-10&end=2025-02-10",
+   "answer": {
+    "ok": true,
+    "body": {
+     "weights": [
+      {
+       "id": 49,
+       "date": "2025-02-10",
+       "time": "07:30",
+       "kg": 65.5,
+       "context": "morning",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 50,
+       "date": "2025-02-10",
+       "time": "07:30",
+       "kg": 65.6,
+       "context": "morning",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 51,
+       "date": "2025-02-10",
+       "time": "07:31",
+       "kg": 65.5,
+       "context": "morning",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 52,
+       "date": "2025-02-10",
+       "time": "08:00",
+       "kg": 66.1,
+       "context": "other",
+       "note": "",
+       "source": "manual",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 53,
+       "date": "2025-02-10",
+       "time": "08:00",
+       "kg": 66.1,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 56,
+       "date": "2025-02-10",
+       "time": "09:00",
+       "kg": 67.0,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 54,
+       "date": "2025-02-10",
+       "time": null,
+       "kg": 65.5,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      },
+      {
+       "id": 55,
+       "date": "2025-02-10",
+       "time": null,
+       "kg": 65.5,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "same reading: a first imported reading",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 131,
+      "diastolic": 81,
+      "context": "morning",
+      "time": "07:10",
+      "source": "apple_health",
+      "source_key": "sr1"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: the same reading under another key is skipped",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 131,
+      "diastolic": 81,
+      "context": "morning",
+      "time": "07:10",
+      "source": "import",
+      "source_key": "sr2"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 0,
+     "skipped": 1
+    }
+   }
+  },
+  {
+   "name": "same reading: another bottom number is added",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 131,
+      "diastolic": 82,
+      "context": "morning",
+      "time": "07:10",
+      "source": "apple_health",
+      "source_key": "sr3"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: a typed reading",
+   "method": "POST",
+   "path": "/api/body/blood-pressure",
+   "body": {
+    "date": "2025-02-10",
+    "systolic": 125,
+    "diastolic": 75,
+    "context": "other",
+    "time": "12:00"
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "id": 52,
+     "date": "2025-02-10",
+     "time": "12:00",
+     "systolic": 125,
+     "diastolic": 75,
+     "pulse": null,
+     "context": "other",
+     "note": "",
+     "source": "manual",
+     "via": null,
+     "created_at": "<ts>",
+     "updated_at": "<ts>",
+     "flag": null
+    }
+   }
+  },
+  {
+   "name": "same reading: an imported reading like the typed one is added",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 125,
+      "diastolic": 75,
+      "context": "other",
+      "time": "12:00",
+      "source": "apple_health",
+      "source_key": "sr4"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: readings with no time never match",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 131,
+      "diastolic": 81,
+      "context": "other",
+      "source": "apple_health",
+      "source_key": "sr5"
+     },
+     {
+      "date": "2025-02-10",
+      "systolic": 131,
+      "diastolic": 81,
+      "context": "other",
+      "source": "apple_health",
+      "source_key": "sr6"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 2,
+     "skipped": 0
+    }
+   }
+  },
+  {
+   "name": "same reading: two new readings alike in one request are one",
+   "method": "POST",
+   "path": "/api/body/blood-pressure/batch",
+   "body": {
+    "rows": [
+     {
+      "date": "2025-02-10",
+      "systolic": 118,
+      "diastolic": 76,
+      "context": "other",
+      "time": "15:00",
+      "source": "apple_health",
+      "source_key": "sr7"
+     },
+     {
+      "date": "2025-02-10",
+      "systolic": 118,
+      "diastolic": 76,
+      "context": "other",
+      "time": "15:00",
+      "source": "import",
+      "source_key": "sr8"
+     }
+    ]
+   },
+   "answer": {
+    "ok": true,
+    "body": {
+     "added": 1,
+     "skipped": 1
+    }
+   }
+  },
+  {
+   "name": "same reading: the readings of that day",
+   "method": "GET",
+   "path": "/api/body/blood-pressure?start=2025-02-10&end=2025-02-10",
+   "answer": {
+    "ok": true,
+    "body": {
+     "readings": [
+      {
+       "id": 50,
+       "date": "2025-02-10",
+       "time": "07:10",
+       "systolic": 131,
+       "diastolic": 81,
+       "pulse": null,
+       "context": "morning",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 51,
+       "date": "2025-02-10",
+       "time": "07:10",
+       "systolic": 131,
+       "diastolic": 82,
+       "pulse": null,
+       "context": "morning",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 52,
+       "date": "2025-02-10",
+       "time": "12:00",
+       "systolic": 125,
+       "diastolic": 75,
+       "pulse": null,
+       "context": "other",
+       "note": "",
+       "source": "manual",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 53,
+       "date": "2025-02-10",
+       "time": "12:00",
+       "systolic": 125,
+       "diastolic": 75,
+       "pulse": null,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 56,
+       "date": "2025-02-10",
+       "time": "15:00",
+       "systolic": 118,
+       "diastolic": 76,
+       "pulse": null,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 54,
+       "date": "2025-02-10",
+       "time": null,
+       "systolic": 131,
+       "diastolic": 81,
+       "pulse": null,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      },
+      {
+       "id": 55,
+       "date": "2025-02-10",
+       "time": null,
+       "systolic": 131,
+       "diastolic": 81,
+       "pulse": null,
+       "context": "other",
+       "note": "",
+       "source": "apple_health",
+       "via": null,
+       "created_at": "<ts>",
+       "updated_at": "<ts>",
+       "flag": null
+      }
+     ]
     }
    }
   }
