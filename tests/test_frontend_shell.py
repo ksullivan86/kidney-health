@@ -16,6 +16,7 @@ INDEX = (STATIC / "index.html").read_text(encoding="utf-8")
 HEAD, BODY = INDEX.split("</head>", 1)
 SCRIPTS = sorted(p for p in STATIC.rglob("*.js") if "vendor" not in p.parts)
 C_CDA_ENGINE = STATIC / "js" / "engine" / "ccda_labs.js"
+PDF_ENGINE = STATIC / "js" / "engine" / "pdf_pages.js"
 C_CDA_PARSE_LINE = "return new root.DOMParser().parseFromString(trustedXml(text), 'application/xml');"
 
 
@@ -60,9 +61,9 @@ def test_scripts_use_no_html_sinks() -> None:
             assert not sinks.search(line), f"{path.relative_to(ROOT)}:{n}: {line.strip()}"
 
 
-def test_only_two_files_create_a_trusted_types_policy_each_one_named_and_narrow() -> None:
+def test_only_three_files_create_a_trusted_types_policy_each_one_named_and_narrow() -> None:
     owners = [p for p in SCRIPTS if "createPolicy" in p.read_text(encoding="utf-8")]
-    assert owners == [C_CDA_ENGINE, STATIC / "js" / "pwa.js"]
+    assert owners == [C_CDA_ENGINE, PDF_ENGINE, STATIC / "js" / "pwa.js"]
     # kh-xml: the patient-portal file import; its text goes through createHTML only if it is a string with no DOCTYPE or ENTITY
     cdaengine = C_CDA_ENGINE.read_text(encoding="utf-8")
     assert cdaengine.count("createPolicy(") == 1 and "tt.createPolicy('kh-xml'" in cdaengine
@@ -71,6 +72,16 @@ def test_only_two_files_create_a_trusted_types_policy_each_one_named_and_narrow(
     # DOMParser is used by that one file, once, for application/xml, with the policy's output; nowhere else in the app
     assert [p for p in SCRIPTS if "DOMParser" in p.read_text(encoding="utf-8")] == [C_CDA_ENGINE]
     assert cdaengine.count("parseFromString") == 1 and C_CDA_PARSE_LINE in cdaengine
+    # kh-pdf: the PDF lab report reader makes pdf.js's Worker; the policy returns its input only when it is the one vendored worker URL
+    pdfengine = PDF_ENGINE.read_text(encoding="utf-8")
+    assert pdfengine.count("createPolicy(") == 1 and "tt.createPolicy('kh-pdf'" in pdfengine
+    assert "'default'" not in pdfengine and "allow-duplicates" not in pdfengine
+    assert "createScriptURL: (url) => { if (url === WORKER_URL) return url; throw new TypeError('blocked worker URL'); }," in pdfengine
+    assert "const WORKER_URL = '/vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs';" in pdfengine
+    assert "createHTML" not in pdfengine  # a script URL only
+    # the Worker constructor is called by that one file, once, with the policy's output; nowhere else in the app
+    assert [p for p in SCRIPTS if re.search(r"new\s+(?:root\.)?(?:Shared)?Worker\(", p.read_text(encoding="utf-8"))] == [PDF_ENGINE]
+    assert pdfengine.count("new root.Worker(workerUrl(), { type: 'module' })") == 1
     pwa = (STATIC / "js" / "pwa.js").read_text(encoding="utf-8")
     assert pwa.count("createPolicy(") == 1 and "createPolicy('kh-sw'" in pwa
     assert "'default'" not in pwa and "allow-duplicates" not in pwa
@@ -78,6 +89,29 @@ def test_only_two_files_create_a_trusted_types_policy_each_one_named_and_narrow(
     assert "const SW_URL = '/sw.js';" in pwa
     # registered only in the installed app over a secure context, never in the demo / preview
     assert "!MOCK && window.isSecureContext === true && 'serviceWorker' in navigator" in pwa
+
+
+def test_the_csp_lists_exactly_the_policies_the_code_creates_each_in_the_one_file_its_comment_names() -> None:
+    from app import security
+
+    created: dict[str, list[str]] = {}
+    for path in SCRIPTS:
+        for name in re.findall(r"createPolicy\(\s*'([^']+)'", path.read_text(encoding="utf-8")):
+            created.setdefault(name, []).append(path.relative_to(STATIC).as_posix())
+    assert created == {"kh-sw": ["js/pwa.js"], "kh-xml": ["js/engine/ccda_labs.js"], "kh-pdf": ["js/engine/pdf_pages.js"]}  # one file each
+    listed = next(d for d in security.CSP_DIRECTIVES if d.startswith("trusted-types ")).split()[1:]
+    assert listed == ["kh-sw", "kh-xml", "kh-pdf"] and sorted(listed) == sorted(created)
+    # the comment above the directive in app/security.py names each policy with its file
+    source = (ROOT / "app" / "security.py").read_text(encoding="utf-8")
+    comment = source[source.index("# Three named policies"):source.index('"trusted-types kh-sw kh-xml kh-pdf"')]
+    for name, files in created.items():
+        assert name in comment and files[0].removeprefix("js/") in comment, name
+    assert "Never add 'allow-duplicates' or a 'default' policy." in comment
+    # nothing else in the CSP was loosened for it: a Worker still needs worker-src 'self', and no blob: or eval anywhere
+    directives = {d.split()[0]: d.split()[1:] for d in security.CSP_DIRECTIVES}
+    assert directives["worker-src"] == ["'self'"] and directives["script-src"] == ["'self'", "'wasm-unsafe-eval'"]
+    assert "blob:" not in directives["worker-src"] + directives["script-src"] + directives["connect-src"]
+    assert "'unsafe-eval'" not in security.CONTENT_SECURITY_POLICY
 
 
 # --------------------------------------------------------------------------- module layout

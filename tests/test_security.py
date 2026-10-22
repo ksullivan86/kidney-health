@@ -23,7 +23,7 @@ SPEC_CSP = (
     "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; "
     "img-src 'self' blob:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; "
     "media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; "
-    "require-trusted-types-for 'script'; trusted-types kh-sw kh-xml"
+    "require-trusted-types-for 'script'; trusted-types kh-sw kh-xml kh-pdf"
 )
 EXPECTED_HEADERS = {
     "x-content-type-options": "nosniff",
@@ -124,7 +124,8 @@ def test_csp_tokens_are_strict():
     assert "'unsafe-inline'" not in tokens and "'unsafe-eval'" not in tokens
     assert "'wasm-unsafe-eval'" in tokens  # the barcode decoder is WebAssembly (note 03)
     directives = {d.split()[0]: d.split()[1:] for d in (x.strip() for x in security.CONTENT_SECURITY_POLICY.split(";")) if d}
-    assert directives["trusted-types"] == ["kh-sw", "kh-xml"]  # exactly the two named policies: the service worker's and the C-CDA import's
+    # exactly the three named policies: the service worker's, the C-CDA import's and the PDF lab report reader's (note 13)
+    assert directives["trusted-types"] == ["kh-sw", "kh-xml", "kh-pdf"]
     assert directives["require-trusted-types-for"] == ["'script'"]
     assert directives["frame-ancestors"] == ["'none'"]
     assert directives["script-src"] == ["'self'", "'wasm-unsafe-eval'"]

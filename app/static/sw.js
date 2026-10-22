@@ -17,7 +17,10 @@
    (learnOffline) instead of the browser's error page. A new release starts with an empty copy.
 
    SHELL_URLS lists every file index.html loads (tests/test_frontend_shell.py keeps the two in
-   step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. */
+   step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. The PDF
+   reader (js/engine/pdf_pages.js is in the list; the pdf.js library and its worker under
+   /vendor/pdfjs-dist-*/, about 1.8 MB, are not) is fetched when the first lab report PDF is picked and
+   kept by the same /vendor/ rule below. */
 'use strict';
 
 const VERSION = '__VERSION__';
@@ -54,6 +57,7 @@ const SHELL_URLS = [
   '/js/engine/lab_import.js',
   '/js/engine/fhir_labs.js',
   '/js/engine/ccda_labs.js',
+  '/js/engine/pdf_pages.js',
   '/js/engine/menu_link.js',
   '/js/engine/symptoms.js',
   '/js/engine/body.js',
@@ -165,8 +169,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.pathname.startsWith('/vendor/')) {
-    // Vendored decoders (barcode scanning): the ponyfill comes with the shell; the 1 MB WebAssembly reader is
-    // fetched on the first scan that needs it, then kept in the vendor cache (cache-first, both caches).
+    // Vendored third-party code (barcode scanning, PDF lab reports): the ponyfill comes with the shell; the 1 MB
+    // WebAssembly reader is fetched on the first scan that needs it, and pdf.js and its worker (about 1.8 MB, module
+    // script and module Worker requests, same origin) on the first PDF; then kept in the vendor cache (cache-first,
+    // both caches). No second rule: the one prefix covers every vendored folder.
     event.respondWith(caches.open(VENDOR).then(async (cache) => {
       const hit = (await cache.match(req)) || (await caches.match(req, { cacheName: SHELL }));
       if (hit) return hit;
