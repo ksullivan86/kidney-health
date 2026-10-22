@@ -113,3 +113,48 @@ def test_an_idea_with_a_food_the_person_said_no_to_is_dropped_even_from_a_saved_
     assert all(d["reason"] not in G.NOT_FOR_ME_REASONS for d in less["dropped"])
     assert G.person_excluded(fx.context(prefs=Prefs(exclude_food_ids=frozenset({5}))), [3, 1, 5, 999]) == "not_for_me"
     assert G.person_excluded(fx.context(), [3, 1, 5]) is None
+
+
+# --------------------------------------------------------------------------- #
+# The "often" bit is the habit, like "liked" is the Like
+# --------------------------------------------------------------------------- #
+
+def rice_often(**kwargs):
+    """Rice eaten at dinner on three of the last 14 days (the default breakfast history stays): over ``OFTEN_MIN_DAYS``."""
+    fs = fx.foods()
+    history = fx.fixture_history(fs) + tuple(fx.hist(fs[1], d, "dinner") for d in ("2026-10-04", "2026-10-02", "2026-09-30"))
+    return dict(history=history, **kwargs)
+
+
+def test_the_often_bit_is_the_habit_not_whether_the_card_had_room_to_show_it():
+    _, plain = setup()
+    assert candidate(plain, 1)["often"] is False
+    _, bridge = setup(**rice_often())
+    rice = candidate(bridge, 1)
+    # rice has two kidney reasons, so its card has no room for "You often have this"; the bit does not depend on that
+    assert len(rice["reasons"]) >= 2 and "you_eat_often" not in rice["reasons"]
+    assert rice["often"] is True
+    assert 1 in G.often_ids(bridge) and 1 not in G.often_ids(plain)
+    assert G.often_ids(bridge) == {f["food_id"] for f in bridge["foods"] if f["often"]}
+
+
+def test_a_neutral_food_or_learning_off_has_no_often_bit():
+    _, neutral = setup(**rice_often(prefs=Prefs(food_pref={1: "neutral"})))
+    _, off = setup(**rice_often(prefs=Prefs(learn_from_log=False)))
+    assert candidate(neutral, 1)["often"] is False and 1 not in G.often_ids(neutral)
+    assert candidate(off, 1)["often"] is False and G.often_ids(off) == set()
+
+
+def test_the_prompt_shows_the_often_bit_even_when_the_card_did_not_show_the_reason():
+    from app.ai.prompts import candidate_block
+
+    ctx, bridge = setup(**rice_often())
+    assert candidate_block(candidate(bridge, 1), ctx.foods[1])["often"] is True
+    assert candidate_block(candidate(bridge, 7), ctx.foods[7])["often"] is False
+
+
+def test_a_you_eat_often_claim_for_a_food_eaten_often_is_kept_when_its_card_shows_two_other_reasons():
+    result = judge([idea([(1, 4), (7, 4)], codes=["you_eat_often", "low_potassium"])], **rice_often())
+    assert result["ideas"][0]["reason_codes"] == ["you_eat_often", "low_potassium"] and result["claims_corrected"] == 0
+    plain = judge([idea([(1, 4), (7, 4)], codes=["you_eat_often", "low_potassium"])])
+    assert "you_eat_often" not in plain["ideas"][0]["reason_codes"] and plain["claims_corrected"] == 1

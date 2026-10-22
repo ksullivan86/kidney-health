@@ -128,9 +128,12 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
             # "You said you like this" is a taste the person stated, not one of the app's reasons: it stays out of
             # ``reasons`` and travels as its own bit, which the AI layer shows the model and checks its "you_like"
             # claim against. The bit is the person's Like itself, not whether the card had room to show the reason (a
-            # card shows at most two, so a food with two kidney reasons would otherwise read as not liked).
+            # card shows at most two, so a food with two kidney reasons would otherwise read as not liked). The
+            # ``often`` bit is the same for "You often have this": the habit itself (the rule of the reason, so off for
+            # a neutral food and when learning from the log is off), not whether the card showed it.
             "reasons": [c for c in codes if c != "you_like"],
             "liked": f.id in habit.pref.liked,
+            "often": habit.days_14.get(f.id, 0) >= R.OFTEN_MIN_DAYS,
         })
     meals = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter, limit=R.AI_MEALS_MAX)]
     for i, m in enumerate(meals, start=1):

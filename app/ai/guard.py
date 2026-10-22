@@ -241,7 +241,10 @@ def handbook_refs(slugs: Iterable[Any]) -> tuple[list[dict[str, str]], int]:
 
 
 def often_ids(bridge: Mapping[str, Any]) -> set[int]:
-    return {int(f["food_id"]) for f in bridge.get("foods", []) if "you_eat_often" in (f.get("reasons") or ())}
+    """The candidates the person often has (the ``often`` bit of :func:`app.guidance.ai_bridge.candidates_for_ai`, the one the
+    model is shown): the only foods a "you eat this often" claim may name. The bit is the habit itself, not whether the
+    candidate's card had room to show "You often have this"."""
+    return {int(f["food_id"]) for f in bridge.get("foods", []) if f.get("often") is True}
 
 
 def liked_ids(bridge: Mapping[str, Any]) -> set[int]:

@@ -19,7 +19,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   often* or *Not for me* (at most 10 of each), only with the consent you already gave for them and shown in "What will be
   sent?"; what the app learned from your log is never sent, and describe a meal, photos and lab report photos get none of it.
   An AI idea may say "uses a food you said you like" only for a food you marked, and an idea that uses a food you said *Not
-  for me* is dropped. A chat assistant connected with a token cannot do any of this.
+  for me* is dropped. A chat assistant connected with a token cannot do any of this. Fixed on the way: an AI idea's "uses
+  foods you often have" was removed when the food's suggestion card already showed two other reasons (a card shows at most
+  two); it now holds for every food you had on at least 2 of the last 14 days, as the card's own rule says.
 * **Food preferences and what the app learns from your log.** Meal guidance can now take your
   taste into account. For each food you can say *More like this*, *Less often*, *Not for me* or *Stop using what you
   learned about this food*; for each kind of food (fruits, grains, …) *Like* or *Less often* next to the existing *Never
@@ -480,8 +482,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Ask). `PROMPT_VERSION` is `2026-10-21.1` (the owner's live `python scripts/ai_eval.py --chat` for it is still to do).
   `prompts.person_block` gains `likes`, `less_often` and `not_for_me` (`taste_names`: NFKC, no `Cc`/`Cf`, 60 characters, at most
   10, null when empty) from `context.explicit_preferences`, read by `routes._person` for meal ideas and Ask only; candidates
-  carry `liked` next to `often` (`ai_bridge` now sets it from the person's Like itself, not from whether the card had room to
-  show `you_like`); `you_like` joins `schemas.REASON_CODES`, the `Code` literal and `guard.REASON_TEXT`, and
+  carry `liked` next to `often` (`ai_bridge` now sets both from the person's Like and `HabitStats.days_14 >= OFTEN_MIN_DAYS`
+  themselves, not from whether the card had room to show `you_like` or `you_eat_often`; `prompts.candidate_block` and
+  `guard.often_ids` read the bit); `you_like` joins `schemas.REASON_CODES`, the `Code` literal and `guard.REASON_TEXT`, and
   `guard.true_reasons` / `check_claims` / `liked_ids` keep it only for a liked candidate; `guard.person_excluded` drops an idea
   with a Not for me food or a never-suggest group (also when the food came from a saved meal). Rule 9 of the meal prompt and
   the "Tastes" paragraph of Ask's rule 10. `set_food_preference` (`app/ai/chat_preference.py`: `{food_id | category, preference:
