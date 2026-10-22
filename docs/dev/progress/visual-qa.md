@@ -1,4 +1,4 @@
-# visual-qa: a look at every screen (Status: in progress, checks running)
+# visual-qa: a look at every screen (Status: complete)
 
 Task: build the demo, drive it with Playwright, look at every screen at 375x812 and 1280x800 in light and dark, fix the small
 layout bugs, report the rest. Screenshots stay outside the repository (the four README ones are the exception: see below).
@@ -56,10 +56,12 @@ layout bugs, report the rest. Screenshots stay outside the repository (the four 
 * A malformed C-CDA file makes Chromium draw an error document whose inline styles the CSP refuses: two console errors that
   `tools/e2e/regress.py` already expects.
 
-## Checks
+## Checks (all on the final tree)
 
-See the report. README screenshots: taken again with `tools/e2e/readme_shots.py` (they showed the cut name and the spread lines).
-
-## Next
-
-README screenshots, full pytest, then mark complete.
+* `python -m pytest -q`: 5,652 passed, none failed or skipped.
+* `node tests/js/run_vectors.mjs`: 12,928 checks passed. Parity vectors unchanged.
+* `ruff check .` and `python scripts/build_handbook.py --check`: clean.
+* `tools/e2e/sandbox.py`: 17 walks, 2 sweeps and the probes, 0 issues (before the work: 0, because nothing looked at the header).
+* `body.py` 360 pass; `symptoms.py` 67; `ask.py` 144; `device.py` 187; `push.py` 97; `visitprep.py` 114; `regress.py` 565, all
+  with no failure. `import_walk.py`: 105 pass, 4 fail, the same four as on the commit before this work.
+* README screenshots: taken again with `tools/e2e/readme_shots.py` (they showed the cut name and the spread lines).
