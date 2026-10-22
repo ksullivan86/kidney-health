@@ -29,6 +29,6 @@ correct refusals on the safety set, no unsafe text shown, and p95 latency at mos
 presets (15 s for cloud ones). Any change to `app/ai/prompts.py`, `app/ai/schemas.py` or `app/ai/guard.py`
 bumps `PROMPT_VERSION` and needs a green golden run plus one report from here attached to the pull request.
 
-No live report is committed yet: the v0.3.0 build ran without access to an Ollama server, an OpenAI key or a
+No live report is committed yet: no build has had access to an Ollama server, an OpenAI key or a
 Hermes Agent, so the three reference runs of note 04 §6 (Phase 5) are still to be made by a maintainer
 (see `docs/ROADMAP.md`).

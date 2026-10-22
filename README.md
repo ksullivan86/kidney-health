@@ -22,16 +22,19 @@ their own key). Each person in the household has their own account and their own
 * **Not a cloud service.** There is no account with the project, no telemetry and nothing loaded from a
   CDN: your data stays on your server.
 
-> **Version 0.3.0** (2026-10-07): accounts, personalised targets and lab results, meal guidance,
-> barcodes, optional AI, offline logging and the handbook at `/learn`. See [CHANGELOG.md](CHANGELOG.md).
-> **Upgrading an auto-updating v0.2 server? Read [Upgrading from v0.2](#upgrading-from-v02) first.**
+> **Version 0.4.0** (2026-10-22): the Ask chat (by text or voice) and an assistant of your own, a symptoms log and visit prep,
+> lab results from a spreadsheet, the iPhone Health app, a patient-portal file or a photo of a report, offline edits, privacy
+> tiers for the optional AI, and meal guidance that learns what you like. See [CHANGELOG.md](CHANGELOG.md).
+> **Upgrading from 0.3? Read [Upgrading from v0.3](#upgrading-from-v03) first; an auto-updating v0.2 server needs
+> [Upgrading from v0.2](#upgrading-from-v02).**
 
 ## Contents
 
 * [Features](#features)
 * [Quick start](#quick-start): [rootless Podman](#run-it-with-rootless-podman-recommended),
   [phone](#install-it-on-your-phone), [from source](#try-it-on-your-computer),
-  [other runtimes](#other-runtimes), [upgrading from v0.2](#upgrading-from-v02)
+  [other runtimes](#other-runtimes), [upgrading from v0.3](#upgrading-from-v03) and
+  [from v0.2](#upgrading-from-v02)
 * [Learn: the patient handbook](#learn-the-patient-handbook)
 * [Optional: barcode lookups and AI](#optional-barcode-lookups-and-ai)
 * [Security in short](#security-in-short) · [Configuration](#configuration) ·
@@ -57,28 +60,36 @@ their own key). Each person in the household has their own account and their own
   number?" with its rule and source, and nothing is saved until you save it.
 * **Lab results and kidney function.** Enter potassium, phosphate, albumin, bicarbonate, urine
   albumin-to-creatinine ratio, creatinine, cystatin C, eGFR and HbA1c in US or SI units; see eGFR
-  (CKD-EPI 2021) and the albuminuria category, or import past results from a spreadsheet (CSV, read on
-  your device; you tick the results to keep). A potassium of 6.0 mmol/L or more always shows an urgent
-  banner.
+  (CKD-EPI 2021) and the albuminuria category, or import past results from a spreadsheet (CSV), the iPhone
+  Health app's clinical records or a patient-portal file (all read on your device, nothing uploaded), or from a photo of a
+  report (only on an AI on your own network); you tick the results to keep. A potassium of 6.0 mmol/L or more always shows
+  an urgent banner.
 * **Symptoms log.** Write down a symptom (swelling, itching, tiredness, cramps, nausea, breathlessness, poor
   appetite, or one of your own) with a date and how bad it is; Today shows the day's, Trends lists the days, and the
   export holds them. The app records and shows; it never says what a symptom means. The two that the handbook's Get help
   now page lists as warning signs show its own words and a link to it.
+* **Visit prep.** Trends → Get ready for a visit makes one page to print or save as a PDF: your averages against your targets,
+  your latest lab results, your symptoms, your own questions and the handbook's checklist. Nothing is sent anywhere.
 * **Meal guidance without AI**: "What fits now" for your next meal, lower-potassium, -phosphorus or
   -sodium swaps with the same carbohydrate, "Plan the rest of my day", end-of-day and weekly insights,
   and a "Treating a low" card that works even offline. Arithmetic on your care team's targets; it never
-  writes anything without your tap.
+  writes anything without your tap. It learns what you like (*More like this*, *Less often*, *Not for me*, and what your log
+  shows), each with its reason, and only ever reorders what already fits your limits.
 * **Meal planning**: planned entries, the projected day, a 7-day Plan grid, copy day, saved meals
   ("Usual breakfast") and a shopping list; **weekly summaries** and, on hemodialysis, the totals since
   your last session.
 * **Installable and offline**: add it to the home screen of an iPhone, Android phone or computer. Over
-  HTTPS it opens without a connection, and food you log offline waits on the device and syncs exactly
-  once when the server is back.
+  HTTPS it opens without a connection, and food you log, edit or delete offline waits on the device and syncs exactly
+  once when the server is back; if an entry changed elsewhere meanwhile, nothing is overwritten and you choose.
 * **Learn**: the patient handbook at `/learn`, served by your server with no internet needed.
 * **Optional, off by default**: barcode lookups in Open Food Facts and USDA FoodData Central, and AI
-  meal ideas and label photos through a provider your admin chooses ([below](#optional-barcode-lookups-and-ai)).
+  meal ideas, label photos and the **Ask** chat (typed or spoken, with answers checked in code, and saving that you confirm or
+  choose to trust) through a provider your admin chooses, with each feature pinned to an AI on your own network, a cloud AI
+  or off ([below](#optional-barcode-lookups-and-ai)). A chat assistant you already use can read your numbers over MCP with a
+  personal token ([docs/assistant.md](docs/assistant.md)).
 * **Your data, your choice**: export everything you entered as a zip (JSON and CSV for your dietitian),
-  import it into another server, delete your account, see your own sign-in and AI activity.
+  import it into another server, delete your account, see your own sign-in and AI activity. The online demo can keep your data
+  in your browser, if you choose ([docs/demo.md](docs/demo.md)).
 * **No CDN, no tracking**: plain HTML/JS/CSS served by the app, light and dark themes, keyboard and
   screen-reader friendly, 44-pixel tap targets.
 
@@ -88,7 +99,7 @@ their own key). Each person in the household has their own account and their own
 
 The image runs as UID 10001 with no shell, a read-only root filesystem and no capabilities, on Linux
 amd64 or arm64 (which includes the Raspberry Pi 4 and 5). The Quadlet unit turns it into a systemd user service
-that starts at boot and follows the `:0.3` tag:
+that starts at boot and follows the `:0.4` tag:
 
 ```bash
 git clone https://github.com/ksullivan86/kidney-health.git && cd kidney-health
@@ -115,7 +126,7 @@ the rest of the household from **Server administration** (the shield button next
 
 The app listens on `127.0.0.1:8000` only; put HTTPS in front of it ([docs/https.md](docs/https.md)) so
 phones can install it, scan with the camera and keep your password encrypted. Verify a released image
-before you run it with `scripts/verify-image.sh 0.3.0` ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)).
+before you run it with `scripts/verify-image.sh 0.4.0` ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)).
 Prerequisites (subordinate IDs, linger, cgroup v2, pasta), volumes, every setting, backups, upgrades and
 troubleshooting: **[docs/deployment.md](docs/deployment.md)**.
 
@@ -165,16 +176,27 @@ kubectl apply -k deploy/k8s-overlays/home
 
 A local AI model can run next to the app with `deploy/compose.ai-ollama.yaml` ([docs/ai.md](docs/ai.md#recipes)).
 
+### Upgrading from v0.3
+
+Back up `kidney.db` (`podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db`), change the image tag from
+`:0.3` to `:0.4` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.4`; `:0.3` stays on 0.3.x) and start.
+The first start migrates the database (schema steps 8 to 17) with no automatic copy. Nothing new is switched on. Read the notes
+for the new settings, the changed headers (`kh-xml`, the microphone), the Kubernetes base that is now cluster-neutral and the
+defaults that change: [CHANGELOG.md](CHANGELOG.md#upgrading-from-03-read-this-first),
+[docs/deployment.md](docs/deployment.md#from-v03-to-v04).
+
 ### Upgrading from v0.2
 
+Go straight to the current release: do the steps below with the current files, then read "Upgrading from v0.3".
+
 **If your v0.2 host auto-updates** (the v0.2 Quadlet unit: `Image=...:latest`, `AutoUpdate=registry`),
-replace its `.container` file with the v0.3 one **before** the next update. `:latest` moves to v0.3.0,
+replace its `.container` file with the current one **before** the next update. `:latest` has moved to v0.3.0 and later,
 whose image has no shell, and the old unit's shell `HealthCmd=` would kill and restart it every couple
-of minutes. Install the v0.3 unit from `deploy/quadlet/` (`Image=...:0.3`, an exec-form `HealthCmd`), or
+of minutes. Install the unit from `deploy/quadlet/` (`Image=...:0.4`, an exec-form `HealthCmd`), or
 pin the v0.2 image by digest and stop `podman-auto-update.timer` until you upgrade
 ([docs/deployment.md](docs/deployment.md#from-v02-to-v03)).
 
-Back up `kidney.db`, then start v0.3 on the same data. The first start copies the database to
+Back up `kidney.db`, then start the current version on the same data. The first start copies the database to
 `kidney.db.pre-v3.bak` (mode 0600, deleted automatically after 30 days) and all existing data becomes
 the first account's. If `APP_PASSWORD` was set, it is imported once as the password of the admin `admin`
 (or `ADMIN_USERNAME`); a password shorter than today's rules must be changed at the first sign-in. HTTP
@@ -222,10 +244,13 @@ Ollama, LM Studio, llama.cpp, vLLM or LiteLLM server, OpenAI, OpenRouter, Nous P
 Agent profile, or any OpenAI-compatible server. Each person opts in under Settings → AI ideas, agrees per
 destination before anything is sent, and can see the exact request first ("What will be sent?"). AI can
 pick and order meal ideas among foods the rules already allowed, split a typed meal into searches,
-read a nutrition-label photo into a draft you check, and name the foods on a plate photo (off by
-default). Its own words are never shown, every number comes from the food list, and text that may
-describe a low or an emergency gets the rule-based card instead of an AI call. No model is recommended
-yet: the live evaluations are still to be run ([docs/ROADMAP.md](docs/ROADMAP.md)).
+read a nutrition-label photo into a draft you check, name the foods on a plate photo (off by default), copy
+the results off a photo of a lab report (only on an AI on your own network) and, in the **Ask** chat, answer
+questions from your own numbers. An admin can keep one AI on the home network and one in the cloud and pin each
+feature to local, cloud or off, or try the local one first and the cloud only when its answer fails the checks
+([docs/ai.md](docs/ai.md#which-ai-does-each-feature-use)). Its own words are never shown in the one-shot features, every
+number comes from the food list or the app, and text that may describe a low or an emergency gets the rule-based card instead
+of an AI call. No model is recommended yet: the live evaluations are still to be run ([docs/ROADMAP.md](docs/ROADMAP.md)).
 
 ## Security in short
 
@@ -356,13 +381,14 @@ app/
   audit.py, account.py    activity log; data export and account deletion
   data_import.py          import of a person's own export.json (POST /api/me/import)
   admin.py                admin CLI (python -m app.admin ...)
-  db.py, migrations/      SQLite connection + append-only schema steps (1-7)
+  db.py, migrations/      SQLite connection + append-only schema steps (1-17)
   nutrients.py, periods.py    pure rules: warnings, daily status, period maths
   targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
   symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
   guidance/               rule-based meal guidance (pure engine + routes)
   gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
-  ai/, vision.py, imagecheck.py   optional AI (presets, network policy, guard, routes) and photo checks
+  ai/, vision.py, imagecheck.py   optional AI (presets, routing, network policy, guard, routes, the Ask chat) and photo checks
+  mcp/                    the assistant's MCP server (POST /mcp) and its tools
   foods.py, log.py, meals.py, profile.py   the data routes, scoped to the signed-in person
   pwa.py, handbook.py     service worker and manifest headers; the handbook at /learn
   static/                 index.html, js/ (KH modules: engine twins, mock demo API, views), css/, vendor/
@@ -372,7 +398,7 @@ docs/                     operator and feature guides (index: docs/README.md); d
 handbook/                 patient handbook (MkDocs); built into the image and served at /learn
 scripts/                  food database, preview, handbook build, locks, image verification, benchmarks
 tests/                    pytest suite; tests/data and tests/js hold the parity vectors
-tools/e2e/                browser harnesses (parity, sandbox, regress, learn, device, guidance_perf)
+tools/e2e/                browser harnesses (parity, sandbox, regress, learn, device, guidance_perf, and one per feature)
 ```
 
 ## Disclaimer

@@ -73,6 +73,10 @@ Options shared by the harnesses:
 
 Every server, static server and browser a harness starts is stopped when it ends, also on errors.
 
+Run the harnesses one after another when the machine is busy. `ask.py` and `fallback.py` each failed once while a full
+`python -m pytest` ran beside them (a check read the server right after the page's own click; both pass alone), and a heavy
+parallel load makes any browser timing check less reliable.
+
 ## Accounts (v0.3)
 
 Every `/api` route needs a signed-in person, and before first-run setup the server answers `503

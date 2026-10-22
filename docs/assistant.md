@@ -7,14 +7,14 @@ token. The plan, its rules and its parts are in
 [`dev/plans/assistant-step1.md`](dev/plans/assistant-step1.md); the API contract is in `ARCHITECTURE.md`
 ("Assistant access tokens" and "Assistant MCP server").
 
-**Where this stands.** Step 1 is in place: personal access tokens (part A), the **MCP server** at `/mcp` with four
-tools that read your numbers and check a meal (part B), and, only for a token made with **Can also save food and
-recipes**, two tools that save (part C): `log_food` and `save_recipe`. **Step 2, part A** is in place too: an
-**Ask** screen inside the app, a text chat that uses the same read tools and checks every answer in code before it
-is shown ([The Ask screen](#the-ask-screen-the-chat-inside-the-app); plan
-[`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)), and **part B** adds a **microphone** to it
-([Talking to Ask](#talking-to-ask-voice), off until the admin sets up speech to text). "Add to plan" from the chat is a later
-part ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
+**Where this stands.** All of it is built. Step 1: personal access tokens, the **MCP server** at `/mcp` with four tools that read
+your numbers and check a meal, and, only for a token made with **Can also save food and recipes**, two tools that save
+(`log_food` and `save_recipe`). Step 2: an **Ask** screen inside the app, a text chat that uses the same read tools and checks
+every answer in code before it is shown ([The Ask screen](#the-ask-screen-the-chat-inside-the-app); plan
+[`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md)); saving from that chat, as a card you press Save on or, if you
+choose, at once with Undo; and a **microphone** ([Talking to Ask](#talking-to-ask-voice), off until the admin sets up speech to
+text). Not built: recipe pages read by `check_meal`, and offering the "remember a taste" tool to an assistant connected with a
+token ([ROADMAP](ROADMAP.md), "An assistant you can talk to").
 
 ## Contents
 
@@ -367,6 +367,12 @@ not offered to an assistant connected with a token** (the MCP server, above); th
 * The trust choice is about the Ask screen. An assistant you connect with a token (above) is told in its instructions to
   read the items back and wait for your yes before it saves; that is an instruction to the assistant, not something the app
   can enforce, and it is unchanged.
+* **A limit you should know about.** A food name that comes from USDA or Open Food Facts reaches the model as data (cleaned,
+  cut and marked), but a model can be fooled by text it reads. In a trusted mode, a trick of that kind could make it ask for a
+  save you did not want. That is why both trusted options are off until your admin allows them, a save is all or nothing, shows
+  Undo and is in your activity list, and the app's own numbers are used whatever the model says. "It saves only what you asked
+  for" is an instruction to the model; the app has no reliable way to check it. Your choice is kept when the AI provider
+  changes; withdrawing the Ask consent stops Ask altogether.
 
 **What is sent, what is kept.** Your messages in this conversation (the last 20) and the app's own numbers the assistant
 looks up: targets, totals, food names and nutrients. Never your name, user name, e-mail, weight, height, exact age or notes
@@ -380,7 +386,7 @@ protocol; `python scripts/ai_eval.py --chat` measures that (the owner runs it wi
 
 ### Talking to Ask (voice)
 
-Part B adds two small things to the Ask screen, both optional and off until switched on. They are about **speech**, not about the AI:
+Voice adds two small things to the Ask screen, both optional and off until switched on. They are about **speech**, not about the AI:
 the words you speak become text in the question box, and you press Send as always.
 
 * **The microphone.** Needs a transcription server set up by your admin (`STT_BASE_URL`; [`ai.md`](ai.md#voice-input-speech-to-text)) and
@@ -395,7 +401,7 @@ the words you speak become text in the question box, and you press Send as alway
   a voice built into your device. A voice that works over the internet is never used; with no built-in voice the switch is hidden.
   Only the answer's words are spoken: not the cards, the figures or any link.
 
-**Not in this part** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next"): recipe pages.
+**Not built** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next", and the [ROADMAP](ROADMAP.md)): recipe pages.
 
 ## Honest limits
 

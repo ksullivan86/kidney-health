@@ -1,6 +1,6 @@
 # Assistant, step 1: the app as an MCP server for an external chat front end
 
-Status: in progress (2026-10-14). The owner's main AI wish is "an assistant you can talk to" (`docs/ROADMAP.md`,
+Status: done, shipped in 0.4.0 (parts A, B and C built 2026-10-14; what is left is in `docs/ROADMAP.md`). The owner's main AI wish is "an assistant you can talk to" (`docs/ROADMAP.md`,
 Ideas from the owner). Step 1 there: a per-person API token, a "check this meal" back end, exposed as an **MCP
 server**, so a chat client (Open WebUI with voice, or a Hermes Agent profile *with* tools) can ask the app for every
 number. Design note 04 already planned this as H5 (§3.3, §9: "Streamable HTTP, a per-user bearer token, read-only

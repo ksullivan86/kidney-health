@@ -40,16 +40,31 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
 2. **Checks before the tag** (the ones CI cannot do):
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
-     (needs a full clone) ([tools/e2e/README.md](../tools/e2e/README.md));
+     (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
+     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py` and `mcp_smoke.py`
+     ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
+     `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
+     click (they pass alone);
    * the workflows that only run on a schedule, on a tag or after an owner setting, the first time they
      matter: `refresh-locks.yml` once by hand (*Run workflow*; review the pull request it opens: its
      `scripts/lock.sh` path was checked only by hand when it was written), `handbook-links.yml` once by
      hand, and `handbook-pages.yml` after setting `HANDBOOK_PAGES`;
-   * the live AI evaluations before a model is recommended (`scripts/ai_eval.py`,
-     [docs/dev/ai-eval/README.md](dev/ai-eval/README.md));
+   * the live AI evaluations before a model is recommended (`scripts/ai_eval.py`, and `--chat` for Ask, for the current
+     `PROMPT_VERSION`; [docs/dev/ai-eval/README.md](dev/ai-eval/README.md)). `ai_eval.py` skips the cases that need the routing,
+     so also try, once with a real Ollama and a cloud key: a photo of a real lab report on the local AI (which units and dates a
+     vision model misreads), and the route `local_then_cloud` (the cloud AI asked only when the local answer fails the checks);
+   * speech to text: pin the image of `deploy/compose.stt-whisper.yaml` by a digest you checked (`crane digest`; the file carries a
+     placeholder), start it with a real model in its volume, check its health check and cache path, and talk to Ask from an
+     iPhone (Safari) and an Android phone (Chrome): the first tap asks for the consent, then the microphone;
    * the manual device matrix of note 02 ("Manual device test matrix"): an iPhone, an iPad, an Android
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
-     plain HTTP (barcode photo, typed digits);
+     plain HTTP (barcode photo, typed digits), with an entry edited and another deleted while offline and a conflict made from
+     a second device (the card in Settings → This device), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results,
+     the entry sheet and Settings;
+   * Settings → Account → Your data → **Import from a file** against a real server in a real browser, once: export a zip from
+     one account, open it, import the `export.json` into a fresh account, with and without "Add to my existing data" and
+     "Also replace my profile, targets and settings". No harness drives the server's page (a Node test covers its code and
+     `demo_local.py` the demo's twin);
    * Labs → Import from Apple Health with a real Health export from an iPhone (Safari, the Files app's Select All in
      `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
      headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
@@ -147,6 +162,10 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.3.0: not used.** Owner decision (2026-10-06): `:latest` moves to v0.3.0 when it is tagged and
   `HOLD_LATEST` stays unset; v0.2 hosts are warned in CHANGELOG.md, README.md and
   [docs/deployment.md](deployment.md#from-v02-to-v03) (ARCHITECTURE.md decision 7).
+* **v0.4.0: decide before tagging (owner).** The release runs schema steps 8 to 17 at start without an automatic copy, and moves
+  the shipped files from `:0.3` to `:0.4`. A host that auto-updates `:latest` migrates its database at the next pull; one that
+  tracks `:0.3` stays on 0.3.x. CHANGELOG.md, "Upgrading from 0.3", says so; set `HOLD_LATEST=true` first if you would rather
+  keep `:latest` on 0.3.0 for a while.
 * Use it for a release that would break hosts that auto-update `:latest` until they change their
   deployment files, and for patch tags of an older minor version (above). Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it

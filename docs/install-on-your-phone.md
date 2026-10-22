@@ -46,7 +46,7 @@ the page; dismiss it with ×. It is not shown again (the browser remembers it in
 the steps stay in **Settings → This device**.
 
 Supported: installable on iOS and iPadOS 17 and later; these steps are written for 26 and 27. The
-v0.3.0 release was checked in browser emulation, not yet on a real iPhone (CHANGELOG.md, "Known
+v0.4.0 release was checked in browser emulation, not yet on a real iPhone (CHANGELOG.md, "Known
 limitations"); if a step looks different on yours, please open an issue.
 
 ## Android

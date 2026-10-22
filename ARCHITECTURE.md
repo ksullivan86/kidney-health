@@ -764,10 +764,10 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/nutrients.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
-| Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py`, `docs/dev/progress/symptoms.md` |
-| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py`, `docs/dev/progress/offline-edits.md` |
-| Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md`, `docs/dev/progress/demo-local.md` |
-| Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py`, `docs/dev/progress/visit-prep.md` (no route, no table, no server code) |
+| Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
+| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
+| Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
+| Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
@@ -932,6 +932,14 @@ not verify (real phones, live AI providers, a Raspberry Pi, clinical sign-off) i
 limitations" there, the checks a maintainer runs before tagging are in `docs/maintainers.md`
 ("Checks before the tag"), and everything deferred or left open, with its owner, is in
 `docs/ROADMAP.md`. The build agents' progress notes were condensed into those files and removed
+(`docs/dev/progress/README.md`).
+
+**Status (2026-10-22): v0.4.0 is prepared.** Everything merged after v0.3.0 ships in it: no v0.3.1 was ever tagged, so the
+"v0.3.1" batch (tolerances, "Not chosen yet", the admin page, running high, the Pages demo, the CSV lab import), the assistant
+(tokens, MCP, Ask, voice, saving), symptoms and visit prep, the health-data imports, offline edits, privacy tiers, food
+preferences and the Python 3.15 image. What it could not verify is listed under "Known limitations" in CHANGELOG.md 0.4.0, the
+checks a maintainer runs before tagging are in `docs/maintainers.md`, and everything deferred or left open, with its owner, is in
+`docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
 ## M1 API
@@ -2543,6 +2551,14 @@ setting: `set_food_preference` is always a card** (the last bullet, "Tastes").
   food and recipes without asking you first. It can pick the wrong food or the wrong amount. Every number still comes from the
   app. The low and emergency rules and the dose checks always stay on. You can undo each save, from the chat or from Today.
   Photo and label readings are always shown to you to check first."; the focus starts on "Keep asking me").
+  The stored choice is not reset when the AI provider changes or a consent is withdrawn (withdrawing the `chat` consent stops
+  Ask altogether).
+* **Residual risk, not closed in code.** A food name from USDA or Open Food Facts reaches the model as untrusted data (cleaned,
+  cut, escaped and marked as data), and in a trusted mode a prompt injection could still make the model ask for a save. What limits
+  it: both trusted modes are off by default and behind an admin switch and a warning, at most 2 saves a message, all or nothing,
+  Undo on every save, the activity row, the app's own numbers (the model cannot choose a nutrient value), and the prompt rule that a
+  save follows the person's own request. That last rule is prompt-only: a code check for "the person asked to log" would be a
+  brittle word list. `scripts/ai_eval.py --chat` has an injection attempt among its questions and checks that logging a banana comes back as a card with nothing saved; it needs a live model (the owner's run).
 * **What the model may call.** `log_food` and `save_recipe` with the MCP tools' own arguments (`CH.OFFERED_TOOLS`); the system
   prompt shows their schemas without `request_key`, and a `request_key` the model sends anyway is dropped: the app makes the
   key. And `set_food_preference` (below). At most `MAX_SAVES` (2) save calls per message, a taste included, each also a tool
@@ -3037,6 +3053,7 @@ rows in their API shape, and **one request script run against a fresh server and
 refusal and its exact text, the 30-a-day limit, ids that pydantic reads as numbers, and `{{today:N}}` dates for the
 "not in the future" boundary), then the Trends grouping (hand-written: only the browser draws it). `node
 tests/js/run_vectors.mjs` replays them (`tests/js/demo_loader.mjs` loads the whole demo); `tests/test_symptoms_vectors.py`
+fails when the file is stale. The demo has no sample symptoms: its ids start at 1 so the request script replays on it unchanged.
 fails when the file is stale. `python tools/e2e/symptoms.py` drives the screens in Chromium (375 px light, 1280 px dark,
 the demo): no sideways scroll, no console error, no request to another host.
 
@@ -3420,7 +3437,8 @@ No schema step: nothing is stored for any of this.
 * **Queueing.** A failed or timed-out (6 s) edit or delete is queued, kind `edit` or `delete`:
   `{client_id, user_id, kind, method, path: "/api/log/<id>", entry_id, body, version, base: <entry as seen>, state, …}`; the
   caller gets the entry as it will look (`pending: true`) or `{pending: true}` for a delete. Without `opts.base` nothing is
-  queued (there is no version to check) and the usual "needs a connection" message stands. The queued body is cut to **what
+  queued (there is no version to check) and the usual "needs a connection" message stands. The Ask chat's **Undo**
+  is such a call (`deleteEntry(id)` with no entry), so it is never queued (`tests/test_ask_ui.py` pins the exact text of that API line). The queued body is cut to **what
   differs from the entry the person saw** (the entry sheet always sends the meal, day, status and note; `changedFields`), so
   "Use mine" never rewrites a field the person did not change, and a save that changes nothing queues nothing. **One item per entry:** a second
   edit joins the first (bodies merged, the original version kept, moved to the end of the queue so it still goes after a
@@ -3547,7 +3565,7 @@ server stays the full version; this mode never exists in the installed app.
   `#sheet-demo-local` dialog in `index.html` (all in `sw.js`'s shell list), `MockApi({seed})` and the `KH.mock.onWrite` call in `js/mock/core.js`, the boot
   hook in `js/main.js`, the Settings → Your data entry points in `js/views/settings.js`, `offlineNow()` in `js/offline.js`, `tests/js/fake_idb.mjs`,
   `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`,
-  `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tools/e2e/demo_local.py`, `docs/demo.md`, `docs/dev/progress/demo-local.md`.
+  `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tools/e2e/demo_local.py`, `docs/demo.md`.
   The browser walk (`python tools/e2e/demo_local.py`, no server): nothing stored before the choice, the sheet's wording, turn on, add an entry, reload and it
   is still there, export, stop (confirm, cancel, delete), import into an empty log, two tabs, a browser that refuses IndexedDB, a newer copy, no request to
   another host, no console or CSP error, no sideways scroll.
