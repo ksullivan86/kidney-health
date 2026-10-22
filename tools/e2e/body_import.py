@@ -455,8 +455,8 @@ def one_pass(browser: Any, base: str, out: Path, files: dict[str, Path], width: 
         result = import_now(page)
         problem = page.inner_text("#body-import-problem")
         check(f"[{tag}] a refusal stops, shows the server's words and says what was already added",
-              "rows.0: too many blood pressure readings for one day (max 30)" in problem and "(the row dated" in problem and "Added 1 weight and 0 readings before it stopped." in problem
-              and "Nothing that was added is lost" in problem, problem)
+              "rows.0: too many blood pressure readings for one day (max 30)" in problem and "(the row dated" in problem and "Added 1 weight and 0 readings before it stopped, and they are saved." in problem
+              and "Press Import to carry on" in problem, problem)
         w_rows = [w for w in admin.json("GET", "/api/body/weights", params={"start": day(40), "end": day(25)})["weights"] if w["date"] == day(30)]
         r_rows = [r for r in admin.json("GET", "/api/body/blood-pressure", params={"start": day(40), "end": day(25)})["readings"] if r["date"] == day(30)]
         check(f"[{tag}] the weight was kept and the reading was not", len(w_rows) == 1 and not r_rows, f"{w_rows} {r_rows}")
