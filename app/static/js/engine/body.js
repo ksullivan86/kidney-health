@@ -61,11 +61,12 @@
     },
     blood_pressure: {
       level: EMERGENCY,
-      text: 'Rest for 5 minutes, then measure again. The handbook lists “a blood pressure of 180/120 or higher that is still '
-        + 'that high when you check again after resting 5 minutes” under “Call your care team today”, and “a blood '
-        + 'pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the '
-        + 'chest, belly or back, numbness or weakness, a sudden change in vision or problems talking” under “Call 911 '
-        + 'now”.',
+      // The 911 signs come first: with one of them nobody should rest and measure again before calling (app/body.py).
+      text: 'The handbook lists “a blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, '
+        + 'sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems '
+        + 'talking” under “Call 911 now”. Without those signs, rest for 5 minutes and measure again: it lists “a blood '
+        + 'pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes” under '
+        + '“Call your care team today”.',
       prominent: true,
     },
   };

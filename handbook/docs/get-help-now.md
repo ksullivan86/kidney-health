@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-22
 fact_checked: 2026-10-05
-sources: [K24, A26-6, HC24, NHS-DKA, ADAK, CDC-DKA, CDC-STROKE, CDC-SEPSIS, MEDLINE-K, MEDLINE-PE, NIDDK-hypo, GLUCAGON-KIT, AKF-bleed, NKF-HDaccess, NIDDK-PD, I22P, NIDDK-Tx, Q15HD, DG53, DG28a, NHLBI-BPS, "988", KCUK]
+sources: [K24, A26-6, HC24, NHS-DKA, ADAK, CDC-DKA, CDC-STROKE, CDC-SEPSIS, MEDLINE-K, MEDLINE-PE, NIDDK-hypo, GLUCAGON-KIT, AKF-bleed, NKF-HDaccess, NIDDK-PD, I22P, NIDDK-Tx, Q15HD, DG53, DG28a, NHLBI-BPS, MEDLINE-BPM, "988", KCUK]
 ---
 
 # Get help now
@@ -51,8 +51,8 @@ Call 911 (or your local emergency number) for any of these. Do not drive yoursel
   Note the time the signs started ([CDC][CDC-STROKE]).
 - **A blood pressure of 180/120 or higher with** a sudden severe headache, trouble breathing, sudden severe
   pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking.
-  The National Heart, Lung, and Blood Institute says to call 911 when a second reading after 5 minutes is
-  also that high, and not to wait to see if it comes down on its own ([NHLBI][NHLBI-BPS]).
+  Call even if you have not measured again, and do not wait to see if it comes down on its own
+  ([MedlinePlus][MEDLINE-BPM]; [NHLBI][NHLBI-BPS]).
 - **New confusion, a seizure, or someone you cannot wake up.** Check glucose if you can and treat a
   low first ([ADA 2026 §6][A26-6]). In kidney failure, confusion can also come from waste building up
   in the blood, which KDIGO lists as a reason to start dialysis ([KDIGO 2024][K24], Table 41).
@@ -203,7 +203,8 @@ in the app, warnings link back here: [Targets and warnings](app/targets-and-warn
 - [NIDDK: low blood glucose][NIDDK-hypo]; [Glucagon Emergency Kit instructions][GLUCAGON-KIT].
 - [CDC: stroke signs][CDC-STROKE]; [CDC: sepsis][CDC-SEPSIS].
 - [NHLBI: high blood pressure symptoms][NHLBI-BPS]: the 180/120 reading, resting 5 minutes and checking
-  again, and the signs that mean 911.
+  again, and the signs that mean 911; [MedlinePlus: measuring blood pressure][MEDLINE-BPM]: a reading over
+  180/120 with those signs means 911.
 - [MedlinePlus: high potassium][MEDLINE-K]; [MedlinePlus: pulmonary edema][MEDLINE-PE].
 - [AKF: fistula and graft bleeds][AKF-bleed]; [NKF: hemodialysis access][NKF-HDaccess].
 - [NIDDK: peritoneal dialysis][NIDDK-PD]; [ISPD peritonitis guideline 2022][I22P].

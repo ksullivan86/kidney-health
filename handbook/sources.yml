@@ -646,6 +646,14 @@ NHLBI-BPS:
   checked: 2026-10-22
   kind: government
   note: "Checked 2026-10-22 against the page: blood pressure above 180/120 mm Hg is too high and needs medical attention, especially with symptoms. With a reading of 180/120 and no symptoms, wait 5 minutes and check again; if it is still high, call your healthcare provider. If the second reading is also high and you have a sudden, severe headache, difficulty breathing, sudden, severe pain in your abdomen, chest or back, numbness or weakness, a sudden change in vision or problems talking, call 9-1-1. Do not wait to see if your pressure comes down on its own. The page also says the provider may recommend a medicine or a dose change: the handbook does not repeat that. The handbook reads 180/120 as a top number of 180 or more or a bottom number of 120 or more (the project's cautious choice; the page and its figures are not explicit)."
+MEDLINE-BPM:
+  cite: "MedlinePlus (US National Library of Medicine). Measuring blood pressure (page last updated 26 August 2024)."
+  short: "MedlinePlus: measuring blood pressure"
+  url: https://medlineplus.gov/lab-tests/measuring-blood-pressure/
+  licence: "MedlinePlus (US National Library of Medicine): link and paraphrase only"
+  checked: 2026-10-22
+  kind: patient-info
+  note: "Checked 2026-10-22 against the page: seek immediate medical attention or call 911 if your blood pressure is over 180/120 mm Hg with chest pain, shortness of breath, back pain, numbness or weakness, trouble speaking or vision changes. Measuring at home: rest about five minutes in a chair, sit up straight with legs uncrossed and feet flat, an upper-arm cuff that fits snugly, the same time of day each time. The handbook follows this page (no second reading first) for the 911 line, because NHLBI's wording ('if the second measurement is also high and if you have any of these symptoms') could be read as waiting with emergency signs."
 AKF-bleed:
   cite: "American Kidney Fund. Dialysis fistula and graft bleeds: what are they and how can they be prevented and treated? (15 August 2025)."
   short: "AKF: fistula and graft bleeds"

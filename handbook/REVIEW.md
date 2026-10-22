@@ -38,8 +38,8 @@ pages, and tick it here.
       vomiting") (P2; see S5, T1)
 
 - [ ] Blood pressure 180/120 or higher (new 2026-10-22, NHLBI): the "call your care team today" line
-      (rest 5 minutes, check again, then call), the 911 line (a stroke-type sign and a second reading
-      that is also high; some clinicians would send the signs to 911 at once), and reading "180/120" as
+      (rest 5 minutes, check again, then call), the 911 line (a stroke-type sign with 180/120 or higher
+      means 911 at once, without measuring again: MedlinePlus, against a literal reading of NHLBI), and reading "180/120" as
       a top number of 180 or more or a bottom number of 120 or more; the two lines on the wallet card
       (S8)
 
@@ -233,7 +233,10 @@ provider"; "if the second measurement is also high and if you have any of these 
 headache; difficulty breathing; sudden, severe pain in the abdomen, chest or back; numbness or weakness; a sudden change in
 vision; problems talking); "Do not wait to see if your pressure comes down on its own."
 
-* **Call 911 now:** "A blood pressure of 180/120 or higher with" the six signs, and NHLBI's second reading after 5 minutes.
+* **Call 911 now:** "A blood pressure of 180/120 or higher with" the six signs, and "Call even if you have not measured again".
+  NHLBI's wording ("if the second measurement is also high and if you have any of these symptoms, call 9-1-1") could be read as
+  waiting 5 minutes with emergency signs; the handbook follows MedlinePlus (`MEDLINE-BPM`: over 180/120 with those signs, call 911)
+  and NHLBI's "Do not wait", the safer reading, and the page's stroke and chest-pain lines above say 911 at once anyway.
 * **Call your care team today** (new group "Blood pressure"): "A blood pressure of 180/120 or higher that is still that high
   when you check again after resting 5 minutes", with none of the signs above.
 * **Not repeated:** the page also says the provider "may recommend starting a medicine or changing your dose". The handbook

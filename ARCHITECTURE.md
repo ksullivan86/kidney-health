@@ -3152,7 +3152,7 @@ A weight over the alarm carries `flag` in the summary's `alarm`; a reading with 
 | Flag | Page group (`level`) | Quoted from the page | `prominent` |
 |---|---|---|---|
 | weight over the alarm | "Call your care team today" (`today`) | "weight gain above the alarm number your team gave you" | no (the person set the number) |
-| blood pressure at 180 or 120 | both; `level` is `emergency` | "A blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes" (today); "A blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking" (911) | yes; the text also says to rest 5 minutes and measure again |
+| blood pressure at 180 or 120 | both; `level` is `emergency` | "A blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes" (today); "A blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking" (911) | yes; the 911 quote comes first, then, without those signs, rest 5 minutes and measure again |
 
 Part A added the two blood pressure lines to `handbook/docs/get-help-now.md` (source `NHLBI-BPS`, read 2026-10-22; the page's clause about a medicine or a
 dose change is deliberately not repeated), to the shared wallet card and to `handbook/REVIEW.md` for the clinician review. `tests/test_body.py` reads the page

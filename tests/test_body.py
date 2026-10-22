@@ -717,7 +717,10 @@ def test_every_quoted_phrase_is_on_the_handbook_page_under_its_group():
     assert "a blood pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes" \
         in sections["Call your care team today"]
     assert "a blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing" in sections["Call 911 now"]
-    assert "not to wait to see if it comes down on its own" in sections["Call 911 now"]
+    # with one of the signs, 911 at once: no second reading first (MedlinePlus), and do not wait (NHLBI)
+    assert "call even if you have not measured again, and do not wait to see if it comes down on its own" in sections["Call 911 now"]
+    text = body.RED_FLAGS["blood_pressure"]["text"]
+    assert text.index("Call 911 now") < text.index("rest for 5 minutes")  # the 911 signs are read first
 
 
 def test_the_page_cites_nhlbi_and_gives_no_medicine_advice_about_blood_pressure():
@@ -737,7 +740,7 @@ def test_the_flags_name_no_cause_treatment_or_dose():
     for key, entry in body.RED_FLAGS.items():
         assert not forbidden.search(entry["text"]), key
     assert body.RED_FLAGS["blood_pressure"]["prominent"] is True and body.RED_FLAGS["weight_alarm"]["prominent"] is False
-    assert "rest for 5 minutes, then measure again" in body.RED_FLAGS["blood_pressure"]["text"].lower()
+    assert "without those signs, rest for 5 minutes and measure again" in body.RED_FLAGS["blood_pressure"]["text"].lower()
 
 
 def test_a_flagged_reading_carries_the_pointer_and_an_ordinary_one_does_not(client):

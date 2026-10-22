@@ -9,7 +9,7 @@ time) · a low I can't treat: glucagon, turn me on my side, call 911 · blood ke
 more, or ketones with vomiting · fistula bleeding not stopped after 10–15 min of firm pressure ·
 fever with confusion or a racing pulse · after a transplant, fever with shaking chills · blood pressure
 180/120 or higher with a sudden severe headache, trouble breathing, chest, belly or back pain, numbness or
-weakness, a sudden vision change or trouble talking (still that high after 5 minutes' rest)
+weakness, a sudden vision change or trouble talking (call, do not wait to measure again)
 
 **Call my team now or today:** potassium 6.0–6.4 mmol/L · ketones 1.6–2.9 mmol/L (now; emergency
 room if no answer) · vomiting, diarrhea or not eating · cloudy PD fluid (keep the bag) · no fistula

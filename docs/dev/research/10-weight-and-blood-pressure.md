@@ -174,11 +174,13 @@ constraints in SQL beyond `NOT NULL` (the project keeps enums in the models so a
   (a new group "Blood pressure"): "**A blood pressure of 180/120 or higher** that is still that high when you check again after
   resting 5 minutes"; under **Call 911 now**: "**A blood pressure of 180/120 or higher with** a sudden severe headache, trouble
   breathing, sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems
-  talking", followed by NHLBI's own condition (it says to call 911 when a second reading after 5 minutes is also that high)
-  and "not to wait to see if it comes down on its own". The page's clause that the provider "may recommend starting a medicine or
+  talking. Call even if you have not measured again, and do not wait to see if it comes down on its own" (MedlinePlus
+  `MEDLINE-BPM`: over 180/120 with those signs, call 911; and NHLBI's "Do not wait"; NHLBI's own "if the second measurement is
+  also high and if you have any of these symptoms" could be read as waiting with emergency signs, so the handbook takes the safer
+  reading, decided 2026-10-22 at review). The page's clause that the provider "may recommend starting a medicine or
   changing your dose" is **not** repeated (no medicine advice). The wallet card (`includes/help-card.md`) carries both in a few
-  words. The reading's `flag` quotes both lines, says to rest 5 minutes and measure again, links to the page, and is
-  **prominent**. A second reading within 15 minutes that is still that high changes nothing in the app's words (the page
+  words. The reading's `flag` quotes the 911 line **first**, then says that without those signs a person rests 5 minutes and
+  measures again, quoting the care-team line; it links to the page and is **prominent**. A second reading within 15 minutes that is still that high changes nothing in the app's words (the page
   already says what to do). Reading "180/120" as a top number of 180 or more **or** a bottom number of 120 or more is the
   project's cautious choice (NHLBI does not say), and is an open item for the clinician review (`handbook/REVIEW.md`,
   "Emergency tiers and red flags").
@@ -296,8 +298,8 @@ contract.
   everyone" group like `user.units.labs`. All three are carried over by an import with `replace_profile` (so the care team's numbers move with the person),
   and the "not selected" line names them.
 * **Flags.** Both are `{level, text, href, link_text, prominent}` like a symptom's `red_flag`; the blood pressure flag's `level` is `emergency` (it points to both
-  groups). The weight flag is `today`, not prominent. The 911 line on the page follows NHLBI (a sign **and** a second reading that is also high after 5
-  minutes), and the wallet card carries both lines.
+  groups). The weight flag is `today`, not prominent. The 911 line on the page needs no second reading when a sign is there (MedlinePlus; see §4.5), the
+  flag's text puts it first, and the wallet card carries both lines.
 * **Import and export** (§4.11). There is **no "replace my data" mode** in the code (an account that has data is a 409 unless `merge=1`, for every kind), so
   that part of §4.11 is not built; a row with a `source_key` is left out when the person has that key, a typed row when an identical one is there, a day over
   its limit is skipped and listed (like symptoms), and the lists are capped at 20,000 rows each. `weights` and `blood_pressures` follow `symptoms` in

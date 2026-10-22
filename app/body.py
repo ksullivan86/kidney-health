@@ -282,7 +282,8 @@ def summarise(weights: Sequence[dict[str, Any]], readings: Sequence[dict[str, An
 
 # What the handbook's Get help now page says about a weight or a reading. ``quotes`` are (group, phrase) pairs copied from the
 # page (without its bold marks) and ``text`` is the line the app shows, built only from those quotes and the page's own group
-# headings (``HANDBOOK_GROUP_HEADINGS``) plus the one instruction the page also gives: rest 5 minutes and measure again.
+# headings (``HANDBOOK_GROUP_HEADINGS``) plus the one instruction the page also gives, for a reading without the 911 signs:
+# rest 5 minutes and measure again.
 RED_FLAGS: dict[str, dict[str, Any]] = {
     "weight_alarm": {
         "level": TODAY,
@@ -297,11 +298,12 @@ RED_FLAGS: dict[str, dict[str, Any]] = {
             (EMERGENCY, "A blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe "
                         "pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems talking"),
         ),
-        "text": "Rest for 5 minutes, then measure again. The handbook lists “a blood pressure of 180/120 or higher that is still "
-                "that high when you check again after resting 5 minutes” under “Call your care team today”, and “a blood "
-                "pressure of 180/120 or higher with a sudden severe headache, trouble breathing, sudden severe pain in the "
-                "chest, belly or back, numbness or weakness, a sudden change in vision or problems talking” under “Call 911 "
-                "now”.",
+        # The 911 signs come first: with one of them nobody should rest and measure again before calling.
+        "text": "The handbook lists “a blood pressure of 180/120 or higher with a sudden severe headache, trouble breathing, "
+                "sudden severe pain in the chest, belly or back, numbness or weakness, a sudden change in vision or problems "
+                "talking” under “Call 911 now”. Without those signs, rest for 5 minutes and measure again: it lists “a blood "
+                "pressure of 180/120 or higher that is still that high when you check again after resting 5 minutes” under "
+                "“Call your care team today”.",
         "prominent": True,
     },
 }

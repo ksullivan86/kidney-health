@@ -13,9 +13,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
   the box.
 * Nothing to see yet except one thing in the handbook: **Get help now** gained two lines about a blood pressure of 180/120 or
-  higher (rest 5 minutes and check again; with a sudden severe headache, trouble breathing, pain in the chest, belly or back,
-  numbness or weakness, a sudden change in vision or trouble talking, call 911), from the US National Heart, Lung, and Blood
-  Institute, and the printable wallet card carries them in a few words. The weight and blood pressure log itself, with the numbers
+  higher (with a sudden severe headache, trouble breathing, pain in the chest, belly or back, numbness or weakness, a sudden
+  change in vision or trouble talking, call 911 at once, without measuring again; without those signs, rest 5 minutes and check
+  again, and call your care team today if it is still that high), from the US National Heart, Lung, and Blood Institute and
+  MedlinePlus, and the printable wallet card carries them in a few words. The weight and blood pressure log itself, with the numbers
   your care team gave you, arrives in the next part; your export already holds anything recorded through it.
 
 ### For people who run a server

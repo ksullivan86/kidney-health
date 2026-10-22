@@ -65,9 +65,9 @@ header on writes. The full table is in ARCHITECTURE.md; in short: `GET`/`POST`/`
 | When | The app shows | From the handbook page |
 |---|---|---|
 | a weight is over the person's alarm | "The handbook lists “weight gain above the alarm number your team gave you” under “Call your care team today”." (not prominent: the person set the number) | Get help now → Call your care team today → Fluid |
-| a reading has a top number of 180 or more, or a bottom number of 120 or more | rest 5 minutes and measure again, and both lines of the page quoted: under Call your care team today (still that high after resting 5 minutes) and under Call 911 now (with a sudden severe headache, trouble breathing, chest, belly or back pain, numbness or weakness, a sudden change in vision or trouble talking). Prominent. | Get help now → the new "Blood pressure" group and the bullet after the stroke signs |
+| a reading has a top number of 180 or more, or a bottom number of 120 or more | both lines of the page quoted, the 911 one first: under Call 911 now (with a sudden severe headache, trouble breathing, chest, belly or back pain, numbness or weakness, a sudden change in vision or trouble talking; no second reading needed), then, without those signs, rest 5 minutes and measure again, under Call your care team today (still that high after resting 5 minutes). Prominent. | Get help now → the new "Blood pressure" group and the bullet after the stroke signs |
 
-The lines come from NHLBI, "High Blood Pressure – Symptoms" (last updated 2024-04-25). The page also says the provider "may recommend starting
+The lines come from NHLBI, "High Blood Pressure – Symptoms" (last updated 2024-04-25), and the 911 line also from MedlinePlus, "Measuring Blood Pressure" (last updated 2024-08-26), which sends a reading over 180/120 with those signs to 911 without a second reading. The page also says the provider "may recommend starting
 a medicine or changing your dose"; the handbook leaves that out on purpose. Reading "180/120" as *either* number is the project's cautious choice
 (NHLBI does not say) and is an open question in `handbook/REVIEW.md` ("Emergency tiers and red flags", S8) for the clinician review.
 `tests/test_body.py` reads the page and fails when a quoted phrase is no longer under its heading, so the app never quotes words the page no
