@@ -12,6 +12,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
   kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
   the box.
+* **Choose the `.zip` itself: nobody has to unzip it first.** **Settings → Account → Your data → Import from a file** takes the `.zip` of an export
+  of yours (or the `export.json` inside it, as before); **Import from Apple Health** (weights and blood pressure) takes the Health app's
+  `export.zip`; and **Labs → Import from Apple Health (clinical records)** takes the same `export.zip` and reads only the lab-result files in its
+  `clinical-records` folder. The `.zip` is opened **on your device** with the browser's own tools: it is never uploaded, only the one file each
+  import needs is read out of it (the Health `export.xml` in pieces, so a file of hundreds of megabytes is fine; Cancel stops it), and a file
+  that is damaged, not finished downloading or not an export from the Health app or this app is turned away with a plain reason. A browser that
+  cannot do this (Safari before 16.4) shows the old advice to unzip the file first; choosing the unzipped files still works everywhere.
 * Nothing to see yet except one thing in the handbook: **Get help now** gained two lines about a blood pressure of 180/120 or
   higher (with a sudden severe headache, trouble breathing, pain in the chest, belly or back, numbness or weakness, a sudden
   change in vision or trouble talking, call 911 at once, without measuring again; without those signs, rest 5 minutes and check
@@ -30,6 +37,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Choosing a `.zip` in the imports changes nothing on the server**: no route, setting or migration, and the server still never receives an archive
+  (the page opens it on the person's device and sends the same JSON or rows as before). The page now ships one more script (`js/engine/zip.js`) in the
+  service worker's cache list, so the app's update prompt appears once after the upgrade, as for any release.
 * **Schema step 18** (`m018_body_measurements.py`): two new tables, `weights` and `blood_pressures`, deleted with the account. It runs
   at the first start of this version and changes nothing that exists (take a backup first, as for any upgrade).
 * The export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`); the export version stays 1 and older
@@ -56,6 +66,22 @@ the API. Security fixes are released as patch versions of the newest minor versi
   duplicate, only what is missing is added back) and "Also replace my profile, targets and settings", with B's state checked through
   the API against A's. It is listed in `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist
   (`docs/maintainers.md`), which now leaves only a phone's own file picker to a person; the two ROADMAP items it closes are removed.
+* **Reading a `.zip` in the browser: `js/engine/zip.js` (`KH.zip`)**, design note 11 (`docs/dev/research/11-reading-a-zip-in-the-browser.md`).
+  A plain script (no DOM, no library, no new vendored file, no server code, no schema step) over `Blob.slice`, `Blob.stream` and
+  `DecompressionStream('deflate-raw')`: `supported, open, find, list, stream, text, ZipError`, the rules `RULES.exportJson`, `healthXml`,
+  `healthCda`, `clinicalRecords`, and the caps `MAX_DIRECTORY_BYTES` (32 MiB) and `MAX_ENTRIES` (200,000). It is strict: the end record, zip64 and
+  the directory are checked before anything is believed, an entry's local header must agree with the directory, and the bytes are counted and
+  checksummed (CRC-32) **while they are inflated**, so an entry that outgrows its declared size is stopped after its first chunk, whatever the
+  archive claims; a cancel reaches the file's own stream. It is listed in `index.html` (before the three views) and `sw.js`. The three views take it:
+  `settings.js` (`textFromZip`), `body_import.js` (`startScan(file, zipped)`) and `lab_fhir.js` (`readZip`, `readEntry`).
+  Tests: `tests/test_zip_reader.py` with `tests/js/zip_reader.mjs` and the archive builder `tests/zip_support.py` (every archive is built at test
+  time: `zipfile`, plus a hand-written byte builder for zip64, a fake end record, lying sizes, a flipped CRC, a cut deflate stream, an encrypted entry;
+  the fifteen cases of note 11, a 64 MB entry under a memory bound, abort, no `DecompressionStream`); the three page tests run each view on archives
+  made in memory (`tests/js/zip_writer.mjs`); `tools/e2e/import_walk.py` and `tools/e2e/body_import.py` now choose the `.zip` itself in Chromium (and
+  keep a check that the bare `export.json` and `export.xml` still work). `import_walk.py` also had two stale expectations since schema step 18
+  (the zip now holds `weights.csv` and `blood_pressure.csv`, and the "not chosen" line names the weight and blood pressure settings): fixed. The
+  ROADMAP item "Let Import from a file take the export .zip itself" is removed; what stays open is a run with a real iPhone `export.zip`
+  (`docs/maintainers.md`).
 * **The Health app import sheet** (`js/views/body_import.js`, `KH.bodyImport.open()`, the sheet `#sheet-body-import` in `index.html`; the reader
   `js/engine/apple_health.js` is now loaded by the page, after `engine/rules.js`, with `sw.js` precaching both): the review, the period, the watch
   readings unticked, batches of 1,000 with `source: "apple_health"` and no source name, a per-day trim against the rows the person already has

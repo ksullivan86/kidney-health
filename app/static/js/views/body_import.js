@@ -380,7 +380,7 @@
         : `Found ${weightsText(s.found.weights)} and ${readingsText(s.found.readings, true)}. The app can keep ${weightsText(s.kept.weights)} and ${readingsText(s.kept.readings)}.`);
     reviewEl.append(headline);
     if (found === 0) {
-      reviewEl.append(h('p', { class: 'hint' }, 'Choose export.xml from the unzipped Health export (the apple_health_export folder). If it is the right file, it holds no weights or blood pressure readings in kg, lb or mmHg.'));
+      reviewEl.append(h('p', { class: 'hint' }, 'Choose export.zip from the Health app (or export.xml from the apple_health_export folder). If it is the right file, it holds no weights or blood pressure readings in kg, lb or mmHg.'));
     }
     if (kept > 0) {
       reviewEl.append(h('p', { class: 'bi-range', id: 'body-import-range' },

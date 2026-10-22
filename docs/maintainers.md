@@ -61,21 +61,26 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      phone with Chrome, desktop Chrome and Safari, over HTTPS (live camera, install, offline outbox) and
      plain HTTP (barcode photo, typed digits), with an entry edited and another deleted while offline and a conflict made from
      a second device (the card in Settings → This device), Settings → Your data → Import from a file with the phone's own file
-     picker (choose an `export.json` kept in the Files app or Android's picker; after closing the password prompt, choosing the same
-     file again asks for the password again), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results, the
+     picker (choose the export `.zip` kept in the Files app or Android's picker, and an `export.json` from inside it; after closing
+     the password prompt, choosing the same file again asks for the password again), and the screen readers (VoiceOver, TalkBack) on Profile, Lab results, the
      entry sheet and Settings;
    * Settings → Account → Your data → **Import from a file** is covered by `import_walk.py` in Chromium (export from one
      account, import the `export.json` into a fresh account with and without "Add to my existing data" and "Also replace
      my profile, targets and settings", the files it refuses and the password prompt); on a phone it is part of the device
      matrix above, because the harness hands the file to the page and only a phone's own file picker shows how a real one
      behaves;
-   * Labs → Import from Apple Health with a real Health export from an iPhone (Safari, the Files app's Select All in
-     `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
+   * Reading the zip in the browser with a real Health `export.zip` from an iPhone (note 11, "Re-verify"): Settings → Your data
+     → Import from a file with the app's own export `.zip` in Safari on the phone and in a desktop browser, the Health import
+     sheet and Labs → Import from Apple Health, each with the `.zip` itself. The tests build their own archives (`zipfile` and a
+     hand-written builder), so this is the only check on what Apple's archiver really writes (its methods, zip64, the
+     `__MACOSX` extras); the reader refuses what it does not understand with a plain reason and the old "unzip it" advice;
+   * Labs → Import from Apple Health with a real Health export from an iPhone (Safari, the `export.zip` itself and the Files
+     app's Select All in `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
      headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
      the lookup described in [targets-and-labs.md](targets-and-labs.md#in-the-app);
    * Weights and blood pressure from the Health app with a real `export.xml` from an iPhone (the Health app's Export All Health
-     Data, `export.zip` unzipped in the Files app; Safari on the phone, so the file's own picker and a file of hundreds of megabytes
-     are read): `body_import.py` and the vectors in `tests/data/apple_health_vectors.json` use hand-written records, so look at
+     Data, `export.zip` chosen as it is and, once, `export.xml` unzipped in the Files app; Safari on the phone, so the file's own picker
+     and a file of hundreds of megabytes are read): `body_import.py` and the vectors in `tests/data/apple_health_vectors.json` use hand-written records, so look at
      the review's "Left out" lines for units or records a real export has that the reader skips, check that a watch's readings
      are listed apart and unticked, that the progress line moves and Cancel stops the read, and that importing the same export
      again adds nothing (note 10 §4.8, "Re-verify"). Also an export with a source that has more than 20 weights or 30

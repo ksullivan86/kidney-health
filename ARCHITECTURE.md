@@ -1095,7 +1095,9 @@ export.json = {"format": "kidney-health-export", "version": 1, "exported_at", "a
 ### Import of `export.json` (`POST /api/me/import`, `app/data_import.py`)
 
 The body is the exact JSON file the export wrote. The browser (`js/views/settings.js`, Settings → Account → Your
-data → Import from a file) reads it, leaves out the sections the import never reads (`user`, `ai_audit`,
+data → Import from a file) takes the export `.zip` itself or the `export.json` inside it (a `.zip` is opened on the device and
+only its `export.json` is read, up to 16 MiB: see "Reading a .zip in the browser" below; the server never gets an archive),
+leaves out the sections the import never reads (`user`, `ai_audit`,
 `activity`, `ai_usage`, `ai_consents`, `ai_provider`), calls it with `dry_run=1`, shows the report and imports
 with a second call. Both calls need the password entered recently, the app header (CSRF) and the signed-in
 person; they act on that person only (`user.id`), never on a name or id in the file.
@@ -1364,8 +1366,12 @@ creatinine > cystatin C; nothing on dialysis, in pregnancy or under 18; albuminu
 ### Lab results from Apple Health clinical records (browser only; `js/engine/fhir_labs.js`, `js/views/lab_fhir.js`; ROADMAP "Ideas from the owner")
 
 **No new route, no new setting, no new dependency, no new network request, no schema step.** The Health app's "Export All Health Data" zip
-holds `apple_health_export/clinical-records/` with one FHIR JSON resource per file. The person unzips it in the Files app and chooses those
-files in the Labs view (card `#lab-fhir`, below "Import from a spreadsheet"). **Least trust: the files are read on the device and never
+holds `apple_health_export/clinical-records/` with one FHIR JSON resource per file. The person chooses the `export.zip` itself in the Labs
+view (card `#lab-fhir`, below "Import from a spreadsheet"), or, if it was already unzipped in the Files app, those files. A `.zip` is opened
+on the device by `KH.zip` (see "Reading a .zip in the browser" below): its `clinical-records/*.json` entries go through the same loop,
+caps and engine as picked files, each read with `KH.zip.text` (a damaged, encrypted or unreadable entry is counted as a file that could not
+be read; one over 1 MB is not read; a `.zip` with no such folder says so; 2,001 entries or more are refused before any is read).
+**Least trust: the files are read on the device and never
 uploaded.** Each file is opened with `File.text()` (a file over 1 MB is not opened), handed to `KH.fhirLabs.start().add()` and let go of;
 `finish()` returns the rows, the refusals and the counts; the page shows the headline ("41 results found in 380 files; …") and the CSV
 import's review table; only the ticked rows go to `POST /api/labs/import` through `KH.views.labs.saveImported` (the shared save: test,
@@ -1404,6 +1410,40 @@ appear only on the page, in the list of refusals, and no file or file name is st
   `tests/test_fhir_labs_ui.py` (with `tests/js/fhir_labs_page.mjs`) checks the page: no inline script or handler, no network call, nothing
   stored in the browser, a file over 1 MB never read, new rows ticked, only ticked rows saved, text drawn as text. The demo has the same
   card (`js/mock/labs.js` answers the import route).
+
+### Reading a .zip in the browser (`js/engine/zip.js`, `KH.zip`; design note `docs/dev/research/11-reading-a-zip-in-the-browser.md`)
+
+**No new route, setting, schema step, dependency, vendored file or network request, no server code and no twin to keep in step.** Three imports take
+the archive itself, so that nobody has to unzip it first: **Import from a file** (`export.json` in this app's own export `.zip`; Settings, `js/views/settings.js`),
+**Weights and blood pressure from the Health app** (`apple_health_export/export.xml`; `js/views/body_import.js`) and **Lab results from Apple Health clinical
+records** (`clinical-records/*.json`; `js/views/lab_fhir.js`). **The archive is read on the device, never uploaded, and the server never takes one** (the same JSON or
+rows reach the same routes as before). The module is a plain script with no DOM and no other module (`index.html` and `sw.js` list it with the engines, before the
+three views) and uses what the browser has: `Blob.slice`, `Blob.stream` and `DecompressionStream('deflate-raw')` (Chrome 103, Safari 16.4, Firefox 113). A browser
+without it (`KH.zip.supported()` false) gets the old "open the .zip first" advice. API: `supported, open, find, list, stream, text, ZipError` and the constants
+`MAX_DIRECTORY_BYTES`, `MAX_ENTRIES`, `DEFAULT_TEXT_BYTES` and the rules `RULES.exportJson, healthXml, healthCda, clinicalRecords`.
+
+* **The archive is not trusted.** `open` reads only the last 65,577 bytes and the central directory: the end record is searched backwards and must have a comment
+  that reaches exactly the end of the file; disk numbers 0; zip64 through its locator and record (64-bit values with `getBigUint64`, above 2^53 - 1 refused); the
+  directory must end exactly at the end record, hold at most 200,000 entries and be at most 32 MiB, and the lowest local header offset must be 0 (data in front of
+  the first entry, as in a self-extracting archive, is damaged). An encrypted entry, a method other than stored or deflate and an entry on another disk are recorded
+  and refused **only when a rule selects them**, so one odd file in `workout-routes/` does not stop the weights.
+* **Choosing entries** (`RULES`): the name is split at `/` with empty parts dropped, never used as a path (a `.` or `..` part never matches); `__MACOSX/` entries,
+  names starting `._` and folders are ignored; the base name is compared exactly; depth is the number of folders above the file (`export.json` and `export.xml`: 0 or 1;
+  `clinical-records/*.json`: the folder is exactly `clinical-records`, depth 1 or 2). `find` wants exactly one match (`missing`, `ambiguous`), `list` gives every one.
+* **Reading an entry** (`stream`, `text`): the declared size against `maxBytes` first (`too_big`, nothing read); the local header must agree with the directory (signature,
+  name bytes, method) and the data must end before the directory; the bytes come from `blob.slice().stream()`, in pieces of 16 KiB into the inflater, through a checking
+  `TransformStream` that counts and keeps a CRC-32 and fails with `damaged` **the moment the count passes the declared size, without passing that chunk on** (a
+  "zip bomb" is stopped after its first chunk), and at the end on a short count or a CRC mismatch. Memory stays bounded whatever the archive claims; an abort or a cancel
+  cancels the file's own stream (it does not rely on the pipe chain to do it) and rejects with an `AbortError`. Reads use `getReader()` loops, never `for await` (Safari).
+  `text` is for small entries (`export.json` at most 16 MiB, a clinical record 1 MB): one buffer of the declared size, decoded as UTF-8 with `fatal: true`.
+* **Errors** (`ZipError.code`): `not_zip`, `unsupported`, `missing`, `ambiguous`, `too_big`, `damaged`, `browser`. Each view has its own plain-word table for them and shows
+  nothing the archive says (the archive's words never reach the page, except a clinical record's own file name in the list of refusals, drawn as text).
+* **Checks**: `tests/test_zip_reader.py` (with `tests/js/zip_reader.mjs` and the archive builder `tests/zip_support.py`): every archive is built at test time, with `zipfile`
+  and with a small byte builder for the shapes `zipfile` cannot make, and the fifteen cases of note 11 section 5 are asserted (the app's own export, stored/deflated/empty/UTF-8
+  entries, a data descriptor, zip64, a fake end record in a comment, a re-zipped folder, a Health-shaped archive with an encrypted entry, a 64 MB entry under a memory bound,
+  and every refusal with its code, abort, and no `DecompressionStream`); each page test (`test_data_import_ui.py`, `test_body_import_ui.py`, `test_fhir_labs_ui.py`) runs its
+  view on archives; the walks `tools/e2e/import_walk.py` and `tools/e2e/body_import.py` choose the `.zip` itself in Chromium. Re-verify with a real iPhone `export.zip`
+  (Safari on the phone and a desktop browser): the tests build their own archives.
 
 ### Lab results from a patient-portal C-CDA file (browser only; `js/engine/ccda_labs.js`, `js/views/lab_ccda.js`; ROADMAP "Ideas from the owner")
 
@@ -3184,19 +3224,24 @@ and fails when a quoted phrase is no longer under its heading, and when a line n
 ### Import from the iPhone Health app (Part C: `js/engine/apple_health.js`, `js/views/body_import.js`, the sheet `#sheet-body-import`)
 
 Browser only: no route, setting or schema step of its own, no dependency and no new network host. The person exports from the Health app (their picture,
-Export All Health Data), taps `export.zip` in the Files app to unzip it and picks `apple_health_export/export.xml` in the sheet, which the buttons of
-Trends (Weight and blood pressure → Import from Apple Health) and Settings → Your data open with `KH.bodyImport.open()` (Part B). Note 10 §4.8 is the
+Export All Health Data) and picks `export.zip` itself in the sheet (or `apple_health_export/export.xml`, if it was already unzipped in the Files app); the
+sheet is opened by the buttons of
+Trends (Weight and blood pressure → Import from Apple Health) and Settings → Your data with `KH.bodyImport.open()` (Part B). A `.zip` is opened on the device by
+`KH.zip` ("Reading a .zip in the browser" below): the sheet streams its `export.xml` (`KH.zip.stream`, checked against its size and CRC-32 as it comes out) through
+`TextDecoderStream` into the same scan, with the same `AbortController` and a progress line counted in the unzipped size; a `.zip` with no `export.xml` (the
+clinical documents file `export_cda.xml` gets its own words), a damaged or cut-off one, and a browser without `DecompressionStream` are told so in plain words
+(`ZIP_MESSAGE`, the old "unzip it in Files" advice for the last). Note 10 §4.8 is the
 specification; the reader's header comment has its details and `tests/data/apple_health_vectors.json` pins each.
 
 * **The reader** (`KH.appleHealth.scan(source, {today, signal, onProgress})`, loaded after `engine/rules.js`): the file can be hundreds of megabytes and
   starts with an internal DTD, so it is **never given to an XML parser** (no `DOMParser`, no entity expansion): it is streamed as text
-  (`file.stream().pipeThrough(new TextDecoderStream())`), each `<Record ` start tag is cut out with a bounded buffer (a tag over 8 KiB is skipped and
+  (`file.stream().pipeThrough(new TextDecoderStream())`, or the zip entry's stream), each `<Record ` start tag is cut out with a bounded buffer (a tag over 8 KiB is skipped and
   counted) and read by a hand-written scanner. It keeps `HKQuantityTypeIdentifierBodyMass` in kg or lb (a weight) and the systolic and diastolic
   `…BloodPressure…` records in mmHg paired by identical `startDate` and `sourceName` (a reading); **nothing else is read** (no heart rate, steps, glucose
   or insulin). Rows carry `date`/`time` as written, `context` by time of day, `source_key` (the first 32 hex characters of the SHA-256 of
   `type|startDate|value|sourceName`, so a second import adds nothing) and `sourceName`, which is for the sheet only.
-* **The sheet** has five steps. *Choose*: the three export steps and a picker for one `.xml` file (a `.zip`, `export_cda.xml` and an empty file are refused
-  with a reason). *Reading*: a progress line from `onProgress` (about every 10 MB) and **Cancel**, which aborts the scan and cancels the file stream.
+* **The sheet** has five steps. *Choose*: the export steps and a picker for one `.zip` or `.xml` file (`export_cda.xml` and an empty file are refused
+  with a reason, and so is a `.zip` that cannot be used). *Reading*: a progress line from `onProgress` (about every 10 MB) and **Cancel**, which aborts the scan and cancels the file stream.
   *Review*: the headline in words (found, kept), the date range, **what was left out and why** (a unit the app does not read, half a reading, outside the
   plausibility range, unreadable, repeats), the sources, the period (**the last 3 months by default** (`defaultSince`), or everything in the file; no
   picker when all of the file is recent) with the counts of each, and **readings from a watch listed apart and unticked** (a source whose `sourceName`
@@ -3221,8 +3266,9 @@ specification; the reader's header comment has its details and `tests/data/apple
   as the other imports do.
 * **Checks**: `tests/test_body_import_ui.py` with `tests/js/body_import_page.mjs` (the view against a fake page, a fake backend that keeps the batch rules and
   fake files: the review, the watch rows, the default period, the trimming, a refusal in the middle, Cancel and Stop, text from the file drawn as text, no
-  network call of its own), `tests/test_frontend_shell.py` (the script lines, `sw.js`, no HTML sink) and the browser harness `tools/e2e/body_import.py`
-  (a real server and the demo, a generated `export.xml`, 375 px and 1280 px, light and dark; the server's rows read back through the API). The sample files are
+  network call of its own; and an `export.zip` made in memory by `tests/js/zip_writer.mjs`: the same review and rows as the bare file, each message, Cancel while
+  a `.zip` is read), `tests/test_frontend_shell.py` (the script lines, `sw.js`, no HTML sink) and the browser harness `tools/e2e/body_import.py`
+  (a real server and the demo, a generated `export.xml` chosen inside an `export.zip` and bare, 375 px and 1280 px, light and dark; the server's rows read back through the API). The sample files are
   hand-written: look at a real iPhone export before calling the import done (note 10, "Re-verify").
 
 ### Parity (demo/preview mode)

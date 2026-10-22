@@ -244,9 +244,12 @@ and value as shown) is not ticked, and the server skips repeats as well (`POST /
 **Import from Apple Health (clinical records)** (on the same view, next to the spreadsheet import): if you linked your
 health system in the iPhone Health app, its lab results can be imported from the Health export. The app never sees the
 export: **the files are read in the browser, on your device, and nothing is uploaded.** On an iPhone: in the Health app tap
-your picture, then *Export All Health Data* and save the zip to Files; in Files tap the zip to unzip it, open
-`apple_health_export` and `clinical-records` (one FHIR JSON file per record); back in the Labs view choose the files, go to
-`clinical-records`, tap *Select*, then *Select All*. The page reads each file on the device (a file over 1 MB is not opened),
+your picture, then *Export All Health Data* and save the zip to Files; back in the Labs view choose the `export.zip` itself
+(the page opens it on the device with the browser's own decompression, `js/engine/zip.js`, and reads only the files in its
+`clinical-records` folder, one FHIR JSON file per record; a `.zip` with no such folder says so, and a damaged file inside it counts
+as a file that could not be read). If the zip was already unzipped in Files, or the browser cannot open a zip, open
+`apple_health_export` and `clinical-records` there instead and choose the files, go to `clinical-records`, tap *Select*, then
+*Select All*. The page reads each file on the device (a file over 1 MB is not opened),
 shows a line such as "41 results found in 380 files; 245 records that are not lab results; 12 results of tests the app does
 not track; 3 results in a unit the app cannot convert", and then the **same review table as the spreadsheet import**. The
 results come from your health system, not from an AI, so the new ones start **ticked** (a result you already have, same test,

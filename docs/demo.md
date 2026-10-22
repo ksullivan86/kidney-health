@@ -36,7 +36,8 @@ makes no difference while the mode is on (there is no server to reach).
   with your log, own foods, saved meals, lab results, symptoms, food preferences ("Not for me", "More like this", "Less often"), profile and settings. It never holds a
   password, session or key. The AI sections are empty (the demo has no AI). The server's own export is a `.zip` with CSV
   files too; the demo gives the JSON only.
-* **Settings → Your data → Import from a file** takes an `export.json` from this demo **or from a real server** and works
+* **Settings → Your data → Import from a file** takes an `export.json` from this demo **or from a real server**, or the export `.zip` of a
+  real server itself (the page opens it on the device, `js/engine/zip.js`; the demo's own export stays `export.json`), and works
   exactly like the server's import ([Privacy](privacy.md#moving-your-data-to-another-server)): it shows what the file would add
   before anything changes, refuses a file that is not an export in the server's words (an unknown field, a value out of range,
   a version it does not read, a file nested more than 32 levels), never imports the account, sessions, tokens, AI settings,

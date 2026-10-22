@@ -227,8 +227,8 @@ six-month match, the flag boundaries (179/119 → none; 180/80 → flagged; 140/
 
 * **Where**: Trends → Weight and blood pressure → **Import from Apple Health**, and Settings → Your data next to the other
   imports. The person exports from the Health app (profile picture → Export All Health Data), taps `export.zip` in the Files
-  app to unzip it, and picks `apple_health_export/export.xml`. (Reading the zip directly is the ROADMAP's "Import from a file
-  takes the export .zip" item; when it is built, this import uses the same reader.)
+  app to unzip it, and picks `apple_health_export/export.xml`. (Reading the zip directly was the ROADMAP's "Import from a file
+  takes the export .zip" item; it is built, and this import uses the same reader: note 11. The sheet now takes `export.zip` itself.)
 * **Reading**: the file can be hundreds of megabytes and starts with an internal DTD, so it is **not** given to an XML parser
   (no `DOMParser`, no `kh-xml` policy, no entity expansion): `js/engine/apple_health.js` streams it as text
   (`file.stream().pipeThrough(new TextDecoderStream())`), finds each `<Record ` start tag of the three types below with a
