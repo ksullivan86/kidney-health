@@ -110,6 +110,7 @@ def test_import_sends_the_checked_choices_then_forgets_the_file_and_the_stale_vi
 def test_a_refusal_is_shown_in_the_page_a_closed_password_prompt_is_not_an_error_and_cancel_forgets() -> None:
     page = _page()
     assert page["refused"]["text"] == "The file was not imported. log_entries[3].servings: must be greater than 0"
-    assert page["cancelled"] == {"text": "", "message": "Not checked: the password prompt was closed."}
+    # the file box is emptied, so choosing the same file again checks it again (a browser fires no `change` otherwise)
+    assert page["cancelled"] == {"text": "", "message": "Not checked: the password prompt was closed.", "fileInput": ""}
     assert page["cancel"] == {"message": "Nothing was imported.", "result": 0}
     assert page["demo"]["hasInput"] is False and page["demo"]["calls"] == 0 and "no server to import into" in page["demo"]["text"]

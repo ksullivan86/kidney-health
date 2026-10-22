@@ -148,6 +148,33 @@ def test_ci_covers_the_required_checks():
     assert re.search(r"^    needs: \[test, lint, handbook\]$", image, re.M)
 
 
+def test_ci_lint_job_runs_ruff_from_a_pinned_release_with_a_checked_hash():
+    """ruff runs in the lint job like the other tools: the release binary, an exact version and its SHA-256 next to
+    the other pins, the job's fetch helper (which checks the hash), annotations on the pull request, a job that only
+    reads. The rules are in pyproject.toml; ruff is in no lock file (CI downloads it, the app and its tests never
+    import it), and CONTRIBUTING.md tells contributors to run it."""
+    ci = read(".github/workflows/ci.yml")
+    lint = job_blocks(ci)["lint"]
+    assert re.search(r'^  RUFF_VERSION: "\d+\.\d+\.\d+"$', ci, re.M), "RUFF_VERSION must be an exact release"
+    assert re.search(r'^  RUFF_SHA256: "[0-9a-f]{64}"$', ci, re.M), "RUFF_SHA256 must be a full SHA-256"
+    fetch_ruff = (
+        'fetch "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSION}/'
+        'ruff-x86_64-unknown-linux-gnu.tar.gz" "$RUFF_SHA256" ruff.tgz'
+    )
+    assert fetch_ruff in lint
+    assert 'echo "$2  $3" | sha256sum --check --strict -' in lint  # what the fetch helper does with every download
+    run_ruff = "ruff check --no-cache --output-format=github ."
+    assert lint.index(fetch_ruff) < lint.index('echo "$bin" >> "$GITHUB_PATH"') < lint.index(run_ruff)
+    assert re.search(r"^    permissions:\n      contents: read$", lint, re.M)
+    pyproject = read("pyproject.toml")
+    assert re.search(r"^\[tool\.ruff\.lint\]\nselect = \[", pyproject, re.M)  # explicit: ruff 0.17 widened its default
+    pins = [*REPO.glob("requirements*"), *REPO.glob("*/requirements*"), *REPO.glob("*/*/requirements*")]
+    assert pins, "no requirement files found"
+    for path in pins:
+        assert "ruff" not in path.read_text(encoding="utf-8").lower(), f"{path.name}: ruff belongs in CI, not in a lock file"
+    assert "ruff check ." in read("CONTRIBUTING.md")
+
+
 
 def test_the_image_smoke_test_checks_the_ca_store_with_the_apps_own_self_check():
     """Note 04 R12: outbound https (USDA, Open Food Facts, AI) needs CA certificates in the image. The smoke test runs

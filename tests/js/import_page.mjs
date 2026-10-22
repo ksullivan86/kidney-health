@@ -139,8 +139,9 @@ await pick('export.json', JSON.stringify(file));
 out.refused = { text: text(result), message: msg.textContent };
 
 answer = () => { const e = new Error('cancelled'); e.cancelled = true; e.handled = true; throw e; };
+input.value = 'C:\\fakepath\\export.json'; // what a browser's file box holds once a file is chosen
 await pick('export.json', JSON.stringify(file));
-out.cancelled = { text: text(result), message: msg.textContent };
+out.cancelled = { text: text(result), message: msg.textContent, fileInput: input.value };
 
 // Cancel button forgets the file
 answer = () => reply();
