@@ -868,7 +868,7 @@ history.
   me food never suggested, a name with instructions in it, and Ask's taste card), `test_ai_preferences.py` and
   `test_ai_guard_preferences.py` (what the AI is told about taste and how its claim is checked),
   `test_ai_chat_preference.py` and `test_ask_taste_ui.py` (Ask's `set_food_preference`: always a card, nothing written, the
-  page's Remember and Undo; not an MCP tool), `test_ai_routes.py` (AI off → 404, consent, dry run = sent body, quotas, isolation, write-only
+  page's Remember and Undo; an assistant with a token gets a tool of the same name only with the separate `assistant:prefs` scope, `test_mcp_prefs.py`), `test_ai_routes.py` (AI off → 404, consent, dry run = sent body, quotas, isolation, write-only
   keys, `AUTH_MODE=none`, retention, failure paths), `test_vision_api.py`, `test_imagecheck.py`,
   `test_migration_m006.py`, `test_ai_eval_script.py`; the Ask chat: `test_ai_chat_checks.py` (text policy, dose check
   in both directions, number check, the loop with a scripted model), `test_ai_chat.py` (the route: switch, consent,

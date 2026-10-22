@@ -98,6 +98,7 @@ def test_the_list_takes_a_family_and_lists_only_that_family(admin):
 
 def test_a_device_tokens_scopes_are_not_the_persons_choice(admin):
     for body in ({"scopes": ["body:write"]}, {"scopes": ["assistant:read"]}, {"scope": "body:write"}, {"can_log": True},
+                 {"can_prefs": True}, {"can_log": True, "can_prefs": True}, {"can_prefs": "yes"},
                  {"can_log": "yes"}, {"family": "phone"}, {"family": None}, {"family": ["device"]}, {"family": "DEVICE"}):
         r = admin.post("/api/me/tokens", json={"name": "x", "family": "device", **body})
         assert r.status_code == 400, body
@@ -113,6 +114,7 @@ def test_scopes_of_the_two_families_never_mix():
     assert p("body:write admin") == ("body:write",)
     assert p("assistant:log") == ("assistant:read", "assistant:log")  # log implies read; nothing implies body:write
     assert p("assistant:read body:write") == () and p("assistant:log body:write") == ()  # a row that mixes them grants nothing
+    assert p("assistant:prefs body:write") == () and p("body:write assistant:prefs assistant:log") == ()  # prefs is an assistant scope
     assert p("body:read body:delete") == ()
     assert api_tokens.family_of_scopes("body:write") == "device" and api_tokens.family_of_scopes("assistant:read") == "assistant"
     assert api_tokens.family_of_scope("body:write") == "device" and api_tokens.family_of_scope("assistant:log") == "assistant"

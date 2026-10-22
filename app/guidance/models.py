@@ -426,7 +426,10 @@ class NotForMeList(_Out):
 # --------------------------------------------------------------------------- #
 
 FoodPreference = Literal["like", "less", "not_for_me", "neutral"]
-PreferenceSource = Literal["person", "ask"]
+# Who set a preference, as the lists, the export and the import carry it: the person themselves, a change Ask proposed and the
+# person confirmed, or a change the person's own assistant made over MCP with an ``assistant:prefs`` token (note 09 §4.8b). The
+# PUT body takes all three: Ask's Undo puts a row back exactly as it was, with the source it had, and that can be "assistant".
+PreferenceSource = Literal["person", "ask", "assistant"]
 
 
 class PreferenceFood(_Out):

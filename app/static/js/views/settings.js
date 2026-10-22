@@ -732,7 +732,7 @@
     'data.imported': 'Data imported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
-    'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe',
+    'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe', 'assistant.preference_set': 'Assistant remembered a taste',
     'ai.trust_changed': 'Trust in the assistant changed',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
@@ -745,6 +745,9 @@
     return ACTION_LABEL[ev.action] || ev.action;
   }
   // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
+  // The words of Settings → Meal guidance → Your food preferences (a food group's "Not for me" is "Never suggest" there).
+  const TASTE_WORD = { none: 'nothing saved', like: 'more like this', less: 'less often', not_for_me: 'not for me', neutral: 'stop learning' };
+  const tasteWord = (value, kind) => (kind === 'group' && value === 'not_for_me' ? 'never suggest' : TASTE_WORD[value] || value);
   const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
     account_deleted: 'account deleted', admin: 'revoked by an admin' };
@@ -766,6 +769,7 @@
     }
     if (ev.action === 'assistant.food_logged') return `${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}, ${d.status}, ${d.meal} on ${d.date}, with “${d.via}”`;
     if (ev.action === 'assistant.recipe_saved') return `“${d.name}” (${d.ingredients} ingredients), with “${d.via}”`;
+    if (ev.action === 'assistant.preference_set') return `${d.name}: ${tasteWord(d.old, d.kind)} → ${tasteWord(d.new, d.kind)}, with “${d.via}”`;
     if (ev.action === 'ai.trust_changed') return `${TRUST_NAME[d.old] || d.old} → ${TRUST_NAME[d.new] || d.new}`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
@@ -1178,10 +1182,17 @@
   // active tokens (to revoke them). A new token is in the POST answer only: it is shown once, in a box with Copy,
   // until the card is drawn again. The demo makes no tokens and says so.
   const ASSISTANT_INTRO = 'A token lets a chat assistant you connect read your own food log and targets and, only if you allow it '
-    + 'when you make the token, also save food and recipes for you. '
+    + 'when you make the token, also save food and recipes for you and remember your tastes (likes and dislikes). '
     + 'How to connect one is in the app\'s documentation (docs/assistant.md).';
-  // What a token may do: every token reads; one made with "Can also save food and recipes" also has assistant:log.
+  // What a token may do: every token reads; one made with "Can also save food and recipes" also has assistant:log; one made with
+  // "Also let it remember tastes" has assistant:prefs. The two are separate: neither gives the other.
   const canSave = (t) => (t.scopes || []).includes('assistant:log');
+  const canTaste = (t) => (t.scopes || []).includes('assistant:prefs');
+  function accessWord(t) {
+    if (canSave(t) && canTaste(t)) return 'Read, save and tastes';
+    if (canTaste(t)) return 'Read and tastes';
+    return canSave(t) ? 'Read and save' : 'Read only';
+  }
   const EXPIRY_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year' };
   let assistantRender = 0;
   let unshownToken = null; // the answer of POST /api/me/tokens until a render has put it on screen (once)
@@ -1191,7 +1202,7 @@
       { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' });
   }
   function tokenSub(t) {
-    const parts = [canSave(t) ? 'Read and save' : 'Read only', `${t.prefix}…`, `created ${fmtDate(t.created_at)}`,
+    const parts = [accessWord(t), `${t.prefix}…`, `created ${fmtDate(t.created_at)}`,
       t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
     else parts.push(`${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`);
@@ -1237,6 +1248,7 @@
     const name = h('input', { id: 'set-token-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-token-name-hint' });
     const expiry = selectEl('set-token-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
     const canLog = h('input', { type: 'checkbox', id: 'set-token-can-log', 'aria-describedby': 'set-token-can-log-hint' });
+    const canPrefs = h('input', { type: 'checkbox', id: 'set-token-can-prefs', 'aria-describedby': 'set-token-can-prefs-hint' });
     const err = formError();
     const create = action('Create token', 'primary', async () => {
       clear(err);
@@ -1244,7 +1256,7 @@
       if (!text) { showFormError(err, 'Give the token a name, for example the app or device it is for.'); name.focus(); return; }
       let made;
       try {
-        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value), can_log: canLog.checked });
+        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value), can_log: canLog.checked, can_prefs: canPrefs.checked });
       } catch (e) {
         if (!e.cancelled && !e.handled) showFormError(err, e);
         return;
@@ -1259,6 +1271,9 @@
       h('div', { class: 'field' },
         h('label', { class: 'check', for: 'set-token-can-log' }, canLog, h('span', { class: 'check-text' }, 'Can also save food and recipes')),
         h('span', { class: 'hint', id: 'set-token-can-log-hint' }, 'Off: the assistant can only read. On: it can also add entries to your food log and save recipes as saved meals, after it asks you. Each save is listed in your activity.')),
+      h('div', { class: 'field' },
+        h('label', { class: 'check', for: 'set-token-can-prefs' }, canPrefs, h('span', { class: 'check-text' }, 'Also let it remember tastes (likes and dislikes)')),
+        h('span', { class: 'hint', id: 'set-token-can-prefs-hint' }, 'Off: the assistant cannot change your food preferences. On: it can remember that you like a food or kind of food, want it less often or do not want it, and forget one, after it asks you. It cannot change anything about treating a low. You see, change and remove each one in Settings → Meal guidance → Your food preferences, and each change is listed in your activity.')),
       h('div', { class: 'settings-actions' }, create),
       err);
   }

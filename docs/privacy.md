@@ -199,7 +199,10 @@ A token made with "Can also save food and recipes" lets that assistant also writ
 saved meals (and add a USDA food the person chose to their food list, which looks the food up at USDA FoodData
 Central as the Food screen's import does, sending only the food's number and the key); what it saved is ordinary
 data of the person's account, in the export and deleted with it. A recipe's source link is kept as text and the
-server never opens it.
+server never opens it. A token made with "Also let it remember tastes" lets that assistant also change the person's own food
+preferences (a like, "less often" or "not for me" for a food or a food group, or forgetting one; it reads and returns nothing
+else of them), limited to 30 changes a day per token; each change is in the person's activity list with the token's name, the
+food row is marked "from your assistant", and it is in the export and deleted with the account like any preference.
 
 ## Who can see it
 

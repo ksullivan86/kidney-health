@@ -277,6 +277,18 @@ the app with a personal token from **Settings → Assistant access**
   look at **Today** or **Saved meals** afterwards; you can edit or delete anything it saved, and each save is
   listed in your activity. It can never change a setting or delete anything. A token that only reads leaves
   logging to you, in the app.
+- A second box, **Also let it remember tastes (likes and dislikes)**, is separate from the first and also off by
+  default. With it ticked, the assistant can remember that you like a food or a kind of food, want it less often or do
+  not want it, and it can forget one of these. That is all it can do with it. A taste only changes what the
+  app suggests (**Not for me** keeps a food out of the suggestions, though it stays in search): it never changes a limit, a
+  warning or a number, and it is not an allergy filter (the app cannot
+  tell whether a food contains an allergen, so check labels). The assistant is told to ask you first and never to guess
+  a taste from what you log, but the app cannot check that. So each change is listed in your activity, a food it sets
+  shows in **Settings → Meal guidance → Your food preferences** as "from your assistant" with **Remove** next to it
+  (a kind of food shows in your activity, and you change it under **Kinds of food** in the same place), and one token
+  can make at most 30 changes a day. **Treating a low is never affected.** The assistant cannot touch the Treating a
+  low card or its options, and it cannot mark a food that treats a low, or a kind of food that has one (such as drinks
+  or sweets), as **Not for me**: only you can, in the app.
 - When a message sounds like a low, the app hands the assistant the same **Treating a low** card you see in the
   app, to show first. When a message sounds like an emergency, it hands over **Get help now**.
 - The app cannot check what the assistant finally says. If a number looks wrong, check it on **Today**.

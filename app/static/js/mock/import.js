@@ -285,7 +285,7 @@
   // A file from before schema step 17 holds only not_for_me rows without source and updated_at.
   const preferenceModel = T.model('ImportFoodPreference', [['food_id', ID, required], ['name', short$(200), required],
     ['preference', T.lit(['like', 'less', 'not_for_me', 'neutral']), required], ['created_at', TS, required],
-    ['source', T.lit(['person', 'ask'], { nullable: true })], ['updated_at', tsOrNull]]);
+    ['source', T.lit(['person', 'ask', 'assistant'], { nullable: true })], ['updated_at', tsOrNull]]);
 
   // The profile, as GET /api/profile shows it, checked like PUT /api/profile (strict types here, then the same rules as the route).
   const orNull = (check) => (v, loc) => (v == null ? null : check(v, loc));

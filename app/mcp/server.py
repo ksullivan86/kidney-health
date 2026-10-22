@@ -24,7 +24,10 @@ Order of checks for every request (each one answers before the next runs):
 
 Scopes: every request needs ``assistant:read``. The tools that save (``log_food``, ``save_recipe``) are listed by
 ``tools/list`` and callable only with a token that also has ``assistant:log``; calling one without it is a tool
-result with ``isError: true`` that says the token can only read, and nothing is saved.
+result with ``isError: true`` that says the token can only read, and nothing is saved. ``set_food_preference``
+(:mod:`app.mcp.preference_tool`) is listed and callable only with ``assistant:prefs``, a separate opt-in that
+``assistant:log`` does not give; a token without it is told "Unknown tool", as if there were no such tool. A limit
+refusal inside a tool (the daily cap on taste changes) is the ``429`` of that limit, like the per-token limit above.
 """
 from __future__ import annotations
 
@@ -39,8 +42,10 @@ from fastapi.responses import JSONResponse, Response
 
 from ..auth import api_tokens
 from ..auth.context import auth_context
+from ..auth.errors import ApiProblem
 from ..auth.ratelimit import register_limit
 from ..db import get_db
+from . import preference_tool as PT
 from . import tools as T
 
 logger = logging.getLogger("kidney_health.mcp")
@@ -62,6 +67,15 @@ WRITE_INSTRUCTIONS = (
     "the items back (food, amount, meal, day, eaten or planned) and ask the person to confirm; after saving, say what "
     "was saved. The confirmation is only about the record: it never comes before the person treats a low. Send a new "
     "request_key with each save, and the same one again only to retry that save: a repeat is not saved twice."
+)
+
+# Added to the instructions for a token that can also remember tastes (assistant:prefs).
+PREFS_INSTRUCTIONS = (
+    " This token can also remember tastes: set_food_preference records that the person likes a food or food group, wants "
+    "it less often, or does not want it, or clears one of those. Use it only when the person says so in this conversation, "
+    "after you read it back and they said yes; never infer a taste from what they log or ask about, and never use it for an "
+    "allergy (the app cannot check allergens). Send a new request_key with each change, and say what you set: the person can "
+    "change or remove it in the app. It only changes what the app suggests and has no part in treating a low."
 )
 
 RATE_LIMIT = "mcp"
@@ -115,13 +129,34 @@ def can_log(request: Request) -> bool:
     return api_tokens.LOG in request.state.api_token.scopes
 
 
-def initialize_result(params: Mapping[str, Any], version: str, can_save: bool = False) -> dict[str, Any]:
+def can_prefs(request: Request) -> bool:
+    """The token of this request also has ``assistant:prefs`` (it never comes with ``assistant:log``)."""
+    return api_tokens.PREFS in request.state.api_token.scopes
+
+
+def all_tools() -> tuple[T.Tool, ...]:
+    """Every tool the server has: :data:`app.mcp.tools.TOOLS` and the taste tool, which needs Ask's own checks and so lives in
+    :mod:`app.mcp.preference_tool` (it imports :mod:`app.mcp.tools`, so the list is put together here)."""
+    return (*T.TOOLS, PT.TOOL)
+
+
+def tool_named(name: str) -> T.Tool | None:
+    return T.TOOLS_BY_NAME.get(name) or (PT.TOOL if name == PT.TOOL.name else None)
+
+
+def allowed(request: Request, tool: T.Tool) -> bool:
+    """The token has the scope the tool needs (:attr:`app.mcp.tools.Tool.needs`)."""
+    return tool.needs in request.state.api_token.scopes
+
+
+def initialize_result(params: Mapping[str, Any], version: str, can_save: bool = False,
+                      can_remember: bool = False) -> dict[str, Any]:
     requested = params.get("protocolVersion")
     return {
         "protocolVersion": requested if requested in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0],
         "capabilities": {"tools": {"listChanged": False}},
         "serverInfo": {"name": SERVER_NAME, "title": SERVER_TITLE, "version": version},
-        "instructions": INSTRUCTIONS + (WRITE_INSTRUCTIONS if can_save else ""),
+        "instructions": INSTRUCTIONS + (WRITE_INSTRUCTIONS if can_save else "") + (PREFS_INSTRUCTIONS if can_remember else ""),
     }
 
 
@@ -140,6 +175,8 @@ def call_tool(tool: T.Tool, call: T.Call, arguments: Mapping[str, Any]) -> dict[
         return tool_result(T.run(tool, call, arguments))
     except T.ToolError as exc:
         return tool_error(str(exc))
+    except ApiProblem:  # a limit inside the tool (the daily cap on taste changes): its own 429 with Retry-After
+        raise
     except Exception:  # noqa: BLE001 - never a stack trace or a value in the answer; the log has the details
         logger.exception("assistant tool %s failed", tool.name)
         if tool.writes:  # every save is one transaction: a failure before the commit leaves nothing behind
@@ -190,18 +227,20 @@ async def mcp_post(request: Request, conn: sqlite3.Connection = Depends(get_db))
         return _error(INVALID_PARAMS, "Invalid params: params must be an object.", request_id)
 
     if method == "initialize":
-        return _result(request_id, initialize_result(params, request.app.version, can_log(request)))
+        return _result(request_id, initialize_result(params, request.app.version, can_log(request), can_prefs(request)))
     if method == "ping":
         return _result(request_id, {})
     if method == "tools/list":
-        return _result(request_id, {"tools": [tool.listing() for tool in T.TOOLS if can_log(request) or not tool.writes]})
+        return _result(request_id, {"tools": [tool.listing() for tool in all_tools() if allowed(request, tool)]})
 
     name = params.get("name")
-    tool = T.TOOLS_BY_NAME.get(name) if isinstance(name, str) else None
+    tool = tool_named(name) if isinstance(name, str) else None
+    if tool is not None and not allowed(request, tool):
+        if tool.needs == api_tokens.LOG:  # a read-only token: say so, save nothing
+            return _result(request_id, tool_error(T.READ_ONLY))
+        tool = None  # a tool the token has no scope for is not there at all
     if tool is None:
         return _error(INVALID_PARAMS, f"Unknown tool: {str(name)[:80]}", request_id)
-    if tool.writes and not can_log(request):  # a read-only token: say so, save nothing
-        return _result(request_id, tool_error(T.READ_ONLY))
     arguments = params.get("arguments")
     if arguments is None:
         arguments = {}

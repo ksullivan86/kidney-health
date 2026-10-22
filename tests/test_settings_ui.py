@@ -410,6 +410,21 @@ def test_the_assistant_card_offers_saving_as_a_separate_choice_and_says_what_eac
     assert "'assistant.recipe_saved': 'Assistant saved a recipe'" in SETTINGS_JS
 
 
+def test_the_assistant_card_offers_remembering_tastes_as_a_second_separate_choice() -> None:
+    """Note 09 §4.8b: "Also let it remember tastes (likes and dislikes)" is its own tick, off by default, sent as its own boolean
+    (``can_prefs``); the list says what each token can do; the activity list names the change. Its behaviour in Node is
+    ``tests/test_assistant_ui.py``."""
+    block = SETTINGS_JS[SETTINGS_JS.index("// Section: Assistant access"):SETTINGS_JS.index("// Section: This device")]
+    start = block.index("id: 'set-token-can-prefs'")
+    assert "'Also let it remember tastes (likes and dislikes)'" in block
+    assert "checked" not in block[start:start + 120]  # unticked
+    assert "can_log: canLog.checked, can_prefs: canPrefs.checked" in block  # two booleans; the server's answer decides the scopes
+    assert "(t.scopes || []).includes('assistant:prefs')" in block
+    assert "'Read, save and tastes'" in block and "'Read and tastes'" in block
+    assert block.index("id: 'set-token-can-log'") < start  # the tick for saving food stays as it was, first
+    assert "'assistant.preference_set': 'Assistant remembered a taste'" in SETTINGS_JS
+
+
 def test_the_activity_list_names_a_change_of_the_assistant_trust_choice() -> None:
     """Assistant step 2, part C: every change of "How much do you trust the assistant?" is an ``ai.trust_changed`` row;
     the activity list shows it in the choice's own words, and Ask's saves read "with “Ask”"."""

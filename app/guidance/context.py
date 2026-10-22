@@ -44,7 +44,9 @@ COMBOS_JSON = REPO_ROOT / "data" / "combos.json"
 FOODS_REV_KEY = "foods_rev"
 PREFERENCE_NOT_FOR_ME = "not_for_me"
 PREFERENCE_VALUES = ("like", "less", PREFERENCE_NOT_FOR_ME, "neutral")  # food_preferences.preference (note 09 §4.2)
-PREFERENCE_SOURCES = ("person", "ask")  # food_preferences.source
+ASSISTANT_SOURCE = "assistant"  # food_preferences.source of a change the person's assistant made over MCP (assistant:prefs); the
+#                                 MCP tool writes it, Ask's Undo may put it back, the lists, the export and the import carry it
+PREFERENCE_SOURCES = ("person", "ask", ASSISTANT_SOURCE)  # food_preferences.source (the demo's twin has the same three)
 MAX_NOT_FOR_ME = 500  # note 06 §4.14: "≤ 500 ids"; the "Not for me" rows alone
 MAX_FOOD_PREFERENCES = 1000  # note 09 §4.2: every preference row of a person together
 EXPLICIT_PER_LIST = 10  # names per list that ``explicit_preferences`` returns

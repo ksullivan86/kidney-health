@@ -1,6 +1,8 @@
 """The assistant's tools (``docs/dev/plans/assistant-step1.md`` parts B and C; ARCHITECTURE.md "Assistant MCP
 server"): four read-only ones and, for a token that also has ``assistant:log``, two that save. Each answers one
-JSON object, sent as ``structuredContent`` and as text.
+JSON object, sent as ``structuredContent`` and as text. A seventh, ``set_food_preference``, is for a token with the separate
+``assistant:prefs`` scope; it needs Ask's own checks, so it lives in :mod:`app.mcp.preference_tool` and
+:func:`app.mcp.server.all_tools` puts the list together (:attr:`Tool.needs` says which scope a tool needs).
 
 Every number comes from the app's own functions, never from a copy of the maths:
 
@@ -1192,14 +1194,22 @@ class Tool:
     title: str
     description: str
     input_schema: dict[str, Any]
-    args: type[_Args]
+    args: type[BaseModel]
     run: Callable[[Call, Any], dict[str, Any]]
-    writes: bool = False  # saves something: listed and callable only with a token that has assistant:log
+    writes: bool = False  # saves something (a failure says "nothing was saved")
+    # The token scope listing and calling the tool need: None means assistant:log for a tool that saves food or a recipe
+    # (``writes``) and assistant:read for the rest. ``set_food_preference`` (app/mcp/preference_tool.py) needs assistant:prefs.
+    scope: str | None = None
+    hints: Mapping[str, bool] | None = None  # the annotation hints, when the default for read-only or saving tools is not true
+
+    @property
+    def needs(self) -> str:
+        return self.scope or (api_tokens.LOG if self.writes else api_tokens.READ)
 
     def listing(self) -> dict[str, Any]:
         return {"name": self.name, "title": self.title, "description": self.description,
                 "inputSchema": self.input_schema,
-                "annotations": {"title": self.title, **(WRITE_ANNOTATIONS if self.writes else ANNOTATIONS)}}
+                "annotations": {"title": self.title, **(self.hints or (WRITE_ANNOTATIONS if self.writes else ANNOTATIONS))}}
 
 
 # The duplicate guard of the two saving tools (app/mcp/request_keys.py).

@@ -3,8 +3,10 @@
 
 Two **families** share the ``api_tokens`` table, the hash-only storage, expiry, revocation and the generic 401:
 
-* **assistant** (``kha_``, scopes ``assistant:read`` and ``assistant:log``, instance switch ``assistant.enabled``): made in
-  Settings → Assistant access and given to a chat assistant; accepted only at ``/mcp``.
+* **assistant** (``kha_``, scopes ``assistant:read``, ``assistant:log`` and ``assistant:prefs``, instance switch
+  ``assistant.enabled``): made in Settings → Assistant access and given to a chat assistant; accepted only at ``/mcp``.
+  ``assistant:log`` lets it save food and recipes; ``assistant:prefs`` lets it remember a taste (``set_food_preference``).
+  Each is a separate opt-in when the token is made: neither implies the other, and both imply only ``assistant:read``.
 * **device** (``khd_``, the one scope ``body:write``, instance switch ``push.enabled``): made in Settings → Phone shortcuts
   and pasted into a phone shortcut; accepted only at ``POST /push/v1/body``, where it can add weights and blood pressure
   readings and read nothing. The scope of a device token is not the person's choice: it is always exactly ``body:write``.
@@ -70,8 +72,9 @@ DEVICE_TOKEN_RE = re.compile(r"^khd_[A-Za-z0-9_-]{43}$")
 DISPLAY_LENGTH = 12  # the 4-character prefix and the first 8 random characters
 READ = "assistant:read"
 LOG = "assistant:log"  # also save food and recipes (part C); a token that has it always has READ too
+PREFS = "assistant:prefs"  # also remember a taste (set_food_preference, note 09 §4.8b); implies READ, never LOG
 BODY_WRITE = "body:write"  # add weights and blood pressure readings at POST /push/v1/body, and nothing else
-SCOPES: tuple[str, ...] = (READ, LOG)  # the assistant family's scopes, in the order they are stored and shown
+SCOPES: tuple[str, ...] = (READ, LOG, PREFS)  # the assistant family's scopes, in the order they are stored and shown
 DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE,)  # the device family's: always exactly this one, never the person's choice
 ALL_SCOPES: tuple[str, ...] = SCOPES + DEVICE_SCOPES
 EXPIRY_DAYS: tuple[int, ...] = tuple(get_args(ExpiryDays))
@@ -151,19 +154,21 @@ def family_of_scopes(scopes: str | tuple[str, ...] | list[str] | None) -> str:
 
 def parse_scopes(text: str | None) -> tuple[str, ...]:
     """The known scopes in a stored ``scopes`` text, in :data:`ALL_SCOPES` order. An unknown word grants nothing;
-    ``assistant:log`` implies ``assistant:read`` and nothing else implies anything (a device token never gains an assistant
-    scope, an assistant token never gains ``body:write``); a text that names scopes of both families grants nothing."""
+    ``assistant:log`` and ``assistant:prefs`` each imply ``assistant:read`` and nothing else implies anything (``log`` does
+    not give ``prefs`` and ``prefs`` does not give ``log``; a device token never gains an assistant scope, an assistant token
+    never gains ``body:write``); a text that names scopes of both families grants nothing."""
     known = {w for w in (text or "").split() if w in ALL_SCOPES}
-    if LOG in known:
+    if LOG in known or PREFS in known:
         known.add(READ)
     if known.intersection(SCOPES) and known.intersection(DEVICE_SCOPES):
         return ()
     return tuple(s for s in ALL_SCOPES if s in known)
 
 
-def scopes_for(can_log: bool) -> tuple[str, ...]:
-    """The scopes of a new assistant token: read, and also log (save food and recipes) when the person ticked it."""
-    return (READ, LOG) if can_log else (READ,)
+def scopes_for(can_log: bool, can_prefs: bool = False) -> tuple[str, ...]:
+    """The scopes of a new assistant token: read, and also log (save food and recipes) and prefs (remember tastes) when the
+    person ticked them. Two separate ticks: neither one gives the other."""
+    return (READ, *((LOG,) if can_log else ()), *((PREFS,) if can_prefs else ()))
 
 
 def is_enabled(conn: sqlite3.Connection, ctx: AuthContext, family: str = ASSISTANT) -> bool:
@@ -472,13 +477,15 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is
     ``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it
-    save food and recipes (``assistant:log``). A device token's scopes are always exactly ``["body:write"]``: the request
-    cannot choose them (``can_log`` is refused for it)."""
+    save food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).
+    A device token's scopes are always exactly ``["body:write"]``: the request cannot choose them (``can_log`` and
+    ``can_prefs`` are refused for it)."""
     ctx = auth_context(request)
     family = body.family
-    if family == DEVICE and body.can_log:
-        raise ApiProblem(400, "A device token can only add weights and blood pressure readings; there is nothing to choose.",
-                         field="can_log")
+    for field, ticked in (("can_log", body.can_log), ("can_prefs", body.can_prefs)):
+        if family == DEVICE and ticked:
+            raise ApiProblem(400, "A device token can only add weights and blood pressure readings; there is nothing to choose.",
+                             field=field)
     if not is_enabled(conn, ctx, family):
         raise ApiProblem(409, DEVICE_SWITCHED_OFF if family == DEVICE else SWITCHED_OFF)
     name = clean_name(body.name)
@@ -487,7 +494,7 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     if active_count(conn, user.id, family) >= MAX_ACTIVE:
         conn.rollback()
         raise ApiProblem(400, f"You have {MAX_ACTIVE} active tokens, the most allowed. Revoke one first.")
-    scopes = DEVICE_SCOPES if family == DEVICE else scopes_for(body.can_log)
+    scopes = DEVICE_SCOPES if family == DEVICE else scopes_for(body.can_log, body.can_prefs)
     token, item = create(conn, user.id, name, body.expires_in_days, scopes)
     if family == DEVICE:
         item["sent"] = {"weights": 0, "readings": 0}

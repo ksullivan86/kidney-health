@@ -6445,7 +6445,8 @@
             "default": "person",
             "enum": [
               "person",
-              "ask"
+              "ask",
+              "assistant"
             ],
             "title": "Source",
             "type": "string"
@@ -6496,7 +6497,8 @@
           "source": {
             "enum": [
               "person",
-              "ask"
+              "ask",
+              "assistant"
             ],
             "title": "Source",
             "type": "string"
@@ -8650,11 +8652,16 @@
       },
       "TokenCreate": {
         "additionalProperties": false,
-        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes; ``assistant:read`` is always included). ``family`` is\n``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's token, whose\none scope, ``body:write``, is not a choice: ``can_log`` is refused for it).",
+        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``\n(it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.\n``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's\ntoken, whose one scope, ``body:write``, is not a choice: ``can_log`` and ``can_prefs`` are refused for it).",
         "properties": {
           "can_log": {
             "default": false,
             "title": "Can Log",
+            "type": "boolean"
+          },
+          "can_prefs": {
+            "default": false,
+            "title": "Can Prefs",
             "type": "boolean"
           },
           "expires_in_days": {
@@ -16109,7 +16116,7 @@
         ]
       },
       "post": {
-        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``). A device token's scopes are always exactly ``[\"body:write\"]``: the request\ncannot choose them (``can_log`` is refused for it).",
+        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).\nA device token's scopes are always exactly ``[\"body:write\"]``: the request cannot choose them (``can_log`` and\n``can_prefs`` are refused for it).",
         "operationId": "me_create_my_token",
         "requestBody": {
           "content": {

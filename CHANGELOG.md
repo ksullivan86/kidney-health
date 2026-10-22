@@ -17,6 +17,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   and the others still count. A PDF with a password, one over 20 MB or 50 pages, a damaged file and a browser too old to open it are each
   refused with the reason (a screenshot of each page still works). A scan made of JPEG 2000 or JBIG2 pictures can come out blank. The
   handbook's AI page has the steps.
+* **Let a chat assistant remember your tastes, if you choose to.** **Settings → Assistant access → New token** has a second box, **Also let it
+  remember tastes (likes and dislikes)**, off by default and separate from **Can also save food and recipes** (neither gives the other). A token
+  made with it lets the assistant you connected remember that you like a food or a kind of food, want it less often or do not want it, and forget
+  one, the way **Ask** does but without a card to press: so it is limited to **30 changes a day per token**, every change is listed in your activity
+  ("Assistant remembered a taste", with what it was, what it became and the token's name), and a food it sets shows in **Settings → Meal guidance →
+  Your food preferences** as "from your assistant" with the usual **Remove**. A taste only changes what the app suggests. **It never changes
+  Treating a low:** the assistant cannot mark a food that treats a low, or a kind of food that has one, as Not for me (that takes it out of the
+  Treating a low options, as it does when you do it yourself), so only you can, in the app. Tokens you already have keep what they could do, and
+  **Ask is unchanged**: it still shows a card for every taste. The handbook's AI page and its Settings and keys page say it in plain words.
 * **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
   kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
   the box.
@@ -72,6 +81,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Choosing a `.zip` in the imports changes nothing on the server**: no route, setting or migration, and the server still never receives an archive
   (the page opens it on the person's device and sends the same JSON or rows as before). The page now ships one more script (`js/engine/zip.js`) in the
   service worker's cache list, so the app's update prompt appears once after the upgrade, as for any release.
+* **A third assistant permission, `assistant:prefs`, and the MCP tool `set_food_preference`.** A person ticks it when making an assistant token
+  (`can_prefs` on `POST /api/me/tokens`, off by default); it gives `assistant:read` and nothing else, `assistant:log` does not give it and it does not
+  give `assistant:log`, and a phone-shortcut token can never hold it. `/mcp` lists the tool only for a token with the scope (anyone else is told
+  "Unknown tool"); it takes one food or food group and `like`, `less`, `not_for_me` or `clear` and a required `request_key`, is limited to **30
+  changes a day per token** (`429` with `Retry-After`; counted in memory, so a restart empties it) on top of the 60 requests a minute, and writes
+  through the same function as the preferences screen with `source = 'assistant'`. It refuses `not_for_me` for a food that treats a low and for a food
+  group that holds one. Audit action `assistant.preference_set`; `export.json` carries `source: assistant` and an import accepts it. No setting
+  or switch (`assistant.enabled` covers it), no schema step, no dependency. Details: [docs/assistant.md](docs/assistant.md).
 * **Reading a PDF lab report needs nothing from you: no setting, route or schema step, and the server never sees a PDF.** It uses the
   local AI, `ai.route.labs`, the consent and the limits that lab report photos already have (each ticked page is one call). The one
   change is in the page's headers: the Content-Security-Policy now ends `trusted-types kh-sw kh-xml kh-pdf` (one more named policy, `kh-pdf`,
@@ -138,6 +155,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   (`gen_meta_vectors.py`; `node tests/js/run_vectors.mjs`) and compared by `tools/e2e/parity.py` section 10. The screens do not read it yet (ROADMAP "Open items").
   New tests: `tests/test_openapi_snapshot.py`, `tests/test_meta.py`.
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
+* **`set_food_preference` over MCP** (note 09 §4.8b): `app/mcp/preference_tool.py` (in `server.all_tools()`, not in `tools.TOOLS`, because it
+  reuses Ask's checks, which import `tools`; `Tool.needs` says which scope a tool needs), `api_tokens.PREFS`, `parse_scopes`/`scopes_for`,
+  `TokenCreate.can_prefs`, `guidance.api.apply_preference` and `drop_preference` (the PUT and DELETE routes now call them), and
+  `chat_preference.resolve_food`, `resolve_group`, `held_preference`, `group_state` and the room checks extracted from Ask's code with its behaviour
+  unchanged. `PreferenceBody.source`, `PreferenceFood.source` and `ImportFoodPreference.source` allow `assistant` (Ask's Undo puts a row back with the
+  source it had; `mock/guidance.js`, `mock/import.js` and `tests/data/import_vectors.json` follow). New tests: `tests/test_mcp_prefs.py` (with a `@pytest.mark.safety`
+  test that the Treating a low options, card, insights and `safety_check` do not change; the file is in `tests/test_safety_set.py`),
+  `tests/test_assistant_ui.py` with `tests/js/assistant_page.mjs`, and a taste section in `tools/e2e/mcp_smoke.py`. The test that pinned "the MCP
+  server cannot list or call `set_food_preference`" now pins the new rule.
 * **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
   before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and
   "Delete what it sent" in `app/push.py` (outside `/api`, in `security.BEARER_PATHS`), `context_for`, `is_watch_source` and the

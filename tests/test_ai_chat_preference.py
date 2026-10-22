@@ -9,8 +9,9 @@ Covered: the tool is offered with its schema and note; a card in every trust mod
 setting, no remembered key, no audit row); the card's fields for a food and for a food group, with the previous state
 Undo restores; the exactly-one-target rule and the other validation; another person's food is not found; a request that
 changes nothing is told to the model (no card); the limits; ``MAX_SAVES`` counts it; ``save_now`` refuses it; the routes
-the page uses accept the card's own payload and Undo puts back the previous state; it is not an MCP tool for any token
-scope; the rule-based answers for a low run first with preferences set; and the person block of Ask carries the explicit
+the page uses accept the card's own payload and Undo puts back the previous state; the MCP server offers the tool only to a
+token made with the separate ``assistant:prefs`` tick (note 09 §4.8b; its own tests are ``tests/test_mcp_prefs.py``) and Ask
+stays a card whatever tokens exist; the rule-based answers for a low run first with preferences set; and the person block of Ask carries the explicit
 choices (never a learned signal, never another person's). Fake provider, no network."""
 from __future__ import annotations
 
@@ -111,7 +112,7 @@ def last_error(provider: FakeProvider) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def test_the_tool_is_a_saving_tool_that_counts_toward_max_saves_and_is_not_an_mcp_tool():
+def test_the_tool_is_a_saving_tool_that_counts_toward_max_saves_and_is_not_in_the_read_and_save_registry():
     assert "set_food_preference" in CH.SAVE_TOOLS and "set_food_preference" in CH.OFFERED_TOOLS
     assert CH.PREFERENCE_TOOL == PREF.TOOL_NAME == "set_food_preference"
     assert "set_food_preference" not in CH.CHAT_TOOLS
@@ -403,23 +404,44 @@ def test_a_group_choice_is_one_patch_of_the_whole_guidance_object_that_changes_o
 
 
 # --------------------------------------------------------------------------- #
-# Not an MCP tool, for any token scope
+# Over MCP only with the separate assistant:prefs scope (note 09 §4.8b); Ask is unchanged
 # --------------------------------------------------------------------------- #
 
 
-def test_the_mcp_server_never_lists_or_runs_the_tool_for_any_token_scope(taste_client):
+def test_the_mcp_server_lists_and_runs_the_tool_only_for_a_token_with_the_prefs_scope(taste_client):
     c = taste_client
     switch(c, True)
     tokens = {"read": make(c, "reader")["token"], "read+save": make(c, "saver", can_log=True)["token"]}
-    for scope, token in tokens.items():
+    arguments = {"food_id": food_id(c), "preference": "like", "request_key": "mcp-key-0001"}
+    for scope, token in tokens.items():  # not listed and not callable without assistant:prefs
         listed = {t["name"] for t in rpc(c.app, token, "tools/list").json()["result"]["tools"]}
         assert "set_food_preference" not in listed, scope
         assert listed >= {"get_today", "search_foods", "check_meal", "safety_check"}
-        r = rpc(c.app, token, "tools/call", {"name": "set_food_preference",
-                                             "arguments": {"food_id": food_id(c), "preference": "like"}})
+        r = rpc(c.app, token, "tools/call", {"name": "set_food_preference", "arguments": arguments})
         assert r.json()["error"]["code"] == -32602 and "Unknown tool: set_food_preference" in r.json()["error"]["message"], scope
         assert "set_food_preference" not in rpc(c.app, token, "initialize", {"protocolVersion": "2025-06-18"}).json()["result"]["instructions"]
     assert stored(c) == []
+    token = make(c, "Hermes", can_prefs=True)["token"]  # listed and callable with it
+    listed = {t["name"] for t in rpc(c.app, token, "tools/list").json()["result"]["tools"]}
+    assert "set_food_preference" in listed and listed >= {"get_today", "search_foods", "check_meal", "safety_check"}
+    r = rpc(c.app, token, "tools/call", {"name": "set_food_preference", "arguments": arguments})
+    assert r.json()["result"]["isError"] is False and r.json()["result"]["structuredContent"]["saved"] is True
+    assert stored(c) == [(arguments["food_id"], "like", "assistant")]  # the token's word, never Ask's
+
+
+def test_ask_is_still_a_card_whatever_tokens_exist(taste_client):
+    """A token with the scope changes nothing about Ask: its tool is a card in every trust mode, written by the page with
+    ``source = ask`` only after Remember (note 09 Q2)."""
+    c = taste_client
+    switch(c, True)
+    make(c, "Hermes", can_prefs=True)
+    set_trust(c, "always")
+    before = touched(c)
+    with attach(c.app, FakeProvider([taste(food_id=food_id(c), preference="less")])):
+        body = say(c).json()
+    assert body["kind"] == "confirm_save" and body["text"] == CH.CONFIRM_PREFERENCE_TEXT
+    assert body["pending_save"]["payload"] == {"preference": "less", "source": "ask"}
+    assert touched(c) == before and stored(c) == []
 
 
 # --------------------------------------------------------------------------- #

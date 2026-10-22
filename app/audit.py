@@ -75,6 +75,7 @@ ACTIONS: set[str] = {
     "body.token_rows_deleted",  # "Delete what it sent": a device token's weights and readings removed (app/push.py); counts only
     "assistant.food_logged",  # a token with assistant:log saved food or a recipe (app/mcp/tools.py)
     "assistant.recipe_saved",
+    "assistant.preference_set",  # a token with assistant:prefs remembered a taste (app/mcp/preference_tool.py)
     "ai.trust_changed",  # a person changed how much the Ask chat may save without asking (app/ai/routes.py)
 }
 USER_VISIBLE_ACTIONS = frozenset(
@@ -97,6 +98,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "body.token_rows_deleted",
         "assistant.food_logged",
         "assistant.recipe_saved",
+        "assistant.preference_set",
         "ai.trust_changed",
     }
 )
