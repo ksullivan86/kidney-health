@@ -270,7 +270,8 @@ def test_unknown_fields_missing_fields_and_wrong_shapes_are_400_naming_the_place
 
 @pytest.mark.parametrize("raw", [b"", b"not json", b"[]", b'"text"', b"5", b"null", b'{"weights": [{"at": NaN}]}',
                                  b'{"weights": [{"at": "' + AT.encode() + b'", "value": Infinity, "unit": "kg", "source": "H"}]}',
-                                 b"\xff\xfe", b'{"weights": []}', b'{"readings": []}', b"{}", b'{"weights": [], "readings": []}'])
+                                 b"\xff\xfe", b'{"weights": []}', b'{"readings": []}', b"{}", b'{"weights": [], "readings": []}',
+                                 b"[" * 20000, b'{"a":' * 5000, b'{"weights": [' + b"[" * 5000])
 def test_a_body_that_is_not_the_object_or_holds_no_rows_is_400(admin, token, raw):
     r = push(admin.app, token, raw=raw)
     assert r.status_code == 400 and isinstance(r.json()["detail"], str), raw

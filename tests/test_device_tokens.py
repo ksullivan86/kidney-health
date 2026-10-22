@@ -527,6 +527,18 @@ def test_shortcut_rows_export_and_import_with_their_source_and_without_the_token
         conn.close()
 
 
+def test_a_device_token_works_with_no_sign_in_mode_for_user_one(tmp_path, foods_json):
+    from app.config import Settings
+    from app.main import create_app
+
+    with TestClient(create_app(Settings(data_dir=tmp_path / "data", foods_json=foods_json, auth_mode="none"))) as c:
+        assert c.patch("/api/admin/settings", json={"push.enabled": True}).status_code == 200
+        made = make_device(c, "Kitchen tablet")
+        assert push(c.app, made["token"], {"weights": [weight()]}).json() == counts(added_w=1)
+        (w,), _ = rows(c)
+        assert (w["via"], w["source"]) == ("Kitchen tablet", "shortcut")
+
+
 def test_log_lines_hide_a_device_token_like_an_assistant_token():
     from app.security import redact
 
