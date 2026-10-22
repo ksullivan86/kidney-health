@@ -16,7 +16,7 @@
    copy ("kdl-demo-local"), because sw.js and theme-init.js run outside KH and cannot read this file, and those names are in each person's
    browser already. js/engine/settings.js and js/engine/off.js keep their literals as vector-checked twins of the server's settings.
 
-   Loaded right after js/engine/rules.js, before every script that reads it. Exposes KH.brand = { name, screenName, slug, logCsvPrefix,
+   Loaded last of the engine files, right before js/core.js and so before every script that reads it. Exposes KH.brand = { name, screenName, slug, logCsvPrefix,
    csrfHeaderValue, versionHeader, exportFormat, idbName }. */
 (() => {
   'use strict';

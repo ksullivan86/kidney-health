@@ -813,7 +813,6 @@ app/static/
   js/core.js            KH.h/s/$, KH.api (fetch wrapper: X-Requested-With, 401 → sign-in, toasts), state, router, sheets, confirm,
                         KH.forms (server "<field>: <message>" errors under their field, aria-describedby + aria-invalid)
   js/engine/rules.js    warnings, ratings, rounding, number formatting (twin of app/nutrients.py, app/nutrient_core.py and app/rules_kidney.py)
-  js/engine/brand.js    KH.brand: the strings the page uses (CSRF header value, IndexedDB name, export format, names), the twin of app/brand.py; loads second
   js/engine/settings.js settings registry + precedence (twin of app/settings_registry.py / settings_store.py)
   js/engine/targets.js, js/engine/kidney_function.js        (M2 targets: KH.targets twin of app/targets.py + target_rules.py;
                         KH.kidney twin of app/units.py + app/kidney_function.py; kidney_function.js loads first)
@@ -834,6 +833,7 @@ app/static/
                         "PDFs" under "Lab report photos")
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
+  js/engine/brand.js    KH.brand: the strings the page uses (CSRF header value, IndexedDB name, export format, names), the twin of app/brand.py; the last engine file, loaded just before core.js
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
   js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
@@ -4134,7 +4134,7 @@ for them. Gathering them changed no value.
   (`foods.py`, `off.py`, `data_import.py`, `mcp/tools.py`) the module imports the names, not the module. The old module-level names
   (`sessions.COOKIE_HTTP`, `api_tokens.PREFIX`, `account.EXPORT_FORMAT` and so on) stay and now point at the constants.
 * **The browser's copy.** `KH.brand` holds `name`, `screenName`, `slug`, `logCsvPrefix`, `csrfHeaderValue`, `versionHeader`, `exportFormat`
-  and `idbName`. It loads second in `index.html` (after `js/engine/rules.js`, before everything that reads it) and is in the `sw.js`
+  and `idbName`. It loads last of the engine files in `index.html`, right before `js/core.js`, and is in the `sw.js`
   precache list; `scripts/build_preview.py` reads `index.html` and needs no list. `idbName` is the one value Python does not have.
 * **Left alone, on purpose.** Migration steps (released steps are never edited); the three AI prompts, which say "Kidney Health" (prompt
   text is pinned by the golden tests); `APP_WORDS` in `app/auth/policy.py` and `js/mock/auth.js`; the `Literal` of `ExportFile.format`

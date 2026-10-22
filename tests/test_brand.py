@@ -224,7 +224,7 @@ def test_the_browser_copy_is_frozen_and_registered_before_its_readers() -> None:
     index = (STATIC / "index.html").read_text(encoding="utf-8")
     scripts = re.findall(r'<script src="([^"]+)"', index)
     at = scripts.index("js/engine/brand.js")
-    assert scripts[at - 1] == "js/engine/rules.js"  # the engine files start with rules.js; the brand file is second
+    assert scripts[at + 1] == "js/core.js"  # the last engine file, right before core.js, which is the first script to read it
     for reader in ("js/core.js", "js/offline.js", "js/mock/export.js", "js/mock/import.js", "js/pwa.js", "js/main.js"):
         assert at < scripts.index(reader), reader
     sw = (STATIC / "sw.js").read_text(encoding="utf-8")
@@ -241,7 +241,7 @@ def test_the_preview_build_carries_the_browser_copy_before_its_readers(tmp_path:
     assert builder.main(["--out", str(out)]) == 0
     html = out.read_text(encoding="utf-8")
     assert html.count("KH.brand = Object.freeze({") == 1
-    assert html.index("/* js/engine/rules.js */") < html.index("/* js/engine/brand.js */") < html.index("/* js/core.js */")
+    assert html.index("/* js/engine/guidance/hypo.js */") < html.index("/* js/engine/brand.js */") < html.index("/* js/core.js */")
     assert html.index("/* js/engine/brand.js */") < html.index("/* js/mock/export.js */")
 
 

@@ -8,7 +8,7 @@ HKDF labels, token prefixes, the database filename, the IndexedDB name and the e
 ## Plan
 
 1. `app/brand.py` (plain constants, no imports) and use it at each Python site.
-2. `app/static/js/engine/brand.js` (`KH.brand`), registered in `index.html` (second engine, after `rules.js`) and in the `sw.js` precache list.
+2. `app/static/js/engine/brand.js` (`KH.brand`), registered in `index.html` (the last engine file, just before `core.js`) and in the `sw.js` precache list.
    `scripts/build_preview.py` reads `index.html`, so it needs nothing. Test harnesses that load files by hand get it added.
 3. Tests: `tests/test_brand.py` (values pinned, Python and JS twins agree, literals only in an allowlist).
 4. Docs: ARCHITECTURE (layout, ownership, "Brand strings"), CONTRIBUTING, CHANGELOG, note 14.
@@ -18,7 +18,7 @@ HKDF labels, token prefixes, the database filename, the IndexedDB name and the e
 * `app/brand.py` (32 constants, each with a comment saying whether it is compatibility surface) and every Python site uses it: cookies, CSRF
   value, version header, token prefixes and regexes, bearer realm, DB filename, backup prefix, MCP name/title/source, export format and README,
   User-Agents, HKDF labels, logger names (31 modules), the API document's texts, the admin CLI's help.
-* `app/static/js/engine/brand.js` (`KH.brand`), second script in `index.html`, in `sw.js`'s precache list; used by core.js, offline.js, pwa.js,
+* `app/static/js/engine/brand.js` (`KH.brand`), the last engine script in `index.html` (just before `core.js`), in `sw.js`'s precache list; used by core.js, offline.js, pwa.js,
   views/{ai,ask-voice,auth,settings,trends,visit}.js, main.js, mock/{export,import}.js.
 * `tests/test_brand.py` (27 tests): values pinned, sites unchanged (incl. HKDF known answers), JS twin agrees, grep test with an allowlist.
 * Text pins in five existing tests updated to the new JS wording (test_ai_ui, test_ask_voice_ui, test_device_ui, test_frontend_shell,
@@ -38,7 +38,9 @@ HKDF labels, token prefixes, the database filename, the IndexedDB name and the e
 ## Decisions
 
 * The JS file lives in `js/engine/` so `tests/js/demo_loader.mjs` (which loads `engine/`, `mock/` and `core.js` from `index.html`) finds it.
-  `test_frontend_shell.py` wants `js/engine/rules.js` first, so `brand.js` is second.
+  Two tests (`test_apple_health.py`, `test_body_import_ui.py`) want `apple_health.js` right after `rules.js`, and `test_frontend_shell.py` /
+  `test_preview_build.py` want `rules.js` first, so `brand.js` is the last engine file, right before `core.js` (the first reader). My first
+  placement (second) failed those two tests in the full run; moved.
 
 ## Commands that reproduce the checks
 
