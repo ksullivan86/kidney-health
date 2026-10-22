@@ -114,6 +114,9 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # chat assistant they connect, such as Open WebUI. A token reads; if the person ticks "Can also save food and
 # recipes" it can also log food and save recipes. Off by default; the app contacts nothing for it.
 # Environment=ASSISTANT_ENABLED=true
+# Phone shortcuts (docs/push.md): each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to
+# add weights and blood pressure readings to their own log (POST /push/v1/body). A token can only add. Off by default.
+# Environment=PUSH_ENABLED=true
 # Environment=PASSWORD_BREACH_CHECK=true
 
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does

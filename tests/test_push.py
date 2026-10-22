@@ -114,6 +114,26 @@ def test_the_switch_is_off_by_default_and_while_off_every_request_is_the_generic
     assert push(client.app, token, {"weights": [weight()]}).status_code == 200  # the address was never blocked
 
 
+def test_nothing_is_looked_up_while_off_or_for_a_token_of_the_other_family(admin, token, monkeypatch):
+    """The switch, the family prefix and the token's shape are all checked before the token's hash is computed or looked up."""
+    from test_api_tokens import make, switch
+
+    switch(admin, True)
+    assistant = make(admin)["token"]
+    lookups: list[str] = []
+    real = api_tokens.hash_token
+    monkeypatch.setattr(api_tokens, "hash_token", lambda t: lookups.append(t) or real(t))
+    for bad in (assistant, "khd_short", "khd_" + "A" * 44, "x"):  # another family, too short, too long, not a token
+        assert push(admin.app, bad, {"weights": [weight()]}).status_code == 401
+    assert lookups == []
+    push_switch(admin, False)
+    assert push(admin.app, token, {"weights": [weight()]}).status_code == 401
+    assert lookups == []
+    push_switch(admin, True)
+    assert push(admin.app, token, {"weights": [weight()]}).status_code == 200
+    assert lookups == [token]  # the one good token, once
+
+
 def test_the_env_switch_wins(tmp_path, foods_json, monkeypatch):
     from conftest import make_settings, signed_in_client
 
@@ -349,6 +369,22 @@ def test_pounds_become_kilograms_rounded_half_up_to_a_hundredth(admin, token):
     stored, _ = rows(admin)
     assert [w["kg"] for w in stored] == out
     assert B.lb_to_kg(154.3) == 69.99 and B.round_kg(70.255) == 70.26
+
+
+def test_a_json_number_is_read_as_it_is_so_float_noise_is_fine_but_text_must_be_plain(admin, token):
+    """A Shortcut may send 154.29999999999998; the same moment as the text "154.3" is the same weight."""
+    raw = ('{"weights": [{"at": "%s", "value": 154.29999999999998, "unit": "lb", "source": "Health"}, '
+           '{"at": "%sT08:00:00Z", "value": 1e2, "unit": "kg", "source": "Health"}, '
+           '{"at": "%sT09:00:00Z", "value": 1.005E+2, "unit": "kg", "source": "Health"}]}') % (AT, DAY, DAY)
+    assert push(admin.app, token, raw=raw.encode()).json() == counts(added_w=3)
+    assert [w["kg"] for w in rows(admin)[0]] == [69.99, 100.0, 100.5]
+    assert push(admin.app, token, {"weights": [weight(AT, "154.3", "lb", "Another")]}).json() == counts(there_w=1)  # the same reading
+    for bad in ("1e999", "1e400", "-0", "123456789012", "0.5e1"):  # too large to be a weight, or no weight in range
+        body = '{"weights": [{"at": "%s", "value": %s, "unit": "kg", "source": "H"}]}' % (AT, bad)
+        assert push(admin.app, token, raw=body.encode()).status_code == 400, bad
+    assert push(admin.app, token, raw=('{"weights": [{"at": "%s", "value": 1%s, "unit": "kg", "source": "H"}]}' % (AT, "0" * 500)).encode()
+                ).status_code == 400
+    assert len(rows(admin)[0]) == 3
 
 
 @pytest.mark.parametrize("value, unit", [

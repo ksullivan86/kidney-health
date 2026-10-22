@@ -47,6 +47,8 @@ using the app; the pages below are for the people who run, maintain and check it
 * [The assistant](assistant.md): a chat assistant that reads your own food log and targets: personal access tokens,
   the MCP server at `/mcp` and its tools, connecting Open WebUI or a Hermes Agent profile, the system prompt template,
   the **Ask** screen inside the app with saving and a trust setting, voice, and the honest limits.
+* [Phone shortcuts](push.md): device tokens that let an iPhone Shortcut add weights and blood pressure readings to your own log
+  (`POST /push/v1/body`): turning it on, the limits, what a leaked token can do. Add-only; it reads nothing.
 * [The online demo](demo.md): the Pages demo, and **Keep my data in this browser** (IndexedDB, off until you choose it): what is
   stored, export and import of `export.json`, when it cannot work.
 * [Diet guide (moved)](diet-guide.md): a pointer from the old diet guide's sections to the handbook pages.

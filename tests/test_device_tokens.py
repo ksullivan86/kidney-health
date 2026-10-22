@@ -525,3 +525,14 @@ def test_shortcut_rows_export_and_import_with_their_source_and_without_the_token
         assert conn.execute("SELECT api_token_id FROM weights").fetchone()[0] is None
     finally:
         conn.close()
+
+
+def test_log_lines_hide_a_device_token_like_an_assistant_token():
+    from app.security import redact
+
+    for prefix in ("kha_", "khd_"):
+        token = prefix + "AbCdEfGh01234567AbCdEfGh01234567AbCdEfGh012"
+        assert len(token) == 47
+        shown = redact(f"refused {token} from 10.0.0.1")
+        assert token not in shown and f"{prefix}[redacted]" in shown
+        assert token not in redact(f"Authorization: Bearer {token}")

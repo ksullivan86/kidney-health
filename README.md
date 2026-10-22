@@ -381,7 +381,7 @@ app/
   audit.py, account.py    activity log; data export and account deletion
   data_import.py          import of a person's own export.json (POST /api/me/import)
   admin.py                admin CLI (python -m app.admin ...)
-  db.py, migrations/      SQLite connection + append-only schema steps (1-18)
+  db.py, migrations/      SQLite connection + append-only schema steps (1-19)
   nutrients.py, periods.py    pure rules: daily status, alerts, period maths
   rules_kidney.py         the kidney/T1D rule pack of nutrients.py: warnings, kidney rating, meal-carb alerts, suggested targets
   nutrient_core.py        the nutrient registry and rounding that nutrients.py and rules_kidney.py share
@@ -392,6 +392,7 @@ app/
   gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
   ai/, vision.py, imagecheck.py   optional AI (presets, routing, network policy, guard, routes, the Ask chat) and photo checks
   mcp/                    the assistant's MCP server (POST /mcp) and its tools
+  push.py                 phone shortcuts: POST /push/v1/body with a device token (add weights and blood pressure readings, nothing else)
   foods.py, log.py, meals.py, profile.py   the data routes, scoped to the signed-in person
   pwa.py, handbook.py     service worker and manifest headers; the handbook at /learn
   static/                 index.html, js/ (KH modules: engine twins, mock demo API, views), css/, vendor/

@@ -307,9 +307,9 @@ pass); every unsafe `/api` request (POST/PUT/PATCH/DELETE) must send `X-Requeste
 kidney-health` and a same-origin `Origin`/`Sec-Fetch-Site`, and cross-site or same-site `/api`
 reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
 `Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true`. The one
-bearer-only path, exactly `/mcp` (`security.BEARER_PATHS`, "Assistant MCP server" below), skips the cookie checks
-(`X-Requested-With`, `Sec-Fetch-Site`: it never reads a cookie) but answers `403` to a foreign `Origin` on every
-method.
+bearer-only paths, exactly `/mcp` and `/push/v1/body` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
+and `/push/v1`" below), skip the cookie checks (`X-Requested-With`, `Sec-Fetch-Site`: they never read a cookie) but answer
+`403` to a foreign `Origin` on every method.
 
 ### Health
 * `GET /healthz` → `{"status":"ok","foods": <count>}`
@@ -759,6 +759,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 16 | `m016_ai_consent_labs.py` | lab report photos | `ai_consents.purpose` accepts `labs` (table rebuilt from its stored definition; "Lab report photos" below). Needs step 15 in place (the numbering has no gaps). |
 | 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
 | 18 | `m018_body_measurements.py` | weight and blood pressure | `weights` and `blood_pressures`: a person's weighings and readings by date, kilograms and mmHg, a `source_key` an import de-duplicates on, no `CHECK` on a context or a source ("Weight and blood pressure" below). |
+| 19 | `m019_body_token.py` | phone push (note 12) | `weights.api_token_id` and `blood_pressures.api_token_id` (`REFERENCES api_tokens(id) ON DELETE SET NULL`, NULL for every earlier row) and two partial indexes `(user_id, api_token_id) WHERE api_token_id IS NOT NULL`; no `(user_id, date, time)` index (step 18's `(user_id, date)` serves the same-reading check) ("Device tokens and `/push/v1`" below). |
 
 ## Backend file ownership
 
@@ -778,6 +779,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
+| Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
@@ -973,7 +975,7 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   the UI shows a red banner).
 * **Every `/api` route needs a signed-in, active person** except `GET /api/auth/status` and
   `POST /api/auth/{login,setup,register,reset,reset/info}`. A bearer token is never a sign-in here: the
-  `Authorization` header is read only by the assistant surface ("Assistant access tokens" below). Anonymous → `401 {"detail": "Sign in required"}`
+  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1/body` ("Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -1066,9 +1068,10 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `DELETE /api/me/keys/{provider}` | user *(re-auth)* | → 204 |
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
 | `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
-| `GET /api/me/tokens` | user | → `{enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}`; works while `assistant.enabled` is off ("Assistant access tokens") |
-| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes); 409 switch off, 400 five active, 429 after 20 in an hour |
+| `GET /api/me/tokens?family=` | user | `family` is `assistant` (default, so the Assistant access screen is unchanged) or `device` (else 400) → `{family, enabled, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [TokenItem]}` for that family only; `enabled` is that family's switch (`assistant.enabled` / `push.enabled`); works while it is off. A device token's item also holds `sent: {weights, readings}` ("Assistant access tokens", "Device tokens and `/push/v1`") |
+| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365, can_log?: bool = false, family?: "assistant"\|"device" = "assistant"}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes) and is a 400 for a device token, whose one scope `body:write` is never chosen; 409 that family's switch is off, 400 five active **in that family**, 429 after 20 in an hour (both families together) |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
+| `DELETE /api/me/tokens/{id}/body-rows` | user | "Delete what it sent": → `{deleted: {weights, readings}}` after deleting every weight and reading the person's **device** token `id` sent (`api_token_id`), nothing else; works for a revoked or expired token still listed; audit `body.token_rows_deleted`; 404 if not yours, not a device token or already purged |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `weights.csv`, `blood_pressure.csv`, `README.txt`; no passwords, sessions or keys |
 | `POST /api/me/import?dry_run=&merge=&replace_profile=` | user *(re-auth)* | body: the `export.json` file as `application/json` (up to `MAX_IMPORT_BYTES`, 16 MiB, for this path only) → the report below; 400 the file is refused (naming the record kind and position), 409 the account has data and `merge` was not set, 413 too large, 415 not JSON, 429 after 20 in an hour. See "Import of `export.json`" |
 
@@ -1179,14 +1182,14 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 
 | Method and path | Body → response |
 |---|---|
-| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at, reset_link, assistant_tokens}]}`; `reset_link` is the open reset or setup link (`{id, created_by, created_at, expires_at}`, never the token) or `null`; `assistant_tokens` is how many active assistant tokens the person has (a number, never a token; also in the `user` of the POST/PATCH answers) |
+| `GET /api/admin/users` | → `{users: [{id, username, display_name, role, status, auth_source, can_use_shared, must_change_password, has_password, created_at, last_login_at, reset_link, assistant_tokens, device_tokens}]}`; `reset_link` is the open reset or setup link (`{id, created_by, created_at, expires_at}`, never the token) or `null`; `assistant_tokens` and `device_tokens` are how many active tokens of each family the person has (numbers, never a token; also in the `user` of the POST/PATCH answers) |
 | `POST /api/admin/users` | `{username, display_name?, role}` → 201 `{user, setup_url, expires_at}`: a `pending_setup` account and a one-time link (`/#/reset/…`, `registration.invite_ttl_days`) where the person sets a password. Proxy mode: pre-creates the proxy identity (`setup_url: null`) |
 | `PATCH /api/admin/users/{id}` | any of `{role, status ("active"\|"disabled"), can_use_shared, must_change_password (true), display_name}` → `{user}`. 409 when it would leave no active admin, for disabling yourself, or enabling a locked/new account (use a reset link). A role change or disabling signs the person out. Demoting or disabling an admin deletes every unused invite and reset/setup link they created (audit detail `links_revoked`); disabling also voids the account's own open link |
 | `DELETE /api/admin/users/{id}` | `{confirm_username}` → 204 (cascade); 409 for yourself or the last admin. The person's unused invites and links are deleted first (`auth_tokens.created_by` is `ON DELETE SET NULL`) |
 | `POST /api/admin/users/{id}/reset-link` | → `{url, expires_at}` (24 h, single use; also unlocks; voids the account's older link) |
 | `DELETE /api/admin/users/{id}/reset-link` | → 204, voids the account's open reset or setup link (404 when there is none); audit `user.reset_link_revoked` |
 | `POST /api/admin/users/{id}/revoke-sessions` | → `{revoked: n}` |
-| `POST /api/admin/users/{id}/revoke-tokens` | → `{revoked: n}`: ends every active assistant token of the person (`api_tokens.revoke_all`, reason `admin`; works while `assistant.enabled` is off; `n: 0` and no audit row when there is none); 404 for an unknown id; audit `api_token.revoked` (actor the admin, target `user`, details `reason`, `count`). The person's Settings → Assistant access then lists them as revoked |
+| `POST /api/admin/users/{id}/revoke-tokens` | → `{revoked: n}`: ends every active token of the person, **assistant and device tokens alike** (`api_tokens.revoke_all`, reason `admin`; works while `assistant.enabled` and `push.enabled` are off; `n: 0` and no audit row when there is none); 404 for an unknown id; audit `api_token.revoked` (actor the admin, target `user`, details `reason`, `count`). The person's Settings then lists them as revoked |
 | `GET /api/admin/invites` · `POST /api/admin/invites` · `DELETE /api/admin/invites/{id}` | POST `{role, note?, ttl_days? (1–90)}` → 201 `{invite, url, expires_at}` (the URL is shown once); list → `{invites: [{id, role, note, created_by, created_at, expires_at, used_at, state}]}`; 409 when registration is `closed` or in proxy mode |
 | `GET /api/admin/settings` · `PATCH /api/admin/settings` | → `{settings: {key: {value, source, locked_by_env, scope}}}`; PATCH `{key: value \| null}`, audited with old and new values |
 | `GET /api/admin/keys` · `PUT/DELETE /api/admin/keys/{provider}` | shared keys: `{providers: [{provider, label, shared: {set, source ("db"\|"env"), locked, last4?, updated_at?}}]}`; PUT `{api_key, test?}`; an env key (`USDA_API_KEY[_FILE]`) is locked (409); 403 in none mode |
@@ -3132,9 +3135,10 @@ treatment or a medicine.** Code: `app/body.py` (router, pure functions, the hand
 
 `weights (id AUTOINCREMENT, user_id → users ON DELETE CASCADE, date 'YYYY-MM-DD', time 'HH:MM' or NULL, kg REAL (kilograms, two decimals), context TEXT, note
 TEXT, source TEXT 'manual', source_key TEXT or NULL, created_at, updated_at)` and `blood_pressures (…, systolic INTEGER, diastolic INTEGER, pulse INTEGER or
-NULL, context, note, source, source_key, created_at, updated_at)`, each with the index `(user_id, date)` and a **unique index `(user_id, source_key)
+NULL, context, note, source, source_key, created_at, updated_at)` (and, from schema step 19, `api_token_id → api_tokens ON DELETE SET NULL`: the device token
+that sent the row, NULL otherwise), each with the index `(user_id, date)` and a **unique index `(user_id, source_key)
 WHERE source_key IS NOT NULL`** (the key an import de-duplicates on; NULL for a typed row). `weights.context` is `morning`, `before_dialysis`,
-`after_dialysis` or `other`; `blood_pressures.context` also has `evening`; `source` is `manual`, `apple_health` or `import`. **No `CHECK`** beyond `NOT NULL`:
+`after_dialysis` or `other`; `blood_pressures.context` also has `evening`; `source` is `manual`, `apple_health`, `import` or `shortcut` (a phone shortcut's device token). **No `CHECK`** beyond `NOT NULL`:
 the lists and the ranges live in the models (a later context or source must not need a table rebuild), and a row with a value this version does not know is
 kept, left out of the lists and the summary, and included in the export. The unit the person types and sees (`user.units.weight`) is display and entry
 only: storage is kilograms. The note is stored as text (`''`, never NULL).
@@ -3145,9 +3149,9 @@ only: storage is kilograms. The note is stored as text (`''`, never NULL).
 |---|---|
 | `GET /api/body/weights?start=&end=` | `{weights: [WeightOut]}` oldest day first, then by time (a row with no time last), then id; `start` and `end` required, at most 366 days (the log's range rules and messages) |
 | `POST /api/body/weights` `WeightCreate` | 201 `WeightOut` (`source: manual`) |
-| `PUT /api/body/weights/{id}` `WeightCreate` | 200 `WeightOut`: replaces the editable fields; the row becomes `manual` and keeps `created_at` and its `source_key` (so a second import does not bring the old value back); the body is checked before the id is looked up |
+| `PUT /api/body/weights/{id}` `WeightCreate` | 200 `WeightOut`: replaces the editable fields; the row becomes `manual`, leaves its device token (`api_token_id` NULL, so "Delete what it sent" never removes what the person edited) and keeps `created_at` and its `source_key` (so a second import does not bring the old value back); the body is checked before the id is looked up |
 | `DELETE /api/body/weights/{id}` | 204 |
-| `POST /api/body/weights/batch` `{rows: [WeightBatchRow]}` | 200 `{added, skipped}`: 1 to 1,000 rows, each the `WeightCreate` fields plus `source` (`apple_health` or `import`, default `import`) and a `source_key` (1 to 64 characters, one line); **the whole request is checked first and refused, writing nothing, on the first row that is not valid** (`400 "rows.3.kg: Input should be …; rows.3.context: …"`: all of that row's problems) or would be the 21st weight of its day (`rows.N: too many weights for one day (max 20)`); rows whose `source_key` the person has, and repeats inside the request, are skipped and counted |
+| `POST /api/body/weights/batch` `{rows: [WeightBatchRow]}` | 200 `{added, skipped}`: 1 to 1,000 rows, each the `WeightCreate` fields plus `source` (`apple_health` or `import`, default `import`) and a `source_key` (1 to 64 characters, one line); **the whole request is checked first and refused, writing nothing, on the first row that is not valid** (`400 "rows.3.kg: Input should be …; rows.3.context: …"`: all of that row's problems) or would be the 21st weight of its day (`rows.N: too many weights for one day (max 20)`); rows whose `source_key` the person has, rows that are **the same reading** as one the person has from any source but `manual` (the same date, `HH:MM` and kilograms; for a reading the same two numbers; a row with no time never matches), and repeats inside the request, are skipped and counted |
 | `GET`, `POST`, `PUT`, `DELETE /api/body/blood-pressure…` | the same for readings: `{readings: [BloodPressureOut]}`, `BloodPressureCreate`, `POST /api/body/blood-pressure/batch` (the 31st reading of a day is the limit) |
 | `GET /api/body/summary?date=` | `BodySummary` (below) |
 
@@ -3158,7 +3162,8 @@ newline and carriage return allowed; null is empty). `BloodPressureCreate`: the 
 250). **The ranges are the project's own plausibility choice** (they keep a typing error out of the log), not clinical numbers (note 10 §3); `kg` is the
 profile's `weight_6_months_ago_kg` range. One person holds at most 20 weights and 30 readings per date (`MAX_WEIGHTS_PER_DAY`, `MAX_READINGS_PER_DAY`:
 bounds on storage; a 21st / 31st, or a move into a full day, is a 400). `kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
-note, source, created_at, updated_at}`; `BloodPressureOut` adds `systolic`, `diastolic`, `pulse` and **`flag`**. `source_key` is internal (it is in the export).
+note, source, via, created_at, updated_at}` (`via` is the name of the device token that sent a `shortcut` row, else `null`; read with a `LEFT JOIN` on the row's token and owner);
+`BloodPressureOut` adds `systolic`, `diastolic`, `pulse` and **`flag`**. `source_key` is internal (it is in the export).
 The two batch routes share one limit, `body_batch`: **60 requests an hour per person** (`app/auth/ratelimit.py`; 60,000 rows an hour, room for years of daily
 weights; the project's own number) and keep the default 1 MiB body limit.
 
@@ -3369,7 +3374,10 @@ questions' limits), `python tools/e2e/visitprep.py` (Chromium at 375 px light an
 
 Spec `docs/dev/plans/assistant-step1.md` part A; code `app/auth/api_tokens.py`; schema step 10; operator and
 user guide `docs/assistant.md`. A person makes a token for a chat assistant they connect; the assistant surface
-(the MCP server at `/mcp`, part B) is the only place a token is accepted.
+(the MCP server at `/mcp`, part B) is the only place an **assistant** token is accepted. The same table, code and
+rules also hold the **device** family (`khd_`, scope `body:write`, accepted only at `POST /push/v1/body`): see
+"Device tokens and `/push/v1`" below for what differs. Where this section says "token" without a family it means
+an assistant token.
 
 ### Switch
 
@@ -3385,8 +3393,9 @@ shows one line saying the feature is in the installed app (no mock tokens).
 `id INTEGER PRIMARY KEY AUTOINCREMENT`, `user_id → users(id) ON DELETE CASCADE`, `name` (1–60 characters after
 cleaning: NFC, no control characters, single spaces), `token_hash` (`UNIQUE`, the SHA-256 hex of the whole token),
 `prefix` (its first 12 characters), `scopes` (space-separated known scopes: `assistant:read`, and `assistant:log` for a
-token made with `can_log`, which always has `assistant:read` too; an unknown word grants nothing; a token's scopes
-are fixed when it is made), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
+token made with `can_log`, which always has `assistant:read` too; `body:write` for a device token; an unknown word
+grants nothing, and a row that names scopes of both families grants nothing; a token's scopes are fixed when it is
+made), `created_at`, `last_used_at`, `expires_at`, `revoked_at`. Index on `user_id`.
 
 ```json
 TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": ["assistant:read"],
@@ -3396,7 +3405,7 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
 
 * A token is `kha_` + 43 base64url characters (`secrets.token_urlsafe(32)`). The plain token is in the `POST`
   answer only; no route returns it or its hash again, and log lines redact `kha_…` (`app/security.py`).
-* At most 5 active (not revoked, not expired) tokens a person; expiry 30, 90 (default) or 365 days; making one
+* At most 5 active (not revoked, not expired) tokens a person **in each family**; expiry 30, 90 (default) or 365 days; making one
   needs a recent password (like keys and the export) and is limited to 20 an hour (`ratelimit` `api_tokens`).
 * The list holds active tokens and those that ended in the last 30 days, newest first; the daily housekeeping
   deletes older ended rows. Tokens are not in the export (a credential, like sessions).
@@ -3423,10 +3432,10 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
 `revoke_all(conn, user_id, reason=…, actor_id=…)` ends every active token of a person on their own password change
 (`password_changed`), a reset link or `python -m app.admin reset-password --stdin` (`password_reset`), an admin's or
 the CLI's disable (`account_disabled`, enabling again brings none back), account deletion (`account_deleted`,
-then the cascade removes the rows) and an admin's "Revoke assistant tokens" in Server administration → People
-(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`). An admin's "must change password" stops tokens until the change, which revokes
+then the cascade removes the rows) and an admin's "Revoke tokens" in Server administration → People
+(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`); all of these end **both families**. An admin's "must change password" stops tokens until the change, which revokes
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
-`expires_in_days`, `scopes`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
+`expires_in_days`, `scopes`, `family`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of
 part C are the one place a token's name is kept: `assistant.food_logged` and `assistant.recipe_saved` below.)
 
@@ -3626,6 +3635,141 @@ instructions tell the model to send a fresh key per intended save and to reuse i
 The assistant (through a token) cannot edit or delete anything; no MCP resources or prompts; no
 activity-log row per read call (the token's `last_used_at` is the trace); the demo has no assistant.
 
+
+## Device tokens and `/push/v1` (phone shortcuts; design note 12, schema step 19)
+
+Spec `docs/dev/research/12-phone-push-tokens.md`; code `app/push.py`, the device family in `app/auth/api_tokens.py`, `context_for`,
+`is_watch_source` and the same-reading check in `app/body.py`, `app/migrations/m019_body_token.py`; guide `docs/push.md`; tests
+`tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`. A person makes a **device token** in Settings and
+pastes it into a Shortcut on their phone; the Shortcut sends the latest weight and blood pressure to the person's own server. The
+token can **only add** weights and readings to its owner's log: it reads nothing, changes nothing and deletes nothing. **This section
+is the server; the Settings "Phone shortcuts" block, the "from a shortcut (name)" label on the weight and blood pressure screens and
+the handbook recipe are the next step** (the routes below are what they use). No new dependency, no JS twin of `/push` (no browser
+code calls it).
+
+### The second token family (`app/auth/api_tokens.py`)
+
+Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_all` and generic 401; no schema change for the tokens.
+
+| | assistant | device |
+|---|---|---|
+| prefix and pattern | `kha_` + 43 base64url characters | `khd_` + 43 base64url characters |
+| scopes | `assistant:read`, `assistant:log` (implies read) | exactly `body:write`; never the person's choice |
+| instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`) |
+| accepted at | `POST /mcp` | `POST /push/v1/body` |
+| made in | Settings → Assistant access | Settings → Phone shortcuts |
+
+* **Families do not mix.** `authenticate(request, conn, scope)` derives the family from the scope the route asks for and, before any
+  lookup, checks that family's switch and that the presented token has that family's prefix pattern. A `kha_` token at `/push` and a
+  `khd_` token at `/mcp` are the generic 401 of their surface and count toward the address's sign-in limit like any wrong token.
+  `parse_scopes` never lets one family's scope imply the other's, and a stored row naming scopes of both grants nothing. The 401 text
+  differs by surface (`A valid device token is required (Settings → Phone shortcuts).` at `/push`).
+* **Per family**: at most 5 active tokens a person (`MAX_ACTIVE`), expiry 30, 90 (default) or 365 days. The 20-an-hour limit on making
+  tokens (`api_tokens`) and the recent-password rule are shared by both.
+* **Routes**: `GET /api/me/tokens?family=assistant|device`, `POST /api/me/tokens` with `family` (default `assistant`: the Assistant
+  access screen is unchanged), `DELETE /api/me/tokens/{id}` (either family), `DELETE /api/me/tokens/{id}/body-rows` (below). A device
+  token's list item is a `TokenItem` plus `sent: {weights, readings}`: how many rows it sent that are still in the log (the Settings block
+  names the count before "Delete what it sent"). A device token's `POST` answer carries `"sent": {"weights": 0, "readings": 0}`.
+* **Revoking**: `revoke_all` (password change or reset, account disabled or deleted, the admin's "Revoke tokens") ends **both families**;
+  `GET /api/admin/users` shows `assistant_tokens` and `device_tokens` counts. `api_token.created` is audited with `family`.
+* **The switch** `push.enabled` (instance, bool, default **false**, env `PUSH_ENABLED`; Server administration → Server settings →
+  "Phone shortcuts"; the group is the one line added to `js/views/settings.js`). Off: `GET` still lists (`enabled: false`) and `DELETE` still
+  revokes, `POST /api/me/tokens` with `family: "device"` answers `409`, and `/push/v1/body` gives the generic `401` to every request with
+  no lookup and no count toward the sign-in limit. On again: tokens that have not expired or been revoked work again.
+
+### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
+
+`Authorization: Bearer khd_…`, `Content-Type: application/json`:
+
+```json
+{"weights":  [{"at": "2026-10-22T07:15:00-04:00", "value": 154.3, "unit": "lb", "source": "Health"}],
+ "readings": [{"at": "2026-10-22T07:20:00-04:00", "systolic": 122, "diastolic": 78, "source": "Omron Connect"}]}
+```
+
+Checks, in order (each answers before the next runs):
+
+| Check | Answer |
+|---|---|
+| Body over `MAX_BODY_BYTES` (1 MiB, the middleware); `Origin` present and not this server's own or `PUBLIC_URL` (`CsrfMiddleware`, exact path `/push/v1/body`, every method; the cookie checks do not apply: no cookie is read) | `413` / `403 {"detail": "Cross-site request refused"}` |
+| Any method but `POST` | `405`, `Allow: POST` |
+| A device token with `body:write` ("The second token family"); a session cookie is never read | the generic `401` with `WWW-Authenticate: Bearer` (switch off: the same, no lookup), or `429` with `Retry-After` for a blocked address |
+| Per-token limit (`ratelimit` `push_body`): **60 requests an hour**, key `token:<id>`, every request that got this far counts | `429` with `Retry-After` |
+| `Content-Type: application/json` | `415` |
+| Body of at most **32 KiB** (from `Content-Length` before anything is read, and counted while it streams) | `413` |
+| One JSON object (strict: NaN, Infinity, invalid UTF-8 refused); **at most 50 rows** in `weights` and `readings` together; unknown fields refused (`extra="forbid"`: `pulse`, `glucose`, `insulin` and every other kind are 400s); at least one row | `400` |
+| Every row valid, **all or nothing**: the first invalid row is a `400 {"detail": "weights.0.at: …"}` naming it | `400` |
+| Per-day limits (20 weights, 30 readings per person and date), counting rows the person typed or imported | `400 "weights.8: too many weights for one day (max 20)"`, nothing written |
+
+* **`at`**: ISO 8601 date and time **with its zone** (`2026-10-22T07:15:00-04:00` or `Z`; a space for the `T`, no seconds, a fraction of a
+  second (dropped) and an offset such as `-0400` or `-04` are also read, so the Health export's own `2026-10-22 07:15:00 -0400` works).
+  The row's `date` and `time` are the **wall clock as written**, not converted. No zone is a `400` ("send the time with its zone"): its
+  wall clock would be a guess. A date more than one day after the server's today, or before 1900, is a `400` (the models'
+  `validate_past_date`). Digits are ASCII only.
+* **`value`** (weights): a JSON number (read as it is, so `154.29999999999998` works), or a plain decimal string, 1 to 3 digits, optionally a point
+  and 1 to 3 more (`"154.3"`; not `"1e2"`, `"-5"`, `"1,5"`); `unit` is exactly `kg` or `lb`; `kg = lb × 0.45359237`, rounded half up to 0.01 kg (`lb_to_kg`, `round_kg`), then
+  the range of `WeightCreate` (20 to 400 kg). **`systolic` and `diastolic`**: a JSON integer or a string of 1 to 3 digits (`122.0` is read as
+  122; a fraction is a `400`); the ranges and `systolic > diastolic` are those of `BloodPressureCreate`. Each row is checked **by the same model
+  classes as `POST /api/body/weights` and `/blood-pressure`**, so the rules cannot drift.
+* **`source`**: 1 to 60 characters after cleaning (NFC, no control characters, single spaces). It is not stored; it goes into the
+  `source_key` and tells a watch from a cuff.
+* **Context from the clock time** (`body.context_for(kind, time)`, the Apple Health reader's rule; not the person's choice here):
+  weight `morning` from 04:00 to 10:59, else `other`; reading `morning` 04:00 to 10:59, `evening` 17:00 to 23:59, else `other`.
+  `KH.appleHealth.contextOf` is held to it by `context_cases` in `tests/data/body_vectors.json`.
+* **Watch-like readings are refused, not stored**: a reading whose `source` contains "watch" in any letter case
+  (`body.is_watch_source`, the reader's `isWatchSource`; `watch_cases` hold both to the same answers) is counted as `refused.watch`. The import
+  sheet starts such readings unticked; a Shortcut has no review step, and note 10 does not recommend cuffless devices for checking blood
+  pressure. A weight from a watch is kept. A watch reading must still be a valid reading (else `400`).
+* **Rows written** (one transaction, `BEGIN IMMEDIATE`): `source = 'shortcut'`, `api_token_id` = the token, no note, `context` as above.
+  `source_key` = the first 32 hex characters of the SHA-256 of **the text the Health export reader builds** (note 10 §4.8):
+  `HKQuantityTypeIdentifierBodyMass|<at as YYYY-MM-DD HH:MM:SS +HHMM>|<value as sent>|<source>` or
+  `BloodPressure|<at>|<systolic>/<diastolic>|<source>`. When the Shortcut's value and source text match the export's, a later import of
+  the export skips the row by key (`tests/test_push.py` rebuilds every key text of `tests/data/apple_health_vectors.json`).
+* **The same reading** (`known_weight_marks`, `known_reading_marks`): a row is "already there" when the person has the same `source_key`, or
+  a row **not `manual`** with the same date, `HH:MM` and kilograms (a reading: the same two numbers), whatever its key. Rows of the
+  request count for later rows of the same request. The two batch import routes apply the same check and count such a row as `skipped`,
+  so push-then-import and import-then-push each leave one row. A `manual` row never matches (a person may type the same reading twice on
+  purpose) and a row with no time cannot match. The browser twin is in `js/mock/body.js` (checked by the body vectors).
+* **The answer is counts only**: `{"added": {"weights": n, "readings": n}, "already_there": {"weights": n, "readings": n}, "refused":
+  {"watch": n}}`, `Cache-Control: no-store`. No row, id, flag, name or value is echoed, so a token reads nothing. **Values are never logged**: the
+  log line is `push: token <id> added … weights and … readings, … already there, … refused`.
+
+### Storage and "Delete what it sent" (schema step 19, `m019_body_token.py`)
+
+`weights.api_token_id` and `blood_pressures.api_token_id` (`INTEGER REFERENCES api_tokens(id) ON DELETE SET NULL`; NULL for every earlier row
+and every row not sent by a token) and two partial indexes `(user_id, api_token_id) WHERE api_token_id IS NOT NULL`. Purging a token 30 days
+after it ended sets the column to NULL and **keeps the row** (still `source: shortcut`, with `via: null`); deleting the account deletes rows
+and tokens. `GET /api/body/*` rows carry `via` (the token's name, joined on the token **and** its owner); `PUT` on a row makes it `manual`
+and clears `api_token_id`.
+
+`DELETE /api/me/tokens/{id}/body-rows` (`current_user`, scoped by `user.id`, a token that is not the person's own **device** token is
+`404`; no recent password needed) deletes the rows whose `api_token_id` is that token and the person's id, in both tables, in one
+transaction: `{"deleted": {"weights": n, "readings": n}}`, audit `body.token_rows_deleted` (target `api_token`, details `weights`, `readings`;
+in the person's own activity list). It works for a revoked or expired token that is still in the list. The token that sent the rows cannot
+call it (it is a session route).
+
+### Export, import, privacy
+
+`api_token_id` and `via` are **not exported** (server-local ids); `source: "shortcut"` and the `source_key` are, and import like the other
+sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by a token are never read by `app/ai/`, `app/mcp/` or
+`app/guidance/` (the same test as for the rest of the log), and are never sent to an AI provider.
+
+### Security review
+
+| Threat | Answer |
+|---|---|
+| A token leaks (a shared Shortcut, a lost phone) | add-only: 50 rows a request, 60 requests an hour, plausible ranges, 20 and 30 rows a day; last use is visible; Revoke, then Delete what it sent; expiry at most 365 days; every token ends on a password change |
+| False readings planted to alarm or mislead | only inside the ranges and day limits; each row is marked `shortcut` with the token's name; nothing is acted on automatically; the 180/120 flag is shown when the app is opened, as for any reading |
+| A token used elsewhere | prefix pattern and scope checked before lookup: `/mcp` refuses `khd_`, `/push` refuses `kha_`, every `/api` route ignores `Authorization` (`tests/test_auth_coverage.py`, `tests/test_api_tokens.py` use a token of each family) |
+| Guessing | 256-bit tokens, hash lookup, the generic 401, the address throttle (`429`) |
+| CSRF / a web page posting | no cookie is read; a cookie-only request is `401`; a foreign `Origin` is `403`; no CORS |
+| A leak through the answer or the log | counts only; the log line holds the token's id and counts |
+| Health-data rules | only weights and blood pressure; every other kind is a `400` by `extra="forbid"`; no glucose, insulin or medicines; nothing goes to an AI provider or the assistant |
+
+### Versioning and what comes later
+
+`/push/v1` is a promise: a breaking change gets `/push/v2` and v1 keeps working for at least one release. Later scopes (`log:write`,
+`labs:write`, `symptoms:write`) would follow the same pattern: one family or scope, one versioned route under `/push/`, add-only, counts-only
+answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain.
 
 ## Offline edits and deletes (ROADMAP; note 02 R5 "Queueable offline actions")
 

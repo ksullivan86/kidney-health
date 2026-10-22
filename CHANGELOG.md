@@ -34,6 +34,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   The app keeps at most 20 weights and 30 readings a day, so for a day with more it keeps the earliest and says how many were left out. If the server
   refuses a batch the import stops, shows the server's words and how many were already added, and pressing Import again carries on. Importing
   the same file again adds nothing. The handbook's "Using the app" page has the steps.
+* **A reading that is already in your log is not added twice, whichever way it arrives.** Importing from Apple Health now skips a weight or
+  a blood pressure reading when your log already holds one that you did not type, with the same day, the same minute and the same numbers
+  (before, only a row with the same file key was skipped). A reading you typed yourself is never counted as a match: you may have meant to
+  record it twice. This is the groundwork for sending weights and blood pressure from an iPhone Shortcut (next entry for a server).
 
 ### For people who run a server
 
@@ -48,9 +52,35 @@ the API. Security fixes are released as patch versions of the newest minor versi
   The new routes under `/api/body` allow 60 batch requests an hour per person. Nothing leaves the server: weights and readings are
   never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)).
 
+* **Phone shortcuts, the server half (off until you turn it on).** `POST /push/v1/body` takes a few weights and blood pressure readings
+  from an iPhone Shortcut, with a **device token** (`khd_…`) a person makes for their own account. A token can only **add** plausible
+  weights and readings to its owner's log (up to 50 rows a request, 60 requests an hour, 20 weights and 30 readings a day, the same
+  ranges as typed rows); it reads, changes and deletes nothing, and the answer is counts only. Readings whose source name contains
+  "Watch" are refused (cuffless readings are not recommended; a Shortcut cannot ask), and the same reading sent twice, or sent and then
+  imported from the Health export, is one row. Turn it on with **Server administration → Server settings → Phone shortcuts** or
+  `PUSH_ENABLED=true` (listed in `deploy/.env.example`, `compose.yaml`, the Quadlet and Kubernetes examples); while off, the route answers
+  `401` to everyone. The phone must reach the server (home network or your VPN), and a reverse proxy that lists the paths it passes on
+  needs `/push/v1/`. Settings has no screen for the tokens yet (a person can make one with `POST /api/me/tokens` and `"family": "device"`;
+  the screen, the label on the rows and the handbook recipe are the next part). Each person may hold 5 device tokens besides 5 assistant
+  tokens; a password change, a disabled or deleted account and an admin's **Revoke tokens** end both kinds; rows a token sent can be
+  deleted together (`DELETE /api/me/tokens/{id}/body-rows`). Details: [docs/push.md](docs/push.md).
+* **Schema step 19** (`m019_body_token.py`): `weights` and `blood_pressures` gain `api_token_id` (the device token that sent a row;
+  empty for every earlier row; set to empty when the token is purged, which keeps the row). It runs at the first start of this version and
+  changes no value that exists (take a backup first, as for any upgrade). The rows `GET /api/body/*` returns gain `via` (the token's name or
+  `null`); `source` can now be `shortcut`, and a `shortcut` row exports and imports like the other sources (the token id is not exported).
+  `GET /api/admin/users` gains `device_tokens` next to `assistant_tokens`.
+
 ### For contributors
 
 * pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
+* **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
+  before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and
+  "Delete what it sent" in `app/push.py` (outside `/api`, in `security.BEARER_PATHS`), `context_for`, `is_watch_source` and the
+  same-reading check in `app/body.py`. `KH.appleHealth.contextOf` and `isWatchSource` are checked against the server's by new
+  `context_cases` and `watch_cases` in `tests/data/body_vectors.json`; the demo's batch routes (`js/mock/body.js`) keep the same-reading
+  rule and return `via: null`. New tests: `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, and a device
+  token in the two tests that every `/api` route ignores `Authorization`. One line (a "Phone shortcuts" group for `push.enabled`) was added
+  to `js/views/settings.js` because `tests/test_settings_ui.py` requires every server setting to be in a group.
 * **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
   the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
   show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400

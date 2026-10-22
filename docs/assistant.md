@@ -119,12 +119,15 @@ recognised ([Tools that save](#tools-that-save)).
 * **Revoke a person's tokens:** Server administration → People → Manage → **Revoke assistant tokens (n)** (shown while
   the switch is on and the person has active tokens; `n` is how many; it asks once more). It ends all of that person's
   active tokens, nobody else's, and is listed in their activity. Needs a recent password, like the other actions there.
+  It ends the person's **phone-shortcut tokens** too ([push.md](push.md)), which share the table and the rules but are a
+  different family (`khd_`, add-only, accepted only at `POST /push/v1/body`).
 
 ### Security rules
 
 * A token counts only on the assistant surface, `POST /mcp`. Every other `/api` route ignores the
   `Authorization` header and keeps using the sign-in cookie, so a token can never reach the admin pages or change
-  anything. The other way round, `/mcp` never accepts the sign-in cookie: only a token opens it.
+  anything. The other way round, `/mcp` never accepts the sign-in cookie: only a token opens it. A phone-shortcut
+  token (`khd_…`, [push.md](push.md)) is not accepted here, and an assistant token (`kha_…`) is not accepted there.
 * Every refusal is the same `401` answer with `WWW-Authenticate: Bearer`, whatever the reason (unknown, revoked,
   expired, account disabled, switch off), so an answer tells nothing about a guessed token.
 * A refused token counts as a failed sign-in for the address it came from: after `LOGIN_IP_MAX_FAILURES` (20)

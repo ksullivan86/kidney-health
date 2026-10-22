@@ -20,8 +20,8 @@ Order of checks (each one answers before the next runs):
    * a weight: ``{"at", "value", "unit", "source"}``; a reading: ``{"at", "systolic", "diastolic", "source"}``.
    * ``at``: ISO 8601 date and time **with its zone** (``2026-10-22T07:15:00-04:00``, or ``Z``). The row's ``date`` and ``time`` are the
      wall clock **as written** in that zone, not converted (the Health export writes the same). A time without a zone is a ``400``.
-   * ``value``: a number or a plain decimal string (1 to 3 digits, optionally a point and 1 to 3 digits); ``unit`` is exactly ``kg`` or ``lb``
-     (``lb`` × 0.45359237, rounded half up to 0.01 kg). ``systolic`` and ``diastolic`` are whole numbers (a JSON integer or a string of
+   * ``value``: a JSON number, or a plain decimal string (1 to 3 digits, optionally a point and 1 to 3 digits); ``unit`` is exactly ``kg`` or
+     ``lb`` (``lb`` × 0.45359237, rounded half up to 0.01 kg, then the 20 to 400 kg range). ``systolic`` and ``diastolic`` are whole numbers (a JSON integer or a string of
      digits); a fraction is a ``400``.
    * ``source``: 1 to 60 characters after cleaning (NFC, no control characters, single spaces): the app or device the sample came from.
      It is not stored; it goes into the row's ``source_key`` and tells a watch from a cuff.
@@ -46,6 +46,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import re
 import sqlite3
 from dataclasses import dataclass
@@ -274,21 +275,29 @@ def parse_at(text: str) -> Moment:
 
 
 def _weight_value(raw: Any) -> tuple[float, str]:
-    """``(number, text as sent)`` of a weight's ``value``: a JSON number or a plain decimal string, 1 to 3 digits, then optionally a
-    point and 1 to 3 digits. ``ValueError`` otherwise (a negative number, an exponent, ``NaN`` and a boolean included)."""
+    """``(number, text as sent)`` of a weight's ``value``: a JSON number, or a plain decimal string (1 to 3 digits, then optionally a
+    point and 1 to 3 digits, such as ``"154.3"``). The text is what the ``source_key`` is built from. A JSON number is read as it is
+    (a Shortcut may send ``154.29999999999998``); its text is the text it was written with when that is a plain decimal, else the
+    number to 3 decimals. ``ValueError`` for anything else (``NaN`` and a boolean included); the range is checked later, in kilograms."""
     if isinstance(raw, bool):
         raise ValueError("must be a number")
     if isinstance(raw, int):
-        text = str(raw)
-    elif isinstance(raw, _Number):
-        text = raw.raw
-    elif isinstance(raw, str):
+        if abs(raw) >= 10**9:
+            raise ValueError("is too large")
+        return float(raw), str(raw)
+    if isinstance(raw, _Number):
+        number = float(raw)
+        if not math.isfinite(number) or abs(number) >= 10**9:
+            raise ValueError("is too large")
+        if _DECIMAL.fullmatch(raw.raw):
+            return number, raw.raw
+        return number, f"{number:.3f}".rstrip("0").rstrip(".")
+    if isinstance(raw, str):
         text = raw.strip()
-    else:
-        raise ValueError("must be a number or a plain decimal such as 154.3")
-    if not _DECIMAL.fullmatch(text):
-        raise ValueError("must be a plain number such as 154.3 (up to 3 digits, then a point and up to 3 more)")
-    return float(text), text
+        if not _DECIMAL.fullmatch(text):
+            raise ValueError("must be a plain number such as 154.3 (up to 3 digits, then a point and up to 3 more)")
+        return float(text), text
+    raise ValueError("must be a number or a plain decimal such as 154.3")
 
 
 def _whole_number(raw: Any) -> int:
