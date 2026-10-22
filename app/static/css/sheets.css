@@ -104,3 +104,21 @@
   min-height: 220px; resize: vertical; font-family: var(--mono); font-size: 0.78rem; line-height: 1.45;
   white-space: pre; overflow: auto; background: var(--surface-2);
 }
+
+/* ---------- Health app import: weights and blood pressure (js/views/body_import.js) ---------- */
+#sheet-body-import .sheet-title { overflow-wrap: anywhere; }
+#body-import-review, .bi-result { display: flex; flex-direction: column; gap: 14px; }
+#body-import-review p, .bi-result p { margin: 0; }
+#body-import-problem p + p { margin-top: 8px; }
+.bi-headline { font-weight: 600; overflow-wrap: anywhere; }
+.bi-headline:focus { outline: none; }
+.bi-headline:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.bi-range, .bi-sources, .bi-left-title { font-size: 0.9rem; color: var(--text-2); overflow-wrap: anywhere; }
+.bi-left-title { margin-bottom: -8px !important; font-weight: 600; }
+.bi-left-out { margin: 0; padding-left: 1.3em; font-size: 0.88rem; color: var(--text-2); }
+.bi-left-out li + li { margin-top: 4px; }
+.bi-days { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--caution-tint); color: var(--caution-text); font-size: 0.9rem; font-weight: 600; }
+.bi-watch { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; gap: 2px; }
+.bi-watch legend { padding: 0 4px; }
+.bi-watch .choice-text { min-width: 0; overflow-wrap: anywhere; }
+#body-import-review .choice-text b { overflow-wrap: anywhere; }
