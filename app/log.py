@@ -34,6 +34,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
+from . import brand
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
 from .db import get_db, utcnow
@@ -699,7 +700,7 @@ def export_csv(user: CurrentUser, start: str | None = None, end: str | None = No
             writer.writerow([csv_safe(v) for v in csv_row(row)])
             yield buffer.getvalue()
 
-    filename = f"kidney-log_{start_s or 'all'}_{end_s or 'all'}.csv"
+    filename = f"{brand.LOG_CSV_PREFIX}{start_s or 'all'}_{end_s or 'all'}.csv"
     return StreamingResponse(
         generate(),
         media_type="text/csv; charset=utf-8",

@@ -61,20 +61,22 @@ import zipfile
 from datetime import datetime, timezone
 from typing import Any, Iterable, Sequence
 
+from . import brand
 from .audit import USER_VISIBLE_ACTIONS, audit, list_events
 from .db import table_columns, table_exists, utcnow
 
-EXPORT_FORMAT = "kidney-health-export"
+EXPORT_FORMAT = brand.EXPORT_FORMAT
 EXPORT_VERSION = 1
 FOOD_CSV_FIELDS = ("id", "name", "brand", "category", "source", "fdc_id", "serving_desc", "serving_g",
                    "gtin", "source_license", "source_url")  # v0.3 barcodes: the ODbL notice travels with the data
-README = """\
-Kidney Health export
-====================
+_README_TITLE = f"{brand.NAME} export"
+README = f"""\
+{_README_TITLE}
+{'=' * len(_README_TITLE)}
 
 This archive holds everything this server stores about your account, in two forms:
 
-* export.json  - every record, in a documented JSON format ("kidney-health-export", version 1). To move
+* export.json  - every record, in a documented JSON format ("{EXPORT_FORMAT}", version 1). To move
                  to another server, unzip it, then use Settings > Account > Your data > "Import from a
                  file" on the new server and choose export.json.
 * log.csv      - your food log (eaten and planned entries) with the nutrient snapshot of each entry.
@@ -329,7 +331,7 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
 
 def export_filename(username: str) -> str:
     safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in username)[:40] or "account"
-    return f"kidney-health-{safe}-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.zip"
+    return f"{brand.SLUG}-{safe}-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.zip"
 
 
 def delete_user(conn: sqlite3.Connection, user_id: int, *, actor_id: int | None, ip: str | None = None,

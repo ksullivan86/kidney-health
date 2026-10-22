@@ -17,6 +17,7 @@ import logging
 import sqlite3
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
+from .. import brand
 from . import messages as M
 from . import rules as R
 from . import topics as T
@@ -38,7 +39,7 @@ from .state import GuidanceContext
 from .vectors import FoodVec, renal_level
 from .swaps import find_swaps
 
-log = logging.getLogger("kidney_health.guidance")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.guidance")
 
 MODES = ("rerank", "ideas", "swap", "plan")
 UNTRUSTED_SOURCES = frozenset({"custom", "off"})  # names typed by a person or a wiki (note 04 §9.2)

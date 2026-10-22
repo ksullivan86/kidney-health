@@ -13,7 +13,7 @@
   const KH = window.KH;
   const M = KH.mock;
   const { route, MockApi } = M;
-  const EXPORT_FORMAT = 'kidney-health-export';
+  const EXPORT_FORMAT = KH.brand.exportFormat;
   const EXPORT_VERSION = 1;
   const MAX_EVENTS = 500;
 

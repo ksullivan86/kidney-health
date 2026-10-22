@@ -121,7 +121,7 @@
     try {
       res = await fetch(`${kind === 'lab-report' ? '/api/ai/read-lab-report' : `/api/vision/${kind}`}${dry ? '?dry_run=true' : ''}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'image/jpeg', Accept: 'application/json', 'X-Requested-With': 'kidney-health' },
+        headers: { 'Content-Type': 'image/jpeg', Accept: 'application/json', 'X-Requested-With': KH.brand.csrfHeaderValue },
         body: blob,
         credentials: 'same-origin',
         ...(signal ? { signal } : {}),

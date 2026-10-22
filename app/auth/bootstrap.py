@@ -22,6 +22,7 @@ import sqlite3
 from datetime import timedelta
 from pathlib import Path
 
+from .. import brand
 from ..audit import audit
 from ..config import Settings
 from ..db import database_file, get_meta, set_meta
@@ -30,7 +31,7 @@ from .accounts import claim_first_admin
 from .context import AuthContext
 from .models import normalize_username, setup_required, valid_local_username
 
-log = logging.getLogger("kidney_health.auth")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.auth")
 
 AUTH_MODE_KEY = "auth_mode"
 PRE_V3_BACKUP_DAYS = 30

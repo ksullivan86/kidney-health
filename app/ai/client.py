@@ -29,13 +29,14 @@ from typing import Any, Awaitable, Callable, Literal, Mapping, Sequence
 
 import anyio
 
+from .. import brand
 from .netpolicy import BaseUrl, NetPolicy, Scope
 from .presets import Preset, StructuredMode, get as get_preset
 from .transport import AiTransportError, HttpResult, TransportFactory, send_json
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
-APP_USER_AGENT = "kidney-health/{version}"
+APP_USER_AGENT = brand.USER_AGENT_AI
 MAX_JSON_SCAN = 32 * 1024  # V1: the first balanced object within 32 KiB
 RETRY_AFTER_MAX_S = 10.0
 RETRY_5XX_DELAY_S = 1.0

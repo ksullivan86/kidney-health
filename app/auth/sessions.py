@@ -28,12 +28,13 @@ from typing import Any
 from starlette.requests import Request
 from starlette.responses import Response
 
+from .. import brand
 from ..audit import ip_prefix
 from ..security import effective_scheme
 from . import clock
 
-COOKIE_HTTPS = "__Host-kh_session"
-COOKIE_HTTP = "kh_session"
+COOKIE_HTTPS = brand.SESSION_COOKIE_HOST
+COOKIE_HTTP = brand.SESSION_COOKIE
 TOUCH_INTERVAL = timedelta(minutes=5)
 USER_AGENT_LIMIT = 200
 

@@ -147,7 +147,7 @@ def test_every_referenced_file_exists() -> None:
 
 def test_api_client_marks_writes_and_hands_401_to_auth() -> None:
     core = (STATIC / "js" / "core.js").read_text(encoding="utf-8")
-    assert "if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = 'kidney-health';" in core
+    assert "if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = KH.brand.csrfHeaderValue;" in core
     # one error path for the server and the demo API (afterError): 401 → sign-in screen,
     # reauth_required → password prompt and one retry, password_change_required, setup_required
     assert "if (err.status === 401 && !opts.quiet401)" in core and "KH.auth.onUnauthorized(err)" in core

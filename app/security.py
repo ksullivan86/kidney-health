@@ -43,9 +43,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from . import brand
 from .config import Settings, normalize_origin
 
-log = logging.getLogger("kidney_health.security")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.security")
 
 # --------------------------------------------------------------------------- #
 # Policy constants
@@ -111,7 +112,7 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
 BEARER_PATHS = frozenset({"/mcp", "/push/v1/body"})
 CSRF_HEADER = "X-Requested-With"
-CSRF_HEADER_VALUE = "kidney-health"
+CSRF_HEADER_VALUE = brand.CSRF_HEADER_VALUE
 PROXY_SECRET_HEADER = "X-Proxy-Secret"
 _FORWARDING_HEADERS = frozenset(
     {b"x-forwarded-for", b"x-forwarded-proto", b"x-forwarded-host", b"x-forwarded-port", b"x-real-ip", b"forwarded"}
@@ -700,8 +701,11 @@ _SECRETS_LOCK = threading.Lock()
 _SECRET_MIN_LENGTH = 6
 _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]+"), r"\1 " + REDACTED),
-    (re.compile(r"\bkha_[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"), "kha_" + REDACTED),  # assistant tokens (app/auth/api_tokens.py)
-    (re.compile(r"\bkhd_[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"), "khd_" + REDACTED),  # device tokens (phone shortcuts)
+    # assistant tokens (app/auth/api_tokens.py) and device tokens (phone shortcuts)
+    *(
+        (re.compile(rf"\b{re.escape(prefix)}[A-Za-z0-9_-]{{43}}(?![A-Za-z0-9_-])"), prefix + REDACTED)
+        for prefix in (brand.ASSISTANT_TOKEN_PREFIX, brand.DEVICE_TOKEN_PREFIX)
+    ),
     (
         re.compile(r"(?i)\b(x-api-key|x-proxy-secret|api[_-]?key|password|passwd|secret|token)(\s*[=:]\s*)([^\s&,;\"']+)"),
         r"\1\2" + REDACTED,

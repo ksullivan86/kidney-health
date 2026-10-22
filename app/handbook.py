@@ -48,11 +48,12 @@ from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
+from . import brand
 from .auth.deps import current_user
 from .config import Settings
 from .guidance.topics import APP_LINKS
 
-log = logging.getLogger("kidney_health.handbook")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.handbook")
 
 LEARN_PATH = "/learn"
 LEARN_PREFIX = LEARN_PATH + "/"

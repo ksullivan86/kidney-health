@@ -291,7 +291,7 @@
     try {
       res = await fetch(`/api/ai/transcribe?seconds=${seconds}`, {
         method: 'POST',
-        headers: { 'Content-Type': type, Accept: 'application/json', 'X-Requested-With': 'kidney-health' },
+        headers: { 'Content-Type': type, Accept: 'application/json', 'X-Requested-With': KH.brand.csrfHeaderValue },
         body: blob,
         credentials: 'same-origin',
         signal,

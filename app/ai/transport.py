@@ -34,9 +34,10 @@ from typing import Any, Callable, Mapping
 import anyio
 import httpx2
 
+from .. import brand
 from .netpolicy import BaseUrl, NetPolicy, PolicyError, Scope, check_addresses, check_host_name, check_url, classify
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 Resolver = Callable[[str, int], list[str]]
 

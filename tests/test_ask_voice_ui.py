@@ -114,7 +114,7 @@ def test_the_transcript_goes_into_the_input_and_is_never_sent_by_the_code():
 def test_the_only_request_is_the_transcription_and_it_stays_on_this_server():
     assert len(re.findall(r"\bfetch\(", VOICE_CODE)) == 1
     assert "`/api/ai/transcribe?seconds=${seconds}`" in VOICE_CODE and "credentials: 'same-origin'" in VOICE_CODE
-    assert "'X-Requested-With': 'kidney-health'" in VOICE_CODE
+    assert "'X-Requested-With': KH.brand.csrfHeaderValue" in VOICE_CODE
     for banned in ("XMLHttpRequest", "WebSocket", "sendBeacon", "EventSource", "importScripts", "import(", "RTCPeerConnection", "<script", "http://", "mode: 'no-cors'"):
         assert banned not in VOICE_CODE, banned
     assert not re.search(r"https://[a-z0-9.-]+", VOICE_CODE, re.IGNORECASE)  # no host is named (the link pattern is a regex)

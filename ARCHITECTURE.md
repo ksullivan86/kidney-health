@@ -39,6 +39,7 @@ app/main.py                 FastAPI app factory, static mount, routers, startup 
 app/openapi_doc.py          the OpenAPI document made honest: operation ids, 400 not 422, the shared error shape, security schemes (design note 14)
 app/api_version.py          API_VERSION, the integer that is raised on a breaking change ("The API document and GET /api/meta")
 app/meta.py                 GET /api/meta: versions, what the signed-in person can use now, the nutrient registry, the meals
+app/brand.py                the brand strings in one place: names, cookie names, token prefixes, CSRF value, DB filename, export format, user agents, HKDF labels ("Brand strings")
 scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
 app/db.py                   sqlite connection helper; runs the ordered steps in app/migrations/ ("Database migrations")
@@ -789,6 +790,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
+| Brand strings (design note 14, change 3) | `app/brand.py` and the modules that import it (every one that names a cookie, a token prefix, the CSRF value, the database file, the export format, a User-Agent, an HKDF label or a logger), `js/engine/brand.js` (`KH.brand`; registered in `index.html` and `sw.js`) and the scripts that read it, `tests/test_brand.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
@@ -831,6 +833,7 @@ app/static/
                         "PDFs" under "Lab report photos")
   js/engine/guidance/*.js   (M2 guidance) KH.guidanceEngine, the browser twin of app/guidance/ (rules, messages,
                         budget, score, fits, swaps, planner, insights, hypo: one file per Python module, loaded in that order)
+  js/engine/brand.js    KH.brand: the strings the page uses (CSRF header value, IndexedDB name, export format, names), the twin of app/brand.py; the last engine file, loaded just before core.js
   js/mock/core.js       MockApi with a route table: KH.mock.route(method, pattern, handler)
   js/mock/<feature>.js  feature twins register their routes (M1: auth/settings; M2: labs, guidance, barcode fixtures)
   js/views/today.js, add.js, plan.js, trends.js, profile.js, settings.js, auth.js   (M1)
@@ -4111,6 +4114,39 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
   `tests/data/meta_vectors.json` (`tests/data/gen_meta_vectors.py`, pytest `--check`-style) is the server's answer on a fresh server (the API version, the
   capability keys and values, the registry and the meals; `app_version` left out) and `node tests/js/run_vectors.mjs` replays it on the demo;
   `tools/e2e/parity.py` section 10 compares the shape, the registry and the capabilities of both sides on a real server.
+
+## Brand strings (design note 14, change 3)
+
+The strings that say which product this is are in one file, `app/brand.py`. The page uses a few of them, and their copy is
+`app/static/js/engine/brand.js` (`KH.brand`). A second product built on this code changes them there and does not have to search
+for them. Gathering them changed no value.
+
+* **Compatibility surface.** Some strings are already stored, sent or remembered by something outside the process. Each constant in
+  `app/brand.py` says whether it is one. They are the cookie names (`kh_session` and its `__Host-` form, `kh_device`), the
+  `X-Requested-With` value, the `X-KDL-Version` header, the token prefixes `kha_` and `khd_`, the bearer realm, the database file
+  `kidney.db`, the backup prefix, the `format` of `export.json`, the MCP server name and `source`, the HKDF labels (`kidney-health/v1/...`),
+  the logger root and, in the browser, the IndexedDB name `kdl`. Changing one on an install in use signs people out, breaks tokens, makes
+  stored API keys unreadable, starts an empty database or turns away the export files people kept. Names and display texts (`NAME`, `SCREEN_NAME`, `SLUG`, the User-Agent
+  texts, the CSV file name) are not.
+* **Written out in full.** No value is built from another, so changing the product name never moves a compatibility string. A new
+  product picks its values before its first start and keeps them.
+* **No imports.** `app/brand.py` imports nothing, so `config`, `crypto` and `security` can use it. Where `brand` is also a food's field
+  (`foods.py`, `off.py`, `data_import.py`, `mcp/tools.py`) the module imports the names, not the module. The old module-level names
+  (`sessions.COOKIE_HTTP`, `api_tokens.PREFIX`, `account.EXPORT_FORMAT` and so on) stay and now point at the constants.
+* **The browser's copy.** `KH.brand` holds `name`, `screenName`, `slug`, `logCsvPrefix`, `csrfHeaderValue`, `versionHeader`, `exportFormat`
+  and `idbName`. It loads last of the engine files in `index.html`, right before `js/core.js`, and is in the `sw.js`
+  precache list; `scripts/build_preview.py` reads `index.html` and needs no list. `idbName` is the one value Python does not have.
+* **Left alone, on purpose.** Migration steps (released steps are never edited); the three AI prompts, which say "Kidney Health" (prompt
+  text is pinned by the golden tests); `APP_WORDS` in `app/auth/policy.py` and `js/mock/auth.js`; the `Literal` of `ExportFile.format`
+  (it needs the text itself); the MCP `INSTRUCTIONS` sentence; the start-up password self-test text; the Trusted Types policy names
+  (`kh-sw`, `kh-xml`, `kh-pdf`), which `security.py` and three scripts name together; the other `kdl-` names in the browser (local storage
+  keys, cache names, the Web Lock, `kdl-demo-local`), because `sw.js` and `theme-init.js` run outside `KH` and those names are in people's
+  browsers already; the vector-checked twins `js/engine/settings.js` and `js/engine/off.js`; and the static files (`index.html`,
+  `manifest.webmanifest`, the style sheets), which cannot import anything.
+* **Tests.** `tests/test_brand.py` pins every constant, checks that each site still produces its value (the HKDF labels against a known
+  answer, the cookie and token names, the export README and file name, the API document), checks that `KH.brand` agrees with `app/brand.py`
+  where they overlap and loads before its readers, and fails when one of the main literals (`kh_session`, `kha_`, `khd_`, `kidney.db`,
+  `kidney-health`, ...) appears in `app/` or `app/static/js/` outside the two brand files and an allowlist of the places above.
 
 ## Offline edits and deletes (ROADMAP; note 02 R5 "Queueable offline actions")
 

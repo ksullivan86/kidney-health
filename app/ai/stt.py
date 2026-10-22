@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
+from .. import brand
 from ..config import ConfigError, Settings
 from ..db import utcnow
 from ..security import register_secret
@@ -38,7 +39,7 @@ from .netpolicy import BaseUrl, NetPolicy, PolicyError, check_url, may_use_http,
 from .prompts import clean
 from .transport import AiTransportError, TransportFactory, ca_store_problem, send_json
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 PURPOSE = "voice"
 POLICY_VERSION = "2026-10-15.1"  # the wording of the voice consent below; a change asks everyone again

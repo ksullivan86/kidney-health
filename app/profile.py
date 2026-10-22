@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from . import brand
 from . import targets as targets_engine
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, table_exists, utcnow
@@ -23,7 +24,7 @@ from .periods import WEEK_STARTS
 from .settings_store import SettingsStore, default_store
 from .target_rules import ACTIVITIES, SEXES
 
-log = logging.getLogger("kidney_health.profile")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.profile")
 
 router = APIRouter(prefix="/api/profile", tags=["profile"], dependencies=[Depends(current_user)])
 

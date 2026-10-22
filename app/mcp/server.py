@@ -40,6 +40,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, Response
 
+from .. import brand
 from ..auth import api_tokens
 from ..auth.context import auth_context
 from ..auth.errors import ApiProblem
@@ -48,12 +49,12 @@ from ..db import get_db
 from . import preference_tool as PT
 from . import tools as T
 
-logger = logging.getLogger("kidney_health.mcp")
+logger = logging.getLogger(f"{brand.LOGGER_NAME}.mcp")
 
 PATH = "/mcp"
 PROTOCOL_VERSIONS: tuple[str, ...] = ("2025-06-18", "2025-03-26")  # newest first
-SERVER_NAME = "kidney-health"
-SERVER_TITLE = "Kidney Health food log"
+SERVER_NAME = brand.MCP_SERVER_NAME
+SERVER_TITLE = brand.MCP_SERVER_TITLE
 INSTRUCTIONS = (
     "Read-only access to one person's kidney-health food log. Call safety_check first with every message from the "
     "person and follow its action before anything else. Take every number (targets, totals, foods, what is left) "

@@ -37,7 +37,7 @@
       exportLink.onclick = (e) => { e.preventDefault(); openCsvSheet(start, end, exportLink); };
       exportLink.onkeydown = (e) => { if (e.key === ' ') { e.preventDefault(); openCsvSheet(start, end, exportLink); } };
     } else {
-      exportLink.setAttribute('download', `kidney-log_${start}_${end}.csv`);
+      exportLink.setAttribute('download', `${KH.brand.logCsvPrefix}${start}_${end}.csv`);
       exportLink.href = api.exportUrl(start, end);
       exportLink.onclick = null;
     }
@@ -62,7 +62,7 @@
     let csv;
     try { csv = await KH.mock.instance.request('GET', api.exportUrl(start, end)); } catch (err) { toastError(err); return; }
     const rows = Math.max(0, csv.split('\r\n').filter(Boolean).length - 1);
-    $('#sheet-csv-sub').textContent = `${fmtRange(start, end)} · ${rows} ${rows === 1 ? 'entry' : 'entries'} · kidney-log_${start}_${end}.csv`;
+    $('#sheet-csv-sub').textContent = `${fmtRange(start, end)} · ${rows} ${rows === 1 ? 'entry' : 'entries'} · ${KH.brand.logCsvPrefix}${start}_${end}.csv`;
     $('#csv-text').value = csv;
     $('#csv-status').textContent = '';
     sheets.open(csvDlg, trigger, $('#csv-copy'));

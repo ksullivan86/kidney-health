@@ -53,6 +53,7 @@ import logging
 import sqlite3
 from typing import Any, Literal, Mapping
 
+from .. import brand
 from ..config import Settings
 from ..crypto import InvalidToken, Keyring
 from ..db import get_meta, set_meta, table_exists
@@ -60,7 +61,7 @@ from ..settings_store import SettingLocked, SettingsStore
 from . import config as K
 from .netpolicy import NetPolicy, PolicyError, is_private_host, parse_base_url
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 Feature = Literal["photos", "meal_ideas", "describe", "chat", "labs"]
 Role = Literal["local", "cloud"]

@@ -15,6 +15,7 @@ from typing import Any, AsyncIterator
 from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 
+from . import brand
 from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
 from . import labs  # M2 targets: /api/labs
 from . import symptoms  # schema step 15: /api/symptoms
@@ -35,7 +36,7 @@ from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
 from .db import connect, get_db, init_db, table_exists
 from .settings_store import SettingsStore, default_store
 
-logger = logging.getLogger("kidney_health")
+logger = logging.getLogger(brand.LOGGER_NAME)
 
 APP_VERSION = "0.4.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
@@ -89,7 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     docs = settings.docs_enabled
     app = FastAPI(
-        title="Kidney Health Food Log",
+        title=f"{brand.NAME} Food Log",
         version=APP_VERSION,
         description="Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.",
         lifespan=lifespan,
@@ -145,4 +146,4 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 try:
     app = create_app()
 except ConfigError as _exc:  # a clean message instead of a traceback from `uvicorn app.main:app`
-    raise SystemExit(f"kidney-health: configuration error: {_exc}") from None
+    raise SystemExit(f"{brand.SLUG}: configuration error: {_exc}") from None

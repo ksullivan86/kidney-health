@@ -31,12 +31,13 @@ from typing import Any, Literal, Mapping
 
 from pydantic import ValidationError
 
+from . import brand
 from . import settings_registry as registry
 from .config import ConfigError
 from .db import database_file, utcnow
 from .settings_registry import SettingDef
 
-log = logging.getLogger("kidney_health.settings")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.settings")
 
 Source = Literal["env", "user", "instance", "default"]
 SETTINGS_VERSION_KEY = "settings_version"

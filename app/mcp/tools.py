@@ -44,6 +44,7 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from ..brand import LOGGER_NAME, MCP_SOURCE  # the names, not the module: ``brand`` is a food's field here
 from .. import foods, meals
 from .. import log as food_log
 from ..ai import features as ai_features
@@ -66,9 +67,9 @@ from ..textclean import clean_label
 from . import measures as M
 from . import request_keys
 
-logger = logging.getLogger("kidney_health.mcp")
+logger = logging.getLogger(f"{LOGGER_NAME}.mcp")
 
-SOURCE = "kidney-health"
+SOURCE = MCP_SOURCE
 REMINDER = "Numbers come from the app; fetch them again after any change."
 MAX_ROW_ID = 2**63 - 1
 GET_HELP_NOW = "/learn/get-help-now/"

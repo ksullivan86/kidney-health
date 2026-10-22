@@ -133,6 +133,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **The brand strings are in one place** ([design note 14](docs/dev/research/14-reuse-map.md) change 3). `app/brand.py` holds the product's names and the strings that
+  identify it: the cookie names, the `X-Requested-With` value, the token prefixes `kha_` and `khd_`, the bearer realm, the database file name `kidney.db`, the export
+  `format`, the User-Agent texts, the HKDF labels and the logger root, each with a note on whether changing it would break an install in use. The page reads the ones it
+  uses from `KH.brand` (`app/static/js/engine/brand.js`). No value changed. `tests/test_brand.py` pins them all, checks that the Python and browser copies agree and
+  fails when a main literal shows up again outside those two files and a short, explained allowlist. A second product changes its values in one place and does not
+  have to search for them.
 * **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the
   introduction and four screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after
   a change to those screens. `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.

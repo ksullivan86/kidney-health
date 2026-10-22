@@ -14,12 +14,13 @@ import sqlite3
 import threading
 from typing import TYPE_CHECKING, Callable
 
+from .. import brand
 from . import clock, sessions
 
 if TYPE_CHECKING:  # pragma: no cover
     from .context import AuthContext
 
-log = logging.getLogger("kidney_health.auth")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.auth")
 
 HOURLY_S = 3600
 DAILY_S = 86400

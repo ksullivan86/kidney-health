@@ -80,6 +80,7 @@ const SHELL_URLS = [
   '/js/engine/guidance/planner.js',
   '/js/engine/guidance/insights.js',
   '/js/engine/guidance/hypo.js',
+  '/js/engine/brand.js',
   '/js/core.js',
   '/js/learn.js',
   '/js/offline.js',

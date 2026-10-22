@@ -25,6 +25,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
 
+from .. import brand
 from ..auth.context import auth_context
 from ..auth.deps import CurrentUser, RecentAdmin, current_user, require_admin
 from ..auth.errors import ApiProblem
@@ -36,7 +37,7 @@ from .routes import (PROBE_LIMIT_ADMIN, _client_for, _policy_for, _resolve, _sec
                      require_ai_enabled, unavailable, voice_config)
 from .transport import AiTransportError
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 router = APIRouter(prefix="/api/ai", tags=["ai", "voice"], dependencies=[Depends(current_user), Depends(require_ai_enabled)])
 admin_router = APIRouter(prefix="/api/admin", tags=["admin", "ai", "voice"], dependencies=[Depends(require_admin)])

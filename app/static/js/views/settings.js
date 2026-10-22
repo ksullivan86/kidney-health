@@ -456,7 +456,7 @@
       if (MOCK) { msg.textContent = 'In the installed app this downloads a .zip of your data. The preview has no server, so there is nothing to download. In the online demo, turn on Keep my data in this browser to try the export and import here.'; return; }
       msg.textContent = 'Preparing your export…';
       try {
-        const res = await download('/api/me/export.zip', `kidney-health-${me.username}.zip`);
+        const res = await download('/api/me/export.zip', `${KH.brand.slug}-${me.username}.zip`);
         msg.textContent = `Saved ${res.name} (${fmtBytes(res.bytes)}). Keep it somewhere private: it holds your health data.`;
       } catch (err) { msg.textContent = ''; throw err; }
     }, { id: 'set-export' })), msg);
@@ -1978,7 +1978,7 @@
     const body = $('#set-about-body');
     clear(body);
     body.append(
-      kv([['App version', APP_VERSION], ['Server', (state.authStatus || {}).instance_name || 'Kidney Health']]),
+      kv([['App version', APP_VERSION], ['Server', (state.authStatus || {}).instance_name || KH.brand.name]]),
       subtitle('What is stored, and who can see it'),
       h('ul', { class: 'about-list' },
         h('li', {}, 'Your log, foods, saved meals, profile, targets and settings are stored on this server, not on the internet. Your account sees only its own data.'),

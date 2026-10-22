@@ -35,6 +35,7 @@ from typing import Any, Mapping
 from fastapi import Request
 from pydantic import ValidationError
 
+from .. import brand
 from .. import foods
 from .. import log as food_log
 from ..auth.models import User
@@ -46,7 +47,7 @@ from . import chat as CH
 from . import chat_preference as PREF
 from . import prompts
 
-log = logging.getLogger("kidney_health.ai")
+log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
 REQUEST_ID_MIN = 8
 REQUEST_ID_MAX = 48  # "<request_id>-<n>" must fit the 64 characters a request_key may have

@@ -341,7 +341,7 @@
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     // Every write carries the app's own header: the server's CSRF check refuses cross-site
     // form posts, which cannot set it (note 07; plain-HTTP LANs send no Sec-Fetch-Site).
-    if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = 'kidney-health';
+    if (method !== 'GET' && method !== 'HEAD') headers['X-Requested-With'] = KH.brand.csrfHeaderValue;
     const timeout = net && typeof net.timeoutFor === 'function' ? net.timeoutFor(method, path) : 0;
     const ctrl = timeout && typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), timeout) : null;
@@ -363,7 +363,7 @@
       if (timer) clearTimeout(timer);
     }
     // A newer server under a cached shell (note 02 §5): let the PWA layer fetch the update and show its toast.
-    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get('X-KDL-Version'));
+    if (KH.pwa && typeof KH.pwa.versionSeen === 'function') KH.pwa.versionSeen(res.headers.get(KH.brand.versionHeader));
     if (res.status === 204) return answered(method, path, body, null, opts);
     let data = null;
     let fromApp = true; // the app always answers JSON; a proxy in front of a stopped app answers HTML or nothing

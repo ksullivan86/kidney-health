@@ -66,12 +66,14 @@ from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
 
+from . import brand
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FOODS_JSON = REPO_ROOT / "data" / "foods.json"
 DEFAULT_STATIC_DIR = Path(__file__).resolve().parent / "static"
 # `mkdocs build` from handbook/ writes here; the image sets HANDBOOK_DIR=/app/learn instead.
 DEFAULT_HANDBOOK_DIR = REPO_ROOT / "handbook" / "site"
-DB_FILENAME = "kidney.db"
+DB_FILENAME = brand.DB_FILENAME
 SECRET_KEY_FILENAME = "secret.key"
 SECRET_KEY_MIN_LENGTH = 32
 
