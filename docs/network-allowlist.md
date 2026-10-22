@@ -88,7 +88,7 @@ egress auditing. The workflows reach:
 | Host | For |
 |---|---|
 | `github.com`, `api.github.com`, `codeload.github.com` | Checkout, action downloads, `gh`, attestations |
-| `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Release downloads, each SHA-256 checked: actionlint 1.7.12, hadolint 2.14.0, kubeconform v0.8.0, kustomize v5.8.2; setup-python and setup-node toolchains |
+| `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Release downloads, each SHA-256 checked: actionlint 1.7.12, hadolint 2.14.0, kubeconform v0.8.0, kustomize v5.8.2, ruff 0.17.0; setup-python and setup-node toolchains |
 | `raw.githubusercontent.com` | kubeconform schemas (`yannh/kubernetes-json-schema`, `datreeio/CRDs-catalog`) |
 | `pypi.org`, `files.pythonhosted.org` | Hash-locked test and lint dependencies |
 | `cgr.dev` (+ blob storage), `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` | Base images; `moby/buildkit` and `tonistiigi/binfmt` (pinned by digest) |

@@ -73,6 +73,7 @@ runtime dependency v0.3 added is `cryptography`; propose any new one in an issue
 ```bash
 python -m pytest                    # the whole suite; must pass with no network
 node tests/js/run_vectors.mjs       # the browser's copies of the server logic match the server
+ruff check .                        # Python lint: pycodestyle errors and pyflakes (rules in pyproject.toml); CI runs it too
 ```
 
 * **Every behaviour change ships with tests**, including failure paths, limits and edge cases, not
@@ -81,6 +82,10 @@ node tests/js/run_vectors.mjs       # the browser's copies of the server logic m
 * Useful subsets: `python -m pytest tests/test_auth_coverage.py tests/test_isolation.py` (every route
   needs sign-in; nobody sees another person's data), `tests/guidance/`, `tests/test_ai_*.py`,
   `tests/test_handbook_content.py`.
+* **Run `ruff check .` before you push.** CI runs it in the `lint` job with a pinned release (`RUFF_VERSION` in
+  `ci.yml`) and shows findings as annotations on the pull request. It is not in the lock files: install a ruff
+  (`pip install ruff==<that version>`, or the release binary) of the version CI pins. The rules are in `pyproject.toml`
+  (`[tool.ruff.lint]`); do not widen them in an unrelated change.
 * CI (`.github/workflows/ci.yml`) also runs actionlint, hadolint, kubeconform, shellcheck and zizmor,
   builds and smoke-tests both images, and builds and checks the handbook. Run the tools you have
   locally when you touch `.github/`, `deploy/` or `handbook/`.
@@ -120,7 +125,7 @@ their README): `parity.py` (the demo API against a real server, about 6,500 comp
 `learn.py` (the handbook at `/learn`, also in CI), `device.py` (barcodes, photos, AI cards, the offline
 outbox, offline edits) and `guidance_perf.py` (the guidance twin's speed with a slowed-down CPU), and one
 harness per feature (`prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`, `symptoms.py`, `visitprep.py`, `menuplan.py`,
-`demo_local.py`, `mcp_smoke.py`). Say in your pull request which ones you ran.
+`demo_local.py`, `import_walk.py`, `mcp_smoke.py`). Say in your pull request which ones you ran.
 
 ## The preview build
 

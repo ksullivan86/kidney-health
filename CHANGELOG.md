@@ -5,6 +5,26 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### For contributors
+
+* **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
+  the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
+  show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400
+  (1,052 findings in today's tree), so `pyproject.toml` selects the earlier default explicitly (`[tool.ruff.lint] select = ["E4", "E7",
+  "E9", "F"]`: pycodestyle errors and pyflakes), which keeps the tree clean and means a ruff upgrade cannot change what CI checks;
+  `target-version` comes from `requires-python` (3.11). CONTRIBUTING.md asks for `ruff check .` before a push.
+  `tests/test_deploy.py` keeps the pin, the checked download, the step and the lock files free of ruff.
+* **`tools/e2e/import_walk.py`: a browser walk of Settings → Account → Your data → Import from a file against a real server**
+  (port 8086, Chromium at 375×812 light and 1280×800 dark, about 20 seconds). Person A is filled through the API and exports a zip in
+  the page; a fresh person B signs in on the page and imports A's `export.json`: the files a person can pick by mistake (the whole
+  `.zip`, a text file, a JSON list, JSON that is not an export, another version), the recent-password sheet (Cancel, a wrong
+  password, the right one, and again at Import), the preview, Import without and with "Add to my existing data" (counts, no
+  duplicate, only what is missing is added back) and "Also replace my profile, targets and settings", with B's state checked through
+  the API against A's. It is listed in `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist
+  (`docs/maintainers.md`), which now leaves only a phone's own file picker to a person; the two ROADMAP items it closes are removed.
+
 ## 0.4.0 — 2026-10-22
 
 Version 0.4 adds an assistant you can talk to (the **Ask** chat inside the app, with your voice if you set up speech to text, and
