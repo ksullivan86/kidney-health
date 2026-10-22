@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-10-22 (§8), to be built in one part. |
+| Status | Decided 2026-10-22 (§8). Built in two steps: the server (tokens, `POST /push/v1/body`, schema step 19) and then the screens (Settings → Phone shortcuts, "from a shortcut (name)", the admin's Revoke tokens, the demo's twin, the handbook recipe, `tools/e2e/push.py`). Left: the owner's check of the recipe on a real iPhone (Re-verify below). |
 | Date researched | 2026-10-22, against `main` at `1e1ca32` (note 10 Part A merged) |
 | Scope | Per-person **device tokens** with one narrow scope, `body:write`. An ingest route outside `/api`, `POST /push/v1/body`, that takes a few weights and readings and answers only with counts. A "same reading" check so a pushed reading and the same reading imported later from the Health export are one row. Settings → **Phone shortcuts** to make, list and revoke the tokens and to delete what one sent. The admin's instance switch. A Shortcut recipe in the handbook. |
 | Out of scope | Reading anything with a device token (it is write-only). Food logging, labs or symptoms from a Shortcut: later scopes, §7. A native iOS app (ROADMAP; this is the path it will send HealthKit readings through, §7). Push notifications from the server. Glucose, insulin and medicines (CLAUDE.md: no dosing data; the route refuses every other kind). Sending readings to an AI provider or the assistant (note 10 §4.9 stands). |

@@ -1597,6 +1597,21 @@ NOTE10:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-22
   kind: project
+NOTE12:
+  cite: "kidney-health design note 12: sending weights and blood pressure from an iPhone."
+  short: "Design note 12"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/12-phone-push-tokens.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-22
+  kind: project
+APPLE-SHORTCUTS:
+  cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
+  short: "Apple: Shortcuts User Guide"
+  url: https://support.apple.com/guide/shortcuts/welcome/ios
+  licence: "© Apple: link and paraphrase"
+  checked: 2026-10-22
+  kind: tool
+  note: "Named in design note 12 (P1). The articles were not re-read for this page and the steps were not tried on a phone: action names can differ between iOS versions, and handbook/REVIEW.md holds the owner's real-iPhone check."
 DEPLOY:
   cite: "kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes."
   short: "Deployment guide"

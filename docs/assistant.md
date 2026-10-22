@@ -87,7 +87,7 @@ name, how many entries (or which recipe), the day and the meal.
 * You change your password, or it is changed with a reset link (from an admin or the server's command line):
   every token of yours is revoked, because whoever knew the old password might have made one.
 * An admin disables or deletes your account (enabling it again brings no token back).
-* An admin uses **Revoke assistant tokens** on your row in Server administration → People: every active token of
+* An admin uses **Revoke tokens** on your row in Server administration → People: every active token of
   yours ends at once (your activity says "revoked by an admin"), and you can make new ones.
 * While an admin requires you to choose a new password, your tokens do not work; the change then revokes them.
 * While the admin has assistant access **turned off**, no token works and no new one can be made. You can still
@@ -116,8 +116,9 @@ recognised ([Tools that save](#tools-that-save)).
   stops tokens of accounts that cannot sign in under the new one.
 * Use HTTPS beyond your own computer: the token travels in a request header, like a password.
 * `python -m app.admin reset-password <name> --stdin` and `disable-user <name>` revoke the account's tokens too.
-* **Revoke a person's tokens:** Server administration → People → Manage → **Revoke assistant tokens (n)** (shown while
-  the switch is on and the person has active tokens; `n` is how many; it asks once more). It ends all of that person's
+* **Revoke a person's tokens:** Server administration → People → Manage → **Revoke tokens (n)** (shown while
+  the assistant switch or the phone shortcut switch is on and the person has active tokens of either kind; `n` is how many
+  in all; it asks once more). It ends all of that person's
   active tokens, nobody else's, and is listed in their activity. Needs a recent password, like the other actions there.
   It ends the person's **phone-shortcut tokens** too ([push.md](push.md)), which share the table and the rules but are a
   different family (`khd_`, add-only, accepted only at `POST /push/v1/body`).

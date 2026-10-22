@@ -14,6 +14,7 @@
    * Charts: niceTicks, makeAxes (x by day and time of day, y by value), xLabels, linePath, the series for the weight and the blood
      pressure charts, and the table rows under them (nothing depends on seeing a chart or on colour).
    * weekAverages: the mean of each kind of weight (morning, before dialysis ...) over the last 7 days. Kinds are never mixed.
+   * originText: where a stored row came from in words ("from a shortcut (Morning weight)", "from the Health app", "from a file"; nothing for a typed row).
 
    Tests: tests/js/body_ui_runner.mjs through tests/test_body_ui_numbers.py (against the server's own functions in app/body.py).
 
@@ -21,7 +22,7 @@
    Exposes KH.bodyUi = { WEIGHT_CONTEXT_LABELS, BP_CONTEXT_LABELS, MONTHS, BP_HINT, GOAL_LIMITS, ALARM_LIMITS, SIX_MONTH_LOOKBACK_DAYS,
    contextChoices, contextLabel, parseNumber, rangeText, weightFromInput, echoWeight, readingFromInput, echoReading, alarmFromInput, goalFromInput, inputNumber, fmtTime,
    amountText, gainText, alarmSentence, goalText, weekSentences, weekAverages, niceTicks, makeAxes, xLabels, linePath, weightSeries,
-   readingSeries, domainOf, weightRows, readingRows, profileWeightHint }. */
+   readingSeries, domainOf, weightRows, readingRows, originText, profileWeightHint }. */
 (() => {
   'use strict';
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -265,16 +266,28 @@
     return niceTicks(Math.min(...v), Math.max(...v), count);
   }
 
+  // ---- where a row came from, in words: "" for a row the person typed. A phone shortcut's row names its token (`via`, the token's
+  // name; null once the token is purged) so the person can see where it came from; the name is the person's own text and is only ever
+  // drawn with textContent. (Design note 12 §4.4.)
+  function originText(row) {
+    const source = row ? row.source : null;
+    if (source === 'shortcut') return row.via ? `from a shortcut (${row.via})` : 'from a shortcut';
+    if (source === 'apple_health') return 'from the Health app';
+    if (source === 'import') return 'from a file';
+    return '';
+  }
+
   // ---- the table under each chart
   function weightRows(weights, unit) {
     return weights.slice().sort(R.compareRows).map((w) => ({
       id: w.id, date: w.date, time: fmtTime(w.time), value: R.shownWeight(w.kg, unit).toFixed(1), unit, context: contextLabel('weight', w.context),
+      origin: originText(w),
     }));
   }
   function readingRows(readings) {
     return readings.slice().sort(R.compareRows).map((r) => ({
       id: r.id, date: r.date, time: fmtTime(r.time), systolic: r.systolic, diastolic: r.diastolic, pulse: r.pulse == null ? '' : r.pulse,
-      context: contextLabel('bp', r.context), flagged: !!r.flag,
+      context: contextLabel('bp', r.context), flagged: !!r.flag, origin: originText(r),
     }));
   }
 
@@ -290,6 +303,6 @@
     WEIGHT_CONTEXT_LABELS, BP_CONTEXT_LABELS, MONTHS, BP_HINT, GOAL_LIMITS, ALARM_LIMITS, SIX_MONTH_LOOKBACK_DAYS, contextChoices, contextLabel, parseNumber, rangeText,
     weightFromInput, echoWeight, readingFromInput, echoReading, alarmFromInput, goalFromInput, inputNumber, fmtTime, amountText, gainText,
     alarmSentence, goalText, weekSentences, weekAverages, niceTicks, makeAxes, xLabels, linePath, weightSeries, readingSeries, domainOf,
-    weightRows, readingRows, profileWeightHint,
+    weightRows, readingRows, originText, profileWeightHint,
   };
 })();

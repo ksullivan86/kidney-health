@@ -195,6 +195,8 @@
 [NOTE07]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/07-accounts-settings-secrets.md "Design note 07"
 [NOTE08]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md "Design note 08"
 [NOTE10]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/10-weight-and-blood-pressure.md "Design note 10"
+[NOTE12]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/12-phone-push-tokens.md "Design note 12"
+[APPLE-SHORTCUTS]: https://support.apple.com/guide/shortcuts/welcome/ios "Apple: Shortcuts User Guide"
 [DEPLOY]: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md "Deployment guide"
 [ASSISTANT-DOC]: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md "Assistant guide"
 [ALLOWLIST]: https://github.com/ksullivan86/kidney-health/blob/main/docs/network-allowlist.md "Network allowlist"

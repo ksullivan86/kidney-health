@@ -88,7 +88,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   The new routes under `/api/body` allow 60 batch requests an hour per person. Nothing leaves the server: weights and readings are
   never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)).
 
-* **Phone shortcuts, the server half (off until you turn it on).** `POST /push/v1/body` takes a few weights and blood pressure readings
+* **Phone shortcuts (off until you turn it on).** `POST /push/v1/body` takes a few weights and blood pressure readings
   from an iPhone Shortcut, with a **device token** (`khd_…`) a person makes for their own account. A token can only **add** plausible
   weights and readings to its owner's log (up to 50 rows a request, 60 requests an hour, 20 weights and 30 readings a day, the same
   ranges as typed rows); it reads, changes and deletes nothing, and the answer is counts only. Readings whose source name contains
@@ -96,10 +96,18 @@ the API. Security fixes are released as patch versions of the newest minor versi
   imported from the Health export, is one row. Turn it on with **Server administration → Server settings → Phone shortcuts** or
   `PUSH_ENABLED=true` (listed in `deploy/.env.example`, `compose.yaml`, the Quadlet and Kubernetes examples); while off, the route answers
   `401` to everyone. The phone must reach the server (home network or your VPN), and a reverse proxy that lists the paths it passes on
-  needs `/push/v1/`. Settings has no screen for the tokens yet (a person can make one with `POST /api/me/tokens` and `"family": "device"`;
-  the screen, the label on the rows and the handbook recipe are the next part). Each person may hold 5 device tokens besides 5 assistant
-  tokens; a password change, a disabled or deleted account and an admin's **Revoke tokens** end both kinds; rows a token sent can be
-  deleted together (`DELETE /api/me/tokens/{id}/body-rows`). Details: [docs/push.md](docs/push.md).
+  needs `/push/v1/`. A person makes a token in **Settings → Account → Your data → Phone shortcuts**: a name and when it ends (30 days,
+  90 days or 1 year), shown once with Copy and the address to send to, listed with when it was last used and what it sent, with **Revoke**
+  and **Delete what it sent** (it asks, naming how many weights and readings go, and removes only what that token sent). While your admin
+  has not turned the switch on, the block says "Your admin has not turned this on" (tokens that exist can still be revoked and their rows
+  deleted). Weights and readings a shortcut sent say "from a shortcut (name)" on Today and in a new "From" column of the Trends tables
+  (rows from the Health app and from a file say so too). In Server administration, **Revoke tokens** in People now counts and ends both
+  kinds, and the Activity log says "Phone shortcut token created / revoked" and "Phone shortcut data deleted". The handbook's Weight and
+  blood pressure page has a **From a phone shortcut** recipe (written from Apple's guide, not yet tried on a real iPhone) and the
+  configuration page lists `PUSH_ENABLED`. The preview (demo) has no server to send to and says so. Each person may hold 5 device tokens
+  besides 5 assistant tokens; a password change, a disabled or deleted account and an admin's **Revoke tokens** end both kinds; rows a
+  token sent can be deleted together (`DELETE /api/me/tokens/{id}/body-rows`). The app does not watch what a shortcut sends: a 180/120
+  reading shows its flag, with Get help now, the next time the app is opened. Details: [docs/push.md](docs/push.md).
 * **Schema step 19** (`m019_body_token.py`): `weights` and `blood_pressures` gain `api_token_id` (the device token that sent a row;
   empty for every earlier row; set to empty when the token is purged, which keeps the row). It runs at the first start of this version and
   changes no value that exists (take a backup first, as for any upgrade). The rows `GET /api/body/*` returns gain `via` (the token's name or
@@ -120,6 +128,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   rule and return `via: null`. New tests: `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, and a device
   token in the two tests that every `/api` route ignores `Authorization`. One line (a "Phone shortcuts" group for `push.enabled`) was added
   to `js/views/settings.js` because `tests/test_settings_ui.py` requires every server setting to be in a group.
+  The screens: `pushBlock` in `js/views/settings.js` (every word from the server through `textContent`; the token is held in one variable
+  until a draw has shown it once), `KH.bodyUi.originText` and the origin span and "From" column in `js/views/body.js` and `body_trends.js`,
+  the demo's token routes in `js/mock/auth.js`, a `family` in the self-revoke audit row of `app/auth/api_tokens.py` (so the activity list
+  can name the family). New tests: `tests/test_push_ui.py` (with `tests/js/push_page.mjs`), additions to `tests/test_settings_ui.py` and
+  `tests/test_body_ui.py` (whose Apple Health button test expected `KH.bodyImport.open()`; the code calls `open(button)`: the stale expectation
+  is corrected), `tools/e2e/push.py` (a real Chromium, the harness posting like a Shortcut) and the token routes in `tools/e2e/parity.py` section 10.
 * **PDF lab reports** (design note 13): `js/engine/pdf_pages.js` (`KH.pdfPages`) opens a PDF with the vendored **pdfjs-dist 6.4.299, `legacy/build`**
   (`pdf.min.mjs`, `pdf.worker.min.mjs`, `LICENSE` in `app/static/vendor/pdfjs-dist-6.4.299/`; the choice and its evidence, pdf.js's own browser
   support statement and the calls the default build makes without a polyfill, are in `app/static/vendor/README.md`) and draws the pages the person

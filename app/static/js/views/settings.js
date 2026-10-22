@@ -40,6 +40,9 @@
     tokens: () => request('GET', '/api/me/tokens'),
     createToken: (b) => request('POST', '/api/me/tokens', b),
     revokeToken: (id) => request('DELETE', `/api/me/tokens/${encodeURIComponent(id)}`),
+    // Phone shortcuts: the device family of the same table (app/push.py, docs/push.md)
+    deviceTokens: () => request('GET', '/api/me/tokens?family=device'),
+    deleteTokenRows: (id) => request('DELETE', `/api/me/tokens/${encodeURIComponent(id)}/body-rows`),
     users: () => request('GET', '/api/admin/users'),
     createUser: (b) => request('POST', '/api/admin/users', b),
     updateUser: (id, b) => request('PATCH', `/api/admin/users/${id}`, b),
@@ -464,6 +467,7 @@
     }
     wrap.append(importBlock());
     wrap.append(bodyImportBlock());
+    wrap.append(pushBlock());
 
     // Delete the account (not in AUTH_MODE=none: every request is user 1 there, which must stay)
     if (authMode() === 'none') {
@@ -727,10 +731,19 @@
     'secret.set': 'Key saved', 'secret.removed': 'Key removed', 'ai_provider.changed': 'AI provider changed', 'export.created': 'Data exported',
     'data.imported': 'Data imported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
-    'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked',
+    'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe',
     'ai.trust_changed': 'Trust in the assistant changed',
   };
+  // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
+  // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
+  const DEVICE_ACTION_LABEL = { 'api_token.created': 'Phone shortcut token created', 'api_token.revoked': 'Phone shortcut token revoked' };
+  function actionLabel(ev) {
+    const d = ev.details || {};
+    if (d.family === 'device' && DEVICE_ACTION_LABEL[ev.action]) return DEVICE_ACTION_LABEL[ev.action];
+    if (ev.action === 'api_token.revoked' && d.count != null) return 'Tokens revoked';
+    return ACTION_LABEL[ev.action] || ev.action;
+  }
   // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
   const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
@@ -745,6 +758,7 @@
     if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
+    if (ev.action === 'body.token_rows_deleted') return pushCountsText({ weights: d.weights, readings: d.readings }) || 'nothing was left to delete';
     if (ev.action === 'data.imported') {
       return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms'],
         [d.weights, 'weight', 'weights'], [d.blood_pressures, 'blood pressure reading', 'blood pressure readings']]
@@ -784,7 +798,7 @@
           const extra = eventDetail(ev);
           // Only events about this account are listed; one an admin did to it says so.
           const byAdmin = ev.actor_user_id != null && ev.actor_user_id !== me ? ' · by an admin' : '';
-          list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra || byAdmin ? h('span', { class: 'muted' }, `${extra ? ` · ${extra}` : ''}${byAdmin}`) : null),
+          list.append(h('li', {}, h('span', { class: 'act-what' }, actionLabel(ev), extra || byAdmin ? h('span', { class: 'muted' }, `${extra ? ` · ${extra}` : ''}${byAdmin}`) : null),
             h('span', { class: 'act-when muted small' }, `${fmtDateTime(ev.at)}${ev.ip_prefix ? ` · ${ev.ip_prefix}` : ''}`)));
         }
       } catch (err) { loaded = false; clear(list); list.append(h('li', {}, failed(err))); }
@@ -985,6 +999,176 @@
       h('p', {}, 'Optional AI help (meal ideas, reading a nutrition label from a photo) is not set up on this server. Nothing you log is sent to an AI service.'),
       h('div', { id: 'set-ai-slot' }));
   }
+
+  // ---------------------------------------------------------------------------
+  // Phone shortcuts (docs/dev/research/12-phone-push-tokens.md §4.4; docs/push.md; app/push.py; the handbook's "From a phone shortcut")
+  // ---------------------------------------------------------------------------
+  // A block of Settings → Your data, in the style of Assistant access. A device token lets a Shortcut on the person's iPhone add their
+  // latest weight and blood pressure to their own log: it can only add, it cannot see the log. The block is always there; while the
+  // admin switch push.enabled is off it says "Your admin has not turned this on" (and still lists, revokes and deletes). A new token is
+  // in the POST answer only: it is shown once, with Copy and the address to send to, until the block is drawn again. The demo has no
+  // server to send to and says so. Every word that came from the server (a token's name) is drawn with textContent through h().
+  // push block (begin)
+  const PUSH_INTRO = 'A shortcut on your iPhone can send your latest weight and blood pressure here. Its token can only add readings: it cannot see your log.';
+  const PUSH_PATH = '/push/v1/body';
+  const PUSH_RECIPE = 'The step-by-step recipe is in the handbook: Weight and blood pressure, From a phone shortcut.';
+  const pushAddress = () => `${window.location.origin}${PUSH_PATH}`;
+  const pushNumber = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  let pushDraw = 0; // an answer to an older draw is dropped
+  let unshownDevice = null; // the answer of POST /api/me/tokens until a draw has put it on screen (once)
+  let pushFirstAction = null; // the first button of the list, for focus after a revoke
+  let pushHost = null; // the block on screen, so that an admin's change of the switch can draw it again
+  function takeUnshownDevice() { const made = unshownDevice; unshownDevice = null; return made && made.token ? made : null; }
+
+  // "2 weights and 1 blood pressure reading" for { weights, readings }; '' when both are none.
+  function pushCountsText(c) {
+    const w = Number(c && c.weights) || 0;
+    const r = Number(c && c.readings) || 0;
+    return [w ? pushNumber(w, 'weight', 'weights') : '', r ? pushNumber(r, 'blood pressure reading', 'blood pressure readings') : ''].filter(Boolean).join(' and ');
+  }
+  function pushTokenSub(t) {
+    const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
+    if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
+    else parts.push(`${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`);
+    const sent = pushCountsText(t.sent);
+    parts.push(sent ? `sent ${sent}` : 'nothing sent that is still in your log');
+    return parts.join(' · ');
+  }
+  // The handbook's recipe: a link where the handbook is served (KH.learn), the plain words where it is not.
+  function pushRecipe() {
+    const info = KH.learn && typeof KH.learn.info === 'function' ? KH.learn.info() : null;
+    const page = info && info.links && info.links.pages && info.links.pages.weight_and_blood_pressure;
+    const target = page && KH.learn.href(`${page.path}#from-a-phone-shortcut`);
+    if (!target) return h('p', { class: 'hint', id: 'set-push-recipe' }, PUSH_RECIPE);
+    return h('p', { class: 'hint', id: 'set-push-recipe' },
+      h('a', { class: 'learn-more', href: target, target: '_blank', rel: 'noopener' }, 'How to make the shortcut', h('span', { class: 'sr-only' }, ' (opens in a new tab)')),
+      ' — the handbook has the steps for the weight and for the blood pressure.');
+  }
+  function pushTokenBox(made) {
+    const address = linkBox(pushAddress(), ['Send to this address with the header Authorization: Bearer and the token.'],
+      { label: 'Address to send to', copy: 'Copy address', copied: 'Address copied', group: 'Address to send to' });
+    const box = linkBox(made.token, ['It is shown only now. Paste it into your shortcut.', 'It is not shown again. Revoke it here if it is lost.'],
+      { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' }); // built last: it takes the focus
+    return [box, address];
+  }
+  function pushTokenList(host, tokens) {
+    pushFirstAction = null;
+    if (!tokens.length) return h('p', { class: 'muted small', id: 'set-push-none' }, 'No tokens yet.');
+    const ul = h('ul', { class: 'list device-list', id: 'set-push-list', 'aria-label': 'Your phone shortcut tokens' });
+    for (const t of tokens) {
+      const li = h('li', { class: `device token-row${t.state === 'active' ? '' : ' token-ended'}` },
+        h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, t.name), h('span', { class: 'row-sub' }, pushTokenSub(t))));
+      const actions = h('div', { class: 'token-actions' });
+      if (t.state === 'active') {
+        const revoke = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Revoke ${t.name}` }, 'Revoke');
+        revoke.addEventListener('click', () => confirm.inline(actions, revoke, {
+          message: `Revoke “${t.name}”? A shortcut using it stops working at once. What it already sent stays in your log until you delete it.`,
+          confirmText: 'Revoke',
+          onConfirm: async () => {
+            await A.revokeToken(t.id);
+            toast(`Revoked ${t.name}`, 'ok');
+            await renderPush(host);
+            if (pushFirstAction) pushFirstAction.focus();
+            return true;
+          },
+        }));
+        actions.append(revoke);
+      }
+      const sent = pushCountsText(t.sent);
+      if (sent) {
+        const del = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Delete what ${t.name} sent` }, 'Delete what it sent');
+        del.addEventListener('click', () => confirm.inline(actions, del, {
+          message: `Delete the ${sent} that “${t.name}” sent? Weights and readings you typed or imported yourself stay. This cannot be undone.`,
+          confirmText: 'Delete',
+          onConfirm: async () => {
+            const res = await A.deleteTokenRows(t.id);
+            // Today and Trends hold the rows they loaded: forget them
+            state.dayLoadedFor = null; state.trends = null; state.summary = null;
+            toast(`Deleted ${pushCountsText(res && res.deleted) || 'nothing: it had no rows left'}`, 'ok');
+            await renderPush(host);
+            if (pushFirstAction) pushFirstAction.focus();
+            return true;
+          },
+        }));
+        actions.append(del);
+      }
+      if (actions.children.length) { li.append(actions); if (!pushFirstAction) pushFirstAction = actions.children[0]; }
+      ul.append(li);
+    }
+    return ul;
+  }
+  function pushTokenForm(host, res, activeCount) {
+    if (activeCount >= res.max_active) {
+      return h('p', { class: 'hint', id: 'set-push-full' }, `You have ${res.max_active} active phone shortcut tokens, the most allowed. Revoke one to make another.`);
+    }
+    const name = h('input', { id: 'set-push-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-push-name-hint' });
+    const expiry = selectEl('set-push-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
+    const err = formError();
+    const create = action('Make token', 'primary', async () => {
+      clear(err);
+      const text = name.value.trim();
+      if (!text) { showFormError(err, 'Give the token a name, for example “Morning weight”.'); name.focus(); return; }
+      let made;
+      try {
+        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value), family: 'device' }); // a password prompt opens here when it is needed
+      } catch (e) {
+        if (!e.cancelled && !e.handled) showFormError(err, e);
+        return;
+      }
+      await renderPush(host, made);
+    }, { id: 'set-push-create' });
+    name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); create.click(); } });
+    return h('div', { class: 'settings-form' },
+      h('div', { class: 'field' }, h('label', { for: 'set-push-name' }, 'Name'), name,
+        h('span', { class: 'hint', id: 'set-push-name-hint' }, 'For example “Morning weight”, so you know which one to revoke.')),
+      h('div', { class: 'field' }, h('label', { for: 'set-push-expiry' }, 'Expires after'), expiry),
+      h('div', { class: 'settings-actions' }, create),
+      err);
+  }
+  // made: the answer of POST /api/me/tokens (with `token`), shown once at the top of "New token" by whichever draw finishes next.
+  async function renderPush(host, made = null) {
+    if (made) unshownDevice = made;
+    const ticket = ++pushDraw;
+    if (MOCK) {
+      host.replaceChildren(h('p', {}, PUSH_INTRO),
+        h('p', { class: 'hint', id: 'set-push-demo' }, 'The preview has no server to send readings to. In the installed app you make a token here, paste it into a Shortcut on your iPhone, and the Shortcut adds your weight and blood pressure to your own log. Your admin turns it on first.'),
+        pushRecipe());
+      return;
+    }
+    let res;
+    try { res = await A.deviceTokens(); } catch (err) {
+      if (ticket !== pushDraw) return;
+      const fresh = takeUnshownDevice();
+      host.replaceChildren(failed(err), ...(fresh ? pushTokenBox(fresh) : [])); // a new token is never lost because the list could not load
+      return;
+    }
+    if (ticket !== pushDraw) return;
+    const tokens = res.tokens || [];
+    const active = tokens.filter((t) => t.state === 'active').length;
+    const parts = [h('p', {}, PUSH_INTRO)];
+    if (!res.enabled) {
+      parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')),
+        h('p', { class: 'hint', id: 'set-push-off' }, 'Your admin has not turned this on.'));
+      if (active) parts.push(h('p', { class: 'hint' }, 'Your tokens do not work while phone shortcuts are off. You can still revoke them and delete what they sent.'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Let people send weights and blood pressure from a phone shortcut" on in Server administration → Server settings (or PUSH_ENABLED). See docs/push.md.'));
+    }
+    parts.push(pushRecipe());
+    if (tokens.length || res.enabled) parts.push(subtitle('Your phone shortcut tokens'), pushTokenList(host, tokens));
+    const fresh = takeUnshownDevice();
+    if (res.enabled || fresh) parts.push(subtitle('New token', 'set-push-new-h'));
+    if (fresh) parts.push(...pushTokenBox(fresh));
+    if (res.enabled) parts.push(pushTokenForm(host, res, active));
+    host.replaceChildren(...parts);
+  }
+  function pushBlock() {
+    const wrap = h('div', { class: 'import-block push-block', id: 'set-push' }, subtitle('Phone shortcuts', 'set-push-h'));
+    const host = h('div', { id: 'set-push-body', role: 'region', 'aria-labelledby': 'set-push-h' }, loading());
+    wrap.append(host);
+    pushHost = host;
+    renderPush(host).catch((e) => console.warn('Phone shortcuts:', e));
+    return wrap;
+  }
+  // push block (end)
 
   // ---------------------------------------------------------------------------
   // Section: Assistant access (docs/assistant.md; app/auth/api_tokens.py)
@@ -1273,11 +1457,13 @@
     li.append(userManage(u, self));
     return li;
   }
-  // The instance switch assistant.enabled as the admin's settings list has it (the demo has no such setting).
-  function assistantSwitchOn() {
+  // The instance switches assistant.enabled and push.enabled as the admin's settings list has them (the demo has no such settings).
+  function adminSwitchOn(key) {
     const all = cache.adminSettings;
-    return !!(all && !(all instanceof Error) && all['assistant.enabled'] && all['assistant.enabled'].value === true);
+    return !!(all && !(all instanceof Error) && all[key] && all[key].value === true);
   }
+  const assistantSwitchOn = () => adminSwitchOn('assistant.enabled');
+  const pushSwitchOn = () => adminSwitchOn('push.enabled');
   function userManage(u, self) {
     const name = u.display_name || u.username;
     const err = formError();
@@ -1332,17 +1518,18 @@
       if (self) { await KH.auth.signOut(); return; } // this device too: show the sign-in screen now
       await loadPeople();
     }));
-    // Assistant tokens (docs/assistant.md): only while the admin switch is on and the person has active ones.
-    const assistantTokens = Number(u.assistant_tokens) || 0;
-    if (assistantSwitchOn() && assistantTokens > 0) {
-      const rev = h('button', { class: 'btn secondary', type: 'button' }, `Revoke assistant tokens (${assistantTokens})`);
+    // Tokens (docs/assistant.md, docs/push.md): the person's assistant tokens and phone shortcut tokens, ended together. Shown while one of the
+    // two admin switches is on and the person has active tokens.
+    const tokenCount = (Number(u.assistant_tokens) || 0) + (Number(u.device_tokens) || 0);
+    if ((assistantSwitchOn() || pushSwitchOn()) && tokenCount > 0) {
+      const rev = h('button', { class: 'btn secondary', type: 'button' }, `Revoke tokens (${tokenCount})`);
       rev.addEventListener('click', () => confirm.inline(actions, rev, {
-        message: `Revoke ${assistantTokens === 1 ? 'the 1 active assistant token' : `all ${assistantTokens} active assistant tokens`} of ${name}? `
-          + `Any chat assistant using ${assistantTokens === 1 ? 'it' : 'them'} stops working at once. ${name} can make new ones in Settings.`,
+        message: `Revoke ${tokenCount === 1 ? 'the 1 active token' : `all ${tokenCount} active tokens`} of ${name}? `
+          + `Any chat assistant or phone shortcut using ${tokenCount === 1 ? 'it' : 'them'} stops working at once. ${name} can make new ones in Settings.`,
         confirmText: 'Revoke',
         onConfirm: async () => {
           const r = await A.revokeUserTokens(u.id);
-          await done(r.revoked === 1 ? `Revoked 1 assistant token of ${name}` : `Revoked ${r.revoked} assistant tokens of ${name}`);
+          await done(r.revoked === 1 ? `Revoked 1 token of ${name}` : `Revoked ${r.revoked} tokens of ${name}`);
           return true;
         },
       }));
@@ -1603,7 +1790,11 @@
         }
         if (key === 'assistant.enabled') {
           renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
-          loadPeople(); // "Revoke assistant tokens" shows only while the switch is on
+          loadPeople(); // "Revoke tokens" shows only while a token switch is on
+        }
+        if (key === 'push.enabled') {
+          if (pushHost) renderPush(pushHost).catch((e2) => console.warn('Phone shortcuts:', e2));
+          loadPeople();
         }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
@@ -1726,7 +1917,7 @@
         : ev.target_type === 'user' && ev.target_id != null ? `account ${accountName(ev.target_id)}` : 'server';
       const target = targetOf(ev);
       const extra = [target, eventDetail(ev)].filter(Boolean).map((x) => ` · ${x}`).join('');
-      list.append(h('li', {}, h('span', { class: 'act-what' }, ACTION_LABEL[ev.action] || ev.action, extra ? h('span', { class: 'muted' }, extra) : null),
+      list.append(h('li', {}, h('span', { class: 'act-what' }, actionLabel(ev), extra ? h('span', { class: 'muted' }, extra) : null),
         h('span', { class: 'act-when muted small' }, `${fmtDateTime(ev.at)} · by ${who}${ev.ip_prefix ? ` · ${ev.ip_prefix}` : ''}`)));
     }
     if (res.events.length >= 30) {

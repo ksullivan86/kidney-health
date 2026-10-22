@@ -68,6 +68,10 @@
   const readingText = (r) => `${r.systolic}/${r.diastolic}`;
   const readingWhen = (r) => [U.contextLabel('bp', r.context), U.fmtTime(r.time)].filter(Boolean).join(', ');
 
+  // "from a shortcut (Morning weight)" for a row a phone shortcut's token sent (also "from the Health app", "from a file"); nothing for a
+  // typed row. The token's name is the person's own text: it is drawn as text.
+  const originEl = (row) => { const text = U.originText(row); return text ? h('span', { class: 'body-when body-origin' }, text) : null; };
+
   function weightItem(w) {
     const what = `${R.formatWeight(w.kg, S.units)}, ${U.contextLabel('weight', w.context)}, ${fmtDateShort(w.date)}`;
     const edit = h('button', { class: 'link-btn', type: 'button', 'aria-label': `Edit ${what}` }, 'Edit');
@@ -80,7 +84,8 @@
     }));
     return h('li', { class: 'body-item' },
       h('div', { class: 'body-main' }, h('span', { class: 'body-val' }, R.formatWeight(w.kg, S.units)),
-        h('span', { class: 'body-when' }, [U.contextLabel('weight', w.context), U.fmtTime(w.time)].filter(Boolean).join(', ')), actions),
+        h('span', { class: 'body-when' }, [U.contextLabel('weight', w.context), U.fmtTime(w.time)].filter(Boolean).join(', ')),
+        originEl(w), actions),
       w.note ? h('p', { class: 'body-note' }, w.note) : null);
   }
 
@@ -98,6 +103,7 @@
       h('div', { class: 'body-main' }, h('span', { class: 'body-val' }, readingText(r)),
         r.pulse != null ? h('span', { class: 'body-when' }, `pulse ${r.pulse}`) : null,
         h('span', { class: 'body-when' }, readingWhen(r)),
+        originEl(r),
         r.flag ? h('span', { class: 'body-tag' }, 'See the handbook note') : null, actions),
       r.note ? h('p', { class: 'body-note' }, r.note) : null);
   }

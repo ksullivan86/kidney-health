@@ -42,7 +42,7 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
      `symptoms.py`, `visitprep.py`, `body.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
-     `lab_pdf.py` and `mcp_smoke.py`
+     `push.py`, `lab_pdf.py` and `mcp_smoke.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);
@@ -87,6 +87,12 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      are listed apart and unticked, that the progress line moves and Cancel stops the read, and that importing the same export
      again adds nothing (note 10 §4.8, "Re-verify"). Also an export with a source that has more than 20 weights or 30
      readings in a day: the sheet says how many were left out;
+   * Phone shortcuts with a real iPhone (the iOS version noted): follow the handbook's "From a phone shortcut" (Weight and blood pressure)
+     step by step, with a token made in Settings → Account → Your data → Phone shortcuts. `push.py` posts from a harness, so it cannot show
+     the Shortcuts app: check that the action names and their order match, that **Format Date** gives a time with its zone, that the JSON
+     body is what the server accepts (the Show Result answer is counts such as `added` 1), that a personal automation runs without asking
+     (or says what to tap), that the phone reaches the server from the place it is used, and that a second run adds nothing; correct the
+     handbook where it differs and tick the row in `handbook/REVIEW.md`;
    * Labs → Import from a patient portal file with a real C-CDA download from a patient portal (MyChart and at least one other; the
      "Download" of the health summary or a visit summary, XML or C-CDA format, not the PDF): the documents in
      `tests/data/ccda_labs_vectors.json` and `tools/e2e/regress.py` are hand-written, so look at the headline's counts for

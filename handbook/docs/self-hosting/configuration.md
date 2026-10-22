@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -135,6 +135,12 @@ Also `AI_TIMEOUT_S`, `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500), `AI_ST
 Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in the repository's
 [AI guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/ai.md).
 
+## Phone shortcuts
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PUSH_ENABLED` | `false` | Phone shortcuts (also **Server administration → Server settings**): each person may make device tokens (**Settings → Account → Your data → Phone shortcuts**) for an iPhone Shortcut that adds their weight and blood pressure to their own log at `POST /push/v1/body`. A token can only add; it reads nothing. While off, the route answers `401` to everyone. The phone must reach the server (home network or your VPN); if a reverse proxy lists the paths it passes on, add `/push/v1/`. Nothing leaves the server for it ([design note 12][NOTE12]; [From a phone shortcut](../app/weight-and-blood-pressure.md#from-a-phone-shortcut)). |
+
 ## Meal guidance
 
 `GUIDANCE_ENABLED` (`true`), `GUIDANCE_POOL_PER_ROLE` (200), `GUIDANCE_BEAM_WIDTH` (16)
@@ -179,5 +185,6 @@ Environment=AUTH_MODE=local
 
 - [Design note 01][NOTE01] §5.5 and [design note 07][NOTE07] §4.3: the variables and their rules.
 - [Design note 03][NOTE03] R10; [design note 04][NOTE04] R4; [design note 06][NOTE06] §4.14; [design note 08][NOTE08] §4.6.
+- [Design note 12][NOTE12] §4.4: the `PUSH_ENABLED` switch.
 - [Deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API]; [Open Food Facts API][OFF-API].

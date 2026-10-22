@@ -3779,10 +3779,12 @@ Spec `docs/dev/research/12-phone-push-tokens.md`; code `app/push.py`, the device
 `is_watch_source` and the same-reading check in `app/body.py`, `app/migrations/m019_body_token.py`; guide `docs/push.md`; tests
 `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`. A person makes a **device token** in Settings and
 pastes it into a Shortcut on their phone; the Shortcut sends the latest weight and blood pressure to the person's own server. The
-token can **only add** weights and readings to its owner's log: it reads nothing, changes nothing and deletes nothing. **This section
-is the server; the Settings "Phone shortcuts" block, the "from a shortcut (name)" label on the weight and blood pressure screens and
-the handbook recipe are the next step** (the routes below are what they use). No new dependency, no JS twin of `/push` (no browser
-code calls it).
+token can **only add** weights and readings to its owner's log: it reads nothing, changes nothing and deletes nothing. The server is
+described first; "The screens" below is the Settings "Phone shortcuts" block, the "from a shortcut (name)" label on the weight and blood
+pressure screens, the admin's "Revoke tokens" and the demo's twin (code `js/views/settings.js`, `js/views/body.js`, `js/views/body_trends.js`,
+`js/engine/body_ui.js`, `js/mock/auth.js`; tests `tests/test_push_ui.py` with `tests/js/push_page.mjs`, `tests/test_settings_ui.py`,
+`tests/test_body_ui.py`, `tools/e2e/push.py`; the handbook recipe is "From a phone shortcut" on `handbook/docs/app/weight-and-blood-pressure.md`).
+No new dependency, no JS twin of `/push` (no browser code calls it: the Shortcut does).
 
 ### The second token family (`app/auth/api_tokens.py`)
 
@@ -3889,6 +3891,42 @@ call it (it is a session route).
 `api_token_id` and `via` are **not exported** (server-local ids); `source: "shortcut"` and the `source_key` are, and import like the other
 sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by a token are never read by `app/ai/`, `app/mcp/` or
 `app/guidance/` (the same test as for the rest of the log), and are never sent to an AI provider.
+
+### The screens (note 12 §4.4 to §4.6)
+
+* **Settings → Account → Your data → Phone shortcuts** (`pushBlock` in `js/views/settings.js`, after the Apple Health import block; ids
+  `set-push`, `set-push-body`, `set-push-name`, `set-push-expiry`, `set-push-create`, `set-push-list`): in the style of Assistant access, but
+  always present. It says what it is for ("A shortcut on your iPhone can send your latest weight and blood pressure here. Its token can only
+  add readings: it cannot see your log."), links the handbook's recipe (`KH.learn`, `…/weight-and-blood-pressure/#from-a-phone-shortcut`; the plain
+  words where the handbook is not served), lists the person's device tokens (name, `khd_` start, created, last used or "never used", expires,
+  and "sent 1 weight and 1 blood pressure reading" from `sent`) and, while the switch is on, the form: a name (60 characters), an expiry
+  (30 days, 90 days, 1 year; 90 to start) and Make token. Making a token is `POST /api/me/tokens` with `family: "device"`; the recent
+  password rule is the one `request()` already handles (the "Enter your password again" sheet opens and the call is repeated). **The token is
+  in that answer only**: the page keeps it in one variable until a draw has put it on screen, shows it once with **Copy token** and the
+  address to send to (`location.origin` + `/push/v1/body`, with its own Copy address), and a later draw never has it. A token that could not
+  be drawn because the list failed to load is still shown. At 5 active tokens the form is replaced by one line.
+* **Revoke** asks in the page (`confirm.inline`) and says what stays; **Delete what it sent** is offered for any listed token with rows
+  still in the log (an ended token too: the lost-phone order is Revoke, then Delete), asks naming the count and the token ("Delete the 1 weight
+  and 1 blood pressure reading that “Morning weight” sent? Weights and readings you typed or imported yourself stay. This cannot be undone."),
+  calls `DELETE /api/me/tokens/{id}/body-rows`, forgets the loaded Today and Trends data and says what it deleted.
+* **Switch off** (`enabled: false` in the list): "Turned off on this server" and "Your admin has not turned this on."; no form; tokens that
+  are still listed can be revoked and their rows deleted (and the block says they do not work while it is off); an admin sees where the switch
+  is. Turning the switch on or off in Server administration redraws the block and the People list.
+* **Weight and blood pressure rows**: `KH.bodyUi.originText(row)` words the origin from `source` and `via`: "from a shortcut (NAME)" (or "from a
+  shortcut" when `via` is null: the token was purged), "from the Health app", "from a file"; nothing for a typed row. Today draws it as a
+  `.body-origin` span next to the time, and the Trends tables add a "From" column while some row of the period has an origin. Every word
+  goes through `textContent` (`h()`), so a token named with markup shows the markup. Visit prep shows no per-row sources and is unchanged.
+* **Admin** (Server administration → People): the revoke button shows while `assistant.enabled` or `push.enabled` is on and the person
+  has an active token of either family (`assistant_tokens + device_tokens` of `GET /api/admin/users`), labelled "Revoke tokens (n)". The
+  Activity log labels `api_token.created` / `api_token.revoked` by `details.family` ("Phone shortcut token created / revoked"; the
+  self-revoke audit row now carries `family`) and `body.token_rows_deleted` ("Phone shortcut data deleted", with the counts).
+* **The demo** (`?mock=1`, `js/mock/auth.js`): the block says "The preview has no server to send readings to…" and draws no form and no
+  list, and makes no request. For parity the mock answers `GET /api/me/tokens?family=assistant|device` like a server with the switches off
+  (`enabled: false`, no tokens, a bad family is 400), `POST /api/me/tokens` is refused with 409 and the preview's words, and
+  `DELETE /api/me/tokens/{id}` and `…/body-rows` are 404. `tools/e2e/parity.py` section 10 compares all of these with the server; the admin
+  user list of the mock has `device_tokens: 0`.
+* **Not built**: a webhook out, push notifications and any watching of the readings by the app. A reading sent by a shortcut is checked
+  when the app is opened, like any other; the handbook says so and points to Get help now.
 
 ### Security review
 

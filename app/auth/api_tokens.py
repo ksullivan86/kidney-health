@@ -501,10 +501,12 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
 def revoke_my_token(token_id: Annotated[int, Path(ge=1, le=MAX_ROW_ID)], request: Request, user: CurrentUser,
                     conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """Revoke at once (also while the switch is off). Another person's id is 404; an ended token is a no-op."""
+    row = conn.execute("SELECT scopes FROM api_tokens WHERE id = ? AND user_id = ?", (token_id, user.id)).fetchone()
     revoked = revoke(conn, user.id, token_id)
-    if revoked is None:
+    if revoked is None or row is None:
         raise HTTPException(status_code=404, detail="token not found")
-    if revoked:
-        audit(conn, user.id, "api_token.revoked", "api_token", token_id, ip=request_ip(request), reason="self")
+    if revoked:  # the family says which Settings block the activity row belongs to ("Phone shortcut token revoked")
+        audit(conn, user.id, "api_token.revoked", "api_token", token_id, ip=request_ip(request), reason="self",
+              family=family_of_scopes(row["scopes"]))
         conn.commit()
     return Response(status_code=204)

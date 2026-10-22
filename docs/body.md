@@ -31,8 +31,15 @@ other). The app **records and shows**, works out a few plain numbers, and points
 Two tables, because the readings validate differently (`weights`, `blood_pressures`; both `ON DELETE CASCADE` from `users`, one unique
 index each on `(user_id, source_key)` where the key is not null, so a second import adds nothing). There is **no `CHECK` on a context or
 a source** (a later value must not need a table rebuild); a row with a value this version does not know is kept, left out of the lists and
-included in the export. `source` is `manual` (typed), `apple_health` or `import`; editing an imported row makes it `manual` and keeps its key, so
-importing again does not bring the old value back. Ids are never reused (`AUTOINCREMENT`).
+included in the export. `source` is `manual` (typed), `apple_health`, `import` or `shortcut` (a phone shortcut's device token, see
+[Phone shortcuts](push.md)); editing an imported row makes it `manual` and keeps its key, so importing again does not bring the old value back.
+Ids are never reused (`AUTOINCREMENT`). A row from a shortcut also carries `api_token_id` (schema step 19), and the list routes answer `via`: the
+token's name, or `null` for every other row and once the token is purged.
+
+**Where a row came from is shown** on Today (a "from a shortcut (Morning weight)" line next to the time; "from the Health app" and "from a file" the same
+way; nothing for a row the person typed) and in the Trends tables (a "From" column while some row of the period has an origin). The words are made by
+`KH.bodyUi.originText(row)` and drawn as text, so a token named with markup shows the markup. Editing a row makes it the person's own. Visit prep shows
+no per-row sources.
 
 The ranges (a weight of 20 to 400 kg, a top number of 50 to 300, a bottom number of 20 to 200 and below the top number, a pulse of 20 to
 250) and the limits (20 weights and 30 readings a day, a note of 200 characters, 1,000 rows in a batch) are **the project's own plausibility
@@ -169,4 +176,5 @@ server's models, settings and functions), and the isolation, auth coverage, expo
 server by `tests/data/gen_body_vectors.py`; regenerate it with `python tests/data/gen_body_vectors.py` after a change to `app/body.py` or
 the body models, then make the browser twin agree), and the browser harnesses `python tools/e2e/parity.py` (section 16 runs the same
 request script on the live server and the demo) and `python tools/e2e/body.py` (the screens in Chromium at 375 px and 1280 px, light and dark, against a real server and the
-demo).
+demo). The rows a phone shortcut sends, the label on them and "Delete what it sent" are checked by `tests/test_push_ui.py` and `python tools/e2e/push.py`
+([Phone shortcuts](push.md)).

@@ -1,6 +1,6 @@
 ---
 title: Weight and blood pressure
-description: "Write down your weights and blood pressure readings, enter the two numbers your care team gave you, and see what the app shows, what it points to in this handbook and what it leaves to your team."
+description: "Write down your weights and blood pressure readings, or send them from an iPhone Shortcut, enter the two numbers your care team gave you, and see what the app shows, what it points to in this handbook and what it leaves to your team."
 slug: weight-and-blood-pressure
 audience: [app-user, patient, caregiver]
 applies_to: [all]
@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-22
 fact_checked: 2026-10-22
-sources: [NOTE10, ARCH, NOTE05, MEDLINE-BPM, NHLBI-BPS, K21BP, AHA25BP, AHA-CUFFLESS, DG28a, NKF-HDaccess]
+sources: [NOTE10, NOTE12, APPLE-SHORTCUTS, ARCH, NOTE05, MEDLINE-BPM, NHLBI-BPS, K21BP, AHA25BP, AHA-CUFFLESS, DG28a, NKF-HDaccess]
 ---
 
 # Weight and blood pressure
@@ -125,6 +125,111 @@ handbook's own words and links to [Get help now](../get-help-now.md).
   when either one is that high. The sheet shows the same block before you save, so you can check that you
   did not mistype.
 
+## From a phone shortcut {#from-a-phone-shortcut}
+
+If you have an iPhone, a **Shortcut** can send your latest weight and your latest blood pressure from the Health app
+to your own server each morning, without opening the app and without an export. It is off until your admin turns
+it on. If **Settings → Account → Your data → Phone shortcuts** says "Your admin has not turned this on", ask them
+([Configuration](../self-hosting/configuration.md); [design note 12][NOTE12]).
+
+**What the token can do.** You make a **token** in **Settings → Account → Your data → Phone shortcuts**: a name, such as "Morning
+weight", and when it ends (30 days, 90 days or 1 year). It is shown **once**, with **Copy token** and the address to
+send to (this server's address followed by `/push/v1/body`). The token can only **add** weights and blood pressure
+readings to your own log. It cannot read your log, change or delete anything, or open any other part of the app.
+Treat it like a password: never post it or send it by email.
+
+- A reading from a source with "Watch" in its name is **not saved** (a watch or ring that estimates blood pressure
+  without a cuff is not a good source for this log, see
+  [Which device](#which-device)). A weight from a watch is saved.
+- Only weights and blood pressure are accepted. Nothing else from the Health app is sent or kept.
+- Sending the same reading twice, or importing your Health export after the Shortcut has sent it, adds nothing.
+  A reading you typed yourself is never counted as the same.
+- The app marks each row it received this way, for example "from a shortcut (Morning weight)", on Today and in the
+  tables under the Trends charts. Edit one and it becomes yours.
+
+### The phone must reach the server
+
+The Shortcut sends from your phone, so the phone must be able to reach your server: on your home network, or
+through the VPN you use to reach it. A server on a private network cannot be reached from mobile data without
+one, and the Shortcut will then fail until you are home again ([Install the app](install.md)).
+
+### Make the "latest weight" shortcut
+
+The steps below are for the Shortcuts app on iOS. **Action names and the order of the choices can differ between
+iOS versions**, so look for the action that does the same thing. Apple's guide to Shortcuts describes each action
+([Apple Shortcuts User Guide][APPLE-SHORTCUTS]).
+
+!!! note "Written from Apple's guide, not yet tried on every iPhone"
+    These steps have not been checked on a real iPhone yet (the review log has the check that is still to do). If a step
+    does not match your phone, stop, and ask whoever runs your server. Nothing
+    breaks: until the token is pasted in, nothing is sent.
+
+1. In **Settings → Account → Your data → Phone shortcuts** make a token and **Copy token**. Keep the page open: you need the
+   address too.
+2. In the Shortcuts app, tap **+** to make a new shortcut and name it, for example "Send weight".
+3. Add **Find Health Samples**. Set **Type** to Weight, **Sort by** Start Date, **Order** Latest First and
+   **Limit** to on, with a limit of 1.
+4. Add **Get Details of Health Samples** and choose **Value**. Add it three more times for **Unit**, **Start Date**
+   and **Source**.
+5. Add **Format Date**. Choose the **Start Date**, set the **Date Format** to **ISO 8601** and turn on **Include
+   Time**. The result looks like `2026-10-22T07:15:00-04:00`: it must end with the zone (`-04:00`, or `Z`).
+6. Add **Dictionary** and give it one key, `weights`, of type **List**. In the list add one **Dictionary** with
+   four keys:
+   `at` (Text) is the formatted date; `value` (Number) is the Value; `unit` (Text) is the Unit; and
+   `source` (Text) is the Source. The unit must be exactly `kg` or `lb`. If your Shortcut shows another word, type
+   the unit yourself as Text.
+7. Add **Get Contents of URL**. For the URL paste the address from Settings. Open **Show More** and set **Method** to
+   **POST**. Under **Headers** add the key `Authorization` with the text `Bearer ` followed by your token (the word
+   Bearer, a space, then the token). Set **Request Body** to **JSON** and give it the Dictionary from step 6.
+8. Add **Show Result** to see the answer the first time. It is only counts, for example `added` 1 weight, so it
+   never shows your numbers back.
+9. Run the shortcut once. Open **Today**: the weight is there, marked "from a shortcut".
+
+### Make the "latest blood pressure" shortcut
+
+Make a second shortcut the same way, because a blood pressure reading is two numbers.
+
+1. **Find Health Samples** with **Type** Blood Pressure Systolic (Latest First, limit 1), then **Get Details of
+   Health Samples** for its **Value**, **Start Date** and **Source**. Do the same with **Type** Blood Pressure
+   Diastolic and get its **Value**. Look at the two Start Dates the first time: they should be the same
+   measurement. If your phone shows blood pressure as one item, use its systolic and diastolic values.
+2. **Format Date** as in step 5 above.
+3. **Dictionary** with the key `readings` (a List) holding one Dictionary with four keys: `at` (Text, the formatted
+   date), `systolic` (Number), `diastolic` (Number) and `source` (Text). Whole numbers only.
+4. **Get Contents of URL** exactly as in step 7 above.
+
+You can also put both in one shortcut: a Dictionary with a `weights` list and a `readings` list. Send only what you
+have.
+
+### Send it every morning
+
+In the Shortcuts app open **Automation**, tap **+**, choose **Time of Day**, set the time and **Daily**, then
+choose **Run Shortcut** and pick yours. Choose **Run Immediately** if your iOS offers it, so that the phone does not
+ask each time. Whether an automation runs without asking depends on your iOS version.
+
+### If the shortcut shows an error
+
+- **401, "A valid device token is required".** The token is wrong, has ended or was revoked, or your admin has not
+  turned phone shortcuts on. Check **Settings → Account → Your data → Phone shortcuts**; make a new token if you need one.
+- **400, with a place such as `weights.0.at`.** The server names the field it did not accept: a time without its
+  zone, a unit that is not `kg` or `lb`, or a number outside what the log accepts. Nothing from that request is kept.
+- **429.** The token has sent more than 60 requests in an hour. Wait and try again.
+- **It cannot connect.** The phone cannot reach the server (see above).
+
+### If the phone is lost or the shortcut was shared
+
+Open **Settings → Account → Your data → Phone shortcuts** on another device and **Revoke** the token. The shortcut stops
+working at once. Then, if you think someone else sent rows, press **Delete what it sent**: it names how many weights and
+readings it will remove, and removes only what that token sent. Your own entries stay. Changing your password also ends
+every token.
+
+### The app does not watch these readings
+
+Nothing here sends you an alert. A reading that was sent by a shortcut is checked the same way as one you typed, but
+the check happens when you open the app: if a reading is past a limit, the red block appears on **Today** the next
+time you open it. If you feel unwell, or a number worries you, do not wait for the app: follow
+[Get help now](../get-help-now.md) and call your care team.
+
 ## What the app does not do
 
 - It does not say what causes a number, whether a number is good or bad for you, or what medicine to take,
@@ -132,6 +237,8 @@ handbook's own words and links to [Get help now](../get-help-now.md).
 - It does not give you an alarm or a goal. It has no alarm for a low blood pressure.
 - It never changes your Profile weight by itself. That weight sets your calorie and protein targets, and on
   dialysis it is your dry weight, which your unit sets and a scale reading is not ([First setup](first-setup.md)).
+- It does not watch the readings a shortcut sends: nothing alerts you, and a reading past a limit shows its
+  warning when you open the app ([From a phone shortcut](#from-a-phone-shortcut)).
 - It does not send your weights or readings to an AI provider or to the Ask assistant ([Privacy and your
   data](privacy.md); [architecture contract][ARCH]).
 - Your weights and readings are in your data export, and they are deleted with your account
@@ -146,6 +253,9 @@ handbook's own words and links to [Get help now](../get-help-now.md).
   after a session, or set your dry weight in Profile.
 - **The pounds and kilograms look swapped.** Check the unit in **Settings → Weight and blood pressure**.
 - **I do not see "between sessions".** It is offered only when your Profile says **Hemodialysis**.
+- **A weight or reading I did not type is in the list.** The row says where it came from: "from a shortcut (name)",
+  "from the Health app" or "from a file". For a shortcut, see
+  [If the phone is lost or the shortcut was shared](#if-the-phone-is-lost-or-the-shortcut-was-shared).
 
 ## Ask your care team
 
@@ -167,7 +277,10 @@ The warning signs, including the ones for a very high blood pressure reading, ar
 ## Sources
 
 - [Design note 10][NOTE10]: how the alarm, the goal, the averages and the warning lines work;
-  [project architecture contract][ARCH].
+  [project architecture contract][ARCH]. [Design note 12][NOTE12]: the phone shortcut, its token and what the
+  server accepts.
+- [Apple Shortcuts User Guide][APPLE-SHORTCUTS]: the Shortcuts actions for Health samples, dates, dictionaries,
+  web requests and automations.
 - [MedlinePlus: measuring blood pressure][MEDLINE-BPM] and [NHLBI: high blood pressure symptoms][NHLBI-BPS]:
   how to measure at home, and the 180/120 warning lines.
 - [KDIGO 2021 blood pressure in CKD guideline][K21BP]: recommendations 1.2 and 3.1.1.

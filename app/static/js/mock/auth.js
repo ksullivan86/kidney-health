@@ -120,7 +120,7 @@
       return { id: u.id, username: u.username, display_name: u.display_name || '', role: u.role, status: u.status, auth_source: u.auth_source,
         can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
         created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
-        assistant_tokens: 0 }; // the demo makes no assistant tokens (app/auth/admin_api.py counts the active ones)
+        assistant_tokens: 0, device_tokens: 0 }; // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
@@ -350,6 +350,20 @@
     return { events };
   });
   route('GET', '/api/me/usage', function () { this._currentUser(); return { days: 30, usage: [], by_day: [] }; });
+  // Access tokens, both families (app/auth/api_tokens.py; phone shortcuts: app/push.py, docs/dev/research/12-phone-push-tokens.md §4.6). The demo has
+  // no server to send readings to and makes no tokens: the list answers as a server does while the switch is off (nothing to list, `enabled:
+  // false`), making one is refused with the preview's words, and every id is a token the person does not have.
+  const TOKEN_FAMILIES = ['assistant', 'device'];
+  const NO_TOKENS = 'The preview has no server to send readings to, so it makes no tokens. In the installed app your admin turns phone shortcuts on, and you make a token in Settings.';
+  route('GET', '/api/me/tokens', function ({ qp }) {
+    this._currentUser();
+    const family = qp('family') == null ? 'assistant' : qp('family');
+    if (!TOKEN_FAMILIES.includes(family)) fail(400, `family must be one of: ${TOKEN_FAMILIES.join(', ')}.`, { field: 'family' });
+    return { family, enabled: false, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [] };
+  });
+  route('POST', '/api/me/tokens', function () { this._currentUser(); this._requireRecent(); fail(409, NO_TOKENS); });
+  route('DELETE', /^\/api\/me\/tokens\/(\d+)$/, function () { this._currentUser(); fail(404, 'token not found'); });
+  route('DELETE', /^\/api\/me\/tokens\/(\d+)\/body-rows$/, function () { this._currentUser(); fail(404, 'token not found'); });
 
   // ---------------------------------------------------------------------------
   // /api/admin: accounts, invites, usage, audit, about (settings and keys: js/mock/settings.js)

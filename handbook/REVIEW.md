@@ -249,6 +249,24 @@ vision; problems talking); "Do not wait to see if your pressure comes down on it
 
 Counts: **high 0, medium 0, low 0** (an addition, not a correction).
 
+### Added 2026-10-22: the phone shortcut recipe (weight and blood pressure, "From a phone shortcut")
+
+`app/weight-and-blood-pressure.md` gained a section with a step-by-step Shortcut recipe (latest weight, latest blood pressure, a
+personal automation at a time of day), what the token can do, what to do when a phone is lost, and a pointer to Get help now. It
+adds **no clinical number**: the 180/120 lines are the ones already on the page and on Get help now. The Shortcuts steps were
+written from the design note (note 12, P1) and Apple's Shortcuts User Guide (`APPLE-SHORTCUTS`) **without opening the articles or
+a phone**, so the page says that action names can differ between iOS versions and carries a note that the steps are not yet tried.
+
+**The owner's check on a real iPhone (open; nothing here can do it):**
+
+- [ ] **Find Health Samples** offers Weight, Blood Pressure Systolic and Blood Pressure Diastolic (or a single Blood Pressure item), with Sort by Start Date, Latest First and a Limit of 1.
+- [ ] **Get Details of Health Samples** gives Value, Unit, Start Date and Source; the Unit comes out as exactly `kg` or `lb`.
+- [ ] **Format Date** with ISO 8601 and Include Time ends with the zone (`-04:00` or `Z`).
+- [ ] The Dictionary editor can hold a List key (`weights`, `readings`) with one Dictionary of Text and Number values; **Get Contents of URL** sends it as JSON with the `Authorization: Bearer` header over HTTPS and over plain HTTP on the home network.
+- [ ] The two Start Dates of a blood pressure reading taken with one cuff match, so the systolic and diastolic belong together.
+- [ ] A personal automation (Time of Day, Run Immediately) runs without asking and without the phone being unlocked, or the page says what it needs.
+- [ ] The weight and blood pressure appear on Today and in the Trends tables marked "from a shortcut (name)", and a second run adds nothing.
+
 ### For a clinician to decide
 
 1. **Transplant fever tier.** Is fever with shaking chills after a transplant a 911 sign (as now), or "call the transplant center right away" first? Should fever or rigors with a tunnelled hemodialysis catheter also go in the 911 tier? KDOQI vascular access 2019 was not re-read for this.
