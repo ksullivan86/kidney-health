@@ -25,10 +25,15 @@ HKDF labels, token prefixes, the database filename, the IndexedDB name and the e
   test_pwa_routes) and test_demo_local_ui.
 * Checked so far: `ruff check .`, `gen_openapi.py --check`, `node tests/js/run_vectors.mjs`, the affected pytest files.
 
+* Docs done: ARCHITECTURE.md (layout, ownership row, frontend tree, "Brand strings"), CONTRIBUTING.md (a line and a twin-table row), CHANGELOG.md
+  (Unreleased, For contributors), note 14 (change 3 marked done).
+* Checked: `tests/data/gen_*.py --check` (11 files), `build_handbook.py --check`, browser: `tools/e2e/device.py --only outbox,changes,demo,firstvisit`
+  (77 passed), `demo_local.py` (90 passed), `import_walk.py` (105 passed, 4 failed; the same 4 fail on the base commit `a441fa2`, they expect the
+  preview text without ", 0 weights, 0 blood pressure readings").
+
 ## Next
 
-* Docs: ARCHITECTURE.md (layout, ownership, "Brand strings"), CONTRIBUTING.md, CHANGELOG.md, note 14 (mark change 3 done).
-* Full pytest in the background, `tests/data/gen_*.py --check`, `build_handbook.py --check`, a browser look at the demo (Playwright).
+* The full `python -m pytest -q` result (running in the background; log in the scratchpad), then mark the note complete.
 
 ## Decisions
 

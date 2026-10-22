@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -228,8 +229,20 @@ def test_the_browser_copy_is_frozen_and_registered_before_its_readers() -> None:
         assert at < scripts.index(reader), reader
     sw = (STATIC / "sw.js").read_text(encoding="utf-8")
     assert "  '/js/engine/brand.js',\n" in sw
-    preview = (ROOT / "scripts" / "build_preview.py").read_text(encoding="utf-8")
-    assert "brand.js" not in preview, "build_preview.py reads index.html; it needs no list of its own"
+
+
+def test_the_preview_build_carries_the_browser_copy_before_its_readers(tmp_path: Path) -> None:
+    """scripts/build_preview.py reads index.html, so it needs no list of its own; this shows the file arrives, in order."""
+    spec = importlib.util.spec_from_file_location("build_preview", ROOT / "scripts" / "build_preview.py")
+    assert spec is not None and spec.loader is not None
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    out = tmp_path / "preview.html"
+    assert builder.main(["--out", str(out)]) == 0
+    html = out.read_text(encoding="utf-8")
+    assert html.count("KH.brand = Object.freeze({") == 1
+    assert html.index("/* js/engine/rules.js */") < html.index("/* js/engine/brand.js */") < html.index("/* js/core.js */")
+    assert html.index("/* js/engine/brand.js */") < html.index("/* js/mock/export.js */")
 
 
 READERS = {

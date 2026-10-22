@@ -78,6 +78,7 @@ ruff check .                        # Python lint: pycodestyle errors and pyflak
 ```
 
 * **Changed a route? Run `python scripts/gen_openapi.py`** and commit `docs/api/openapi.json`; the suite fails while it is stale (the API-version rule is in [`docs/api/README.md`](docs/api/README.md)).
+* **Need a cookie name, token prefix, header value, database file name, export format, User-Agent or HKDF label? Use `app/brand.py`** (`KH.brand` in the browser) and do not spell it out again; those values are already on disk and on the wire, and `tests/test_brand.py` pins them and fails on a new copy.
 * **Every behaviour change ships with tests**, including failure paths, limits and edge cases, not
   only the happy path. Tests never use the network: outbound calls go through fakes and recorded
   fixtures (`tests/fixtures/`).
@@ -115,6 +116,7 @@ pull request** and keep them equal with the shared vector files:
 | none (the CSV file is read in the browser only) | `js/engine/lab_import.js` | `lab_import_vectors.json` (`tests/js/gen_lab_import_vectors.mjs`; review the diff by hand) |
 | `app/guidance/*` | `js/engine/guidance/*.js` | `guidance_vectors.json` (`gen_guidance_vectors.py`) |
 | `app/gtin.py`, `app/textclean.py`, `app/additives.py`, `app/off.py` texts | `js/engine/gtin.js`, `textclean.js`, `additives.js`, `off.js` | `barcode_vectors.json` (`gen_barcode_vectors.py`) |
+| `app/brand.py` (names, header values, export format) | `js/engine/brand.js` | `tests/test_brand.py` (no vector file: it reads both files) |
 
 ```bash
 python3 tests/data/gen_guidance_vectors.py           # regenerate after a server change, then review the diff
