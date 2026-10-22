@@ -1,4 +1,4 @@
-Status: in progress (role brand; design note 14 change 3)
+Status: complete (role brand; design note 14 change 3)
 
 # brand: the brand strings in one place
 
@@ -31,9 +31,12 @@ HKDF labels, token prefixes, the database filename, the IndexedDB name and the e
   (77 passed), `demo_local.py` (90 passed), `import_walk.py` (105 passed, 4 failed; the same 4 fail on the base commit `a441fa2`, they expect the
   preview text without ", 0 weights, 0 blood pressure readings").
 
-## Next
+## Final checks (all green at the last commit)
 
-* The full `python -m pytest -q` result (running in the background; log in the scratchpad), then mark the note complete.
+* `python -m pytest` (full suite): 5,665 passed, 1 warning, exit 0 (about 21 minutes). `tests/test_brand.py` is 28 of them.
+* `node tests/js/run_vectors.mjs`, `ruff check .`, `python scripts/build_handbook.py --check`, `python scripts/gen_openapi.py --check` (the
+  document did not change) and every `python tests/data/gen_*.py --check` (11 files): all exit 0.
+* Browser: `tools/e2e/device.py --only outbox,changes,demo,firstvisit` 77 passed (after the final script order), `demo_local.py` 90 passed.
 
 ## Decisions
 
