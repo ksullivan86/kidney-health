@@ -255,7 +255,7 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
 * **Actions**: every `uses:` is pinned to a full commit SHA (a test fails otherwise), every workflow
   starts with `permissions: {}`, checkouts do not keep credentials, and there is no
   `pull_request_target`. zizmor audits the workflows on every push, including impostor commits.
-  Downloaded tools (actionlint, hadolint, kubeconform, kustomize) are checked against a pinned SHA-256.
+  Downloaded tools (actionlint, hadolint, kubeconform, kustomize, ruff) are checked against a pinned SHA-256.
 * **Scanning**: Grype fails the build on High or Critical vulnerabilities **with a fix available**,
   on pull requests (amd64) and before any tag moves (amd64 and arm64). A weekly scan of the
   published `:latest` and `:edge` prints the full report and opens an issue on a new fixable High.

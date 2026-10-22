@@ -26,3 +26,10 @@ include = ["app", "app.*"]
 
 [tool.setuptools.package-data]
 "app.auth" = ["password-blocklist.txt.gz"]
+
+# CI runs `ruff check .` (the lint job pins the ruff release). ruff 0.17 widened its default rule set to
+# about 400 rules; the rules below are the older default (pycodestyle errors and pyflakes), kept explicit
+# so a ruff upgrade never changes what CI checks. Widen them in a pull request of their own.
+# target-version is read from requires-python (>=3.11), the oldest Python a source install may use.
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

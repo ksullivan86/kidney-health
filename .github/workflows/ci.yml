@@ -31,6 +31,9 @@ env:
   KUBECONFORM_SHA256: "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
   KUSTOMIZE_VERSION: "v5.8.2"
   KUSTOMIZE_SHA256: "06af0a202c2b831207d0173f9c9cdb1b30abceca0747cb3fbb72792d26055c95"
+  # ruff: the release's own .sha256 file, checked against the downloaded tarball (0.17.0 is from 2026-10-09).
+  RUFF_VERSION: "0.17.0"
+  RUFF_SHA256: "c94fc1dc71f054d06d9f1149442dcb471516aa2b7d4b7e8124e05d082d4c91d3"
   GRYPE_VERSION: "v0.120.0"
   BUILDKIT_IMAGE: "moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea"
 
@@ -110,6 +113,8 @@ jobs:
           tar -xzf kubeconform.tgz -C "$bin" kubeconform
           fetch "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" "$KUSTOMIZE_SHA256" kustomize.tgz
           tar -xzf kustomize.tgz -C "$bin" kustomize
+          fetch "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSION}/ruff-x86_64-unknown-linux-gnu.tar.gz" "$RUFF_SHA256" ruff.tgz
+          tar -xzf ruff.tgz -C "$bin" --strip-components=1 ruff-x86_64-unknown-linux-gnu/ruff
           echo "$bin" >> "$GITHUB_PATH"
       - name: Every action is pinned to a full commit SHA
         run: |
@@ -153,6 +158,9 @@ jobs:
           python .github/scripts/yaml_parse.py
       - name: shellcheck (deploy and CI scripts)
         run: shellcheck --version && shellcheck scripts/verify-image.sh deploy/docker-rootless-run.sh .github/scripts/smoke-test.sh
+      # The rules are in pyproject.toml ([tool.ruff.lint]); findings show up as annotations on the pull request.
+      - name: ruff (Python)
+        run: ruff check --no-cache --output-format=github .
 
   zizmor:
     name: zizmor (workflow security audit)
