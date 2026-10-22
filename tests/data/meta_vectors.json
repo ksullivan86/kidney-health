@@ -1,0 +1,116 @@
+{
+ "about": "GET /api/meta on a fresh server, every switch at its default (design note 14 change 4); app_version is left out.",
+ "api_version": 1,
+ "capability_keys": [
+  "ai",
+  "ai_next_meal",
+  "ai_parse_meal",
+  "ai_label",
+  "ai_plate",
+  "ai_lab_report",
+  "chat",
+  "voice",
+  "assistant",
+  "push",
+  "barcode",
+  "barcode_off",
+  "barcode_usda",
+  "handbook"
+ ],
+ "capabilities": {
+  "ai": false,
+  "ai_next_meal": false,
+  "ai_parse_meal": false,
+  "ai_label": false,
+  "ai_plate": false,
+  "ai_lab_report": false,
+  "chat": false,
+  "voice": false,
+  "assistant": false,
+  "push": false,
+  "barcode": false,
+  "barcode_off": false,
+  "barcode_usda": false,
+  "handbook": false
+ },
+ "nutrients": [
+  {
+   "key": "calories_kcal",
+   "label": "Calories",
+   "unit": "kcal",
+   "role": "goal"
+  },
+  {
+   "key": "protein_g",
+   "label": "Protein",
+   "unit": "g",
+   "role": "range"
+  },
+  {
+   "key": "fat_g",
+   "label": "Fat",
+   "unit": "g",
+   "role": "info"
+  },
+  {
+   "key": "sat_fat_g",
+   "label": "Saturated fat",
+   "unit": "g",
+   "role": "info"
+  },
+  {
+   "key": "carbs_g",
+   "label": "Carbohydrate",
+   "unit": "g",
+   "role": "track"
+  },
+  {
+   "key": "fiber_g",
+   "label": "Fiber",
+   "unit": "g",
+   "role": "info"
+  },
+  {
+   "key": "sugar_g",
+   "label": "Sugars",
+   "unit": "g",
+   "role": "info"
+  },
+  {
+   "key": "sodium_mg",
+   "label": "Sodium",
+   "unit": "mg",
+   "role": "limit"
+  },
+  {
+   "key": "potassium_mg",
+   "label": "Potassium",
+   "unit": "mg",
+   "role": "limit"
+  },
+  {
+   "key": "phosphorus_mg",
+   "label": "Phosphorus",
+   "unit": "mg",
+   "role": "limit"
+  },
+  {
+   "key": "calcium_mg",
+   "label": "Calcium",
+   "unit": "mg",
+   "role": "info"
+  },
+  {
+   "key": "fluid_ml",
+   "label": "Fluid",
+   "unit": "mL",
+   "role": "limit"
+  }
+ ],
+ "meals": [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "snack"
+ ]
+}

@@ -36,6 +36,10 @@ docs/deployment.md          Podman, Quadlet, Kubernetes (Talos) instructions
 docs/network-allowlist.md   egress domains the project needs
 app/__init__.py
 app/main.py                 FastAPI app factory, static mount, routers, startup load
+app/openapi_doc.py          the OpenAPI document made honest: operation ids, 400 not 422, the shared error shape, security schemes (design note 14)
+app/api_version.py          API_VERSION, the integer that is raised on a breaking change ("The API document and GET /api/meta")
+app/meta.py                 GET /api/meta: versions, what the signed-in person can use now, the nutrient registry, the meals
+scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
 app/db.py                   sqlite connection helper; runs the ordered steps in app/migrations/ ("Database migrations")
 app/models.py               Pydantic request/response models (shapes below)
@@ -306,13 +310,16 @@ v0.3 request rules (`app/security.py`, note 01 §5.5 and §10, note 07 §4.8): a
 pass); every unsafe `/api` request (POST/PUT/PATCH/DELETE) must send `X-Requested-With:
 kidney-health` and a same-origin `Origin`/`Sec-Fetch-Site`, and cross-site or same-site `/api`
 reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
-`Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true`. The one
+`Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true` (the checked-in
+`docs/api/openapi.json` needs neither: "The API document and `GET /api/meta`" below). The one
 bearer-only paths, exactly `/mcp` and `/push/v1/body` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
 and `/push/v1`" below), skip the cookie checks (`X-Requested-With`, `Sec-Fetch-Site`: they never read a cookie) but answer
 `403` to a foreign `Origin` on every method.
 
 ### Health
 * `GET /healthz` → `{"status":"ok","foods": <count>}`
+* `GET /api/meta` (signed in) → the versions, what this person can use now, the nutrient registry and the meal names; see "The API document
+  and `GET /api/meta`" below.
 
 ### Profile
 * `GET /api/profile` → Profile
@@ -464,7 +471,8 @@ it exposes only the food count. Otherwise no auth (LAN use behind a reverse prox
 Request validation failures return **400** with `{"detail": "<message>", "errors": [...]}`
 (not FastAPI's default 422), so every error has the `detail` string shape above. `errors`
 carries only `type`, `loc` and `msg`: since v0.3 the offending `input` (and `ctx`) is **never**
-echoed, because it could be a password, API key or setup code (note 07 §9 N4).
+echoed, because it could be a password, API key or setup code (note 07 §9 N4). The OpenAPI document says the same
+(`400`, shared `ValidationProblem`; FastAPI's own 422 is removed from it).
 
 ### Numeric bounds (`app/models.py`)
 Every numeric request field rejects the JSON literals `NaN` / `Infinity` and has a ceiling, so
@@ -780,6 +788,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
+| API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
 | Assistant step 2, part B (voice) | `app/ai/stt.py`, `app/ai/voice.py` (`POST /api/ai/transcribe`, the admin test), `send_json(content=...)` in `app/ai/transport.py`, `AiEnv.stt_*` and `max_audio_bytes` in `app/config.py`, the `ai.voice_enabled` key, `app/migrations/m014_*`, `Permissions-Policy: microphone=(self)` in `app/security.py`, `js/views/ask-voice.js`, `css/ask-voice.css`, the Speech to text panel and the voice consent text in `js/views/ai.js`, `deploy/compose.stt-whisper.yaml`, `tools/e2e/ask_voice.py`, `tests/test_ai_voice.py`, `tests/test_migration_m014.py`, `tests/test_ask_voice_ui.py`, `tests/test_deploy_stt.py` |
 | M3 integration | `app/handbook.py` (`/learn` mount), README, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `docs/README.md`, `docs/maintainers.md`, `docs/ROADMAP.md` (each feature owner appends its own section), `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`, `tools/e2e/**` |
@@ -871,6 +880,7 @@ app/static/
                         taste (Remember, Cancel, Undo; see "Saving from the chat")
   js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
   js/mock/handbook.js   demo answer for GET /api/handbook (none; the Pages demo links to the handbook beside it)
+  js/mock/meta.js       demo answer for GET /api/meta (nothing optional switched on; the registry from js/engine/rules.js; tests/data/meta_vectors.json)
   js/main.js            boot
 ```
 
@@ -1031,7 +1041,8 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   controlling worker for the version it was served from (`postMessage('VERSION')` → `{type: "kdl-version",
   version}`), `KH.api` passes every answer's header to `KH.pwa.versionSeen`, and on a difference the page
   fetches the new worker at once, whose install shows the "Update ready · Reload" toast. API changes stay
-  additive, so the old shell keeps working until the person reloads.
+  additive, so the old shell keeps working until the person reloads (a change that is not additive raises `API_VERSION`: "The API document and
+  `GET /api/meta`").
 
 ```json
 Me = {"id": 1, "username": "mum", "display_name": "Mum", "role": "admin",
@@ -3945,6 +3956,94 @@ sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by 
 `/push/v1` is a promise: a breaking change gets `/push/v2` and v1 keeps working for at least one release. Later scopes (`log:write`,
 `labs:write`, `symptoms:write`) would follow the same pattern: one family or scope, one versioned route under `/push/`, add-only, counts-only
 answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain.
+
+## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
+
+Design note 14 (§3, §4 changes 2 and 4, decided in §6) asks for what a second client needs first: a document of the API that is true, kept in
+the repository and checked, and a route that tells a client what this server offers. Nothing else about any route changes; the ids and the
+document are the only things rewritten. The guide for people who write programs against the server is [`docs/api/README.md`](docs/api/README.md).
+
+### The document (`app/openapi_doc.py`, `scripts/gen_openapi.py`, `docs/api/openapi.json`)
+
+* **A snapshot, checked.** `python scripts/gen_openapi.py` builds the app in-process (a temporary `DATA_DIR`, no server, no network, the
+  caller's environment left out) and writes `docs/api/openapi.json`: sorted keys, 2-space indent, a trailing newline. `--check` exits `1` with a
+  short list of what differs (operations and components added, removed or changed) when the committed file is stale, like the vector
+  generators' `--check`; `tests/test_openapi_snapshot.py` runs it, so a changed route fails the suite until the file is regenerated and committed.
+  `ENABLE_API_DOCS` is unchanged: the live `/openapi.json` and `/docs` stay off by default, and when on they serve the same document.
+* **Operation ids** (`generate_unique_id_function=openapi_doc.operation_id`): `<first tag>_<route function name>`, the tag left off when the
+  name already starts with it (`auth_login`, `log_create_entry`, `meta_info`). The default (`login_api_auth_login_post`) carried the path and
+  the method and changed when a route moved. A test asserts they are unique; the two routes that register one function for several methods
+  (`/mcp`, `/push/v1/body`) name their ids with `operation_id=`.
+* **Validation errors are `400`**, with the body `security.validation_error_handler` sends (`{detail, errors: [{type, loc, msg}]}`,
+  schema `ValidationProblem`). FastAPI's 422 (`HTTPValidationError`) is removed from every operation; the one 422 a route really returns
+  (`GET /api/profile/suggested-targets`, out of scope, `{detail, code}`) is declared by the route and stays.
+* **One error shape.** `Problem` is `{detail: string, ...}` with the keys routes add (`reason`, `field`, `code`, `problems`, `retry_after`,
+  `reauth_required`, `password_change_required`, `setup_required`, `https_required`, `locked_by_env`). Shared `components.responses` carry it:
+  `BadRequest` (400), `Unauthorized` and `BearerUnauthorized` (401; the second has `WWW-Authenticate`), `Forbidden` (403), `NotFound` (404),
+  `Conflict` (409), `PayloadTooLarge` (413), `UnsupportedMediaType` (415), `TooManyRequests` (429, `Retry-After`), `MethodNotAllowed` (405) and
+  `Error` (the `default` of every `/api` operation and of `POST /push/v1/body`). A log entry's `412` keeps its own words and gains
+  `EntryConflictProblem` (`{detail, current: Entry}`); `POST /mcp`'s `400` is a JSON-RPC error object (`JsonRpcError`).
+  Which operation lists which status follows from how the app is built, not from a guess per route: `400` where FastAPI would have added its
+  422 (the operation has parameters or a body); `401` and `403` on every route that depends on `current_user` (the CSRF and `Origin` checks
+  make `403` true of every unsafe `/api` call and of both bearer routes); `404` where the path has a parameter, where `require_ai_enabled`
+  gates the route, and on `/mcp`; `413` on `POST`/`PUT`/`PATCH` (the body limit); and a short reviewed table in `openapi_doc.py` (`CONFLICT`,
+  `UNSUPPORTED_MEDIA`, `RATE_LIMITED`, by operation id) for the `409`, `415` and `429` that only a handler knows. A status a handler raises that
+  these rules miss is still described by `default`. The 405 stubs of `/mcp` and `/push/v1/body` say `405` (and `404` for `/mcp` while assistant
+  access is off), not the `200` FastAPI would show.
+* **Security schemes** (`components.securitySchemes`; an operation's `security` is read from its dependencies, not from its path):
+
+  | Scheme | Type | Routes | Notes |
+  |---|---|---|---|
+  | `session` | `apiKey` in a cookie, `kh_session` (`__Host-kh_session` over HTTPS, named in the text) | every `/api` operation that depends on `current_user`: all of them except `GET /api/auth/status` and `POST /api/auth/{login,setup,register,reset,reset/info}` | the text also says every unsafe `/api` request needs `X-Requested-With: kidney-health` |
+  | `assistantToken` | `http` bearer, `kha_` + 43 characters | `POST /mcp` | while `assistant.enabled` is on; no cookie is read |
+  | `deviceToken` | `http` bearer, `khd_` + 43 characters | `POST /push/v1/body` | while `push.enabled` is on; no cookie is read |
+
+  The 405 stubs, `/healthz` and `/sw.js` have none. `openapi_doc.BEARER_OPERATIONS` is held equal to `security.BEARER_PATHS` by a test, and the
+  routes without `security` under `/api` are held equal to the public list of `tests/test_auth_coverage.py`.
+* **Versions.** `info.version` is `APP_VERSION`; `info.x-api-version` is `API_VERSION` (`app/api_version.py`, `1`). **Raise it on a breaking
+  change** (removing or renaming a route, a field, an enum value or an id; making an optional request field required; narrowing what a request
+  may hold; changing a type, a meaning or a status), never for an additive one (a new route, an optional request field, a field or enum value in
+  an answer, a capability key, a documented error). `/push/v1` has its own version in its path. The rule is written in `app/api_version.py` and
+  `docs/api/README.md`.
+* **Not covered yet**, and said so in the guide: no request schema for the routes that read a raw body (`/mcp`, `/push/v1/body`, the photo
+  routes, `/api/ai/transcribe`, `/api/me/import`), and some answers are untyped objects. Filling them in is additive.
+
+### `GET /api/meta` (`app/meta.py`)
+
+Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a server's features are not listed to strangers). Not cached
+(`no-store` like every `/api` answer). The answer:
+
+```json
+{"app_version": "0.4.0", "api_version": 1,
+ "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
+                  "chat": false, "voice": false, "assistant": false, "push": false,
+                  "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
+ "nutrients": [{"key": "calories_kcal", "label": "Calories", "unit": "kcal", "role": "goal"}, "... 12 in all, in registry order"],
+ "meals": ["breakfast", "lunch", "dinner", "snack"]}
+```
+
+* `capabilities` are booleans: true when **this person can use the thing now**. Each is read from an existing switch or status function and
+  worked out nowhere else: `ai`, `ai_next_meal`, `ai_parse_meal`, `ai_label`, `ai_plate`, `ai_lab_report`, `chat`, `voice` from
+  `app.ai.routes.status_view` (the body of `GET /api/ai/status`: `available` and `features`; all `false` while `ai.enabled` is off, when that route
+  is a `404`), so they follow the admin switches, the person's opt-in, each feature's route, `ai.chat_enabled`, `ai.voice_enabled` and the speech
+  server; `assistant` and `push` from `api_tokens.is_enabled` (`assistant.enabled`, `push.enabled`); `barcode_off` (the admin switch `food.off_enabled`
+  **and** this person's `food.off_consent`) and `barcode_usda` (`food.usda_branded_barcode` **and** a USDA key this person can use) from
+  `barcode.providers_available`, `barcode` being either (a person's own foods are found by barcode with neither); `handbook` from
+  `handbook.info(...)["available"]` (the server serves the built handbook at `/learn`; a `HANDBOOK_PUBLIC_URL` alone is `false`).
+  A new capability is a new key: an additive change.
+* `nutrients` is `nutrient_core.NUTRIENTS` in the server's order (`key`, `label`, `unit` `kcal`/`g`/`mg`/`mL`, `role` `goal`/`range`/`track`/`limit`/`info`);
+  `meals` is `nutrient_core.MEALS`.
+* **No secret, no host, no key and nothing of another person.** There are no provider names, addresses, models, counts, tokens or settings values,
+  only the booleans above; two people on one server get the same answer until their own choices (opt-in, consent) differ. `tests/test_meta.py`
+  configures every kind of key and token and greps the answer for them and for the words `key`, `token`, `secret` and `password` (the only `key`
+  is the name of a nutrient's field).
+* **Not used by the screens yet.** The pages still read the nutrient labels and order from `js/engine/rules.js` and `js/core.js`; moving them to
+  this route is the second step of design note 14 change 4 (ROADMAP "Open items").
+* **Parity.** The demo answers the same route from `js/mock/meta.js`: no AI, no assistant or phone-shortcut tokens, no USDA key, no handbook of
+  its own; Open Food Facts follows the demo's own settings, as its barcode lookup does; the nutrients and meals come from `js/engine/rules.js`.
+  `tests/data/meta_vectors.json` (`tests/data/gen_meta_vectors.py`, pytest `--check`-style) is the server's answer on a fresh server (the API version, the
+  capability keys and values, the registry and the meals; `app_version` left out) and `node tests/js/run_vectors.mjs` replays it on the demo;
+  `tools/e2e/parity.py` section 10 compares the shape, the registry and the capabilities of both sides on a real server.
 
 ## Offline edits and deletes (ROADMAP; note 02 R5 "Queueable offline actions")
 

@@ -96,6 +96,7 @@ const SHELL_URLS = [
   '/js/mock/auth.js',
   '/js/mock/settings.js',
   '/js/mock/handbook.js',
+  '/js/mock/meta.js',
   '/js/mock/ai.js',
   '/js/mock/export.js',
   '/js/mock/import.js',

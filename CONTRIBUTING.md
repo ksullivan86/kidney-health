@@ -77,6 +77,7 @@ node tests/js/run_vectors.mjs       # the browser's copies of the server logic m
 ruff check .                        # Python lint: pycodestyle errors and pyflakes (rules in pyproject.toml); CI runs it too
 ```
 
+* **Changed a route? Run `python scripts/gen_openapi.py`** and commit `docs/api/openapi.json`; the suite fails while it is stale (the API-version rule is in [`docs/api/README.md`](docs/api/README.md)).
 * **Every behaviour change ships with tests**, including failure paths, limits and edge cases, not
   only the happy path. Tests never use the network: outbound calls go through fakes and recorded
   fixtures (`tests/fixtures/`).

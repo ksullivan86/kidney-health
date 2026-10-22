@@ -293,6 +293,18 @@ def usda_unavailable_reason(conn: sqlite3.Connection, request: Request, user: An
     return None
 
 
+def providers_available(conn: sqlite3.Connection, request: Request, user: Any) -> dict[str, bool]:
+    """Which lookup sources this person can use right now, without counting a lookup: ``off`` (Open Food Facts: the admin switch
+    ``food.off_enabled`` and the person's own ``food.off_consent``) and ``usda`` (``food.usda_branded_barcode`` and a USDA key
+    usable by them, :func:`usda_unavailable_reason`). The switches :func:`lookup` reads; ``GET /api/meta`` reports the answer.
+    A person's own foods and foods they already have are found without either."""
+    store = request.app.state.settings_store
+    return {
+        "off": bool(store.get(conn, "food.off_enabled")) and bool(store.get(conn, "food.off_consent", user.id)),
+        "usda": bool(store.get(conn, "food.usda_branded_barcode")) and usda_unavailable_reason(conn, request, user) is None,
+    }
+
+
 def _trim_usda_record(record: Mapping[str, Any]) -> dict[str, Any]:
     """The cached copy of a FoodData Central record: only what :func:`app.foods.map_usda_record` reads."""
     keep = ("description", "brandOwner", "brandName", "foodCategory", "brandedFoodCategory", "gtinUpc", "ingredients",

@@ -115,6 +115,7 @@ Left open when v0.3.0 was finished, with the reason; each needs the named owner,
 
 ## Open items from the v0.4.0 build (no specification defers them)
 
-Left open when v0.4.0 was prepared, with the owner; each is a maintainer's call or run, not a missing feature.
+Left open when v0.4.0 was prepared, with the owner; each is a maintainer's call or run, not a missing feature, or the named next step of a change that is already in.
 
+* Read nutrient labels and order from `GET /api/meta` instead of `rules.js` / `core.js` lists (note 14 change 4, step 2). The route and the demo's twin exist (`app/meta.py`, `js/mock/meta.js`), and `tests/data/meta_vectors.json` already holds the screens' lists equal to the server's; the screens still read their own copies. The step is to load `/api/meta` once after sign-in, build the nutrient table from it (keeping `rules.js` for the offline and demo cases and for the rounding the twins need) and show only the features its `capabilities` say work.
 * Move the handbook build stage and the Debian fallback image to Python 3.15 once PyYAML publishes a cp315 wheel (the steps are in [`maintainers.md`](maintainers.md#refreshing-the-lock-files)). Until then Dependabot keeps proposing to move the handbook `FROM` line to the 3.15 digest, and that bump fails the image build (see the comment in `.github/dependabot.yml`); the `latest-dev` digests also move on, so expect a newer pair than the one in `deploy/Containerfile`.

@@ -745,6 +745,12 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
 @router.get("/status")
 def ai_status_route(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """What the person's AI buttons can do now: per feature where it runs (``routes``), consent, quota, photo features."""
+    return status_view(request, conn, user)
+
+
+def status_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str, Any]:
+    """The answer of ``GET /api/ai/status``. ``GET /api/meta`` reads ``available`` and ``features`` from it, so the two never disagree
+    (call it only while ``ai.enabled`` is on: the route is a 404 otherwise)."""
     state = ai_state(request)
     routes = R.resolve_all(conn, state.store, _keyring(request), state.settings, state.policy, user_id=user.id,
                            can_use_shared=user.can_use_shared, require_opt_in=False)
