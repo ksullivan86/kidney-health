@@ -5,299 +5,484 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.5.0 — 2026-10-22
+
+Version 0.5 adds a log of weights and blood pressure, and three ways to fill it: type it, bring it in from the iPhone Health app, or send it
+from an iPhone Shortcut. It also reads lab results from a PDF report, opens an export `.zip` without unzipping it first, and lets a chat
+assistant you have connected remember your tastes if you allow it. We looked at every screen on a phone and on a computer and fixed what
+looked wrong. As in 0.4, everything that sends data off your server is **off until an admin turns it on**, and each person decides for
+themselves.
+
+**Before you upgrade, read [Upgrading from 0.4](#upgrading-from-04-read-this-first).** The first start migrates the database (schema
+steps 18 and 19); take a backup first.
+
+### Highlights
+
+* **Weight and blood pressure.** **Today** has a card to add a weight or a blood pressure reading, and **Trends** has a chart for each, with
+  7-day averages. You can enter the two numbers your care team gives you, a weight-gain alarm and a blood pressure goal; the app suggests
+  neither. A very high reading shows the handbook's own words for when to get help. **Get ready for a visit** includes your latest numbers.
+  The app records and shows. It says nothing about why a number is what it is and never suggests a medicine. You can also bring in past
+  weights and readings from the iPhone Health app: the file is read on your phone, nothing is uploaded, and readings from a watch are listed
+  apart and left unticked.
+* **Choose the `.zip` itself.** **Import from a file**, the Health app import and **Labs → Import from Apple Health** take the `.zip` as it is.
+  It is opened on your device, and only the file each import needs is read out of it.
+* **Lab results from a PDF.** **Labs → Read a lab report photo or PDF** takes the PDF your lab's website gives you. The PDF is opened on your
+  device. Only the pages you tick, drawn as pictures, go to the AI on your own network, and you tick which rows to keep.
+* **Phone shortcuts** (an admin turns them on). A token you make in Settings lets an iPhone Shortcut add your latest weight or blood
+  pressure to your own log. It can only add: it reads nothing and changes nothing. You can revoke it, and delete what it sent, at any time.
+* **Your assistant can remember a taste, if you let it.** A chat assistant you have connected can remember that you like a food or do not
+  want it, when you tick a separate box on its token. Every change is in your activity list, and there is a daily limit. It cannot take a
+  food that treats a low out of the Treating a low options.
+* **Tidier screens.** The app's name no longer shows as "K…", warning lines are no longer pushed apart by a link, the two number boxes
+  on the blood pressure sheet line up, and a few boxes take the whole row on a phone so their words are not cut off.
+* **For people who run a server.** One new switch, `PUSH_ENABLED`, off by default; two schema steps; a checked-in API document
+  (`docs/api/openapi.json`) and `GET /api/meta` for anyone who builds their own client.
+
+### Upgrading from 0.4 (read this first)
+
+1. **Back up `kidney.db` first.** The first start migrates the database in place (schema 17 → 19: steps 18 and 19), each step in its own
+   transaction. Nothing for you to run: they happen when the server starts. As in 0.4, neither step makes an automatic copy. For example,
+   with the running container: `podman exec kidney-health python -m app.admin backup /data/before-0.5.0.db` (or `backup --dir DIR --keep N`
+   for a backup tool). What the steps add, nothing removed: 18 two tables, `weights` and `blood_pressures`, for the weight and blood
+   pressure log (deleted with the account); 19 a column on both that records which phone-shortcut token sent a row (empty for every
+   earlier row). No value that exists changes. To go back to 0.4, restore the backup you took; 0.4 is not tested on a database that 0.5 has
+   migrated, and anything entered after the upgrade is lost.
+2. **Change the image tag from `:0.4` to `:0.5`.** The minor tag does not move to the next minor on its own, so a host that tracks `:0.4`
+   stays on 0.4.x until you change it. The shipped Quadlet unit, compose file and Kubernetes base already say `:0.5`; or pin the digest in
+   the release notes after `scripts/verify-image.sh 0.5.0`. **`:latest` moves to 0.5.0 with this release**, as it does with every release
+   from 0.4.0 on, so a host that auto-updates `:latest` upgrades itself, and migrates its database, at its next pull
+   ([docs/deployment.md, "From v0.4 to v0.5"](docs/deployment.md#from-v04-to-v05)).
+3. **Headers.** The app's Content-Security-Policy now ends `trusted-types kh-sw kh-xml kh-pdf` (it was `kh-sw kh-xml`). If a reverse proxy
+   sets your CSP instead of the app, add `kh-pdf` there, or choosing a PDF lab report says "This browser cannot read a PDF here". If your
+   proxy lists the paths it passes on and you want phone shortcuts, add `/push/v1/` next to `/mcp`. Nothing else in the headers changed.
+4. **Nothing new is switched on.** Phone shortcuts (`PUSH_ENABLED`) are off until an admin turns them on, and a token that can remember
+   tastes exists only when a person ticks the box for it. Tokens made before the upgrade keep what they could do and gain nothing. Nothing
+   leaves your server for any of this. Reading a PDF uses the same local-only lab report AI as a photo (`AI_ROUTE_LABS`), so it stays off
+   while no local AI exists.
+5. **Things that behave differently without you changing anything:**
+   * Everyone gets a weight and blood pressure card on Today, two charts in Trends, "Latest in your log" hints in Profile and a section in
+     the visit page. They are empty until someone adds a number. Weights are typed and shown in pounds unless you change the default for
+     everyone (Server administration → Server settings → Default for everyone → Units for weight) or a person changes their own.
+   * Get help now gained two lines about a blood pressure of 180/120 or higher, in the handbook's words.
+   * The data export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`); the export version stays 1 and older
+     files still import.
+   * In Server administration → People, the button is now **Revoke tokens** and ends assistant tokens and phone-shortcut tokens alike.
+   * The API document changed shape: operation ids are `<first tag>_<route function>` (`auth_login`), and validation errors are
+     listed as the 400 the routes always sent, not FastAPI's 422 (the routes answer as before). If you generated a client from the
+     live `/openapi.json`, generate it again. The live `/openapi.json` and `/docs` stay off unless `ENABLE_API_DOCS` is on.
+
+**New optional settings and permissions** (all off or at a safe default; the full list is in
+[docs/deployment.md](docs/deployment.md#configuration) and `app/config.py`; settings not set in the environment can be changed in
+Server administration → Server settings):
+
+| Area | Setting |
+|---|---|
+| Phone shortcuts | `PUSH_ENABLED` (off): device tokens and `POST /push/v1/body`. Also in Server administration → Server settings → Phone shortcuts. `deploy/.env.example` lists it, `compose.yaml` passes it through, and the Quadlet and Kubernetes examples have a commented line |
+| Weight and blood pressure | `user.units.weight` (`lb` or `kg`, default `lb`; the default for everyone, and each person can set their own); `body.weight_alarm` and `body.bp_goal` (personal, empty until a person enters their care team's numbers). None is an environment variable |
+| Token permission | `assistant:prefs`: a new permission on an assistant token, off by default and ticked per token in Settings → Assistant access (**Also let it remember tastes (likes and dislikes)**). It needs `ASSISTANT_ENABLED`. Phone-shortcut tokens hold the fixed permission `body:write` |
+| Limits | A person may hold 5 phone-shortcut tokens besides 5 assistant tokens; a shortcut token: 50 rows a request, 60 requests an hour; weight and blood pressure imports: 60 requests an hour per person; an assistant token that remembers tastes: 30 changes a day |
+
+**Anything an admin must do:** the backup and the tag in steps 1 and 2, and the `kh-pdf` and `/push/v1/` lines in step 3 if they apply to
+your proxy. Nothing else is required. Phone shortcuts are the one new thing you may want to turn on.
 
 ### For people using the app
 
-* **Tidier screens.** We looked at every screen, on a phone and on a computer, in light and dark, and fixed what looked wrong.
-  The top bar shows the app's name whole or not at all, never cut to "K…", and it no longer runs past the edge of a narrow window.
-  A handbook link under a warning no longer pushes the lines above it apart, and its arrow stays with the last word; the same goes
-  for the links next to a sentence ("Check them in Profile", "How to make the shortcut"). On the blood
-  pressure sheet the two number boxes line up. The **Include** box in Copy a day and the **Note** box in Lab results take the whole
-  row on a phone, so their words are not cut off. In Lab results every row puts the date above the value. A long name under
-  **Meals that fit** wraps to two lines. On Trends, the message about missing targets has its padding back. In Settings the buttons
-  under **Your data** and **Signed-in devices** no longer touch the box above them.
-* **Read a lab report from the PDF your lab's website gives you.** **Lab results → Read a lab report photo or PDF** takes the PDF itself,
-  not only a photo or a screenshot. The PDF is opened **on your device** and never sent anywhere: you see "Page 1", "Page 2", ... (pages 1 to 6
-  start ticked, up to 10 can be ticked), only the pages you tick are drawn on your device and sent as pictures to the AI at home (the same local
-  AI, consent and checks as a photo; the consent sheet says so), with "Reading page 2 of 4..." and a Cancel button. The rows from all the pages
-  come in one table, all unticked, each saying which page it came from; a row that repeats is shown once; a page that cannot be read says so
-  and the others still count. A PDF with a password, one over 20 MB or 50 pages, a damaged file and a browser too old to open it are each
-  refused with the reason (a screenshot of each page still works). A scan made of JPEG 2000 or JBIG2 pictures can come out blank. The
-  handbook's AI page has the steps.
-* **Let a chat assistant remember your tastes, if you choose to.** **Settings → Assistant access → New token** has a second box, **Also let it
-  remember tastes (likes and dislikes)**, off by default and separate from **Can also save food and recipes** (neither gives the other). A token
-  made with it lets the assistant you connected remember that you like a food or a kind of food, want it less often or do not want it, and forget
-  one, the way **Ask** does but without a card to press: so it is limited to **30 changes a day per token**, every change is listed in your activity
-  ("Assistant remembered a taste", with what it was, what it became and the token's name), and a food it sets shows in **Settings → Meal guidance →
-  Your food preferences** as "from your assistant" with the usual **Remove**. A taste only changes what the app suggests. **It never changes
-  Treating a low:** the assistant cannot mark a food that treats a low, or a kind of food that has one, as Not for me (that takes it out of the
-  Treating a low options, as it does when you do it yourself), so only you can, in the app. Tokens you already have keep what they could do, and
-  **Ask is unchanged**: it still shows a card for every taste. The handbook's AI page and its Settings and keys page say it in plain words.
-* **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
-  kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
-  the box.
-* **Choose the `.zip` itself: nobody has to unzip it first.** **Settings → Account → Your data → Import from a file** takes the `.zip` of an export
-  of yours (or the `export.json` inside it, as before); **Import from Apple Health** (weights and blood pressure) takes the Health app's
-  `export.zip`; and **Labs → Import from Apple Health (clinical records)** takes the same `export.zip` and reads only the lab-result files in its
-  `clinical-records` folder. The `.zip` is opened **on your device** with the browser's own tools: it is never uploaded, only the one file each
-  import needs is read out of it (the Health `export.xml` in pieces, so a file of hundreds of megabytes is fine; Cancel stops it), and a file
-  that is damaged, not finished downloading or not an export from the Health app or this app is turned away with a plain reason. A browser that
-  cannot do this (Safari before 16.4) shows the old advice to unzip the file first; choosing the unzipped files still works everywhere.
 * **Weight and blood pressure.** **Today** has a card for the day's weights and blood pressure readings, with **Add weight** and **Add blood
-  pressure** (nothing is saved until Save; you can edit or delete an entry). A weight is typed in pounds or kilograms (your choice in
-  **Settings → Weight and blood pressure**, pounds first) and the sheet shows the other unit under the box; you say when it was taken (morning, before
-  or after dialysis, other: the dialysis choices only if your Profile says dialysis). A reading has the top number first, then the bottom number and an
-  optional pulse, with one line on how to measure and what you typed repeated back ("Top 180, bottom 95") so a slip is seen before you save.
-  Both need the connection to your server and say so offline.
-* **The two numbers your care team gives you, and nothing else.** In **Settings → Weight and blood pressure** you can enter a weight-gain alarm
-  ("call my team if my weight goes up by more than ... between sessions, or in n days"; between sessions only on hemodialysis) and a blood pressure
-  goal ("under ... / ..."). The app never suggests either. With an alarm, Today says how your weight changed and names the two weights it compared; with
-  a goal, it shows your last 7 days' average against it. Without them you see your numbers with no verdict.
-* **The handbook's own words for a warning sign.** **Get help now** gained two lines about a blood pressure of 180/120 or
-  higher (with a sudden severe headache, trouble breathing, pain in the chest, belly or back, numbness or weakness, a sudden
-  change in vision or trouble talking, call 911 at once, without measuring again; without those signs, rest 5 minutes and check
-  again, and call your care team today if it is still that high), from the US National Heart, Lung, and Blood Institute and
-  MedlinePlus, and the printable wallet card carries them in a few words. When you save (or are about to save) a reading with a top number of 180 or more or a
-  bottom number of 120 or more, Today shows those lines in a red block at the top of the card, the 911 line first, with a link to the page; a weight over your
-  alarm shows the page's line about weight gain above the alarm number. The app says nothing about why, and never suggests a medicine.
-* **Trends** has a weight chart and a blood pressure chart (on hemodialysis the weight chart also shows your dry weight as a dashed line and marks the weights
-  after dialysis; the blood pressure chart shows your goal as dashed lines), each with a table under it, and the 7-day averages. **Profile** shows "Latest in
-  your log" under Weight (not on dialysis) and "In your log" under Weight 6 months ago, each with **Use this**: it only fills the box, and nothing changes until you
-  press Save profile. **Visit prep** gains a section with your latest weight, the change over six months, on hemodialysis the gains between your last sessions,
-  your blood pressure averages for 7 and 30 days, how many readings were at or above your goal and any reading the handbook points to.
-* **A new handbook page, Weight and blood pressure** (Using the app): what to record, how to measure at home, which device (a validated upper-arm cuff; cuffless
-  watches and rings are not recommended), that the alarm and the goal are your care team's numbers (and why the app has none of its own), and what the app shows and
-  does not. First setup no longer says the app has no field for your weight-gain limit. **Settings → Your data → Import from a file** now counts weights and blood
-  pressure readings in what it would add, what is already there and what it skips.
-
-* **Bring weights and blood pressure in from the iPhone Health app.** **Import from Apple Health** (the sheet behind the buttons in Trends and
-  in Settings → Your data) reads your Health export, `apple_health_export/export.xml`, **on your phone**: nothing is uploaded while it is read, you see
-  what was found, what was left out and why, and the dates it covers, and only the weights and blood pressure readings you keep are sent, in batches.
-  You choose the last 3 months (the default) or everything. **Readings from a watch are listed apart and not ticked**, because cuffless devices
-  are not recommended for checking blood pressure: you decide. Nothing else in the file is read (not heart rate, steps, glucose or insulin).
-  The app keeps at most 20 weights and 30 readings a day, so for a day with more it keeps the earliest and says how many were left out. If the server
-  refuses a batch the import stops, shows the server's words and how many were already added, and pressing Import again carries on. Importing
-  the same file again adds nothing. The handbook's "Using the app" page has the steps.
-* **A reading that is already in your log is not added twice, whichever way it arrives.** Importing from Apple Health now skips a weight or
-  a blood pressure reading when your log already holds one that you did not type, with the same day, the same minute and the same numbers
-  (before, only a row with the same file key was skipped). A reading you typed yourself is never counted as a match: you may have meant to
-  record it twice. This is the groundwork for sending weights and blood pressure from an iPhone Shortcut (next entry for a server).
+  pressure**. Nothing is saved until you press Save, and you can edit or delete an entry. A weight is typed in pounds or kilograms (your
+  choice in **Settings → Weight and blood pressure**, pounds first), and the sheet shows the other unit under the box. You say when it was
+  taken: morning, before or after dialysis, or other (the dialysis choices show only if your Profile says dialysis). A reading has the top
+  number, the bottom number and an optional pulse, with one line on how to measure. What you typed is repeated back ("Top 180, bottom 95")
+  so a slip shows before you save. Both need the connection to your server and say so when you are offline.
+* **The two numbers your care team gives you, and nothing else.** In **Settings → Weight and blood pressure** you can enter a weight-gain
+  alarm ("call my team if my weight goes up by more than ... between sessions, or in n days"; between sessions only on hemodialysis) and a
+  blood pressure goal ("under ... / ..."). The app never suggests either. With an alarm, Today says how your weight changed and names the
+  two weights it compared. With a goal, it shows your last 7 days' average against it. With neither, you see your numbers and no verdict.
+* **The handbook's own words for a warning sign.** **Get help now** has two new lines about a blood pressure of 180/120 or higher. With a
+  sudden severe headache, trouble breathing, pain in the chest, belly or back, numbness or weakness, a sudden change in vision or trouble
+  talking, call 911 at once, without measuring again. Without those signs, rest 5 minutes and check again, and call your care team today if
+  it is still that high. The lines come from the US National Heart, Lung, and Blood Institute and MedlinePlus, and the printable wallet
+  card carries them in a few words. When you save (or are about to save) a reading with a top number of 180 or more or a bottom number of
+  120 or more, Today shows these lines in a red block at the top of the card, the 911 line first, with a link to the page. A weight over
+  your alarm shows the page's line about weight gain above the alarm number. The app says nothing about why and never suggests a medicine.
+* **Charts, Profile hints and the visit page.** **Trends** has a weight chart and a blood pressure chart, each with a table under it and
+  the 7-day averages. On hemodialysis the weight chart also shows your dry weight as a dashed line and marks the weights after dialysis.
+  The blood pressure chart shows your goal as dashed lines. **Profile** shows "Latest in your log" under Weight (not on dialysis) and "In
+  your log" under Weight 6 months ago, each with **Use this**: it only fills the box, and nothing changes until you press Save profile.
+  **Get ready for a visit** gains a section with your latest weight, the change over six months, on hemodialysis the gains between your
+  last sessions, your blood pressure averages for 7 and 30 days, how many readings were at or above your goal, and any reading the
+  handbook points to.
+* **A new handbook page, Weight and blood pressure** (Using the app): what to record, how to measure at home, which device (a validated
+  upper-arm cuff; cuffless watches and rings are not recommended), that the alarm and the goal are your care team's numbers (and why the
+  app has none of its own), and what the app shows and does not. First setup no longer says the app has no field for your weight-gain
+  limit. **Settings → Your data → Import from a file** now counts weights and blood pressure readings in what it would add, what is already
+  there and what it skips.
+* **Bring weights and blood pressure in from the iPhone Health app.** **Import from Apple Health** (the buttons in Trends and in
+  Settings → Your data) reads your Health export **on your phone**. Nothing is uploaded while it is read. You see what was found, what was
+  left out and why, and the dates it covers, and only the weights and readings you keep are sent, in batches. You choose the last 3 months
+  (the default) or everything. **Readings from a watch are listed apart and not ticked**, because cuffless devices are not recommended for
+  checking blood pressure: you decide. Nothing else in the file is read (not heart rate, steps, glucose or insulin). The app keeps at most
+  20 weights and 30 readings a day, so for a day with more it keeps the earliest and says how many were left out. If the server refuses a
+  batch, the import stops, shows the server's words and how many were already added, and pressing Import again carries on. The handbook's
+  "Using the app" page has the steps.
+* **A reading is never added twice, whichever way it arrives.** Importing the same file again adds nothing. A weight or reading is also
+  skipped when your log already holds one that you did not type, with the same day, the same minute and the same numbers. A reading you
+  typed yourself never counts as a match, because you may have meant to record it twice.
+* **Send weights and blood pressure from an iPhone Shortcut** (your admin turns it on). In **Settings → Account → Your data → Phone
+  shortcuts**, give a token a name, choose when it ends (30 days, 90 days or 1 year) and press Make token. It is shown once, with **Copy**
+  and the address to send to; you paste both into a Shortcut on your iPhone, and the Shortcut sends your latest weight or blood pressure
+  to your own server. The handbook's Weight and blood pressure page has the recipe ("From a phone shortcut"). A token can only **add**
+  weights and readings to your own log; it reads nothing and changes nothing. A reading from a watch is not stored. The list shows each
+  token's last use and what it sent, with **Revoke** and **Delete what it sent** (it asks first, naming how many weights and readings
+  go, and removes only what that token sent, never what you typed or imported). Rows a shortcut sent say "from a shortcut (name)" on Today
+  and in a new "From" column in the Trends tables; rows from the Health app and from a file say so too. Until your admin turns phone
+  shortcuts on, the block says "Your admin has not turned this on" (tokens that exist can still be revoked and their rows deleted). The
+  app does not watch what a shortcut sends: a 180/120 reading shows its flag, with Get help now, the next time you open the app. The
+  recipe is written from Apple's guide and has not been tried on a real iPhone yet. The demo has no server to send to and says so.
+* **Choose the `.zip` itself: nobody has to unzip it first.** **Settings → Account → Your data → Import from a file** takes the `.zip` of an
+  export of yours (or the `export.json` inside it, as before). **Import from Apple Health** (weights and blood pressure) takes the Health
+  app's `export.zip`. **Labs → Import from Apple Health (clinical records)** takes the same `export.zip` and reads only the lab-result files
+  in its `clinical-records` folder. The `.zip` is opened **on your device** with the browser's own tools and is never uploaded. Only the one
+  file each import needs is read out of it (the Health `export.xml` in pieces, so a file of hundreds of megabytes is fine; Cancel stops
+  it). A file that is damaged, not finished downloading or not an export from the Health app or this app is turned away with a plain
+  reason. A browser that cannot do this (Safari before 16.4) shows the old advice to unzip the file first; choosing the unzipped files
+  still works everywhere.
+* **Read a lab report from the PDF your lab's website gives you.** **Lab results → Read a lab report photo or PDF** takes the PDF itself,
+  not only a photo or a screenshot. The PDF is opened **on your device** and never sent anywhere. You see "Page 1", "Page 2", ... (pages 1
+  to 6 start ticked, up to 10 can be ticked). Only the pages you tick are drawn on your device and sent as pictures to the AI at home, with
+  the same local AI, consent and checks as a photo (the consent sheet says so), a "Reading page 2 of 4..." line and a Cancel button. The
+  rows from all the pages come in one table, all unticked, each saying which page it came from. A row that repeats is shown once, and a
+  page that cannot be read says so while the others still count. A PDF with a password, one over 20 MB or 50 pages, a damaged file and a
+  browser too old to open it are each refused with the reason (a screenshot of each page still works). A scan made of JPEG 2000 or JBIG2
+  pictures can come out blank. The handbook's AI page has the steps.
+* **Let a chat assistant remember your tastes, if you choose to.** **Settings → Assistant access → New token** has a second box, **Also let
+  it remember tastes (likes and dislikes)**. It is off by default and separate from **Can also save food and recipes**: neither gives the
+  other. A token made with it lets the assistant you connected remember that you like a food or a kind of food, want it less often or do
+  not want it, and forget one, the way **Ask** does but without a card to press. So it is limited to **30 changes a day per token**, every
+  change is listed in your activity ("Assistant remembered a taste", with what it was, what it became and the token's name), and a food it
+  sets shows in **Settings → Meal guidance → Your food preferences** as "from your assistant" with the usual **Remove**. A taste only
+  changes what the app suggests. **It never changes Treating a low:** the assistant cannot mark a food that treats a low, or a kind of
+  food that has one, as Not for me (that takes it out of the Treating a low options, as it does when you do it yourself), so only you can,
+  in the app. Tokens you already have keep what they could do, and **Ask is unchanged**: it still shows a card for every taste. The
+  handbook's AI page and its Settings and keys page say it in plain words.
+* **Tidier screens.** We looked at every screen, on a phone and on a computer, in light and dark, and fixed what looked wrong. The top bar
+  shows the app's name whole or not at all, never cut to "K…", and no longer runs past the edge of a narrow window. A handbook link under a
+  warning no longer pushes the lines above it apart, and its arrow stays with the last word; the same goes for the links next to a
+  sentence ("Check them in Profile", "How to make the shortcut"). On the blood pressure sheet the two number boxes line up. The **Include**
+  box in Copy a day and the **Note** box in Lab results take the whole row on a phone, so their words are not cut off. In Lab results
+  every row puts the date above the value. A long name under **Meals that fit** wraps to two lines. On Trends, the message about missing
+  targets has its padding back. In Settings the buttons under **Your data** and **Signed-in devices** no longer touch the box above them.
+* **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box kept the file, so
+  choosing it again did nothing until you left Settings and came back. Closing the prompt now empties the box.
 
 ### For people who run a server
 
-* **Choosing a `.zip` in the imports changes nothing on the server**: no route, setting or migration, and the server still never receives an archive
-  (the page opens it on the person's device and sends the same JSON or rows as before). The page now ships one more script (`js/engine/zip.js`) in the
-  service worker's cache list, so the app's update prompt appears once after the upgrade, as for any release.
-* **A third assistant permission, `assistant:prefs`, and the MCP tool `set_food_preference`.** A person ticks it when making an assistant token
-  (`can_prefs` on `POST /api/me/tokens`, off by default); it gives `assistant:read` and nothing else, `assistant:log` does not give it and it does not
-  give `assistant:log`, and a phone-shortcut token can never hold it. `/mcp` lists the tool only for a token with the scope (anyone else is told
-  "Unknown tool"); it takes one food or food group and `like`, `less`, `not_for_me` or `clear` and a required `request_key`, is limited to **30
-  changes a day per token** (`429` with `Retry-After`; counted in memory, so a restart empties it) on top of the 60 requests a minute, and writes
-  through the same function as the preferences screen with `source = 'assistant'`. It refuses `not_for_me` for a food that treats a low and for a food
-  group that holds one. Audit action `assistant.preference_set`; `export.json` carries `source: assistant` and an import accepts it. No setting
-  or switch (`assistant.enabled` covers it), no schema step, no dependency. Details: [docs/assistant.md](docs/assistant.md).
-* **Reading a PDF lab report needs nothing from you: no setting, route or schema step, and the server never sees a PDF.** It uses the
-  local AI, `ai.route.labs`, the consent and the limits that lab report photos already have (each ticked page is one call). The one
-  change is in the page's headers: the Content-Security-Policy now ends `trusted-types kh-sw kh-xml kh-pdf` (one more named policy, `kh-pdf`,
-  which lets the page start the bundled pdf.js worker from `/vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs` and nothing else; `script-src`,
-  `worker-src` and the rest are unchanged, no `'unsafe-eval'`, no `blob:`). **If you set your own CSP at a reverse proxy instead of using
-  the app's header, add `kh-pdf` to its `trusted-types` list**, or choosing a PDF says "This browser cannot read a PDF here". The image
-  carries 1.8 MB more of vendored files (`app/static/vendor/pdfjs-dist-6.4.299/`, Apache-2.0, pinned by SHA-256 in `vendor/README.md`);
-  they are fetched by a browser only when a person picks a PDF.
-* **Schema step 18** (`m018_body_measurements.py`): two new tables, `weights` and `blood_pressures`, deleted with the account. It runs
-  at the first start of this version and changes nothing that exists (take a backup first, as for any upgrade).
-* The export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`); the export version stays 1 and older
-  files still import. Three new personal settings (`user.units.weight`, `body.weight_alarm`, `body.bp_goal`) are carried over by an
-  import with "Also replace my profile, targets and settings"; the unit's default for everyone is in Server administration.
-  The new routes under `/api/body` allow 60 batch requests an hour per person. Nothing leaves the server: weights and readings are
-  never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)).
-
-* **Phone shortcuts (off until you turn it on).** `POST /push/v1/body` takes a few weights and blood pressure readings
-  from an iPhone Shortcut, with a **device token** (`khd_…`) a person makes for their own account. A token can only **add** plausible
-  weights and readings to its owner's log (up to 50 rows a request, 60 requests an hour, 20 weights and 30 readings a day, the same
-  ranges as typed rows); it reads, changes and deletes nothing, and the answer is counts only. Readings whose source name contains
-  "Watch" are refused (cuffless readings are not recommended; a Shortcut cannot ask), and the same reading sent twice, or sent and then
-  imported from the Health export, is one row. Turn it on with **Server administration → Server settings → Phone shortcuts** or
-  `PUSH_ENABLED=true` (listed in `deploy/.env.example`, `compose.yaml`, the Quadlet and Kubernetes examples); while off, the route answers
-  `401` to everyone. The phone must reach the server (home network or your VPN), and a reverse proxy that lists the paths it passes on
-  needs `/push/v1/`. A person makes a token in **Settings → Account → Your data → Phone shortcuts**: a name and when it ends (30 days,
-  90 days or 1 year), shown once with Copy and the address to send to, listed with when it was last used and what it sent, with **Revoke**
-  and **Delete what it sent** (it asks, naming how many weights and readings go, and removes only what that token sent). While your admin
-  has not turned the switch on, the block says "Your admin has not turned this on" (tokens that exist can still be revoked and their rows
-  deleted). Weights and readings a shortcut sent say "from a shortcut (name)" on Today and in a new "From" column of the Trends tables
-  (rows from the Health app and from a file say so too). In Server administration, **Revoke tokens** in People now counts and ends both
-  kinds, and the Activity log says "Phone shortcut token created / revoked" and "Phone shortcut data deleted". The handbook's Weight and
-  blood pressure page has a **From a phone shortcut** recipe (written from Apple's guide, not yet tried on a real iPhone) and the
-  configuration page lists `PUSH_ENABLED`. The preview (demo) has no server to send to and says so. Each person may hold 5 device tokens
-  besides 5 assistant tokens; a password change, a disabled or deleted account and an admin's **Revoke tokens** end both kinds; rows a
-  token sent can be deleted together (`DELETE /api/me/tokens/{id}/body-rows`). The app does not watch what a shortcut sends: a 180/120
-  reading shows its flag, with Get help now, the next time the app is opened. Details: [docs/push.md](docs/push.md).
-* **Schema step 19** (`m019_body_token.py`): `weights` and `blood_pressures` gain `api_token_id` (the device token that sent a row;
-  empty for every earlier row; set to empty when the token is purged, which keeps the row). It runs at the first start of this version and
-  changes no value that exists (take a backup first, as for any upgrade). The rows `GET /api/body/*` returns gain `via` (the token's name or
-  `null`); `source` can now be `shortcut`, and a `shortcut` row exports and imports like the other sources (the token id is not exported).
-  `GET /api/admin/users` gains `device_tokens` next to `assistant_tokens`.
+* **Phone shortcuts (off until you turn it on).** `POST /push/v1/body` takes a few weights and blood pressure readings from an iPhone
+  Shortcut, with a **device token** (`khd_…`) a person makes for their own account. Turn it on with **Server administration → Server
+  settings → Phone shortcuts** or `PUSH_ENABLED=true`; while off, the route answers `401` to everyone. The phone must reach the server (home
+  network or your VPN), and a reverse proxy that lists the paths it passes on needs `/push/v1/`. A token can only **add** plausible weights
+  and readings to its owner's log: up to 50 rows a request, 60 requests an hour, 20 weights and 30 readings a day, the same ranges as typed
+  rows. It reads, changes and deletes nothing, and the answer is counts only. Readings whose source name contains "Watch" are refused
+  (cuffless readings are not recommended; a Shortcut cannot ask), and the same reading sent twice, or sent and then imported from the
+  Health export, is one row. Each person may hold 5 device tokens besides 5 assistant tokens. A password change and a disabled or deleted
+  account end both kinds, and rows a token sent can be deleted together (`DELETE /api/me/tokens/{id}/body-rows`). In Server
+  administration, **Revoke tokens** in People counts and ends both kinds, and the Activity log says "Phone shortcut token created / revoked" and "Phone shortcut data deleted". The handbook's configuration page lists
+  `PUSH_ENABLED`. Details: [docs/push.md](docs/push.md).
+* **Schema steps 18 and 19.** Step 18 (`m018_body_measurements.py`) adds the tables `weights` and `blood_pressures`, deleted with the
+  account. Step 19 (`m019_body_token.py`) adds `api_token_id` to both, the device token that sent a row (empty for every earlier row, and
+  set to empty when the token is purged, which keeps the row). The rows `GET /api/body/*` returns gain `via` (the token's name or `null`),
+  `source` can now be `shortcut`, and `GET /api/admin/users` gains `device_tokens` next to `assistant_tokens`. They run at the first start
+  of this version and change no value that exists (take a backup first, as for any upgrade).
+* **Weight and blood pressure on the server.** The export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`);
+  the export version stays 1 and older files still import. Three new personal settings (`user.units.weight`, `body.weight_alarm`,
+  `body.bp_goal`) are carried over by an import with "Also replace my profile, targets and settings"; the unit's default for everyone is in
+  Server administration. The routes under `/api/body` allow 60 batch requests an hour per person. Nothing leaves the server: weights and
+  readings are never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)).
+* **A third assistant permission, `assistant:prefs`, and the MCP tool `set_food_preference`.** A person ticks it when making an assistant
+  token (`can_prefs` on `POST /api/me/tokens`, off by default). It gives `assistant:read` and nothing else: `assistant:log` does not give
+  it, it does not give `assistant:log`, and a phone-shortcut token can never hold it. `/mcp` lists the tool only for a token with the
+  permission (anyone else is told "Unknown tool"). The tool takes one food or food group and `like`, `less`, `not_for_me` or `clear`, and a
+  required `request_key`. It is limited to **30 changes a day per token** (`429` with `Retry-After`; counted in memory, so a restart
+  empties it) on top of the 60 requests a minute, and it writes through the same function as the preferences screen with `source =
+  'assistant'`. It refuses `not_for_me` for a food that treats a low and for a food group that holds one. Audit action
+  `assistant.preference_set`; `export.json` carries `source: assistant` and an import accepts it. No new setting (`assistant.enabled`
+  covers it), no schema step, no dependency. Details: [docs/assistant.md](docs/assistant.md).
+* **Reading a PDF lab report needs nothing from you: no setting, route or schema step, and the server never sees a PDF.** It uses the local
+  AI, `ai.route.labs`, the consent and the limits that lab report photos already have (each ticked page is one call). The one change is in
+  the page's headers: the Content-Security-Policy now ends `trusted-types kh-sw kh-xml kh-pdf`. The new policy, `kh-pdf`, lets the page
+  start the bundled pdf.js worker from `/vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs` and nothing else; `script-src`, `worker-src` and the
+  rest are unchanged, with no `'unsafe-eval'` and no `blob:`. **If you set your own CSP at a reverse proxy, add `kh-pdf` to its
+  `trusted-types` list.** The image carries 1.8 MB more of vendored files (`app/static/vendor/pdfjs-dist-6.4.299/`, Apache-2.0, pinned by
+  SHA-256 in `vendor/README.md`); a browser fetches them only when a person picks a PDF.
+* **Choosing a `.zip` in the imports changes nothing on the server**: no route, setting or migration, and the server still never receives
+  an archive (the page opens it on the person's device and sends the same JSON or rows as before). The page ships one more script
+  (`js/engine/zip.js`), so the app's update prompt appears once after the upgrade, as for any release.
 
 ### For contributors
 
-* **A guide to the test vector files** ([design note 14](docs/dev/research/14-reuse-map.md) change 6, the documentation half). [`tests/data/README.md`](tests/data/README.md) says,
-  for each `*_vectors.json` file, what it covers, which server code and browser twin it ties together, how to regenerate it, its shape, and what a replayer in another language
-  must get right (rounding, tolerances, dates, text shown to people). `tests/test_vectors_readme.py` fails when a file has no section or a section lists the wrong keys. The Swift test
-  target waits for the iOS design note.
-* **The brand strings are in one place** ([design note 14](docs/dev/research/14-reuse-map.md) change 3). `app/brand.py` holds the product's names and the strings that
-  identify it: the cookie names, the `X-Requested-With` value, the token prefixes `kha_` and `khd_`, the bearer realm, the database file name `kidney.db`, the export
-  `format`, the User-Agent texts, the HKDF labels and the logger root, each with a note on whether changing it would break an install in use. The page reads the ones it
-  uses from `KH.brand` (`app/static/js/engine/brand.js`). No value changed. `tests/test_brand.py` pins them all, checks that the Python and browser copies agree and
-  fails when a main literal shows up again outside those two files and a short, explained allowlist. A second product changes its values in one place and does not
-  have to search for them.
-* **A look at every screen, and checks that keep the fixes.** `tests/test_layout_ui.py` pins each layout fix in the stylesheets and
-  the page. `tools/e2e/sandbox.py` gained two probes: the header at 19 widths with the Preview pill, the admin shield, the Ask tab
-  and the offline badge on and off (the name whole or hidden, nothing overlapping, no sideways scroll), and the Plan week's badges.
-  The four README screenshots were taken again, because they showed the cut name and the spread-out warning lines.
-* **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the
-  introduction and four screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after
-  a change to those screens. `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.
-* **An honest, checked-in OpenAPI document** ([design note 14](docs/dev/research/14-reuse-map.md) change 2; guide: [`docs/api/README.md`](docs/api/README.md)).
-  `python scripts/gen_openapi.py` writes `docs/api/openapi.json` (sorted keys, 2-space indent) from `create_app()` in-process, with no server and no network;
-  `--check` exits 1 with a short list of what differs, and `tests/test_openapi_snapshot.py` runs it, so **changed a route? run the script** (one line in
-  CONTRIBUTING). `ENABLE_API_DOCS` is unchanged: the live `/openapi.json` and `/docs` stay off by default. The document was wrong in four ways and is now
-  built by `app/openapi_doc.py`: operation ids are `<first tag>_<route function>` (`auth_login`, `log_create_entry`) instead of
-  `login_api_auth_login_post`, and a test holds them unique; validation errors are the **400** `{detail, errors: [{type, loc, msg}]}` the handler really
-  sends (FastAPI's 422 is gone; the one real 422, the out-of-scope refusal of suggested targets, stays); every error status points at a shared
-  `components.responses` entry with the one `Problem` shape (`{detail, ...}`), with a `default` on every `/api` operation; and `securitySchemes`
-  `session` (the cookie and the `X-Requested-With` header it needs), `assistantToken` (`kha_`, `/mcp`) and `deviceToken` (`khd_`, `/push/v1/body`) are applied
-  from each route's dependencies. `info.version` is the app's version and the new `info.x-api-version` is `API_VERSION` (`app/api_version.py`, `1`):
-  raise it on a breaking change only, an additive change keeps it. No route behaves differently; `POST /mcp` gained `operation_id="mcp_post"`.
-* **`GET /api/meta`** (design note 14 change 4; `app/meta.py`): signed in only, it answers `{app_version, api_version, capabilities, nutrients, meals}`: booleans for what the
-  signed-in person can use now (`ai` and each AI feature, `chat`, `voice`, `assistant`, `push`, `barcode`, `barcode_off`, `barcode_usda`, `handbook`), each read from the
-  switch or status function that already exists (the AI ones from the new `status_view` behind `GET /api/ai/status`, the barcode ones from the new
-  `barcode.providers_available`), the nutrient registry (`key`, `label`, `unit`, `role`) in the server's order, and the meal names. It holds no secret, host or
+* **A checked-in OpenAPI document** ([design note 14](docs/dev/research/14-reuse-map.md) change 2; guide: [`docs/api/README.md`](docs/api/README.md)).
+  `python scripts/gen_openapi.py` writes `docs/api/openapi.json` (sorted keys, 2-space indent) from `create_app()` in-process, with no
+  server and no network. `--check` exits 1 with a short list of what differs, and `tests/test_openapi_snapshot.py` runs it, so **changed
+  a route? run the script** (one line in CONTRIBUTING). `ENABLE_API_DOCS` is unchanged: the live `/openapi.json` and `/docs` stay off by
+  default. The document was wrong in four ways and `app/openapi_doc.py` now builds it: operation ids are `<first tag>_<route function>`
+  (`auth_login`, `log_create_entry`) instead of `login_api_auth_login_post`, and a test holds them unique; validation errors are the
+  **400** `{detail, errors: [{type, loc, msg}]}` the handler really sends (FastAPI's 422 is gone; the one real 422, the out-of-scope refusal
+  of suggested targets, stays); every error status points at a shared `components.responses` entry with the one `Problem` shape
+  (`{detail, ...}`), with a `default` on every `/api` operation; and the `securitySchemes` `session` (the cookie and the `X-Requested-With`
+  header it needs), `assistantToken` (`kha_`, `/mcp`) and `deviceToken` (`khd_`, `/push/v1/body`) are applied from each route's
+  dependencies. `info.version` is the app's version and the new `info.x-api-version` is `API_VERSION` (`app/api_version.py`, `1`): raise it
+  on a breaking change only. No route behaves differently; `POST /mcp` gained `operation_id="mcp_post"`.
+* **`GET /api/meta`** (design note 14 change 4; `app/meta.py`): signed in only, it answers `{app_version, api_version, capabilities,
+  nutrients, meals}`. The capabilities are booleans for what the signed-in person can use now (`ai` and each AI feature, `chat`, `voice`,
+  `assistant`, `push`, `barcode`, `barcode_off`, `barcode_usda`, `handbook`), each read from the switch or status function that already
+  exists (the AI ones from the new `status_view` behind `GET /api/ai/status`, the barcode ones from the new `barcode.providers_available`).
+  The nutrient registry (`key`, `label`, `unit`, `role`) comes in the server's order, then the meal names. It holds no secret, host or
   other person's data. The demo answers it from `js/mock/meta.js` (nothing optional switched on), pinned by `tests/data/meta_vectors.json`
-  (`gen_meta_vectors.py`; `node tests/js/run_vectors.mjs`) and compared by `tools/e2e/parity.py` section 10. The screens do not read it yet (ROADMAP "Open items").
-  New tests: `tests/test_openapi_snapshot.py`, `tests/test_meta.py`.
-* **The release run no longer goes red over long release notes.** GitHub refuses release notes over 125,000 characters, and
-  0.4.0's (pasted from the rendered changelog, with its HTML) reached that cap, so the `release notes (image digest)` job's
-  `gh release edit` got a 422 after the image had already been built, scanned, signed and tagged. The job now counts the notes
-  with the Image section first and, if they would be too long, warns and prints the block to paste by hand. A test in
-  `tests/test_deploy.py` runs the job's script against a fake `gh` (short notes, too long, already there), and
-  `docs/maintainers.md` says to paste the section as Markdown.
-* pydantic 2.14's behaviour changes were read against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
-* **`set_food_preference` over MCP** (note 09 §4.8b): `app/mcp/preference_tool.py` (in `server.all_tools()`, not in `tools.TOOLS`, because it
-  reuses Ask's checks, which import `tools`; `Tool.needs` says which scope a tool needs), `api_tokens.PREFS`, `parse_scopes`/`scopes_for`,
-  `TokenCreate.can_prefs`, `guidance.api.apply_preference` and `drop_preference` (the PUT and DELETE routes now call them), and
-  `chat_preference.resolve_food`, `resolve_group`, `held_preference`, `group_state` and the room checks extracted from Ask's code with its behaviour
-  unchanged. `PreferenceBody.source`, `PreferenceFood.source` and `ImportFoodPreference.source` allow `assistant` (Ask's Undo puts a row back with the
-  source it had; `mock/guidance.js`, `mock/import.js` and `tests/data/import_vectors.json` follow). New tests: `tests/test_mcp_prefs.py` (with a `@pytest.mark.safety`
-  test that the Treating a low options, card, insights and `safety_check` do not change; the file is in `tests/test_safety_set.py`),
-  `tests/test_assistant_ui.py` with `tests/js/assistant_page.mjs`, and a taste section in `tools/e2e/mcp_smoke.py`. The test that pinned "the MCP
-  server cannot list or call `set_food_preference`" now pins the new rule.
-* **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
-  before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and
-  "Delete what it sent" in `app/push.py` (outside `/api`, in `security.BEARER_PATHS`), `context_for`, `is_watch_source` and the
-  same-reading check in `app/body.py`. `KH.appleHealth.contextOf` and `isWatchSource` are checked against the server's by new
-  `context_cases` and `watch_cases` in `tests/data/body_vectors.json`; the demo's batch routes (`js/mock/body.js`) keep the same-reading
-  rule and return `via: null`. New tests: `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, and a device
-  token in the two tests that every `/api` route ignores `Authorization`. One line (a "Phone shortcuts" group for `push.enabled`) was added
-  to `js/views/settings.js` because `tests/test_settings_ui.py` requires every server setting to be in a group.
-  The screens: `pushBlock` in `js/views/settings.js` (every word from the server through `textContent`; the token is held in one variable
-  until a draw has shown it once), `KH.bodyUi.originText` and the origin span and "From" column in `js/views/body.js` and `body_trends.js`,
-  the demo's token routes in `js/mock/auth.js`, a `family` in the self-revoke audit row of `app/auth/api_tokens.py` (so the activity list
-  can name the family). New tests: `tests/test_push_ui.py` (with `tests/js/push_page.mjs`), additions to `tests/test_settings_ui.py` and
-  `tests/test_body_ui.py` (whose Apple Health button test expected `KH.bodyImport.open()`; the code calls `open(button)`: the stale expectation
-  is corrected), `tools/e2e/push.py` (a real Chromium, the harness posting like a Shortcut) and the token routes in `tools/e2e/parity.py` section 10.
-* **PDF lab reports** (design note 13): `js/engine/pdf_pages.js` (`KH.pdfPages`) opens a PDF with the vendored **pdfjs-dist 6.4.299, `legacy/build`**
-  (`pdf.min.mjs`, `pdf.worker.min.mjs`, `LICENSE` in `app/static/vendor/pdfjs-dist-6.4.299/`; the choice and its evidence, pdf.js's own browser
-  support statement and the calls the default build makes without a polyfill, are in `app/static/vendor/README.md`) and draws the pages the person
-  ticked as JPEGs in a module Worker that the module makes under the one Trusted Types policy `kh-pdf` (`app/security.py` now says
-  `trusted-types kh-sw kh-xml kh-pdf`; `tests/test_frontend_shell.py` allows exactly three policy-creating files and one `Worker` constructor). The
-  options passed to `getDocument` are the audited list in the file's header (`data`, `isEvalSupported: false`, `enableXfa: false`,
-  `disableAutoFetch`, `disableStream`, `disableRange`, `stopAtErrors: false`; no URL, `cMapUrl`, `standardFontDataUrl`, `iccUrl` or `wasmUrl`).
-  **Against pdf.js 6.4 two names differ from note 13:** `isEvalSupported` no longer exists (the library has no eval path left; the option is passed
-  anyway and `tests/test_vendor.py` fails if an update brings it back, so the page can be re-audited) and `render()` takes `canvas` instead of the
-  deprecated `canvasContext`. pdf.js makes no worker of its own when `GlobalWorkerOptions.workerPort` is set and has no main-thread "fake worker" then, but a
-  worker that fails to start only fires `error` and the load promise never settles, so the module listens for it and also refuses a pdf.js that
-  did not post to our worker. `lab_photo.js` gained the page list, page-by-page reading with Cancel, the merged table (`KH.labPhoto.mergePages`)
-  and the messages; `KH.ai.uploadPhoto` takes an optional `AbortSignal`.
-* **`scripts/vendor_barcode.py` vendors both the barcode decoder and pdf.js** (same name and options; new `--only barcode|pdfjs`, which
-  downloads nothing of the other group; the download cap is per package because the pdfjs-dist tarball is 8.5 MB; the tarball address the
-  registry names must be the expected one; the weekly `vendor-check.yml` `--check-latest` covers pdf.js through npm's small dist-tags answer).
-  `tests/test_vendor.py` runs the fetch against a fake registry. **A comment in `sw.js` that contained `*/` stopped the service worker from
-  starting** (found by the browser walk, not by a test): `tests/test_pdf_pages.py` now runs `node --check` on `sw.js`, `pdf_pages.js`,
-  `lab_photo.js` and `ai.js`.
-* **`tools/e2e/lab_pdf.py`: a browser walk of a PDF lab report** (ports 8089 and 8090, Chromium at 375×812 light and 1280×800 dark with the
-  service worker allowed on the second, about a minute). A tiny PDF writer in the harness (no new dependency) makes a two-page report, a
-  password-protected one (a security handler whose check never passes, so no cipher is needed), a damaged one, a 51-page one and a
-  21 MB one; a fake local AI answers lab report photos with scripted rows. It checks the
-  page list, the consent sheet's extra line, that each page reached the AI as its own drawn JPEG (no EXIF, within 2048 px, dark pixels, the two
-  different) and that no request body starts with `%PDF-`, the merged table, the date entry and Save through `POST /api/labs/import`, Cancel,
-  the five refusals (including pdf.js's real `PasswordException`), that only the library and its worker were requested from
-  `/vendor/pdfjs-dist-6.4.299/` and one closed Worker was made per run, 0 CSP or Trusted Types violations, and the service worker's `/vendor/` cache.
-  It is listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
-* **Weight and blood pressure screens (note 10 Part B).** `js/engine/body_ui.js` (`KH.bodyUi`, pure), `js/views/body.js` and `js/views/body_trends.js`, `css/body.css`, the
-  body section of `js/engine/visitprep.js`; tests `tests/test_body_ui.py` and `tests/test_body_ui_numbers.py` (with `tests/js/body_ui_runner.mjs`: what a person types is
-  accepted and refused as the server's models and settings do, and the visit prep sums equal `app/body.py`'s), and the browser harness `python tools/e2e/body.py`
-  (listed in `tools/e2e/README.md` and the release checklist in `docs/maintainers.md`). The Apple Health import (Part C) plugs in as `KH.bodyImport` with `open()`; the
-  buttons exist only when it does. New handbook sources `K21BP`, `AHA25BP`, `AHA-CUFFLESS` and `NOTE10`.
-* **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
-  the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
-  show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400
-  (1,052 findings in today's tree), so `pyproject.toml` selects the earlier default explicitly (`[tool.ruff.lint] select = ["E4", "E7",
-  "E9", "F"]`: pycodestyle errors and pyflakes), which keeps the tree clean and means a ruff upgrade cannot change what CI checks;
-  `target-version` comes from `requires-python` (3.11). CONTRIBUTING.md asks for `ruff check .` before a push.
-  `tests/test_deploy.py` keeps the pin, the checked download, the step and the lock files free of ruff.
-* **`tools/e2e/import_walk.py`: a browser walk of Settings → Account → Your data → Import from a file against a real server**
-  (port 8086, Chromium at 375×812 light and 1280×800 dark, about 20 seconds). Person A is filled through the API and exports a zip in
-  the page; a fresh person B signs in on the page and imports A's `export.json`: the files a person can pick by mistake (the whole
-  `.zip`, a text file, a JSON list, JSON that is not an export, another version), the recent-password sheet (Cancel, a wrong
-  password, the right one, and again at Import), the preview, Import without and with "Add to my existing data" (counts, no
-  duplicate, only what is missing is added back) and "Also replace my profile, targets and settings", with B's state checked through
-  the API against A's. It is listed in `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist
-  (`docs/maintainers.md`), which now leaves only a phone's own file picker to a person; the two ROADMAP items it closes are removed.
-* **Reading a `.zip` in the browser: `js/engine/zip.js` (`KH.zip`)**, design note 11 (`docs/dev/research/11-reading-a-zip-in-the-browser.md`).
-  A plain script (no DOM, no library, no new vendored file, no server code, no schema step) over `Blob.slice`, `Blob.stream` and
-  `DecompressionStream('deflate-raw')`: `supported, open, find, list, stream, text, ZipError`, the rules `RULES.exportJson`, `healthXml`,
-  `healthCda`, `clinicalRecords`, and the caps `MAX_DIRECTORY_BYTES` (32 MiB) and `MAX_ENTRIES` (200,000). It is strict: the end record, zip64 and
-  the directory are checked before anything is believed, an entry's local header must agree with the directory, and the bytes are counted and
-  checksummed (CRC-32) **while they are inflated**, so an entry that outgrows its declared size is stopped after its first chunk, whatever the
-  archive claims; a cancel reaches the file's own stream. It is listed in `index.html` (before the three views) and `sw.js`. The three views take it:
-  `settings.js` (`textFromZip`), `body_import.js` (`startScan(file, zipped)`) and `lab_fhir.js` (`readZip`, `readEntry`).
-  Tests: `tests/test_zip_reader.py` with `tests/js/zip_reader.mjs` and the archive builder `tests/zip_support.py` (every archive is built at test
-  time: `zipfile`, plus a hand-written byte builder for zip64, a fake end record, lying sizes, a flipped CRC, a cut deflate stream, an encrypted entry;
-  the fifteen cases of note 11, a 64 MB entry under a memory bound, abort, no `DecompressionStream`); the three page tests run each view on archives
-  made in memory (`tests/js/zip_writer.mjs`); `tools/e2e/import_walk.py` and `tools/e2e/body_import.py` now choose the `.zip` itself in Chromium (and
-  keep a check that the bare `export.json` and `export.xml` still work). `import_walk.py` also had two stale expectations since schema step 18
-  (the zip now holds `weights.csv` and `blood_pressure.csv`, and the "not chosen" line names the weight and blood pressure settings): fixed. The
-  ROADMAP item "Let Import from a file take the export .zip itself" is removed; what stays open is a run with a real iPhone `export.zip`
-  (`docs/maintainers.md`).
-* **The Health app import sheet** (`js/views/body_import.js`, `KH.bodyImport.open()`, the sheet `#sheet-body-import` in `index.html`; the reader
-  `js/engine/apple_health.js` is now loaded by the page, after `engine/rules.js`, with `sw.js` precaching both): the review, the period, the watch
-  readings unticked, batches of 1,000 with `source: "apple_health"` and no source name, a per-day trim against the rows the person already has
-  (`trimDays`), and a stop on any refusal that says what was already added. No server change. `tests/test_body_import_ui.py` and
-  `tests/js/body_import_page.mjs` test it in Node against a fake backend that keeps the batch rules; `tools/e2e/body_import.py` (port 8087, Chromium at
-  375 px and 1280 px, light and dark, a real server and the demo, about 2 minutes) imports a generated `export.xml`, checks the server's rows through the
-  API, a 25-weight day, a refused batch, Cancel and the second import that adds 0; it is in `tools/e2e/README.md`, `tests/test_e2e_tools.py` and the
-  release checklist (`docs/maintainers.md`, which also asks for a real iPhone export). The reader's header comment no longer spells out the
-  `<!DOCTYPE` line, which tripped the preview test for a page with no doctype once the reader was inlined. The handbook section is in
-  `handbook/docs/app/targets-and-warnings.md`.
-* `app/body.py` (routes `/api/body/weights`, `/blood-pressure`, their `/batch` imports and `/summary`; pure functions for pounds and
-  kilograms, the weight-gain alarm, the 7-day means against the goal, the six-month change and the flags), the `Weight*`,
-  `BloodPressure*` and `Body*` models, `user.units.weight`, `body.weight_alarm` and `body.bp_goal` in the settings registry, and
-  `weights` / `blood_pressures` in the export and the import. The browser twin is `js/engine/body.js` and `js/mock/body.js` (with sample
-  data in the demo), checked by `tests/data/body_vectors.json` (`tests/data/gen_body_vectors.py`) and `tools/e2e/parity.py` section 16.
-  The settings twin gained a float type with null (`engine/settings.js`). [docs/body.md](docs/body.md) and ARCHITECTURE.md
-  "Weight and blood pressure" describe it; the handbook source `NHLBI-BPS` and an open clinician question are in `handbook/REVIEW.md`.
-* **The kidney and type 1 diabetes rules moved out of `app/nutrients.py` into `app/rules_kidney.py`** (design note 14 §2.2 and §4 change 5; no
-  behaviour change, no vector change). The thresholds, `food_warnings`, `kidney_rating`, the per-meal carbohydrate alerts, `dosing_weight`,
-  `suggest_targets`, the CKD, dialysis and diabetes choices and the food flags are the same code in a new module; the registry, rounding and
-  number formatting both modules need are in `app/nutrient_core.py`, so there is no import cycle. `app/nutrients.py` re-exports every moved
-  name, so each `from .nutrients import X` and `nutrients.X` still works.
+  (`gen_meta_vectors.py`; `node tests/js/run_vectors.mjs`) and compared by `tools/e2e/parity.py` section 10. The screens do not read it yet
+  (ROADMAP "Open items"). New tests: `tests/test_openapi_snapshot.py`, `tests/test_meta.py`.
+* **A guide to the test vector files** ([design note 14](docs/dev/research/14-reuse-map.md) change 6, the documentation half).
+  [`tests/data/README.md`](tests/data/README.md) says, for each `*_vectors.json` file, what it covers, which server code and browser twin
+  it ties together, how to regenerate it, its shape, and what a replayer in another language must get right (rounding, tolerances, dates,
+  text shown to people). `tests/test_vectors_readme.py` fails when a file has no section or a section lists the wrong keys. The Swift test
+  target waits for the iOS design note.
+* **The brand strings are in one place** ([design note 14](docs/dev/research/14-reuse-map.md) change 3). `app/brand.py` holds the product's
+  names and the strings that identify it: the cookie names, the `X-Requested-With` value, the token prefixes `kha_` and `khd_`, the
+  bearer realm, the database file name `kidney.db`, the export `format`, the User-Agent texts, the HKDF labels and the logger root, each
+  with a note on whether changing it would break an install in use. The page reads the ones it uses from `KH.brand`
+  (`app/static/js/engine/brand.js`). No value changed. `tests/test_brand.py` pins them all, checks that the Python and browser copies agree
+  and fails when a main literal shows up again outside those two files and a short, explained allowlist.
+* **The kidney and type 1 diabetes rules moved out of `app/nutrients.py` into `app/rules_kidney.py`** (design note 14 §2.2 and §4 change 5;
+  no behaviour change, no vector change). The thresholds, `food_warnings`, `kidney_rating`, the per-meal carbohydrate alerts,
+  `dosing_weight`, `suggest_targets`, the CKD, dialysis and diabetes choices and the food flags are the same code in a new module. The
+  registry, rounding and number formatting both modules need are in `app/nutrient_core.py`, so there is no import cycle.
+  `app/nutrients.py` re-exports every moved name, so each `from .nutrients import X` and `nutrients.X` still works.
 * **The safety set: `python -m pytest -m safety`** (design note 14 §4 change 7). The tests that enforce the health-data rules of CLAUDE.md
   (no insulin or medicine dosing, a low is never blocked or warned against, handbook text quoted word for word, the AI guard and the
   prefilter, nothing about weights, readings or symptoms sent to an AI) carry a registered `safety` marker, including the AI golden
-  `safety-*` and `prefilter-*` cases. `tests/test_safety_set.py` collects the set and fails if it is empty or a listed file loses its
-  last safety test; CONTRIBUTING.md "Tests" explains it. No behaviour change.
+  `safety-*` and `prefilter-*` cases. `tests/test_safety_set.py` collects the set and fails if it is empty or a listed file loses its last
+  safety test; CONTRIBUTING.md "Tests" explains it. No behaviour change.
+* **Weight and blood pressure** (note 10). The server: `app/body.py` (routes `/api/body/weights`, `/blood-pressure`, their `/batch` imports
+  and `/summary`; pure functions for pounds and kilograms, the weight-gain alarm, the 7-day means against the goal, the six-month change
+  and the flags), the `Weight*`, `BloodPressure*` and `Body*` models, `user.units.weight`, `body.weight_alarm` and `body.bp_goal` in the
+  settings registry, and `weights` / `blood_pressures` in the export and the import. The browser twin is `js/engine/body.js` and
+  `js/mock/body.js` (with sample data in the demo), checked by `tests/data/body_vectors.json` (`tests/data/gen_body_vectors.py`) and
+  `tools/e2e/parity.py` section 16. The settings twin gained a float type with null (`engine/settings.js`). The screens:
+  `js/engine/body_ui.js` (`KH.bodyUi`, pure), `js/views/body.js`, `js/views/body_trends.js`, `css/body.css` and the body section of
+  `js/engine/visitprep.js`. Tests: `tests/test_body_ui.py` and `tests/test_body_ui_numbers.py` (with `tests/js/body_ui_runner.mjs`: what a
+  person types is accepted and refused as the server's models and settings do, and the visit prep sums equal `app/body.py`'s), and the
+  browser harness `python tools/e2e/body.py`. New handbook sources are `K21BP`, `AHA25BP`, `AHA-CUFFLESS`, `NOTE10` and `NHLBI-BPS`; an
+  open clinician question is in `handbook/REVIEW.md`. [docs/body.md](docs/body.md) and ARCHITECTURE.md "Weight and blood pressure"
+  describe it.
+* **The Health app import sheet** (`js/views/body_import.js`, `KH.bodyImport.open()`, the sheet `#sheet-body-import` in `index.html`; the
+  reader `js/engine/apple_health.js` is loaded by the page after `engine/rules.js`, with `sw.js` precaching both): the review, the period,
+  the watch readings unticked, batches of 1,000 with `source: "apple_health"` and no source name, a per-day trim against the rows the
+  person already has (`trimDays`), and a stop on any refusal that says what was already added. No server change.
+  `tests/test_body_import_ui.py` and `tests/js/body_import_page.mjs` test it in Node against a fake backend that keeps the batch rules.
+  `tools/e2e/body_import.py` (port 8087, Chromium at 375 px and 1280 px, light and dark, a real server and the demo, about 2 minutes)
+  imports a generated `export.xml` and checks the server's rows through the API, a 25-weight day, a refused batch, Cancel and the second
+  import that adds 0. The reader's header comment no longer spells out the `<!DOCTYPE` line, which tripped the preview test for a page with
+  no doctype once the reader was inlined. The handbook section is in `handbook/docs/app/targets-and-warnings.md`.
+* **Reading a `.zip` in the browser: `js/engine/zip.js` (`KH.zip`)**, design note 11
+  (`docs/dev/research/11-reading-a-zip-in-the-browser.md`). A plain script (no DOM, no library, no new vendored file, no server code, no
+  schema step) over `Blob.slice`, `Blob.stream` and `DecompressionStream('deflate-raw')`: `supported, open, find, list, stream, text,
+  ZipError`, the rules `RULES.exportJson`, `healthXml`, `healthCda`, `clinicalRecords`, and the caps `MAX_DIRECTORY_BYTES` (32 MiB) and
+  `MAX_ENTRIES` (200,000). It is strict: the end record, zip64 and the directory are checked before anything is believed, an entry's local
+  header must agree with the directory, and the bytes are counted and checksummed (CRC-32) **while they are inflated**, so an entry that
+  outgrows its declared size is stopped after its first chunk, whatever the archive claims; a cancel reaches the file's own stream. It is
+  listed in `index.html` (before the three views) and `sw.js`. The three views take it: `settings.js` (`textFromZip`), `body_import.js`
+  (`startScan(file, zipped)`) and `lab_fhir.js` (`readZip`, `readEntry`). Tests: `tests/test_zip_reader.py` with `tests/js/zip_reader.mjs`
+  and the archive builder `tests/zip_support.py` (every archive is built at test time: `zipfile`, plus a hand-written byte builder for
+  zip64, a fake end record, lying sizes, a flipped CRC, a cut deflate stream, an encrypted entry; the fifteen cases of note 11, a 64 MB
+  entry under a memory bound, abort, no `DecompressionStream`). The three page tests run each view on archives made in memory
+  (`tests/js/zip_writer.mjs`), and `tools/e2e/import_walk.py` and `tools/e2e/body_import.py` choose the `.zip` itself in Chromium (and
+  keep a check that the bare `export.json` and `export.xml` still work). What stays open is a run with a real iPhone `export.zip`
+  (`docs/maintainers.md`).
+* **`tools/e2e/import_walk.py`: a browser walk of Settings → Account → Your data → Import from a file against a real server** (port 8086,
+  Chromium at 375×812 light and 1280×800 dark, about 20 seconds). Person A is filled through the API and exports a zip in the page; a
+  fresh person B signs in on the page and imports A's `export.json`. It covers the files a person can pick by mistake (a text file, a JSON
+  list, JSON that is not an export, another version), the recent-password sheet (Cancel, a wrong password, the right one, and again at
+  Import), the preview, Import without and with "Add to my existing data" (counts, no duplicate, only what is missing is added back) and
+  "Also replace my profile, targets and settings", with B's state checked through the API against A's. It is listed in
+  `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist (`docs/maintainers.md`), which now leaves only a phone's own file
+  picker to a person.
+* **PDF lab reports** (design note 13): `js/engine/pdf_pages.js` (`KH.pdfPages`) opens a PDF with the vendored **pdfjs-dist 6.4.299,
+  `legacy/build`** (`pdf.min.mjs`, `pdf.worker.min.mjs`, `LICENSE` in `app/static/vendor/pdfjs-dist-6.4.299/`; the choice and its evidence,
+  pdf.js's own browser support statement and the calls the default build makes without a polyfill, are in `app/static/vendor/README.md`)
+  and draws the pages the person ticked as JPEGs in a module Worker. The module makes that worker under the one Trusted Types policy
+  `kh-pdf` (`app/security.py` now says `trusted-types kh-sw kh-xml kh-pdf`; `tests/test_frontend_shell.py` allows exactly three
+  policy-creating files and one `Worker` constructor). The options passed to `getDocument` are the audited list in the file's header
+  (`data`, `isEvalSupported: false`, `enableXfa: false`, `disableAutoFetch`, `disableStream`, `disableRange`, `stopAtErrors: false`; no
+  URL, `cMapUrl`, `standardFontDataUrl`, `iccUrl` or `wasmUrl`). **Against pdf.js 6.4 two names differ from note 13:** `isEvalSupported` no
+  longer exists (the library has no eval path left; the option is passed anyway and `tests/test_vendor.py` fails if an update brings it
+  back, so the page can be re-audited) and `render()` takes `canvas` instead of the deprecated `canvasContext`. pdf.js makes no worker of
+  its own when `GlobalWorkerOptions.workerPort` is set, but a worker that fails to start only fires `error` and the load promise never
+  settles, so the module listens for it and also refuses a pdf.js that did not post to our worker. `lab_photo.js` gained the page list,
+  page-by-page reading with Cancel, the merged table (`KH.labPhoto.mergePages`) and the messages; `KH.ai.uploadPhoto` takes an optional
+  `AbortSignal`.
+* **`scripts/vendor_barcode.py` vendors both the barcode decoder and pdf.js** (same name and options; new `--only barcode|pdfjs`, which
+  downloads nothing of the other group; the download cap is per package because the pdfjs-dist tarball is 8.5 MB; the tarball address the
+  registry names must be the expected one; the weekly `vendor-check.yml` `--check-latest` covers pdf.js through npm's small dist-tags
+  answer). `tests/test_vendor.py` runs the fetch against a fake registry. **A comment in `sw.js` that contained `*/` stopped the service
+  worker from starting** (found by the browser walk, not by a test): `tests/test_pdf_pages.py` now runs `node --check` on `sw.js`,
+  `pdf_pages.js`, `lab_photo.js` and `ai.js`.
+* **`tools/e2e/lab_pdf.py`: a browser walk of a PDF lab report** (ports 8089 and 8090, Chromium at 375×812 light and 1280×800 dark with the
+  service worker allowed on the second, about a minute). A tiny PDF writer in the harness (no new dependency) makes a two-page report, a
+  password-protected one (a security handler whose check never passes, so no cipher is needed), a damaged one, a 51-page one and a 21 MB
+  one; a fake local AI answers lab report photos with scripted rows. It checks the page list, the consent sheet's extra line, that each
+  page reached the AI as its own drawn JPEG (no EXIF, within 2048 px, dark pixels, the two different) and that no request body starts with
+  `%PDF-`, the merged table, the date entry and Save through `POST /api/labs/import`, Cancel, the five refusals (including pdf.js's real
+  `PasswordException`), that only the library and its worker were requested from `/vendor/pdfjs-dist-6.4.299/` and one closed Worker was
+  made per run, 0 CSP or Trusted Types violations, and the service worker's `/vendor/` cache. It is listed in `tools/e2e/README.md` and
+  `tests/test_e2e_tools.py`.
+* **Device tokens and `/push/v1`** (design note 12): the `khd_` family lives in `app/auth/api_tokens.py` (family, scope and switch checked
+  before any lookup; `/mcp` refuses `khd_` and `/push` refuses `kha_`; `family` on `GET`/`POST /api/me/tokens`, audited), the route and
+  "Delete what it sent" in `app/push.py` (outside `/api`, in `security.BEARER_PATHS`), and `context_for`, `is_watch_source` and the
+  same-reading check in `app/body.py`. `KH.appleHealth.contextOf` and `isWatchSource` are checked against the server's by new
+  `context_cases` and `watch_cases` in `tests/data/body_vectors.json`; the demo's batch routes (`js/mock/body.js`) keep the same-reading
+  rule and return `via: null`. The screens: `pushBlock` in `js/views/settings.js` (every word from the server through `textContent`; the
+  token is held in one variable until a draw has shown it once), `KH.bodyUi.originText` and the origin span and "From" column in
+  `js/views/body.js` and `body_trends.js`, and the demo's token routes in `js/mock/auth.js`. The self-revoke audit row carries `family`, so
+  the activity list can name it. One line (a "Phone shortcuts" group for `push.enabled`) was added to `js/views/settings.js` because
+  `tests/test_settings_ui.py` requires every server setting to be in a group. New tests: `tests/test_push.py`,
+  `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `tests/test_push_ui.py` (with `tests/js/push_page.mjs`), a device token in
+  the two tests that every `/api` route ignores `Authorization`, additions to `tests/test_settings_ui.py` and `tests/test_body_ui.py`
+  (whose Apple Health button test expected `KH.bodyImport.open()`; the code calls `open(button)`: the stale expectation is corrected),
+  `tools/e2e/push.py` (a real Chromium, the harness posting like a Shortcut) and the token routes in `tools/e2e/parity.py` section 10.
+* **`set_food_preference` over MCP** (note 09 §4.8b): `app/mcp/preference_tool.py` (in `server.all_tools()`, not in `tools.TOOLS`, because
+  it reuses Ask's checks, which import `tools`; `Tool.needs` says which scope a tool needs), `api_tokens.PREFS`,
+  `parse_scopes`/`scopes_for`, `TokenCreate.can_prefs`, `guidance.api.apply_preference` and `drop_preference` (the PUT and DELETE routes
+  now call them), and `chat_preference.resolve_food`, `resolve_group`, `held_preference`, `group_state` and the room checks extracted from
+  Ask's code with its behaviour unchanged. `PreferenceBody.source`, `PreferenceFood.source` and `ImportFoodPreference.source` allow
+  `assistant` (Ask's Undo puts a row back with the source it had; `mock/guidance.js`, `mock/import.js` and
+  `tests/data/import_vectors.json` follow). New tests: `tests/test_mcp_prefs.py` (with a `@pytest.mark.safety` test that the Treating a
+  low options, card, insights and `safety_check` do not change; the file is in `tests/test_safety_set.py`), `tests/test_assistant_ui.py`
+  with `tests/js/assistant_page.mjs`, and a taste section in `tools/e2e/mcp_smoke.py`. The test that pinned "the MCP server cannot list or
+  call `set_food_preference`" now pins the new rule.
+* **A look at every screen, and checks that keep the fixes.** `tests/test_layout_ui.py` pins each layout fix in the stylesheets and the
+  page. `tools/e2e/sandbox.py` gained two probes: the header at 19 widths with the Preview pill, the admin shield, the Ask tab and the
+  offline badge on and off (the name whole or hidden, nothing overlapping, no sideways scroll), and the Plan week's badges. The four README
+  screenshots were taken again, because they showed the cut name and the spread-out warning lines.
+* **A new README.** It is shorter and in plain words, with a link to try the demo in the browser right under the introduction and four
+  screenshots from the demo (`docs/screenshots/`). `tools/e2e/readme_shots.py` takes them again after a change to those screens.
+  `CLAUDE.md` and `AGENTS.md` gain a "Write for people" rule.
+* **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside the
+  other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings show up as
+  annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400 (1,052 findings in the
+  tree then), so `pyproject.toml` selects the earlier default explicitly (`[tool.ruff.lint] select = ["E4", "E7", "E9", "F"]`:
+  pycodestyle errors and pyflakes), which keeps the tree clean and means a ruff upgrade cannot change what CI checks; `target-version`
+  comes from `requires-python` (3.11). CONTRIBUTING.md asks for `ruff check .` before a push. `tests/test_deploy.py` keeps the pin, the
+  checked download, the step and the lock files free of ruff.
+* **The release run no longer goes red over long release notes.** GitHub refuses release notes over 125,000 characters, and 0.4.0's
+  (pasted from the rendered changelog, with its HTML) reached that cap, so the `release notes (image digest)` job's `gh release edit` got
+  a 422 after the image had already been built, scanned, signed and tagged. The job now counts the notes with the Image section first and,
+  if they would be too long, warns and prints the block to paste by hand. A test in `tests/test_deploy.py` runs the job's script against a
+  fake `gh` (short notes, too long, already there), and `docs/maintainers.md` says to paste the section as Markdown.
+* The GitHub Actions group was bumped (CodeQL's `init` and `analyze`, 4.38.2 to 4.38.3). pydantic 2.14's behaviour changes were read
+  against the app's models: none applies (no enum, `multiple_of`, `NameEmail`, `ByteSize`, `ZoneInfo`, `Decimal` or `Fraction` field, URL
+  type, or stdlib dataclass or `TypedDict` schema), and the locked 2.14.0 already passes the suite and the AI schema snapshots.
 
+### Security
+
+No entry in this release fixes a vulnerability that was reported against 0.4.0 or any released version. The security-relevant changes,
+collected from the entries above, are these; the model and the checks are in [docs/security.md](docs/security.md).
+
+* **A second kind of token, with its own scope.** Phone-shortcut tokens (`khd_`) are a separate family from assistant tokens (`kha_`). A
+  device token holds exactly one scope, `body:write`, which the person does not choose, and only `POST /push/v1/body` accepts it. `/mcp`
+  refuses a `khd_` token, `/push` refuses a `kha_` token, and every other route ignores the `Authorization` header (a device token is in
+  the tests that walk every `/api` route). It is stored as a SHA-256 hash, shown once, expires (30 days, 90 days or 1 year), and a person
+  holds at most 5. Making one needs a recent password and is limited to 20 tokens an hour. A password change or reset, a disabled or
+  deleted account, or an admin's **Revoke tokens** ends it at once, and the person can revoke it any time. The route can only add up to 50
+  plausible rows a request, 60 requests an hour, and answers with counts alone, so a leaked token reads nothing. The rows it added are
+  marked with the token, so the person can see them and delete them all in one step. It refuses a foreign `Origin`, a wrong token counts
+  as a failed sign-in for its address, with the switch off every request gets the same `401`, and `khd_` tokens are redacted from logs.
+* **The assistant's taste tool sits behind its own permission.** `set_food_preference` needs `assistant:prefs`, a separate tick that is off
+  by default; the tick gives no other power, saving food does not give it, and a phone-shortcut token can never hold it. `/mcp` does not
+  list the tool for any other token. A change needs a `request_key`, and repeating a key inside 24 hours changes nothing. At most 30
+  changes a day per token (counted in memory, so a restart empties it). Every change writes an audit row in the same transaction ("Assistant
+  remembered a taste": what it was, what it became, the token's name). The tool refuses Not for me for a food that treats a low and for a
+  kind of food that holds one, because that would take it out of the Treating a low options; a test in the safety set pins this. The app
+  cannot check that the assistant asked you first (see Known limitations).
+* **Reading a PDF adds a library, with its own gate.** pdf.js is vendored, not fetched: Apache-2.0, pinned by SHA-256 and checked weekly by
+  `vendor-check.yml`. The Content-Security-Policy gains a third named Trusted Types policy, `kh-pdf`, which starts the one bundled worker
+  file and nothing else; there is still no `'unsafe-eval'` and no `blob:`. The options given to pdf.js are an audited list (no URL, no
+  font or colour-profile downloads). The PDF stays on the device; only the pages a person ticks, drawn as pictures, go to the local AI,
+  under the consent and checks a photo already has. A lab report never reaches a cloud AI.
+* **Archives are opened on the device, and strictly.** The `.zip` reader checks the end record, zip64 and the directory before it believes
+  anything, requires an entry's local header to agree with the directory, caps the directory (32 MiB, 200,000 entries), refuses an
+  encrypted entry, and counts and checksums (CRC-32) the bytes as they are inflated, so an entry that outgrows its declared size is
+  stopped. The server receives no archive and gained no route for one.
+* **Header changes.** `trusted-types kh-sw kh-xml kh-pdf` (it was `kh-sw kh-xml`). `/push/v1/body` joins `/mcp` as a path that reads a
+  bearer token and never the sign-in cookie, and gets the same `Origin` check on every method. Everything else in the headers is unchanged.
+* **Health numbers stay on your server, and the shortcut route takes nothing else.** Weights, blood pressure readings and what a shortcut
+  sends are never sent to an AI provider or the assistant ([docs/privacy.md](docs/privacy.md)). The shortcut route refuses any field other
+  than weights and readings (`glucose`, `insulin`, a medicine) with a `400`, and the Health import reads only weights and blood pressure.
+* **The API document and `GET /api/meta` expose no secret.** `GET /api/meta` is for signed-in people only and holds no secret, host or
+  other person's data. The checked-in OpenAPI document lists routes and shapes. The live `/openapi.json` and `/docs` stay off unless
+  `ENABLE_API_DOCS` is on.
+
+### Known limitations
+
+What is built and tested here but not yet verified outside it. The things marked *owner* need the maintainer's own hardware, keys or
+accounts; the list of checks is in [docs/maintainers.md](docs/maintainers.md) and everything deferred is in
+[docs/ROADMAP.md](docs/ROADMAP.md).
+
+* **Not yet tried on a real iPhone (*owner*).**
+  * **The Shortcut recipe.** The handbook's "From a phone shortcut" is written from Apple's guide. The Shortcuts action names and their
+    order, that a personal automation runs without asking, and that the phone reaches the server from where it is used have not been
+    checked on a real iPhone. The tests and the browser walk (`tools/e2e/push.py`) post the way a Shortcut would.
+  * **A real Health `export.zip`.** The `.zip` reader, the weights and blood pressure import and the lab-record import were written
+    against archives and files that the tests build, in the formats Apple documents. What Apple's archiver really writes (its methods,
+    zip64, the `__MACOSX` extras) and what a real `export.xml` holds that the reader skips (units, a watch's readings) are not known. The
+    reader turns away what it does not understand with a plain reason.
+  * **Real files from a patient portal.** The C-CDA importer was written against hand-made samples that follow the published formats.
+    Real downloads from MyChart and one more portal have not been tried, so a code, unit or section a real file has may be skipped (the
+    headline counts what was skipped).
+  * **Real lab PDFs on a local model.** Reading a PDF is tested with generated PDFs and a fake AI. A real report from a portal (Quest,
+    Labcorp, a hospital) on a real local vision model, in Safari on an iPhone and in a desktop browser, has not been tried, so which
+    units and dates a model misreads is unmeasured. A scan made of JPEG 2000 or JBIG2 pictures can come out blank, and the PDF's own text
+    layer is not read.
+  * **The device matrix.** Installing, the live camera, the offline outbox, offline edits and a conflict from a second device, the Ask
+    microphone, a phone's own file picker for the imports, VoiceOver and TalkBack were checked in Chromium (fake camera and microphone,
+    emulated offline), not on an iPhone, an iPad or an Android phone. The Trusted Types policies are exercised only by Chromium here.
+* **Screens that are still a little off.** On a phone, **Profile**'s two-box rows (Daily targets, About you) can sit at different heights
+  when one label wraps; an attempt to fix it crowded the hints under the boxes, so it was left. For an admin (the shield button next to
+  Settings), and in the demo with its Preview pill, the header on a phone has no room for the app's name, so only the logo shows. On Today with an empty log, the
+  full stop after "Choose them in Profile" sits a little apart from its link.
+* **Left open by the entries above.**
+  * A shortcut's reading of 180/120 or higher is flagged, with Get help now, only the next time the app is opened; the app does not watch
+    what a shortcut sends.
+  * The assistant's taste tool: asking you first is the assistant's job, and the app cannot enforce it (the tool's description and the
+    server's instructions tell the model to). A taste set for a *kind* of food has no "from your assistant" mark in the preferences screen
+    (only in your activity list). The 30-a-day limit is counted in memory.
+  * The screens do not read `GET /api/meta` yet; they keep their own copies of the nutrient lists.
+  * Safari before 16.4 cannot open a `.zip` and shows the unzip advice. The Health `export.xml`'s `ClinicalRecord` entries and a "pick a
+    folder" chooser are not built.
+  * The demo has no server to send a phone shortcut to.
+* **Still true from 0.4:**
+  * **The handbook is still a draft, and the rules still await review.** Every handbook page shows "Draft: not yet reviewed by a
+    clinician" until a named reviewer signs it off (the open questions are in `handbook/REVIEW.md`). The rules marked "Expert opinion"
+    in the target suggestions, the meal guidance's per-meal caps and score weights, the potassium-additive rule, the default
+    carbohydrate tolerance (10 g) and the 10 % ceiling of the "about" tolerance also wait for a renal dietitian or nephrologist. The
+    plausible ranges of weights and blood pressure readings are the project's own choice, not clinical numbers, and the handbook's blood
+    pressure lines are as unreviewed as the rest of it. Keep `targets.lab_rules_enabled` off on a public demo server.
+  * **No AI model is recommended yet.** Every AI feature was tested against fake providers through the real network code, not against a
+    live Ollama, OpenAI, OpenRouter or Hermes Agent. The live evaluations for the current `PROMPT_VERSION` (`2026-10-21.1`),
+    `python scripts/ai_eval.py` and `python scripts/ai_eval.py --chat` with the model in use, have not been run (*owner*). Speech to text
+    is untested against a real server, and the local whisper overlay ships with a placeholder image digest.
+  * **Raspberry Pi speed is estimated, not measured** (*owner*). `scripts/bench_guidance.py` has not been run on a Raspberry Pi 4 or 5.
+  * **Python 3.15 is in the image only.** `deploy/Containerfile.debian` (the fallback) and the throw-away handbook build stage stay on
+    Python 3.14 until PyYAML publishes a cp315 wheel. The handbook is still built with MkDocs and Material; moving to Zensical waits for
+    a Zensical release that passes the CI canary, before Material's security fixes end (November 2026 at the earliest).
+  * **Signatures need a public repository.** Release signing, provenance and SBOM attestations, and CodeQL run only while the GitHub
+    repository is public; `scripts/verify-image.sh` fails for an image released while it was private.
+  * **Offline is for the food log.** New entries, and edits and deletes of entries, work without a connection. Profile and target
+    changes (on purpose: a care team's targets must not be overwritten by a stale copy), weights and blood pressure, lab results,
+    symptoms, food preferences, settings, barcode lookups, AI and new guidance answers need a connection; the Treating a low card still
+    works, and handbook pages work offline only once opened on that device.
+  * **The kidney-only profile is partly done.** The app and the AI prompts follow a profile with *Diabetes: None*, but the handbook's
+    framing and the app's one-line description in the page metadata and the web app manifest ("for a renal diet with type 1 diabetes")
+    are the owner's wording to choose.
+  * English only; one SQLite file per server; no reminders or notifications; no OIDC sign-in and no second factor yet
+    ([docs/ROADMAP.md](docs/ROADMAP.md) lists what is planned, and the owner's next step, a native iPhone app that syncs Apple Health).
 
 ## 0.4.0 — 2026-10-22
 
