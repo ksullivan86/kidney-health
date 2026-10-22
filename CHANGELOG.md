@@ -5,7 +5,122 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.4.0 — 2026-10-21
+
+Version 0.4 adds an assistant you can talk to (the **Ask** chat inside the app, with your voice if you set up speech to text, and
+an MCP server for a chat assistant you already use), health data you can bring in (lab results from a spreadsheet, the iPhone
+Health app, a patient-portal file or a photo of a report; your own export into another server), a symptoms log and a one-page
+visit prep, edits and deletes that work offline, an AI whose reach you choose per feature (your own network, the cloud, or off), and
+meal guidance that learns what you like. It also folds in the follow-ups made after 0.3.0 (Server administration on its own page,
+carbohydrate and "about" tolerances, "Not chosen yet" in the profile, the online demo). As in 0.3, everything that sends data off your server is
+**off until an admin turns it on**, and each person decides for themselves.
+
+**Before you upgrade, read [Upgrading from 0.3](#upgrading-from-03-read-this-first).** The first start migrates the database
+(schema steps 8 to 17); take a backup first.
+
+### Highlights
+
+* **Ask: a chat inside the app, by text or voice** (an admin turns it on). Type "How much potassium do I have left today?" and the
+  assistant looks up your own targets and log with the app's read-only tools. A low or an emergency in your message is answered by
+  the app's own Treating a low or Get help now card without asking the AI, and every answer is checked in code before you see it
+  ([docs/assistant.md](docs/assistant.md#the-ask-screen-the-chat-inside-the-app)). With a speech-to-text server you set up, a
+  microphone turns your words into text for you to read and fix; the reply can be read aloud with a voice built into your device.
+* **Save from the chat, with a trust setting you control.** By default Ask shows a card and saves only when you press Save. If you
+  would rather not confirm every time, an admin can allow "Trust it for this conversation" or "Trust it always"; every save then
+  shows Undo, and the app's numbers, the low and emergency rules and the dose checks stay on.
+* **An assistant of your own, through MCP.** Settings → Assistant access makes personal tokens so a chat assistant you already use
+  (Open WebUI, a Hermes Agent profile) can ask the app for your numbers instead of guessing them: today's figures, a food search,
+  "check this meal", and a safety check. It reads only, unless you tick "Can also save food and recipes" for that token.
+* **Symptoms log and visit prep.** Write down a symptom with a severity; the app records and shows it and never says what it
+  means (the two handbook warning signs show the handbook's own words). **Trends → Get ready for a visit** makes one page to print or
+  save as a PDF: averages against your targets, your latest lab results, your symptoms, your own questions and the handbook's
+  checklist. Nothing is sent anywhere.
+* **Bring your results in.** Lab results from a spreadsheet (CSV), from the iPhone Health app's clinical records, from a
+  patient-portal C-CDA file (all read on your device; nothing is uploaded) and from a photo of a report (only on an AI on your own
+  network); you tick what to keep. **Import from a file** also takes the `export.json` of your own export into another server.
+* **Edit and delete without a connection.** Changing or deleting an entry that is already on your server now waits on the device
+  and is sent in order; if it was changed on another device meanwhile, nothing is overwritten and you choose.
+* **Privacy tiers for the optional AI.** An admin can keep two AIs, one on your own network and one in the cloud, and pin each
+  feature (photos, meal ideas, describe a meal, Ask) to local, cloud or off; the default is the least trusting one (local). Photos,
+  meal ideas and describe a meal can also try the local AI first and go to the cloud only when the local answer fails the app's
+  checks. Reading a lab report photo never goes to a cloud AI.
+* **Meal guidance learns what you like.** *More like this*, *Less often* and *Not for me* on any suggestion, likes and dislikes by
+  kind of food, and what the app notices in your log ("Eaten on 6 of the last 14 days"), each with its reason and each removable.
+  Tastes only reorder what already fits your limits; they never relax a limit, hide a warning or touch the Treating a low card. Ask
+  can offer to remember a taste you mention (always as a card), and the optional AI is told, by name, what you marked.
+* **No diabetes, no carbohydrate goals.** A profile with *Diabetes: None* shows no per-meal carbohydrate goal or alert, and the AI
+  instructions follow your profile instead of assuming type 1 diabetes. A new account's kidney stage and diabetes type read "Not
+  chosen yet" until you choose.
+* **Everyday improvements.** Carbohydrate and "about" tolerances; warnings when potassium, sodium or fluid run high over several
+  days; Server administration on its own page; "Add this day to my plan" on the handbook's sample menus; handbook pages you have
+  opened work offline; an online demo beside the handbook that can keep your data in your browser if you choose.
+* **For people who run a server.** The image now runs Python 3.15 (and is about 1 MB smaller); the Kubernetes base is
+  cluster-neutral with an example overlay; `app.admin backup --dir --keep` for backup tools; each release's notes carry the image
+  digest; an optional local speech-to-text overlay with no route to the internet.
+
+### Upgrading from 0.3 (read this first)
+
+1. **Back up `kidney.db` first.** The first start migrates the database in place (schema 7 → 17: steps 8 to 17), each step in its
+   own transaction. Unlike the 0.2 → 0.3 step, none of them makes an automatic copy. For example, with the running container:
+   `podman exec kidney-health python -m app.admin backup /data/before-0.4.0.db` (or `backup --dir DIR --keep N` for a backup tool).
+   What the steps add, nothing removed: 8 "Not chosen yet" in the profile (existing profiles count as chosen), 9 the tolerance for
+   "about" targets, 10 assistant tokens, 11 and 13 the duplicate guards of the assistant's and Ask's saves (hashes only), 12, 14 and 16
+   rebuild `ai_consents` so the consent purposes `chat`, `voice` and `labs` can be stored (every consent is kept), 15 symptoms, 17 the
+   source and update time of food preferences. To go back to 0.3, restore the backup you took; 0.3 is not tested on a database that
+   0.4 has migrated, and anything entered after the upgrade is lost.
+2. **Change the image tag from `:0.3` to `:0.4`.** The minor tag does not move to the next minor on its own, so a host that tracks
+   `:0.3` stays on 0.3.x until you change it. The shipped Quadlet unit, compose file and Kubernetes base already say `:0.4`; or pin
+   the digest in the release notes after `scripts/verify-image.sh 0.4.0`. `:latest` follows releases, so a host that auto-updates
+   `:latest` upgrades itself at its next pull ([docs/deployment.md, "From v0.3 to v0.4"](docs/deployment.md#from-v03-to-v04)).
+3. **The image base moved to Python 3.15** (Chainguard's free `python:latest` moved up from 3.14, and the old 3.14 digests no longer
+   get security updates). Nothing to do when you pull. If you build the image yourself, `deploy/Containerfile` has the new digests;
+   `deploy/Containerfile.debian` (the fallback) and the throw-away handbook build stage stay on Python 3.14 for now.
+4. **Kubernetes:** the base in `deploy/k8s` is cluster-neutral now. If you applied it directly after editing it, copy
+   `deploy/k8s-overlays/example/`, move your values (`PUBLIC_URL`, `TRUSTED_PROXIES`, the ingress namespace, the route) into it
+   and apply the overlay: the base alone now lets no traffic in and trusts only loopback.
+5. **Headers.** The app's Content-Security-Policy now ends `trusted-types kh-sw kh-xml` (it was `kh-sw`), and `Permissions-Policy`
+   allows the microphone for the app's own origin (`microphone=(self)`, it was `microphone=()`). If a reverse proxy sets your CSP
+   instead of the app, add `kh-xml` there, or the patient-portal lab import cannot read any file; if it sets your
+   `Permissions-Policy`, allow `microphone=(self)` there for voice input.
+6. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and local-then-cloud routing are all off until
+   an admin turns them on. On a server that already had a shared AI provider, every AI feature keeps the old rule (`any`: the
+   provider each person chose) until an admin picks a route, and the admin table says "Routing is not set up yet"; a new server
+   starts every feature on `local`, which is off until a local AI exists. Reading a lab report photo starts on `local` everywhere,
+   which is off while no local AI exists.
+7. **Things that behave differently without you changing anything:**
+   * Meal guidance learns from the log: **Settings → Meal guidance → Learn from my log** is on by default, so suggestions can be
+     reordered a little by foods eaten often or planned and passed over, and by anything a person marks *More like this*, *Less
+     often* or *Not for me*. A person switches it off there; it never changes a limit or the Treating a low card.
+   * Today: a meal's carbohydrate is "over" only more than the carbohydrate tolerance (10 g by default) above the meal's goal, and
+     carbohydrate eaten to treat a low is left out of the meal's goal. New warnings appear when planned food runs potassium,
+     sodium or fluid over your limit again after 2 of the 3 days before, or phosphorus or protein above the target over a week.
+   * A new account's Profile shows "Not chosen yet" for the kidney stage and diabetes type (the app keeps using stage 3b and type 1
+     for targets until then); existing profiles count as chosen.
+   * Server administration is its own page (the shield button next to Settings), Settings holds personal settings only, and the
+     text for AI ideas moved from Settings → AI ideas to Settings → Meal guidance → Your food preferences.
+   * The AI instructions changed (`PROMPT_VERSION` is `2026-10-21.1`): they follow the profile, a taste list is added for meal ideas
+     and Ask, and a stage or diabetes type not chosen yet is sent as "not chosen yet". Nothing about lows or doses changed.
+   * The data export gains `builtin_foods`, `symptoms` (and `symptoms.csv`) and all four food-preference values; the export version
+     stays 1 and older files still import. Every log entry in an API answer carries a `version`; `PUT` and `DELETE /api/log/{id}`
+     take an optional `If-Match`, and without it behave as before.
+   * `requirements.txt` and `requirements-dev.txt` are gone; install from the hash-locked files
+     (`pip install --require-hashes --no-deps -r requirements-dev.lock`).
+
+**New optional settings** (all off or at a safe default; the full list is in
+[docs/deployment.md](docs/deployment.md#configuration) and `app/config.py`; settings not set in the environment can be changed in
+Server administration → Server settings):
+
+| Area | Settings |
+|---|---|
+| Assistant access | `ASSISTANT_ENABLED` (off): personal tokens and `POST /mcp` |
+| Ask | `AI_CHAT_ENABLED` (off), `AI_ALLOW_TRUSTED_SAVES` (off) |
+| Voice for Ask | `AI_VOICE_ENABLED` (off), `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY_FILE` (write-only), `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100 recordings per person per day), `STT_MAX_AUDIO_BYTES` (1.5 MiB); all `STT_*` values are environment-only |
+| Which AI each feature uses | `AI_PROVIDER_ROLE` (`local` or `cloud`, environment only), `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE` (`local`, `cloud`, `off`, `any` or `local_then_cloud`), `AI_ROUTE_CHAT` (no `local_then_cloud`), `AI_ROUTE_LABS` (`local` or `off` only); defaults `local` |
+| Limits | `MAX_IMPORT_BYTES` (16 MiB, only for `POST /api/me/import`) |
+| Tools | `python -m app.admin backup --dir DIR --keep N`; `deploy/compose.stt-whisper.yaml` (optional local speech to text) |
+
+`deploy/compose.yaml` passes `ASSISTANT_ENABLED`, `AI_PROVIDER_ROLE` and the `AI_ROUTE_*` settings through; the other switches are
+changed in Server administration, and the `STT_*` values go in your own environment (or come from the whisper overlay).
 
 ### For people using the app
 
@@ -179,7 +294,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   you to check. Every change of your choice, and every save by Ask, is in your activity list (saves read "with Ask").
 * **Assistant access tokens** (when the admin turns assistant access on). **Settings → Assistant access** makes
   personal tokens for a chat assistant you connect: it may read your own food log and targets and cannot change
-  anything unless you tick **Can also save food and recipes** (off by default; see below). Give a token a name
+  anything unless you tick **Can also save food and recipes** (off by default; see the next entry). Give a token a name
   and an expiry (30 days, 90 days or 1 year); it is shown once, with **Copy token**, and never again. The list shows when each token was made, last used and expires; **Revoke** ends one
   at once, and you can have 5 at a time. Changing your password, a password reset, or your account being
   disabled or deleted revokes all of them; your activity list shows when tokens were made and revoked; see
@@ -190,19 +305,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   amount, its warnings, the totals and your day as if you had planned it; nothing is saved), and a safety check
   of every message that shows the app's **Treating a low** card (with your own grams) or **Get help now** first.
   Unknown values stay unknown, and the assistant gets no doses or medicine advice from the app. A token reads
-  only, unless you made it with **Can also save food and recipes**. [docs/assistant.md](docs/assistant.md)
-  explains how to connect it, the system prompt to give it, and its honest limits: the app cannot check what
-  the chat model finally says, and a cloud model sees what you type and what the app answers.
-* **An assistant that can save food and recipes (optional, per token).** Tick **Can also save food and recipes**
-  when you make a token (the list then says "Read and save" instead of "Read only"; a token cannot be changed
-  later). The assistant can then add food to your log, eaten or planned, for a meal and day, and save a recipe
-  as a saved meal (the ingredients for the whole recipe; its note says how many servings it makes and keeps the
-  source link as text, which the app never opens). It is told to read the items back and wait for your yes, and
-  to say what it saved. If any food is unclear nothing at all is saved and it asks you. Food you say you ate to
-  treat a low is saved like any other entry and never delayed or warned about. A USDA food it finds is added to
-  your food list first, as the Food screen's import would. Everything it saves is an ordinary entry or saved meal
-  you can edit or delete, and your activity list shows each save with the token's name. It cannot edit or
-  delete anything.
+  only, unless you tick **Can also save food and recipes** when you make it (the list then says "Read and save"
+  instead of "Read only"; a token cannot be changed later): the assistant can then add food to your log, eaten or
+  planned, for a meal and day, and save a recipe as a saved meal (the ingredients for the whole recipe; its note says
+  how many servings it makes and keeps the source link as text, which the app never opens). It is told to read the
+  items back and wait for your yes, and to say what it saved. If any food is unclear nothing at all is saved and it
+  asks you. Food you say you ate to treat a low is saved like any other entry and never delayed or warned about. A USDA
+  food it finds is added to your food list first, as the Food screen's import would. Everything it saves is an ordinary
+  entry or saved meal you can edit or delete, and your activity list shows each save with the token's name. It cannot
+  edit or delete anything. [docs/assistant.md](docs/assistant.md) explains how to connect it, the system prompt to give
+  it, and its honest limits: the app cannot check what the chat model finally says, and a cloud model sees what you type
+  and what the app answers.
 * Opening a sheet (Quick add, an entry, the scanner) no longer pulls the cursor out of a field you have
   already started typing in: the first field gets the focus a moment after the sheet opens only if you
   have not moved to another one.
@@ -218,7 +331,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   there is left out, so importing the same file twice adds nothing. Your profile, targets and meal-guidance
   settings are replaced only if you also tick **Also replace my profile, targets and settings** (off by
   default: you may have agreed them with your care team on this server). The numbers of an imported entry are
-  recalculated from its food and servings, as for any entry. The preview says it works in the installed app
+  recalculated from its food and servings, as for any entry. The demo explains this and, with **Keep my data in this browser** on, imports like a server
   ([docs/privacy.md](docs/privacy.md), handbook *Your data*).
 * **Handbook pages work offline once opened.** The app keeps a copy of each handbook page you open (and
   what it needs to show), so **Learn** pages you have read before open without a connection, for example
@@ -293,6 +406,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **The AI instructions changed: `PROMPT_VERSION` is `2026-10-21.1` (it was `2026-10-07.1`).** The meal-ideas and Ask instructions are
+  worded from the person's profile, Ask has a chat protocol and saving tools, lab report photos have a task line, and food preferences
+  add a taste list. The rules about lows, doses and medicines are the same text for every profile. If you choose a model for Ask or
+  meal ideas, run the golden set with it (`python scripts/ai_eval.py` and `python scripts/ai_eval.py --chat`,
+  [docs/ai.md](docs/ai.md#for-contributors)); the project's own live run for this version is still to do.
 * **Schema step 17** (`food_preferences.source` and `updated_at`, back-filled; nothing is removed) runs at the next start,
   in one transaction. Take a backup first as for any upgrade. The "Not for me" routes keep their shapes; new routes are
   `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}` and `GET /api/guidance/learned`.
@@ -333,8 +451,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   feature is off. A server upgraded from an earlier version starts it on `local` even though its other features start on
   `any`. **Schema step 16** rebuilds `ai_consents` so the new consent purpose `labs` is allowed (every existing consent is
   kept; back up before upgrading, as always). `POST /api/ai/read-lab-report` is the new route (raw JPEG body, `?dry_run=true`);
-  it counts in `ai.shared_daily_limit`; the AI activity row keeps no copy of the AI's answer. `PROMPT_VERSION` is
-  2026-10-15.4. The admin's routing table shows only Local and Off for that row. See [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
+  it counts in `ai.shared_daily_limit`; the AI activity row keeps no copy of the AI's answer. The admin's routing table shows
+  only Local and Off for that row. See [docs/ai.md](docs/ai.md#which-ai-does-each-feature-use).
 * **Which AI does each feature use? (privacy tiers, tier 1).** You can now keep **two shared AI providers at once**, a
   *local* one on your own network (Ollama on a home GPU) and a *cloud* one, and pin each feature (**photos**, **meal
   ideas**, **describe a meal**, **Ask**) to *local*, *cloud* or *off*: Server administration → AI providers → *Which AI
@@ -376,17 +494,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   gate, the timeout and the AI activity list. **The AI activity rows of Ask keep no request, answer or message
   text** (only the step, the tool name and the outcome), whatever `AI_AUDIT_RETENTION_DAYS` says, and the
   conversation is not stored on the server. **Schema step 12**: the table `ai_consents` is rebuilt so a consent for
-  the new purpose `chat` can be stored (every consent is kept; as always, back up before upgrading).
-  `PROMPT_VERSION` is
-  2026-10-15.1 (the Ask prompt): run `python scripts/ai_eval.py --chat` with your provider to see how well its model
-  follows the one-JSON-step protocol. Small local models may not; see [docs/ai.md](docs/ai.md).
+  the new purpose `chat` can be stored (every consent is kept; as always, back up before upgrading). Run
+  `python scripts/ai_eval.py --chat` with your provider to see how well its model follows the one-JSON-step protocol.
+  Small local models may not; see [docs/ai.md](docs/ai.md).
 * **Let people trust Ask to save without asking** is a new switch, **off by default**: Server administration → Server
   settings → Optional AI → *Let people trust Ask to save without asking*, or `AI_ALLOW_TRUSTED_SAVES=true`. It needs Ask
   on. While it is off, every save the assistant asks for in Ask is a card the person presses Save on, whatever people
   chose before (their choice is kept and applies again if you turn it on). **Schema step 13**: a new table,
   `assistant_ask_keys`, remembers for 24 hours (as hashes) which chat request already saved, so a request sent twice
-  saves once; nothing existing changes (as always, back up before upgrading). `PROMPT_VERSION` is 2026-10-15.2 (the Ask
-  prompt now allows `log_food` and `save_recipe`): run `python scripts/ai_eval.py --chat` with your provider again.
+  saves once; nothing existing changes (as always, back up before upgrading).
 * **Assistant access** is a new switch, **off by default**: Server administration → Server settings → Optional
   AI → *Assistant access (personal tokens for a chat assistant)*, or `ASSISTANT_ENABLED=true` (passed through by
   `deploy/compose.yaml`). While it is off nothing changes for anyone (members do not see the Settings card) and
@@ -454,7 +570,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   an optional storage class and the image pin). **Upgrade note:** if you applied `deploy/k8s` directly
   after editing it, copy the example overlay, move your values into it and apply the overlay: the base
   alone now lets no traffic in and trusts only loopback. Own overlays under `deploy/k8s-overlays/` are
-  ignored by git; a GitOps repository can use the base remotely (`//deploy/k8s?ref=v0.3.1`). CI renders
+  ignored by git; a GitOps repository can use the base remotely (`//deploy/k8s?ref=v0.4.0`). CI renders
   and validates both.
 * Docs: the optional AI is introduced in three questions (which model answers, what it may do, whose
   key pays and who can read the request), with a recommended starting setup for a home server with
@@ -562,8 +678,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   rules and the `hypo` purpose note are the same text for every profile (a test compares them across three profiles);
   `TASK_SYSTEM_PROMPT` (describe a meal, label, plate) is one fixed sentence with no profile data. `person_block` sends null
   for a stage or diabetes type not chosen yet; `targets_block(meal_carbs=False)` leaves the per-meal and per-snack carbohydrate
-  goals out for diabetes "None". **This made `PROMPT_VERSION` `2026-10-15.3` (the lab report photos made it `.4`): the owner runs the golden set with a live model for the current one**
-  (command in [docs/ai.md](docs/ai.md#for-contributors)). Tests: `tests/test_ai_prompts.py` (snapshots
+  goals out for diabetes "None". This made `PROMPT_VERSION` `2026-10-15.3` (lab report photos made it `.4`, food preferences `2026-10-21.1`): the owner runs the golden set
+  with a live model for the current one (command in [docs/ai.md](docs/ai.md#for-contributors)). Tests: `tests/test_ai_prompts.py` (snapshots
   `tests/fixtures/ai/prompts_*.txt` for type 1 with CKD 4, kidney-only stage 3b and not chosen yet),
   `tests/test_ai_profile_prompts.py`, the golden cases `tests/ai_golden/kidney-only-*.json` (one per feature) and the
   `chat-kidney-only-*` questions of `scripts/ai_eval.py`. No code path of the safety rules changed.
@@ -629,7 +745,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   exact path in `app.security.BEARER_PATHS` (no cookie CSRF checks, the Origin rule kept), and
   `tests/test_auth_coverage.py` holds it to being the only write route outside `/api`. `tests/test_mcp.py` covers
   the protocol, auth and every tool; `python tools/e2e/mcp_smoke.py` speaks the protocol to a real server.
-* **Menu days to the app (ROADMAP v0.4, note 08 §4.10).** `scripts/build_handbook.py` writes a plain link under each
+* **Menu days to the app (note 08 §4.10).** `scripts/build_handbook.py` writes a plain link under each
   generated menu day, `#plan-menu?items=b173905x1,…` (`<meal letter><fdc_id>x<servings>`: built-in foods only, at most
   40, no personal data, no numbers the app would trust) and fails a day the link cannot carry. The MkDocs hook
   `handbook/tools/menu_links.py` points it at the app (`HANDBOOK_APP_LINK`), at the Pages demo or drops it.
@@ -648,6 +764,84 @@ the API. Security fixes are released as patch versions of the newest minor versi
   line in `scripts/lock.sh`; the locks themselves are unchanged. GitHub's Dependabot dependency graph
   reads every `requirements*.txt` and `*.in` file and failed on lines naming a `*.lock` file, which it
   never fetches. A test now keeps those files free of such lines.
+
+### Security
+
+No entry in this release fixes a vulnerability that was reported against 0.3.0 or any released version. The security-relevant
+changes, collected from the entries above, are these; the model and the checks are in [docs/security.md](docs/security.md).
+
+* **Two header changes.** `trusted-types kh-sw kh-xml` (a second named policy, created in one file, that passes only XML without
+  a DOCTYPE or ENTITY declaration: the browser's XML parser is a Trusted Types sink) and `Permissions-Policy: microphone=(self)`
+  (it was `microphone=()`; the camera was already allowed for the app's own origin). Everything else in the headers is unchanged.
+* **A new credential, built to be small.** Assistant tokens are stored as SHA-256 hashes, shown once, expire (30 days, 90 days or 1
+  year) and are revoked at once by changing or resetting the password, disabling or deleting the account, or an admin's
+  **Revoke assistant tokens**. Only `POST /mcp` accepts one (never the rest of `/api`, never the sign-in cookie), it refuses a
+  foreign `Origin`, it allows 60 requests a minute per token, and a refused token counts as a failed sign-in for its address.
+  Saving needs a second scope that is off by default. `tests/test_auth_coverage.py` walks every `/api` route with a valid token.
+* **The Ask chat is checked in code.** The app answers a low or an emergency itself, and checks every answer (text policy, dose
+  check, number check, links removed); the activity rows keep no request or answer text; saving without asking needs an admin
+  switch, a warning and gives Undo; a taste Ask offers to remember is always a card.
+* **Untrusted files are validated, not trusted.** `POST /api/me/import` checks every record against the API's own limits and
+  refuses the whole file on the first problem, needs a recent password, is limited to 20 requests an hour and has its own body limit
+  (`MAX_IMPORT_BYTES`); passwords, sessions, tokens, keys and AI activity are never imported even if a file has them. Health files
+  (the CSV, Apple Health and C-CDA imports) are read on the device and nothing is uploaded; the server has no XML parser.
+* **Outbound calls keep one gate.** The speech-to-text server is called through the same SSRF-checked transport and private-host rules
+  as AI providers, so there is no new outbound path; the *local* AI role is limited to private addresses, re-checked before each call;
+  a lab report photo never reaches a cloud AI or a person's own provider; recordings are never written to disk or logged.
+* **A supported base image.** The image moved to Python 3.15 because the 3.14 digests of Chainguard's free tier no longer get
+  security updates.
+
+### Known limitations
+
+What is built and tested here but not yet verified outside it. The things marked *owner* need the maintainer's own hardware, keys or
+accounts; the list of checks is in [docs/maintainers.md](docs/maintainers.md) and everything deferred is in
+[docs/ROADMAP.md](docs/ROADMAP.md).
+
+* **The handbook is still a draft, and the rules still await review.** Every handbook page shows "Draft: not yet reviewed by a
+  clinician" until a named reviewer signs it off (the open questions are in `handbook/REVIEW.md`). The rules marked "Expert opinion"
+  in the target suggestions, the meal guidance's per-meal caps and score weights, the potassium-additive rule, the default
+  carbohydrate tolerance (10 g) and the 10 % ceiling of the "about" tolerance also wait for a renal dietitian or nephrologist. The
+  red-flag words of the symptoms log are the handbook's own and are as unreviewed as it is. Keep `targets.lab_rules_enabled` off
+  on a public demo server.
+* **No AI model is recommended yet.** Every AI feature was tested against fake providers through the real network code, not against
+  a live Ollama, OpenAI, OpenRouter or Hermes Agent. The live evaluations for the current `PROMPT_VERSION` (`2026-10-21.1`),
+  `python scripts/ai_eval.py` and `python scripts/ai_eval.py --chat` with the model in use, have not been run (*owner*), so how well
+  a model follows Ask's one-JSON-step protocol, keeps tastes out of first place or reads a real lab report (units and dates a
+  vision model misreads) is unmeasured. `scripts/ai_eval.py` does not exercise the routes, so the local-then-cloud fallback was only
+  tried with two fake providers. Hermes Agent's tool check follows its documented API and was not tried against a live agent.
+* **Not yet tried on real devices.** Installing, the live camera, HEIC photos, the offline outbox, **offline edits and a conflict
+  made from a second device**, the Ask microphone (iOS Safari, Android Chrome), VoiceOver and TalkBack were checked in Chromium (fake
+  camera and microphone, emulated offline), not on an iPhone, an iPad or an Android phone (*owner*). The `kh-xml` Trusted Types
+  policy is exercised only by Chromium here. The live camera still needs HTTPS.
+* **Real health exports have not been read.** The Apple Health and patient-portal C-CDA importers were written against
+  hand-made samples that follow the published formats; a real Health export from an iPhone and real files from MyChart and one more
+  portal have not been tried (*owner*), so a code, unit or section a real file has may be skipped (the headline counts what was
+  skipped). The "entries optional" results template (`…2.3`) rests on HL7's own example and a second source, because its R2.1
+  definition page could not be fetched; a result a portal puts only on the organizer's `effectiveTime` is not read.
+* **Speech to text is untested against a real server.** The local whisper overlay (`deploy/compose.stt-whisper.yaml`) ships with a
+  placeholder image digest that the person deploying it must verify, and has not been run with a real container.
+* **Lab reports: photos, not PDFs.** The photo or a screenshot works (on the local AI only); uploading the PDF itself is not built.
+  Importing the export `.zip` directly is not built either: **Import from a file** takes the `export.json` inside it (the demo's
+  export gives the JSON only).
+* **Offline is for the food log.** New entries, and now edits and deletes of entries, work without a connection. Profile and target
+  changes (on purpose: a care team's targets must not be overwritten by a stale copy), lab results, symptoms, food preferences,
+  settings, barcode lookups, AI and new guidance answers need a connection; the Treating a low card still works, and handbook
+  pages work offline only once opened on that device.
+* **Raspberry Pi speed is estimated, not measured.** Guidance requests take tens of milliseconds on an x86 machine (food
+  preferences added one indexed query per request) and the browser copy stays under its 200 ms budget with the CPU slowed down 4×, but
+  `scripts/bench_guidance.py` has not been run on a real Raspberry Pi 4 or 5 (*owner*; lower `GUIDANCE_POOL_PER_ROLE` if a Pi 4 is
+  too slow, [docs/guidance.md](docs/guidance.md#performance)).
+* **Python 3.15 is in the image only.** `deploy/Containerfile.debian` (the fallback) and the throw-away handbook build stage stay on
+  Python 3.14 until PyYAML publishes a cp315 wheel; on 3.15 CI skips the two test files that read YAML. The handbook is still built
+  with MkDocs and Material; moving to Zensical waits for a Zensical release that passes the CI canary, before Material's security
+  fixes end (November 2026 at the earliest).
+* **The kidney-only profile is partly done.** The app and the AI prompts follow a profile with *Diabetes: None*, but the handbook's
+  framing (reviewed content) and the app's one-line description in the page metadata and the web app manifest ("for a renal diet with
+  type 1 diabetes") are the owner's wording to choose.
+* **Signatures need a public repository.** Release signing, provenance and SBOM attestations, and CodeQL run only while the GitHub
+  repository is public; `scripts/verify-image.sh` fails for an image released while it was private.
+* English only; one SQLite file per server; no reminders or push notifications; no OIDC sign-in and no second factor yet
+  ([docs/ROADMAP.md](docs/ROADMAP.md) lists what is planned).
 
 ## 0.3.0 — 2026-10-07
 

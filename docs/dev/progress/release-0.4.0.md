@@ -26,9 +26,15 @@ Base: `a8dd85d` (Learn my food preferences, part C, #62), branch `worktree-agent
   `scripts/verify-image.sh` usage, a release.yml comment. Left alone on purpose: test fixtures that pass "0.3.0" to pure
   functions (`test_off_mapping.py`, `test_ai_client.py`, `import_vectors.json` app_version), "v0.3.0 review" comments.
 
+* Step 2 (CHANGELOG): `## 0.4.0 — 2026-10-21` with intro, Highlights, "Upgrading from 0.3 (read this first)" (backup, tag
+  `:0.3` -> `:0.4`, Python 3.15, Kubernetes base, headers, defaults that change, new-settings table), the three audience
+  subsections kept as the detail (the two assistant bullets merged, PROMPT_VERSION notes consolidated into one server bullet,
+  `ref=v0.3.1` -> `v0.4.0`), Security (no vulnerability fix: states that and lists the security-relevant changes), Known
+  limitations. No new `## Unreleased`. Links checked with a scratch script (anchors incl. `#from-v03-to-v04`).
+
 ## In progress / next
 
-Step 2 (CHANGELOG), then README, ROADMAP, progress-note condensing, docs sweep, checks.
+README, ROADMAP, progress-note condensing, docs sweep (coming / planned / part B/C), checks.
 
 ## Decisions
 
