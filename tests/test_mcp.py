@@ -285,7 +285,7 @@ def test_a_cookie_session_never_opens_mcp(admin, token):
 def test_the_csrf_exemption_is_for_the_exact_path_only(admin, token):
     """/mcp needs no X-Requested-With and ignores Sec-Fetch-Site (it never reads a cookie); any other path, even
     /mcp/ or /mcpx, keeps the cookie checks."""
-    assert security.BEARER_PATHS == frozenset({"/mcp"})
+    assert security.BEARER_PATHS == frozenset({"/mcp", "/push/v1/body"})  # the phone shortcuts' ingest route is the second one
     ok = rpc(admin.app, token, "ping", sec_fetch_site="cross-site")
     assert ok.status_code == 200
     for path in ("/mcp/", "/mcpx", "/mcp/tools", "/MCP"):

@@ -12,6 +12,9 @@ the 7-day means against the goal, the six-month change, the flags, the API shape
 * ``constants``: the tables the twin must equal (contexts, sources, limits, the handbook's words);
 * ``unit_cases``, ``alarm_cases``, ``week_cases``, ``six_month_cases``, ``flag_cases``, ``row_cases``, ``summary_cases``: one
   call of a pure function and what the server's function answers;
+* ``context_cases`` and ``watch_cases`` (design note 12): ``body.context_for`` and ``body.is_watch_source``, which the Apple Health reader
+  (``KH.appleHealth.contextOf`` and ``isWatchSource``, ``js/engine/apple_health.js``) must answer the same way for a phone shortcut and
+  the file import to give a reading the same context; ``node tests/js/run_vectors.mjs`` checks the reader against them;
 * ``script``: one list of requests, run in order against a fresh server (here) and a fresh demo account (there), with the answers
   the server gave: every route, every refusal and its exact text. A ``{{today:N}}`` in a path or a body is the date N days from
   today (negative: earlier), so the "not in the future" rule is checked on both sides at today's date; ``created_at`` and
@@ -211,6 +214,10 @@ def row_cases() -> list[dict[str, Any]]:
          "updated_at": STAMP},
         {"id": 2, "date": D2, "time": None, "kg": 70, "context": "after_dialysis", "note": None, "source": "apple_health", "source_key": "abc", "created_at": STAMP,
          "updated_at": "2026-10-06T08:00:00.000000Z"},
+        {"id": 3, "date": D2, "time": "07:15", "kg": 69.99, "context": "morning", "note": "", "source": "shortcut", "source_key": "s", "via": "Morning weight",
+         "created_at": STAMP, "updated_at": STAMP},
+        {"id": 4, "date": D2, "time": None, "kg": 70.5, "context": "other", "note": "", "source": "manual", "source_key": None, "via": None, "created_at": STAMP,
+         "updated_at": STAMP},
     ]
     readings = [
         {"id": 1, "date": D1, "time": "07:35", "systolic": 128, "diastolic": 78, "pulse": 64, "context": "morning", "note": "", "source": "manual",
@@ -219,8 +226,30 @@ def row_cases() -> list[dict[str, Any]]:
          "source_key": "k", "created_at": STAMP, "updated_at": STAMP},
         {"id": 3, "date": D2, "time": None, "systolic": 140, "diastolic": 120, "pulse": None, "context": "other", "note": "x", "source": "manual",
          "source_key": None, "created_at": STAMP, "updated_at": STAMP},
+        {"id": 4, "date": D2, "time": "19:40", "systolic": 124, "diastolic": 79, "pulse": None, "context": "evening", "note": "", "source": "shortcut",
+         "source_key": "t", "via": "Evening cuff", "created_at": STAMP, "updated_at": STAMP},
     ]
     return [{"kind": "weight", "row": r, "api": B.row_to_weight(r)} for r in weights] + [{"kind": "reading", "row": r, "api": B.row_to_reading(r)} for r in readings]
+
+
+def context_cases() -> list[dict[str, Any]]:
+    """``context_for(kind, time)`` at every boundary; ``minutes`` is what the browser reader's ``contextOf(kind, minutes)`` takes."""
+    times = ["00:00", "03:59", "04:00", "04:01", "07:30", "10:58", "10:59", "11:00", "12:00", "16:59", "17:00", "17:01", "20:00", "23:59"]
+    out = []
+    for kind in ("weight", "reading"):
+        for t in times:
+            hours, minutes = t.split(":")
+            out.append({"kind": kind, "time": t, "minutes": int(hours) * 60 + int(minutes), "context": B.context_for(kind, t)})
+    out.append({"kind": "weight", "time": None, "minutes": None, "context": B.context_for("weight", None)})
+    out.append({"kind": "reading", "time": None, "minutes": None, "context": B.context_for("reading", None)})
+    return out
+
+
+def watch_cases() -> list[dict[str, Any]]:
+    """``is_watch_source(name)``: a name that contains "watch" in any letter case."""
+    names = ["Apple Watch", "Sandra's Apple Watch", "watch", "WATCH", "wAtCh", "Stopwatch", "Watchful", "Withings", "Health", "Omron Connect",
+             "", " ", "Wat ch", "Wätch", "Apple\u00a0Watch", "iPhone", "Series 9 (Watch)", "Garmin Connect", "W\u0061tch", "wacth"]
+    return [{"name": n, "watch": B.is_watch_source(n)} for n in names] + [{"name": None, "watch": B.is_watch_source(None)}]
 
 
 def summary_cases() -> list[dict[str, Any]]:
@@ -534,6 +563,39 @@ def script() -> list[dict[str, Any]]:
     add("the list ends at today", GET, f"{c}?start={{{{today:-3}}}}&end={{{{today:0}}}}")
     add("the list can end tomorrow", GET, f"{p}?start={{{{today:-1}}}}&end={{{{today:1}}}}")
     add("the summary of today", GET, "/api/body/summary?date={{today:0}}")
+    # --- the same reading (design note 12 §4.3): a batch row is skipped when the person has a row that is not typed with the same day,
+    # the same HH:MM and the same numbers; a typed row never matches, and neither does a row with no time
+    sd = "2025-02-10"
+    k = {"source": "apple_health"}
+    add("same reading: a first imported weight", POST, f"{c}/batch", {"rows": [{**w(65.5, sd, "morning", time="07:30"), **k, "source_key": "sr1"}]})
+    add("same reading: the same weight under another key is skipped", POST, f"{c}/batch",
+        {"rows": [{**w(65.5, sd, "morning", time="07:30"), "source": "import", "source_key": "sr2"}]})
+    add("same reading: the same kilograms to the hundredth", POST, f"{c}/batch",
+        {"rows": [{**w(65.504, sd, "morning", time="07:30"), **k, "source_key": "sr2b"}]})
+    add("same reading: another weight at the same minute is added", POST, f"{c}/batch",
+        {"rows": [{**w(65.6, sd, "morning", time="07:30"), **k, "source_key": "sr3"}]})
+    add("same reading: the same weight a minute later is added", POST, f"{c}/batch",
+        {"rows": [{**w(65.5, sd, "morning", time="07:31"), **k, "source_key": "sr4"}]})
+    add("same reading: a typed weight", POST, c, w(66.1, sd, "other", time="08:00"))
+    add("same reading: an imported weight like the typed one is added", POST, f"{c}/batch",
+        {"rows": [{**w(66.1, sd, "other", time="08:00"), **k, "source_key": "sr5"}]})
+    add("same reading: rows with no time never match", POST, f"{c}/batch",
+        {"rows": [{**w(65.5, sd, "other"), **k, "source_key": "sr6"}, {**w(65.5, sd, "other"), **k, "source_key": "sr7"}]})
+    add("same reading: two new rows alike in one request are one", POST, f"{c}/batch",
+        {"rows": [{**w(67.0, sd, "other", time="09:00"), **k, "source_key": "sr8"}, {**w(67.0, sd, "other", time="09:00"), "source": "import", "source_key": "sr9"}]})
+    add("same reading: the weights of that day", GET, f"{c}?start={sd}&end={sd}")
+    add("same reading: a first imported reading", POST, f"{p}/batch", {"rows": [{**bp(131, 81, sd, "morning", time="07:10"), **k, "source_key": "sr1"}]})
+    add("same reading: the same reading under another key is skipped", POST, f"{p}/batch",
+        {"rows": [{**bp(131, 81, sd, "morning", time="07:10"), "source": "import", "source_key": "sr2"}]})
+    add("same reading: another bottom number is added", POST, f"{p}/batch", {"rows": [{**bp(131, 82, sd, "morning", time="07:10"), **k, "source_key": "sr3"}]})
+    add("same reading: a typed reading", POST, p, bp(125, 75, sd, "other", time="12:00"))
+    add("same reading: an imported reading like the typed one is added", POST, f"{p}/batch",
+        {"rows": [{**bp(125, 75, sd, "other", time="12:00"), **k, "source_key": "sr4"}]})
+    add("same reading: readings with no time never match", POST, f"{p}/batch",
+        {"rows": [{**bp(131, 81, sd, "other"), **k, "source_key": "sr5"}, {**bp(131, 81, sd, "other"), **k, "source_key": "sr6"}]})
+    add("same reading: two new readings alike in one request are one", POST, f"{p}/batch",
+        {"rows": [{**bp(118, 76, sd, "other", time="15:00"), **k, "source_key": "sr7"}, {**bp(118, 76, sd, "other", time="15:00"), "source": "import", "source_key": "sr8"}]})
+    add("same reading: the readings of that day", GET, f"{p}?start={sd}&end={sd}")
     return steps
 
 
@@ -592,6 +654,8 @@ INTENT = {
     "a morning weight over the alarm": (200, None),
     "the day after tomorrow is not": (400, "date: must not be in the future"),
     "tomorrow is allowed (the person's clock may be ahead)": (200, None),
+    "same reading: the same weight under another key is skipped": (200, None),
+    "same reading: the same reading under another key is skipped": (200, None),
 }
 
 
@@ -611,6 +675,23 @@ def check_intent(steps: list[dict[str, Any]], answers: list[dict[str, Any]]) -> 
     assert over["weight"]["alarm"]["over_alarm"] is True and over["weight"]["alarm"]["flag"] is not None
     assert over["bp"]["flagged_today"]["systolic"] == 185 and over["bp"]["week"]["above_goal"] is True and over["bp"]["week"]["count"] == 4
     assert bodies["batch weights: a known key never counts against the day"] == {"added": 0, "skipped": 1}
+    for name, want in {
+        "same reading: a first imported weight": {"added": 1, "skipped": 0},
+        "same reading: the same weight under another key is skipped": {"added": 0, "skipped": 1},
+        "same reading: the same kilograms to the hundredth": {"added": 0, "skipped": 1},
+        "same reading: another weight at the same minute is added": {"added": 1, "skipped": 0},
+        "same reading: the same weight a minute later is added": {"added": 1, "skipped": 0},
+        "same reading: an imported weight like the typed one is added": {"added": 1, "skipped": 0},
+        "same reading: rows with no time never match": {"added": 2, "skipped": 0},
+        "same reading: two new rows alike in one request are one": {"added": 1, "skipped": 1},
+        "same reading: a first imported reading": {"added": 1, "skipped": 0},
+        "same reading: the same reading under another key is skipped": {"added": 0, "skipped": 1},
+        "same reading: another bottom number is added": {"added": 1, "skipped": 0},
+        "same reading: an imported reading like the typed one is added": {"added": 1, "skipped": 0},
+        "same reading: readings with no time never match": {"added": 2, "skipped": 0},
+        "same reading: two new readings alike in one request are one": {"added": 1, "skipped": 1},
+    }.items():
+        assert bodies[name] == want, (name, bodies[name])
 
 
 def constants() -> dict[str, Any]:
@@ -658,6 +739,8 @@ def build() -> dict[str, Any]:
         "flag_cases": flag_cases(),
         "row_cases": row_cases(),
         "summary_cases": summary_cases(),
+        "context_cases": context_cases(),
+        "watch_cases": watch_cases(),
         "script": [{**step, "answer": answer} for step, answer in zip(steps, answers)],
     }
     return json.loads(json.dumps(doc))  # the same JSON round trip as the file (3.0 becomes 3.0, tuples become lists)

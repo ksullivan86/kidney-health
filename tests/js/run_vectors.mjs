@@ -868,6 +868,16 @@ async function appleHealthVectors() {
     types: { weight: A.TYPE_WEIGHT, systolic: A.TYPE_SYSTOLIC, diastolic: A.TYPE_DIASTOLIC },
   }, doc.limits);
 
+  // The context a clock time gives and what counts as a watch: the server's body.context_for and body.is_watch_source (the phone shortcut's
+  // POST /push/v1/body uses them) must answer as this reader does, so a reading gets the same context by either way in
+  // (tests/data/body_vectors.json, context_cases and watch_cases, generated from the server's own functions).
+  const bodyDoc = JSON.parse(readFileSync(BODY_VECTORS, 'utf8'));
+  for (const c of bodyDoc.context_cases) {
+    if (c.minutes === null) continue; // "no time" is the server's: the reader always has a time
+    expect(`context_for(${c.kind}, ${c.time})`, A.contextOf(c.kind, c.minutes), c.context);
+  }
+  for (const c of bodyDoc.watch_cases) expect(`is_watch_source(${JSON.stringify(c.name)})`, A.isWatchSource(c.name), c.watch);
+
   // the cases: each source_key recomputed here from the hand-written key text, then the scan at every chunk size
   let scans = 0;
   for (const c of doc.cases) {

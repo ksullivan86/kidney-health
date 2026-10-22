@@ -33,7 +33,8 @@ and the version stays 1 because nothing that was there changed.
 ``weights`` and ``blood_pressures`` (schema step 18; note 10 §4.11) list the weighings and blood pressure readings the person
 recorded, oldest day first, as stored: ``[{id, date, time, kg, context, note, source, source_key, created_at, updated_at}]``
 and ``[{id, date, time, systolic, diastolic, pulse, context, note, source, source_key, created_at, updated_at}]`` (``kg`` is
-kilograms; ``time`` is ``HH:MM`` or null; ``source`` is ``manual``, ``apple_health`` or ``import`` and ``source_key`` is the
+kilograms; ``time`` is ``HH:MM`` or null; ``source`` is ``manual``, ``apple_health``, ``import`` or ``shortcut`` (sent by a phone shortcut's device token, which
+is not in the file) and ``source_key`` is the
 key an import de-duplicates on, null for a typed row). Optional lists added to version 1, like ``symptoms``: an older file
 without them still imports, and the version stays 1 because nothing that was there changed. The weight alarm and blood
 pressure goal the person's care team gave them are in ``settings`` (``body.weight_alarm``, ``body.bp_goal``).
@@ -89,7 +90,7 @@ and the foods where you switched off what the app learned from your log; the foo
 "settings"), your AI activity (what the app sent to an AI provider for you and what came back, for as long as
 the server keeps it; never photos), your daily AI call counts and the AI providers you agreed to send data to.
 
-What is NOT in it: your password, your sign-in sessions, your assistant access tokens and any
+What is NOT in it: your password, your sign-in sessions, your assistant access tokens, your phone shortcut tokens and any
 API keys you stored (not even part of them). The person who runs the server keeps backups of the
 whole database; deleting your account does not reach those backups until they expire.
 

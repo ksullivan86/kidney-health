@@ -20,8 +20,8 @@ the outermost middleware comes first:
    while streaming); prefixes registered with :func:`register_body_limit` use a larger setting.
 6. :class:`CsrfMiddleware` - ``Sec-Fetch-Site``/``Origin`` checks on unsafe methods, the required
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
-   reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``) get only
-   the ``Origin`` check, on every method.
+   reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp`` and
+   ``/push/v1/body``) get only the ``Origin`` check, on every method.
 
 Request state other code may read (``request.state.<name>``): ``peer`` (TCP peer), ``client_ip``
 (after trusted proxy handling), ``scheme`` (effective scheme), ``proxy_trusted`` (bool).
@@ -104,9 +104,10 @@ STATIC_HEADERS: tuple[tuple[str, str], ...] = (
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Bearer-only paths, matched exactly (never as a prefix): the assistant's MCP endpoint (app/mcp; ARCHITECTURE.md
-# "Assistant MCP server"). They never read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site,
-# X-Requested-With) do not apply; the Origin rule does, on every method (the MCP transport's DNS-rebinding rule).
-BEARER_PATHS = frozenset({"/mcp"})
+# "Assistant MCP server") and the phone shortcuts' ingest route (app/push.py; "Device tokens and /push/v1"). They never
+# read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site, X-Requested-With) do not apply; the Origin rule does,
+# on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
+BEARER_PATHS = frozenset({"/mcp", "/push/v1/body"})
 CSRF_HEADER = "X-Requested-With"
 CSRF_HEADER_VALUE = "kidney-health"
 PROXY_SECRET_HEADER = "X-Proxy-Secret"
@@ -698,6 +699,7 @@ _SECRET_MIN_LENGTH = 6
 _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]+"), r"\1 " + REDACTED),
     (re.compile(r"\bkha_[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"), "kha_" + REDACTED),  # assistant tokens (app/auth/api_tokens.py)
+    (re.compile(r"\bkhd_[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"), "khd_" + REDACTED),  # device tokens (phone shortcuts)
     (
         re.compile(r"(?i)\b(x-api-key|x-proxy-secret|api[_-]?key|password|passwd|secret|token)(\s*[=:]\s*)([^\s&,;\"']+)"),
         r"\1\2" + REDACTED,

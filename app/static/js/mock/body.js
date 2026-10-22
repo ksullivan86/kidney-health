@@ -209,6 +209,14 @@
     _bodyKeys(table, userId) {
       return new Set(this[table === 'weights' ? '_weightsOf' : '_readingsOf'](userId).filter((r) => r.source_key != null).map((r) => r.source_key));
     },
+    // "The same reading" (app/body.py known_weight_marks / known_reading_marks): the person's rows that are not typed and have a time, as
+    // date|HH:MM|kg (a weight) or date|HH:MM|systolic/diastolic (a reading). A typed row never matches; a row with no time cannot match.
+    _weightMarks(userId) {
+      return new Set(this._weightsOf(userId).filter((r) => r.source !== 'manual' && r.time != null).map((r) => `${r.date}|${r.time}|${R.roundKg(r.kg)}`));
+    },
+    _readingMarks(userId) {
+      return new Set(this._readingsOf(userId).filter((r) => r.source !== 'manual' && r.time != null).map((r) => `${r.date}|${r.time}|${r.systolic}/${r.diastolic}`));
+    },
   });
 
   // ---- weights
@@ -230,13 +238,16 @@
     const user = this._currentUser();
     const rows = this._batchRows(body, weightFields);
     const known = this._bodyKeys('weights', user.id);
+    const marks = this._weightMarks(user.id);
     const perDay = new Map();
     for (const r of this._weightsOf(user.id)) perDay.set(r.date, (perDay.get(r.date) || 0) + 1);
     const fresh = [];
     for (const { index, data } of rows) {
-      if (known.has(data.source_key)) continue;
+      const mark = data.time == null ? null : `${data.date}|${data.time}|${R.roundKg(data.kg)}`;
+      if (known.has(data.source_key) || (mark !== null && marks.has(mark))) continue;
       if ((perDay.get(data.date) || 0) >= L.max_weights_per_day) fail(400, `rows.${index}: too many weights for one day (max ${L.max_weights_per_day})`);
       known.add(data.source_key);
+      if (mark !== null) marks.add(mark);
       perDay.set(data.date, (perDay.get(data.date) || 0) + 1);
       fresh.push(data);
     }
@@ -290,15 +301,18 @@
     const user = this._currentUser();
     const rows = this._batchRows(body, readingFields, (data) => (data.systolic <= data.diastolic ? TOP_BELOW_BOTTOM : null));
     const known = this._bodyKeys('readings', user.id);
+    const marks = this._readingMarks(user.id);
     const perDay = new Map();
     for (const r of this._readingsOf(user.id)) perDay.set(r.date, (perDay.get(r.date) || 0) + 1);
     const fresh = [];
     for (const { index, data } of rows) {
-      if (known.has(data.source_key)) continue;
+      const mark = data.time == null ? null : `${data.date}|${data.time}|${data.systolic}/${data.diastolic}`;
+      if (known.has(data.source_key) || (mark !== null && marks.has(mark))) continue;
       if ((perDay.get(data.date) || 0) >= L.max_readings_per_day) {
         fail(400, `rows.${index}: too many blood pressure readings for one day (max ${L.max_readings_per_day})`);
       }
       known.add(data.source_key);
+      if (mark !== null) marks.add(mark);
       perDay.set(data.date, (perDay.get(data.date) || 0) + 1);
       fresh.push(data);
     }

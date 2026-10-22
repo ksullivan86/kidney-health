@@ -90,9 +90,13 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
 * assistant access tokens the person made, when the admin has turned assistant access on
   ([assistant.md](assistant.md)): a name, the first 12 characters, the scopes (read only, or also save food and
   recipes), the dates and a one-way hash of each token, never the token itself;
+* phone-shortcut tokens the person made, when the admin has turned phone shortcuts on ([push.md](push.md)): the same (a name, the
+  first 12 characters, the dates, a one-way hash), and the one scope that lets a token add weights and blood pressure readings. A
+  weight or reading such a token adds is ordinary data of the account (marked as sent by that token, with its name shown while the token
+  exists, in the export without the token, deleted with the account); the server logs only counts, never a value;
 * a per-day count of lookups made with a shared key (counts only, not what was looked up);
 * entries in the activity log about their account: sign-ins, failed sign-ins, password and key
-  changes, assistant tokens made or revoked, food or recipes an assistant saved (with the token's name and
+  changes, assistant and phone-shortcut tokens made or revoked, a phone-shortcut token's rows deleted (counts only), food or recipes an assistant saved (with the token's name and
   how many entries, or the recipe's name), exports;
 * if the optional AI is on and the person uses it ([ai.md](ai.md)): the providers they agreed to send
   data to, their own AI provider (its key encrypted), a per-day count of AI calls and tokens, and their

@@ -19,6 +19,7 @@ from . import auth, crypto, foods, log as log_router, meals, profile, pwa, secur
 from . import labs  # M2 targets: /api/labs
 from . import symptoms  # schema step 15: /api/symptoms
 from . import body  # schema step 18: /api/body (weight and blood pressure)
+from . import push  # schema step 19: POST /push/v1/body (device tokens) and DELETE /api/me/tokens/{id}/body-rows
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
@@ -121,6 +122,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ai_voice.router)
     app.include_router(ai_voice.admin_router)
     app.include_router(assistant_mcp.router)
+    app.include_router(push.router)  # bearer-only like /mcp, outside /api
+    app.include_router(push.api_router)
     app.include_router(data_import.router)
 
     @app.get("/healthz")

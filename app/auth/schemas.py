@@ -93,18 +93,22 @@ class UserDeleteBody(_Body):
     confirm_username: str = Field(max_length=USERNAME_MAX)
 
 
-# Assistant access tokens (app/auth/api_tokens.py): the expiry choices and the longest name.
+# Access tokens (app/auth/api_tokens.py): the expiry choices, the longest name and the two families.
 ExpiryDays = Literal[30, 90, 365]
+TokenFamily = Literal["assistant", "device"]
 TOKEN_NAME_MAX = 60
 
 
 class TokenCreate(BaseModel):
     """``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one
-    way to ask for ``assistant:log`` (it saves food and recipes; ``assistant:read`` is always included)."""
+    way to ask for ``assistant:log`` (it saves food and recipes; ``assistant:read`` is always included). ``family`` is
+    ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's token, whose
+    one scope, ``body:write``, is not a choice: ``can_log`` is refused for it)."""
 
     model_config = ConfigDict(extra="forbid", str_max_length=4096)
 
     name: str = Field(min_length=1, max_length=TOKEN_NAME_MAX)
     expires_in_days: ExpiryDays = 90
     can_log: bool = False
+    family: TokenFamily = "assistant"
 

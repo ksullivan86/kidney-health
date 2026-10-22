@@ -177,6 +177,11 @@
       label: "Share the server's USDA key", help: 'Effective only when a shared key is set.' },
     { key: 'providers.usda.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: null,
       label: 'People may add their own USDA key', help: '' },
+    // Phone shortcuts (design note 12; app/auth/api_tokens.py, app/push.py). The device tokens are rows of api_tokens, never settings.
+    { key: 'push.enabled', type: 'bool', default: false, scope: 'instance', env: 'PUSH_ENABLED',
+      label: 'Let people send weights and blood pressure from a phone shortcut',
+      help: 'Off by default. When on, each person can make tokens in Settings → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log. '
+        + 'A token can only add: it cannot read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'registration.invite_ttl_days', type: 'int', min: 1, max: 90, default: 7, scope: 'instance', env: null,
       label: 'Invite links expire after (days)', help: '' },
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',

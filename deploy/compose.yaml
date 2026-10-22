@@ -110,6 +110,7 @@ services:
       AI_ROUTE_CHAT: ${AI_ROUTE_CHAT:-}
       AI_ROUTE_LABS: ${AI_ROUTE_LABS:-}
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
+      PUSH_ENABLED: ${PUSH_ENABLED:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # A cloud AI provider's key is a file secret like the others (never an env var):

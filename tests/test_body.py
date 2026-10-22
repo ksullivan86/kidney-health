@@ -35,8 +35,8 @@ from test_data_import import export_doc, post_import
 
 ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK_PAGE = ROOT / "handbook" / "docs" / "get-help-now.md"
-WEIGHT_KEYS = {"id", "date", "time", "kg", "context", "note", "source", "created_at", "updated_at"}
-READING_KEYS = {"id", "date", "time", "systolic", "diastolic", "pulse", "context", "note", "source", "created_at", "updated_at", "flag"}
+WEIGHT_KEYS = {"id", "date", "time", "kg", "context", "note", "source", "via", "created_at", "updated_at"}
+READING_KEYS = {"id", "date", "time", "systolic", "diastolic", "pulse", "context", "note", "source", "via", "created_at", "updated_at", "flag"}
 FLAG_KEYS = {"level", "text", "href", "link_text", "prominent"}
 
 
@@ -1075,3 +1075,69 @@ def test_the_body_settings_are_carried_over_only_with_replace_profile(client, fr
     assert r.status_code == 400 and "body.weight_alarm: not a value this server accepts" in r.json()["detail"]
     assert post_import(fresh, doc, merge=True, replace_profile=True).status_code == 200
     assert fresh.get("/api/me/settings").json()["settings"]["body.bp_goal"]["value"] == {"systolic": 130, "diastolic": 80}
+
+
+# --------------------------------------------------------------------------- design note 12: context, watch, the same reading, via
+
+
+@pytest.mark.parametrize("kind, time, context", [
+    ("weight", "00:00", "other"), ("weight", "03:59", "other"), ("weight", "04:00", "morning"), ("weight", "10:59", "morning"),
+    ("weight", "11:00", "other"), ("weight", "17:00", "other"), ("weight", "23:59", "other"), ("weight", None, "other"),
+    ("reading", "00:00", "other"), ("reading", "03:59", "other"), ("reading", "04:00", "morning"), ("reading", "10:59", "morning"),
+    ("reading", "11:00", "other"), ("reading", "16:59", "other"), ("reading", "17:00", "evening"), ("reading", "23:59", "evening"),
+    ("reading", None, "other"),
+])
+def test_context_for_is_the_readers_rule_by_clock_time(kind, time, context):
+    assert body.context_for(kind, time) == context
+    with pytest.raises(ValueError):
+        body.context_for("pulse", "07:00")
+
+
+@pytest.mark.parametrize("name, watch", [
+    ("Apple Watch", True), ("watch", True), ("WATCH", True), ("Stopwatch", True), ("Sandra's Watch (2)", True),
+    ("Health", False), ("Omron Connect", False), ("", False), (None, False), ("Wat ch", False), ("wacth", False),
+])
+def test_is_watch_source_is_a_case_blind_contains(name, watch):
+    assert body.is_watch_source(name) is watch
+
+
+@pytest.mark.parametrize("path, kind", [("weights", "weights"), ("blood-pressure", "bp")])
+def test_a_batch_skips_the_same_reading_from_any_origin_but_manual(client, path, kind):
+    def row(origin: str, key: str, time: str | None = "07:30", bump: int = 0) -> dict[str, Any]:
+        base = w(70.0 + bump / 10, day(4), "morning", time=time) if kind == "weights" else bp(120 + bump, 80, day(4), "morning", time=time)
+        return {**base, "source": origin, "source_key": key}
+
+    listed = weights if kind == "weights" else readings
+
+    def post(*rows: dict[str, Any]) -> Any:
+        return client.post(f"/api/body/{path}/batch", json={"rows": list(rows)}).json()
+
+    assert post(row("apple_health", "a1")) == {"added": 1, "skipped": 0}
+    assert post(row("import", "a2")) == {"added": 0, "skipped": 1}  # the same day, minute and numbers under another key and origin
+    assert post(row("apple_health", "a3", bump=1)) == {"added": 1, "skipped": 0}  # other numbers
+    assert post(row("apple_health", "a4", time="07:31")) == {"added": 1, "skipped": 0}  # another minute
+    assert post(row("apple_health", "a5", time=None), row("apple_health", "a6", time=None)) == {"added": 2, "skipped": 0}  # no time: no match
+    assert post(row("import", "a7", bump=2), row("apple_health", "a8", bump=2)) == {"added": 1, "skipped": 1}  # alike inside one request
+    # a typed row never matches
+    if kind == "weights":
+        typed = add_weight(client, 75.0, day(4), "other", time="09:00")
+        twin = {**row("apple_health", "a9", time="09:00"), "kg": 75.0}
+    else:
+        typed = add_reading(client, 133, 83, day(4), "other", time="09:00")
+        twin = {**row("apple_health", "a9", time="09:00"), "systolic": 133, "diastolic": 83}
+    assert typed["source"] == "manual" and post(twin) == {"added": 1, "skipped": 0}
+    assert len(listed(client)) == 8
+    # editing an imported row makes it typed: it no longer matches, but its key is still known
+    first = next(x for x in listed(client) if x["time"] == "07:30" and x["source"] == "apple_health")
+    edit = w(70.0, day(4), "morning", time="07:30") if kind == "weights" else bp(120, 80, day(4), "morning", time="07:30")
+    assert client.put(f"/api/body/{path}/{first['id']}", json=edit).json()["source"] == "manual"
+    assert post(row("import", "a1")) == {"added": 0, "skipped": 1}  # the key
+
+
+def test_rows_carry_via_which_is_null_without_a_device_token(client):
+    add_weight(client)
+    add_reading(client)
+    client.post("/api/body/weights/batch", json={"rows": key_rows("weights", 1, day(5))})
+    assert all(x["via"] is None for x in weights(client)) and all(x["via"] is None for x in readings(client))
+    assert summary(client)["weight"]["latest"]["via"] is None
+    assert "via" not in export_doc(client)["weights"][0] and "api_token_id" not in export_doc(client)["weights"][0]

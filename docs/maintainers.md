@@ -178,12 +178,14 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.3.0: not used.** Owner decision (2026-10-06): `:latest` moves to v0.3.0 when it is tagged and
   `HOLD_LATEST` stays unset; v0.2 hosts are warned in CHANGELOG.md, README.md and
   [docs/deployment.md](deployment.md#from-v02-to-v03) (ARCHITECTURE.md decision 7).
-* **v0.4.0: decide before tagging (owner).** The release runs schema steps 8 to 17 at start without an automatic copy, and moves
-  the shipped files from `:0.3` to `:0.4`. A host that auto-updates `:latest` migrates its database at the next pull; one that
-  tracks `:0.3` stays on 0.3.x. CHANGELOG.md, "Upgrading from 0.3", says so; set `HOLD_LATEST=true` first if you would rather
-  keep `:latest` on 0.3.0 for a while.
-* Use it for a release that would break hosts that auto-update `:latest` until they change their
-  deployment files, and for patch tags of an older minor version (above). Remove it again (or set it
+* **The rule from v0.4.0 on (owner, 2026-10-22): `:latest` moves with every release tag.** Leave `HOLD_LATEST` unset when you tag
+  `vX.Y.Z`. A test release is a pre-release tag (anything with `-`, such as `v0.5.0-rc1`), which publishes only `:X.Y.Z-rc1` and never
+  moves `:latest` on its own. The one remaining use of `HOLD_LATEST` is the patch of an **older** minor version (see "Patch releases of an older minor version" above), where moving
+  `:latest` would take it backwards.
+* **v0.4.0: not held.** The release runs schema steps 8 to 17 at start without an automatic copy, and moves the shipped files from
+  `:0.3` to `:0.4`. A host that auto-updates `:latest` migrates its database at the next pull; one that tracks `:0.3` stays on 0.3.x.
+  CHANGELOG.md, "Upgrading from 0.3", says to take a backup first.
+* Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest
   ghcr.io/ksullivan86/kidney-health:X.Y.Z`.

@@ -20,7 +20,8 @@ one that does not exist):
   hour per person): the rows an import read on the person's device, each the same body plus ``source`` (``apple_health`` or
   ``import``) and a ``source_key``. The whole request is checked first and refused, writing nothing, on the first row that is
   not valid (``rows.3.kg: ...``) or would be the 21st weight (31st reading) of its day; rows whose ``source_key`` the person
-  already has, and repeats within the request, are skipped and counted → ``{added, skipped}``.
+  already has, rows that are the same reading as one the person already has from any source but ``manual`` (see below), and
+  repeats within the request, are skipped and counted → ``{added, skipped}``.
 * ``GET /api/body/summary?date=`` → what Today shows: the latest weight and the one before it, the change, the check against
   the person's weight-gain alarm, the latest reading, the 7-day means against the person's goal, and the latest flagged reading
   of that day (:func:`summarise`).
@@ -39,6 +40,17 @@ number). A reading with a top number of 180 or more, or a bottom number of 120 o
 lines (NHLBI's "180/120"), says to rest 5 minutes and measure again, and is prominent. :data:`RED_FLAGS` is that list;
 ``tests/test_body.py`` checks every quoted phrase against the page, so a change to the page that drops a phrase fails a test
 instead of leaving the app quoting words that are gone.
+
+**Where a row came from** (``source``): ``manual`` (typed; also any row the person edits), ``apple_health`` and ``import`` (the
+batch routes), and ``shortcut`` (a phone shortcut's device token, ``POST /push/v1/body``, :mod:`app.push`; schema step 19 adds
+``api_token_id`` to both tables so the person can see which token sent a row and delete all of it). The rows returned by
+``GET /api/body/*`` carry ``via``: the token's name for such a row, else ``null``.
+
+**The same reading** (:func:`known_weight_marks`, :func:`known_reading_marks`): a row that arrives from the batch routes or from a
+shortcut is not added when the person already has a row that is not ``manual`` with the same date, the same ``HH:MM`` and the same
+kilograms (a reading: the same two numbers). A pushed reading and the same reading imported later from the Health export (or the
+other way round) are one row, even when their ``source_key`` text differs. A ``manual`` row never matches: a person may type the
+same reading twice on purpose.
 
 Weights and readings are health data: they are never logged, they leave the server only in the person's own export, and they
 are never sent to an AI provider or the assistant (``app/ai/``, ``app/mcp/`` and ``app/guidance/`` do not read the tables;
@@ -131,6 +143,38 @@ def shown_weight(kg: float, unit: str) -> float:
 def format_weight(kg: float, unit: str) -> str:
     """``"154.3 lb"`` / ``"70.0 kg"``."""
     return f"{shown_weight(kg, unit):.1f} {unit}"
+
+
+MORNING_FROM_MINUTE = 4 * 60  # 04:00
+MORNING_TO_MINUTE = 10 * 60 + 59  # 10:59
+EVENING_FROM_MINUTE = 17 * 60  # 17:00 (to 23:59)
+
+
+def context_for(kind: str, time: str | None) -> str:
+    """The ``context`` a row gets from the clock time it was taken, where the person is not asked (the Apple Health import and
+    a phone shortcut): ``morning`` from 04:00 to 10:59; for a blood pressure ``kind == "reading"`` also ``evening`` from 17:00 to
+    23:59; everything else, and a row with no time, is ``other``. ``kind`` is ``"weight"`` or ``"reading"``; ``time`` is ``HH:MM``
+    on the person's clock (as stored). The browser twin is ``KH.appleHealth.contextOf(kind, minutes)`` (``js/engine/apple_health.js``),
+    which takes minutes since midnight; ``tests/data/body_vectors.json`` (``context_cases``) holds both to the same answers."""
+    if kind not in ("weight", "reading"):
+        raise ValueError(f"kind must be 'weight' or 'reading', not {kind!r}")
+    if time is None:
+        return "other"
+    hours, minutes = time.split(":")
+    at = int(hours) * 60 + int(minutes)
+    if MORNING_FROM_MINUTE <= at <= MORNING_TO_MINUTE:
+        return "morning"
+    if kind == "reading" and at >= EVENING_FROM_MINUTE:
+        return "evening"
+    return "other"
+
+
+def is_watch_source(name: str | None) -> bool:
+    """True for a source whose name contains "Watch", in any letter case ("Apple Watch", "Sandra's watch", "Stopwatch"):
+    the source of the cuffless readings that note 10 (F4) does not recommend for checking blood pressure. The Apple Health import
+    sheet starts such readings unticked; a phone shortcut has no review step, so ``POST /push/v1/body`` does not store them
+    (:mod:`app.push`). A weight from a watch-named source is kept. The browser twin is ``KH.appleHealth.isWatchSource``."""
+    return "watch" in str(name if name is not None else "").lower()
 
 
 def order_key(row: dict[str, Any]) -> tuple[str, int, str, int]:
@@ -327,12 +371,28 @@ READING_COLUMNS = "id, date, time, systolic, diastolic, pulse, context, note, so
 WEIGHT_CSV_COLUMNS: tuple[str, ...] = tuple(WEIGHT_COLUMNS.split(", "))
 READING_CSV_COLUMNS: tuple[str, ...] = tuple(READING_COLUMNS.split(", "))
 ORDER = "ORDER BY date, (time IS NULL), time, id"
+# What the API shows of a row: the stored columns and ``via``, the name of the device token that sent it (NULL for any other row,
+# and once the token is purged). The join also matches the token's owner, so a name never crosses people.
+WEIGHT_API = ("w.id, w.date, w.time, w.kg, w.context, w.note, w.source, w.source_key, w.created_at, w.updated_at, t.name AS via "
+              "FROM weights w LEFT JOIN api_tokens t ON t.id = w.api_token_id AND t.user_id = w.user_id")
+READING_API = ("r.id, r.date, r.time, r.systolic, r.diastolic, r.pulse, r.context, r.note, r.source, r.source_key, r.created_at, "
+               "r.updated_at, t.name AS via "
+               "FROM blood_pressures r LEFT JOIN api_tokens t ON t.id = r.api_token_id AND t.user_id = r.user_id")
+WEIGHT_API_ORDER = "ORDER BY w.date, (w.time IS NULL), w.time, w.id"
+READING_API_ORDER = "ORDER BY r.date, (r.time IS NULL), r.time, r.id"
+
+
+def _via(row: sqlite3.Row | dict[str, Any]) -> str | None:
+    """The name of the device token that sent the row (``via`` of the API select), or None (a typed or imported row, a row
+    given as a plain dict, a token that is gone)."""
+    return row["via"] if "via" in row.keys() else None
 
 
 def row_to_weight(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
     """The API shape of a stored weight."""
     return {"id": row["id"], "date": row["date"], "time": row["time"], "kg": float(row["kg"]), "context": row["context"],
-            "note": row["note"] or "", "source": row["source"], "created_at": row["created_at"], "updated_at": row["updated_at"]}
+            "note": row["note"] or "", "source": row["source"], "via": _via(row), "created_at": row["created_at"],
+            "updated_at": row["updated_at"]}
 
 
 def row_to_reading(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
@@ -340,7 +400,7 @@ def row_to_reading(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
     systolic, diastolic = int(row["systolic"]), int(row["diastolic"])
     return {"id": row["id"], "date": row["date"], "time": row["time"], "systolic": systolic, "diastolic": diastolic,
             "pulse": None if row["pulse"] is None else int(row["pulse"]), "context": row["context"], "note": row["note"] or "",
-            "source": row["source"], "created_at": row["created_at"], "updated_at": row["updated_at"],
+            "source": row["source"], "via": _via(row), "created_at": row["created_at"], "updated_at": row["updated_at"],
             "flag": bp_flag(systolic, diastolic)}
 
 
@@ -389,7 +449,7 @@ def _fetch_weight(conn: sqlite3.Connection, user_id: int, weight_id: int) -> sql
     """The person's own weight, or a 404 (the same for a weight that is somebody else's and one that does not exist)."""
     row = None
     if 1 <= weight_id <= MAX_SQLITE_INT:
-        row = conn.execute(f"SELECT {WEIGHT_COLUMNS} FROM weights WHERE id = ? AND user_id = ?", (weight_id, user_id)).fetchone()
+        row = conn.execute(f"SELECT {WEIGHT_API} WHERE w.id = ? AND w.user_id = ?", (weight_id, user_id)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Weight not found")
     return row
@@ -398,8 +458,7 @@ def _fetch_weight(conn: sqlite3.Connection, user_id: int, weight_id: int) -> sql
 def _fetch_reading(conn: sqlite3.Connection, user_id: int, reading_id: int) -> sqlite3.Row:
     row = None
     if 1 <= reading_id <= MAX_SQLITE_INT:
-        row = conn.execute(f"SELECT {READING_COLUMNS} FROM blood_pressures WHERE id = ? AND user_id = ?",
-                           (reading_id, user_id)).fetchone()
+        row = conn.execute(f"SELECT {READING_API} WHERE r.id = ? AND r.user_id = ?", (reading_id, user_id)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Blood pressure reading not found")
     return row
@@ -414,7 +473,7 @@ def _fetch_reading(conn: sqlite3.Connection, user_id: int, reading_id: int) -> s
 def list_weights(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db), start: str | None = None,
                  end: str | None = None) -> dict[str, Any]:
     start_s, end_s = parse_range(start, end)
-    rows = conn.execute(f"SELECT {WEIGHT_COLUMNS} FROM weights WHERE user_id = ? AND date >= ? AND date <= ? {ORDER}",
+    rows = conn.execute(f"SELECT {WEIGHT_API} WHERE w.user_id = ? AND w.date >= ? AND w.date <= ? {WEIGHT_API_ORDER}",
                         (user.id, start_s, end_s)).fetchall()
     return {"weights": [row_to_weight(r) for r in rows if _known_weight(r)]}
 
@@ -437,7 +496,7 @@ def update_weight(weight_id: int, body: WeightCreate, user: CurrentUser, conn: s
     _fetch_weight(conn, user.id, weight_id)
     _check_weight_day(conn, user.id, body.date, except_id=weight_id)
     conn.execute(
-        "UPDATE weights SET date = ?, time = ?, kg = ?, context = ?, note = ?, source = 'manual', updated_at = ? "
+        "UPDATE weights SET date = ?, time = ?, kg = ?, context = ?, note = ?, source = 'manual', api_token_id = NULL, updated_at = ? "
         "WHERE id = ? AND user_id = ?",
         (body.date, body.time, round_kg(body.kg), body.context, body.note, utcnow(), weight_id, user.id),
     )
@@ -482,19 +541,50 @@ def _known_keys(conn: sqlite3.Connection, table: str, user_id: int) -> set[str]:
     return {r[0] for r in conn.execute(f"SELECT source_key FROM {table} WHERE user_id = ? AND source_key IS NOT NULL", (user_id,))}
 
 
+def known_weight_marks(conn: sqlite3.Connection, user_id: int, days: set[str]) -> set[tuple[str, str, float]]:
+    """``(date, HH:MM, kg)`` of the person's weights dated in ``days`` that are not ``manual`` and have a time: what "the same
+    reading" means for a weight arriving from a batch import or a shortcut (a typed row never matches; a row with no time cannot
+    be said to be the same moment). ``kg`` is the stored (rounded) value."""
+    marks: set[tuple[str, str, float]] = set()
+    wanted = sorted(days)
+    for start in range(0, len(wanted), 500):
+        chunk = wanted[start:start + 500]
+        for r in conn.execute(f"SELECT date, time, kg FROM weights WHERE user_id = ? AND source <> 'manual' AND time IS NOT NULL "
+                              f"AND date IN ({', '.join('?' for _ in chunk)})", (user_id, *chunk)):
+            marks.add((r["date"], r["time"], round_kg(r["kg"])))
+    return marks
+
+
+def known_reading_marks(conn: sqlite3.Connection, user_id: int, days: set[str]) -> set[tuple[str, str, int, int]]:
+    """``(date, HH:MM, systolic, diastolic)`` of the person's readings dated in ``days`` that are not ``manual`` and have a time
+    (see :func:`known_weight_marks`)."""
+    marks: set[tuple[str, str, int, int]] = set()
+    wanted = sorted(days)
+    for start in range(0, len(wanted), 500):
+        chunk = wanted[start:start + 500]
+        for r in conn.execute(f"SELECT date, time, systolic, diastolic FROM blood_pressures WHERE user_id = ? AND source <> 'manual' "
+                              f"AND time IS NOT NULL AND date IN ({', '.join('?' for _ in chunk)})", (user_id, *chunk)):
+            marks.add((r["date"], r["time"], int(r["systolic"]), int(r["diastolic"])))
+    return marks
+
+
 @router.post("/weights/batch", response_model=BodyBatchResult)
 def create_weights(body: BodyBatch, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     request.app.state.auth.limits.take("body_batch", user.id)
     rows: list[WeightBatchRow] = _checked_rows(WeightBatchRow, body)
     known = _known_keys(conn, "weights", user.id)
+    marks = known_weight_marks(conn, user.id, {r.date for r in rows})
     per_day = _per_day(conn, "weights", user.id, {r.date for r in rows})
     fresh: list[WeightBatchRow] = []
     for index, row in enumerate(rows):
-        if row.source_key in known:
+        mark = (row.date, row.time, round_kg(row.kg)) if row.time is not None else None
+        if row.source_key in known or (mark is not None and mark in marks):
             continue
         if per_day.get(row.date, 0) >= MAX_WEIGHTS_PER_DAY:
             raise HTTPException(status_code=400, detail=f"rows.{index}: too many weights for one day (max {MAX_WEIGHTS_PER_DAY})")
         known.add(row.source_key)
+        if mark is not None:
+            marks.add(mark)
         per_day[row.date] = per_day.get(row.date, 0) + 1
         fresh.append(row)
     now = utcnow()
@@ -516,7 +606,7 @@ def create_weights(body: BodyBatch, request: Request, user: CurrentUser, conn: s
 def list_readings(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db), start: str | None = None,
                   end: str | None = None) -> dict[str, Any]:
     start_s, end_s = parse_range(start, end)
-    rows = conn.execute(f"SELECT {READING_COLUMNS} FROM blood_pressures WHERE user_id = ? AND date >= ? AND date <= ? {ORDER}",
+    rows = conn.execute(f"SELECT {READING_API} WHERE r.user_id = ? AND r.date >= ? AND r.date <= ? {READING_API_ORDER}",
                         (user.id, start_s, end_s)).fetchall()
     return {"readings": [row_to_reading(r) for r in rows if _known_reading(r)]}
 
@@ -541,7 +631,7 @@ def update_reading(reading_id: int, body: BloodPressureCreate, user: CurrentUser
     _check_reading_day(conn, user.id, body.date, except_id=reading_id)
     conn.execute(
         "UPDATE blood_pressures SET date = ?, time = ?, systolic = ?, diastolic = ?, pulse = ?, context = ?, note = ?, "
-        "source = 'manual', updated_at = ? WHERE id = ? AND user_id = ?",
+        "source = 'manual', api_token_id = NULL, updated_at = ? WHERE id = ? AND user_id = ?",
         (body.date, body.time, body.systolic, body.diastolic, body.pulse, body.context, body.note, utcnow(), reading_id, user.id),
     )
     conn.commit()
@@ -561,15 +651,19 @@ def create_readings(body: BodyBatch, request: Request, user: CurrentUser, conn: 
     request.app.state.auth.limits.take("body_batch", user.id)
     rows: list[BloodPressureBatchRow] = _checked_rows(BloodPressureBatchRow, body)
     known = _known_keys(conn, "blood_pressures", user.id)
+    marks = known_reading_marks(conn, user.id, {r.date for r in rows})
     per_day = _per_day(conn, "blood_pressures", user.id, {r.date for r in rows})
     fresh: list[BloodPressureBatchRow] = []
     for index, row in enumerate(rows):
-        if row.source_key in known:
+        mark = (row.date, row.time, row.systolic, row.diastolic) if row.time is not None else None
+        if row.source_key in known or (mark is not None and mark in marks):
             continue
         if per_day.get(row.date, 0) >= MAX_READINGS_PER_DAY:
             raise HTTPException(status_code=400,
                                 detail=f"rows.{index}: too many blood pressure readings for one day (max {MAX_READINGS_PER_DAY})")
         known.add(row.source_key)
+        if mark is not None:
+            marks.add(mark)
         per_day[row.date] = per_day.get(row.date, 0) + 1
         fresh.append(row)
     now = utcnow()
@@ -599,9 +693,9 @@ def summary(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depe
     goal = store.get(conn, "body.bp_goal", user.id)
     profile = get_profile(conn, user.id)
     dry_weight = profile["weight_kg"] if profile["dialysis"] == "hemodialysis" else None  # on hemodialysis the profile holds the dry weight
-    wrows = conn.execute(f"SELECT {WEIGHT_COLUMNS} FROM weights WHERE user_id = ? AND date <= ? ORDER BY date DESC, id DESC LIMIT ?",
+    wrows = conn.execute(f"SELECT {WEIGHT_API} WHERE w.user_id = ? AND w.date <= ? ORDER BY w.date DESC, w.id DESC LIMIT ?",
                          (user.id, day, SUMMARY_WEIGHT_ROWS)).fetchall()
-    rrows = conn.execute(f"SELECT {READING_COLUMNS} FROM blood_pressures WHERE user_id = ? AND date <= ? ORDER BY date DESC, id DESC LIMIT ?",
+    rrows = conn.execute(f"SELECT {READING_API} WHERE r.user_id = ? AND r.date <= ? ORDER BY r.date DESC, r.id DESC LIMIT ?",
                          (user.id, day, SUMMARY_READING_ROWS)).fetchall()
     return summarise([row_to_weight(r) for r in wrows if _known_weight(r)], [row_to_reading(r) for r in rrows if _known_reading(r)],
                      day=day, units=units, alarm=alarm.model_dump(), goal=goal.model_dump(), dry_weight_kg=dry_weight)
