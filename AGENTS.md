@@ -29,6 +29,8 @@ Then [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, tests and the how-tos.
 * **Migrations** are append-only steps in `app/migrations/`; never edit a released step.
 * **Docs.** When behaviour a person can see changes, update `ARCHITECTURE.md`, the relevant page in
   `docs/` and the handbook (`handbook/docs/app/`).
+* **Write for people.** Plain words, short sentences, each thing said once, no filler. The README, docs,
+  handbook and screen text should read like a person wrote them.
 * **Shared tree.** Other agents may work in the same checkout: commit only the paths you changed (never
   `git add -A` or `git commit -a`), never rewrite history, and keep a progress note in
   `docs/dev/progress/<role>.md` as `CLAUDE.md` describes.

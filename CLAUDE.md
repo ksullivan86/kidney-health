@@ -20,6 +20,10 @@ Rules that every change must keep:
 * **Migrations** are append-only steps in `app/migrations/`; never edit a released step.
 * **Docs.** Update `ARCHITECTURE.md`, the relevant `docs/` page and the handbook when behaviour a
   person can see changes.
+* **Write for people.** The README, docs, handbook, screen text, commit messages and PR descriptions
+  are read by patients, families and volunteers. Use plain words and short sentences, say each thing
+  once, and leave out filler, stacked qualifiers and long asides in brackets. It should read like a
+  person wrote it, not a tool.
 
 ## Long-running agent work: checkpoint as you go
 
