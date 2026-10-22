@@ -1,4 +1,4 @@
-Status: in progress (role vectors-readme; design note 14 change 6, documentation half)
+Status: complete (role vectors-readme; design note 14 change 6, documentation half)
 
 # vectors-readme: a guide to tests/data/*_vectors.json
 
@@ -41,7 +41,7 @@ Base: `283c497`. Spec: `docs/dev/research/14-reuse-map.md` ยง3 (iOS needs) and ย
 * Step 5 done: note 14 change 6 row ("Done in part"), `CHANGELOG.md` (Unreleased, For contributors), `CONTRIBUTING.md` (one sentence in "The parity
   rule"), and one sentence in `ARCHITECTURE.md` next to the parity rule (the same pointer).
 * Step 6 checks passed: `python -m pytest tests/test_vectors_readme.py` and the vector-currency, e2e, deploy and safety-set tests; `node tests/js/run_vectors.mjs`
-  (all groups pass); `ruff check .`. The full `python -m pytest -q` was started in the background (see the last line of this note for its result).
+  (all groups pass); `ruff check .`. The full `python -m pytest -q` was started in the background and passed (exit 0, about 14 minutes).
 
 ## Reproduce
 
