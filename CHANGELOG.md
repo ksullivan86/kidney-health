@@ -9,6 +9,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Read a lab report from the PDF your lab's website gives you.** **Lab results → Read a lab report photo or PDF** takes the PDF itself,
+  not only a photo or a screenshot. The PDF is opened **on your device** and never sent anywhere: you see "Page 1", "Page 2", ... (pages 1 to 6
+  start ticked, up to 10 can be ticked), only the pages you tick are drawn on your device and sent as pictures to the AI at home (the same local
+  AI, consent and checks as a photo; the consent sheet says so), with "Reading page 2 of 4..." and a Cancel button. The rows from all the pages
+  come in one table, all unticked, each saying which page it came from; a row that repeats is shown once; a page that cannot be read says so
+  and the others still count. A PDF with a password, one over 20 MB or 50 pages, a damaged file and a browser too old to open it are each
+  refused with the reason (a screenshot of each page still works). A scan made of JPEG 2000 or JBIG2 pictures can come out blank. The
+  handbook's AI page has the steps.
 * **Import from a file: choosing the same file again after closing the password prompt works.** Before, the file box
   kept the file, so choosing it again did nothing until you left Settings and came back; closing the prompt now empties
   the box.
@@ -44,6 +52,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Choosing a `.zip` in the imports changes nothing on the server**: no route, setting or migration, and the server still never receives an archive
   (the page opens it on the person's device and sends the same JSON or rows as before). The page now ships one more script (`js/engine/zip.js`) in the
   service worker's cache list, so the app's update prompt appears once after the upgrade, as for any release.
+* **Reading a PDF lab report needs nothing from you: no setting, route or schema step, and the server never sees a PDF.** It uses the
+  local AI, `ai.route.labs`, the consent and the limits that lab report photos already have (each ticked page is one call). The one
+  change is in the page's headers: the Content-Security-Policy now ends `trusted-types kh-sw kh-xml kh-pdf` (one more named policy, `kh-pdf`,
+  which lets the page start the bundled pdf.js worker from `/vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs` and nothing else; `script-src`,
+  `worker-src` and the rest are unchanged, no `'unsafe-eval'`, no `blob:`). **If you set your own CSP at a reverse proxy instead of using
+  the app's header, add `kh-pdf` to its `trusted-types` list**, or choosing a PDF says "This browser cannot read a PDF here". The image
+  carries 1.8 MB more of vendored files (`app/static/vendor/pdfjs-dist-6.4.299/`, Apache-2.0, pinned by SHA-256 in `vendor/README.md`);
+  they are fetched by a browser only when a person picks a PDF.
 * **Schema step 18** (`m018_body_measurements.py`): two new tables, `weights` and `blood_pressures`, deleted with the account. It runs
   at the first start of this version and changes nothing that exists (take a backup first, as for any upgrade).
 * The export gains `weights` and `blood_pressures` (and `weights.csv`, `blood_pressure.csv`); the export version stays 1 and older
@@ -81,6 +97,33 @@ the API. Security fixes are released as patch versions of the newest minor versi
   rule and return `via: null`. New tests: `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, and a device
   token in the two tests that every `/api` route ignores `Authorization`. One line (a "Phone shortcuts" group for `push.enabled`) was added
   to `js/views/settings.js` because `tests/test_settings_ui.py` requires every server setting to be in a group.
+* **PDF lab reports** (design note 13): `js/engine/pdf_pages.js` (`KH.pdfPages`) opens a PDF with the vendored **pdfjs-dist 6.4.299, `legacy/build`**
+  (`pdf.min.mjs`, `pdf.worker.min.mjs`, `LICENSE` in `app/static/vendor/pdfjs-dist-6.4.299/`; the choice and its evidence, pdf.js's own browser
+  support statement and the calls the default build makes without a polyfill, are in `app/static/vendor/README.md`) and draws the pages the person
+  ticked as JPEGs in a module Worker that the module makes under the one Trusted Types policy `kh-pdf` (`app/security.py` now says
+  `trusted-types kh-sw kh-xml kh-pdf`; `tests/test_frontend_shell.py` allows exactly three policy-creating files and one `Worker` constructor). The
+  options passed to `getDocument` are the audited list in the file's header (`data`, `isEvalSupported: false`, `enableXfa: false`,
+  `disableAutoFetch`, `disableStream`, `disableRange`, `stopAtErrors: false`; no URL, `cMapUrl`, `standardFontDataUrl`, `iccUrl` or `wasmUrl`).
+  **Against pdf.js 6.4 two names differ from note 13:** `isEvalSupported` no longer exists (the library has no eval path left; the option is passed
+  anyway and `tests/test_vendor.py` fails if an update brings it back, so the page can be re-audited) and `render()` takes `canvas` instead of the
+  deprecated `canvasContext`. pdf.js makes no worker of its own when `GlobalWorkerOptions.workerPort` is set and has no main-thread "fake worker" then, but a
+  worker that fails to start only fires `error` and the load promise never settles, so the module listens for it and also refuses a pdf.js that
+  did not post to our worker. `lab_photo.js` gained the page list, page-by-page reading with Cancel, the merged table (`KH.labPhoto.mergePages`)
+  and the messages; `KH.ai.uploadPhoto` takes an optional `AbortSignal`.
+* **`scripts/vendor_barcode.py` vendors both the barcode decoder and pdf.js** (same name and options; new `--only barcode|pdfjs`, which
+  downloads nothing of the other group; the download cap is per package because the pdfjs-dist tarball is 8.5 MB; the tarball address the
+  registry names must be the expected one; the weekly `vendor-check.yml` `--check-latest` covers pdf.js through npm's small dist-tags answer).
+  `tests/test_vendor.py` runs the fetch against a fake registry. **A comment in `sw.js` that contained `*/` stopped the service worker from
+  starting** (found by the browser walk, not by a test): `tests/test_pdf_pages.py` now runs `node --check` on `sw.js`, `pdf_pages.js`,
+  `lab_photo.js` and `ai.js`.
+* **`tools/e2e/lab_pdf.py`: a browser walk of a PDF lab report** (ports 8089 and 8090, Chromium at 375×812 light and 1280×800 dark with the
+  service worker allowed on the second, about a minute). A tiny PDF writer in the harness (no new dependency) makes a two-page report, an
+  encrypted one (RC4), a damaged one, a 51-page one and a 21 MB one; a fake local AI answers lab report photos with scripted rows. It checks the
+  page list, the consent sheet's extra line, that each page reached the AI as its own drawn JPEG (no EXIF, within 2048 px, dark pixels, the two
+  different) and that no request body starts with `%PDF-`, the merged table, the date entry and Save through `POST /api/labs/import`, Cancel,
+  the five refusals (including pdf.js's real `PasswordException`), that only the library and its worker were requested from
+  `/vendor/pdfjs-dist-6.4.299/` and one closed Worker was made per run, 0 CSP or Trusted Types violations, and the service worker's `/vendor/` cache.
+  It is listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
 * **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
   the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
   show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400

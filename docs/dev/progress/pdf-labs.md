@@ -15,7 +15,7 @@ Spec: `docs/dev/research/13-lab-results-from-a-pdf.md` (decided 2026-10-22). Bra
 5. [x] `lab_photo.js` PDF flow + extended `tests/js/lab_photo_page.mjs` / `tests/test_lab_photo_ui.py`.
 6. [x] Browser walk `tools/e2e/lab_pdf.py` (no lab-photo walk existed; this one starts a fake local AI like `fallback.py`),
        listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
-7. [ ] Docs: ARCHITECTURE, docs/ai.md, handbook page, docs/security.md, docs/deployment.md + handbook upgrades page (CSP string),
+7. [x] Docs: ARCHITECTURE, docs/ai.md, handbook page, docs/security.md, docs/deployment.md + handbook upgrades page (CSP string),
        ROADMAP, CHANGELOG (`## Unreleased`), maintainers/README mentions; `python scripts/build_handbook.py --check`.
 8. [ ] Full run: `python -m pytest` (no xdist installed), `node tests/js/run_vectors.mjs`, `ruff check .`.
 
@@ -49,3 +49,12 @@ Spec: `docs/dev/research/13-lab-results-from-a-pdf.md` (decided 2026-10-22). Bra
 Done so far (verified by the commands above): vendoring script (`--only barcode|pdfjs`, per-package download cap, tarball URL equality, pdf.js
 group, README sections), the three vendored files, pdf_pages.js and its Node test (fake pdf.js), the CSP directive and its tests,
 index.html script tag and sw.js precache entry (sw.js test in test_vendor.py). index.html's file input / card text and lab_photo.js are next.
+
+## Resumed after the usage-limit reset (2026-10-22)
+
+Docs step finished: ARCHITECTURE (PDFs bullet, module list, vendor line, kh-pdf in the C-CDA bullet), docs/ai.md, handbook ai.md /
+targets-and-warnings.md / index.md (anchor is now `ai.md#read-a-lab-report-from-a-photo-or-a-pdf`), docs/security.md, privacy.md, deployment.md and the
+handbook upgrades page (CSP names), targets-and-labs.md, barcode-and-photos.md, ROADMAP (PDF item: only the owner's live run and the text-layer
+idea left), CHANGELOG under the existing `## Unreleased`, maintainers.md, README.md, docs/README.md, vendor-check.yml wording.
+Checks run: `ruff check .`, `node tests/js/run_vectors.mjs`, `python scripts/build_handbook.py --check` (the repo's tool is `scripts/build_handbook.py`),
+`python3 scripts/vendor_barcode.py --check`, `python tools/e2e/lab_pdf.py` (100 checks, 0 failed, both screens). Full `python -m pytest` is step 8.
