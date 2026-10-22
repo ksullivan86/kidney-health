@@ -446,7 +446,7 @@ accounts; the list of checks is in [docs/maintainers.md](docs/maintainers.md) an
 * **Screens that are still a little off.** On a phone, **Profile**'s two-box rows (Daily targets, About you) can sit at different heights
   when one label wraps; an attempt to fix it crowded the hints under the boxes, so it was left. For an admin (the shield button next to
   Settings), and in the demo with its Preview pill, the header on a phone has no room for the app's name, so only the logo shows. On Today with an empty log, the
-  full stop after "Choose them in Profile" sits a little apart from its link.
+  full stop after "...enter them in Settings" sits a little apart from its link.
 * **Left open by the entries above.**
   * A shortcut's reading of 180/120 or higher is flagged, with Get help now, only the next time the app is opened; the app does not watch
     what a shortcut sends.

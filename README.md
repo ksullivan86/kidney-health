@@ -51,10 +51,11 @@ tells you to hold back on treating a low blood sugar.
   This part works without AI.
 * **Treating a low.** A card with what to take for a low blood sugar, which also works offline.
 * **Lab results.** Enter results in US or SI units and see your eGFR and kidney stage. You can also
-  bring them in from a spreadsheet, the iPhone Health app, a patient portal file, or a photo of a
-  report.
-* **Weight and blood pressure.** Log them, see them on charts, and keep the alarm and goal your care
-  team gave you. A very high reading shows the handbook's advice on when to call 911.
+  bring them in from a spreadsheet, the iPhone Health app, a patient portal file, or a photo or PDF
+  of a report.
+* **Weight and blood pressure.** Log them, bring them in from the iPhone Health app or send them from
+  a phone shortcut, see them on charts, and keep the alarm and goal your care team gave you. A very
+  high reading shows the handbook's advice on when to call 911.
 * **Symptoms and visit prep.** Note symptoms as they happen, then print one page with your averages,
   latest labs, symptoms and questions to take to your next appointment.
 * **Works offline.** Install it on your phone's home screen. Food you log without a connection is
@@ -63,7 +64,7 @@ tells you to hold back on treating a low blood sugar.
   move it to another server, or delete your account.
 
 AI features are there if you want them, and off until an admin turns them on. They include an
-**Ask** chat, meal ideas, and reading label photos. You can choose to keep the AI on your own home
+**Ask** chat, meal ideas, and reading label photos and lab report PDFs. You can choose to keep the AI on your own home
 network. See [docs/ai.md](docs/ai.md).
 
 ## Run it yourself

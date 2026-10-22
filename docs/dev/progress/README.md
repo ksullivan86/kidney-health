@@ -7,4 +7,5 @@ condensed and removed when a milestone is finished: what changed goes to `CHANGE
 to `docs/ROADMAP.md`, and checks a maintainer still has to run to `docs/maintainers.md`. The v0.3.0
 build's notes were condensed this way on 2026-10-07, and the 0.4.0 notes (ai-fallback, assistant, ccda-labs, demo-local, deps,
 fhir-labs, follow-ups, import, lab-photo, menu-plan, offline-edits, preferences-a/b/c, privacy-tiers, prompts, qa-1015, symptoms,
-visit-prep) on 2026-10-21.
+visit-prep) on 2026-10-21, and the 0.5.0 notes (brand, mcp-prefs, pdf-labs, push-server, push-ui, reuse-api, reuse-groundwork,
+vectors-readme, visual-qa, zip-reader) on 2026-10-22.
