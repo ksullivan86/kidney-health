@@ -112,8 +112,10 @@
   };
 
   // A photo goes as the raw JPEG body (no multipart, note 03 R8): the shared JSON client cannot send it. `kind` is label or
-  // plate (POST /api/vision/<kind>), or lab-report (POST /api/ai/read-lab-report: a report photo, local AI only).
-  async function uploadPhoto(kind, blob, dry) {
+  // plate (POST /api/vision/<kind>), or lab-report (POST /api/ai/read-lab-report: a report photo, local AI only). `signal` (optional,
+  // an AbortSignal) lets the caller stop the request: it rejects with the browser's AbortError, which is not turned into a message
+  // (a PDF lab report is read page by page and has a Cancel button, js/views/lab_photo.js).
+  async function uploadPhoto(kind, blob, dry, signal) {
     if (MOCK) throw Object.assign(new Error('Photos are read by AI only in the installed app.'), { status: 0 });
     let res;
     try {
@@ -122,8 +124,10 @@
         headers: { 'Content-Type': 'image/jpeg', Accept: 'application/json', 'X-Requested-With': 'kidney-health' },
         body: blob,
         credentials: 'same-origin',
+        ...(signal ? { signal } : {}),
       });
     } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
       throw Object.assign(new Error('Cannot reach the server. Check your connection.'), { status: 0 });
     }
     const text = await res.text();

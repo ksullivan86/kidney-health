@@ -73,6 +73,15 @@
 .lab-photo-list .lab-row { flex-wrap: wrap; }
 .lab-photo-date { flex: 1 1 100%; margin: 0 0 6px; padding-left: 34px; min-width: 0; }
 .lab-photo-date input[type=date] { max-width: 14rem; }
+/* ... and from a PDF: the list of its pages (ticked pages are read, one request each), and the page a row came from. */
+.lab-photo-pages { margin: 4px 0 12px; }
+.lab-photo-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.lab-photo-fieldset legend { font-weight: 600; padding: 0; margin: 0 0 2px; }
+.lab-photo-page-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0 12px; max-height: 15rem; overflow-y: auto; margin: 6px 0; padding: 0; }
+.lab-photo-page { display: flex; align-items: center; gap: 8px; min-height: var(--tap); }
+.lab-photo-page input[type=checkbox] { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+.lab-photo-page label { min-width: 0; }
+.lab-row-page { color: var(--text-2); font-size: 0.85rem; }
 .danger-link { color: var(--over-text); }
 .badge.very-high { background: var(--over-tint); color: var(--over-text); }
 
