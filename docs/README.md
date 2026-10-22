@@ -82,6 +82,7 @@ using the app; the pages below are for the people who run, maintain and check it
 * [07 Accounts, settings and secrets](dev/research/07-accounts-settings-secrets.md)
 * [08 The patient handbook site at `/learn`](dev/research/08-handbook-site.md)
 * [09 Learn my food preferences](dev/research/09-food-preferences.md)
+* [10 Weight and blood pressure](dev/research/10-weight-and-blood-pressure.md)
 
 ## Research behind the numbers
 
