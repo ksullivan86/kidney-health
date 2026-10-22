@@ -55,6 +55,7 @@ def test_low_potassium_fruit_badge_never_sits_next_to_a_high_potassium_warning(f
     assert foods["Pear, raw"]["serving_desc"].startswith("1 small") and foods["Pear, raw"]["nutrients"]["potassium_mg"] == 172
 
 
+@pytest.mark.safety
 def test_hypo_treatments_are_served_as_a_rescue_portion_and_get_no_carb_warning(foods):
     hypo = [f for f in foods.values() if "hypo_treatment" in f["flags"]]
     assert len(hypo) >= 10

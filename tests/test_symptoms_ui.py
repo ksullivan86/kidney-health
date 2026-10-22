@@ -111,6 +111,7 @@ def test_the_view_draws_with_h_and_never_with_markup_strings():
     assert not re.search(r"`<[a-z]", code) and not re.search(r"'<[a-z]", code)
 
 
+@pytest.mark.safety
 def test_the_app_names_no_cause_treatment_or_dose_in_what_it_draws_or_says():
     forbidden = re.compile(r"\b(because|causes|caused|due to|dose[sd]?|dosing|insulin|medicine|medication|treat\w*|glucagon|units of|take )\b", re.I)
     for name in CODE:
@@ -133,6 +134,7 @@ def test_the_red_flag_decision_lives_in_one_place_and_the_view_asks_for_it():
     assert "const HREF = '/learn/get-help-now/';" in ENGINE
 
 
+@pytest.mark.safety
 def test_a_severe_red_flag_is_shown_first_and_prominently():
     code = strip_comments(VIEW)
     assert "red_flag && s.red_flag.prominent ? 0 : 1" in code and "red_flag && g.red_flag.prominent ? 0 : 1" in code

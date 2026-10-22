@@ -53,6 +53,7 @@ def test_custom_and_open_food_facts_names_are_marked_untrusted():
     assert custom["untrusted"] is True
 
 
+@pytest.mark.safety
 def test_swap_mode_lists_rule_swaps_and_refuses_low_treatments():
     ctx = fx.context()
     c = ai_bridge.candidates_for_ai(ctx, "dinner", "swap", food=ctx.foods[2], servings=1.0)
@@ -131,6 +132,7 @@ def test_validation_merges_duplicates_and_bounds_counts():
         assert reason in ("malformed_item", "empty")
 
 
+@pytest.mark.safety
 def test_ai_ideas_never_hold_a_low_treatment_even_if_named_a_candidate():
     ctx = fx.context()
     r = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 12, "quarters": 4}]], candidate_ids=[12])

@@ -8,6 +8,7 @@ import io
 import json
 import uuid
 
+import pytest
 from conftest import DAY, find_food, log_food, send_json
 
 
@@ -217,6 +218,7 @@ def test_batch_body_over_the_server_limit_is_refused(client):
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 def test_from_log_sets_the_meal_hint_and_leaves_low_treatments_out(client):
     log_food(client, "chicken", meal="dinner")
     log_food(client, "apple", meal="dinner")

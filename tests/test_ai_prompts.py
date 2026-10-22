@@ -93,6 +93,7 @@ def test_the_next_meal_payload_matches_its_snapshot(client):
                              "rating", "reasons", "ref", "serving", "source", "warnings"]
 
 
+@pytest.mark.safety
 def test_fields_that_are_never_sent(client):
     sam = add_user(client)
     secret_food = sam.post("/api/foods", json={"name": "Sam's secret stew", "serving_desc": "1 bowl (300 g)", "serving_g": 300,
@@ -257,6 +258,7 @@ def test_a_profile_not_chosen_yet_is_not_assumed_either_way():
         assert text in prompt and "type 1" not in prompt and "type 2" not in prompt
 
 
+@pytest.mark.safety
 def test_the_low_rules_and_the_hypo_purpose_note_are_the_same_text_for_every_profile():
     """A person whose profile says "None" can still have a low, or log for someone who does: nothing about treating a low
     depends on the profile. Whatever a profile changes, it is only the condition sentence."""

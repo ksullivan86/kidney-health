@@ -74,6 +74,7 @@ def test_tv_s6_no_trigger_no_swaps():
         assert r["swaps"] == [] and r["reason"] == "no_warning", fid
 
 
+@pytest.mark.safety
 def test_hypo_mode_never_reduces_the_treatment_and_respects_the_dose_setting():
     ctx = fx.context(prefs=Prefs(hypo_dose_g=20))
     r = swaps.find_swaps(ctx, "snack", ctx.foods[12], 1.0, "hypo")
@@ -134,6 +135,7 @@ def test_hypo_option_dropped_when_the_largest_portion_cannot_reach_the_dose():
     assert R.HYPO_PORTION_MAX * 1.0 < 15
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize(("dose", "tablets"), [(5, 2), (15, 4), (16, 4), (20, 5), (30, 8)])
 def test_single_tablets_are_counted_out_whole_and_never_under_the_dose(dose, tablets):
     fs = fx.foods()

@@ -78,6 +78,7 @@ def test_untrusted_names_are_trimmed_and_never_empty():
     assert M.safe_name("") == "this food"
 
 
+@pytest.mark.safety
 def test_every_fixed_template_passes_the_wording_lint():
     for tip in T.ALL_TIPS:
         lint(tip.text.format(pct=85, value="40", min="70", Meal="Dinner", carbs="62", goal="60", dose="15"))
@@ -93,6 +94,7 @@ def test_every_fixed_template_passes_the_wording_lint():
         lint(M.learned_reason(kind, **values))
 
 
+@pytest.mark.safety
 def test_the_low_card_follows_the_persons_amount_and_never_mentions_insulin():
     card = M.treating_a_low_card(20)
     assert "take 20 g of fast carbs now" in card["lines"][0]
@@ -116,6 +118,7 @@ def collect(result, out: list[str]) -> None:
             collect(item, out)
 
 
+@pytest.mark.safety
 def test_every_generated_message_passes_the_wording_lint():
     texts: list[str] = []
     foods = fx.real_foods()

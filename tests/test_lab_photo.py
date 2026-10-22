@@ -754,6 +754,7 @@ def test_initialise_starts_labs_on_local_for_a_server_that_already_has_a_provide
         assert cloud > 0
 
 
+@pytest.mark.safety
 def test_the_prompt_line_names_every_test_the_app_keeps_and_gives_no_advice():
     from app import units
 

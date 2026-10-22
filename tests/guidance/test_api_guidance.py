@@ -161,6 +161,7 @@ def test_swaps_for_a_food_before_saving_and_for_a_saved_entry(real):
     assert grams["food"]["servings"] == pytest.approx(101 / serving_g)
 
 
+@pytest.mark.safety
 def test_swaps_for_a_low_treatment_never_shrink_it(real):
     set_targets(real)
     oj = food_id(real, "Orange juice")
@@ -195,6 +196,7 @@ def test_swaps_404_for_unknown_food_or_entry(real):
     assert real.get("/api/guidance/swaps", params={"entry_id": 999999}).status_code == 404
 
 
+@pytest.mark.safety
 def test_hypo_options_are_always_available_and_lowest_potassium_first(real):
     real.put("/api/profile", json={"targets": {k: None for k in TARGETS}})  # no targets needed
     real.patch("/api/admin/settings", json={"guidance.enabled": False})

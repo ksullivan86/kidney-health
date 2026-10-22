@@ -392,6 +392,7 @@ def _lines(body: str):
         yield n, line
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("page", PAGES, ids=PAGE_IDS)
 def test_no_insulin_or_medicine_doses(page):
     _, body = _split(page)
@@ -405,6 +406,7 @@ def test_no_insulin_or_medicine_doses(page):
             assert not MG_NEAR_DRUG.search(line), f"{rel}:{n}: milligrams next to a medicine name: {line.strip()[:120]}"
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("page", [p for p in PAGES if _rel(p).startswith(DOSE_DIRS)],
                          ids=[r for r in PAGE_IDS if r.startswith(DOSE_DIRS)])
 def test_dose_pages_carry_the_no_dosing_box(page):
@@ -412,12 +414,14 @@ def test_dose_pages_carry_the_no_dosing_box(page):
     assert NO_DOSING_INCLUDE in body, f"{_rel(page)}: pages under t1d/ and medicines/ must include {NO_DOSING_INCLUDE}"
 
 
+@pytest.mark.safety
 def test_no_dosing_include_says_lows_come_first():
     text = (HANDBOOK / "includes" / "no-dosing.md").read_text(encoding="utf-8").lower()
     assert "never gives insulin or medicine doses" in text
     assert "low blood glucose is always treated straight away" in text
 
 
+@pytest.mark.safety
 def test_dose_lint_catches_examples():
     assert INSULIN_UNITS.search("give 4 units of insulin")
     assert INSULIN_UNITS.search("insulin glargine 10 U at night")
@@ -430,6 +434,7 @@ def test_dose_lint_catches_examples():
     assert not INSULIN_UNITS.search("switch to US units or International units")
 
 
+@pytest.mark.safety
 def test_get_help_now_names_emergency_numbers_and_tiers():
     _, body = _split(DOCS / "get-help-now.md")
     for needle in ("911", "## Call 911 now", "## Call your care team today", "## Mention at your next visit",
@@ -437,6 +442,7 @@ def test_get_help_now_names_emergency_numbers_and_tiers():
         assert needle in body, f"get-help-now.md must mention {needle!r}"
 
 
+@pytest.mark.safety
 def test_wallet_card_is_shared_and_keeps_the_action_levels():
     """get-help-now and reference/wallet-card print the same card (includes/help-card.md)."""
     card = (HANDBOOK / "includes" / "help-card.md").read_text(encoding="utf-8")

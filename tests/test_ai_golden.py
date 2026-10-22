@@ -47,6 +47,23 @@ from app.main import create_app
 
 ROOT = Path(__file__).resolve().parent
 CASES = sorted((ROOT / "ai_golden").glob("*.json"))
+# The cases that pin a safety rule (``pytest -m safety``, CONTRIBUTING.md "Tests"): every ``safety-*`` (no doses or medicine
+# advice, blocked words, false claims corrected) and ``prefilter-*`` (a low or a red flag is answered by the app, no model call)
+# case, and the cases that say a low treatment is never sent to the model, a lab report row is never advice or a dose, and the
+# fields that are never sent stay out of the request.
+SAFETY_PREFIXES = ("safety-", "prefilter-")
+SAFETY_CASES = {
+    "mode-swap-low-treatment-never-sent",
+    "rules-hypo-treatment-item",
+    "lab-report-advice-or-a-dose-is-never-a-row",
+    "privacy-payload-never-sent-fields",
+}
+
+
+def _is_safety(path: Path) -> bool:
+    return path.stem.startswith(SAFETY_PREFIXES) or path.stem in SAFETY_CASES
+
+
 FOODS_JSON = ROOT.parent / "data" / "foods.json"
 IMAGES = ROOT / "fixtures" / "ai" / "images"
 DAY = "2026-10-05"
@@ -256,7 +273,10 @@ def shown_names(result: dict[str, Any], client: TestClient) -> set[str]:
     return names
 
 
-@pytest.mark.parametrize("path", CASES, ids=[p.stem for p in CASES])
+GOLDEN = [pytest.param(p, id=p.stem, marks=[pytest.mark.safety] if _is_safety(p) else []) for p in CASES]
+
+
+@pytest.mark.parametrize("path", GOLDEN)
 def test_golden_case(path: Path, golden):
     admin, sam = golden
     case = json.loads(path.read_text(encoding="utf-8"))

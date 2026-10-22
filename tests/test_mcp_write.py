@@ -647,6 +647,7 @@ def test_saving_counts_toward_the_sixty_requests_a_minute(admin, saver, fake_clo
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 def test_the_saving_tools_speak_of_no_doses_or_medicines():
     from app.mcp import server as mcp_server
     from app.mcp import tools as mcp_tools

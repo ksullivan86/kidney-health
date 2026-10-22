@@ -79,6 +79,7 @@ def test_tv_b6_interdialytic_allowance_on_a_long_gap():
     assert budget.interdialytic_allowance(2500, "potassium_mg", history, "2026-10-04", ()) is None
 
 
+@pytest.mark.safety
 def test_tv_b7_a_low_treatment_counts_for_minerals_but_not_meal_carbs():
     fs = fx.foods()
     day = fx.context().day + (fx.entry(fs[10], "dinner", purpose="hypo"),)

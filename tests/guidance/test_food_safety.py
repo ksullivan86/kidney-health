@@ -15,6 +15,8 @@ import fixtures as fx
 import pytest
 from app.guidance import fits, planner
 
+pytestmark = pytest.mark.safety
+
 ROOT = Path(__file__).resolve().parents[2]
 FOODS = json.loads((ROOT / "data" / "foods.json").read_text(encoding="utf-8"))["foods"]
 RAW_EGG = re.compile(r"\begg\b.*\braw\b|\braw\b.*\begg", re.IGNORECASE)

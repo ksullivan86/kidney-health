@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fixtures as fx
+import pytest
 from app.guidance import insights
 from app.guidance import messages as M
 from app.guidance.state import HistoryEntry, Prefs, Profile
@@ -48,6 +49,7 @@ def test_tv_i1_day_messages_word_for_word():
     assert r["planned_excluded"] == 0
 
 
+@pytest.mark.safety
 def test_low_treatments_are_never_warned_against():
     r = insights.day_insights(tv_i1_context())
     hypo = by_id(r)["day.hypo.logged"]

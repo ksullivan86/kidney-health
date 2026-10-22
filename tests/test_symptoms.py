@@ -206,6 +206,7 @@ def squash(text: str) -> str:
     return re.sub(r"\s+", " ", text).lower()
 
 
+@pytest.mark.safety
 def test_the_red_flag_list_is_what_the_handbook_page_sorts_as_a_warning_sign():
     sections = handbook_sections()
     for key, entry in symptoms_module.RED_FLAGS.items():
@@ -222,6 +223,7 @@ def test_the_red_flag_list_is_what_the_handbook_page_sorts_as_a_warning_sign():
     assert RED_FLAG_KEYS == set(symptoms_module.RED_FLAGS)
 
 
+@pytest.mark.safety
 def test_a_red_flag_symptom_carries_the_handbook_line_and_link_and_nothing_else_does(client):
     for key in KEYS:
         for severity in (1, 2, 3):
@@ -240,6 +242,7 @@ def test_a_red_flag_symptom_carries_the_handbook_line_and_link_and_nothing_else_
     assert [s["red_flag"]["level"] for s in listing(client) if s["symptom"] == "swelling"] == ["today"] * 3
 
 
+@pytest.mark.safety
 def test_the_app_never_names_a_cause_a_treatment_or_a_dose_about_a_symptom():
     forbidden = re.compile(r"\b(because|causes|caused|due to|dose[sd]?|dosing|insulin|medicine|medication|treat\w*|"
                            r"take|\d+\s*(?:mg|g|units?|ml))\b", re.I)
@@ -247,6 +250,7 @@ def test_the_app_never_names_a_cause_a_treatment_or_a_dose_about_a_symptom():
         assert not forbidden.search(entry["text"]), key
 
 
+@pytest.mark.safety
 def test_the_other_features_do_not_read_the_symptoms_table():
     """Symptoms are never sent to an AI provider or the assistant: the code that builds those requests does not read them."""
     reads = re.compile(r"(?:FROM|INTO|JOIN|UPDATE)\s+symptoms\b|\bimport\s+symptoms\b|from\s+\.+\s*symptoms\b|from\s+\.+symptoms\s+import|"

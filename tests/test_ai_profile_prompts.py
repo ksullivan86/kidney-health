@@ -108,6 +108,7 @@ def test_describe_a_meal_and_photos_carry_no_profile_data(person_client):
         assert "stage" not in text.lower() and "type 1" not in text and '"diabetes"' not in text, feature
 
 
+@pytest.mark.safety
 def test_the_low_rules_and_the_hypo_purpose_are_the_same_for_every_profile(person_client):
     """Nothing about treating a low depends on the profile (a person with "None" can still have a low)."""
     _, c = person_client
@@ -149,6 +150,7 @@ def test_no_identity_in_any_request(person_client):
             assert never not in text.replace("administrator", ""), (feature, never)
 
 
+@pytest.mark.safety
 def test_a_low_and_an_emergency_are_answered_by_the_app_for_every_profile(person_client):
     """The rule-based pre-filters are code, not prompt wording: the same cards, no model call, for every profile."""
     _, c = person_client

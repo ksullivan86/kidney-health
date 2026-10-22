@@ -9,6 +9,8 @@ from app.guidance import fits, hypo, insights, planner, swaps
 from app.guidance import rules as R
 from app.guidance.budget import meal_room
 
+pytestmark = pytest.mark.safety
+
 
 @pytest.mark.parametrize("text", [
     "I'm low", "feeling low", "going low, what do I eat", "hypo!", "had a hypo at 3am", "feeling shaky and sweaty",

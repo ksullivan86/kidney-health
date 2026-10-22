@@ -391,6 +391,7 @@ def test_get_today_defaults_to_the_servers_today(admin, token):
     assert got["targets_set"] is False and "Profile" in got["note"]
 
 
+@pytest.mark.safety
 def test_low_treatment_carbs_never_count_toward_the_meal(admin, token):
     set_targets(admin)
     log_food(admin, "Glucose tablets", meal="lunch", servings=2)  # "Used to treat a low" by default
@@ -650,6 +651,7 @@ def test_check_meal_asks_which_meal_for_the_carbohydrate_goal(admin, token):
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 def test_safety_check_low_wording_returns_the_treating_a_low_card_with_the_persons_grams(admin, token):
     assert admin.patch("/api/me/settings", json={"guidance": {"hypo_dose_g": 20}}).status_code == 200
     for message in ("I feel shaky and low", "my sugar is 3.2", "bg 62 mg/dL", "I think I'm going low"):
@@ -661,6 +663,7 @@ def test_safety_check_low_wording_returns_the_treating_a_low_card_with_the_perso
         assert "Treating a low card" in got["say_first"] and "link" not in got
 
 
+@pytest.mark.safety
 def test_safety_check_emergency_wording_points_to_get_help_now(admin, token):
     got = call(admin.app, token, "safety_check", message="I have chest pain and can't breathe")
     assert got["action"] == "get_help_now" and got["matched"] == {"low": False, "emergency": True}
@@ -672,6 +675,7 @@ def test_safety_check_emergency_wording_points_to_get_help_now(admin, token):
     assert "treat the low first" in both["say_first"] and "never delay" in both["say_first"]
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("message", ["What can I eat for lunch?", "low-fat yogurt with berries", "low sodium soup",
                                      "", "2 tsp sugar in my tea"])
 def test_safety_check_neutral_wording_is_none(admin, token, message):
@@ -679,6 +683,7 @@ def test_safety_check_neutral_wording_is_none(admin, token, message):
     assert got["action"] == "none" and got["cards"] == [] and got["matched"] == {"low": False, "emergency": False}
 
 
+@pytest.mark.safety
 def test_no_tool_text_speaks_of_doses_or_insulin():
     """The only mention is the instruction never to give them."""
     dosing = re.compile(r"\b(insulin|bolus|basal|doses?|dosing|correction|ratios?|binders?|medicines?|medications?)\b", re.I)

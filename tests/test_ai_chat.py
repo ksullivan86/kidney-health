@@ -182,6 +182,7 @@ def test_the_body_is_checked(ask_client):
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", ["I feel shaky and low", "my sugar is 3.2", "bg 62 mg/dL", "I think I'm going low"])
 def test_low_wording_gets_the_treating_a_low_card_and_the_model_is_not_called(ask_client, text):
     c = ask_client
@@ -202,6 +203,7 @@ def test_low_wording_gets_the_treating_a_low_card_and_the_model_is_not_called(as
     assert db_rows(c, "ai_audit") == []  # and nothing in the activity log
 
 
+@pytest.mark.safety
 def test_emergency_wording_gets_get_help_now_and_a_low_in_the_same_message_keeps_its_card(ask_client):
     c = ask_client
     with attach(c.app, FakeProvider()) as provider:
@@ -213,6 +215,7 @@ def test_emergency_wording_gets_get_help_now_and_a_low_in_the_same_message_keeps
         assert both["ai_called"] is False and provider.requests == []
 
 
+@pytest.mark.safety
 def test_the_rules_answer_before_consent_and_before_the_provider_is_looked_at(tmp_path, foods_json):
     """A low is answered even when the person has not agreed to anything yet, and the answer never waits for the AI."""
     with TestClient(create_app(ai_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
@@ -223,18 +226,21 @@ def test_the_rules_answer_before_consent_and_before_the_provider_is_looked_at(tm
             assert provider.requests == []
 
 
+@pytest.mark.safety
 def test_a_low_in_the_dry_run_is_answered_not_previewed(ask_client):
     with attach(ask_client.app, FakeProvider()) as provider:
         body = ask(ask_client, "I feel shaky and low", dry_run="true").json()
         assert body["kind"] == "treat_low" and "dry_run" not in body and provider.requests == []
 
 
+@pytest.mark.safety
 def test_food_talk_that_only_looks_like_a_low_is_not_stopped(ask_client):
     with attach(ask_client.app, FakeProvider([step_answer("Yes.")])) as provider:
         assert ask(ask_client, "low-fat yogurt with berries and low sodium soup").json()["kind"] == "answer"
         assert provider.calls == 1
 
 
+@pytest.mark.safety
 def test_an_earlier_low_or_emergency_message_is_never_sent_to_the_model(ask_client):
     history = ({"role": "user", "text": "I went low an hour ago"},
                {"role": "assistant", "text": "Treat the low first. When you feel better, ask again."},
@@ -303,6 +309,7 @@ def test_a_number_the_person_typed_may_be_quoted(ask_client):
         assert ask(ask_client, "can I drink 250 ml of water").json()["kind"] == "withheld"
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("answer", [
     "Take 4 units of insulin before you eat that.",
     "A bolus would cover it.",
@@ -317,6 +324,7 @@ def test_insulin_and_dose_talk_is_withheld(ask_client, answer):
     assert answer not in json.dumps(body)
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("answer", [
     "Have more rice if you are still hungry.",
     "Extra water is not advised by me; check with your care team about fluid.",

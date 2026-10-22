@@ -54,6 +54,7 @@ def test_never_high_from_the_flag_alone() -> None:
         assert kidney_rating(food_warnings({"potassium_mg": None}, flags)) == "yellow"
 
 
+@pytest.mark.safety
 def test_hypo_treatment_keeps_the_mineral_warning_and_still_has_no_carb_warning() -> None:
     warnings = food_warnings({"potassium_mg": None, "carbs_g": 40}, ["potassium_additive", "hypo_treatment", "high_gi"])
     assert [w["nutrient"] for w in warnings] == ["potassium_mg"]

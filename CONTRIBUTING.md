@@ -72,6 +72,7 @@ runtime dependency v0.3 added is `cryptography`; propose any new one in an issue
 
 ```bash
 python -m pytest                    # the whole suite; must pass with no network
+python -m pytest -m safety          # only the health-data safety rules (see "The safety set" below)
 node tests/js/run_vectors.mjs       # the browser's copies of the server logic match the server
 ruff check .                        # Python lint: pycodestyle errors and pyflakes (rules in pyproject.toml); CI runs it too
 ```
@@ -79,6 +80,13 @@ ruff check .                        # Python lint: pycodestyle errors and pyflak
 * **Every behaviour change ships with tests**, including failure paths, limits and edge cases, not
   only the happy path. Tests never use the network: outbound calls go through fakes and recorded
   fixtures (`tests/fixtures/`).
+* **The safety set.** The tests that enforce the rules in [Safety rules (health data)](#safety-rules-health-data)
+  carry `@pytest.mark.safety`: no insulin or medicine dosing, a low is never blocked, warned against or limited, handbook
+  text quoted word for word, the AI guard and the prefilter that answers a low before any model call, and nothing about
+  weights, readings or symptoms sent to an AI. `python -m pytest -m safety` runs just those (a few hundred tests, also part of
+  the full run). They must travel with any piece of this code that is reused elsewhere. Mark a new test that enforces one of
+  these rules (the whole module with `pytestmark` when the file is only about the rule), and add its file to `SAFETY_FILES` in
+  `tests/test_safety_set.py`, which fails if the set quietly shrinks.
 * Useful subsets: `python -m pytest tests/test_auth_coverage.py tests/test_isolation.py` (every route
   needs sign-in; nobody sees another person's data), `tests/guidance/`, `tests/test_ai_*.py`,
   `tests/test_handbook_content.py`.
@@ -99,7 +107,7 @@ pull request** and keep them equal with the shared vector files:
 
 | Server | Twin | Vectors (generator) |
 |---|---|---|
-| `app/nutrients.py` (warnings, ratings, rounding) | `js/engine/rules.js` | `tests/data/rules_vectors.json` (`gen_rules_vectors.py`) |
+| `app/nutrients.py`, `app/rules_kidney.py` (warnings, ratings), `app/nutrient_core.py` (rounding) | `js/engine/rules.js` | `tests/data/rules_vectors.json` (`gen_rules_vectors.py`) |
 | `app/settings_registry.py`, `app/settings_store.py` | `js/engine/settings.js` | `settings_vectors.json` (`gen_settings_vectors.py`) |
 | `app/targets.py`, `app/target_rules.py` | `js/engine/targets.js` | `targets_vectors.json` (`gen_targets_vectors.py`) |
 | `app/units.py`, `app/kidney_function.py` | `js/engine/kidney_function.js` | `kidney_function_vectors.json` (`gen_kidney_function_vectors.py`) |

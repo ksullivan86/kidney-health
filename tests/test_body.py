@@ -700,6 +700,7 @@ def squash(text: str) -> str:
     return re.sub(r"\s+", " ", text).lower()
 
 
+@pytest.mark.safety
 def test_every_quoted_phrase_is_on_the_handbook_page_under_its_group():
     from app.symptoms import HANDBOOK_GROUP_HEADINGS
 
@@ -723,6 +724,7 @@ def test_every_quoted_phrase_is_on_the_handbook_page_under_its_group():
     assert text.index("Call 911 now") < text.index("rest for 5 minutes")  # the 911 signs are read first
 
 
+@pytest.mark.safety
 def test_the_page_cites_nhlbi_and_gives_no_medicine_advice_about_blood_pressure():
     text = HANDBOOK_PAGE.read_text(encoding="utf-8")
     assert "[NHLBI][NHLBI-BPS]" in text and "NHLBI-BPS," in text.split("---")[1]
@@ -734,6 +736,7 @@ def test_the_page_cites_nhlbi_and_gives_no_medicine_advice_about_blood_pressure(
     assert "180/120" in card and "5 minutes" in card
 
 
+@pytest.mark.safety
 def test_the_flags_name_no_cause_treatment_or_dose():
     forbidden = re.compile(r"\b(because|causes|caused|due to|dose[sd]?|dosing|insulin|medicine|medication|treat\w*|take|"
                            r"\d+\s*(?:mg|g|units?|ml))\b", re.I)
@@ -752,6 +755,7 @@ def test_a_flagged_reading_carries_the_pointer_and_an_ordinary_one_does_not(clie
     assert [x["flag"] is not None for x in readings(client)] == [False, True, True]
 
 
+@pytest.mark.safety
 def test_the_other_features_do_not_read_the_weight_and_blood_pressure_tables():
     """Weights and readings are never sent to an AI provider or the assistant: the code that builds those requests does not read them."""
     reads = re.compile(r"(?:FROM|INTO|JOIN|UPDATE)\s+(?:weights|blood_pressures)\b|from\s+\.+\s*body\b|from\s+\.+body\s+import|"

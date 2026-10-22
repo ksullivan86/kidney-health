@@ -107,16 +107,19 @@ PASSES = [
 ]
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text, code", WITHHELD)
 def test_dose_check_withholds_insulin_and_medicine_talk(text, code):
     assert CH.dose_reason(text) == code, text
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", PASSES)
 def test_dose_check_lets_ordinary_food_talk_through(text):
     assert CH.dose_reason(text) is None, text
 
 
+@pytest.mark.safety
 def test_the_dose_check_uses_the_blocklists_binder_names():
     from app.ai import guard
 
@@ -162,6 +165,7 @@ def test_numbers_that_the_app_worked_out_pass(text):
     assert passes_number_check(text), text
 
 
+@pytest.mark.safety
 @pytest.mark.parametrize("text", [
     "You have eaten 1.2 g of potassium.",       # no unit conversion
     "You have eaten 1200 mg of potassium.",     # rounded further than shown
@@ -204,12 +208,14 @@ def check(text: str, newest: str = "what is left today") -> CH.Verdict:
     return CH.check_answer(text, [RESULT], PERSON, newest)
 
 
+@pytest.mark.safety
 def test_check_answer_passes_a_clean_answer_and_keeps_it():
     verdict = check("You have 2,000 mg as your limit.  Rice fits well.")
     assert (verdict.kind, verdict.reason, verdict.notes) == ("answer", None, [])
     assert verdict.text == "You have 2,000 mg as your limit. Rice fits well."
 
 
+@pytest.mark.safety
 def test_check_answer_withholds_with_the_fixed_texts():
     dose = check("Take 4 units of insulin.")
     assert dose.kind == "withheld" and dose.text == CH.WITHHELD_DOSE_TEXT and dose.reason == "dose:insulin"
@@ -221,6 +227,7 @@ def test_check_answer_withholds_with_the_fixed_texts():
                            "Here are the app's own numbers.")
 
 
+@pytest.mark.safety
 def test_the_dose_check_runs_before_the_number_check():
     assert check("Take 40 g of insulin").reason == "dose:insulin"
 
@@ -265,6 +272,7 @@ def test_history_joins_neighbours_and_starts_with_the_person():
     assert out == [{"role": "user", "content": "a\n\nb"}, {"role": "assistant", "content": "c"}, {"role": "user", "content": "d"}]
 
 
+@pytest.mark.safety
 def test_a_low_or_an_emergency_earlier_in_the_conversation_never_reaches_the_model():
     out = CH.history_messages([
         msg("user", "I went low and feel shaky"), msg("assistant", "Treat the low first. When you feel better, ask again."),
@@ -303,6 +311,7 @@ def test_tool_results_enter_the_prompt_as_cleaned_escaped_data():
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.safety
 def test_safety_outcome_keeps_every_card_and_never_a_link_the_page_did_not_need():
     low = {"action": "treat_low_first", "cards": [{"title": "Treating a low", "lines": ["x"], "url": "/learn/hypo/", "full_url": "https://a/learn/hypo/"}]}
     assert CH.safety_outcome(low) == ("treat_low", CH.TREAT_LOW_TEXT, [{"title": "Treating a low", "lines": ["x"], "url": "/learn/hypo/"}])

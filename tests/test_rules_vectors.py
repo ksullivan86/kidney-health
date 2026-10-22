@@ -1,6 +1,6 @@
 """Parity vectors for the browser rules engine (ARCHITECTURE.md, "Frontend modules").
 
-tests/data/rules_vectors.json is generated from app/nutrients.py by tests/data/gen_rules_vectors.py
+tests/data/rules_vectors.json is generated from app/nutrients.py and app/rules_kidney.py by tests/data/gen_rules_vectors.py
 and replayed against app/static/js/engine/rules.js by ``node tests/js/run_vectors.mjs``. These
 tests fail when the committed file no longer matches the Python rules (regenerate it), and run
 the Node side too when ``node`` is installed (CI runs it as its own step as well).
@@ -12,6 +12,8 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from app.nutrients import NUTRIENT_KEYS, food_warnings, kidney_rating
 
@@ -31,7 +33,7 @@ def test_rules_vectors_are_current() -> None:
     committed = json.loads(VECTORS.read_text(encoding="utf-8"))
     fresh = _generator().build()
     assert committed == fresh, (
-        "tests/data/rules_vectors.json is stale: app/nutrients.py or data/foods.json changed. "
+        "tests/data/rules_vectors.json is stale: app/nutrients.py, app/rules_kidney.py or data/foods.json changed. "
         "Run `python3 tests/data/gen_rules_vectors.py`, then `node tests/js/run_vectors.mjs`, and update "
         "app/static/js/engine/rules.js until both agree."
     )
@@ -56,6 +58,7 @@ def test_rules_vectors_cover_every_food_at_three_amounts() -> None:
     assert {c["kidney_rating"] for c in doc["food_cases"]} == {"green", "yellow", "red"}
 
 
+@pytest.mark.safety
 def test_hypo_treatment_vectors_never_warn_about_carbohydrate() -> None:
     """The safety rule the vectors pin down on both sides: hypo treatments get no carb warning."""
     doc = json.loads(VECTORS.read_text(encoding="utf-8"))
