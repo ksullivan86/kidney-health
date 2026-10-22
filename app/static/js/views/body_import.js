@@ -475,8 +475,9 @@
       } else {
         const detail = (err && (err.detail || err.message)) || 'Something went wrong';
         const done = totals.weights + totals.readings > 0
-          ? `${addedText(totals)}${alreadyText(totals)} before it stopped.` : 'Nothing was added.';
-        const lines = [`The import stopped: ${detail}${rowNote(detail, imp.batch)}`, `${done} Nothing that was added is lost. Press Import to try again: what is already here is skipped.`];
+          ? `${addedText(totals)}${alreadyText(totals)} before it stopped, and they are saved. Press Import to carry on: what is already here is skipped.`
+          : 'Nothing was added. Press Import to try again.';
+        const lines = [`The import stopped: ${detail}${rowNote(detail, imp.batch)}`, done];
         setPhase('review');
         refresh();
         status('');

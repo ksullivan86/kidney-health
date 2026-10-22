@@ -801,6 +801,9 @@ app/static/
   js/engine/fhir_labs.js  (v0.4: KH.fhirLabs, the reader of Lab results → Import from Apple Health, FHIR clinical-records files; browser
                         only, no Python twin; tests/data/fhir_labs_vectors.json; loads after lab_import.js) and js/views/lab_fhir.js (KH.labFhir, its
                         card and review table, after lab_photo.js; "Lab results from Apple Health clinical records" under "M2 API: targets and labs")
+  js/engine/apple_health.js  (note 10 part C: KH.appleHealth, the reader of the Health app's export.xml for weights and blood pressure, streamed as text, no XML parser;
+                        browser only, no Python twin; tests/data/apple_health_vectors.json; loads right after rules.js) and js/views/body_import.js (KH.bodyImport.open(),
+                        the sheet #sheet-body-import: review, period, watch readings unticked, per-day trimming, batches; "Weight and blood pressure" below)
   js/engine/ccda_labs.js  (v0.4: KH.ccdaLabs, the reader of Lab results → Import from a patient portal file, a C-CDA XML health summary parsed in the
                         browser; browser only, no Python twin; tests/data/ccda_labs_vectors.json; reuses KH.fhirLabs's LOINC table, units, day rule and
                         collector, so it loads after fhir_labs.js) and js/views/lab_ccda.js (KH.labCcda, its card, after lab_fhir.js, whose review table
@@ -3170,6 +3173,50 @@ and fails when a quoted phrase is no longer under its heading, and when a line n
   (a test greps them), so no AI provider and no assistant ever receives a weight or a reading. A later feature that wants to must change `docs/privacy.md`
   first (a ROADMAP line).
 * No offline outbox for them in this version (like symptoms): a save needs the connection.
+
+### Import from the iPhone Health app (Part C: `js/engine/apple_health.js`, `js/views/body_import.js`, the sheet `#sheet-body-import`)
+
+Browser only: no route, setting or schema step of its own, no dependency and no new network host. The person exports from the Health app (their picture,
+Export All Health Data), taps `export.zip` in the Files app to unzip it and picks `apple_health_export/export.xml` in the sheet, which the buttons of
+Trends (Weight and blood pressure → Import from Apple Health) and Settings → Your data open with `KH.bodyImport.open()` (Part B). Note 10 §4.8 is the
+specification; the reader's header comment has its details and `tests/data/apple_health_vectors.json` pins each.
+
+* **The reader** (`KH.appleHealth.scan(source, {today, signal, onProgress})`, loaded after `engine/rules.js`): the file can be hundreds of megabytes and
+  starts with an internal DTD, so it is **never given to an XML parser** (no `DOMParser`, no entity expansion): it is streamed as text
+  (`file.stream().pipeThrough(new TextDecoderStream())`), each `<Record ` start tag is cut out with a bounded buffer (a tag over 8 KiB is skipped and
+  counted) and read by a hand-written scanner. It keeps `HKQuantityTypeIdentifierBodyMass` in kg or lb (a weight) and the systolic and diastolic
+  `…BloodPressure…` records in mmHg paired by identical `startDate` and `sourceName` (a reading); **nothing else is read** (no heart rate, steps, glucose
+  or insulin). Rows carry `date`/`time` as written, `context` by time of day, `source_key` (the first 32 hex characters of the SHA-256 of
+  `type|startDate|value|sourceName`, so a second import adds nothing) and `sourceName`, which is for the sheet only.
+* **The sheet** has five steps. *Choose*: the three export steps and a picker for one `.xml` file (a `.zip`, `export_cda.xml` and an empty file are refused
+  with a reason). *Reading*: a progress line from `onProgress` (about every 10 MB) and **Cancel**, which aborts the scan and cancels the file stream.
+  *Review*: the headline in words (found, kept), the date range, **what was left out and why** (a unit the app does not read, half a reading, outside the
+  plausibility range, unreadable, repeats), the sources, the period (**the last 3 months by default** (`defaultSince`), or everything in the file; no
+  picker when all of the file is recent) with the counts of each, and **readings from a watch listed apart and unticked** (a source whose `sourceName`
+  contains "Watch", `isWatchSource`; the sheet quotes note 10 F4: cuffless devices are not recommended for checking blood pressure; the person decides;
+  a watch-named source's *weights* are not held back). The Import button says what it will send ("Import 11 weights and 7 readings"). *Importing*: Stop
+  ends it after the request in flight. *Done*: "Added a weights and b readings; c were already here" (the server's `added` and `skipped`).
+* **What goes up**: the reader's rows without `sourceName` (`forUpload`) with **`source: "apple_health"`** (the batch model accepts `apple_health` or `import`),
+  in batches of 1,000 (`batches`) to `POST /api/body/weights/batch` and then `/blood-pressure/batch` through `KH.api.importWeights` and
+  `importBloodPressures`. `today` is passed to `scan` so a row dated more than a day ahead is unreadable here and not a refused request there. While the
+  file is read and reviewed nothing is sent.
+* **Days over the limit.** A batch with a row that would be the 21st weight (31st reading) of a day is refused whole, so the sheet trims first
+  (`trimDays`): for each day it keeps the **first rows in time order, as many as the day can still take** (`KH.bodyRules.LIMITS`: 20 and 30, minus what the
+  person already has that day, read from `GET /api/body/weights` and `/blood-pressure` for the days of the file in windows of 366 days, only where the file has
+  rows; if they cannot be read, the limit alone). Rows an earlier import of this file stored (a stored row that is not typed in by hand with the same time and
+  numbers) take no room: they are sent again and skipped as "already here", so importing the same file twice does not call them "left out". The result says
+  "n more on m days were left out (the app keeps at most 20 weights and 30 readings a day)"; the review says "n or more will be left out" from the file alone.
+* **A refusal never loses rows silently.** The server's answer to any request that fails (a 400 for a row, the 429 of the hourly `body_batch` limit, a gateway
+  error) **stops the import**: the sheet shows the server's own words (with the day of the row it names), how many weights and readings were already added, and
+  that pressing Import again carries on, skipping what is already here. A 401 closes the sheet for the sign-in screen. Closing the sheet during an import stops it
+  after the request in flight and says so in a message.
+* **After rows were added** the caches of Today and Trends (`state.dayLoadedFor`, `trends`, `summary`) are cleared and a showing Today or Trends is shown again,
+  as the other imports do.
+* **Checks**: `tests/test_body_import_ui.py` with `tests/js/body_import_page.mjs` (the view against a fake page, a fake backend that keeps the batch rules and
+  fake files: the review, the watch rows, the default period, the trimming, a refusal in the middle, Cancel and Stop, text from the file drawn as text, no
+  network call of its own), `tests/test_frontend_shell.py` (the script lines, `sw.js`, no HTML sink) and the browser harness `tools/e2e/body_import.py`
+  (a real server and the demo, a generated `export.xml`, 375 px and 1280 px, light and dark; the server's rows read back through the API). The sample files are
+  hand-written: look at a real iPhone export before calling the import done (note 10, "Re-verify").
 
 ### Parity (demo/preview mode)
 

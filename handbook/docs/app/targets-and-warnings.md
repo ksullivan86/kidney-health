@@ -260,6 +260,37 @@ What to know:
 - A portal's file may have results the app cannot place (a different code or unit). The line at the top says how many were left out;
   type those by hand.
 
+## Weights and blood pressure from the Health app
+
+If your scale or your blood pressure cuff sends its readings to the iPhone **Health** app, the app can bring those weights and
+readings into your log from the Health export. **The file is read on your phone. Nothing is uploaded while it is read**: you see
+what was found first, and only the weights and readings you keep are saved on your server.
+
+1. In the **Health** app, tap your picture (top right), then **Export All Health Data**. It can take a few minutes. Save the zip
+   file to the **Files** app.
+2. In **Files**, tap **export.zip** to unzip it. Open the new folder **apple_health_export**. The file you need is **export.xml**
+   (not `export_cda.xml`). It can be very large, hundreds of megabytes; that is normal.
+3. In this app, tap **Import from Apple Health** (in **Trends**, under your weight and blood pressure, or in **Settings → Your
+   data**). Choose **export.xml**. The app reads it in pieces and shows how far it has got. **Cancel** stops it.
+4. The app shows a line such as "Found 412 weights and 168 blood pressure readings", the dates the file covers, and what it left out
+   and why. Choose **the last 3 months** (the default) or **everything in the file**, then tap **Import**.
+5. The app says how many weights and readings it added. If you import the same file again, nothing is added twice: what is
+   already in your log is skipped.
+
+What to know:
+
+- The app reads only **weights** (in kg or lb) and **blood pressure readings** (a top and a bottom number in mmHg taken at the
+  same time). **Nothing else in the file is read**: not heart rate, steps, workouts, medicines, blood glucose or insulin, and not
+  your name. It does not send the file anywhere.
+- A weight or reading outside the range the app accepts, a unit it does not read, or half a reading (a top number with no bottom
+  number) is left out. The sheet says how many and why.
+- **Readings from a watch are not ticked.** A watch takes blood pressure without an arm cuff. The app lists any source with
+  "Watch" in its name on its own, with a note, and leaves it unticked: tick it only if you want those readings in your log.
+- The app keeps at most 20 weights and 30 blood pressure readings a day. If the file has more on one day, the earliest of that day
+  are kept and the sheet says how many were left out.
+- The app only copies the numbers. It does not say whether a weight or a reading is good or bad, and it never changes the
+  weight in your Profile: talk to your care team about what they mean.
+
 ## Examples
 
 What the app shows for some builtin foods, per serving ([USDA FoodData Central][FDC]):

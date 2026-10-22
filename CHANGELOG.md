@@ -19,6 +19,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
   MedlinePlus, and the printable wallet card carries them in a few words. The weight and blood pressure log itself, with the numbers
   your care team gave you, arrives in the next part; your export already holds anything recorded through it.
 
+* **Bring weights and blood pressure in from the iPhone Health app.** **Import from Apple Health** (the sheet behind the buttons in Trends and
+  in Settings → Your data) reads your Health export, `apple_health_export/export.xml`, **on your phone**: nothing is uploaded while it is read, you see
+  what was found, what was left out and why, and the dates it covers, and only the weights and blood pressure readings you keep are sent, in batches.
+  You choose the last 3 months (the default) or everything. **Readings from a watch are listed apart and not ticked**, because cuffless devices
+  are not recommended for checking blood pressure: you decide. Nothing else in the file is read (not heart rate, steps, glucose or insulin).
+  The app keeps at most 20 weights and 30 readings a day, so for a day with more it keeps the earliest and says how many were left out. If the server
+  refuses a batch the import stops, shows the server's words and how many were already added, and pressing Import again carries on. Importing
+  the same file again adds nothing. The handbook's "Using the app" page has the steps.
+
 ### For people who run a server
 
 * **Schema step 18** (`m018_body_measurements.py`): two new tables, `weights` and `blood_pressures`, deleted with the account. It runs
@@ -46,6 +55,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   duplicate, only what is missing is added back) and "Also replace my profile, targets and settings", with B's state checked through
   the API against A's. It is listed in `tools/e2e/README.md`, CONTRIBUTING.md and the release checklist
   (`docs/maintainers.md`), which now leaves only a phone's own file picker to a person; the two ROADMAP items it closes are removed.
+* **The Health app import sheet** (`js/views/body_import.js`, `KH.bodyImport.open()`, the sheet `#sheet-body-import` in `index.html`; the reader
+  `js/engine/apple_health.js` is now loaded by the page, after `engine/rules.js`, with `sw.js` precaching both): the review, the period, the watch
+  readings unticked, batches of 1,000 with `source: "apple_health"` and no source name, a per-day trim against the rows the person already has
+  (`trimDays`), and a stop on any refusal that says what was already added. No server change. `tests/test_body_import_ui.py` and
+  `tests/js/body_import_page.mjs` test it in Node against a fake backend that keeps the batch rules; `tools/e2e/body_import.py` (port 8087, Chromium at
+  375 px and 1280 px, light and dark, a real server and the demo, about 2 minutes) imports a generated `export.xml`, checks the server's rows through the
+  API, a 25-weight day, a refused batch, Cancel and the second import that adds 0; it is in `tools/e2e/README.md`, `tests/test_e2e_tools.py` and the
+  release checklist (`docs/maintainers.md`, which also asks for a real iPhone export). The reader's header comment no longer spells out the
+  `<!DOCTYPE` line, which tripped the preview test for a page with no doctype once the reader was inlined. The handbook section is in
+  `handbook/docs/app/targets-and-warnings.md`.
 * `app/body.py` (routes `/api/body/weights`, `/blood-pressure`, their `/batch` imports and `/summary`; pure functions for pounds and
   kilograms, the weight-gain alarm, the 7-day means against the goal, the six-month change and the flags), the `Weight*`,
   `BloodPressure*` and `Body*` models, `user.units.weight`, `body.weight_alarm` and `body.bp_goal` in the settings registry, and
