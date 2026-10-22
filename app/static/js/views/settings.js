@@ -509,10 +509,20 @@
 
   // ---------------------------------------------------------------------------
   // Import from a file (POST /api/me/import, app/data_import.py). The file is read in this browser, checked by the
-  // server with ?dry_run=1 (nothing is kept), and only imported when the person presses Import.
+  // server with ?dry_run=1 (nothing is kept), and only imported when the person presses Import. The person chooses the
+  // export .zip itself or the export.json inside it: a .zip is opened here, on the device, by KH.zip (js/engine/zip.js,
+  // docs/dev/research/11-reading-a-zip-in-the-browser.md), which reads only export.json out of it; nothing else in the
+  // .zip is looked at, and the server never sees the archive.
   // ---------------------------------------------------------------------------
   // The server's own limit is MAX_IMPORT_BYTES (16 MiB unless the admin changed it); this only saves a pointless upload.
   const IMPORT_MAX_BYTES = 16 * 1024 * 1024;
+  // What the person is told when the .zip cannot be read, by KH.zip's error code (too_big is worded where the size is known).
+  const IMPORT_ZIP_UNREADABLE = 'This .zip could not be read (it may be damaged or not finished downloading). Download the export again, or open it on your device and choose the export.json inside it.';
+  const IMPORT_ZIP_MESSAGE = {
+    missing: 'This .zip has no export.json in it, so it is not an export from this app.',
+    ambiguous: 'This .zip holds more than one export.json. Open it and choose the one you want.',
+    browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
+  };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
   const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider'];
   const IMPORT_KINDS = [
@@ -542,23 +552,30 @@
   }
   function importBlock() {
     const wrap = h('div', { class: 'import-block', id: 'set-import' }, subtitle('Import from a file', 'set-import-h'));
-    wrap.append(h('p', {}, 'Moving to another server, or starting again? Choose the export.json from an export of yours (open the .zip first). You see what would be added before anything is changed.'));
+    wrap.append(h('p', {}, 'Moving to another server, or starting again? Choose the .zip from an export of yours, or the export.json inside it. You see what would be added before anything is changed.'));
     const msg = statusMsg('set-import-msg');
     if (MOCK && !(KH.demoLocal && KH.demoLocal.on())) { // the online demo with "Keep my data in this browser" on imports like a server (js/mock/import.js)
-      wrap.append(h('p', { class: 'hint', id: 'set-import-demo' }, 'The preview has no server to import into. In the installed app you choose the export.json here, check what would be added, then import it.'), msg);
+      wrap.append(h('p', { class: 'hint', id: 'set-import-demo' }, 'The preview has no server to import into. In the installed app you choose the export .zip or the export.json here, check what would be added, then import it.'), msg);
       return wrap;
     }
     const fileId = 'set-import-file';
-    const input = h('input', { type: 'file', id: fileId, class: 'ai-file', accept: '.json,application/json', 'aria-describedby': 'set-import-hint set-import-msg' });
+    const input = h('input', { type: 'file', id: fileId, class: 'ai-file', accept: '.zip,.json,application/zip,application/json', 'aria-describedby': 'set-import-hint set-import-msg' });
     const result = h('div', { class: 'import-result', id: 'set-import-result' });
-    wrap.append(h('div', { class: 'field' }, h('label', { for: fileId }, 'export.json'), input,
-      h('span', { class: 'hint', id: 'set-import-hint' }, `Up to ${fmtBytes(IMPORT_MAX_BYTES)}. Passwords, sign-in sessions, assistant tokens and keys are never imported, even if a file has them.`)), msg, result);
+    wrap.append(h('div', { class: 'field' }, h('label', { for: fileId }, 'Your export (.zip or export.json)'), input,
+      h('span', { class: 'hint', id: 'set-import-hint' }, `The export.json can be up to ${fmtBytes(IMPORT_MAX_BYTES)}. Passwords, sign-in sessions, assistant tokens and keys are never imported, even if a file has them.`)), msg, result);
 
     let payload = null; // the parsed file, kept only while the person decides
     const options = { merge: false, replace_profile: false };
     // Forget the file and what was chosen; `keepFile` leaves the file input alone (the person has just picked a new one).
     let latest = 0; // an answer to an older check is dropped
-    const reset = (keepFile) => { latest += 1; payload = null; options.merge = false; options.replace_profile = false; if (!keepFile) input.value = ''; clear(result); };
+    let opening = null; // the AbortController of a .zip being read, so that a new choice or a Cancel stops it
+    const reset = (keepFile) => {
+      latest += 1;
+      if (opening) { opening.abort(); opening = null; }
+      payload = null; options.merge = false; options.replace_profile = false;
+      if (!keepFile) input.value = '';
+      clear(result);
+    };
 
     async function check(focusId) {
       const mine = ++latest;
@@ -635,16 +652,47 @@
       if (target) target.focus();
     }
 
+    // The text of the export.json inside a .zip, or null once the reason is on the screen (or the choice has moved on).
+    async function textFromZip(file, mine) {
+      const zip = KH.zip;
+      if (!zip || !zip.supported()) { msg.textContent = IMPORT_ZIP_MESSAGE.browser; return null; }
+      msg.textContent = 'Reading the file…';
+      const ctrl = new AbortController();
+      opening = ctrl;
+      let entry = null;
+      try {
+        const archive = await zip.open(file);
+        entry = zip.find(archive, zip.RULES.exportJson);
+        return await zip.text(archive, entry, { maxBytes: IMPORT_MAX_BYTES, signal: ctrl.signal });
+      } catch (err) {
+        if (mine !== latest) return null; // another file was chosen, or Cancel was pressed
+        const code = err && err.code;
+        msg.textContent = code === 'too_big' && entry
+          ? `The export.json in that .zip is ${fmtBytes(entry.size)}; the largest this app imports is ${fmtBytes(IMPORT_MAX_BYTES)}.`
+          : IMPORT_ZIP_MESSAGE[code] || IMPORT_ZIP_UNREADABLE;
+        return null;
+      } finally {
+        if (opening === ctrl) opening = null;
+      }
+    }
+
     input.addEventListener('change', async () => {
       const file = input.files && input.files[0];
       reset(true);
       msg.textContent = '';
       if (!file) return;
-      if (/\.zip$/i.test(file.name) || file.type === 'application/zip') { msg.textContent = 'That is the whole export. Open the .zip on your device and choose the export.json inside it.'; return; }
-      if (file.size > IMPORT_MAX_BYTES) { msg.textContent = `That file is ${fmtBytes(file.size)}; the largest this app imports is ${fmtBytes(IMPORT_MAX_BYTES)}.`; return; }
-      msg.textContent = 'Reading the file…';
+      const mine = latest;
       let doc = null;
-      try { doc = JSON.parse(await file.text()); } catch (e) { doc = null; }
+      if (/\.zip$/i.test(file.name) || file.type === 'application/zip') {
+        const text = await textFromZip(file, mine);
+        if (text === null || mine !== latest) return;
+        try { doc = JSON.parse(text); } catch (e) { doc = null; }
+      } else {
+        if (file.size > IMPORT_MAX_BYTES) { msg.textContent = `That file is ${fmtBytes(file.size)}; the largest this app imports is ${fmtBytes(IMPORT_MAX_BYTES)}.`; return; }
+        msg.textContent = 'Reading the file…';
+        try { doc = JSON.parse(await file.text()); } catch (e) { doc = null; }
+        if (mine !== latest) return;
+      }
       if (!doc || typeof doc !== 'object' || Array.isArray(doc)) { msg.textContent = 'This is not an export.json file (it is not JSON). Choose the export.json from your export.'; return; }
       for (const key of IMPORT_NEVER_SENT) delete doc[key];
       payload = doc;

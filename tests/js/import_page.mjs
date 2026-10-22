@@ -3,13 +3,17 @@
 // answer, and prints what happened as JSON, so pytest (tests/test_data_import_ui.py) can check the behaviour without
 // a browser: which file is read, what is sent (and what never is), what the person is shown, which choices re-check,
 // and what is reset after Import. The block is cut out of the view by its markers; the helpers it uses (h, clear,
-// action, ...) are stand-ins with the same contract as js/core.js and the view's own.
+// action, ...) are stand-ins with the same contract as js/core.js and the view's own. The real zip reader (js/engine/zip.js) is
+// loaded, and node tests/js/import_page.mjs <folder> opens the archives that tests/test_data_import_ui.py built in <folder> (a
+// .zip pick, docs/dev/research/11-reading-a-zip-in-the-browser.md section 4.5).
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const folder = process.argv[2] || null;
+vm.runInThisContext(readFileSync(join(ROOT, 'app', 'static', 'js', 'engine', 'zip.js'), 'utf8'), { filename: 'zip.js' });
 const source = readFileSync(join(ROOT, 'app', 'static', 'js', 'views', 'settings.js'), 'utf8');
 const code = source.slice(source.indexOf('  const IMPORT_MAX_BYTES'), source.indexOf('  const ACTION_LABEL = {'));
 
@@ -45,7 +49,7 @@ const log = { calls: [], toasts: [], labsInvalidated: 0, profileLoaded: 0 };
 let answer = () => ({});
 const A = { importData: async (body, o) => { log.calls.push({ options: { ...o }, keys: Object.keys(body) }); return answer(o); } };
 const state = { dayLoadedFor: 'x', plan: {}, planStart: 1, trends: {}, summary: {}, shopping: {}, meals: [] };
-const KH = { labs: { invalidate() { log.labsInvalidated += 1; } }, loadProfile: async () => { log.profileLoaded += 1; } };
+const KH = { labs: { invalidate() { log.labsInvalidated += 1; } }, loadProfile: async () => { log.profileLoaded += 1; }, zip: globalThis.KH.zip };
 function action(label, cls, fn, attrs = {}) {
   const btn = h('button', { class: `btn ${cls}`, type: 'button', ...attrs }, label);
   btn.handlers.click = [async () => {
@@ -60,7 +64,7 @@ function build(MOCK) {
   const context = vm.createContext({
     h, clear, action, A, state, KH, MOCK, toast: (m, t) => log.toasts.push([t || '', m]), subtitle: (t, id) => h('h3', { id }, t),
     statusMsg: (id) => h('p', { id }), note: (kind, ...c) => h('div', { class: kind }, ...c), fmtBytes: (n) => `${n} B`,
-    fmtDate: (s) => s, $: (sel) => page.byId[sel.slice(1)] || null, console, JSON, Promise,
+    fmtDate: (s) => s, $: (sel) => page.byId[sel.slice(1)] || null, console, JSON, Promise, AbortController,
   });
   vm.runInContext(`${code}\nglobalThis.importBlock = importBlock;`, context);
   return context.importBlock();
@@ -70,11 +74,12 @@ const out = {};
 const demo = build(true);
 out.demo = { text: text(demo), hasInput: 'set-import-file' in page.byId, calls: log.calls.length };
 
-build(false);
+const block = build(false);
 const input = page.byId['set-import-file'];
 const msg = page.byId['set-import-msg'];
 const result = page.byId['set-import-result'];
 out.input = { type: input.attrs.type, accept: input.attrs.accept };
+out.block = text(block);
 async function pick(name, content, size) {
   input.files = [{ name, type: '', size: size ?? content.length, text: async () => content }];
   await input.fire('change');
@@ -148,5 +153,67 @@ answer = () => reply();
 await pick('export.json', JSON.stringify(file));
 await page.byId['set-import-cancel'].handlers.click[0]();
 out.cancel = { message: msg.textContent, result: result.children.length };
+
+// ---- a .zip: the archives tests/test_data_import_ui.py built (their folder is the first argument) ------------------------------------------------
+if (folder) {
+  const RealDS = globalThis.DecompressionStream;
+  const zipFile = (name, archive, type = 'application/zip') => {
+    const blob = new Blob([readFileSync(join(folder, archive))]);
+    return Object.defineProperties(blob, { name: { value: name }, type: { value: type } });
+  };
+  const pickZip = async (archive, name = 'kidney-health-sam.zip', type = 'application/zip') => {
+    input.files = [zipFile(name, archive, type)];
+    await input.fire('change');
+  };
+  const seen = (before, extra = {}) => ({ message: msg.textContent, calls: log.calls.length - before, result: result.children.length, ...extra });
+  answer = () => reply();
+  out.zips = {};
+  for (const [key, archive] of Object.entries({
+    missing: 'no_export.zip', ambiguous: 'two_exports.zip', damaged: 'damaged.zip', encrypted: 'encrypted.zip', notJson: 'not_json.zip', notObject: 'array.zip',
+    notZip: 'not_a_zip.zip', tooBig: 'too_big.zip',
+  })) {
+    const before = log.calls.length;
+    await pickZip(archive);
+    out.zips[key] = seen(before);
+  }
+  out.zips.sizes = JSON.parse(readFileSync(join(folder, 'sizes.json'), 'utf8'));
+  for (const [key, archive, name, type] of [['plain', 'export_ok.zip', 'kidney-health-sam.zip', 'application/zip'], ['rezipped', 'rezipped.zip', 'folder.zip', 'application/zip'],
+    ['byType', 'export_ok.zip', 'download', 'application/zip'], ['byNameOnly', 'export_ok.zip', 'EXPORT.ZIP', '']]) {
+    const before = log.calls.length;
+    await pickZip(archive, name, type);
+    out.zips[key] = seen(before, { options: log.calls[before] && log.calls[before].options, keys: log.calls[before] && log.calls[before].keys, focused: page.focused,
+      importDisabled: page.byId['set-import-go'] && page.byId['set-import-go'].disabled, text: text(result) });
+  }
+  { // the same dry run as the export.json inside it picked by itself
+    const before = log.calls.length;
+    await pick('export.json', JSON.stringify(file));
+    out.zips.json = seen(before, { options: log.calls[before].options, keys: log.calls[before].keys, text: text(result) });
+  }
+  { // a browser without DecompressionStream: the old advice, and the archive is not even opened
+    delete globalThis.DecompressionStream;
+    const before = log.calls.length;
+    await pickZip('export_ok.zip');
+    out.zips.browser = seen(before);
+    globalThis.DecompressionStream = RealDS;
+  }
+  { // choosing again while the first .zip is still being read: only the second choice is checked
+    const before = log.calls.length;
+    input.files = [zipFile('first.zip', 'export_ok.zip')];
+    const slow = input.fire('change');
+    input.files = [{ name: 'second.json', type: '', size: 10, text: async () => JSON.stringify({ ...file, log_entries: [], second: true }) }];
+    await input.fire('change');
+    await slow;
+    await settle();
+    out.zips.race = seen(before, { keys: log.calls.map((c) => c.keys.join(',')).slice(before) });
+  }
+  { // Cancel forgets a checked .zip; a new pick of nothing leaves the block empty
+    await pickZip('export_ok.zip');
+    await page.byId['set-import-cancel'].handlers.click[0]();
+    out.zips.cancel = { message: msg.textContent, result: result.children.length, fileInput: input.value };
+    input.files = [];
+    await input.fire('change');
+    out.zips.nothing = { message: msg.textContent, result: result.children.length };
+  }
+}
 
 console.log(JSON.stringify(out));
