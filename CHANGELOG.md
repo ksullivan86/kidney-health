@@ -141,6 +141,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For contributors
 
+* **A guide to the test vector files** ([design note 14](docs/dev/research/14-reuse-map.md) change 6, the documentation half). [`tests/data/README.md`](tests/data/README.md) says,
+  for each `*_vectors.json` file, what it covers, which server code and browser twin it ties together, how to regenerate it, its shape, and what a replayer in another language
+  must get right (rounding, tolerances, dates, text shown to people). `tests/test_vectors_readme.py` fails when a file has no section or a section lists the wrong keys. The Swift test
+  target waits for the iOS design note.
 * **The brand strings are in one place** ([design note 14](docs/dev/research/14-reuse-map.md) change 3). `app/brand.py` holds the product's names and the strings that
   identify it: the cookie names, the `X-Requested-With` value, the token prefixes `kha_` and `khd_`, the bearer realm, the database file name `kidney.db`, the export
   `format`, the User-Agent texts, the HKDF labels and the logger root, each with a note on whether changing it would break an install in use. The page reads the ones it

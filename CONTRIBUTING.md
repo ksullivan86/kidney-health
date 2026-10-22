@@ -126,6 +126,8 @@ node tests/js/run_vectors.mjs                         # the JS side; fix the twi
 
 Both sides run in CI. Never edit a vector file by hand, and never "fix" a parity failure by changing
 the harness or the vectors: fix the twin (or the server, if the server is wrong).
+[`tests/data/README.md`](tests/data/README.md) describes every vector file: what it covers, its shape,
+how to regenerate it and what to get right when replaying it in another client.
 
 ## Browser harnesses
 
