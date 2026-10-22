@@ -41,7 +41,8 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
-     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py` and `mcp_smoke.py`
+     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py` and
+     `mcp_smoke.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);
@@ -72,6 +73,13 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      `clinical-records`): the sample resources in `tests/data/fhir_labs_vectors.json` are hand-written, so look at the
      headline's counts for tests or units a real export has that the reader skips, and add a LOINC code only after
      the lookup described in [targets-and-labs.md](targets-and-labs.md#in-the-app);
+   * Weights and blood pressure from the Health app with a real `export.xml` from an iPhone (the Health app's Export All Health
+     Data, `export.zip` unzipped in the Files app; Safari on the phone, so the file's own picker and a file of hundreds of megabytes
+     are read): `body_import.py` and the vectors in `tests/data/apple_health_vectors.json` use hand-written records, so look at
+     the review's "Left out" lines for units or records a real export has that the reader skips, check that a watch's readings
+     are listed apart and unticked, that the progress line moves and Cancel stops the read, and that importing the same export
+     again adds nothing (note 10 §4.8, "Re-verify"). Also an export with a source that has more than 20 weights or 30
+     readings in a day: the sheet says how many were left out;
    * Labs → Import from a patient portal file with a real C-CDA download from a patient portal (MyChart and at least one other; the
      "Download" of the health summary or a visit summary, XML or C-CDA format, not the PDF): the documents in
      `tests/data/ccda_labs_vectors.json` and `tools/e2e/regress.py` are hand-written, so look at the headline's counts for

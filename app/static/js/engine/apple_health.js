@@ -4,7 +4,7 @@
    (to POST /api/body/weights/batch and /api/body/blood-pressure/batch) is a separate file. Nothing is uploaded by this module.
 
    Why not an XML parser. The file can be hundreds of megabytes (a parser would hold all of it), and it starts with an internal DTD
-   (<!DOCTYPE HealthData [ ... ]>), the shape entity-expansion attacks use. So the text is scanned, never parsed: the DTD, the <?xml ?>
+   (a "<!DOCTYPE" HealthData line with a [ ... ] subset), the shape entity-expansion attacks use. So the text is scanned, never parsed: the DTD, the <?xml ?>
    line and every element that is not a <Record start tag are just text that is looked past, and nothing is ever expanded. A <Record
    inside the DTD, a comment or a CDATA block would be read like any other (the person picked the file and sees every row before
    anything is saved).

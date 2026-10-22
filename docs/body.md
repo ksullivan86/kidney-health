@@ -96,11 +96,48 @@ settings → Default for everyone.
   assistant**: the code that builds those requests does not read the tables, and a test greps for it. See [Privacy](privacy.md).
 * The log needs the connection in this version: no offline queue (like symptoms).
 
+## Import from the iPhone Health app
+
+Part C. A person on an iPhone can bring past weights and blood pressure readings in from the Health app's export. It is **browser only**: no route,
+setting or schema step of its own, and no new network host. The steps for a person are in the handbook ("Using the app", *Weights and blood
+pressure from the Health app*); this is how it works. The contract is ARCHITECTURE.md, "Weight and blood pressure → Import from the iPhone Health
+app"; the specification is note 10 §4.8.
+
+* **Opening it.** `KH.bodyImport.open()` (`js/views/body_import.js`) opens the sheet `#sheet-body-import`. The buttons that call it are in Trends
+  (Weight and blood pressure → Import from Apple Health) and Settings → Your data (Part B); the sheet itself has no button of its own.
+* **Reading.** The person picks `apple_health_export/export.xml` (after unzipping `export.zip` in the Files app). The reader `KH.appleHealth.scan`
+  (`js/engine/apple_health.js`; its header comment is its full specification) streams the file as text, finds the `<Record ` start tags of the
+  three types it keeps and reads their attributes by hand. **There is no XML parser**: the file can be hundreds of megabytes and starts with an
+  internal DTD, so nothing is parsed or expanded. It keeps weights in kg or lb and blood pressure (a systolic and a diastolic record with the same
+  `startDate` and `sourceName`, in mmHg); **nothing else in the file is read** (no heart rate, steps, glucose or insulin). The sheet shows a progress line
+  and a Cancel that aborts the scan. Nothing is sent while the file is read or reviewed.
+* **Review.** What was found and kept, what was left out and why (in words), the dates in the file, the sources, a period (**the last 3 months by
+  default**, or everything) with the counts of each, and, listed apart and **unticked**, readings from a source with "Watch" in its name: note 10 F4
+  says cuffless devices (watches, rings) are not recommended for checking blood pressure, so the person has to choose them. (Only readings are held
+  back that way; a weight from a source named "… Watch" is imported like any other.) Source names come from the file and are drawn as text only.
+* **Sending.** Import sends the rows of the period in batches of 1,000, weights first, **without the source name** and with `source: "apple_health"`
+  (what `WeightBatchRow` and `BloodPressureBatchRow` accept besides `import`), each with its `source_key`, so importing the same file again adds nothing
+  ("c were already here"). The result reads "Added a weights and b readings; c were already here", and Today and Trends are loaded again.
+* **A day with more than the app keeps.** One person holds at most 20 weights and 30 readings a day, and a batch with a row that would overfill a day is
+  refused **whole**. So the sheet keeps the **first rows of such a day in time order**, as many as the day can still take (the limits minus what the
+  person already has that day, read through the list routes for the days of the file), and says "n more on m days were left out (the app keeps at most
+  20 weights and 30 readings a day)". Rows a former import of the same file stored count as "already here" and take no room; one the person edited since
+  counts as typed by hand. If the rows already there cannot be read, only the limit is used.
+* **If the server refuses anyway** (another device added rows meanwhile, the hourly limit of 60 batch requests, a version difference, a gateway error),
+  the import **stops**: the sheet shows the server's own words (with the day of the row it names) and how many weights and readings were already added,
+  and pressing Import again carries on without repeating them. Nothing is dropped silently. Closing the sheet during an import stops it after the request
+  in flight and says so in a message.
+* **Checks.** `tests/test_body_import_ui.py` (with `tests/js/body_import_page.mjs`, which runs the view against a fake backend that keeps the server's batch
+  rules), the reader's `tests/test_apple_health.py` and vectors, and the browser harness `python tools/e2e/body_import.py` (a real server and the demo; a
+  generated `export.xml`; the server's rows read back through the API). The sample records are hand-written: before calling the import done, try a real
+  export from an iPhone ([maintainers](maintainers.md), release checklist).
+
 ## The demo and the checks
 
 The Pages demo runs `js/mock/body.js` over `js/engine/body.js` in the page: the same routes, the same errors in the same order, the same `flag`,
 `summary` and batch answers; its sample data is two weeks of weights and readings with a sample alarm and goal, today's weight over the
 alarm and **no reading at 180/120** (so the demo never shows the emergency block unasked). The demo has no rate limit on the batch routes.
+The import sheet works against it too (`tools/e2e/body_import.py` runs it in the demo as well).
 
 Checks, all without a network: `python -m pytest` (`tests/test_body.py`, `test_body_vectors.py`, `test_migration_m018.py`, and the
 isolation, auth coverage, export and import tests), `node tests/js/run_vectors.mjs` (`tests/data/body_vectors.json`, generated from the

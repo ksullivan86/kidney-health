@@ -178,26 +178,22 @@ def test_the_module_reads_no_xml_with_a_parser_and_touches_no_network_or_storage
     assert "first 32 hex characters of the SHA-256" in header
 
 
-def test_the_builder_of_the_demo_inlines_the_module_once_index_html_lists_it(tmp_path: Path):
-    """index.html does not list the file yet (the import sheet adds it, with sw.js), so the builder is run on a copy that does."""
+def test_index_html_lists_the_module_after_rules_js_and_the_builder_of_the_demo_inlines_it_once(tmp_path: Path):
+    """The import sheet's page lists the module (after rules.js, which it needs for halfUp); the Pages demo gets it as a file of its own."""
+    index = (STATIC / "index.html").read_text(encoding="utf-8")
+    scripts = re.findall(r'<script src="([^"]+)"', index)
+    assert scripts.index("js/engine/rules.js") + 1 == scripts.index("js/engine/apple_health.js") < scripts.index("js/core.js")
+    assert "'/js/engine/apple_health.js'," in (STATIC / "sw.js").read_text(encoding="utf-8")
     spec = importlib.util.spec_from_file_location("build_preview", ROOT / "scripts" / "build_preview.py")
     builder = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(builder)
-    static = tmp_path / "static"
-    shutil.copytree(STATIC, static)
-    index = static / "index.html"
-    html = index.read_text(encoding="utf-8")
-    anchor = '<script src="js/engine/rules.js"></script>'
-    assert html.count(anchor) == 1
-    index.write_text(html.replace(anchor, anchor + '\n<script src="js/engine/apple_health.js"></script>'), encoding="utf-8")
-    fragment = builder.build_fragment(static_dir=static)
+    fragment = builder.build_fragment(static_dir=STATIC)
     assert "/* js/engine/apple_health.js */" in fragment and ENGINE.strip() in fragment
     assert fragment.index("/* js/engine/rules.js */") < fragment.index("/* js/engine/apple_health.js */")
     assert fragment.count("KH.appleHealth = {") == 1
-    # the GitHub Pages demo gets it as a file of its own, after rules.js (which it needs for halfUp)
     site = tmp_path / "site"
-    builder.build_pages(site, static_dir=static)
+    builder.build_pages(site, static_dir=STATIC)
     assert (site / "js" / "engine" / "apple_health.js").read_bytes() == ENGINE_PATH.read_bytes()
     page = (site / "index.html").read_text(encoding="utf-8")
     assert page.index('<script src="js/engine/rules.js">') < page.index('<script src="js/engine/apple_health.js">')
