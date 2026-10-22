@@ -236,6 +236,7 @@ nav:
       - app/guidance.md
       - app/ai.md
       - app/settings-and-keys.md
+      - app/weight-and-blood-pressure.md
       - app/reports-for-your-team.md
       - app/privacy.md
   - Self-hosting:

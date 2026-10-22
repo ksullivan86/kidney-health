@@ -1,0 +1,147 @@
+/* Kidney Diet Log — weight and blood pressure: the Today card, the two sheets, the Settings section, the Profile lines, the Trends
+   charts and the visit prep section (js/views/body.js, js/views/body_trends.js, js/views/visit.js).
+   Light and dark come from the tokens in base.css; the two chart series (the top number and the bottom number) have their own tokens
+   below, the first two steps of the dataviz palette checked for the lightness band, the colour-blind separation and 3:1 against the
+   surface in both themes. A number is always written as text beside its mark (and in the table under each chart): the colour and the
+   shape of a mark only repeat what the words say. */
+
+:root {
+  --body-top: #2a78d6;
+  --body-bottom: #eb6834;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --body-top: #3987e5; --body-bottom: #d95926; }
+}
+:root[data-theme="dark"] { --body-top: #3987e5; --body-bottom: #d95926; }
+
+/* ---------- the cards ---------- */
+.body-body:empty { display: none; }
+.body-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.body-actions .btn { flex: 1 1 150px; min-height: var(--tap); gap: 6px; padding: 0 12px; }
+.body-actions .btn svg { width: 18px; height: 18px; }
+.body-empty { margin: 0; color: var(--text-2); font-size: 0.9rem; }
+.body-sub-h { font-size: 0.85rem; color: var(--text-2); font-weight: 700; margin: 10px 0 2px; }
+.body-hint-line { margin: 10px 0 0; color: var(--text-2); font-size: 0.85rem; }
+
+/* ---------- Today: the day's entries ---------- */
+.body-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.body-item { padding: 8px 0; min-width: 0; }
+.body-item + .body-item { border-top: 1px solid var(--border); }
+.body-item.flagged { border-left: 4px solid var(--over); padding-left: 8px; }
+.body-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.body-val { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.body-when { color: var(--text-2); font-size: 0.88rem; overflow-wrap: anywhere; }
+.body-tag {
+  font-size: 0.78rem; font-weight: 700; line-height: 1; padding: 4px 10px; border-radius: 999px;
+  background: var(--over-tint); color: var(--over-text);
+}
+.body-note { margin: 2px 0 0; color: var(--text-2); font-size: 0.88rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+.body-actions-row { display: flex; gap: 0 2px; margin-left: auto; }
+.body-main .confirm-row { flex-basis: 100%; }
+
+/* the alarm line and the goal line */
+.body-line { margin: 0 0 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); border-left: 4px solid var(--border); min-width: 0; }
+.body-line p { margin: 0; overflow-wrap: anywhere; }
+.body-line p + p { margin-top: 2px; }
+.body-line-sub { color: var(--text-2); font-size: 0.88rem; }
+.body-line .body-flag { margin-top: 8px; }
+
+/* The handbook's line for a number past a limit. A very high reading is a block that stands out, and is listed first. */
+.body-flag {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; padding: 8px 10px; font-size: 0.88rem;
+  border-radius: var(--radius-sm); background: var(--surface-2); border-left: 4px solid var(--caution); color: var(--text);
+}
+.body-flag .rating { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.body-flag-text { min-width: 0; overflow-wrap: anywhere; }
+.body-flag-text p { margin: 0; }
+.body-flag-label { display: block; margin-bottom: 2px; }
+.body-flag.prominent { background: var(--over-tint); border-left-width: 6px; border-left-color: var(--over); font-size: 0.97rem; padding: 12px 12px; }
+.body-flag.prominent .rating { width: 24px; height: 24px; }
+.body-flag.prominent .body-flag-label { color: var(--over-text); font-size: 1.05rem; }
+.body-flag .learn-more { font-weight: 600; white-space: nowrap; }
+.body-flag:focus { outline: none; }
+.body-flag:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+#bp-flag:empty { display: none; }
+#bp-flag .body-flag { margin-bottom: 0; }
+
+/* ---------- the sheets ---------- */
+input[type="time"] {
+  width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+#weight-note, #bp-note { resize: vertical; min-height: calc(var(--tap) * 1.5); font: inherit; }
+.body-echo { margin: 0; min-height: 1.4em; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.body-echo:empty { display: none; }
+.body-bp-hint { margin: 0; }
+/* When it was taken: a few big choices that wrap on a phone */
+.body-seg { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.body-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.body-seg label {
+  flex: 1 1 40%; display: flex; align-items: center; justify-content: center; min-height: var(--tap); padding: 0 10px; text-align: center;
+  font-weight: 600; font-size: 0.9rem; color: var(--text-2); cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
+}
+.body-seg input:checked + label { background: var(--accent-tint); color: var(--accent); border-color: var(--accent); }
+.body-seg input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Settings ---------- */
+.body-alarm, .body-goal { border: 0; padding: 0; margin: 14px 0 0; }
+.body-stack { display: flex; flex-direction: column; gap: 12px; }
+.body-alarm-sentence { margin: 6px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+#set-body .settings-actions { margin-top: 8px; }
+
+/* ---------- Profile: the log's weight beside a field ---------- */
+.body-use { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-2); }
+.body-use .link-btn { display: inline-flex; align-items: center; padding: 0 6px; min-height: var(--tap); }
+.body-use-status { display: block; color: var(--text); font-weight: 600; }
+
+/* ---------- Trends: two charts, each with its table ---------- */
+.body-trends-block { padding-top: 10px; min-width: 0; }
+.body-trends-block + .body-trends-block { border-top: 1px solid var(--border); margin-top: 10px; }
+.body-trends-h { font-size: 1rem; margin: 0 0 2px; }
+.body-stats { list-style: none; margin: 0 0 6px; padding: 0; color: var(--text-2); font-size: 0.88rem; display: flex; flex-direction: column; gap: 2px; }
+.body-stats li { overflow-wrap: anywhere; }
+.body-stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+.body-chart-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.body-chart-svg text { font-family: var(--font); fill: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.body-chart-svg text.month { fill: var(--text-2); font-weight: 600; }
+.body-chart-svg .grid { stroke: var(--border); stroke-width: 1; }
+.body-chart-svg .axis { stroke: var(--text-3); stroke-width: 1; }
+.body-chart-svg .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.body-chart-svg .series.weight, .body-chart-svg .series.top { stroke: var(--body-top); }
+.body-chart-svg .series.bottom { stroke: var(--body-bottom); }
+.body-chart-svg .mark { stroke: var(--surface); stroke-width: 2; }
+.body-chart-svg .mark.weight, .body-chart-svg .mark.top { fill: var(--body-top); }
+.body-chart-svg .mark.bottom { fill: var(--body-bottom); }
+.body-chart-svg .mark.flagged { stroke: var(--over); stroke-width: 3; }
+.body-chart-svg .ref { fill: none; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.body-chart-svg .ref.dry { stroke: var(--text-2); }
+.body-chart-svg .ref.goal-top { stroke: var(--body-top); }
+.body-chart-svg .ref.goal-bottom { stroke: var(--body-bottom); }
+.body-legend { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--text-2); font-size: 0.82rem; }
+.body-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.body-legend svg { width: 22px; height: 14px; overflow: visible; }
+.body-legend .series { fill: none; stroke-width: 2; }
+.body-legend .series.weight, .body-legend .series.top { stroke: var(--body-top); }
+.body-legend .series.bottom { stroke: var(--body-bottom); }
+.body-legend .mark { stroke: var(--surface); stroke-width: 1.5; }
+.body-legend .mark.weight, .body-legend .mark.top { fill: var(--body-top); }
+.body-legend .mark.bottom { fill: var(--body-bottom); }
+.body-legend .ref { fill: none; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.body-legend .ref.dry { stroke: var(--text-2); }
+.body-legend .ref.goal-top { stroke: var(--body-top); }
+.body-legend .ref.goal-bottom { stroke: var(--body-bottom); }
+.body-table-wrap { overflow-x: auto; }
+.body-table th, .body-table td { white-space: nowrap; }
+.body-table td.flagged { font-weight: 700; color: var(--over-text); }
+
+/* ---------- visit prep ---------- */
+.visit-body-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.visit-body-list li { overflow-wrap: anywhere; break-inside: avoid; }
+.visit-body-list b { font-variant-numeric: tabular-nums; }
+.visit-body-sub { margin: 8px 0 2px; font-size: 0.88rem; font-weight: 700; color: var(--text-2); }
+.visit-body-gains { list-style: none; margin: 0; padding: 0; }
+.visit-body-gains li { display: flex; flex-wrap: wrap; gap: 0 10px; padding: 4px 0; border-top: 1px solid var(--border); break-inside: avoid; }
+.visit-body-gains li:first-child { border-top: 0; }
+.visit-body-gains .over { font-weight: 700; color: var(--over-text); }
+.visit-section .body-flag { margin-top: 6px; }

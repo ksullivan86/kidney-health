@@ -33,7 +33,7 @@ makes no difference while the mode is on (there is no server to reach).
 
 * **Settings → Your data → Export my data (export.json)** (or **Export export.json** in the sheet) downloads the file the
   server's export holds, `export.json`: the same format (`kidney-health-export`, version 1), the same keys in the same order,
-  with your log, own foods, saved meals, lab results, symptoms, food preferences ("Not for me", "More like this", "Less often"), profile and settings. It never holds a
+  with your log, own foods, saved meals, lab results, symptoms, weights, blood pressure readings, food preferences ("Not for me", "More like this", "Less often"), profile and settings. It never holds a
   password, session or key. The AI sections are empty (the demo has no AI). The server's own export is a `.zip` with CSV
   files too; the demo gives the JSON only.
 * **Settings → Your data → Import from a file** takes an `export.json` from this demo **or from a real server**, or the export `.zip` of a
@@ -71,7 +71,7 @@ stored copy and starts the sample demo again.
 
 One record in the browser's IndexedDB (database `kdl-demo-local`, object store `state`, key `current`):
 `{format: "kidney-health-demo-local", schema, rev, savedAt, foodsVersion, state}`. `state` is the demo API's own tables
-(entries, foods, saved meals, labs, symptoms, profile, settings, the sample accounts); `schema` is its shape and `rev` counts
+(entries, foods, saved meals, labs, symptoms, weights, blood pressure readings, profile, settings, the sample accounts); `schema` is its shape and `rev` counts
 the saves. Nothing else is kept in the browser for this mode, and nothing is read from it unless you turned the mode on. It
 exists only in the demo build: the installed app never opens this database, and neither does a development server's `?mock=1`
 page (a test checks both).

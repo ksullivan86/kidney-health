@@ -76,6 +76,7 @@
     const kidneyOnly = $('#pf-diabetes').value === 'none';
     for (const id of ['#tg-carbs_per_meal_g', '#tg-carbs_per_snack_g']) $(id).closest('.field').hidden = kidneyOnly;
     $('#pf-disclaimer-diabetes').hidden = kidneyOnly;
+    showBodyHints();
   }
   $('#pf-dialysis').addEventListener('change', syncConditionalFields);
   $('#pf-diabetes').addEventListener('change', syncConditionalFields);
@@ -85,6 +86,42 @@
     const today = KH.util.todayStr();
     $('#pf-transplant-date').max = today;
     $('#pf-birth-month').max = today.slice(0, 7);
+  }
+
+  // ---------------------------------------------------------------------------
+  // The weights in the person's log, offered beside the two weight fields (note 10 §4.6; js/views/body.js profileHints). The latest
+  // weight is not offered on dialysis, where this field is the dry weight the unit sets and a scale reading is not that. Nothing here
+  // changes the profile: "Use this" fills the box, and Save profile saves it.
+  // ---------------------------------------------------------------------------
+  let bodyHints = null; // { units, latest, sixMonth } from the log, or null (none yet, no log, no connection)
+  let bodyHintsReq = 0;
+  function hintLine(box, kind, entry, input, what) {
+    clear(box);
+    box.hidden = !entry;
+    if (!entry) return;
+    const kg = KH.bodyRules.shownWeight(entry.kg, 'kg');
+    const status = h('span', { class: 'body-use-status', role: 'status' });
+    const use = h('button', { class: 'link-btn', type: 'button' }, 'Use this', h('span', { class: 'sr-only' }, ` (${kg.toFixed(1)} kg as ${what})`));
+    use.addEventListener('click', () => {
+      input.value = String(kg);
+      status.textContent = 'Filled in. Press Save profile to keep it.';
+      input.focus();
+    });
+    box.append(KH.bodyUi.profileWeightHint(kind, entry, KH.util.fmtMonthDay(entry.date), bodyHints.units), ' — ', use, status);
+  }
+  function showBodyHints() {
+    const latest = bodyHints && $('#pf-dialysis').value === 'none' ? bodyHints.latest : null;
+    hintLine($('#pf-weight-log'), 'latest', latest, $('#pf-weight'), 'your weight');
+    hintLine($('#pf-weight-6mo-log'), 'sixmonth', bodyHints ? bodyHints.sixMonth : null, $('#pf-weight-6mo'), 'your weight 6 months ago');
+  }
+  async function loadBodyHints() {
+    if (!KH.body || !KH.bodyUi) return;
+    const req = ++bodyHintsReq;
+    let hints = null;
+    try { hints = await KH.body.profileHints(); } catch (err) { hints = null; } // a note under a field is not worth an error: it is left out
+    if (req !== bodyHintsReq) return;
+    bodyHints = hints && (hints.latest || hints.sixMonth) ? hints : null;
+    showBodyHints();
   }
 
   // The v0.3 fields as the form shows them (empty string = not set).
@@ -570,6 +607,7 @@
   $('#profile-open-settings').addEventListener('click', () => router.show('settings'));
 
   router.register('profile', () => {
+    loadBodyHints();
     KH.loadProfile().then(() => {
       renderProfile();
       // "Review suggested targets" in the Labs view: suggest once the saved profile is in the form.

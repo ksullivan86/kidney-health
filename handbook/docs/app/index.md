@@ -39,6 +39,7 @@ that server is called the **admin** in these pages.
 | Ask a question in plain words, by typing or speaking, when your admin has turned it on | **Ask** | [Optional AI](ai.md#ask-a-chat-inside-the-app-optional) |
 | Tell the app what you like to eat, and see what it noticed in your log | **⋯** next to a suggestion, **Settings** → **Meal guidance** | [Meal guidance](guidance.md) |
 | Add your own USDA or AI key | **Settings** | [Settings and keys](settings-and-keys.md) |
+| Write down your weight and blood pressure, enter the numbers your care team gave you, and see them on a chart | **Today** → **Weight and blood pressure**, **Settings** → **Weight and blood pressure**, **Trends** | [Weight and blood pressure](weight-and-blood-pressure.md) |
 | Write down a symptom, and show how it went | **Today** → **Symptoms**, then **Trends** | [Reports for your care team](reports-for-your-team.md#symptoms-you-write-down) |
 | Print one page for an appointment | **Trends** → **Get ready for a visit** | [Reports for your care team](reports-for-your-team.md#visit-prep-one-page-for-an-appointment) |
 | Take numbers to your dietitian | **Trends** → **Export CSV** | [Reports for your care team](reports-for-your-team.md) |

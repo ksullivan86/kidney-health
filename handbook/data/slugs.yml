@@ -21,3 +21,4 @@ sick-days: t1d/sick-days
 get-help-now: get-help-now
 blood-potassium: labs/blood-potassium
 targets-and-warnings: app/targets-and-warnings
+weight-and-blood-pressure: app/weight-and-blood-pressure

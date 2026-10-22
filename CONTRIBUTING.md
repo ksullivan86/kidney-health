@@ -132,7 +132,7 @@ their README): `parity.py` (the demo API against a real server, about 6,500 comp
 (the preview inside an emulated sandboxed host), `regress.py` (the installed app end to end),
 `learn.py` (the handbook at `/learn`, also in CI), `device.py` (barcodes, photos, AI cards, the offline
 outbox, offline edits) and `guidance_perf.py` (the guidance twin's speed with a slowed-down CPU), and one
-harness per feature (`prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`, `symptoms.py`, `visitprep.py`, `menuplan.py`,
+harness per feature (`prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`, `symptoms.py`, `visitprep.py`, `body.py`, `menuplan.py`,
 `demo_local.py`, `import_walk.py`, `body_import.py`, `mcp_smoke.py`). Say in your pull request which ones you ran.
 
 ## The preview build

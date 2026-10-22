@@ -440,7 +440,7 @@
   function dataBlock(me) {
     const wrap = h('div', { class: 'data-block' });
     const msg = statusMsg('set-export-msg');
-    wrap.append(h('p', {}, 'Download everything you have entered: a .zip with export.json and spreadsheet (CSV) files for your log, foods, saved meals and settings. It holds no passwords, sessions or keys.'));
+    wrap.append(h('p', {}, 'Download everything you have entered: a .zip with export.json and spreadsheet (CSV) files for your log, foods, saved meals, lab results, symptoms, weights, blood pressure readings and settings. It holds no passwords, sessions or keys.'));
     wrap.append(h('div', { class: 'settings-actions' }, action(MOCK && keptHere() ? 'Export my data (export.json)' : 'Export my data (.zip)', 'secondary', async () => {
       if (MOCK && keptHere()) { // "Keep my data in this browser" is on (the Pages demo, js/views/demo_local.js): the file the zip would hold
         msg.textContent = 'Preparing your export…';
@@ -463,6 +463,7 @@
         async (btn) => KH.demoLocal.open(btn), { id: 'set-demo-local' })));
     }
     wrap.append(importBlock());
+    wrap.append(bodyImportBlock());
 
     // Delete the account (not in AUTH_MODE=none: every request is user 1 there, which must stay)
     if (authMode() === 'none') {
@@ -507,6 +508,16 @@
     return wrap;
   }
 
+  // "Import from Apple Health" (past weights and blood pressure readings from the Health app's export.xml): the page that reads the
+  // file is another module's (KH.bodyImport, js/views/body_import.js); with no such module there is no button.
+  function bodyImportBlock() {
+    const wrap = h('div', { class: 'import-block', id: 'set-body-import' });
+    if (!(KH.bodyImport && typeof KH.bodyImport.open === 'function')) { wrap.hidden = true; return wrap; }
+    wrap.append(subtitle('Weights and blood pressure from Apple Health', 'set-body-import-h'),
+      h('p', {}, 'Bring in past weights and blood pressure readings from the iPhone Health app. The file is read on this device; only the rows you choose are sent to your server.'),
+      h('div', { class: 'settings-actions' }, action('Import from Apple Health', 'secondary', async (b) => KH.bodyImport.open(b), { id: 'set-body-import-open' })));
+    return wrap;
+  }
   // ---------------------------------------------------------------------------
   // Import from a file (POST /api/me/import, app/data_import.py). The file is read in this browser, checked by the
   // server with ?dry_run=1 (nothing is kept), and only imported when the person presses Import. The person chooses the
@@ -533,10 +544,13 @@
     ['meal_templates', 'saved meal', 'saved meals'],
     ['lab_results', 'lab result', 'lab results'],
     ['symptoms', 'symptom', 'symptoms'],
+    ['weights', 'weight', 'weights'],
+    ['blood_pressures', 'blood pressure reading', 'blood pressure readings'],
     ['food_preferences', 'food preference', 'food preferences'],
     ['settings', 'setting', 'settings'],
   ];
-  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', symptoms: 'Symptom', food_preferences: 'Food preference', settings: 'Setting' };
+  const IMPORT_SKIP_WHAT = { log_entries: 'Log entry', meal_templates: 'Saved meal', symptoms: 'Symptom', weights: 'Weight', blood_pressures: 'Blood pressure reading',
+    food_preferences: 'Food preference', settings: 'Setting' };
   const IMPORT_SKIP_SHOWN = 12;
   const importCount = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function importLines(counts) {
@@ -544,11 +558,12 @@
     if (counts.profile) lines.push('your profile and targets');
     return lines;
   }
-  // "2 log entries, 1 food of yours, 1 saved meal, 0 lab results, 0 symptoms" for the sizes of a file or an account.
+  // "2 log entries, 1 food of yours, 1 saved meal, 0 lab results, 0 symptoms, 0 weights, 0 blood pressure readings" for the sizes of a file or an account.
   function importSizes(r) {
     return [importCount(r.log_entries || 0, 'log entry', 'log entries'), importCount(r.custom_foods || 0, 'food of yours', 'foods of yours'),
       importCount(r.meal_templates || 0, 'saved meal', 'saved meals'), importCount(r.lab_results || 0, 'lab result', 'lab results'),
-      importCount(r.symptoms || 0, 'symptom', 'symptoms')].join(', ');
+      importCount(r.symptoms || 0, 'symptom', 'symptoms'), importCount(r.weights || 0, 'weight', 'weights'),
+      importCount(r.blood_pressures || 0, 'blood pressure reading', 'blood pressure readings')].join(', ');
   }
   function importBlock() {
     const wrap = h('div', { class: 'import-block', id: 'set-import' }, subtitle('Import from a file', 'set-import-h'));
@@ -731,7 +746,8 @@
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
     if (ev.action === 'data.imported') {
-      return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms']]
+      return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms'],
+        [d.weights, 'weight', 'weights'], [d.blood_pressures, 'blood pressure reading', 'blood pressure readings']]
         .filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`).join(', ') || 'nothing new';
     }
     if (ev.action === 'assistant.food_logged') return `${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}, ${d.status}, ${d.meal} on ${d.date}, with “${d.via}”`;
@@ -1876,6 +1892,7 @@
     renderNav();
     renderAccount();
     renderPrefs();
+    if (KH.body) KH.body.renderSettings().catch((err) => console.warn('Weight and blood pressure settings:', err)); // js/views/body.js
     if (KH.guidance) KH.guidance.renderSettings().catch((err) => console.warn('Meal guidance settings:', err)); // js/views/guidance.js
     renderAi();
     renderAssistant().catch((err) => console.warn('Assistant access:', err));

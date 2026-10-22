@@ -25,6 +25,7 @@
     $('#trends-title').textContent = `Last ${state.trendsDays} days`;
     if (KH.guidance) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
     if (KH.symptoms) KH.symptoms.trends(start, end).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
+    if (KH.bodyTrends) KH.bodyTrends.show(start, end).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body_trends.js
     $('#trends-range').textContent = `${fmtDateShort(start)} – ${fmtDateShort(end)}`;
     const exportLink = $('#export-csv');
     if (MOCK) {

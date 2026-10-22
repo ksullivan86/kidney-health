@@ -100,8 +100,9 @@ session ([KDOQI 2015][Q15HD]).
 ## What to do
 
 - [ ] Weigh yourself every morning and before each session. Write it down.
-- [ ] Ask your unit for your fluid allowance and your weight-gain limit, and enter them in the app
-      ([First setup](../app/first-setup.md)).
+- [ ] Ask your unit for your fluid allowance and your weight-gain limit, and
+      [enter them in the app](../app/weight-and-blood-pressure.md) (your fluid allowance in Profile, see
+      [First setup](../app/first-setup.md); your weight-gain limit in Settings).
 - [ ] Set your dialysis days in the app so it totals the gap between sessions.
 - [ ] Plan the weekend: lighter on salt, potassium and fluid from Friday (or Saturday) to Monday
       (or Tuesday).

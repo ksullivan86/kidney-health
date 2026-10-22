@@ -44,7 +44,14 @@ def test_the_page_agrees_with_the_server_on_what_is_never_sent_and_how_big_a_fil
     assert size and int(size.group(1)) * 1024 * 1024 == Settings.__dataclass_fields__["max_import_bytes"].default
     shown = {k for k, _, _ in re.findall(r"\['([a-z_]+)', '([^']+)', '([^']+)'\]", BLOCK[BLOCK.index("const IMPORT_KINDS"):BLOCK.index("const IMPORT_SKIP_WHAT")])}
     assert shown == {"log_entries", "custom_foods", "shared_foods_kept_as_own", "shared_foods_linked", "meal_templates",
-                     "lab_results", "symptoms", "food_preferences", "settings"}
+                     "lab_results", "symptoms", "weights", "blood_pressures", "food_preferences", "settings"}
+    # the sizes of a file or an account, the skipped rows and the activity list name weights and readings too (note 10 Part B)
+    sizes = BLOCK[BLOCK.index("function importSizes"):BLOCK.index("function importBlock")]
+    assert "r.weights || 0" in sizes and "r.blood_pressures || 0" in sizes
+    skip = BLOCK[BLOCK.index("const IMPORT_SKIP_WHAT"):BLOCK.index("const IMPORT_SKIP_SHOWN")]
+    assert "weights: 'Weight'" in skip and "blood_pressures: 'Blood pressure reading'" in skip
+    detail = SETTINGS_JS[SETTINGS_JS.index("if (ev.action === 'data.imported')"):SETTINGS_JS.index("if (ev.action === 'assistant.food_logged')")]
+    assert "[d.weights, 'weight', 'weights']" in detail and "[d.blood_pressures, 'blood pressure reading', 'blood pressure readings']" in detail
 
 
 def test_the_page_never_keeps_the_file_or_builds_html_from_it() -> None:
@@ -132,7 +139,7 @@ def test_each_choice_checks_again_and_keeps_the_focus_where_it_was(page) -> None
     assert page["merged"] == {"options": {"merge": True, "replace_profile": False, "dry_run": True}, "focused": "set-import-merge"}
     assert page["profileChosen"] == {"options": {"merge": True, "replace_profile": True, "dry_run": True}, "focused": "set-import-profile"}
     blocked = page["blocked"]
-    assert blocked["importDisabled"] is True and "This account already has data (3 log entries, 1 food of yours, 0 saved meals, 0 lab results, 0 symptoms)" in blocked["text"]
+    assert blocked["importDisabled"] is True and "This account already has data (3 log entries, 1 food of yours, 0 saved meals, 0 lab results, 0 symptoms, 0 weights, 0 blood pressure readings)" in blocked["text"]
     assert "Will be added" not in blocked["text"]  # nothing is promised while it is refused
     assert "Nothing new to add." in page["nothingNew"] and "null" not in page["nothingNew"]
 

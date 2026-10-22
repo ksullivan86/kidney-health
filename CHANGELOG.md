@@ -27,12 +27,32 @@ the API. Security fixes are released as patch versions of the newest minor versi
   import needs is read out of it (the Health `export.xml` in pieces, so a file of hundreds of megabytes is fine; Cancel stops it), and a file
   that is damaged, not finished downloading or not an export from the Health app or this app is turned away with a plain reason. A browser that
   cannot do this (Safari before 16.4) shows the old advice to unzip the file first; choosing the unzipped files still works everywhere.
-* Nothing to see yet except one thing in the handbook: **Get help now** gained two lines about a blood pressure of 180/120 or
+* **Weight and blood pressure.** **Today** has a card for the day's weights and blood pressure readings, with **Add weight** and **Add blood
+  pressure** (nothing is saved until Save; you can edit or delete an entry). A weight is typed in pounds or kilograms (your choice in
+  **Settings → Weight and blood pressure**, pounds first) and the sheet shows the other unit under the box; you say when it was taken (morning, before
+  or after dialysis, other: the dialysis choices only if your Profile says dialysis). A reading has the top number first, then the bottom number and an
+  optional pulse, with one line on how to measure and what you typed repeated back ("Top 180, bottom 95") so a slip is seen before you save.
+  Both need the connection to your server and say so offline.
+* **The two numbers your care team gives you, and nothing else.** In **Settings → Weight and blood pressure** you can enter a weight-gain alarm
+  ("call my team if my weight goes up by more than ... between sessions, or in n days"; between sessions only on hemodialysis) and a blood pressure
+  goal ("under ... / ..."). The app never suggests either. With an alarm, Today says how your weight changed and names the two weights it compared; with
+  a goal, it shows your last 7 days' average against it. Without them you see your numbers with no verdict.
+* **The handbook's own words for a warning sign.** **Get help now** gained two lines about a blood pressure of 180/120 or
   higher (with a sudden severe headache, trouble breathing, pain in the chest, belly or back, numbness or weakness, a sudden
   change in vision or trouble talking, call 911 at once, without measuring again; without those signs, rest 5 minutes and check
   again, and call your care team today if it is still that high), from the US National Heart, Lung, and Blood Institute and
-  MedlinePlus, and the printable wallet card carries them in a few words. The weight and blood pressure log itself, with the numbers
-  your care team gave you, arrives in the next part; your export already holds anything recorded through it.
+  MedlinePlus, and the printable wallet card carries them in a few words. When you save (or are about to save) a reading with a top number of 180 or more or a
+  bottom number of 120 or more, Today shows those lines in a red block at the top of the card, the 911 line first, with a link to the page; a weight over your
+  alarm shows the page's line about weight gain above the alarm number. The app says nothing about why, and never suggests a medicine.
+* **Trends** has a weight chart and a blood pressure chart (on hemodialysis the weight chart also shows your dry weight as a dashed line and marks the weights
+  after dialysis; the blood pressure chart shows your goal as dashed lines), each with a table under it, and the 7-day averages. **Profile** shows "Latest in
+  your log" under Weight (not on dialysis) and "In your log" under Weight 6 months ago, each with **Use this**: it only fills the box, and nothing changes until you
+  press Save profile. **Visit prep** gains a section with your latest weight, the change over six months, on hemodialysis the gains between your last sessions,
+  your blood pressure averages for 7 and 30 days, how many readings were at or above your goal and any reading the handbook points to.
+* **A new handbook page, Weight and blood pressure** (Using the app): what to record, how to measure at home, which device (a validated upper-arm cuff; cuffless
+  watches and rings are not recommended), that the alarm and the goal are your care team's numbers (and why the app has none of its own), and what the app shows and
+  does not. First setup no longer says the app has no field for your weight-gain limit. **Settings → Your data → Import from a file** now counts weights and blood
+  pressure readings in what it would add, what is already there and what it skips.
 
 * **Bring weights and blood pressure in from the iPhone Health app.** **Import from Apple Health** (the sheet behind the buttons in Trends and
   in Settings → Your data) reads your Health export, `apple_health_export/export.xml`, **on your phone**: nothing is uploaded while it is read, you see
@@ -125,6 +145,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   the five refusals (including pdf.js's real `PasswordException`), that only the library and its worker were requested from
   `/vendor/pdfjs-dist-6.4.299/` and one closed Worker was made per run, 0 CSP or Trusted Types violations, and the service worker's `/vendor/` cache.
   It is listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`.
+* **Weight and blood pressure screens (note 10 Part B).** `js/engine/body_ui.js` (`KH.bodyUi`, pure), `js/views/body.js` and `js/views/body_trends.js`, `css/body.css`, the
+  body section of `js/engine/visitprep.js`; tests `tests/test_body_ui.py` and `tests/test_body_ui_numbers.py` (with `tests/js/body_ui_runner.mjs`: what a person types is
+  accepted and refused as the server's models and settings do, and the visit prep sums equal `app/body.py`'s), and the browser harness `python tools/e2e/body.py`
+  (listed in `tools/e2e/README.md` and the release checklist in `docs/maintainers.md`). The Apple Health import (Part C) plugs in as `KH.bodyImport` with `open()`; the
+  buttons exist only when it does. New handbook sources `K21BP`, `AHA25BP`, `AHA-CUFFLESS` and `NOTE10`.
 * **`ruff check .` runs in CI.** The `lint` job downloads ruff 0.17.0 (the release binary, with `RUFF_VERSION` and `RUFF_SHA256` beside
   the other tool pins, checked by the job's `fetch` helper) and runs `ruff check --no-cache --output-format=github .`, so findings
   show up as annotations on the pull request. ruff is not in the lock files. ruff 0.17 widened its default rules to about 400

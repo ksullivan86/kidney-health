@@ -60,6 +60,16 @@ K17:
   checked: 2026-10-05
   kind: guideline
   dg: [11]
+K21BP:
+  cite: "Cheung AK, Chang TI, Cushman WC, et al. KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease. Kidney Int 2021;99(3S):S1–S87."
+  short: "KDIGO 2021 blood pressure in CKD guideline"
+  url: https://doi.org/10.1016/j.kint.2020.11.003
+  also:
+    - https://kdigo.org/guidelines/blood-pressure-in-ckd/
+  licence: "CC BY-NC-ND 4.0: cite and paraphrase only; do not adapt tables or figures"
+  checked: 2026-10-22
+  kind: guideline
+  note: "Citation checked 2026-10-22 against Crossref (Kidney Int 2021;99(3S):S1–S87, doi 10.1016/j.kint.2020.11.003) and the guideline PDF at kdigo.org. Recommendation 1.2: 'We suggest that out-of-office BP measurements with ambulatory BP monitoring (ABPM) or home BP monitoring (HBPM) be used to complement standardized office BP readings for the management of high BP (2B).' Recommendation 3.1.1: 'We suggest that adults with high BP and CKD be treated with a target systolic blood pressure (SBP) of <120 mm Hg, when tolerated, using standardized office BP measurement (2B).' Practice Point 3.1.1: it is potentially hazardous to apply that target to BP measurements obtained in a non-standardized manner. The guideline covers adults with CKD who are not receiving dialysis (the Work Group left out the dialysis population). The handbook states none of these targets as the reader's own: it says the goal is the care team's."
 K20TX:
   cite: "Chadban SJ, et al. KDIGO Clinical Practice Guideline on the Evaluation and Management of Candidates for Kidney Transplantation. Transplantation 2020;104(4S1):S11–S103; summary Transplantation 2020;104(4):708–714."
   short: "KDIGO 2020 transplant candidate guideline"
@@ -654,6 +664,22 @@ MEDLINE-BPM:
   checked: 2026-10-22
   kind: patient-info
   note: "Checked 2026-10-22 against the page: seek immediate medical attention or call 911 if your blood pressure is over 180/120 mm Hg with chest pain, shortness of breath, back pain, numbness or weakness, trouble speaking or vision changes. Measuring at home: rest about five minutes in a chair, sit up straight with legs uncrossed and feet flat, an upper-arm cuff that fits snugly, the same time of day each time. The handbook follows this page (no second reading first) for the 911 line, because NHLBI's wording ('if the second measurement is also high and if you have any of these symptoms') could be read as waiting with emergency signs."
+AHA25BP:
+  cite: "Jones DW, Ferdinand KC, Taler SJ, et al. 2025 AHA/ACC/AANP/AAPA/ABC/ACCP/ACPM/AGS/AMA/ASPC/NMA/PCNA/SGIM Guideline for the Prevention, Detection, Evaluation and Management of High Blood Pressure in Adults: A Report of the American College of Cardiology/American Heart Association Joint Committee on Clinical Practice Guidelines. Hypertension 2025;82(10):e212–e316."
+  short: "2025 AHA/ACC high blood pressure guideline"
+  url: https://doi.org/10.1161/HYP.0000000000000249
+  licence: "© American Heart Association and American College of Cardiology: link and paraphrase only"
+  checked: 2026-10-22
+  kind: guideline
+  note: "Citation checked 2026-10-22 against PubMed (PMID 40811516) and Crossref: Hypertension 2025;82(10):e212–e316, doi 10.1161/HYP.0000000000000249. The full text at ahajournals.org could not be fetched (HTTP 403 to the checker), so the device wording was checked against the American Heart Association's news release of 11 December 2025 (AHA-CUFFLESS), which says the guideline 'recommended against using cuffless blood pressure devices for diagnosis or treatment until they demonstrate greater precision and reliability', and against secondary summaries (validated oscillometric home monitors for diagnosis and for adjusting treatment). The handbook says only that: validated devices, and not cuffless watches or rings. Re-read the guideline's home-monitoring section (note 10 header, 'Re-verify') before this page is reviewed."
+AHA-CUFFLESS:
+  cite: "American Heart Association. Cuffless blood pressure technologies in wearable devices show promise to transform care (news release, 11 December 2025; on the scientific statement 'Cuffless Devices for the Measurement of Blood Pressure')."
+  short: "AHA: cuffless blood pressure devices"
+  url: https://newsroom.heart.org/news/cuffless-blood-pressure-technologies-in-wearable-devices-show-promise-to-transform-care
+  licence: "© American Heart Association: link and paraphrase only"
+  checked: 2026-10-22
+  kind: patient-info
+  note: "Checked 2026-10-22 against the page: it describes the 2025 AHA/ACC guideline as having recommended against using cuffless blood pressure devices for diagnosis or treatment until they demonstrate greater precision and reliability, and the statement's writing chair advises using a validated device for any readings that may inform diagnosis or treatment."
 AKF-bleed:
   cite: "American Kidney Fund. Dialysis fistula and graft bleeds: what are they and how can they be prevented and treated? (15 August 2025)."
   short: "AKF: fistula and graft bleeds"
@@ -1563,6 +1589,13 @@ NOTE08:
   url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-05
+  kind: project
+NOTE10:
+  cite: "kidney-health design note 10: weight and blood pressure."
+  short: "Design note 10"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/10-weight-and-blood-pressure.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-22
   kind: project
 DEPLOY:
   cite: "kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes."

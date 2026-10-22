@@ -26,6 +26,7 @@ or delete it.
 | Your account: user name, display name, password **hash** | server | the password itself is never stored |
 | Profile, targets and lab results | server | |
 | Symptoms you write down (the symptom, the date, how bad, your note) | server | in your export; never sent to an AI provider or to an assistant |
+| Weights and blood pressure readings you write down (the number, the date and time, when you took it, your note), and the alarm and goal you set | server | in your export; never in a log or the activity list, and never sent to an AI provider or to an assistant ([Weight and blood pressure](weight-and-blood-pressure.md)) |
 | Every log entry, your own foods, saved meals, your food preferences (More like this, Less often, Not for me) | server | what the app learns from your log is worked out each time and not stored and never sent to an AI; the foods and groups you marked yourself go to meal ideas and Ask only if you use them ([Optional AI](ai.md)) |
 | Settings, and your own API keys **encrypted** | server | keys are write-only ([Settings and keys](settings-and-keys.md)) |
 | Your activity: sign-ins, password and key changes, exports | server | kept for 365 days by default |

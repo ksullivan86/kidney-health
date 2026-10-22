@@ -774,7 +774,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/rules_kidney.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
-| Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B adds the screens (note 10) |
+| Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B, the screens: `js/engine/body_ui.js` (`KH.bodyUi`), `js/views/body.js` (`KH.body`: Today, the sheets, the Settings section, the Profile hints), `js/views/body_trends.js` (`KH.bodyTrends`), `css/body.css`, the cards, sheets and `#set-body` in `index.html`, the body section of `js/engine/visitprep.js` and `js/views/visit.js`, `handbook/docs/app/weight-and-blood-pressure.md`, `tests/test_body_ui*.py`, `tests/js/body_ui_runner.mjs`, `tools/e2e/body.py` |
 | Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
@@ -834,7 +834,10 @@ app/static/
                         the Trends grouping; tests/data/symptoms_vectors.json. js/mock/symptoms.js: the demo's /api/symptoms routes. css/symptoms.css
   js/engine/body.js     KH.bodyRules: the browser twin of the pure part of app/body.py (kg and lb, the weight-gain alarm, the 7-day blood pressure means, the
                         six-month change, the handbook's words, the summary); tests/data/body_vectors.json. js/mock/body.js: the demo's /api/body routes
-                        (weight and blood pressure log; Part A has no screens, Part B adds them)
+                        (weight and blood pressure log)
+  js/engine/body_ui.js  KH.bodyUi: what the weight and blood pressure screens are made of (entry, echoes, words, chart scales, table rows); js/views/body.js: KH.body,
+                        the Today card, the two sheets, Settings → Weight and blood pressure and the Profile hints; js/views/body_trends.js: KH.bodyTrends, the charts.
+                        css/body.css; today.js, trends.js, settings.js, profile.js and visit.js call them (weight and blood pressure log, Part B)
                         labs.js: the Lab results view (#labs, no tab; opened from Profile) and KH.labs (helpers Profile uses)
                         guidance.js: KH.guidance, the meal guidance UI (M2 guidance; see "M2 API: guidance" → Frontend)
   css/labs.css          Lab results view, the potassium safety banner, Profile's lab summary (M2 targets)
@@ -3181,9 +3184,9 @@ the demo): no sideways scroll, no console error, no request to another host.
 
 ## Weight and blood pressure (schema step 18)
 
-Design note: `docs/dev/research/10-weight-and-blood-pressure.md` (the facts F1 to F7 each number traces to, the decisions Q1 to Q8). **Part A (this
-section) is the server, the demo's twin, the settings, the export and import and the handbook's two lines; it has no screens.** Part B adds the Today card,
-the sheets, the Trends charts, the Settings section, the Profile helpers and the visit prep section; Part C the import from the iPhone Health app
+Design note: `docs/dev/research/10-weight-and-blood-pressure.md` (the facts F1 to F7 each number traces to, the decisions Q1 to Q8). **Part A is the server, the
+demo's twin, the settings, the export and import and the handbook's two lines; Part B (below, "Where it shows") is the screens: the Today card and its sheets, the
+Trends charts, the Settings section, the Profile helpers, the visit prep section and the handbook page;** Part C the import from the iPhone Health app
 (`export.xml`). A person records a weight (when it was taken: morning, before or after dialysis, other) and a blood pressure reading (top and bottom
 number, optional pulse); the app records and shows, works out a few plain numbers, and points to the handbook when a number is past a limit. **It never
 suggests a weight-gain alarm, a blood pressure goal or a dry weight (those are the care team's, entered in Settings), and says nothing about a cause, a
@@ -3272,6 +3275,65 @@ Part A added the two blood pressure lines to `handbook/docs/get-help-now.md` (so
 dose change is deliberately not repeated), to the shared wallet card and to `handbook/REVIEW.md` for the clinician review. `tests/test_body.py` reads the page
 and fails when a quoted phrase is no longer under its heading, and when a line names a cause, a treatment or a dose.
 
+### Where it shows (Part B)
+
+Every screen reads and writes only the routes above (no new route, no table, no migration); the pure parts are `js/engine/body_ui.js` (`KH.bodyUi`: what
+a person types and how it is worded, the chart scales, the table rows) and, for the visit prep page, `js/engine/visitprep.js`.
+
+* **Today** (`js/views/body.js`, `KH.body.today(date)`, called by `today.js`): a **Weight and blood pressure** card under Symptoms with the day's weights and
+  readings (**Edit**, **Delete** asking in the page), **Add weight** and **Add blood pressure** opening the bottom sheets `#sheet-weight` and `#sheet-bp`
+  (nothing is saved until **Save**; a refusal keeps what was typed). A **very high reading is the first block of the card and prominent**: the block draws the
+  server's `flag.text` as it is (the 911 line first, a link to Get help now through `KH.learn.href`, no handbook means no link and the words stay), headed
+  "Reading 185/95 at 7:10 PM"; the same block shows **in the sheet before Save** from the twin (`KH.bodyRules.bpFlag`). Under it the **alarm line** (from
+  `summary.weight.alarm`: "Weight up 1.8 lb. Over your alarm. Your alarm: more than 2.2 lb in 1 day.", the latest weight and the server's `message` that names the
+  weight compared, and for a weight over the alarm the handbook's weight line, not prominent) and the **goal line** (the goal as the care team gave it and
+  the server's 7-day average against it). With neither set, a line says where to enter them. Days after today cannot be added to; the card needs the
+  connection and says so (a save offline says "need a connection to your server ... Nothing was saved" in the sheet).
+* **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
+  and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
+  profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
+  the hundredth. The reading sheet has the **top number (systolic)** then the **bottom number (diastolic)**, an optional pulse, the one line from MedlinePlus
+  ("Rest about 5 minutes first, sit with your feet flat, and put the cuff on your upper arm." and a link "How to measure" into the handbook page), the echo
+  ("Top 180, bottom 95") and the same choices (morning / evening / ... / other). The ranges are the server's (`WeightCreate`, `BloodPressureCreate`), checked in the
+  page by `KH.bodyUi` so a typing slip is refused in words before a request.
+* **Settings → Weight and blood pressure** (`KH.body.renderSettings()`, called by `js/views/settings.js`; the section `#set-body` after Preferences): the unit; the
+  alarm as "Call my team if my weight goes up by more than [ ] [kg|lb] [between sessions | in a number of days]" (**between sessions only on hemodialysis**, or
+  when that is already the saved choice) with a live sentence; the goal as "My blood pressure goal from my team: under [ ] / [ ]". Each says the number is the care
+  team's and that the app suggests none, shows where the value comes from and saves its own setting (`PATCH /api/me/settings`), in kilograms whatever the unit;
+  a link to the handbook page through the server's link table (`pages.weight_and_blood_pressure` in `app/guidance/topics.py`).
+* **Settings → Your data**: `IMPORT_KINDS`, `importSizes`, the skipped-row names and the "Data imported" activity line count weights and blood pressure readings,
+  and **Import from Apple Health** is a button that exists only when a module `KH.bodyImport` (Part C, not in Part B) provides `open()`; the same button on
+  Trends. Part B builds neither the reader nor its sheet.
+* **Trends** (`js/views/body_trends.js`, `KH.bodyTrends.show(start, end)`, called by `trends.js`; the card `#body-trends` under the symptoms list): a **weight chart**
+  (one line, a marker per weight, a diamond for a weight after dialysis, on hemodialysis a dashed line for the profile's dry weight) and a **blood pressure chart**
+  (the top and bottom numbers as two lines with a circle and a square per reading, the goal as two dashed lines when set, a heavier outline for a flagged
+  reading), both **plain SVG built with the DOM** (`KH.s`: no chart library, no `innerHTML`, no inline style: classes and `css/body.css`), each with a **table under
+  it** (`<details>`, every row, a flagged reading says "Yes, see Today") and a legend that names every line and marker, so nothing depends on seeing the chart or on
+  colour. The dashed lines are named in the legend with their numbers ("Top goal: under 130 (dashed)", "Dry weight in Profile (…)"), not by text on the line, where
+  it sat on the readings. The two series colours are the first two steps of the dataviz palette (tokens `--body-top` and `--body-bottom`, light and dark, validated for the
+  colour-blind separation and 3:1 against the surface). The stats above them: the latest weight, the mean of **each kind of weight** over the last 7 days
+  (`weekAverages`: morning is never averaged with after dialysis) and the server's 7-day blood pressure average with the goal verdict.
+* **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
+  this" (**not shown when the form says dialysis**, where the field is the dry weight; it follows the Dialysis box live), under **Weight 6 months ago** "In your log:
+  74.0 kg on Apr 21 — Use this" (the six-month rule of the section above: the weight dated closest to 182 days before the latest, within 30). **Use this fills the box and
+  nothing else**; Save profile saves it, and the profile is never changed by the log.
+* **Visit prep** (`js/views/visit.js`): the section "Weight and blood pressure I recorded" (`V.bodyPage`): the latest weight, the six-month change, on hemodialysis the
+  gains between the last 6 sessions (`sessionGains`: each weight before dialysis against the latest weight after dialysis in the 7 days before it, else the dry
+  weight in Profile, the server's `between_sessions` comparison; "over your alarm" only against a between-sessions alarm), the 7-day and 30-day blood pressure
+  averages (`readingsWindow`, the server's week rule with another length), how many readings had a top number at or above the goal's or a bottom number at or above its
+  (the server's "at or above"), and the readings with `flag` in the period with their dates and the handbook's block once. A read that failed says so.
+* **The handbook page** `handbook/docs/app/weight-and-blood-pressure.md` ("Using the app"): what to record and when, how to measure (MedlinePlus `MEDLINE-BPM`), which
+  device (a validated upper-arm cuff; cuffless watches and rings are not recommended: `AHA25BP`, `AHA-CUFFLESS`), that the alarm and the goal are the care team's
+  numbers (`K21BP`: KDIGO 2021 recommendations 1.2 and 3.1.1, for adults not on dialysis), what the app shows and does not, and a pointer to Get help now. First setup
+  no longer says the app has no field for the weight-gain limit; the hemodialysis page links "enter them in the app" to it.
+* **Security and privacy**: no route is added (every one is `current_user`, scoped by `user.id`); all text goes in through `h()` children; no inline script, handler or
+  style; nothing is stored in the browser and nothing is sent anywhere but the app's own `/api/body`, `/api/me/settings` and `/api/profile`; weights and readings are
+  never sent to an AI provider or the assistant (the views do not touch `KH.ai`).
+* **Tests**: `tests/test_body_ui.py` (shell, markup, no inline code, the sheets' fields, the flag block quoting the server's text, Profile and Settings and visit
+  prep wiring, the buttons hidden without `KH.bodyImport`), `tests/test_body_ui_numbers.py` with `tests/js/body_ui_runner.mjs` (what a person types is accepted and
+  refused as the server's models and settings do; the words and the chart maths; the visit prep numbers against `app/body.py`), `python tools/e2e/body.py` (Chromium at
+  375 px light and 1280 px dark with the other two combinations in a shorter walk, a real server and the demo, and `?mock=1&hd=1`).
+
 ### Export, import, deletion, privacy
 
 * **Export and import**: `export.json` → `weights` and `blood_pressures` (after `symptoms`, oldest day first, `source_key` kept) and `weights.csv` /
@@ -3346,7 +3408,10 @@ another person is invisible and a 404 and the shape of the demo's sample data; `
 `tools/e2e/parity.py` section 16 runs the same script against the live server and the demo in Chromium. The demo differs in two ways: no rate limit on the batch
 routes, no body-size limit. **The demo's sample data** (`js/mock/seed.js`, note 10 §4.7): two weeks of morning weights (on hemodialysis the weights before and
 after sessions) and readings, a sample alarm of 1 kg in a day (2 kg between sessions) and a sample goal of 130/80 "from the care team", today's weight over the
-alarm and **no reading at 180/120**, so the demo never shows the emergency block unasked.
+alarm and **no reading at 180/120**, so the demo never shows the emergency block unasked. The screens' own engine, `js/engine/body_ui.js` (`KH.bodyUi`), has no
+server twin to keep in step (the server never parses what a person types or draws a chart); `tests/test_body_ui_numbers.py` runs it through `tests/js/body_ui_runner.mjs`
+against the server's own models, settings and functions instead (a weight or reading is accepted or refused as `WeightCreate`, `BloodPressureCreate` and the settings
+registry do, the units are `app.body.lb_to_kg` and `format_weight`, the visit prep sums are `app.body.six_month_change`, `blood_pressure_week` and `weight_alarm_check`).
 
 ## Visit prep
 
@@ -3381,6 +3446,15 @@ it has no tab, so the bottom bar keeps its six. The demo shows it from its own d
   the days, the worst severity and the dates, a severe red flag first, and the handbook's line for the warning signs **drawn by
   `KH.symptoms.flagEl`**, the function the Today and Trends lists use (exported for this page), so the words are exactly the
   ones in "Symptoms log" above. Notes stay in the log.
+* **Weight and blood pressure** (note 10 Part B): `GET /api/body/summary?date=` (the units, the alarm the person's care team gave, the goal, the latest weight),
+  `GET /api/body/weights` for the last 366 days (the six-month change needs the half year before the latest weight) and `GET /api/body/blood-pressure` for
+  the longer of the period and 30 days, with the profile's dialysis setting and dry weight (`KH.loadProfile`). `bodyPage` in `js/engine/visitprep.js` is plain arithmetic on
+  the person's own rows, with the server's rules from `KH.bodyRules`: the **latest weight** and the **six-month change** (`sixMonthChange`; no verdict), on
+  hemodialysis the **gains between the last sessions** (up to 6, newest first; each weight before dialysis against the latest weight after dialysis in the 7 days
+  before it, else the dry weight in Profile; "over your alarm" only for a between-sessions alarm), the **7-day and 30-day averages** (whole numbers, half up) and the
+  number of readings, **how many were at or above the goal** (a top number at or above the goal's or a bottom number at or above its) and the **readings the handbook
+  points to** in the period with their dates and, once, the same block Today draws (`KH.body.flagBlock`, the server's words). `tests/test_body_ui_numbers.py`
+  checks each against `app/body.py`. A read that failed says so.
 * **My questions** and **a checklist**. See below.
 
 A section whose read failed says so in the page ("The lab results could not be loaded ... Try again before you print"), so a
@@ -3408,17 +3482,20 @@ The app adds no clinical content of its own.
 (used only while `#view-visit` is the view showing, through `:root:has(#view-visit:not([hidden]))`) hides the skip link, header,
 tabs, banners, toasts and dialogs and everything marked `screen-only` (the period buttons, the question box, Remove, the
 handbook link), sets `color-scheme: light`, **black text on white whatever the theme** (the level icons black with white
-glyphs), 9 pt text, 9 mm page margins and rows that are not split. For a typical person (five targets, four tests, a few
-symptoms) the page is **one sheet on A4 and on Letter** (`tools/e2e/visitprep.py` makes both PDFs and counts the sheets); a long
-symptoms or questions list runs on to a second sheet. On screen it follows the light and dark theme and works at 375 px.
+glyphs), 9 pt text, 9 mm page margins and rows that are not split; the head puts the name and the period beside the title, the checklist
+is three across, and the weight and blood pressure sentences run on as short paragraphs (the sub-headings and the closing note are for the screen).
+For a typical person (five targets, four tests, a few symptoms) the page is **one sheet on A4 and on Letter**; with weights and readings logged it is
+still one sheet on A4, and on the shorter Letter sheet the checklist and the closing line go **together** to a second one (a break rule keeps the
+closing line from standing alone) (`tools/e2e/visitprep.py` makes the PDFs both ways and counts the sheets); a long symptoms or questions list
+runs on to a second sheet. On screen it follows the light and dark theme and works at 375 px.
 
 ### Security and privacy
 
-* Three reads of the app's own API, each already `current_user` and scoped by `user.id` (summary, labs, symptoms); the view
-  sends **no write and no other request** (`tests/test_visit_prep_ui.py` checks the code has no `fetch`, XHR or beacon and
-  calls only `api.summary`, `api.labs`, `api.symptoms`; the Chromium harness checks that no write and no other host is asked).
+* Six reads of the app's own API, each already `current_user` and scoped by `user.id` (summary, labs, symptoms and the weight and blood pressure summary and lists), and
+  the profile through `KH.loadProfile`; the view sends **no write and no other request** (`tests/test_visit_prep_ui.py` checks the code has no `fetch`, XHR or beacon and
+  calls only `api.summary`, `api.labs`, `api.symptoms`, `api.bodySummary`, `api.bodyWeights`, `api.bloodPressures`; the Chromium harness checks that no write and no other host is asked).
 * Nothing is sent to a provider: the view does not touch `KH.ai` or `/api/ai`, and `app/ai/`, `app/mcp/` and `app/guidance/`
-  still never read symptoms, so the page adds no path for a symptom, a lab result or a question to an AI.
+  still never read symptoms, weights or readings, so the page adds no path for a symptom, a lab result, a weight, a reading or a question to an AI.
 * Text goes in through `h()` children (`textContent`), never as HTML; no inline script, handler or style (CSP).
 * No dosing, no insulin or medicine content, no new clinical number. Treating a low is not touched.
 
@@ -3427,7 +3504,8 @@ symptoms or questions list runs on to a second sheet. On screen it follows the l
 `tests/test_visit_prep_ui.py` (shell, service worker, no inline code, `textContent` only, `window.print` wired from the file,
 the print rules, no network and no storage in the view, the checklist against the handbook), `tests/test_visit_prep_numbers.py`
 with `tests/js/visitprep_runner.mjs` (the endpoint's numbers through the engine, unknown values, labs, grouped symptoms, the
-questions' limits), `python tools/e2e/visitprep.py` (Chromium at 375 px light and 1280 px dark, the demo, print emulation and PDFs).
+questions' limits), `tests/test_body_ui_numbers.py` for the weight and blood pressure section (against `app/body.py`), `python tools/e2e/visitprep.py` (Chromium at
+375 px light and 1280 px dark, the demo, print emulation and PDFs), and `python tools/e2e/body.py` for the section with data.
 
 ## Assistant access tokens (assistant step 1, part A)
 

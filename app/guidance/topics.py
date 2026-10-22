@@ -94,6 +94,7 @@ APP_LINKS: dict[str, dict[str, dict[str, str]]] = {
         "home": _named("", "Kidney Health Handbook"),
         "targets": _link("targets-and-warnings"),
         "first_setup": _named("app/first-setup/", "First setup"),
+        "weight_and_blood_pressure": _named("app/weight-and-blood-pressure/", "Weight and blood pressure"),
         "get_help_now": _link("get-help-now"),
         "blood_potassium": _link("blood-potassium"),
         "treating_a_low": _link("treating-a-low"),

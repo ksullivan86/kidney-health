@@ -41,7 +41,7 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
-     `symptoms.py`, `visitprep.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
+     `symptoms.py`, `visitprep.py`, `body.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
      `lab_pdf.py` and `mcp_smoke.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a

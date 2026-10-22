@@ -219,6 +219,7 @@
     $('#totals-details > summary').textContent = counts.planned > 0 ? 'All nutrient totals for the day (eaten → projected)' : 'All nutrient totals for the day';
     if (KH.guidance) KH.guidance.today(day).catch((e) => console.warn('Meal guidance:', e));
     if (KH.symptoms) KH.symptoms.today(day.date).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
+    if (KH.body) KH.body.today(day.date).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body.js
   }
 
   // A goal with only a minimum (fibre, note 05 §4.8): progress toward it, never "over".

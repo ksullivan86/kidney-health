@@ -68,8 +68,12 @@ their own key). Each person in the household has their own account and their own
   appetite, or one of your own) with a date and how bad it is; Today shows the day's, Trends lists the days, and the
   export holds them. The app records and shows; it never says what a symptom means. The two that the handbook's Get help
   now page lists as warning signs show its own words and a link to it.
+* **Weight and blood pressure.** Write down a weight (pounds or kilograms) and a blood pressure reading; Today shows the
+  day's, Trends has a chart of each with a table under it, Profile offers your latest logged weight, and the export holds them. You can
+  enter the weight-gain alarm and the blood pressure goal your care team gave you; the app never suggests either. A reading at
+  180/120 or higher shows the handbook's own words (call 911 with the warning signs) in a red block. Never sent to an AI.
 * **Visit prep.** Trends → Get ready for a visit makes one page to print or save as a PDF: your averages against your targets,
-  your latest lab results, your symptoms, your own questions and the handbook's checklist. Nothing is sent anywhere.
+  your latest lab results, your symptoms, your weight and blood pressure, your own questions and the handbook's checklist. Nothing is sent anywhere.
 * **Meal guidance without AI**: "What fits now" for your next meal, lower-potassium, -phosphorus or
   -sodium swaps with the same carbohydrate, "Plan the rest of my day", end-of-day and weekly insights,
   and a "Treating a low" card that works even offline. Arithmetic on your care team's targets; it never
@@ -387,7 +391,7 @@ app/
   nutrient_core.py        the nutrient registry and rounding that nutrients.py and rules_kidney.py share
   targets.py, target_rules.py, kidney_function.py, units.py, labs.py   personalised targets, eGFR, lab results
   symptoms.py             the symptoms log (a person's symptoms by date and severity; the handbook's red flags)
-  body.py                 the weight and blood pressure log (routes, kg and lb, the alarm and goal checks, the handbook's words; no screens yet)
+  body.py                 the weight and blood pressure log (routes, kg and lb, the alarm and goal checks, the handbook's words; the screens are js/views/body.js and body_trends.js)
   guidance/               rule-based meal guidance (pure engine + routes)
   gtin.py, additives.py, textclean.py, off.py, barcode.py   barcodes, additive scan, Open Food Facts
   ai/, vision.py, imagecheck.py   optional AI (presets, routing, network policy, guard, routes, the Ask chat) and photo checks
