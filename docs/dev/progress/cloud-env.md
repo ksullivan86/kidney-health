@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # cloud-env: a second AI provider from the environment (`AI_CLOUD_*`)
 
@@ -49,11 +49,12 @@ Worktree `.../scratchpad/integ-cloudenv`, branch `wip/cloud-env`, based on main 
 * Checks run: ruff, gen_openapi --check (no change: the admin answers are free dicts), all `tests/data/gen_*.py --check`,
   `node tests/js/run_vectors.mjs`, `build_handbook.py --check`, `git diff --check`: all clean.
 
-## Next
+## Final checks (all green)
 
-1. Full `python -m pytest -q` (background; log in the scratchpad) and `python -m pytest -m safety -q`.
-2. A browser harness for the AI admin screens, if one runs offline (`tools/e2e/`).
-3. Final commit: mark "Status: complete".
+* Full `python -m pytest -q`, run in three parts on a snapshot: 0 failures (one test needs `.git`, and passes in the worktree).
+* `python -m pytest -m safety -q`, ruff, `gen_openapi.py --check`, every `tests/data/gen_*.py --check`, `node tests/js/run_vectors.mjs`,
+  `build_handbook.py --check`, `git diff --check`.
+* Browser: new `tools/e2e/cloud_env.py` (43 checks) and the existing `tools/e2e/fallback.py` (64 checks) pass offline.
 
 ## Checks
 
