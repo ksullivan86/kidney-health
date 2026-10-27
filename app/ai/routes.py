@@ -371,7 +371,7 @@ async def maintenance_probe(app: FastAPI, provider_id: int, server_port: int | N
         finally:
             state.gate.leave(slot)
         if row["locked"]:
-            result["key_fp"] = K.key_fingerprint(keyring, state.settings.ai.api_key)
+            result["key_fp"] = K.key_fingerprint(keyring, K.env_key(state.settings, row))
 
         def store() -> None:
             current = K.provider_row(conn, provider_id)
@@ -1188,7 +1188,7 @@ def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str,
                            can_use_shared=user.can_use_shared, require_opt_in=False) if enabled else None
     shared = [] if not user.can_use_shared else [
         {"id": int(r["id"]), "label": r["label"], "host": parse_base_url(r["base_url"]).display_host, "kind": P.get(r["preset"]).kind,
-         "policy": P.policy_line(P.get(r["preset"]), scope="shared"), "photos": bool(r["vision_model"]), "usable": K.usable(r)}
+         "policy": K.row_policy(r), "photos": bool(r["vision_model"]), "usable": K.usable(r)}
         for r in K.shared_rows(conn)
     ]
     return {
@@ -1327,7 +1327,7 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
         result = await C.probe(client, cfg, error_snippet=snippet if admin and row["scope"] == "shared" else None)
 
     if row["locked"]:
-        result["key_fp"] = K.key_fingerprint(_keyring(request), state.settings.ai.api_key)
+        result["key_fp"] = K.key_fingerprint(_keyring(request), K.env_key(state.settings, row))
 
     def store() -> None:
         current = K.provider_row(conn, int(row["id"]))
@@ -1441,6 +1441,7 @@ def admin_list(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
         "deny_cidrs": [str(n) for n in state.policy.deny],
         "proxy": bool(state.policy.proxy),
         "env_provider": bool(state.settings.ai.provider),
+        "env_cloud_provider": bool(state.settings.ai.cloud.provider),
         "writable": state.settings.auth_mode != "none",
         "voice": voice_admin_view(request, conn),
     }
@@ -1477,7 +1478,7 @@ def update_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)
     state = ai_state(request)
     row = _shared_row_or_404(conn, provider_id)
     if row["locked"]:
-        raise ApiProblem(409, "This provider is set by the server's environment (AI_PROVIDER) and cannot be changed here.", locked=True)
+        raise ApiProblem(409, f"This provider is set by the server's environment ({K.env_var(row)}) and cannot be changed here.", locked=True)
     data = _admin_input(state, body)
     if R.role_of(conn, state.store, state.settings, row) == "local" and not R.is_private_host(data.base_url, state.policy):
         raise ApiProblem(400, "This provider is your local AI, so its address must stay on your own network (listed in AI_PRIVATE_HOSTS). "
@@ -1507,7 +1508,7 @@ def delete_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE_INT)
     _none_mode_refusal(request)
     row = _shared_row_or_404(conn, provider_id)
     if row["locked"]:
-        raise ApiProblem(409, "This provider is set by the server's environment (AI_PROVIDER); unset it there.", locked=True)
+        raise ApiProblem(409, f"This provider is set by the server's environment ({K.env_var(row)}); unset it there.", locked=True)
     conn.execute("DELETE FROM ai_providers WHERE id = ?", (provider_id,))
     roles = R.drop_role(conn, ai_state(request).store, provider_id, updated_by=admin.id)  # a role never points at a deleted provider
     audit(conn, admin.id, "ai_provider.changed", "ai_provider", provider_id, ip=request_ip(request), change="deleted", roles_cleared=roles)
@@ -1635,7 +1636,7 @@ def install(app: FastAPI, settings: Settings, store: SettingsStore, *, app_versi
 
 
 def startup(app: FastAPI, conn: sqlite3.Connection) -> None:
-    """At start-up: keep the env provider row in step with ``AI_PROVIDER`` and run the retention purge."""
+    """At start-up: keep the env provider rows in step with ``AI_PROVIDER`` and ``AI_CLOUD_PROVIDER`` and run the retention purge."""
     state: AiState = app.state.ai
     R.initialise(conn, state.store)  # before the environment provider is synced: it decides "upgraded" or "new" from what is stored
     K.sync_env_provider(conn, state.settings, getattr(app.state, "keyring", None))

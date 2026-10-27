@@ -41,6 +41,11 @@ Keys (defaults in brackets):
   ``AI_PRIVATE_HOSTS``, ``AI_DENY_CIDRS``, ``AI_MAX_RESPONSE_BYTES`` [262144], ``AI_HTTP_PROXY``. These are
   env-only on purpose (an SSRF allowlist is never runtime-editable); the switches (``AI_ENABLED`` …) are
   settings-registry keys with env locks. ``app/ai/config.py`` checks the values at start-up.
+* A second server-defined provider, always the cloud AI (:class:`AiCloudEnv`, ``Settings.ai.cloud``):
+  ``AI_CLOUD_PROVIDER``, ``AI_CLOUD_BASE_URL``, ``AI_CLOUD_API_KEY[_FILE]``, ``AI_CLOUD_MODEL``,
+  ``AI_CLOUD_VISION_MODEL``, ``AI_CLOUD_TIMEOUT_S``, ``AI_CLOUD_MAX_TOKENS`` [1500], ``AI_CLOUD_CONTEXT_TOKENS``
+  [32768], ``AI_CLOUD_STRUCTURED_OUTPUT`` [auto], ``AI_CLOUD_REASONING_EFFORT`` and ``AI_CLOUD_UPSTREAM`` (the
+  company a proxy forwards to; required when the preset is not a cloud one). Read like their ``AI_*`` twins.
 * Speech to text for the Ask microphone (assistant step 2, part B; ``app/ai/stt.py``), also in :class:`AiEnv`:
   ``STT_BASE_URL`` (ends in ``/v1``, same address rules as ``AI_BASE_URL``), ``STT_API_KEY[_FILE]`` (optional),
   ``STT_MODEL``, ``STT_TIMEOUT_S`` [60], ``STT_DAILY_LIMIT`` [100]; and ``STT_MAX_AUDIO_BYTES`` [1.5 MiB] (``Settings.max_audio_bytes``).
@@ -130,6 +135,7 @@ class AiEnv:
     http_proxy: str | None = None  # AI_HTTP_PROXY; HTTP(S)_PROXY are ignored for AI calls
     openrouter_zdr: bool = False
     provider_role: str | None = None  # AI_PROVIDER_ROLE: local | cloud, the role of the AI_PROVIDER provider (docs/ai.md "Which AI does each feature use?")
+    cloud: "AiCloudEnv" = field(default_factory=lambda: AiCloudEnv())  # AI_CLOUD_*: the second server-defined provider, always the cloud AI
     # Speech to text for the Ask screen's microphone (assistant step 2, part B; app/ai/stt.py): one OpenAI-compatible
     # ``{STT_BASE_URL}/audio/transcriptions`` endpoint, under the same address rules as the AI provider.
     stt_base_url: str | None = None  # STT_BASE_URL, ends in /v1 like AI_BASE_URL
@@ -137,6 +143,61 @@ class AiEnv:
     stt_model: str | None = None  # STT_MODEL
     stt_timeout_s: float = 60.0  # STT_TIMEOUT_S: how long the transcription server may take
     stt_daily_limit: int = 100  # STT_DAILY_LIMIT: recordings per person per day (0 = unlimited)
+
+
+UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&-]{0,59}$")  # a company's plain name, shown to people in the consent line
+UPSTREAM_MAX_CHARS = 60
+
+
+@dataclass(frozen=True)
+class AiCloudEnv:
+    """The second server-defined AI provider, always the cloud AI (``AI_CLOUD_*``; docs/ai.md "A local AI and a cloud AI, both
+    from the environment"). The fields read like their ``AI_*`` twins; a value that is not set is ``None`` (the defaults are applied
+    where the row is written, ``app/ai/config.py``), so a stray value without ``AI_CLOUD_PROVIDER`` can be told from an unset one."""
+
+    provider: str | None = None  # AI_CLOUD_PROVIDER: a preset name (never hermes)
+    base_url: str | None = None
+    api_key: str | None = field(default=None, repr=False)  # AI_CLOUD_API_KEY_FILE (or AI_CLOUD_API_KEY); write-only like AI_API_KEY
+    model: str | None = None
+    vision_model: str | None = None
+    timeout_s: float | None = None  # None: the preset's read timeout
+    max_tokens: int | None = None  # None: 1500
+    structured: str | None = None  # None: auto
+    reasoning_effort: str | None = None
+    context_tokens: int | None = None  # None: 32768, even for a self-hosted preset (a cloud model sits behind it)
+    upstream: str | None = None  # AI_CLOUD_UPSTREAM: who a proxy forwards to ("Anthropic"); required for a non-cloud preset
+
+    def stray(self) -> list[str]:
+        """The ``AI_CLOUD_*`` names that are set (the key as AI_CLOUD_API_KEY, whichever of it and _FILE was used), for the "without AI_CLOUD_PROVIDER" warning."""
+        pairs = (("AI_CLOUD_BASE_URL", self.base_url), ("AI_CLOUD_API_KEY", self.api_key), ("AI_CLOUD_MODEL", self.model),
+                 ("AI_CLOUD_VISION_MODEL", self.vision_model), ("AI_CLOUD_TIMEOUT_S", self.timeout_s),
+                 ("AI_CLOUD_MAX_TOKENS", self.max_tokens), ("AI_CLOUD_CONTEXT_TOKENS", self.context_tokens),
+                 ("AI_CLOUD_STRUCTURED_OUTPUT", self.structured), ("AI_CLOUD_REASONING_EFFORT", self.reasoning_effort),
+                 ("AI_CLOUD_UPSTREAM", self.upstream))
+        return [name for name, value in pairs if value is not None]
+
+
+def load_ai_cloud_env(env: Mapping[str, str]) -> AiCloudEnv:
+    """``AiCloudEnv`` from the environment, read, defaulted and range-checked like ``AI_*`` (meaning is checked by ``app/ai/config.py``)."""
+    key, _, _ = read_secret(env, "AI_CLOUD_API_KEY")
+    key = (key or "").strip() or None
+    upstream = _raw(env, "AI_CLOUD_UPSTREAM")
+    if upstream is not None and not UPSTREAM_PATTERN.fullmatch(upstream):
+        raise ConfigError(f"AI_CLOUD_UPSTREAM must be the company's plain name: letters, digits, spaces and . & - only, at most "
+                          f"{UPSTREAM_MAX_CHARS} characters (for example Anthropic), not {upstream[:80]!r}.")
+    return AiCloudEnv(
+        provider=(_raw(env, "AI_CLOUD_PROVIDER") or "").lower() or None,
+        base_url=_raw(env, "AI_CLOUD_BASE_URL"),
+        api_key=key,
+        model=_raw(env, "AI_CLOUD_MODEL"),
+        vision_model=_raw(env, "AI_CLOUD_VISION_MODEL"),
+        timeout_s=_parse_float(env, "AI_CLOUD_TIMEOUT_S", 5.0, 600.0),
+        max_tokens=(parse_int(env, "AI_CLOUD_MAX_TOKENS", 1500, 64, 32_768) if _raw(env, "AI_CLOUD_MAX_TOKENS") else None),
+        structured=(_choice(env, "AI_CLOUD_STRUCTURED_OUTPUT", "auto", ("auto", "json_schema", "json_object", "prompt")) if _raw(env, "AI_CLOUD_STRUCTURED_OUTPUT") else None),
+        reasoning_effort=(_raw(env, "AI_CLOUD_REASONING_EFFORT") or "").lower() or None,
+        context_tokens=(parse_int(env, "AI_CLOUD_CONTEXT_TOKENS", 32_768, 1024, 2_000_000) if _raw(env, "AI_CLOUD_CONTEXT_TOKENS") else None),
+        upstream=upstream,
+    )
 
 
 def _parse_float(env: Mapping[str, str], name: str, lo: float, hi: float) -> float | None:
@@ -180,6 +241,7 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
         http_proxy=_raw(env, "AI_HTTP_PROXY"),
         openrouter_zdr=parse_bool(env, "AI_OPENROUTER_ZDR", False),
         provider_role=(_choice(env, "AI_PROVIDER_ROLE", "", ("", "local", "cloud")) or None),
+        cloud=load_ai_cloud_env(env),
         stt_base_url=_raw(env, "STT_BASE_URL"),
         stt_api_key=stt_key,
         stt_model=_raw(env, "STT_MODEL"),
@@ -286,7 +348,7 @@ class Settings:
     def secret_values(self) -> list[str]:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
-                  self.ai.stt_api_key]
+                  self.ai.cloud.api_key, self.ai.stt_api_key]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:

@@ -5,13 +5,15 @@ Configuration comes from two places only (contract item 2, note 07):
 * **The settings registry** (``app/settings_registry.py``, "Note 04" block): the instance switches
   ``ai.*`` (env locks ``AI_ENABLED``, ``AI_ALLOW_USER_KEYS``, …) and each person's ``ai`` object
   (opt-in, provider choice, preferences, ``share_age_sex``; **no key field**, §9 A6).
-* **The environment** (``app.config.AiEnv``): the server-defined provider (``AI_PROVIDER``,
-  ``AI_BASE_URL``, ``AI_API_KEY[_FILE]``, ``AI_MODEL``, …) and the network policy (``AI_PRIVATE_HOSTS``,
+* **The environment** (``app.config.AiEnv``): the server-defined providers (``AI_PROVIDER``,
+  ``AI_BASE_URL``, ``AI_API_KEY[_FILE]``, ``AI_MODEL``, … and the cloud twin ``AI_CLOUD_*``) and the network policy (``AI_PRIVATE_HOSTS``,
   ``AI_DENY_CIDRS``, ``AI_HTTP_PROXY``, ``AI_MAX_RESPONSE_BYTES``), which are never runtime-editable.
 
-Providers are rows of ``ai_providers`` (schema step 6): shared ones (an admin's, or the env provider,
+Providers are rows of ``ai_providers`` (schema step 6): shared ones (an admin's, or an environment provider,
 ``locked = 1``, kept in step with the environment at start-up; its key is never stored) and at most
-one per person. Keys are sealed with :class:`app.crypto.Keyring` (``purpose = "ai_provider:<id>"``,
+one per person. There are two environment providers (schema step 20, ``env_slot``): ``main``, defined by
+``AI_PROVIDER`` (its role is ``AI_PROVIDER_ROLE``), and ``cloud``, defined by ``AI_CLOUD_PROVIDER`` (its role is always
+``cloud``). Keys are sealed with :class:`app.crypto.Keyring` (``purpose = "ai_provider:<id>"``,
 ``owner`` = the owner's user id or ``None``) and shown write-only (``{set, last4}``).
 
 **Resolution** (:func:`resolve`): the person's own provider when they chose it and it is usable;
@@ -31,16 +33,16 @@ from typing import Any, Literal, Mapping
 
 from .. import brand
 from ..audit import audit
-from ..config import ConfigError, Settings
+from ..config import AiCloudEnv, ConfigError, Settings
 from ..crypto import InvalidToken, Keyring
 from ..db import table_exists, utcnow
 from ..security import register_secret
 from ..settings_store import SettingsStore
 from . import stt
 from .client import ProviderConfig
-from .netpolicy import BaseUrl, NetPolicy, PolicyError, is_private_host, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
+from .netpolicy import BaseUrl, NetPolicy, PolicyError, check_url, is_private_host, kubernetes_api_addresses, parse_base_url, parse_deny_cidrs, parse_private_hosts
 from .transport import ca_store_problem
-from .presets import PRESETS, POLICY_VERSION, STRUCTURED_SETTINGS, REASONING_EFFORTS, Preset, get as get_preset, policy_line
+from .presets import DEFAULT_CONTEXT_TOKENS, PRESETS, POLICY_VERSION, STRUCTURED_SETTINGS, REASONING_EFFORTS, Preset, get as get_preset, policy_line
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
@@ -72,8 +74,54 @@ def build_policy(settings: Settings, *, kubernetes_host: str | None = None) -> N
     return NetPolicy(private_hosts=hosts, deny=deny, kubernetes_api=kubernetes_api_addresses(kubernetes_host), proxy=env.http_proxy)
 
 
+ENV_SLOTS: tuple[str, ...] = ("main", "cloud")
+SLOT_VARS: Mapping[str, str] = {"main": "AI_PROVIDER", "cloud": "AI_CLOUD_PROVIDER"}  # the variable that defines each environment provider
+DEFAULT_MAX_TOKENS = 1500
+
+
+@dataclass(frozen=True)
+class EnvSlot:
+    """One environment provider as the start-up check and the sync read it: ``main`` is ``AI_*``, ``cloud`` is ``AI_CLOUD_*``.
+
+    The values are the ones that are written to the row, so the defaults are applied here (a cloud model behind a proxy gets the
+    cloud prompt budget, 32,768 tokens, whatever the preset's kind is)."""
+
+    slot: str
+    provider: str | None
+    base_url: str | None
+    api_key: str | None
+    model: str | None
+    vision_model: str | None
+    timeout_s: float | None
+    max_tokens: int
+    structured: str
+    reasoning_effort: str | None
+    context_tokens: int | None  # None: the preset's (main only)
+    upstream: str | None
+
+    @property
+    def var(self) -> str:
+        return SLOT_VARS[self.slot]
+
+    @property
+    def prefix(self) -> str:
+        return "AI_CLOUD_" if self.slot == "cloud" else "AI_"
+
+
+def env_slot(settings: Settings, slot: str) -> EnvSlot:
+    """The values of the ``main`` (``AI_*``) or ``cloud`` (``AI_CLOUD_*``) environment provider, defaults applied."""
+    env = settings.ai
+    if slot == "cloud":
+        c: AiCloudEnv = env.cloud
+        return EnvSlot("cloud", c.provider, c.base_url, c.api_key, c.model, c.vision_model, c.timeout_s,
+                       c.max_tokens or DEFAULT_MAX_TOKENS, c.structured or "auto", c.reasoning_effort,
+                       c.context_tokens or DEFAULT_CONTEXT_TOKENS["cloud"], c.upstream)
+    return EnvSlot("main", env.provider, env.base_url, env.api_key, env.model, env.vision_model, env.timeout_s,
+                   env.max_tokens, env.structured, env.reasoning_effort, env.context_tokens, None)
+
+
 def check_env(settings: Settings) -> list[str]:
-    """Validate the env provider at start-up; returns warnings, raises :class:`ConfigError`."""
+    """Validate the environment providers at start-up; returns warnings, raises :class:`ConfigError`."""
     env = settings.ai
     warnings: list[str] = []
     policy = build_policy(settings)
@@ -83,6 +131,22 @@ def check_env(settings: Settings) -> list[str]:
             parse_proxy(env.http_proxy)
         except ValueError as exc:
             raise ConfigError(f"AI_HTTP_PROXY: {exc}") from None
+    if env.cloud.provider:  # the two providers together: the cloud slot is always the cloud AI, so the other one can only be local
+        if env.provider_role == "cloud":
+            raise ConfigError("Two cloud providers: AI_CLOUD_PROVIDER is always the cloud AI, so AI_PROVIDER_ROLE cannot be cloud as well. "
+                              "Set AI_PROVIDER_ROLE=local for AI_PROVIDER (or remove AI_PROVIDER_ROLE).")
+        if env.provider and not env.provider_role:
+            raise ConfigError("AI_PROVIDER and AI_CLOUD_PROVIDER are both set, so AI_PROVIDER needs a role: set AI_PROVIDER_ROLE=local "
+                              "(AI_CLOUD_PROVIDER is always the cloud AI).")
+    warnings += _check_main(settings, policy, ca_problem)
+    warnings += [w for w in _check_cloud(settings, policy, ca_problem) if w not in warnings]
+    return warnings
+
+
+def _check_main(settings: Settings, policy: NetPolicy, ca_problem: str | None) -> list[str]:
+    """The ``AI_PROVIDER`` provider (unchanged from before the cloud slot existed)."""
+    env = settings.ai
+    warnings: list[str] = []
     if not env.provider:
         stray = [n for n, v in (("AI_BASE_URL", env.base_url), ("AI_MODEL", env.model), ("AI_API_KEY", env.api_key),
                                 ("AI_PROVIDER_ROLE", env.provider_role)) if v]
@@ -123,6 +187,52 @@ def check_env(settings: Settings) -> list[str]:
     return warnings
 
 
+def _check_cloud(settings: Settings, policy: NetPolicy, ca_problem: str | None) -> list[str]:
+    """The ``AI_CLOUD_PROVIDER`` provider: always the cloud AI. It may sit on a private host (a LiteLLM proxy on the LAN), and is then
+    subject to ``AI_PRIVATE_HOSTS`` like every shared provider."""
+    env = settings.ai
+    c = env.cloud
+    warnings: list[str] = []
+    if not c.provider:
+        stray = c.stray()
+        if stray:
+            warnings.append(f"{', '.join(stray)} {'is' if len(stray) == 1 else 'are'} set but AI_CLOUD_PROVIDER is not, so no server cloud AI provider is defined.")
+        return warnings
+    try:
+        preset = get_preset(c.provider)
+    except KeyError as exc:
+        raise ConfigError(f"AI_CLOUD_PROVIDER: {exc.args[0]}") from None
+    if preset.kind == "agent":
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} is refused: a Hermes agent keeps a transcript and is only for a local, tool-free "
+                          "profile (use AI_PROVIDER). For a cloud model use a cloud preset, or litellm with AI_CLOUD_UPSTREAM.")
+    base = c.base_url or preset.base_url
+    if not base:
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} needs AI_CLOUD_BASE_URL (the server's address ending in /v1).")
+    try:
+        parsed = parse_base_url(base)
+        check_url(parsed, "shared", policy)  # a private address or plain http must be listed in AI_PRIVATE_HOSTS
+    except PolicyError as exc:
+        raise ConfigError(f"AI_CLOUD_BASE_URL: {exc}") from None
+    if ca_problem and parsed.scheme == "https":
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} uses https, but {ca_problem}.")
+    if ca_problem:
+        warnings.append(f"AI providers on https will not work: {ca_problem}.")
+    if not (c.model or preset.default_model):
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} needs AI_CLOUD_MODEL (the model name the server knows).")
+    if preset.key_required and not c.api_key:
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} needs AI_CLOUD_API_KEY_FILE (or AI_CLOUD_API_KEY).")
+    if c.structured is not None and c.structured not in STRUCTURED_SETTINGS:
+        raise ConfigError(f"AI_CLOUD_STRUCTURED_OUTPUT must be one of {', '.join(STRUCTURED_SETTINGS)}.")
+    if c.reasoning_effort and c.reasoning_effort not in REASONING_EFFORTS:
+        raise ConfigError(f"AI_CLOUD_REASONING_EFFORT must be one of {', '.join(REASONING_EFFORTS)}.")
+    if preset.can_proxy and not c.upstream:
+        raise ConfigError(f"AI_CLOUD_PROVIDER={preset.name} is a server your admin runs, so it forwards to a company, and the consent line must "
+                          "name it: set AI_CLOUD_UPSTREAM to the company's plain name (for example Anthropic).")
+    if c.upstream and not preset.can_proxy:
+        warnings.append(f"AI_CLOUD_UPSTREAM is ignored: AI_CLOUD_PROVIDER={preset.name} is the company's own service, and its consent line names it.")
+    return warnings
+
+
 def parse_proxy(raw: str) -> str:
     """``AI_HTTP_PROXY`` must be an ``http://`` or ``https://`` URL with a host (``ValueError`` otherwise)."""
     from urllib.parse import urlsplit
@@ -142,17 +252,21 @@ def key_fingerprint(keyring: Keyring | None, key: str | None) -> str | None:
 
 
 def sync_env_provider(conn: sqlite3.Connection, settings: Settings, keyring: Keyring | None = None) -> int | None:
-    """Keep the ``locked`` shared provider in step with ``AI_PROVIDER`` (no commit). Returns its id.
+    """Keep the ``locked`` shared providers in step with ``AI_PROVIDER`` and ``AI_CLOUD_PROVIDER`` (no commit). Returns the id of
+    the ``AI_PROVIDER`` row (``None`` when it is not set; the cloud row is :func:`env_row` ``"cloud"``).
 
-    The key stays in the environment. When the host changes, consents given for the old host are
-    deleted, so everyone is asked again (R9 step 3). A new URL, model or key clears the last
-    connection test, so the provider is tested again (R4 step 5; the key is compared through
-    :func:`key_fingerprint`).
-    """
+    A variable that is unset deletes its row. The key stays in the environment. When the host changes, consents given for the old
+    host are deleted, so everyone is asked again (R9 step 3); so they are when ``AI_CLOUD_UPSTREAM`` changes, because the
+    consent line names the company. A new URL, model or key clears the last connection test, so the provider is tested again
+    (R4 step 5; the key is compared through :func:`key_fingerprint`)."""
     if not table_exists(conn, "ai_providers"):
         return None
-    env = settings.ai
-    row = conn.execute("SELECT * FROM ai_providers WHERE locked = 1").fetchone()
+    ids = {slot: _sync_slot(conn, env_slot(settings, slot), keyring) for slot in ENV_SLOTS}
+    return ids["main"]
+
+
+def _sync_slot(conn: sqlite3.Connection, env: EnvSlot, keyring: Keyring | None) -> int | None:
+    row = env_row(conn, env.slot)
     if not env.provider:
         if row is not None:
             conn.execute("DELETE FROM ai_providers WHERE id = ?", (row["id"],))  # consents cascade
@@ -164,6 +278,8 @@ def sync_env_provider(conn: sqlite3.Connection, settings: Settings, keyring: Key
         "model": env.model or preset.default_model or "", "vision_model": env.vision_model or None,
         "timeout_s": env.timeout_s, "max_tokens": env.max_tokens, "context_tokens": env.context_tokens,
         "structured": env.structured, "reasoning_effort": env.reasoning_effort,
+        "upstream": env.upstream if preset.can_proxy else None,  # a cloud preset names its own company
+        "env_slot": env.slot,
     }
     now = utcnow()
     if row is None:
@@ -176,7 +292,8 @@ def sync_env_provider(conn: sqlite3.Connection, settings: Settings, keyring: Key
         return int(cur.lastrowid)
     changed = {k: v for k, v in values.items() if row[k] != v}
     if changed:
-        if "base_url" in changed and parse_base_url(row["base_url"]).host_port != parse_base_url(base).host_port:
+        host_changed = "base_url" in changed and parse_base_url(row["base_url"]).host_port != parse_base_url(base).host_port
+        if host_changed or "upstream" in changed:
             conn.execute("DELETE FROM ai_consents WHERE provider_id = ?", (row["id"],))
         sets = ", ".join(f"{k} = ?" for k in changed)
         conn.execute(f"UPDATE ai_providers SET {sets}, probe_json = NULL, probed_at = NULL, disabled_reason = NULL, updated_at = ? WHERE id = ?",
@@ -187,6 +304,47 @@ def sync_env_provider(conn: sqlite3.Connection, settings: Settings, keyring: Key
     if probe is not None and fingerprint is not None and probe.get("key_fp") != fingerprint:
         clear_probe(conn, int(row["id"]))
     return int(row["id"])
+
+
+def env_row(conn: sqlite3.Connection, slot: str) -> sqlite3.Row | None:
+    """The locked row of an environment provider (``main``: ``AI_PROVIDER``, ``cloud``: ``AI_CLOUD_PROVIDER``), or None."""
+    if not table_exists(conn, "ai_providers"):
+        return None
+    return conn.execute("SELECT * FROM ai_providers WHERE locked = 1 AND COALESCE(env_slot, 'main') = ?", (slot,)).fetchone()
+
+
+def env_slot_of(row: Mapping[str, Any]) -> str | None:
+    """``main`` or ``cloud`` for a row the environment defines, None for every other row."""
+    if not row["locked"]:
+        return None
+    try:
+        return str(row["env_slot"] or "main")
+    except (KeyError, IndexError):  # a mapping from before step 20
+        return "main"
+
+
+def env_var(row: Mapping[str, Any]) -> str | None:
+    """The variable that defines a locked row (``AI_PROVIDER`` or ``AI_CLOUD_PROVIDER``), for messages."""
+    slot = env_slot_of(row)
+    return None if slot is None else SLOT_VARS[slot]
+
+
+def env_key(settings: Settings, row: Mapping[str, Any]) -> str | None:
+    """The key of an environment provider, from the environment (it is never stored)."""
+    return settings.ai.cloud.api_key if env_slot_of(row) == "cloud" else settings.ai.api_key
+
+
+def row_upstream(row: Mapping[str, Any]) -> str | None:
+    """Who the provider forwards to (``AI_CLOUD_UPSTREAM``), or None."""
+    try:
+        return row["upstream"] or None
+    except (KeyError, IndexError):
+        return None
+
+
+def row_policy(row: Mapping[str, Any], preset: Preset | None = None) -> str:
+    """The consent line for a provider row (the proxy line when it forwards to a company)."""
+    return policy_line(preset or get_preset(row["preset"]), scope=row["scope"], upstream=row_upstream(row))
 
 
 # --------------------------------------------------------------------------- #
@@ -231,7 +389,7 @@ def seal_key(conn: sqlite3.Connection, keyring: Keyring, provider_id: int, owner
 def provider_key(row: Mapping[str, Any], keyring: Keyring, settings: Settings) -> str | None:
     """The key in plaintext (env provider: from the environment). ``InvalidToken`` when unreadable."""
     if row["locked"]:
-        return settings.ai.api_key
+        return env_key(settings, row)
     if row["api_key_enc"] is None:
         return None
     owner = row["owner_user_id"]
@@ -246,7 +404,7 @@ def key_status(row: Mapping[str, Any], keyring: Keyring, settings: Settings) -> 
     """The write-only view: ``{"set": false}``, ``{"set": true, "last4"?}``, ``{"set": true, "source": "env"}``
     or ``{"set": true, "status": "unreadable"}``."""
     if row["locked"]:
-        return {"set": bool(settings.ai.api_key), "source": "env", "locked": True}
+        return {"set": bool(env_key(settings, row)), "source": "env", "locked": True}
     if row["api_key_enc"] is None:
         return {"set": False}
     try:
@@ -287,10 +445,12 @@ def provider_view(row: Mapping[str, Any], keyring: Keyring, settings: Settings) 
         "structured": row["structured"],
         "reasoning_effort": row["reasoning_effort"],
         "locked": bool(row["locked"]),
+        "env": env_var(row),  # the variable that sets a locked provider (AI_PROVIDER or AI_CLOUD_PROVIDER)
+        "upstream": row_upstream(row),
         "enabled": bool(row["enabled"]),
         "disabled_reason": row["disabled_reason"],
         "key": key_status(row, keyring, settings),
-        "policy": policy_line(preset, scope=row["scope"]),
+        "policy": row_policy(row, preset),
         "kind": preset.kind,
         "photos": bool(row["vision_model"]),
         "probe": None if probe is None else {k: probe.get(k) for k in ("ok", "structured", "vision", "tools", "models", "warnings", "errors")},
@@ -450,6 +610,7 @@ def to_config(row: Mapping[str, Any], keyring: Keyring, settings: Settings, *, u
         extra_body=extra,
         context_tokens=int(row["context_tokens"] or preset.context_tokens),
         max_response_bytes=int(env.max_response_bytes),
+        upstream=row_upstream(row) if scope == "shared" else None,
         key_scope="own" if scope == "user" else "shared",
         safety_identifier=safety_identifier(keyring, user_id) if preset.name == "openai" and scope == "shared" else None,
     )
@@ -681,7 +842,8 @@ def consent_request(cfg: ProviderConfig, purpose: Purpose, *, fallback: Provider
     own request, with ``given`` saying whether the person already agreed to it) and says when it is used."""
     preset = cfg.preset_def
     out: dict[str, Any] = {"provider_id": cfg.id, "provider_label": cfg.label, "host": cfg.host, "purpose": purpose,
-                           "policy": policy_line(preset, scope=cfg.scope), "policy_version": POLICY_VERSION, "kind": preset.kind,
+                           "policy": policy_line(preset, scope=cfg.scope, upstream=cfg.upstream), "policy_version": POLICY_VERSION,
+                           "kind": preset.kind, "upstream": cfg.upstream,
                            "local": cfg.local_only}  # the local AI: on the admin's private network, never reached outside it
     if purpose == "labs":
         out["notice"] = labs_notice(cfg.host)

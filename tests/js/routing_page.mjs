@@ -68,10 +68,10 @@ const PROVIDERS = [
   { id: 2, label: 'Ollama', host: 'ollama.lan:11434', private: true, role: 'local', photos: true, usable: true, locked: false },
   { id: 3, label: 'Spare cloud', host: 'api.example.com', private: false, role: null, photos: false, usable: true, locked: false },
 ];
-function data({ routes = {}, locked = {}, roles = { local: 2, cloud: 1 }, providers = PROVIDERS, writable = true, envRole = null } = {}) {
+function data({ routes = {}, locked = {}, roles = { local: 2, cloud: 1 }, providers = PROVIDERS, writable = true, envRole = null, envCloud = false } = {}) {
   const features = FEATURES.map(([feature, label, sends]) => ({ feature, label, sends, route: routes[feature] || 'local', source: 'default', locked_by_env: locked[feature] || null }));
   const role = (r) => (roles[r] ? { id: roles[r], label: 'x', host: 'x', private: r === 'local' } : null);
-  return { features, roles: { local: role('local'), cloud: role('cloud') }, providers, env_role: envRole, as_before: features.some((f) => f.route === 'any'), writable };
+  return { features, roles: { local: role('local'), cloud: role('cloud') }, providers, env_role: envRole, env_cloud: envCloud, as_before: features.some((f) => f.route === 'any'), writable };
 }
 const warningsOf = (root) => find(root, (e) => e.attrs.class === 'ai-routing-warnings').map(text).join(' | ');
 const radio = (root, feature, route) => find(root, (e) => e.tag === 'input' && e.attrs['aria-label'] === `${FEATURES.find((f) => f[0] === feature)[1]}: ${{ local: 'Local', cloud: 'Cloud', off: 'Off', any: 'As before', local_then_cloud: 'Local, then cloud' }[route]}`)[0];
@@ -135,6 +135,19 @@ const out = {};
   };
   const envRole = R.adminPart(data({ envRole: 'local' }), null);
   out.envRole = { localDisabled: selects(envRole)[0].disabled, cloudDisabled: selects(envRole)[1].disabled, text: text(envRole).includes('AI_PROVIDER_ROLE=local') };
+  // Both roles from the environment (AI_PROVIDER_ROLE=local and AI_CLOUD_PROVIDER): neither can be changed, and the cloud one names its variable.
+  const bothEnv = R.adminPart(data({ envRole: 'local', envCloud: true }), null);
+  out.envBoth = {
+    localDisabled: selects(bothEnv)[0].disabled, cloudDisabled: selects(bothEnv)[1].disabled,
+    cloudSelected: selects(bothEnv)[1].value, cloudText: text(bothEnv).includes('The server\'s own cloud provider (AI_CLOUD_PROVIDER)'),
+  };
+  // A cloud-only server (AI_CLOUD_PROVIDER without a local AI): the local choice is still free, the cloud one is fixed.
+  const cloudOnly = R.adminPart(data({ envCloud: true, roles: { cloud: 1 }, providers: [PROVIDERS[0], PROVIDERS[1]] }), null);
+  out.envCloudOnly = { localDisabled: selects(cloudOnly)[0].disabled, cloudDisabled: selects(cloudOnly)[1].disabled };
+  // Save never sends a role the environment fixes, even if the select could have been changed.
+  await radio(bothEnv, 'chat', 'cloud').fire('change');
+  await find(bothEnv, (e) => e.tag === 'button' && text(e) === 'Save routing')[0].fire('click');
+  out.envBothSaved = log.saved[log.saved.length - 1];
 }
 
 // 4. A refused save shows the server's words and keeps the form.
