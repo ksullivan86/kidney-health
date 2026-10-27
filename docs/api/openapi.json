@@ -9817,7 +9817,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",

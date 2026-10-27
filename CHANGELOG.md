@@ -7,6 +7,42 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.7.0 — 2026-10-27
+
+Version 0.7 is about recipes. A saved meal can now be a recipe that makes several servings, with steps and a link. **Fit to my
+targets** checks one serving against a meal today or against what is left today. If it does not fit, the app changes the recipe
+itself and lists every change: it lowers amounts, swaps a food or offers a smaller serving. No AI is involved, and nothing new is
+sent anywhere.
+
+**Before you upgrade, read [Upgrading from 0.6 or 0.5](#upgrading-from-06-or-05-read-this-first).** The first start migrates the
+database (schema step 21); take a backup first.
+
+### Highlights
+
+* **Recipes.** A saved meal can hold the amounts for the whole pot, how many servings it makes, cooking steps and a source link. The
+  list shows one serving's numbers.
+* **Fit to my targets.** Amounts go down (never protein, never below half), at most 2 foods are swapped (never one you use to treat a
+  low), or a smaller serving is offered. Save the result as a new recipe, or replace yours with a confirm and Undo.
+* **What fits now judges a recipe one serving at a time.** A 4-serving stew saved by Ask is no longer judged as one meal.
+
+### Upgrading from 0.6 or 0.5 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.7.0.db`). The first start runs schema step
+   21: saved meals gain three columns for recipes. A recipe saved by Ask or an assistant gets its servings and link copied from its
+   note; no note changes.
+2. **Coming from 0.5**, step 20 runs in the same start. Read [Upgrading from 0.5](#upgrading-from-05-read-this-first) too.
+3. **Change the tag** to `:0.7`, or pin a digest from the release notes. The shipped files already say `:0.7`.
+4. **Nothing new is switched on, and there is no new setting.**
+5. **New `RULES_VERSION` (`2026-10-27.1`)** for the six recipe numbers. Earlier guidance answers keep their old version.
+
+### Known limitations
+
+* Recipes from the AI (phase 3 of [note 16](docs/dev/research/16-recipes-that-fit.md)) are not built yet.
+* The half floor, the protein rule and the order of changes wait for a dietitian's review (`handbook/REVIEW.md`).
+* Values are estimates from the foods you entered. Cooking losses, such as potassium that leaches into boiling water, are not counted.
+
 ### For people using the app
 
 * **Recipes, and "Fit to my targets".** A saved meal can now be a recipe: put the amounts for the whole pot in its foods, how many
