@@ -37,7 +37,7 @@ VIEW = (STATIC / "js" / "views" / "guidance.js").read_text(encoding="utf-8")
 ENGINE_RULES = (STATIC / "js" / "engine" / "guidance" / "rules.js").read_text(encoding="utf-8")
 ENGINE_MESSAGES = (STATIC / "js" / "engine" / "guidance" / "messages.js").read_text(encoding="utf-8")
 SETTINGS_VIEW = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
-ENGINE_PARTS = ["rules", "messages", "budget", "score", "fits", "swaps", "planner", "insights", "hypo"]
+ENGINE_PARTS = ["rules", "messages", "budget", "score", "fits", "swaps", "planner", "insights", "hypo", "recipes"]
 
 
 def _js_string(source: str, name: str) -> str:

@@ -68,9 +68,33 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
 
-A recipe that Ask or a connected assistant saved for you holds the amounts for the whole pot and knows how many servings it
-makes. **What fits now** judges it one serving at a time. To put one serving on a day, use a scale of 1 divided by the
-servings, for example 0.25 for a recipe that makes 4.
+### Recipes
+
+A recipe is a saved meal that makes more than one serving. Put the amounts for the whole pot in the foods, and the number of
+servings in **Makes**. You can also keep the cooking steps and a link to where the recipe came from. The app never opens the
+link. Ask or a connected assistant can save a recipe for you too.
+
+The list shows a recipe's numbers for one serving, and **What fits now** offers it one serving at a time. To put one serving
+on a day, use **Add to a day** with a scale of 1 divided by the servings, for example 0.25 for a recipe that makes 4.
+
+### Fit to my targets
+
+**Plan** → a saved meal → **Fit to my targets** checks one serving against the room you have for a meal today, or against
+what is left today. If it does not fit, the app tries these in order and stops at the first that works:
+
+1. Less of one food at a time, never below half the recipe's amount. It never takes away protein this way.
+2. Swap a food for a similar one with less of what is over (at most 2 swaps). A food you use to treat a low is never
+   changed.
+3. A smaller serving: ¾, then ½.
+
+Every change is listed with the app's figures. Nothing changes until you choose:
+
+* **Save as a new recipe** keeps your recipe and adds "<name> (fitted)". A smaller serving is saved as more servings from
+  the same pot, so one saved serving is the size that fits.
+* **Replace this recipe** asks first and shows the carbohydrate per serving before and after. You can undo it.
+
+Cooking, soaking and draining are not counted, and seasonings that are not in your food list are not counted. The app says
+so under every result.
 
 ## Copy a day
 

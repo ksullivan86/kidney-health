@@ -44,7 +44,10 @@ def test_vectors_cover_every_engine_function_and_the_note_06_cases():
     doc = json.loads(VECTORS.read_text(encoding="utf-8"))
     fns = {c["call"]["fn"] for c in doc["cases"]}
     assert fns == {"meal_room", "what_fits", "find_swaps", "hypo_options", "plan_day", "day_insights", "period_insights",
-                   "prefilter", "learned"}
+                   "prefilter", "learned", "fit_recipe"}
+    # Note 16: every outcome of a recipe fit is in the file.
+    statuses = {c["output"]["status"] for c in doc["cases"] if c["call"]["fn"] == "fit_recipe"}
+    assert statuses == {"fits", "fits_after_changes", "fits_smaller_serving", "does_not_fit"}
     ids = {c["id"].split(" ")[0] for c in doc["cases"]}
     for vector in ("TV-B4", "TV-B5", "TV-B6", "TV-B7", "TV-F8", "TV-S1", "TV-S2", "TV-S3", "TV-S4", "TV-S5", "TV-S6",
                    "TV-P1", "TV-P2", "TV-P6", "TV-P7", "TV-I1", "TV-I2", "TV-I3", "TV-I5"):

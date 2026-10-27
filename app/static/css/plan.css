@@ -95,3 +95,12 @@
 .mp-line { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 .mp-line .rating { width: 18px; height: 18px; flex: none; margin-top: 1px; }
 #sheet-menuplan .preview { margin-bottom: 10px; }
+
+/* Fit to my targets (note 16): the checks, the change lines and the fitted recipe. */
+.fit-head { font-weight: 600; margin: 0 0 8px; }
+.fit-checks, .fit-changes { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.fit-checks li { padding: 6px 10px; border-radius: 8px; background: var(--ok-tint); color: var(--ok-text); }
+.fit-checks li.fit-over { background: var(--over-tint); color: var(--over-text); }
+.fit-checks .muted { color: inherit; opacity: 0.8; }
+.fit-over-word { font-weight: 600; }
+.fit-changes li { padding-left: 12px; border-left: 3px solid var(--border); }

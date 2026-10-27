@@ -1597,6 +1597,21 @@
           </select>
           <span class="hint" id="meal-hint-hint">Meal ideas offer it for this meal (“Any main meal”: breakfast, lunch or dinner).</span>
         </div>
+        <div class="field">
+          <label for="meal-makes">Makes (servings)</label>
+          <input id="meal-makes" type="number" inputmode="decimal" min="0.25" max="100" step="0.25" placeholder="1" aria-describedby="meal-makes-hint">
+          <span class="hint" id="meal-makes-hint">For a recipe: the foods below are for the whole pot, and the app works out one serving.</span>
+        </div>
+        <div class="field">
+          <label for="meal-source">Recipe link</label>
+          <input id="meal-source" type="url" inputmode="url" maxlength="900" placeholder="https://… (optional)" aria-describedby="meal-source-hint">
+          <span class="hint" id="meal-source-hint">Kept as text. The app never opens it.</span>
+        </div>
+        <div class="field span-2">
+          <label for="meal-steps">Cooking steps</label>
+          <textarea id="meal-steps" rows="3" maxlength="10000" placeholder="Optional. One step per line." aria-describedby="meal-steps-hint"></textarea>
+          <span class="hint" id="meal-steps-hint">At most 20 steps of 500 characters.</span>
+        </div>
       </div>
       <div class="field">
         <span class="label" id="meal-items-label">Foods in this meal</span>
@@ -1628,6 +1643,38 @@
 </dialog>
 
 <!-- ===================== APPLY SAVED MEAL SHEET ===================== -->
+<dialog id="sheet-fit" class="sheet" aria-labelledby="sheet-fit-title">
+  <form method="dialog" class="sheet-form" id="fit-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-fit-title" class="sheet-title">Fit to my targets</h2>
+        <div class="sheet-sub" id="sheet-fit-sub">One serving, checked against the room you have.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <label for="fit-target">Check one serving against</label>
+        <select id="fit-target">
+          <option value="">The next meal today</option>
+          <option value="breakfast">Breakfast today</option>
+          <option value="lunch">Lunch today</option>
+          <option value="dinner">Dinner today</option>
+          <option value="snack">A snack today</option>
+          <option value="day">What is left today</option>
+        </select>
+      </div>
+      <div id="fit-result" aria-live="polite"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn secondary" type="button" id="fit-replace" hidden>Replace this recipe</button>
+      <button class="btn" type="button" id="fit-save" hidden>Save as a new recipe</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="sheet-apply" class="sheet" aria-labelledby="sheet-apply-title">
   <form method="dialog" class="sheet-form" id="apply-form" novalidate>
     <div class="sheet-head">
@@ -2193,6 +2240,7 @@
 <script src="js/engine/guidance/planner.js"></script>
 <script src="js/engine/guidance/insights.js"></script>
 <script src="js/engine/guidance/hypo.js"></script>
+<script src="js/engine/guidance/recipes.js"></script>
 <script src="js/engine/brand.js"></script>
 <script src="js/core.js"></script>
 <script src="js/learn.js"></script>

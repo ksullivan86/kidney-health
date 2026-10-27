@@ -341,10 +341,55 @@
     return GE.hypoOptions(this._guidanceContext(todayStr(), { history: false, history60: false, savedMeals: false, combos: false }));
   });
 
-  // Recipes that fit (note 16): the twin of app/guidance/recipes.py comes with the recipe screens (phase 2). Until then the demo says so.
-  route('POST', '/api/guidance/fit-recipe', function () {
+  // Recipes that fit (note 16 §7): api.fit_a_recipe with the twin of app/guidance/recipes.py.
+  const RECIPE_UNAVAILABLE = 'A food in this recipe is no longer in your food list. Edit the recipe first.';
+  route('POST', '/api/guidance/fit-recipe', function ({ body }) {
     this._currentUser();
-    return this._guidanceUnavailable('disabled', 'Fitting a recipe to your targets is not in the demo yet.');
+    const c = new Check(body);
+    c.num('meal_id', { ge: 1, int: true, maxId: true });
+    if (c.has('items') && body.items != null) {
+      c.models('items', (ic) => {
+        ic.num('food_id', { required: true, ge: 1, int: true, nullable: false, maxId: true });
+        ic.num('servings', { required: true, gt: 0, le: 40, nullable: false });
+        for (const k of Object.keys(ic.body)) if (!['food_id', 'servings'].includes(k)) ic.err(k, 'Extra inputs are not permitted');
+      }, { minLength: 1 });
+      if (Array.isArray(body.items) && body.items.length > R.RECIPE_MAX_ITEMS) c.err('items', `List should have at most ${R.RECIPE_MAX_ITEMS} items after validation, not ${body.items.length}`);
+    } else c.out.items = null;
+    c.num('servings_made', { gt: 0, le: 100 });
+    let target = { kind: 'meal', meal: null, date: null };
+    if (c.has('target') && body.target != null) {
+      const t = new Check(body.target);
+      t.choice('kind', ['meal', 'day'], { def: 'meal' });
+      t.choice('meal', MEAL_KEYS, { nullable: true });
+      if (t.has('date') && body.target.date != null) t.date('date');
+      for (const k of Object.keys(t.body)) if (!['kind', 'meal', 'date'].includes(k)) t.err(k, 'Extra inputs are not permitted');
+      for (const e of t.errors) c.errors.push(`target.${e}`);
+      target = { ...target, ...t.out };
+    }
+    for (const k of Object.keys(c.body)) if (!['meal_id', 'items', 'servings_made', 'target'].includes(k)) c.err(k, 'Extra inputs are not permitted');
+    const b = c.done();
+    if ((b.meal_id == null) === (b.items == null)) fail(400, 'give either meal_id or items');
+    const off = this._guidanceGate();
+    if (off) return off;
+    let wanted, servingsMade;
+    if (b.meal_id != null) {
+      const t = this._template(b.meal_id);
+      wanted = t.items.map((it) => [Number(it.food_id), Number(it.servings)]);
+      servingsMade = t.servings_made ?? null;
+    } else {
+      for (const it of b.items) this._foodOr404(it.food_id);
+      wanted = b.items.map((it) => [it.food_id, it.servings]);
+      servingsMade = b.servings_made ?? null;
+    }
+    if (wanted.length > R.RECIPE_MAX_ITEMS) fail(400, `a recipe can have at most ${R.RECIPE_MAX_ITEMS} foods`);
+    const day = target.date || todayStr();
+    const ctx = this._guidanceContext(day, { history60: false, savedMeals: false, combos: false });
+    if (!this._guidanceHasTargets(ctx.profile)) return this._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
+    const meal = target.kind === 'day' ? null : (target.meal || GE.nextOpenMeal(ctx));
+    const head = { rules_version: R.RULES_VERSION, target: { kind: target.kind, meal, date: day }, servings_made: Number(servingsMade || 1) };
+    const recipe = wanted.map(([id, q]) => [ctx.foods.get(id), q]);
+    if (!recipe.length || recipe.some(([f]) => f == null)) return { ...head, status: 'unavailable', message: RECIPE_UNAVAILABLE };
+    return { ...head, ...GE.fitRecipe(ctx, recipe, servingsMade, { kind: target.kind, meal }) };
   });
 
   route('POST', '/api/guidance/plan-day', function ({ body }) {

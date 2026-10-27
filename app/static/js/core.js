@@ -459,6 +459,7 @@
     meals: () => request('GET', '/api/meals'),
     createMeal: (b) => request('POST', '/api/meals', b),
     updateMeal: (id, b) => request('PUT', `/api/meals/${id}`, b),
+    fitRecipe: (b) => request('POST', '/api/guidance/fit-recipe', b),
     deleteMeal: (id) => request('DELETE', `/api/meals/${id}`),
     mealFromLog: (b) => request('POST', '/api/meals/from-log', b),
     applyMeal: (id, b) => request('POST', `/api/meals/${id}/apply`, b),
