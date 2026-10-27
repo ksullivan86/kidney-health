@@ -360,10 +360,11 @@ def provider_row(conn: sqlite3.Connection, provider_id: int) -> sqlite3.Row | No
 
 
 def shared_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    """Shared providers, the env one first, then by id."""
+    """Shared providers: the environment's first (``AI_PROVIDER``, then ``AI_CLOUD_PROVIDER``, whichever row was made first), then by id."""
     if not table_exists(conn, "ai_providers"):
         return []
-    return conn.execute("SELECT * FROM ai_providers WHERE scope = 'shared' ORDER BY locked DESC, id").fetchall()
+    return conn.execute("SELECT * FROM ai_providers WHERE scope = 'shared' "
+                        "ORDER BY locked DESC, CASE WHEN env_slot = 'cloud' THEN 1 ELSE 0 END, id").fetchall()
 
 
 def own_row(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:

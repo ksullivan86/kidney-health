@@ -813,6 +813,9 @@ Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Phot
   marked "Set by the server". It cannot be edited or deleted there (`409`), and the cloud role cannot be changed. A new
   address, model or key clears that provider's connection test. A new address, or a new `AI_CLOUD_UPSTREAM`, asks
   everyone again. Unsetting a variable removes its row. Keys are never stored and never shown.
+* **Keep `AI_CLOUD_UPSTREAM` true.** The proxy decides where a request goes, and the app cannot see that. If you point the
+  proxy at another company's model, change `AI_CLOUD_UPSTREAM` in the same step: that asks everyone again, which is what
+  you want.
 * **The cloud prompt budget is 32,768 tokens** (`AI_CLOUD_CONTEXT_TOKENS`) although `litellm` is a self-hosted preset;
   the local AI keeps 8,192 (`AI_CONTEXT_TOKENS`). Measure each with `scripts/ai_eval.py` (`--role local` and `--role cloud`).
 * `AI_ROUTE_*` are optional. Leave one out and an admin chooses it in the app, or it stays `local`, which is off until a local

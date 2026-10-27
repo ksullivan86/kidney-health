@@ -448,6 +448,22 @@ def test_unsetting_a_variable_deletes_only_its_row_and_its_consents(tmp_path, fo
     conn.close()
 
 
+def test_the_first_provider_is_listed_first_even_when_the_cloud_row_is_older(tmp_path, foods_json):
+    start(cloud_only(tmp_path, foods_json))  # the cloud row gets the lower id
+    settings = both(tmp_path, foods_json)
+    start(settings)
+    r = rows(settings)
+    assert r["cloud"]["id"] < r["main"]["id"]
+    conn = sqlite3.connect(settings.db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("INSERT INTO ai_providers (scope, preset, label, base_url, model, created_at, updated_at) "
+                     "VALUES ('shared', 'openai', 'Added by hand', 'https://api.openai.com/v1', 'm', 'now', 'now')")
+        assert [x["env_slot"] for x in K.shared_rows(conn)] == ["main", "cloud", None]
+    finally:
+        conn.close()
+
+
 def test_an_admins_own_provider_is_left_alone_by_the_sync(tmp_path, foods_json):
     settings = both(tmp_path, foods_json)
     with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
