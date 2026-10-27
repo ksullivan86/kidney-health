@@ -203,6 +203,7 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.5.0: not held.** The release runs schema steps 18 and 19 at start without an automatic copy, and moves the shipped files from
   `:0.4` to `:0.5`. A host that auto-updates `:latest` migrates its database at the next pull; one that tracks `:0.4` stays on 0.4.x.
   CHANGELOG.md, "Upgrading from 0.4", says to take a backup first.
+* **v0.5.1: not held.** A security release: new base image digests only, no schema step, so `:0.5` and `:latest` move as usual.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest

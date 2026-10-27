@@ -5,6 +5,27 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## 0.5.1 — 2026-10-27
+
+A security release. Nothing in the app changed: the image is rebuilt on a newer Chainguard Python base, which fixes a critical
+bug in the Brotli compression library that the base image carries.
+
+### Upgrading from 0.5.0
+
+Nothing to do but pull the new image. A host that tracks `:0.5` or `:latest` gets it at its next pull. There is no schema step and
+no setting changed, so going back to 0.5.0 only means the old image.
+
+### Security
+
+* **CVE-2026-111497 (Critical) in Brotli.** The weekly image scan found it on 2026-10-26 (issue
+  [#85](https://github.com/ksullivan86/kidney-health/issues/85)). The base image moves from `libbrotli` 1.2.0-r6 to 1.2.1-r2, which
+  has the fix. The app itself does not decode Brotli: its own requests ask for plain or gzip answers, and no Python Brotli package
+  is installed. The library comes with the base image, so this update is a precaution, and it clears the scan.
+* The same base update brings a newer certificate bundle (`ca-certificates-bundle` 20261020), Python 3.15.1 and point releases of
+  glibc, OpenSSL and SQLite.
+* Not in this release: `opentelemetry-api` 1.45.1 (a Medium advisory, GHSA-xcq7-p3pf-p88h, pulled in by FastAPI). The weekly lock
+  refresh picks it up once it is 7 days old.
+
 ## 0.5.0 — 2026-10-22
 
 Version 0.5 adds a log of weights and blood pressure, and three ways to fill it: type it, bring it in from the iPhone Health app, or send it

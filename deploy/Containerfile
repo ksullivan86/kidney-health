@@ -22,7 +22,7 @@
 # Base images: literal `FROM image:tag@sha256:` lines so Dependabot (docker ecosystem, directory
 # /deploy, group "base-images") bumps them in one pull request. Chainguard's free tier publishes only
 # :latest and :latest-dev, so the digest is what pins the Python version: builder and runtime are
-# Python 3.15 (resolved on 2026-10-15; :latest moved from 3.14 to 3.15 and the 3.14 digests no longer
+# Python 3.15 (moved to 3.15 on 2026-10-15, last resolved on 2026-10-27; the 3.14 digests no longer
 # get security updates). The handbook stage is the one exception, see its comment. Re-resolve by hand with:
 #   crane digest cgr.dev/chainguard/python:latest-dev ; crane digest cgr.dev/chainguard/python:latest
 # The Debian fallback (deploy/Containerfile.debian) is built by CI on pull requests but not published.
@@ -30,7 +30,7 @@
 # ---------------------------------------------------------------------------------------------------
 # Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:e8e6a6f7677673d91c9b28fa2ec6ad62cd5ed532179846d2c14e75c93a12c3fc AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:e51f00c88b6dc695e822b75cb403e40ab9459bd66524ed0f476dfc8366de8794 AS builder
 # Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
 # hadolint ignore=DL3002
 USER 0
@@ -107,7 +107,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:1c4deeea85db49ab5f6bcd9e7fc0bf3fd8439e99f7bde45330f40400685eb394
+FROM cgr.dev/chainguard/python:latest@sha256:012106301931c182063868dee31dc36a0d278267ec837176ba1774a320fa1bbb
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
