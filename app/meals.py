@@ -26,7 +26,8 @@ from .models import (
     MealTemplateCreate,
     ShoppingList,
 )
-from .nutrients import add_totals, empty_totals, food_warnings, kidney_rating, round_nutrients, scale_nutrients
+from .nutrients import (NUTRIENT_KEYS, add_totals, count_unknown, empty_totals, food_warnings, kidney_rating, round_nutrients,
+                        scale_nutrients)
 
 router = APIRouter(prefix="/api/meals", tags=["meals"], dependencies=[Depends(current_user)])
 plan_router = APIRouter(prefix="/api/plan", tags=["plan"], dependencies=[Depends(current_user)])
@@ -61,6 +62,35 @@ def parse_items(items_json: str | None) -> list[dict[str, Any]]:
         if servings > 0:
             items.append({"food_id": food_id, "servings": servings})
     return items
+
+
+def parse_steps(steps_json: str | None) -> list[str] | None:
+    """Stored ``steps_json`` -> a list of strings, or ``None`` (malformed or empty)."""
+    try:
+        value = json.loads(steps_json) if steps_json else None
+    except json.JSONDecodeError:
+        return None
+    steps = [step for step in value if isinstance(step, str) and step] if isinstance(value, list) else []
+    return steps or None
+
+
+def recipe_fields(row: sqlite3.Row) -> tuple[float | None, list[str] | None, str | None]:
+    """``(servings_made, steps, source_url)`` of a row (schema step 21; ``None`` on a database before it)."""
+    keys = row.keys()
+    servings = row["servings_made"] if "servings_made" in keys else None
+    steps = parse_steps(row["steps_json"]) if "steps_json" in keys else None
+    url = row["source_url"] if "source_url" in keys else None
+    return (float(servings) if servings is not None else None), steps, url
+
+
+def per_serving(totals: Mapping[str, float], unknown: Mapping[str, int], items: int, servings_made: float | None) -> dict[str, float | None]:
+    """One serving: the whole meal's totals divided by ``servings_made`` (1 for a plain saved meal). A nutrient that no item lists
+    is ``None``, never 0; one that some items list is a lower bound, and ``unknown`` says how many do not."""
+    divide = servings_made or 1.0
+    out: dict[str, float | None] = {}
+    for key in NUTRIENT_KEYS:
+        out[key] = None if items and unknown.get(key, 0) >= items else totals.get(key, 0.0) / divide
+    return round_nutrients(out)
 
 
 def fetch_template(conn: sqlite3.Connection, user_id: int, meal_id: int) -> sqlite3.Row | None:
@@ -109,11 +139,16 @@ def build_item(conn: sqlite3.Connection, item: Mapping[str, Any]) -> tuple[dict[
 def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     totals = empty_totals()
+    unknown: dict[str, int] = {}
+    counted = 0  # items with a food row (a deleted food's placeholder has none)
     for raw_item in parse_items(row["items_json"]):
         item, scaled = build_item(conn, raw_item)
         if scaled is not None:
             add_totals(totals, scaled)
+            count_unknown(unknown, scaled)
+            counted += 1
         items.append(item)
+    servings_made, steps, source_url = recipe_fields(row)
     return {
         "id": row["id"],
         "name": row["name"],
@@ -122,6 +157,11 @@ def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
         "items": items,
         "totals": round_nutrients(totals),
         "kidney_rating": worst_rating(i["kidney_rating"] for i in items),
+        "servings_made": servings_made,
+        "steps": steps,
+        "source_url": source_url,
+        "per_serving": per_serving(totals, unknown, counted, servings_made),
+        "unknown": unknown,
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -136,16 +176,24 @@ def resolve_items(conn: sqlite3.Connection, user_id: int, items: Iterable[MealIt
     return out
 
 
+def steps_json(steps: list[str] | None) -> str | None:
+    return json.dumps(steps) if steps else None
+
+
 def insert_template(conn: sqlite3.Connection, *, user_id: int, name: str, note: str | None, items: list[dict[str, Any]],
-                    meal_hint: str | None = None, created_at: str | None = None, updated_at: str | None = None) -> int:
-    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``. ``created_at`` and
-    ``updated_at`` are for an import of the person's own export (``app/data_import.py``); left out they are now."""
+                    meal_hint: str | None = None, created_at: str | None = None, updated_at: str | None = None,
+                    servings_made: float | None = None, steps: list[str] | None = None, source_url: str | None = None) -> int:
+    """Insert a saved meal; ``meal_hint`` is the slot it is for (note 06 §4.11), or ``None``. A recipe also has ``servings_made``
+    (the items make that many servings), ``steps`` and ``source_url`` (note 16 §5.1). ``created_at`` and ``updated_at`` are for an
+    import of the person's own export (``app/data_import.py``); left out they are now."""
     now = utcnow()
     created = created_at or now
     cur = conn.execute(
-        """INSERT INTO meal_templates (user_id, name, note, items_json, meal_hint, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (int(user_id), name, note, json.dumps(items), meal_hint, created, updated_at or created),
+        """INSERT INTO meal_templates (user_id, name, note, items_json, meal_hint, servings_made, steps_json, source_url,
+                                       created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (int(user_id), name, note, json.dumps(items), meal_hint, servings_made, steps_json(steps), source_url, created,
+         updated_at or created),
     )
     return int(cur.lastrowid)
 
@@ -164,7 +212,8 @@ def list_meals(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) ->
 @router.post("", response_model=MealTemplate, status_code=201)
 def create_meal(body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     items = resolve_items(conn, user.id, body.items)
-    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal_hint)
+    meal_id = insert_template(conn, user_id=user.id, name=body.name, note=body.note, items=items, meal_hint=body.meal_hint,
+                              servings_made=body.servings_made, steps=body.steps, source_url=body.source_url)
     conn.commit()
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
@@ -194,10 +243,16 @@ def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, conn:
     items = resolve_items(conn, user.id, body.items)
     # A client that does not send meal_hint (a v0.2 screen) keeps the stored one; null clears it.
     meal_hint = body.meal_hint if "meal_hint" in body.model_fields_set else row["meal_hint"]
+    # The same for the recipe fields (a client from before schema step 21 never sends them).
+    sent = body.model_fields_set
+    servings_made = body.servings_made if "servings_made" in sent else row["servings_made"]
+    steps = steps_json(body.steps) if "steps" in sent else row["steps_json"]
+    source_url = body.source_url if "source_url" in sent else row["source_url"]
     conn.execute(
-        """UPDATE meal_templates SET name = ?, note = ?, items_json = ?, meal_hint = ?, updated_at = ?
+        """UPDATE meal_templates SET name = ?, note = ?, items_json = ?, meal_hint = ?, servings_made = ?, steps_json = ?,
+                  source_url = ?, updated_at = ?
            WHERE id = ? AND user_id = ?""",
-        (body.name, body.note, json.dumps(items), meal_hint, utcnow(), meal_id, user.id),
+        (body.name, body.note, json.dumps(items), meal_hint, servings_made, steps, source_url, utcnow(), meal_id, user.id),
     )
     conn.commit()
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))

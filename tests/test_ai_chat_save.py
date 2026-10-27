@@ -239,7 +239,8 @@ def test_a_recipe_card_is_accepted_by_the_meals_route_as_it_is(plain_client):
     assert body["kind"] == "confirm_save" and card["tool"] == "save_recipe" and meals(c) == []
     assert (card["name"], card["servings_made"]) == ("Banana apple bowl", 2)
     assert [g["title"] for g in card["numbers"]] == ["Whole recipe", "Per serving"]
-    assert card["payload"]["note"] == "Makes 2 servings. Source: https://example.com/bowl"
+    assert "note" not in card["payload"]  # schema step 21: the count and the link have their own fields
+    assert (card["payload"]["servings_made"], card["payload"]["source_url"]) == (2, "https://example.com/bowl")
     made = c.post("/api/meals", json=card["payload"])
     assert made.status_code == 201, made.text
     assert [i["food_name"] for i in made.json()["items"]] == ["Banana, raw", "Apple, raw, with skin"]
@@ -504,7 +505,7 @@ def test_a_recipe_is_saved_at_once_and_undone_by_deleting_the_meal(trusting_clie
     assert card["tool"] == "save_recipe" and card["name"] == "Banana bowl" and card["servings_made"] == 2
     assert [g["title"] for g in card["numbers"]] == ["Whole recipe", "Per serving"]
     [saved] = meals(c)
-    assert card["undo"] == {"meal_id": saved["id"]} and saved["note"] == "Makes 2 servings."
+    assert card["undo"] == {"meal_id": saved["id"]} and saved["note"] is None and saved["servings_made"] == 2
     [row] = audit(c, "assistant.recipe_saved")
     assert row["details"]["via"] == "Ask" and row["target_type"] == "meal" and row["target_id"] == str(saved["id"])
     assert c.delete(f"/api/meals/{saved['id']}").status_code == 204 and meals(c) == [] and len(entries(c)) == 1

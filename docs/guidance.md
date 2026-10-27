@@ -145,7 +145,8 @@ at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
    "usual meals" mined from the last 60 days (2–6 foods eaten together in this slot on at least 2 dates;
    none that holds a "Not for me" food or a food of a "Never suggest" group, none the person hid with "Not this meal",
    and none with "Learn from my log" off; a saved meal is still offered whatever it holds, because the person built it),
-   tried at full, ¾ and ½ size; the first size that passes the meal check is kept, with a note such as
+   tried at full, ¾ and ½ size (a recipe's full size is one serving: its whole-pot amounts are divided by the servings it
+   makes first); the first size that passes the meal check is kept, with a note such as
    "Fits at half size (25 g carbs, 35 g under your 60 g goal): this week's phosphorus leaves 167 mg for
    dinner."
 6. **Tips** (at most 2) from a maintainer-written table: potassium leaching when potassium is at caution,

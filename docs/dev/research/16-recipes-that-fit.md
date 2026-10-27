@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposal, 2026-10-27. Nothing is built. The decisions in §15 are open. |
+| Status | Accepted, 2026-10-27. The owner's decisions are recorded under §15. Phases 0 to 2 (the fit without AI) are built first, then phase 3. The schema step is **21**: 0.6.0 used 20. |
 | Date researched | 2026-10-27, against `main` at `56869a4` (v0.5.0) |
 | Scope | A recipe is a saved meal with a count of servings, optional cooking steps and an optional source link. (1) **Fit to my targets**: the app's own engine checks one serving against the room in a meal, or against what is left today. If it does not fit, the engine lowers amounts, swaps a food or suggests a smaller serving, and lists every change in plain words. It needs no AI. (2) **AI recipes**, optional: the AI proposes a new recipe, or a reworked one, from foods the rules chose. The app works out every number, runs the same fit and says what it changed. (3) The data, API, screens, tests and phases for both. |
 | Out of scope | Importing a recipe from a web page, the handbook's recipes as starters, and Ask or MCP tools that call the engine (all three are "Later", §13); a week of meals or meal prep; cooking losses, leaching and any other effect of cooking on the numbers; allergen checks; recipe photos; scaling a recipe to a new count of servings other than by editing "Makes"; insulin, medicines and glucose in any form. |
@@ -69,7 +69,7 @@ Today a person can save a meal, and Ask or an MCP token can save a "recipe" (§2
 
 ### 5.1 What is stored
 
-Schema step 20 (`app/migrations/m020_recipes.py`, append-only) adds three nullable columns to `meal_templates`:
+Schema step 21 (`app/migrations/m021_recipes.py`, append-only) adds three nullable columns to `meal_templates`:
 
 | Column | Meaning |
 |---|---|
@@ -462,7 +462,7 @@ They live where saved meals live: **Plan**. No new tab.
 
 All run with `python -m pytest` and no network. New tests carry the `safety` marker where they pin a row of §11.
 
-* **Migration** (`tests/test_migration_m020.py`): columns added; backfill only for the exact sentence; a changed note stays `NULL`; idempotent; foreign keys unaffected.
+* **Migration** (`tests/test_migration_m021.py`): columns added; backfill only for the exact sentence; a changed note stays `NULL`; idempotent; foreign keys unaffected.
 * **Meals** (`tests/test_meals_recipes.py`): the new fields in, out and on `PUT` (kept when left out, cleared on `null`); limits (steps, characters, servings); someone else's meal and food are 404; export and import carry them; `save_recipe` writes the columns; per-serving figures; `null` stays `null` and `unknown` counts; What fits now offers a 4-serving recipe at serving size.
 * **Engine** (`tests/guidance/test_recipes.py`): as is; lowering order and floor; protein not lowered; swap respects category, preferences, "Not for me", no low treatment; smaller serving; no fit leaves `fitted` null; both targets; `servings_made` null; unknown values; determinism (same input twice, ids as tie-break); bounds (24 steps, 2 swaps); property tests over the built-in foods: a `fits*` result always passes `check_meal` kind `recipe`; no ingredient is below its floor or off the quarter grid; no low-treatment food is added, lowered or removed; every text passes `BANNED_PATTERN`.
 * **Route** (`tests/guidance/test_api_recipes.py`): auth; scoped by user; 404; `no_targets` and `disabled`; no row is written (row counts equal before and after).
@@ -479,7 +479,7 @@ Rough, for one agent working directly (±50 %), in the units of the ROADMAP.
 
 | Phase | What | Tokens |
 |---|---|---|
-| 0 | **Groundwork.** Step 20, the three fields in the models, routes, export, import and demo twins; per-serving figures with unknown counts; What fits now per serving; `save_recipe` writes the columns; docs. | 1–1.5M |
+| 0 | **Groundwork.** Step 21, the three fields in the models, routes, export, import and demo twins; per-serving figures with unknown counts; What fits now per serving; `save_recipe` writes the columns; docs. | 1–1.5M |
 | 1 | **Engine.** `check_meal` kind `recipe`; the swap core split; `fit_recipe`; messages; the route; rules, `RULES_VERSION` and `docs/guidance.md`; the tests above. | 1.5–2M |
 | 2 | **Twin, vectors and screens.** `recipes.js`, vectors, the demo route; the list, the editor and the fit sheet; handbook page; ARCHITECTURE; e2e. **Release point: recipes that fit, without AI.** | 2–3M |
 | 3 | **AI recipes.** The feature key in the settings registry, `routing.py`, the status and meta answers, the admin table, `deploy/compose.yaml`, the settings twin and the handbook's configuration table; candidates; prompt; schema; `validate_ai_recipe`; titles; the steps checks and the switch; golden cases; the eval additions; the cards; `docs/ai.md` (G18, the "Recipes that fit" section, the reworded row); `PROMPT_VERSION`. Then the owner's live run. | 3–4M |
@@ -514,7 +514,7 @@ Phases 0 to 3 are about 7.5 to 10.5M tokens.
 The recommended choice comes first in each.
 
 1. **Release the no-AI fit first** (phases 0 to 2), then the AI (phase 3), or build both together?
-2. **Three new columns** (`servings_made`, `steps_json`, `source_url`) in schema step 20, with the exact-sentence backfill, or keep the count in the note text? (Recommended: columns. The text cannot be divided safely.)
+2. **Three new columns** (`servings_made`, `steps_json`, `source_url`) in schema step 21, with the exact-sentence backfill, or keep the count in the note text? (Recommended: columns. The text cannot be divided safely.)
 3. **Repair "What fits now" for saved recipes** in phase 0, or leave it? (Recommended: repair; it is a bug today.)
 4. **A new `check_meal` kind `recipe`** with the differences of §9.2, or reuse `ai` and `saved` and bend the inputs? (Recommended: the new kind.)
 5. **The order**: lower amounts (floor ½, never a protein ingredient), swap (at most 2), smaller serving (¾, ½), then give back what was not needed. Or a smaller serving before a swap, as saved meals do today?
@@ -529,3 +529,24 @@ The recommended choice comes first in each.
 14. **Live-run gates** for calling a model recommended for recipes: 95 % schema-valid, a surviving recipe in 70 % of cases, `steps_unsafe_shown` 0, p95 at most 60 s local and 30 s cloud?
 15. **Wording**: change the "ingredient lists" row of `docs/ai.md` to "a food's printed ingredient text", and name the new section "Recipes that fit"?
 16. **Review**: send the floor (½), the protein rule and the order to the dietitian review list in `handbook/REVIEW.md` with phase 2? They are design choices, not clinical numbers, but they decide what a person's dinner looks like.
+
+### The owner's decisions (2026-10-27)
+
+1. Release the fit without AI first (phases 0 to 2), then AI recipes (phase 3).
+2. Three columns with the exact-sentence backfill, in schema step 21.
+3. Repair "What fits now" for saved recipes in phase 0.
+4. A new `check_meal` kind `recipe`, as in §9.2.
+5. The order as proposed: lower amounts (floor ½, never a protein ingredient), swap (at most 2), a smaller serving (¾, ½), then give back
+   what was not needed.
+6. Both targets: the next open meal, and one serving against today.
+7. Save a fitted copy as "<name> (fitted)" by default. Replace only with a confirm showing carbohydrate before and after, and Undo.
+8. Feature `recipes`, default `local`, `local_then_cloud` allowed, under the Meal data consent. The consent wording names recipes, so
+   `POLICY_VERSION` moves. The owner's server will set it to `cloud`, the same chain as meal ideas.
+9. AI steps allowed behind `ai.recipe_steps`, off until a live run. The owner does that run on the cloud chain.
+10. Times and temperatures allowed, with the label "not checked for food safety".
+11. A title from the template, with rename.
+12. The recipe's own name, note, steps and link are never sent, and the AI's steps are dropped when the app swaps a food.
+13. Later work in this order: the handbook link, then Ask and MCP `fit_recipe`, then web import.
+14. The live-run gates as proposed.
+15. Yes to the wording change and the section name.
+16. The floor, the protein rule and the order go on the dietitian review list in `handbook/REVIEW.md` with phase 2.

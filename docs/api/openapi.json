@@ -4949,6 +4949,63 @@
             ],
             "title": "Note"
           },
+          "per_serving": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Per Serving",
+            "type": "object"
+          },
+          "servings_made": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings Made"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
           "totals": {
             "additionalProperties": {
               "anyOf": [
@@ -4964,6 +5021,14 @@
               ]
             },
             "title": "Totals",
+            "type": "object"
+          },
+          "unknown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Unknown",
             "type": "object"
           },
           "updated_at": {
@@ -5028,6 +5093,46 @@
               }
             ],
             "title": "Note"
+          },
+          "servings_made": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings Made"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 900,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
           }
         },
         "required": [

@@ -437,3 +437,18 @@ def test_export_carries_the_guidance_data(real):
     assert data["meal_templates"][0]["meal_hint"] == "lunch"
     assert "guidance" not in data["settings"] or isinstance(data["settings"]["guidance"], dict)
     assert b"purpose" in archive.read("log.csv").splitlines()[0]
+
+
+def test_a_recipe_is_judged_one_serving_at_a_time(real):
+    """Note 16 §5.3: a recipe's items are for the whole pot. What fits now divides them by servings_made, so a 4-serving pot of rice
+    is offered as one cup; the same pot saved as a plain meal is four cups at once and does not fit one meal."""
+    set_targets(real)
+    rice = food_id(real, "Rice, white, long-grain, cooked")
+    for name, extra in (("Rice pot", {"servings_made": 4}), ("Rice pile", {})):
+        r = real.post("/api/meals", json={"name": name, "meal_hint": "dinner", "items": [{"food_id": rice, "servings": 4}], **extra})
+        assert r.status_code == 201, r.text
+    fits = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "dinner"}).json()
+    offered = {m["name"]: m for m in fits["saved_meals"]}
+    assert "Rice pot" in offered and "Rice pile" not in offered
+    [item] = offered["Rice pot"]["items"]
+    assert item["food_id"] == rice and item["servings"] == pytest.approx(offered["Rice pot"]["scale"])  # ≤ 1 cup, never 4

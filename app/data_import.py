@@ -68,6 +68,11 @@ from .models import (
     MAX_GRAMS,
     MAX_INGREDIENTS_CHARS,
     MAX_NUTRIENT_VALUE,
+    MAX_RECIPE_SERVINGS,
+    MAX_RECIPE_STEP_CHARS,
+    MAX_RECIPE_STEPS,
+    SOURCE_URL_MAX,
+    check_source_url,
     MAX_SERVING_G,
     MAX_SERVINGS,
     MAX_SQLITE_INT,
@@ -411,8 +416,16 @@ class ImportMeal(_Strict):
     items: Annotated[list[ImportMealItem], Field(max_length=MAX_MEAL_ITEMS)]
     totals: dict[str, Any]
     kidney_rating: Rating
+    # A recipe (schema step 21); an export from before it has none of these. per_serving and unknown are worked out again.
+    servings_made: Annotated[float, Field(gt=0, le=MAX_RECIPE_SERVINGS, allow_inf_nan=False)] | None = None
+    steps: Annotated[list[_short(MAX_RECIPE_STEP_CHARS, min_length=1)], Field(max_length=MAX_RECIPE_STEPS)] | None = None
+    source_url: _short(SOURCE_URL_MAX, min_length=1) | None = None
+    per_serving: dict[str, Any] | None = None
+    unknown: dict[str, Any] | None = None
     created_at: Timestamp
     updated_at: Timestamp
+
+    check_url = field_validator("source_url")(check_source_url)
 
     @field_validator("totals")
     @classmethod
@@ -977,7 +990,8 @@ class Importer:
                 self.already["meal_templates"] += 1
                 continue
             insert_template(self.conn, user_id=self.uid, name=m.name, note=note or None, items=items,
-                            meal_hint=m.meal_hint, created_at=m.created_at, updated_at=m.updated_at)
+                            meal_hint=m.meal_hint, created_at=m.created_at, updated_at=m.updated_at,
+                            servings_made=m.servings_made, steps=m.steps, source_url=m.source_url)
             self.counts["meal_templates"] += 1
 
     # -- lab results ----------------------------------------------------------------------------------------------

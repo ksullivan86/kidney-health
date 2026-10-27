@@ -352,13 +352,17 @@ def load_planned(conn: sqlite3.Connection, user_id: int, start: str, end: str) -
 
 
 def load_saved_meals(conn: sqlite3.Connection, user_id: int) -> tuple[SavedMeal, ...]:
+    """The person's saved meals as What fits now judges them: one serving each. A recipe's items are for the whole pot, so
+    they are divided by ``servings_made`` (note 16 §5.3); a plain saved meal is one serving already."""
     rows = conn.execute(
-        "SELECT id, name, meal_hint, items_json FROM meal_templates WHERE user_id = ? ORDER BY name COLLATE NOCASE, id",
+        "SELECT id, name, meal_hint, items_json, servings_made FROM meal_templates WHERE user_id = ? "
+        "ORDER BY name COLLATE NOCASE, id",
         (int(user_id),),
     ).fetchall()
     meals = []
     for row in rows:
-        items = tuple((int(i["food_id"]), float(i["servings"])) for i in parse_items(row["items_json"]))
+        divide = float(row["servings_made"] or 1)
+        items = tuple((int(i["food_id"]), float(i["servings"]) / divide) for i in parse_items(row["items_json"]))
         hint = row["meal_hint"] if row["meal_hint"] in R.SLOT_ORDER else None
         meals.append(SavedMeal(id=int(row["id"]), name=row["name"], meal_hint=hint, items=items))
     return tuple(meals)

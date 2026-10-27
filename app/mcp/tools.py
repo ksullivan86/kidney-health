@@ -19,8 +19,8 @@ Every number comes from the app's own functions, never from a copy of the maths:
   with the USDA foods they need (:func:`app.foods.add_usda_food`, the code behind the USDA import route). If any
   item is unresolved nothing is saved.
 * ``save_recipe`` (writes): the ingredients are placed the same way and saved as a saved meal
-  (:func:`app.meals.insert_template`); the saved meal has no servings count, so the ingredients are for the whole
-  recipe and its note says "Makes N servings" and keeps the source link as text (never fetched).
+  (:func:`app.meals.insert_template`): the ingredients are for the whole recipe, ``servings_made`` says how many
+  servings they make, and the source link is kept as text in ``source_url`` (never fetched; schema step 21).
 * Both take an optional ``request_key``: a retry with the same key by the same token within 24 hours saves nothing
   and answers with what the first call saved (:mod:`app.mcp.request_keys`).
 * ``safety_check``: the app's rule-based pre-filters: :func:`app.guidance.hypo.prefilter` (the Treating a low
@@ -39,7 +39,6 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date as _date
 from typing import Any, Callable, Literal, Mapping
-from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -56,7 +55,7 @@ from ..auth.errors import ApiProblem
 from ..auth.models import User
 from ..guidance import context as guidance_context
 from ..guidance import hypo
-from ..models import MAX_GRAMS, MAX_SERVINGS, LogCreate, validate_date
+from ..models import MAX_GRAMS, MAX_RECIPE_SERVINGS, MAX_SERVINGS, SOURCE_URL_MAX, LogCreate, check_source_url, validate_date
 from ..nutrients import (MEALS, NUTRIENT_BY_KEY, NUTRIENT_KEYS, _carb_goals, _status_word, add_totals,
                          count_unknown, empty_totals, food_warnings, is_about, kidney_rating, round_nutrients,
                          round_value, scale_nutrients)
@@ -854,9 +853,6 @@ def safety_check(call: Call, args: SafetyArgs) -> dict[str, Any]:
 READ_ONLY = ("This token can only read. The person can make a token that can also save in Settings → Assistant "
              "access.")
 RECIPE_NAME_MAX = 60
-MAX_RECIPE_SERVINGS = 100
-# The saved meal's note holds "Makes N servings." and the link; the meals API accepts a note of 1000 characters.
-SOURCE_URL_MAX = 900
 
 
 class LogArgs(_Args):
@@ -869,24 +865,6 @@ class LogArgs(_Args):
                                     pattern=request_keys.KEY_PATTERN)
 
     check_date = field_validator("date")(_check_date)
-
-
-def check_source_url(value: str | None) -> str | None:
-    """An http(s) link with a host, no spaces or control characters and no user name or password in it. Stored as
-    text in the saved meal's note; the server never opens it."""
-    if value is None:
-        return None
-    if any(ch.isspace() or not ch.isprintable() for ch in value):
-        raise ValueError("source_url must be one http or https link without spaces")
-    try:
-        parts = urlsplit(value)
-        port = parts.port  # a bad port raises ValueError
-    except ValueError:
-        raise ValueError("source_url must be an http or https link") from None
-    if parts.scheme.lower() not in ("http", "https") or not parts.hostname or parts.username or parts.password \
-            or port == 0:
-        raise ValueError("source_url must be an http or https link with a host and no password in it")
-    return value
 
 
 class RecipeArgs(_Args):
@@ -1092,12 +1070,6 @@ def saved_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def recipe_note(servings: float, source_url: str | None) -> str:
-    """The saved meal has no servings count: its note says how many servings the stored ingredients make."""
-    note = f"Makes {servings:g} serving{'' if servings == 1 else 's'}."
-    return f"{note} Source: {source_url}" if source_url else note
-
-
 def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
     key = args.request_key
     seen = earlier_save(call, "save_recipe", key)
@@ -1110,7 +1082,6 @@ def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
     if unresolved:
         return unresolved_result(unresolved, "save_recipe", name=name)
     token = token_info(call)
-    note = recipe_note(args.servings, args.source_url)
     added_foods: list[dict[str, Any]] = []
 
     def save(added: list[dict[str, Any]]) -> int:
@@ -1119,7 +1090,8 @@ def save_recipe(call: Call, args: RecipeArgs) -> dict[str, Any]:
             raise AlreadySaved(again)
         added_foods.extend(added)
         items = [{"food_id": one.food_id, "servings": float(one.servings)} for one in placed]
-        meal_id = meals.insert_template(call.conn, user_id=call.user.id, name=name, note=note, items=items)
+        meal_id = meals.insert_template(call.conn, user_id=call.user.id, name=name, note=None, items=items,
+                                          servings_made=float(args.servings), source_url=args.source_url)
         audit(call.conn, call.user.id, "assistant.recipe_saved", "meal", meal_id, ip=request_ip(call.request),
               via=token.name, name=name, ingredients=len(items), servings=args.servings, foods_added=len(added))
         if key is not None:
@@ -1161,7 +1133,8 @@ def recipe_answer(call: Call, meal_id: int, scaled: list[dict[str, float | None]
     return finish({
         "saved": True, **({"duplicate": True} if duplicate else {}),
         "meal": {
-            "id": saved["id"], "name": saved["name"], "note": saved["note"],
+            "id": saved["id"], "name": saved["name"], "note": saved["note"], "servings_made": saved["servings_made"],
+            "source_url": saved["source_url"],
             "items": [{"food_id": i["food_id"], "food_name": i["food_name"], "servings": i["servings"],
                        "serving_desc": i["serving_desc"], "nutrients": i["nutrients"]} for i in saved["items"]],
         },
@@ -1171,8 +1144,8 @@ def recipe_answer(call: Call, meal_id: int, scaled: list[dict[str, float | None]
         "totals_per_serving": saved_totals(scaled, servings),
         "added_to_foods": added_foods,
         "notes": [*(notes or []),
-                  "The saved meal holds the ingredients for the whole recipe; its note records how many servings it "
-                  "makes and the source link. Tell the person what was saved."],
+                  "The saved meal holds the ingredients for the whole recipe, how many servings they make and the "
+                  "source link. Tell the person what was saved."],
     })
 
 
@@ -1313,8 +1286,8 @@ TOOLS: tuple[Tool, ...] = (
         "Save a recipe as a saved meal, only after you read the name, ingredients and number of servings back and "
         "the person said yes. Ingredients are placed as in check_meal (name, amount and unit, food_id, or the "
         "fdc_id of a USDA result); if any is unresolved nothing is saved and unresolved says what to ask. The saved "
-        "meal holds the ingredients for the whole recipe, and its note records how many servings it makes and the "
-        "source link (text; the app never opens it). The answer gives the totals for the whole recipe and per "
+        "meal holds the ingredients for the whole recipe, how many servings they make, and the source link (text; "
+        "the app never opens it). The answer gives the totals for the whole recipe and per "
         "serving (null means not listed). " + RETRY_ADVICE + " Say what was saved.",
         {"type": "object", "additionalProperties": False, "required": ["name", "ingredients", "servings"],
          "properties": {
