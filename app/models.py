@@ -7,6 +7,7 @@ from datetime import date as _date
 from datetime import datetime as _datetime
 from datetime import timedelta as _timedelta
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
@@ -690,6 +691,30 @@ class PeriodSummary(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
+MAX_RECIPE_SERVINGS = 100  # servings a recipe makes (schema step 21 checks the same)
+SOURCE_URL_MAX = 900
+MAX_RECIPE_STEPS = 20
+MAX_RECIPE_STEP_CHARS = 500
+
+
+def check_source_url(value: str | None) -> str | None:
+    """An http(s) link with a host, no spaces or control characters and no user name or password in it. Stored as
+    text; the server never opens it."""
+    if value is None:
+        return None
+    if any(ch.isspace() or not ch.isprintable() for ch in value):
+        raise ValueError("source_url must be one http or https link without spaces")
+    try:
+        parts = urlsplit(value)
+        port = parts.port  # a bad port raises ValueError
+    except ValueError:
+        raise ValueError("source_url must be an http or https link") from None
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname or parts.username or parts.password \
+            or port == 0:
+        raise ValueError("source_url must be an http or https link with a host and no password in it")
+    return value
+
+
 class MealItemIn(BaseModel):
     food_id: int = Field(ge=1, le=MAX_SQLITE_INT)
     servings: float = Field(gt=0, le=MAX_SERVINGS, allow_inf_nan=False)
@@ -702,11 +727,35 @@ class MealTemplateCreate(BaseModel):
     note: str | None = Field(default=None, max_length=1000)
     items: list[MealItemIn] = Field(min_length=1)
     meal_hint: Meal | None = None  # v0.3 (note 06 §4.11): the slot it is for; left out on PUT keeps it
+    # A recipe (note 16 §5.1, schema step 21): the items make servings_made servings. Each, left out on PUT, keeps the stored value.
+    servings_made: float | None = Field(default=None, gt=0, le=MAX_RECIPE_SERVINGS, allow_inf_nan=False)
+    steps: list[str] | None = Field(default=None, max_length=MAX_RECIPE_STEPS)
+    source_url: str | None = Field(default=None, max_length=SOURCE_URL_MAX)
+
+    check_url = field_validator("source_url")(check_source_url)
 
     @field_validator("note")
     @classmethod
     def _empty_to_none(cls, v: str | None) -> str | None:
         return v or None
+
+    @field_validator("source_url", mode="before")
+    @classmethod
+    def _empty_url_to_none(cls, v: Any) -> Any:
+        return None if v == "" else v
+
+    @field_validator("steps")
+    @classmethod
+    def _steps(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        steps = [step.strip() for step in v if step.strip()]
+        for step in steps:
+            if len(step) > MAX_RECIPE_STEP_CHARS:
+                raise ValueError(f"a step can have at most {MAX_RECIPE_STEP_CHARS} characters")
+            if any(not ch.isprintable() for ch in step):
+                raise ValueError("a step cannot contain control characters")
+        return steps or None
 
 
 class MealItem(BaseModel):
@@ -726,6 +775,11 @@ class MealTemplate(BaseModel):
     meal_hint: Meal | None = None  # v0.3
     items: list[MealItem]
     totals: dict[str, Number | None]
+    servings_made: Number | None = None  # v0.7 (note 16): null = a plain saved meal, one serving
+    steps: list[str] | None = None
+    source_url: str | None = None
+    per_serving: dict[str, Number | None] = {}  # totals ÷ servings_made; null when no item lists the nutrient
+    unknown: dict[str, int] = {}  # how many items do not list each nutrient (only keys with a count)
     kidney_rating: Rating
     created_at: str
     updated_at: str

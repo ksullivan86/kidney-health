@@ -496,9 +496,12 @@ def test_save_recipe_creates_a_saved_meal_the_meals_api_shows_to_that_person_onl
     assert got["saved"] is True and got["servings_made"] == 4 and got["source_url"] == RECIPE["source_url"]
     meal = got["meal"]
     assert meal["name"] == "Banana pudding"
-    assert meal["note"] == "Makes 4 servings. Source: https://example.com/recipes/banana-pudding?id=7"
+    assert meal["note"] is None and meal["servings_made"] == 4  # schema step 21: no more "Makes 4 servings." note
+    assert meal["source_url"] == "https://example.com/recipes/banana-pudding?id=7"
     api = admin.get(f"/api/meals/{meal['id']}").json()
     assert api["name"] == meal["name"] and api["note"] == meal["note"] and api["meal_hint"] is None
+    assert (api["servings_made"], api["source_url"]) == (meal["servings_made"], meal["source_url"])
+    assert api["per_serving"]["potassium_mg"] == round((3 * 422 + 2 * 125) / 4)
     assert [(i["food_name"], i["servings"]) for i in api["items"]] == [("Banana, raw", 3), ("Juice, apple", 2)]  # the whole recipe
     assert [i["food_id"] for i in meal["items"]] == [i["food_id"] for i in api["items"]]
     assert meal["items"][0]["nutrients"] == api["items"][0]["nutrients"]
@@ -513,11 +516,11 @@ def test_save_recipe_creates_a_saved_meal_the_meals_api_shows_to_that_person_onl
 def test_save_recipe_one_serving_without_a_link_and_unknown_values_stay_unknown(admin, saver):
     soup(admin)
     got = call(admin.app, saver, "save_recipe", name="Plain soup", servings=1, ingredients=[{"food": "mystery soup"}, {"food": "banana"}])
-    assert got["meal"]["note"] == "Makes 1 serving." and got["source_url"] is None
+    assert got["meal"]["servings_made"] == 1 and got["meal"]["source_url"] is None and got["source_url"] is None
     assert got["totals_whole_recipe"]["potassium_mg"] == {"value": 422, "not_listed_by": 1}  # at least
     assert got["totals_per_serving"]["phosphorus_mg"] == {"value": 26, "not_listed_by": 1}
     half = call(admin.app, saver, "save_recipe", name="Half", servings=2.5, ingredients=[{"food": "mystery soup"}])
-    assert half["meal"]["note"] == "Makes 2.5 servings."
+    assert half["meal"]["servings_made"] == 2.5 and half["meal"]["note"] is None
     assert half["totals_whole_recipe"]["potassium_mg"] == {"value": None, "not_listed_by": 1}
     assert half["totals_per_serving"]["potassium_mg"] == {"value": None, "not_listed_by": 1}  # never 0
 
@@ -556,12 +559,13 @@ def test_save_recipe_name_and_size_rules(admin, saver, monkeypatch):
         assert tool_error(admin.app, saver, "save_recipe", {**RECIPE, **bad}).startswith("Invalid arguments"), bad
     assert saved_meals(admin) == []
     ok = call(admin.app, saver, "save_recipe", **{**RECIPE, "name": "  " + "x" * 58 + "  ", "source_url": "http://example.org/" + "a" * 880})
-    assert ok["meal"]["name"] == "x" * 58 and len(ok["meal"]["note"]) <= 1000
+    assert ok["meal"]["name"] == "x" * 58 and len(ok["meal"]["source_url"]) == 899
     assert admin.get(f"/api/meals/{ok['meal']['id']}").status_code == 200
-    # the stored meal can be edited again in the app (the note fits the meals API's limit)
+    # the stored meal can be edited again in the app, and a PUT without the recipe fields keeps them
     put = admin.put(f"/api/meals/{ok['meal']['id']}", json={"name": "Renamed", "note": ok["meal"]["note"],
                                                            "items": [{"food_id": i["food_id"], "servings": i["servings"]} for i in ok["meal"]["items"]]})
     assert put.status_code == 200, put.text
+    assert (put.json()["servings_made"], put.json()["source_url"]) == (RECIPE["servings"], ok["meal"]["source_url"])
 
 
 # --------------------------------------------------------------------------- #

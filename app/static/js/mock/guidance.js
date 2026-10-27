@@ -213,7 +213,8 @@
       }
       const saved = !savedMeals ? [] : [...this._templates].sort((a, b) => nocaseCompare(a.name, b.name) || a.id - b.id)
         .map((t) => ({ id: t.id, name: t.name, meal_hint: R.SLOT_ORDER.includes(t.meal_hint) ? t.meal_hint : null,
-          items: t.items.map((it) => [Number(it.food_id), Number(it.servings)]) }));
+          // A recipe's items are for the whole pot: one serving is judged (load_saved_meals).
+          items: t.items.map((it) => [Number(it.food_id), Number(it.servings) / Number(t.servings_made || 1)]) }));
       let starters = [];
       if (combos) {
         const byFdc = new Map();
@@ -338,6 +339,12 @@
   route('GET', '/api/guidance/hypo-options', function () {
     this._currentUser();
     return GE.hypoOptions(this._guidanceContext(todayStr(), { history: false, history60: false, savedMeals: false, combos: false }));
+  });
+
+  // Recipes that fit (note 16): the twin of app/guidance/recipes.py comes with the recipe screens (phase 2). Until then the demo says so.
+  route('POST', '/api/guidance/fit-recipe', function () {
+    this._currentUser();
+    return this._guidanceUnavailable('disabled', 'Fitting a recipe to your targets is not in the demo yet.');
   });
 
   route('POST', '/api/guidance/plan-day', function ({ body }) {

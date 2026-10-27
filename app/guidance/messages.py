@@ -404,3 +404,61 @@ def treating_a_low_card(dose_g: int | float) -> dict[str, object]:
         "handbook": "treating-a-low",
         "url": "/learn/t1d/treating-a-low/",
     }
+
+
+# --------------------------------------------------------------------------- #
+# Recipes that fit (note 16 §9.6)
+# --------------------------------------------------------------------------- #
+
+RECIPE_NOTES: tuple[str, ...] = (
+    "Numbers are for the foods as they are listed. Cooking, soaking or draining can change what ends up on the plate, and the "
+    "app does not count that.",
+    "Seasonings that are not in your food list are not counted.",
+)
+_FIGURES = " (app figures)."
+
+
+def recipe_target_label(kind: str, meal: str) -> str:
+    """``this dinner's room`` or ``what is left today``."""
+    return "what is left today" if kind == "day" else f"this {meal}'s room"
+
+
+def _per_serving(key: str, old: float | None, new: float | None) -> str:
+    return f"{capitalise(NUTRIENT_WORD.get(key, key))} per serving: {fmt_amount(key, old)} → {with_unit(key, new)}"
+
+
+def recipe_lowered_text(name: str, serving_desc: str, old: float, new: float, key: str, label: str,
+                        old_value: float | None, new_value: float | None) -> str:
+    head = f"Used {portion_text(new, serving_desc)} of {safe_name(name)} instead of {portion_text(old, serving_desc)}"
+    if key not in NUTRIENT_WORD:  # a share above the app's portion limits
+        return f"{head}, so one serving holds a smaller portion of it."
+    return f"{head}, to keep {NUTRIENT_WORD[key]} within {label}. {_per_serving(key, old_value, new_value)}{_FIGURES}"
+
+
+def recipe_swapped_text(old_name: str, new_name: str, serving_desc: str, amount: float, key: str, label: str,
+                        before: Mapping[str, float | None], after: Mapping[str, float | None]) -> str:
+    text = f"Swapped {safe_name(old_name)} for {safe_name(new_name)}, {portion_text(amount, serving_desc)} in the whole recipe"
+    if key == "avoid_ckd":
+        return f"{text}, because {safe_name(old_name)} is on the app's list of foods to avoid with kidney disease."
+    if key not in NUTRIENT_WORD:
+        return f"{text}, because {safe_name(old_name)} does not list a value the app needs today."
+    text += f", to keep {NUTRIENT_WORD[key]} within {label}. {_per_serving(key, before.get(key), after.get(key))}"
+    if key != R.PROTEIN:
+        text += f"; protein {fmt_g(before.get(R.PROTEIN))} → {fmt_g(after.get(R.PROTEIN))} g"
+    return text + _FIGURES
+
+
+def recipe_smaller_text(fraction: float, key: str, label: str, full: float | None, part: float | None, room: float | None) -> str:
+    return (f"Have {fmt_servings(fraction)} of a serving: a full serving would use {with_unit(key, full)} of "
+            f"{NUTRIENT_WORD.get(key, key)} against {with_unit(key, room)} of room; {fmt_servings(fraction)} uses "
+            f"{with_unit(key, part)}{_FIGURES}")
+
+
+def recipe_no_fit_text(label: str, over: Mapping[str, object] | None) -> str:
+    text = f"This recipe does not fit {label} after lowering amounts, swaps and a ½ serving."
+    if over is not None:
+        key = str(over["nutrient"])
+        text += (f" Still over: {NUTRIENT_WORD.get(key, key)} {with_unit(key, over['used'])} against "  # type: ignore[arg-type]
+                 f"{with_unit(key, over['room'])} of room")  # type: ignore[arg-type]
+        return text + _FIGURES
+    return text

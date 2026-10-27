@@ -200,7 +200,8 @@ def _propose_recipe(call: T.Call, args: T.RecipeArgs, request_id: str) -> CH.Sav
         "items": items, "imports": _imports(placed),
         "numbers": [{"title": "Whole recipe", "rows": CH.totals_rows(T.saved_totals(scaled))},
                     {"title": "Per serving", "rows": CH.totals_rows(T.saved_totals(scaled, args.servings))}],
-        "payload": {"name": recipe, "note": T.recipe_note(args.servings, args.source_url), "items": ingredients},
+        "payload": {"name": recipe, "items": ingredients, "servings_made": args.servings,
+                    **({"source_url": args.source_url} if args.source_url else {})},
     }
     return CH.SaveStep(pending=pending, questions=[])
 

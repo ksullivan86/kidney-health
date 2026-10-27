@@ -21,10 +21,10 @@
   const GE = KH.guidanceEngine || (KH.guidanceEngine = {});
   const { NUTRIENT_KEYS } = KH.rules;
 
-  const RULES_VERSION = '2026-10-21.1';
+  const RULES_VERSION = '2026-10-27.1';
   // rules.rules_hash() of this RULES_VERSION (sha256 over the sorted JSON of the rules table, first 16 hex
   // digits). The runner checks it against the vectors and tests/test_guidance_ui.py against the server.
-  const RULES_HASH = '5ec3de3f29059521';
+  const RULES_HASH = 'cc53c2250d14fe26';
 
   const MAIN_MEALS = ['breakfast', 'lunch', 'dinner'];
   const SNACK = 'snack';
@@ -127,6 +127,13 @@
   const PROTEIN_TOPUP_STEPS = 2;
   const REPAIR_STEP = 0.25;
   const REPAIR_STEPS = 6;
+  // Recipes that fit (note 16 §9.5).
+  const RECIPE_FLOOR = 0.5;
+  const RECIPE_MAX_LOWER_STEPS = 24;
+  const RECIPE_MAX_SWAPS = 2;
+  const RECIPE_SERVING_FRACTIONS = [0.75, 0.5];
+  const RECIPE_MAX_ITEMS = 30;
+  const RECIPE_POT_MAX_SERVINGS = 40;
   const VARIANT_MAX = 4;
   const UNKNOWN_PENALTY = 1.5;
   const FREE_FOOD_CARBS_G = 5.0;
@@ -523,6 +530,12 @@
     ['PROTEIN_TOPUP_STEPS', 'Most top-up steps per meal'],
     ['REPAIR_STEP', 'Servings taken off a built item when the plan would make a day-judged nutrient newly over'],
     ['REPAIR_STEPS', 'Most repair steps before the slot is marked partial'],
+    ['RECIPE_FLOOR', 'A recipe fit lowers an ingredient to at least this share of its own amount (never below ¼ serving); never a protein food'],
+    ['RECIPE_MAX_LOWER_STEPS', 'Most quarter-serving steps a recipe fit takes off the ingredients'],
+    ['RECIPE_MAX_SWAPS', 'Most swaps in one recipe fit'],
+    ['RECIPE_SERVING_FRACTIONS', 'Smaller servings a recipe fit tries after lowering and swaps'],
+    ['RECIPE_MAX_ITEMS', 'Most ingredients in a recipe (as save_recipe)'],
+    ['RECIPE_POT_MAX_SERVINGS', 'Most servings of one food in the whole recipe after a swap'],
     ['VARIANT_MAX', 'Most "Show another plan" variants'],
     ['UNKNOWN_PENALTY', 'Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)'],
     ['FREE_FOOD_CARBS_G', "A food with at most this many carbs is free once the meal's carbs are done"],
@@ -549,7 +562,8 @@
     HYPO_BEST_MAX_K_MG, INSIGHT_MAX, SOURCE_MIN_SHARE, SOURCE_MAX, MIN_LOGGED_DAYS, PERIOD_DEFAULT_DAYS, PERIOD_MAX_DAYS,
     PERIOD_CHANGE_MIN, MEAL_SHARE_MIN, PERIOD_HYPO_MIN, SAVED_MEAL_SCALES, SAVED_MEALS_MAX, AI_FOODS_MAX, AI_FOODS_PER_GROUP_MIN,
     AI_MEALS_MAX, AI_PLAN_OPTIONS_MAX, AI_QUARTERS_RANGE, ENERGY_NOTE_FRACTION, ENERGY_LOW_INSIGHT_FRACTION, ENERGY_DENSE_MIN_KCAL,
-    ENERGY_DENSE_MAX, ENERGY_NOTE_FOODS, PROTEIN_TOPUP_STEP, PROTEIN_TOPUP_STEPS, REPAIR_STEP, REPAIR_STEPS, VARIANT_MAX,
+    ENERGY_DENSE_MAX, ENERGY_NOTE_FOODS, PROTEIN_TOPUP_STEP, PROTEIN_TOPUP_STEPS, REPAIR_STEP, REPAIR_STEPS, RECIPE_FLOOR,
+    RECIPE_MAX_LOWER_STEPS, RECIPE_MAX_SWAPS, RECIPE_SERVING_FRACTIONS, RECIPE_MAX_ITEMS, RECIPE_POT_MAX_SERVINGS, VARIANT_MAX,
     UNKNOWN_PENALTY, FREE_FOOD_CARBS_G, HIGH_GI_PENALTY_MIN_CARBS_G, FILLS_CARBS_MIN_G, LOW_K_REASON_MG, LOW_P_REASON_MG,
     MAX_NAME_CHARS, RENAL_MEDIUM, RENAL_HIGH,
   };

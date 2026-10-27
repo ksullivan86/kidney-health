@@ -68,6 +68,10 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
 
+A recipe that Ask or a connected assistant saved for you holds the amounts for the whole pot and knows how many servings it
+makes. **What fits now** judges it one serving at a time. To put one serving on a day, use a scale of 1 divided by the
+servings, for example 0.25 for a recipe that makes 4.
+
 ## Copy a day
 
 **Plan** → **Copy…** copies one day's entries onto another day. Choose which meals, and whether to copy

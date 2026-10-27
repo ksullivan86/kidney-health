@@ -244,6 +244,11 @@
     ['serving_desc', short$(200), required], ['nutrients', T.dict(checkedNutrients), required], ['kidney_rating', RATING, required], ['hidden', T.bool(), required]]);
   const mealModel = T.model('ImportMeal', [['id', ID, required], ['name', short$(200, 1), required], ['note', short$(1000, 0, true)], ['meal_hint', T.lit(R.MEAL_KEYS, { nullable: true })],
     ['items', T.list(mealItemModel, { max: MAX_MEAL_ITEMS }), required], ['totals', T.dict(checkedNutrients), required], ['kidney_rating', RATING, required],
+    // A recipe (schema step 21); an export from before it has none of these. per_serving and unknown are worked out again.
+    ['servings_made', T.num({ gt: 0, le: 100, nullable: true })],
+    ['steps', (v, loc) => (v == null ? null : T.list(short$(500, 1), { max: 20 })(v, loc))],
+    ['source_url', T.str({ strip: true, min: 1, max: 900, nullable: true, after: (v) => { const e = M.checkSourceUrl(v); if (e) throw new Error(e.replace(/^Value error, /, '')); return v; } })],
+    ['per_serving', (v, loc) => (v == null ? null : T.dict()(v, loc))], ['unknown', (v, loc) => (v == null ? null : T.dict()(v, loc))],
     ['created_at', TS, required], ['updated_at', TS, required]]);
 
   // A model the demo API already checks for a request body (LabCreate, SymptomCreate): the first problem it finds, as "where: message"
@@ -591,7 +596,8 @@
         }
         const key = tupleKey(fold(m.name), note, m.meal_hint || null, items.map((i) => [i.food_id, pyRound(i.servings, 3)]));
         if ((have.get(key) || 0) > 0) { have.set(key, have.get(key) - 1); bump(this.already, 'meal_templates'); return; }
-        const t = api._insertTemplate({ name: m.name, note: note || null, items, mealHint: m.meal_hint, createdAt: m.created_at });
+        const t = api._insertTemplate({ name: m.name, note: note || null, items, mealHint: m.meal_hint, createdAt: m.created_at,
+          servingsMade: m.servings_made ?? null, steps: m.steps ?? null, sourceUrl: m.source_url ?? null });
         t.updated_at = m.updated_at;
         bump(this.counts, 'meal_templates');
       });

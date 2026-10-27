@@ -37444,6 +37444,24 @@
         "calcium_mg": 6,
         "fluid_ml": 0
        },
+       "servings_made": null,
+       "steps": null,
+       "source_url": null,
+       "per_serving": {
+        "calories_kcal": 105.0,
+        "protein_g": 1.3,
+        "fat_g": 0.4,
+        "sat_fat_g": 0.1,
+        "carbs_g": 27.0,
+        "fiber_g": 3.1,
+        "sugar_g": 14.4,
+        "sodium_mg": 1,
+        "potassium_mg": 422,
+        "phosphorus_mg": 26,
+        "calcium_mg": 6,
+        "fluid_ml": 0
+       },
+       "unknown": {},
        "kidney_rating": "red"
       },
       {
@@ -37507,6 +37525,33 @@
         "phosphorus_mg": 172,
         "calcium_mg": 12,
         "fluid_ml": 0
+       },
+       "servings_made": null,
+       "steps": null,
+       "source_url": null,
+       "per_serving": {
+        "calories_kcal": 210.0,
+        "protein_g": 2.6,
+        "fat_g": 0.8,
+        "sat_fat_g": 0.2,
+        "carbs_g": 74.0,
+        "fiber_g": 6.2,
+        "sugar_g": 28.8,
+        "sodium_mg": 2,
+        "potassium_mg": 1244,
+        "phosphorus_mg": 172,
+        "calcium_mg": 12,
+        "fluid_ml": 0
+       },
+       "unknown": {
+        "calories_kcal": 1,
+        "protein_g": 1,
+        "fat_g": 1,
+        "sat_fat_g": 1,
+        "fiber_g": 1,
+        "sugar_g": 1,
+        "sodium_mg": 1,
+        "calcium_mg": 1
        },
        "kidney_rating": "red"
       }
@@ -38551,7 +38596,7 @@
    "answer": {
     "status": 200,
     "body": {
-     "rules_version": "2026-10-21.1",
+     "rules_version": "2026-10-27.1",
      "foods": [
       {
        "name": "Banana, raw",
@@ -38573,7 +38618,7 @@
    "answer": {
     "status": 200,
     "body": {
-     "rules_version": "2026-10-21.1",
+     "rules_version": "2026-10-27.1",
      "limit": 1000,
      "not_for_me_limit": 500,
      "foods": [

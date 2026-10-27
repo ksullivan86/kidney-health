@@ -480,3 +480,64 @@ class LearnedList(_Out):
     rules_version: str
     learn_from_log: bool
     items: list[LearnedItem]
+
+
+# --------------------------------------------------------------------------- #
+# POST /api/guidance/fit-recipe (note 16 §7)
+# --------------------------------------------------------------------------- #
+
+
+class FitRecipeTarget(BaseModel):
+    """``meal``: one serving against the room of a meal (default: the next meal of the day with nothing logged). ``day``: one
+    serving against what is left today, with no per-meal cap and no carbohydrate check."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["meal", "day"] = "meal"
+    meal: Meal | None = None
+    date: str | None = None
+
+    @field_validator("date")
+    @classmethod
+    def _date(cls, v: str | None) -> str | None:
+        return None if v is None else validate_date(v)
+
+
+class FitRecipeItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    food_id: int = Field(ge=1, le=MAX_SQLITE_INT)
+    servings: float = Field(gt=0, le=40, allow_inf_nan=False)
+
+
+class FitRecipeRequest(BaseModel):
+    """Either ``meal_id`` (a saved meal or recipe of the person's) or a draft: ``items`` (pot amounts) and ``servings_made``.
+    Computes only; nothing is written."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    meal_id: int | None = Field(default=None, ge=1, le=MAX_SQLITE_INT)
+    items: list[FitRecipeItem] | None = Field(default=None, min_length=1, max_length=30)
+    servings_made: float | None = Field(default=None, gt=0, le=100, allow_inf_nan=False)
+    target: FitRecipeTarget = Field(default_factory=FitRecipeTarget)
+
+
+class FitRecipeTargetOut(_Out):
+    kind: Literal["meal", "day"]
+    meal: Meal | None
+    date: str
+
+
+class FitRecipeResponse(_Out):
+    status: Literal["fits", "fits_after_changes", "fits_smaller_serving", "does_not_fit", "unavailable"]
+    rules_version: str
+    target: FitRecipeTargetOut
+    servings_made: Number
+    before: dict[str, Any] | None = None
+    after: dict[str, Any] | None = None
+    fitted: dict[str, Any] | None = None
+    closest: dict[str, Any] | None = None
+    changes: list[dict[str, Any]] = []
+    still_over: list[str] = []
+    notes: list[str] = []
+    message: str | None = None

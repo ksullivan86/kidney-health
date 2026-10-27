@@ -7,7 +7,32 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
-Nothing yet.
+### For people using the app
+
+* **A recipe saved by Ask or a connected assistant is now judged one serving at a time in What fits now.** Such a recipe holds the
+  amounts for the whole pot. Until now What fits now judged the whole pot as one meal, so a 4-serving stew almost never fitted. It now
+  divides by the number of servings first. Plain saved meals are unchanged.
+
+### For people who run a server
+
+* **Schema step 21.** Saved meals gain three columns for recipes: how many servings the items make, cooking steps and a source link
+  (never opened). A recipe saved by Ask or MCP before this release has its count and link in the note as "Makes 4 servings. Source:
+  …"; the step copies them into the new columns and leaves the note as it is. Take a backup before the first start.
+* **API.** `POST` and `PUT /api/meals` accept `servings_made`, `steps` and `source_url`; a `PUT` that leaves one out keeps it, and
+  `null` clears it. Every saved meal now also gives `per_serving` (null when no food lists a nutrient, never 0) and `unknown` (how
+  many foods do not list it). The export and import carry the three fields. `save_recipe` (Ask and MCP) writes the columns and no
+  longer writes the sentence into the note. Nothing existing was removed.
+
+* **`POST /api/guidance/fit-recipe`, new.** It checks one serving of a recipe against a meal or against what is left today. When it
+  does not fit, it lowers amounts (never a protein food, never below half), swaps a food (at most 2) or suggests a smaller serving,
+  and lists every change in plain words with the app's figures. It computes only and saves nothing. There is no screen for it yet.
+  `RULES_VERSION` is `2026-10-27.1`; the six new numbers are in [docs/guidance.md](docs/guidance.md#recipes-that-fit).
+
+### For contributors
+
+* New tests: `tests/guidance/test_recipe_fit.py` (the engine and the route), `tests/test_migration_m021.py`, `tests/test_recipes_api.py`, and a What fits now case in
+  `tests/guidance/test_api_guidance.py`. These are phases 0 and 1 of [note 16](docs/dev/research/16-recipes-that-fit.md); the
+  screens and the demo's twin of the engine come next.
 
 ## 0.6.0 — 2026-10-27
 

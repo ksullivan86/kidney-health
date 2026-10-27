@@ -524,7 +524,7 @@ class MealCheck:
 
 def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
                totals: tuple[dict[str, float], frozenset[str]] | None = None) -> MealCheck:
-    """The single gate (§4.7): ``kind`` is ``built``, ``ai``, ``saved``, ``usual`` or ``starter``.
+    """The single gate (§4.7): ``kind`` is ``built``, ``ai``, ``saved``, ``usual``, ``starter`` or ``recipe``.
 
     Totals of potassium, phosphorus, sodium and fluid within room + negligible; for every kind except
     ``built`` also within what is left of the day's own target (potassium, sodium, fluid: an AI idea or
@@ -537,6 +537,9 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
     a low-treatment food, an ingredient, an alcoholic drink, or a "high" portion of a nutrient that is
     not ok today, and
     AI ideas never hold more than 1 serving of a food with a "high" warning (note 04 V5).
+    ``recipe`` (note 16 §9.2) judges one serving's share of each ingredient: like ``saved`` it allows low
+    treatments, ingredients and alcohol (the person built it), it has no lower portion bound, and like ``ai``
+    it refuses a "high" share of a nutrient that is not ok today and more than 1 serving of a "high" food.
     """
     if not items:
         return MealCheck(False, "empty")
@@ -563,25 +566,27 @@ def check_meal(items: Sequence[MealItem], room: Room, kind: str = "built",
         if carbs > _NEG_CARBS and carbs > max(room.carbs.gap, 0.0) + room.carbs.tolerance:
             return MealCheck(False, "too_many_carbs")
     strict = kind in ("built", "ai")
+    recipe = kind == "recipe"
     for f, q in items:
         if f.avoid:
             return MealCheck(False, "avoid_ckd")
-        if q < R.PORTION_MIN - 1e-9 or q > R.PORTION_MAX + 1e-9:
+        # A recipe's share may be tiny (a spoon of oil in 4 servings), so only its top is checked (note 16 §9.2).
+        if (q < R.PORTION_MIN - 1e-9 and not recipe) or q > R.PORTION_MAX + 1e-9:
             return MealCheck(False, "portion_out_of_range")
-        if strict:
-            if f.hypo:
-                return MealCheck(False, "hypo_treatment")
-            if f.ingredient:
-                return MealCheck(False, "ingredient")
-            if f.alcohol:
-                return MealCheck(False, "alcohol")
+        if strict and f.hypo:
+            return MealCheck(False, "hypo_treatment")
+        if strict and f.ingredient:
+            return MealCheck(False, "ingredient")
+        if strict and f.alcohol:
+            return MealCheck(False, "alcohol")
+        if strict or recipe:
             high_any = False
             for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)):
                 high = (v is not None and is_high(key, v * q)) or (key == R.P and f.additive)
                 high_any = high_any or high
                 if high and room.level_of(key) != "ok":
                     return MealCheck(False, f"high_warning:{key}")
-            if kind == "ai" and high_any and q > 1.0 + 1e-9:
+            if kind in ("ai", "recipe") and high_any and q > 1.0 + 1e-9:
                 return MealCheck(False, "high_portion_too_large")
     return MealCheck(True)
 

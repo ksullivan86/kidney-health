@@ -636,9 +636,19 @@ MealTemplate = {
               "nutrients": {...scaled...}, "kidney_rating": "green", "hidden": false} ],
   "totals": {...12 keys...},
   "kidney_rating": "yellow",                      // worst item rating
+  "servings_made": null, "steps": null, "source_url": null,   // a recipe (schema step 21, note 16 §5.1)
+  "per_serving": {...12 keys...},                // totals ÷ servings_made (÷ 1 when null); null when no item lists it
+  "unknown": {"phosphorus_mg": 1},               // how many items do not list a nutrient (only keys with a count)
   "created_at": "...", "updated_at": "..."
 }
 ```
+**Recipes** (note 16, schema step 21). `POST` and `PUT /api/meals` accept `servings_made` (> 0, ≤ 100), `steps` (at most 20
+strings of at most 500 characters, trimmed, empty ones dropped, no control characters) and `source_url` (an `http` or `https`
+link with a host and no password, at most 900 characters, never fetched; `""` is no link). A `PUT` that leaves one out keeps
+the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
+`scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
+each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
+`per_serving` and `unknown` are worked out again on read.
 A food referenced by a template may be hidden later; keep the item, return `hidden: true`, and
 `apply` still works (the entry snapshot comes from the stored food row).
 
@@ -773,6 +783,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 18 | `m018_body_measurements.py` | weight and blood pressure | `weights` and `blood_pressures`: a person's weighings and readings by date, kilograms and mmHg, a `source_key` an import de-duplicates on, no `CHECK` on a context or a source ("Weight and blood pressure" below). |
 | 19 | `m019_body_token.py` | phone push (note 12) | `weights.api_token_id` and `blood_pressures.api_token_id` (`REFERENCES api_tokens(id) ON DELETE SET NULL`, NULL for every earlier row) and two partial indexes `(user_id, api_token_id) WHERE api_token_id IS NOT NULL`; no `(user_id, date, time)` index (step 18's `(user_id, date)` serves the same-reading check) ("Device tokens and `/push/v1`" below). |
 | 20 | `m020_ai_env_slots.py` | two AI providers from the environment | `ai_providers.env_slot` (`main` or `cloud`; the row locked today becomes `main`) and `ai_providers.upstream` (who a proxy forwards to, at most 60 characters); the one-locked-row unique index is replaced by one locked row per slot ("Environment providers: main and cloud" under "M2 API: AI and photos" below). |
+| 21 | `m021_recipes.py` | recipes (note 16) | `meal_templates.servings_made` (REAL, > 0 and ≤ 100, NULL = a plain saved meal of one serving), `steps_json` (a JSON list of strings) and `source_url` (≤ 900 characters, never fetched). A note that is exactly the sentence `save_recipe` wrote (`Makes N serving(s).` with or without ` Source: <link>`) fills `servings_made` and `source_url`; the note itself is left alone and any other note leaves the columns NULL. |
 
 ## Backend file ownership
 
@@ -1604,6 +1615,7 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 | `GET /api/guidance/swaps` | `food_id` + `meal` + `servings` or `grams` (+ `date`), **or** `entry_id`; `purpose` `hypo`\|`none` (default: `hypo` for a `hypo_treatment` food, else the entry's); `explain` → `Swaps`. 400 without exactly one of `food_id`/`entry_id`; 404 for a food or entry that is not the person's |
 | `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off; reads no soft preference and is never empty while a low treatment exists (the floor under "Food preferences" below) |
 | `POST /api/guidance/plan-day` | `{date, meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, explain?}` → `Plan`; computes only |
+| `POST /api/guidance/fit-recipe` | `{meal_id}` **or** `{items: [{food_id, servings ≤ 40}] (1–30), servings_made?}`, with `target?: {kind: meal\|day (meal), meal?, date?}` → `{status: fits\|fits_after_changes\|fits_smaller_serving\|does_not_fit\|unavailable, rules_version, target: {kind, meal, date}, servings_made, before, after, fitted, closest, changes, still_over, notes}`; computes only (note 16 §7, "Recipes that fit" in `docs/guidance.md`). `before`/`after` are `{per_serving, unknown, checks: [{nutrient, used, room, ok}]}`; `fitted` (or `closest` when it does not fit, with no Save) is `{items: [{food_id, name, servings, serving_desc, portion_text}], serving_fraction, log_scale}`, the pot amounts and the `scale` for `apply`. 400 without exactly one of `meal_id`/`items`; 404 for a recipe or food that is not the person's; `unavailable` when a food of the recipe is gone |
 | `GET /api/guidance/insights/day` | `date` → `{status, rules_version, date, insights: [Insight] (≤ 6), planned_excluded, notes}` |
 | `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
 | `GET /api/guidance/rules` | → `{rules_version, rules_hash, rules: {NAME: value}, notes: {NAME: basis}, topic_pages: {slug: {slug, title, url}}, tips}` |
@@ -3838,11 +3850,11 @@ rolls everything back. Nothing is edited or deleted; a repeated call saves again
 * `save_recipe {name: 1–60, ingredients: (1–30, as check_meal items), servings: > 0 and ≤ 100, source_url?}` →
   `{saved: true, meal: {id, name, note, items: [{food_id, food_name, servings, serving_desc, nutrients}]},
   servings_made, source_url, totals_whole_recipe: {key: Amount}, totals_per_serving: {key: Amount},
-  added_to_foods, notes}`. The saved meal (`meals.insert_template`, `meal_hint` null) has no servings count, so
-  `items_json` holds the ingredients for the **whole recipe** and `note` is `Makes N serving(s).` plus, with a link,
-  ` Source: <url>`. `source_url` is an `http`/`https` address with a host, at most 900 characters (the note is at most
-  1000 characters in the meals API, so the meal stays editable), with no whitespace, control character, user name or
-  password; it is stored as text and **never fetched**. `totals_per_serving` is the whole-recipe total divided by
+  added_to_foods, notes}`. The saved meal (`meals.insert_template`, `meal_hint` null) holds the ingredients for the
+  **whole recipe** in `items_json`, the count in `servings_made` and the link in `source_url` (schema step 21; before it
+  the count and the link were the note `Makes N serving(s). Source: <url>`, and step 21 reads them back from that
+  sentence). `source_url` is an `http`/`https` address with a host, at most 900 characters, with no whitespace, control
+  character, user name or password; it is stored as text and **never fetched**. The note is left empty. `totals_per_serving` is the whole-recipe total divided by
   `servings` (arithmetic only; unknown stays unknown).
 * Activity: `assistant.food_logged` (target `api_token` id; details `via` (the token's name), `entries`, `status`,
   `meal`, `date`, `foods_added`) and `assistant.recipe_saved` (target `meal` id; details `via`, `name`,
