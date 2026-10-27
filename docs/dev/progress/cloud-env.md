@@ -30,15 +30,17 @@ Worktree `.../scratchpad/integ-cloudenv`, branch `wip/cloud-env`, based on main 
   `env_key`, `row_policy`, `upstream` on the config), `app/ai/routing.py` (roles), `app/ai/routes.py` (messages, key fingerprint).
 * Screens: `js/views/ai_routing.js` (cloud role fixed, names `AI_CLOUD_PROVIDER`), `js/views/ai.js` (variable in the badge title,
   the policy line of a proxy). Harness `tests/js/routing_page.mjs` + `tests/test_ai_routing_ui.py`.
-* Tests so far: `tests/test_ai_cloud_env.py` (84), `tests/test_migration_m020.py`.
+* Tests: `tests/test_ai_cloud_env.py`, `tests/test_migration_m020.py`, `tests/test_ai_cloud_routing.py` (routing with both env
+  providers, labs never reach the cloud provider, deny/proxy rules, local_then_cloud).
+* `scripts/ai_eval.py --role/--upstream`, `Options.resolved_role/problem()`, report `provider.role/upstream`; tests in
+  `tests/test_ai_eval_script.py`; `docs/dev/ai-eval/README.md`.
+* Mutation checks run by hand (put back): `role_row` ignoring the cloud slot, `env_key` always the first key. Both are caught.
 
 ## Next
 
-1. `tests/test_ai_cloud_routing.py`: both providers routed, labs never reach the cloud, proxy and deny rules.
-2. `scripts/ai_eval.py --role/--upstream` and `tests/test_ai_eval_script.py`.
-3. Deploy files (`compose.yaml`, `.env.example`, quadlet, k8s) and `tests/test_compose_env.py`.
-4. Docs: `docs/ai.md`, `docs/deployment.md`, handbook configuration page, `ARCHITECTURE.md`, `CHANGELOG.md`, ai-eval README.
-5. Full checks (see below).
+1. Deploy files (`compose.yaml`, `.env.example`, quadlet, k8s) and `tests/test_compose_env.py`.
+2. Docs: `docs/ai.md`, `docs/deployment.md`, handbook configuration page, `ARCHITECTURE.md`, `CHANGELOG.md` (the ai-eval README is done).
+3. Full checks (see below).
 
 ## Checks
 
