@@ -28,7 +28,7 @@ listed below; what they receive and the AI address rules (`AI_PRIVATE_HOSTS`, `A
 | `api.openai.com` | 443 | AI with the `openai` preset | off (`AI_ENABLED=false`) |
 | `openrouter.ai` | 443 | AI with the `openrouter` preset | off |
 | `inference-api.nousresearch.com` | 443 | AI with the `nous_portal` preset | off |
-| your AI host (e.g. `ollama:11434`, `host.containers.internal:8643`) | its port | A local Ollama, Hermes or other OpenAI-compatible server. Private addresses are reachable only when listed in the env-only `AI_PRIVATE_HOSTS`. | off |
+| your AI host (e.g. `ollama:11434`, `host.containers.internal:8643`, `litellm.lan:4000`) | its port | A local Ollama, Hermes, a LiteLLM proxy or other OpenAI-compatible server, for `AI_PROVIDER` and for `AI_CLOUD_PROVIDER`. Private addresses are reachable only when listed in the env-only `AI_PRIVATE_HOSTS`. | off |
 | your speech-to-text host (`STT_BASE_URL`, e.g. `stt:8000` from `deploy/compose.stt-whisper.yaml`, or a cloud service such as `api.openai.com`) | its port | The Ask microphone is on (`ai.voice_enabled`, needs Ask) **and** a person agreed: the app sends one recording (a minute at most) to `{STT_BASE_URL}/audio/transcriptions`. The same SSRF-checked transport and the same address rules as an AI provider: a private address only when listed in `AI_PRIVATE_HOSTS`, no redirects. A local container needs **no** internet at all: put it on an `internal` network. See [`ai.md`](ai.md#voice-input-speech-to-text). | off |
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` (k-anonymity: only 5 hex characters of a hash leave the server) | off |
 

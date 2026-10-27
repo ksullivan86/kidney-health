@@ -36,11 +36,24 @@ Worktree `.../scratchpad/integ-cloudenv`, branch `wip/cloud-env`, based on main 
   `tests/test_ai_eval_script.py`; `docs/dev/ai-eval/README.md`.
 * Mutation checks run by hand (put back): `role_row` ignoring the cloud slot, `env_key` always the first key. Both are caught.
 
+## Also done
+
+* Deploy files: `compose.yaml` (pass-throughs for the five non-secret `AI_CLOUD_*`, commented `AI_CLOUD_API_KEY_FILE` secret),
+  `.env.example`, Quadlet (a full commented example), Kubernetes (`deployment.yaml`, `secret.example.yaml`, `networkpolicy.yaml`).
+  `tests/test_compose_env.py` pins them; `tests/test_ai_cloud_env.py` runs the docs recipe and the Quadlet example through
+  `load_settings`, `check_env` and a started app.
+* Docs: `docs/ai.md` (three questions, env table, what is sent, routing, recipe, troubleshooting, contributors),
+  `docs/deployment.md`, `docs/privacy.md`, `docs/network-allowlist.md`, handbook `self-hosting/configuration.md`,
+  `self-hosting/network-allowlist.md`, `app/ai.md`, `ARCHITECTURE.md` (env part, "Environment providers: main and cloud",
+  routes, migration table, ownership), `CHANGELOG.md` (`## Unreleased`).
+* Checks run: ruff, gen_openapi --check (no change: the admin answers are free dicts), all `tests/data/gen_*.py --check`,
+  `node tests/js/run_vectors.mjs`, `build_handbook.py --check`, `git diff --check`: all clean.
+
 ## Next
 
-1. Deploy files (`compose.yaml`, `.env.example`, quadlet, k8s) and `tests/test_compose_env.py`.
-2. Docs: `docs/ai.md`, `docs/deployment.md`, handbook configuration page, `ARCHITECTURE.md`, `CHANGELOG.md` (the ai-eval README is done).
-3. Full checks (see below).
+1. Full `python -m pytest -q` (background; log in the scratchpad) and `python -m pytest -m safety -q`.
+2. A browser harness for the AI admin screens, if one runs offline (`tools/e2e/`).
+3. Final commit: mark "Status: complete".
 
 ## Checks
 

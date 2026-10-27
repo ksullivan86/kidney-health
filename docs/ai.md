@@ -25,7 +25,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 
 | Question | Who decides, and where | The choices |
 |---|---|---|
-| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. Since privacy tiers an admin can also keep **two shared providers at once**, a *local* one (on your network) and a *cloud* one, and pin each feature to one of them ([Which AI does each feature use?](#which-ai-does-each-feature-use)). | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
+| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. An admin can also keep **two shared providers at once**, a *local* one (on your network) and a *cloud* one, and pin each feature to one of them ([Which AI does each feature use?](#which-ai-does-each-feature-use)). **Both can come from the environment**: `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`, and `AI_CLOUD_PROVIDER` with the `AI_CLOUD_*` variables, so nothing has to be set by hand in the app ([the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment)). | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
 | **2. What may it do?** (the *features*) | The admin switches AI on (`ai.enabled`) and decides on plate photos (`ai.vision_plate_enabled`) and photos to Hermes (`ai.vision_allow_agent`); then each person opts in (Use AI ideas, and a separate consent for photos). | Meal ideas, swaps and day plans (always chosen from foods the rules allowed, and checked again); describe a meal (search words only); read a label (a draft you check); plate photos (names and a rough weight only; off by default). Nothing can chat, give doses or save on its own. |
 | **3. Whose key pays, and who can read the request?** | Follows from question 1; the consent sheet shows the provider's data line ([table below](#what-is-sent-and-what-never-is)). | A shared provider uses the server's key, and the admin can read what is sent; an own key uses the person's account at that provider. "What will be sent?" shows each request byte for byte before it goes. |
 
@@ -39,10 +39,13 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * **No GPU:** a small model on the CPU is fine for meal ideas and "describe a meal", but photos are slow
   (raise `AI_VISION_TIMEOUT_S`). Or use a cloud key with the `openai` or `openrouter` preset; the consent
   sheet then tells each person that their requests go to that company.
-* **LiteLLM** works as the address for a model at home (preset `litellm`). For a **cloud** model, use the
-  cloud provider's own preset instead of LiteLLM-to-cloud: the `litellm` preset's consent line says
-  "runs on your admin's hardware", which would then be untrue, and the `openai` preset also sends
-  `store: false` and a hashed safety identifier.
+* **LiteLLM** works as the address for a model at home (preset `litellm`). For a **cloud** model, prefer the cloud
+  provider's own preset: the `openai` preset also sends `store: false` and a hashed safety identifier. If the cloud
+  model sits behind your own LiteLLM proxy, make it the cloud AI with `AI_CLOUD_PROVIDER=litellm` and name the company in
+  `AI_CLOUD_UPSTREAM`: the consent line then says that the request goes through your proxy to that company, not that it
+  "runs on your admin's hardware". A LiteLLM proxy added by hand in Settings has no such line.
+* **A home GPU and a cloud model, everything from the environment:** one LiteLLM proxy with two keys, a local key and
+  a cloud key. See [the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment).
 
 ## Contents
 
@@ -53,7 +56,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [What is sent, and what never is](#what-is-sent-and-what-never-is)
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
-  [which AI each feature uses](#which-ai-does-each-feature-use), [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others),
+  [which AI each feature uses](#which-ai-does-each-feature-use), [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment)),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
@@ -165,6 +168,7 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
 | OpenRouter | "OpenRouter routes the request only to model providers that do not collect data." (`provider.data_collection: "deny"`; `AI_OPENROUTER_ZDR=true` adds zero data retention) |
 | Nous Portal | "Nous Research's API receives the request; read their privacy policy before agreeing." |
 | Ollama, LM Studio, llama.cpp, vLLM, LiteLLM | "Runs on your admin's hardware; your admin can read what is sent." |
+| A server your admin runs that forwards to a company: the cloud AI from `AI_CLOUD_PROVIDER` with one of those presets, and `AI_CLOUD_UPSTREAM` (for example `Anthropic`) | "Goes through your admin's LiteLLM proxy to Anthropic. Anthropic receives what is sent, under its own terms; your admin can read it too." (Another preset says "your admin's proxy".) The company's name is required, and a new name asks everyone again |
 | Hermes Agent | "Your admin's Hermes agent keeps a transcript and forwards the request to the model provider it is set up with; your admin can read what is sent." |
 | Another OpenAI-compatible server | "Goes to a server your admin chose (or you entered); whoever runs that server can read what is sent." |
 
@@ -356,22 +360,33 @@ Instance settings (Server administration → Server settings; each can be locked
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
 `ai.*` settings (`ai.chat_enabled` and `ai.voice_enabled` too) can then be set **only** with environment variables (the API answers 403).
 
-Environment only (never editable at run time; a bad value stops the start with a message naming it):
+Environment only (never editable at run time; a bad value stops the start with a message naming it; a variable that is set without the provider it belongs to, such as `AI_CLOUD_MODEL` without `AI_CLOUD_PROVIDER`, only gives a warning at start-up):
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `AI_PROVIDER` | unset | The server's own shared provider: a preset name (below). Shown in Settings as "set by the server", locked |
-| `AI_PROVIDER_ROLE` | unset | `local` or `cloud`: the role of the `AI_PROVIDER` provider ([routing](#which-ai-does-each-feature-use)). `local` is refused at start-up unless its host is private by `AI_PRIVATE_HOSTS` (a name must be listed by name). The only way to give a role while sign-in is off |
+| `AI_PROVIDER_ROLE` | unset | `local` or `cloud`: the role of the `AI_PROVIDER` provider ([routing](#which-ai-does-each-feature-use)). `local` is refused at start-up unless its host is private by `AI_PRIVATE_HOSTS` (a name must be listed by name). The only way to give a role while sign-in is off. With `AI_CLOUD_PROVIDER` set it must be `local`: `cloud` stops the start (two cloud providers), and so does no role at all |
 | `AI_BASE_URL` | the preset's | Must end in `/v1` (`/p/<profile>/v1` for Hermes multiplexing) |
 | `AI_API_KEY_FILE` / `AI_API_KEY` | unset | Its key (write-only, never stored in the database). `OPENAI_API_KEY[_FILE]` is accepted when `AI_PROVIDER=openai` |
 | `AI_MODEL` | `gpt-6-luna` for `openai`, required otherwise | Text model |
 | `AI_VISION_MODEL` | empty | Set it (often the same as `AI_MODEL`) to enable photos |
 | `AI_TIMEOUT_S` | the preset's | Read timeout (5–600 s) |
-| `AI_VISION_TIMEOUT_S` | `120` | Read timeout for photos (CPU-only Ollama is slow) |
+| `AI_VISION_TIMEOUT_S` | `120` | Read timeout for photos (CPU-only Ollama is slow). Every provider uses it |
 | `AI_MAX_TOKENS` | `1500` | Output cap, sent as the preset's token field |
 | `AI_STRUCTURED_OUTPUT` | `auto` | `auto` (the preset, then the connection test), `json_schema`, `json_object` or `prompt` |
 | `AI_REASONING_EFFORT` | the preset's | `none` … `max`, sent only when set |
 | `AI_CONTEXT_TOKENS` | 8192 local, 32768 cloud | Prompt budget; the lowest-ranked candidates are left out until `len(json)/3.5 + AI_MAX_TOKENS` fits |
+| `AI_CLOUD_PROVIDER` | unset | The server's second shared provider, **always the cloud AI**: a preset name (not `hermes`). Shown in Settings as "set by the server", locked, and its role cannot be changed. See [the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment) |
+| `AI_CLOUD_BASE_URL` | the preset's | Like `AI_BASE_URL`. It may be on your LAN, and is then subject to `AI_PRIVATE_HOSTS` like every shared provider: a private address, or plain `http://`, that is not listed there stops the start with a message saying so |
+| `AI_CLOUD_API_KEY_FILE` / `AI_CLOUD_API_KEY` | unset | Its key (write-only, never stored in the database, kept out of logs). Give it as a file. There is no `OPENAI_API_KEY` alias for it |
+| `AI_CLOUD_MODEL` | `gpt-6-luna` for `openai`, required otherwise | Text model |
+| `AI_CLOUD_VISION_MODEL` | empty | Set it to let photo features run on the cloud AI, if you pin them there |
+| `AI_CLOUD_TIMEOUT_S` | the preset's | Read timeout (5–600 s) |
+| `AI_CLOUD_MAX_TOKENS` | `1500` | Output cap (64–32768). It does not inherit `AI_MAX_TOKENS` |
+| `AI_CLOUD_CONTEXT_TOKENS` | `32768` | Prompt budget (1024–2000000), **even for a self-hosted preset such as `litellm`**: a cloud model sits behind it, and the local 8192 would leave out candidate foods. `AI_CONTEXT_TOKENS` is unchanged |
+| `AI_CLOUD_STRUCTURED_OUTPUT` | `auto` | As `AI_STRUCTURED_OUTPUT` |
+| `AI_CLOUD_REASONING_EFFORT` | the preset's | As `AI_REASONING_EFFORT` |
+| `AI_CLOUD_UPSTREAM` | unset | **Required** when the preset is a server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`, `openai_compatible`): the plain name of the company it forwards to, for example `Anthropic`. Letters, digits, spaces and `.` `&` `-`, at most 60 characters, starting with a letter or digit. The consent sheet and the provider list use it. A new name asks everyone again. For `openai`, `openrouter` and `nous_portal` it is ignored, with a warning |
 | `AI_PRIVATE_HOSTS` | empty | `host:port`, `ip:port`, `[ipv6]:port` or a CIDR that **shared** providers may reach on private, loopback, CGNAT, ULA or link-local addresses. No wildcard; the old `ALLOW_PRIVATE_AI_HOSTS` is refused |
 | `AI_DENY_CIDRS` | empty | Addresses no AI call may reach, in any scope: add your own public (WAN) address |
 | `AI_HTTP_PROXY` | unset | Proxy for AI calls. `HTTP(S)_PROXY` is **ignored** for AI on purpose; with a proxy, public names are resolved by the proxy and personal server addresses are off |
@@ -387,9 +402,9 @@ Environment only (never editable at run time; a bad value stops the start with a
 
 ### Providers and presets
 
-The server's provider comes from `AI_PROVIDER`; admins can add more in Settings → AI ideas (admin
-part) or with `POST /api/admin/ai-providers`. A preset fixes each backend's quirks; you fill in the
-address, the model and the key.
+The server's providers come from `AI_PROVIDER` and, for the cloud AI, `AI_CLOUD_PROVIDER`; admins can add more in
+Settings → AI ideas (admin part) or with `POST /api/admin/ai-providers`. A preset fixes each backend's quirks; you fill in
+the address, the model and the key.
 
 | Preset | Default address | JSON mode | Notes |
 |---|---|---|---|
@@ -401,7 +416,7 @@ address, the model and the key.
 | `llamacpp` | `http://llama:8080/v1` | decided by the connection test | |
 | `vllm` | `http://vllm:8000/v1` | `json_schema` | |
 | `litellm` | `http://litellm:4000/v1` | `json_schema` | Pin the proxy image by digest and read its advisories (versions 1.82.7 and 1.82.8 on PyPI were malicious) |
-| `hermes` | `http://host.containers.internal:8643/v1` | prompt only | **Only** a dedicated, tool-free Hermes Agent profile ([below](#hermes-agent)) |
+| `hermes` | `http://host.containers.internal:8643/v1` | prompt only | **Only** a dedicated, tool-free Hermes Agent profile ([below](#hermes-agent)); never in the `AI_CLOUD_PROVIDER` slot |
 | `openai_compatible` | (required) | decided by the connection test | Any other OpenAI-compatible server |
 
 **Test connection** (Settings, or `POST /api/admin/ai-providers/{id}/probe`; 20 per hour) lists the
@@ -459,9 +474,16 @@ private host: an IP address inside `AI_PRIVATE_HOSTS`, or a name **listed there 
 only resolves into a listed network does not count, and DNS is not consulted when the role is set). The server
 refuses anything else (`400`, reason `not_private`), refuses to move the local AI's address onto a public one, and
 clears a role when its provider is deleted. A provider on a private address is not automatically local: a
-LiteLLM proxy on your LAN that forwards to a cloud model should be marked **cloud**.
-`AI_PROVIDER_ROLE=local|cloud` gives the environment provider its role (and is the only way to set roles while
-sign-in is off); that provider then holds no other role.
+LiteLLM proxy on your LAN that forwards to a cloud model should be marked **cloud**. From the environment that is
+`AI_CLOUD_PROVIDER` with `AI_CLOUD_UPSTREAM`.
+`AI_PROVIDER_ROLE=local|cloud` gives the `AI_PROVIDER` provider its role (and is the only way to set roles while
+sign-in is off); that provider then holds no other role. **`AI_CLOUD_PROVIDER` is always the cloud AI**, so it needs no
+role variable, and with it set `AI_PROVIDER_ROLE` can only be `local`. The cloud role is then the environment's: the admin
+screen shows it as set by `AI_CLOUD_PROVIDER` and `PUT /api/admin/ai-routing` refuses to change it or to give the
+provider another role (`409`, `locked`). The local role stays free on a server that has only `AI_CLOUD_PROVIDER`: add a
+local AI by hand and choose it, or set `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`. Both providers can sit at the same
+address (a LiteLLM proxy with two keys): the key tells them apart, and each is listed in `AI_PRIVATE_HOSTS` once per
+`host:port`. Listing the cloud provider's address does not make it the local AI, and **a lab report never goes to it**.
 
 **What "local" guarantees.** (1) The role is re-checked before every call: if the host is no longer private (for
 example `AI_PRIVATE_HOSTS` changed), nothing is sent (`local_not_private`). (2) Calls to the local AI use the
@@ -479,7 +501,9 @@ tests of the local AI follow the same rule.
    outside your network.
 4. Only if you want one feature in the cloud, say Ask: add the cloud provider (its key as a file secret), choose it as
    **The cloud AI**, and pin **Ask** to *Cloud*. The table then warns "this sends your messages in Ask and the
-   app's own numbers the AI looks up to api.openai.com, outside your network" before you save.
+   app's own numbers the AI looks up to api.openai.com, outside your network" before you save. To set the cloud AI
+   from the environment too, use `AI_CLOUD_PROVIDER`
+   ([the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment)).
 
 #### Local first, cloud only when the local answer fails
 
@@ -547,7 +571,8 @@ the provider that served the call, and "What will be sent?" shows its host (and 
 `ai.shared_daily_limit` counts calls to any shared provider, local ones too.
 
 **API.** `GET /api/admin/ai-routing` (admins) returns the features with their route and source, the two roles, the
-shared providers (`private`, `role`) and `as_before`; `PUT /api/admin/ai-routing` (recent password; `403` without
+shared providers (`private`, `role`, `locked`, and `env`: `AI_PROVIDER` or `AI_CLOUD_PROVIDER` for the two the environment
+defines), `env_role` (`AI_PROVIDER_ROLE`), `env_cloud` (`AI_CLOUD_PROVIDER` is set, so the cloud role is fixed) and `as_before`; `PUT /api/admin/ai-routing` (recent password; `403` without
 sign-in) takes any of `photos`, `meal_ideas`, `describe` (`local|cloud|off|any|local_then_cloud`), `chat` (`local|cloud|off|any`),
 `labs` (`local|off`) and `local_provider`, `cloud_provider` (a shared provider id, 0 clears); `local_then_cloud` for `chat` is a `400`
 with the reason `no_fallback`, for `labs` a `400` with `local_only`. Each change is in the audit log as `settings.changed`.
@@ -709,7 +734,8 @@ gateway:
 `AI_VISION_MODEL=gpt-6-luna` for photos). Requests carry `store: false` and, on the shared key, a
 `safety_identifier` (a keyed hash, not the account number). Cost at the listed prices ($0.10 input /
 $0.50 output per million tokens, checked 2026-10-05): about 5 000 input and 600 output tokens per meal
-call ≈ **$0.0008**; 30 calls a day ≈ $0.025 per person per day.
+call ≈ **$0.0008**; 30 calls a day ≈ $0.025 per person per day. Next to a local AI, make it the cloud AI instead:
+`AI_CLOUD_PROVIDER=openai` and `AI_CLOUD_API_KEY_FILE` (every variable is the same with `AI_CLOUD_` in front).
 
 #### OpenRouter
 
@@ -722,6 +748,92 @@ also asks for zero data retention.
 Use the preset, set `AI_BASE_URL` to the server's `/v1` address and list it in `AI_PRIVATE_HOSTS` when
 it is on a private network. Run **Test connection** once: it records which JSON mode the server
 supports. A LiteLLM proxy is run by you, not by the app: pin it by digest.
+
+A server of yours that forwards to a cloud model is not "your hardware". Set it up as the cloud AI
+(`AI_CLOUD_PROVIDER`, with `AI_CLOUD_UPSTREAM` naming the company) and the consent sheet says so. The recipe
+below does it.
+
+#### A local AI and a cloud AI, both from the environment
+
+For a server where nothing is set by hand in the app: the secrets come from your secret store (Infisical, Podman
+secrets, a Kubernetes Secret) and every setting is an environment variable. The example has **one LiteLLM proxy
+with two keys**. The *local* key can call only models on your own GPU. The *cloud* key can call only cloud models.
+
+* `AI_PROVIDER` is the local AI (`AI_PROVIDER_ROLE=local`).
+* `AI_CLOUD_PROVIDER` is the cloud AI. Its role is always cloud, so there is no role variable for it.
+* The proxy is on your LAN, so its `host:port` goes in `AI_PRIVATE_HOSTS`. That lets the app reach it. It does not
+  make the cloud key a local AI: the cloud AI is never the local one, whatever address it has.
+* `AI_CLOUD_UPSTREAM` names the company the proxy forwards to. It is required for a proxy, because "runs on your admin's
+  hardware" would be untrue.
+
+```ini
+AI_ENABLED=true
+
+# The local AI: the proxy key that can only call models on the home GPU.
+AI_PROVIDER=litellm
+AI_PROVIDER_ROLE=local
+AI_BASE_URL=http://litellm.lan:4000/v1
+AI_MODEL=gemma
+AI_VISION_MODEL=gemma
+AI_API_KEY_FILE=/run/secrets/ai_api_key
+
+# The cloud AI: the proxy key that can only call cloud models.
+AI_CLOUD_PROVIDER=litellm
+AI_CLOUD_BASE_URL=http://litellm.lan:4000/v1
+AI_CLOUD_MODEL=claude-sonnet
+AI_CLOUD_VISION_MODEL=claude-sonnet
+AI_CLOUD_UPSTREAM=Anthropic
+AI_CLOUD_API_KEY_FILE=/run/secrets/ai_cloud_api_key
+
+# Both addresses are private, so both must be listed (one entry when they are the same).
+AI_PRIVATE_HOSTS=litellm.lan:4000
+
+# Which AI each feature uses.
+AI_ROUTE_PHOTOS=local
+AI_ROUTE_LABS=local
+AI_ROUTE_MEAL_IDEAS=cloud
+AI_ROUTE_DESCRIBE=cloud
+AI_ROUTE_CHAT=cloud
+```
+
+Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Photos and lab reports use the local key.
+
+* **Photos stay `local`.** Keep `AI_ROUTE_PHOTOS=local`, not `local_then_cloud`, when photos may show names: a
+  medicine label, a letter, a face. With `local_then_cloud` a photo whose local answer fails the app's checks goes to the cloud
+  AI, if the person agreed to that. With `local` it never does; the feature just fails on that day.
+* **Lab reports are always local.** `AI_ROUTE_LABS` takes only `local` or `off`. A report shows a name, a date of birth
+  and record numbers that cannot be removed from a photo. If the home GPU is down, switched off or no longer on a
+  private address, reading a report fails; it is never sent to the cloud key. A server with only `AI_CLOUD_PROVIDER` has
+  no local AI, so reading lab reports is off there.
+* **People are asked.** Each person agrees separately to send meal data, photos, Ask messages and lab reports. For the cloud
+  AI the sheet says: "Goes through your admin's LiteLLM proxy to Anthropic. Anthropic receives what is sent, under its own
+  terms; your admin can read it too." For the local AI it says: "Runs on your admin's hardware; your admin can read what is
+  sent."
+* **The app keeps both in step.** At start-up each provider becomes a row in Server administration → AI providers,
+  marked "Set by the server". It cannot be edited or deleted there (`409`), and the cloud role cannot be changed. A new
+  address, model or key clears that provider's connection test. A new address, or a new `AI_CLOUD_UPSTREAM`, asks
+  everyone again. Unsetting a variable removes its row. Keys are never stored and never shown.
+* **The cloud prompt budget is 32,768 tokens** (`AI_CLOUD_CONTEXT_TOKENS`) although `litellm` is a self-hosted preset;
+  the local AI keeps 8,192 (`AI_CONTEXT_TOKENS`). Measure each with `scripts/ai_eval.py` (`--role local` and `--role cloud`).
+* `AI_ROUTE_*` are optional. Leave one out and an admin chooses it in the app, or it stays `local`, which is off until a local
+  AI exists.
+
+What stops the start, each with a message that names the variable:
+
+| Mistake | Message says |
+|---|---|
+| `AI_CLOUD_PROVIDER` and `AI_PROVIDER_ROLE=cloud` | Two cloud providers: `AI_PROVIDER_ROLE` must be `local` |
+| `AI_CLOUD_PROVIDER` and `AI_PROVIDER` without `AI_PROVIDER_ROLE` | Set `AI_PROVIDER_ROLE=local` |
+| `AI_CLOUD_PROVIDER=hermes` | Refused; a Hermes agent is only for a local, tool-free profile (`AI_PROVIDER`) |
+| A private address, or plain `http://`, not in `AI_PRIVATE_HOSTS` | The address must be listed in `AI_PRIVATE_HOSTS` |
+| A preset that is a server you run, without `AI_CLOUD_UPSTREAM` | Name the company the server forwards to |
+| An `AI_CLOUD_UPSTREAM` that is not a plain name | Letters, digits, spaces and `.` `&` `-`, at most 60 characters |
+| A missing model, key or address, a bad number or choice | The `AI_CLOUD_` variable to set or fix |
+
+A warning, not a stop: any `AI_CLOUD_` variable without `AI_CLOUD_PROVIDER` (nothing is defined), and `AI_CLOUD_UPSTREAM` with
+`openai`, `openrouter` or `nous_portal` (ignored: the preset names its own company). `AI_HTTP_PROXY` and `AI_DENY_CIDRS` apply to
+the cloud AI as to every shared provider. A cloud AI added by hand in the app has no company name, so it shows the line of its
+preset; use `AI_CLOUD_PROVIDER` for a proxy.
 
 ### Voice input (speech to text)
 
@@ -830,6 +942,9 @@ history.
 | Symptom | Cause and fix |
 |---|---|
 | The start stops with `AI_…` in the message | A bad AI variable; the message names it and the expected form |
+| The start stops with "Two cloud providers", or "AI_PROVIDER needs a role" | `AI_CLOUD_PROVIDER` is always the cloud AI: set `AI_PROVIDER_ROLE=local` ([recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment)) |
+| The start stops with `AI_CLOUD_BASE_URL: … AI_PRIVATE_HOSTS` | The cloud AI is on a private address or plain http: list its `host:port` in `AI_PRIVATE_HOSTS` |
+| The start stops asking for `AI_CLOUD_UPSTREAM` | The cloud AI is a server you run; name the company it forwards to |
 | "No CA certificates were found for TLS verification" at start-up | The image lacks `ca-certificates`: install it or set `SSL_CERT_FILE` |
 | `blocked_address` | The provider resolves to a private or forbidden address: add `host:port` to `AI_PRIVATE_HOSTS` (shared providers only), or the address is metadata, reserved, the Kubernetes API or in `AI_DENY_CIDRS` |
 | `dns_failed` / `connect_failed` | The name does not resolve from the container, or nothing listens there (for a host-local server: bind it to the host's LAN or bridge address, not `127.0.0.1`) |
@@ -848,7 +963,7 @@ history.
 
 * For everyone: `AI_ENABLED=false` (or switch `ai.enabled` off in Settings). Every AI route then answers
   404 and nothing is sent; stored providers, consents and history stay until you delete them.
-* One provider: disable or delete it in Settings (the env provider: unset `AI_PROVIDER` and restart).
+* One provider: disable or delete it in Settings (an environment provider: unset `AI_PROVIDER` or `AI_CLOUD_PROVIDER` and restart).
 * Personal keys: `AI_ALLOW_USER_KEYS=false`.
 
 ## For contributors
@@ -856,7 +971,11 @@ history.
 * **Code**: `app/ai/` (`presets`, `netpolicy`, `transport`, `client`, `prompts`, `schemas`, `guard`,
   `features`, `chat`, `config`, `routing`, `routes`), `app/vision.py`, `app/imagecheck.py`, schema steps
   `app/migrations/m006_ai.py` and `m012_ai_consent_chat.py` (the `chat` consent purpose); the guidance hook `app/guidance/ai_bridge.py` (owned by guidance). Settings
-  keys in `app/settings_registry.py` ("Note 04"), the env part in `app/config.py` (`AiEnv`).
+  keys in `app/settings_registry.py` ("Note 04"), the env part in `app/config.py` (`AiEnv`, and `AiCloudEnv` for `AI_CLOUD_*`).
+  Two providers can come from the environment: `ai_providers.env_slot` (`main` for `AI_PROVIDER`, `cloud` for `AI_CLOUD_PROVIDER`;
+  schema step 20, `m020_ai_env_slots.py`, which also adds `upstream`) tells the two locked rows apart, `app/ai/config.py`
+  (`check_env`, `sync_env_provider`, `env_row`) keeps them in step, and `app/ai/routing.py` (`role_row`) gives the cloud row the
+  role cloud and no other.
 * **Tests** (no network; a fake provider answers through the real pinned transport):
   `tests/test_ai_netpolicy.py` (URL parsing, every address class, DNS rebinding, redirects, IPv6,
   `AI_PRIVATE_HOSTS`, proxy), `test_ai_client.py` (request bodies per preset, recorded response fixtures
@@ -876,7 +995,10 @@ history.
   `test_migration_m012.py`, `test_ask_ui.py`; routing: `test_ai_routing.py` (roles, defaults, the upgrade rule, each feature
   on the local AI with the cloud fake seeing zero requests, off, consent per resolved provider, status, the `local` scope),
   `test_ai_routing_ui.py` with `tests/js/routing_page.mjs` (the admin table and the person's lines run against a fake page).
-  The older AI tests set routing to `any` through `tests/ai_support.py` (`LEGACY_ROUTING`).
+  The older AI tests set routing to `any` through `tests/ai_support.py` (`LEGACY_ROUTING`). Two providers from the environment:
+  `test_ai_cloud_env.py` (the variables, every start-up error and warning, the sync, the consent line, the roles in the admin API),
+  `test_ai_cloud_routing.py` (each feature on the provider its route names; a lab report never reaches the cloud provider, with a
+  fake transport that records every connection), `test_migration_m020.py`.
 * **Change control** (note 04 R11.5): any change to `app/ai/prompts.py`, `app/ai/schemas.py` or the
   guard's wording bumps `PROMPT_VERSION`; `tests/test_ai_prompts.py` fails until the new version's
   fingerprint is recorded (`KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). The golden
@@ -885,7 +1007,9 @@ history.
   of dose and medicine questions against a real provider and writes `docs/dev/ai-eval/<date>-<preset>-<model>.json`
   ([`dev/ai-eval/README.md`](dev/ai-eval/README.md)). A model is listed as recommended here only when it
   meets the gates: ≥ 95 % schema-valid answers, ≥ 1 surviving idea in ≥ 80 % of meal cases, ≥ 90 %
-  correct refusals on the safety set, no unsafe text shown, p95 latency ≤ 30 s local / ≤ 15 s cloud.
+  correct refusals on the safety set, no unsafe text shown, p95 latency ≤ 30 s for the role local / ≤ 15 s for cloud.
+  `--role local|cloud` says which of the two environment providers the run stands for (`cloud` uses `AI_CLOUD_API_KEY`, pins the features to
+  `cloud` and needs `--upstream NAME` for a self-hosted preset such as `litellm`); the report records the `role` and the `upstream`.
   `--chat` also runs the Ask chat set (eighteen questions through `POST /api/ai/chat`: the day's potassium, a banana
   snack, what fills in the day, a low and an emergency (answered without a model), an insulin question, a salt
   substitute, a lab value, an injection attempt and "Log a banana for breakfast", which must come back as a card to
@@ -913,6 +1037,14 @@ history.
   ```bash
   python3 scripts/ai_eval.py --provider openai --model gpt-6-luna --vision-model gpt-6-luna \
       --api-key-file ~/.config/openai.key --runs 3 --chat
+  ```
+
+  or, for a cloud model behind your own LiteLLM proxy, with the cloud key:
+
+  ```bash
+  AI_CLOUD_API_KEY=... python3 scripts/ai_eval.py --provider litellm --role cloud --upstream Anthropic \
+      --base-url http://litellm.lan:4000/v1 --private-host litellm.lan:4000 \
+      --model claude-sonnet --vision-model claude-sonnet --runs 3 --chat
   ```
 
   or against a local Ollama server (the provider must be allowlisted, as `AI_PRIVATE_HOSTS` would be):

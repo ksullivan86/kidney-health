@@ -20,18 +20,17 @@ import httpx2
 import pytest
 
 from ai_support import PUBLIC_IP, FakeProvider, chat, no_sleep
-from conftest import HTTPS_URL, TestClient, make_settings, sign_in
+from conftest import HTTPS_URL, TestClient, sign_in
 from test_ai_chat import ask, step_answer
-from test_ai_cloud_env import CLOUD_KEY, CLOUD_URL, GPU_URL, HOSTS, LOCAL_KEY, both, cloud_env, cloud_only, local_env
+from test_ai_cloud_env import CLOUD_KEY, CLOUD_URL, LOCAL_KEY, both, cloud_env, cloud_only
 from test_ai_routes import DAY, _rerank_first_candidate
 from test_ai_routing import IDEAS, PARSE, db, describe, next_meal, ready, route, turn_on
-from test_lab_photo import GOOD, PATH, read
+from test_lab_photo import GOOD, read
 from test_vision_api import LABEL_ANSWER, photo, usage_rows
-from app.ai import config as K
 from app.ai import routing as R
 from app.ai.netpolicy import NetPolicy, parse_private_hosts
 from app.ai.transport import PinnedTransport
-from app.config import AiEnv, ConfigError
+from app.config import ConfigError
 from app.main import create_app
 
 LAN = "10.0.0.5"

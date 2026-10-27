@@ -16,7 +16,7 @@ import pytest
 
 from ai_support import FakeProvider, attach_routed, chat
 from conftest import HTTPS_URL, TestClient, make_settings, sign_in
-from test_ai_routing import IDEAS, db, next_meal, ready, route, turn_on
+from test_ai_routing import db, next_meal, ready, route, turn_on
 from app import security
 from app.ai import config as K
 from app.ai import presets as P
@@ -724,3 +724,67 @@ def test_a_connection_test_of_each_row_uses_its_own_key(tmp_path, foods_json):
         assert stored[by_env["AI_PROVIDER"]]["key_fp"] == K.key_fingerprint(keyring, LOCAL_KEY)
         assert stored[by_env["AI_CLOUD_PROVIDER"]]["key_fp"] == K.key_fingerprint(keyring, CLOUD_KEY)
         assert LOCAL_KEY not in json.dumps(stored) and CLOUD_KEY not in json.dumps(stored)
+
+
+# --------------------------------------------------------------------------- #
+# The examples in the docs and the deployment files are real configurations
+# --------------------------------------------------------------------------- #
+
+ROOT = __import__("pathlib").Path(__file__).resolve().parents[1]
+
+
+def example_env(lines: list[str], tmp_path) -> dict[str, str]:
+    """``NAME=value`` lines as an environment, with every ``*_FILE`` key pointing at a real file."""
+    env: dict[str, str] = {}
+    for line in lines:
+        name, _, value = line.strip().partition("=")
+        env[name.strip()] = value.strip()
+    for name in [n for n in env if n.endswith("API_KEY_FILE")]:
+        key_file = tmp_path / name
+        key_file.write_text(f"sk-{name.lower()}-0123456789abcdefghij\n")
+        env[name] = str(key_file)
+    return env
+
+
+def recipe_lines() -> list[str]:
+    text = (ROOT / "docs" / "ai.md").read_text(encoding="utf-8")
+    section = text.split("#### A local AI and a cloud AI, both from the environment", 1)[1]
+    block = section.split("```ini\n", 1)[1].split("```", 1)[0]
+    return [ln for ln in block.splitlines() if ln.strip() and not ln.startswith("#")]
+
+
+def quadlet_lines() -> list[str]:
+    text = (ROOT / "deploy" / "quadlet" / "kidney-health.container").read_text(encoding="utf-8")
+    block = text.split("# A local AI and a cloud AI, both from the environment", 1)[1].split("# Assistant access", 1)[0]
+    return [ln.removeprefix("# Environment=").removeprefix("# Secret=") for ln in block.splitlines()
+            if ln.startswith("# Environment=")]
+
+
+@pytest.mark.parametrize("lines", [recipe_lines, quadlet_lines], ids=["docs/ai.md", "quadlet"])
+def test_the_example_with_a_local_and_a_cloud_ai_starts_and_does_what_it_says(tmp_path, foods_json, monkeypatch, lines):
+    from dataclasses import replace
+
+    from conftest import ADMIN_PASSWORD, ADMIN_USERNAME
+
+    env = example_env(lines(), tmp_path)
+    assert {"AI_PROVIDER_ROLE", "AI_CLOUD_PROVIDER", "AI_CLOUD_UPSTREAM", "AI_PRIVATE_HOSTS", "AI_ROUTE_LABS"} <= set(env)
+    assert env["AI_ROUTE_LABS"] == "local" and env["AI_ROUTE_PHOTOS"] == "local"  # photos and lab reports stay local
+    assert env["AI_ROUTE_MEAL_IDEAS"] == env["AI_ROUTE_DESCRIBE"] == env["AI_ROUTE_CHAT"] == "cloud"
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    settings = replace(load_settings({"DATA_DIR": str(tmp_path / "data"), "ADMIN_USERNAME": ADMIN_USERNAME, "ADMIN_PASSWORD": ADMIN_PASSWORD, **env}),
+                       foods_json=foods_json)
+    assert K.check_env(settings) == []  # no error and no warning
+    with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        o = c.get("/api/admin/ai-routing").json()
+        assert {f["feature"]: f["route"] for f in o["features"]} == {
+            "photos": "local", "labs": "local", "meal_ideas": "cloud", "describe": "cloud", "chat": "cloud"}
+        assert all(f["source"] == "env" for f in o["features"])  # every route comes from the environment
+        by_env = {p["env"]: p for p in o["providers"]}
+        assert o["roles"]["local"]["id"] == by_env["AI_PROVIDER"]["id"] and o["roles"]["cloud"]["id"] == by_env["AI_CLOUD_PROVIDER"]["id"]
+        assert all(p["locked"] and p["private"] for p in o["providers"])
+        listed = {p["env"]: p for p in c.get("/api/admin/ai-providers").json()["providers"]}
+        assert listed["AI_CLOUD_PROVIDER"]["policy"] == PROXY_LINE and listed["AI_PROVIDER"]["policy"] == SELF_HOSTED_LINE
+        assert listed["AI_CLOUD_PROVIDER"]["context_tokens"] == 32_768 and listed["AI_PROVIDER"]["context_tokens"] is None
+        assert c.patch("/api/admin/settings", json={"ai.route.labs": "off"}).status_code in (403, 409)  # locked by the environment

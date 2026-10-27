@@ -5,6 +5,55 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### For people using the app
+
+* **A cloud AI that goes through your admin's own server says so.** If your admin runs a LiteLLM proxy (or another server) that passes
+  your request on to a company's model, the consent sheet and the provider list now name the company: "Goes through your admin's LiteLLM
+  proxy to Anthropic. Anthropic receives what is sent, under its own terms; your admin can read it too." Nothing else you have agreed to
+  changes, and nobody is asked again for an AI they already agreed to. You are asked again for this one if your admin names a different
+  company.
+
+### For people who run a server
+
+* **A local AI and a cloud AI, both from the environment.** Until now only one provider could come from the environment (`AI_PROVIDER`);
+  a second one had to be added in the app. `AI_CLOUD_PROVIDER` adds the second one, and it is **always the cloud AI**: `AI_CLOUD_BASE_URL`,
+  `AI_CLOUD_API_KEY_FILE` (or `AI_CLOUD_API_KEY`), `AI_CLOUD_MODEL`, `AI_CLOUD_VISION_MODEL`, `AI_CLOUD_TIMEOUT_S`, `AI_CLOUD_MAX_TOKENS`,
+  `AI_CLOUD_CONTEXT_TOKENS`, `AI_CLOUD_STRUCTURED_OUTPUT`, `AI_CLOUD_REASONING_EFFORT` and `AI_CLOUD_UPSTREAM`, read, defaulted and checked like
+  the `AI_` variables of the same names. It is a second "Set by the server" row in Server administration → AI providers; it cannot be
+  edited or deleted there, and the cloud role cannot be changed there either (`409`, naming `AI_CLOUD_PROVIDER`). A server with only the
+  `AI_CLOUD_` variables is fine. With both set, `AI_PROVIDER` needs `AI_PROVIDER_ROLE=local`; `cloud` there, or no role, stops the start with a
+  message. `hermes` is refused for the cloud AI. The cloud AI may be on your LAN (a LiteLLM proxy with a cloud-only key); it is then listed in
+  `AI_PRIVATE_HOSTS` like every shared provider, and the start stops with a message saying so if it is not. Listing it does not make it the
+  local AI. **Lab report photos still go only to the local AI**: with the local AI unreachable, switched off or gone they fail, and they are
+  never sent to the cloud key; tests with two environment providers pin this. `AI_CLOUD_` variables without `AI_CLOUD_PROVIDER` give a start-up
+  warning. The [recipe in `docs/ai.md`](docs/ai.md#a-local-ai-and-a-cloud-ai-both-from-the-environment) has a full example (one LiteLLM proxy,
+  a local key and a cloud key, every `AI_ROUTE_*`), and says why photos stay `local` when they may show names. `deploy/.env.example`,
+  `deploy/compose.yaml`, the Quadlet and Kubernetes examples and the handbook's configuration page list the new variables.
+* **`AI_CLOUD_UPSTREAM` names the company a proxy forwards to.** A server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`,
+  `openai_compatible`) as the cloud AI forwards to a company, so "Runs on your admin's hardware" would be untrue. The company's plain name is
+  therefore required for it (letters, digits, spaces and `.` `&` `-`, at most 60 characters); the start stops without it. For `openai`,
+  `openrouter` and `nous_portal` it is ignored, with a warning. Changing it asks everyone again, as a new host does. No existing consent line
+  changed and `POLICY_VERSION` is the same, so nobody is asked again for a provider they already agreed to.
+* **The cloud AI's prompt budget is 32,768 tokens** (`AI_CLOUD_CONTEXT_TOKENS`) even when its preset is self-hosted, so a cloud model behind
+  LiteLLM is not held to the local 8,192 and keeps more candidate foods. The first provider's budget is as before.
+* **Schema step 20.** `ai_providers` gains `env_slot` (`main` for `AI_PROVIDER`, `cloud` for `AI_CLOUD_PROVIDER`) and `upstream`; the one-row unique
+  index for the provider the environment defines becomes one row per slot. The row you have today becomes `main` and nothing in it changes.
+  Take a backup before the first start, as for any release with a schema step.
+* **API.** `GET /api/admin/ai-providers` gives each provider `env` (`AI_PROVIDER` or `AI_CLOUD_PROVIDER` for a locked one) and `upstream`, and
+  the list `env_cloud_provider`; `GET /api/admin/ai-routing` gives `env_cloud` and `env` on each provider. A consent request carries `upstream`.
+  Nothing existing was removed.
+
+### For contributors
+
+* **`scripts/ai_eval.py --role local|cloud` and `--upstream NAME`.** `cloud` (the default for `openai`, `openrouter` and `nous_portal`) configures
+  the `AI_CLOUD_` provider, reads the key from `AI_CLOUD_API_KEY`, pins the features to `cloud` and uses the cloud prompt budget, so a run sends
+  what the server's cloud route sends (a test compares the two request bodies). A self-hosted preset with `--role cloud` needs `--upstream`.
+  The report's `provider` block records the `role` and the `upstream`, and the slowest-answer limit follows the role. See
+  [`docs/dev/ai-eval/README.md`](docs/dev/ai-eval/README.md).
+* New tests: `tests/test_ai_cloud_env.py`, `tests/test_ai_cloud_routing.py`, `tests/test_migration_m020.py`.
+
 ## 0.5.1 — 2026-10-27
 
 A security release. Nothing in the app changed: the image is rebuilt on a newer Chainguard Python base, which fixes a critical
