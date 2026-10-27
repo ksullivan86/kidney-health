@@ -351,7 +351,7 @@ def startup_lines(data: Mapping[str, Any]) -> list[str]:
 
     A feature that is off has no row and is never named. The live counts are not part of this: they need calls first."""
     reports = data["reports"]
-    if not reports["configured"]:
+    if not data["enabled"] or not reports["configured"]:
         return []
     lines = []
     if not reports["readable"]:

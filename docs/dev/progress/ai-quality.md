@@ -41,19 +41,21 @@ Two signals per routed feature, in one admin route and one admin screen section:
   `tests/test_ai_quality_reports.py` (pass).
 * `AI_EVAL_REPORTS_DIR` in `app/config.py` (`AiEnv.eval_reports_dir`).
 * `app/ai/routes.py`: `GET /api/admin/ai-quality`, the start-up call, and the `shown` count in the activity row.
+* `tests/test_ai_quality_api.py`: every outcome through the real routes, access, rows, start-up lines (34 tests, pass).
+* The screen: `app/static/js/views/ai_quality.js`, `ai.css` block, `ai.js` api entry and mount, `index.html`, `sw.js`;
+  `tests/test_ai_quality_ui.py` with `tests/js/quality_page.mjs` (pass). `docs/api/openapi.json` regenerated.
 
 ## In progress
 
-API and start-up tests (`tests/test_ai_quality_api.py`), then the screen.
+Docs (see Next). The AI-related pytest subset was running in the background when this was written; the full suite is
+still to run at the end.
 
 ## Next
 
-* config field, route, start-up lines, `shown` count
-* tests: outcome mapping, thresholds, window and cap, counts only, access, reports folder, start-up, UI (fake DOM)
-* UI module, CSS, index.html, sw.js
-* docs: ai.md, dev/ai-eval/README.md, deployment.md, .env.example, compose/quadlet/k8s comments, handbook, ARCHITECTURE.md,
-  CHANGELOG.md
-* openapi regeneration, all checks, final commit
+* docs: ai.md, dev/ai-eval/README.md, deployment.md, .env.example (+ compose passthrough), compose/quadlet/k8s comments,
+  handbook (configuration page, admin page), ARCHITECTURE.md (route row + one paragraph), CHANGELOG.md (Unreleased)
+* full pytest, safety marker, vectors, ruff, openapi check, generators, handbook check, git diff --check
+* final commit marks this note "Status: complete"
 
 ## Commands that reproduce the checks
 
