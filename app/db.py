@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
@@ -26,6 +27,8 @@ if TYPE_CHECKING:  # pragma: no cover
 log = logging.getLogger(f"{brand.LOGGER_NAME}.db")
 
 SCHEMA_VERSION_KEY = "schema_version"
+# The database and its -wal and -shm files: the owner and the owner's group (the image's 10001:0, OpenShift's GID 0).
+DB_FILE_MODE = 0o660
 
 META_DDL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -250,12 +253,47 @@ def migrate(conn: sqlite3.Connection, steps: Sequence["Step"] | None = None) -> 
     return applied
 
 
+def secure_database_files(path: Path | str) -> None:
+    """Set the database file and its ``-wal`` and ``-shm`` files to 0660, so only the owner and the group can read them.
+
+    The process umask would otherwise decide (0644 under the usual 022). SQLite gives the two side files the mode of
+    the main file when it creates them. Never stops the start: a file that stays open to "other" users (this
+    process does not own it, say) is reported in the log, as for ``secret.key``."""
+    base = str(path)
+    for name in (base, f"{base}-wal", f"{base}-shm"):
+        try:
+            info = os.stat(name)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            log.warning("could not check the mode of %s", name)
+            continue
+        mode = stat.S_IMODE(info.st_mode)
+        if mode == DB_FILE_MODE:
+            continue
+        try:
+            os.chmod(name, DB_FILE_MODE)
+            continue
+        except OSError:
+            pass
+        if mode & 0o006:
+            log.warning("%s is readable by other users (mode %o) and cannot be changed here; run: chmod 660 %s", name, mode, name)
+
+
 def init_db(path: Path | str) -> list[int]:
-    """Create the database file, apply the schema and pending migrations (idempotent)."""
+    """Create the database file, apply the schema and pending migrations (idempotent).
+
+    A new file is created with mode 0660 first, so the ``-wal`` and ``-shm`` files SQLite makes next to it get that mode
+    too; :func:`secure_database_files` then fixes a file that was made earlier under a looser umask."""
+    if str(path) not in ("", ":memory:") and not os.path.exists(path):
+        os.close(os.open(path, os.O_WRONLY | os.O_CREAT, DB_FILE_MODE))
+    secure_database_files(path)
     conn = connect(path)
     try:
         conn.execute("PRAGMA journal_mode = WAL")
-        return migrate(conn)
+        applied = migrate(conn)
+        secure_database_files(path)
+        return applied
     finally:
         conn.close()
 

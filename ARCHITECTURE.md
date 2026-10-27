@@ -23,6 +23,9 @@ The UI must say that targets come from the person's care team.
 * Frontend: static `index.html` + plain scripts and styles (v0.3: `js/`, `css/`; "Frontend modules") served by FastAPI.
   **No build step, no CDN, no external requests from the browser.** Works offline on a LAN.
 * One container image. All state lives in `DATA_DIR` (default `/data`) as `kidney.db`.
+  File modes do not depend on the umask: `Settings.ensure_data_dir` makes `DATA_DIR` `0770` (and removes "other" access from an
+  existing folder the process owns); `db.init_db` creates `kidney.db` at `0660` and `db.secure_database_files` sets it and its
+  `-wal` and `-shm` files to `0660`; `secret.key`, backups and exports are `0600`. A mode the app cannot fix is a log warning, never a failed start.
 * Tests: `pytest` with `httpx2` (Starlette `TestClient`; v0.3 moved the app from `httpx` to `httpx2`).
 
 ## Repository layout and file ownership

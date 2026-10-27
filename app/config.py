@@ -66,14 +66,18 @@ The image runs uvicorn with ``--no-proxy-headers``: ``X-Forwarded-*`` are applie
 from __future__ import annotations
 
 import ipaddress
+import logging
 import os
 import re
+import stat
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
 
 from . import brand
+
+log = logging.getLogger(f"{brand.LOGGER_NAME}.config")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FOODS_JSON = REPO_ROOT / "data" / "foods.json"
@@ -83,6 +87,27 @@ DEFAULT_HANDBOOK_DIR = REPO_ROOT / "handbook" / "site"
 DB_FILENAME = brand.DB_FILENAME
 SECRET_KEY_FILENAME = "secret.key"
 SECRET_KEY_MIN_LENGTH = 32
+# Who may open DATA_DIR: its owner and the owner's group (the image's 10001:0 and OpenShift's GID 0), nobody else.
+DATA_DIR_MODE = 0o770
+
+def _restrict_data_dir(path: Path, *, created: bool) -> None:
+    try:
+        info = path.stat()
+        mode = stat.S_IMODE(info.st_mode)
+        owned = not hasattr(os, "geteuid") or info.st_uid == os.geteuid()
+        if created and owned:
+            path.chmod(DATA_DIR_MODE)  # mkdir's mode is cut down by the umask
+        elif mode & 0o007 and owned:
+            path.chmod(mode & ~0o007)
+            log.warning("%s was open to other users (mode %o); removed their access (now %o)", path, mode, mode & ~0o007)
+        elif mode & 0o007:
+            log.warning(
+                "%s is open to other users (mode %o) and this process does not own it, so it cannot change that;"
+                " run: chmod o-rwx %s", path, mode, path,
+            )
+    except OSError as exc:
+        log.warning("could not check or set the mode of %s (%s); run: chmod 770 %s", path, exc, path)
+
 
 # Files that exist only inside an OCI container (podman / docker).
 _CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
@@ -331,9 +356,16 @@ class Settings:
         return self.data_dir / SECRET_KEY_FILENAME
 
     def ensure_data_dir(self) -> Path:
-        """Create ``DATA_DIR`` (and parents) if it does not exist yet."""
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        return self.data_dir
+        """Create ``DATA_DIR`` (and parents) if it does not exist yet, with mode 0770.
+
+        The process umask would otherwise decide (0755 under the usual 022), which lets every local user list and
+        open the database. A folder that already exists and is open to "other" loses that access, but only when this
+        process owns it. This never stops the start: a folder it cannot fix is reported in the log."""
+        path = self.data_dir
+        created = not path.exists()
+        path.mkdir(parents=True, exist_ok=True, mode=DATA_DIR_MODE)
+        _restrict_data_dir(path, created=created)
+        return path
 
     # ------------------------------------------------------------------ derived values
     @property
