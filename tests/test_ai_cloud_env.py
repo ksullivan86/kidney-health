@@ -131,9 +131,9 @@ def test_a_plain_company_name_is_accepted(name):
 
 
 @pytest.mark.parametrize("name", ["<b>Anthropic</b>", "Anthropic!", "Anth_ropic", "a" * 61, "-Anthropic", ".Anthropic", "Anthropic\nOpenAI",
-                                  "Anthropic (US)", "Antropic‮evil", "https://example.com", "Ünicode"])
+                                  "Anthropic [US]", "A; B; C; D", "Anthropic;", "Antropic‮evil", "https://example.com", "Ünicode"])
 def test_anything_else_is_refused_before_it_can_reach_a_screen(name):
-    with pytest.raises(ConfigError, match="AI_CLOUD_UPSTREAM must be the company's plain name"):
+    with pytest.raises(ConfigError, match="AI_CLOUD_UPSTREAM must name the company"):
         load_ai_env({"AI_CLOUD_UPSTREAM": name})
 
 
@@ -279,7 +279,7 @@ def test_a_bad_environment_stops_the_start_through_load_settings(tmp_path):
     env = {"DATA_DIR": str(tmp_path / "d"), "AI_PROVIDER": "litellm", "AI_CLOUD_PROVIDER": "litellm"}
     with pytest.raises(ConfigError, match="AI_PROVIDER needs a role"):
         create_app(load_settings(env))
-    with pytest.raises(ConfigError, match="AI_CLOUD_UPSTREAM must be"):
+    with pytest.raises(ConfigError, match="AI_CLOUD_UPSTREAM must name"):
         load_settings({**env, "AI_CLOUD_UPSTREAM": "<script>"})
 
 
@@ -804,3 +804,22 @@ def test_the_example_with_a_local_and_a_cloud_ai_starts_and_does_what_it_says(tm
         assert listed["AI_CLOUD_PROVIDER"]["policy"] == PROXY_LINE and listed["AI_PROVIDER"]["policy"] == SELF_HOSTED_LINE
         assert listed["AI_CLOUD_PROVIDER"]["context_tokens"] == 32_768 and listed["AI_PROVIDER"]["context_tokens"] is None
         assert c.patch("/api/admin/settings", json={"ai.route.labs": "off"}).status_code in (403, 409)  # locked by the environment
+
+
+@pytest.mark.parametrize("raw, names", [
+    ("OpenAI (ChatGPT); Anthropic (Claude)", ["OpenAI (ChatGPT)", "Anthropic (Claude)"]),
+    ("OpenAI;Anthropic", ["OpenAI", "Anthropic"]),
+    ("Anthropic", ["Anthropic"]),
+])
+def test_a_chain_of_companies_is_named_in_order(raw, names):
+    from app.config import upstream_names
+    assert upstream_names(raw) == names
+    assert load_ai_env({"AI_CLOUD_UPSTREAM": raw}).cloud.upstream == "; ".join(names)
+
+
+def test_the_consent_line_names_every_company_of_a_chain_in_order():
+    from app.ai.presets import PRESETS, proxy_line
+    line = proxy_line(PRESETS["litellm"], "OpenAI (ChatGPT); Anthropic (Claude)")
+    assert line == ("Goes through your admin's LiteLLM proxy to OpenAI (ChatGPT), or to Anthropic (Claude) when the one before is busy or "
+                    "down. Each company receives what is sent to it, under its own terms; your admin can read it too.")
+    assert proxy_line(PRESETS["litellm"], "Anthropic").startswith("Goes through your admin's LiteLLM proxy to Anthropic. Anthropic receives")

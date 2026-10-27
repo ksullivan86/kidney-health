@@ -20,6 +20,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **A chain of companies behind one proxy.** `AI_CLOUD_UPSTREAM` can name up to 3 companies in the order the proxy tries them, separated by
+  `;` (`OpenAI (ChatGPT); Anthropic (Claude)`), and brackets are allowed. The consent sheet then names each one and says when the next is
+  used. One name works as before. The activity list, usage counts, "How well each AI is doing" and `ai_eval` see the chain as one provider
+  ([docs/ai.md](docs/ai.md#a-proxy-that-falls-back-from-one-company-to-another)).
+* **Meal ideas and describe a meal: the answer comes before "nothing fits".** The answer format now lists the ideas (or the order, the
+  swaps, the plan, the foods) before the status and the refusal. A model that writes the keys in order then works out its ideas before it
+  decides that nothing fits. With the refusal first, a small local model often took that exit at once. `PROMPT_VERSION` is `2026-10-27.1`,
+  so run `scripts/ai_eval.py` again for the models you use; reports for the old version show as "for an older version".
 * **Security: tokens made while sign-in was off no longer survive switching it on.** With `AUTH_MODE=none` anyone who can reach the server is
   user 1, an admin, and can make assistant (`kha_`) and phone shortcut (`khd_`) tokens that last up to a year. After you switched to `local`,
   those tokens still worked. Now any change of `AUTH_MODE` since the last start revokes every active token of both kinds, for every person.

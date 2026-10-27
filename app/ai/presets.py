@@ -169,9 +169,19 @@ def get(name: str) -> Preset:
         raise KeyError(f"unknown AI preset {name!r}; use one of {', '.join(PRESETS)}") from None
 
 
+PROXY_CHAIN_POLICY = ("Goes through your admin's {proxy} to {first}{rest}. Each company receives what is sent to it, under its own "
+                      "terms; your admin can read it too.")
+
+
 def proxy_line(preset: Preset, upstream: str) -> str:
-    """The consent line for a server your admin runs that forwards to ``upstream`` (a company's plain name)."""
-    return PROXY_POLICY.format(proxy=PROXY_NAMES.get(preset.name, "proxy"), upstream=upstream)
+    """The consent line for a server your admin runs that forwards to ``upstream``: one company's plain name, or several separated by
+    ";" in the order the proxy tries them (the next only when the one before is busy or down)."""
+    proxy = PROXY_NAMES.get(preset.name, "proxy")
+    names = [n.strip() for n in upstream.split(";") if n.strip()]
+    if len(names) <= 1:
+        return PROXY_POLICY.format(proxy=proxy, upstream=upstream.strip())
+    rest = "".join(f", or to {n} when the one before is busy or down" for n in names[1:])
+    return PROXY_CHAIN_POLICY.format(proxy=proxy, first=names[0], rest=rest)
 
 
 def policy_line(preset: Preset, *, scope: str, upstream: str | None = None) -> str:

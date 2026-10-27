@@ -175,8 +175,22 @@ class AiEnv:
     eval_reports_dir: str | None = None  # AI_EVAL_REPORTS_DIR
 
 
-UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&-]{0,59}$")  # a company's plain name, shown to people in the consent line
-UPSTREAM_MAX_CHARS = 60
+# A company's plain name, shown to people in the consent line. A proxy that falls back from one company to another names them in
+# order, separated by ";" ("OpenAI (ChatGPT); Anthropic (Claude)"): the first is used, the next only when the one before is busy or down.
+UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&()-]{0,59}$")
+UPSTREAM_MAX_CHARS = 60  # all names with their separators (the ai_providers.upstream column holds 60)
+UPSTREAM_MAX_NAMES = 3
+
+
+def upstream_names(raw: str) -> list[str]:
+    """The company names in ``AI_CLOUD_UPSTREAM``, in order (``ConfigError`` when one is not a plain name or there are too many)."""
+    names = [part.strip() for part in raw.split(";")]
+    if (len(raw) > UPSTREAM_MAX_CHARS or not 1 <= len(names) <= UPSTREAM_MAX_NAMES
+            or not all(UPSTREAM_PATTERN.fullmatch(n) for n in names)):
+        raise ConfigError(f"AI_CLOUD_UPSTREAM must name the company (or up to {UPSTREAM_MAX_NAMES}, in the order the proxy tries them, "
+                          f"separated by ;): letters, digits, spaces and . & ( ) - only, at most {UPSTREAM_MAX_CHARS} characters in all "
+                          f"(for example Anthropic, or OpenAI (ChatGPT); Anthropic (Claude)), not {raw[:80]!r}.")
+    return names
 
 
 @dataclass(frozen=True)
@@ -212,9 +226,8 @@ def load_ai_cloud_env(env: Mapping[str, str]) -> AiCloudEnv:
     key, _, _ = read_secret(env, "AI_CLOUD_API_KEY")
     key = (key or "").strip() or None
     upstream = _raw(env, "AI_CLOUD_UPSTREAM")
-    if upstream is not None and not UPSTREAM_PATTERN.fullmatch(upstream):
-        raise ConfigError(f"AI_CLOUD_UPSTREAM must be the company's plain name: letters, digits, spaces and . & - only, at most "
-                          f"{UPSTREAM_MAX_CHARS} characters (for example Anthropic), not {upstream[:80]!r}.")
+    if upstream is not None:
+        upstream = "; ".join(upstream_names(upstream))
     return AiCloudEnv(
         provider=(_raw(env, "AI_CLOUD_PROVIDER") or "").lower() or None,
         base_url=_raw(env, "AI_CLOUD_BASE_URL"),

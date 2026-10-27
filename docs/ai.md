@@ -388,7 +388,7 @@ Environment only (never editable at run time; a bad value stops the start with a
 | `AI_CLOUD_CONTEXT_TOKENS` | `32768` | Prompt budget (1024–2000000), **even for a self-hosted preset such as `litellm`**: a cloud model sits behind it, and the local 8192 would leave out candidate foods. `AI_CONTEXT_TOKENS` is unchanged |
 | `AI_CLOUD_STRUCTURED_OUTPUT` | `auto` | As `AI_STRUCTURED_OUTPUT` |
 | `AI_CLOUD_REASONING_EFFORT` | the preset's | As `AI_REASONING_EFFORT` |
-| `AI_CLOUD_UPSTREAM` | unset | **Required** when the preset is a server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`, `openai_compatible`): the plain name of the company it forwards to, for example `Anthropic`. Letters, digits, spaces and `.` `&` `-`, at most 60 characters, starting with a letter or digit. The consent sheet and the provider list use it. A new name asks everyone again. For `openai`, `openrouter` and `nous_portal` it is ignored, with a warning |
+| `AI_CLOUD_UPSTREAM` | unset | **Required** when the preset is a server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`, `openai_compatible`): the plain name of the company it forwards to, for example `Anthropic`. A proxy that falls back from one company to another names them in the order it tries them, separated by `;`, at most 3: `OpenAI (ChatGPT); Anthropic (Claude)`. Each name has letters, digits, spaces and `.` `&` `(` `)` `-`, starting with a letter or digit, and all of it at most 60 characters. The consent sheet and the provider list use it. A new name asks everyone again. For `openai`, `openrouter` and `nous_portal` it is ignored, with a warning |
 | `AI_PRIVATE_HOSTS` | empty | `host:port`, `ip:port`, `[ipv6]:port` or a CIDR that **shared** providers may reach on private, loopback, CGNAT, ULA or link-local addresses. No wildcard; the old `ALLOW_PRIVATE_AI_HOSTS` is refused |
 | `AI_DENY_CIDRS` | empty | Addresses no AI call may reach, in any scope: add your own public (WAN) address |
 | `AI_HTTP_PROXY` | unset | Proxy for AI calls. `HTTP(S)_PROXY` is **ignored** for AI on purpose; with a proxy, public names are resolved by the proxy and personal server addresses are off |
@@ -602,6 +602,25 @@ and `request`, the sheet Settings shows to agree later). A `409 consent_required
 cloud provider's request, with `given` and the rule); `?dry_run=true` adds `cloud_fallback` (the second request, its `message`, and
 whether the person agreed); an answer adds `cloud_fallback` only after a fallback or when it was needed but not possible
 (`used`, `answered`, `reason` such as `no_consent` or `quota_exhausted`, `message`, `local`, `cloud` and the two audit ids).
+
+### A proxy that falls back from one company to another
+
+With `AI_CLOUD_UPSTREAM=OpenAI (ChatGPT); Anthropic (Claude)` the consent sheet says: "Goes through your admin's LiteLLM proxy to OpenAI
+(ChatGPT), or to Anthropic (Claude) when the one before is busy or down. Each company receives what is sent to it, under its own terms;
+your admin can read it too." Name every company the proxy can fall back to, and no other. The app cannot see which one answered: the
+proxy decides. So these all treat the chain as one provider with one model, the alias the app calls:
+
+* the AI activity list (the host is your proxy; the model is the alias);
+* the daily usage counts;
+* "How well each AI is doing" and an `ai_eval` report, which mix the answers of every company in the chain.
+
+To judge each company on its own, run `scripts/ai_eval.py` against a proxy alias that points at that company only.
+
+### Local models stay a real choice
+
+Every diet feature (meal ideas, swaps, the day plan, describe a meal and Ask) works with a local AI as well as a cloud one. What makes a
+model fit for a feature is its `ai_eval` result, never its size or where it runs. "How well each AI is doing" only advises: it never
+blocks a feature or moves it to another AI. Lab report photos are the one rule the other way: they only ever go to the local AI.
 
 ### How well each AI is doing
 

@@ -86,7 +86,7 @@ for extra in (ROOT, ROOT / "tests"):
 from app.ai import guard  # noqa: E402
 from app.ai.presets import PRESETS, get as get_preset  # noqa: E402
 from app.ai.prompts import PROMPT_VERSION  # noqa: E402
-from app.config import UPSTREAM_PATTERN, AiCloudEnv, AiEnv  # noqa: E402
+from app.config import AiCloudEnv, AiEnv, ConfigError, upstream_names  # noqa: E402
 
 GOLDEN = ROOT / "tests" / "ai_golden"
 FOODS_JSON = ROOT / "data" / "foods.json"
@@ -141,8 +141,12 @@ class Options:
         if self.role not in (None, "local", "cloud"):
             return f"--role must be local or cloud, not {self.role!r}"
         role = self.resolved_role
-        if self.upstream is not None and not UPSTREAM_PATTERN.fullmatch(self.upstream):
-            return "--upstream must be the company's plain name: letters, digits, spaces and . & - only, at most 60 characters"
+        if self.upstream is not None:
+            try:
+                upstream_names(self.upstream)
+            except ConfigError:
+                return ("--upstream must be the company's plain name, or up to 3 separated by ; in the order the proxy tries them: "
+                        "letters, digits, spaces and . & ( ) - only, at most 60 characters")
         if role == "cloud" and preset.kind == "agent":
             return f"--provider {preset.name} cannot be the cloud role: a Hermes agent is only for a local, tool-free profile"
         if role == "cloud" and preset.can_proxy and not self.upstream:
