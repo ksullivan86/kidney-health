@@ -23,6 +23,7 @@ PASSTHROUGH = re.compile(r"^ {6}([A-Z][A-Z0-9_]*): \$\{\1:-\}$", re.M)
 V03_KEYS = {
     "OFF_ENABLED", "OFF_CONTACT", "GUIDANCE_ENABLED", "AI_ENABLED", "AI_PROVIDER", "AI_BASE_URL", "AI_MODEL",
     "AI_VISION_MODEL", "AI_PRIVATE_HOSTS", "HANDBOOK_PUBLIC_URL", "PASSWORD_BREACH_CHECK",
+    "AI_CLOUD_PROVIDER", "AI_CLOUD_BASE_URL", "AI_CLOUD_MODEL", "AI_CLOUD_VISION_MODEL", "AI_CLOUD_UPSTREAM",
 }
 EGRESS_HOSTS = ("api.nal.usda.gov", "world.openfoodfacts.org", "api.pwnedpasswords.com")
 
@@ -44,10 +45,17 @@ def test_no_secret_is_passed_as_an_environment_variable():
     for text in (COMPOSE, ENV_EXAMPLE, QUADLET, K8S):
         active = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
         assert not re.search(r"\bAI_API_KEY\s*[:=]", active)
+        assert not re.search(r"\bAI_CLOUD_API_KEY\s*[:=]", active)
     # The cloud AI key is shown only as a file secret, the way SECRET_KEY and the USDA key are given.
     assert "# AI_API_KEY_FILE: /run/secrets/ai_api_key" in COMPOSE and "#   file: ./secrets/ai_api_key" in COMPOSE
     assert "# Environment=AI_API_KEY_FILE=/run/secrets/ai_api_key" in QUADLET
     assert "value: /run/secrets/kidney-health/ai_api_key" in K8S
+    # The second provider's key (AI_CLOUD_PROVIDER, the cloud AI) is a file secret too.
+    assert "# AI_CLOUD_API_KEY_FILE: /run/secrets/ai_cloud_api_key" in COMPOSE and "#   file: ./secrets/ai_cloud_api_key" in COMPOSE
+    assert "# - ai_cloud_api_key" in COMPOSE
+    assert "# Environment=AI_CLOUD_API_KEY_FILE=/run/secrets/ai_cloud_api_key" in QUADLET
+    assert "AI_CLOUD_API_KEY_FILE=/run/secrets/kidney-health/ai_cloud_api_key" in K8S
+    assert "ai_cloud_api_key" in (REPO / "deploy" / "k8s" / "secret.example.yaml").read_text(encoding="utf-8")
 
 
 def test_every_deploy_profile_names_the_optional_egress():
@@ -72,6 +80,7 @@ def test_blank_pass_through_values_mean_unset(tmp_path):
 
     ai = config.load_ai_env(env)
     assert (ai.provider, ai.base_url, ai.model, ai.vision_model, ai.private_hosts) == (None, None, None, None, ())
+    assert ai.cloud == config.AiCloudEnv()  # the cloud AI's blank pass-throughs are unset too
 
     store = SettingsStore(env=env)
     assert store.validate_env_locks() == []

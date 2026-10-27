@@ -769,6 +769,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 17 | `m017_food_preference_source.py` | food preferences | `food_preferences.source` (`person` or `ask`, back-filled `person`; `assistant` later, code only) and `updated_at` (back-filled `created_at`); `preference` takes `like`, `less`, `not_for_me`, `neutral`, still without a `CHECK` ("Food preferences" under "M2 API: guidance" below). |
 | 18 | `m018_body_measurements.py` | weight and blood pressure | `weights` and `blood_pressures`: a person's weighings and readings by date, kilograms and mmHg, a `source_key` an import de-duplicates on, no `CHECK` on a context or a source ("Weight and blood pressure" below). |
 | 19 | `m019_body_token.py` | phone push (note 12) | `weights.api_token_id` and `blood_pressures.api_token_id` (`REFERENCES api_tokens(id) ON DELETE SET NULL`, NULL for every earlier row) and two partial indexes `(user_id, api_token_id) WHERE api_token_id IS NOT NULL`; no `(user_id, date, time)` index (step 18's `(user_id, date)` serves the same-reading check) ("Device tokens and `/push/v1`" below). |
+| 20 | `m020_ai_env_slots.py` | two AI providers from the environment | `ai_providers.env_slot` (`main` or `cloud`; the row locked today becomes `main`) and `ai_providers.upstream` (who a proxy forwards to, at most 60 characters); the one-locked-row unique index is replaced by one locked row per slot ("Environment providers: main and cloud" under "M2 API: AI and photos" below). |
 
 ## Backend file ownership
 
@@ -780,7 +781,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Handbook (parallel) | `handbook/**`, `scripts/build_handbook.py`, `tests/test_handbook_content.py` |
 | M2 targets | `app/targets.py`, `app/target_rules.py`, `app/kidney_function.py`, `app/units.py`, `app/labs.py`, `app/migrations/m004_*`, `suggest_targets` wrapper in `app/rules_kidney.py`, profile fields in `app/profile.py`, `docs/research/targets_by_stage.json`, `docs/diet-guide.md`, its tests |
 | M2 guidance | `app/guidance/**`, `data/combos.json`, `app/migrations/m005_*`, `POST /api/log/batch` + `purpose`/`client_id` handling in `app/log.py`, `scripts/bench_guidance.py`, `docs/guidance.md`, `tests/guidance/**` |
-| M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
+| M2 ai | `app/ai/**`, `app/vision.py`, `app/imagecheck.py` (photo routes and checks, moved here from barcode-vision so all AI-dependent code is together), `app/migrations/m006_*`, `app/migrations/m020_*`, AI settings keys, `docs/ai.md`, the "Photos" section of `docs/barcode-and-photos.md`, `deploy/compose.ai-ollama.yaml`, `scripts/ai_eval.py`, `docs/dev/ai-eval/`, its tests and fixtures (`tests/test_ai_*.py`, `tests/test_vision_api.py`, `tests/test_imagecheck.py`, `tests/ai_golden/`, `tests/fixtures/ai/`) |
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/rules_kidney.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
 | Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B, the screens: `js/engine/body_ui.js` (`KH.bodyUi`), `js/views/body.js` (`KH.body`: Today, the sheets, the Settings section, the Profile hints), `js/views/body_trends.js` (`KH.bodyTrends`), `css/body.css`, the cards, sheets and `#set-body` in `index.html`, the body section of `js/engine/visitprep.js` and `js/views/visit.js`, `handbook/docs/app/weight-and-blood-pressure.md`, `tests/test_body_ui*.py`, `tests/js/body_ui_runner.mjs`, `tools/e2e/body.py` |
@@ -2169,7 +2170,11 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   features off), `AI_TIMEOUT_S` (preset read timeout), `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500,
   64–32768), `AI_STRUCTURED_OUTPUT` (`auto` | `json_schema` | `json_object` | `prompt`), `AI_REASONING_EFFORT`,
   `AI_CONTEXT_TOKENS` (8192 self-hosted/agent/custom, 32768 cloud), `AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
-  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB); and the speech-to-text
+  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB); the **second environment
+  provider, always the cloud AI** (`AiCloudEnv`, `AiEnv.cloud`; "Environment providers: main and cloud" below):
+  `AI_CLOUD_PROVIDER`, `AI_CLOUD_BASE_URL`, `AI_CLOUD_API_KEY[_FILE]`, `AI_CLOUD_MODEL`, `AI_CLOUD_VISION_MODEL`,
+  `AI_CLOUD_TIMEOUT_S` (5–600), `AI_CLOUD_MAX_TOKENS` (1500, 64–32768), `AI_CLOUD_CONTEXT_TOKENS` (32768, 1024–2000000),
+  `AI_CLOUD_STRUCTURED_OUTPUT` (`auto`), `AI_CLOUD_REASONING_EFFORT`, `AI_CLOUD_UPSTREAM`; and the speech-to-text
   server of the Ask microphone, `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY[_FILE]`, `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100),
   `STT_MAX_AUDIO_BYTES` (1.5 MiB; `Settings.max_audio_bytes`; "Voice input" below). A bad
   value stops the start with a message naming the variable; `ALLOW_PRIVATE_AI_HOSTS` is refused (no alias,
@@ -2180,8 +2185,8 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   `openai_compatible` (custom). Each fixes the token field, structured mode, temperature, reasoning
   effort, read timeout and extra body (OpenAI `store: false`; OpenRouter `provider: {data_collection:
   "deny", require_parameters: true}` and `zdr` with `AI_OPENROUTER_ZDR`).
-* **Providers** are rows of `ai_providers`: the env provider (`locked = 1`, kept in step with the
-  environment at start-up; its key stays in the environment, `probe_json.key_fp` is an HMAC that tells a
+* **Providers** are rows of `ai_providers`: the env providers (`locked = 1`, at most one per `env_slot`, kept in step with the
+  environment at start-up; their keys stay in the environment, `probe_json.key_fp` is an HMAC that tells a
   changed key), admins' shared providers, and at most one per person (`scope = 'user'`). Keys are sealed
   with `Keyring.seal(purpose="ai_provider:<id>", owner=<owner id or None>)` and shown only as
   `{set, last4}` (last 4 for keys of ≥ 20 characters), `{set, source: "env", locked: true}` or
@@ -2192,6 +2197,39 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   `users.can_use_shared`); else none. A failing own provider **never** falls back to a shared one. With routing,
   a feature pinned to `local` or `cloud` takes the shared provider that holds that role instead of the person's
   shared choice ("Privacy tiers: roles and routing" below).
+
+* **Environment providers: main and cloud** (schema step 20, `m020_ai_env_slots.py`). Two providers can come from the
+  environment. `ai_providers.env_slot` is `main` for the row `AI_PROVIDER` defines and `cloud` for the row `AI_CLOUD_PROVIDER`
+  defines (NULL for every other row; the step makes the row that is locked today `main`); `locked` keeps its meaning (read-only here),
+  and the unique index `ai_providers_one_per_env_slot` allows one locked row per slot (a locked row without a slot counts as `main`).
+  `ai_providers.upstream` holds `AI_CLOUD_UPSTREAM`. `config.env_slot(settings, slot)` gives the values of a slot with the defaults
+  applied (the cloud slot: `AI_CLOUD_MAX_TOKENS` 1500, `AI_CLOUD_STRUCTURED_OUTPUT` `auto`, **`AI_CLOUD_CONTEXT_TOKENS` 32768 whatever the
+  preset's kind**; the main slot is unchanged: `AI_CONTEXT_TOKENS`, else the preset's), `config.check_env` checks them and
+  `config.sync_env_provider` writes the rows at start-up (`routes.startup`). The key of a locked row is read from the environment by
+  slot (`config.env_key`), never stored; the connection test's `key_fp` is the fingerprint of that key.
+  * *Start-up checks* (`ConfigError` unless a warning is named): `AI_CLOUD_PROVIDER` with `AI_PROVIDER_ROLE=cloud` (two cloud
+    providers); `AI_PROVIDER` without `AI_PROVIDER_ROLE` while `AI_CLOUD_PROVIDER` is set (it must be `local`); `hermes` in the cloud
+    slot; an unknown preset, a missing address, model or key, a bad structured mode or reasoning effort (each naming the `AI_CLOUD_`
+    variable); an address `netpolicy.check_url(…, "shared", …)` refuses, so a private address or plain `http://` that is not in
+    `AI_PRIVATE_HOSTS` stops the start with a message naming it (the cloud AI may sit on a private host, subject to
+    `AI_PRIVATE_HOSTS` like every shared provider; `AI_DENY_CIDRS` and `AI_HTTP_PROXY` apply as to every shared provider);
+    `AI_CLOUD_UPSTREAM` missing when the preset `can_proxy` (kind `self_hosted` or `custom`); `AI_CLOUD_UPSTREAM` that is not a plain
+    name (`config.UPSTREAM_PATTERN`: a letter or digit, then letters, digits, spaces and `.&-`, at most 60 characters). Warnings: an
+    `AI_CLOUD_` value without `AI_CLOUD_PROVIDER`; `AI_CLOUD_UPSTREAM` with a cloud-kind preset (ignored, stored as NULL).
+  * *Sync* (`_sync_slot`): an unset variable deletes its row (consents cascade); a changed host (`host:port`) or a changed
+    `upstream` deletes that provider's consents; any changed value, or a key whose fingerprint differs from the stored test's, clears
+    the connection test; a restart with the same environment changes nothing.
+  * *Roles*: `routing.role_row` gives the `cloud` role to the `cloud` slot's row whenever it exists, the role `AI_PROVIDER_ROLE` names to
+    the main row, and never lets a setting give a locked row another role. `routing.plan` answers `409` (`locked`) for any change of
+    `cloud_provider` while `AI_CLOUD_PROVIDER` is set (the message names it), and for naming that row as the local AI. The cloud row is
+    never the local AI, so `labs` (local-only) can never be served by it: with no usable local AI the feature is off
+    (`no_local_provider`); `tests/test_ai_cloud_routing.py` pins this with two environment providers and a transport that records
+    connections.
+  * *Consent line*: `presets.policy_line(preset, scope, upstream)` returns, for a shared self-hosted or custom preset with an
+    upstream, the new line `PROXY_POLICY` ("Goes through your admin's LiteLLM proxy to Anthropic. Anthropic receives what is sent,
+    under its own terms; your admin can read it too."; other presets say "your admin's proxy"). No existing line changed, so
+    `POLICY_VERSION` is the same and nobody is asked again; `ProviderConfig.upstream` carries the name to `consent_request` and
+    `routing.provider_summary`, `provider_view` gives `env` (`AI_PROVIDER` or `AI_CLOUD_PROVIDER`) and `upstream`.
 
 ### Routes
 
@@ -2220,13 +2258,13 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `PUT /api/me/ai/provider` *(re-auth)* | `{preset, model, base_url?, vision_model?, api_key?, remove_key?}` → the view; `403` when personal providers are off; `api_key` write-only |
 | `DELETE /api/me/ai/provider` *(re-auth)* | → 204 (`provider` falls back to `auto`) |
 | `POST /api/me/ai/probe` | → `{probe}`: Test connection for the person's own provider (5 per hour; counted in the usage) |
-| `GET /api/admin/ai-providers` | → `{providers: [Provider], presets, private_hosts, deny_cidrs, proxy, env_provider, writable, voice: {configured, enabled, host?, model?, key_set?, local?, daily_limit?, max_seconds?, max_bytes?, problem?}}` (the transcription server read-only; its key never) |
+| `GET /api/admin/ai-providers` | → `{providers: [Provider (+ `env`: `AI_PROVIDER` \| `AI_CLOUD_PROVIDER` \| null, `upstream`)], presets, private_hosts, deny_cidrs, proxy, env_provider, env_cloud_provider, writable, voice: {configured, enabled, host?, model?, key_set?, local?, daily_limit?, max_seconds?, max_bytes?, problem?}}` (the transcription server read-only; its key never) |
 | `POST /api/admin/ai-voice/probe` *(re-auth)* | → `{probe: {ok, latency_ms} \| {ok: false, error, message}}`: one second of silence through the transcription transport (20 per hour with the other tests; 404 unless AI is on and `STT_BASE_URL` is set; the answer's text is neither returned nor kept) |
 | `POST /api/admin/ai-providers` *(re-auth)* | `{preset, model, label?, base_url?, vision_model?, api_key?, timeout_s?, max_tokens?, context_tokens?, structured, reasoning_effort?, enabled}` → 201 `Provider` |
-| `PUT /api/admin/ai-providers/{id}` *(re-auth)* | same body (+ `remove_key`) → `Provider`; `409` for the env provider; a new host deletes its consents |
-| `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for the env provider |
+| `PUT /api/admin/ai-providers/{id}` *(re-auth)* | same body (+ `remove_key`) → `Provider`; `409` for an env provider (the message names `AI_PROVIDER` or `AI_CLOUD_PROVIDER`); a new host deletes its consents |
+| `DELETE /api/admin/ai-providers/{id}` *(re-auth)* | → 204; `409` for an env provider |
 | `POST /api/admin/ai-providers/{id}/probe` *(re-auth)* | → `{probe, provider}` (20 per hour; may show the first 300 characters of an error body, shared providers only) |
-| `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env, allowed}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked}], env_role, as_before, defaults, writable}` |
+| `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env, allowed}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked, env}], env_role, env_cloud, as_before, defaults, writable}` |
 | `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe: "local" \| "cloud" \| "off" \| "any" \| "local_then_cloud", chat: "local" \| "cloud" \| "off" \| "any", labs: "local" \| "off", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 no_fallback` (`local_then_cloud` for `chat`), `400 local_only` (`cloud`, `any` or `local_then_cloud` for `labs`), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
 | `GET /api/admin/ai-usage` | `days` 1–366 (30) → `{days, usage: [{user_id, username, provider_id, key_scope, requests, prompt_tokens, completion_tokens}]}` (counts only, never content) |
 
@@ -2289,7 +2327,7 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   default `local`; env locks `AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`), `ai.route.labs`
   (`local` \| `off` only, default `local`, env lock `AI_ROUTE_LABS`) and
   `ai.route.local_provider`, `ai.route.cloud_provider` (a shared provider id, 0 = none; ids are never reused because
-  `ai_providers.id` is `AUTOINCREMENT`). The environment provider holds the role `AI_PROVIDER_ROLE` names and no other.
+  `ai_providers.id` is `AUTOINCREMENT`). The environment provider `AI_PROVIDER` holds the role `AI_PROVIDER_ROLE` names and no other; the one `AI_CLOUD_PROVIDER` defines holds `cloud` and no other.
   All seven are in `NO_SIGNIN_ENV_ONLY`; Server settings shows a pointer for them (`ROUTING_GROUP`), the table is the
   place to edit.
 * **Resolution** (`routing.resolve_feature(feature)`): AI off or not opted in as before; route `off` → `feature_off`

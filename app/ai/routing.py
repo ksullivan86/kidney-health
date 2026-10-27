@@ -2,7 +2,10 @@
 
 The app can have several shared providers at once. An admin gives at most one of them the role **local**
 (a host on the private network that :mod:`app.ai.netpolicy` accepts, such as Ollama on a home GPU) and at most
-one the role **cloud** (anything else). Each AI feature is then pinned to a role:
+one the role **cloud** (anything else). Both can come from the environment: ``AI_PROVIDER`` with ``AI_PROVIDER_ROLE=local``,
+and ``AI_CLOUD_PROVIDER``, whose role is always cloud (a LiteLLM proxy on the LAN may be the cloud AI; it is then listed in
+``AI_PRIVATE_HOSTS`` like any shared provider, but it is not the local AI and never serves ``labs``). Each AI feature is then
+pinned to a role:
 
 =============  ==========================================================  ====================
 feature        what it covers                                              consent purpose
@@ -120,13 +123,16 @@ def allowed_routes(feature: str) -> tuple[str, ...]:
 def role_row(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, role: str) -> sqlite3.Row | None:
     """The shared provider that holds ``role``, or None.
 
-    The environment provider holds the role ``AI_PROVIDER_ROLE`` names (a server without sign-in cannot use the
-    admin screen), and then holds no other; any other shared provider holds the role the setting names."""
+    The environment provider ``AI_CLOUD_PROVIDER`` is always the cloud AI, and holds no other role. The environment provider
+    ``AI_PROVIDER`` holds the role ``AI_PROVIDER_ROLE`` names (a server without sign-in cannot use the admin screen), and then
+    holds no other; any other shared provider holds the role the setting names."""
     env_role = settings.ai.provider_role
-    locked = K.shared_rows(conn)[:1]
-    env_row = locked[0] if locked and locked[0]["locked"] else None
-    if env_row is not None and env_role == role:
-        return env_row
+    cloud_env = K.env_row(conn, "cloud")
+    if role == "cloud" and cloud_env is not None:
+        return cloud_env
+    main_env = K.env_row(conn, "main")
+    if main_env is not None and env_role == role:
+        return main_env
     try:
         provider_id = int(store.get(conn, role_key(role)) or 0)
     except (TypeError, ValueError):
@@ -136,8 +142,8 @@ def role_row(conn: sqlite3.Connection, store: SettingsStore, settings: Settings,
     row = K.provider_row(conn, provider_id)
     if row is None or row["scope"] != "shared":
         return None
-    if row["locked"] and env_role:
-        return None
+    if row["locked"] and (K.env_slot_of(row) == "cloud" or env_role):
+        return None  # an environment provider's role is the environment's to give, never a setting's
     return row
 
 
@@ -290,7 +296,7 @@ def provider_summary(cfg: Any) -> dict[str, Any]:
     from .presets import policy_line
 
     return {"id": cfg.id, "label": cfg.label, "host": cfg.host, "model": cfg.model, "vision_model": cfg.vision_model,
-            "scope": cfg.scope, "kind": cfg.preset_def.kind, "policy": policy_line(cfg.preset_def, scope=cfg.scope)}
+            "scope": cfg.scope, "kind": cfg.preset_def.kind, "policy": policy_line(cfg.preset_def, scope=cfg.scope, upstream=cfg.upstream)}
 
 
 def route_view(conn: sqlite3.Connection, user_id: int, feature: str, resolved: K.Resolved, *, consent: bool = True) -> dict[str, Any]:
@@ -374,9 +380,11 @@ def overview(conn: sqlite3.Connection, store: SettingsStore, settings: Settings,
     for row in K.shared_rows(conn):
         providers.append({"id": int(row["id"]), "label": row["label"], "host": parse_base_url(row["base_url"]).display_host,
                           "private": is_private(row, policy), "role": role_of(conn, store, settings, row),
-                          "photos": bool(row["vision_model"]), "usable": K.usable(row), "locked": bool(row["locked"])})
+                          "photos": bool(row["vision_model"]), "usable": K.usable(row), "locked": bool(row["locked"]),
+                          "env": K.env_var(row)})
     return {
         "features": features, "roles": roles, "providers": providers, "env_role": settings.ai.provider_role,
+        "env_cloud": bool(settings.ai.cloud.provider),  # AI_CLOUD_PROVIDER is set: the cloud AI is the server's own and is fixed
         "as_before": any(f["route"] == "any" for f in features),
         "defaults": {f: "local" for f in FEATURES},
         "writable": settings.auth_mode != "none",
@@ -417,6 +425,9 @@ def plan(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, pol
     env_role = settings.ai.provider_role
     for role, provider_id in providers.items():
         key = role_key(role)
+        if role == "cloud" and settings.ai.cloud.provider:
+            raise RoutingError("The cloud AI is the server's own provider (AI_CLOUD_PROVIDER); it cannot be changed here.",
+                               status=409, field="cloud_provider", locked=True)
         if role == env_role:
             raise RoutingError(f"The {role} AI is the server's own provider (AI_PROVIDER_ROLE={role}); it cannot be changed here.",
                                status=409, field=f"{role}_provider", locked=True)
@@ -424,6 +435,9 @@ def plan(conn: sqlite3.Connection, store: SettingsStore, settings: Settings, pol
             row = K.provider_row(conn, provider_id)
             if row is None or row["scope"] != "shared":
                 raise RoutingError(f"AI provider {provider_id} not found", status=404, field=f"{role}_provider")
+            if row["locked"] and K.env_slot_of(row) == "cloud":
+                raise RoutingError("The server's own cloud provider (AI_CLOUD_PROVIDER) is always the cloud AI; it cannot hold another role.",
+                                   status=409, field=f"{role}_provider", locked=True)
             if row["locked"] and env_role:
                 raise RoutingError(f"The server's own provider has its role from AI_PROVIDER_ROLE={env_role}; it cannot hold another.",
                                    status=409, field=f"{role}_provider", locked=True)

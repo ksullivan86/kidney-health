@@ -110,6 +110,30 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=AI_BASE_URL=http://192.168.1.10:8643/v1
 # Environment=AI_MODEL=kidney
 # Environment=AI_PRIVATE_HOSTS=192.168.1.10:8643
+# A local AI and a cloud AI, both from the environment: a LiteLLM proxy on your LAN with two keys, one that can only call
+# models on your own GPU (AI_PROVIDER, the local AI) and one that can only call cloud models (AI_CLOUD_PROVIDER, always the
+# cloud AI). Each key is its own secret; the cloud AI names the company the proxy forwards to; both hosts are listed:
+#   printf '%s' "$LOCAL_KEY" | podman secret create kidney-ai-local-key -
+#   printf '%s' "$CLOUD_KEY" | podman secret create kidney-ai-cloud-key -
+# Environment=AI_PROVIDER=litellm
+# Environment=AI_PROVIDER_ROLE=local
+# Environment=AI_BASE_URL=http://litellm.lan:4000/v1
+# Environment=AI_MODEL=gemma
+# Environment=AI_VISION_MODEL=gemma
+# Secret=kidney-ai-local-key,type=mount,target=ai_api_key,uid=10001,gid=10001,mode=0400
+# Environment=AI_API_KEY_FILE=/run/secrets/ai_api_key
+# Environment=AI_CLOUD_PROVIDER=litellm
+# Environment=AI_CLOUD_BASE_URL=http://litellm.lan:4000/v1
+# Environment=AI_CLOUD_MODEL=claude-sonnet
+# Environment=AI_CLOUD_UPSTREAM=Anthropic
+# Secret=kidney-ai-cloud-key,type=mount,target=ai_cloud_api_key,uid=10001,gid=10001,mode=0400
+# Environment=AI_CLOUD_API_KEY_FILE=/run/secrets/ai_cloud_api_key
+# Environment=AI_PRIVATE_HOSTS=litellm.lan:4000
+# Environment=AI_ROUTE_PHOTOS=local
+# Environment=AI_ROUTE_LABS=local
+# Environment=AI_ROUTE_MEAL_IDEAS=cloud
+# Environment=AI_ROUTE_DESCRIBE=cloud
+# Environment=AI_ROUTE_CHAT=cloud
 # Assistant access (docs/assistant.md): each person may make personal tokens (Settings → Assistant access) for a
 # chat assistant they connect, such as Open WebUI. A token reads; if the person ticks "Can also save food and
 # recipes" it can also log food and save recipes. Off by default; the app contacts nothing for it.

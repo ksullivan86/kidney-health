@@ -74,6 +74,7 @@ class ProviderConfig:
     key_scope: Literal["own", "shared"] = "shared"
     safety_identifier: str | None = field(default=None, repr=False)
     local_only: bool = False  # the shared provider holding the role "local": the transport refuses any public address
+    upstream: str | None = None  # the company a shared proxy forwards to (AI_CLOUD_UPSTREAM); the consent line names it
 
     @property
     def net_scope(self) -> Scope:

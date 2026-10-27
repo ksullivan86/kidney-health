@@ -7,7 +7,7 @@
      and a date of birth that cannot be removed from an image), the shared provider that is the local AI and the one that is
      the cloud AI, and a warning for every feature that sends something to the cloud. Saved with PUT /api/admin/ai-routing
      (through KH.ai.api), which refuses a local AI that is not on a private address and "Local, then cloud" for Ask and lab
-     report photos.
+     report photos. When the environment defines the cloud AI (AI_CLOUD_PROVIDER, `env_cloud`), that choice is fixed and says so.
    * Settings → AI (a person): one line per feature saying where it runs ("Runs on your local AI (host)").
 
    Rules: everything the server sends is drawn with textContent (the h() helper); no inline scripts or handlers;
@@ -90,7 +90,7 @@
         + 'Choose a row below to pin it. On a new server every feature starts on local and stays off until a local AI is chosen.')));
     }
     if (!data.writable) {
-      wrap.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so routing can be set only with the environment variables AI_ROUTE_PHOTOS, AI_ROUTE_MEAL_IDEAS, AI_ROUTE_DESCRIBE, AI_ROUTE_CHAT, AI_ROUTE_LABS and AI_PROVIDER_ROLE (docs/ai.md).')));
+      wrap.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so routing can be set only with the environment variables AI_ROUTE_PHOTOS, AI_ROUTE_MEAL_IDEAS, AI_ROUTE_DESCRIBE, AI_ROUTE_CHAT, AI_ROUTE_LABS, AI_PROVIDER_ROLE and AI_CLOUD_PROVIDER (docs/ai.md).')));
     }
 
     const chosen = {}; // feature → the route picked now
@@ -140,7 +140,8 @@
         if (p.role && p.role !== role) continue; // already holds the other role
         sel.append(h('option', { value: String(p.id), selected: data.roles[role] && data.roles[role].id === p.id }, `${p.label} (${p.host})`));
       }
-      const fixed = data.env_role === role;
+      const fromCloudVar = role === 'cloud' && !!data.env_cloud; // AI_CLOUD_PROVIDER is always the cloud AI
+      const fixed = data.env_role === role || fromCloudVar;
       sel.disabled = !data.writable || fixed;
       sel.addEventListener('change', refresh);
       roleSel[role] = sel;
@@ -149,7 +150,9 @@
         h('span', { class: 'hint' }, role === 'local'
           ? (fixed ? 'The server\'s own provider (AI_PROVIDER_ROLE=local).'
             : 'Only a provider on your own network can be chosen: its host and port must be listed in AI_PRIVATE_HOSTS (a name must be listed by name).')
-          : (fixed ? 'The server\'s own provider (AI_PROVIDER_ROLE=cloud).' : 'A company\'s service outside your network. What a feature sends there leaves your network.'))));
+          : (fromCloudVar ? 'The server\'s own cloud provider (AI_CLOUD_PROVIDER). Set it in the environment.'
+            : fixed ? 'The server\'s own provider (AI_PROVIDER_ROLE=cloud).'
+              : 'A company\'s service outside your network. What a feature sends there leaves your network.'))));
     }
     wrap.append(roleBox);
     if (!data.providers.some((p) => p.private)) {

@@ -67,8 +67,9 @@ def run(tmp_path: Path, **extra: Any) -> dict[str, Any]:
 def test_the_live_runner_measures_the_golden_inputs_and_the_safety_set(tmp_path):
     rep = run(tmp_path)
     s = rep["summary"]
-    assert rep["prompt_version"] and rep["provider"] == {"preset": "openai", "kind": "cloud", "model": "gpt-6-luna",
-                                                         "vision_model": "gpt-6-luna", "base_url": "https://api.openai.com/v1"}
+    assert rep["prompt_version"] and rep["provider"] == {"preset": "openai", "kind": "cloud", "role": "cloud", "upstream": None,
+                                                         "model": "gpt-6-luna", "vision_model": "gpt-6-luna",
+                                                         "base_url": "https://api.openai.com/v1"}
     assert s["safety_cases"] == len(ai_eval.SAFETY_SET) and s["safety_refusal_rate"] == 1.0 and s["unsafe_text_shown"] == 0
     assert s["schema_valid_rate"] == 1.0 and s["next_meal_cases"] == 1 and s["next_meal_with_idea_rate"] == 1.0
     assert s["latency_ms"]["p95"] is not None and rep["p95_limit_ms"] == 15_000
@@ -114,6 +115,175 @@ def test_main_writes_the_report_without_the_key(tmp_path, monkeypatch, capsys):
 def test_runs_must_be_positive():
     with pytest.raises(SystemExit):
         ai_eval.main(["--provider", "openai", "--model", "m", "--runs", "0"])
+
+
+# --------------------------------------------------------------------------- #
+# --role local|cloud (a second provider from the environment: AI_CLOUD_*)
+# --------------------------------------------------------------------------- #
+
+LAN = "10.0.0.5"
+CLOUD_URL = "http://litellm.lan:4000/v1"
+
+
+def proxy_options(**extra: Any) -> Any:
+    values: dict[str, Any] = dict(preset="litellm", model="claude-sonnet", vision_model="claude-sonnet", api_key=KEY, base_url=CLOUD_URL,
+                                  private_hosts=("litellm.lan:4000",), role="cloud", upstream="Anthropic")
+    values.update(extra)
+    return ai_eval.Options(**values)
+
+
+def test_without_a_role_a_cloud_preset_is_cloud_and_every_other_preset_is_local():
+    for preset in ("openai", "openrouter", "nous_portal"):
+        assert ai_eval.Options(preset=preset, model="m").resolved_role == "cloud"
+    for preset in ("ollama", "lmstudio", "llamacpp", "vllm", "litellm", "hermes", "openai_compatible"):
+        assert ai_eval.Options(preset=preset, model="m").resolved_role == "local"
+    assert ai_eval.Options(preset="litellm", model="m", role="cloud").resolved_role == "cloud"
+    assert ai_eval.Options(preset="openai", model="m", role="local").resolved_role == "local"
+
+
+def test_a_cloud_run_configures_the_cloud_slot_and_a_local_run_the_first_one(tmp_path):
+    cloud = ai_eval.settings_for(proxy_options(), tmp_path / "a")
+    assert (cloud.ai.provider, cloud.ai.api_key) == (None, None)
+    assert (cloud.ai.cloud.provider, cloud.ai.cloud.api_key, cloud.ai.cloud.upstream) == ("litellm", KEY, "Anthropic")
+    assert (cloud.ai.cloud.base_url, cloud.ai.cloud.model, cloud.ai.cloud.vision_model) == (CLOUD_URL, "claude-sonnet", "claude-sonnet")
+    local = ai_eval.settings_for(ai_eval.Options(preset="ollama", model="gemma", private_hosts=("ollama:11434",)), tmp_path / "b")
+    assert (local.ai.provider, local.ai.model, local.ai.cloud.provider) == ("ollama", "gemma", None)
+    openai = ai_eval.settings_for(ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY), tmp_path / "c")  # a cloud preset: the cloud slot
+    assert (openai.ai.provider, openai.ai.cloud.provider, openai.ai.cloud.upstream) == (None, "openai", None)
+    assert ai_eval.settings_for(proxy_options(preset="openai", upstream="Anthropic"), tmp_path / "d").ai.cloud.upstream is None  # ignored, as the server does
+
+
+def test_a_cloud_run_gets_the_defaults_the_server_gives_the_cloud_role(tmp_path):
+    from test_ai_cloud_env import config_of
+
+    cfg = config_of(ai_eval.settings_for(proxy_options(), tmp_path / "cloud"), "cloud")
+    assert cfg.context_tokens == 32_768 and cfg.upstream == "Anthropic" and cfg.local_only is False and cfg.net_scope == "shared"
+    local = config_of(ai_eval.settings_for(ai_eval.Options(preset="litellm", model="gemma", api_key=KEY, base_url=CLOUD_URL,
+                                                           private_hosts=("litellm.lan:4000",)), tmp_path / "local"), "main")
+    assert local.context_tokens == 8_192 and local.upstream is None  # the first provider is as it was
+
+
+def test_the_report_records_the_role_and_the_company(tmp_path):
+    provider = FakeProvider(route=scripted_model, address=LAN)
+    options = proxy_options(cases=r"^(baseline-good-idea|vision-not-a-label)$", safety=False)
+    rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path, log=lambda line: None)
+    assert rep["provider"] == {"preset": "litellm", "kind": "self_hosted", "role": "cloud", "upstream": "Anthropic", "model": "claude-sonnet",
+                               "vision_model": "claude-sonnet", "base_url": CLOUD_URL}
+    assert rep["p95_limit_ms"] == 15_000  # the cloud limit follows the role, not the preset's kind
+    assert KEY not in json.dumps(rep) and rep["summary"]["ai_calls"] == 2
+    local = ai_eval.report(ai_eval.Options(preset="ollama", model="m"), [])
+    assert local["provider"]["role"] == "local" and local["provider"]["upstream"] is None and local["p95_limit_ms"] == 30_000
+    forced = ai_eval.report(ai_eval.Options(preset="openai", model="m", role="local"), [])
+    assert forced["provider"]["role"] == "local" and forced["p95_limit_ms"] == 30_000
+
+
+def test_a_cloud_run_sends_what_the_servers_cloud_route_sends(tmp_path):
+    """The same case, once through the evaluation and once through a server whose environment defines the same cloud provider and
+    whose features are pinned to ``cloud``: the same request body, to the same address, with the cloud key, in the shared scope."""
+    from conftest import HTTPS_URL, TestClient, add_user, make_settings, sign_in
+    from test_ai_cloud_env import GPU_URL
+    from test_ai_golden import DAY, prepare
+    from test_ai_routing import route, turn_on
+    from app.config import AiCloudEnv, AiEnv
+    from app.main import create_app
+
+    case = ai_eval.load_cases(r"^baseline-good-idea$")[0]
+    connections: list[tuple[str, str]] = []
+
+    def recording(provider: FakeProvider):
+        def factory(base: Any, scope: Any, policy: Any) -> Any:
+            connections.append((base.host, scope))
+            return provider.factory(base, scope, policy)
+
+        return factory
+
+    evaluated = FakeProvider(route=scripted_model, address=LAN)
+    rep = ai_eval.run_eval(proxy_options(cases=r"^baseline-good-idea$", safety=False), transport_factory=recording(evaluated),
+                           data_dir=tmp_path / "eval", log=lambda line: None)
+    assert rep["summary"]["ai_calls"] == 1
+    cloud = AiCloudEnv(provider="litellm", base_url=CLOUD_URL, api_key=KEY, model="claude-sonnet", vision_model="claude-sonnet", upstream="Anthropic")
+    settings = make_settings(tmp_path / "server", ai_eval.FOODS_JSON, ai=AiEnv(private_hosts=("litellm.lan:4000",), cloud=cloud))  # the same food list
+    served = FakeProvider(route=scripted_model, address=LAN)
+    with TestClient(create_app(settings), base_url=HTTPS_URL) as admin:
+        sign_in(admin)
+        turn_on(admin, **{"ai.shared_daily_limit": 0})
+        assert route(admin, photos="cloud", meal_ideas="cloud", describe="cloud", chat="cloud").status_code == 200
+        sam = add_user(admin)
+        fx = case["fixture"]
+        prepare(admin, sam, fx)
+        admin.app.state.ai.client.transport_factory = recording(served)
+        admin.app.state.ai.auto_reprobe = False
+        body = {"meal": fx.get("meal", "dinner"), "mode": fx.get("mode", "ideas"), "date": DAY}
+        assert admin.post("/api/ai/next-meal", json=body).status_code == 200
+    assert evaluated.bodies() == served.bodies() and len(served.bodies()) == 1
+    assert [r.headers["authorization"] for r in evaluated.requests] == [f"Bearer {KEY}"] == [r.headers["authorization"] for r in served.requests]
+    assert [str(r.url) for r in evaluated.requests] == [str(r.url) for r in served.requests]
+    assert connections == [("litellm.lan", "shared"), ("litellm.lan", "shared")]
+    assert GPU_URL not in str(evaluated.requests)
+
+
+def test_main_reads_the_cloud_key_for_the_cloud_role_and_passes_the_company(tmp_path, monkeypatch, capsys):
+    seen: dict[str, Any] = {}
+
+    def fake_run(options: Any) -> dict[str, Any]:
+        seen["options"] = options
+        return ai_eval.report(options, [])
+
+    monkeypatch.setattr(ai_eval, "run_eval", fake_run)
+    monkeypatch.setenv("AI_API_KEY", "sk-first-0123456789abcdefghijklmn")
+    monkeypatch.setenv("AI_CLOUD_API_KEY", KEY)
+    out = tmp_path / "report.json"
+    args = ["--provider", "litellm", "--model", "claude-sonnet", "--runs", "1", "--out", str(out)]
+    assert ai_eval.main([*args, "--role", "cloud", "--upstream", " Anthropic "]) == 1
+    options = seen["options"]
+    assert (options.role, options.upstream, options.api_key, options.resolved_role) == ("cloud", "Anthropic", KEY, "cloud")
+    assert json.loads(out.read_text())["provider"]["role"] == "cloud" and json.loads(out.read_text())["provider"]["upstream"] == "Anthropic"
+    assert "role cloud (to Anthropic)" in capsys.readouterr().out
+    assert KEY not in out.read_text()
+    ai_eval.main([*args])  # no role: litellm is local, and the first provider's key
+    assert (seen["options"].role, seen["options"].api_key, seen["options"].resolved_role) == (None, "sk-first-0123456789abcdefghijklmn", "local")
+    ai_eval.main(["--provider", "openai", "--model", "gpt-6-luna", "--runs", "1", "--out", str(out)])  # a cloud preset: cloud, the cloud key
+    assert (seen["options"].resolved_role, seen["options"].api_key, seen["options"].upstream) == ("cloud", KEY, None)
+    monkeypatch.setenv("MY_KEY", "sk-mine-0123456789abcdefghijklmnop")
+    ai_eval.main([*args, "--role", "cloud", "--upstream", "Anthropic", "--api-key-env", "MY_KEY"])
+    assert seen["options"].api_key == "sk-mine-0123456789abcdefghijklmnop"
+
+
+@pytest.mark.parametrize("args, message", [
+    (["--provider", "litellm", "--role", "cloud"], "needs --upstream NAME"),
+    (["--provider", "vllm", "--role", "cloud", "--upstream", "  "], "needs --upstream NAME"),
+    (["--provider", "openai_compatible", "--role", "cloud"], "needs --upstream NAME"),
+    (["--provider", "ollama", "--upstream", "Anthropic"], "--upstream applies to --role cloud only"),
+    (["--provider", "openai", "--role", "local", "--upstream", "Anthropic"], "--upstream applies to --role cloud only"),
+    (["--provider", "litellm", "--role", "cloud", "--upstream", "<b>x</b>"], "--upstream must be the company's plain name"),
+    (["--provider", "litellm", "--role", "cloud", "--upstream", "a" * 61], "--upstream must be the company's plain name"),
+    (["--provider", "hermes", "--role", "cloud", "--upstream", "Anthropic"], "cannot be the cloud role"),
+    (["--provider", "litellm", "--role", "everywhere"], "invalid choice"),
+])
+def test_main_refuses_what_the_server_would_refuse(monkeypatch, capsys, args, message):
+    monkeypatch.setattr(ai_eval, "run_eval", lambda options: pytest.fail("nothing may run"))
+    with pytest.raises(SystemExit) as stop:
+        ai_eval.main([*args, "--model", "m", "--runs", "1"])
+    assert stop.value.code == 2 and message in capsys.readouterr().err
+
+
+def test_a_cloud_preset_needs_no_upstream_and_one_given_is_not_reported(tmp_path, monkeypatch):
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(ai_eval, "run_eval", lambda options: seen.setdefault("rep", ai_eval.report(options, [])))
+    ai_eval.main(["--provider", "openrouter", "--model", "m", "--runs", "1", "--upstream", "Anthropic", "--out", str(tmp_path / "r.json")])
+    assert seen["rep"]["provider"]["role"] == "cloud" and seen["rep"]["provider"]["upstream"] is None  # the preset names its own company
+
+
+def test_run_eval_itself_refuses_a_proxy_without_a_company(tmp_path):
+    with pytest.raises(SystemExit, match="needs --upstream NAME"):
+        ai_eval.run_eval(proxy_options(upstream=None), data_dir=tmp_path, log=lambda line: None)
+
+
+def test_the_usage_text_and_the_readme_describe_the_role():
+    doc = ai_eval.__doc__
+    assert "--role cloud --upstream Anthropic" in doc and "AI_CLOUD_API_KEY" in doc and "``role`` and the ``upstream``" in doc
+    readme = (ROOT / "docs" / "dev" / "ai-eval" / "README.md").read_text(encoding="utf-8")
+    assert "--role cloud" in readme and "--upstream" in readme and "AI_CLOUD_API_KEY" in readme
 
 
 # --------------------------------------------------------------------------- #

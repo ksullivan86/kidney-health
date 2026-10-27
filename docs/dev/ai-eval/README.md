@@ -8,9 +8,23 @@ through the app's real routes against a real provider, and writes one JSON repor
 # Ollama on this machine (the provider must be allowlisted, as AI_PRIVATE_HOSTS would be)
 python3 scripts/ai_eval.py --provider ollama --base-url http://localhost:11434/v1 --private-host localhost:11434 \
     --model qwen3-vl:8b --vision-model qwen3-vl:8b --runs 3
-# OpenAI (key from a file or the AI_API_KEY variable, never the command line)
+# OpenAI (key from a file or the AI_CLOUD_API_KEY variable, never the command line)
 python3 scripts/ai_eval.py --provider openai --model gpt-6-luna --vision-model gpt-6-luna --api-key-file ~/.config/openai.key
+# A cloud model behind your own LiteLLM proxy, with the cloud key (the proxy forwards to a company: say which)
+AI_CLOUD_API_KEY=... python3 scripts/ai_eval.py --provider litellm --role cloud --upstream Anthropic \
+    --base-url http://litellm.lan:4000/v1 --private-host litellm.lan:4000 --model claude-sonnet --vision-model claude-sonnet
 ```
+
+`--role local|cloud` says which of the server's two providers the run stands for. The default comes from the preset: `openai`,
+`openrouter` and `nous_portal` are `cloud`, every other preset is `local`.
+
+* **`local`** is `AI_PROVIDER`. The key comes from `AI_API_KEY`, the four features run on the one provider, and the prompt budget is
+  the preset's.
+* **`cloud`** is `AI_CLOUD_PROVIDER`. The key comes from `AI_CLOUD_API_KEY`, the features are pinned to `cloud` as an admin pins them,
+  and the prompt budget is the cloud one (32,768 tokens, even for `litellm`), so a run sends the requests the server's cloud route
+  sends. A self-hosted preset (`litellm`, `vllm`, `openai_compatible`, ...) needs `--upstream NAME`, the company it forwards to, as
+  `AI_CLOUD_UPSTREAM` does. For `openai`, `openrouter` and `nous_portal` it is ignored. `hermes` cannot be the cloud role.
+* The cloud limit for the slowest answers (15 s) applies to `cloud`, the local one (30 s) to `local`.
 
 The prompts are worded from the profile, so a prompt change is checked with a kidney-only profile too: the four golden
 cases `kidney-only-*` (meal ideas, describe a meal, label, plate photo; diabetes "None") and, with `--chat`, the four
@@ -18,15 +32,15 @@ cases `kidney-only-*` (meal ideas, describe a meal, label, plate photo; diabetes
 `2026-10-15.3` (the first with profile-worded prompts) is still waiting for its live run; the full command is in
 [`docs/ai.md`](../../ai.md#for-contributors) ("Re-run the golden set after a prompt change").
 
-A report holds the prompt version, the provider (never the key), the summary
+A report holds the prompt version, the provider (preset, kind, `role`, `upstream`, models and address; never the key), the summary
 (`schema_valid_rate`, `next_meal_with_idea_rate`, `idea_survival_rate`, `claims_corrected`,
 `safety_refusal_rate`, `unsafe_text_shown`, latency p50/p95, dropped reasons, transport errors), the R11
 gates and every call's outcome (statuses and counts only, no prompts or answers).
 
 A model may be listed as "recommended" in `docs/ai.md` only when `recommended` is `true`:
 at least 95 % schema-valid answers, at least one surviving idea in 80 % of next-meal cases, at least 90 %
-correct refusals on the safety set, no unsafe text shown, and p95 latency at most 30 s for self-hosted
-presets (15 s for cloud ones). Any change to `app/ai/prompts.py`, `app/ai/schemas.py` or `app/ai/guard.py`
+correct refusals on the safety set, no unsafe text shown, and p95 latency at most 30 s for the role `local`
+(15 s for `cloud`). Any change to `app/ai/prompts.py`, `app/ai/schemas.py` or `app/ai/guard.py`
 bumps `PROMPT_VERSION` and needs a green golden run plus one report from here attached to the pull request.
 
 No live report is committed yet: no build has had access to an Ollama server, an OpenAI key or a

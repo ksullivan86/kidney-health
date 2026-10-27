@@ -35,7 +35,9 @@ Three choices make up every AI setup (Settings → AI ideas starts with the same
    **What will be sent?** shows the exact request before it goes.
 
 A model at home keeps your data in the house. A company's AI means your request leaves the house, so
-the consent sheet says so before you agree.
+the consent sheet says so before you agree. Sometimes your admin's own server passes your request on to a
+company. The consent sheet then names that company: "Goes through your admin's LiteLLM proxy to Anthropic.
+Anthropic receives what is sent, under its own terms; your admin can read it too."
 
 ## Where each feature runs
 

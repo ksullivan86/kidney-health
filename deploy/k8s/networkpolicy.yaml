@@ -76,7 +76,7 @@ spec:
       ports:
         - port: 443
           protocol: TCP
-    # Optional LAN AI host (Ollama 11434, Hermes 8643). Also list it in AI_PRIVATE_HOSTS.
+    # Optional LAN AI host (Ollama 11434, Hermes 8643, LiteLLM 4000). Also list it in AI_PRIVATE_HOSTS.
     # - to:
     #     - ipBlock:
     #         cidr: 192.168.1.50/32

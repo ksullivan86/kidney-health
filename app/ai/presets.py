@@ -46,6 +46,13 @@ POLICY_LINES: Mapping[str, str] = MappingProxyType({
     "user_custom": "Goes to the server you entered; whoever runs that server can read what is sent.",
 })
 
+# A server your admin runs that forwards to a company (a LiteLLM proxy in front of a cloud model) is the cloud AI, whatever its preset:
+# "Runs on your admin's hardware" would be false for it. ``AI_CLOUD_UPSTREAM`` names the company, and the consent sheet says so. This
+# is a new line built from that name; none of the lines above changes, so nobody is asked again for a provider they already agreed to.
+PROXY_POLICY = "Goes through your admin's {proxy} to {upstream}. {upstream} receives what is sent, under its own terms; your admin can read it too."
+PROXY_NAMES: Mapping[str, str] = MappingProxyType({"litellm": "LiteLLM proxy"})  # any other preset: "proxy"
+UPSTREAM_KINDS: tuple[str, ...] = ("self_hosted", "custom")
+
 DEFAULT_CONTEXT_TOKENS: Mapping[str, int] = MappingProxyType({"cloud": 32_768, "self_hosted": 8_192, "agent": 8_192, "custom": 8_192})
 
 
@@ -84,6 +91,11 @@ class Preset:
     @property
     def context_tokens(self) -> int:
         return DEFAULT_CONTEXT_TOKENS[self.kind]
+
+    @property
+    def can_proxy(self) -> bool:
+        """A self-hosted or custom server can sit in front of a company's model (``AI_CLOUD_UPSTREAM`` then names it)."""
+        return self.kind in UPSTREAM_KINDS
 
 
 def _frozen(d: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -157,8 +169,18 @@ def get(name: str) -> Preset:
         raise KeyError(f"unknown AI preset {name!r}; use one of {', '.join(PRESETS)}") from None
 
 
-def policy_line(preset: Preset, *, scope: str) -> str:
-    """The consent sheet's line for ``preset`` (a person's own custom server gets its own wording)."""
+def proxy_line(preset: Preset, upstream: str) -> str:
+    """The consent line for a server your admin runs that forwards to ``upstream`` (a company's plain name)."""
+    return PROXY_POLICY.format(proxy=PROXY_NAMES.get(preset.name, "proxy"), upstream=upstream)
+
+
+def policy_line(preset: Preset, *, scope: str, upstream: str | None = None) -> str:
+    """The consent sheet's line for ``preset`` (a person's own custom server gets its own wording).
+
+    ``upstream``: the company a shared self-hosted or custom server forwards to (``AI_CLOUD_UPSTREAM``). It replaces "Runs on your
+    admin's hardware", which would be untrue; it is ignored for every other preset and for a person's own server."""
     if scope == "user" and preset.kind == "custom":
         return POLICY_LINES["user_custom"]
+    if upstream and scope == "shared" and preset.can_proxy:
+        return proxy_line(preset, upstream)
     return POLICY_LINES[preset.policy_key]

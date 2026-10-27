@@ -32,7 +32,7 @@ built offline and loads nothing from the internet either, no fonts, no scripts, 
 | `api.openai.com` | 443 | AI with the `openai` preset | off |
 | `openrouter.ai` | 443 | AI with the `openrouter` preset | off |
 | `inference-api.nousresearch.com` | 443 | AI with the `nous_portal` preset | off |
-| your AI host, e.g. `ollama:11434` | its port | a local Ollama, Hermes or other compatible server, listed in `AI_PRIVATE_HOSTS` | off |
+| your AI host, e.g. `ollama:11434` or `litellm.lan:4000` | its port | a local Ollama, Hermes, a LiteLLM proxy or other compatible server (`AI_PROVIDER` or `AI_CLOUD_PROVIDER`), listed in `AI_PRIVATE_HOSTS` | off |
 | your speech-to-text host (`STT_BASE_URL`), e.g. `stt:8000` | its port | the Ask microphone is on and a person agreed; one recording goes there to become text. Same address rules as an AI host; a local container needs no internet at all | off |
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` | off |
 

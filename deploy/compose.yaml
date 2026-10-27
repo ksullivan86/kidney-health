@@ -109,12 +109,18 @@ services:
       AI_ROUTE_DESCRIBE: ${AI_ROUTE_DESCRIBE:-}
       AI_ROUTE_CHAT: ${AI_ROUTE_CHAT:-}
       AI_ROUTE_LABS: ${AI_ROUTE_LABS:-}
+      AI_CLOUD_PROVIDER: ${AI_CLOUD_PROVIDER:-}
+      AI_CLOUD_BASE_URL: ${AI_CLOUD_BASE_URL:-}
+      AI_CLOUD_MODEL: ${AI_CLOUD_MODEL:-}
+      AI_CLOUD_VISION_MODEL: ${AI_CLOUD_VISION_MODEL:-}
+      AI_CLOUD_UPSTREAM: ${AI_CLOUD_UPSTREAM:-}
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # A cloud AI provider's key is a file secret like the others (never an env var):
       # AI_API_KEY_FILE: /run/secrets/ai_api_key                # and add ai_api_key below
+      # AI_CLOUD_API_KEY_FILE: /run/secrets/ai_cloud_api_key    # the key of AI_CLOUD_PROVIDER; add ai_cloud_api_key below
       # GitOps alternative to the setup code: create the first admin from a file secret.
       # ADMIN_USERNAME: you
       # ADMIN_PASSWORD_FILE: /run/secrets/admin_password      # and add admin_password below
@@ -124,6 +130,7 @@ services:
       - usda_api_key
       # - admin_password
       # - ai_api_key
+      # - ai_cloud_api_key
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -156,6 +163,9 @@ secrets:
   #   x-podman.relabel: Z
   # ai_api_key:                         # only for a cloud AI provider (docs/ai.md)
   #   file: ./secrets/ai_api_key
+  #   x-podman.relabel: Z
+  # ai_cloud_api_key:                   # only for AI_CLOUD_PROVIDER, the cloud AI (docs/ai.md)
+  #   file: ./secrets/ai_cloud_api_key
   #   x-podman.relabel: Z
 
 volumes:

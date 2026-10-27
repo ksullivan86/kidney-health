@@ -119,6 +119,12 @@ def test_locked_and_read_only_controls_are_disabled(page):
     assert page["envRole"] == {"localDisabled": True, "cloudDisabled": False, "text": True}
 
 
+def test_a_cloud_ai_from_the_environment_is_fixed_and_names_its_variable(page):
+    assert page["envBoth"] == {"localDisabled": True, "cloudDisabled": True, "cloudSelected": "1", "cloudText": True}
+    assert page["envCloudOnly"] == {"localDisabled": False, "cloudDisabled": True}  # a cloud-only server may still add a local AI by hand
+    assert page["envBothSaved"] == {"chat": "cloud"}  # only the feature; the roles are the environment's
+
+
 def test_a_refused_save_shows_the_servers_words(page):
     assert page["refused"] == "not a private host"
 

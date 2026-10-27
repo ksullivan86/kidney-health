@@ -1274,7 +1274,7 @@
       box.append(h('p', { class: 'form-error' }, `Could not load the routing: ${err.detail || err.message}`));
     }
     const list = h('div', { class: 'setting-list' });
-    if (!data.providers.length) list.append(h('p', { class: 'muted' }, 'No shared provider yet. Add one below, or set AI_PROVIDER in the environment.'));
+    if (!data.providers.length) list.append(h('p', { class: 'muted' }, 'No shared provider yet. Add one below, or set AI_PROVIDER (and AI_CLOUD_PROVIDER for a cloud AI) in the environment.'));
     for (const p of data.providers) list.append(providerRow(p, data));
     box.append(list);
     if (data.writable) box.append(h('details', { class: 'settings-details' }, h('summary', {}, 'Add a shared provider'), providerForm(null, data)));
@@ -1317,7 +1317,7 @@
 
   function providerRow(p, data) {
     const badges = [];
-    if (p.locked) badges.push(h('span', { class: 'badge status-pending_setup' }, 'Set by the server'));
+    if (p.locked) badges.push(h('span', { class: 'badge status-pending_setup', title: p.env ? `Set by ${p.env}` : null }, 'Set by the server'));
     if (!p.enabled) badges.push(h('span', { class: 'badge status-disabled' }, 'Off'));
     if (p.disabled_reason) badges.push(h('span', { class: 'badge status-disabled' }, p.disabled_reason === 'hermes_tools' ? 'Hermes has tools enabled' : 'Hermes check failed'));
     const keyText = p.key.source === 'env' ? (p.key.set ? 'key from the environment' : 'no key') : p.key.status === 'unreadable' ? 'key unreadable: enter it again' : p.key.set ? `key set${p.key.last4 ? ` · ends in ${p.key.last4}` : ''}` : 'no key';
@@ -1327,6 +1327,7 @@
     const row = h('div', { class: 'setting-item' },
       h('div', { class: 'user-badges' }, h('span', { class: 'row-title' }, p.label), ...badges),
       h('p', { class: 'muted small' }, `${p.preset} · ${p.host} · ${p.model}${p.vision_model ? ` · photos: ${p.vision_model}` : ' · no photos'} · ${keyText}`),
+      p.upstream ? h('p', { class: 'muted small' }, p.policy) : null, // a proxy that forwards to a company: what people are told before they agree
       testLine);
     const actions = h('div', { class: 'settings-actions' });
     actions.append(button('Test connection', 'secondary', async (btn) => {
