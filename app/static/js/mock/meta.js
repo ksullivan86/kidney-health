@@ -25,7 +25,7 @@
       app_version: views.settings && views.settings.APP_VERSION ? views.settings.APP_VERSION : null,
       api_version: API_VERSION,
       capabilities: {
-        ai: false, ai_next_meal: false, ai_parse_meal: false, ai_label: false, ai_plate: false, ai_lab_report: false,
+        ai: false, ai_next_meal: false, ai_parse_meal: false, ai_label: false, ai_plate: false, ai_lab_report: false, ai_recipes: false,
         chat: false, voice: false,
         assistant: false, push: false,
         barcode: off, barcode_off: off, barcode_usda: false,

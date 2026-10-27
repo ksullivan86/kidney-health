@@ -15,6 +15,7 @@ feature        what it covers                                              conse
 ``describe``   turning a described meal into search words                  ``text``
 ``chat``       the Ask screen                                              ``chat``
 ``labs``       reading a photo of a lab report                             ``labs``
+``recipes``    AI recipes: suggest one, or rework a saved recipe           ``text``
 =============  ==========================================================  ====================
 
 Each feature is ``local``, ``cloud``, ``off`` or ``any`` (settings ``ai.route.<feature>``), except ``labs``, which is
@@ -24,7 +25,8 @@ least-trusting one, ``local``**: with no local provider the feature is off until
 A server that already had a provider when this was added starts every feature on ``any`` so nothing changes
 (:func:`initialise`); a new server starts on the defaults.
 
-**Tier 3, ``local_then_cloud``** (:data:`FALLBACK_ROUTE`): the structured features (``photos``, ``meal_ideas``, ``describe``) can
+**Tier 3, ``local_then_cloud``** (:data:`FALLBACK_ROUTE`): the structured features (``photos``, ``meal_ideas``, ``describe``,
+``recipes``) can
 also be ``local_then_cloud``: the call goes to the local AI first, exactly as with ``local``, and the cloud AI is asked a
 second time **only when the local AI's answer fails the schema or the app's rules** (the validator or the judge rejects it).
 It is not asked when the local AI cannot be reached, takes too long, is over its quota or declines the question: those answer
@@ -66,9 +68,9 @@ from .netpolicy import NetPolicy, PolicyError, is_private_host, parse_base_url
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
 
-Feature = Literal["photos", "meal_ideas", "describe", "chat", "labs"]
+Feature = Literal["photos", "meal_ideas", "describe", "chat", "labs", "recipes"]
 Role = Literal["local", "cloud"]
-FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "chat", "labs")
+FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "chat", "labs", "recipes")
 # Features that run only on the local AI: their route is ``local`` or ``off`` (the setting refuses the rest), and neither a
 # person's own provider nor the pre-routing rule ``any`` ever serves them.
 LOCAL_ONLY: tuple[str, ...] = ("labs",)
@@ -76,14 +78,15 @@ LOCAL_ONLY_ROUTES: tuple[str, ...] = ("local", "off")
 # Tier 3: "local first, cloud only when the local answer fails". Only the features whose answer is one structured reply that the
 # app checks in code (the validator, then the judge) can use it; Ask is a loop of calls and a lab report never leaves the network.
 FALLBACK_ROUTE = "local_then_cloud"
-FALLBACK_FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe")
+FALLBACK_FEATURES: tuple[str, ...] = ("photos", "meal_ideas", "describe", "recipes")
 HEADLINE: tuple[str, ...] = ("meal_ideas", "describe", "photos", "chat")  # the status endpoint's top-level provider: the first that resolves
 ROLES: tuple[str, ...] = ("local", "cloud")
 ROUTES: tuple[str, ...] = ("local", "cloud", "off", "any")
 # The consent purpose each feature is agreed under (ai_consents.purpose).
-PURPOSE: dict[str, K.Purpose] = {"photos": "photos", "meal_ideas": "text", "describe": "text", "chat": "chat", "labs": "labs"}
+PURPOSE: dict[str, K.Purpose] = {"photos": "photos", "meal_ideas": "text", "describe": "text", "chat": "chat", "labs": "labs",
+                                  "recipes": "text"}
 LABEL = {"photos": "Photos (labels and plates)", "meal_ideas": "Meal ideas", "describe": "Describe a meal", "chat": "Ask",
-         "labs": "Lab report photos"}
+         "labs": "Lab report photos", "recipes": "Recipes"}
 # What leaves the server for each feature, in the words of the admin warning and the consent sheet.
 SENDS = {
     "photos": "your photos of labels and plates",
@@ -91,6 +94,7 @@ SENDS = {
     "describe": "the meals you describe in words",
     "chat": "your messages in Ask and the app's own numbers the AI looks up",
     "labs": "your photos of lab reports (which can show your name, date of birth and record numbers)",
+    "recipes": "your meal data and the foods and amounts of a recipe (never its name, note, steps or link)",
 }
 INITIALISED_KEY = "ai_routing_initialised"  # meta: set once, whichever way the first start-up decided
 

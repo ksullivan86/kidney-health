@@ -339,7 +339,8 @@ def test_labs_and_photos_are_the_only_features_the_local_pin_protects_and_the_cl
     """The other features were pinned to the cloud by the admin: they may go there. Photos and labs were not."""
     agree(two)
     features = {f["feature"]: f["route"] for f in two.client.get("/api/admin/ai-routing").json()["features"]}
-    assert features == {"photos": "local", "meal_ideas": "cloud", "describe": "cloud", "chat": "cloud", "labs": "local"}
+    assert features == {"photos": "local", "meal_ideas": "cloud", "describe": "cloud", "chat": "cloud", "labs": "local",
+                        "recipes": "local"}
     assert route(two.client, photos="cloud").status_code == 200  # an admin may send photos to the cloud, on purpose, and sees the warning
     assert route(two.client, labs="cloud").status_code == 400  # but never a lab report
 

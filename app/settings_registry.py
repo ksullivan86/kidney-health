@@ -732,6 +732,27 @@ register(
         "removed from a photo, so it is read only by the local AI. Default local: with no local AI the feature is off.",
     ),
     SettingDef(
+        key="ai.route.recipes",
+        model=AiStructuredRoute,
+        default="local",
+        scope="instance",
+        env="AI_ROUTE_RECIPES",
+        label="Which AI suggests and reworks recipes",
+        help="local, cloud, off, any or local_then_cloud (the cloud AI only when the local answer fails the app's checks). "
+        "Default local. It sends the foods and amounts of a recipe, never its name, note, steps or link.",
+    ),
+    SettingDef(
+        key="ai.recipe_steps",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_RECIPE_STEPS",
+        label="Cooking steps written by AI in AI recipes",
+        help="Off by default. When on, an AI recipe may come with up to 8 cooking steps. The app removes any step that talks about "
+        "medicines, a low, nutrients or amounts, and labels the rest as not checked for cooking times or food safety. Turn it on "
+        "only after a live run with your model (docs/ai.md).",
+    ),
+    SettingDef(
         key="ai.route.local_provider",
         model=AiProviderId,
         default=0,
@@ -753,8 +774,8 @@ NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
      "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled", "ai.voice_enabled",
      "ai.allow_trusted_saves",
-     "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.labs", "ai.route.local_provider",
-     "ai.route.cloud_provider"}
+     "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.labs", "ai.route.recipes",
+     "ai.recipe_steps", "ai.route.local_provider", "ai.route.cloud_provider"}
 )
 
 

@@ -51,10 +51,12 @@ AUDIT_FEATURES: dict[str, tuple[str, ...]] = {
     "photos": ("read_label", "plate"),
     "chat": ("chat",),
     "labs": ("read_lab_report",),
+    "recipes": ("recipes:suggest", "recipes:change"),
 }
 
 # What each feature's ``ai_audit.status`` means for the person, from what the code really writes:
-#   guard.judge_*  (meal ideas)   ok | no_fit (the model said nothing fits) | dropped_all (the checks threw every idea out) | refused
+#   guard.judge_*  (meal ideas) and recipes.judge_recipes (AI recipes)
+#                                 ok | no_fit (the model said nothing fits) | dropped_all (the checks threw every idea out) | refused
 #   features.prepare_parse_meal   ok | refused
 #   features.label_draft          ok | not_a_label | unreadable
 #   features.prepare_plate        ok | no_food | unsure
@@ -68,6 +70,7 @@ OUTCOMES: dict[str, dict[str, str]] = {
     "photos": {"ok": USABLE, "not_a_label": UNREAD, "unreadable": UNREAD, "no_food": UNREAD, "unsure": UNREAD, "refused": REFUSED},
     "chat": {"ok": USABLE, "refused": REFUSED},
     "labs": {"ok": USABLE, "no_results": UNREAD, "not_a_lab_report": UNREAD, "unreadable": UNREAD, "refused": REFUSED},
+    "recipes": {"ok": USABLE, "no_fit": NO_FIT, "dropped_all": DROPPED, "refused": REFUSED},
 }
 # An Ask call that parsed (status ok) is a step: a tool call and a card to confirm are fine; so is the answer. What the app
 # withheld (a dose or a number it could not check) is dropped by the checks; an empty answer, or no answer within the step limit,
@@ -145,6 +148,7 @@ WORDS: dict[str, dict[str, str]] = {
     "photos": {"noun": "result", "route": "photos", "consequence": ""},
     "chat": {"noun": "answer", "route": "Ask", "consequence": ""},
     "labs": {"noun": "result", "route": "lab report photos", "consequence": ""},
+    "recipes": {"noun": "recipe", "route": "recipes", "consequence": ""},
 }
 PART_TEXT = {NO_FIT: "{n} 'nothing fits'", UNREAD: "{n} could not read", REFUSED: "{n} refused", DROPPED: "{n} dropped by the checks",
              INVALID: "{n} invalid"}
@@ -196,6 +200,7 @@ GATES_FOR: dict[str, tuple[str, ...]] = {
     "describe": ("schema_valid_rate", "safety_refusal_rate", "p95_latency", "no_unsafe_text"),
     "photos": ("schema_valid_rate", "p95_latency", "no_unsafe_text"),
     "chat": ("chat_pass_rate", "chat_no_unsafe_text"),
+    "recipes": ("schema_valid_rate", "p95_latency", "no_unsafe_text"),
 }
 # Gate → (what it measures, the share it needs). ``tests/test_ai_quality_reports.py`` keeps the shares equal to ``scripts/ai_eval.py``.
 RATE_GATES: dict[str, tuple[str, int]] = {

@@ -59,6 +59,7 @@ class Capabilities(BaseModel):
     ai_label: bool = Field(description="Read a nutrition label photo (`POST /api/vision/label`).")
     ai_plate: bool = Field(description="Estimate a plate from a photo (`POST /api/vision/plate`).")
     ai_lab_report: bool = Field(description="Read a lab report photo or PDF page (`POST /api/ai/read-lab-report`).")
+    ai_recipes: bool = Field(description="AI recipes: suggest one, or rework a saved recipe (`POST /api/ai/recipes`).")
     chat: bool = Field(description="The Ask chat (`POST /api/ai/chat`).")
     voice: bool = Field(description="Voice input for Ask (`POST /api/ai/transcribe`).")
     assistant: bool = Field(description="Assistant access tokens and the MCP server at `/mcp` are switched on (`assistant.enabled`).")
@@ -97,6 +98,7 @@ def capabilities(request: Request, conn: sqlite3.Connection, user: Any) -> dict[
         "ai_label": features.get("label", False),
         "ai_plate": features.get("plate", False),
         "ai_lab_report": features.get("lab_report", False),
+        "ai_recipes": features.get("recipes", False),
         "chat": features.get("chat", False),
         "voice": features.get("voice", False),
         "assistant": api_tokens.is_enabled(conn, ctx, api_tokens.ASSISTANT),

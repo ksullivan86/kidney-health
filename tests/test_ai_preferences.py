@@ -168,9 +168,9 @@ def test_tastes_are_in_meal_ideas_and_ask_and_in_no_other_feature(ai):
         assert "Apple, raw, with skin" not in sent[feature] and "Egg white, raw" not in sent[feature], feature
 
 
-def test_only_the_two_features_with_a_person_block_build_one():
+def test_only_the_three_features_with_a_person_block_build_one():
     source = inspect.getsource(ai_routes)
-    assert source.count("_person(conn, state, user") == 2  # the meal ideas and the Ask chat build one; nothing else calls it
+    assert source.count("_person(conn, state, user") == 3  # meal ideas, AI recipes and the Ask chat build one; nothing else calls it
     assert source.count("explicit_preferences(") == 1  # read in one place
     from app.ai import features, lab_report
 

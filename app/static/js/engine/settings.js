@@ -49,6 +49,10 @@
       label: 'Optional AI ideas', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
     { key: 'ai.max_concurrency', type: 'int', min: 1, max: 32, default: 2, scope: 'instance', env: 'AI_MAX_CONCURRENCY',
       label: 'AI calls at the same time (whole server)', help: 'Each person has at most one call running. Extra calls are told to try again in a few seconds.' },
+    { key: 'ai.recipe_steps', type: 'bool', default: false, scope: 'instance', env: 'AI_RECIPE_STEPS',
+      label: 'Cooking steps written by AI in AI recipes',
+      help: 'Off by default. When on, an AI recipe may come with up to 8 cooking steps. The app removes any step that talks about medicines, a low, nutrients or amounts, and labels the rest as not checked for cooking times or food safety. '
+        + 'Turn it on only after a live run with your model (docs/ai.md).' },
     // Which shared AI each feature uses (privacy tiers, tier 1; app/ai/routing.py). Set in Server administration → AI providers, through PUT /api/admin/ai-routing.
     { key: 'ai.route.chat', type: 'choice', options: ['local', 'cloud', 'off', 'any'], default: 'local', scope: 'instance', env: 'AI_ROUTE_CHAT',
       label: 'Which AI answers in Ask', help: 'local, cloud, off or any. Default local. Needs Ask (ai.chat_enabled) on as well.' },
@@ -64,6 +68,8 @@
       label: 'Which AI suggests meals (ideas, order, swaps, day plan)', help: 'local, cloud, off, any or local_then_cloud (the cloud AI only when the local answer fails the app\'s checks). Default local.' },
     { key: 'ai.route.photos', type: 'choice', options: ['local', 'cloud', 'off', 'any', 'local_then_cloud'], default: 'local', scope: 'instance', env: 'AI_ROUTE_PHOTOS',
       label: 'Which AI reads photos (labels and plates)', help: 'local, cloud, off, any (any shared provider a person chose, as before routing) or local_then_cloud (the local AI first; the cloud AI only when the local answer fails the app\'s checks). A kitchen photo can show more than a label, so the default is local: with no local AI the feature is off.' },
+    { key: 'ai.route.recipes', type: 'choice', options: ['local', 'cloud', 'off', 'any', 'local_then_cloud'], default: 'local', scope: 'instance', env: 'AI_ROUTE_RECIPES',
+      label: 'Which AI suggests and reworks recipes', help: 'local, cloud, off, any or local_then_cloud (the cloud AI only when the local answer fails the app\'s checks). Default local. It sends the foods and amounts of a recipe, never its name, note, steps or link.' },
     { key: 'ai.shared_daily_limit', type: 'int', min: 0, max: 100000, default: 30, scope: 'instance', env: 'AI_SHARED_DAILY_LIMIT',
       label: 'Shared AI calls per person per day', help: 'Counts meal ideas, described meals, photos and connection tests on shared providers. 0 means unlimited.' },
     { key: 'ai.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: 'AI_ALLOW_USER_KEYS',

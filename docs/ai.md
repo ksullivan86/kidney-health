@@ -921,9 +921,10 @@ AI_ROUTE_LABS=local
 AI_ROUTE_MEAL_IDEAS=cloud
 AI_ROUTE_DESCRIBE=cloud
 AI_ROUTE_CHAT=cloud
+AI_ROUTE_RECIPES=cloud
 ```
 
-Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Photos and lab reports use the local key.
+Meal ideas, swaps, the day plan, describe a meal, AI recipes and Ask use the cloud key. Photos and lab reports use the local key.
 
 * **Photos stay `local`.** Keep `AI_ROUTE_PHOTOS=local`, not `local_then_cloud`, when photos may show names: a
   medicine label, a letter, a face. With `local_then_cloud` a photo whose local answer fails the app's checks goes to the cloud

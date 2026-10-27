@@ -314,7 +314,7 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
         model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
         response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
         verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
-                                                             "trimmed")}, **Q.shown_of(verdict), **(extra or {})},
+                                                             "trimmed", "steps_dropped")}, **Q.shown_of(verdict), **(extra or {})},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
     )
     conn.commit()
@@ -796,7 +796,8 @@ def status_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
         "features": {"next_meal": on("meal_ideas"), "parse_meal": on("describe"), "label": on("photos") and photos,
                      "plate": on("photos") and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
-                     "chat": chat_on, "voice": voice is not None, "lab_report": lab_report},
+                     "chat": chat_on, "voice": voice is not None, "lab_report": lab_report, "recipes": on("recipes"),
+                     "recipe_steps": on("recipes") and bool(state.store.get(conn, "ai.recipe_steps"))},
         "voice": voice,
         "trust": _trust_view(conn, state, prefs),
         "prompt_version": PROMPT_VERSION,
@@ -820,6 +821,87 @@ async def next_meal(body: NextMealBody, request: Request, user: CurrentUser, bac
                     dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """AI ideas, order, swap picks or plan picks for one meal, checked by the rules (R3, note 06 §4.13)."""
     prep = await run_in_threadpool(_prepare_next_meal, request, conn, user, body)
+    if isinstance(prep, dict):
+        return prep
+    if dry_run:
+        return await dry_run_of(conn, user, request, prep)
+    return await run_call(request, conn, user, prep, background)
+
+
+class RecipesBody(BaseModel):
+    """``POST /api/ai/recipes`` (note 16 §7): ``suggest`` a recipe of a kind of dish that makes ``makes`` servings, or ``change`` (rework)
+    the saved recipe ``meal_id``. The target is a meal (``meal``, default the next open one) or one serving against what is left
+    today (``target: "day"``)."""
+
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["suggest", "change"] = "suggest"
+    target: Literal["meal", "day"] = "meal"
+    meal: Meal | None = None
+    date: str | None = None
+    dish: Literal[schemas.RECIPE_DISHES] | None = None  # type: ignore[valid-type]
+    makes: Literal[1, 2, 4, 6] = 4
+    meal_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)] | None = None
+
+
+def _prepare_recipes(request: Request, conn: sqlite3.Connection, user: User, body: RecipesBody) -> F.Prepared | dict[str, Any]:
+    from ..guidance.recipes import Target, next_open_meal
+    from ..meals import fetch_template, parse_items, recipe_fields
+    from . import recipes as AR
+
+    state = ai_state(request)
+    if body.mode == "suggest" and (body.dish is None or body.meal_id is not None):
+        raise HTTPException(status_code=400, detail="suggest needs dish (and no meal_id)")
+    if body.mode == "change" and (body.meal_id is None or body.dish is not None):
+        raise HTTPException(status_code=400, detail="change needs meal_id (and no dish)")
+    day = guidance_api.parse_day(body.date)
+    off = guidance_api.gate(conn, state.store, user.id)
+    if off is not None:
+        return off
+    resolved = _resolve(request, conn, user, "recipes")
+    if not resolved.ok:
+        raise unavailable(resolved.reason or "not_configured")
+    recipe: list[tuple[Any, float]] = []
+    name = None
+    makes: float = float(body.makes)
+    wanted: list[tuple[int, float]] = []
+    if body.mode == "change":
+        row = fetch_template(conn, user.id, body.meal_id)  # type: ignore[arg-type]
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"saved meal {body.meal_id} not found")
+        wanted = [(int(i["food_id"]), float(i["servings"])) for i in parse_items(row["items_json"])]
+        makes = float(recipe_fields(row)[0] or 1.0)
+        name = str(row["name"])
+    ctx = guidance_api.load_ctx(request, conn, user.id, day, guidance_context.LoadOptions(history60=False, saved_meals=False, combos=False))
+    if not guidance_context.has_targets(ctx.profile):
+        return guidance_api.unavailable("no_targets", gmessages.NO_TARGETS)
+    if body.mode == "change":
+        recipe = [(ctx.foods.get(fid), q) for fid, q in wanted]
+        if not recipe or any(f is None for f, _ in recipe):
+            return {"status": "unavailable", "message": "This recipe has a food that is no longer in your list.", "ai_called": False}
+        if any(f.hypo for f, _ in recipe):
+            return {"status": "not_sent", "message": AR.NOT_SENT_TEXT, "ai_called": False}
+    meal = None if body.target == "day" else (body.meal or next_open_meal(ctx))
+    target = Target(body.target, meal)
+    person = _person(conn, state, user.id)
+    steps = bool(state.store.get(conn, "ai.recipe_steps"))
+
+    def build(cfg: C.ProviderConfig) -> F.Prepared:
+        return AR.prepare_recipes(ctx, cfg, target=target, person=person, mode=body.mode, dish=body.dish, makes=makes, steps=steps,
+                                  recipe=recipe, name=name)
+
+    try:
+        return _with_cloud(resolved, build(resolved.cfg), build)  # type: ignore[arg-type]
+    except F.ContextTooSmall:
+        raise ApiProblem(503, "The AI provider's prompt budget (AI_CONTEXT_TOKENS) is too small for this request.",
+                         reason="context_too_small") from None
+
+
+@router.post("/recipes")
+async def ai_recipes(body: RecipesBody, request: Request, user: CurrentUser, background: BackgroundTasks,
+                     dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """AI recipes (note 16 §8): up to two recipes for a meal, or one reworked recipe, checked and fitted by the app. Saves nothing:
+    each card carries the exact body for ``POST /api/meals``."""
+    prep = await run_in_threadpool(_prepare_recipes, request, conn, user, body)
     if isinstance(prep, dict):
         return prep
     if dry_run:
@@ -1542,6 +1624,7 @@ class RoutingBody(BaseModel):
     describe: StructuredRoute | None = None
     chat: StructuredRoute | None = None  # read here so that R.plan refuses local_then_cloud for Ask with its own reason (400)
     labs: LocalOnlyRoute | None = None  # local or off only: a lab report photo never goes to a cloud AI
+    recipes: StructuredRoute | None = None
     local_provider: ProviderId | None = None
     cloud_provider: ProviderId | None = None
 

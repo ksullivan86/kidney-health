@@ -1,4 +1,4 @@
-Status: phases 0 and 1 merged (#94); phase 2 built, in a PR
+Status: phases 0 to 2 released in 0.7.0 (#94, #95, #96); phase 3 (AI recipes) in progress
 
 # recipes: note 16, "Recipes that fit your targets"
 
@@ -55,7 +55,37 @@ MCP write and Ask save. The full suite runs in CI.
 * Handbook `app/planning-and-menus.md` ("Recipes", "Fit to my targets"), `handbook/REVIEW.md` (decision 16), CHANGELOG, ARCHITECTURE.
 * Tests: `tests/test_recipes_ui.py`; `test_parity_vectors.py` expects `fit_recipe` with all four statuses.
 
-## Then: phase 3 (AI recipes)
+## Phase 3: AI recipes (in progress)
+
+Owner's decisions 8 to 15 (note 16 §15). Server part first (3a), then the screens (3b).
+
+Done (3a, not yet committed when this was written; see git status):
+
+* Routing: feature `recipes` in `app/ai/routing.py` (purpose `text`, `local_then_cloud` allowed), `RoutingBody.recipes` in routes.
+* Settings: `ai.route.recipes` (`AI_ROUTE_RECIPES`, default local) and `ai.recipe_steps` (`AI_RECIPE_STEPS`, default off) in the
+  registry, the JS twin `engine/settings.js`, `tests/data/settings_vectors.json` (regenerated), the admin groups in `views/settings.js`,
+  `deploy/compose.yaml`, `deploy/.env.example`, the Quadlet example and the docs/ai.md example (`AI_ROUTE_RECIPES=cloud`).
+* `POLICY_VERSION` 2026-10-27.1 (decision 8: "Meal data" now covers a recipe's foods and amounts, so everyone is asked again).
+  `tests/test_ai_cloud_env.py` pins the new version.
+* `app/ai/recipe_steps.py`: the eight checks of §8.7. `app/ai/recipes.py`: `recipe_candidates`, `prepare_recipes`, `judge_recipes`,
+  `title_for`, `differences`. Prompt `RECIPE_SYSTEM_PROMPT` in prompts.py (rules 3, 4, 6–9 copied from the meal ideas prompt by
+  `_meal_rule`), task lines `recipes_suggest`/`recipes_change`, `recipe_context`. Schema `recipes_schema`, `RecipesAnswer`.
+* `POST /api/ai/recipes` (`RecipesBody`, `_prepare_recipes`), status `features.recipes` and `features.recipe_steps`, meta
+  `ai_recipes` (and the demo's meta says false), quality buckets for `recipes:suggest`/`recipes:change`.
+* Tests: `tests/test_ai_recipes.py` (29), `tests/test_ai_recipe_steps.py`; routing/fallback/meta/cloud-env tests updated.
+
+Decisions made while building:
+
+* The recipe AI's numbers (¼, ½, 1 serving; 48 foods; 6 per group; 4 ingredients) live in `app/ai/recipes.py`, not in
+  `guidance/rules.py`, so `RULES_VERSION` and the twin do not move: the demo never runs AI recipes.
+* A recipe with a low-treatment food is never sent (`status: not_sent`, wording does not mention a low). Other foods that may
+  not be candidates are left out of what is sent; the card's "differences" then shows them as taken out.
+* No answer cache for recipes (only next-meal is cached).
+
+Next (3a): `PROMPT_VERSION`, prompt snapshot fixture in `tests/fixtures/ai/`, golden cases (`tests/ai_golden/`, category
+`recipes`), `scripts/ai_eval.py` metrics (§12), docs/ai.md section "Recipes that fit" and the reworded "ingredient lists" row
+(decision 15), ARCHITECTURE route row, CHANGELOG Unreleased, handbook configuration table. Then 3b: the "Suggest recipes" sheet,
+"Rework with AI" in the fit sheet, the cards, Settings → AI line, handbook page.
 
 ## Old phase 2 plan
 

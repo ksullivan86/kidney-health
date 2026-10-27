@@ -115,7 +115,7 @@ def test_plan_refuses_the_route_for_ask_and_labs_with_a_reason(fb):
 
 def test_labs_stays_local_only_exactly_as_it_was():
     assert R.LOCAL_ONLY == ("labs",) and R.LOCAL_ONLY_ROUTES == ("local", "off")
-    assert R.allowed_routes("labs") == ("local", "off") and R.FALLBACK_FEATURES == ("photos", "meal_ideas", "describe")
+    assert R.allowed_routes("labs") == ("local", "off") and R.FALLBACK_FEATURES == ("photos", "meal_ideas", "describe", "recipes")
     assert "chat" not in R.FALLBACK_FEATURES and "labs" not in R.FALLBACK_FEATURES
     assert R.allowed_routes("chat") == R.ROUTES and "local_then_cloud" not in R.ROUTES
 
