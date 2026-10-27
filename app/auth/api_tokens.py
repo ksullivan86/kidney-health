@@ -93,8 +93,10 @@ DEVICE_DENIED = "A valid device token is required (Settings → Phone shortcuts)
 DEVICE_SWITCHED_OFF = "Phone shortcuts are turned off on this server. Ask your admin to turn them on."
 
 # Why every token of a person ended at once (the activity log's "reason"); "self" = revoked in Settings, "admin" =
-# an admin used Server administration → People → Revoke tokens (it ends both families).
-REASONS = ("self", "password_changed", "password_reset", "account_disabled", "account_deleted", "admin")
+# an admin used Server administration → People → Revoke tokens (it ends both families), "auth_mode_changed" = the
+# sign-in mode (AUTH_MODE) was different at start-up, so every token of every person ended.
+REASONS = ("self", "password_changed", "password_reset", "account_disabled", "account_deleted", "admin",
+           "auth_mode_changed")
 
 # Making tokens: a person may make a few in a row while setting up, not a stream (each one is audited).
 register_limit("api_tokens", 20, 3600, "Too many new tokens. Try again later.")
@@ -338,6 +340,18 @@ def revoke_all(conn: sqlite3.Connection, user_id: int, *, reason: str, actor_id:
     if count:
         audit(conn, actor_id, "api_token.revoked", "user", int(user_id), ip=ip, reason=reason, count=count)
     return count
+
+
+def revoke_everyone(conn: sqlite3.Connection, *, reason: str) -> int:
+    """Revoke every active token of every person, both families (no commit). One ``api_token.revoked`` row per
+    person who had any, with no actor (the server did it at start-up). Returns how many tokens ended."""
+    if not table_exists(conn, "api_tokens"):
+        return 0
+    now = clock.now_iso()
+    ids = [int(r[0]) for r in conn.execute(
+        "SELECT DISTINCT user_id FROM api_tokens WHERE revoked_at IS NULL AND expires_at > ? ORDER BY user_id", (now,)
+    ).fetchall()]
+    return sum(revoke_all(conn, uid, reason=reason, actor_id=None) for uid in ids)
 
 
 def purge_ended(conn: sqlite3.Connection) -> int:

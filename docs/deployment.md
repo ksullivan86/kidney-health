@@ -460,7 +460,9 @@ The image has no shell by design. Use `kubectl debug -it --profile=restricted --
   **Recommended whenever more than one person signs in**, until local accounts get a second factor:
   put an SSO provider with MFA in front (Authelia, Authentik, Keycloak, Kanidm, Pocket ID).
 * **`AUTH_MODE=none`**: no sign-in at all; everything belongs to one person and anyone who can open
-  the page can read and change it. Only for one person on a trusted LAN, never exposed beyond it.
+  the page can read and change it. Only for one person on a trusted LAN, never exposed beyond it. Anyone who
+  can reach it can also make assistant and phone shortcut tokens, so changing the mode later revokes every
+  token (and signs everybody out) the next time the server starts.
 
 ## Backups and restore
 

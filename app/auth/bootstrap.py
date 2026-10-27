@@ -3,7 +3,8 @@
 Run once by the app's lifespan after the database is migrated:
 
 1. Password self-test (Argon2id, or scrypt with ``PASSWORD_HASH=scrypt``).
-2. Sign everybody out when ``AUTH_MODE`` changed since the last start (``meta.auth_mode``, §9 N2).
+2. Sign everybody out and revoke every assistant and phone shortcut token when ``AUTH_MODE`` changed since the
+   last start (``meta.auth_mode``, §9 N2).
 3. Housekeeping: expired sessions, idle throttle rows, the pre-v3 backup 30 days after the
    migration (§9 N11).
 4. First run, when no admin has been set up:
@@ -26,7 +27,7 @@ from .. import brand
 from ..audit import audit
 from ..config import Settings
 from ..db import database_file, get_meta, set_meta
-from . import clock, passwords, policy, sessions, tokens
+from . import api_tokens, clock, passwords, policy, sessions, tokens
 from .accounts import claim_first_admin
 from .context import AuthContext
 from .models import normalize_username, setup_required, valid_local_username
@@ -47,6 +48,14 @@ def _auth_mode_changed(conn: sqlite3.Connection, mode: str) -> None:
     if previous is not None and previous != mode:
         removed = conn.execute("DELETE FROM sessions").rowcount
         log.warning("AUTH_MODE changed from %s to %s: signed out every device (%d sessions)", previous, mode, removed)
+        # Tokens made while sign-in was off (or behind a different front door) were made by whoever could reach the
+        # server, so none of them is trusted after a change. Both families, every person.
+        ended = api_tokens.revoke_everyone(conn, reason="auth_mode_changed")
+        if ended:
+            log.warning(
+                "AUTH_MODE changed from %s to %s: revoked %d assistant and phone shortcut tokens, because they may have been"
+                " made by someone who was not the owner. Make new ones in Settings.", previous, mode, ended,
+            )
     if previous != mode:
         set_meta(conn, AUTH_MODE_KEY, mode)
 

@@ -3665,7 +3665,10 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
 (`password_changed`), a reset link or `python -m app.admin reset-password --stdin` (`password_reset`), an admin's or
 the CLI's disable (`account_disabled`, enabling again brings none back), account deletion (`account_deleted`,
 then the cascade removes the rows) and an admin's "Revoke tokens" in Server administration → People
-(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`); all of these end **both families**. An admin's "must change password" stops tokens until the change, which revokes
+(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`); all of these end **both families**. A change of `AUTH_MODE`
+since the last start (`meta.auth_mode`) ends every active token of **every** person, both families, at start-up
+(`revoke_everyone` in `app/auth/bootstrap.py`'s `_auth_mode_changed`; reason `auth_mode_changed`, one `api_token.revoked` row per person with no actor, one log warning with the
+count), because with `AUTH_MODE=none` anyone who can reach the server is user 1 and can make tokens. An admin's "must change password" stops tokens until the change, which revokes
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`, `family`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of

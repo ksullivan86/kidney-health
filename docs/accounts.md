@@ -125,7 +125,7 @@ Requirements (the server refuses to start otherwise):
 
 First setup in proxy mode still uses the setup code, opened through the proxy: the person who enters
 it becomes the admin. A proxy name never takes over a local account with the same name. Changing
-`AUTH_MODE` signs everybody out.
+`AUTH_MODE` signs everybody out and revokes every assistant and phone shortcut token ([what ends a token](assistant.md#what-ends-a-token)).
 
 Caddy with Authelia, for example:
 
