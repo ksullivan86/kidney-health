@@ -82,10 +82,13 @@ def _reasons() -> dict[str, Any]:
 
 
 def _head(extra: Mapping[str, Any]) -> dict[str, Any]:
+    # The answer (ideas, order, picks) comes first and the status and refusal last. A model that writes the keys in schema order, as
+    # constrained decoding does, then works out its ideas before it decides whether "nothing fits"; with the refusal first, small
+    # models often took that exit at once (an empty answer in about 24 tokens).
     return _object({
+        **extra,
         "status": {"type": "string", "enum": ["ok", "refused"]},
         "refusal": {"type": "string", "enum": ["none", "outside_scope", "no_fit"]},
-        **extra,
     })
 
 
@@ -135,7 +138,7 @@ def parse_meal_schema() -> dict[str, Any]:
         "amount": _nullable("number"),
         "unit": {"type": "string", "enum": list(UNITS)},
     })
-    return _object({"status": {"type": "string", "enum": ["ok", "refused"]}, "items": _array(item, hi=MAX_PARSE_ITEMS)})
+    return _object({"items": _array(item, hi=MAX_PARSE_ITEMS), "status": {"type": "string", "enum": ["ok", "refused"]}})
 
 
 def read_label_schema() -> dict[str, Any]:

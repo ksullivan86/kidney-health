@@ -213,6 +213,11 @@ Tick every line before you put real health data in the app.
     the stored API keys, never health data or passwords.
 * **Rotate** with `python -m app.admin rotate-secret-key` (auto-generated key) or, with a mounted
   key: add a new first line, restart, `python -m app.admin reencrypt`, remove the old line, restart.
+* **File modes on the data folder.** The app creates `DATA_DIR` as `0770` and sets `kidney.db` and its `-wal` and `-shm`
+  files to `0600`, whatever the umask, so other users on the same computer cannot read them. `secret.key`,
+  backups and exports are `0600`. A folder that already exists and is open to other users loses that access, if
+  the app owns it. When the app cannot fix a mode, it logs a warning with the command to run. The images are
+  unchanged: `/data` is `10001:0`, mode `0770`.
 * The automatic `kidney.db.pre-v3.bak` (taken before the v0.3 accounts migration) holds every v0.2
   meal. It is deleted 30 days after a successful migration; Admin → About shows while it exists.
 

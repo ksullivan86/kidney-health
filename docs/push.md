@@ -25,7 +25,9 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the route
-is `POST /push/v1/body` only.
+is `POST /push/v1/body` only. To let a phone reach it from beyond your LAN without opening the rest of the app, use the
+commented second host name in `deploy/caddy/Caddyfile.example`; it passes only this request and `POST /mcp`
+([assistant.md](assistant.md)). A VPN is simpler and safer.
 
 ## What a token is
 
@@ -36,7 +38,8 @@ is `POST /push/v1/body` only.
 * A token has a name (for example "Morning weight"), shows when it was last used and how many weights and readings it sent that are still in
   the log, and is **revoked** at once in Settings. Every token
   also ends when its owner's password is changed or reset, when the account is disabled or deleted and when an admin presses **Revoke
-  tokens** for the person (Server administration → People: it ends assistant and device tokens alike).
+  tokens** for the person (Server administration → People: it ends assistant and device tokens alike). When the server's
+  sign-in mode (`AUTH_MODE`) changes, every token of every person ends at the next start.
 * The rows a token sent are marked `source: shortcut` and linked to it, so the person can see where a row came from and **delete
   everything one token sent** in one step (`DELETE /api/me/tokens/{id}/body-rows`). If the token is purged 30 days after it ended, the rows
   stay and only lose its name.

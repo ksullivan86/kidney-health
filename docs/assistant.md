@@ -52,6 +52,11 @@ The chat client's server must be able to reach the app: on the same machine or p
 your reverse proxy with HTTPS. Exposing the app to the internet so that a vendor's cloud app can reach it is
 **not recommended** for health data.
 
+If something must reach the server from beyond your LAN, expose only `POST /mcp` (and `POST /push/v1/body` for phone
+shortcuts) and keep the rest of the app private. In `deploy/caddy/Caddyfile.example` there is a commented second host name
+that passes only those two requests and answers `404` to everything else. Do not put a sign-in in front of that name: the
+token is the sign-in.
+
 ## Access tokens
 
 A token is a long secret, `kha_` followed by 43 letters, digits, `-` and `_`, that you paste into the chat
@@ -95,6 +100,9 @@ taste": the food or kind of food, what it was and what it is now, and the token'
 * An admin disables or deletes your account (enabling it again brings no token back).
 * An admin uses **Revoke tokens** on your row in Server administration → People: every active token of
   yours ends at once (your activity says "revoked by an admin"), and you can make new ones.
+* The server's sign-in mode (`AUTH_MODE`) changes: every token of everyone is revoked at the next start (your
+  activity says "sign-in mode changed"). With sign-in off, anyone who could reach the server could have made a
+  token as you. Make new ones in Settings.
 * While an admin requires you to choose a new password, your tokens do not work; the change then revokes them.
 * While the admin has assistant access **turned off**, no token works and no new one can be made. You can still
   see and revoke yours. When it is turned on again, tokens that have not expired or been revoked work again.
@@ -119,7 +127,9 @@ when, so that a retry is recognised ([Tools that save](#tools-that-save)).
   them); admins also see it while it is off, with a pointer to the switch.
 * A token works for the account it was made by, under the server's current sign-in mode: a local account with
   `AUTH_MODE=local`, a proxy account with `AUTH_MODE=proxy`, user 1 with `AUTH_MODE=none`. Changing the mode
-  stops tokens of accounts that cannot sign in under the new one.
+  revokes every assistant and phone shortcut token of everyone the next time the server starts, and says so in
+  the log. With `AUTH_MODE=none` anyone who can reach the server is user 1 and can make tokens, so none of them
+  can be trusted once sign-in is back.
 * Use HTTPS beyond your own computer: the token travels in a request header, like a password.
 * `python -m app.admin reset-password <name> --stdin` and `disable-user <name>` revoke the account's tokens too.
 * **Revoke a person's tokens:** Server administration → People → Manage → **Revoke tokens (n)** (shown while

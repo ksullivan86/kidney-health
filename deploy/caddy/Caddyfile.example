@@ -28,6 +28,29 @@
 		}
 	}
 
+	# OPTIONAL, and only if something must be reachable from beyond your LAN (for example a chat assistant
+	# running elsewhere, or a phone shortcut away from home): a second name that passes exactly two
+	# requests, POST /mcp (docs/assistant.md) and POST /push/v1/body (docs/push.md), and answers 404 to
+	# everything else. The sign-in page, the API and the rest of the app stay on the LAN-only name above.
+	# Both requests carry a token (Authorization: Bearer ...), so do not put a login in front of this
+	# name. Also: add the name to ALLOWED_HOSTS, point its DNS at this machine, and turn on only the
+	# switches you use (Assistant access, Phone shortcuts).
+	# Health data crosses the internet here, so use it only over this HTTPS name.
+	#
+	# @bridge host bridge.home.example.net
+	# handle @bridge {
+	# 	@tokens {
+	# 		method POST
+	# 		path /mcp /push/v1/body
+	# 	}
+	# 	handle @tokens {
+	# 		reverse_proxy kidney-health:8000
+	# 	}
+	# 	handle {
+	# 		respond 404
+	# 	}
+	# }
+
 	# Unknown names under the wildcard get nothing.
 	handle {
 		abort

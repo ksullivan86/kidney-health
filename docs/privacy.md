@@ -215,6 +215,8 @@ food row is marked "from your assistant", and it is in the export and deleted wi
   * the person who runs the server can technically read the database file and its backups;
   * an admin can create a password-reset link for any account. If that happens, you are told at
     your next sign-in, and it appears in your activity list.
+  * the **How well each AI is doing** section in Server administration counts everyone's AI calls together. It shows
+    no names and no contents. On a server with only two or three people, an admin may still guess whose calls they were.
 
 ## Moving your data to another server
 

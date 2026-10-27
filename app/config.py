@@ -66,14 +66,18 @@ The image runs uvicorn with ``--no-proxy-headers``: ``X-Forwarded-*`` are applie
 from __future__ import annotations
 
 import ipaddress
+import logging
 import os
 import re
+import stat
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
 
 from . import brand
+
+log = logging.getLogger(f"{brand.LOGGER_NAME}.config")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FOODS_JSON = REPO_ROOT / "data" / "foods.json"
@@ -83,6 +87,27 @@ DEFAULT_HANDBOOK_DIR = REPO_ROOT / "handbook" / "site"
 DB_FILENAME = brand.DB_FILENAME
 SECRET_KEY_FILENAME = "secret.key"
 SECRET_KEY_MIN_LENGTH = 32
+# Who may open DATA_DIR: its owner and the owner's group (the image's 10001:0 and OpenShift's GID 0), nobody else.
+DATA_DIR_MODE = 0o770
+
+def _restrict_data_dir(path: Path, *, created: bool) -> None:
+    try:
+        info = path.stat()
+        mode = stat.S_IMODE(info.st_mode)
+        owned = not hasattr(os, "geteuid") or info.st_uid == os.geteuid()
+        if created and owned:
+            path.chmod(DATA_DIR_MODE)  # mkdir's mode is cut down by the umask
+        elif mode & 0o007 and owned:
+            path.chmod(mode & ~0o007)
+            log.warning("%s was open to other users (mode %o); removed their access (now %o)", path, mode, mode & ~0o007)
+        elif mode & 0o007:
+            log.warning(
+                "%s is open to other users (mode %o) and this process does not own it, so it cannot change that;"
+                " run: chmod o-rwx %s", path, mode, path,
+            )
+    except OSError as exc:
+        log.warning("could not check or set the mode of %s (%s); run: chmod 770 %s", path, exc, path)
+
 
 # Files that exist only inside an OCI container (podman / docker).
 _CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
@@ -150,8 +175,22 @@ class AiEnv:
     eval_reports_dir: str | None = None  # AI_EVAL_REPORTS_DIR
 
 
-UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&-]{0,59}$")  # a company's plain name, shown to people in the consent line
-UPSTREAM_MAX_CHARS = 60
+# A company's plain name, shown to people in the consent line. A proxy that falls back from one company to another names them in
+# order, separated by ";" ("OpenAI (ChatGPT); Anthropic (Claude)"): the first is used, the next only when the one before is busy or down.
+UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&()-]{0,59}$")
+UPSTREAM_MAX_CHARS = 60  # all names with their separators (the ai_providers.upstream column holds 60)
+UPSTREAM_MAX_NAMES = 3
+
+
+def upstream_names(raw: str) -> list[str]:
+    """The company names in ``AI_CLOUD_UPSTREAM``, in order (``ConfigError`` when one is not a plain name or there are too many)."""
+    names = [part.strip() for part in raw.split(";")]
+    if (len(raw) > UPSTREAM_MAX_CHARS or not 1 <= len(names) <= UPSTREAM_MAX_NAMES
+            or not all(UPSTREAM_PATTERN.fullmatch(n) for n in names)):
+        raise ConfigError(f"AI_CLOUD_UPSTREAM must name the company (or up to {UPSTREAM_MAX_NAMES}, in the order the proxy tries them, "
+                          f"separated by ;): letters, digits, spaces and . & ( ) - only, at most {UPSTREAM_MAX_CHARS} characters in all "
+                          f"(for example Anthropic, or OpenAI (ChatGPT); Anthropic (Claude)), not {raw[:80]!r}.")
+    return names
 
 
 @dataclass(frozen=True)
@@ -187,9 +226,8 @@ def load_ai_cloud_env(env: Mapping[str, str]) -> AiCloudEnv:
     key, _, _ = read_secret(env, "AI_CLOUD_API_KEY")
     key = (key or "").strip() or None
     upstream = _raw(env, "AI_CLOUD_UPSTREAM")
-    if upstream is not None and not UPSTREAM_PATTERN.fullmatch(upstream):
-        raise ConfigError(f"AI_CLOUD_UPSTREAM must be the company's plain name: letters, digits, spaces and . & - only, at most "
-                          f"{UPSTREAM_MAX_CHARS} characters (for example Anthropic), not {upstream[:80]!r}.")
+    if upstream is not None:
+        upstream = "; ".join(upstream_names(upstream))
     return AiCloudEnv(
         provider=(_raw(env, "AI_CLOUD_PROVIDER") or "").lower() or None,
         base_url=_raw(env, "AI_CLOUD_BASE_URL"),
@@ -331,9 +369,16 @@ class Settings:
         return self.data_dir / SECRET_KEY_FILENAME
 
     def ensure_data_dir(self) -> Path:
-        """Create ``DATA_DIR`` (and parents) if it does not exist yet."""
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        return self.data_dir
+        """Create ``DATA_DIR`` (and parents) if it does not exist yet, with mode 0770.
+
+        The process umask would otherwise decide (0755 under the usual 022), which lets every local user list and
+        open the database. A folder that already exists and is open to "other" loses that access, but only when this
+        process owns it. This never stops the start: a folder it cannot fix is reported in the log."""
+        path = self.data_dir
+        created = not path.exists()
+        path.mkdir(parents=True, exist_ok=True, mode=DATA_DIR_MODE)
+        _restrict_data_dir(path, created=created)
+        return path
 
     # ------------------------------------------------------------------ derived values
     @property

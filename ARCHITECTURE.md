@@ -23,6 +23,9 @@ The UI must say that targets come from the person's care team.
 * Frontend: static `index.html` + plain scripts and styles (v0.3: `js/`, `css/`; "Frontend modules") served by FastAPI.
   **No build step, no CDN, no external requests from the browser.** Works offline on a LAN.
 * One container image. All state lives in `DATA_DIR` (default `/data`) as `kidney.db`.
+  File modes do not depend on the umask: `Settings.ensure_data_dir` makes `DATA_DIR` `0770` (and removes "other" access from an
+  existing folder the process owns); `db.init_db` creates `kidney.db` at `0600` and `db.secure_database_files` sets it and its
+  `-wal` and `-shm` files to `0600`, like `secret.key`, backups and exports. A mode the app cannot fix is a log warning, never a failed start.
 * Tests: `pytest` with `httpx2` (Starlette `TestClient`; v0.3 moved the app from `httpx` to `httpx2`).
 
 ## Repository layout and file ownership
@@ -3665,7 +3668,10 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
 (`password_changed`), a reset link or `python -m app.admin reset-password --stdin` (`password_reset`), an admin's or
 the CLI's disable (`account_disabled`, enabling again brings none back), account deletion (`account_deleted`,
 then the cascade removes the rows) and an admin's "Revoke tokens" in Server administration → People
-(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`); all of these end **both families**. An admin's "must change password" stops tokens until the change, which revokes
+(`POST /api/admin/users/{id}/revoke-tokens`, reason `admin`); all of these end **both families**. A change of `AUTH_MODE`
+since the last start (`meta.auth_mode`) ends every active token of **every** person, both families, at start-up
+(`revoke_everyone` in `app/auth/bootstrap.py`'s `_auth_mode_changed`; reason `auth_mode_changed`, one `api_token.revoked` row per person with no actor, one log warning with the
+count), because with `AUTH_MODE=none` anyone who can reach the server is user 1 and can make tokens. An admin's "must change password" stops tokens until the change, which revokes
 them. Activity (both in the person's own activity list): `api_token.created` (target `api_token` id; details
 `expires_in_days`, `scopes`, `family`) and `api_token.revoked` (by the person: target `api_token`, `reason: "self"`; by an
 event: target `user`, `reason`, `count`). Never the token, its prefix or its name: audit rows keep ids. (The saves of

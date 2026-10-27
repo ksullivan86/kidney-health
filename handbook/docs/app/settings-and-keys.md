@@ -128,7 +128,8 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
   again. If it is lost, **Revoke** it and make a new one.
 - You can have 5 at a time. **Revoke** ends one at once. Changing your password, a password reset, or your
   account being disabled revokes all of them, and so does an admin who uses **Revoke tokens** on your
-  account (your activity says so). That ends your phone shortcut tokens too.
+  account (your activity says so). That ends your phone shortcut tokens too. If your admin changes how the
+  server signs people in, every token ends and you make new ones.
 - If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
 - Treat a token like a password: never send it by text message or email.
 

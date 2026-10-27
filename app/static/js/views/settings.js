@@ -750,7 +750,7 @@
   const tasteWord = (value, kind) => (kind === 'group' && value === 'not_for_me' ? 'never suggest' : TASTE_WORD[value] || value);
   const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
-    account_deleted: 'account deleted', admin: 'revoked by an admin' };
+    account_deleted: 'account deleted', admin: 'revoked by an admin', auth_mode_changed: 'sign-in mode changed' };
   function eventDetail(ev) {
     const d = ev.details || {};
     if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}`;

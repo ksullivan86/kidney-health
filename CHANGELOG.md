@@ -15,8 +15,34 @@ the API. Security fixes are released as patch versions of the newest minor versi
   changes, and nobody is asked again for an AI they already agreed to. You are asked again for this one if your admin names a different
   company.
 
+* **Assistant and phone shortcut tokens end when your admin changes how the server signs people in.** If you see a token as revoked in
+  Settings, and "sign-in mode changed" in your activity, this is why. Make a new token. Nothing else about your account changes.
+
 ### For people who run a server
 
+* **A chain of companies behind one proxy.** `AI_CLOUD_UPSTREAM` can name up to 3 companies in the order the proxy tries them, separated by
+  `;` (`OpenAI (ChatGPT); Anthropic (Claude)`), and brackets are allowed. The consent sheet then names each one and says when the next is
+  used. One name works as before. The activity list, usage counts, "How well each AI is doing" and `ai_eval` see the chain as one provider
+  ([docs/ai.md](docs/ai.md#a-proxy-that-falls-back-from-one-company-to-another)).
+* **Meal ideas and describe a meal: the answer comes before "nothing fits".** The answer format now lists the ideas (or the order, the
+  swaps, the plan, the foods) before the status and the refusal. A model that writes the keys in order then works out its ideas before it
+  decides that nothing fits. With the refusal first, a small local model often took that exit at once. `PROMPT_VERSION` is `2026-10-27.1`,
+  so run `scripts/ai_eval.py` again for the models you use; reports for the old version show as "for an older version".
+* **Security: tokens made while sign-in was off no longer survive switching it on.** With `AUTH_MODE=none` anyone who can reach the server is
+  user 1, an admin, and can make assistant (`kha_`) and phone shortcut (`khd_`) tokens that last up to a year. After you switched to `local`,
+  those tokens still worked. Now any change of `AUTH_MODE` since the last start revokes every active token of both kinds, for every person.
+  The log says how many, each person's activity gets one "Tokens revoked" row (reason `auth_mode_changed`), and people make new tokens in
+  Settings. Starting with the same mode revokes nothing. No schema step.
+* **Security: the database is no longer readable by every user on the computer.** Outside a container, `DATA_DIR` and `kidney.db` took their
+  modes from the umask, usually `0755` and `0644`. The app now makes `DATA_DIR` `0770` and sets `kidney.db` and its `-wal` and `-shm` files
+  to `0600` at every start, and removes "other" access from an existing data folder it owns. The start never fails over this: a mode the app
+  cannot change is a log warning that names the command to run. `secret.key`, backups and exports were already `0600`. The images are
+  unchanged (`/data` is `10001:0`, mode `0770`).
+* **Docs.** [`docs/ai.md`](docs/ai.md) says how to make the two LiteLLM keys really limited (one virtual key for each use, allowed models,
+  never the master key, budgets, the admin screen off the open network), warns that the promise about lab report photos depends on it, and
+  has a section on model servers on another machine (firewall 11434 and 4000, no plain `http://` across a LAN). The Caddy example shows how to
+  expose only `POST /mcp` and `POST /push/v1/body`. `ENABLE_API_DOCS` now says it is for development machines only. `docs/privacy.md` says that
+  the AI quality section may let an admin guess whose calls they were on a very small server.
 * **A local AI and a cloud AI, both from the environment.** Until now only one provider could come from the environment (`AI_PROVIDER`);
   a second one had to be added in the app. `AI_CLOUD_PROVIDER` adds the second one, and it is **always the cloud AI**: `AI_CLOUD_BASE_URL`,
   `AI_CLOUD_API_KEY_FILE` (or `AI_CLOUD_API_KEY`), `AI_CLOUD_MODEL`, `AI_CLOUD_VISION_MODEL`, `AI_CLOUD_TIMEOUT_S`, `AI_CLOUD_MAX_TOKENS`,

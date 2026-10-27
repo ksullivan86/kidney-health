@@ -74,6 +74,8 @@ from other machines ([HTTPS for phones](https.md)).
   Revoke tokens** ends every token that person has, assistant tokens and phone shortcut tokens alike (it shows while
   assistant access or phone shortcuts is on and they have active ones). It appears in their activity; they can make
   new tokens in their settings.
+- Changing `AUTH_MODE` signs everybody out and revokes every assistant and phone shortcut token at the next start. With
+  sign-in off, anyone who could reach the server could have made a token, so none is kept.
 - Removing an admin contains them: demoting, disabling or deleting an admin also deletes every
   unused invite and reset or setup link they created. A reset link also stops working once the
   account's password is changed another way, or the account is disabled.

@@ -57,7 +57,8 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
   [which AI each feature uses](#which-ai-does-each-feature-use), [how well each AI is doing](#how-well-each-ai-is-doing),
-  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment)),
+  [a model server on another machine](#a-model-server-on-another-machine),
+  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment), [limiting each LiteLLM key](#limit-each-litellm-key-to-what-it-is-for)),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
@@ -387,7 +388,7 @@ Environment only (never editable at run time; a bad value stops the start with a
 | `AI_CLOUD_CONTEXT_TOKENS` | `32768` | Prompt budget (1024–2000000), **even for a self-hosted preset such as `litellm`**: a cloud model sits behind it, and the local 8192 would leave out candidate foods. `AI_CONTEXT_TOKENS` is unchanged |
 | `AI_CLOUD_STRUCTURED_OUTPUT` | `auto` | As `AI_STRUCTURED_OUTPUT` |
 | `AI_CLOUD_REASONING_EFFORT` | the preset's | As `AI_REASONING_EFFORT` |
-| `AI_CLOUD_UPSTREAM` | unset | **Required** when the preset is a server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`, `openai_compatible`): the plain name of the company it forwards to, for example `Anthropic`. Letters, digits, spaces and `.` `&` `-`, at most 60 characters, starting with a letter or digit. The consent sheet and the provider list use it. A new name asks everyone again. For `openai`, `openrouter` and `nous_portal` it is ignored, with a warning |
+| `AI_CLOUD_UPSTREAM` | unset | **Required** when the preset is a server you run (`litellm`, `vllm`, `ollama`, `lmstudio`, `llamacpp`, `openai_compatible`): the plain name of the company it forwards to, for example `Anthropic`. A proxy that falls back from one company to another names them in the order it tries them, separated by `;`, at most 3: `OpenAI (ChatGPT); Anthropic (Claude)`. Each name has letters, digits, spaces and `.` `&` `(` `)` `-`, starting with a letter or digit, and all of it at most 60 characters. The consent sheet and the provider list use it. A new name asks everyone again. For `openai`, `openrouter` and `nous_portal` it is ignored, with a warning |
 | `AI_PRIVATE_HOSTS` | empty | `host:port`, `ip:port`, `[ipv6]:port` or a CIDR that **shared** providers may reach on private, loopback, CGNAT, ULA or link-local addresses. No wildcard; the old `ALLOW_PRIVATE_AI_HOSTS` is refused |
 | `AI_DENY_CIDRS` | empty | Addresses no AI call may reach, in any scope: add your own public (WAN) address |
 | `AI_HTTP_PROXY` | unset | Proxy for AI calls. `HTTP(S)_PROXY` is **ignored** for AI on purpose; with a proxy, public names are resolved by the proxy and personal server addresses are off |
@@ -426,6 +427,18 @@ models, finds the JSON mode that works (`json_schema`, then `json_object`, then 
 vision with a red square when a vision model is set, and for `hermes` runs the tool check first. Shared
 providers are tested again automatically after a person's call when the last test is a day old, and
 after a change of address, model or key.
+
+#### A model server on another machine
+
+Ollama has no sign-in at all, and LiteLLM has none until you set up keys. Anyone who can reach the port can use the model.
+With Ollama they can also change what is installed. So:
+
+* **Firewall the port** (11434 for Ollama, 4000 for LiteLLM) so that only the machine running this app can reach it.
+* **Do not listen on every network address** unless you need to. Set the server to listen on the address the app uses.
+* **Plain `http://` on a LAN is readable by anyone on that network.** It carries meal data, photos and the key in clear
+  text. Prefer the same machine, a private network (a VPN between the two machines) or TLS.
+
+A device on your LAN is one of the threats in [`security.md`](security.md#2-threat-model-in-one-table).
 
 ### Which AI does each feature use?
 
@@ -486,6 +499,8 @@ provider another role (`409`, `locked`). The local role stays free on a server t
 local AI by hand and choose it, or set `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`. Both providers can sit at the same
 address (a LiteLLM proxy with two keys): the key tells them apart, and each is listed in `AI_PRIVATE_HOSTS` once per
 `host:port`. Listing the cloud provider's address does not make it the local AI, and **a lab report never goes to it**.
+That holds only if the local key cannot call a cloud model: set the proxy up as in
+[Limit each LiteLLM key to what it is for](#limit-each-litellm-key-to-what-it-is-for).
 
 **What "local" guarantees.** (1) The role is re-checked before every call: if the host is no longer private (for
 example `AI_PRIVATE_HOSTS` changed), nothing is sent (`local_not_private`). (2) Calls to the local AI use the
@@ -587,6 +602,25 @@ and `request`, the sheet Settings shows to agree later). A `409 consent_required
 cloud provider's request, with `given` and the rule); `?dry_run=true` adds `cloud_fallback` (the second request, its `message`, and
 whether the person agreed); an answer adds `cloud_fallback` only after a fallback or when it was needed but not possible
 (`used`, `answered`, `reason` such as `no_consent` or `quota_exhausted`, `message`, `local`, `cloud` and the two audit ids).
+
+### A proxy that falls back from one company to another
+
+With `AI_CLOUD_UPSTREAM=OpenAI (ChatGPT); Anthropic (Claude)` the consent sheet says: "Goes through your admin's LiteLLM proxy to OpenAI
+(ChatGPT), or to Anthropic (Claude) when the one before is busy or down. Each company receives what is sent to it, under its own terms;
+your admin can read it too." Name every company the proxy can fall back to, and no other. The app cannot see which one answered: the
+proxy decides. So these all treat the chain as one provider with one model, the alias the app calls:
+
+* the AI activity list (the host is your proxy; the model is the alias);
+* the daily usage counts;
+* "How well each AI is doing" and an `ai_eval` report, which mix the answers of every company in the chain.
+
+To judge each company on its own, run `scripts/ai_eval.py` against a proxy alias that points at that company only.
+
+### Local models stay a real choice
+
+Every diet feature (meal ideas, swaps, the day plan, describe a meal and Ask) works with a local AI as well as a cloud one. What makes a
+model fit for a feature is its `ai_eval` result, never its size or where it runs. "How well each AI is doing" only advises: it never
+blocks a feature or moves it to another AI. Lab report photos are the one rule the other way: they only ever go to the local AI.
 
 ### How well each AI is doing
 
@@ -913,6 +947,36 @@ Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Phot
   the local AI keeps 8,192 (`AI_CONTEXT_TOKENS`). Measure each with `scripts/ai_eval.py` (`--role local` and `--role cloud`).
 * `AI_ROUTE_*` are optional. Leave one out and an admin chooses it in the app, or it stays `local`, which is off until a local
   AI exists.
+
+##### Limit each LiteLLM key to what it is for
+
+"The local key can call only models on your GPU" is true only if you set up LiteLLM that way. The app cannot see or check it.
+
+* Make **one virtual key for each use**: one for the local AI, one for the cloud AI. Make them in LiteLLM, and give the
+  app only these. Never give it the master key, which can do everything, including make new keys.
+* Set each key's **allowed models** to just that key's aliases: the local key to the aliases that run on your GPU, the
+  cloud key to the cloud alias. A key with no list of allowed models can call every model the proxy knows.
+* If you like, give each key a **budget** and a **rate limit**. A leaked key or a stuck loop then cannot run up a bill or
+  flood the GPU.
+* Keep LiteLLM's admin screen and its port (4000) off the open network. Only the app's host and you should reach them
+  ([a model server on another machine](#a-model-server-on-another-machine)).
+
+**Warning.** The promise that lab report photos never leave your network depends on the local key being unable to call a
+cloud model. The app sends lab reports only to the local AI's address and key, and trusts the proxy to refuse the rest. If
+the local key could reach a cloud alias, one wrong model name in `AI_MODEL` or in the app would send lab reports to the
+cloud, and nothing would stop it.
+
+**Test it once, and again after you change the proxy.** Call a cloud alias with the local key and expect a refusal, not an
+answer:
+
+```bash
+curl -s http://litellm.lan:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(cat /run/secrets/ai_api_key)" -H "Content-Type: application/json" \
+  -d '{"model": "claude-sonnet", "messages": [{"role": "user", "content": "hi"}]}'
+```
+
+Change `claude-sonnet` to your cloud alias and the key file to your local key's. Do the same with the cloud key and a
+local alias if you want to keep the cloud key off your GPU.
 
 What stops the start, each with a message that names the variable:
 
