@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # recipes-note: design note 16, "Recipes that fit your targets"
 
@@ -32,15 +32,28 @@ Local commits only: no push, no PR.
 8. The commit trailer: the system reminder for this session says "Claude Sonnet 5.5"; the task text says "Claude Opus 5.5".
    I used the reminder's lines (it is accurate for this model) and said so in the report.
 
-## In progress / next
+## Done at the end
 
-* Write the note (sections 1 to 15), then the ROADMAP line, then run the checks below.
+* `docs/dev/research/16-recipes-that-fit.md` written (15 sections, about 530 lines): status table, problem, what exists
+  (R1 to R13), where the code departs from the owner's choices, options, the recipe's data, data flow, API, the AI call
+  (data sent, candidate list, schema, checks, title, steps checks G18), the fitting engine (kind `recipe`, pseudocode, bounds,
+  change lines), screens, safety cases, tests and measuring, phases with token costs, risks, decisions (16).
+* One line added to `docs/ROADMAP.md` in "Ideas from the owner".
+* No index line for the note: `docs/dev/research/README.md` does not exist, and `docs/README.md` lists notes 01 to 10 only,
+  so adding 16 alone would be odd. Left for whoever indexes 11 to 16.
+* A check on the fixture of `tests/guidance/fixtures.py` showed the problem in R4: a recipe that fits one dinner (365 mg
+  potassium, 750 mg of room) is refused at pot size for 4 (1,460 mg), and a 0.04-serving item gives `portion_out_of_range`.
 
-## Checks to run (no network)
+## Checks run (all green, no network)
 
 ```
-cd <worktree>
-python scripts/build_handbook.py --check
-python -m pytest -q tests/test_docs*.py tests/test_handbook*.py tests/test_vectors_readme.py   # whatever matches
-git diff --check
+python scripts/build_handbook.py --check          # handbook generated files are up to date
+python -m pytest -q tests/test_handbook_content.py tests/test_handbook_serving.py tests/test_learn_links.py \
+    tests/test_vectors_readme.py tests/guidance/test_docs.py        # all passed (one old warning about unused sources)
+git diff --cached --check
 ```
+There is no `tests/test_docs*.py`. Every path in the note exists, except the new files it proposes.
+
+## If you continue
+
+Nothing is left in this task. The decisions are in section 15 of the note; the owner answers them before phase 0 starts.
