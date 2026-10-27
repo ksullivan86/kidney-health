@@ -341,6 +341,12 @@
     return GE.hypoOptions(this._guidanceContext(todayStr(), { history: false, history60: false, savedMeals: false, combos: false }));
   });
 
+  // Recipes that fit (note 16): the twin of app/guidance/recipes.py comes with the recipe screens (phase 2). Until then the demo says so.
+  route('POST', '/api/guidance/fit-recipe', function () {
+    this._currentUser();
+    return this._guidanceUnavailable('disabled', 'Fitting a recipe to your targets is not in the demo yet.');
+  });
+
   route('POST', '/api/guidance/plan-day', function ({ body }) {
     this._currentUser();
     const c = new Check(body);
