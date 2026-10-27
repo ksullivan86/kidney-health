@@ -1,4 +1,4 @@
-Status: phase 0 in PR #94 (CI); phase 1 built locally, not committed to a PR yet
+Status: phases 0 and 1 merged (#94); phase 2 built, in a PR
 
 # recipes: note 16, "Recipes that fit your targets"
 
@@ -45,7 +45,19 @@ MCP write and Ask save. The full suite runs in CI.
 * Docs: ARCHITECTURE route row, `docs/guidance.md` "Recipes that fit", CHANGELOG.
 * Tests: `tests/guidance/test_recipe_fit.py` (22).
 
-## Next: phase 2 (twin, vectors, screens)
+## Phase 2: twin, vectors and screens (built)
+
+* `engine/guidance/recipes.js` (loaded after hypo.js; in sw.js and both test lists), `check_meal` kind `recipe` in score.js,
+  the recipe texts in messages.js. 11 `fit_recipe` vectors (`recipe_cases()` in the generator), every status covered; Node replays them.
+* Demo route `POST /api/guidance/fit-recipe` in `js/mock/guidance.js` (validation, gate, no_targets, unavailable, the twin).
+* Screens in `js/views/plan.js` + `index.html` (`#sheet-fit`, editor fields) + `css/plan.css`. Checked in Chromium on the built demo
+  at 375 and 1280, light and dark: the sheet, every target, Save "(fitted)", Replace with the carbohydrate confirm, Undo; no errors.
+* Handbook `app/planning-and-menus.md` ("Recipes", "Fit to my targets"), `handbook/REVIEW.md` (decision 16), CHANGELOG, ARCHITECTURE.
+* Tests: `tests/test_recipes_ui.py`; `test_parity_vectors.py` expects `fit_recipe` with all four statuses.
+
+## Then: phase 3 (AI recipes)
+
+## Old phase 2 plan
 
 * `app/static/js/engine/guidance/recipes.js` (twin of recipes.py) and the `check_meal` kind `recipe` in the JS score twin;
   vectors for fit_recipe in `tests/data/guidance_vectors.json` (generator `tests/data/gen_guidance_vectors.py`); the demo route

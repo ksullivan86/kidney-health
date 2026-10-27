@@ -95,7 +95,7 @@ const TARGETS_ENGINE = ['app/static/js/engine/rules.js', 'app/static/js/engine/k
 const TARGETS_VECTORS = join(ROOT, 'tests', 'data', 'targets_vectors.json');
 const KIDNEY_VECTORS = join(ROOT, 'tests', 'data', 'kidney_function_vectors.json');
 // Load order matters (each part uses the ones before it); index.html lists them in the same order.
-const GUIDANCE_PARTS = ['rules', 'messages', 'budget', 'score', 'fits', 'swaps', 'planner', 'insights', 'hypo'];
+const GUIDANCE_PARTS = ['rules', 'messages', 'budget', 'score', 'fits', 'swaps', 'planner', 'insights', 'hypo', 'recipes'];
 const GUIDANCE_ENGINE = ['app/static/js/engine/rules.js', ...GUIDANCE_PARTS.map((p) => `app/static/js/engine/guidance/${p}.js`)];
 const GUIDANCE_VECTORS = join(ROOT, 'tests', 'data', 'guidance_vectors.json');
 const BARCODE_ENGINE = ['rules', 'textclean', 'gtin', 'additives', 'off'].map((p) => `app/static/js/engine/${p}.js`);
@@ -336,6 +336,9 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
     }
     if (fn === 'day_insights') return GE.dayInsights(ctx);
     if (fn === 'learned') return GE.learned(ctx);
+    if (fn === 'fit_recipe') {
+      return GE.fitRecipe(ctx, spec.items.map(([id, q]) => [ctx.foods.get(id), q]), spec.servings_made, { kind: spec.target.kind, meal: spec.target.meal || null });
+    }
     throw new Error(`unknown fn ${fn}`);
   };
   const counts = {};

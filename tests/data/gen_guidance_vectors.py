@@ -46,7 +46,7 @@ for extra in (ROOT, ROOT / "tests" / "guidance"):
 
 import fixtures as fx  # noqa: E402  (the note 06 §6.1 fixture, tests/guidance/fixtures.py)
 
-from app.guidance import fits, hypo, insights, planner, swaps  # noqa: E402
+from app.guidance import recipes, fits, hypo, insights, planner, swaps  # noqa: E402
 from app.guidance import rules as R  # noqa: E402
 from app.guidance.budget import meal_room  # noqa: E402
 from app.guidance.state import (  # noqa: E402
@@ -184,6 +184,9 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
         return insights.day_insights(ctx)
     if fn == "learned":
         return fits.learned(ctx)
+    if fn == "fit_recipe":
+        target = recipes.Target(spec["target"]["kind"], spec["target"].get("meal"))
+        return recipes.fit_recipe(ctx, [(foods[i], q) for i, q in spec["items"]], spec.get("servings_made"), target)
     raise ValueError(f"unknown fn {fn!r}")
 
 
@@ -530,7 +533,32 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
                               "tea with sugar 2 tsp", "lunch at 12:30", "at 1.5 cups", "only ٤٨")):
         out.append((f"prefilter {i + 1}", base_input(), {"fn": "prefilter", "text": text}))
     out += preference_cases()
+    out += recipe_cases()
     return out
+
+
+def recipe_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """Recipes that fit (note 16 §9): every status and every move, on the fixture and on real foods."""
+    dinner = {"kind": "meal", "meal": "dinner"}
+
+    def fit(items: list[list[float]], n: float | None, target: dict[str, Any] = dinner) -> dict[str, Any]:
+        return {"fn": "fit_recipe", "items": items, "servings_made": n, "target": target}
+
+    stew = [[rid("Beef, chuck pot roast, braised"), 4], [rid("Potato, baked, with skin"), 4], [rid("Cheese, cheddar"), 2],
+            [rid("Green beans, boiled"), 4], [rid("Milk, 2% reduced fat"), 1]]
+    return [
+        ("REC fits as it is", base_input(), fit([[1, 2], [5, 2]], 2)),
+        ("REC a pot for four, a smaller serving", base_input(), fit([[3, 4], [1, 4], [5, 4]], 4)),
+        ("REC the whole pot as one serving does not fit", base_input(), fit([[3, 4], [1, 4], [5, 4]], None)),
+        ("REC a food to avoid is swapped", base_input(), fit([[9, 1], [1, 1]], 1)),
+        ("REC a low treatment stays", base_input(), fit([[12, 8], [1, 2]], 1)),
+        ("REC potatoes swapped at lunch", base_input(), fit([[2, 8], [3, 4]], 4, {"kind": "meal", "meal": "lunch"})),
+        ("REC against what is left today", base_input(), fit([[2, 8], [3, 4]], 4, {"kind": "day"})),
+        ("REC the next open meal", base_input(), fit([[1, 4], [5, 4]], 4, {"kind": "meal"})),
+        ("REC a stew on real foods", real_input(), fit(stew, 4)),
+        ("REC a stew on real foods, for one", real_input(), fit(stew, 1)),
+        ("REC a stew on real foods, the day", real_input(), fit(stew, 2, {"kind": "day"})),
+    ]
 
 
 def build() -> dict[str, Any]:

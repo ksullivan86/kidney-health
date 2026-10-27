@@ -9,6 +9,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Recipes, and "Fit to my targets".** A saved meal can now be a recipe: put the amounts for the whole pot in its foods, how many
+  servings it makes in **Makes**, and if you like the cooking steps and a link to where it came from. The list shows one serving's
+  numbers. **Fit to my targets** on any saved meal checks one serving against a meal today or against what is left today. If it does
+  not fit, the app lowers amounts (never protein, never below half), swaps a food (never one you use to treat a low) or offers a
+  smaller serving, and lists every change. **Save as a new recipe** keeps yours and adds "<name> (fitted)"; **Replace this recipe**
+  asks first, shows carbohydrate per serving before and after, and can be undone. It works in the demo too. See
+  [Planning and menus](handbook/docs/app/planning-and-menus.md#fit-to-my-targets).
+
 * **A recipe saved by Ask or a connected assistant is now judged one serving at a time in What fits now.** Such a recipe holds the
   amounts for the whole pot. Until now What fits now judged the whole pot as one meal, so a 4-serving stew almost never fitted. It now
   divides by the number of servings first. Plain saved meals are unchanged.
@@ -25,14 +33,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **`POST /api/guidance/fit-recipe`, new.** It checks one serving of a recipe against a meal or against what is left today. When it
   does not fit, it lowers amounts (never a protein food, never below half), swaps a food (at most 2) or suggests a smaller serving,
-  and lists every change in plain words with the app's figures. It computes only and saves nothing. There is no screen for it yet.
+  and lists every change in plain words with the app's figures. It computes only and saves nothing.
   `RULES_VERSION` is `2026-10-27.1`; the six new numbers are in [docs/guidance.md](docs/guidance.md#recipes-that-fit).
 
 ### For contributors
 
-* New tests: `tests/guidance/test_recipe_fit.py` (the engine and the route), `tests/test_migration_m021.py`, `tests/test_recipes_api.py`, and a What fits now case in
-  `tests/guidance/test_api_guidance.py`. These are phases 0 and 1 of [note 16](docs/dev/research/16-recipes-that-fit.md); the
-  screens and the demo's twin of the engine come next.
+* `app/static/js/engine/guidance/recipes.js` is the demo's twin of the engine; 11 recipe cases are in
+  `tests/data/guidance_vectors.json` and replay in Node. `handbook/REVIEW.md` lists the half floor, the protein rule and the order for
+  a dietitian to confirm.
+* New tests: `tests/test_recipes_ui.py`, `tests/guidance/test_recipe_fit.py` (the engine and the route), `tests/test_migration_m021.py`, `tests/test_recipes_api.py`, and a What fits now case in
+  `tests/guidance/test_api_guidance.py`. Phases 0 to 2 of [note 16](docs/dev/research/16-recipes-that-fit.md), the fit without AI.
+  AI recipes (phase 3) come next.
 
 ## 0.6.0 — 2026-10-27
 

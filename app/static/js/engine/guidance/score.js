@@ -350,20 +350,22 @@
       if (carbs > NEG_CARBS && carbs > Math.max(room.carbs.gap, 0.0) + room.carbs.tolerance) return mealCheck(false, 'too_many_carbs');
     }
     const strict = kind === 'built' || kind === 'ai';
+    const recipe = kind === 'recipe';
     for (const [f, q] of items) {
       if (f.avoid) return mealCheck(false, 'avoid_ckd');
-      if (q < R.PORTION_MIN - 1e-9 || q > R.PORTION_MAX + 1e-9) return mealCheck(false, 'portion_out_of_range');
-      if (strict) {
-        if (f.hypo) return mealCheck(false, 'hypo_treatment');
-        if (f.ingredient) return mealCheck(false, 'ingredient');
-        if (f.alcohol) return mealCheck(false, 'alcohol');
+      // A recipe's share may be tiny (a spoon of oil in 4 servings), so only its top is checked (note 16 §9.2).
+      if ((q < R.PORTION_MIN - 1e-9 && !recipe) || q > R.PORTION_MAX + 1e-9) return mealCheck(false, 'portion_out_of_range');
+      if (strict && f.hypo) return mealCheck(false, 'hypo_treatment');
+      if (strict && f.ingredient) return mealCheck(false, 'ingredient');
+      if (strict && f.alcohol) return mealCheck(false, 'alcohol');
+      if (strict || recipe) {
         let highAny = false;
         for (const [key, v] of [[R.K, f.k], [R.P, f.p], [R.NA, f.na]]) {
           const high = (v != null && R.isHigh(key, v * q)) || (key === R.P && f.additive);
           highAny = highAny || high;
           if (high && GE.budget.levelOf(room, key) !== 'ok') return mealCheck(false, `high_warning:${key}`);
         }
-        if (kind === 'ai' && highAny && q > 1.0 + 1e-9) return mealCheck(false, 'high_portion_too_large');
+        if ((kind === 'ai' || recipe) && highAny && q > 1.0 + 1e-9) return mealCheck(false, 'high_portion_too_large');
       }
     }
     return mealCheck(true);

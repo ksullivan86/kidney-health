@@ -327,7 +327,42 @@
     return { code: t.code, text: format(t.text, values), handbook: t.slug, url: TOPIC_PAGES[t.slug].url };
   }
 
+  // ---- Recipes that fit (note 16 §9.6; twin of the recipe_* functions in messages.py) ----
+  const RECIPE_NOTES = [
+    'Numbers are for the foods as they are listed. Cooking, soaking or draining can change what ends up on the plate, and the ' +
+    'app does not count that.',
+    'Seasonings that are not in your food list are not counted.',
+  ];
+  const FIGURES = ' (app figures).';
+  const word = (key) => NUTRIENT_WORD[key] || key;
+  function recipeTargetLabel(kind, meal) { return kind === 'day' ? 'what is left today' : `this ${meal}'s room`; }
+  function perServing(key, oldV, newV) { return `${capitalise(word(key))} per serving: ${fmtAmount(key, oldV)} → ${withUnit(key, newV)}`; }
+  function recipeLoweredText(name, servingDesc, oldQ, newQ, key, label, oldValue, newValue) {
+    const head = `Used ${portionText(newQ, servingDesc)} of ${safeName(name)} instead of ${portionText(oldQ, servingDesc)}`;
+    if (!(key in NUTRIENT_WORD)) return `${head}, so one serving holds a smaller portion of it.`;
+    return `${head}, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, oldValue, newValue)}${FIGURES}`;
+  }
+  function recipeSwappedText(oldName, newName, servingDesc, amount, key, label, before, after) {
+    let text = `Swapped ${safeName(oldName)} for ${safeName(newName)}, ${portionText(amount, servingDesc)} in the whole recipe`;
+    if (key === 'avoid_ckd') return `${text}, because ${safeName(oldName)} is on the app's list of foods to avoid with kidney disease.`;
+    if (!(key in NUTRIENT_WORD)) return `${text}, because ${safeName(oldName)} does not list a value the app needs today.`;
+    text += `, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, before[key], after[key])}`;
+    if (key !== R.PROTEIN) text += `; protein ${fmtG(before[R.PROTEIN])} → ${fmtG(after[R.PROTEIN])} g`;
+    return text + FIGURES;
+  }
+  function recipeSmallerText(fraction, key, label, full, part, room) {
+    return `Have ${fmtServings(fraction)} of a serving: a full serving would use ${withUnit(key, full)} of ${word(key)} against ` +
+      `${withUnit(key, room)} of room; ${fmtServings(fraction)} uses ${withUnit(key, part)}${FIGURES}`;
+  }
+  function recipeNoFitText(label, over) {
+    const text = `This recipe does not fit ${label} after lowering amounts, swaps and a ½ serving.`;
+    if (over == null) return text;
+    const key = over.nutrient;
+    return `${text} Still over: ${word(key)} ${withUnit(key, over.used)} against ${withUnit(key, over.room)} of room${FIGURES}`;
+  }
+
   GE.M = {
+    RECIPE_NOTES, recipeTargetLabel, recipeLoweredText, recipeSwappedText, recipeSmallerText, recipeNoFitText,
     DISCLAIMER, AI_FALLBACK, NO_TARGETS, DISABLED, NEEDS_CONNECTION, NUTRIENT_WORD,
     whole, fmtInt, fmtG, fmtAmount, withUnit, pct, joinAnd, capitalise, fmtServings, shortServing, portionText, portionShort,
     fractionWord, sizeWord, safeName, fitText, reasonText, NOTE_TEXTS, noteText, learnedReason, roomLine, noFitText, savedMealNote, swapText, swapAvoidText,

@@ -648,7 +648,14 @@ link with a host and no password, at most 900 characters, never fetched; `""` is
 the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
 `scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
-`per_serving` and `unknown` are worked out again on read.
+`per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
+link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
+sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
+else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
+`servings_made ÷ serving_fraction` so one saved serving is the size that fits) or **Replace this recipe** (`PUT`, after an inline
+confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back). The demo answers the route
+with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
+`tests/data/guidance_vectors.json`.
 A food referenced by a template may be hidden later; keep the item, return `hidden: true`, and
 `apply` still works (the entry snapshot comes from the stored food row).
 

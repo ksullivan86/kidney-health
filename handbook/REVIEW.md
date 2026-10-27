@@ -94,6 +94,11 @@ pages, and tick it here.
 - [ ] Weight gain between hemodialysis sessions: show Cabrera's 3.5 % at all (St6)
 - [ ] Conservative care diet: "eat for comfort and strength; older or frail people may need more
       protein, not less" (KDIGO PP 3.3.1.5) replaced "protein is limited" (P5)
+- [ ] Recipes that fit (0.7, note 16; added 2026-10-27): when a recipe does not fit, the app lowers an ingredient to no
+      less than half of the recipe's own amount, never lowers a protein food (it swaps it or offers a smaller serving
+      instead), and tries in this order: lower amounts, swap a food (at most 2), a smaller serving (¾, then ½). These are
+      design choices, not clinical numbers, but they decide what a person's dinner looks like. Confirm the half, the
+      protein rule and the order (`app/guidance/recipes.py`, `RECIPE_*` in `app/guidance/rules.py`)
 
 **Labs** (reviewer: nephrologist)
 

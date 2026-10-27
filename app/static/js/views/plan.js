@@ -11,6 +11,11 @@
   const { todayStr, parseDate, addDays, fmtDateLong, fmtMonthDay, fmtRange, weekdayMon, weekStartOf, defaultStatusFor, defaultMealForNow, debounce } = KH.util;
   const { SHOP_KEY } = KH.keys;
 
+  // A recipe saved by Ask or MCP before schema step 21 kept this sentence as its note; the columns hold it now (note 16 §5.1).
+  const OLD_RECIPE_NOTE = /^Makes \d+(?:\.\d+)? servings?\.(?: Source: https?:\/\/\S+)?$/;
+  const shownNote = (t) => (t.note && !(t.servings_made != null && OLD_RECIPE_NOTE.test(t.note)) ? t.note : null);
+  const isRecipe = (t) => t.servings_made != null && t.servings_made !== 1;
+
   const planGridEl = $('#plan-grid');
   const savedMealsEl = $('#saved-meals');
   const shoppingEl = $('#shopping-list');
@@ -135,16 +140,19 @@
     for (const t of meals) {
       const li = h('li', { class: 'saved-meal' });
       const nums = h('div', { class: 'row-nums' });
-      for (const k of ROW_NUMBERS) nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(t.totals[k], k)), ` ${NUT[k].unit}`));
+      const shown = isRecipe(t) ? t.per_serving : t.totals;
+      for (const k of ROW_NUMBERS) nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(shown[k], k)), ` ${NUT[k].unit}`));
       li.append(h('div', { class: 'saved-meal-main' },
         ratingIcon(t.kidney_rating),
         h('div', { class: 'row-main' },
           h('div', { class: 'row-title' }, t.name),
           h('div', { class: 'row-sub' }, t.items.map((it) => `${fmtTimes(it.servings)} ${it.food_name}${it.hidden ? ' (hidden food)' : ''}`).join(', ')),
-          t.note ? h('div', { class: 'entry-note' }, t.note) : null,
+          isRecipe(t) ? h('div', { class: 'muted small' }, `Makes ${fmtServings(t.servings_made)}. Numbers are for one serving.`) : null,
+          shownNote(t) ? h('div', { class: 'entry-note' }, shownNote(t)) : null,
           nums)));
       li.append(h('div', { class: 'saved-meal-actions' },
         h('button', { class: 'btn secondary', type: 'button', onclick: (ev) => openApplySheet({ mealId: t.id, trigger: ev.currentTarget }) }, plusIcon(), 'Add to a day'),
+        h('button', { class: 'link-btn', type: 'button', onclick: (ev) => openFitSheet(t, ev.currentTarget) }, 'Fit to my targets'),
         h('button', { class: 'link-btn', type: 'button', onclick: (ev) => openMealEditor(t, ev.currentTarget) }, 'Edit'),
         h('button', { class: 'link-btn danger-link', type: 'button', 'aria-label': `Delete saved meal ${t.name}`,
           onclick: (ev) => confirmDeleteSavedMeal(t, ev.currentTarget.parentElement, ev.currentTarget) }, 'Delete')));
@@ -401,7 +409,10 @@
         per: food.nutrients, kidney_rating: food.kidney_rating, hidden: !!food.hidden })) : [];
     $('#sheet-meal-title').textContent = t ? 'Edit saved meal' : 'New saved meal';
     $('#meal-name').value = t ? t.name : draft ? draft.name : '';
-    $('#meal-note').value = t && t.note ? t.note : '';
+    $('#meal-note').value = t ? shownNote(t) || '' : '';
+    $('#meal-makes').value = t && t.servings_made != null ? String(t.servings_made) : '';
+    $('#meal-source').value = t && t.source_url ? t.source_url : '';
+    $('#meal-steps').value = t && t.steps ? t.steps.join('\n') : '';
     $('#meal-hint').value = t && t.meal_hint ? t.meal_hint : draft && draft.meal_hint ? draft.meal_hint : ''; // v0.3: the meal it is meant for (meal guidance)
     $('#meal-delete').hidden = !t;
     $('#meal-search').value = '';
@@ -427,10 +438,11 @@
   }
   function renderMealTotals() {
     const totals = Object.fromEntries(NUTRIENTS.map((n) => [n.key, 0]));
-    for (const it of mealEd.items) for (const n of NUTRIENTS) totals[n.key] += (it.per[n.key] || 0) * it.servings;
+    const makes = Number($('#meal-makes').value) > 0 ? Number($('#meal-makes').value) : 1;
+    for (const it of mealEd.items) for (const n of NUTRIENTS) totals[n.key] += (it.per[n.key] || 0) * it.servings / makes;
     const key = clear($('#meal-preview-key'));
     for (const k of KEY_NUMBERS) key.append(h('div', { class: 'kn' }, h('span', { class: 'kn-v' }, fmtNum(totals[k], k)), h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
-    $('#meal-preview-count').textContent = `${mealEd.items.length} ${mealEd.items.length === 1 ? 'food' : 'foods'}`;
+    $('#meal-preview-count').textContent = `${mealEd.items.length} ${mealEd.items.length === 1 ? 'food' : 'foods'}${makes !== 1 ? ', one serving' : ''}`;
   }
   async function runMealSearch() {
     const q = $('#meal-search').value.trim();
@@ -460,6 +472,7 @@
       }
     } catch (err) { if (reqId === mealEd.search) toastError(err); }
   }
+  $('#meal-makes').addEventListener('input', renderMealTotals);
   $('#meal-search').addEventListener('input', debounce(runMealSearch, 200));
   $('#meal-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runMealSearch(); } });
   sheets.onSubmit($('#meal-form'), async (e) => {
@@ -468,8 +481,12 @@
     const name = $('#meal-name').value.trim();
     if (!name) { toast('Give the meal a name', 'error'); $('#meal-name').focus(); return; }
     if (!mealEd.items.length) { toast('Add at least one food', 'error'); $('#meal-search').focus(); return; }
+    const makes = $('#meal-makes').value.trim();
+    if (makes && !(Number(makes) > 0 && Number(makes) <= 100)) { toast('Makes is a number of servings from 0.25 to 100', 'error'); $('#meal-makes').focus(); return; }
+    const steps = $('#meal-steps').value.split('\n').map((x) => x.trim()).filter(Boolean);
     const body = { name, note: $('#meal-note').value.trim() || null, meal_hint: $('#meal-hint').value || null,
-      items: mealEd.items.map((it) => ({ food_id: it.food_id, servings: it.servings })) };
+      items: mealEd.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
+      servings_made: makes ? Number(makes) : null, steps: steps.length ? steps : null, source_url: $('#meal-source').value.trim() || null };
     mealEd.busy = true; $('#meal-save').disabled = true;
     try {
       const t = mealEd.id != null ? await api.updateMeal(mealEd.id, body) : await api.createMeal(body);
@@ -487,6 +504,124 @@
     confirmDeleteSavedMeal(t, $('.sheet-foot', mealDlg), ev.currentTarget, () => { mealDlg.close(); $('#btn-new-meal').focus(); });
   });
 
+  // ---- Fit to my targets (note 16 §10): POST /api/guidance/fit-recipe, then Save a fitted copy or Replace ---------------
+  const fitDlg = $('#sheet-fit');
+  const fit = { meal: null, result: null, req: 0, busy: false, undo: null };
+  const STATUS_HEAD = {
+    fits: 'One serving fits as it is.',
+    fits_after_changes: 'It fits with the changes below.',
+    fits_smaller_serving: 'It fits as a smaller serving, with the changes below.',
+    does_not_fit: 'It does not fit, even with changes. This is the closest the app found.',
+  };
+  function openFitSheet(t, trigger) {
+    fit.meal = t; fit.result = null; fit.undo = null;
+    $('#sheet-fit-sub').textContent = isRecipe(t) ? `${t.name}: one serving (it makes ${fmtServings(t.servings_made)}).` : `${t.name}, as one serving.`;
+    $('#fit-target').value = t.meal_hint || ''; // the meal it is meant for, else the next meal today
+    sheets.open(fitDlg, trigger, $('#fit-target'));
+    runFit();
+  }
+  function fitTarget() {
+    const v = $('#fit-target').value;
+    return v === 'day' ? { kind: 'day', date: todayStr() } : { kind: 'meal', meal: v || null, date: todayStr() };
+  }
+  async function runFit() {
+    const req = ++fit.req;
+    const host = clear($('#fit-result'));
+    host.append(h('p', { class: 'muted' }, 'Checking…'));
+    $('#fit-save').hidden = true; $('#fit-replace').hidden = true;
+    try {
+      const r = await api.fitRecipe({ meal_id: fit.meal.id, target: fitTarget() });
+      if (req !== fit.req) return;
+      fit.result = r;
+      renderFit();
+    } catch (err) { if (req === fit.req) { clear(host); toastError(err); } }
+  }
+  function fitRow(c, after) {
+    const key = c.nutrient;
+    const unit = NUT[key] ? NUT[key].unit : '';
+    const label = NUT[key] ? NUT[key].label || NUT[key].short : key;
+    const now = after ? after.checks.find((x) => x.nutrient === key) : null;
+    const text = now && now.used !== c.used ? `${fmtNum(c.used, key)} → ${fmtNum(now.used, key)}` : fmtNum(c.used, key);
+    const ok = now ? now.ok : c.ok;
+    return h('li', { class: ok ? 'fit-ok' : 'fit-over' }, h('span', {}, label), ' ', h('b', {}, `${text} ${unit}`),
+      h('span', { class: 'muted' }, ` of ${fmtNum(c.room, key)} ${unit} room`), ok ? '' : h('span', { class: 'fit-over-word' }, ' (over)'));
+  }
+  function renderFit() {
+    const r = fit.result;
+    const host = clear($('#fit-result'));
+    if (!r || !STATUS_HEAD[r.status]) { host.append(h('p', {}, r && r.message ? r.message : 'The app cannot check this now.')); return; }
+    host.append(h('p', { class: 'fit-head' }, STATUS_HEAD[r.status]));
+    const after = r.after || (r.closest ? r.closest.after : null);
+    const unknown = Object.keys(r.before.unknown || {}).filter((k) => NUT[k]);
+    host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, after))));
+    if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`));
+    if (r.changes.length) host.append(h('ul', { class: 'fit-changes' }, r.changes.map((c) => h('li', {}, c.text))));
+    const shape = r.fitted || r.closest;
+    if (shape && r.status !== 'fits') {
+      host.append(h('h3', { class: 'preview-title' }, r.fitted ? 'The fitted recipe (whole pot)' : 'The closest it gets (whole pot)'),
+        h('ul', { class: 'compact-items' }, shape.items.map((it) => h('li', {}, `${it.portion_text} ${it.name}`))));
+    }
+    for (const note of r.notes || []) host.append(h('p', { class: 'muted small' }, note));
+    if (fit.undo) host.append(h('p', {}, 'Replaced. ', h('button', { class: 'link-btn', type: 'button', onclick: undoReplace }, 'Undo')));
+    const canSave = !!r.fitted && r.status !== 'fits';
+    $('#fit-save').hidden = !canSave; $('#fit-replace').hidden = !canSave || !!fit.undo;
+  }
+  function fittedBody(name) {
+    const t = fit.meal, f = fit.result.fitted;
+    const n = fit.result.servings_made;
+    return { name: name.slice(0, 200), note: shownNote(t), meal_hint: t.meal_hint || null,
+      items: f.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
+      // A smaller serving is saved as more servings from the same pot, so one saved serving is the size that fits.
+      servings_made: Math.round((n / f.serving_fraction) * 100) / 100, steps: t.steps || null, source_url: t.source_url || null };
+  }
+  const bodyOf = (t) => ({ name: t.name, note: t.note, meal_hint: t.meal_hint || null, items: t.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
+    servings_made: t.servings_made ?? null, steps: t.steps || null, source_url: t.source_url || null });
+  const carbsLine = () => {
+    const before = fit.result.before.per_serving.carbs_g, after = fit.result.after ? fit.result.after.per_serving.carbs_g : null;
+    return `Carbohydrate per serving goes from ${fmtNum(before, 'carbs_g')} g to ${fmtNum(after, 'carbs_g')} g.`;
+  };
+  $('#fit-target').addEventListener('change', () => { fit.undo = null; runFit(); });
+  $('#fit-save').addEventListener('click', async () => {
+    if (fit.busy || !fit.result || !fit.result.fitted) return;
+    fit.busy = true;
+    try {
+      const saved = await api.createMeal(fittedBody(`${fit.meal.name} (fitted)`));
+      toast(`Saved “${saved.name}”. ${carbsLine()}`, 'ok');
+      fitDlg.close();
+      await KH.loadMeals(true);
+      renderSavedMeals();
+    } catch (err) { toastError(err); } finally { fit.busy = false; }
+  });
+  $('#fit-replace').addEventListener('click', (ev) => {
+    if (!fit.result || !fit.result.fitted) return;
+    confirm.inline($('.sheet-foot', fitDlg), ev.currentTarget, {
+      message: `Replace “${fit.meal.name}” with the fitted recipe? ${carbsLine()}`,
+      confirmText: 'Replace',
+      onConfirm: async () => {
+        try {
+          const old = bodyOf(fit.meal);
+          await api.updateMeal(fit.meal.id, fittedBody(fit.meal.name));
+          fit.undo = old;
+          await KH.loadMeals(true);
+          renderSavedMeals();
+          renderFit();
+          return true;
+        } catch (err) { toastError(err); return false; }
+      },
+    });
+  });
+  async function undoReplace() {
+    if (!fit.undo) return;
+    try {
+      await api.updateMeal(fit.meal.id, fit.undo);
+      fit.undo = null;
+      toast(`“${fit.meal.name}” is back as it was`, 'ok');
+      await KH.loadMeals(true);
+      renderSavedMeals();
+      renderFit();
+    } catch (err) { toastError(err); }
+  }
+
   router.register('plan', () => loadPlan());
-  KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor };
+  KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor, openFitSheet };
 })();
