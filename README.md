@@ -93,7 +93,7 @@ fill in **Profile**, press **Suggest targets**, check them with your care team, 
 invite the rest of the household from **Server administration** (the shield icon).
 
 Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
-camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.5.0`
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.5.1`
 ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
 upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
