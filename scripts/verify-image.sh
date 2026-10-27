@@ -2,8 +2,8 @@
 # Verify a published kidney-health image before you deploy it, then pin it by digest.
 # Spec: docs/dev/research/01-rootless-and-security.md §3.6, §5.4. Background: SECURITY.md.
 #
-#   scripts/verify-image.sh 0.5.1          # a release tag (signed by release.yml on refs/tags/v*)
-#   scripts/verify-image.sh 0.5            # the minor tag you track
+#   scripts/verify-image.sh 0.6.0          # a release tag (signed by release.yml on refs/tags/v*)
+#   scripts/verify-image.sh 0.6            # the minor tag you track
 #   scripts/verify-image.sh edge           # the main branch build (signed on refs/heads/main)
 #   scripts/verify-image.sh sha256:<hex>   # a digest you already have
 #

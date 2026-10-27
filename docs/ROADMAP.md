@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.5.0 release (2026-10-22).
+section. Last reviewed for the v0.6.0 release (2026-10-27).
 
 ## Next (the owner, 2026-10-22)
 
@@ -86,6 +86,11 @@ insulin or medicines.
 * Model-written titles and reasons again, behind the golden-set gates, with NFKC, `Cc`/`Cf` removal, a confusable skeleton, an expanded term list (`shot`, `inject`, `pen`, `skip`, `delay`, `extra`, binder brand names) and a "worded by AI" label — note 04 §9 A2 ("Free text returns in v0.4 only behind the golden-set gates").
 * The three reference live evaluations (Ollama `qwen3-vl:8b`, OpenAI `gpt-6-luna`, Hermes Agent) committed under `docs/dev/ai-eval/` before a model is listed as recommended in `docs/ai.md` — note 04 §6 Phase 5 (a maintainer action: no build has had an Ollama server, OpenAI key or Hermes Agent to run them against).
 * Re-check whether Hermes Agent's `GET /v1/toolsets` lists tools of configured MCP servers, and tighten the tool check if it does — note 04 §9 A1 (b) and §7.
+* **The answer before "nothing fits" on a real local model (the owner).** 0.6.0 changed the order of the answer format and the tests use
+  recorded answers. Run `scripts/ai_eval.py` on the local model with 0.5.1 and with 0.6.0 and keep both reports, to see whether the meal
+  ideas improved.
+* **Recipes that fit** ([note 16](dev/research/16-recipes-that-fit.md)), waiting on the owner's review. Its schema step is numbered 20 in
+  the note; 0.6.0 used 20, so the build takes the next free number.
 * Live runs of the 0.4.0 AI features that tests only fake (a maintainer action, steps in [`maintainers.md`](maintainers.md)): a photo of a real lab report on the local vision model, the route `local_then_cloud` with a real Ollama and a cloud key (`scripts/ai_eval.py` does not exercise routing), and the speech-to-text overlay (its image digest in `deploy/compose.stt-whisper.yaml` is a placeholder; a real whisper container; the microphone on an iPhone and an Android phone).
 
 ## Scanning, label photos and the offline outbox in the browser (notes 02 R5/R7, 03 R7–R9)
