@@ -9742,6 +9742,45 @@
         ]
       }
     },
+    "/api/admin/ai-quality": {
+      "get": {
+        "description": "How well each AI is doing: per routed feature, counts of its recent calls and what the live evaluation said. Counts only.",
+        "operationId": "admin_read_ai_quality",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Read Ai Quality",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Read Ai Quality",
+        "tags": [
+          "admin",
+          "ai"
+        ]
+      }
+    },
     "/api/admin/ai-routing": {
       "get": {
         "description": "Which AI each feature uses and which shared provider is local or cloud (docs/ai.md).",

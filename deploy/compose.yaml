@@ -114,6 +114,7 @@ services:
       AI_CLOUD_MODEL: ${AI_CLOUD_MODEL:-}
       AI_CLOUD_VISION_MODEL: ${AI_CLOUD_VISION_MODEL:-}
       AI_CLOUD_UPSTREAM: ${AI_CLOUD_UPSTREAM:-}
+      AI_EVAL_REPORTS_DIR: ${AI_EVAL_REPORTS_DIR:-}   # a path inside the container; mount the reports under volumes: below
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
@@ -138,6 +139,8 @@ services:
       # every start, :Z relabels for SELinux; never use either on $HOME or a system directory):
       #   - ./kidney-data:/data:Z,U
       - kidney-data:/data
+      # The reports scripts/ai_eval.py writes, read-only; set AI_EVAL_REPORTS_DIR=/ai-eval in deploy/.env (docs/ai.md):
+      #   - ./ai-eval:/ai-eval:ro,Z
 
     healthcheck:
       # Same probe as the image HEALTHCHECK (Podman's OCI image format drops that one). Exec form:

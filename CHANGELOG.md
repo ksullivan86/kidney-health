@@ -44,6 +44,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **API.** `GET /api/admin/ai-providers` gives each provider `env` (`AI_PROVIDER` or `AI_CLOUD_PROVIDER` for a locked one) and `upstream`, and
   the list `env_cloud_provider`; `GET /api/admin/ai-routing` gives `env_cloud` and `env` on each provider. A consent request carries `upstream`.
   Nothing existing was removed.
+* **Server administration now shows how well each AI is doing.** **AI providers** has a new section under "Which AI does each feature use?".
+  It has a row for each feature that is on, with the AI and model it uses and two facts. *In use* counts the last 20 calls of that feature
+  to that model in the last 14 days, from everyone: usable answers, "nothing fits", could not read, refused, dropped by the checks, invalid
+  and errors. With 8 calls or more, a caution appears when 70 % or more had no usable result. This is how a small model that answers
+  "nothing fits" to every meal idea becomes visible. Only counts are shown, never what anyone asked or got back. *Evaluation* says whether the
+  model passed `scripts/ai_eval.py` for the current prompts. The same two facts are in `GET /api/admin/ai-quality` (admins, read only).
+* **`AI_EVAL_REPORTS_DIR`, new and optional.** A folder, mounted read-only, with the reports `scripts/ai_eval.py` writes. The app reads it
+  at start-up and each time the section is refreshed: at most 200 files of 1 MiB, and never a link that leads out of the folder. With it set,
+  the start-up log gets one `AI quality:` warning for each feature that is on and whose model failed the evaluation or has no report for
+  the current prompts. Lab report photos are not covered by the evaluation, so the section says to check a real report by hand. Unset, the section
+  says there is no reports folder. The mount for Podman, compose and Kubernetes is in [docs/ai.md](docs/ai.md#how-well-each-ai-is-doing).
+* **One more number in the AI activity row.** A described meal or a plate photo now records how many items were offered (`shown`), so "every
+  item was dropped by the checks" can be told from "some were". No schema step; earlier rows are counted by their status.
 
 ### For contributors
 

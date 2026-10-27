@@ -99,6 +99,7 @@
     probeProvider: (id) => request('POST', `/api/admin/ai-providers/${id}/probe`),
     usage: () => request('GET', '/api/admin/ai-usage?days=30'),
     routing: () => request('GET', '/api/admin/ai-routing'),
+    quality: () => request('GET', '/api/admin/ai-quality'),
     setRouting: (b) => request('PUT', '/api/admin/ai-routing', b),
     probeVoice: () => request('POST', '/api/admin/ai-voice/probe'),
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
@@ -1272,6 +1273,9 @@
     if (!data.writable) box.append(note('caution', h('p', {}, 'Sign-in is off on this server (AUTH_MODE=none), so AI providers and AI settings can be set only with environment variables (docs/ai.md).')));
     try { box.append(KH.aiRouting.adminPart(await api.routing(), refreshProviders)); } catch (err) {
       box.append(h('p', { class: 'form-error' }, `Could not load the routing: ${err.detail || err.message}`));
+    }
+    try { box.append(KH.aiQuality.adminPart(await api.quality(), api.quality)); } catch (err) { // js/views/ai_quality.js: how well each AI is doing
+      box.append(h('p', { class: 'form-error' }, `Could not load how well each AI is doing: ${err.detail || err.message}`));
     }
     const list = h('div', { class: 'setting-list' });
     if (!data.providers.length) list.append(h('p', { class: 'muted' }, 'No shared provider yet. Add one below, or set AI_PROVIDER (and AI_CLOUD_PROVIDER for a cloud AI) in the environment.'));

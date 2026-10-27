@@ -98,3 +98,16 @@
 .ai-routing-person { margin-top: 12px; }
 /* The "Allow the cloud AI (host) as the fallback" buttons name a host: let the words wrap instead of running past a phone's edge. */
 .ai-routing-lines .btn, .ai-fallback-line + .settings-actions .btn { white-space: normal; height: auto; min-height: var(--tap); padding-top: 8px; padding-bottom: 8px; line-height: 1.25; text-align: center; max-width: 100%; }
+
+/* How well each AI is doing (js/views/ai_quality.js) */
+.ai-quality { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.ai-quality-body, .ai-quality-list { display: flex; flex-direction: column; gap: 12px; }
+.ai-quality-body p, .ai-quality-folder { margin: 0; }
+.ai-quality-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.ai-quality-row h4, .ai-quality-row p { margin: 0; }
+.ai-quality-title { font-size: 1rem; font-weight: 600; }
+.ai-quality-provider { overflow-wrap: anywhere; }
+.ai-quality-signal { display: flex; flex-direction: column; gap: 4px; }
+.ai-quality-signal > b { font-size: 0.85rem; color: var(--text-2); }
+.ai-quality-row .settings-note { overflow-wrap: anywhere; }
+.ai-quality .settings-actions .btn { min-height: var(--tap); }

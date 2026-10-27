@@ -134,6 +134,10 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=AI_ROUTE_MEAL_IDEAS=cloud
 # Environment=AI_ROUTE_DESCRIBE=cloud
 # Environment=AI_ROUTE_CHAT=cloud
+# What the live evaluation said about the model in use (docs/ai.md "How well each AI is doing"): the reports scripts/ai_eval.py
+# writes, in a folder mounted read-only:
+# Volume=%h/ai-eval:/ai-eval:ro,Z
+# Environment=AI_EVAL_REPORTS_DIR=/ai-eval
 # Assistant access (docs/assistant.md): each person may make personal tokens (Settings → Assistant access) for a
 # chat assistant they connect, such as Open WebUI. A token reads; if the person ticks "Can also save food and
 # recipes" it can also log food and save recipes. Off by default; the app contacts nothing for it.

@@ -49,6 +49,8 @@ Keys (defaults in brackets):
 * Speech to text for the Ask microphone (assistant step 2, part B; ``app/ai/stt.py``), also in :class:`AiEnv`:
   ``STT_BASE_URL`` (ends in ``/v1``, same address rules as ``AI_BASE_URL``), ``STT_API_KEY[_FILE]`` (optional),
   ``STT_MODEL``, ``STT_TIMEOUT_S`` [60], ``STT_DAILY_LIMIT`` [100]; and ``STT_MAX_AUDIO_BYTES`` [1.5 MiB] (``Settings.max_audio_bytes``).
+* How well each AI is doing (``app/ai/quality.py``), also in :class:`AiEnv`: ``AI_EVAL_REPORTS_DIR`` [unset], a read-only folder of the
+  ``*.json`` reports ``scripts/ai_eval.py`` writes. Only read (at most 200 files of 1 MiB); unset means "no reports folder".
 * ``OFF_BASE_URL`` [``https://world.openfoodfacts.org``]: the Open Food Facts server barcode lookups
   ask (staging ``https://world.openfoodfacts.net`` or a self-hosted Product Opener). Env only, never a
   runtime setting (note 03 §9 B5): ``https://`` (plain ``http://`` only for localhost), no path. A
@@ -143,6 +145,9 @@ class AiEnv:
     stt_model: str | None = None  # STT_MODEL
     stt_timeout_s: float = 60.0  # STT_TIMEOUT_S: how long the transcription server may take
     stt_daily_limit: int = 100  # STT_DAILY_LIMIT: recordings per person per day (0 = unlimited)
+    # A read-only folder of the reports ``scripts/ai_eval.py`` writes (app/ai/eval_reports.py): Server administration → AI providers
+    # says, per feature, whether the model in use passed the live evaluation. Unset: it says there is no reports folder.
+    eval_reports_dir: str | None = None  # AI_EVAL_REPORTS_DIR
 
 
 UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&-]{0,59}$")  # a company's plain name, shown to people in the consent line
@@ -247,6 +252,7 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
         stt_model=_raw(env, "STT_MODEL"),
         stt_timeout_s=60.0 if stt_timeout is None else stt_timeout,
         stt_daily_limit=parse_int(env, "STT_DAILY_LIMIT", 100, 0, 10_000),
+        eval_reports_dir=_raw(env, "AI_EVAL_REPORTS_DIR"),
     )
 
 

@@ -59,6 +59,7 @@ from . import features as F
 from . import guard, prompts, schemas
 from . import stt
 from . import presets as P
+from . import quality as Q
 from . import routing as R
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
@@ -313,7 +314,7 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
         model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
         response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
         verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
-                                                             "trimmed")}, **(extra or {})},
+                                                             "trimmed")}, **Q.shown_of(verdict), **(extra or {})},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
     )
     conn.commit()
@@ -1575,6 +1576,13 @@ def update_ai_routing(body: RoutingBody, request: Request, admin: RecentAdmin, c
     return R.overview(conn, state.store, state.settings, state.policy)
 
 
+@admin_router.get("/ai-quality")
+def read_ai_quality(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """How well each AI is doing: per routed feature, counts of its recent calls and what the live evaluation said. Counts only."""
+    state = ai_state(request)
+    return Q.overview(conn, state.store, state.settings, state.policy)
+
+
 @admin_router.get("/ai-usage")
 def ai_usage(admin: AdminUser, days: Annotated[int, Query(ge=1, le=366)] = 30, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Counts only (requests and tokens per person and provider); admins never see AI content (R9)."""
@@ -1642,6 +1650,7 @@ def startup(app: FastAPI, conn: sqlite3.Connection) -> None:
     K.sync_env_provider(conn, state.settings, getattr(app.state, "keyring", None))
     conn.commit()
     housekeeping(conn, state, force=True)
+    Q.log_startup(conn, state.store, state.settings, state.policy)  # one warning per routed feature whose ai_eval check failed or is missing
 
 
 __all__ = ["AiState", "install", "startup", "run_call", "require_ai_enabled", "ai_state"]
