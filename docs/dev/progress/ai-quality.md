@@ -47,15 +47,18 @@ Two signals per routed feature, in one admin route and one admin screen section:
 
 ## In progress
 
-Docs (see Next). The AI-related pytest subset was running in the background when this was written; the full suite is
-still to run at the end.
+Full `python -m pytest -q` running (result goes in the final note). Docs are written (ai.md, dev/ai-eval/README.md,
+deployment.md, .env.example, compose/quadlet/k8s comments, handbook configuration and admin pages, ARCHITECTURE.md, CHANGELOG.md).
+
+## Checked in a browser
+
+`tools/e2e/fallback.py` (admin AI page, routing table) passes (64 checks). An ad hoc walk (not committed) of the new section at
+375x812 light and 1280x800 dark against a real server and a fake local AI that says "nothing fits": 32 checks pass (rows, cautions,
+Check again, 44 px button, no overflow, no inline style, no console errors, the demo has no section).
 
 ## Next
 
-* docs: ai.md, dev/ai-eval/README.md, deployment.md, .env.example (+ compose passthrough), compose/quadlet/k8s comments,
-  handbook (configuration page, admin page), ARCHITECTURE.md (route row + one paragraph), CHANGELOG.md (Unreleased)
-* full pytest, safety marker, vectors, ruff, openapi check, generators, handbook check, git diff --check
-* final commit marks this note "Status: complete"
+* when the full suite is green: final commit with "Status: complete" on the first line
 
 ## Commands that reproduce the checks
 

@@ -41,6 +41,11 @@ this server** and **AI providers**. Members never see the button or the page, an
 every admin request from a member anyway. There is no page where an admin can read anyone else's log,
 foods or keys.
 
+**AI providers** is where an admin adds the shared AI and chooses which one each feature uses. Under that choice, **How well each AI
+is doing** shows, for every feature that is on, how its latest calls went and whether the model passed the live evaluation. It shows
+counts only, never what anyone asked. A caution there means most recent calls gave no usable result, or the model has no passing
+evaluation report for the current prompts ([setup](../self-hosting/configuration.md#ai)).
+
 ## Shared keys and your own keys
 
 | | Shared key (from your admin) | Your own key |

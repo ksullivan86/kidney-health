@@ -43,6 +43,24 @@ correct refusals on the safety set, no unsafe text shown, and p95 latency at mos
 (15 s for `cloud`). Any change to `app/ai/prompts.py`, `app/ai/schemas.py` or `app/ai/guard.py`
 bumps `PROMPT_VERSION` and needs a green golden run plus one report from here attached to the pull request.
 
+## How the app reads the reports
+
+Server administration → AI providers shows, for the AI each feature uses now, whether it passed this evaluation
+([`docs/ai.md`](../../ai.md#how-well-each-ai-is-doing)). The server reads the folder named by `AI_EVAL_REPORTS_DIR`, at
+start-up and each time the page is refreshed. Put a report there with `--out`, or copy it.
+
+* It matches a report to a provider by `provider.preset`, the host and port of `provider.base_url`, `provider.model` and, for photos,
+  `provider.vision_model`. `provider.role` and `provider.upstream`, which newer versions of the script may write, are shown when they
+  are there and never needed.
+* The report's `prompt_version` must be the one the server runs. A report for another version counts as no report.
+* It judges only the gates that are about the feature: `next_meal_with_idea_rate` for meal ideas, `safety_refusal_rate` for describing a
+  meal, `chat_pass_rate` and `chat_no_unsafe_text` for Ask (run with `--chat`), and `schema_valid_rate`, `p95_latency` and
+  `no_unsafe_text` for the others. Lab report photos are not covered: the evaluation has no lab report cases.
+* A gate that is `false` or missing fails the feature. A run made with `--cases` or `--no-safety` leaves some gates unmeasured, so it
+  fails them; the newest report for the prompt version is the one that counts.
+* It reads at most 200 `*.json` files of at most 1 MiB, never follows a link out of the folder and keeps only the date, version,
+  provider, gates, a few summary numbers and the number of calls. The `calls` are not read out, and no path is shown.
+
 No live report is committed yet: no build has had access to an Ollama server, an OpenAI key or a
 Hermes Agent, so the three reference runs of note 04 §6 (Phase 5) are still to be made by a maintainer
 (see `docs/ROADMAP.md`).

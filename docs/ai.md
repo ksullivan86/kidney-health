@@ -56,7 +56,8 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [What is sent, and what never is](#what-is-sent-and-what-never-is)
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
-  [which AI each feature uses](#which-ai-does-each-feature-use), [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment)),
+  [which AI each feature uses](#which-ai-does-each-feature-use), [how well each AI is doing](#how-well-each-ai-is-doing),
+  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment)),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
@@ -393,6 +394,7 @@ Environment only (never editable at run time; a bad value stops the start with a
 | `AI_MAX_RESPONSE_BYTES` | `262144` | Answer size cap (decompressed bytes) |
 | `AI_OPENROUTER_ZDR` | `false` | Ask OpenRouter for zero-data-retention endpoints |
 | `MAX_IMAGE_BYTES` | `4194304` | Photo size cap |
+| `AI_EVAL_REPORTS_DIR` | unset | A folder, mounted read-only, with the `*.json` reports `scripts/ai_eval.py` writes. Server administration then says which models passed ([How well each AI is doing](#how-well-each-ai-is-doing)). Unset: "No reports folder". |
 | `STT_BASE_URL` | unset | The speech-to-text server for the Ask microphone: one OpenAI-compatible endpoint, `{STT_BASE_URL}/audio/transcriptions`; ends in `/v1`; the same address rules as an AI provider ([Voice input](#voice-input-speech-to-text)) |
 | `STT_MODEL` | required with `STT_BASE_URL` | The model name that server knows (`whisper-1`, `Systran/faster-whisper-small`) |
 | `STT_API_KEY_FILE` / `STT_API_KEY` | unset | Its key, if it wants one (write-only, never returned by any API; give it as a file) |
@@ -585,6 +587,97 @@ and `request`, the sheet Settings shows to agree later). A `409 consent_required
 cloud provider's request, with `given` and the rule); `?dry_run=true` adds `cloud_fallback` (the second request, its `message`, and
 whether the person agreed); an answer adds `cloud_fallback` only after a fallback or when it was needed but not possible
 (`used`, `answered`, `reason` such as `no_consent` or `quota_exhausted`, `message`, `local`, `cloud` and the two audit ids).
+
+### How well each AI is doing
+
+A model can pass the connection test and still be a poor fit. A small local model that answers "nothing fits" to almost every
+meal-idea request looks healthy: it answers fast, in valid JSON. So Server administration → AI providers has a section,
+**How well each AI is doing**, under the routing table. It has a row for each feature that is on. The row names the AI and model
+the feature uses now and gives two facts about it.
+
+**In use.** The app takes the newest 20 calls of that feature to that model from the last 14 days, from everyone, and sorts them:
+
+| Outcome | What it means |
+|---|---|
+| Usable | The answer passed the app's checks and left something to show. |
+| Nothing fits | The model answered that no meal idea fits. |
+| Could not read | A photo that is not a label, shows no food or cannot be read; a document that is not a lab report, cannot be read or gave no results; a described meal with no foods listed. |
+| Refused | The model declined the request. |
+| Dropped by the checks | The app's checks threw out every idea or item, or held back an Ask answer (a dose, or a number it could not check). |
+| Invalid | The answer was not the JSON the app asked for, even after the one repair turn, or an Ask question ended without an answer. |
+| Errors | The request timed out, could not connect, or got an HTTP error. |
+
+With 8 or more calls, a caution appears when 70 % or more of them had no usable result. It reads: "Meal ideas: 9 of the last 10
+calls to kidney-text had no usable idea (8 'nothing fits', 1 invalid). The app showed the rule results instead. Check this model
+with scripts/ai_eval.py, or route meal ideas to another AI." With fewer than 8 calls the row shows the counts and gives no verdict.
+An answer reused within 10 minutes is not a call to the model and is not counted. A person's own provider is not counted either.
+Only counts leave the server: the screen never shows what anyone asked, what came back, who asked or when.
+
+**Evaluation.** Set `AI_EVAL_REPORTS_DIR` to a folder that holds the reports `scripts/ai_eval.py` writes
+([`dev/ai-eval/README.md`](dev/ai-eval/README.md)). The app reads it at start-up and each time the page is opened or refreshed
+("Check again"). Each row then says one of:
+
+* **Passed ai_eval on 2026-10-21 (prompt version 2026-10-21.1).** Shown quietly.
+* **Failed ai_eval on 2026-10-21:** the gates that failed, in plain words, with the report's number. A caution.
+* **No ai_eval report for this model and prompt version.** A caution. A report for an older prompt version counts as none, because
+  the prompts have changed since; the line then says which version the newest report is for.
+* **Not covered by ai_eval; check a real report by hand ([`maintainers.md`](maintainers.md)).** For lab report photos: the
+  evaluation has no lab report cases.
+* With no `AI_EVAL_REPORTS_DIR`: "No reports folder is set". That is not a caution.
+
+A report belongs to a provider when the preset, the host and port of the base URL and the model are the same; for photos the
+vision model must match too. When several match, the newest one for the current prompt version counts. A gate counts against a
+feature only when it is about that feature: the meal-idea rate for meal ideas, the dose and medicine refusals for describing a
+meal, the Ask questions for Ask (a report counts for Ask only if it was run with `--chat`), and the format, speed and unsafe-text
+gates for the others.
+
+The folder is read, never written. At most 200 files of at most 1 MiB are read, newest file name first. A file that is not a
+report, a file that is too big, a link that points out of the folder and anything that is not a plain file is left out and counted;
+the screen says how many. A link that stays inside the folder is followed, so a Kubernetes ConfigMap works. Of a report only the
+date, prompt version, provider, gates and a few numbers are kept; its per-case calls are never shown, and a report is named by its
+file name, never its path.
+
+With AI on and the variable set, the start-up log gets one `AI quality:` warning for each feature that is on and whose evaluation
+failed or is missing. A feature that is off gets none, and neither does a lab report photo. If the folder cannot be read there is one line
+about that.
+
+**Give the app the reports.** Run the evaluation with `--out` pointing into a folder on the server, mount that folder read-only and
+set the variable.
+
+```
+# Podman (Quadlet), in kidney-health.container
+Volume=%h/ai-eval:/ai-eval:ro,Z
+Environment=AI_EVAL_REPORTS_DIR=/ai-eval
+```
+
+```yaml
+# Compose: deploy/.env has AI_EVAL_REPORTS_DIR=/ai-eval, and compose.yaml has
+    volumes:
+      - ./ai-eval:/ai-eval:ro,Z
+```
+
+```yaml
+# Kubernetes, in the Deployment's container and pod (a ConfigMap holds up to 1 MiB; use a PersistentVolumeClaim for more)
+          env:
+            - name: AI_EVAL_REPORTS_DIR
+              value: /ai-eval
+          volumeMounts:
+            - name: ai-eval
+              mountPath: /ai-eval
+              readOnly: true
+      volumes:
+        - name: ai-eval
+          configMap:
+            name: kidney-ai-eval   # kubectl create configmap kidney-ai-eval --from-file=2026-10-27-litellm-kidney-text.json
+```
+
+**API.** `GET /api/admin/ai-quality` (admins; it only reads) returns `{enabled, window_days, last_calls, min_calls, warn_percent,
+prompt_version, reports: {configured, readable, files, reports, ignored: {malformed, too_big, outside_folder, unreadable,
+over_limit}}, features: [{feature, label, route, provider: {id, label, preset, host, model}, live: {calls, window_days, counts,
+unusable, warn, summary, message}, evaluation: {state, warn, message, date, prompt_version, file, failed, role, upstream}}]}`.
+`counts` has `usable`, `no_fit`, `unread`, `refused`, `dropped`, `invalid` and `error`. `state` is `passed`, `failed`, `none`,
+`older`, `not_covered`, `off` (a photo feature with no vision model), `no_folder` or `unreadable_folder`. A feature that is off, or has no
+usable AI behind it, has no row. `model` is the vision model for photos and lab reports. For `local_then_cloud` the local AI is the one rated.
 
 ### Recipes
 
@@ -961,6 +1054,7 @@ history.
 | `vision_not_configured` / `plate_disabled` | No vision model is set / plate photos are off |
 | `quota_exhausted` | Today's shared calls are used up (voice: today's recordings, `STT_DAILY_LIMIT`) |
 | "The AI ideas did not fit your targets today" | Every idea failed the rules; the app shows its own |
+| The admin screen warns that most calls of a feature had no usable result, or that a model has no passing ai_eval report | See [How well each AI is doing](#how-well-each-ai-is-doing): check the model with `scripts/ai_eval.py`, or route the feature to another AI |
 
 ### Turning AI off
 
@@ -1002,6 +1096,10 @@ history.
   `test_ai_cloud_env.py` (the variables, every start-up error and warning, the sync, the consent line, the roles in the admin API),
   `test_ai_cloud_routing.py` (each feature on the provider its route names; a lab report never reaches the cloud provider, with a
   fake transport that records every connection), `test_migration_m020.py`.
+  How well each AI is doing: `test_ai_quality_live.py` (the outcome of each status for each feature, the thresholds at their edges, the
+  window and the cap), `test_ai_quality_reports.py` (the reports folder and the evaluation status; it also reads a report the real
+  `ai_eval.py` writes), `test_ai_quality_api.py` (every outcome through the real routes, access, start-up lines) and
+  `test_ai_quality_ui.py` with `tests/js/quality_page.mjs` (the screen against a fake page).
 * **Change control** (note 04 R11.5): any change to `app/ai/prompts.py`, `app/ai/schemas.py` or the
   guard's wording bumps `PROMPT_VERSION`; `tests/test_ai_prompts.py` fails until the new version's
   fingerprint is recorded (`KH_UPDATE_SNAPSHOTS=1 python -m pytest tests/test_ai_prompts.py`). The golden

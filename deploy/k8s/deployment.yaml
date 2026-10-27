@@ -91,6 +91,10 @@ spec:
             # AI_PROVIDER_ROLE=local, then AI_CLOUD_PROVIDER (always the cloud AI), AI_CLOUD_BASE_URL, AI_CLOUD_MODEL, its key as
             # AI_CLOUD_API_KEY_FILE=/run/secrets/kidney-health/ai_cloud_api_key (add ai_cloud_api_key to the Secret), and
             # AI_CLOUD_UPSTREAM=<the company a LiteLLM proxy forwards to> when the preset is a server you run.
+            # The reports scripts/ai_eval.py writes (docs/ai.md "How well each AI is doing"): mount them read-only, e.g. a
+            # ConfigMap or a PersistentVolumeClaim named ai-eval (add the volumeMount and volume below), and set
+            # - name: AI_EVAL_REPORTS_DIR
+            #   value: /ai-eval
             # - name: ASSISTANT_ENABLED           # personal tokens for a chat assistant (docs/assistant.md); a token
             #   value: "true"                     # reads, and with "Can also save food and recipes" also saves
             # - name: PUSH_ENABLED                # device tokens for an iPhone Shortcut (docs/push.md): a token can only
@@ -103,6 +107,9 @@ spec:
             - name: secrets
               mountPath: /run/secrets/kidney-health
               readOnly: true
+            # - name: ai-eval                     # the ai_eval reports, read-only (AI_EVAL_REPORTS_DIR above)
+            #   mountPath: /ai-eval
+            #   readOnly: true
           # Probes come from the node's kubelet, which NetworkPolicy cannot block. The pod IP in
           # the Host header is an IP literal, which the Host allowlist always accepts.
           startupProbe:
@@ -161,3 +168,6 @@ spec:
             # The pod starts without the Secret, but then SECRET_KEY_FILE points at a missing file
             # and the app refuses to start with a clear message: create the Secret first.
             optional: true
+        # - name: ai-eval
+        #   configMap:                          # up to 1 MiB in all; use a persistentVolumeClaim for more
+        #     name: kidney-ai-eval              # kubectl create configmap kidney-ai-eval --from-file=<report>.json

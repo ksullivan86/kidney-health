@@ -2144,7 +2144,7 @@ retry or repair, concurrency gate, "Test connection" with the Hermes tool check)
 answer models, and `ChatStep` for the Ask chat), `guard` (V1–V9, pure), `chat` (the Ask chat's step loop, answer checks and
 figures; "Ask chat" below), `lab_report` (the checks on a lab report photo's copied lines; "Lab report photos" below), `features` (prepare/judge for each feature, the G7/G8
 pre-filters, the label draft), `config` (provider rows, resolution, quota, consent, AI activity,
-retention), `routing` (provider roles and per-feature routing; "Privacy tiers" below), `routes` (the routers below, the call pipeline, the daily re-test); `app/vision.py` (photo
+retention), `routing` (provider roles and per-feature routing; "Privacy tiers" below), `quality` and `eval_reports` (how well each AI is doing; "How well each AI is doing" below), `routes` (the routers below, the call pipeline, the daily re-test); `app/vision.py` (photo
 routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
 (`app/migrations/m006_ai.py`). People and operators: `docs/ai.md`; photos also in
 `docs/barcode-and-photos.md` "Photos".
@@ -2170,7 +2170,7 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   features off), `AI_TIMEOUT_S` (preset read timeout), `AI_VISION_TIMEOUT_S` (120), `AI_MAX_TOKENS` (1500,
   64–32768), `AI_STRUCTURED_OUTPUT` (`auto` | `json_schema` | `json_object` | `prompt`), `AI_REASONING_EFFORT`,
   `AI_CONTEXT_TOKENS` (8192 self-hosted/agent/custom, 32768 cloud), `AI_PRIVATE_HOSTS`, `AI_DENY_CIDRS`,
-  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `MAX_IMAGE_BYTES` (4 MiB); the **second environment
+  `AI_HTTP_PROXY`, `AI_MAX_RESPONSE_BYTES` (262144), `AI_OPENROUTER_ZDR`, `AI_EVAL_REPORTS_DIR` (a read-only folder of `ai_eval` reports; "How well each AI is doing" below), `MAX_IMAGE_BYTES` (4 MiB); the **second environment
   provider, always the cloud AI** (`AiCloudEnv`, `AiEnv.cloud`; "Environment providers: main and cloud" below):
   `AI_CLOUD_PROVIDER`, `AI_CLOUD_BASE_URL`, `AI_CLOUD_API_KEY[_FILE]`, `AI_CLOUD_MODEL`, `AI_CLOUD_VISION_MODEL`,
   `AI_CLOUD_TIMEOUT_S` (5–600), `AI_CLOUD_MAX_TOKENS` (1500, 64–32768), `AI_CLOUD_CONTEXT_TOKENS` (32768, 1024–2000000),
@@ -2266,6 +2266,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `POST /api/admin/ai-providers/{id}/probe` *(re-auth)* | → `{probe, provider}` (20 per hour; may show the first 300 characters of an error body, shared providers only) |
 | `GET /api/admin/ai-routing` | → `{features: [{feature, label, sends, route, source, locked_by_env, allowed}], roles: {local, cloud: {id, label, host, private} \| null}, providers: [{id, label, host, private, role, photos, usable, locked, env}], env_role, env_cloud, as_before, defaults, writable}` |
 | `PUT /api/admin/ai-routing` *(re-auth)* | any of `{photos, meal_ideas, describe: "local" \| "cloud" \| "off" \| "any" \| "local_then_cloud", chat: "local" \| "cloud" \| "off" \| "any", labs: "local" \| "off", local_provider, cloud_provider: shared provider id (0 clears)}` → the view above. `400 not_private` (a local AI must be a private host), `400 no_fallback` (`local_then_cloud` for `chat`), `400 local_only` (`cloud`, `any` or `local_then_cloud` for `labs`), `400 same_provider`, `404` (not a shared provider), `409 locked` (an env lock, or the env provider's role from `AI_PROVIDER_ROLE`), `403` with `AUTH_MODE=none`; each changed key is audited as `settings.changed` |
+| `GET /api/admin/ai-quality` | → `{enabled, window_days: 14, last_calls: 20, min_calls: 8, warn_percent: 70, prompt_version, reports: {configured, readable, files, reports, ignored: {malformed, too_big, outside_folder, unreadable, over_limit}}, features: [{feature, label, route, provider: {id, label, preset, host, model}, live: {calls, window_days, counts: {usable, no_fit, unread, refused, dropped, invalid, error}, unusable, warn, summary, message}, evaluation: {state, warn, message, date, prompt_version, file, failed, role, upstream}}]}` (admins; read only; counts only, never content, a user or a path; a feature that is off or has no usable AI has no row) |
 | `GET /api/admin/ai-usage` | `days` 1–366 (30) → `{days, usage: [{user_id, username, provider_id, key_scope, requests, prompt_tokens, completion_tokens}]}` (counts only, never content) |
 
 ```json
@@ -2413,6 +2414,26 @@ Code: `routing.FALLBACK_ROUTE` / `FALLBACK_FEATURES` / `allowed_routes`, `Resolv
   also in guidance's AI order, pick and plan, and by `js/scan.js` for a label), the activity row line.
 * **Unchanged.** SSRF policy, scopes, auth, user scoping (consent and cache keys carry the person), what is sent (the cloud
   request is the one route `cloud` would send), `PROMPT_VERSION`.
+
+### How well each AI is doing (`app/ai/quality.py`, `app/ai/eval_reports.py`)
+
+Server administration → AI providers shows two signals per routed feature, from `GET /api/admin/ai-quality`; no table or schema step is added. **In use:** the
+newest `LAST_CALLS` (20) rows of `ai_audit` for the feature (`AUDIT_FEATURES`), the provider it resolves to for a person on the shared AI
+(`quality.routed_row`: the choice of `routing.resolve_feature` without a person or a keyring) and the model in use (the vision model for photos and lab
+reports: that is the row's `model`), from the last `WINDOW_DAYS` (14) days, all people together; `cached` rows are not calls and are left out. Only
+`status` and `verdict_json` are read. `quality.classify` reads a status per feature (`OUTCOMES`, from `routes._verdict_of`, `_finish_chat` and the judges)
+as `usable`, `no_fit`, `unread`, `refused`, `dropped`, `invalid` or `error`; `routes._finish` keeps `verdict.shown`, the number of items offered for a
+described meal or plate photo, so that an `ok` with every item dropped counts as `dropped` (rows from before have no `shown` and count by their status).
+`MIN_CALLS` (8) calls with `WARN_PERCENT` (70) or more without a usable result is a warning; fewer calls give counts and no verdict. **Evaluation:**
+`AI_EVAL_REPORTS_DIR` is read on every request and at start-up (at most 200 `*.json` files of 1 MiB, newest name first; a link is followed only to
+a target inside the folder and opened with `O_NOFOLLOW`; anything malformed, too big, outside or not a plain file is counted, never fatal). A report
+matches by `provider.preset`, the `host:port` of `provider.base_url`, `provider.model` and, for photos, `provider.vision_model`
+(`provider.role` and `provider.upstream` are carried when present, never needed); only a report with `prompt_version == PROMPT_VERSION` can pass or
+fail, an older one is `older`. Each feature is judged on the gates about it (`GATES_FOR`); `labs` is `not_covered` (the evaluation has no lab report
+cases) and Ask needs a report run with `--chat`. `quality.log_startup` logs one `AI quality:` warning per routed feature whose state is `failed`, `none` or
+`older`, only with the variable set and AI on. The demo and preview have no AI admin (`renderAdmin` shows a note), so there is no twin and no vector.
+Screen: `js/views/ai_quality.js` (`KH.aiQuality`), mounted by `ai.js` under the routing table. People and operators: `docs/ai.md` "How well each AI is
+doing".
 
 ### The call pipeline (`app/ai/routes.py` `run_call`)
 
