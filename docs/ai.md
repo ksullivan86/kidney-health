@@ -57,7 +57,8 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
   [which AI each feature uses](#which-ai-does-each-feature-use), [how well each AI is doing](#how-well-each-ai-is-doing),
-  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment)),
+  [a model server on another machine](#a-model-server-on-another-machine),
+  [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment), [limiting each LiteLLM key](#limit-each-litellm-key-to-what-it-is-for)),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
   [retention](#retention-and-backups), [troubleshooting](#troubleshooting), [turning it off](#turning-ai-off)
 * [For contributors](#for-contributors): code, tests, evaluation, change control
@@ -427,6 +428,18 @@ vision with a red square when a vision model is set, and for `hermes` runs the t
 providers are tested again automatically after a person's call when the last test is a day old, and
 after a change of address, model or key.
 
+#### A model server on another machine
+
+Ollama has no sign-in at all, and LiteLLM has none until you set up keys. Anyone who can reach the port can use the model.
+With Ollama they can also change what is installed. So:
+
+* **Firewall the port** (11434 for Ollama, 4000 for LiteLLM) so that only the machine running this app can reach it.
+* **Do not listen on every network address** unless you need to. Set the server to listen on the address the app uses.
+* **Plain `http://` on a LAN is readable by anyone on that network.** It carries meal data, photos and the key in clear
+  text. Prefer the same machine, a private network (a VPN between the two machines) or TLS.
+
+A device on your LAN is one of the threats in [`security.md`](security.md#2-threat-model-in-one-table).
+
 ### Which AI does each feature use?
 
 *Privacy tiers, tier 1 ([`ROADMAP.md`](ROADMAP.md)).* A cloud model sees whatever a feature sends it, and a
@@ -486,6 +499,8 @@ provider another role (`409`, `locked`). The local role stays free on a server t
 local AI by hand and choose it, or set `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`. Both providers can sit at the same
 address (a LiteLLM proxy with two keys): the key tells them apart, and each is listed in `AI_PRIVATE_HOSTS` once per
 `host:port`. Listing the cloud provider's address does not make it the local AI, and **a lab report never goes to it**.
+That holds only if the local key cannot call a cloud model: set the proxy up as in
+[Limit each LiteLLM key to what it is for](#limit-each-litellm-key-to-what-it-is-for).
 
 **What "local" guarantees.** (1) The role is re-checked before every call: if the host is no longer private (for
 example `AI_PRIVATE_HOSTS` changed), nothing is sent (`local_not_private`). (2) Calls to the local AI use the
@@ -913,6 +928,36 @@ Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Phot
   the local AI keeps 8,192 (`AI_CONTEXT_TOKENS`). Measure each with `scripts/ai_eval.py` (`--role local` and `--role cloud`).
 * `AI_ROUTE_*` are optional. Leave one out and an admin chooses it in the app, or it stays `local`, which is off until a local
   AI exists.
+
+##### Limit each LiteLLM key to what it is for
+
+"The local key can call only models on your GPU" is true only if you set up LiteLLM that way. The app cannot see or check it.
+
+* Make **one virtual key for each use**: one for the local AI, one for the cloud AI. Make them in LiteLLM, and give the
+  app only these. Never give it the master key, which can do everything, including make new keys.
+* Set each key's **allowed models** to just that key's aliases: the local key to the aliases that run on your GPU, the
+  cloud key to the cloud alias. A key with no list of allowed models can call every model the proxy knows.
+* If you like, give each key a **budget** and a **rate limit**. A leaked key or a stuck loop then cannot run up a bill or
+  flood the GPU.
+* Keep LiteLLM's admin screen and its port (4000) off the open network. Only the app's host and you should reach them
+  ([a model server on another machine](#a-model-server-on-another-machine)).
+
+**Warning.** The promise that lab report photos never leave your network depends on the local key being unable to call a
+cloud model. The app sends lab reports only to the local AI's address and key, and trusts the proxy to refuse the rest. If
+the local key could reach a cloud alias, one wrong model name in `AI_MODEL` or in the app would send lab reports to the
+cloud, and nothing would stop it.
+
+**Test it once, and again after you change the proxy.** Call a cloud alias with the local key and expect a refusal, not an
+answer:
+
+```bash
+curl -s http://litellm.lan:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(cat /run/secrets/ai_api_key)" -H "Content-Type: application/json" \
+  -d '{"model": "claude-sonnet", "messages": [{"role": "user", "content": "hi"}]}'
+```
+
+Change `claude-sonnet` to your cloud alias and the key file to your local key's. Do the same with the cloud key and a
+local alias if you want to keep the cloud key off your GPU.
 
 What stops the start, each with a message that names the variable:
 

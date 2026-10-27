@@ -40,7 +40,7 @@ the app with a message that names the variable; it never starts half-configured
 | `MAX_BODY_BYTES` | 1 MiB | Largest JSON request. |
 | `MAX_IMAGE_BYTES` | 4 MiB | Largest photo upload (v0.3 photo features). |
 | `HSTS_MAX_AGE` | 31536000 | Sent only over HTTPS; `0` turns HSTS off. |
-| `ENABLE_API_DOCS` | `false` | Serves `/docs` and `/openapi.json` (alias `DOCS_ENABLED`). |
+| `ENABLE_API_DOCS` | `false` | Serves `/docs`, `/redoc` and `/openapi.json` (alias `DOCS_ENABLED`). For a development machine only: they answer without a sign-in and load scripts from a CDN. |
 | `PWA_ENABLED` | `true` | `false` is the kill switch for the offline service worker. |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Secrets are redacted either way. |
 | `DATA_DIR` | `/data` in the image, `./data-local` outside | Where `kidney.db` lives. |

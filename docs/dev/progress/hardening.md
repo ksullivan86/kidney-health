@@ -15,8 +15,12 @@ modes under DATA_DIR), doc gaps 3 to 7, CHANGELOG, ARCHITECTURE.
   Nothing else under DATA_DIR is written by the app besides secret.key (0600) and backups (0600); there is no photo,
   export or lab PDF cache on disk.
 
+* Docs 3 to 7: ai.md (limit each LiteLLM key; model server on another machine), Caddyfile.example (commented second host
+  name), assistant.md and push.md pointers, deployment.md `ENABLE_API_DOCS` row (+ handbook configuration row), privacy.md bullet.
+  CHANGELOG done. The repo links no LiteLLM docs, so none is linked.
+
 ## Next
-* Docs 3 to 7, CHANGELOG, final checks.
+* Final checks (full pytest, safety, vectors, ruff, openapi, gen_*, handbook, diff --check), rerun audit scripts, mark complete.
 
 ## Checks
 * `python -m pytest tests/test_auth_mode_tokens.py -q`

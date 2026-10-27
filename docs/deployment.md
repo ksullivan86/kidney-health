@@ -133,7 +133,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `MAX_BODY_BYTES`, `MAX_IMAGE_BYTES` | 1 MiB, 4 MiB | Request size limits (JSON; photos). |
 | `MAX_IMPORT_BYTES` | 16 MiB | Size limit of `POST /api/me/import` only (a person's own `export.json`; a year at eight entries a day is about 3.5 MB). A file at the limit needs about 90 MB of extra memory for a moment. |
 | `HSTS_MAX_AGE` | 31536000 | Sent only over HTTPS; `0` disables it. |
-| `ENABLE_API_DOCS` | `false` | `/docs` and `/openapi.json` (with a relaxed CSP on those paths only). |
+| `ENABLE_API_DOCS` | `false` | `/docs`, `/redoc` and `/openapi.json`, with a relaxed CSP on those paths only. **Development machines only.** They answer without a sign-in, and `/docs` and `/redoc` load scripts from a CDN (`cdn.jsdelivr.net`), which breaks the rule that the browser loads nothing from outside the server. The app logs a warning at start-up when it is on. |
 | `PWA_ENABLED` | `true` | `false` is the kill switch for the offline service worker. |
 | `DATA_DIR` | `/data` in the image | Where `kidney.db` lives. |
 | `HANDBOOK_DIR` | `/app/learn` in the image; `handbook/site` in a checkout | The built handbook served at `/learn/`. Without an `index.html` there, `/learn` answers 404 and the app's Learn links use `HANDBOOK_PUBLIC_URL`, or are hidden. The app reads the site once at start: restart it after rebuilding the handbook in place. |

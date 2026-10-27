@@ -25,7 +25,9 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the route
-is `POST /push/v1/body` only.
+is `POST /push/v1/body` only. To let a phone reach it from beyond your LAN without opening the rest of the app, use the
+commented second host name in `deploy/caddy/Caddyfile.example`; it passes only this request and `POST /mcp`
+([assistant.md](assistant.md)). A VPN is simpler and safer.
 
 ## What a token is
 

@@ -52,6 +52,11 @@ The chat client's server must be able to reach the app: on the same machine or p
 your reverse proxy with HTTPS. Exposing the app to the internet so that a vendor's cloud app can reach it is
 **not recommended** for health data.
 
+If something must reach the server from beyond your LAN, expose only `POST /mcp` (and `POST /push/v1/body` for phone
+shortcuts) and keep the rest of the app private. In `deploy/caddy/Caddyfile.example` there is a commented second host name
+that passes only those two requests and answers `404` to everything else. Do not put a sign-in in front of that name: the
+token is the sign-in.
+
 ## Access tokens
 
 A token is a long secret, `kha_` followed by 43 letters, digits, `-` and `_`, that you paste into the chat
