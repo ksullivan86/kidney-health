@@ -115,7 +115,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
 Open <http://localhost:8000> and enter the setup code printed in the terminal. The database is saved
-in `./data-local/kidney.db`, which only you and your group can read.
+in `./data-local/kidney.db`, which only you can read.
 
 ### Other ways to run it
 

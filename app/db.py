@@ -27,8 +27,8 @@ if TYPE_CHECKING:  # pragma: no cover
 log = logging.getLogger(f"{brand.LOGGER_NAME}.db")
 
 SCHEMA_VERSION_KEY = "schema_version"
-# The database and its -wal and -shm files: the owner and the owner's group (the image's 10001:0, OpenShift's GID 0).
-DB_FILE_MODE = 0o660
+# The database and its -wal and -shm files: the owner only, as for secret.key. The process creates them, so it owns them.
+DB_FILE_MODE = 0o600
 
 META_DDL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -254,7 +254,7 @@ def migrate(conn: sqlite3.Connection, steps: Sequence["Step"] | None = None) -> 
 
 
 def secure_database_files(path: Path | str) -> None:
-    """Set the database file and its ``-wal`` and ``-shm`` files to 0660, so only the owner and the group can read them.
+    """Set the database file and its ``-wal`` and ``-shm`` files to 0600, so only the owner can read them.
 
     The process umask would otherwise decide (0644 under the usual 022). SQLite gives the two side files the mode of
     the main file when it creates them. Never stops the start: a file that stays open to "other" users (this
@@ -277,13 +277,13 @@ def secure_database_files(path: Path | str) -> None:
         except OSError:
             pass
         if mode & 0o006:
-            log.warning("%s is readable by other users (mode %o) and cannot be changed here; run: chmod 660 %s", name, mode, name)
+            log.warning("%s is readable by other users (mode %o) and cannot be changed here; run: chmod 600 %s", name, mode, name)
 
 
 def init_db(path: Path | str) -> list[int]:
     """Create the database file, apply the schema and pending migrations (idempotent).
 
-    A new file is created with mode 0660 first, so the ``-wal`` and ``-shm`` files SQLite makes next to it get that mode
+    A new file is created with mode 0600 first, so the ``-wal`` and ``-shm`` files SQLite makes next to it get that mode
     too; :func:`secure_database_files` then fixes a file that was made earlier under a looser umask."""
     if str(path) not in ("", ":memory:") and not os.path.exists(path):
         os.close(os.open(path, os.O_WRONLY | os.O_CREAT, DB_FILE_MODE))

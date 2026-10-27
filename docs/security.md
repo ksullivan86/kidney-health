@@ -214,7 +214,7 @@ Tick every line before you put real health data in the app.
 * **Rotate** with `python -m app.admin rotate-secret-key` (auto-generated key) or, with a mounted
   key: add a new first line, restart, `python -m app.admin reencrypt`, remove the old line, restart.
 * **File modes on the data folder.** The app creates `DATA_DIR` as `0770` and sets `kidney.db` and its `-wal` and `-shm`
-  files to `0660`, whatever the umask, so other users on the same computer cannot read them. `secret.key`,
+  files to `0600`, whatever the umask, so other users on the same computer cannot read them. `secret.key`,
   backups and exports are `0600`. A folder that already exists and is open to other users loses that access, if
   the app owns it. When the app cannot fix a mode, it logs a warning with the command to run. The images are
   unchanged: `/data` is `10001:0`, mode `0770`.

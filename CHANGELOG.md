@@ -35,7 +35,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Settings. Starting with the same mode revokes nothing. No schema step.
 * **Security: the database is no longer readable by every user on the computer.** Outside a container, `DATA_DIR` and `kidney.db` took their
   modes from the umask, usually `0755` and `0644`. The app now makes `DATA_DIR` `0770` and sets `kidney.db` and its `-wal` and `-shm` files
-  to `0660` at every start, and removes "other" access from an existing data folder it owns. The start never fails over this: a mode the app
+  to `0600` at every start, and removes "other" access from an existing data folder it owns. The start never fails over this: a mode the app
   cannot change is a log warning that names the command to run. `secret.key`, backups and exports were already `0600`. The images are
   unchanged (`/data` is `10001:0`, mode `0770`).
 * **Docs.** [`docs/ai.md`](docs/ai.md) says how to make the two LiteLLM keys really limited (one virtual key for each use, allowed models,

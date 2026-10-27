@@ -711,7 +711,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers   # DATA_DI
 python -m pytest
 ```
 
-The app makes `./data-local` readable only by you and your group (mode 0770), and the database files 0660,
+The app makes `./data-local` readable only by you and your group (mode 0770), and the database files 0600,
 whatever your umask is. Other users on the computer cannot open them. If the folder already existed and was open to
 everyone, the app closes it, and logs a warning when it cannot.
 

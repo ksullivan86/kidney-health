@@ -10,7 +10,7 @@ modes under DATA_DIR), doc gaps 3 to 7, CHANGELOG, ARCHITECTURE.
   `app/auth/bootstrap.py`; settings.js label; tests in `tests/test_auth_mode_tokens.py` (they fail without the fix);
   docs (assistant, accounts, push, deployment, handbook x2, ARCHITECTURE).
 
-* Fix 2: `Settings.ensure_data_dir` (0770, tighten when owned), `db.init_db` pre-creates 0660 and `db.secure_database_files`;
+* Fix 2: `Settings.ensure_data_dir` (0770, tighten when owned), `db.init_db` pre-creates 0600 and `db.secure_database_files`;
   tests in `tests/test_data_file_modes.py` (fail without the fix); docs deployment, README, security, ARCHITECTURE.
   Nothing else under DATA_DIR is written by the app besides secret.key (0600) and backups (0600); there is no photo,
   export or lab PDF cache on disk.

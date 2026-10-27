@@ -2,7 +2,7 @@
 
 The process umask decided before: 0755 for the folder and 0644 for ``kidney.db`` under the usual 022, which lets every
 local user outside a container read the health data. The folder is now 0770, the database and its ``-wal`` and
-``-shm`` files 0660 and ``secret.key`` stays 0600.
+``-shm`` files 0600, like ``secret.key``.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def test_a_new_data_folder_and_database_are_private_whatever_the_umask(tmp_path,
             assert "kidney.db" in names and "kidney.db-wal" in names and "kidney.db-shm" in names
             assert mode_of(data) == 0o770
             for name in ("kidney.db", "kidney.db-wal", "kidney.db-shm"):
-                assert mode_of(data / name) == 0o660, name
+                assert mode_of(data / name) == 0o600, name
             assert mode_of(data / "secret.key") == 0o600
             # nothing else the app wrote is open to other users
             for p in data.iterdir():
@@ -77,7 +77,7 @@ def test_a_database_made_earlier_under_a_looser_umask_is_tightened(tmp_path, uma
             Path(f"{path}{side}").chmod(0o644)
         db.init_db(path)
         for name in ("kidney.db", "kidney.db-wal", "kidney.db-shm"):
-            assert mode_of(tmp_path / name) == 0o660, name
+            assert mode_of(tmp_path / name) == 0o600, name
     finally:
         keep_open.close()
 
@@ -118,7 +118,7 @@ def test_a_folder_that_cannot_be_changed_never_stops_the_start(tmp_path, foods_j
 
 
 def test_the_image_layout_is_left_as_it_is(tmp_path, foods_json, caplog, umask):
-    """/data is 0770 in the image: no change, no warning. A database already at 0660 is not touched."""
+    """/data is 0770 in the image: no change, no warning. A database already at 0600 is not touched."""
     umask(0o022)
     data = tmp_path / "data"
     data.mkdir()
@@ -127,7 +127,7 @@ def test_the_image_layout_is_left_as_it_is(tmp_path, foods_json, caplog, umask):
         make_settings(tmp_path, foods_json).ensure_data_dir()
         db.init_db(data / "kidney.db")
         db.init_db(data / "kidney.db")
-    assert mode_of(data) == 0o770 and mode_of(data / "kidney.db") == 0o660
+    assert mode_of(data) == 0o770 and mode_of(data / "kidney.db") == 0o600
     assert not [m for m in caplog.messages if "other users" in m or "could not" in m]
 
 
@@ -143,7 +143,7 @@ def test_a_database_that_stays_open_to_other_users_is_reported_not_fatal(tmp_pat
     with caplog.at_level(logging.WARNING, logger="kidney_health.db"):
         assert db.init_db(path) == []  # the start goes on
     assert mode_of(path) == 0o644
-    assert any("is readable by other users" in m and "chmod 660" in m and str(path) in m for m in caplog.messages)
+    assert any("is readable by other users" in m and "chmod 600" in m and str(path) in m for m in caplog.messages)
 
 
 def test_a_database_that_is_fine_gives_no_warning(tmp_path, caplog):
