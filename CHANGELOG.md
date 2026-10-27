@@ -7,6 +7,51 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.6.0 — 2026-10-27
+
+Version 0.6 is about the AI helpers. A server can now have a local AI and a cloud AI, both set from the environment, and the cloud
+one can be a proxy that tries one company and then another. The consent sheet names every company that may see a request. Server
+administration shows how well each AI is doing, so a model that answers "nothing fits" to every meal idea is easy to spot. The
+answer format now asks for the ideas before "nothing fits", which helps small local models. Two access fixes came out of a review
+of who can reach what. As before, everything that sends data off your server is **off until an admin turns it on**, and lab report
+photos go only to the local AI.
+
+**Before you upgrade, read [Upgrading from 0.5](#upgrading-from-05-read-this-first).** The first start migrates the database (schema
+step 20); take a backup first.
+
+### Highlights
+
+* **A local AI and a cloud AI, both from the environment** (`AI_CLOUD_PROVIDER` and the other `AI_CLOUD_` settings).
+* **The consent sheet names the company behind a proxy**, or each company of a chain, in the order they are tried.
+* **How well each AI is doing**, in Server administration → AI providers: counts of usable answers, and whether the model passed
+  `scripts/ai_eval.py`. It only advises; it never turns a feature off or moves it to another AI.
+* **The answer comes before "nothing fits"** in meal ideas, re-order, swaps, plans and describe a meal.
+* **Security:** changing `AUTH_MODE` ends every assistant and phone-shortcut token, and the database files are `0600` whatever the umask.
+
+### Upgrading from 0.5 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.6.0.db`). The first start runs schema step
+   20: the AI provider list gains `env_slot` and `upstream`. The provider you have keeps every setting.
+2. **Change the tag** from `:0.5` to `:0.6`, or pin a digest from the release notes. The shipped files already say `:0.6`.
+3. **Nothing new is switched on.** `AI_CLOUD_PROVIDER` and `AI_EVAL_REPORTS_DIR` do nothing until you set them. If you set
+   `AI_CLOUD_PROVIDER` next to `AI_PROVIDER`, `AI_PROVIDER_ROLE=local` is required.
+4. **A changed `AUTH_MODE` revokes tokens.** A start with a different mode than the last start already signed everyone out. It now
+   also ends every assistant and phone-shortcut token, and people make new ones in Settings. Starting 0.6.0 with the mode you had
+   on 0.5 revokes nothing.
+5. **Outside a container**, `DATA_DIR` becomes `0770` and `kidney.db` with its `-wal` and `-shm` files `0600`. A backup tool that
+   reads the file as another user needs the app's user, or use `python -m app.admin backup`. The images do not change.
+6. **New `PROMPT_VERSION` (`2026-10-27.1`).** Reports from `scripts/ai_eval.py` for the old version show as "for an older version".
+   Run it again for the models you use.
+
+### Known limitations
+
+* The new answer order was tested with the recorded answers in the test suite, not yet with a real small local model. Run
+  `scripts/ai_eval.py` on 0.5.1 and on 0.6.0 to see the difference for yours.
+* A chain of companies behind one proxy is one provider to the app: the activity list, the counts, the evaluation and `ai_eval` cannot
+  tell which company answered. To judge each one, point `ai_eval` at a proxy alias that uses only that company.
+
 ### For people using the app
 
 * **A cloud AI that goes through your admin's own server says so.** If your admin runs a LiteLLM proxy (or another server) that passes
