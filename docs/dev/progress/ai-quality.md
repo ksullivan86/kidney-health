@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # ai-quality: "How well each AI is doing" in Server administration → AI providers
 
@@ -47,8 +47,8 @@ Two signals per routed feature, in one admin route and one admin screen section:
 
 ## In progress
 
-Full `python -m pytest -q` running (result goes in the final note). Docs are written (ai.md, dev/ai-eval/README.md,
-deployment.md, .env.example, compose/quadlet/k8s comments, handbook configuration and admin pages, ARCHITECTURE.md, CHANGELOG.md).
+Nothing. The full `python -m pytest -q` (exit 0), the safety marker, vectors, ruff, openapi and generator checks, the handbook check and
+`git diff --check` all pass.
 
 ## Checked in a browser
 
@@ -58,7 +58,7 @@ Check again, 44 px button, no overflow, no inline style, no console errors, the 
 
 ## Next
 
-* when the full suite is green: final commit with "Status: complete" on the first line
+Nothing left in this task. Possible follow-up: a committed browser harness for the new section (an ad hoc walk was used).
 
 ## Commands that reproduce the checks
 
