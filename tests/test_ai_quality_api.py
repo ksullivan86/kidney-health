@@ -469,7 +469,8 @@ def test_start_up_says_nothing_about_a_feature_that_passed_or_is_off(tmp_path, f
     (reports / "good.json").write_text(json.dumps(report(gates={**GOOD_GATES, "chat_pass_rate": True, "chat_no_unsafe_text": True})))
     assert route(configured.client, describe="off").status_code == 200
     lines = start_again(tmp_path, foods_json, caplog, eval_reports_dir=str(reports))
-    assert [line.split(" uses ")[0] for line in lines] == ["AI quality: Photos (labels and plates)"]  # no vision model in that report
+    # No vision model in that report, and it measured no recipes.
+    assert [line.split(" uses ")[0] for line in lines] == ["AI quality: Photos (labels and plates)", "AI quality: Recipes"]
     assert "Describe a meal" not in " ".join(lines) and "Meal ideas" not in " ".join(lines) and "Ask" not in " ".join(lines)
 
 

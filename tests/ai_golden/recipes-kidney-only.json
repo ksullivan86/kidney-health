@@ -1,0 +1,38 @@
+{
+  "id": "recipes-kidney-only",
+  "category": "kidney_only",
+  "feature": "recipes",
+  "fixture": {
+    "profile": {
+      "diabetes": "none"
+    },
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "ids_needed": [
+      "Chicken breast, roasted, skinless",
+      "Rice, white, long-grain, cooked"
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:#Chicken breast, roasted, skinless}}\",\"quarters\":8},{\"food_id\":\"{{id:#Rice, white, long-grain, cooked}}\",\"quarters\":8}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "payload_includes": [
+      "chronic kidney disease only"
+    ],
+    "payload_excludes": [
+      "carbs_per_meal_g",
+      "type 1 diabetes"
+    ]
+  }
+}

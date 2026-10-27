@@ -1,0 +1,43 @@
+{
+  "id": "recipes-thirteen-ingredients",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "ids_needed": [
+      "Cauliflower, boiled",
+      "Cabbage, boiled",
+      "Green beans, boiled",
+      "Carrots, boiled",
+      "Onion, raw",
+      "Garlic, raw",
+      "Celery, raw",
+      "Zucchini, boiled",
+      "Radishes, raw",
+      "Lettuce, iceberg",
+      "Cucumber, with peel, raw",
+      "Bell pepper, red, raw",
+      "Rice, white, long-grain, cooked"
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:#Cauliflower, boiled}}\",\"quarters\":1},{\"food_id\":\"{{id:#Cabbage, boiled}}\",\"quarters\":1},{\"food_id\":\"{{id:#Green beans, boiled}}\",\"quarters\":1},{\"food_id\":\"{{id:#Carrots, boiled}}\",\"quarters\":1},{\"food_id\":\"{{id:#Onion, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Garlic, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Celery, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Zucchini, boiled}}\",\"quarters\":1},{\"food_id\":\"{{id:#Radishes, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Lettuce, iceberg}}\",\"quarters\":1},{\"food_id\":\"{{id:#Cucumber, with peel, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Bell pepper, red, raw}}\",\"quarters\":1},{\"food_id\":\"{{id:#Rice, white, long-grain, cooked}}\",\"quarters\":1}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "too_many_items"
+    ]
+  }
+}

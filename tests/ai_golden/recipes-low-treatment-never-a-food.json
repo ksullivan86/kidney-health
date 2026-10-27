@@ -1,0 +1,34 @@
+{
+  "id": "recipes-low-treatment-never-a-food",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "ids_needed": [
+      "Apple juice"
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:#Apple juice}}\",\"quarters\":4},{\"food_id\":\"{{id:Chicken breast, roasted, skinless}}\",\"quarters\":8}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ],
+    "payload_excludes": [
+      "Apple juice"
+    ]
+  }
+}

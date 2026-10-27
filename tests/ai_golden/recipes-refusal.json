@@ -1,0 +1,25 @@
+{
+  "id": "recipes-refusal",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[],\"status\":\"refused\",\"refusal\":\"outside_scope\"}"
+  ],
+  "expect": {
+    "status": "refused"
+  }
+}

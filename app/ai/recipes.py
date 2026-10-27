@@ -33,8 +33,8 @@ from .client import ProviderConfig, build_body
 
 RECIPE_PORTIONS: tuple[float, ...] = (0.25, 0.5, 1.0)  # a candidate is kept if one of these shares passes
 AI_RECIPE_FOODS_MAX = 48
-AI_RECIPE_PER_GROUP_MIN = 6
 AI_RECIPE_INGREDIENTS_MIN = 4
+COOK_LATER = frozenset({"Beverages", "Sweets & Snacks", "Prepared & Fast Food"})  # categories a recipe rarely starts from
 # Foods the AI never adds, by name: table salt, and any salt substitute (a potassium salt). Grown from the golden set.
 NEVER_ADD = re.compile(r"\b(?:salt|salt substitutes?|salt replacers?|potassium chloride|lo-?salt|nu-?salt|no-?salt|lite salt)\b",
                        re.IGNORECASE)
@@ -77,9 +77,9 @@ def recipe_ineligible(f: FoodVec, ctx: GuidanceContext) -> str | None:
 
 
 def recipe_candidates(ctx: GuidanceContext, target: Target, extra: Sequence[FoodVec] = ()) -> dict[str, Any]:
-    """The rule result for an AI recipe: up to :data:`AI_RECIPE_FOODS_MAX` foods ranked as "What fits now" ranks them (the best of
-    ¼, ½ and 1 serving), at least :data:`AI_RECIPE_PER_GROUP_MIN` per group and :data:`AI_RECIPE_INGREDIENTS_MIN` ingredients
-    when there are that many, plus ``extra`` (the foods of a recipe to rework) when they may be sent. Each candidate's numbers are
+    """The rule result for an AI recipe: up to :data:`AI_RECIPE_FOODS_MAX` foods that pass at ¼, ½ or 1 serving, ranked by the
+    "What fits now" score: at least :data:`AI_RECIPE_INGREDIENTS_MIN` ingredients, then one food of each cooking category in turn,
+    then drinks, sweets, ready meals and processed foods if there is room, plus ``extra`` (the foods of a recipe to rework) when they may be sent. Each candidate's numbers are
     for one serving of the food."""
     room = room_for(ctx, target)
     counter = Counter()
@@ -95,23 +95,30 @@ def recipe_candidates(ctx: GuidanceContext, target: Target, extra: Sequence[Food
         ranked.append((best.score or 0.0, f))
     ranked.sort(key=lambda pair: (-pair[0], pair[1].name.casefold(), pair[1].id))
     picked: list[FoodVec] = []
-    per_group: dict[str, int] = {}
-    for _, f in ranked:  # the best few of every group …
-        if per_group.get(f.group, 0) < AI_RECIPE_PER_GROUP_MIN:
-            picked.append(f)
-            per_group[f.group] = per_group.get(f.group, 0) + 1
-    ingredients = sum(1 for f in picked if f.ingredient)
-    for _, f in ranked:  # … enough ingredients …
+    ingredients = 0
+    for _, f in ranked:  # enough ingredients first: a recipe needs oil and flour …
         if ingredients >= AI_RECIPE_INGREDIENTS_MIN:
             break
-        if f.ingredient and f not in picked:
+        if f.ingredient:
             picked.append(f)
             ingredients += 1
-    for _, f in ranked:  # … then the rest in rule order
-        if len(picked) >= AI_RECIPE_FOODS_MAX:
-            break
-        if f not in picked:
-            picked.append(f)
+    by_category: dict[str, list[FoodVec]] = {}
+    later: list[FoodVec] = []
+    for _, f in ranked:
+        if f in picked:
+            continue
+        if f.processed or (f.category or "") in COOK_LATER:
+            later.append(f)
+        else:
+            by_category.setdefault(f.category or f.group, []).append(f)
+    # … then one food of each cooking category in turn, best first, so grains cannot crowd out the vegetables; drinks, sweets,
+    # ready meals and processed foods only fill what is left.
+    categories = sorted(by_category)
+    while len(picked) < AI_RECIPE_FOODS_MAX and any(by_category[c] for c in categories):
+        for c in categories:
+            if by_category[c] and len(picked) < AI_RECIPE_FOODS_MAX:
+                picked.append(by_category[c].pop(0))
+    picked += later[:max(0, AI_RECIPE_FOODS_MAX - len(picked))]
     order = {f.id: i for i, (_, f) in enumerate(ranked)}
     picked = sorted(picked[:AI_RECIPE_FOODS_MAX], key=lambda f: order[f.id])
     for f in extra:

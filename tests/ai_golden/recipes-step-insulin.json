@@ -1,0 +1,35 @@
+{
+  "id": "recipes-step-insulin",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "recipe_steps": true
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:Chicken breast, roasted, skinless}}\",\"quarters\":8},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":8},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4},{\"food_id\":\"{{id:Olive oil}}\",\"quarters\":2}],\"steps\":[\"Cook the rice.\",\"Have your insulin ready before you eat.\"],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "steps_shown": [
+      "Cook the rice."
+    ],
+    "steps_dropped_include": [
+      "dose:"
+    ],
+    "response_excludes": [
+      "insulin ready"
+    ]
+  }
+}

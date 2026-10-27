@@ -59,20 +59,22 @@ MCP write and Ask save. The full suite runs in CI.
 
 Owner's decisions 8 to 15 (note 16 §15). Server part first (3a), then the screens (3b).
 
-Done (3a, not yet committed when this was written; see git status):
+Done (3a, committed on claude/adoring-sagan-th5swr, PR to come):
 
 * Routing: feature `recipes` in `app/ai/routing.py` (purpose `text`, `local_then_cloud` allowed), `RoutingBody.recipes` in routes.
 * Settings: `ai.route.recipes` (`AI_ROUTE_RECIPES`, default local) and `ai.recipe_steps` (`AI_RECIPE_STEPS`, default off) in the
   registry, the JS twin `engine/settings.js`, `tests/data/settings_vectors.json` (regenerated), the admin groups in `views/settings.js`,
   `deploy/compose.yaml`, `deploy/.env.example`, the Quadlet example and the docs/ai.md example (`AI_ROUTE_RECIPES=cloud`).
-* `POLICY_VERSION` 2026-10-27.1 (decision 8: "Meal data" now covers a recipe's foods and amounts, so everyone is asked again).
-  `tests/test_ai_cloud_env.py` pins the new version.
-* `app/ai/recipe_steps.py`: the eight checks of §8.7. `app/ai/recipes.py`: `recipe_candidates`, `prepare_recipes`, `judge_recipes`,
-  `title_for`, `differences`. Prompt `RECIPE_SYSTEM_PROMPT` in prompts.py (rules 3, 4, 6–9 copied from the meal ideas prompt by
-  `_meal_rule`), task lines `recipes_suggest`/`recipes_change`, `recipe_context`. Schema `recipes_schema`, `RecipesAnswer`.
-* `POST /api/ai/recipes` (`RecipesBody`, `_prepare_recipes`), status `features.recipes` and `features.recipe_steps`, meta
-  `ai_recipes` (and the demo's meta says false), quality buckets for `recipes:suggest`/`recipes:change`.
-* Tests: `tests/test_ai_recipes.py` (29), `tests/test_ai_recipe_steps.py`; routing/fallback/meta/cloud-env tests updated.
+* `POLICY_VERSION` 2026-10-27.1 (decision 8), `PROMPT_VERSION` 2026-10-27.2 (snapshot `tests/fixtures/ai/prompt_version.json`).
+* `app/ai/recipe_steps.py` (§8.7), `app/ai/recipes.py` (candidates, prepare, judge, title, differences), prompt
+  `RECIPE_SYSTEM_PROMPT` (rules 3, 4, 6–9 copied from the meal ideas prompt by `_meal_rule`), schema `recipes_schema`.
+* `POST /api/ai/recipes`, status `features.recipes`/`recipe_steps`, meta `ai_recipes`, quality rows (`AUDIT_FEATURES`, `OUTCOMES`,
+  `WORDS`, `GATES_FOR`), new eval gates `recipes_with_survivor_rate`, `recipe_p95_latency`, `no_unsafe_steps`.
+* `scripts/ai_eval.py` runs the recipe golden cases with steps on and reports the §12 measures; its own step checker `STEP_UNSAFE`.
+* 21 golden cases (`tests/ai_golden/recipes-*.json`, generator kept in the session scratchpad: write new ones by hand from these).
+* Tests: `tests/test_ai_recipes.py`, `tests/test_ai_recipe_steps.py`; many AI tests updated for the sixth feature.
+* Docs: docs/ai.md (table rows, "What is sent" with decision 15's wording, settings, routing table, "Recipes that fit",
+  case count 118), ARCHITECTURE (status fields, route row), handbook configuration, CHANGELOG Unreleased, ROADMAP.
 
 Decisions made while building:
 
@@ -81,11 +83,12 @@ Decisions made while building:
 * A recipe with a low-treatment food is never sent (`status: not_sent`, wording does not mention a low). Other foods that may
   not be candidates are left out of what is sent; the card's "differences" then shows them as taken out.
 * No answer cache for recipes (only next-meal is cached).
+* Candidates are filled round-robin by category after 4 ingredients, with drinks, sweets, ready meals and processed foods last:
+  ranking alone gave a list of cereals and fast food with one vegetable.
 
-Next (3a): `PROMPT_VERSION`, prompt snapshot fixture in `tests/fixtures/ai/`, golden cases (`tests/ai_golden/`, category
-`recipes`), `scripts/ai_eval.py` metrics (§12), docs/ai.md section "Recipes that fit" and the reworded "ingredient lists" row
-(decision 15), ARCHITECTURE route row, CHANGELOG Unreleased, handbook configuration table. Then 3b: the "Suggest recipes" sheet,
-"Rework with AI" in the fit sheet, the cards, Settings → AI line, handbook page.
+Next: open the 3a PR once the full suite passes. Then 3b: the "Suggest recipes" sheet in Plan, "Rework with AI" in the fit sheet,
+the cards (Save recipe, Add to plan, Dismiss, "What will be sent?"), the Settings → AI line, the consent wording in `views/ai.js`
+(PURPOSE_TEXT.text names recipes), the handbook pages (planning-and-menus, the AI page), and a Chromium walk.
 
 ## Old phase 2 plan
 

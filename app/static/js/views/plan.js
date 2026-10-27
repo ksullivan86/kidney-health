@@ -42,6 +42,13 @@
   $('#week-this').addEventListener('click', () => { state.planStart = currentWeekStart(); loadPlan(); });
   $('#btn-copy-day').addEventListener('click', (e) => openCopySheet({ from: state.date || todayStr(), trigger: e.currentTarget }));
   $('#btn-new-meal').addEventListener('click', (e) => openMealEditor(null, e.currentTarget));
+  // AI recipes (note 16 §10): offered only when the server offers them to this person; the demo never does.
+  async function aiRecipesOn() {
+    if (!KH.ai || typeof KH.ai.status !== 'function') return false;
+    try { const st = await KH.ai.status(); return !!(st && st.features && st.features.recipes); } catch (e) { return false; }
+  }
+  async function afterAiSave() { await KH.loadMeals(true); renderSavedMeals(); }
+  $('#btn-ai-recipes').addEventListener('click', (e) => KH.ai.openRecipes({ trigger: e.currentTarget, onSaved: afterAiSave }));
 
   async function loadPlan() {
     const reqId = ++planRequest;
@@ -59,6 +66,7 @@
     if (rangeRes.status === 'fulfilled') { state.plan = { start, end, days: rangeRes.value.days || [] }; renderPlanGrid(); }
     else { toastError(rangeRes.reason); clear(planGridEl); planGridEl.append(h('p', { class: 'card empty-state' }, 'Could not load this week.')); }
     if (mealsRes.status === 'fulfilled') renderSavedMeals(); else toastError(mealsRes.reason);
+    aiRecipesOn().then((on) => { $('#ai-recipes-row').hidden = !on; });
     if (shopRes.status === 'fulfilled') { state.shopping = { start, end, items: shopRes.value.items || [] }; renderShopping(); }
     else toastError(shopRes.reason);
   }
@@ -518,6 +526,8 @@
     $('#sheet-fit-sub').textContent = isRecipe(t) ? `${t.name}: one serving (it makes ${fmtServings(t.servings_made)}).` : `${t.name}, as one serving.`;
     $('#fit-target').value = t.meal_hint || ''; // the meal it is meant for, else the next meal today
     sheets.open(fitDlg, trigger, $('#fit-target'));
+    $('#fit-rework').hidden = true;
+    aiRecipesOn().then((on) => { $('#fit-rework').hidden = !on; });
     runFit();
   }
   function fitTarget() {
@@ -581,6 +591,13 @@
     return `Carbohydrate per serving goes from ${fmtNum(before, 'carbs_g')} g to ${fmtNum(after, 'carbs_g')} g.`;
   };
   $('#fit-target').addEventListener('change', () => { fit.undo = null; runFit(); });
+  $('#fit-rework').addEventListener('click', () => {
+    const t = fit.meal, target = fitTarget();
+    const trigger = $('#saved-meals');
+    fitDlg.close();
+    KH.ai.openRecipes({ mode: 'change', mealId: t.id, name: t.name, meal: target.kind === 'meal' ? target.meal : null, trigger,
+      onSaved: afterAiSave });
+  });
   $('#fit-save').addEventListener('click', async () => {
     if (fit.busy || !fit.result || !fit.result.fitted) return;
     fit.busy = true;

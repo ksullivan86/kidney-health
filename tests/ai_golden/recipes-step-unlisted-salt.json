@@ -1,0 +1,32 @@
+{
+  "id": "recipes-step-unlisted-salt",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "recipe_steps": true
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:Chicken breast, roasted, skinless}}\",\"quarters\":8},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":8},{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":4},{\"food_id\":\"{{id:Olive oil}}\",\"quarters\":2}],\"steps\":[\"Season with salt and a stock cube.\",\"Serve hot.\"],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "steps_shown": [
+      "Serve hot."
+    ],
+    "steps_dropped_include": [
+      "unlisted_food"
+    ]
+  }
+}

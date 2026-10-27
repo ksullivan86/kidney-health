@@ -7,7 +7,30 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
-Nothing yet.
+### For people using the app
+
+* **Recipes from AI (optional).** If your server offers it, Plan has **Suggest recipes with AI** and the Fit to my targets sheet
+  has **Rework with AI**. The AI picks foods the app's rules chose; the app works out every number, fits the recipe to your
+  targets and lists what it changed. **Save recipe** adds it to your saved meals; nothing is saved before you tap. Your
+  recipe's name, note, steps and link are never sent. See
+  [Planning and menus](handbook/docs/app/planning-and-menus.md#recipes-from-ai-optional).
+
+### For people who run a server
+
+* **AI recipes.** `POST /api/ai/recipes` suggests up to two recipes for a meal, or reworks one of yours, from
+  foods the rules chose. The app works out every number, fits the recipe to your targets as Fit to my targets does, and saves
+  nothing. It is a new feature `recipes`: `AI_ROUTE_RECIPES` (default `local`) says where it runs, and it is agreed under the
+  Meal data consent. Cooking steps written by AI stay off until you set `AI_RECIPE_STEPS=true` after a live run. See
+  [docs/ai.md](docs/ai.md#recipes-that-fit).
+* **Everyone is asked to agree to Meal data again**, because it now covers a recipe's foods and amounts (`POLICY_VERSION`
+  2026-10-27.1).
+* **New `PROMPT_VERSION` (`2026-10-27.2`).** Run `scripts/ai_eval.py` again for the models you use. The report now measures
+  recipes too, with three new gates.
+
+### For contributors
+
+* 21 new golden cases (`tests/ai_golden/recipes-*.json` and one privacy case), `tests/test_ai_recipes.py`,
+  `tests/test_ai_recipe_steps.py`, `tests/test_recipes_ai_ui.py`, and the Chromium walk `tools/e2e/recipes_ai.py`.
 
 ## 0.7.0 — 2026-10-27
 

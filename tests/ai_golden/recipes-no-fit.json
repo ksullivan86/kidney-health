@@ -1,0 +1,25 @@
+{
+  "id": "recipes-no-fit",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[],\"status\":\"ok\",\"refusal\":\"no_fit\"}"
+  ],
+  "expect": {
+    "status": "no_fit"
+  }
+}

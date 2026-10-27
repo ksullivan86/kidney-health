@@ -1,0 +1,59 @@
+{
+  "id": "recipes-privacy-rework-never-sends-the-recipes-text",
+  "category": "privacy",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "mode": "change",
+    "recipe": {
+      "name": "Mum's stew for Ann (555-0100)",
+      "note": "from the hospital leaflet, ward 7",
+      "steps": [
+        "Brown it slowly in the big pan"
+      ],
+      "source_url": "https://example.org/mums-stew",
+      "servings_made": 2,
+      "items": [
+        [
+          "Chicken breast, roasted, skinless",
+          2
+        ],
+        [
+          "Rice, white, long-grain, cooked",
+          2
+        ],
+        [
+          "Green beans, boiled",
+          1
+        ]
+      ]
+    }
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:Chicken breast, roasted, skinless}}\",\"quarters\":8},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":6},{\"food_id\":\"{{id:Cauliflower, boiled}}\",\"quarters\":4}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "recipes": 1,
+    "title": "Mum's stew for Ann (555-0100) (reworked)",
+    "payload_excludes": [
+      "Mum's",
+      "555-0100",
+      "leaflet",
+      "ward 7",
+      "Brown it slowly",
+      "example.org"
+    ]
+  }
+}
