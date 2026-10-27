@@ -26,6 +26,7 @@ from .. import brand
 from ..auth.deps import CurrentUser, current_user
 from ..db import get_db, utcnow
 from ..foods import WEIGHT_UNKNOWN_DETAIL, fetch_food, fetch_user_food, weight_known
+from ..meals import fetch_template, parse_items, recipe_fields
 from ..models import MAX_GRAMS, MAX_SERVINGS, MAX_SQLITE_INT, Meal, validate_date
 from ..settings_store import SettingsStore, default_store
 from . import context as C
@@ -36,6 +37,8 @@ from . import topics as T
 from .ai_bridge import ai_status
 from .fits import learned, what_fits
 from .models import (
+    FitRecipeRequest,
+    FitRecipeResponse,
     DayInsightsResponse,
     GuidanceUnavailable,
     HypoOptionsResponse,
@@ -52,6 +55,7 @@ from .models import (
     SwapResponse,
 )
 from .planner import plan_day
+from .recipes import Target, fit_recipe, next_open_meal
 from .score import Counter
 from .state import GuidanceContext
 from .swaps import find_swaps, hypo_options
@@ -95,6 +99,9 @@ def parse_day(value: str | None, name: str = "date") -> str:
         return validate_date(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"{name}: {exc}") from exc
+
+
+RECIPE_UNAVAILABLE = "A food in this recipe is no longer in your food list. Edit the recipe first."
 
 
 def unavailable(status: str, message: str) -> dict[str, Any]:
@@ -214,6 +221,46 @@ def swaps(
     if entry_id is not None:
         result["entry_id"] = entry_id
     return result
+
+
+@router.post("/fit-recipe", response_model=FitRecipeResponse | GuidanceUnavailable)
+def fit_a_recipe(body: FitRecipeRequest, request: Request, user: CurrentUser,
+                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Recipes that fit (note 16 §7): one serving of a saved recipe (``meal_id``) or a draft (``items`` and ``servings_made``)
+    against a meal's room or what is left today. Lowers amounts, swaps a food or suggests a smaller serving, and lists every
+    change. Computes only; the person saves a fitted copy through ``POST /api/meals``."""
+    if (body.meal_id is None) == (body.items is None):
+        raise HTTPException(status_code=400, detail="give either meal_id or items")
+    store = settings_store(request)
+    off = gate(conn, store, user.id)
+    if off is not None:
+        return off
+    if body.meal_id is not None:
+        row = fetch_template(conn, user.id, body.meal_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"saved meal {body.meal_id} not found")
+        wanted = [(int(i["food_id"]), float(i["servings"])) for i in parse_items(row["items_json"])]
+        servings_made = recipe_fields(row)[0]
+    else:
+        wanted = [(i.food_id, i.servings) for i in body.items or []]
+        for food_id, _ in wanted:
+            if fetch_user_food(conn, user.id, food_id) is None:
+                raise HTTPException(status_code=404, detail=f"food {food_id} not found")
+        servings_made = body.servings_made
+    if len(wanted) > R.RECIPE_MAX_ITEMS:
+        raise HTTPException(status_code=400, detail=f"a recipe can have at most {R.RECIPE_MAX_ITEMS} foods")
+    day = parse_day(body.target.date)
+    ctx = load_ctx(request, conn, user.id, day, C.LoadOptions(history60=False, saved_meals=False, combos=False))
+    if not C.has_targets(ctx.profile):
+        return unavailable("no_targets", M.NO_TARGETS)
+    meal = None if body.target.kind == "day" else (body.target.meal or next_open_meal(ctx))
+    head = {"rules_version": R.RULES_VERSION, "target": {"kind": body.target.kind, "meal": meal, "date": day},
+            "servings_made": float(servings_made or 1.0)}
+    recipe = [(ctx.foods.get(fid), q) for fid, q in wanted]
+    if not recipe or any(f is None for f, _ in recipe):
+        return {**head, "status": "unavailable", "message": RECIPE_UNAVAILABLE}
+    result = fit_recipe(ctx, recipe, servings_made, Target(body.target.kind, meal))  # type: ignore[arg-type]
+    return {**head, **result}
 
 
 @router.get("/hypo-options", response_model=HypoOptionsResponse)

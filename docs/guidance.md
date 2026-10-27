@@ -252,6 +252,30 @@ Chromium by `tools/e2e/prefs.py`.
   the room; none for a phosphate additive, none for a low treatment) and tips (leaching for potatoes,
   sweet potatoes, yams, carrots, beets and winter squash; additives; the low-treatment card).
 
+## Recipes that fit
+
+`POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
+meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One
+serving's share of a food is its amount in the whole recipe divided by the servings it makes. The gate is `check_meal` kind `recipe`:
+the same totals, unknown values, carbohydrate and "avoid" rules as a saved meal, no lower limit on a share (a spoon of oil in 4
+servings), at most 3 servings of one food in a serving, and no "high" share of a nutrient that is not ok today.
+
+When it does not fit, the app tries these in order and stops at the first that fits:
+
+1. **Lower amounts**, one ingredient at a time, the largest contributor first, a quarter serving at a time, down to half the
+   recipe's own amount (`RECIPE_FLOOR`). It never lowers a protein food (that would cut protein without a word) or a low-treatment
+   food.
+2. **Swap** a food, at most 2 times, with the swap engine's rules: same category or role, no ingredient, alcohol or supply, nothing
+   "Not for me", 25 % less of the nutrient that is over in a serving, carbohydrate or protein kept close in the whole recipe, and no
+   new problem. A low-treatment food is never swapped out or in. A food on the "avoid" list is swapped first.
+3. **A smaller serving**: ¾, then ½.
+
+Then any lowering that turned out not to be needed is given back. Every change is one line with the app's figures, such as "Used
+2 × 1 cup (158 g) of rice instead of 4 × 1 cup (158 g), to keep potassium within this dinner's room. Potassium per serving:
+640 → 405 mg (app figures)." Carbohydrate is shown in grams and nothing more. Nothing is saved: the screen saves a fitted copy through
+`POST /api/meals`. Cooking, soaking and draining are not counted, and seasonings missing from the food list are not counted; both
+are said under every result.
+
 ## Treating a low
 
 `GET /api/guidance/hypo-options` lists the person's low-treatment foods at the amount that treats a low
@@ -436,7 +460,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-21.1** (hash `5ec3de3f29059521`).
+Rules version **2026-10-27.1** (hash `cc53c2250d14fe26`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -534,6 +558,12 @@ Rules version **2026-10-21.1** (hash `5ec3de3f29059521`).
 | `PROTEIN_TOPUP_STEPS` | `2` | Most top-up steps per meal |
 | `REPAIR_STEP` | `0.25` | Servings taken off a built item when the plan would make a day-judged nutrient newly over |
 | `REPAIR_STEPS` | `6` | Most repair steps before the slot is marked partial |
+| `RECIPE_FLOOR` | `0.5` | A recipe fit lowers an ingredient to at least this share of its own amount (never below ¼ serving); never a protein food |
+| `RECIPE_MAX_LOWER_STEPS` | `24` | Most quarter-serving steps a recipe fit takes off the ingredients |
+| `RECIPE_MAX_SWAPS` | `2` | Most swaps in one recipe fit |
+| `RECIPE_SERVING_FRACTIONS` | `[0.75, 0.5]` | Smaller servings a recipe fit tries after lowering and swaps |
+| `RECIPE_MAX_ITEMS` | `30` | Most ingredients in a recipe (as save_recipe) |
+| `RECIPE_POT_MAX_SERVINGS` | `40.0` | Most servings of one food in the whole recipe after a swap |
 | `VARIANT_MAX` | `4` | Most "Show another plan" variants |
 | `UNKNOWN_PENALTY` | `1.5` | Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03) |
 | `FREE_FOOD_CARBS_G` | `5.0` | A food with at most this many carbs is free once the meal's carbs are done |

@@ -1,4 +1,4 @@
-Status: phase 0 built, waiting for CI
+Status: phase 0 in PR #94 (CI); phase 1 built locally, not committed to a PR yet
 
 # recipes: note 16, "Recipes that fit your targets"
 
@@ -30,7 +30,31 @@ MCP write and Ask save. The full suite runs in CI.
 * The screen still shows a back-filled note "Makes 4 servings." and has no fields for servings, steps or link: phase 2 (editor).
 * No `fit-recipe` route and no `check_meal` kind `recipe`: phase 1.
 
-## Next: phase 1 (engine)
+## Phase 1: engine (built, local tests pass)
+
+* `check_meal` kind `recipe` (`app/guidance/score.py`): no lower bound on a share, top bound 3, allows low treatments, ingredients
+  and alcohol (like `saved`), refuses a "high" share of a not-ok nutrient and more than 1 serving of a "high" food (like `ai`).
+* `app/guidance/recipes.py`: `day_room`, `room_for`, `fit_recipe` (lower, swap, smaller serving, give back), `recipe_swap`.
+  **Deviation from §9.4:** instead of splitting `swaps.py`, `recipe_swap` reuses `swaps._eligible_swap` and the swap constants and
+  works on pot amounts itself. `find_swaps` and its vectors stay untouched. Ranking is simpler than the swap engine's (same
+  category, the person's preferences, processed last, then lower value, name, id).
+* Change lines in `app/guidance/messages.py` (`recipe_*`, `RECIPE_NOTES`), checked against `BANNED_PATTERN` in the tests.
+* `POST /api/guidance/fit-recipe` (`app/guidance/api.py`, models in `app/guidance/models.py`).
+* Six `RECIPE_*` numbers in `rules.py` and the twin `engine/guidance/rules.js` (with `RULES_HASH`), `RULES_VERSION` 2026-10-27.1,
+  guidance and import vectors regenerated, rules table in `docs/guidance.md` regenerated, OpenAPI regenerated.
+* Docs: ARCHITECTURE route row, `docs/guidance.md` "Recipes that fit", CHANGELOG.
+* Tests: `tests/guidance/test_recipe_fit.py` (22).
+
+## Next: phase 2 (twin, vectors, screens)
+
+* `app/static/js/engine/guidance/recipes.js` (twin of recipes.py) and the `check_meal` kind `recipe` in the JS score twin;
+  vectors for fit_recipe in `tests/data/guidance_vectors.json` (generator `tests/data/gen_guidance_vectors.py`); the demo route
+  in `js/mock/guidance.js`.
+* Screens: the recipe editor (servings, steps, link; hide a note equal to the old sentence), the fit sheet (before/after, change
+  lines, Save as "<name> (fitted)", Replace with confirm + Undo), handbook page, e2e.
+* `handbook/REVIEW.md`: the floor, the protein rule and the order on the dietitian review list (decision 16).
+
+## Old: phase 1 plan
 
 §9 of the note: `check_meal` kind `recipe` (§9.2), split the swap core (§9.4), `fit_recipe` in `app/guidance/recipes.py` (§9.3:
 lower amounts with floor ½ and never a protein ingredient, at most 2 swaps, a smaller serving ¾ then ½, give back), the messages,

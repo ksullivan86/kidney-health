@@ -26,7 +26,7 @@ import re
 from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-21.1"
+RULES_VERSION = "2026-10-27.1"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -143,6 +143,13 @@ PROTEIN_TOPUP_STEP = 0.5
 PROTEIN_TOPUP_STEPS = 2
 REPAIR_STEP = 0.25
 REPAIR_STEPS = 6
+# Recipes that fit (note 16 §9.5): design choices, no clinical numbers. The room, caps and "high" limits are the ones above.
+RECIPE_FLOOR = 0.5  # an ingredient is lowered to at least half of the recipe's own amount (and never below ¼ serving)
+RECIPE_MAX_LOWER_STEPS = 24
+RECIPE_MAX_SWAPS = 2
+RECIPE_SERVING_FRACTIONS: tuple[float, ...] = (0.75, 0.5)
+RECIPE_MAX_ITEMS = 30
+RECIPE_POT_MAX_SERVINGS = 40.0
 VARIANT_MAX = 4
 UNKNOWN_PENALTY = 1.5
 FREE_FOOD_CARBS_G = 5.0
@@ -450,6 +457,12 @@ RULE_DOCS: tuple[tuple[str, str], ...] = (
     ("PROTEIN_TOPUP_STEPS", "Most top-up steps per meal"),
     ("REPAIR_STEP", "Servings taken off a built item when the plan would make a day-judged nutrient newly over"),
     ("REPAIR_STEPS", "Most repair steps before the slot is marked partial"),
+    ("RECIPE_FLOOR", "A recipe fit lowers an ingredient to at least this share of its own amount (never below ¼ serving); never a protein food"),
+    ("RECIPE_MAX_LOWER_STEPS", "Most quarter-serving steps a recipe fit takes off the ingredients"),
+    ("RECIPE_MAX_SWAPS", "Most swaps in one recipe fit"),
+    ("RECIPE_SERVING_FRACTIONS", "Smaller servings a recipe fit tries after lowering and swaps"),
+    ("RECIPE_MAX_ITEMS", "Most ingredients in a recipe (as save_recipe)"),
+    ("RECIPE_POT_MAX_SERVINGS", "Most servings of one food in the whole recipe after a swap"),
     ("VARIANT_MAX", "Most \"Show another plan\" variants"),
     ("UNKNOWN_PENALTY", "Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)"),
     ("FREE_FOOD_CARBS_G", "A food with at most this many carbs is free once the meal's carbs are done"),

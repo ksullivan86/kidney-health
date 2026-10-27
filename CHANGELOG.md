@@ -23,11 +23,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   many foods do not list it). The export and import carry the three fields. `save_recipe` (Ask and MCP) writes the columns and no
   longer writes the sentence into the note. Nothing existing was removed.
 
+* **`POST /api/guidance/fit-recipe`, new.** It checks one serving of a recipe against a meal or against what is left today. When it
+  does not fit, it lowers amounts (never a protein food, never below half), swaps a food (at most 2) or suggests a smaller serving,
+  and lists every change in plain words with the app's figures. It computes only and saves nothing. There is no screen for it yet.
+  `RULES_VERSION` is `2026-10-27.1`; the six new numbers are in [docs/guidance.md](docs/guidance.md#recipes-that-fit).
+
 ### For contributors
 
-* New tests: `tests/test_migration_m021.py`, `tests/test_recipes_api.py`, and a What fits now case in
-  `tests/guidance/test_api_guidance.py`. This is phase 0 of [note 16](docs/dev/research/16-recipes-that-fit.md); the fit itself
-  comes next.
+* New tests: `tests/guidance/test_recipe_fit.py` (the engine and the route), `tests/test_migration_m021.py`, `tests/test_recipes_api.py`, and a What fits now case in
+  `tests/guidance/test_api_guidance.py`. These are phases 0 and 1 of [note 16](docs/dev/research/16-recipes-that-fit.md); the
+  screens and the demo's twin of the engine come next.
 
 ## 0.6.0 — 2026-10-27
 

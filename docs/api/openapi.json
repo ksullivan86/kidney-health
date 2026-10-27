@@ -2482,6 +2482,294 @@
         "title": "FamiliarMeal",
         "type": "object"
       },
+      "FitRecipeItem": {
+        "additionalProperties": false,
+        "properties": {
+          "food_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "servings": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 40.0,
+            "title": "Servings",
+            "type": "number"
+          }
+        },
+        "required": [
+          "food_id",
+          "servings"
+        ],
+        "title": "FitRecipeItem",
+        "type": "object"
+      },
+      "FitRecipeRequest": {
+        "additionalProperties": false,
+        "description": "Either ``meal_id`` (a saved meal or recipe of the person's) or a draft: ``items`` (pot amounts) and ``servings_made``.\nComputes only; nothing is written.",
+        "properties": {
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FitRecipeItem"
+                },
+                "maxItems": 30,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "meal_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal Id"
+          },
+          "servings_made": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings Made"
+          },
+          "target": {
+            "$ref": "#/components/schemas/FitRecipeTarget"
+          }
+        },
+        "title": "FitRecipeRequest",
+        "type": "object"
+      },
+      "FitRecipeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "changes": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "closest": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closest"
+          },
+          "fitted": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fitted"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "servings_made": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Servings Made"
+          },
+          "status": {
+            "enum": [
+              "fits",
+              "fits_after_changes",
+              "fits_smaller_serving",
+              "does_not_fit",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "still_over": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Still Over",
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/FitRecipeTargetOut"
+          }
+        },
+        "required": [
+          "status",
+          "rules_version",
+          "target",
+          "servings_made"
+        ],
+        "title": "FitRecipeResponse",
+        "type": "object"
+      },
+      "FitRecipeTarget": {
+        "additionalProperties": false,
+        "description": "``meal``: one serving against the room of a meal (default: the next meal of the day with nothing logged). ``day``: one\nserving against what is left today, with no per-meal cap and no carbohydrate check.",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "kind": {
+            "default": "meal",
+            "enum": [
+              "meal",
+              "day"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          }
+        },
+        "title": "FitRecipeTarget",
+        "type": "object"
+      },
+      "FitRecipeTargetOut": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "meal",
+              "day"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          }
+        },
+        "required": [
+          "kind",
+          "meal",
+          "date"
+        ],
+        "title": "FitRecipeTargetOut",
+        "type": "object"
+      },
       "Food": {
         "properties": {
           "additives": {
@@ -13329,6 +13617,66 @@
         "summary": "Copy Food",
         "tags": [
           "foods"
+        ]
+      }
+    },
+    "/api/guidance/fit-recipe": {
+      "post": {
+        "description": "Recipes that fit (note 16 §7): one serving of a saved recipe (``meal_id``) or a draft (``items`` and ``servings_made``)\nagainst a meal's room or what is left today. Lowers amounts, swaps a food or suggests a smaller serving, and lists every\nchange. Computes only; the person saves a fitted copy through ``POST /api/meals``.",
+        "operationId": "guidance_fit_a_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FitRecipeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FitRecipeResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GuidanceUnavailable"
+                    }
+                  ],
+                  "title": "Response Guidance Fit A Recipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Fit A Recipe",
+        "tags": [
+          "guidance"
         ]
       }
     },
