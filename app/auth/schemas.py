@@ -9,6 +9,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from .totp import CODE_MAX as TOTP_CODE_MAX
+
 PASSWORD_FIELD_MAX = 1024  # login/re-auth accept long input; new passwords are capped at 128 by policy
 USERNAME_MAX = 255
 
@@ -20,6 +22,12 @@ class _Body(BaseModel):
 class LoginBody(_Body):
     username: str = Field(min_length=1, max_length=USERNAME_MAX)
     password: SecretStr = Field(min_length=1, max_length=PASSWORD_FIELD_MAX)
+    # The code from an authenticator app, or a recovery code, for a person with two-step sign-in on (note 17 §5).
+    code: SecretStr | None = Field(default=None, max_length=TOTP_CODE_MAX)
+
+
+class TotpCodeBody(_Body):
+    code: SecretStr = Field(min_length=1, max_length=TOTP_CODE_MAX)
 
 
 class SetupBody(_Body):

@@ -131,3 +131,18 @@
 /* "How to make the shortcut" opens a sentence. Inline, so it does not push the lines apart; its padding (which does not change the line
    height) keeps the touch target at 44 px. */
 #set-push-recipe .learn-more { display: inline; min-height: 0; margin: 0; padding: 15px 0; }
+
+/* Two-step sign-in (js/views/two_step.js, design note 17). The QR code stays black on white in both themes: phone cameras read
+   that best, and the quiet zone around it is part of the code. */
+.badge.two-step-on { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
+.two-step-steps { padding-left: 1.25rem; display: grid; gap: 1rem; margin: 0.5rem 0 0; }
+.two-step-steps > li > p { margin: 0 0 0.5rem; }
+.two-step-qr-box { margin: 0.25rem 0 0.5rem; }
+.two-step-qr { display: block; width: min(15rem, 100%); height: auto; border-radius: 6px; }
+.two-step-qr .qr-light { fill: #fff; }
+.two-step-qr .qr-dark { fill: #000; }
+.two-step-key { display: block; font-family: var(--mono); font-size: 1.05rem; letter-spacing: 0.06em; word-spacing: 0.2em; overflow-wrap: anywhere;
+  background: var(--surface-2, transparent); border-radius: 6px; padding: 0.5rem 0.65rem; margin: 0 0 0.5rem; user-select: all; }
+.two-step-left.warn { color: var(--caution-text); font-weight: 600; }
+.recovery-codes { list-style: none; padding: 0; margin: 0.75rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.4rem 1rem; }
+.recovery-codes code { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.04em; }

@@ -31,6 +31,7 @@ import test_isolation
 import test_lab_photo
 import test_log_if_match
 import test_mcp_write
+import test_totp
 import test_body
 import test_symptoms
 from ai_support import FakeProvider, attach, chat
@@ -85,6 +86,11 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "api_tokens": ("test_api_tokens.test_another_persons_tokens_are_invisible_and_404",),  # assistant access, step 10
     "assistant_request_keys": ("test_mcp_write.test_a_key_is_independent_for_another_token_and_for_another_person",),  # step 11
     "assistant_ask_keys": ("test_ai_chat_save.test_a_request_id_is_independent_for_another_person",),  # step 13
+    "totp_factors": ("test_totp.test_one_persons_two_step_sign_in_is_their_own",  # two-step sign-in, step 22 (note 17)
+                     "test_totp.test_the_secret_is_sealed_and_bound_to_its_owner",
+                     "test_totp.test_deleting_the_account_deletes_its_two_step_rows"),
+    "totp_recovery_codes": ("test_totp.test_one_persons_two_step_sign_in_is_their_own",
+                            "test_totp.test_deleting_the_account_deletes_its_two_step_rows"),
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -100,7 +106,7 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
-           "test_log_if_match": test_log_if_match}
+           "test_log_if_match": test_log_if_match, "test_totp": test_totp}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

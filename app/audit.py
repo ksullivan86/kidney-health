@@ -77,6 +77,10 @@ ACTIONS: set[str] = {
     "assistant.recipe_saved",
     "assistant.preference_set",  # a token with assistant:prefs remembered a taste (app/mcp/preference_tool.py)
     "ai.trust_changed",  # a person changed how much the Ask chat may save without asking (app/ai/routes.py)
+    "totp.enabled",  # two-step sign-in (note 17; app/auth/totp_api.py, admin_api.py, app/admin.py)
+    "totp.disabled",
+    "totp.recovery_codes_renewed",
+    "totp.recovery_code_used",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -100,6 +104,10 @@ USER_VISIBLE_ACTIONS = frozenset(
         "assistant.recipe_saved",
         "assistant.preference_set",
         "ai.trust_changed",
+        "totp.enabled",
+        "totp.disabled",
+        "totp.recovery_codes_renewed",
+        "totp.recovery_code_used",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

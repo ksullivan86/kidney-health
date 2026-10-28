@@ -120,7 +120,8 @@
       return { id: u.id, username: u.username, display_name: u.display_name || '', role: u.role, status: u.status, auth_source: u.auth_source,
         can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
         created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
-        assistant_tokens: 0, device_tokens: 0 }; // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
+        assistant_tokens: 0, device_tokens: 0, // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
+        two_step: false }; // nor two-step sign-in (design note 17)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
@@ -364,6 +365,12 @@
   route('POST', '/api/me/tokens', function () { this._currentUser(); this._requireRecent(); fail(409, NO_TOKENS); });
   route('DELETE', /^\/api\/me\/tokens\/(\d+)$/, function () { this._currentUser(); fail(404, 'token not found'); });
   route('DELETE', /^\/api\/me\/tokens\/(\d+)\/body-rows$/, function () { this._currentUser(); fail(404, 'token not found'); });
+  // Two-step sign-in (app/auth/totp_api.py, design note 17): the demo has no real sign-in, so it answers as a server does where two-step
+  // sign-in is not available (the sign-in proxy's case): the status says so and every change is a 404.
+  route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0 }; });
+  for (const [m, p] of [['POST', '/api/me/totp/setup'], ['POST', '/api/me/totp/enable'], ['POST', '/api/me/totp/recovery-codes'], ['DELETE', '/api/me/totp']]) {
+    route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
+  }
 
   // ---------------------------------------------------------------------------
   // /api/admin: accounts, invites, usage, audit, about (settings and keys: js/mock/settings.js)
@@ -491,6 +498,12 @@
     this._requireRecent();
     targetUser(this, id); // the demo makes no assistant tokens: an unknown id is 404, anything else has none to revoke
     return { revoked: 0 };
+  });
+  route('DELETE', userIdRoute('/totp'), function ({ id }) {
+    this._requireAdmin();
+    this._requireRecent();
+    targetUser(this, id); // nobody in the demo has two-step sign-in on
+    return { removed: false };
   });
   route('GET', '/api/admin/invites', function () {
     this._requireAdmin();

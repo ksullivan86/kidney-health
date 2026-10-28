@@ -198,8 +198,8 @@ Tick every line before you put real health data in the app.
   stripped.
 * **Keys you set on the server are locked.** The UI shows them as "set by server"; nobody can read or
   change them through the API.
-* **`SECRET_KEY` encrypts the API keys stored in the database** (Fernet under HKDF-derived keys). It
-  does not sign sessions; those are opaque server-side tokens. One key per line, at least 32
+* **`SECRET_KEY` encrypts the API keys and the two-step sign-in secrets stored in the database** (Fernet under HKDF-derived
+  keys). It does not sign sessions; those are opaque server-side tokens. One key per line, at least 32
   characters; the first line is current.
 * **Mount `SECRET_KEY_FILE` from your engine's secret store.** Without it the app generates
   `/data/secret.key` and warns at every start and on Admin → About, because that file sits **on the
@@ -210,7 +210,8 @@ Tick every line before you put real health data in the app.
   * encrypt the backup (restic, borg or age) and keep it `0600`; it holds everyone's health data,
     password hashes and the audit log;
   * back the `SECRET_KEY` up **separately** (a password manager). Restoring without it loses only
-    the stored API keys, never health data or passwords.
+    the stored API keys and the two-step sign-in secrets, never health data or passwords. People with two-step sign-in then use
+    a recovery code, or you remove it with `python -m app.admin remove-two-step USERNAME`.
 * **Rotate** with `python -m app.admin rotate-secret-key` (auto-generated key) or, with a mounted
   key: add a new first line, restart, `python -m app.admin reencrypt`, remove the old line, restart.
 * **File modes on the data folder.** The app creates `DATA_DIR` as `0770` and sets `kidney.db` and its `-wal` and `-shm`

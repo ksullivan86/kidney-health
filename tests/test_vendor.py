@@ -52,8 +52,10 @@ def test_pins_are_the_ones_the_spec_recorded():
     # note 03 R7 / note 02 F7: the hashes measured when the decoder was chosen.
     assert VB.PONYFILL.sha256 == "e3aa2057178b8ea71dd97003270331bbcb46499197b68bc0c7dd18e40c0863ea"
     assert VB.WASM.sha256 == "2ebda08a93eea3efcd8399cda6b276e6a0b1de4fec60b4d8988a047de4c6d1ba"
-    assert [(p.name, p.version) for p in VB.PACKAGES] == [("barcode-detector", "3.2.2"), ("zxing-wasm", "3.1.3"), ("pdfjs-dist", "6.4.299")]
-    assert [(p.name, p.group) for p in VB.PACKAGES] == [("barcode-detector", "barcode"), ("zxing-wasm", "barcode"), ("pdfjs-dist", "pdfjs")]
+    assert [(p.name, p.version) for p in VB.PACKAGES] == [("barcode-detector", "3.2.2"), ("zxing-wasm", "3.1.3"), ("pdfjs-dist", "6.4.299"),
+                                                          ("qrcode-generator", "2.0.4")]
+    assert [(p.name, p.group) for p in VB.PACKAGES] == [("barcode-detector", "barcode"), ("zxing-wasm", "barcode"), ("pdfjs-dist", "pdfjs"),
+                                                        ("qrcode-generator", "qrcode")]
 
 
 def test_ponyfill_expects_this_wasm_build():
@@ -278,3 +280,18 @@ def test_the_download_cap_fits_the_pdfjs_tarball_and_stays_small_for_the_others(
 def test_check_mode_can_be_limited_to_one_group():
     assert VB.main(["--check", "--only", "pdfjs"]) == 0
     assert VB.main(["--check", "--only", "barcode"]) == 0
+    assert VB.main(["--check", "--only", "qrcode"]) == 0
+
+
+def test_the_qr_code_module_draws_nothing_itself_and_fetches_nothing():
+    """note 17 §7: the QR code of the secret is drawn in the page; the module must not touch the DOM, eval or fetch."""
+    text = (VENDOR / VB.QRCODE_PACKAGES[0].files[0].dest).read_text(encoding="utf-8")
+    assert "export default qrcode;" in text
+    for bad in (r"\beval\(", r"\bFunction\(", r"\bdocument\.", r"\bwindow\.", r"\bfetch\(", "XMLHttpRequest", r"\bimport\(", "importScripts"):
+        assert not re.search(bad, text), bad
+    urls = set(re.findall(r"https?://[^\s'\"]+", text))
+    assert urls <= {"http://www.d-project.com/", "http://www.denso-wave.com/qrcode/faqpatent-e.html",
+                    "http://www.opensource.org/licenses/mit-license.php", "http://www.w3.org/2000/svg"}
+    licence = (VENDOR / VB.QRCODE_LICENCE.dest).read_text(encoding="utf-8")
+    assert licence.startswith("MIT License") and "Kazuhiko Arase" in licence
+    assert VB.QRCODE_LICENCE in VB.all_files(("qrcode",)) and VB.QRCODE_LICENCE not in VB.all_files(("pdfjs",))

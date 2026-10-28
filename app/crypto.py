@@ -52,7 +52,7 @@ SECRETS_INFO = brand.HKDF_SECRETS_INFO
 ENVELOPE_VERSION = 1
 BACKUP_WARNING = (
     "Back up {path} separately from " + brand.DB_FILENAME + "; without it stored API keys cannot be decrypted "
-    "(passwords and health data are not affected)."
+    "and two-step sign-in needs recovery codes (passwords and health data are not affected)."
 )
 AUTO_KEY_WARNING = (
     "SECRET_KEY is not set, so stored API keys are encrypted with {path}. That file is on the data volume, "
@@ -61,10 +61,11 @@ AUTO_KEY_WARNING = (
 )
 
 # Columns holding Keyring tokens: (table, primary key, token column, key-id column or None).
-# app.admin rotate-secret-key / reencrypt walks these; note 04 appends ai_providers.api_key_enc.
+# app.admin rotate-secret-key / reencrypt walks these; note 04 appends ai_providers.api_key_enc, note 17 totp_factors.secret_enc.
 ENCRYPTED_COLUMNS: list[tuple[str, str, str, str | None]] = [
     ("secrets", "id", "ciphertext", "key_id"),
     ("ai_providers", "id", "api_key_enc", None),
+    ("totp_factors", "user_id", "secret_enc", "key_id"),
 ]
 
 

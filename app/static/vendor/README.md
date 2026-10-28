@@ -77,6 +77,27 @@ licence, XML-namespace and test strings that nothing fetches; in the 6.4.299 sou
 `GlobalWorkerOptions.workerPort` exists, `isEvalSupported` no longer exists (the eval code path was removed),
 and `render()` takes `canvas`, `viewport`, `background` and `annotationMode`.
 
+## QR code drawer (note 17)
+
+Used only when a person turns on two-step sign-in. `js/views/two_step.js` loads
+`qrcode-generator-2.0.4/qrcode.mjs` with a dynamic `import()` and draws the QR code of the `otpauth://` link as SVG
+elements it makes itself (no `innerHTML`), so the secret never leaves the page. The file is not in the service
+worker's shell list; the `/vendor/` runtime cache keeps it after the first use.
+
+| File | From | Bytes | SHA-256 |
+|---|---|---|---|
+| `qrcode-generator-2.0.4/qrcode.mjs` | qrcode-generator 2.0.4 `dist/qrcode.mjs` | 51,907 | `ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0` |
+| `qrcode-generator-2.0.4/LICENSE` | qrcode-generator `LICENSE` (repository, `master`) | 1,071 | `3a850fa5f08101db6f40676c2786e10bd2cd5fff7b12ffdf1e0c434d4e49d90c` |
+
+| Package | Version | Licence | Source |
+|---|---|---|---|
+| `qrcode-generator` | 2.0.4 | MIT | [github.com/kazuhikoarase/qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator), npm `https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-2.0.4.tgz` |
+
+Checks made when the file was vendored (2026-10-28): the npm tarball matched the registry's `dist.integrity`
+(SHA-512) before it was read and nothing in it was run; the module has no `eval`, no `Function(` and no
+`document` or `window` use, and the only URLs in it are licence, homepage and SVG-namespace strings that
+nothing fetches. Released 2025-08-07.
+
 ## Updating
 
 1. `python3 scripts/vendor_barcode.py --check-latest` (CI runs it weekly, warn only) says when npm has

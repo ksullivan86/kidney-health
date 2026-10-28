@@ -18,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from .. import settings_registry
 from ..audit import audit
 from ..db import get_db
-from . import api_tokens, clock, passwords, sessions, tokens
+from . import api_tokens, clock, passwords, sessions, tokens, totp
 from .accounts import (
     PasswordRejected,
     check_local_username,
@@ -57,6 +57,8 @@ from .throttle import HARD_STOP, REAUTH_MAX_FAILURES, ip_key
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 LOGIN_FAILED = "Username or password is incorrect"
+CODE_NEEDED = "Enter the 6-digit code from your authenticator app."
+CODE_WRONG = "That code is not right. Check that the time on your phone is set automatically, or type a recovery code."
 LINK_INVALID = "This link is not valid any more. Ask your admin for a new one."
 SETUP_CODE_INVALID = (
     "The setup code is wrong or has expired. Restart the server, or run python -m app.admin setup-code, for a new one."
@@ -183,7 +185,8 @@ def _login_checks(request: Request, conn: sqlite3.Connection, ctx: AuthContext, 
     return row, device, mac
 
 
-def _login_failed(conn: sqlite3.Connection, ctx: AuthContext, row: Any, device: str | None, mac: bytes, ip: str | None) -> None:
+def _login_failed(conn: sqlite3.Connection, ctx: AuthContext, row: Any, device: str | None, mac: bytes, ip: str | None,
+                  **details: Any) -> None:
     th = ctx.throttle
     th.ip_failure(ip)
     if device is not None:
@@ -193,20 +196,45 @@ def _login_failed(conn: sqlite3.Connection, ctx: AuthContext, row: Any, device: 
         if row is not None and row["status"] == "active" and count >= HARD_STOP:
             lock_account(conn, int(row["id"]), ip=ip)
     if row is not None:
-        audit(conn, None, "login.failed", "user", int(row["id"]), ip=ip)
+        audit(conn, None, "login.failed", "user", int(row["id"]), ip=ip, **details)
     conn.commit()
 
 
+def _second_step(conn: sqlite3.Connection, ctx: AuthContext, row: Any, device: str | None, mac: bytes, ip: str | None,
+                 code: str) -> str | None:
+    """After the right password: the code check of a person with two-step sign-in on (note 17 §5). None for everyone else,
+    and for an app code; for a recovery code, the notice saying how many are left. A missing code is a 401 that is not
+    counted (the client asks for it and sends the password again); a wrong one is counted like a wrong password."""
+    user_id = int(row["id"])
+    factor = totp.load(conn, ctx.require_keyring(), user_id)
+    if factor is None or not factor.enabled:
+        return None
+    if not totp.clean_code(code):
+        raise ApiProblem(401, CODE_NEEDED, totp_required=True, field="code")
+    used = totp.check(conn, factor, code)
+    if used is None:
+        _login_failed(conn, ctx, row, device, mac, ip, via="code")
+        raise ApiProblem(401, CODE_WRONG, totp_required=True, field="code")
+    if used == "recovery":
+        left = totp.recovery_codes_left(conn, user_id)
+        audit(conn, user_id, "totp.recovery_code_used", "user", user_id, ip=ip, left=left)
+        if left == 0:
+            return "You used your last recovery code. Make new ones in Settings → Account → Two-step sign-in."
+        return f"You signed in with a recovery code. {left} {'is' if left == 1 else 'are'} left."
+    return None
+
+
 def _login_succeeded(request: Request, response: Response, conn: sqlite3.Connection, ctx: AuthContext, row: Any,
-                     device: str | None, mac: bytes, ip: str | None, password: str, stored: str) -> dict[str, Any]:
+                     device: str | None, mac: bytes, ip: str | None, password: str, stored: str, code: str = "") -> dict[str, Any]:
     th = ctx.throttle
     user_id = int(row["id"])
+    second = _second_step(conn, ctx, row, device, mac, ip, code)
     if device is not None:
         th.device_success(device)
     th.forget(conn, mac)
     if passwords.needs_rehash(stored):
         set_password(conn, user_id, hash_password(password), must_change=bool(row["must_change_password"]))
-    notice = _reset_notice(conn, user_id)
+    notice = " ".join(n for n in (_reset_notice(conn, user_id), second) if n) or None
     start_session(request, response, conn, ctx, user_id)
     audit(conn, user_id, "login.succeeded", "user", user_id, ip=ip)
     conn.commit()
@@ -238,7 +266,8 @@ async def login(body: LoginBody, request: Request, response: Response, conn: sql
     if not ok:
         await run_in_threadpool(_login_failed, conn, ctx, row, device, mac, ip)
         raise ApiProblem(401, LOGIN_FAILED)
-    return await run_in_threadpool(_login_succeeded, request, response, conn, ctx, row, device, mac, ip, password, stored)
+    code = body.code.get_secret_value() if body.code is not None else ""
+    return await run_in_threadpool(_login_succeeded, request, response, conn, ctx, row, device, mac, ip, password, stored, code)
 
 
 @router.post("/logout")
@@ -434,6 +463,10 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     else:
         via = "reset_link"
     audit(conn, user_id, "user.password_changed", "user", user_id, ip=ip, via=via, issued_by=token["created_by"])
+    if totp.is_enabled(conn, user_id):
+        # A link must not skip the second step (note 17 §5): the person signs in with the new password and a code.
+        conn.commit()
+        return {"user": None, "totp_required": True}
     start_session(request, response, conn, ctx, user_id)
     conn.commit()
     return {"user": me_dict(load_user(conn, user_id))}

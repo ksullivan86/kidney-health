@@ -173,6 +173,12 @@
             <button class="pw-toggle" type="button" aria-controls="login-password" aria-pressed="false">Show</button>
           </div>
         </div>
+        <!-- Two-step sign-in (design note 17 §7): shown after the server answers totp_required for the right password. -->
+        <div class="field" id="login-code-field" hidden>
+          <label for="login-code">Code from your authenticator app</label>
+          <input id="login-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32" class="code-input" aria-describedby="login-code-hint">
+          <span class="hint" id="login-code-hint">The 6 digits your app shows now. Lost your phone? Type one of your recovery codes instead.</span>
+        </div>
         <button class="btn primary auth-submit" type="submit" id="login-submit">Sign in</button>
         <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
         <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
@@ -2283,6 +2289,7 @@
 <script src="js/views/profile.js"></script>
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>
+<script src="js/views/two_step.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

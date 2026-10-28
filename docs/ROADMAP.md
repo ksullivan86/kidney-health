@@ -16,13 +16,14 @@ token. The Home Screen web app stays the place for every other screen. In this o
    and checks each row as `POST /push/v1/body` does. CI replays `tests/data/body_vectors.json`, `apple_health_vectors.json` and
    `push_vectors.json` on a pinned Swift toolchain.
 2. **Done (2026-10-28): the app target, built and unit-tested on GitHub's macOS runner** (in the simulator). `ios/KidneyHealthSync`:
-   the server address and token, the Health permission for exactly three read types, background sync, and the status line.
+   the server address and token, the Health permission for exactly three read types, background sync, and the status line. **Test
+   connection** checks the token with `GET /push/v1/check` and sends nothing else.
 3. **Signing, TestFlight and the owner's tests on a real iPhone**, once the owner has an Apple Developer Program membership (USD 99 a year).
 
 Decided 2026-10-22: option A first, and the Swift package first (decisions 1 and 2 of
 [note 15 §7](dev/research/15-native-ios-app.md#7-decisions-for-the-owner)). Still open: when to enrol and add the signing secrets (decision
-3, needed for step 3), and whether the app pairs by QR code or by pasting the token (decision 4; the QR code and a route to test a token are
-an optional fourth step of about 1M tokens in note 15 §6). Cost, from note 15 §6: about 4–6M tokens for option A, against 6–10M for the
+3, needed for step 3), and whether the app pairs by QR code or by pasting the token (decision 4; the QR code is an optional fourth step of about 1M
+tokens in note 15 §6, and the route to test a token is built). Cost, from note 15 §6: about 4–6M tokens for option A, against 6–10M for the
 full web-view shell (option B), which stays a later choice. Out of scope: an App Store listing, Android, and anything that reads glucose,
 insulin or medicines.
 
@@ -34,7 +35,7 @@ insulin or medicines.
 ## Accounts, sign-in and secrets (note 07)
 
 * OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID), choosing between Authlib 1.8 + itsdangerous and the project's own PKCE code (a new runtime dependency needs a contract decision) — note 07 F7, §3.1 and §6 "Later (v0.4)".
-* A second factor for local sign-in: one-time codes (TOTP, `pyotp`; the biggest security gain left for a password-only health app, 3–5M) and/or passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
+* A second factor for local sign-in: one-time codes (TOTP) are **built** ([note 17](dev/research/17-two-step-sign-in.md)). Still later: requiring them for admins, and passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * Read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency) — note 07 §6 "Later (v0.4)".
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
