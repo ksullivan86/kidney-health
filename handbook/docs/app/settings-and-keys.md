@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17]
 ---
 
 # Settings and keys
@@ -22,7 +22,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -104,8 +104,34 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
   another minimum). Your other devices are signed out.
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
-- Sensitive actions (changing a password or key, making an assistant token, exporting, deleting your
-  account) ask for your password again if you entered it more than 10 minutes ago.
+- Sensitive actions (changing a password or key, turning two-step sign-in on or off, making an assistant token,
+  exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago.
+
+## Two-step sign-in
+
+Two-step sign-in means a password alone is not enough to get into your account. After your password, the app asks
+for a 6-digit code from an **authenticator app** on your phone, such as Aegis, 2FAS, Google Authenticator,
+Microsoft Authenticator, 1Password or Bitwarden. The code changes every 30 seconds and works only once. Someone who
+learns your password still cannot sign in. It is off until you turn it on ([design note 17][NOTE17]).
+
+To turn it on:
+
+1. **Settings → Account → Two-step sign-in → Turn on two-step sign-in**. The app asks for your password again.
+2. In your authenticator app, add an account and scan the QR code. On the phone you are using, tap
+   **Open it in your authenticator app** instead. If neither works, type the key shown under the QR code.
+3. Type the 6-digit code the app shows, and tap **Turn on**.
+4. The app shows **ten recovery codes**, once. Tap **Download**, or copy them into a password manager, and keep them
+   away from your phone. Each one works once instead of a code, if you lose your phone.
+
+Your other devices are signed out, and you sign in on them again with your password and a code. Phone shortcut and
+assistant tokens keep working.
+
+- **New phone:** turn two-step sign-in off and on again, and scan the new QR code with the new phone.
+- **Lost phone:** sign in with a recovery code, then turn it off and on again with your new phone.
+- **Running low on codes:** **Make new recovery codes**. The old ones stop working.
+- **No phone and no recovery codes:** ask your admin. They can remove two-step sign-in from your account, and you
+  then sign in with your password alone.
+- A password reset link from your admin sets a new password but does not sign you in: you still need a code.
 
 ## Assistant access
 
@@ -137,6 +163,7 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 
 - [ ] Check **Food data**: do you have shared lookups, or do you need your own USDA key?
 - [ ] Look at **Signed-in devices** after you get a new phone, and sign out the old one.
+- [ ] Turn on **Two-step sign-in**, and keep the recovery codes somewhere safe.
 - [ ] Never send a key by text message or email to anyone; paste it only into the app.
 
 ## If something goes wrong
@@ -146,6 +173,8 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
   add your own key.
 - **"Please enter your password again."** This is normal for sensitive actions; enter it and the app
   carries on.
+- **"That code is not right."** The codes depend on the phone's clock. Set the phone's date and time to set
+  automatically, wait for a new code, and try again. Or type a recovery code.
 
 ## Related pages
 

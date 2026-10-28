@@ -196,6 +196,7 @@
 [NOTE08]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/08-handbook-site.md "Design note 08"
 [NOTE10]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/10-weight-and-blood-pressure.md "Design note 10"
 [NOTE12]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/12-phone-push-tokens.md "Design note 12"
+[NOTE17]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/17-two-step-sign-in.md "Design note 17"
 [APPLE-SHORTCUTS]: https://support.apple.com/guide/shortcuts/welcome/ios "Apple: Shortcuts User Guide"
 [DEPLOY]: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md "Deployment guide"
 [ASSISTANT-DOC]: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md "Assistant guide"

@@ -261,6 +261,7 @@
   }
 
   function showLogin(opts = {}) {
+    showCodeField(false);
     showScreen('login', opts);
     const known = state.me && state.me.username;
     if (known && !$('#login-username').value) $('#login-username').value = known;
@@ -482,21 +483,41 @@
     return true;
   }
 
+  // Two-step sign-in (design note 17 §5): the right password answers totp_required, and the form asks for the code too. The
+  // password stays in its field, so the person only types the code; a different username hides the field again.
+  function showCodeField(on) {
+    $('#login-code-field').hidden = !on;
+    if (!on) $('#login-code').value = '';
+  }
+  $('#login-username').addEventListener('input', () => showCodeField(false));
+
   sheets.onSubmit($('#form-login'), async (e) => {
     e.preventDefault();
     const form = $('#form-login');
-    const user = $('#login-username'), pass = $('#login-password');
-    if (!requireFields(form, [[user, 'Enter your username.'], [pass, 'Enter your password.']])) return;
+    const user = $('#login-username'), pass = $('#login-password'), code = $('#login-code');
+    const asking = !$('#login-code-field').hidden;
+    if (!requireFields(form, [[user, 'Enter your username.'], [pass, 'Enter your password.'], ...(asking ? [[code, 'Enter the code from your authenticator app.']] : [])])) return;
     const btn = $('#login-submit');
     await busy(btn, async () => {
       setError('');
+      const body = { username: user.value.trim(), password: pass.value };
+      if (asking) body.code = code.value.trim();
       try {
-        const res = await request('POST', '/api/auth/login', { username: user.value.trim(), password: pass.value }, { quiet401: true });
+        const res = await request('POST', '/api/auth/login', body, { quiet401: true });
         pass.value = '';
+        showCodeField(false);
         afterSignIn(res.user, res.notice);
       } catch (err) {
+        if (err.status === 401 && err.data && err.data.totp_required) {
+          showCodeField(true);
+          code.value = '';
+          if (!asking) { setError(''); setNotice(err.detail); code.focus(); return; } // the first ask is not an error
+          showApiError(err, form, btn);
+          code.focus();
+          return;
+        }
         showApiError(err, form, btn);
-        if (err.status === 401) { pass.value = ''; pass.focus(); }
+        if (err.status === 401) { pass.value = ''; showCodeField(false); pass.focus(); }
       }
     });
   });
@@ -560,7 +581,16 @@
       try {
         const res = await request('POST', '/api/auth/reset', { token: linkToken ? linkToken.token : '', password: $('#reset-password').value }, { quiet401: true });
         const fresh = resetTarget && resetTarget.new_account;
+        const name = resetTarget && resetTarget.username;
         resetTarget = null;
+        if (!res.user && res.totp_required) {
+          // Two-step sign-in is on: a link sets the password but does not sign in (design note 17 §5).
+          linkToken = null;
+          $('#reset-password').value = '';
+          showLogin({ notice: 'Password saved. Other devices were signed out. Sign in with your new password and the code from your authenticator app.' });
+          if (name) $('#login-username').value = name;
+          return;
+        }
         afterSignIn(res.user, fresh ? `Your account is ready. Next time, sign in as ${res.user.username} with this password.`
           : 'Password saved. Other devices signed in to this account were signed out.');
       } catch (err) { showApiError(err, form, btn); }

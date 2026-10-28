@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted, 2026-10-28. The owner asked for it ("do the TOTP sign-in codes"); the choices below are the defaults this note took, listed in §9 so they can be changed. Built in two parts: the server (A), then the screens (B). The schema step is **22**. |
+| Status | Accepted, 2026-10-28. The owner asked for it ("do the TOTP sign-in codes"); the choices below are the defaults this note took, listed in §9 so they can be changed. Built 2026-10-28, the server and the screens together. The schema step is **22**. |
 | Scope | A person with a password can turn on **two-step sign-in**. After the password, sign-in asks for a 6-digit code from an authenticator app (for example Aegis, 2FAS, Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden). Ten single-use **recovery codes** cover a lost phone. An admin, or the command line, can remove it for a person who has lost both. |
 | Out of scope | Passkeys (WebAuthn), codes by SMS or email, requiring two-step sign-in for everyone or for admins, "remember this device for 30 days". All "Later", §10. |
 | Builds on | `app/auth/routes.py` (sign-in, reset links), `app/auth/me.py`, `app/auth/admin_api.py`, `app/auth/throttle.py`, `app/crypto.py` (`Keyring.seal`), `app/admin.py`; note 07 (accounts) and its §3.1 table of second factors. |
@@ -101,7 +101,7 @@ and `login.failed` with `via: "code"`.
 
 Assistant and device tokens are not touched by any of this: each is its own credential, already limited to one scope.
 
-## 7. The screens (part B)
+## 7. The screens
 
 * Sign-in: after a `totp_required` answer the form shows one more field, "Code from your authenticator app", with
   `autocomplete="one-time-code"` and `inputmode="numeric"`, and a line "Lost your phone? Type a recovery code instead."

@@ -75,6 +75,25 @@ per-address limits do not apply to your proxy's own address (`TRUSTED_PROXIES`).
 for that budget or for a hashing slot wait without holding a server thread, so the rest of the app
 stays responsive during a flood.
 
+## Two-step sign-in
+
+Anyone with a password can add a second step: a 6-digit code from an authenticator app on their phone (Aegis, 2FAS, Google
+Authenticator, Microsoft Authenticator, 1Password, Bitwarden and others). It is off until a person turns it on, and nobody is made
+to use it. The codes come from the phone's clock, so they need no network, no texts and no other company.
+
+* Sign-in asks for the code after the right password. A wrong code counts like a wrong password, with the same delays and the same
+  lock after 100.
+* Turning it on gives the person **ten recovery codes**. Each one works once instead of a code, for a lost or broken phone.
+* A reset link sets a new password but does not sign the person in. They sign in with the new password and a code.
+* Phone shortcut and assistant tokens keep working. Each is its own credential and can only do one thing.
+* No phone and no recovery codes: **Server administration → People → Remove two-step sign-in**, or
+  `python -m app.admin remove-two-step USERNAME` (this works for the only admin too). The person then signs in with the password
+  alone and can turn it on again.
+* The secret each phone holds is stored encrypted with `SECRET_KEY`. If you lose that key, the codes stop working, but recovery
+  codes still do, and you can remove two-step sign-in as above.
+
+How it works, and why: [design note 17](dev/research/17-two-step-sign-in.md).
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.
@@ -174,7 +193,7 @@ their account (including what an admin did to it), never an admin's actions on o
 ## Command reference
 
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
-`setup-code` · `revoke-sessions USER|--all` · `export-user USER FILE|-` (that person's data export, for
+`setup-code` · `revoke-sessions USER|--all` · `remove-two-step USER` (lost phone and recovery codes) · `export-user USER FILE|-` (that person's data export, for
 someone who cannot sign in) · `disable-user USER` (never the only admin; signs out their devices; enable
 it again in Settings → People) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings

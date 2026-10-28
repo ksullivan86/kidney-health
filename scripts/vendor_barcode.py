@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Vendor the third-party browser code the app serves itself: the barcode decoder (note 03 R7, note 02 R7) and the PDF reader (note 13).
+"""Vendor the third-party browser code the app serves itself: the barcode decoder (note 03 R7, note 02 R7), the PDF reader (note 13)
+and the QR code drawer for two-step sign-in (note 17).
 
 The app loads nothing from a CDN, so what the browser needs is copied into ``app/static/vendor/`` from pinned npm
-packages. Two groups:
+packages. Three groups:
 
 * ``barcode``: the decoder the browser falls back to. The app decodes barcodes on the phone. Browsers with a native
   ``BarcodeDetector`` (Chrome on Android, macOS and ChromeOS) need nothing; every other browser, iPhones included, uses the
   ``barcode-detector`` ponyfill over ZXing-C++ compiled to WebAssembly (note 03 R7, §6 item 12, §9 B9).
 * ``pdfjs``: ``pdfjs-dist``, Mozilla's PDF reader, which draws the pages of a lab report PDF on the device before they are read
   like photos (note 13 §4.1). Only the ``legacy/build`` main file, its worker and the licence are taken.
+* ``qrcode``: ``qrcode-generator``, which turns the ``otpauth://`` link of two-step sign-in into a QR code in the browser, so the
+  secret never goes to another site (note 17 §7). Only the ES module is taken; its MIT licence is not in the tarball and is fetched
+  from the project's repository and checked against its pin.
 
 What this script does (standard library only; dev time, never at runtime):
 
@@ -24,7 +28,7 @@ What this script does (standard library only; dev time, never at runtime):
 Usage::
 
     python3 scripts/vendor_barcode.py                # download, verify, write, both groups (needs the network)
-    python3 scripts/vendor_barcode.py --only pdfjs   # the same for one group only (barcode | pdfjs); downloads nothing else
+    python3 scripts/vendor_barcode.py --only pdfjs   # the same for one group only (barcode | pdfjs | qrcode); downloads nothing else
     python3 scripts/vendor_barcode.py --check        # verify the committed files against the pins (offline)
     python3 scripts/vendor_barcode.py --check-latest # warn when npm has newer versions (exit 0; CI, weekly)
     python3 scripts/vendor_barcode.py --print-hashes # download and verify integrity, print SHA-256 (updating)
@@ -55,7 +59,7 @@ REGISTRY = "https://registry.npmjs.org"
 ZXING_CPP_RAW = "https://raw.githubusercontent.com/zxing-cpp/zxing-cpp/{commit}/LICENSE"
 TIMEOUT_S = 60
 MAX_DOWNLOAD = 8 * 1024 * 1024  # the barcode tarballs are about 1.7 MB at most
-GROUPS = ("barcode", "pdfjs")
+GROUPS = ("barcode", "pdfjs", "qrcode")
 
 
 @dataclass(frozen=True)
@@ -129,7 +133,28 @@ PDFJS_PACKAGES: tuple[Package, ...] = (
         ),
     ),
 )
-PACKAGES: tuple[Package, ...] = BARCODE_PACKAGES + PDFJS_PACKAGES
+# The QR code drawer for two-step sign-in (note 17 §7): the ES module only.
+QRCODE_VERSION = "2.0.4"
+QRCODE_DIR = f"qrcode-generator-{QRCODE_VERSION}"
+QRCODE_PACKAGES: tuple[Package, ...] = (
+    Package(
+        name="qrcode-generator",
+        version=QRCODE_VERSION,
+        licence="MIT",
+        homepage="https://github.com/kazuhikoarase/qrcode-generator",
+        group="qrcode",
+        files=(
+            VendoredFile("package/dist/qrcode.mjs", f"{QRCODE_DIR}/qrcode.mjs",
+                         "ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0", 51907,
+                         "the encoder (ES module), loaded by js/views/two_step.js with a dynamic import() when a person turns two-step sign-in on"),
+        ),
+    ),
+)
+QRCODE_LICENCE_RAW = "https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/master/LICENSE"
+QRCODE_LICENCE = VendoredFile("LICENSE", f"{QRCODE_DIR}/LICENSE",
+                              "3a850fa5f08101db6f40676c2786e10bd2cd5fff7b12ffdf1e0c434d4e49d90c", 1071,
+                              "MIT licence, from the project's repository (the npm tarball has none)")
+PACKAGES: tuple[Package, ...] = BARCODE_PACKAGES + PDFJS_PACKAGES + QRCODE_PACKAGES
 PDFJS_MAIN, PDFJS_WORKER = PDFJS_PACKAGES[0].files[0], PDFJS_PACKAGES[0].files[1]
 ZXING_CPP_COMMIT = "a17fd9dc65d6aa0dd2f660fdfca7a6a6613d938f"
 ZXING_CPP_LICENCE = VendoredFile("LICENSE", "zxing-wasm-3.1.3/LICENSE.zxing-cpp",
@@ -223,6 +248,10 @@ def fetch(print_only: bool = False, groups: tuple[str, ...] = GROUPS) -> dict[st
         licence = _get(ZXING_CPP_RAW.format(commit=commit))
         computed.append((ZXING_CPP_LICENCE.dest, sha256(licence), len(licence)))
         files[ZXING_CPP_LICENCE.dest] = licence
+    if "qrcode" in groups:
+        licence = _get(QRCODE_LICENCE_RAW)
+        computed.append((QRCODE_LICENCE.dest, sha256(licence), len(licence)))
+        files[QRCODE_LICENCE.dest] = licence
     if print_only:
         if commit:
             print(f"ZXING_CPP_COMMIT = {commit!r}")
@@ -237,7 +266,7 @@ def fetch(print_only: bool = False, groups: tuple[str, ...] = GROUPS) -> dict[st
 
 def all_files(groups: tuple[str, ...] = GROUPS) -> tuple[VendoredFile, ...]:
     out = tuple(f for pkg in packages_of(groups) for f in pkg.files)
-    return out + ((ZXING_CPP_LICENCE,) if "barcode" in groups else ())
+    return out + ((ZXING_CPP_LICENCE,) if "barcode" in groups else ()) + ((QRCODE_LICENCE,) if "qrcode" in groups else ())
 
 
 def check_files(files: dict[str, bytes], consts: dict[str, str] | None = None, groups: tuple[str, ...] = GROUPS) -> None:
@@ -262,6 +291,11 @@ def check_files(files: dict[str, bytes], consts: dict[str, str] | None = None, g
         for vf in (PDFJS_MAIN, PDFJS_WORKER):
             if quoted not in files[vf.dest]:
                 raise VendorError(f"app/static/vendor/{vf.dest} does not name pdf.js {PDFJS_VERSION}")
+    if "qrcode" in groups:
+        if b"export default qrcode;" not in files[QRCODE_PACKAGES[0].files[0].dest]:
+            raise VendorError("the QR code module has no default export")
+        if b"MIT License" not in files[QRCODE_LICENCE.dest]:
+            raise VendorError(f"app/static/vendor/{QRCODE_LICENCE.dest} is not the MIT licence")
 
 
 def _files_table(rows: list[str]) -> list[str]:
@@ -352,6 +386,25 @@ def readme() -> str:
         "`GlobalWorkerOptions.workerPort` exists, `isEvalSupported` no longer exists (the eval code path was removed),",
         "and `render()` takes `canvas`, `viewport`, `background` and `annotationMode`.",
         "",
+        "## QR code drawer (note 17)",
+        "",
+        "Used only when a person turns on two-step sign-in. `js/views/two_step.js` loads",
+        f"`{QRCODE_DIR}/qrcode.mjs` with a dynamic `import()` and draws the QR code of the `otpauth://` link as SVG",
+        "elements it makes itself (no `innerHTML`), so the secret never leaves the page. The file is not in the service",
+        "worker's shell list; the `/vendor/` runtime cache keeps it after the first use.",
+        "",
+        *_files_table(_file_rows(QRCODE_PACKAGES) + [
+            f"| `{QRCODE_LICENCE.dest}` | qrcode-generator `LICENSE` (repository, `master`) | {QRCODE_LICENCE.size:,} | `{QRCODE_LICENCE.sha256}` |"]),
+        "",
+        "| Package | Version | Licence | Source |",
+        "|---|---|---|---|",
+        *(_package_row(p) for p in QRCODE_PACKAGES),
+        "",
+        "Checks made when the file was vendored (2026-10-28): the npm tarball matched the registry's `dist.integrity`",
+        "(SHA-512) before it was read and nothing in it was run; the module has no `eval`, no `Function(` and no",
+        "`document` or `window` use, and the only URLs in it are licence, homepage and SVG-namespace strings that",
+        "nothing fetches. Released 2025-08-07.",
+        "",
         "## Updating",
         "",
         "1. `python3 scripts/vendor_barcode.py --check-latest` (CI runs it weekly, warn only) says when npm has",
@@ -417,12 +470,12 @@ def check_latest() -> int:
         else:
             print(f"{wasm.name} {wasm.version} is the latest release")
     check_latest_pdfjs()
+    check_latest_pdfjs(QRCODE_PACKAGES[0])
     return 0
 
 
-def check_latest_pdfjs() -> None:
-    """Warn when npm has a newer ``pdfjs-dist`` (the small dist-tags document, not the whole package listing)."""
-    pdfjs = PDFJS_PACKAGES[0]
+def check_latest_pdfjs(pdfjs: Package = PDFJS_PACKAGES[0]) -> None:
+    """Warn when npm has a newer ``pdfjs-dist`` or ``qrcode-generator`` (the small dist-tags document, not the whole listing)."""
     try:
         latest = str(json.loads(_get(f"{REGISTRY}/-/package/{pdfjs.name}/dist-tags")).get("latest", ""))
     except Exception as exc:  # noqa: BLE001 - a weekly warn-only report

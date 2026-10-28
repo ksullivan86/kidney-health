@@ -1,6 +1,6 @@
 /* Kidney Diet Log — Settings view (note 07 §4.17; note 02 R10 for This device).
 
-   Sections: Account (name, password, signed-in devices, export, delete, sign out), Preferences
+   Sections: Account (name, password, two-step sign-in from js/views/two_step.js, signed-in devices, export, delete, sign out), Preferences
    (theme, week start, units), Food data (USDA key, Open Food Facts), AI ideas (filled by M2),
    Assistant access (personal tokens for a chat assistant; only while the admin switch is on, see
    renderAssistant), This device (install, offline, storage; completed by js/pwa.js in the installed
@@ -51,6 +51,7 @@
     revokeResetLink: (id) => request('DELETE', `/api/admin/users/${id}/reset-link`),
     revokeUser: (id) => request('POST', `/api/admin/users/${id}/revoke-sessions`),
     revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`),
+    removeUserTwoStep: (id) => request('DELETE', `/api/admin/users/${id}/totp`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
     deleteInvite: (id) => request('DELETE', `/api/admin/invites/${encodeURIComponent(id)}`),
@@ -350,6 +351,7 @@
     body.append(nameForm);
 
     if (hasLocalPassword()) body.append(passwordForm(me));
+    if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
@@ -1453,6 +1455,7 @@
     const self = state.me && u.id === state.me.id;
     const badges = [h('span', { class: `badge role-${u.role}` }, ROLE_LABEL[u.role] || u.role)];
     if (u.status !== 'active') badges.push(h('span', { class: `badge status-${u.status}` }, STATUS_LABEL[u.status] || u.status));
+    if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1549,6 +1552,22 @@
         },
       }));
       actions.append(rev);
+    }
+    // Two-step sign-in (design note 17 §2): for someone who lost both the phone and the recovery codes.
+    if (u.two_step) {
+      const rm = h('button', { class: 'btn secondary', type: 'button' }, 'Remove two-step sign-in');
+      rm.addEventListener('click', () => confirm.inline(actions, rm, {
+        message: self ? 'Remove your own two-step sign-in? Signing in then needs only your password.'
+          : `Remove two-step sign-in from ${name}? Do this only if ${name} lost both the phone and the recovery codes, and you know it is them asking. `
+            + 'They then sign in with the password alone and can turn it on again.',
+        confirmText: 'Remove',
+        onConfirm: async () => {
+          await A.removeUserTwoStep(u.id);
+          await done(self ? 'Your two-step sign-in was removed' : `Two-step sign-in removed from ${name}`);
+          return true;
+        },
+      }));
+      actions.append(rm);
     }
     if (!self && u.status === 'active') {
       const dis = h('button', { class: 'btn danger', type: 'button' }, 'Disable account');

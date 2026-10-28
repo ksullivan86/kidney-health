@@ -7,6 +7,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people who run a server
+
+* **Two-step sign-in.** Anyone with a password can turn it on in **Settings → Account → Two-step sign-in**. Signing in then needs a
+  6-digit code from an authenticator app on their phone too, and ten recovery codes cover a lost phone. It is off until a person turns
+  it on. A lost phone and lost codes: **Server administration → People → Remove two-step sign-in**, or
+  `python -m app.admin remove-two-step USERNAME`. The QR code is drawn in the browser from a vendored library, so the secret goes to
+  no other site. Schema step 22 adds two tables and changes nothing else. See [`docs/accounts.md`](docs/accounts.md#two-step-sign-in)
+  and [design note 17](docs/dev/research/17-two-step-sign-in.md).
+
 ### For contributors
 
 * **The first part of the iOS app.** `ios/KidneyHealthCore` is a Swift package with the rules the Health sync app must share with the

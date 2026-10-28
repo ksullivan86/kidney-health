@@ -121,6 +121,7 @@ const SHELL_URLS = [
   '/js/views/profile.js',
   '/js/views/auth.js',
   '/js/views/settings.js',
+  '/js/views/two_step.js',
   '/js/views/ai.js',
   '/js/views/ai_routing.js',
   '/js/views/ai_quality.js',

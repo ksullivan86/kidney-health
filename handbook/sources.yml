@@ -1604,6 +1604,13 @@ NOTE12:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-22
   kind: project
+NOTE17:
+  cite: "kidney-health design note 17: two-step sign-in with codes from an authenticator app."
+  short: "Design note 17"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/17-two-step-sign-in.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-28
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

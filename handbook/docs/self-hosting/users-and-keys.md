@@ -91,6 +91,8 @@ from other machines ([HTTPS for phones](https.md)).
 - An account the admin creates gets a one-time setup link; the page it opens shows the username the
   admin chose, so the person (and their password manager) knows what to sign in with.
 - `python -m app.admin list-users` and `revoke-sessions USERNAME` (or `--all`) help after a lost phone.
+- Someone who uses two-step sign-in and lost both the phone and the recovery codes: `python -m app.admin remove-two-step USERNAME`.
+  They sign in with the password alone and can turn it on again.
 - `python -m app.admin export-user USERNAME export.zip` gives you a person's data export when they cannot
   sign in (it holds their health data: hand it over privately and delete your copy), and
   `disable-user USERNAME` stops an account and signs out its devices; enable it again in **Settings → People**.
