@@ -288,6 +288,20 @@ public enum Push {
         case reading(Reading)
     }
 
+    /// The first day the first sync sends: three months before `today`, on the same day of the month or the last day of a
+    /// shorter month. The Health export import offers the same start (`defaultSince` in js/engine/apple_health.js). Nil for a
+    /// `today` that is not a date.
+    public static func defaultSince(_ today: String) -> String? {
+        let parts = today.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]), isCalendarDate(y, m, d) else { return nil }
+        var (year, month) = (y, m - 3)
+        if month < 1 { (year, month) = (year - 1, month + 12) }
+        var day = d
+        while !isCalendarDate(year, month, day) { day -= 1 }
+        return pad(year, 4) + "-" + pad(month, 2) + "-" + pad(day, 2)
+    }
+
     // MARK: - Helpers
 
     private static func pad(_ value: Int, _ width: Int) -> String {

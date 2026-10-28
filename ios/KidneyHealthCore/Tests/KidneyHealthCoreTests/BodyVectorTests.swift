@@ -106,6 +106,16 @@ final class BodyVectorTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(seen, 20)
     }
 
+    func testTheFirstSyncStartsWhereTheHealthImportStarts() throws {
+        let apple = try Vectors.load("apple_health_vectors.json")
+        for c in try apple.list("default_since") {
+            XCTAssertEqual(Push.defaultSince(try c.text("today")), try c.text("since"), "\(c)")
+        }
+        for bad in try XCTUnwrap(apple["default_since_errors"] as? [Any]) {
+            if let text = bad as? String { XCTAssertNil(Push.defaultSince(text), text) }
+        }
+    }
+
     func testRowsAreSplitIntoBatches() throws {
         let apple = try Vectors.load("apple_health_vectors.json")
         for c in try apple.list("batches") {

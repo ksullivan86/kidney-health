@@ -132,6 +132,17 @@ final class SyncTests: XCTestCase {
                        + "1 reading left out because the server would not accept them.")
     }
 
+    func testOlderSamplesAreLeftOutOnTheFirstSync() async {
+        let old = WeightSample(start: Date(timeIntervalSince1970: 1_700_000_000), zone: zone, value: 70, unit: .kg, source: "Health")
+        let transport = FakeTransport([.success(ok(added: (1, 0)))])
+        let batch = SampleBatch(weights: [old] + weights(1), readings: [], anchor: anchor)
+        let outcome = await Sync.run(batch, to: url, token: token, today: "2026-10-28", since: Push.defaultSince("2026-10-28"),
+                                     transport: transport)
+        XCTAssertEqual(transport.sent.map(\.body.weights.count), [1])
+        XCTAssertEqual(outcome.leftOut, 0)
+        XCTAssertEqual(outcome.anchorToKeep, anchor)
+    }
+
     func testTheServerAddressMustBeHTTPS() {
         XCTAssertEqual(Settings.pushURL("https://kidney.example.org")?.absoluteString, "https://kidney.example.org/push/v1/body")
         XCTAssertEqual(Settings.pushURL(" https://kidney.example.org/ ")?.absoluteString, "https://kidney.example.org/push/v1/body")

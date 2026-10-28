@@ -132,9 +132,13 @@ public enum Sync {
 
     /// Checks the batch, sends it in requests of at most 50 rows, and stops at the first request the server does not accept.
     /// Rows already sent are safe to send again: the server counts them as already there.
-    public static func run(_ batch: SampleBatch, to url: URL, token: String, today: String,
+    /// `since` (`YYYY-MM-DD`) leaves out older samples: the first sync starts at `Push.defaultSince(today)`, so years of Health
+    /// data do not run into the server's limit of 60 requests an hour.
+    public static func run(_ batch: SampleBatch, to url: URL, token: String, today: String, since: String? = nil,
                            transport: PushTransport) async -> SyncOutcome {
-        let plan = Push.plan(weights: batch.weights.map(\.row), readings: batch.readings.map(\.row), today: today)
+        let recent: (String) -> Bool = { at in since.map { (Push.moment(at)?.date ?? "") >= $0 } ?? true }
+        let plan = Push.plan(weights: batch.weights.map(\.row).filter { recent($0.at) },
+                             readings: batch.readings.map(\.row).filter { recent($0.at) }, today: today)
         var outcome = SyncOutcome(state: .done)
         outcome.leftOut = plan.refused.values.reduce(0, +)
         outcome.watchReadings = plan.watchReadings
