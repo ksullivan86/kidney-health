@@ -36,12 +36,17 @@ env:
   RUFF_SHA256: "c94fc1dc71f054d06d9f1149442dcb471516aa2b7d4b7e8124e05d082d4c91d3"
   GRYPE_VERSION: "v0.120.0"
   BUILDKIT_IMAGE: "moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea"
+  # The Swift toolchain for ios/KidneyHealthCore, from swift.org (6.4.1 is from 2026-10-12; its .sig checked against the
+  # Swift 6.x release key when this hash was taken).
+  SWIFT_VERSION: "6.4.1"
+  SWIFT_SHA256: "7d246c7114077ad01dba4ad897628446ada4c489d6c7dbcf39ae3f25cbe17e8b"
 
 jobs:
   test:
     name: pytest (Python ${{ matrix.python }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The suite takes 16 to 19 minutes on Python 3.15 runners; 20 cut a passing run off at 99 %.
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
@@ -83,6 +88,31 @@ jobs:
           package-manager-cache: false
       - name: Browser rules engine matches the server (tests/data/*.json)
         run: node tests/js/run_vectors.mjs
+
+  swift:
+    name: Swift package for the iOS app (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the pinned Swift toolchain and verify its SHA-256
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          name="swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04"
+          curl -fsSL --retry 3 -o swift.tar.gz \
+            "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404/swift-${SWIFT_VERSION}-RELEASE/${name}.tar.gz"
+          echo "$SWIFT_SHA256  swift.tar.gz" | sha256sum --check --strict -
+          tar -xzf swift.tar.gz && rm swift.tar.gz
+          echo "$RUNNER_TEMP/$name/usr/bin" >> "$GITHUB_PATH"
+      - name: KidneyHealthCore matches the server (tests/data/body, apple_health and push vectors)
+        run: |
+          swift --version
+          swift test --package-path ios/KidneyHealthCore
 
   lint:
     name: lint (workflows, Containerfiles, manifests, scripts)

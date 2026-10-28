@@ -11,9 +11,10 @@ The next build is the **native iOS app as a Health sync companion** (option A of
 SwiftUI app that reads weight and blood pressure from Apple Health in the background and sends them to `POST /push/v1/body` with a device
 token. The Home Screen web app stays the place for every other screen. In this order:
 
-1. **The shared Swift package `KidneyHealthCore` and its vector tests, run on Linux.** The rules that must equal the server's (ranges, the
-   time-of-day context, the watch test, `source_key`, kilogram rounding, batches of 50), tested by replaying `tests/data/body_vectors.json`
-   and `tests/data/apple_health_vectors.json` in CI on a pinned Swift toolchain image. No Apple account is needed.
+1. **Done (2026-10-28): the shared Swift package `KidneyHealthCore` and its vector tests, run on Linux.** `ios/KidneyHealthCore` holds the
+   rules that must equal the server's (ranges, the time-of-day context, the watch test, `source_key`, kilogram rounding, batches of 50)
+   and checks each row as `POST /push/v1/body` does. CI replays `tests/data/body_vectors.json`, `apple_health_vectors.json` and
+   `push_vectors.json` on a pinned Swift toolchain.
 2. **The app target, built and unit-tested on GitHub's macOS runner** (in the simulator). No account is needed until signing.
 3. **Signing, TestFlight and the owner's tests on a real iPhone**, once the owner has an Apple Developer Program membership (USD 99 a year).
 

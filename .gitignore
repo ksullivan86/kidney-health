@@ -19,3 +19,6 @@ handbook/.cache/
 # (or in a separate GitOps repository that uses deploy/k8s as a remote base).
 deploy/k8s-overlays/*
 !deploy/k8s-overlays/example/
+# Swift package builds (swift build / swift test in ios/).
+ios/**/.build/
+ios/**/.swiftpm/

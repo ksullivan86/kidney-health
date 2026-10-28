@@ -74,6 +74,7 @@ runtime dependency v0.3 added is `cryptography`; propose any new one in an issue
 python -m pytest                    # the whole suite; must pass with no network
 python -m pytest -m safety          # only the health-data safety rules (see "The safety set" below)
 node tests/js/run_vectors.mjs       # the browser's copies of the server logic match the server
+swift test --package-path ios/KidneyHealthCore   # the iOS app's rules match the server (Swift 6.4 on Linux or a Mac)
 ruff check .                        # Python lint: pycodestyle errors and pyflakes (rules in pyproject.toml); CI runs it too
 ```
 

@@ -1,0 +1,1087 @@
+{
+ "about": "Made by tests/data/gen_push_vectors.py from app/push.py. Replayed by ios/KidneyHealthCore (swift test).",
+ "constants": {
+  "path": "/push/v1/body",
+  "max_rows": 50,
+  "max_body_bytes": 32768,
+  "max_source_chars": 60,
+  "max_weights_per_day": 20,
+  "max_readings_per_day": 30,
+  "kg": [
+   20,
+   400
+  ],
+  "systolic": [
+   50,
+   300
+  ],
+  "diastolic": [
+   20,
+   200
+  ],
+  "weight_type": "HKQuantityTypeIdentifierBodyMass",
+  "reading_type": "BloodPressure"
+ },
+ "clock_cases": [
+  {
+   "epoch": 1792667700,
+   "zone": "America/New_York",
+   "at": "2026-10-22T07:15:00-04:00",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "epoch": 1792667700,
+   "zone": "UTC",
+   "at": "2026-10-22T11:15:00+00:00",
+   "date": "2026-10-22",
+   "time": "11:15",
+   "stamp": "2026-10-22 11:15:00 +0000"
+  },
+  {
+   "epoch": 1792667742,
+   "zone": "Europe/Berlin",
+   "at": "2026-10-22T13:15:42+02:00",
+   "date": "2026-10-22",
+   "time": "13:15",
+   "stamp": "2026-10-22 13:15:42 +0200"
+  },
+  {
+   "epoch": 1772953199,
+   "zone": "America/New_York",
+   "at": "2026-03-08T01:59:59-05:00",
+   "date": "2026-03-08",
+   "time": "01:59",
+   "stamp": "2026-03-08 01:59:59 -0500"
+  },
+  {
+   "epoch": 1772953200,
+   "zone": "America/New_York",
+   "at": "2026-03-08T03:00:00-04:00",
+   "date": "2026-03-08",
+   "time": "03:00",
+   "stamp": "2026-03-08 03:00:00 -0400"
+  },
+  {
+   "epoch": 1793511000,
+   "zone": "America/New_York",
+   "at": "2026-11-01T01:30:00-04:00",
+   "date": "2026-11-01",
+   "time": "01:30",
+   "stamp": "2026-11-01 01:30:00 -0400"
+  },
+  {
+   "epoch": 1793514600,
+   "zone": "America/New_York",
+   "at": "2026-11-01T01:30:00-05:00",
+   "date": "2026-11-01",
+   "time": "01:30",
+   "stamp": "2026-11-01 01:30:00 -0500"
+  },
+  {
+   "epoch": 1774745940,
+   "zone": "Europe/London",
+   "at": "2026-03-29T00:59:00+00:00",
+   "date": "2026-03-29",
+   "time": "00:59",
+   "stamp": "2026-03-29 00:59:00 +0000"
+  },
+  {
+   "epoch": 1774746000,
+   "zone": "Europe/London",
+   "at": "2026-03-29T02:00:00+01:00",
+   "date": "2026-03-29",
+   "time": "02:00",
+   "stamp": "2026-03-29 02:00:00 +0100"
+  },
+  {
+   "epoch": 1792888200,
+   "zone": "Europe/London",
+   "at": "2026-10-25T01:30:00+01:00",
+   "date": "2026-10-25",
+   "time": "01:30",
+   "stamp": "2026-10-25 01:30:00 +0100"
+  },
+  {
+   "epoch": 1792891800,
+   "zone": "Europe/London",
+   "at": "2026-10-25T01:30:00+00:00",
+   "date": "2026-10-25",
+   "time": "01:30",
+   "stamp": "2026-10-25 01:30:00 +0000"
+  },
+  {
+   "epoch": 1792633500,
+   "zone": "Asia/Kolkata",
+   "at": "2026-10-22T07:15:00+05:30",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 +0530"
+  },
+  {
+   "epoch": 1792633500,
+   "zone": "Asia/Kathmandu",
+   "at": "2026-10-22T07:30:00+05:45",
+   "date": "2026-10-22",
+   "time": "07:30",
+   "stamp": "2026-10-22 07:30:00 +0545"
+  },
+  {
+   "epoch": 1792663200,
+   "zone": "Pacific/Kiritimati",
+   "at": "2026-10-23T00:00:00+14:00",
+   "date": "2026-10-23",
+   "time": "00:00",
+   "stamp": "2026-10-23 00:00:00 +1400"
+  },
+  {
+   "epoch": 1792663500,
+   "zone": "Pacific/Honolulu",
+   "at": "2026-10-22T00:05:00-10:00",
+   "date": "2026-10-22",
+   "time": "00:05",
+   "stamp": "2026-10-22 00:05:00 -1000"
+  },
+  {
+   "epoch": 1792663140,
+   "zone": "Pacific/Honolulu",
+   "at": "2026-10-21T23:59:00-10:00",
+   "date": "2026-10-21",
+   "time": "23:59",
+   "stamp": "2026-10-21 23:59:00 -1000"
+  },
+  {
+   "epoch": 1792607400,
+   "zone": "Australia/Adelaide",
+   "at": "2026-10-22T05:00:00+10:30",
+   "date": "2026-10-22",
+   "time": "05:00",
+   "stamp": "2026-10-22 05:00:00 +1030"
+  },
+  {
+   "epoch": 1775404799,
+   "zone": "Australia/Sydney",
+   "at": "2026-04-06T01:59:59+10:00",
+   "date": "2026-04-06",
+   "time": "01:59",
+   "stamp": "2026-04-06 01:59:59 +1000"
+  },
+  {
+   "epoch": 1775404800,
+   "zone": "Australia/Sydney",
+   "at": "2026-04-06T02:00:00+10:00",
+   "date": "2026-04-06",
+   "time": "02:00",
+   "stamp": "2026-04-06 02:00:00 +1000"
+  },
+  {
+   "epoch": 1709208000,
+   "zone": "America/Los_Angeles",
+   "at": "2024-02-29T04:00:00-08:00",
+   "date": "2024-02-29",
+   "time": "04:00",
+   "stamp": "2024-02-29 04:00:00 -0800"
+  }
+ ],
+ "at_cases": [
+  {
+   "at": "2026-10-22T07:15:00-04:00",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "at": "2026-10-22T07:15:00Z",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 +0000"
+  },
+  {
+   "at": "2026-10-22T23:50:00+14:00",
+   "date": "2026-10-22",
+   "time": "23:50",
+   "stamp": "2026-10-22 23:50:00 +1400"
+  },
+  {
+   "at": "2026-10-22T00:05:00-10:00",
+   "date": "2026-10-22",
+   "time": "00:05",
+   "stamp": "2026-10-22 00:05:00 -1000"
+  },
+  {
+   "at": "2026-10-22T07:15:00+05:30",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 +0530"
+  },
+  {
+   "at": "2026-10-22T07:15:00-0400",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "at": "2026-10-22 07:15:00 -0400",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "at": "2026-10-22T07:15-04:00",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "at": "2026-10-22T07:15:30.123456-04:00",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:30 -0400"
+  },
+  {
+   "at": "2026-10-22T07:15:00-04",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 -0400"
+  },
+  {
+   "at": "  2026-10-22T07:15:00Z  ",
+   "date": "2026-10-22",
+   "time": "07:15",
+   "stamp": "2026-10-22 07:15:00 +0000"
+  },
+  {
+   "at": "",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:00",
+   "refused": true
+  },
+  {
+   "at": "07:15:00-04:00",
+   "refused": true
+  },
+  {
+   "at": "22/10/2026 07:15 -0400",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T24:00:00Z",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:60:00Z",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:60Z",
+   "refused": true
+  },
+  {
+   "at": "2026-02-30T07:15:00Z",
+   "refused": true
+  },
+  {
+   "at": "2026-13-01T07:15:00Z",
+   "refused": true
+  },
+  {
+   "at": "0000-01-01T07:15:00Z",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:00+24:00",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:00+05:60",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:00 UTC",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T07:15:00z",
+   "refused": true
+  },
+  {
+   "at": "2026-10-22T7:15:00Z",
+   "refused": true
+  },
+  {
+   "at": "yesterday",
+   "refused": true
+  },
+  {
+   "at": "２０２６-10-22T07:15:00Z",
+   "refused": true
+  },
+  {
+   "at": "2024-02-29T08:00:00-08:00",
+   "date": "2024-02-29",
+   "time": "08:00",
+   "stamp": "2024-02-29 08:00:00 -0800"
+  },
+  {
+   "at": "2025-02-29T08:00:00-08:00",
+   "refused": true
+  }
+ ],
+ "value_cases": [
+  {
+   "number": 70.5,
+   "text": "70.5"
+  },
+  {
+   "number": 70.0,
+   "text": "70.0"
+  },
+  {
+   "number": 154.3,
+   "text": "154.3"
+  },
+  {
+   "number": 154.29999999999998,
+   "text": "154.3"
+  },
+  {
+   "number": 154.30000001543002,
+   "text": "154.3"
+  },
+  {
+   "number": 69.99,
+   "text": "69.99"
+  },
+  {
+   "number": 70.125,
+   "text": "70.125"
+  },
+  {
+   "number": 100.0,
+   "text": "100.0"
+  },
+  {
+   "number": 99.9999,
+   "text": "100"
+  },
+  {
+   "number": 99.9994,
+   "text": "99.999"
+  },
+  {
+   "number": 0.5,
+   "text": "0.5"
+  },
+  {
+   "number": 123.4567,
+   "text": "123.457"
+  },
+  {
+   "number": 400.0,
+   "text": "400.0"
+  },
+  {
+   "number": 20.0,
+   "text": "20.0"
+  },
+  {
+   "number": 881.849,
+   "text": "881.849"
+  },
+  {
+   "number": 70.1,
+   "text": "70.1"
+  },
+  {
+   "number": 3.14159,
+   "text": "3.142"
+  },
+  {
+   "number": 72.0005,
+   "text": "72.001"
+  },
+  {
+   "number": 72.0015,
+   "text": "72.001"
+  },
+  {
+   "number": 1000.0,
+   "text": null
+  },
+  {
+   "number": 999.9996,
+   "text": null
+  }
+ ],
+ "source_cases": [
+  {
+   "source": "Health",
+   "kept": "Health"
+  },
+  {
+   "source": "  Withings  Health Mate ",
+   "kept": "Withings Health Mate"
+  },
+  {
+   "source": "Omron\tConnect",
+   "kept": "OmronConnect"
+  },
+  {
+   "source": "Apple Watch",
+   "kept": "Apple Watch"
+  },
+  {
+   "source": "Café Scale",
+   "kept": "Café Scale"
+  },
+  {
+   "source": "Scale​",
+   "kept": "Scale"
+  },
+  {
+   "source": "Scale\u0007",
+   "kept": "Scale"
+  },
+  {
+   "source": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "kept": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "source": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "kept": null
+  },
+  {
+   "source": "",
+   "kept": null
+  },
+  {
+   "source": "   ",
+   "kept": null
+  },
+  {
+   "source": "​",
+   "kept": null
+  },
+  {
+   "source": "Sam’s iPhone",
+   "kept": "Sam’s iPhone"
+  },
+  {
+   "source": "x y",
+   "kept": "x y"
+  },
+  {
+   "source": "Ω scale",
+   "kept": "Ω scale"
+  },
+  {
+   "source": "Ｗａｔｃｈ",
+   "kept": "Ｗａｔｃｈ"
+  }
+ ],
+ "weight_cases": [
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 70.5,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|70.5|Health",
+    "key": "860e4620da21cf9e63799768f5eb4832"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "154.3",
+    "unit": "lb",
+    "source": "Withings"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 69.99,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|154.3|Withings",
+    "key": "46fb7d44c32425a317b3405af7940375"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T03:59:00-04:00",
+    "value": "70",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "03:59",
+    "kg": 70.0,
+    "context": "other",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 03:59:00 -0400|70|Health",
+    "key": "b78bd70dfa972f003ce7142edeacb87d"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T11:00:00+01:00",
+    "value": "70.125",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "11:00",
+    "kg": 70.13,
+    "context": "other",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 11:00:00 +0100|70.125|Health",
+    "key": "198857fbbb45142e178e2b7a7d08b35d"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T19:30:00Z",
+    "value": "154.25",
+    "unit": "lb",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "19:30",
+    "kg": 69.97,
+    "context": "other",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 19:30:00 +0000|154.25|Health",
+    "key": "491e87be9c1aba2c37056978d7dcd473"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "20",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 20.0,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|20|Health",
+    "key": "003dffc54ca0feef2be6168b0b3ecc56"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "400",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 400.0,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|400|Health",
+    "key": "77819f1755e5eede1519f21417490db2"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "19.99",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "400.01",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "44.0925",
+    "unit": "lb",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "44.08",
+    "unit": "lb",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "881.849",
+    "unit": "lb",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 400.0,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|881.849|Health",
+    "key": "ab328be589a61ae2a719a1ef91a0ebbd"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "882",
+    "unit": "lb",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Sam’s Apple Watch"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 70.5,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|70.5|Sam’s Apple Watch",
+    "key": "25ff2a7761f359cd8749978de6748e2e"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "  Withings \t Scale "
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:15",
+    "kg": 70.5,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|2026-10-19 07:15:00 -0400|70.5|Withings Scale",
+    "key": "5246e0f0dab58d1d11292f7a45ba868b"
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70,5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "1234",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "value"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": ""
+   },
+   "refused": "source"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00-04:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "refused": "source"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:15:00",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "at"
+  },
+  {
+   "row": {
+    "at": "1899-12-31T07:15:00Z",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "at"
+  },
+  {
+   "row": {
+    "at": "1900-01-01T07:15:00Z",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "planned": {
+    "date": "1900-01-01",
+    "time": "07:15",
+    "kg": 70.5,
+    "context": "morning",
+    "key_text": "HKQuantityTypeIdentifierBodyMass|1900-01-01 07:15:00 +0000|70.5|Health",
+    "key": "01ec594dc080ee3ec26f149f73a5a09e"
+   }
+  },
+  {
+   "row": {
+    "at": "2999-01-01T07:15:00Z",
+    "value": "70.5",
+    "unit": "kg",
+    "source": "Health"
+   },
+   "refused": "at"
+  }
+ ],
+ "reading_cases": [
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 122,
+    "diastolic": 78,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|122/78|Omron Connect",
+    "key": "41849593896c5465d407cc0cbadff5e2",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T17:00:00-04:00",
+    "systolic": "130",
+    "diastolic": "85",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "17:00",
+    "systolic": 130,
+    "diastolic": 85,
+    "context": "evening",
+    "key_text": "BloodPressure|2026-10-19 17:00:00 -0400|130/85|Omron Connect",
+    "key": "d625d30808b1965bdc42151548815f7d",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T16:59:00-04:00",
+    "systolic": "130",
+    "diastolic": "85",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "16:59",
+    "systolic": 130,
+    "diastolic": 85,
+    "context": "other",
+    "key_text": "BloodPressure|2026-10-19 16:59:00 -0400|130/85|Omron Connect",
+    "key": "02fb429a1c405af1d8a6c1d0f0c26de3",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T23:59:00-04:00",
+    "systolic": "130",
+    "diastolic": "85",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "23:59",
+    "systolic": 130,
+    "diastolic": 85,
+    "context": "evening",
+    "key_text": "BloodPressure|2026-10-19 23:59:00 -0400|130/85|Omron Connect",
+    "key": "e6562b1c46e109a3455e65776049178e",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T10:59:00-04:00",
+    "systolic": "130",
+    "diastolic": "85",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "10:59",
+    "systolic": 130,
+    "diastolic": 85,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 10:59:00 -0400|130/85|Omron Connect",
+    "key": "8eb73d97666622fc04637a471109bef4",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T11:00:00-04:00",
+    "systolic": "130",
+    "diastolic": "85",
+    "source": "Omron Connect"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "11:00",
+    "systolic": 130,
+    "diastolic": 85,
+    "context": "other",
+    "key_text": "BloodPressure|2026-10-19 11:00:00 -0400|130/85|Omron Connect",
+    "key": "4050d0cfa502edee6fd5051c75942b67",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Sam’s Apple Watch"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 122,
+    "diastolic": 78,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|122/78|Sam’s Apple Watch",
+    "key": "496c95da74c71cd202d1435ae34fbb63",
+    "watch": true
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Stopwatch"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 122,
+    "diastolic": 78,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|122/78|Stopwatch",
+    "key": "1f581013325d89193910a3cac4c77d2f",
+    "watch": true
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Wätch"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 122,
+    "diastolic": 78,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|122/78|Wätch",
+    "key": "4510266276fe9a6be0de984c7dbb2c93",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "50",
+    "diastolic": "20",
+    "source": "Omron"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 50,
+    "diastolic": 20,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|50/20|Omron",
+    "key": "394dfd1e30a9dd48034eca72ca6c4247",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "300",
+    "diastolic": "200",
+    "source": "Omron"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 300,
+    "diastolic": 200,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 -0400|300/200|Omron",
+    "key": "1e5918b46dde4fc2c121c2dc2ef69c5b",
+    "watch": false
+   }
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "49",
+    "diastolic": "20",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "301",
+    "diastolic": "78",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "19",
+    "source": "Omron"
+   },
+   "refused": "diastolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "250",
+    "diastolic": "201",
+    "source": "Omron"
+   },
+   "refused": "diastolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "80",
+    "diastolic": "80",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "79",
+    "diastolic": "80",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122.5",
+    "diastolic": "78",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "1220",
+    "diastolic": "78",
+    "source": "Omron"
+   },
+   "refused": "systolic"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00-04:00",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "\u0007"
+   },
+   "refused": "source"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Omron"
+   },
+   "refused": "at"
+  },
+  {
+   "row": {
+    "at": "2026-10-19T07:20:00+05:45",
+    "systolic": "122",
+    "diastolic": "78",
+    "source": "Omron | Arm"
+   },
+   "planned": {
+    "date": "2026-10-19",
+    "time": "07:20",
+    "systolic": 122,
+    "diastolic": 78,
+    "context": "morning",
+    "key_text": "BloodPressure|2026-10-19 07:20:00 +0545|122/78|Omron | Arm",
+    "key": "ffa7016f3f74f364369ad835504617b6",
+    "watch": false
+   }
+  }
+ ]
+}
