@@ -519,7 +519,9 @@ def test_the_prompt_has_no_identity_and_the_dry_run_shows_the_first_request(ask_
         ask(c, f"what about {MARKER}")
         sent = provider.bodies()[0]
     assert dry["body"] == sent  # the dry run is exactly what is sent
-    text = json.dumps(sent)
+    # The safety identifier is a keyed hash that changes every run, so its hex digits can hold "168" by chance; it is checked on
+    # its own at the end.
+    text = json.dumps({k: v for k, v in sent.items() if k != "safety_identifier"})
     system = sent["messages"][0]["content"]
     for tool in ("get_today", "search_foods", "check_meal", "log_food", "save_recipe"):
         assert tool in system
