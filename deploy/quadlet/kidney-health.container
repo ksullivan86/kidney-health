@@ -30,10 +30,10 @@ Wants=network-online.target
 # Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
 # GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
 # Renovate or Dependabot bump tag and digest together:
-#   Image=ghcr.io/ksullivan86/kidney-health:0.7.0@sha256:<index digest>
+#   Image=ghcr.io/ksullivan86/kidney-health:0.8.0@sha256:<index digest>
 # Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
 # never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
-Image=ghcr.io/ksullivan86/kidney-health:0.7
+Image=ghcr.io/ksullivan86/kidney-health:0.8
 ContainerName=kidney-health
 # `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily
 # and restarts the unit, rolling back if it fails. Never mount podman.sock into a container for

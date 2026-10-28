@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.7
+          image: ghcr.io/ksullivan86/kidney-health:0.8
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

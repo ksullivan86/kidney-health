@@ -538,7 +538,7 @@ def quadlet(path: str) -> dict[str, list[str]]:
 def test_quadlet_unit_is_hardened():
     q = quadlet("deploy/quadlet/kidney-health.container")
     one = lambda key: q[f"Container.{key}"][0]  # noqa: E731
-    assert one("Image") == "ghcr.io/ksullivan86/kidney-health:0.7"
+    assert one("Image") == "ghcr.io/ksullivan86/kidney-health:0.8"
     assert one("Network") == "pasta"
     assert one("PublishPort").startswith("127.0.0.1:")
     assert one("ReadOnly") == "true" and one("NoNewPrivileges") == "true"
@@ -572,7 +572,7 @@ def test_compose_is_hardened_and_uses_file_secrets():
         "SECRET_KEY_FILE: /run/secrets/secret_key",
         "file: ./secrets/secret_key",
         'test: ["CMD", "python", "-m", "app.healthcheck"]',
-        "image: ghcr.io/ksullivan86/kidney-health:0.7",
+        "image: ghcr.io/ksullivan86/kidney-health:0.8",
     ):
         assert needle in text, needle
     active = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
@@ -643,7 +643,7 @@ def test_k8s_kustomization_and_network_policy():
     assert {"networkpolicy.yaml", "deployment.yaml", "namespace.yaml", "service.yaml", "pvc.yaml"} <= set(resources)
     assert not {"httproute.yaml", "secret.example.yaml", "ingress.example.yaml", "cilium-networkpolicy.example.yaml", "restore-pod.example.yaml"} & set(resources)
     assert not (REPO / "deploy/k8s/ingress.yaml").exists(), "ingress-nginx is retired: Ingress is only an example"
-    assert 'newTag: "0.7"' in kust
+    assert 'newTag: "0.8"' in kust
     netpol = read("deploy/k8s/networkpolicy.yaml")
     assert "name: default-deny" in netpol and "podSelector: {}" in netpol
     for cidr in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "169.254.0.0/16"):

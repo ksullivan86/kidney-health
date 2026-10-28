@@ -7,6 +7,47 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.8.0 — 2026-10-28
+
+Version 0.8 adds recipes from AI. If your server offers it, the AI can suggest a recipe for a meal or rework one of yours. The AI
+only picks foods and amounts from a list the app's rules made. The app works out every number, fits the recipe to your targets the
+same way **Fit to my targets** does, and lists what it changed. Nothing is saved until you tap.
+
+**Before you upgrade, read [Upgrading from 0.7](#upgrading-from-07-read-this-first).** There is no schema step, and nothing new is
+switched on.
+
+### Highlights
+
+* **Suggest recipes with AI** in Plan, and **Rework with AI** in the Fit to my targets sheet. Each card shows the foods for the
+  whole pot and one serving's numbers. **Save recipe**, **Add to plan** and **Dismiss** do what they say.
+* **What is never sent:** a recipe's name, note, steps and link. A saved recipe with a food you use to treat a low is never sent.
+* **Low treatments, alcohol, foods to avoid with kidney disease, "Not for me" foods, table salt and salt substitutes** are never
+  offered to the AI, and the app checks the answer for them again.
+* **Cooking steps written by AI are off** until an admin turns them on after a live test run.
+
+### Upgrading from 0.7 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.8.0.db`). This release has no schema
+   step, but keep the habit.
+2. **Coming from 0.6**, schema step 21 runs at the first start; from 0.5, steps 20 and 21 do. Read
+   [Upgrading from 0.6 or 0.5](#upgrading-from-06-or-05-read-this-first) too.
+3. **Change the tag** to `:0.8`, or pin a digest from the release notes. The shipped files already say `:0.8`.
+4. **Nothing new is switched on.** The new AI feature `recipes` runs on the local AI by default (`AI_ROUTE_RECIPES=local`), and only
+   for people who agree to Meal data. AI cooking steps stay off until you set `AI_RECIPE_STEPS=true`.
+5. **Everyone who uses AI is asked to agree to Meal data again** (`POLICY_VERSION` `2026-10-27.1`), because it now covers a
+   recipe's foods and amounts.
+6. **New `PROMPT_VERSION` (`2026-10-27.2`).** Run `scripts/ai_eval.py` again for each model you use. The report now measures
+   recipes too, with three new gates.
+
+### Known limitations
+
+* AI cooking steps stay off until the owner's live run of `scripts/ai_eval.py` on the cloud chain shows no unsafe step and a
+  surviving recipe in at least 70 % of cases.
+* The recipe rules, like the rest of Fit to my targets, wait for a dietitian's review (`handbook/REVIEW.md`).
+* Values are estimates from the foods in the recipe. Cooking losses are not counted.
+
 ### For people using the app
 
 * **Recipes from AI (optional).** If your server offers it, Plan has **Suggest recipes with AI** and the Fit to my targets sheet
