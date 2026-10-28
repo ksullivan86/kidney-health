@@ -179,7 +179,8 @@
       if (hemodialysis && dialysisDays.includes(weekday(back))) { // before and after a session instead of a morning weight
         const before = back === 0 ? 72.6 : 71.0 + (i % 3) * 0.2; // today's weight is the one over the sample alarm of 2 kg, before a session or at home (against the last one after a session)
         api._insertWeight(labUser, { date, time: '06:40', kg: before, context: 'before_dialysis', note: '' }, { createdAt: stampOf(back, 6.4) });
-        api._insertWeight(labUser, { date, time: '11:20', kg: 70.2 - (i % 2) * 0.1, context: 'after_dialysis', note: '' }, { createdAt: stampOf(back, 11.2) });
+        // Today's session has not happened yet: an after-session weight today would be the day's latest and hide the one over the alarm.
+        if (back !== 0) api._insertWeight(labUser, { date, time: '11:20', kg: 70.2 - (i % 2) * 0.1, context: 'after_dialysis', note: '' }, { createdAt: stampOf(back, 11.2) });
       } else {
         api._insertWeight(labUser, { date, time: '07:15', kg: hemodialysis && back === 0 ? 72.4 : kg, context: 'morning', note: '' }, { createdAt: stampOf(back, 7.15) });
       }
