@@ -60,6 +60,8 @@ SAFETY_FILES = (
     "tests/guidance/test_swaps.py",
     # food safety named in the handbook (no raw egg is ever suggested)
     "tests/guidance/test_food_safety.py",
+    # the iOS app reads weight and blood pressure only: no glucose, insulin or medicine type, no writing to Health
+    "tests/test_ios_app.py",
 )
 
 # Files that skip as a whole where PyYAML is not installed: Python 3.15, which has no PyYAML wheel yet

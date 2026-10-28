@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Step 1 is built (2026-10-28):** `ios/KidneyHealthCore` and its Linux tests in CI. Step 2, the app target, is next. Decisions 3 and 4 are open. |
+| Status | **Steps 1 and 2 are built (2026-10-28):** `ios/KidneyHealthCore` with its Linux tests, and the app `ios/KidneyHealthSync` with simulator tests on the macOS runner. Step 3 (signing, TestFlight, a real iPhone) waits for the owner's Apple account. Decisions 3 and 4 are open. |
 | Date researched | 2026-10-22, against `main` with notes 10–14 |
 | Scope | What a native iPhone app adds to the Home Screen web app, the smallest first version, how it reuses the server and the tests, what it needs from the owner (an Apple Developer account, signing, TestFlight), and how it is built without a Mac. |
 | Out of scope | An App Store listing (a separate decision: review, a privacy policy, Apple's health-data rules and a regulatory opinion, ROADMAP); Android (later, the same pattern with Health Connect); glucose, insulin and medicines (CLAUDE.md: no dosing data, ever; the app never reads those HealthKit types); push notifications from the server. |
@@ -106,6 +106,14 @@ Note 12 built the server half of that: a write-only device token and an add-only
    whole sync. The toolchain is the swift.org release tarball, pinned by SHA-256 in `ci.yml`. A digest-pinned Docker image was the plan,
    but a downloaded tool checked against a pinned hash is the rule the other CI tools already follow.
 2. **The app target, built and unit-tested on the macOS runner** (simulator): about 2–3M tokens. No account is needed until signing.
+   Built 2026-10-28. The sync rules are in the package, so they are tested on Linux too. Choices made while building:
+   * The first sync starts at the Health import's default start, three months back. A history of years would otherwise run into the
+     route's 60 requests an hour, and the sync would never get past it.
+   * Samples are read in rounds of 500 of each kind, and a round's anchor is kept only after a 200 for all of it.
+   * The token check of §4.3 is not built. A wrong token shows on the first sync, as a 401 and a status line that says to make a new
+     one. A `GET /push/v1/ping` stays a small server change for step 4.
+   * The Xcode project is written by hand in the folder-based format (`objectVersion = 77`), because XcodeGen could not be fetched and
+     pinned. Xcode adds new files in those folders by itself.
 3. **Signing, TestFlight and the owner's phone tests**: the owner's account and time, plus about 1M tokens of workflow and fixes.
 4. **(Optional) pairing by QR code** and the test-token route: about 1M tokens.
 

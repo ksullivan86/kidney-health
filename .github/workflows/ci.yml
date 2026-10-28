@@ -114,6 +114,34 @@ jobs:
           swift --version
           swift test --package-path ios/KidneyHealthCore
 
+  ios-app:
+    name: iOS app (simulator build and tests)
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      XCODE_VERSION: "26.3"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the app and run its tests in the simulator (no signing, no Apple account)
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+          udid=$(xcrun simctl list devices available -j | python3 ios/pick_simulator.py)
+          echo "simulator: $udid"
+          results="$RUNNER_TEMP/tests.xcresult"
+          if ! xcodebuild test -quiet \
+            -project ios/KidneyHealthSync.xcodeproj -scheme KidneyHealthSync \
+            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived" -resultBundlePath "$results"; then
+            xcrun xcresulttool get test-results summary --path "$results" || true
+            xcrun xcresulttool get test-results tests --path "$results" | head -c 20000 || true
+            exit 1
+          fi
+
   lint:
     name: lint (workflows, Containerfiles, manifests, scripts)
     runs-on: ubuntu-24.04
