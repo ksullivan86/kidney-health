@@ -1,4 +1,4 @@
-Status: complete for step 2 (2026-10-28): PR #101 green on the macOS runner (12 simulator tests) and on Linux (34 package tests). Step 3 waits for the owner.
+Status: in progress (2026-10-28): Test connection (GET /push/v1/check and the app button) is built and tested on Linux; the simulator run is in CI.
 
 # iOS app (design note 15)
 
@@ -19,12 +19,24 @@ Status: complete for step 2 (2026-10-28): PR #101 green on the macOS runner (12 
     no third-party packages, HTTPS only, Keychain this-device-only.
   * CI job `ios-app` on macos-15 with Xcode 26.3: `xcodebuild test` on the newest iPhone simulator (`ios/pick_simulator.py`).
 
+* Test connection (after step 2):
+  * Server: `GET /push/v1/check` in `app/push.py` (the device token, the shared `push_body` hour, `{"ok": true}`, `no-store`; 405 for
+    other methods), in `security.BEARER_PATHS` and `openapi_doc.BEARER_OPERATIONS`. Tests: the check section of `tests/test_push.py`.
+  * Package: `PushTransport.get`, `ConnectionCheck.run` and `.text`, `Settings.checkURL`, `Push.checkPath`. Linux test
+    `testTestConnectionSaysWhetherTheTokenWorks` (35 tests in all).
+  * App: `URLSessionTransport.get`, `SyncModel.testConnection` (a 429 also sets `waitUntil`), the button under the token in
+    `ContentView`. Simulator tests: `testTheCheckIsAGetWithTheBearerTokenAndNoBody`, `testTestConnectionSaysWhatTheServerAnswered`.
+  * Linux compile check of the app files: the scratch package `appcheck` (stubs for Keychain, HealthSource, Combine); the copy of
+    `URLSessionTransport.swift` needs `import FoundationNetworking` there.
+
 ## Decisions
 
 * macos-15, not macos-26: actionlint 1.7.12 does not know the macos-26 label yet.
 * The app and its tests use Swift 5 language mode (`SWIFT_VERSION = 5.0`) to keep HealthKit's non-Sendable types from blocking the
   build. The package stays Swift 6.
-* No token check route yet (note 15 §4.3): a wrong token shows on the first sync.
+* The token check is its own GET route, because `POST /push/v1/body` refuses a request with no rows. It shares the token's hour so a
+  leaked token gains nothing from it. A 200 that is not `{"ok": true}` (an older server's app shell, another site) reads as "not this
+  app".
 * The Health observers start only once a server and token are saved, so nothing of Health is touched before setup (and the test host
   starts clean).
 
