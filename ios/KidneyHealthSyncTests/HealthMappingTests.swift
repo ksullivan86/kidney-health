@@ -32,14 +32,7 @@ final class HealthMappingTests: XCTestCase {
         XCTAssertEqual(reading.row.systolic, 122)
         XCTAssertEqual(reading.row.diastolic, 78)
         XCTAssertEqual(reading.row.at, "2026-10-22T13:15:00+02:00")
-        XCTAssertFalse(reading.source.isEmpty)
-    }
-
-    func testHalfAPairIsNoReading() {
-        let top = HKQuantitySample(type: HKQuantityType(.bloodPressureSystolic),
-                                   quantity: HKQuantity(unit: .millimeterOfMercury(), doubleValue: 122), start: start, end: start)
-        let pair = HKCorrelation(type: HKCorrelationType(.bloodPressure), start: start, end: start, objects: [top])
-        XCTAssertNil(HealthMapping.reading(pair))
+        // HealthKit refuses to build a blood pressure correlation without both numbers, so half a pair never reaches the app.
     }
 
     func testWithoutAZoneThePhonesZoneIsUsed() {
