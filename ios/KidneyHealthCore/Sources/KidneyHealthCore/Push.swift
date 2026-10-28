@@ -237,6 +237,11 @@ public enum Push {
     public struct Request: Codable, Equatable, Sendable {
         public let weights: [Weight]
         public let readings: [Reading]
+
+        public init(weights: [Weight], readings: [Reading]) {
+            self.weights = weights
+            self.readings = readings
+        }
     }
 
     /// The rows the app sends, and what it left out because the server would refuse them or not store them.

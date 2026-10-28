@@ -124,6 +124,17 @@ public struct SyncOutcome: Equatable, Sendable {
     public var leftOut = 0
     /// The anchor to keep: set only when every request was accepted, so nothing new is ever skipped.
     public var anchorToKeep: Data?
+
+    public init(state: State, addedWeights: Int = 0, addedReadings: Int = 0, alreadyThere: Int = 0, watchReadings: Int = 0,
+                leftOut: Int = 0, anchorToKeep: Data? = nil) {
+        self.state = state
+        self.addedWeights = addedWeights
+        self.addedReadings = addedReadings
+        self.alreadyThere = alreadyThere
+        self.watchReadings = watchReadings
+        self.leftOut = leftOut
+        self.anchorToKeep = anchorToKeep
+    }
 }
 
 public enum Sync {
