@@ -1,4 +1,4 @@
-Status: in progress (2026-10-28): Test connection (GET /push/v1/check and the app button) is built and tested on Linux; the simulator run is in CI.
+Status: complete (2026-10-28): steps 1 and 2 and Test connection are merged (#100, #101, #102). Step 3 waits for the owner's Apple account.
 
 # iOS app (design note 15)
 
