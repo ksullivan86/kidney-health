@@ -15,6 +15,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   whole request. It has no dependencies. CI runs `swift test` on Linux against `tests/data/body_vectors.json`,
   `apple_health_vectors.json` and the new `push_vectors.json` (`tests/data/gen_push_vectors.py`). See
   [note 15](docs/dev/research/15-native-ios-app.md).
+* **The iPhone app, ready to sign.** `ios/KidneyHealthSync` reads new weights and blood pressure readings from Apple Health and sends
+  them to your server with a phone token. It reads nothing else and never writes to Health. The first sync starts three months back.
+  CI builds it and runs its tests in the iPhone simulator. Putting it on a phone needs the owner's Apple Developer account, which is the
+  next step. See [`ios/README.md`](ios/README.md).
 
 ## 0.8.0 — 2026-10-28
 

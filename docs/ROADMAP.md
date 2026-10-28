@@ -15,7 +15,8 @@ token. The Home Screen web app stays the place for every other screen. In this o
    rules that must equal the server's (ranges, the time-of-day context, the watch test, `source_key`, kilogram rounding, batches of 50)
    and checks each row as `POST /push/v1/body` does. CI replays `tests/data/body_vectors.json`, `apple_health_vectors.json` and
    `push_vectors.json` on a pinned Swift toolchain.
-2. **The app target, built and unit-tested on GitHub's macOS runner** (in the simulator). No account is needed until signing.
+2. **Done (2026-10-28): the app target, built and unit-tested on GitHub's macOS runner** (in the simulator). `ios/KidneyHealthSync`:
+   the server address and token, the Health permission for exactly three read types, background sync, and the status line.
 3. **Signing, TestFlight and the owner's tests on a real iPhone**, once the owner has an Apple Developer Program membership (USD 99 a year).
 
 Decided 2026-10-22: option A first, and the Swift package first (decisions 1 and 2 of

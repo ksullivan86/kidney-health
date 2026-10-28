@@ -1,40 +1,38 @@
-Status: step 1 complete (2026-10-28). Step 2 (the app target on the macOS runner) not started.
+Status: step 2 in progress (2026-10-28): code written, the macOS CI job is being brought to green on draft PR #101.
 
 # iOS app (design note 15)
 
 ## Done
 
-* `ios/KidneyHealthCore`, a Swift package (tools 6.0, no dependencies, no HealthKit):
-  * `Body.swift`: ranges, per-day limits, `halfUp`/`roundKg`/`lbToKg`, `context`, `isWatchSource`, `isPlausible`, `batches`, `readTypes`.
-  * `SHA256.swift`: plain SHA-256 (CryptoKit is not on Linux).
-  * `Push.swift`: `at(instant, zone)`, `moment(at)` (the route's `parse_at`), `valueText`, `cleanSource`, `wholeMmHg`, `plan(row)` in the
-    route's check order, `plan(weights:readings:today:)` into requests of at most 50 rows, `encode`.
-* `tests/data/gen_push_vectors.py` writes `tests/data/push_vectors.json` from `app/push.py`; `tests/test_push_vectors.py` keeps it current.
-* Swift tests (23): replay body, apple_health and push vectors; plan tests; the read-types safety test.
-* CI job `swift` in `ci.yml`: the swift.org 6.4.1 tarball, pinned by SHA-256 (its `.sig` checked against the Swift 6.x release key
-  when the hash was taken), then `swift test`.
-* Docs: `ios/README.md`, `tests/data/README.md` (push_vectors section), ARCHITECTURE (push section), CONTRIBUTING, note 15 status,
-  ROADMAP "Next", CHANGELOG Unreleased.
+* Step 1 (merged in #100): `ios/KidneyHealthCore` (rules, SHA-256, push checks), `tests/data/push_vectors.json`, the `swift` CI job.
+* Step 2 (PR #101):
+  * `KidneyHealthCore/Sync.swift`: samples to rows, `Sync.run` (requests of 50, stop at the first non-200, keep the anchor only when
+    all were accepted, 401 stops, 429 waits for Retry-After), `Sync.describe` (the status line), `Settings.pushURL/appURL/isDeviceToken`.
+    `Push.defaultSince` (three months back, from apple_health_vectors `default_since`). Linux tests: `SyncTests.swift` (34 tests in all).
+  * `ios/KidneyHealthSync.xcodeproj` (hand-written, objectVersion 77, folder-synced groups, local package reference, shared scheme).
+  * App: `KidneyHealthSyncApp`, `ContentView`, `SyncModel` (rounds of 500, at most 10 rounds a sync, `since` kept in UserDefaults),
+    `HealthSource` (anchored query descriptors, observer queries with background delivery, preferred weight unit), `Keychain`
+    (this device only), `URLSessionTransport` (ephemeral, no cookies, no redirects).
+  * Simulator tests: HealthMapping, Transport (URLProtocol stub), Keychain, settings screen.
+  * `tests/test_ios_app.py` (safety set): entitlements, no write usage text, only three read types, no other Health type in the code,
+    no third-party packages, HTTPS only, Keychain this-device-only.
+  * CI job `ios-app` on macos-15 with Xcode 26.3: `xcodebuild test` on the newest iPhone simulator (`ios/pick_simulator.py`).
 
 ## Decisions
 
-* The toolchain is a pinned tarball, not a Docker image: Docker Hub answered 429 here, and the repository already pins downloaded tools by hash.
-* The app sends `value` as text (`valueText`): the same text the route would build from the JSON number, so the key is the same either way.
-* Blood pressure numbers are rounded half up to whole numbers (`wholeMmHg`), as the Health export import does.
-* Per-day limits are left to the server: they count rows already stored.
+* macos-15, not macos-26: actionlint 1.7.12 does not know the macos-26 label yet.
+* The app and its tests use Swift 5 language mode (`SWIFT_VERSION = 5.0`) to keep HealthKit's non-Sendable types from blocking the
+  build. The package stays Swift 6.
+* No token check route yet (note 15 §4.3): a wrong token shows on the first sync.
 
-## Next (step 2)
+## Next
 
-* The app target under `ios/` on the `macos` runner (simulator tests), using this package. Settings (server address, token in the Keychain),
-  permissions (exactly `Body.readTypes`), sync (observer and anchored queries, anchor saved only after a 200, 401 stops, 429 waits).
-* Decide the token check (note 15 §4.3): a zero-row body is a 400 today ("Send at least one weight or reading."), so a check needs
-  `GET /push/v1/ping` or a change to the route.
-* Re-verify on a real iPhone that the value text HealthKit gives matches what the Health export writes, so the keys agree.
+* Get `ios-app` green; fill in the PR body; mark ready; merge (the owner asked to merge when green).
+* Step 3 waits for the owner: Apple Developer Program, signing secrets, TestFlight, real-phone checks (value text vs the Health export).
 
 ## Reproduce
 
 ```bash
-python3 tests/data/gen_push_vectors.py --check
-python -m pytest tests/test_push_vectors.py tests/test_push.py tests/test_deploy.py
-swift test --package-path ios/KidneyHealthCore    # Swift 6.4.1
+swift test --package-path ios/KidneyHealthCore
+python -m pytest tests/test_ios_app.py tests/test_push_vectors.py tests/test_safety_set.py
 ```
