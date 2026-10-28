@@ -184,6 +184,34 @@ def lab_report_schema() -> dict[str, Any]:
     })
 
 
+# AI recipes (note 16 §8.4). The model gives foods by id and pot amounts in quarter servings; never a nutrient, a unit, a title or a
+# count of servings. The answer models below are one step looser than the wire schema, so the guard can drop the extra with a reason.
+RECIPE_DISHES: tuple[str, ...] = ("soup", "stew", "bowl", "stir_fry", "bake", "salad", "sandwich", "pasta", "rice_dish", "egg_dish",
+                                  "porridge", "snack", "drink")
+RECIPE_MAKES: tuple[int, ...] = (1, 2, 4, 6)
+MAX_RECIPES = 2
+MIN_RECIPE_ITEMS = 2
+MAX_RECIPE_ITEMS = 12
+MAX_RECIPE_QUARTERS = 160  # a pot amount: 40 servings of one food
+MAX_RECIPE_STEPS = 8
+
+
+def recipes_schema(candidate_ids: Sequence[int], *, steps: bool, max_recipes: int = MAX_RECIPES) -> dict[str, Any]:
+    """``recipes`` (note 16 §8.4). With ``steps`` False (the admin switch ``ai.recipe_steps`` is off) a step list must be empty."""
+    item = _object({
+        "food_id": {"type": "integer", "enum": list(candidate_ids)} if candidate_ids else {"type": "integer"},
+        "quarters": {"type": "integer", "minimum": 1, "maximum": MAX_RECIPE_QUARTERS},
+    })
+    recipe = _object({
+        "dish": {"type": "string", "enum": list(RECIPE_DISHES)},
+        "theme": {"type": "string", "enum": list(THEMES)},
+        "ingredients": _array(item, lo=MIN_RECIPE_ITEMS, hi=MAX_RECIPE_ITEMS),
+        "steps": _array(_str(), hi=MAX_RECIPE_STEPS if steps else 0),
+        "reason_codes": _reasons(),
+    })
+    return _head({"recipes": _array(recipe, hi=max_recipes)})
+
+
 def chat_step_schema(tool_names: Sequence[str]) -> dict[str, Any]:
     """The Ask chat's step protocol, as the system prompt describes it: exactly one of a tool call or an answer.
 
@@ -352,6 +380,16 @@ class LabReportAnswer(BaseModel):
     model_config = _FORBID
     status: Literal["ok", "not_a_lab_report", "unreadable"]
     rows: Annotated[list[LabReportRow], Field(max_length=MAX_LAB_ROWS)]
+
+
+class RecipesAnswer(BaseModel):
+    """V2 for AI recipes: the recipes are checked one by one in the guard (:func:`app.ai.recipes.judge_recipes`), so a bad one is
+    dropped with a reason instead of failing the whole answer."""
+
+    model_config = _FORBID
+    status: Status
+    refusal: Refusal
+    recipes: Annotated[list[dict[str, Any]], Field(max_length=10)]
 
 
 class ChatCall(BaseModel):

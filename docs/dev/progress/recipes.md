@@ -1,4 +1,4 @@
-Status: phases 0 and 1 merged (#94); phase 2 built, in a PR
+Status: phases 0 to 2 released in 0.7.0 (#94, #95, #96); phase 3 (AI recipes) in progress
 
 # recipes: note 16, "Recipes that fit your targets"
 
@@ -55,7 +55,40 @@ MCP write and Ask save. The full suite runs in CI.
 * Handbook `app/planning-and-menus.md` ("Recipes", "Fit to my targets"), `handbook/REVIEW.md` (decision 16), CHANGELOG, ARCHITECTURE.
 * Tests: `tests/test_recipes_ui.py`; `test_parity_vectors.py` expects `fit_recipe` with all four statuses.
 
-## Then: phase 3 (AI recipes)
+## Phase 3: AI recipes (in progress)
+
+Owner's decisions 8 to 15 (note 16 §15). Server part first (3a), then the screens (3b).
+
+Done (3a, committed on claude/adoring-sagan-th5swr, PR to come):
+
+* Routing: feature `recipes` in `app/ai/routing.py` (purpose `text`, `local_then_cloud` allowed), `RoutingBody.recipes` in routes.
+* Settings: `ai.route.recipes` (`AI_ROUTE_RECIPES`, default local) and `ai.recipe_steps` (`AI_RECIPE_STEPS`, default off) in the
+  registry, the JS twin `engine/settings.js`, `tests/data/settings_vectors.json` (regenerated), the admin groups in `views/settings.js`,
+  `deploy/compose.yaml`, `deploy/.env.example`, the Quadlet example and the docs/ai.md example (`AI_ROUTE_RECIPES=cloud`).
+* `POLICY_VERSION` 2026-10-27.1 (decision 8), `PROMPT_VERSION` 2026-10-27.2 (snapshot `tests/fixtures/ai/prompt_version.json`).
+* `app/ai/recipe_steps.py` (§8.7), `app/ai/recipes.py` (candidates, prepare, judge, title, differences), prompt
+  `RECIPE_SYSTEM_PROMPT` (rules 3, 4, 6–9 copied from the meal ideas prompt by `_meal_rule`), schema `recipes_schema`.
+* `POST /api/ai/recipes`, status `features.recipes`/`recipe_steps`, meta `ai_recipes`, quality rows (`AUDIT_FEATURES`, `OUTCOMES`,
+  `WORDS`, `GATES_FOR`), new eval gates `recipes_with_survivor_rate`, `recipe_p95_latency`, `no_unsafe_steps`.
+* `scripts/ai_eval.py` runs the recipe golden cases with steps on and reports the §12 measures; its own step checker `STEP_UNSAFE`.
+* 21 golden cases (`tests/ai_golden/recipes-*.json`, generator kept in the session scratchpad: write new ones by hand from these).
+* Tests: `tests/test_ai_recipes.py`, `tests/test_ai_recipe_steps.py`; many AI tests updated for the sixth feature.
+* Docs: docs/ai.md (table rows, "What is sent" with decision 15's wording, settings, routing table, "Recipes that fit",
+  case count 118), ARCHITECTURE (status fields, route row), handbook configuration, CHANGELOG Unreleased, ROADMAP.
+
+Decisions made while building:
+
+* The recipe AI's numbers (¼, ½, 1 serving; 48 foods; 6 per group; 4 ingredients) live in `app/ai/recipes.py`, not in
+  `guidance/rules.py`, so `RULES_VERSION` and the twin do not move: the demo never runs AI recipes.
+* A recipe with a low-treatment food is never sent (`status: not_sent`, wording does not mention a low). Other foods that may
+  not be candidates are left out of what is sent; the card's "differences" then shows them as taken out.
+* No answer cache for recipes (only next-meal is cached).
+* Candidates are filled round-robin by category after 4 ingredients, with drinks, sweets, ready meals and processed foods last:
+  ranking alone gave a list of cereals and fast food with one vegetable.
+
+Next: open the 3a PR once the full suite passes. Then 3b: the "Suggest recipes" sheet in Plan, "Rework with AI" in the fit sheet,
+the cards (Save recipe, Add to plan, Dismiss, "What will be sent?"), the Settings → AI line, the consent wording in `views/ai.js`
+(PURPOSE_TEXT.text names recipes), the handbook pages (planning-and-menus, the AI page), and a Chromium walk.
 
 ## Old phase 2 plan
 

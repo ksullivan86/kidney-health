@@ -1,0 +1,37 @@
+{
+  "id": "recipes-not-for-me",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "food_preferences": [
+      [
+        "Carrots, boiled",
+        "not_for_me"
+      ]
+    ],
+    "ids_needed": [
+      "Carrots, boiled"
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":\"{{id:Chicken breast, roasted, skinless}}\",\"quarters\":8},{\"food_id\":\"{{id:#Carrots, boiled}}\",\"quarters\":4}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "not_"
+    ]
+  }
+}

@@ -139,7 +139,7 @@ def test_the_answer_has_the_documented_shape(qrig):
     assert data["prompt_version"] == PROMPT_VERSION
     assert data["reports"] == {"configured": True, "readable": True, "files": 0, "reports": 0,
                                "ignored": {"malformed": 0, "too_big": 0, "outside_folder": 0, "unreadable": 0, "over_limit": 0}}
-    assert [f["feature"] for f in data["features"]] == ["photos", "meal_ideas", "describe", "chat", "labs"]
+    assert [f["feature"] for f in data["features"]] == ["photos", "meal_ideas", "describe", "chat", "labs", "recipes"]
     one = row_of(data, "meal_ideas")
     assert set(one) == {"feature", "label", "route", "provider", "live", "evaluation"}
     assert one["label"] == "Meal ideas" and one["route"] == "local"
@@ -156,7 +156,7 @@ def test_a_photo_feature_is_rated_on_its_vision_model(qrig):
 
 def test_a_feature_that_is_off_has_no_row(qrig):
     assert route(qrig.client, describe="off", chat="off").status_code == 200
-    assert [f["feature"] for f in quality(qrig.client)["features"]] == ["photos", "meal_ideas", "labs"]
+    assert [f["feature"] for f in quality(qrig.client)["features"]] == ["photos", "meal_ideas", "labs", "recipes"]
 
 
 def test_a_feature_with_no_ai_behind_it_has_no_row(qrig):
@@ -458,7 +458,8 @@ def configured(tmp_path, foods_json) -> Rig:
 def test_start_up_warns_once_for_each_routed_feature_without_a_passing_report(tmp_path, foods_json, reports, caplog, configured):
     lines = start_again(tmp_path, foods_json, caplog, eval_reports_dir=str(reports))
     assert [line.split(" uses ")[0] for line in lines] == ["AI quality: Photos (labels and plates)", "AI quality: Meal ideas",
-                                                           "AI quality: Describe a meal", "AI quality: Ask"]
+                                                           "AI quality: Describe a meal", "AI quality: Ask",
+                                                           "AI quality: Recipes"]
     assert lines[1] == ("AI quality: Meal ideas uses gemma on Ollama (ollama.lan:11434). No ai_eval report for this model and prompt version. "
                         "Run scripts/ai_eval.py with this model and put the report in the reports folder.")
     assert not any("Lab report" in line for line in lines)  # not covered by ai_eval: nothing to warn about
@@ -468,7 +469,8 @@ def test_start_up_says_nothing_about_a_feature_that_passed_or_is_off(tmp_path, f
     (reports / "good.json").write_text(json.dumps(report(gates={**GOOD_GATES, "chat_pass_rate": True, "chat_no_unsafe_text": True})))
     assert route(configured.client, describe="off").status_code == 200
     lines = start_again(tmp_path, foods_json, caplog, eval_reports_dir=str(reports))
-    assert [line.split(" uses ")[0] for line in lines] == ["AI quality: Photos (labels and plates)"]  # no vision model in that report
+    # No vision model in that report, and it measured no recipes.
+    assert [line.split(" uses ")[0] for line in lines] == ["AI quality: Photos (labels and plates)", "AI quality: Recipes"]
     assert "Describe a meal" not in " ".join(lines) and "Meal ideas" not in " ".join(lines) and "Ask" not in " ".join(lines)
 
 
@@ -498,7 +500,7 @@ def test_start_up_never_fails_on_a_broken_folder(tmp_path, foods_json, reports, 
     (reports / "junk.json").write_text("{not json")
     (reports / "big.json").write_text(" " * (1024 * 1024 + 1))
     lines = start_again(tmp_path, foods_json, caplog, eval_reports_dir=str(reports))
-    assert len(lines) == 4
+    assert len(lines) == 5
 
     def boom(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("disk on fire")

@@ -32,7 +32,7 @@ STRUCTURED_SETTINGS: tuple[str, ...] = ("auto", *STRUCTURED_MODES)
 REASONING_EFFORTS: tuple[str, ...] = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 # Consent policy lines (R9). Changing one bumps POLICY_VERSION, so everybody is asked again.
-POLICY_VERSION = "2026-10-06.1"
+POLICY_VERSION = "2026-10-27.1"  # 2026-10-27.1: "Meal data" also covers the foods and amounts of a recipe (AI recipes)
 POLICY_LINES: Mapping[str, str] = MappingProxyType({
     "openai": "OpenAI does not use API data for training; it keeps abuse-monitoring logs for up to 30 days.",
     "openrouter": "OpenRouter routes the request only to model providers that do not collect data.",

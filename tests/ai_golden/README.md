@@ -19,6 +19,11 @@ stub provider that replays `model_outputs` (no network). The file name is the ca
   `fixture.message`) run `POST /api/ai/chat`: "I don't really like salmon" ends in a `set_food_preference` card and
   `nothing_saved`; logging salmon or asking about it must not produce one. `scripts/ai_eval.py` skips the `chat` cases (the live
   questions are its `CHAT_SET`, `--chat`).
+* `recipes` (note 16, phase 3): `feature: "recipes"` runs `POST /api/ai/recipes`. `fixture.dish` and `makes` (mode `suggest`),
+  or `fixture.mode: "change"` with `fixture.recipe` (`name`, `servings_made`, `note`, `steps`, `source_url` and `items` as
+  `[food name, servings]`), and `fixture.recipe_steps` for the admin switch. `expect.recipes` is the number of recipes shown,
+  `title` the first one's, `steps_shown` its steps and `steps_dropped_include` the reasons of the steps the app removed.
+  `scripts/ai_eval.py` runs these with the steps switch on.
 * `fixture`: the person's profile and targets (`stage4`, `hd`, `tight` or an object), log entries
   (`[meal, food name, servings, status?, purpose?]`), earlier days (`history`), custom foods (theirs and
   another person's), the person's food preferences, AI and guidance settings, the meal and mode, the text (parse-meal), the

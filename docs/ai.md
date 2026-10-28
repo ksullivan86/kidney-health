@@ -74,6 +74,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 | **Plate photo** (`POST /api/vision/plate`, off by default) | Food names, a search term, a rough weight and how sure it is | Matches each name in **your** food list; suggests servings from the weight; unsure items start unticked; a fixed warning about photo portions | Normal search |
 | **Read a lab report photo** (`POST /api/ai/read-lab-report`, **local AI only**) | The printed result lines of the app's own lab tests (`potassium`, `phosphate`, `albumin`, `bicarbonate`, `uacr`, `creatinine`, `cystatin_c`, `egfr`, `a1c`): the number and unit exactly as printed, and the date as printed or `null`. Never a judgement, a range or advice | Keeps only the app's own tests and units, runs the checks of `POST /api/labs` on every value (a plausible number, converted by the app) and refuses a future date, counts what it left out ("3 lines were not recognised"), and returns **proposed rows**: every row starts **unticked**, a missing or ambiguous date is entered by you, and only the rows you tick are saved, through the ordinary `POST /api/labs/import`. It never says whether a value is normal, high or low | Type the result in Labs, or import a CSV |
 
+| **AI recipes** (`POST /api/ai/recipes`) | Up to 2 recipes (1 to rework one of yours) of 2–12 foods, each a food **id from the rule candidates** and the amount for the whole pot in quarter servings, a dish and a theme from fixed lists, reason codes, and cooking steps only when your admin turned them on | Works out one serving from the food rows, runs the same fit as **Fit to my targets** (lowers amounts, swaps a food, offers a smaller serving, and lists each change), drops what still does not fit, checks every reason claim, writes the title from the food names and the dish, and checks each step ([Recipes that fit](#recipes-that-fit)). It saves nothing: **Save recipe** is your tap | Saved recipes and Fit to my targets |
 | **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`), a request to save (`log_food`, `save_recipe`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A request to save is **a card you press Save on** unless you chose to trust the assistant (see "Saving from Ask" below). A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
 
 Ask is the one feature where the model writes free text for you, which is why its answer is checked in code
@@ -84,7 +85,7 @@ exception is a choice you make yourself, behind an admin switch and a warning ("
 ## Guardrails
 
 These are enforced in code (`app/ai/guard.py`, `app/ai/features.py`, `app/guidance/ai_bridge.py`) and
-covered by the offline golden set (`tests/ai_golden/`, 97 cases).
+covered by the offline golden set (`tests/ai_golden/`, 118 cases).
 
 | # | Guardrail | How |
 |---|---|---|
@@ -150,7 +151,8 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 |---|---|
 | CKD stage, dialysis type, diabetes type | Yes (meal features and Ask), in the data and as one sentence of the instructions ([The instructions follow your profile](#the-instructions-follow-your-profile)). A stage or diabetes type you have not chosen yet goes as "not chosen yet". Describe a meal and photos send none of it |
 | Your care team's targets; which nutrients are judged per day or per week; today's eaten and planned totals and status levels; 7-day averages of phosphorus and protein; the meal and the meals still open | Yes (meal features) |
-| Up to 40 candidate foods: id, name, serving, category, rating, numbers per portion, warning levels, a few flags, an "often" bit (true for a food you had on at least 2 of the last 14 days, the rule of "You often have this"), a "liked" bit (true only for a food you marked **Like**), the source (built-in, USDA, Open Food Facts, custom) | Yes (meal features) |
+| Up to 40 candidate foods: id, name, serving, category, rating, numbers per portion, warning levels, a few flags, an "often" bit (true for a food you had on at least 2 of the last 14 days, the rule of "You often have this"), a "liked" bit (true only for a food you marked **Like**), the source (built-in, USDA, Open Food Facts, custom) | Yes (meal features; AI recipes send up to 48, with numbers for one serving of each) |
+| To rework a recipe: its foods, the amounts for the whole pot, how many servings it makes, and the app's own findings (where one serving does not fit) | Yes (AI recipes). **Never** the recipe's name, note, steps or link |
 | Your food preferences text (≤ 200 characters) | Only if you wrote some |
 | The foods and food groups you marked **Like**, **Less often** or **Not for me**, by name (at most 10 of each, each name cut to 60 characters) | Yes, **only your own explicit choices**, to **meal ideas and Ask** and only with the consent you already gave for them (nothing is sent before you agree, and "What will be sent?" shows the lists). Never to Describe a meal, photos or lab report photos. **What the app learned from your log is never sent**, and neither is a food you told the app to stop learning about |
 | Age as a 10-year band and sex | Only if you tick "Share my age band and sex" |
@@ -160,7 +162,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | The photo (label, plate) | Yes (photo features): JPEG only, with location, camera data, comments and any trailing bytes removed by the server; never stored |
 | The photo of a lab report | Only to the **local AI** on your admin's network (never a cloud AI, never a person's own provider), and only after you agree to the separate "Lab report photos" consent: JPEG only, location and camera data removed, never stored. **The report may show your name, date of birth and record numbers, and the app cannot remove them from an image**: crop the photo to the results table if you can. The AI activity list keeps the photo's fingerprint and size, not the photo and not what the AI copied |
 | `safety_identifier` (OpenAI on a shared key) | A keyed hash (HMAC under the server's secret key) of your account number; it cannot be turned back into the number |
-| Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, ingredient lists, other people's data | **Never** |
+| Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, a food's printed ingredient text, a recipe's name, note, steps or link, other people's data | **Never** |
 
 Where the data goes depends on the provider your admin chose (the consent sheet shows the line below):
 
@@ -356,6 +358,8 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 | `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing); `photos`, `meal_ideas` and `describe` also `local_then_cloud` (the local AI first, the cloud AI only when the local answer fails the app's checks; **not** `chat`). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
+| `ai.route.recipes` (`AI_ROUTE_RECIPES`) | `local` | AI recipes: `local`, `cloud`, `off`, `any` or `local_then_cloud`, like meal ideas |
+| `ai.recipe_steps` (`AI_RECIPE_STEPS`) | `false` | Cooking steps written by AI in AI recipes. Turn it on only after a live run of `scripts/ai_eval.py` on your model with `steps_unsafe_shown` 0 ([Recipes that fit](#recipes-that-fit)) |
 | `ai.route.labs` (`AI_ROUTE_LABS`) | `local` | Reading a photo of a lab report: `local` or `off` **only**. `cloud` and `any` are refused by the setting, the admin screen, the API and the environment (a report shows a name and a date of birth), and a person's own provider is never used for it. With no local AI the feature is off |
 | `ai.route.local_provider`, `ai.route.cloud_provider` | `0` | The id of the shared provider that is the local AI and the one that is the cloud AI (0: none). Set through the same table, never by hand: a local AI must be on a private host |
 
@@ -454,9 +458,10 @@ pin each feature to one of them, or switch it off.
 | `describe` | Turning a described meal into search words | `ai.route.describe` (`AI_ROUTE_DESCRIBE`) | Meal data |
 | `chat` | The Ask screen | `ai.route.chat` (`AI_ROUTE_CHAT`) | Ask conversations |
 | `labs` | Read a lab report photo | `ai.route.labs` (`AI_ROUTE_LABS`) | Lab report photos |
+| `recipes` | AI recipes: suggest one, or rework one of yours | `ai.route.recipes` (`AI_ROUTE_RECIPES`) | Meal data |
 
-Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `off` only. `photos`, `meal_ideas` and
-`describe` can also be **`local_then_cloud`** ([below](#local-first-cloud-only-when-the-local-answer-fails)); `chat` and
+Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `off` only. `photos`, `meal_ideas`,
+`describe` and `recipes` can also be **`local_then_cloud`** ([below](#local-first-cloud-only-when-the-local-answer-fails)); `chat` and
 `labs` cannot.
 
 * **`labs` is local-only.** A lab report photo can show a name, a date of birth and record numbers that the app cannot take
@@ -921,9 +926,10 @@ AI_ROUTE_LABS=local
 AI_ROUTE_MEAL_IDEAS=cloud
 AI_ROUTE_DESCRIBE=cloud
 AI_ROUTE_CHAT=cloud
+AI_ROUTE_RECIPES=cloud
 ```
 
-Meal ideas, swaps, the day plan, describe a meal and Ask use the cloud key. Photos and lab reports use the local key.
+Meal ideas, swaps, the day plan, describe a meal, AI recipes and Ask use the cloud key. Photos and lab reports use the local key.
 
 * **Photos stay `local`.** Keep `AI_ROUTE_PHOTOS=local`, not `local_then_cloud`, when photos may show names: a
   medicine label, a letter, a face. With `local_then_cloud` a photo whose local answer fails the app's checks goes to the cloud
@@ -1127,6 +1133,30 @@ history.
 * One provider: disable or delete it in Settings (an environment provider: unset `AI_PROVIDER` or `AI_CLOUD_PROVIDER` and restart).
 * Personal keys: `AI_ALLOW_USER_KEYS=false`.
 
+## Recipes that fit
+
+*Note 16 ([`dev/research/16-recipes-that-fit.md`](dev/research/16-recipes-that-fit.md)), phase 3.* **Fit to my targets** works without
+AI. AI recipes are an optional extra under the feature `recipes`, which runs where `ai.route.recipes` says (default `local`)
+and is agreed under the **Meal data** consent. That consent now names recipes, so everyone is asked once more
+(`POLICY_VERSION` 2026-10-27.1).
+
+* **What the AI does.** It picks foods from up to 48 candidates the rules chose (ingredients such as oil and flour included;
+  low treatments, alcohol, foods to avoid with kidney disease, foods you marked Not for me, table salt and salt substitutes
+  never) and gives the amount of each for the whole pot in quarter servings. It gives no number of its own, no title and no
+  count of servings.
+* **What the app does.** It checks the ids and the amounts, works out one serving from the food rows, and runs the same fit
+  as Fit to my targets. A recipe that still does not fit is dropped and counted. The title comes from the names of the main
+  foods and the dish ("Rice and chicken breast stir-fry"); a recipe you rework is called "<your name> (reworked)", and your
+  name for it is never sent.
+* **Steps** are the one free text, and they are **off** until an admin turns on `ai.recipe_steps`. The app removes any
+  step that is too long, has a link or markup, talks about insulin, medicines or a low, gives an amount or a nutrient, makes a
+  health, allergy or diet claim, or adds a salt substitute, a stock cube or another heavy item that is not in the list.
+  Every card with steps says: "Steps written by AI. The app checked them for medicine talk and nutrient claims, not for cooking
+  times or food safety. Check them before you cook." When the app swaps a food, the steps are dropped.
+* **Before turning steps on**, run `scripts/ai_eval.py` on the model and check the recipe lines of the report: at least one
+  recipe that passed in 70 % of the recipe cases (`recipes_with_survivor_rate`), `steps_unsafe_shown` 0, and the slowest
+  recipe answers within 60 s on a local AI and 30 s on a cloud AI (`recipe_p95_ms`).
+
 ## For contributors
 
 * **Code**: `app/ai/` (`presets`, `netpolicy`, `transport`, `client`, `prompts`, `schemas`, `guard`,
@@ -1143,7 +1173,7 @@ history.
   in `tests/fixtures/ai/`, retries and repair, the Hermes tool check), `test_ai_guard.py` (every
   blocklist term, claims, V3–V9; 100 % of the guard's branches), `test_ai_prompts.py` (payload snapshot,
   never-sent fields, escaping, the prompts of three profiles, the `PROMPT_VERSION` pin), `test_ai_profile_prompts.py`
-  (the requests of all five features for three profiles), `test_ai_golden.py` (97 cases through the real
+  (the requests of all five features for three profiles), `test_ai_golden.py` (118 cases through the real
   routes, among them the `preferences-*` cases: the person block's lists, the `liked` bit and the `you_like` claim, a Not for
   me food never suggested, a name with instructions in it, and Ask's taste card), `test_ai_preferences.py` and
   `test_ai_guard_preferences.py` (what the AI is told about taste and how its claim is checked),

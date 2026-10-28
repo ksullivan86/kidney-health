@@ -115,7 +115,7 @@ def test_plan_refuses_the_route_for_ask_and_labs_with_a_reason(fb):
 
 def test_labs_stays_local_only_exactly_as_it_was():
     assert R.LOCAL_ONLY == ("labs",) and R.LOCAL_ONLY_ROUTES == ("local", "off")
-    assert R.allowed_routes("labs") == ("local", "off") and R.FALLBACK_FEATURES == ("photos", "meal_ideas", "describe")
+    assert R.allowed_routes("labs") == ("local", "off") and R.FALLBACK_FEATURES == ("photos", "meal_ideas", "describe", "recipes")
     assert "chat" not in R.FALLBACK_FEATURES and "labs" not in R.FALLBACK_FEATURES
     assert R.allowed_routes("chat") == R.ROUTES and "local_then_cloud" not in R.ROUTES
 
@@ -603,3 +603,28 @@ def test_the_dry_run_of_a_prepared_call_without_a_fallback_is_unchanged():
     prep.cloud = F.prepare_parse_meal(make_cfg("openai", model="other"), "an apple", search=lambda q: [])
     shown = prep.dry_run("test", cloud_consent=None)
     assert shown["cloud_fallback"]["consent"] is None and shown["cloud_fallback"]["model"] == "other"
+
+
+def _recipe_from_candidates(request: httpx2.Request) -> Any:
+    """A model that answers AI recipes with the first two candidates the app offered."""
+    import json
+
+    text = json.loads(request.content)["messages"][1]["content"]
+    data = json.loads(text.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
+    two = data["candidates"][:2]
+    return chat({"status": "ok", "refusal": "none", "recipes": [
+        {"dish": "bowl", "theme": "light", "ingredients": [{"food_id": c["id"], "quarters": 2} for c in two], "steps": [],
+         "reason_codes": ["low_sodium"]}]})
+
+
+def test_ai_recipes_take_the_route_and_a_rejected_local_recipe_goes_to_the_cloud(fb):
+    assert route(fb.client, recipes="local_then_cloud").status_code == 200
+    rejected = {"status": "ok", "refusal": "none", "recipes": [
+        {"dish": "bowl", "theme": "light", "ingredients": [{"food_id": 999_999, "quarters": 4}, {"food_id": 999_998, "quarters": 4}],
+         "steps": [], "reason_codes": ["low_sodium"]}]}
+    local, cloud = FakeProvider([chat(rejected)], address=PRIVATE_IP), FakeProvider(route=_recipe_from_candidates)
+    with attach_routed(fb.client.app, local=local, cloud=cloud):
+        r = fb.client.post("/api/ai/recipes", json={"mode": "suggest", "dish": "bowl", "makes": 2, "meal": "dinner", "date": DAY})
+    body = r.json()
+    assert r.status_code == 200 and body["status"] == "ok" and body["provider"]["id"] == fb.cloud
+    assert body["cloud_fallback"]["answered"] is True and local.calls == 1 and cloud.calls == 1

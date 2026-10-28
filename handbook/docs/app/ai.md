@@ -43,7 +43,7 @@ Anthropic receives what is sent, under its own terms; your admin can read it too
 
 Your admin can set up two AIs at once: one **at home** (on the home network) and one **in the cloud**, and choose
 for each feature which one it uses, or switch it off. The app starts with the safest choice: photos, meal ideas,
-describing a meal and Ask all go to the AI at home, and a feature stays **off** until there is one. A feature goes to a
+describing a meal, AI recipes and Ask all go to the AI at home, and a feature stays **off** until there is one. A feature goes to a
 company's AI only when your admin chooses that, and the admin screen says what it would send and where.
 **Reading a photo of a lab report** is stricter still: it runs only on the AI at home, never on a company's AI and never on
 a key of your own, and it is off if there is no AI at home.
@@ -53,7 +53,7 @@ network". If your admin moves a feature to a different AI, the app asks for your
 key, if you add one, is your own choice and goes to that company. If your admin switches a feature off, it is off for
 everyone.
 
-**Local first, cloud only if the local answer fails.** For photos, meal ideas and describing a meal your admin can choose
+**Local first, cloud only if the local answer fails.** For photos, meal ideas, describing a meal and AI recipes your admin can choose
 this middle way. The line then reads "Runs on your local AI (host); if its answer fails the app's checks, on the cloud AI
 (host)". Your request goes to the AI at home first. A company's AI sees it **only if** the answer from home did not pass
 the app's checks (it was not usable, or the app's rules threw all of it out) **and** you agreed to send that kind of data
@@ -73,6 +73,7 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
 | Name foods it sees on a plate photo | Give doses, answer medical questions, or tell you what your lab results mean |
 | Copy the printed results from a photo of a lab report into rows you check, on the AI at home only | Say whether a result is normal, high or low, save a result on its own, or read a report on a company's AI |
 | In **Ask**, answer a short question after looking up your own numbers in the app | Make up a number: the app checks every number in an answer before you see it |
+| Put together a recipe from foods the rules allowed ([Recipes from AI](planning-and-menus.md#recipes-from-ai-optional)) | Set the numbers or the title: the app works them out and fits the recipe to your targets |
 
 ### Safety rules that always apply
 
@@ -100,7 +101,8 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
 |---|---|
 | Your CKD stage, dialysis type and diabetes type ("not chosen yet" if you have not picked them; with *Diabetes: None* the AI is told you have kidney disease only) | Your name, user name or email |
 | Your targets and today's totals and status | Your weight, height, exact age or dates |
-| Up to 40 candidate foods with their numbers | Entry notes, other people's data |
+| Up to 40 candidate foods with their numbers (48 for AI recipes) | Entry notes, other people's data |
+| For **AI recipes**: the foods and amounts of a recipe you rework, and where one serving does not fit | The recipe's name, note, steps or link |
 | Your food preferences, if you wrote any (up to 200 characters) | Anything when you have not opted in |
 | The foods and food groups **you** marked *More like this*, *Less often* or *Not for me*, by name, to meal ideas and **Ask** only | What the app learned from your log; anything for describe a meal, photos or lab report photos |
 | Age in 10-year bands and sex, **only if you tick "share age and sex"** | |

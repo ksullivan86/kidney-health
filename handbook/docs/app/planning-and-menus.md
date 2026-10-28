@@ -96,6 +96,24 @@ Every change is listed with the app's figures. Nothing changes until you choose:
 Cooking, soaking and draining are not counted, and seasonings that are not in your food list are not counted. The app says
 so under every result.
 
+### Recipes from AI (optional)
+
+If your server has the optional AI and you turned it on, **Plan** shows **Suggest recipes with AI**, and the Fit to my targets
+sheet shows **Rework with AI**. Pick the meal, the kind of dish and how many servings, and tap **Ask AI for recipes**.
+
+* The AI may use only foods the app's rules chose, and gives the amount of each for the whole pot. The app works out every
+  number from your food list.
+* The app then fits each recipe the same way as Fit to my targets, and lists what it changed. A recipe that still does not
+  fit is not shown.
+* The title is made by the app from the main foods, such as "Rice and chicken breast stir-fry". A recipe it reworked keeps
+  your name with "(reworked)". Your recipe's name, note, steps and link are never sent.
+* **Save recipe** adds it to your saved meals. **Add to plan** adds one serving to the meal. Nothing is saved until you tap.
+* Cooking steps from AI appear only if your admin turned them on. The app removes any step about medicines, a low,
+  nutrients or amounts. The rest are marked "Steps written by AI. The app checked them for medicine talk and nutrient claims,
+  not for cooking times or food safety. Check them before you cook."
+
+See [Optional AI](ai.md) for what is sent and where.
+
 ## Copy a day
 
 **Plan** → **Copy…** copies one day's entries onto another day. Choose which meals, and whether to copy

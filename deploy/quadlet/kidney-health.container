@@ -134,6 +134,7 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=AI_ROUTE_MEAL_IDEAS=cloud
 # Environment=AI_ROUTE_DESCRIBE=cloud
 # Environment=AI_ROUTE_CHAT=cloud
+# Environment=AI_ROUTE_RECIPES=cloud
 # What the live evaluation said about the model in use (docs/ai.md "How well each AI is doing"): the reports scripts/ai_eval.py
 # writes, in a folder mounted read-only:
 # Volume=%h/ai-eval:/ai-eval:ro,Z

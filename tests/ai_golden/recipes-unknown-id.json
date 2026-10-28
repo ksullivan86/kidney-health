@@ -1,0 +1,28 @@
+{
+  "id": "recipes-unknown-id",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"hearty\",\"ingredients\":[{\"food_id\":999999,\"quarters\":4},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":8}],\"steps\":[],\"reason_codes\":[\"adds_protein\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "not_a_candidate"
+    ]
+  }
+}

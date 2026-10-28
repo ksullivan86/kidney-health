@@ -89,8 +89,9 @@ insulin or medicines.
 * **The answer before "nothing fits" on a real local model (the owner).** 0.6.0 changed the order of the answer format and the tests use
   recorded answers. Run `scripts/ai_eval.py` on the local model with 0.5.1 and with 0.6.0 and keep both reports, to see whether the meal
   ideas improved.
-* **Recipes from the AI** (phase 3 of [note 16](dev/research/16-recipes-that-fit.md)): the feature `recipes` and its steps behind
-  `ai.recipe_steps`, off until the owner's live run. Phases 0 to 2, the fit without AI, shipped in 0.7.0.
+* **Recipes from the AI** (phase 3 of [note 16](dev/research/16-recipes-that-fit.md)): built (`POST /api/ai/recipes`, feature `recipes`,
+  steps behind `ai.recipe_steps`, the Plan screens). What is left is the owner's live run of `scripts/ai_eval.py` on the
+  cloud chain decides whether steps may be turned on (`steps_unsafe_shown` 0, a surviving recipe in 70 % of cases).
 * Live runs of the 0.4.0 AI features that tests only fake (a maintainer action, steps in [`maintainers.md`](maintainers.md)): a photo of a real lab report on the local vision model, the route `local_then_cloud` with a real Ollama and a cloud key (`scripts/ai_eval.py` does not exercise routing), and the speech-to-text overlay (its image digest in `deploy/compose.stt-whisper.yaml` is a placeholder; a real whisper container; the microphone on an iPhone and an Android phone).
 
 ## Scanning, label photos and the offline outbox in the browser (notes 02 R5/R7, 03 R7–R9)

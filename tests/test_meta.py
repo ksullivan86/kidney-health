@@ -154,7 +154,7 @@ def test_usda_without_any_key_is_not_offered(client):
 # --------------------------------------------------------------------------- #
 
 AI_KEYS = {"next_meal": "ai_next_meal", "parse_meal": "ai_parse_meal", "label": "ai_label", "plate": "ai_plate",
-           "chat": "chat", "voice": "voice", "lab_report": "ai_lab_report"}
+           "chat": "chat", "voice": "voice", "lab_report": "ai_lab_report", "recipes": "ai_recipes"}
 
 
 def ai_matches_status(client: TestClient) -> dict[str, bool]:

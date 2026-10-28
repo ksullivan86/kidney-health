@@ -27,7 +27,7 @@
   const PHOTO_QUALITY = 0.85;
   const STATUS_TTL_MS = 30000;
   const PURPOSE_TEXT = {
-    text: 'your meal data (stage, targets, today\'s totals, candidate foods) or the meal you describe',
+    text: 'your meal data (stage, targets, today\'s totals, candidate foods), the meal you describe, or the foods and amounts of a recipe (never its name, note, steps or link)',
     photos: 'your photo (location and camera data removed)',
     chat: 'your messages in this conversation, and the app\'s own numbers the assistant looks up (your targets, today\'s totals, food names and nutrients)',
     voice: 'your voice recording (up to a minute)',
@@ -41,7 +41,7 @@
       + 'nothing goes to the AI until you press Send. The recording is not kept on this device or on the server.',
   };
   const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask', voice: 'Voice',
-    read_lab_report: 'Read a lab report' };
+    read_lab_report: 'Read a lab report', recipes: 'AI recipes' };
   const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations', voice: 'Voice recordings', labs: 'Lab report photos' };
   const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations', voice: 'your voice recordings', labs: 'your lab report photos' };
   const CONFIDENCE_TEXT = { low: 'not sure', medium: 'fairly sure', high: 'sure' };
@@ -54,7 +54,16 @@
     too_many_items: 'more than five foods', duplicate: 'a repeat', too_many: 'more than the app shows', empty: 'no foods',
     malformed_idea: 'an answer the app could not check', malformed_item: 'an answer the app could not check',
     unexpected_field: 'an answer the app could not check', poor: 'a weak fit for this meal',
+    too_many_recipes: 'more recipes than were asked for', too_few_items: 'fewer than two foods', malformed_recipe: 'an answer the app could not check',
+    share_too_large: 'more than 3 servings of one food in each serving', not_for_me: 'a food you marked Not for me',
+    excluded_category: 'a food from a group you do not want suggested',
   };
+  // AI recipes (note 16 §8): the fixed lists the request offers.
+  const DISHES = [['bowl', 'Bowl'], ['soup', 'Soup'], ['stew', 'Stew'], ['stir_fry', 'Stir-fry'], ['bake', 'Bake'], ['salad', 'Salad'],
+    ['sandwich', 'Sandwich'], ['pasta', 'Pasta'], ['rice_dish', 'Rice dish'], ['egg_dish', 'Egg dish'], ['porridge', 'Porridge'],
+    ['snack', 'Snack'], ['drink', 'Drink']];
+  const MAKES = [1, 2, 4, 6];
+  const RECIPE_KEYS = ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg', 'fluid_ml'];
   const UNIT_TEXT = { serving: ['serving', 'servings'], g: ['g', 'g'], ml: ['ml', 'ml'], cup: ['cup', 'cups'], tbsp: ['tbsp', 'tbsp'],
     tsp: ['tsp', 'tsp'], slice: ['slice', 'slices'], piece: ['piece', 'pieces'], oz: ['oz', 'oz'], fl_oz: ['fl oz', 'fl oz'] };
   const STATUS_TEXT = { ok: 'checked', dropped_all: 'no idea fitted', no_fit: 'nothing fitted', refused: 'declined by the AI', invalid: 'answer not usable',
@@ -90,6 +99,7 @@
     audit: (before) => request('GET', '/api/ai/audit?' + util.qs({ before, limit: 20 })),
     deleteAudit: () => request('DELETE', '/api/ai/audit'),
     nextMeal: (b, dry) => request('POST', `/api/ai/next-meal${dry ? '?dry_run=true' : ''}`, b),
+    recipes: (b, dry) => request('POST', `/api/ai/recipes${dry ? '?dry_run=true' : ''}`, b),
     parseMeal: (b, dry) => request('POST', `/api/ai/parse-meal${dry ? '?dry_run=true' : ''}`, b),
     chat: (b, dry) => request('POST', `/api/ai/chat${dry ? '?dry_run=true' : ''}`, b),
     providers: () => request('GET', '/api/admin/ai-providers'),
@@ -342,7 +352,7 @@
   // then one more try); shows the request first when they asked for that. null = the person declined.
   // `feature` (privacy tiers: photos, meal_ideas, describe or chat) names whose provider the consent is about, since two
   // features of one purpose can run on different providers; it defaults to the purpose's usual feature.
-  const FEATURE_OF = { text: 'meal_ideas', photos: 'photos', chat: 'chat', labs: 'labs' };
+  const FEATURE_OF = { text: 'meal_ideas', photos: 'photos', chat: 'chat', labs: 'labs' }; // AI recipes pass 'recipes'
   async function withConsent(purpose, send, preview, trigger, feature = FEATURE_OF[purpose]) {
     const st = await status();
     const route = st && st.routes && st.routes[feature];
@@ -398,7 +408,8 @@
     const out = [...fallbackNotes(answer)];
     const dropped = ((answer && answer.dropped) || []).length;
     if (dropped) {
-      const noun = what || (answer.feature === 'next_meal' ? ['AI idea was', 'AI ideas were'] : ['AI answer was', 'AI answers were']);
+      const noun = what || (answer.feature === 'next_meal' ? ['AI idea was', 'AI ideas were']
+        : answer.feature === 'recipes' ? ['AI recipe was', 'AI recipes were'] : ['AI answer was', 'AI answers were']);
       out.push(h('p', { class: 'hint g-ai-dropped' }, `${dropped} ${noun[dropped === 1 ? 0 : 1]} left out by the app's rules: `
         + `${[...new Set(answer.dropped.map((d) => dropText(d.reason)))].join('; ')}.`));
     }
@@ -512,6 +523,104 @@
     body.append(h('p', { class: 'hint' }, "The app's rules choose the foods the AI may use and check every idea it returns; nothing is added until you tap Add to plan."), picker, box);
     const block = mountIdeas(box, { date, meal });
     picker.addEventListener('change', () => block.setMeal(segValue(picker, name)));
+    foot.append(h('span', { class: 'spacer' }), closeButton(sheetEl));
+    sheets.open(sheetEl, trigger);
+  }
+  // ---------------------------------------------------------------------------
+  // AI recipes (note 16 §8, §10): suggest a recipe, or rework a saved one. The server checks and fits every recipe and saves
+  // nothing; each card carries the exact body for POST /api/meals, saved only by the person's tap.
+  // ---------------------------------------------------------------------------
+  function recipeCard(card, ctx, onSaved) {
+    const art = h('article', { class: 'ai-idea ai-recipe' });
+    const unknown = Object.keys(card.unknown || {}).filter((k) => NUT[k] && RECIPE_KEYS.includes(k));
+    const changes = ((card.fit && card.fit.changes) || []).filter((c) => c.code !== 'does_not_fit');
+    const save = button('Save recipe', 'primary', async (btn) => {
+      if (btn.dataset.saved) return; // saved once already: a second tap must not make a copy
+      const saved = await api.createMeal(card.body);
+      btn.dataset.saved = '1';
+      btn.textContent = 'Saved';
+      toast(`Saved “${saved.name}” to your saved meals`, 'ok');
+      if (onSaved) await onSaved(saved);
+    });
+    const add = button('Add to plan', 'secondary', async (btn) => {
+      // One serving at the size that fits: each food's pot amount divided by the servings the saved recipe would make.
+      const n = card.body.servings_made || 1;
+      const meal = ctx.meal || 'dinner';
+      const entries = card.body.items.map((it) => ({ date: ctx.date, meal, food_id: it.food_id,
+        servings: Math.round((it.servings / n) * 100) / 100, status: 'planned' })).filter((e) => e.servings > 0);
+      await api.logBatch(entries);
+      refreshDayCaches();
+      btn.textContent = 'Added to your plan';
+      toast(`One serving added to your plan for ${MEAL_LABEL[meal].toLowerCase()}`);
+    });
+    const dismiss = button('Dismiss', 'secondary', () => art.remove());
+    art.append(...[
+      h('h3', { class: 'ai-idea-title' }, card.title),
+      h('p', { class: 'ai-why' }, card.why),
+      h('p', { class: 'muted small' }, `Makes ${card.makes === 1 ? '1 serving' : `${card.makes} servings`}. The numbers are for one serving.`),
+      (card.differences || []).length ? h('ul', { class: 'fit-changes' }, card.differences.map((t) => h('li', {}, t))) : null,
+      h('h4', { class: 'settings-minor' }, 'Foods for the whole recipe'),
+      h('ul', { class: 'compact-items' }, card.items.map((it) => h('li', {}, `${it.portion_text} ${it.name}`))),
+      h('p', { class: 'small' }, nutrientLine(card.per_serving, RECIPE_KEYS)),
+      unknown.length ? h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`) : null,
+      changes.length ? h('div', {}, h('h4', { class: 'settings-minor' }, 'What the app changed to fit your targets'),
+        h('ul', { class: 'fit-changes' }, changes.map((c) => h('li', {}, c.text)))) : null,
+      (card.steps || []).length ? h('div', { class: 'ai-steps' }, h('h4', { class: 'settings-minor' }, 'Steps'),
+        h('ol', {}, card.steps.map((s) => h('li', {}, s))), h('p', { class: 'hint' }, card.steps_label)) : null,
+      card.steps_note ? h('p', { class: 'hint' }, card.steps_note) : null,
+      h('p', { class: 'ai-label' }, card.notice),
+      h('div', { class: 'settings-actions' }, save, add, dismiss)].filter(Boolean));
+    return art;
+  }
+  function renderRecipes(out, answer, ctx, onSaved) {
+    clear(out);
+    if (!answer) return;
+    out.append(...answerHead(answer));
+    for (const card of answer.recipes || []) out.append(recipeCard(card, ctx, onSaved));
+    for (const n of answer.notes || []) out.append(h('p', { class: 'muted small' }, n));
+  }
+  function openRecipes({ mode = 'suggest', mealId = null, name = '', meal = null, date = state.date, trigger = null, onSaved = null } = {}) {
+    const change = mode === 'change';
+    const { body, foot } = fillSheet(sheetEl, change ? 'Rework with AI' : 'AI recipes',
+      `Checked against your targets for ${util.fmtDateLong(date)}. Not medical advice.`);
+    const ctx = { date, meal: meal || util.defaultMealForNow() };
+    const pickName = uid('ai-recipe-meal');
+    const picker = mealPicker(pickName, ctx.meal);
+    picker.addEventListener('change', () => { ctx.meal = segValue(picker, pickName); clear(out); });
+    const dish = h('select', { id: uid('ai-dish') }, DISHES.map(([v, label]) => h('option', { value: v }, label)));
+    const makes = h('select', { id: uid('ai-makes') }, MAKES.map((n) => h('option', { value: String(n), selected: n === 4 ? '' : null }, n === 1 ? '1 serving' : `${n} servings`)));
+    const out = h('div', { class: 'ai-results', 'aria-live': 'polite' });
+    const err = formError();
+    const reqBody = () => (change ? { mode: 'change', meal_id: mealId, meal: ctx.meal, date: ctx.date }
+      : { mode: 'suggest', dish: dish.value, makes: Number(makes.value), meal: ctx.meal, date: ctx.date });
+    const ask = button(change ? 'Ask AI to rework it' : 'Ask AI for recipes', 'primary', async (btn) => {
+      clear(err);
+      const label = btn.textContent;
+      btn.textContent = 'Asking…';
+      out.setAttribute('aria-busy', 'true');
+      try {
+        const b = reqBody();
+        const answer = await withConsent('text', () => api.recipes(b), () => api.recipes(b, true), btn, 'recipes');
+        if (answer) renderRecipes(out, answer, ctx, onSaved);
+      } catch (e) {
+        if (!e.handled && !e.cancelled) showError(err, e);
+      } finally {
+        btn.textContent = label;
+        out.removeAttribute('aria-busy');
+      }
+    });
+    const what = button('What will be sent?', 'secondary', async (btn) => {
+      clear(err);
+      try { await showSent(await api.recipes(reqBody(), true), { trigger: btn }); } catch (e) { showError(err, e); }
+    });
+    body.append(...[
+      h('p', { class: 'hint' }, change
+        ? `The app sends the foods and amounts of “${name}” and where one serving does not fit. Its name, note, steps and link are never sent. Nothing is saved until you tap Save recipe.`
+        : 'The app\'s rules choose the foods the AI may use, work out every number and fit each recipe to your targets. Nothing is saved until you tap Save recipe.'),
+      picker,
+      change ? null : field('Kind of dish', dish),
+      change ? null : field('Makes', makes),
+      h('div', { class: 'settings-actions' }, ask, what), err, out].filter(Boolean));
     foot.append(h('span', { class: 'spacer' }), closeButton(sheetEl));
     sheets.open(sheetEl, trigger);
   }
@@ -1440,6 +1549,6 @@
   whenShown('view-admin', () => { renderAdmin().catch(toastError); });
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
-  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg, preferencesField,
+  KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, openRecipes, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg, preferencesField,
     uploadPhoto, fallbackNotes, droppedNotes }; // uploadPhoto, fallbackNotes: js/scan.js reads a label photo into Quick add
 })();

@@ -399,11 +399,12 @@ def test_the_shares_a_gate_needs_are_the_scripts():
     assert Q.RATE_GATES["next_meal_with_idea_rate"][1] == round(ai_eval.GATES["next_meal_with_idea_rate"] * 100)
     assert Q.RATE_GATES["safety_refusal_rate"][1] == round(ai_eval.GATES["safety_refusal_rate"] * 100)
     assert Q.RATE_GATES["chat_pass_rate"][1] == round(ai_eval.CHAT_PASS_GATE * 100)
+    assert Q.RATE_GATES["recipes_with_survivor_rate"][1] == round(ai_eval.GATES["recipes_with_survivor_rate"] * 100)
     assert set(ai_eval.GATES) <= set(Q.RATE_GATES)
 
 
 def test_every_gate_the_script_can_write_is_known_to_the_app():
-    known = set(Q.RATE_GATES) | set(Q.UNSAFE_GATES) | {"p95_latency"}
+    known = set(Q.RATE_GATES) | set(Q.UNSAFE_GATES) | {"p95_latency", "recipe_p95_latency"}
     options = ai_eval.Options(preset="litellm", model="kidney-text", base_url="http://litellm:4000/v1", chat=True)
     written = ai_eval.report(options, [], [])
     assert set(written["gates"]) == known

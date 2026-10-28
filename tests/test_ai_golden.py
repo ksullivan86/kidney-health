@@ -5,18 +5,21 @@ reaches the network.
 
 Case format (README in ``tests/ai_golden/``)::
 
-    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report" | "chat",
+    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report" | "chat" | "recipes",
      "fixture": {"profile": {...}, "targets": {...} | "<preset>", "entries": [[meal, food name, servings, status?, purpose?]],
                  "history": [[days before, meal, food name, servings]], "custom_foods": [{...}], "other_custom_foods": [{...}],
                  "food_preferences": [[food name, "like" | "less" | "not_for_me" | "neutral"]],
                  "settings": {"ai": {...}, "guidance": {...}}, "meal", "mode", "text", "image", "swap_entry": index,
-                 "message": the person's text (feature chat)},
+                 "message": the person's text (feature chat),
+                 "dish", "makes", "target", "recipe_steps": the admin switch, "recipe": {"name", "servings_made", "note", "steps",
+                 "source_url", "items": [[food name, servings]]} (feature recipes; ``mode`` "change" reworks it)},
      "model_outputs": [<content string> | {"content", "finish_reason", "refusal", "reasoning_content", "status"}],
      "expect": {"http", "status", "calls", "shown_food_names", "not_shown_food_names", "not_first_food_names",
                 "idea_reason_codes_include", "idea_reason_codes_exclude", "dropped_reasons_include",
                 "claims_corrected", "rule_fallback", "repaired", "response_excludes", "payload_includes",
                 "payload_excludes", "cards", "draft", "items", "rows", "dropped",
-                "kind", "pending": {"tool", "preference", "target"}, "nothing_saved"}}
+                "kind", "pending": {"tool", "preference", "target"}, "nothing_saved",
+                "recipes", "title", "steps_shown", "steps_dropped_include"}}
 
 ``feature: "chat"`` runs ``POST /api/ai/chat`` (Ask) with the person's ``message``; ``kind`` is the answer's kind, ``pending``
 the card the person is asked to confirm, ``nothing_saved`` that no preference, log entry, saved meal or setting changed.
@@ -57,6 +60,11 @@ SAFETY_CASES = {
     "rules-hypo-treatment-item",
     "lab-report-advice-or-a-dose-is-never-a-row",
     "privacy-payload-never-sent-fields",
+    "recipes-low-treatment-never-a-food",
+    "recipes-salt-never-a-food",
+    "recipes-step-insulin",
+    "recipes-step-nutrient-claim",
+    "recipes-privacy-rework-never-sends-the-recipes-text",
 }
 
 
@@ -85,7 +93,7 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
     assert len(cases) >= 40
     categories = {c["category"] for c in cases}
     assert {"grounding", "rules", "safety_text", "refusal", "prefilter", "injection", "format", "privacy", "fallback",
-            "modes", "vision", "kidney_only", "lab_report", "preferences"} <= categories
+            "modes", "vision", "kidney_only", "lab_report", "preferences", "recipes"} <= categories
     assert len({c["id"] for c in cases}) == len(cases)
 
 
@@ -97,7 +105,7 @@ def golden(tmp_path_factory) -> Iterator[tuple[TestClient, TestClient]]:
                                                          private_hosts=(LOCAL_HOST,)))
     with TestClient(create_app(settings), base_url=HTTPS_URL) as admin:
         sign_in(admin)
-        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.shared_daily_limit": 0,
+        r = admin.patch("/api/admin/settings", json={"ai.enabled": True, **LEGACY_ROUTING, "ai.route.recipes": "any", "ai.shared_daily_limit": 0,
                                                      "ai.vision_plate_enabled": True, "ai.chat_enabled": True})
         assert r.status_code == 200, r.text
         # Lab report photos run only on a local AI (privacy tier 1): the cases of category lab_report use this one.
@@ -185,6 +193,14 @@ def prepare(admin: TestClient, sam: TestClient, fx: dict[str, Any]) -> dict[str,
     for days, meal, name, servings in fx.get("history", []):
         r = admin.post("/api/log", json={"date": day_before(days), "meal": meal, "food_id": food_id(admin, name), "servings": servings})
         assert r.status_code == 201, r.text
+    if "recipe" in fx:  # a saved recipe for mode "change" (feature recipes)
+        recipe = {k: v for k, v in fx["recipe"].items() if k != "items"}
+        recipe["items"] = [{"food_id": food_id(admin, name), "servings": servings} for name, servings in fx["recipe"]["items"]]
+        r = admin.post("/api/meals", json=recipe)
+        assert r.status_code == 201, r.text
+        ctx["recipe_id"] = r.json()["id"]
+    r = admin.patch("/api/admin/settings", json={"ai.recipe_steps": bool(fx.get("recipe_steps"))})
+    assert r.status_code == 200, r.text
     settings = fx.get("settings", {})
     r = admin.patch("/api/me/ai", json={"opt_in": True, **settings.get("ai", {})})
     assert r.status_code == 200, r.text
@@ -268,6 +284,8 @@ def shown_names(result: dict[str, Any], client: TestClient) -> set[str]:
         names |= {i["name"] for i in idea["items"]}
     for pick in result.get("pick") or []:
         names.add(pick["name"])
+    for recipe in result.get("recipes") or []:
+        names |= {i["name"] for i in recipe["items"]}
     for item in result.get("order") or []:
         names.add(client.get(f"/api/foods/{item['food_id']}").json()["name"])
     return names
@@ -296,6 +314,15 @@ def test_golden_case(path: Path, golden):
             if "swap_entry" in fx:
                 body["entry_id"] = case_ctx["entries"][fx["swap_entry"]]
             r = admin.post("/api/ai/next-meal", json=body)
+        elif feature == "recipes":
+            body = {"mode": fx.get("mode", "suggest"), "target": fx.get("target", "meal"), "date": DAY}
+            if body["target"] == "meal":
+                body["meal"] = fx.get("meal", "dinner")
+            if body["mode"] == "change":
+                body["meal_id"] = case_ctx["recipe_id"]
+            else:
+                body |= {"dish": fx.get("dish", "bowl"), "makes": fx.get("makes", 2)}
+            r = admin.post("/api/ai/recipes", json=body)
         elif feature == "parse_meal":
             r = admin.post("/api/ai/parse-meal", json={"text": fx["text"], "date": DAY})
         elif feature == "lab_report":
@@ -360,6 +387,16 @@ def test_golden_case(path: Path, golden):
             assert needle in sent, (case["id"], needle)
         for needle in expect.get("payload_excludes", []):
             assert needle not in sent, (case["id"], needle)
+    recipes = result.get("recipes") or []
+    if "recipes" in expect:
+        assert len(recipes) == expect["recipes"], (case["id"], text[:800])
+    if "title" in expect:
+        assert recipes and recipes[0]["title"] == expect["title"], (case["id"], [x["title"] for x in recipes])
+    if "steps_shown" in expect:
+        assert recipes and recipes[0]["steps"] == expect["steps_shown"], (case["id"], recipes[0]["steps"] if recipes else None)
+    for prefix in expect.get("steps_dropped_include", []):
+        got = [d["reason"] for x in recipes for d in x["steps_dropped"]]
+        assert any(g.startswith(prefix) for g in got), (case["id"], got)
     if "cards" in expect:
         assert [c["title"] for c in result.get("cards", [])] == expect["cards"], case["id"]
     for key, value in (expect.get("draft") or {}).items():

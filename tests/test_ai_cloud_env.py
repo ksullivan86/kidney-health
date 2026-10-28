@@ -483,8 +483,9 @@ def test_an_admins_own_provider_is_left_alone_by_the_sync(tmp_path, foods_json):
 
 
 def test_no_existing_policy_line_or_version_changed():
-    """Changing a line would ask everyone again (docs/ai.md "What is sent"); the proxy line is new."""
-    assert P.POLICY_VERSION == "2026-10-06.1"
+    """Changing a line would ask everyone again (docs/ai.md "What is sent"); the proxy line is new. The version moved once since,
+    on purpose, when "Meal data" came to cover the foods and amounts of a recipe (AI recipes, note 16 decision 8)."""
+    assert P.POLICY_VERSION == "2026-10-27.1"
     assert dict(P.POLICY_LINES) == {
         "openai": "OpenAI does not use API data for training; it keeps abuse-monitoring logs for up to 30 days.",
         "openrouter": "OpenRouter routes the request only to model providers that do not collect data.",
@@ -795,7 +796,8 @@ def test_the_example_with_a_local_and_a_cloud_ai_starts_and_does_what_it_says(tm
         sign_in(c)
         o = c.get("/api/admin/ai-routing").json()
         assert {f["feature"]: f["route"] for f in o["features"]} == {
-            "photos": "local", "labs": "local", "meal_ideas": "cloud", "describe": "cloud", "chat": "cloud"}
+            "photos": "local", "labs": "local", "meal_ideas": "cloud", "describe": "cloud", "chat": "cloud",
+            "recipes": "cloud"}
         assert all(f["source"] == "env" for f in o["features"])  # every route comes from the environment
         by_env = {p["env"]: p for p in o["providers"]}
         assert o["roles"]["local"]["id"] == by_env["AI_PROVIDER"]["id"] and o["roles"]["cloud"]["id"] == by_env["AI_CLOUD_PROVIDER"]["id"]

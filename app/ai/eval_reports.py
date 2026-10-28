@@ -37,7 +37,7 @@ IGNORED = ("malformed", "too_big", "outside_folder", "unreadable", "over_limit")
 
 # The summary numbers a message may quote (all from ``report["summary"]`` except the limit); anything else is dropped.
 METRICS = ("schema_valid_rate", "next_meal_with_idea_rate", "safety_refusal_rate", "unsafe_text_shown", "chat_pass_rate",
-           "chat_unsafe_text_shown")
+           "chat_unsafe_text_shown", "recipes_with_survivor_rate", "steps_unsafe_shown", "recipe_p95_ms")
 
 
 @dataclass

@@ -1143,6 +1143,11 @@
             "title": "Ai Plate",
             "type": "boolean"
           },
+          "ai_recipes": {
+            "description": "AI recipes: suggest one, or rework a saved recipe (`POST /api/ai/recipes`).",
+            "title": "Ai Recipes",
+            "type": "boolean"
+          },
           "assistant": {
             "description": "Assistant access tokens and the MCP server at `/mcp` are switched on (`assistant.enabled`).",
             "title": "Assistant",
@@ -1191,6 +1196,7 @@
           "ai_label",
           "ai_plate",
           "ai_lab_report",
+          "ai_recipes",
           "chat",
           "voice",
           "assistant",
@@ -7935,6 +7941,110 @@
         "title": "ReauthBody",
         "type": "object"
       },
+      "RecipesBody": {
+        "additionalProperties": false,
+        "description": "``POST /api/ai/recipes`` (note 16 §7): ``suggest`` a recipe of a kind of dish that makes ``makes`` servings, or ``change`` (rework)\nthe saved recipe ``meal_id``. The target is a meal (``meal``, default the next open one) or one serving against what is left\ntoday (``target: \"day\"``).",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "dish": {
+            "anyOf": [
+              {
+                "enum": [
+                  "soup",
+                  "stew",
+                  "bowl",
+                  "stir_fry",
+                  "bake",
+                  "salad",
+                  "sandwich",
+                  "pasta",
+                  "rice_dish",
+                  "egg_dish",
+                  "porridge",
+                  "snack",
+                  "drink"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dish"
+          },
+          "makes": {
+            "default": 4,
+            "enum": [
+              1,
+              2,
+              4,
+              6
+            ],
+            "title": "Makes",
+            "type": "integer"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          },
+          "meal_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal Id"
+          },
+          "mode": {
+            "default": "suggest",
+            "enum": [
+              "suggest",
+              "change"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "target": {
+            "default": "meal",
+            "enum": [
+              "meal",
+              "day"
+            ],
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "title": "RecipesBody",
+        "type": "object"
+      },
       "RegisterBody": {
         "properties": {
           "display_name": {
@@ -8127,6 +8237,24 @@
               }
             ],
             "title": "Photos"
+          },
+          "recipes": {
+            "anyOf": [
+              {
+                "enum": [
+                  "local",
+                  "cloud",
+                  "off",
+                  "any",
+                  "local_then_cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipes"
           }
         },
         "title": "RoutingBody",
@@ -11847,6 +11975,75 @@
         "summary": "Read Lab Report",
         "tags": [
           "vision"
+        ]
+      }
+    },
+    "/api/ai/recipes": {
+      "post": {
+        "description": "AI recipes (note 16 §8): up to two recipes for a meal, or one reworked recipe, checked and fitted by the app. Saves nothing:\neach card carries the exact body for ``POST /api/meals``.",
+        "operationId": "ai_recipes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dry_run",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Dry Run",
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ai Recipes",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Ai Recipes",
+        "tags": [
+          "ai"
         ]
       }
     },

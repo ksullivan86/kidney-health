@@ -1727,11 +1727,11 @@
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width']],
     // The master switch first: Settings → AI ideas sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
-      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.audit_retention_days', 'assistant.enabled']],
+      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.recipe_steps', 'ai.audit_retention_days', 'assistant.enabled']],
     // Drawn by js/views/ai_routing.js in Server administration → AI providers (a provider must be private to be local, so these
     // are not edited one by one here): the list shows a pointer instead of rows.
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
-      'ai.route.local_provider', 'ai.route.cloud_provider']],
+      'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
