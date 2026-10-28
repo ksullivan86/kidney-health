@@ -82,3 +82,15 @@ def test_the_pure_helpers():
     assert got["file"].splitlines() == ["Recovery codes for ana on Home.", "Each code works once, in place of the code from your authenticator app.",
                                         "Keep them somewhere safe, away from your phone.", "", "aaaaa-bbbbb", "ccccc-ddddd"]
     assert got["left"] == ["No recovery codes left. Make new ones now.", "1 recovery code left.", "7 recovery codes left."]
+
+
+def test_the_activity_list_names_every_two_step_event_in_words():
+    from app.audit import ACTIONS, USER_VISIBLE_ACTIONS
+
+    settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    labels = settings[settings.index("const ACTION_LABEL = {"):settings.index("};", settings.index("const ACTION_LABEL = {"))]
+    two_step = sorted(a for a in ACTIONS if a.startswith("totp."))
+    assert two_step == ["totp.disabled", "totp.enabled", "totp.recovery_code_used", "totp.recovery_codes_renewed"]
+    for action in two_step:
+        assert action in USER_VISIBLE_ACTIONS and f"'{action}':" in labels, action
+    assert "if (ev.action === 'login.failed' && d.via === 'code') return 'Wrong sign-in code entered';" in settings

@@ -736,6 +736,8 @@
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe', 'assistant.preference_set': 'Assistant remembered a taste',
     'ai.trust_changed': 'Trust in the assistant changed',
+    'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
+    'totp.recovery_code_used': 'Signed in with a recovery code',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -744,6 +746,7 @@
     const d = ev.details || {};
     if (d.family === 'device' && DEVICE_ACTION_LABEL[ev.action]) return DEVICE_ACTION_LABEL[ev.action];
     if (ev.action === 'api_token.revoked' && d.count != null) return 'Tokens revoked';
+    if (ev.action === 'login.failed' && d.via === 'code') return 'Wrong sign-in code entered';
     return ACTION_LABEL[ev.action] || ev.action;
   }
   // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
@@ -773,6 +776,9 @@
     if (ev.action === 'assistant.recipe_saved') return `“${d.name}” (${d.ingredients} ingredients), with “${d.via}”`;
     if (ev.action === 'assistant.preference_set') return `${d.name}: ${tasteWord(d.old, d.kind)} → ${tasteWord(d.new, d.kind)}, with “${d.via}”`;
     if (ev.action === 'ai.trust_changed') return `${TRUST_NAME[d.old] || d.old} → ${TRUST_NAME[d.new] || d.new}`;
+    if (ev.action === 'totp.disabled') return { self: 'by the person', admin: 'by an admin', cli: 'with the command line' }[d.via] || '';
+    if (ev.action === 'totp.enabled' && d.signed_out) return d.signed_out === 1 ? '1 other device signed out' : `${d.signed_out} other devices signed out`;
+    if (ev.action === 'totp.recovery_code_used' && d.left != null) return d.left === 1 ? '1 left' : `${d.left} left`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
