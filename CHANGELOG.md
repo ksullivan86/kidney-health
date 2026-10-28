@@ -7,7 +7,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
-Nothing yet.
+### For contributors
+
+* **The first part of the iOS app.** `ios/KidneyHealthCore` is a Swift package with the rules the Health sync app must share with the
+  server: ranges, the time of day a reading gets, the watch rule, kilogram rounding, the key that stops a reading being added twice,
+  and requests of at most 50 rows. It checks each row the way the phone route does before sending, because one refused row would block the
+  whole request. It has no dependencies. CI runs `swift test` on Linux against `tests/data/body_vectors.json`,
+  `apple_health_vectors.json` and the new `push_vectors.json` (`tests/data/gen_push_vectors.py`). See
+  [note 15](docs/dev/research/15-native-ios-app.md).
 
 ## 0.8.0 — 2026-10-28
 

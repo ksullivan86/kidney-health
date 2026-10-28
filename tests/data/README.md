@@ -45,6 +45,7 @@ Run the commands from the repository root.
 | `menu_link_vectors.json` | none: written by hand |
 | `meta_vectors.json` | `python3 tests/data/gen_meta_vectors.py` |
 | `personal_target_vectors.json` | none: copied from a design note |
+| `push_vectors.json` | `python3 tests/data/gen_push_vectors.py` |
 | `rules_vectors.json` | `python3 tests/data/gen_rules_vectors.py` |
 | `settings_vectors.json` | `python3 tests/data/gen_settings_vectors.py` |
 | `symptoms_vectors.json` | `python3 tests/data/gen_symptoms_vectors.py` |
@@ -424,6 +425,38 @@ What a replayer must get right:
 * In this file `rules` uses the note's rule ids (`P-2`). In `targets_vectors.json` the same rule is `P-2d` or `P-2n`.
 * The values are the note's. If a vector is wrong, change the note first and then this file.
 
+## push_vectors.json
+
+What the phone route `POST /push/v1/body` makes of each row, for the iOS app. One row the route refuses makes the whole request a `400`,
+so the app checks every row the same way before it sends.
+
+* Server: `app/push.py`, with the ranges of `app/models.py` and the rules of `app/body.py`.
+* Native client: `ios/KidneyHealthCore` (`swift test --package-path ios/KidneyHealthCore`). There is no browser twin.
+* Made by `tests/data/gen_push_vectors.py`. It needs no server and no clock.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `constants`: the route's path and limits (`max_rows`, `max_body_bytes`, `max_source_chars`, the per-day limits, the ranges) and the two type names of a key text.
+* `clock_cases`: `{epoch: int, zone: string, at: string, date, time, stamp}`. The `at` text to send for an instant in a time zone, and what the route reads from it.
+* `at_cases`: `{at: string, date?, time?, stamp?, refused?: true}`.
+* `value_cases`: `{number: float, text: string | null}`. A weight held as a double and sent as a JSON number in its shortest form, and the text the route builds its key from. `null` means the route would refuse it as text.
+* `source_cases`: `{source: string, kept: string | null}`.
+* `weight_cases`: `{row: {at, value, unit, source}, planned?: {date, time, kg, context, key_text, key}, refused?: string}`.
+* `reading_cases`: `{row: {at, systolic, diastolic, source}, planned?: {date, time, systolic, diastolic, context, key_text, key, watch}, refused?: string}`.
+
+What a replayer must get right:
+
+* `refused` is the field the route names (`at`, `value`, `source`, `systolic` or `diastolic`). The checks run in the route's order, so a row
+  with two problems is refused for the first one.
+* `at` keeps the wall clock as written in its zone. Nothing is converted to UTC. A time without a zone is refused.
+* `key_text` is `HKQuantityTypeIdentifierBodyMass|stamp|value|source` or `BloodPressure|stamp|systolic/diastolic|source`, with the cleaned
+  source. `key` is the first 32 hex characters of its SHA-256. It is the key the Health export import builds, so a reading sent from the
+  phone is not added again by a later import.
+* The source is cleaned by NFC, removing control and format characters, and folding spaces. A tab is a control character, so it is removed, not turned into a space.
+* A reading from a watch is planned with `watch: true`: the route counts it and stores nothing.
+* The rows are dated far in the past or far in the future, so the "not more than one day ahead" rule holds on any day the file is replayed.
+
 ## rules_vectors.json
 
 The food rules: warnings, the red, yellow or green rating, and the rounding of nutrient values, for every built-in food and for the edges of every threshold.
@@ -573,4 +606,5 @@ A client must not drop, shorten or soften these cases to make a replay pass. If 
 
 The first two files to replay are `body_vectors.json` and `apple_health_vectors.json` (design note 14, change 6 in `docs/dev/research/14-reuse-map.md`).
 They pin the kilogram rounding, the ranges, the contexts, the pairing of the two blood pressure numbers and the `source_key`. The `source_key` must match the one the web import builds, or the same reading will be added twice.
-A Swift test target that replays them is planned with the iOS design note. None exists yet.
+`push_vectors.json` adds what the phone route makes of each row. The Swift package `ios/KidneyHealthCore` replays all three
+(`swift test --package-path ios/KidneyHealthCore`), and CI runs it on Linux.

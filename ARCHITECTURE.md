@@ -4128,7 +4128,11 @@ sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by 
 
 `/push/v1` is a promise: a breaking change gets `/push/v2` and v1 keeps working for at least one release. Later scopes (`log:write`,
 `labs:write`, `symptoms:write`) would follow the same pattern: one family or scope, one versioned route under `/push/`, add-only, counts-only
-answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain.
+answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain. Its rules
+are in the Swift package `ios/KidneyHealthCore` (design note 15 §4.1): the ranges, the context, the watch rule, the kilogram rounding, the
+`source_key` and requests of at most 50 rows. It has no dependencies and no HealthKit code, so CI tests it on Linux against
+`tests/data/body_vectors.json`, `apple_health_vectors.json` and `push_vectors.json`. The app checks each row as this route does before
+sending, because one refused row makes the whole request a `400`.
 
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 
