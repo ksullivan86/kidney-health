@@ -52,7 +52,7 @@ least one release) and is not this number.
   `default` response with the same shape, so a status the list does not name is still described.
 * **Security schemes.** `session` is the cookie (`kh_session`, or `__Host-kh_session` over HTTPS) and every unsafe `/api` request must also
   send `X-Requested-With: kidney-health`; its text says so. `assistantToken` (`kha_...`) is the bearer token of `POST /mcp`; `deviceToken`
-  (`khd_...`) is the bearer token of `POST /push/v1/body`. A route has the scheme its dependencies give it: the public sign-in routes have
+  (`khd_...`) is the bearer token of `POST /push/v1/body` and `GET /push/v1/check`. A route has the scheme its dependencies give it: the public sign-in routes have
   none, and a bearer token is never a sign-in on `/api`.
 * **Capabilities.** [`GET /api/meta`](../../ARCHITECTURE.md#the-api-document-and-get-apimeta-design-note-14-changes-2-and-4) tells a signed-in client
   the versions, what it can use now (AI features, chat, voice, assistant tokens, phone shortcuts, the barcode providers, the handbook), the

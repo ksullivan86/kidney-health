@@ -53,6 +53,7 @@ BODY_METHODS = ("post", "put", "patch")  # the methods whose body the global siz
 BEARER_OPERATIONS: dict[tuple[str, str], str] = {
     ("post", "/mcp"): ASSISTANT_TOKEN,
     ("post", "/push/v1/body"): DEVICE_TOKEN,
+    ("get", "/push/v1/check"): DEVICE_TOKEN,
 }
 # The stubs that answer 405 for the methods a bearer route does not offer. ``/mcp`` answers 404 first while ``assistant.enabled`` is off.
 NOT_ALLOWED_SUFFIX = "_not_allowed"
@@ -79,7 +80,7 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "admin_set_shared_key", "admin_probe_ai_provider", "admin_probe_voice", "ai_probe_my_provider",
     "body_create_weights", "body_create_readings", "barcode_lookup", "foods_usda_search", "foods_usda_import",
     "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe", "vision_read_label", "vision_plate", "vision_read_lab_report",
-    "mcp_post", "push_body",
+    "mcp_post", "push_body", "push_check",
 })
 # Public routes that answer 401: the sign-in with a wrong name or password.
 UNAUTHORIZED_PUBLIC: frozenset[str] = frozenset({"auth_login"})
@@ -227,7 +228,7 @@ def _responses() -> dict[str, Any]:
         "Forbidden": _problem_response(
             f"Refused. On `/api`: an unsafe request without the `X-Requested-With: {brand.CSRF_HEADER_VALUE}` header or from another site; a route "
             "for admins (`Admins only`); the password must be entered again (`reauth_required`) or changed first (`password_change_required`). "
-            "On `/mcp` and `/push/v1/body`: a foreign `Origin` header."
+            "On `/mcp`, `/push/v1/body` and `/push/v1/check`: a foreign `Origin` header."
         ),
         "NotFound": _problem_response(
             "The record does not exist or is not the signed-in person's (the two look the same), or the feature is switched off on this server "
@@ -284,8 +285,8 @@ def _security_schemes() -> dict[str, Any]:
             "bearerFormat": f"{brand.DEVICE_TOKEN_PREFIX} followed by 43 characters",
             "description": (
                 f"A device token (`Authorization: Bearer {brand.DEVICE_TOKEN_PREFIX}...`), made in Settings, Phone shortcuts, with the one scope `body:write`. It works only at "
-                "`POST /push/v1/body`, only while the instance switch `push.enabled` is on, and it can add weights and blood pressure readings and read "
-                "nothing. No cookie is read there."
+                "`POST /push/v1/body` (and `GET /push/v1/check`, which tests it), only while the instance switch `push.enabled` is on, and it can add "
+                "weights and blood pressure readings and read nothing. No cookie is read there."
             ),
         },
     }
@@ -396,7 +397,7 @@ def _document_operation(op: dict[str, Any], method: str, path: str, facts: Facts
     opid = op["operationId"]
     bearer = BEARER_OPERATIONS.get((method, path))
 
-    if opid.endswith(NOT_ALLOWED_SUFFIX):  # the 405 stubs of /mcp and /push/v1/body: FastAPI shows their code path's 200
+    if opid.endswith(NOT_ALLOWED_SUFFIX):  # the 405 stubs of /mcp and /push/v1: FastAPI shows their code path's 200
         op["responses"] = {"405": _ref_response("MethodNotAllowed")}
         if path == "/mcp":
             op["responses"]["404"] = _ref_response("NotFound")

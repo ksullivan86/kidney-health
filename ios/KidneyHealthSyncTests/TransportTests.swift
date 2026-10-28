@@ -64,6 +64,23 @@ final class TransportTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(Push.Request.self, from: try XCTUnwrap(body(sent))), request)
     }
 
+    func testTheCheckIsAGetWithTheBearerTokenAndNoBody() async throws {
+        StubProtocol.handler = { request in
+            (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!,
+             Data(#"{"ok": true}"#.utf8))
+        }
+        let transport = URLSessionTransport(session: URLSessionTransport.makeSession(protocolClasses: [StubProtocol.self]))
+        let check = try XCTUnwrap(Settings.checkURL("https://kidney.example.org"))
+        let result = await ConnectionCheck.run(check, token: "khd_test", transport: transport)
+        XCTAssertEqual(result, .ok)
+        let sent = try XCTUnwrap(StubProtocol.seen.first)
+        XCTAssertEqual(sent.httpMethod, "GET")
+        XCTAssertEqual(sent.url?.absoluteString, "https://kidney.example.org/push/v1/check")
+        XCTAssertEqual(sent.value(forHTTPHeaderField: "Authorization"), "Bearer khd_test")
+        XCTAssertNil(sent.value(forHTTPHeaderField: "Cookie"))
+        XCTAssertNil(body(sent))
+    }
+
     func testARedirectIsNotFollowed() throws {
         let task = URLSession.shared.dataTask(with: url)
         let response = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 307, httpVersion: nil,

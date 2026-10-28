@@ -316,7 +316,7 @@ kidney-health` and a same-origin `Origin`/`Sec-Fetch-Site`, and cross-site or sa
 reads are refused, all with `403`; bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
 `Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true` (the checked-in
 `docs/api/openapi.json` needs neither: "The API document and `GET /api/meta`" below). The one
-bearer-only paths, exactly `/mcp` and `/push/v1/body` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
+bearer-only paths, exactly `/mcp`, `/push/v1/body` and `/push/v1/check` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
 and `/push/v1`" below), skip the cookie checks (`X-Requested-With`, `Sec-Fetch-Site`: they never read a cookie) but answer
 `403` to a foreign `Origin` on every method.
 
@@ -1036,7 +1036,7 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   the UI shows a red banner).
 * **Every `/api` route needs a signed-in, active person** except `GET /api/auth/status` and
   `POST /api/auth/{login,setup,register,reset,reset/info}`. A bearer token is never a sign-in here: the
-  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1/body` ("Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
+  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1` (`/push/v1/body` and its check; "Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -3979,7 +3979,7 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
 | prefix and pattern | `kha_` + 43 base64url characters | `khd_` + 43 base64url characters |
 | scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | exactly `body:write`; never the person's choice |
 | instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`) |
-| accepted at | `POST /mcp` | `POST /push/v1/body` |
+| accepted at | `POST /mcp` | `POST /push/v1/body`, and `GET /push/v1/check` to test it |
 | made in | Settings → Assistant access | Settings → Phone shortcuts |
 
 * **Families do not mix.** `authenticate(request, conn, scope)` derives the family from the scope the route asks for and, before any
@@ -3999,6 +3999,13 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
   "Phone shortcuts"; the group is the one line added to `js/views/settings.js`). Off: `GET` still lists (`enabled: false`) and `DELETE` still
   revokes, `POST /api/me/tokens` with `family: "device"` answers `409`, and `/push/v1/body` gives the generic `401` to every request with
   no lookup and no count toward the sign-in limit. On again: tokens that have not expired or been revoked work again.
+
+### `GET /push/v1/check` (the token check, note 15 §4.3)
+
+The iPhone app's **Test connection**. The same checks as `POST /push/v1/body` up to the per-token limit: `Origin` (`403`, the path is in
+`BEARER_PATHS`), any method but `GET` (`405`, `Allow: GET`), the device token with `body:write` (the generic `401`; switch off: the same,
+no lookup) and the shared `push_body` hour of the token (`429`). Then `200 {"ok": true}` with `Cache-Control: no-store`. It reads no body,
+stores nothing but the token's `last_used_at`, and names nothing of the person. Tests: the check section of `tests/test_push.py`.
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 
@@ -4173,7 +4180,7 @@ document are the only things rewritten. The guide for people who write programs 
   |---|---|---|---|
   | `session` | `apiKey` in a cookie, `kh_session` (`__Host-kh_session` over HTTPS, named in the text) | every `/api` operation that depends on `current_user`: all of them except `GET /api/auth/status` and `POST /api/auth/{login,setup,register,reset,reset/info}` | the text also says every unsafe `/api` request needs `X-Requested-With: kidney-health` |
   | `assistantToken` | `http` bearer, `kha_` + 43 characters | `POST /mcp` | while `assistant.enabled` is on; no cookie is read |
-  | `deviceToken` | `http` bearer, `khd_` + 43 characters | `POST /push/v1/body` | while `push.enabled` is on; no cookie is read |
+  | `deviceToken` | `http` bearer, `khd_` + 43 characters | `POST /push/v1/body`, `GET /push/v1/check` | while `push.enabled` is on; no cookie is read |
 
   The 405 stubs, `/healthz` and `/sw.js` have none. `openapi_doc.BEARER_OPERATIONS` is held equal to `security.BEARER_PATHS` by a test, and the
   routes without `security` under `/api` are held equal to the public list of `tests/test_auth_coverage.py`.

@@ -19,6 +19,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   them to your server with a phone token. It reads nothing else and never writes to Health. The first sync starts three months back.
   CI builds it and runs its tests in the iPhone simulator. Putting it on a phone needs the owner's Apple Developer account, which is the
   next step. See [`ios/README.md`](ios/README.md).
+* **Test connection in the iPhone app.** A new route, `GET /push/v1/check`, tells a phone whether its token works without sending
+  anything. It takes the same token as `POST /push/v1/body` and counts toward the same 60 requests an hour. If a reverse proxy lists
+  the paths it passes on, `/push/v1/` already covers it. The second host name in `deploy/caddy/Caddyfile.example` now passes it too.
+  See [`docs/push.md`](docs/push.md#testing-a-token).
 
 ## 0.8.0 — 2026-10-28
 

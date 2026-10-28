@@ -60,7 +60,7 @@ Note 12 built the server half of that: a write-only device token and an add-only
   * The server address (HTTPS only).
   * The device token, pasted, or (later) paired by scanning a QR code that Settings → Phone shortcuts shows once.
   * The token is stored in the Keychain, this device only (I4), never in `UserDefaults`, and never shown again after saving.
-  * A **Test connection** button posts an empty-looking request that the server answers with counts. If the route needs a body, it sends a zero-row request; the server must accept that or offer a dedicated check. Decide this when building.
+  * A **Test connection** button. Built as its own route, `GET /push/v1/check` (bearer, sends nothing, answers `{"ok": true}`, shares the token's hour), because `POST /push/v1/body` refuses a request with no rows.
 * **Permissions screen.**
   * Asks for exactly three read types (I3): body mass, systolic and diastolic.
   * Never asks for glucose, insulin or any medication type (CLAUDE.md). A test enforces this by reading the entitlement and the requested type list.
@@ -76,7 +76,7 @@ Note 12 built the server half of that: a write-only device token and an add-only
 ### 4.3 What the server and the web app need (small)
 
 * **Optionally, a QR code for pairing** in Settings → Phone shortcuts, holding the address and the token once. It is drawn on the device by the page, without a vendored library if one fits in a few hundred lines; otherwise vendored and pinned.
-* **A way for the app to test a token without sending a reading.** This could be a zero-row body answered with zero counts, or `GET /push/v1/ping` (bearer, counts nothing, rate-limited). Decide it with the build.
+* **A way for the app to test a token without sending a reading.** Built as `GET /push/v1/check` (bearer, stores nothing, shares the token's 60 requests an hour).
 * Nothing else. The route, its limits and the same-reading check are the whole server side (note 12 §7).
 
 ### 4.4 Build, sign, ship (no Mac)
@@ -110,12 +110,11 @@ Note 12 built the server half of that: a write-only device token and an add-only
    * The first sync starts at the Health import's default start, three months back. A history of years would otherwise run into the
      route's 60 requests an hour, and the sync would never get past it.
    * Samples are read in rounds of 500 of each kind, and a round's anchor is kept only after a 200 for all of it.
-   * The token check of §4.3 is not built. A wrong token shows on the first sync, as a 401 and a status line that says to make a new
-     one. A `GET /push/v1/ping` stays a small server change for step 4.
+   * The token check of §4.3 was built after step 2, as `GET /push/v1/check` and the **Test connection** button.
    * The Xcode project is written by hand in the folder-based format (`objectVersion = 77`), because XcodeGen could not be fetched and
      pinned. Xcode adds new files in those folders by itself.
 3. **Signing, TestFlight and the owner's phone tests**: the owner's account and time, plus about 1M tokens of workflow and fixes.
-4. **(Optional) pairing by QR code** and the test-token route: about 1M tokens.
+4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built.
 
 That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for the full shell (option B).
 
