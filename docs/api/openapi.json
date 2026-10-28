@@ -4776,6 +4776,20 @@
       },
       "LoginBody": {
         "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 32,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
           "password": {
             "format": "password",
             "maxLength": 1024,
@@ -9232,6 +9246,23 @@
         "title": "TokenCreate",
         "type": "object"
       },
+      "TotpCodeBody": {
+        "properties": {
+          "code": {
+            "format": "password",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "TotpCodeBody",
+        "type": "object"
+      },
       "Trigger": {
         "additionalProperties": false,
         "properties": {
@@ -11459,6 +11490,61 @@
           }
         ],
         "summary": "Revoke User Tokens",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/users/{user_id}/totp": {
+      "delete": {
+        "description": "Turn off another person's two-step sign-in, for someone who lost both the phone and the recovery codes (note 17 §6).\nThey then sign in with the password alone and can turn it on again. ``{\"removed\": false}`` when it was off.",
+        "operationId": "admin_remove_user_totp",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Remove User Totp",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove User Totp",
         "tags": [
           "admin"
         ]
@@ -16976,6 +17062,219 @@
           }
         ],
         "summary": "Delete Token Rows",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/totp": {
+      "delete": {
+        "description": "Turn it off (or drop an unfinished setup) and remove the recovery codes. The person's sessions stay.",
+        "operationId": "me_disable_totp",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Disable Totp",
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "description": "Whether two-step sign-in is on, and how many recovery codes are left. Never the secret.",
+        "operationId": "me_read_totp",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Read Totp",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Read Totp",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/totp/enable": {
+      "post": {
+        "description": "Turn it on when the code is right for the pending secret: the recovery codes (shown once) and the other sessions signed out.",
+        "operationId": "me_enable_totp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Enable Totp",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Enable Totp",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/totp/recovery-codes": {
+      "post": {
+        "description": "A new set of recovery codes (shown once); the old set stops working.",
+        "operationId": "me_renew_recovery_codes",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Renew Recovery Codes",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Renew Recovery Codes",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/totp/setup": {
+      "post": {
+        "description": "A new secret, kept as not on yet until :func:`enable_totp` sees a code from it. Replaces an earlier unfinished one.",
+        "operationId": "me_setup_totp",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Setup Totp",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Setup Totp",
         "tags": [
           "me"
         ]

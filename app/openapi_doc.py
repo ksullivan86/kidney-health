@@ -70,6 +70,7 @@ CONFLICT: frozenset[str] = frozenset({
     "ai_give_consent", "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe",
     "vision_read_label", "vision_plate", "vision_read_lab_report",
     "admin_update_ai_provider", "admin_delete_ai_provider", "admin_update_ai_routing",
+    "me_setup_totp", "me_enable_totp", "me_renew_recovery_codes",
 })
 UNSUPPORTED_MEDIA: frozenset[str] = frozenset({
     "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body",
@@ -80,7 +81,7 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "admin_set_shared_key", "admin_probe_ai_provider", "admin_probe_voice", "ai_probe_my_provider",
     "body_create_weights", "body_create_readings", "barcode_lookup", "foods_usda_search", "foods_usda_import",
     "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe", "vision_read_label", "vision_plate", "vision_read_lab_report",
-    "mcp_post", "push_body", "push_check",
+    "mcp_post", "push_body", "push_check", "me_enable_totp",
 })
 # Public routes that answer 401: the sign-in with a wrong name or password.
 UNAUTHORIZED_PUBLIC: frozenset[str] = frozenset({"auth_login"})

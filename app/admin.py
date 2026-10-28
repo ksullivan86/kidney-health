@@ -729,6 +729,34 @@ def cmd_disable_user(args: argparse.Namespace, settings: Settings, out: TextIO) 
     return EXIT_OK
 
 
+def cmd_remove_two_step(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """Turn off one person's two-step sign-in (design note 17 §2), for someone who has lost both the phone and the recovery
+    codes, including the only admin. They then sign in with the password alone and can turn it on again. Audited
+    (``totp.disabled``, via the CLI). Sessions are left as they are."""
+    from .audit import audit
+    from .auth import totp
+
+    conn = _accounts_db(args, settings)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = _find_user(conn, args.username)
+        removed = totp.remove(conn, int(row["id"]))
+        if removed:
+            audit(conn, None, "totp.disabled", "user", int(row["id"]), via="cli")
+        conn.commit()
+    except BaseException:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
+    if removed:
+        print(f"two-step sign-in removed for {row['username']!r}; they can sign in with the password alone.", file=out)
+    else:
+        print(f"{row['username']!r} does not use two-step sign-in", file=out)
+    return EXIT_OK
+
+
 def cmd_purge_pre_v3_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     path = Path(f"{_db_path(args, settings)}.pre-v3.bak")
     if not path.exists():
@@ -851,6 +879,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("disable-user", help="disable an account and sign out its devices (not the only admin)")
     p.add_argument("username")
     p.set_defaults(func=cmd_disable_user)
+
+    p = sub.add_parser("remove-two-step", help="turn off one account's two-step sign-in (lost phone and recovery codes)")
+    p.add_argument("username")
+    p.set_defaults(func=cmd_remove_two_step)
 
     p = sub.add_parser("revoke-sessions", help="sign out one account's devices (or --all)")
     p.add_argument("username", nargs="?")
