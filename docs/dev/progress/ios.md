@@ -1,4 +1,4 @@
-Status: step 2 in progress (2026-10-28): code written, the macOS CI job is being brought to green on draft PR #101.
+Status: complete for step 2 (2026-10-28): PR #101 green on the macOS runner (12 simulator tests) and on Linux (34 package tests). Step 3 waits for the owner.
 
 # iOS app (design note 15)
 
@@ -13,7 +13,8 @@ Status: step 2 in progress (2026-10-28): code written, the macOS CI job is being
   * App: `KidneyHealthSyncApp`, `ContentView`, `SyncModel` (rounds of 500, at most 10 rounds a sync, `since` kept in UserDefaults),
     `HealthSource` (anchored query descriptors, observer queries with background delivery, preferred weight unit), `Keychain`
     (this device only), `URLSessionTransport` (ephemeral, no cookies, no redirects).
-  * Simulator tests: HealthMapping, Transport (URLProtocol stub), Keychain, settings screen.
+  * Simulator tests (12): HealthMapping, Transport (URLProtocol stub), Keychain, settings screen. HealthKit refuses to build half a
+    blood pressure pair and gives an unsaved sample no source name, so neither is tested there.
   * `tests/test_ios_app.py` (safety set): entitlements, no write usage text, only three read types, no other Health type in the code,
     no third-party packages, HTTPS only, Keychain this-device-only.
   * CI job `ios-app` on macos-15 with Xcode 26.3: `xcodebuild test` on the newest iPhone simulator (`ios/pick_simulator.py`).
@@ -24,10 +25,11 @@ Status: step 2 in progress (2026-10-28): code written, the macOS CI job is being
 * The app and its tests use Swift 5 language mode (`SWIFT_VERSION = 5.0`) to keep HealthKit's non-Sendable types from blocking the
   build. The package stays Swift 6.
 * No token check route yet (note 15 §4.3): a wrong token shows on the first sync.
+* The Health observers start only once a server and token are saved, so nothing of Health is touched before setup (and the test host
+  starts clean).
 
 ## Next
 
-* Get `ios-app` green; fill in the PR body; mark ready; merge (the owner asked to merge when green).
 * Step 3 waits for the owner: Apple Developer Program, signing secrets, TestFlight, real-phone checks (value text vs the Health export).
 
 ## Reproduce
