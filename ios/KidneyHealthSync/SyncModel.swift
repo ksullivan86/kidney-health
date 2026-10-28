@@ -60,6 +60,7 @@ final class SyncModel: ObservableObject {
         }
         address = cleaned
         defaults.set(cleaned, forKey: Key.address)
+        startObserving()
         return nil
     }
 
@@ -87,8 +88,10 @@ final class SyncModel: ObservableObject {
         await syncNow()
     }
 
+    /// Starts the Health observers once the app is set up: a server address and a token. Before that there is nothing to send, and
+    /// nothing of Health is touched.
     func startObserving() {
-        guard let health, !observing else { return }
+        guard let health, !observing, hasToken, Settings.pushURL(address) != nil else { return }
         observing = true
         health.observe { await SyncModel.shared.syncNow() }
     }

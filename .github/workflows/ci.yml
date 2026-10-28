@@ -133,9 +133,14 @@ jobs:
           xcodebuild -version
           udid=$(xcrun simctl list devices available -j | python3 ios/pick_simulator.py)
           echo "simulator: $udid"
-          xcodebuild test -quiet \
+          results="$RUNNER_TEMP/tests.xcresult"
+          if ! xcodebuild test -quiet \
             -project ios/KidneyHealthSync.xcodeproj -scheme KidneyHealthSync \
-            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived"
+            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived" -resultBundlePath "$results"; then
+            xcrun xcresulttool get test-results summary --path "$results" || true
+            xcrun xcresulttool get test-results tests --path "$results" | head -c 20000 || true
+            exit 1
+          fi
 
   lint:
     name: lint (workflows, Containerfiles, manifests, scripts)
