@@ -24,10 +24,10 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 (an admin also sees where the switch is). Turning the switch on or off redraws the block and the People list at once.
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
-not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the route
-is `POST /push/v1/body` only. To let a phone reach it from beyond your LAN without opening the rest of the app, use the
-commented second host name in `deploy/caddy/Caddyfile.example`; it passes only this request and `POST /mcp`
-([assistant.md](assistant.md)). A VPN is simpler and safer.
+not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the routes
+are `POST /push/v1/body` and the token check `GET /push/v1/check` (below). To let a phone reach them from beyond your LAN without
+opening the rest of the app, use the commented second host name in `deploy/caddy/Caddyfile.example`; it passes only these two
+requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
 
 ## What a token is
 
@@ -112,11 +112,21 @@ curl -sS https://food.example.org/push/v1/body \
 | `413` / `415` | body over 32 KiB / not `application/json` |
 | `429` | more than 60 requests an hour for this token, or too many wrong tokens from this address (`Retry-After`) |
 
+## Testing a token
+
+`GET /push/v1/check` with the same `Authorization: Bearer khd_…` answers `200 {"ok": true}` when the token works, and the same `401`,
+`403` and `429` as above when it does not. It sends and stores nothing, and counts toward the token's 60 requests an hour. The iPhone
+app's **Test connection** button uses it ([`ios/README.md`](../ios/README.md)). Any other method is a `405`.
+
+```bash
+curl -sS https://food.example.org/push/v1/check -H "Authorization: Bearer khd_…"
+```
+
 ## What a leaked token can do
 
 It can add up to 60 requests of up to 50 plausible weights and readings an hour (never more than 20 weights and 30 readings a day) to
 **one** person's log, until it expires (at most 365 days) or is revoked. It cannot read the log, the profile or anything else, change or
-delete a row, make or see tokens, or reach any other route (every other route ignores the `Authorization` header). The false rows are
+delete a row, make or see tokens, or reach any other route (every other route ignores the `Authorization` header). The check route only says whether it works. The false rows are
 marked as sent by that token, so the person can see them and delete all of them in one step. Nothing is acted on automatically. Revoke the
 token (and delete what it sent) if a phone is lost or a Shortcut was shared.
 

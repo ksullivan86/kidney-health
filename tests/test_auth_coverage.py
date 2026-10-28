@@ -202,15 +202,16 @@ def test_a_valid_assistant_or_device_token_opens_no_api_route(client):
 # access is off they answer 404 as if they did not exist.
 BEARER_ROUTES = {("post", "/mcp")}
 # The phone shortcuts' ingest route (design note 12; app/push.py) is the second bearer-only route outside /api: a device token, not
-# an assistant token, and the instance switch push.enabled (off: the generic 401, not a 404).
-PUSH_ROUTES = {("post", "/push/v1/body")}
+# an assistant token, and the instance switch push.enabled (off: the generic 401, not a 404). GET /push/v1/check tests the same token
+# (design note 15 §4.3) and reads and stores nothing.
+PUSH_ROUTES = {("post", "/push/v1/body"), ("get", "/push/v1/check")}
 
 
 def test_the_bearer_routes_are_the_only_write_routes_outside_the_api(anon_client):
     unsafe = {(m, p) for m, p, _ in _walk(anon_client.app.routes)
               if not p.startswith("/api/") and m in ("post", "put", "patch", "delete")}
-    assert BEARER_ROUTES | PUSH_ROUTES <= unsafe
-    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES}, sorted(unsafe)  # PUT, PATCH, DELETE: 405
+    assert BEARER_ROUTES | {r for r in PUSH_ROUTES if r[0] == "post"} <= unsafe
+    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES}, sorted(unsafe)  # the other methods: 405
 
 
 def test_the_push_route_needs_a_device_token_and_never_takes_a_session(client):

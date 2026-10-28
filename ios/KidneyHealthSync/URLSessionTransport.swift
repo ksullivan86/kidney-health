@@ -1,4 +1,4 @@
-// Posts one request body to the person's server. No cookies, no cache, no redirects: a redirect could carry the token to another
+// Talks to the person's server: a request body, or the token check. No cookies, no cache, no redirects: a redirect could carry the token to another
 // host, so it is answered as the redirect status and the sync stops.
 import Foundation
 import KidneyHealthCore
@@ -27,6 +27,17 @@ struct URLSessionTransport: PushTransport {
         request.httpMethod = "POST"
         request.httpBody = body
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        return try await send(request, token: token)
+    }
+
+    func get(_ url: URL, token: String) async throws -> HTTPReply {
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        return try await send(request, token: token)
+    }
+
+    private func send(_ request: URLRequest, token: String) async throws -> HTTPReply {
+        var request = request
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (data, response) = try await session.data(for: request)

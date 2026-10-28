@@ -70,10 +70,12 @@ public struct HTTPReply: Sendable {
     }
 }
 
-/// Sends one request body. Implementations post JSON with `Authorization: Bearer <token>` and throw only when the server could not be
-/// reached.
+/// Talks to the server. Implementations send `Authorization: Bearer <token>` and throw only when the server could not be reached.
 public protocol PushTransport: Sendable {
+    /// Posts a JSON request body.
     func post(_ body: Data, to url: URL, token: String) async throws -> HTTPReply
+    /// A GET with no body (the token check).
+    func get(_ url: URL, token: String) async throws -> HTTPReply
 }
 
 /// The server's answer to an accepted request: counts only (app/push.py).
@@ -234,6 +236,65 @@ public enum Sync {
     private static func count(_ n: Int, _ word: String) -> String { "\(n) \(word)\(n == 1 ? "" : "s")" }
 }
 
+/// The answer of **Test connection** (`GET /push/v1/check`): does the token work at this server?
+public enum ConnectionCheck: Equatable, Sendable {
+    /// The token works: the app can send.
+    case ok
+    /// 401: the token is wrong, revoked or expired, or phone shortcuts are switched off on the server.
+    case badToken
+    /// 429: the token's 60 requests an hour are used up.
+    case wait(seconds: Int)
+    /// The address answers, but not as a Kidney Health server that offers the check (an older version, or another site).
+    case notThisApp
+    /// Another error status.
+    case serverError(Int)
+    /// The server could not be reached.
+    case offline
+
+    /// Asks the server whether the token works. Nothing is sent but the token.
+    public static func run(_ url: URL, token: String, transport: PushTransport) async -> ConnectionCheck {
+        let reply: HTTPReply
+        do {
+            reply = try await transport.get(url, token: token)
+        } catch {
+            return .offline
+        }
+        switch reply.status {
+        case 200:
+            let object = try? JSONSerialization.jsonObject(with: reply.body) as? [String: Any]
+            return object?["ok"] as? Bool == true ? .ok : .notThisApp
+        case 401:
+            return .badToken
+        case 429:
+            let seconds = reply.header("Retry-After").flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            return .wait(seconds: seconds.map { max(1, min($0, 86_400)) } ?? Sync.defaultWait)
+        case 404, 405:
+            return .notThisApp
+        default:
+            return .serverError(reply.status)
+        }
+    }
+
+    /// What the person reads under the button.
+    public var text: String {
+        switch self {
+        case .ok:
+            return "Connected. The server took the token."
+        case .badToken:
+            return "The server did not accept the token. Make a new one in Settings → Phone shortcuts. If that does not help, ask the "
+                + "person who runs the server whether phone shortcuts are on."
+        case .wait:
+            return "The token was used many times this hour. Try again later."
+        case .notThisApp:
+            return "That address does not answer like a Kidney Health server, or the server is too old for this test. Check the address."
+        case .serverError(let status):
+            return "The server had a problem (error \(status)). Try again later."
+        case .offline:
+            return "The server could not be reached. Check the address and that this phone can reach it."
+        }
+    }
+}
+
 /// The server address a person types, and the device token they paste.
 public enum Settings {
     /// The URL of `POST /push/v1/body` for an address such as `https://kidney.example.org`, or nil. HTTPS only, no user name or
@@ -251,6 +312,12 @@ public enum Settings {
         url.port = parts.port
         url.path = path + Push.path
         return url.url
+    }
+
+    /// The URL of `GET /push/v1/check` for the same address.
+    public static func checkURL(_ address: String) -> URL? {
+        guard let push = pushURL(address) else { return nil }
+        return push.deletingLastPathComponent().appendingPathComponent("check")
     }
 
     /// The address to open the web app, from the same text.

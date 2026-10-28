@@ -31,12 +31,20 @@ struct ContentView: View {
                         Text("Saved.")
                     }
                     if model.hasToken {
+                        Button(model.testing ? "Testing…" : "Test connection") {
+                            Task { await model.testConnection() }
+                        }
+                        .disabled(model.testing)
+                        if let result = model.checkResult {
+                            Text(result)
+                        }
                         Button("Remove the token from this phone", role: .destructive) { model.removeToken() }
                     }
                 } header: {
                     Text("Your server")
                 } footer: {
-                    Text("Make a token in the web app under Settings → Phone shortcuts. It is kept on this phone only and is never shown again.")
+                    Text("Make a token in the web app under Settings → Phone shortcuts. It is kept on this phone only and is never shown again. "
+                         + "Test connection checks the saved address and token, and sends nothing else.")
                 }
 
                 Section {

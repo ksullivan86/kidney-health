@@ -534,6 +534,66 @@ def test_the_rate_limit_is_60_requests_an_hour_per_token(admin, token):
     assert admin.post("/api/body/weights/batch", json={"rows": [{"date": DAY, "kg": 70, "context": "other", "source_key": "z1"}]}).status_code == 200
 
 
+# --------------------------------------------------------------------------- GET /push/v1/check (the app's Test connection)
+
+CHECK = "/push/v1/check"
+
+
+def check(app: Any, token: str | None, headers: dict[str, str] | None = None) -> Any:
+    h = dict(headers or {})
+    if token is not None:
+        h["Authorization"] = f"Bearer {token}"
+    return bare(app).get(CHECK, headers=h)
+
+
+def test_check_says_ok_for_a_working_token_and_stores_nothing(admin, token):
+    r = check(admin.app, token)
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert r.headers["cache-control"] == "no-store"
+    assert rows(admin) == ([], [])
+    item = next(t for t in admin.get("/api/me/tokens?family=device").json()["tokens"] if t["name"] == "Morning weight")
+    assert item["last_used_at"]  # the person sees that the phone reached the server
+
+
+def test_check_refuses_like_the_ingest_route(admin, token):
+    from test_api_tokens import make, switch
+
+    switch(admin, True)
+    assistant = make(admin)["token"]
+    for bad in (None, assistant, "khd_" + "A" * 43, "khd_short", ""):
+        r = check(admin.app, bad)
+        assert r.status_code == 401 and r.json() == GENERIC and r.headers["www-authenticate"].startswith("Bearer"), bad
+    r = admin.get(CHECK)  # a signed-in cookie is not a credential here
+    assert r.status_code == 401 and r.json() == GENERIC
+    push_switch(admin, False)
+    assert check(admin.app, token).status_code == 401
+    push_switch(admin, True)
+    revoked = make_device(admin, "Old phone")
+    assert admin.delete(f"/api/me/tokens/{revoked['id']}").status_code in (200, 204)
+    assert check(admin.app, revoked["token"]).status_code == 401
+    assert check(admin.app, token).status_code == 200
+
+
+def test_check_shares_the_hour_of_the_token(admin, token):
+    for i in range(60):
+        assert check(admin.app, token).status_code == 200, i
+    r = push(admin.app, token, {"weights": [weight()]})
+    assert r.status_code == 429 and int(r.headers["retry-after"]) > 0
+    assert check(admin.app, token).status_code == 429
+
+
+@pytest.mark.parametrize("method", ["POST", "DELETE", "PUT", "PATCH"])
+def test_check_takes_only_get(admin, token, method):
+    r = bare(admin.app).request(method, CHECK, headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 405 and r.headers["allow"] == "GET"
+
+
+def test_check_keeps_the_origin_rule(admin, token):
+    r = check(admin.app, token, headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403
+    assert check(admin.app, token, headers={"Origin": "https://localhost", "Sec-Fetch-Site": "cross-site"}).status_code == 200
+
+
 def test_the_rate_limit_window_moves_with_the_clock(admin, token, fake_clock, monkeypatch):
     from app.auth import clock as auth_clock
 

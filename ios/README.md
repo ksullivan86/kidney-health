@@ -11,7 +11,7 @@ What is here:
   It also holds one sync: what to send, when to stop, and the status line. It has no dependencies and no HealthKit code.
 * `KidneyHealthSync/`: the app, one screen with three parts.
   * **Your server**: the address (HTTPS only) and the phone token from Settings → Phone shortcuts. The token is kept in the Keychain
-    for this phone only.
+    for this phone only. **Test connection** asks the server whether the saved token works (`GET /push/v1/check`) and sends nothing else.
   * **Apple Health**: one button asks to read weight and blood pressure. The app never asks to write.
   * **Sending**: what the last sync did, and **Send now**. Health wakes the app when it saves a new weight or reading.
 * `KidneyHealthSyncTests/`: tests that run in the iPhone simulator.

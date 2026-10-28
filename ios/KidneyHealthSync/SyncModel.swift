@@ -15,6 +15,9 @@ final class SyncModel: ObservableObject {
     @Published private(set) var status: String
     @Published private(set) var lastSent: Date?
     @Published private(set) var syncing = false
+    @Published private(set) var testing = false
+    /// The answer of the last **Test connection**, until the settings change.
+    @Published private(set) var checkResult: String?
 
     private let defaults: UserDefaults
     private let health: HealthSource?
@@ -60,6 +63,7 @@ final class SyncModel: ObservableObject {
         }
         address = cleaned
         defaults.set(cleaned, forKey: Key.address)
+        checkResult = nil
         startObserving()
         return nil
     }
@@ -70,7 +74,25 @@ final class SyncModel: ObservableObject {
         Keychain.delete(.anchors)
         defaults.removeObject(forKey: Key.since)
         hasToken = false
+        checkResult = nil
         setStatus("The token was removed from this phone.")
+    }
+
+    /// Asks the saved server whether the saved token works (`GET /push/v1/check`). Nothing of Health is read or sent.
+    func testConnection() async {
+        guard !testing, let url = Settings.checkURL(address),
+              let tokenData = Keychain.read(.token), let token = String(data: tokenData, encoding: .utf8) else {
+            checkResult = "Save the address and a token first."
+            return
+        }
+        testing = true
+        defer { testing = false }
+        let result = await ConnectionCheck.run(url, token: token, transport: transport)
+        if case .wait(let seconds) = result {
+            // The check shares the token's hour with sending, so sending would be refused too.
+            defaults.set(Date().addingTimeInterval(TimeInterval(seconds)), forKey: Key.waitUntil)
+        }
+        checkResult = result.text
     }
 
     func requestHealthAccess() async {

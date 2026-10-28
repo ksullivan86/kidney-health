@@ -5,6 +5,7 @@ import Foundation
 
 public enum Push {
     public static let path = "/push/v1/body"
+    public static let checkPath = "/push/v1/check"
     /// Weights and readings together, in one request.
     public static let maxRows = 50
     public static let maxBodyBytes = 32 * 1024

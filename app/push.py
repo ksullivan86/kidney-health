@@ -40,6 +40,10 @@ Order of checks (each one answers before the next runs):
 
 The answer is **counts only**: ``{"added": {"weights": n, "readings": n}, "already_there": {…}, "refused": {"watch": n}}``. No row, id, flag
 or name is echoed, so a token reads nothing. Values are never logged: the log line holds the token's id and the counts.
+
+``GET /push/v1/check`` lets the iOS app test a token before it sends anything (design note 15 §4.3): the same token check (steps 1 to
+3 above, the same generic ``401`` and the same per-token limit), then ``{"ok": true}``. It reads and stores nothing, and its answer holds
+nothing about the person.
 """
 from __future__ import annotations
 
@@ -93,6 +97,7 @@ from .security import flatten_validation_errors
 logger = logging.getLogger(f"{brand.LOGGER_NAME}.push")
 
 PATH = "/body"
+CHECK_PATH = "/check"
 VERSION = "v1"
 MAX_BODY_BYTES = 32 * 1024  # a request over this is a 413, before its body is parsed
 MAX_ROWS = 50  # weights and readings together
@@ -207,6 +212,12 @@ class PushAdded(BaseModel):
 
 class PushRefused(BaseModel):
     watch: int
+
+
+class PushCheck(BaseModel):
+    """The answer of ``GET /push/v1/check``: the token works here. Nothing about the person is in it."""
+
+    ok: Literal[True]
 
 
 class PushResult(BaseModel):
@@ -573,14 +584,31 @@ async def push_body(request: Request, response: Response, conn: sqlite3.Connecti
     return result
 
 
+@router.get(CHECK_PATH, response_model=PushCheck, summary="Test a device token without sending anything")
+async def push_check(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> JSONResponse:
+    """``{"ok": true}`` when the token works at ``POST /push/v1/body``: the same check, the same generic ``401``, and one request of the same
+    60 an hour. Nothing is read or stored, and nothing is logged but the token's last use."""
+    await run_in_threadpool(api_tokens.authenticate, request, conn, api_tokens.BODY_WRITE)
+    auth_context(request).limits.take(RATE_LIMIT, f"token:{request.state.api_token.id}")
+    return JSONResponse({"ok": True}, headers=NO_STORE)
+
+
 def push_other() -> JSONResponse:
     """``405`` for every method but POST (the static mount at ``/`` would otherwise answer 404 for a GET)."""
     return JSONResponse({"detail": "Method Not Allowed"}, status_code=405, headers={"Allow": "POST", **NO_STORE})
 
 
+def check_other() -> JSONResponse:
+    """``405`` for every method but GET on ``/push/v1/check``."""
+    return JSONResponse({"detail": "Method Not Allowed"}, status_code=405, headers={"Allow": "GET", **NO_STORE})
+
+
 for _method in ("GET", "DELETE", "PUT", "PATCH"):  # one route each, so every OpenAPI operation id is unique
     router.add_api_route(PATH, push_other, methods=[_method], operation_id=f"push_body_{_method.lower()}_not_allowed",
                          summary="Not offered: POST only (405)")
+for _method in ("POST", "DELETE", "PUT", "PATCH"):
+    router.add_api_route(CHECK_PATH, check_other, methods=[_method], operation_id=f"push_check_{_method.lower()}_not_allowed",
+                         summary="Not offered: GET only (405)")
 
 
 # --------------------------------------------------------------------------- #

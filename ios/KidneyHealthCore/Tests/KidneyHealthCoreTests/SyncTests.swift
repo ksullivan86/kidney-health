@@ -19,6 +19,16 @@ final class FakeTransport: PushTransport, @unchecked Sendable {
         }
         return try next.get()
     }
+
+    private(set) var checked: [(url: URL, token: String)] = []
+
+    func get(_ url: URL, token: String) async throws -> HTTPReply {
+        let next: Result<HTTPReply, Error> = lock.withLock {
+            checked.append((url, token))
+            return replies.isEmpty ? .success(HTTPReply(status: 200, body: Data(#"{"ok": true}"#.utf8))) : replies.removeFirst()
+        }
+        return try next.get()
+    }
 }
 
 func ok(added: (Int, Int) = (0, 0), there: (Int, Int) = (0, 0), watch: Int = 0) -> HTTPReply {
@@ -153,6 +163,32 @@ final class SyncTests: XCTestCase {
                     "https://kidney.example.org/?a=1", "https://kidney.example.org/#x", "ftp://kidney.example.org", ""] {
             XCTAssertNil(Settings.pushURL(bad), bad)
         }
+    }
+
+    func testTestConnectionSaysWhetherTheTokenWorks() async {
+        let check = Settings.checkURL("https://example.org:8443/kidney/")!
+        XCTAssertEqual(check.absoluteString, "https://example.org:8443/kidney/push/v1/check")
+        XCTAssertEqual(check.path, Push.checkPath.replacingOccurrences(of: "/push", with: "/kidney/push"))
+        let cases: [(Result<HTTPReply, Error>, ConnectionCheck)] = [
+            (.success(HTTPReply(status: 200, body: Data(#"{"ok": true}"#.utf8))), .ok),
+            (.success(HTTPReply(status: 200, body: Data("<!doctype html>".utf8))), .notThisApp),  // a web page, or an older server's app shell
+            (.success(HTTPReply(status: 200, body: Data(#"{"ok": false}"#.utf8))), .notThisApp),
+            (.success(HTTPReply(status: 401)), .badToken),
+            (.success(HTTPReply(status: 429, headers: ["Retry-After": "30"])), .wait(seconds: 30)),
+            (.success(HTTPReply(status: 404)), .notThisApp),
+            (.success(HTTPReply(status: 405)), .notThisApp),
+            (.success(HTTPReply(status: 502)), .serverError(502)),
+            (.failure(Offline()), .offline),
+        ]
+        for (reply, want) in cases {
+            let transport = FakeTransport([reply])
+            let got = await ConnectionCheck.run(check, token: token, transport: transport)
+            XCTAssertEqual(got, want)
+            XCTAssertEqual(transport.checked.map(\.token), [token])
+            XCTAssertTrue(transport.sent.isEmpty)  // a check sends no reading
+            XCTAssertFalse(got.text.isEmpty)
+        }
+        XCTAssertEqual(ConnectionCheck.ok.text, "Connected. The server took the token.")
     }
 
     func testOnlyADeviceTokenIsTaken() {
