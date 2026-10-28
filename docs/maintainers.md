@@ -211,6 +211,8 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
   `:0.6` to `:0.7`. A host that auto-updates `:latest` migrates its database at the next pull; one that tracks `:0.6` stays on 0.6.x.
   CHANGELOG.md, "Upgrading from 0.6 or 0.5", says to take a backup first. If v0.5.1 and v0.6.0 were never tagged, tag only v0.7.0:
   it carries both.
+* **v0.8.0: not held.** No schema step. The release moves the shipped files from `:0.7` to `:0.8` and asks everyone who uses AI to
+  agree to Meal data again. A host that tracks `:0.7` stays on 0.7.x.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest
