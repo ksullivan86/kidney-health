@@ -7,6 +7,48 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.9.0 — 2026-10-29
+
+Version 0.9 makes signing in safer. Anyone with a password can now add a second step, a 6-digit code from an authenticator app,
+and can add passkeys to sign in with a fingerprint, face or phone PIN. A server can require two-step sign-in for its admins. All of
+it is off until a person, or the admin, turns it on.
+
+**Before you upgrade, read [Upgrading from 0.8](#upgrading-from-08-read-this-first).** Two schema steps run at the first start.
+Nothing new is switched on.
+
+### Highlights
+
+* **Two-step sign-in** in **Settings → Account**: a QR code for an authenticator app, then a code at every sign-in, and ten
+  recovery codes for a lost phone.
+* **Passkeys** in **Settings → Account**, and **Sign in with a passkey** on the sign-in page. No password or code is typed. The
+  password keeps working.
+* **Admins must use two-step sign-in**, a switch in **Server administration → Server settings**, or
+  `AUTH_REQUIRE_TWO_STEP_ADMINS=true`.
+* **A way back in** for each: an admin removes a person's two-step sign-in or passkeys in **People**, and so does
+  `python -m app.admin remove-two-step` or `remove-passkeys`.
+
+### Upgrading from 0.8 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.9.0.db`). Schema steps 22 (two-step
+   sign-in) and 23 (passkeys) run at the first start. They add tables and change nothing that is there.
+2. **Coming from 0.7 or older**, read [Upgrading from 0.7](#upgrading-from-07-read-this-first) too. All the database steps run in
+   one start.
+3. **Change the tag** to `:0.9`, or pin a digest from the release notes. The shipped files already say `:0.9`.
+4. **Nothing new is switched on.** Nobody has two-step sign-in or a passkey after the upgrade, and admins are not made to use it
+   until you turn the switch on. You can turn it on only after turning on your own.
+5. **For passkeys, set `PUBLIC_URL`** to the address people open, such as `https://kidney.example.org`. Browsers make passkeys only
+   for a name over HTTPS (or `localhost`), never for an IP address.
+6. **`SECRET_KEY` now also protects the two-step secrets.** Keep backing it up apart from `kidney.db`. If it is lost, people sign in
+   with a recovery code, or you remove their two-step sign-in.
+
+### Known limitations
+
+* Sensitive changes still ask for the password again, also for someone who signed in with a passkey.
+* Every account needs a password. Accounts with passkeys only, and passkeys in the username box's suggestions, are for later.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people who run a server
 
 * **Two-step sign-in.** Anyone with a password can turn it on in **Settings → Account → Two-step sign-in**. Signing in then needs a

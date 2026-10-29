@@ -213,6 +213,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
   it carries both.
 * **v0.8.0: not held.** No schema step. The release moves the shipped files from `:0.7` to `:0.8` and asks everyone who uses AI to
   agree to Meal data again. A host that tracks `:0.7` stays on 0.7.x.
+* **v0.9.0: not held.** The release runs schema steps 22 and 23 at start without an automatic copy (they only add tables), and
+  moves the shipped files from `:0.8` to `:0.9`. A host that auto-updates `:latest` migrates its database at the next pull; one that
+  tracks `:0.8` stays on 0.8.x. CHANGELOG.md, "Upgrading from 0.8", says to take a backup first.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest

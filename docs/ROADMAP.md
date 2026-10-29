@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.8.0 release (2026-10-28).
+section. Last reviewed for the v0.9.0 release (2026-10-29).
 
 ## Next (the owner, 2026-10-22)
 
@@ -35,7 +35,7 @@ insulin or medicines.
 ## Accounts, sign-in and secrets (note 07)
 
 * OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID), choosing between Authlib 1.8 + itsdangerous and the project's own PKCE code (a new runtime dependency needs a contract decision) — note 07 F7, §3.1 and §6 "Later (v0.4)".
-* A second factor for local sign-in: one-time codes (TOTP) are **built** ([note 17](dev/research/17-two-step-sign-in.md)). Requiring them for admins is built too. Passkeys are **built** as an extra way in, with the password kept ([note 18](dev/research/18-passkeys.md)). Still later: passkeys for re-authentication and accounts with passkeys only; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
+* A second factor for local sign-in: one-time codes (TOTP) shipped in 0.9.0 ([note 17](dev/research/17-two-step-sign-in.md)), and so did requiring them for admins. Passkeys shipped in 0.9.0 as an extra way in, with the password kept ([note 18](dev/research/18-passkeys.md)). Still later: passkeys for re-authentication and accounts with passkeys only; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * Read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency) — note 07 §6 "Later (v0.4)".
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
