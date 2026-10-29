@@ -566,6 +566,28 @@ What a replayer must get right:
 * The three refusals (pregnancy, under 18, an early transplant) mean the app gives no suggestion and the person enters targets by hand. A client must not suggest numbers in those cases.
 * `today` is always given. Never read a clock.
 
+## webauthn_w3c_vectors.json
+
+The test vectors of the W3C Web Authentication Level 3 specification (§16), copied as published: a registration and a sign-in for each
+kind of key a passkey can use. They check the passkey checks in `app/auth/webauthn.py` (design note 18). There is no browser twin and no
+generator: the file is the spec's own data, read by `tests/test_webauthn.py`.
+
+Top-level keys:
+
+* `source`: where the values come from and when they were read.
+* `rp_id`: the server's name in every vector, `example.org`.
+* `origin`: the web address in every vector, `https://example.org`.
+* `vectors`: by name, `{expect, user_verified: {registration, authentication}, registration: {challenge, clientDataJSON,
+  attestationObject, credential_id}, authentication: {challenge, clientDataJSON, authenticatorData, signature}}`, every value hex.
+* `note`: why `user_verified` is there.
+
+What a replayer must get right:
+
+* The spec sets the authenticator flags of these vectors at random. With user verification not required, every vector whose `expect`
+  is `accepted` registers and signs in, and the two `refused` ones (cross-origin, top origin) are refused. With it required, as the
+  server always does, a step whose `user_verified` is false is refused.
+* The stored signature counter is 0 for every sign-in.
+
 ## Replaying in another language
 
 The recipe is the same for every file.
