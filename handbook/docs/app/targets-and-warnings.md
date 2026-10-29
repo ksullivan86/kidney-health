@@ -132,6 +132,9 @@ is waiting for clinical review.
 
 ## Personalized targets
 
+After you save, delete or import lab results, the history and kidney-function card refresh together.
+A slow reply from before your change will not replace the refreshed results.
+
 Optional details in **Profile → About you** and your results in **Lab results** (Profile → Blood and urine
 tests) make "Suggest targets" start from you rather than from a 70 kg example ([design note 05][NOTE05]).
 If your patient portal or a spreadsheet has your past results, **Lab results → Import from a spreadsheet**
