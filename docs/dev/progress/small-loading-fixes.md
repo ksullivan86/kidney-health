@@ -14,6 +14,12 @@ Three small loading fixes. Worktree branch `worktree-agent-a3f2ee7639205c3ed`, m
    passwordForm and the data block; pytest `tests/test_devices_loading.py`), 5 cases: 3 failed on the old code (revoked phone
    came back, newest-first overlap, older failure replaced the list), all pass now. All tests that read settings.js pass
    (232). Docs: ARCHITECTURE Settings view, CHANGELOG. Handbook unchanged: nothing new on screen.
-3. Add tab search (`js/views/add.js`, `runSearch`): a failed search shows in place of old results, with Retry. Not started.
+3. Add tab search (`js/views/add.js`, `runSearch`): DONE. The counter was already there; the newest failed search now calls
+   `renderSearchFailed`: the new heading, no count, "Could not search: <why>." and Retry (runs runSearch again), in place of
+   the old results. The toast is gone (said once, in place). Test `tests/js/food_search_failed.test.mjs` (pytest
+   `tests/test_food_search_failed.py`), 3 cases: 2 failed on the old code (old results stayed, no Retry), all pass now.
+   Tests that read add.js, USDA and scan late replies pass. Docs: ARCHITECTURE Add food, handbook logging.md "If something
+   goes wrong", CHANGELOG.
+4. Next: e2e cases in tools/e2e/late_replies.py, then the full pytest and node vectors.
 
 Python: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python

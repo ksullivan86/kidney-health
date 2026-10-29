@@ -503,7 +503,9 @@ Mobile-first single page, five views switched client-side (no router library):
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
-   (manual nutrients) and, when USDA is configured, "Search USDA". The USDA sheet shows only the
+   (manual nutrients) and, when USDA is configured, "Search USDA". Only the newest search draws the list; when it fails, the
+   list says "Could not search" with **Retry** under the new search's heading, in place of the old results
+   (`tests/js/food_search_failed.test.mjs`). The USDA sheet shows only the
    answer to the newest search while it is open: an older search, or one from before the sheet was
    closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
    without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
