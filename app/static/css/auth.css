@@ -5,7 +5,7 @@
 /* Password and code fields look like every other text field (base.css lists the other types). */
 input[type="password"] {
   width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border: 1px solid var(--control-border); background: var(--surface); color: var(--text);
 }
 input[aria-invalid="true"] { border-color: var(--over); box-shadow: inset 0 0 0 1px var(--over); }
 

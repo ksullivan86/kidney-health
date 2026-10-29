@@ -243,3 +243,67 @@ def test_rows_and_grids_make_room_for_large_text() -> None:
 def test_a_message_in_a_sheet_keeps_its_height() -> None:
     """In the Scan sheet with large text, "No camera was found" was squashed to 0 px and printed over the buttons."""
     assert "flex-shrink: 0" in rule(SHEETS_CSS, ".status-msg")
+
+
+# ------------------------------------------------------------------------------------------------- control edges
+AUTH_CSS = read("css", "auth.css")
+THEMES = {  # the light tokens, and the two places the dark tokens are set (the device's choice, the person's choice)
+    "light": block(BASE, ":root {"),
+    "dark (device)": block(block(BASE, "@media (prefers-color-scheme: dark)"), ':root:not([data-theme="light"])'),
+    "dark (chosen)": block(BASE, ':root[data-theme="dark"] {'),
+}
+# The rules that draw the edge of a field, a select, or the box of a hidden radio or checkbox.
+CONTROL_EDGES = (
+    (BASE, 'input[type="text"], input[type="number"], input[type="search"], input[type="date"], input[type="url"], select, textarea'),
+    (AUTH_CSS, 'input[type="password"]'),
+    (BODY_CSS, 'input[type="time"]'),
+    (PROFILE_CSS, 'input[type="month"]'),
+    (BASE, ".segmented"),  # the edge of a row of choices (meal, eaten or planned, Trends' range)
+    (BODY_CSS, ".body-seg label"),  # when a weight was taken
+    (PROFILE_CSS, ".wd-check > span"),  # dialysis weekdays
+)
+
+
+def token(theme: str, name: str) -> str:
+    """A colour token as the theme sets it; a dark theme that does not set it keeps the light value."""
+    for css in (THEMES[theme], THEMES["light"]):
+        match = re.search(rf"(?<![\w-]){re.escape(name)}:\s*(#[0-9a-fA-F]{{6}})", css)
+        if match:
+            return match.group(1)
+    raise AssertionError(f"no {name} in the {theme} tokens")
+
+
+def contrast(a: str, b: str) -> float:
+    """The WCAG contrast ratio of two #rrggbb colours."""
+    def lum(hex_colour: str) -> float:
+        c = [int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    x, y = lum(a), lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def test_the_edge_of_every_field_and_choice_box_stands_out_3_to_1() -> None:
+    """Fields had the card line as their edge: #d7dbe2 on white is 1.4:1, #353d47 on the dark card 1.5:1. WCAG 1.4.11 asks 3:1
+    against the colours next to the control: the page, a card or a sheet, and the grey panels. tools/e2e/a11y.py measures the
+    same in the browser, and the browser's own checkboxes and radios too (4.3:1 or more in both themes)."""
+    low = []
+    for css, selector in CONTROL_EDGES:
+        match = re.search(r"border: 1px solid var\((--[\w-]+)\)", rule(css, selector))
+        assert match, f"{selector} has no 1 px edge"
+        for theme in THEMES:
+            edge = token(theme, match.group(1))
+            for behind in ("--bg", "--surface", "--surface-2"):
+                ratio = contrast(edge, token(theme, behind))
+                if ratio < 3:
+                    low.append(f"{selector} ({theme}): {match.group(1)} {edge} on {behind} {token(theme, behind)} is {ratio:.2f}:1")
+    assert not low, "\n".join(low)
+
+
+def test_cards_and_dividers_keep_their_light_line() -> None:
+    """Only the controls got the stronger edge: cards, lists and the lines between choices stay as light as before."""
+    assert "border: 1px solid var(--border)" in rule(BASE, ".card")
+    assert "border-left: 1px solid var(--border)" in rule(BASE, ".meal-seg label + input + label")
+    assert "border-left: 1px solid var(--border)" in rule(BASE, ".segmented .seg + .seg")
+    for theme in THEMES:
+        assert contrast(token(theme, "--border"), token(theme, "--surface")) < 2, theme

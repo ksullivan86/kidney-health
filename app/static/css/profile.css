@@ -14,7 +14,7 @@
 .wd-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .wd-check > span {
   display: inline-flex; align-items: center; justify-content: center; min-width: var(--tap); min-height: var(--tap); padding: 0 10px;
-  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-weight: 600; font-size: 0.9rem; color: var(--text-2); cursor: pointer;
+  border: 1px solid var(--control-border); border-radius: var(--radius-sm); background: var(--surface); font-weight: 600; font-size: 0.9rem; color: var(--text-2); cursor: pointer;
 }
 .wd-check input:checked + span { background: var(--accent-tint); color: var(--accent); border-color: var(--accent); }
 .wd-check input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -23,7 +23,7 @@
 /* base.css styles the other input types; the birth month uses a month picker (text where unsupported). */
 input[type="month"] {
   width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border: 1px solid var(--control-border); background: var(--surface); color: var(--text);
 }
 .choice-list { gap: 2px; }
 .choice-list > .hint { margin: -4px 0 4px; }

@@ -51,6 +51,51 @@ def test_harness_compiles_and_has_no_machine_paths(name):
     assert not re.search(r"^\s*(import httpx\b(?!2)|from httpx\b(?!2))", text, re.M), f"{name} imports httpx (use httpx2)"
 
 
+def a11y_functions(*names):
+    """Functions of a11y.py that need no browser (the module itself imports Playwright, which pytest does not have)."""
+    import zlib
+    from typing import Any
+
+    tree = ast.parse((E2E / "a11y.py").read_text(encoding="utf-8"))
+    found = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+    space = {"zlib": zlib, "Any": Any}
+    exec(compile(ast.Module(body=found, type_ignores=[]), "a11y.py", "exec"), space)  # noqa: S102 - the repository's own code
+    return [space[n] for n in names]
+
+
+def test_a11y_reads_the_pixels_of_a_browser_picture():
+    """The edge of a checkbox the browser draws is measured on its pixels; every PNG row filter must decode."""
+    import zlib
+
+    png_pixels, ratio = a11y_functions("png_pixels", "ratio")
+    rows = [[(255, 255, 255), (118, 118, 118), (21, 101, 192)], [(0, 0, 0), (10, 200, 30), (250, 5, 128)],
+            [(1, 2, 3), (4, 5, 6), (7, 8, 9)], [(118, 118, 118), (255, 255, 255), (60, 60, 60)], [(9, 9, 9), (200, 100, 50), (50, 100, 200)]]
+
+    def paeth(a, b, c):
+        p = a + b - c
+        pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+        return a if pa <= pb and pa <= pc else b if pb <= pc else c
+
+    raw, prev = b"", bytes(9)
+    for kind, row in enumerate(rows):  # filters 0 to 4, one per row
+        line = bytes(v for px in row for v in px)
+        enc = bytearray()
+        for i, x in enumerate(line):
+            a, b, c = (line[i - 3] if i >= 3 else 0), prev[i], (prev[i - 3] if i >= 3 else 0)
+            enc.append((x - (0, a, b, (a + b) // 2, paeth(a, b, c))[kind]) & 255)
+        raw += bytes([kind]) + bytes(enc)
+        prev = line
+
+    def chunk(tag, body):
+        return len(body).to_bytes(4, "big") + tag + body + zlib.crc32(tag + body).to_bytes(4, "big")
+
+    png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", (3).to_bytes(4, "big") + (5).to_bytes(4, "big") + bytes([8, 2, 0, 0, 0]))
+           + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+    assert png_pixels(png) == [px for row in rows for px in row]
+    assert round(ratio((118, 118, 118), (255, 255, 255)), 2) == 4.54  # Chromium's checkbox edge on white
+    assert round(ratio((215, 219, 226), (255, 255, 255)), 2) == 1.39  # the old field edge
+
+
 def test_readme_documents_every_harness():
     readme = (E2E / "README.md").read_text(encoding="utf-8")
     for name in HARNESSES:
