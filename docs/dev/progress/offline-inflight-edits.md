@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Offline outbox: edits and deletes while a send is in flight
 
@@ -29,11 +29,11 @@ and to a second edit or a delete that joined a change (`enqueueChange`) while th
 1. [x] Reproduce: tests/js/outbox_inflight.test.mjs + tests/test_outbox_inflight.py. Old code: 16 of 33 checks fail
    (11 of the first 26). Commit ef1766d.
 2. [x] Fix in offline.js. New code: 33 of 33 pass; outbox_changes.mjs 79 pass.
-3. [ ] Existing tests: full pytest, tools/e2e/device.py (outbox and changes passed; the full run is next). Static tests
-   updated: `row.state = 'conflict'` in test_offline_edits_ui.py; test_device_ui.py checks `/api/log/${id}` templates with a
-   number. device.py step 5b: batch answer held with page.route, one entry edited and one deleted meanwhile (passes).
-   One `changes` run timed out at "conflict === 2" while the full pytest ran at the same time; it passed when run alone
-   (also on the old code). Re-run to check for flakiness.
+3. [x] Existing tests: full `python -m pytest` exits 0 with no failures; `tools/e2e/device.py` (every section) 189 passed,
+   0 failed. Static tests updated: `row.state = 'conflict'` in test_offline_edits_ui.py; test_device_ui.py checks
+   `/api/log/${id}` templates with a number. device.py step 5b holds the batch answer with page.route, edits one entry and
+   deletes another meanwhile, and checks the server. 5b first used pear at dinner, and the `changes` section opens its own pear
+   row by name, so it opened the wrong one; 5b now logs peach and mango at breakfast.
 4. [x] Docs: ARCHITECTURE.md (Offline edits and deletes: "Changes made while a send is on its way", checks, code map, M2
    checks), docs/install-on-your-phone.md, handbook/docs/app/logging.md, CHANGELOG.md.
 

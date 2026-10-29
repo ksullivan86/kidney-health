@@ -785,13 +785,14 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         page.unroute("**/api/log/batch")
         watch.offline = False
         # 5b. Changed while the batch is on its way: the server has stored both entries, the answer has not come back yet,
-        # and the person edits one and deletes the other. Both changes reach the server once the answer is in.
-        pear = hx.api("GET", "/api/foods?q=pear%20raw&limit=1")["foods"][0]["id"]
-        banana = hx.api("GET", "/api/foods?q=banana%20raw&limit=1")["foods"][0]["id"]
+        # and the person edits one and deletes the other. Both changes reach the server once the answer is in. (Foods and a
+        # meal no other section uses: the `changes` section opens its rows on Today by food name.)
+        peach = hx.api("GET", "/api/foods?q=peach%20raw&limit=1")["foods"][0]["id"]
+        mango = hx.api("GET", "/api/foods?q=mango%20raw&limit=1")["foods"][0]["id"]
         watch.offline = True
         ctx.set_offline(True)
-        made = page.evaluate(f"Promise.all([KH.api.addEntry({{ date: '{TODAY}', meal: 'dinner', food_id: {pear}, servings: 1 }}),"
-                             f" KH.api.addEntry({{ date: '{TODAY}', meal: 'dinner', food_id: {banana}, servings: 1 }})])")
+        made = page.evaluate(f"Promise.all([KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {peach}, servings: 1 }}),"
+                             f" KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {mango}, servings: 1 }})])")
         held: list[Any] = []
 
         def hold_answer(route: Any) -> None:
@@ -804,14 +805,14 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         while not held and time.monotonic() < deadline:
             page.wait_for_timeout(100)
         on_server = {e["food_id"] for e in hx.entries() if e["client_id"] in {m["client_id"] for m in made}}
-        check(area, "in flight: the server has both entries before the page hears back", held and on_server == {pear, banana}, str(on_server))
+        check(area, "in flight: the server has both entries before the page hears back", held and on_server == {peach, mango}, str(on_server))
         page.evaluate("([a, b]) => Promise.all([KH.api.updateEntry(a.id, { servings: 3, note: 'harness edit' }, a), KH.api.deleteEntry(b.id, b)])", made)
         route, answer = held[0]
         route.fulfill(response=answer)
         wait_js(page, "KH.offline.items().then((items) => items.length === 0)", TIMEOUT_MS)
         rows = [e for e in hx.entries() if e["client_id"] in {m["client_id"] for m in made}]
         check(area, "the edit made while it was on its way is on the server, the deleted one is gone",
-              [(e["food_id"], e["servings"], e["note"]) for e in rows] == [(pear, 3, "harness edit")], json.dumps(rows)[:400])
+              [(e["food_id"], e["servings"], e["note"]) for e in rows] == [(peach, 3, "harness edit")], json.dumps(rows)[:400])
         page.unroute("**/api/log/batch")
         # 6. Sign-out asks while something waits.
         watch.offline = True
