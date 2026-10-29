@@ -22,9 +22,14 @@
     "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":13}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
   ],
   "expect": {
-    "status": "dropped_all",
-    "dropped_reasons_include": [
+    "status": "ok",
+    "portions_lowered": 1,
+    "portions_lowered_include": [
       "quarters_out_of_range"
-    ]
+    ],
+    "shown_quarters_at_most": {
+      "Rice, white, long-grain, cooked": 6
+    },
+    "rule_fallback": false
   }
 }

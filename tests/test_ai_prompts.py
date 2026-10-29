@@ -89,7 +89,7 @@ def test_the_next_meal_payload_matches_its_snapshot(client):
     assert sorted(data) == ["candidates", "handbook_pages", "judged", "meal", "meal_budget", "meals_left", "person",
                             "saved_meals", "targets", "today", "week_avg"]
     for c in data["candidates"]:
-        assert sorted(c) == ["category", "flags", "group", "id", "liked", "name", "often", "per_portion", "portion_quarters",
+        assert sorted(c) == ["category", "flags", "group", "id", "liked", "max_quarters", "name", "often", "per_portion", "portion_quarters",
                              "rating", "reasons", "ref", "serving", "source", "warnings"]
 
 
@@ -330,7 +330,7 @@ def _fingerprint() -> str:
                     schemas.plan_schema(["lunch"], 3), schemas.parse_meal_schema(), schemas.read_label_schema(),
                     schemas.plate_schema(), schemas.lab_report_schema()],
         "blocklist": guard.BLOCKLIST.pattern, "reasons": guard.REASON_TEXT, "themes": guard.THEME_TITLE,
-        "refused": guard.REFUSED_TEXT, "notice": guard.NOTICE,
+        "refused": guard.REFUSED_TEXT, "notice": guard.NOTICE, "lowered": [guard.PORTION_LOWERED_TEXT, guard.PORTIONS_LOWERED_TEXT],
         # The Ask chat (assistant step 2): its prompt, tool notes, step protocol, the answer checks and their fixed texts.
         "chat_prompt": prompts.CHAT_SYSTEM_PROMPT, "chat_tools": dict(prompts.CHAT_TOOL_NOTES),
         "chat_messages": [prompts.CHAT_TOOL_RESULT, prompts.CHAT_TOOL_ERROR, prompts.CHAT_NO_CALLS_LEFT,

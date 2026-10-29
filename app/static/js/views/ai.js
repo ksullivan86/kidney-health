@@ -457,6 +457,8 @@
       h('h3', { class: 'ai-idea-title' }, idea.title),
       h('p', { class: 'ai-why' }, idea.why),
       h('ul', { class: 'ai-items' }, idea.items.map(itemRow)),
+      // The app's own sentence when it made a portion smaller so the idea fits (the amounts above are the smaller ones).
+      idea.portion_note ? h('p', { class: 'hint ai-portion-note' }, idea.portion_note) : null,
       h('p', { class: 'small' }, nutrientLine(idea.totals, ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'], idea.unknown || [])),
       afterParts.length ? h('p', { class: 'muted small' }, afterParts.join(' · ')) : null,
       (idea.handbook || []).length ? h('p', { class: 'ai-links' }, idea.handbook.map(learnLink).filter(Boolean)) : null,

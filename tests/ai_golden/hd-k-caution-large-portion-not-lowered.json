@@ -1,0 +1,49 @@
+{
+  "id": "hd-k-caution-large-portion-not-lowered",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "profile": {
+      "ckd_stage": "5",
+      "dialysis": "hemodialysis"
+    },
+    "targets": "hd",
+    "entries": [
+      [
+        "breakfast",
+        "Orange juice",
+        1
+      ],
+      [
+        "lunch",
+        "Potato, baked, with skin",
+        1
+      ],
+      [
+        "lunch",
+        "Banana, raw",
+        1
+      ],
+      [
+        "breakfast",
+        "Potato, baked, with skin",
+        1
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Cranberries, raw}}\",\"quarters\":12}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "dropped_all",
+    "dropped_reasons_include": [
+      "would_exceed:potassium_mg"
+    ],
+    "portions_lowered": 0,
+    "not_shown_food_names": [
+      "Cranberries, raw"
+    ],
+    "rule_fallback": true
+  }
+}

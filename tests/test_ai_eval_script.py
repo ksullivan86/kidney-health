@@ -480,6 +480,22 @@ def test_the_live_runner_counts_a_less_often_food_the_model_puts_first(tmp_path)
     assert out == [(1, 0), (1, 1)]  # one case measured each time; only the model that put rice first is counted
 
 
+def test_the_live_runner_counts_an_idea_the_app_made_smaller(tmp_path):
+    def model(request: Any) -> Any:  # twelve quarters of the first food the app accepts less of
+        body = json.loads(request.content)
+        text = body["messages"][1]["content"]
+        data = json.loads(text.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
+        pick = next(c for c in data["candidates"] if 1 <= c["max_quarters"] < 12)
+        return chat({"status": "ok", "refusal": "none", "ideas": [
+            {"theme": "light", "items": [{"food_id": pick["id"], "quarters": 12}], "reason_codes": [], "handbook": []}]})
+
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, safety=False, cases=r"^baseline-good-idea$")
+    rep = ai_eval.run_eval(options, transport_factory=FakeProvider(route=model).factory, data_dir=tmp_path, log=lambda line: None)
+    s = rep["summary"]
+    assert s["next_meal_with_idea_rate"] == 1.0 and s["ideas_lowered"] == 1 and s["dropped_reasons"] == {}
+    assert sum(s["lowered_reasons"].values()) == 1
+
+
 # --------------------------------------------------------------------------- #
 # The kidney-only cases (the prompts follow the profile; the owner's live run checks them with a real model)
 # --------------------------------------------------------------------------- #

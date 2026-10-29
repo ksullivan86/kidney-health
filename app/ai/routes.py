@@ -313,8 +313,10 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
         conn, user.id, feature=prep.feature if prep.mode is None else f"{prep.feature}:{prep.mode}", cfg=prep.cfg,
         model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
         response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
-        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "repaired", "retried",
-                                                             "trimmed", "steps_dropped")}, **Q.shown_of(verdict), **(extra or {})},
+        # ``repaired`` is the client's JSON repair turn; ``portions_lowered`` the meal ideas the app made smaller to fit.
+        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "portions_lowered", "claims_corrected", "reason", "error",
+                                                             "repaired", "retried", "trimmed", "steps_dropped")},
+                 **Q.shown_of(verdict), **(extra or {})},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
     )
     conn.commit()
@@ -437,7 +439,7 @@ def _reuse(conn: sqlite3.Connection, user: User, prep: F.Prepared, hit: CachedAn
     audit_id = K.write_audit(
         conn, user.id, feature=f"{prep.feature}:{prep.mode}" if prep.mode else prep.feature, cfg=prep.cfg, model=prep.model,
         prompt_version=PROMPT_VERSION, request=None, response_text=None,
-        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "claims_corrected", "reason", "error", "trimmed")},
+        verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "portions_lowered", "claims_corrected", "reason", "error", "trimmed")},
                  "cached_from": hit.audit_id},
         latency_ms=0, status="cached", keep_bodies=False,
     )

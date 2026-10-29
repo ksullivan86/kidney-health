@@ -37,7 +37,7 @@ from .fits import (
 from .planner import plan_day
 from .score import Counter, Scorer, check_meal, habit_stats, meal_totals, pref_terms, score_meal, today_stats
 from .state import GuidanceContext
-from .vectors import FoodVec, renal_level
+from .vectors import FoodVec, is_high, renal_level
 from .swaps import find_swaps
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.guidance")
@@ -87,7 +87,8 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
 
     * ``foods``: up to 40 of the what-fits ranking without the display limit (at least 6 per group
       when available), each ``{ref, food_id, name, untrusted, group, portion, per_portion,
-      renal_rating, fit_text, reasons}``;
+      renal_rating, fit_text, reasons, liked, often, max_quarters}`` (``max_quarters``: the most of
+      that food alone the meal check accepts here, :func:`max_quarters`);
     * ``meals``: up to 5 fitting saved or usual meals;
     * ``room``, ``levels``, ``handbook`` (allowed slugs);
     * ``swap`` mode: ``swaps`` (≤ 15 rule swaps that passed) for ``food`` × ``servings``;
@@ -137,6 +138,7 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
             "reasons": [c for c in codes if c != "you_like"],
             "liked": f.id in habit.pref.liked,
             "often": habit.days_14.get(f.id, 0) >= R.OFTEN_MIN_DAYS,
+            "max_quarters": max_quarters(f, room),
         })
     meals = [public(o) for o in fitting_saved_meals(ctx, meal, room, today, counter, limit=R.AI_MEALS_MAX)]
     for i, m in enumerate(meals, start=1):
@@ -191,6 +193,93 @@ def _merge(items: Iterable[Mapping[str, Any]]) -> tuple[list[tuple[int, int]] | 
     return [(fid, merged[fid]) for fid in order], None
 
 
+#: The meal check's reasons that only mean "a portion is too big": lowering a portion lowers every nutrient, so it can fix
+#: these and cannot make anything else fail. ``quarters_out_of_range`` above the top is brought down to it first.
+LOWERABLE = ("high_portion_too_large", "would_exceed:", "too_many_carbs", "quarters_out_of_range")
+_AMOUNT = {R.K: "k", R.P: "p", R.NA: "na", R.FLUID: "fluid", R.CARBS: "carbs"}
+
+
+def _not_for_lowering(f: FoodVec, q: float, room: Any) -> bool:
+    """Would ``f`` at ``q`` servings fail :func:`check_meal` (kind ``ai``) for a reason a smaller portion must not fix?
+
+    The same tests as the meal check, at the portion the AI proposed: an ``avoid_ckd`` food, a low treatment, an ingredient,
+    an alcoholic drink, an unknown value while that nutrient is not ok today (or unknown carbohydrate with a carb goal), or
+    a "high" portion of a nutrient that is not ok today. An idea with any of these is dropped as before, never repaired."""
+    if f.avoid or f.hypo or f.ingredient or f.alcohol:
+        return True
+    if room.carbs is not None and f.carbs is None:
+        return True
+    for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)):
+        if room.level_of(key) == "ok":
+            continue
+        if v is None or is_high(key, v * q) or (key == R.P and f.additive):
+            return True
+    return False
+
+
+def _to_lower(items: Sequence[tuple[FoodVec, int]], reason: str) -> int | None:
+    """The item to take one quarter off for ``reason``: the biggest contributor (most quarters for a "high" food over one
+    serving), then the most quarters, then the lowest food id. Never a low treatment, never below the smallest portion."""
+    lo = R.AI_QUARTERS_RANGE[0]
+    rows: list[tuple[float, int, int, int]] = []
+    for idx, (f, qt) in enumerate(items):
+        if f.hypo or qt <= lo:
+            continue
+        q = qt / 4.0
+        if reason == "high_portion_too_large":
+            high = f.additive or any(v is not None and is_high(key, v * q) for key, v in ((R.K, f.k), (R.P, f.p), (R.NA, f.na)))
+            if q > 1.0 + 1e-9 and high:
+                rows.append((-q, -qt, f.id, idx))
+        elif reason == "portion_out_of_range":
+            if q > R.PORTION_MAX + 1e-9:
+                rows.append((-q, -qt, f.id, idx))
+        else:
+            key = R.CARBS if reason == "too_many_carbs" else reason.split(":", 1)[1]
+            v = getattr(f, _AMOUNT[key]) if key in _AMOUNT else None
+            if v is not None and v * q > 0:
+                rows.append((-(v * q), -qt, f.id, idx))
+    return min(rows)[3] if rows else None
+
+
+def lower_to_fit(items: Sequence[tuple[FoodVec, int]], room: Any, reason: str) -> list[tuple[FoodVec, int]] | None:
+    """An AI idea (``[(food, quarters)]``) that failed :func:`check_meal` with ``reason``, made smaller until it passes, or
+    ``None`` when it cannot be repaired.
+
+    Only a portion that is too big is repaired (:data:`LOWERABLE`); an idea that also fails for any other reason at the
+    proposed amounts (:func:`_not_for_lowering`) is not. More than 12 quarters is first brought down to 12. Then one quarter
+    at a time comes off the item behind the current reason (:func:`_to_lower`), never below one quarter, never off a low
+    treatment, and nothing is ever raised. The full meal check decides at the end."""
+    lo, hi = R.AI_QUARTERS_RANGE
+    if not reason.startswith(LOWERABLE) or any(qt < lo for _, qt in items):
+        return None
+    if any(_not_for_lowering(f, qt / 4.0, room) for f, qt in items):
+        return None
+    work = [(f, min(qt, hi)) for f, qt in items]
+    for _ in range(sum(qt for _, qt in work)):  # each step takes one quarter off, so this always ends
+        check = check_meal([(f, qt / 4.0) for f, qt in work], room, "ai")
+        if check.ok:
+            return work
+        if check.reason is None or not check.reason.startswith((*LOWERABLE, "portion_out_of_range")):
+            return None
+        pick = _to_lower(work, check.reason)
+        if pick is None:
+            return None
+        f, qt = work[pick]
+        work[pick] = (f, qt - 1)
+    return work if check_meal([(f, qt / 4.0) for f, qt in work], room, "ai").ok else None
+
+
+def max_quarters(f: FoodVec, room: Any) -> int:
+    """The most quarters of ``f`` (within ``AI_QUARTERS_RANGE``) that pass :func:`check_meal` (kind ``ai``) alone in this
+    meal's room, or 0 when not even one quarter does. Every part of the check grows with the portion, so the first amount
+    that passes from the top is the answer. Sent to the AI with each candidate, so it is told the limit, not only warned."""
+    lo, hi = R.AI_QUARTERS_RANGE
+    for qt in range(hi, lo - 1, -1):
+        if check_meal([(f, qt / 4.0)], room, "ai").ok:
+            return qt
+    return 0
+
+
 def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[Mapping[str, Any]]],
                       candidate_ids: Iterable[int] | None = None) -> dict[str, Any]:
     """Check AI ideas (``[[{food_id, quarters}, …], …]``) exactly like built meals (§4.13; note 04 V3–V5).
@@ -198,8 +287,11 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
     ``food_id`` must be in the candidate set (default: the ``candidates_for_ai`` foods and saved-meal
     foods of this meal); duplicates are merged; ``1 ≤ quarters ≤ 12`` per item; ≤ 5 items per idea,
     ≤ 3 ideas; then :func:`check_meal` (kind ``ai``) and :func:`score_meal` on the current room.
-    Numbers, warnings and texts always come from the rules. Failing ideas are dropped with a reason
-    code (``not_a_candidate``, ``quarters_out_of_range``, ``would_exceed:<k>``, ``too_many_carbs``, …).
+    Numbers, warnings and texts always come from the rules. An idea that fails only because a portion
+    is too big is made smaller (:func:`lower_to_fit`) and kept; ``portions_lowered`` lists those
+    (``{index, reason, changes: [{food_id, from_quarters, to_quarters}]}``) and the idea carries its
+    ``changes`` too. Other failing ideas are dropped with a reason code (``not_a_candidate``,
+    ``quarters_out_of_range``, ``would_exceed:<k>``, ``too_many_carbs``, ``avoid_ckd``, …).
     """
     if candidate_ids is None:
         ctx_c = candidates_for_ai(ctx, meal, "ideas")
@@ -214,6 +306,8 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
     pref = pref_terms(ctx)
     accepted: list[dict[str, Any]] = []
     dropped: list[dict[str, Any]] = []
+    lowered: list[dict[str, Any]] = []
+    lo, hi = R.AI_QUARTERS_RANGE
     for index, idea in enumerate(ideas):
         if index >= 3:
             dropped.append({"index": index, "reason": "too_many_ideas"})
@@ -228,34 +322,48 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
         if len(merged) > 5:
             dropped.append({"index": index, "reason": "too_many_items"})
             continue
-        reason = None
-        items = []
+        reasons = []  # every grounding problem, in item order; only "more than 12 quarters" can be repaired
         for food_id, quarters in merged:
             if food_id not in allowed or food_id not in ctx.foods:
-                reason = "not_a_candidate"
-                break
-            lo, hi = R.AI_QUARTERS_RANGE
-            if not lo <= quarters <= hi:
-                reason = "quarters_out_of_range"
-                break
-            items.append((ctx.foods[food_id], quarters / 4.0))
-        if reason is None:
-            check = check_meal(items, room, "ai")
+                reasons.append("not_a_candidate")
+            elif not lo <= quarters <= hi:
+                reasons.append("quarters_out_of_range" if quarters > hi else "quarters_too_small")
+        if reasons:
+            first = "quarters_out_of_range" if reasons[0] == "quarters_too_small" else reasons[0]
+            if set(reasons) != {"quarters_out_of_range"}:
+                dropped.append({"index": index, "reason": first})
+                continue
+        proposed = [(ctx.foods[food_id], quarters) for food_id, quarters in merged]
+        if reasons:
+            reason: str | None = "quarters_out_of_range"
+        else:
+            check = check_meal([(f, qt / 4.0) for f, qt in proposed], room, "ai")
             reason = None if check.ok else check.reason
+        changes: list[dict[str, int]] = []
         if reason is not None:
-            dropped.append({"index": index, "reason": reason})
-            continue
+            fixed = lower_to_fit(proposed, room, reason)
+            if fixed is None:
+                dropped.append({"index": index, "reason": reason})
+                continue
+            changes = [{"food_id": f.id, "from_quarters": was, "to_quarters": now}
+                       for (f, was), (_, now) in zip(proposed, fixed) if now != was]
+            lowered.append({"index": index, "reason": reason, "changes": changes})
+            proposed = fixed
+        items = [(f, qt / 4.0) for f, qt in proposed]
         meal_t, meal_u = meal_totals(items)
-        accepted.append({
+        out = {
             "index": index,
             "items": [food_core(f, q) for f, q in items],
             "totals": totals_json(meal_t, room),
             "unknown": unknown_json(meal_u, room),
             "score": score_meal(items, room, today, ctx.profile.dialysis != "none", pref=pref),
             "checked": True,
-        })
+        }
+        if changes:
+            out["portions_lowered"] = changes
+        accepted.append(out)
     note = M.AI_FALLBACK if not accepted else None
-    return {"ideas": accepted, "dropped": dropped, "note": note}
+    return {"ideas": accepted, "dropped": dropped, "portions_lowered": lowered, "note": note}
 
 
 def validate_ai_plan(ctx: GuidanceContext, picks: Mapping[str, int], **options: Any) -> dict[str, Any]:
