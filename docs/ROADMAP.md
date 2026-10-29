@@ -17,8 +17,9 @@ recovery trustworthy before more AI or native-app features.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
    to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
-3. **Backup and restore that a person can find and follow.** Show when the last backup ran and how to restore it, and test a restore
-   into a fresh server in CI. The backups themselves work; this is about finding and using them.
+3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
+   after 7 days with the restore link, and `tests/test_restore_roundtrip.py` restores a backup into an empty server in CI. Left:
+   the same reminder for a server whose backups run outside the app (a volume snapshot leaves no `backup.created` row).
 4. **Real phones and assistive tech as a release step.** The checks in [`maintainers.md`](maintainers.md) (iPhone offline, large
    text, keyboard only, VoiceOver, TalkBack) become a list a release does not ship without.
 
