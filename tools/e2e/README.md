@@ -59,6 +59,10 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 `reliability.py` also opens the saved-meal editor with missing and partial nutrient values, changes
 **Makes**, and checks that a failed save keeps the note and servings count for a successful retry.
 
+The recipe-serving checks in `reliability.py` compare the Add-to-a-day preview, API scale and stored
+entries for one and two recipe servings. A failed apply keeps the count and date; retry sends the
+same body and logs one serving once.
+
 The recipe Fit checks in `reliability.py` open saved meals with missing, partial and known-zero
 potassium and verify the qualifiers on the nutrient row itself.
 

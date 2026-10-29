@@ -653,7 +653,12 @@ link with a host and no password, at most 900 characters, never fetched; `""` is
 the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
 `scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
-`per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
+`per_serving` and `unknown` are worked out again on read.
+The **Add to a day** sheet asks for **Servings to add** for a recipe and starts at 1. It previews
+that many recipe servings and sends the existing API multiplier `servings / servings_made`.
+Ordinary saved meals retain **Scale** (1 = as saved). The API's whole-pot scale contract is unchanged.
+The input limit also respects the API scale maximum for recipes whose Makes is less than 1.
+The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
 sentence; the New/Edit saved-meal preview also counts missing nutrients for its current ingredients,
 showing **not listed** when none list the value and **≥** for partial totals. **Makes** scales known
