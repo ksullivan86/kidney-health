@@ -13,7 +13,7 @@
 # The build is the GitHub Pages flavour (handbook/mkdocs.pages.yml): same pages and checks as the copy
 # inside the app, site_url from actions/configure-pages, and no "Back to the food log" link. Pages
 # cannot send response headers, so this copy has no CSP header; it is static and takes no input.
-# Beside it, in demo/, the app's demo (0.10.0; scripts/build_preview.py --pages): the app in preview
+# Beside it, in demo/, the app's demo (0.11.0; scripts/build_preview.py --pages): the app in preview
 # mode with sample data, run entirely in the browser. What a visitor logs stays in the page and is gone
 # on reload; it requests nothing beyond its own files and carries the app's Content-Security-Policy as
 # a <meta> element.
