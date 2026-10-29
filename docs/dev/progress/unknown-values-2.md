@@ -1,6 +1,7 @@
+Status: complete
+
 # Progress: unknown values in swaps and the fit sheet (ROADMAP item 2, second part)
 
-Status: in progress
 
 Branch `worktree-agent-aec7bcc7cd9e8f4d1` (local only, never pushed). Continues the WIP commits cbf83f0 and a66660f.
 
@@ -24,20 +25,7 @@ Branch `worktree-agent-aec7bcc7cd9e8f4d1` (local only, never pushed). Continues 
   * Docs: their paragraphs merged into ours so each thing is said once.
 * `/usr/bin/python3 tools/e2e/reliability.py` (Playwright is in the system Python, not the venv): 28 passed, 0 failed.
 
-## Next
-* Full pytest run in the background (output in the scratchpad, `unknown-values-2-full-pytest.txt`; another helper also
-  uses `full_pytest.txt` there, so do not write that name).
-* Checked the WIP code: swaps (null deltas, "not listed" texts), the fit sheet (rows "≥"/"not listed", grey row, carbs line)
-  and the recipe change lines ("at least"). All WIP tests pass.
-* Added: `fit_text` (What fits now) says "carbs not listed" instead of "0 g carbs" (server + twin; not reachable today
-  because What fits leaves out a food with unknown carbs when carbs are counted, so a vector case shows that instead).
-* Added: low treatment rows on the guidance sheet show "potassium not listed" (keyNumbers keeps a key that is in `unknown`;
-  lowOption passes `notListedIn(o.nutrients)`). Before, the missing value was silently left out.
-* Fixed: the fit sheet note said "do not list k, p" (chip letters); now "potassium and phosphorus".
-* Tests: twin-vs-server text check in tests/test_unknown_swaps_fit_ui.py (node), low-option and note checks there,
-  `fit_text` in tests/guidance/test_messages.py, API test in tests/guidance/test_api_guidance.py
-  (`test_low_treatments_and_the_fit_sheet_say_which_values_a_food_does_not_list`). OpenAPI unchanged (`--check` ok;
-  `SwapIdea.deltas` already allowed null).
+* Full pytest on the final tree (before the CHANGELOG-only commit 59258a7): 6547 passed, 2 skipped, 0 failed (28 min).
 
 ## Commands
 PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python
