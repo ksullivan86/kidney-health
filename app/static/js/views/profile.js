@@ -588,18 +588,21 @@
   // ---------------------------------------------------------------------------
   // Lab results summary (the full view is js/views/labs.js)
   // ---------------------------------------------------------------------------
+  let labsSummaryRequest = 0;
   async function loadLabsSummary() {
+    const req = ++labsSummaryRequest;
     const box = $('#pf-labs-summary');
     if (!KH.labs) return;
     try {
       const data = await KH.labs.load();
+      if (req !== labsSummaryRequest) return;
       clear(box);
       box.append(KH.labs.summary(data));
       const alertBox = clear($('#profile-lab-alert'));
       const alert = KH.labs.currentAlert(data);
       if (alert) alertBox.append(KH.labs.alertBanner(alert, { link: true }));
     } catch (err) {
-      if (err.handled) return;
+      if (req !== labsSummaryRequest || err.handled) return;
       clear(box).append(h('p', { class: 'muted small' }, `Lab results could not be loaded: ${err.detail || err.message}`));
     }
   }

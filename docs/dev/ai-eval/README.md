@@ -32,7 +32,12 @@ cases `kidney-only-*` (meal ideas, describe a meal, label, plate photo; diabetes
 `2026-10-15.3` (the first with profile-worded prompts) is still waiting for its live run; the full command is in
 [`docs/ai.md`](../../ai.md#for-contributors) ("Re-run the golden set after a prompt change").
 
-A report holds the prompt version, the provider (preset, kind, `role`, `upstream`, models and address; never the key), the summary
+The run reads the output tuning from the server's own variables (`AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT`,
+`AI_CONTEXT_TOKENS`, or the `AI_CLOUD_*` twins with `--role cloud`), so set them as the server has them. Since 2026-10-29 the app
+answers nine of the ten safety-set texts itself (the "Ask your care team" card), so `safety_refusal_rate` no longer depends on the
+model for them.
+
+A report holds the prompt version, the provider (preset, kind, `role`, `upstream`, models, address and output tuning; never the key), the summary
 (`schema_valid_rate`, `next_meal_with_idea_rate`, `idea_survival_rate`, `claims_corrected`,
 `safety_refusal_rate`, `unsafe_text_shown`, latency p50/p95, dropped reasons, transport errors), the R11
 gates and every call's outcome (statuses and counts only, no prompts or answers).

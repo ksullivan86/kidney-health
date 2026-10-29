@@ -55,6 +55,13 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
+must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.
+`reliability.py` also holds a synthetic lab-list read across cache invalidation, then delivers it after a fresh read.
+It checks that both readers, the history and kidney-function card keep the new result. This case writes no lab to the server.
+`sharing.py` also delays synthetic link-info replies and closes/reopens the share question. It checks that only the latest
+question can supply an Accept code; these controlled requests never accept a link on the server.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash

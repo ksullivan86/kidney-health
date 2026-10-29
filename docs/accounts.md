@@ -131,6 +131,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    the password again, like making a token.
 2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
    the right person.
+   The **Accept** button appears only after the app has checked that link. Opening another link replaces the question;
+   a slow reply from the earlier link cannot change it back.
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
    you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, and **Trends** shows their Trends
    charts, both with a banner that says it is read-only.
@@ -150,6 +152,9 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 * Not with `AUTH_MODE=none`, where there is only one person.
 
 How it works, and why: [design note 19](dev/research/19-sharing.md).
+
+The shared food-day card loads without waiting for the rest of the summary. Changing the date or person
+discards older replies, so a slow response cannot replace the day you chose. If loading fails, press **Retry**.
 
 ## Adding people
 

@@ -176,6 +176,51 @@ def walk_recipe(page: Any, recipe_id: int) -> None:
     page.unroute("**/api/guidance/fit-recipe")
 
 
+def walk_lab_cache(page: Any) -> None:
+    """Deferred list/function replies reproduce a save invalidating an older read, without writes."""
+    result = page.evaluate("""async () => {
+      const api = KH.api;
+      const saved = {labs: api.labs, kidneyFunction: api.kidneyFunction};
+      const pending = [];
+      const finish = (batch, marker) => {
+        batch.list({labs: [{id: 1, analyte: 'potassium', value: 4.8, label: 'Potassium',
+          display: marker, taken_on: '2026-10-29'}], alerts: []});
+        batch.kf({message: marker + ' summary'});
+      };
+      try {
+        api.labs = () => new Promise(resolve => pending.push({list: resolve}));
+        api.kidneyFunction = () => new Promise(resolve => { pending[pending.length - 1].kf = resolve; });
+        KH.labs.invalidate();
+        const old = KH.labs.load();
+        KH.labs.invalidate();
+        const current = KH.labs.load();
+        if (pending.length !== 2) {
+          for (const batch of pending) finish(batch, 'Old result');
+          await Promise.all([old, current]);
+          return {calls: pending.length};
+        }
+        finish(pending[1], 'New result');
+        const newest = await current;
+        finish(pending[0], 'Old result');
+        const redirected = await old;
+        await KH.views.labs.refresh();
+        return {calls: pending.length, newest: newest.labs[0].display, redirected: redirected.labs[0].display,
+          history: document.querySelector('#labs-history').innerText,
+          kidney: document.querySelector('#kf-body').innerText};
+      } finally {
+        Object.assign(api, saved);
+        KH.labs.invalidate();
+        await KH.views.labs.refresh();
+      }
+    }""")
+    check("Lab cache: invalidation starts a fresh list/function read", result["calls"] == 2)
+    check("Lab cache: a late pre-save reply converges on the new result",
+          result.get("newest") == result.get("redirected") == "New result")
+    check("Lab cache: history and kidney-function text keep the refreshed result",
+          "New result" in result.get("history", "") and "Old result" not in result.get("history", "")
+          and "New result summary" in result.get("kidney", ""))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--port", type=int, default=PORT)
@@ -207,7 +252,8 @@ def main(argv: list[str] | None = None) -> int:
                 page = ctx.new_page()
                 page.set_default_timeout(15000)
                 for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
-                                   ("Failed save", lambda: walk_failed_save(page)), ("Saved meals", lambda: walk_saved_meals(page)),
+                                   ("Failed save", lambda: walk_failed_save(page)), ("Lab cache", lambda: walk_lab_cache(page)),
+                                   ("Saved meals", lambda: walk_saved_meals(page)),
                                    ("Recipe", lambda: walk_recipe(page, recipe))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()

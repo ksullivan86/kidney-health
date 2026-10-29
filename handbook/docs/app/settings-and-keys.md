@@ -185,6 +185,12 @@ sign-in activity.
   When you open their Trends, the previous person's charts clear while the new ones load. If a chart cannot load, tap **Retry**.
 - A link nobody has used yet can be cancelled from the same list.
 
+On a shared summary, the food day loads on its own. If you change the date while it loads, you see the day you picked.
+If it cannot load, tap **Retry**.
+
+After you open a sharing link, **Accept** appears once the app has checked who is sharing. If you open another link while
+you wait, the question is about the newer link.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
