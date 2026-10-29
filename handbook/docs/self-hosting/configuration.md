@@ -189,7 +189,9 @@ restart keeps their choice; changing the variable later does nothing ([design no
 | `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_POTASSIUM`, `_PHOSPHATE`, `_ALBUMIN`, `_BICARBONATE`, `DEFAULT_ACTIVITY` | `true`, 90, 90, 180, 180, `inactive` | Whether lab results change suggested targets, how long each result counts, and the activity level used until a person picks theirs. |
 | `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS` | `system`, `us`, `lb` | The theme and units for people who have not picked their own. A lock stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
 
-Run `python -m app.admin check` in the container before the first start: it stops on any mistake and
+`python -m app.admin env-template` prints all of these as a `.env` file to fill in, with each one's values and
+default (`--initial-only` starts it with `SETTINGS_INITIAL_ONLY=*`). Run `python -m app.admin check` in the container
+before the first start: it stops on any mistake and
 lists which settings are locked and which are first values. Each person's own choices, like their
 targets and whether they use AI, stay theirs to make in the app.
 

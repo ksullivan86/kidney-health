@@ -15,6 +15,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **`python -m app.admin env-template`** prints every setting's variable as a `.env` file to fill in, with what each does, its
+  values and its default. It is made from the app, so it matches the version you run. `--initial-only` starts it with
+  `SETTINGS_INITIAL_ONLY=*`. See [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).
 * Schema step 25 adds two columns to `shares` at the first start. Shares made before last until someone stops them, as before.
 
 ## 0.10.0 — 2026-10-29

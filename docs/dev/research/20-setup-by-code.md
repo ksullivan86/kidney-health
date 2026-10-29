@@ -56,7 +56,9 @@ in the app. A provider from the environment gets its role from `AI_PROVIDER_ROLE
 1. Secret files: `secret_key` (one line, 32 characters or more), `admin_password`, and any API keys.
 2. `deploy/.env` (or Quadlet `Environment=`, or Kubernetes `env:`): `PUBLIC_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_FILE`,
    the features to turn on, and `SETTINGS_INITIAL_ONLY` naming the ones the admin may change later.
-3. `python -m app.admin check` inside the container: it stops on any mistake and lists what is locked and what is a first value.
+3. `python -m app.admin env-template` prints every setting's variable as a `.env` file to fill in (what it does, its values,
+   its default), made from the registry so it matches the running version; `--initial-only` starts it with `*`.
+   `python -m app.admin check` inside the container then stops on any mistake and lists what is locked and what is a first value.
 4. Start the server. The log shows `setting …: first value from …` for each first value.
 
 ## 5. Tests

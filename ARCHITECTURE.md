@@ -1314,7 +1314,7 @@ true). `SETTINGS_INITIAL_ONLY` (a comma list of those names, or `*`) turns the l
 migrations on every start. For each first value it has never seen (no `meta` row `settings_initial:<key>`), it writes the
 instance row unless one exists, audits `settings.changed` with no actor and `env: <NAME>`, and writes the `meta` row, so a
 value changed or reset in the app survives restarts. A name that is not a setting's variable, `*` with names, or a bad value
-stops the start (`validate_env_locks`); `python -m app.admin check` lists locks and first values. The JavaScript twin
+stops the start (`validate_env_locks`); `python -m app.admin check` lists locks and first values, and `env-template` prints every setting's variable as a `.env` file (`app/admin.py` `env_template`, from the registry). The JavaScript twin
 (`js/engine/settings.js` `effective`) treats a listed variable as no lock, checked by two precedence vectors.
 
 ### Changes to existing routes
