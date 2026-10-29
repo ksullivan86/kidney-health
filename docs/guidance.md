@@ -261,6 +261,10 @@ Chromium by `tools/e2e/prefs.py`.
 
 ## Recipes that fit
 
+The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. It shows
+**not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
+or **Makes** updates the preview; a known zero stays 0.
+
 `POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
 meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One
 serving's share of a food is its amount in the whole recipe divided by the servings it makes. The gate is `check_meal` kind `recipe`:

@@ -16,7 +16,8 @@ recovery trustworthy before more AI or native-app features.
    sheet. Still to test the same way: the other screens that save (Plan, Labs, Profile, weight and blood pressure).
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
-   to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
+   to each meal's `totals`). The New/Edit saved-meal preview also marks missing and partial amounts as ingredients or
+   Makes change. Still to check: the swap ideas and the Fit to my targets sheet.
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
    after 7 days with the restore link, and `tests/test_restore_roundtrip.py` restores a backup into an empty server in CI. Left:
    the same reminder for a server whose backups run outside the app (a volume snapshot leaves no `backup.created` row).

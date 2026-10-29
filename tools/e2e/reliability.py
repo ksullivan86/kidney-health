@@ -147,6 +147,43 @@ def walk_saved_meals(page: Any) -> None:
     check("Add: the saved-meal shortcuts say 'not listed' and '≥' the same way", "K not listed" in chips and "K ≥" in chips, chips)
 
 
+def walk_meal_editor(page: Any) -> None:
+    page.click("#tab-plan")
+    wait_text(page, "#saved-meals", "Crackers only")
+    for name, expected in (("Crackers only", "not listed"), ("Crackers and banana", "≥")):
+        page.locator("#saved-meals .saved-meal", has_text=name).get_by_role("button", name="Edit", exact=True).click()
+        amount = page.locator('#meal-preview-key .kn[aria-label^="Potassium:"] .kn-v').inner_text()
+        check(f"Meal editor: {name} shows {expected} for potassium", expected in amount, amount)
+        check(f"Meal editor: {name} fits the phone sheet without sideways scrolling",
+              page.evaluate("() => { const sheet = document.querySelector('#sheet-meal'); return sheet.scrollWidth <= sheet.clientWidth + 1; }"))
+        page.evaluate("() => document.querySelector('#sheet-meal').close()")
+    page.locator("#saved-meals .saved-meal", has_text="Crackers and banana").get_by_role("button", name="Edit", exact=True).click()
+    potassium = page.locator('#meal-preview-key .kn[aria-label^="Potassium:"] .kn-v')
+    before = float(potassium.inner_text().replace("≥", "").replace(",", "").strip())
+    page.fill("#meal-makes", "4")
+    divided = potassium.inner_text()
+    check("Meal editor: Makes divides the known amount and keeps the partial marker",
+          divided.startswith("≥") and 0 < float(divided.replace("≥", "").replace(",", "").strip()) < before, divided)
+    page.fill("#meal-note", "Keep this note for retry")
+    pattern = "**/api/meals/*"
+    page.route(pattern, lambda route: route.fulfill(status=500, content_type="application/json",
+                                                   body=json.dumps({"detail": "Test save failure"})))
+    with page.expect_response(lambda response: response.request.method == "PUT" and "/api/meals/" in response.url):
+        page.click("#meal-save")
+    page.wait_for_function("() => !document.querySelector('#meal-save').disabled")
+    check("Meal editor: a failed save keeps the sheet, note and Makes for retry",
+          page.is_visible("#sheet-meal") and page.input_value("#meal-note") == "Keep this note for retry" and page.input_value("#meal-makes") == "4")
+    page.unroute(pattern)
+    unchanged = page.evaluate("async () => (await KH.api.meals()).meals.find(meal => meal.name === 'Crackers and banana')")
+    check("Meal editor: the failed save did not change the stored meal", unchanged.get("note") != "Keep this note for retry")
+    with page.expect_response(lambda response: response.request.method == "PUT" and "/api/meals/" in response.url):
+        page.click("#meal-save")
+    page.wait_for_selector("#sheet-meal", state="hidden")
+    saved = page.evaluate("async () => (await KH.api.meals()).meals.filter(meal => meal.name === 'Crackers and banana')")
+    check("Meal editor: retry saves the preserved fields to the same meal once",
+          len(saved) == 1 and saved[0].get("note") == "Keep this note for retry" and saved[0].get("servings_made") == 4)
+
+
 def walk_recipe(page: Any, recipe_id: int) -> None:
     def halve(route: Any) -> None:
         answer = route.fetch().json()
@@ -254,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
                 for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
                                    ("Failed save", lambda: walk_failed_save(page)), ("Lab cache", lambda: walk_lab_cache(page)),
                                    ("Saved meals", lambda: walk_saved_meals(page)),
-                                   ("Recipe", lambda: walk_recipe(page, recipe))):
+                                   ("Meal editor", lambda: walk_meal_editor(page)), ("Recipe", lambda: walk_recipe(page, recipe))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
                     except Exception:
