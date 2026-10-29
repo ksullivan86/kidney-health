@@ -16,6 +16,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
   period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
 
+* **Show other foods.** What fits now has a **Show other foods** button that finds foods not already on the list, and
+  **Back to the first choices** to start over. AI meal ideas have **Other ideas** and AI recipes **Other recipes**, which ask
+  the AI again without the foods it already suggested. See [`docs/guidance.md`](docs/guidance.md).
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the

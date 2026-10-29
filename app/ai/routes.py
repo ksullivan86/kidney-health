@@ -667,6 +667,8 @@ class NextMealBody(BaseModel):
     entry_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)] | None = None  # swap: a planned entry
     food_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)] | None = None  # swap: a food not logged yet
     servings: Annotated[float, Field(gt=0, le=20, allow_inf_nan=False)] | None = None
+    # ideas: foods of the ideas already shown, left out so "Other ideas" finds new ones
+    exclude_food_ids: list[Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]] = Field(default_factory=list, max_length=guidance_api.MAX_EXCLUDE)
 
 
 class ParseMealBody(BaseModel):
@@ -709,6 +711,8 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
         return guidance_api.unavailable("no_targets", gmessages.NO_TARGETS)
     swap = None
     meal = body.meal
+    if body.exclude_food_ids and body.mode != "ideas":
+        raise HTTPException(status_code=400, detail="exclude_food_ids is only for mode ideas")
     if body.mode == "swap":
         if (body.entry_id is None) == (body.food_id is None):
             raise HTTPException(status_code=400, detail="swap mode needs either entry_id or food_id (with servings)")
@@ -731,7 +735,8 @@ def _prepare_next_meal(request: Request, conn: sqlite3.Connection, user: User, b
     person = _person(conn, state, user.id)
 
     def build(cfg: C.ProviderConfig) -> F.Prepared:
-        return F.prepare_next_meal(ctx, cfg, meal=meal, mode=body.mode, person=person, swap=swap)  # type: ignore[arg-type]
+        return F.prepare_next_meal(ctx, cfg, meal=meal, mode=body.mode, person=person, swap=swap,  # type: ignore[arg-type]
+                                   exclude=frozenset(body.exclude_food_ids))
 
     try:
         return _with_cloud(resolved, build(resolved.cfg), build)  # type: ignore[arg-type]
@@ -841,6 +846,8 @@ class RecipesBody(BaseModel):
     dish: Literal[schemas.RECIPE_DISHES] | None = None  # type: ignore[valid-type]
     makes: Literal[1, 2, 4, 6] = 4
     meal_id: Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)] | None = None
+    # main foods of the recipes already shown, left out so "Other recipes" finds new ones (oil, flour and the like stay)
+    exclude_food_ids: list[Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]] = Field(default_factory=list, max_length=guidance_api.MAX_EXCLUDE)
 
 
 def _prepare_recipes(request: Request, conn: sqlite3.Connection, user: User, body: RecipesBody) -> F.Prepared | dict[str, Any]:
@@ -887,7 +894,7 @@ def _prepare_recipes(request: Request, conn: sqlite3.Connection, user: User, bod
 
     def build(cfg: C.ProviderConfig) -> F.Prepared:
         return AR.prepare_recipes(ctx, cfg, target=target, person=person, mode=body.mode, dish=body.dish, makes=makes, steps=steps,
-                                  recipe=recipe, name=name)
+                                  recipe=recipe, name=name, exclude=frozenset(body.exclude_food_ids))
 
     try:
         return _with_cloud(resolved, build(resolved.cfg), build)  # type: ignore[arg-type]

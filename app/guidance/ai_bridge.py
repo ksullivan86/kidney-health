@@ -80,7 +80,8 @@ def _per_portion(f: FoodVec, q: float) -> dict[str, Any]:
 
 
 def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodVec | None = None,
-                      servings: float | None = None, purpose: str | None = None) -> dict[str, Any]:
+                      servings: float | None = None, purpose: str | None = None,
+                      exclude: frozenset[int] = frozenset()) -> dict[str, Any]:
     """The rule result for ``meal``, trimmed for a prompt (§4.13).
 
     * ``foods``: up to 40 of the what-fits ranking without the display limit (at least 6 per group
@@ -90,7 +91,7 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
     * ``room``, ``levels``, ``handbook`` (allowed slugs);
     * ``swap`` mode: ``swaps`` (≤ 15 rule swaps that passed) for ``food`` × ``servings``;
     * ``plan`` mode: ``plan`` (≤ 5 options per slot).
-    Low-treatment foods are never in the list (note 04 G7).
+    Low-treatment foods are never in the list (note 04 G7). ``exclude`` leaves out foods of ideas already shown ("Other ideas").
     """
     if mode not in MODES:
         raise ValueError(f"mode must be one of {', '.join(MODES)}")
@@ -100,7 +101,7 @@ def candidates_for_ai(ctx: GuidanceContext, meal: str, mode: str, *, food: FoodV
     habit = habit_stats(ctx)
     today = today_stats(ctx.day)
     scorer = Scorer(room, habit, today, counter)
-    ranked, _ = rank_foods(ctx, room, scorer, eligible_foods(ctx))
+    ranked, _ = rank_foods(ctx, room, scorer, [f for f in eligible_foods(ctx) if f.id not in exclude])
     ranked = [pair for pair in ranked if (pair[0].score or 0.0) >= R.MIN_SHOW_SCORE]
     picked: list = []
     per_group: dict[str, int] = {}

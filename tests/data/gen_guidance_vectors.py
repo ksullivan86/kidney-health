@@ -170,7 +170,8 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
                 "meal_high_k": room.meal_high_k, "day_high_k": room.day_high_k,
                 "usage_weight": dict(room.usage_weight), "day_left": {k: _finite(v) for k, v in room.day_left.items()}}
     if fn == "what_fits":
-        return fits.what_fits(ctx, spec["meal"], limit=spec.get("limit", R.DEFAULT_LIMIT), explain=spec.get("explain", False))
+        return fits.what_fits(ctx, spec["meal"], limit=spec.get("limit", R.DEFAULT_LIMIT), explain=spec.get("explain", False),
+                              exclude=frozenset(spec.get("exclude", ())))
     if fn == "find_swaps":
         return swaps.find_swaps(ctx, spec["meal"], foods[spec["food_id"]], spec["servings"], spec.get("purpose"),
                                 explain=spec.get("explain", False))
@@ -316,6 +317,9 @@ def preference_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("PREF a like lifts a food but not over better ones (real list)", real_input(
             food_pref=[[rid("Apple, raw, with skin"), "like"], [rid("Cheese, cheddar"), "like"], [bread, "like"]]),
          {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),
+        ("OTHER foods already shown are left out, so the next ones move up (real list)", real_input(),
+         {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True,
+          "exclude": [rid("Apple, raw, with skin"), rid("Cheese, cheddar"), bread, rice]}),
         ("PREF less often on a grain and its group drops it behind the others (real list)", real_input(
             food_pref=[[rice, "less"]], less_categories=["Grains & Breads"]),
          {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),

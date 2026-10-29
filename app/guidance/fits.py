@@ -493,15 +493,18 @@ def select(ranked: Sequence[tuple[Evaluation, Evaluation]], limit: int) -> list[
 
 
 def what_fits(ctx: GuidanceContext, meal: str, limit: int = R.DEFAULT_LIMIT, explain: bool = False,
-              counter: Counter | None = None) -> dict[str, Any]:
-    """The "What fits now" result for ``meal`` on ``ctx.date`` (the body of ``GET /api/guidance/next-meal``)."""
+              counter: Counter | None = None, exclude: frozenset[int] = frozenset()) -> dict[str, Any]:
+    """The "What fits now" result for ``meal`` on ``ctx.date`` (the body of ``GET /api/guidance/next-meal``).
+
+    ``exclude`` holds food ids the person has already seen ("Show other foods"); they are left out before ranking."""
     counter = counter if counter is not None else Counter()
     totals: DayTotals = day_totals(ctx.day)
     room = meal_room(ctx, meal, totals=totals)
     habit = habit_stats(ctx)
     today = today_stats(ctx.day)
     scorer = Scorer(room, habit, today, counter)
-    ranked, why_not = rank_foods(ctx, room, scorer, eligible_foods(ctx), explain)
+    pool = [f for f in eligible_foods(ctx) if f.id not in exclude]
+    ranked, why_not = rank_foods(ctx, room, scorer, pool, explain)
     chosen = select(ranked, max(1, min(int(limit), R.MAX_LIMIT)))
     tracked = tracked_keys(room)
     carbs_first = room.carbs is not None

@@ -100,6 +100,24 @@ def test_next_meal_answers_with_the_contract_shape(real):
     assert body["targets"]["profile_updated_at"]
 
 
+def test_show_other_foods_leaves_out_the_ones_already_shown(real):
+    set_targets(real)
+    first = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()["foods"]
+    shown = [f["food_id"] for f in first]
+    assert shown
+    other = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch", "exclude": ",".join(map(str, shown))})
+    assert other.status_code == 200, other.text
+    again = [f["food_id"] for f in other.json()["foods"]]
+    assert again and not set(again) & set(shown)
+
+
+@pytest.mark.parametrize("bad", ["1,,2", "a", "-3", "1.5", ",".join(["1"] * 61), "1" * 13, "\u0661"])
+def test_show_other_foods_refuses_a_bad_exclude_list(real, bad):
+    set_targets(real)
+    r = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch", "exclude": bad})
+    assert r.status_code == 400 and r.json()["detail"] == "exclude: a comma list of at most 60 food ids"
+
+
 def test_guidance_follows_a_target_change_at_once(real):
     set_targets(real)
     room = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()["room"]
