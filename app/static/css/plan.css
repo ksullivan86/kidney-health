@@ -76,8 +76,9 @@
 .shop-name { font-weight: 600; }
 .shop-item.done .shop-name { text-decoration: line-through; color: var(--text-3); }
 .shop-item.done .hint { color: var(--text-3); }
-.shopping-foot { display: flex; justify-content: flex-end; margin: 4px -8px -6px 0; }
-.shopping-foot:has(> [hidden]) { display: none; }
+.shopping-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; margin: 4px -8px -6px 0; }
+.shopping-foot:not(:has(> :not([hidden]))) { display: none; }
+.shopping-text { width: 100%; margin-top: 8px; font: inherit; }
 
 /* ---------- "Add this menu day to my plan" sheet (js/views/menuplan.js) ---------- */
 #sheet-menuplan .mp-meal { margin-bottom: 10px; }

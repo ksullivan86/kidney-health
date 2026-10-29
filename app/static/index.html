@@ -511,11 +511,14 @@
         <h2 id="shopping-heading" class="card-title">Shopping list</h2>
         <span class="muted small" id="shopping-sub"></span>
       </div>
-      <p class="hint">Everything planned for the visible week, grouped by food. Checks are kept only on this device.</p>
+      <p class="hint">Everything planned for the visible week, grouped by food. Checks are kept only on this device. <b>Share list</b> or <b>Copy list</b> sends what is not ticked yet to any list app.</p>
       <ul id="shopping-list" class="list shopping-list" aria-labelledby="shopping-heading"></ul>
       <div class="shopping-foot">
+        <button class="btn secondary" type="button" id="shopping-share" hidden>Share list</button>
+        <button class="btn secondary" type="button" id="shopping-copy" hidden>Copy list</button>
         <button class="link-btn" type="button" id="shopping-clear" hidden>Clear checks</button>
       </div>
+      <textarea id="shopping-text" class="shopping-text" rows="6" readonly hidden aria-label="Shopping list as text"></textarea>
     </section>
   </section>
 

@@ -214,6 +214,39 @@
     try { if (set.size) localStorage.setItem(shopKey(start), JSON.stringify([...set])); else localStorage.removeItem(shopKey(start)); } catch (e) { /* storage unavailable */ }
   }
   $('#shopping-clear').addEventListener('click', () => { if (state.shopping) { saveChecks(state.shopping.start, new Set()); renderShopping(); } });
+  // The list as plain text for any list app (design note 22, part A): what is not ticked yet, one food a line. Nothing leaves
+  // this device unless the person shares or pastes it.
+  function shoppingText(sh, checks) {
+    const items = sh.items || [];
+    const left = items.filter((it) => !checks.has(it.food_id));
+    const lines = (left.length ? left : items).map((it) => `- ${it.food_name}: ${fmtServings(it.servings)}${it.serving_desc ? ` of ${it.serving_desc}` : ''}`);
+    return [`Shopping list, ${fmtRange(sh.start, sh.end)}`, '', ...lines].join('\n');
+  }
+  function showShoppingText(text) { // where the clipboard is blocked: the text, selected, to copy by hand
+    const box = $('#shopping-text');
+    box.value = text;
+    box.hidden = false;
+    box.focus();
+    box.select();
+  }
+  async function copyShopping(text) {
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    let allowed = true;
+    try { allowed = !policy || typeof policy.allowsFeature !== 'function' || policy.allowsFeature('clipboard-write'); } catch (e) { allowed = true; }
+    try {
+      if (allowed && navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); toast('Shopping list copied', 'ok'); return; }
+    } catch (e) { /* fall back */ }
+    showShoppingText(text);
+    toast('Select the list and copy it (Ctrl+C, or touch and hold on a phone).');
+  }
+  $('#shopping-copy').addEventListener('click', () => { if (state.shopping) copyShopping(shoppingText(state.shopping, loadChecks(state.shopping.start))); });
+  $('#shopping-share').addEventListener('click', async () => {
+    if (!state.shopping) return;
+    const text = shoppingText(state.shopping, loadChecks(state.shopping.start));
+    try { await navigator.share({ title: 'Shopping list', text }); } catch (e) {
+      if (!(e && e.name === 'AbortError')) copyShopping(text); // closed by the person: nothing to do
+    }
+  });
   function renderShopping() {
     const sh = state.shopping;
     if (!sh) return;
@@ -222,6 +255,9 @@
     const items = sh.items || [];
     $('#shopping-sub').textContent = items.length ? `${items.length} ${items.length === 1 ? 'food' : 'foods'} · ${fmtRange(sh.start, sh.end)}` : fmtRange(sh.start, sh.end);
     $('#shopping-clear').hidden = !items.length || !checks.size;
+    $('#shopping-copy').hidden = !items.length;
+    $('#shopping-share').hidden = !items.length || typeof navigator.share !== 'function';
+    $('#shopping-text').hidden = true;
     if (!items.length) {
       shoppingEl.append(h('li', { class: 'empty-state' }, 'Nothing planned this week yet. Plan foods on a day, or add a saved meal, to build the list.'));
       return;

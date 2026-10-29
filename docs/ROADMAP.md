@@ -149,7 +149,7 @@ Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a
   Proposed, not built. Someone a person shares their food log with may suggest a meal or a swap with a short note; it waits in
   the person's Plan until they tap **Add to my plan** or **No thanks**. Nothing is written for them. About 2-3M tokens.
 * **The shopping list outside the app (the owner, 2026-10-29; [note 22](dev/research/22-shopping-lists-and-ordering.md)).**
-  Proposed, not built: share or copy the list to any app (about 0.3M), send it to Grocy, KitchenOwl or Mealie on the person's
+  Share or copy the list to any app is built (Plan → Shopping list). Proposed, not built: send it to Grocy, KitchenOwl or Mealie on the person's
   own server (1.5-2M), and, only if the owner chooses a service, open it at a grocery delivery company (another company, off by
   default).
 * **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. The read-only sharing it builds on is built (note 19); it still needs a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
