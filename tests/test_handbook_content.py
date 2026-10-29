@@ -577,3 +577,28 @@ def test_si_phosphate_table_gives_the_edges_the_app_uses() -> None:
     hi = float(high)
     assert category(hi) == high_cat and category(round(hi - 0.01, 2)) != high_cat
     assert (low_cat, mid_cat, high_cat) == ("no limit", "1,000 mg", "800 mg")
+
+
+def test_the_search_field_has_an_edge_that_stands_out_3_to_1():
+    """In the header the search field was a darker teal box with no edge, 1.5:1 on the teal; on a phone the open field had
+    the colour of the results under it. WCAG 1.4.11 asks 3:1 for the edge of a field (tools/e2e/a11y.py checks the app's)."""
+    css = (DOCS / "stylesheets" / "extra.css").read_text(encoding="utf-8")
+
+    def lum(c):
+        c = [v / 255 for v in c]
+        c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+    teal = re.search(r"--md-primary-fg-color:\s*#([0-9a-f]{6});", css).group(1)
+    header = [int(teal[i:i + 2], 16) for i in (0, 2, 4)]
+    wide = re.search(r"@media screen and \(min-width: 60em\) \{\s*\.md-search__form \{([^}]*)\}", css)
+    assert wide, "no edge for the search field in the header"
+    rgb = re.search(r"outline: 1px solid rgb\((\d+) (\d+) (\d+) / (\d+)%\);", wide.group(1))
+    assert rgb and "outline-offset: -1px" in wide.group(1)
+    alpha = int(rgb.group(4)) / 100
+    edge = [int(rgb.group(i + 1)) * alpha + header[i] * (1 - alpha) for i in range(3)]
+    hi, lo = sorted((lum(edge), lum(header)), reverse=True)
+    assert (hi + 0.05) / (lo + 0.05) >= 3
+    phone = re.search(r"@media screen and \(max-width: 59\.984375em\) \{\s*\.md-search__form \{([^}]*)\}", css)
+    # Material's secondary text colour: #0000008a on the light results (4.4:1), 56 % light grey on the dark ones (4.1:1).
+    assert phone and "border-bottom: 1px solid var(--md-default-fg-color--light);" in phone.group(1)

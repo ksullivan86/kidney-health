@@ -554,6 +554,11 @@ v0.2 changes to the other views:
   the text follows the person's setting; at 200 % rows wrap and grids drop to fewer columns rather than scroll sideways.
   The page keeps `scroll-padding` for the sticky header and the phone tab bar, so a control reached with Tab is never under
   them. `tools/e2e/a11y.py` checks both, with names and contrast.
+* Field edges: the edge of a text field, select or textarea and the box of a hidden radio or checkbox (a row of choices,
+  the weight's "when" boxes, the dialysis weekdays) use `--control-border` (`base.css`), at least 3:1 on `--bg`, `--surface`
+  and `--surface-2` in both themes (WCAG 1.4.11). `--border` stays the light line of cards, lists and dividers.
+  `tools/e2e/a11y.py` measures every edge in the browser, and the browser's own checkboxes and radios from their pixels;
+  `tests/test_layout_ui.py` computes the same ratios from the tokens.
 * Trends: a **Period summary** card at the top (same data as GET /api/log/summary for the
   selected range): per nutrient the average per logged day vs target with level color, days over,
   change vs the previous period, and the interdialytic block when applicable; the explanatory

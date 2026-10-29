@@ -30,6 +30,22 @@
   color: var(--md-default-fg-color);
 }
 
+/* ---------- the search field's edge: 3:1 (WCAG 1.4.11) in both schemes ---------- */
+/* In the header the field is a darker teal box with no edge: 1.5:1 on the teal (2.4:1 open in the dark scheme). White at
+   70 % is 4.1:1 on the teal. On a phone the open field is the top of the search panel, the same colour as the results under
+   it: a line under it in the secondary text colour (4.4:1 light, 4.1:1 dark). tests/test_handbook_content.py checks both. */
+@media screen and (min-width: 60em) {
+  .md-search__form {
+    outline: 1px solid rgb(255 255 255 / 70%);
+    outline-offset: -1px;
+  }
+}
+@media screen and (max-width: 59.984375em) {
+  .md-search__form {
+    border-bottom: 1px solid var(--md-default-fg-color--light);
+  }
+}
+
 /* ---------- announce bar: back to the app, get help now ---------- */
 .kh-announce {
   display: flex;
