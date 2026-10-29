@@ -445,7 +445,7 @@
     try {
       const t = await api.mealFromLog({ date: saveMealState.date, meal: saveMealState.meal, name, note: $('#savemeal-note').value.trim() || null });
       saveMealDlg.close();
-      state.meals = null;
+      KH.invalidateMeals();
       toast(`Saved “${t.name}” (${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}). Find it under Plan.`, 'ok');
     } catch (err) { toastError(err); }
     finally { saveMealState.busy = false; $('#savemeal-save').disabled = false; }

@@ -39,7 +39,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   or recipes are loading, the old answer is not shown, so **Add to plan** cannot put it under the wrong meal. After you save a lab
   result or change your profile, a slower older read cannot bring back the previous values or potassium alert. A shared food day
   shows the day you picked last, with **Retry** if it cannot load. A sharing link's **Accept** button always belongs to the link
-  you opened last.
+  you opened last. A slow read of your profile or saved meals can no longer undo a save or an import you just made.
 
 ### For people who run a server
 
@@ -48,7 +48,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   tested `json_schema` and 1,500 tokens. A run longer than 10 minutes no longer stops with "Please enter your password again".
 
 * **A reminder to back up.** Server administration → About this server says when no backup was taken in the last 7 days, or
-  ever, with the command and a link to the restore steps. A new test restores a backup into an empty server and finds every
+  ever, with the command and a link to the restore steps. `BACKUP_REMINDER_DAYS` changes the 7 days, and `0` turns it off. If
+  your backups run outside the app, such as a volume snapshot, end the job with `python -m app.admin record-backup`. A new test restores a backup into an empty server and finds every
   entry, saved meal and target again.
 * **A release gate for real phones.** A release now waits for a person to check it on an iPhone offline, with the largest
   text, by keyboard only, and with VoiceOver and TalkBack ([`docs/maintainers.md`](docs/maintainers.md#release-process)).

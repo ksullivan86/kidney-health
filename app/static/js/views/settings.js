@@ -666,7 +666,8 @@
         msg.textContent = sentence;
         toast(sentence, 'ok');
         // Everything the other views keep is stale now.
-        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null; state.meals = null;
+        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null;
+        KH.invalidateSharedCaches();
         if (KH.labs) KH.labs.invalidate();
         try { await KH.loadProfile(true); } catch (e) { /* the next visit loads it */ }
       }, { id: 'set-import-go' });
@@ -2047,14 +2048,16 @@
 
   // A reminder when the last backup is older than a week, or there is none: a backup is the only way back after a lost disk or a
   // bad upgrade. A week is the project's own choice, the most a person should have to type in again.
-  const BACKUP_DUE_DAYS = 7;
-  function backupDue(lastAt, now = Date.now()) {
+  const BACKUP_DUE_DAYS = 7; // the server's BACKUP_REMINDER_DAYS default, for a server too old to send it
+  function backupDue(lastAt, dueDays = BACKUP_DUE_DAYS, now = Date.now()) {
+    if (!dueDays) return null; // BACKUP_REMINDER_DAYS=0: the admin turned this note off
     const days = lastAt ? Math.floor((now - Date.parse(lastAt)) / 86400000) : null;
-    if (days != null && days < BACKUP_DUE_DAYS) return null;
+    if (days != null && days < dueDays) return null;
     const how = KH.learn && typeof KH.learn.href === 'function' ? KH.learn.href('self-hosting/backups/#restore') : null;
     return note('caution', h('p', { id: 'set-backup-due' },
       days == null ? 'No backup has been taken on this server yet. ' : `The last backup is ${days} days old. `,
       'Take one with ', h('code', {}, 'python -m app.admin backup --dir /backups --keep 14'), ' and keep a copy on another machine. ',
+      'If your backups run outside the app, end each one with ', h('code', {}, 'python -m app.admin record-backup'), '. ',
       how ? h('a', { class: 'learn-more', href: how, target: '_blank', rel: 'noopener' }, 'How to restore a backup', h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
         : 'The handbook page "Backups" says how to restore one.'));
   }
@@ -2082,7 +2085,7 @@
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,
     ]));
-    const due = backupDue(a.last_backup_at);
+    const due = backupDue(a.last_backup_at, a.backup_reminder_days ?? BACKUP_DUE_DAYS);
     if (due) box.append(due);
     if (sk.warning) box.append(note('caution', h('p', {}, sk.warning)));
     if (secrets.unreadable) box.append(note('caution', h('p', {}, 'Some stored keys can no longer be read (the secret key changed). Ask the people concerned to enter their keys again.')));

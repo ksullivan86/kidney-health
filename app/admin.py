@@ -196,6 +196,19 @@ def cmd_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int
     return EXIT_OK
 
 
+def cmd_record_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """A backup made outside the app (a volume snapshot, restic, a NAS job): record it, so Server administration shows it as the
+    last backup and the reminder waits. Run it from the backup job after the backup succeeded; it copies nothing."""
+    conn = open_existing(_db_path(args, settings))
+    try:
+        _audit(conn, "backup.created", target="outside")
+        conn.commit()
+    finally:
+        conn.close()
+    print("recorded: a backup made outside the app. Check that your backup includes the database and, separately, SECRET_KEY.", file=out)
+    return EXIT_OK
+
+
 def rollback_journal_header(data: bytes) -> bytes:
     """Mark a serialised database as rollback-journal mode (header bytes 18/19 = 1) instead of WAL (2).
 
@@ -912,6 +925,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dir", help=f"write DIR/{brand.BACKUP_PREFIX}YYYYMMDDTHHMMSSZ.db instead of FILE")
     p.add_argument("--keep", type=int, help="with --dir: keep only the newest N backups in DIR")
     p.set_defaults(func=cmd_backup)
+    p = sub.add_parser("record-backup", help="record a backup made outside the app (a volume snapshot), so the reminder waits")
+    p.set_defaults(func=cmd_record_backup)
 
     p = sub.add_parser("check", help="validate configuration and database")
     p.set_defaults(func=cmd_check)

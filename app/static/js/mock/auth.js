@@ -587,6 +587,7 @@
       proxy: {},
       pre_v3_backup: null,
       last_backup_at: null,
+      backup_reminder_days: 7,
     };
   });
 

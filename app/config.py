@@ -32,7 +32,8 @@ Keys (defaults in brackets):
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``MAX_IMPORT_BYTES`` [16 MiB: only ``POST /api/me/import``],
   ``HSTS_MAX_AGE`` [31536000], ``PWA_ENABLED`` [true],
-  ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``
+  ``LOG_LEVEL`` [INFO], ``USDA_API_KEY[_FILE]``, ``BACKUP_REMINDER_DAYS`` [7: Server administration reminds an admin when the
+  last backup is older; 0 turns the reminder off]
 * Optional AI (note 04 R4, §9 A5; ``app/ai/``), parsed into :class:`AiEnv` (``Settings.ai``): the
   server-defined provider ``AI_PROVIDER``, ``AI_BASE_URL``, ``AI_API_KEY[_FILE]`` (``OPENAI_API_KEY[_FILE]``
   is accepted for ``AI_PROVIDER=openai``), ``AI_MODEL``, ``AI_VISION_MODEL``, ``AI_TIMEOUT_S``,
@@ -318,6 +319,7 @@ class Settings:
     session_idle_days: int = 14
     session_max_days: int = 30
     reauth_minutes: int = 10
+    backup_reminder_days: int = 7  # 0: no reminder
     password_min_length: int = 15
     password_breach_check: bool = False
     password_hash: str = "argon2id"
@@ -682,6 +684,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         session_idle_days=parse_int(env, "SESSION_IDLE_DAYS", 14, 1, 30),
         session_max_days=parse_int(env, "SESSION_MAX_DAYS", 30, 1, 30),
         reauth_minutes=parse_int(env, "REAUTH_MINUTES", 10, 1, 1440),
+        backup_reminder_days=parse_int(env, "BACKUP_REMINDER_DAYS", 7, 0, 365),
         password_min_length=parse_int(env, "PASSWORD_MIN_LENGTH", 15, 8, 64),
         password_breach_check=parse_bool(env, "PASSWORD_BREACH_CHECK", False),
         password_hash=_choice(env, "PASSWORD_HASH", "argon2id", PASSWORD_HASHES),

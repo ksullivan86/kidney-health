@@ -516,4 +516,5 @@ def about(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends
         "proxy": security_state.snapshot() if security_state is not None else {},
         "pre_v3_backup": pre_v3_backup(conn),
         "last_backup_at": last_backup["at"] if last_backup else None,
+        "backup_reminder_days": s.backup_reminder_days,
     }

@@ -18,8 +18,8 @@ recovery trustworthy before more AI or native-app features.
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
    to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
-   after 7 days with the restore link, and `tests/test_restore_roundtrip.py` restores a backup into an empty server in CI. Left:
-   the same reminder for a server whose backups run outside the app (a volume snapshot leaves no `backup.created` row).
+   after 7 days (`BACKUP_REMINDER_DAYS`) with the restore link, `tests/test_restore_roundtrip.py` restores a backup into an empty
+   server in CI, and a backup job outside the app ends with `python -m app.admin record-backup` so the reminder sees it.
 4. **Real phones and assistive tech as a release step.** Done: step 2 of the release process in
    [`maintainers.md`](maintainers.md#release-process) is a gate (iPhone offline, large text, keyboard only, VoiceOver, TalkBack),
    and the release pull request says who checked each line on what device.

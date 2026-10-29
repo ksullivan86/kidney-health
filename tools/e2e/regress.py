@@ -71,6 +71,19 @@ def info(area: str, name: str, detail: str = "") -> None:
     print(f"INFO [{area}] {name}" + (f" :: {detail}" if detail else ""), flush=True)
 
 
+def xml_parser_style_error(entry: tuple[str, str]) -> bool:
+    """Chromium's old/new wording for the blocked styles in its malformed-XML error document.
+
+    Called only for console entries captured while choosing the controlled broken XML fixtures.
+    Other severities, CSP directives and unrelated console errors must still fail the walk.
+    """
+    level, message = entry
+    return level == "error" and "style-src 'self'" in message and message.startswith((
+        "Refused to apply inline style",
+        "Applying inline style violates the following Content Security Policy directive",
+    ))
+
+
 # --------------------------------------------------------------------------- server
 API: Api | None = None  # the harness's own signed-in session (direct API reads and writes)
 
@@ -674,7 +687,7 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         # A malformed XML file makes Chromium's parser build an error document (a parsererror element) with inline styles, which the page's CSP
         # refuses (style-src 'self'): two console messages per broken file, nothing else. The document is never shown; the page reads it as an error.
         page.wait_for_timeout(300)
-        noise = [c for c in rec.console[n_console:] if c[0] == "error" and c[1].startswith("Refused to apply inline style")]
+        noise = [c for c in rec.console[n_console:] if xml_parser_style_error(c)]
         check(A, "Patient portal file: the two broken files add only Chromium's refused inline styles of its parse-error document to the console",
               noise and len(noise) == len(rec.console[n_console:]) <= 8, str(rec.console[n_console:][:5]))
         rec.console[:] = [c for c in rec.console if c not in noise]

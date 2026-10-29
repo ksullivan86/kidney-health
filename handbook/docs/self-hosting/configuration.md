@@ -64,6 +64,7 @@ the app with a message that names the variable; it never starts half-configured
 | `SETUP_CODE_TTL_MINUTES` | 60 | Lifetime of the first-run setup code (5–1440). |
 | `SESSION_IDLE_DAYS` / `SESSION_MAX_DAYS` | 14 / 30 | Sign-in lifetime (1–30 each). |
 | `REAUTH_MINUTES` | 10 | How long a password re-entry unlocks sensitive actions. |
+| `BACKUP_REMINDER_DAYS` | 7 | Server administration reminds an admin when the last backup is older than this (0–365; `0` turns it off). See [Backups](backups.md). |
 | `PASSWORD_MIN_LENGTH` | 15 | 8–64. Below 15 logs a warning: 15 is the NIST minimum for a password used alone ([NIST][NIST-63B4]). |
 | `PASSWORD_BREACH_CHECK` | `false` | `true` checks new passwords against Have I Been Pwned (5 hash characters leave the server). |
 | `PASSWORD_HASH` | `argon2id` | `scrypt` only where Argon2id is unavailable. |
