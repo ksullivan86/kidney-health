@@ -1,13 +1,14 @@
 """Read-only sharing with a caregiver or dietitian (design note 19; ``app/sharing.py``, schema step 24).
 
 Covered: the link (made once with a recent password, shown once, works once, 7 days, the limits of 5 links and 10 shares, your own
-link, a wrong or used or cancelled link: the same 404, a newer link replacing the areas), the one check for every
+link, a wrong or used or cancelled link: the same 404, a newer link replacing the areas, a time limit), the one check for every
 ``/api/shared/{id}/…`` read (another person's share, an ended share, an area not shared, a disabled owner: the same 404), that a
 shared answer equals the owner's own, that no write route exists under ``/api/shared``, the daily view audit, both sides stopping,
 the switch and ``AUTH_MODE=none``, the admin's count and removal, and account deletion of either side.
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import date, timedelta
 from typing import Any
@@ -142,6 +143,51 @@ def test_a_newer_link_from_the_same_person_replaces_the_areas(people):
     assert sam.get(f"/api/shared/{first}/log").status_code == 404
     with db(ana) as conn:
         assert conn.execute("SELECT ended_by FROM shares WHERE id = ?", (first,)).fetchone()[0] == "replaced"
+
+
+def test_a_share_can_end_on_a_date(people, fake_clock):
+    ana, sam, _ = people
+    r = ana.post("/api/me/shares", json={"areas": ["food"], "days": 1})
+    assert r.status_code == 201 and r.json()["code"]["days"] == 1
+    code = code_of(r.json())
+    assert sam.post("/api/shared/info", json={"code": code}).json()["days"] == 1
+    person = sam.post("/api/shared/accept", json={"code": code}).json()
+    assert person["until"] and person["until"] > person["since"]
+    assert ana.get("/api/me/shares").json()["sharing"][0]["until"] == person["until"]
+    assert sam.get(f"/api/shared/{person['id']}/log").status_code == 200
+    fake_clock.advance(hours=23)
+    assert sam.get(f"/api/shared/{person['id']}/log").status_code == 200
+    fake_clock.advance(hours=1, seconds=1)
+    r = sam.get(f"/api/shared/{person['id']}/log")
+    assert r.status_code == 404 and r.json()["detail"] == sharing.NOT_SHARED
+    assert sam.get("/api/shared").json()["people"] == [] and ana.get("/api/me/shares").json()["sharing"] == []
+    ended = audit_rows(ana, "share.ended")
+    assert len(ended) == 1 and ended[0]["actor_user_id"] is None and json.loads(ended[0]["details_json"])["by"] == "time"
+    assert "share.ended" in {e["action"] for e in ana.get("/api/me/activity").json()["events"]}
+
+
+def test_without_days_a_share_lasts_until_stopped(people, fake_clock):
+    ana, sam, _ = people
+    sid = share(ana, sam, ["labs"])
+    assert sam.get("/api/shared").json()["people"][0]["until"] is None
+    fake_clock.advance(days=13)
+    assert sam.get(f"/api/shared/{sid}/labs").status_code == 200
+
+
+@pytest.mark.parametrize("days", [0, 366, -1, 1.5, "a month"])
+def test_the_time_limit_is_one_to_365_days(people, days):
+    ana, _, _ = people
+    assert ana.post("/api/me/shares", json={"areas": ["food"], "days": days}).status_code == 400
+
+
+def test_a_newer_link_brings_its_own_end_date(people):
+    ana, sam, _ = people
+    share(ana, sam, ["food"])
+    r = ana.post("/api/me/shares", json={"areas": ["food"], "days": 30})
+    person = sam.post("/api/shared/accept", json={"code": code_of(r.json())}).json()
+    assert person["until"] is not None
+    share(ana, sam, ["food"])
+    assert sam.get("/api/shared").json()["people"][0]["until"] is None
 
 
 def test_making_a_link_needs_a_recent_password(people, fake_clock):

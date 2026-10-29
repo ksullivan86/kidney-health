@@ -49,6 +49,14 @@ def test_settings_shows_the_block_outside_no_sign_in_mode_and_the_admin_can_end_
     assert "['Sharing', ['sharing.enabled']]," in settings
 
 
+def test_the_form_offers_how_long_a_share_lasts():
+    assert "const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];" in CODE
+    assert "A.make(areas, Number(lasts.value) || null)" in CODE
+    assert "make: (areas, days) => request('POST', '/api/me/shares', { areas, days: days || null })," in CODE
+    settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    assert "time: 'on the end date you chose'" in settings
+
+
 def test_the_link_is_taken_into_memory_and_asked_about_after_sign_in():
     assert "takeLink(); // the link the page was opened with" in CODE
     assert "history.replaceState(null, '', location.pathname + location.search)" in CODE
@@ -114,6 +122,10 @@ def test_the_pure_helpers():
         who: [S.whoText({{ name: 'Ana', username: 'ana' }}), S.whoText({{ name: 'ana', username: 'ana' }})],
         question: S.questionText({{ name: 'Ana', username: 'ana2', areas: ['food', 'labs'] }}),
         line: S.sharingLine({{ areas: ['food'], since: '2026-10-29T08:00:00Z', last_viewed_at: null, active: false }}, '2026-10-29'),
+        dated: S.sharingLine({{ areas: ['labs'], since: '2026-10-29T08:00:00Z', until: '2026-11-28T08:00:00Z', last_viewed_at: null }}, '2026-10-29'),
+        person: S.personLine({{ areas: ['food'], since: '2026-10-29T08:00:00Z', until: '2026-11-28T08:00:00Z' }}),
+        lasts: [S.lastsText(null), S.lastsText(1), S.lastsText(30)],
+        ending: S.questionText({{ name: 'Ana', username: 'ana', areas: ['food'], days: 30 }}),
         entries: [S.entryLine({{ food_name: 'Banana', servings: 1, grams: null, status: 'eaten' }}),
                   S.entryLine({{ food_name: 'Juice', servings: 0.5, grams: null, status: 'planned', purpose: 'hypo' }}),
                   S.entryLine({{ food_name: 'Rice', servings: 1, grams: 150.4, status: 'eaten' }})],
@@ -128,6 +140,10 @@ def test_the_pure_helpers():
     assert got["question"] == ("Ana (ana2) wants to share their food log and lab results with you. You can look, but not change "
                                "anything. Ana (ana2) can stop this at any time, and so can you.")
     assert got["line"].startswith("food log · since Oct 29") and got["line"].endswith("has not looked yet · their account is turned off")
+    assert "until" not in got["line"] and " · until Nov 28, 2026 · has not looked yet" in got["dated"]
+    assert got["person"].endswith(" · until Nov 28, 2026")
+    assert got["lasts"] == ["until one of you stops it", "for 1 day", "for 30 days"]
+    assert got["ending"].endswith("and so can you. It ends by itself after 30 days.")
     assert got["entries"] == ["Banana, 1 serving", "Juice, 0.5 servings (planned, to treat a low)", "Rice, 150 g"]
     assert got["calls"] == [["GET", "/api/shared/7/log/summary?start=2026-10-01&end=2026-10-14"], ["GET", "/api/shared/7/labs?limit=1000"],
                             ["GET", "/api/shared/7/log?date=2026-10-29"], ["GET", "/api/shared/7/profile"],

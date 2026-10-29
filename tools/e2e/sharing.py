@@ -150,6 +150,7 @@ def walk_ana_shares(p: Pass) -> str:
           "caregiver or dietitian" in text_of(page, "#set-sharing") and "never change anything" in text_of(page, "#set-sharing")
           and "Nobody yet." in text_of(page, "#set-sharing"))
     page.uncheck("#set-share-symptoms")
+    page.select_option("#set-share-days", "30")
     page.click("#set-sharing-make")
     answer_reauth(page)
     page.wait_for_selector("#set-share-link", timeout=20000)
@@ -157,6 +158,7 @@ def walk_ana_shares(p: Pass) -> str:
     box = text_of(page, "#set-sharing [aria-label='New share link']")
     check(f"[{p.tag}] the link is shown once with the areas and the words that it works once",
           "/#/share/" in link and "food log, lab results and weight and blood pressure" in box and "works once" in box, box[:200])
+    check(f"[{p.tag}] it says the share will last 30 days", "you share for 30 days" in box, box[:300])
     page.click("#set-sharing [aria-label='New share link'] button:has-text('Copy link')")
     check(f"[{p.tag}] Copy link puts exactly the link on the clipboard", page.evaluate("() => navigator.clipboard.readText()") == link)
     check(f"[{p.tag}] the unused link is listed with when it ends", "works until" in text_of(page, "#set-sharing-codes"))
@@ -175,6 +177,7 @@ def walk_sam_accepts(p: Pass, link: str) -> None:
     q = text_of(page, "#share-question")
     check(f"[{p.tag}] the sheet names Ana and what she shares, and says he cannot change anything",
           "ana wants to share their food log, lab results and weight and blood pressure with you" in q and "not change anything" in q, q)
+    check(f"[{p.tag}] the sheet says it ends by itself after 30 days", "ends by itself after 30 days" in q, q)
     check(f"[{p.tag}] the link left the address bar", "/share/" not in page.url, page.url)
     p.shot("question", "#sheet-share")
     page.click("#share-accept")
@@ -213,6 +216,7 @@ def walk_ana_stops(p: Pass) -> None:
     wait_text(page, "#set-sharing-list", "sam")
     line = text_of(page, "#set-sharing-list")
     check(f"[{p.tag}] her list names Sam and says he looked today", "looked today" in line and "food log" in line, line)
+    check(f"[{p.tag}] and when the share ends", " · until " in line, line)
     page.get_by_role("button", name="Stop sharing with sam").click()
     check(f"[{p.tag}] Stop sharing asks first", "can no longer see any of your data" in text_of(page, "#set-sharing-list"))
     page.locator("#set-sharing-list").get_by_role("button", name="Stop sharing", exact=True).click()

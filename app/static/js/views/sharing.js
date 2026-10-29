@@ -18,6 +18,8 @@
 
   const AREAS = ['food', 'labs', 'body', 'symptoms'];
   const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms' };
+  // How long a share lasts once accepted (POST /api/me/shares `days`; the server takes 1 to 365).
+  const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];
   const LINK_RE = /^#\/share\/([0-9a-f]{16}\.[A-Za-z0-9_-]{43})$/;
   const INTRO = 'Let a family member, caregiver or dietitian who has an account on this server see parts of your log. '
     + 'They can look, but never change anything. You can stop at any time.';
@@ -28,7 +30,7 @@
 
   const A = {
     mine: () => request('GET', '/api/me/shares'),
-    make: (areas) => request('POST', '/api/me/shares', { areas }),
+    make: (areas, days) => request('POST', '/api/me/shares', { areas, days: days || null }),
     end: (id) => request('DELETE', `/api/me/shares/${id}`),
     people: () => request('GET', '/api/shared'),
     stop: (id) => request('DELETE', `/api/shared/${id}`),
@@ -71,17 +73,21 @@
     if (!iso) return 'has not looked yet';
     return String(iso).slice(0, 10) === today ? 'looked today' : `last looked ${fmtDay(iso)}`;
   }
+  /** How long a share lasts, in words: "for 30 days" (a link's `days`) or "until Nov 28, 2026" (an accepted share's `until`). */
+  function lastsText(days) { return days ? `for ${days} ${days === 1 ? 'day' : 'days'}` : 'until one of you stops it'; }
+  function untilText(until) { return until ? `until ${fmtDay(until)}` : null; }
   function sharingLine(s, today) {
-    const parts = [areasText(s.areas), `since ${fmtDay(s.since)}`, lastLooked(s.last_viewed_at, today)];
+    const parts = [areasText(s.areas), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today)].filter(Boolean);
     if (s.active === false) parts.push('their account is turned off');
     return parts.join(' · ');
   }
-  function personLine(p) { return `${areasText(p.areas)} · since ${fmtDay(p.since)}`; }
+  function personLine(p) { return [areasText(p.areas), `since ${fmtDay(p.since)}`, untilText(p.until)].filter(Boolean).join(' · '); }
   function whoText(p) { return p.name && p.name !== p.username ? `${p.name} (${p.username})` : p.username || p.name || ''; }
   function questionText(info) {
     const who = whoText(info);
+    const lasts = info.days ? ` It ends by itself after ${info.days} ${info.days === 1 ? 'day' : 'days'}.` : '';
     return `${who} wants to share their ${areasText(info.areas)} with you. You can look, but not change anything. `
-      + `${who} can stop this at any time, and so can you.`;
+      + `${who} can stop this at any time, and so can you.${lasts}`;
   }
   /** One entry of a shared day as a line: "Banana, 1 serving (planned)". */
   function entryLine(e) {
@@ -160,7 +166,7 @@
           await load(body, null, '#set-sharing-make');
         }, { 'aria-label': `Cancel the link for your ${areasText(c.areas)}` });
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, areasText(c.areas)),
-          h('span', { class: 'row-sub' }, `works until ${fmtDay(c.expires_at)}`)), h('div', { class: 'token-actions' }, cancel)));
+          h('span', { class: 'row-sub' }, `shares ${lastsText(c.days)} · the link works until ${fmtDay(c.expires_at)}`)), h('div', { class: 'token-actions' }, cancel)));
       }
       body.append(ul);
     }
@@ -201,9 +207,11 @@
       box.checked = true;
       return h('label', { class: 'check', for: id }, box, ` My ${AREA_LABEL[a]}`);
     });
+    const lasts = h('select', { id: 'set-share-days' }, ...DAY_CHOICES.map(([v, label]) => h('option', { value: v }, label)));
     const make = h('button', { class: 'btn primary', type: 'submit', id: 'set-sharing-make' }, 'Make a link');
     const form = h('form', { class: 'settings-form sharing-form', novalidate: true },
       h('fieldset', {}, h('legend', {}, 'Share with someone'), boxes),
+      h('label', { class: 'label', for: 'set-share-days' }, 'For how long'), lasts,
       h('span', { class: 'hint' }, 'You get a link to send them. It works once, for 7 days. They need their own account on this server.'),
       h('div', { class: 'settings-actions' }, make), err);
     sheets.onSubmit(form, async (e) => {
@@ -214,7 +222,7 @@
       if (!areas.length) { err.append(h('p', {}, 'Tick at least one thing to share.')); return; }
       make.disabled = true;
       try {
-        const made = await A.make(areas);
+        const made = await A.make(areas, Number(lasts.value) || null);
         await load(body, made);
       } catch (e2) {
         if (e2.cancelled || e2.handled) return;
@@ -237,7 +245,8 @@
     return h('div', { class: 'link-box', role: 'group', 'aria-label': 'New share link' },
       h('label', { for: id, class: 'label' }, `Link for your ${areasText(made.code.areas)} (shown only now)`),
       h('div', { class: 'link-row' }, input, copy),
-      h('p', { class: 'hint' }, `Send it to the person you want to share with. It works once, until ${fmtDay(made.code.expires_at)}.`),
+      h('p', { class: 'hint' }, `Send it to the person you want to share with. It works once, until ${fmtDay(made.code.expires_at)}. `
+        + `Once they accept, you share ${lastsText(made.code.days)}.`),
       h('p', { class: 'hint' }, 'Whoever opens it first while signed in can accept it, so send it only to them.'));
   }
 
@@ -350,6 +359,6 @@
   takeLink(); // the link the page was opened with: kept before any sign-in screen rewrites the address
   setupSheet();
 
-  KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, sharingLine, personLine, whoText,
+  KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, lastsText, sharingLine, personLine, whoText,
     questionText, entryLine, AREAS, AREA_LABEL };
 })();
