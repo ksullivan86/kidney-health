@@ -134,6 +134,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
    you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, and **Trends** shows their Trends
    charts, both with a banner that says it is read-only.
+   When loading food trends, the previous charts and summary clear first. If loading fails, press **Retry**;
+   the previous person's food data is not left under the new heading.
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
   the date of birth and other profile details.

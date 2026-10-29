@@ -4098,7 +4098,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read
   `reads.range` / `reads.summary`, `KH.symptoms.trends` and `KH.bodyTrends.show` take the share as `source`, the `#trends-shared`
   banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
-  in, shows the signed-in person's own data.
+  in, shows the signed-in person's own data. A new Trends food request clears the old charts, tooltip and period summary
+  before loading, including when changing people or periods. Failure shows an unavailable message and Retry; an older
+  request may not replace the latest loading, error or completed state.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 
