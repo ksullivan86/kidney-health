@@ -4102,6 +4102,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
   in, shows the signed-in person's own data. Shared weight charts use only the owner's profile for the dry-weight line.
   If that profile cannot be loaded, omit the line; never fall back to the viewer's profile, including on resize.
+  A new Trends food request clears the old charts, tooltip and period summary
+  before loading, including when changing people or periods. Failure shows an unavailable message and Retry; an older
+  request may not replace the latest loading, error or completed state.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

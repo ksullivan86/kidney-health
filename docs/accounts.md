@@ -136,6 +136,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    charts, both with a banner that says it is read-only.
    A shared weight chart uses that person's dry weight. If their profile cannot be loaded, the dry-weight line is left out;
    your own dry weight is never used on their chart.
+   When loading food trends, the previous charts and summary clear first. If loading fails, press **Retry**;
+   the previous person's food data is not left under the new heading.
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
   the date of birth and other profile details.
