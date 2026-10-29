@@ -90,7 +90,8 @@ what is left today. If it does not fit, the app tries these in order and stops a
 Every change is listed with the app's figures. Nothing changes until you choose:
 
 * **Save as a new recipe** keeps your recipe and adds "<name> (fitted)". A smaller serving is saved as more servings from
-  the same pot, so one saved serving is the size that fits.
+  the same pot, so one saved serving is the size that fits. A recipe makes at most 100 servings: when more would be needed,
+  the amounts are made smaller instead and it still makes 100.
 * **Replace this recipe** asks first and shows the carbohydrate per serving before and after. You can undo it.
 
 Cooking, soaking and draining are not counted, and seasonings that are not in your food list are not counted. The app says

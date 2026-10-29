@@ -61,7 +61,8 @@ Use **Add → Quick add** for a packaged food that is not in the list.
    bar on **Today** shows "≥ 55 / 3,500 mg" or "not listed" with **Not complete** (never a green
    **OK**) and "1 food does not list potassium, so the total may be higher", the meal line reads
    "K ≥ 55 (+ 1 not listed)", and **Trends**, **Plan** and the 7-day averages mark those days
-   "not complete".
+   "not complete". A saved meal with that food shows "K ≥" or "K not listed" the same way, on **Plan** and
+   in the shortcuts on **Add**.
 4. Copy the ingredient list into **Ingredients** (optional, but worth it). The app checks it as you
    type and shows "Phosphate additives" or "Potassium additives" when it finds one (for example sodium
    phosphate or potassium chloride); saving sets the same flags. You can also tick them yourself under
@@ -150,7 +151,8 @@ deleted like any other entry.
 Your phone also keeps a copy of the last two weeks and the coming week, so **Today** opens while you are
 offline when the app was installed from an `https://` address (it says it is showing the copy saved on
 this device), and search finds the foods this phone has
-seen. Signing out deletes everything the app kept on the phone, so it asks first when entries are still
+seen. If your server has a problem loading a day, **Today** says the day could not be loaded and
+offers **Retry**. It never shows another day's food under that date. Signing out deletes everything the app kept on the phone, so it asks first when entries are still
 waiting to sync.
 
 If the server refuses a waiting entry when it arrives (for example, the food was deleted in the

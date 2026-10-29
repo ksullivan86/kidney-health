@@ -149,7 +149,15 @@
       const li = h('li', { class: 'saved-meal' });
       const nums = h('div', { class: 'row-nums' });
       const shown = isRecipe(t) ? t.per_serving : t.totals;
-      for (const k of ROW_NUMBERS) nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(shown[k], k)), ` ${NUT[k].unit}`));
+      for (const k of ROW_NUMBERS) {
+        // A total skips foods that do not list the value: "≥ 120" when some do not, "not listed" when none does, never a plain 0.
+        const unk = unknownOf(t.unknown, k);
+        const none = !!t.per_serving && t.per_serving[k] == null; // the server sends null when no food in it lists the value
+        nums.append(none
+          ? h('span', { class: 'n', title: foodsNotListing(unk, k) }, `${NUT[k].short} `, h('b', {}, 'not listed'))
+          : h('span', { class: 'n', title: unk ? foodsNotListing(unk, k) : null, 'aria-label': `${NUT[k].label} ${atLeastWords(fmtNum(shown[k], k), unk)} ${NUT[k].unit}` },
+            `${NUT[k].short} `, h('b', {}, atLeast(fmtNum(shown[k], k), unk)), ` ${NUT[k].unit}`));
+      }
       li.append(h('div', { class: 'saved-meal-main' },
         ratingIcon(t.kidney_rating),
         h('div', { class: 'row-main' },
@@ -576,13 +584,18 @@
     const canSave = !!r.fitted && r.status !== 'fits';
     $('#fit-save').hidden = !canSave; $('#fit-replace').hidden = !canSave || !!fit.undo;
   }
+  const MAX_RECIPE_SERVINGS = 100; // app/models.py: the server refuses a recipe that makes more
+  /** The fitted recipe as a saved-meal body. A smaller serving is saved as more servings from the same pot, so one saved serving
+      is the size that fits. When that would be more than 100 servings, the pot is made smaller instead (every food scaled down
+      alike), so one serving stays exactly the same and the server can save it. */
   function fittedBody(name) {
     const t = fit.meal, f = fit.result.fitted;
-    const n = fit.result.servings_made;
+    const want = fit.result.servings_made / f.serving_fraction;
+    const made = Math.min(want, MAX_RECIPE_SERVINGS);
+    const scale = made / want;
     return { name: name.slice(0, 200), note: shownNote(t), meal_hint: t.meal_hint || null,
-      items: f.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
-      // A smaller serving is saved as more servings from the same pot, so one saved serving is the size that fits.
-      servings_made: Math.round((n / f.serving_fraction) * 100) / 100, steps: t.steps || null, source_url: t.source_url || null };
+      items: f.items.map((it) => ({ food_id: it.food_id, servings: Math.max(0.001, Math.round(it.servings * scale * 1000) / 1000) })),
+      servings_made: Math.round(made * 100) / 100, steps: t.steps || null, source_url: t.source_url || null };
   }
   const bodyOf = (t) => ({ name: t.name, note: t.note, meal_hint: t.meal_hint || null, items: t.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
     servings_made: t.servings_made ?? null, steps: t.steps || null, source_url: t.source_url || null });

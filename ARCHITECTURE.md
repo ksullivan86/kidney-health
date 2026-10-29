@@ -654,7 +654,7 @@ each item by `servings_made`, so a recipe is judged and offered one serving at a
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
 sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
-`servings_made ÷ serving_fraction` so one saved serving is the size that fits) or **Replace this recipe** (`PUT`, after an inline
+`servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
 confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back). The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
@@ -2064,7 +2064,8 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   the green OK; caution and over keep their warning), no "… left", and "1 food does not list potassium, so the
   total may be higher"; meal lines "K ≥ 55 (+ 1 not listed)" or "K not listed"; entry rows "not listed"; the
   all-totals list, the 7-day strip, "since last dialysis", Trends (days, averages, the period card; a dashed bar
-  edge) and Plan's day chips the same; the entry sheet's impact says "would reach at least …". The twin uses
+  edge), Plan's day chips, the saved-meal cards on Plan and the saved-meal shortcuts on Add (from the meal's `unknown` and
+  `per_serving`) the same; the entry sheet's impact says "would reach at least …". The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 
@@ -4536,3 +4537,13 @@ server stays the full version; this mode never exists in the installed app.
   The browser walk (`python tools/e2e/demo_local.py`, no server): nothing stored before the choice, the sheet's wording, turn on, add an entry, reload and it
   is still there, export, stop (confirm, cancel, delete), import into an empty log, two tabs, a browser that refuses IndexedDB, a newer copy, no request to
   another host, no console or CSP error, no sideways scroll.
+
+## When a day fails to load (the 2026-10-29 review)
+
+`loadDay` in `js/views/today.js` numbers each request (`dayRequest`); only the newest may draw. When it fails and the chosen day
+was never drawn (`state.dayLoadedFor !== state.date`), `renderUnavailable` clears everything that belongs to a day (meals, alerts,
+projected alerts, status bars, the all-totals list, the guidance cards) and shows a `role="alert"` card, "<date> could not be
+loaded, so nothing is shown for it", with **Retry** (`#day-retry`, which calls `loadDay` again). A failed reload of a day already
+on the page keeps it and shows a toast, as before. Symptoms and weight load on their own for the chosen day. Checked by
+`tests/test_reliability_ui.py` and in Chromium by `tools/e2e/reliability.py`, which also checks the saved-meal "not listed"
+values and the 100-serving limit of a fitted recipe.

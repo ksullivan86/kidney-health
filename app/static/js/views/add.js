@@ -12,7 +12,7 @@
   const { h, s, $, $$, clear, api, state, toast, toastError, router, sheets, confirm } = KH;
   const { NUT, NUTRIENTS, FLAGS, FLAG, MEAL_LABEL, fmtNum, fmtWithUnit, fmtServings, evaluateWarnings } = KH.rules;
   const { KEY_NUMBERS, ROW_NUMBERS, LEVEL_TEXT, ratingIcon, levelPill, renderWarnings, selectedMeal, setMeal, selectedStatus, setStatus,
-    scaledNutrients, impactOn } = KH.ui;
+    scaledNutrients, impactOn, unknownOf, atLeast, atLeastWords } = KH.ui;
   const { todayStr, fmtDateLong, defaultStatusFor, defaultMealForNow, debounce, numOrNull } = KH.util;
   const { MOCK } = KH.flags;
 
@@ -44,13 +44,19 @@
     const meals = state.meals || [];
     wrap.hidden = !meals.length;
     for (const t of meals) {
+      // A total skips foods that do not list the value: "≥ 30" when some do not, "not listed" when none does (never 0).
+      const value = (k, words) => {
+        if (t.per_serving && t.per_serving[k] == null) return 'not listed';
+        const unk = unknownOf(t.unknown, k);
+        return words ? atLeastWords(fmtNum(t.totals[k], k), unk) : atLeast(fmtNum(t.totals[k], k), unk);
+      };
       // The list item wraps the button: a role="listitem" on the <button> itself would hide its
       // button role from screen readers (ARIA in HTML forbids that combination).
       const b = h('button', { class: 'meal-chip', type: 'button',
-        'aria-label': `Add saved meal ${t.name}: ${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}, ${fmtNum(t.totals.carbs_g, 'carbs_g')} g carbs` },
+        'aria-label': `Add saved meal ${t.name}: ${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}, carbs ${value('carbs_g', true)}${value('carbs_g') === 'not listed' ? '' : ' g'}` },
         ratingIcon(t.kidney_rating, { decorative: true }),
         h('span', { class: 'meal-chip-main' }, h('span', { class: 'meal-chip-name' }, t.name),
-          h('span', { class: 'meal-chip-sub' }, `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'} · ${fmtNum(t.totals.carbs_g, 'carbs_g')} g carbs · K ${fmtNum(t.totals.potassium_mg, 'potassium_mg')}`)));
+          h('span', { class: 'meal-chip-sub' }, `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'} · carbs ${value('carbs_g')}${value('carbs_g') === 'not listed' ? '' : ' g'} · K ${value('potassium_mg')}`)));
       b.addEventListener('click', () => KH.views.plan.openApplySheet({ mealId: t.id, date: state.date, meal: state.addMealHint || defaultMealForNow(), status: state.addStatusHint, trigger: b }));
       list.append(h('div', { class: 'meal-chip-item', role: 'listitem' }, b));
     }
