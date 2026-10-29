@@ -147,3 +147,22 @@ def test_the_activity_list_says_where_a_first_value_came_from():
 
     view = (Path(__file__).resolve().parents[1] / "app" / "static" / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     assert "${d.env ? ` (first value from ${d.env})` : ''}" in view
+
+
+def test_env_template_lists_every_setting_and_is_a_valid_env_file(tmp_path):
+    out = io.StringIO()
+    assert admin.main(["env-template"], env={"DATA_DIR": str(tmp_path / "data")}, out=out) == 0
+    text = out.getvalue()
+    names = [line.split("=", 1)[0] for line in text.splitlines() if line and not line.startswith("#")]
+    expected = sorted(d.env for d in settings_registry.all_settings() if d.env)
+    assert sorted(names) == sorted(["SETTINGS_INITIAL_ONLY", *expected])
+    assert "# registration.invite_ttl_days: Invite links expire after (days)" in text
+    assert "#   Values: a whole number from 1 to 90. Default: 7." in text
+    assert "#   Values: one of invite, closed, open. Default: invite." in text
+    env = dict(line.split("=", 1) for line in text.splitlines() if line and not line.startswith("#"))
+    s = store(**env)
+    assert s.validate_env_locks() == [] and s.initial_keys() == []  # all empty: nothing locked, nothing written
+
+    out = io.StringIO()
+    assert admin.main(["env-template", "--initial-only"], env={"DATA_DIR": str(tmp_path / "data")}, out=out) == 0
+    assert "\nSETTINGS_INITIAL_ONLY=*\n" in out.getvalue()

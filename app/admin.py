@@ -513,6 +513,59 @@ def _forget_failures(conn: sqlite3.Connection, settings: Settings, username_norm
         conn.execute("DELETE FROM login_failures WHERE name_mac = ?", (Keyring(lines).mac(NAME_MAC_INFO, username_norm),))
 
 
+def _allowed(definition: Any) -> str:
+    """The values a setting takes, in words, from its type (for ``env-template``)."""
+    schema = definition.adapter.json_schema()
+    if "enum" in schema:
+        return "one of " + ", ".join(str(v) for v in schema["enum"])
+    if schema.get("type") == "boolean":
+        return "true or false"
+    if schema.get("type") == "integer":
+        return f"a whole number from {schema.get('minimum', '…')} to {schema.get('maximum', '…')}"
+    if schema.get("type") == "string":
+        return f"text, at most {schema['maxLength']} characters" if schema.get("maxLength") else "text"
+    return "JSON"
+
+
+def env_template(definitions: Sequence[Any], initial_only: bool = False) -> str:
+    """Every setting's variable as a ``.env`` file: one empty line per setting, with what it is, its values and its default
+    in a comment. Made from the registry (``app/settings_registry.py``), so it lists exactly what this version reads."""
+    import textwrap
+
+    from .settings_store import INITIAL_ONLY_ENV
+
+    lines = [
+        f"# {brand.NAME} server settings, from `python -m app.admin env-template` (version {_app_version()}).",
+        "# Fill in the ones you want and leave the rest empty: an empty value means the default, and an admin can still",
+        "# choose it in Server administration. A value here locks its setting, unless its name is in SETTINGS_INITIAL_ONLY",
+        "# (a comma list, or * for all): then it is only the first value, written on the first start (docs/deployment.md,",
+        "# \"Set it up by code\"). The address, sign-in mode, secrets and AI providers are in deploy/.env.example.",
+        "",
+        f"{INITIAL_ONLY_ENV}={'*' if initial_only else ''}",
+    ]
+    group = None
+    for d in sorted((d for d in definitions if d.env), key=lambda d: d.key):
+        head = d.key.split(".", 1)[0]
+        if head != group:
+            group = head
+            lines += ["", f"# ---- {head}"]
+        default = json.dumps(d.to_python_json(d.default)) if not isinstance(d.default, (str, bool)) else (
+            str(d.default).lower() if isinstance(d.default, bool) else d.default)
+        about = f"{d.label or d.key}. {d.help}".strip() if d.help else (d.label or d.key)
+        lines.append("")
+        lines += textwrap.wrap(f"{d.key}: {about}", 118, initial_indent="# ", subsequent_indent="#   ")
+        lines.append(f"#   Values: {_allowed(d)}. Default: {default}.")
+        lines.append(f"{d.env}=")
+    return "\n".join(lines) + "\n"
+
+
+def cmd_env_template(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    from .settings_store import SettingsStore
+
+    out.write(env_template(SettingsStore(env={}).definitions(), initial_only=args.initial_only))
+    return EXIT_OK
+
+
 def cmd_create_admin(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     from .audit import audit
     from .auth.accounts import claim_first_admin, create_user
@@ -884,6 +937,10 @@ def build_parser() -> argparse.ArgumentParser:
             sp.add_argument("value", help="text, number, true/false or JSON")
         sp.add_argument("--user", type=int, default=None, help="a person's own value (user id)")
         sp.set_defaults(func=cmd_settings)
+
+    p = sub.add_parser("env-template", help="print every setting's variable as a .env file to fill in")
+    p.add_argument("--initial-only", action="store_true", help="write SETTINGS_INITIAL_ONLY=* (every value a first value)")
+    p.set_defaults(func=cmd_env_template)
 
     p = sub.add_parser("create-admin", help="create an admin (password on stdin)")
     p.add_argument("username")

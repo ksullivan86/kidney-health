@@ -192,6 +192,9 @@ AI agent that writes the files for you. Write every choice in one place:
    line of 32 characters or more), `admin_password`, and any API keys.
 2. **The settings**, in `deploy/.env` for compose, `Environment=` lines for Quadlet, or `env:` for
    Kubernetes. Set `PUBLIC_URL`, `ADMIN_USERNAME` with `ADMIN_PASSWORD_FILE`, and the features you want.
+   `python -m app.admin env-template` prints every setting's variable as a `.env` file to fill in, each with
+   what it does, the values it takes and its default. It is made from the app itself, so it always matches
+   the version you run. Add `--initial-only` to start with every value a first value.
 3. **Choose what stays changeable.** A setting's variable locks it. Name the ones an admin may change
    later in `SETTINGS_INITIAL_ONLY`, or write `*` to make every one a first value. On the first start
    that sees a first value, the server writes it and notes it in the activity log. After that the app
