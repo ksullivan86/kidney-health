@@ -9,7 +9,10 @@
 // What it pins: an entry made offline and edited (or deleted) while its batch, or its quick add, is on its way ends up on the
 // server as the person left it; a second edit of an entry while the first edit's PUT is on its way is applied too; an answer
 // that is lost after the server got the entry, and an edit made before it is sent again, still ends with the edit; a low
-// treatment is never held back or dropped. Python runs this file from tests/test_outbox_inflight.py.
+// treatment is never held back or dropped. An entry sheet opened before the entry reached the server still saves (or deletes),
+// on the server's entry and never as a second entry. Discard, Discard all and "Sign out and lose them" while an entry is being
+// sent end with it deleted on the server, or name it when that cannot be done. Python runs this file from
+// tests/test_outbox_inflight.py.
 import { isDeepStrictEqual } from 'node:util';
 import { loadDemo, newDemo } from './demo_loader.mjs';
 
@@ -434,6 +437,7 @@ await scenario('"Sign out and lose them" while a batch is on its way: the entrie
 });
 
 await scenario('"Sign out and lose them" when the delete cannot be done: the app says which entry may be on the server', async ({ KH, nav, date, food, hold, onServer }) => {
+  await KH.request('GET', '/api/foods?q=apple&limit=1'); // the device has seen the food, so it knows its name
   nav.onLine = false;
   await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
   await KH.api.quick({ date, meal: 'snack', name: 'Soup', serving_g: 250, nutrients: { calories_kcal: 120 }, servings: 1 });

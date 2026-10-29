@@ -27,6 +27,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Plain saved meals still use Scale.
 * **A change made while an entry syncs is no longer lost.** Edit or delete a waiting entry as it is being sent, and your
   change now follows it to the server.
+* **An entry you discard while it syncs is gone from your server too.** Before, discarding it in Settings or with **Sign out
+  and lose them** could leave it there. Saving an entry you opened just before it synced now works too.
 
 ### For people who run a server
 

@@ -124,8 +124,10 @@ await scenario('an entry created offline: editing rewrites the queued create, de
   const idle = await KH.offline.syncNow();
   expect('no request reached the server for it', [idle.sent, calls.filter((c) => c.startsWith('POST') || c.startsWith('DELETE'))], [0, []]);
   expect('and the server never heard of it', api._entries.filter((e) => e.food_name === 'Stew').length, 0);
-  expect('an entry that already reached the server cannot be edited as a pending one', (await refused(KH.api.updateEntry(made.id, { servings: 3 }, made))).status, 409);
-  expect('the stored entry is as edited', stored(api._entries[0].id).servings, 2);
+  // A sheet still open on the waiting entry: its edit goes to the server's entry (with its version), never as a second entry.
+  const later = await KH.api.updateEntry(made.id, { servings: 3 }, made);
+  expect('an entry that already reached the server: the edit goes to the server\'s entry', [typeof later.id, api._entries.filter((e) => e.food_name === 'Soup').length], ['number', 1]);
+  expect('the stored entry has the edit, and kept the earlier one', [stored(api._entries[0].id).servings, stored(api._entries[0].id).note], [3, 'big bowl']);
 });
 
 await scenario('a change meets a different entry on the server: kept as a conflict, nothing overwritten', async ({ KH, api, nav, date, quick, stored }) => {
