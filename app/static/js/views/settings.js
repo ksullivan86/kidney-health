@@ -767,7 +767,7 @@
     account_deleted: 'account deleted', admin: 'revoked by an admin', auth_mode_changed: 'sign-in mode changed' };
   function eventDetail(ev) {
     const d = ev.details || {};
-    if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}`;
+    if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}${d.env ? ` (first value from ${d.env})` : ''}`;
     if (ev.action === 'secret.set' || ev.action === 'secret.removed') return `${d.provider || ev.target_id} (${d.scope === 'shared' ? 'shared key' : 'own key'})`;
     if (ev.action === 'sessions.revoked' && d.count != null) return d.count === 1 ? '1 device' : `${d.count} devices`;
     if (ev.action === 'user.role_changed') return `${ROLE_LABEL[d.old] || d.old} → ${ROLE_LABEL[d.new] || d.new}`;

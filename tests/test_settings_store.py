@@ -61,12 +61,12 @@ def test_registry_has_note_07_keys():
     expected = {
         "instance.name": ("instance", "INSTANCE_NAME", "Kidney Health"),
         "registration.mode": ("instance", "REGISTRATION_MODE", "invite"),
-        "registration.invite_ttl_days": ("instance", None, 7),
+        "registration.invite_ttl_days": ("instance", "INVITE_TTL_DAYS", 7),
         "audit.retention_days": ("instance", "AUDIT_RETENTION_DAYS", 365),
-        "providers.usda.shared_enabled": ("instance", None, True),
-        "providers.usda.user_keys_allowed": ("instance", None, True),
+        "providers.usda.shared_enabled": ("instance", "USDA_SHARED_ENABLED", True),
+        "providers.usda.user_keys_allowed": ("instance", "USDA_ALLOW_USER_KEYS", True),
         "providers.usda.daily_limit_per_user": ("instance", "USDA_SHARED_DAILY_LIMIT", 200),
-        "ui.theme": ("user_default", None, "system"),
+        "ui.theme": ("user_default", "UI_THEME", "system"),
     }
     for key, (scope, env, default) in expected.items():
         d = keys[key]

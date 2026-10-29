@@ -277,9 +277,13 @@ def cmd_check(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
         print(f"warning: {warning}", file=out)
     from .settings_store import SettingsStore
 
-    locked = SettingsStore(env=args.env).validate_env_locks()
+    store = SettingsStore(env=args.env)
+    locked = store.validate_env_locks()
     if locked:
         print(f"info: settings locked by env: {', '.join(locked)}", file=out)
+    initial = store.initial_keys()
+    if initial:
+        print(f"info: first values from env (changeable in the app afterwards): {', '.join(initial)}", file=out)
     problems: list[str] = []
     if settings.secret_key:
         print(f"ok: SECRET_KEY from {settings.secret_key_source}", file=out)

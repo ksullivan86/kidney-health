@@ -179,6 +179,11 @@ def precedence_vectors() -> list[dict]:
         precedence_case("invalid stored values fall through", {}, {"registration.mode": "invite"},
                         {}, raw_instance={"food.off_enabled": '"maybe"', "registration.invite_ttl_days": "0", "ui.theme": '"purple"'},
                         raw_user={"ui.theme": '"neon"', "food.off_consent": "1"}),
+        precedence_case("first values only are not locks", {"SETTINGS_INITIAL_ONLY": " SHARING_ENABLED, UI_THEME ", "SHARING_ENABLED": "true",
+                                                            "UI_THEME": "dark", "PUSH_ENABLED": "true"},
+                        {"sharing.enabled": False}, {"ui.theme": "light"}),
+        precedence_case("every variable a first value", {"SETTINGS_INITIAL_ONLY": "*", "OFF_ENABLED": "true", "INSTANCE_NAME": "Env name"},
+                        {"instance.name": "Family log"}, {}),
     ]
 
 
