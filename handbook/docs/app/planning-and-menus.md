@@ -99,6 +99,9 @@ This applies to both the original and fitted amounts, including carbohydrate. No
   the amounts are made smaller instead and it still makes 100.
 * **Replace this recipe** asks first and shows the carbohydrate per serving before and after. You can undo it.
 
+Undo belongs to the recipe you replaced. Opening another recipe while a save finishes will not
+give it the first recipe's Undo. Changing the fit target clears an older Replace question.
+
 Cooking, soaking and draining are not counted, and seasonings that are not in your food list are not counted. The app says
 so under every result.
 
