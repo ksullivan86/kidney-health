@@ -309,6 +309,16 @@ Categories (exact strings): `Fruits`, `Vegetables`, `Grains & Breads`,
 
 ## HTTP API (all JSON, prefix `/api`)
 
+Manual weight, blood-pressure, lab and symptom creates, Copy day and saved-meal apply accept an
+optional `Idempotency-Key` (8–128 ASCII letters/digits or `._:-`). A successful write and its
+per-user/per-operation receipt commit atomically. An unchanged retry returns the first validated
+201 response; changed data with the same key is 409. The response expires after 24 hours and is
+cleared on the person's next keyed write, while the key/hash tombstone prevents reexecution until
+account deletion. An expired replay is 409 with a check-your-log message. No-key callers keep
+their existing behavior. New forms retain a random key for an unchanged retry, reset for a new
+action, and send it through the existing request helper. No offline queue is added. The demo has
+the same semantics; [design note 23](docs/dev/research/23-retry-safe-writes.md) records the contract.
+
 Errors: `{"detail": "message"}` with 400/404/409/503.
 
 v0.3 request rules (`app/security.py`, note 01 §5.5 and §10, note 07 §4.8): an unknown `Host` is
@@ -819,6 +829,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 22 | `m022_totp.py` | two-step sign-in (note 17) | `totp_factors` (one row per person who started or turned it on: `secret_enc` sealed with the keyring, purpose `totp`, owner the person; `key_id`; `enabled_at`, NULL until the first code; `last_step`, so each code works once) and `totp_recovery_codes` (`code_hash`, the 32-byte SHA-256 of a code, and `used_at`). Both `ON DELETE CASCADE`. Nobody has it on after the upgrade. |
 | 24 | `m024_shares.py` | read-only sharing (note 19) | `shares`: a share link until it is accepted (`code_id`, the SHA-256 `verifier_hash`, `expires_at`), then a share (`grantee_user_id`, `accepted_at`; the link's fields cleared); `owner_user_id`, `areas` (a JSON list of `food`, `labs`, `body`, `symptoms`), `ended_at` and `ended_by` (`owner`, `grantee`, `admin`, `replaced`), `last_viewed_at`. `CHECK`s keep the two states apart and forbid sharing with yourself. `ON DELETE CASCADE` on both accounts. Nobody shares anything after the upgrade. |
 | 25 | `m025_share_time_limit.py` | a share can end on a date (note 19 §11) | `shares.lasts_days` (1 to 365, or NULL: until stopped) and `shares.ends_at` (set on accept). Existing rows get NULL in both and last until stopped, as before. |
+| 26 | `m026_write_receipts.py` | retry-safe health and plan writes (note 23) | `write_receipts`: user/operation/key, validated-body hash, response JSON and creation time. The write and receipt share one transaction; expired response JSON is cleared but its key remains until account deletion. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership

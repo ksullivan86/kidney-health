@@ -38,6 +38,7 @@ from . import brand
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
 from .db import get_db, utcnow
+from .write_receipts import IdempotencyKey, WriteReceipt
 from .foods import (
     WEIGHT_UNKNOWN_DETAIL,
     Provenance,
@@ -755,12 +756,16 @@ def mark_eaten(body: MarkEaten, user: CurrentUser, conn: sqlite3.Connection = De
 
 
 @router.post("/copy-day", response_model=CopyDayResult, status_code=201)
-def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+             idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
     """Copy a day's entries onto another date (snapshot recomputed from the current foods).
 
     Entries entered by weight keep their grams (servings follow the food's current
     serving size); all others keep their servings. Notes are copied.
     """
+    receipt = WriteReceipt(conn, user.id, "log.copy-day", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     status_filter = None if body.include == "all" else body.include
     rows = fetch_entries(conn, user.id, body.from_date, body.from_date, status=status_filter)
     if body.meals:
@@ -784,9 +789,8 @@ def copy_day(body: CopyDay, user: CurrentUser, conn: sqlite3.Connection = Depend
                 note=row["note"], status=body.status, purpose=_column(row, "purpose"),
             )
         )
-    conn.commit()
     entries = [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]
-    return {"created": len(entries), "entries": entries}
+    return receipt.commit({"created": len(entries), "entries": entries}, CopyDayResult)
 
 
 def _replayed(conn: sqlite3.Connection, user_id: int, client_id: str | None, response: Response) -> dict[str, Any]:

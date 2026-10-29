@@ -35,6 +35,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
+from .write_receipts import IdempotencyKey, WriteReceipt
 from .log import parse_range
 from .models import (
     MAX_SQLITE_INT,
@@ -166,14 +167,17 @@ def list_symptoms(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
 
 
 @router.post("", status_code=201, response_model=SymptomOut)
-def create_symptom(body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def create_symptom(body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+                   idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
+    receipt = WriteReceipt(conn, user.id, "symptoms.create", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     _check_day_not_full(conn, user.id, body.date)
     cur = conn.execute(
         "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         (user.id, body.date, body.symptom, body.label, body.severity, body.note, utcnow()),
     )
-    conn.commit()
-    return row_to_symptom(_fetch(conn, user.id, int(cur.lastrowid)))
+    return receipt.commit(row_to_symptom(_fetch(conn, user.id, int(cur.lastrowid))), SymptomOut)
 
 
 @router.put("/{symptom_id}", response_model=SymptomOut)

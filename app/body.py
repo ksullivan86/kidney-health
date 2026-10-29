@@ -68,6 +68,7 @@ from pydantic import ValidationError
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
+from .write_receipts import IdempotencyKey, WriteReceipt
 from .log import parse_date_param, parse_range
 from .models import (
     MAX_READINGS_PER_DAY,
@@ -479,7 +480,11 @@ def list_weights(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db), 
 
 
 @router.post("/weights", status_code=201, response_model=WeightOut)
-def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+                  idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
+    receipt = WriteReceipt(conn, user.id, "body.weight", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     _check_weight_day(conn, user.id, body.date)
     now = utcnow()
     cur = conn.execute(
@@ -487,8 +492,7 @@ def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connectio
         "VALUES (?, ?, ?, ?, ?, ?, 'manual', NULL, ?, ?)",
         (user.id, body.date, body.time, round_kg(body.kg), body.context, body.note, now, now),
     )
-    conn.commit()
-    return row_to_weight(_fetch_weight(conn, user.id, int(cur.lastrowid)))
+    return receipt.commit(row_to_weight(_fetch_weight(conn, user.id, int(cur.lastrowid))), WeightOut)
 
 
 @router.put("/weights/{weight_id}", response_model=WeightOut)
@@ -612,7 +616,11 @@ def list_readings(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
 
 
 @router.post("/blood-pressure", status_code=201, response_model=BloodPressureOut)
-def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+                   idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
+    receipt = WriteReceipt(conn, user.id, "body.blood-pressure", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     _check_reading_day(conn, user.id, body.date)
     now = utcnow()
     cur = conn.execute(
@@ -620,8 +628,7 @@ def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.C
         "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', NULL, ?, ?)",
         (user.id, body.date, body.time, body.systolic, body.diastolic, body.pulse, body.context, body.note, now, now),
     )
-    conn.commit()
-    return row_to_reading(_fetch_reading(conn, user.id, int(cur.lastrowid)))
+    return receipt.commit(row_to_reading(_fetch_reading(conn, user.id, int(cur.lastrowid))), BloodPressureOut)
 
 
 @router.put("/blood-pressure/{reading_id}", response_model=BloodPressureOut)

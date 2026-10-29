@@ -37,6 +37,7 @@ from pydantic import ValidationError
 from . import units
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
+from .write_receipts import IdempotencyKey, WriteReceipt
 from .kidney_function import KIDNEY_ANALYTES, assess
 from .models import MAX_SQLITE_INT, Analyte, KidneyFunction, LabCreate, LabCreated, LabImport, LabImportResult, LabList
 from . import profile as profile_module
@@ -115,7 +116,11 @@ def export_rows(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
 
 
 @router.post("", status_code=201, response_model=LabCreated)
-def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+               idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
+    receipt = WriteReceipt(conn, user.id, "labs.create", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     result = units.convert(body.analyte, body.value, body.unit)  # validated by LabCreate already
     cur = conn.execute(
         """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at)
@@ -123,7 +128,6 @@ def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = De
         (user.id, result["analyte"], result["value"], result["entered_value"], result["entered_unit"], body.taken_on,
          body.note, utcnow()),
     )
-    conn.commit()
     row = conn.execute(f"SELECT {COLUMNS} FROM lab_results WHERE id = ? AND user_id = ?", (cur.lastrowid, user.id)).fetchone()
     out = row_to_lab(row)
     alerts = []
@@ -132,7 +136,7 @@ def create_lab(body: LabCreate, user: CurrentUser, conn: sqlite3.Connection = De
         if alert is not None:
             alerts.append(alert)
     out["alerts"] = alerts
-    return out
+    return receipt.commit(out, LabCreated)
 
 
 def _same_result_key(analyte: str, taken_on: str, value: float) -> tuple[str, str, str]:

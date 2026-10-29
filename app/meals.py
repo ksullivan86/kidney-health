@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
+from .write_receipts import IdempotencyKey, WriteReceipt
 from .foods import fetch_food, fetch_user_food, get_food_or_404, parse_flags, raw_nutrients
 from .log import fetch_entries, fetch_entry, insert_entry, parse_range, row_to_entry
 from .models import (
@@ -267,9 +268,13 @@ def delete_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depe
 
 
 @router.post("/{meal_id}/apply", response_model=MealApplyResult, status_code=201)
-def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+               idempotency_key: IdempotencyKey = None) -> dict[str, Any]:
     """Log every item of the template on ``date``/``meal`` with the given status, scaled."""
     row = get_template_or_404(conn, user.id, meal_id)
+    receipt = WriteReceipt(conn, user.id, f"meals.apply:{meal_id}", idempotency_key, body)
+    if receipt.replay is not None:
+        return receipt.replay
     items = parse_items(row["items_json"])
     if not items:
         raise HTTPException(status_code=400, detail="this saved meal has no items")
@@ -287,8 +292,7 @@ def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.C
                 grams=None, note=None, status=body.status,
             )
         )
-    conn.commit()
-    return {"entries": [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]}
+    return receipt.commit({"entries": [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]}, MealApplyResult)
 
 
 # --------------------------------------------------------------------------- #
