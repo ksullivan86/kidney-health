@@ -358,16 +358,26 @@
     sheets.open(applyDlg, trigger, mealId ? $('#apply-date') : sel);
   }
   function applyTemplate() { return (state.meals || []).find((t) => t.id === Number($('#apply-meal-id').value)) || null; }
+  // Recipe amounts are servings in the sheet; the API still takes a multiplier of the whole pot.
+  function applyScale(t, amount) { return amount / (isRecipe(t) ? t.servings_made : 1); }
+  function applyAmountLimit(t) { return Math.min(100, 100 * (isRecipe(t) ? t.servings_made : 1)); }
   function updateApplyPreview() {
     const t = applyTemplate();
     const items = clear($('#apply-items'));
     const key = clear($('#apply-preview-key'));
     const box = clear($('#apply-warnings'));
     if (!t) return;
-    const scale = Number($('#apply-scale').value) > 0 ? Number($('#apply-scale').value) : 1;
+    const recipe = isRecipe(t);
+    const amount = Number($('#apply-scale').value) > 0 ? Number($('#apply-scale').value) : 1;
+    const scale = applyScale(t, amount);
+    $('#apply-scale-label').textContent = recipe ? 'Servings to add' : 'Scale';
+    $('#apply-scale-hint').textContent = recipe ? `1 = one serving; this recipe makes ${fmtServings(t.servings_made)}.` : '1 = as saved, 0.5 = half portions';
+    $('#apply-scale').max = String(applyAmountLimit(t));
     $('#sheet-apply-title').textContent = `Add “${t.name}”`;
     $('#sheet-apply-sub').textContent = t.note ? t.note : 'Logs every food in the saved meal onto one day.';
-    $('#apply-preview-amount').textContent = scale === 1 ? `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}` : `${t.items.length} foods × ${scale}`;
+    const count = `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}`;
+    $('#apply-preview-amount').textContent = recipe ? `${fmtServings(amount)} of this recipe · ${count}`
+      : scale === 1 ? count : `${count} × ${scale}`;
     for (const it of t.items) {
       items.append(h('li', {}, ratingIcon(it.kidney_rating, { decorative: true }),
         h('span', { class: 'ci-name' }, it.food_name, it.hidden ? h('span', { class: 'food-source' }, 'hidden') : null),
@@ -400,8 +410,14 @@
     if (!t) return;
     const date = $('#apply-date').value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Pick a date', 'error'); $('#apply-date').focus(); return; }
-    const scale = Number($('#apply-scale').value);
-    if (!(scale > 0)) { toast('Scale must be more than 0', 'error'); $('#apply-scale').focus(); return; }
+    const amount = Number($('#apply-scale').value);
+    const label = isRecipe(t) ? 'Servings' : 'Scale';
+    if (!(amount > 0) || !Number.isFinite(amount)) { toast(`${label} must be more than 0`, 'error'); $('#apply-scale').focus(); return; }
+    if (amount > applyAmountLimit(t)) {
+      toast(isRecipe(t) ? `Add at most ${fmtServings(applyAmountLimit(t))}` : `Scale must be at most ${fmtNum(applyAmountLimit(t))}`, 'error');
+      $('#apply-scale').focus(); return;
+    }
+    const scale = applyScale(t, amount);
     const body = { date, meal: selectedMeal($('#apply-meal')), status: selectedStatus($('#apply-status')) };
     if (scale !== 1) body.scale = scale;
     applyBusy = true; $('#apply-save').disabled = true;
@@ -578,6 +594,11 @@
   // ---- Fit to my targets (note 16 §10): POST /api/guidance/fit-recipe, then Save a fitted copy or Replace ---------------
   const fitDlg = $('#sheet-fit');
   const fit = { meal: null, result: null, req: 0, busy: false, undo: null };
+  const currentFit = (req, meal) => fitDlg.open && req === fit.req && meal === fit.meal;
+  fitDlg.addEventListener('close', () => {
+    if (fitDlg.open) return; // a queued close event from the previous opening
+    fit.req += 1; fit.result = null; fit.undo = null;
+  });
   const STATUS_HEAD = {
     fits: 'One serving fits as it is.',
     fits_after_changes: 'It fits with the changes below.',
@@ -599,6 +620,8 @@
   }
   async function runFit() {
     const req = ++fit.req;
+    fit.result = null;
+    confirm.dismiss($('.sheet-foot', fitDlg));
     const host = clear($('#fit-result'));
     host.append(h('p', { class: 'muted' }, 'Checking…'));
     $('#fit-save').hidden = true; $('#fit-replace').hidden = true;
@@ -689,28 +712,31 @@
   });
   $('#fit-save').addEventListener('click', async () => {
     if (fit.busy || !fit.result || !fit.result.fitted) return;
+    const req = fit.req, meal = fit.meal, carbs = carbsLine();
     fit.busy = true;
     try {
-      const saved = await api.createMeal(fittedBody(`${fit.meal.name} (fitted)`));
-      toast(`Saved “${saved.name}”. ${carbsLine()}`, 'ok');
-      fitDlg.close();
+      const saved = await api.createMeal(fittedBody(`${meal.name} (fitted)`));
+      toast(`Saved “${saved.name}”. ${carbs}`, 'ok');
+      if (currentFit(req, meal)) fitDlg.close();
       await KH.loadMeals(true);
       renderSavedMeals();
     } catch (err) { toastError(err); } finally { fit.busy = false; }
   });
   $('#fit-replace').addEventListener('click', (ev) => {
     if (!fit.result || !fit.result.fitted) return;
+    const req = fit.req, meal = fit.meal;
     confirm.inline($('.sheet-foot', fitDlg), ev.currentTarget, {
-      message: `Replace “${fit.meal.name}” with the fitted recipe? ${carbsLine()}`,
+      message: `Replace “${meal.name}” with the fitted recipe? ${carbsLine()}`,
       confirmText: 'Replace',
       onConfirm: async () => {
+        if (!currentFit(req, meal)) return true; // the question no longer describes the open result
         try {
-          const old = bodyOf(fit.meal);
-          await api.updateMeal(fit.meal.id, fittedBody(fit.meal.name));
-          fit.undo = old;
+          const old = { meal_id: meal.id, name: meal.name, body: bodyOf(meal) };
+          await api.updateMeal(meal.id, fittedBody(meal.name));
+          if (currentFit(req, meal)) fit.undo = old;
           await KH.loadMeals(true);
           renderSavedMeals();
-          renderFit();
+          if (currentFit(req, meal)) renderFit();
           return true;
         } catch (err) { toastError(err); return false; }
       },
@@ -718,13 +744,14 @@
   });
   async function undoReplace() {
     if (!fit.undo) return;
+    const undo = fit.undo, req = fit.req, meal = fit.meal;
     try {
-      await api.updateMeal(fit.meal.id, fit.undo);
-      fit.undo = null;
-      toast(`“${fit.meal.name}” is back as it was`, 'ok');
+      await api.updateMeal(undo.meal_id, undo.body);
+      if (currentFit(req, meal) && fit.undo === undo) fit.undo = null;
+      toast(`“${undo.name}” is back as it was`, 'ok');
       await KH.loadMeals(true);
       renderSavedMeals();
-      renderFit();
+      if (currentFit(req, meal)) renderFit();
     } catch (err) { toastError(err); }
   }
 

@@ -1,0 +1,43 @@
+{
+  "id": "rules-high-portion-lowered-to-one-serving",
+  "category": "rules",
+  "feature": "next_meal",
+  "fixture": {
+    "targets": "stage4",
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ],
+    "meal": "dinner"
+  },
+  "model_outputs": [
+    "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Chicken wings, roasted}}\",\"quarters\":6},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":4}],\"reason_codes\":[\"adds_protein\"],\"handbook\":[\"potassium\"]}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "portions_lowered": 1,
+    "portions_lowered_include": [
+      "high_portion_too_large"
+    ],
+    "shown_food_names": [
+      "Chicken wings, roasted",
+      "Rice, white, long-grain, cooked"
+    ],
+    "shown_quarters_at_most": {
+      "Chicken wings, roasted": 4,
+      "Rice, white, long-grain, cooked": 4
+    },
+    "payload_includes": [
+      "max_quarters"
+    ],
+    "rule_fallback": false
+  }
+}

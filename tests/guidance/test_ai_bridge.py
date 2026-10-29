@@ -85,9 +85,14 @@ def test_validate_ai_items_drops_every_bad_idea_with_a_reason():
     assert [i["index"] for i in r["ideas"]] == [0] and r["note"] is None
     assert r["ideas"][0]["score"] == 10.71 and r["ideas"][0]["checked"] is True
     assert {d["index"]: d["reason"] for d in r["dropped"]} == {1: "not_a_candidate", 2: "quarters_out_of_range"}
-    more = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 1, "quarters": 13}], [{"food_id": 999, "quarters": 4}]])
-    assert more["dropped"] == [{"index": 0, "reason": "quarters_out_of_range"}, {"index": 1, "reason": "not_a_candidate"}]
-    assert more["note"] == M.AI_FALLBACK
+    more = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 1, "quarters": 0}], [{"food_id": 999, "quarters": 4}],
+                                                       [{"food_id": 999, "quarters": 13}]])
+    assert more["dropped"] == [{"index": 0, "reason": "quarters_out_of_range"}, {"index": 1, "reason": "not_a_candidate"},
+                               {"index": 2, "reason": "not_a_candidate"}]
+    assert more["note"] == M.AI_FALLBACK and more["portions_lowered"] == []
+    # 13 quarters is too many, but only too big: brought down to what fits instead of dropped
+    big = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 1, "quarters": 13}]])
+    assert big["dropped"] == [] and big["portions_lowered"][0]["reason"] == "quarters_out_of_range"
 
 
 def test_an_idea_says_which_totals_a_food_does_not_list():
@@ -98,9 +103,16 @@ def test_an_idea_says_which_totals_a_food_does_not_list():
     assert r["ideas"][0]["unknown"] == ["potassium_mg"] and r["ideas"][0]["totals"]["potassium_mg"] > 0  # "at least"
 
 
-def test_an_idea_that_exceeds_potassium_is_dropped_with_would_exceed():
+def test_an_idea_that_exceeds_potassium_is_made_smaller_or_dropped_with_would_exceed():
     ctx = fx.context()
     r = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 2, "quarters": 4}]], candidate_ids=[2])
+    assert r["dropped"] == [] and r["ideas"][0]["items"][0]["servings"] == 0.75  # 694 mg of the 750 mg room
+    assert r["portions_lowered"] == [{"index": 0, "reason": "would_exceed:potassium_mg",
+                                      "changes": [{"food_id": 2, "from_quarters": 4, "to_quarters": 3}]}]
+    # with 100 mg left today not even a quarter of the potato (231 mg) fits: dropped as before
+    block = fx.entry(fx.foods()[13], "breakfast", override={"potassium_mg": 2400.0})
+    tight = fx.context(day=(block,), history=())
+    r = ai_bridge.validate_ai_items(tight, "dinner", [[{"food_id": 2, "quarters": 4}]], candidate_ids=[2])
     assert r["ideas"] == [] and r["dropped"] == [{"index": 0, "reason": "would_exceed:potassium_mg"}]
     assert r["note"] == M.AI_FALLBACK
 
@@ -118,12 +130,15 @@ def test_an_idea_never_creates_a_new_day_over_even_within_the_negligible_amount(
     room = meal_room(ctx, "dinner", totals=day_totals(ctx.day))
     assert room.day_left["potassium_mg"] == 30 and room.nutrients["potassium_mg"].level == "caution"
     r = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 4, "quarters": 4}]], candidate_ids=[4])
-    assert r["ideas"] == [] and r["dropped"][0]["reason"] == "would_exceed:potassium_mg"
     before = daily_status({"potassium_mg": 2470.0}, {"potassium_mg": 2500})["potassium_mg"]["level"]
     after = daily_status({"potassium_mg": 2525.0}, {"potassium_mg": 2500})["potassium_mg"]["level"]
-    assert (before, after) == ("caution", "over")  # what accepting it would have done
+    assert (before, after) == ("caution", "over")  # what accepting it as proposed would have done
+    # made smaller to the 27.5 mg that still fits what is left, never accepted as proposed
+    assert r["dropped"] == [] and r["ideas"][0]["items"][0]["servings"] == 0.5
+    assert r["ideas"][0]["totals"]["potassium_mg"] <= 30
+    assert r["portions_lowered"][0]["reason"] == "would_exceed:potassium_mg"
     half = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 4, "quarters": 2}]], candidate_ids=[4])
-    assert len(half["ideas"]) == 1  # 27.5 mg still fits what is left
+    assert len(half["ideas"]) == 1 and half["portions_lowered"] == []  # 27.5 mg still fits what is left
 
 
 def test_validation_merges_duplicates_and_bounds_counts():

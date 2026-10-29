@@ -232,7 +232,125 @@ def walk_recipe(page: Any, recipe_id: int) -> None:
     check("Recipe: every food is halved, so one saved serving is the size that fits",
           [i["servings"] for i in body.get("items", [])] == [5.0], json.dumps(body.get("items")))
     check("Recipe: the server accepts it (201)", answers and answers[-1] == 201, str(answers))
+    wait_text(page, "#saved-meals", "Big pot (fitted)")
+    walk_fit_context(page, recipe_id)
     page.unroute("**/api/guidance/fit-recipe")
+
+
+def walk_fit_context(page: Any, recipe_id: int) -> None:
+    """A's delayed Replace must never expose its old body as Undo on B; verify B on the server."""
+    before_b = page.evaluate("async () => (await KH.api.meals()).meals.find(meal => meal.name === 'Crackers only')")
+    page.evaluate("""() => {
+      window.originalFitLoadMeals = KH.loadMeals;
+      window.fitCacheLoads = 0;
+      KH.loadMeals = async (...args) => { const result = await window.originalFitLoadMeals(...args); window.fitCacheLoads++; return result; };
+    }""")
+    held: list[Any] = []
+    pattern = f"**/api/meals/{recipe_id}"
+    page.route(pattern, lambda route: held.append(route))
+
+    def open_recipe(name: str) -> None:
+        page.evaluate("(name) => KH.views.plan.openFitSheet(KH.state.meals.find(meal => meal.name === name), null)", name)
+        page.wait_for_selector("#fit-replace:not([hidden])")
+
+    def replace() -> None:
+        page.click("#fit-replace")
+        page.locator("#sheet-fit .confirm-row").get_by_role("button", name="Replace", exact=True).click()
+
+    try:
+        open_recipe("Big pot")
+        replace()
+        for _ in range(50):
+            if held:
+                break
+            page.wait_for_timeout(100)
+        if not held:
+            raise AssertionError("the Replace request was not held")
+        page.evaluate("() => document.querySelector('#sheet-fit').close()")
+        open_recipe("Crackers only")
+        held.pop().continue_()
+        page.wait_for_function("() => window.fitCacheLoads === 1")
+        check("Recipe race: the old Replace cannot attach A's Undo to B",
+              page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).count() == 0)
+        check("Recipe race: B's Fit sheet remains open after A's write",
+              page.is_visible("#sheet-fit") and "Crackers only" in text_of(page, "#sheet-fit-sub"))
+        after_b = page.evaluate("async () => (await KH.api.meals()).meals.find(meal => meal.name === 'Crackers only')")
+        check("Recipe race: B's stored recipe is unchanged", after_b == before_b)
+        page.unroute(pattern)
+        page.evaluate("() => document.querySelector('#sheet-fit').close()")
+        before_undo = page.evaluate("async (id) => (await KH.api.meals()).meals.find(meal => meal.id === id)", recipe_id)
+        open_recipe("Big pot")
+        replace()
+        page.wait_for_function("() => window.fitCacheLoads === 2")
+        check("Recipe: an unchanged result still offers Undo after Replace",
+              page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).is_visible())
+        page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).click()
+        page.wait_for_function("() => window.fitCacheLoads === 3")
+        restored = page.evaluate("async (id) => (await KH.api.meals()).meals.find(meal => meal.id === id)", recipe_id)
+        check("Recipe: Undo restores that recipe's original foods and serving count",
+              restored["items"] == before_undo["items"] and restored["servings_made"] == before_undo["servings_made"])
+    finally:
+        page.unroute(pattern)
+        for route in held:
+            route.abort()
+        page.evaluate("() => { KH.loadMeals = window.originalFitLoadMeals; document.querySelector('#sheet-fit').close(); }")
+
+
+def walk_apply_servings(page: Any, person: Any, recipe_id: int) -> None:
+    """Recipe choices are servings; both the preview and actual logged food must match that choice."""
+    target = (date.today() + timedelta(days=2)).isoformat()
+    path = f"/api/meals/{recipe_id}/apply"
+    sent: list[dict[str, Any]] = []
+
+    def request_sent(request: Any) -> None:
+        if request.method == "POST" and urlsplit(request.url).path == path:
+            sent.append(json.loads(request.post_data))
+
+    def open_sheet(day: str) -> None:
+        page.evaluate("async ([id, day]) => KH.views.plan.openApplySheet({mealId: id, date: day, meal: 'dinner', status: 'planned'})", [recipe_id, day])
+        page.wait_for_selector("#sheet-apply[open]")
+
+    page.on("request", request_sent)
+    pattern = f"**{path}"
+    try:
+        open_sheet(target)
+        expected = page.evaluate("(id) => KH.rules.fmtNum(KH.state.meals.find(meal => meal.id === id).per_serving.carbs_g, 'carbs_g')", recipe_id)
+        check("Recipe apply: one serving is the default, with a plain servings label",
+              page.input_value("#apply-scale") == "1" and page.inner_text("#apply-scale-label") == "Servings to add")
+        check("Recipe apply: the default preview is one food serving and one serving's carbs",
+              page.locator("#apply-items .ci-amt").inner_text() == "1 serving"
+              and page.locator("#apply-preview-key .kn-v").first.inner_text() == expected)
+        page.route(pattern, lambda route: route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": "Test apply failure"})))
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path):
+            page.click("#apply-save")
+        page.wait_for_function("() => !document.querySelector('#apply-save').disabled")
+        check("Recipe apply: failed save keeps the serving count and selected date for retry",
+              page.is_visible("#sheet-apply") and page.input_value("#apply-scale") == "1" and page.input_value("#apply-date") == target)
+        check("Recipe apply: a failed save logs nothing", person.json("GET", "/api/log", params={"date": target})["entries"] == [])
+        page.unroute(pattern)
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path) as response:
+            page.click("#apply-save")
+        page.wait_for_selector("#sheet-apply", state="hidden")
+        entries = person.json("GET", "/api/log", params={"date": target})["entries"]
+        check("Recipe apply: retry sends the same quarter-pot scale and logs one serving once",
+              response.value.status == 201 and len(sent) == 2 and sent[0] == sent[1] and sent[1].get("scale") == 0.25
+              and len(entries) == 1 and entries[0]["servings"] == 1 and entries[0]["status"] == "planned" and entries[0]["meal"] == "dinner")
+        second = (date.today() + timedelta(days=3)).isoformat()
+        open_sheet(second)
+        page.fill("#apply-scale", "2")
+        expected_two = page.evaluate("(id) => KH.rules.fmtNum(KH.state.meals.find(meal => meal.id === id).totals.carbs_g / 2, 'carbs_g')", recipe_id)
+        check("Recipe apply: two servings preview two food servings and the matching carbs",
+              page.locator("#apply-items .ci-amt").inner_text() == "2 servings"
+              and page.locator("#apply-preview-key .kn-v").first.inner_text() == expected_two)
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path):
+            page.click("#apply-save")
+        page.wait_for_selector("#sheet-apply", state="hidden")
+        entries = person.json("GET", "/api/log", params={"date": second})["entries"]
+        check("Recipe apply: two servings send half the pot and log the previewed amount",
+              sent[-1].get("scale") == 0.5 and len(entries) == 1 and entries[0]["servings"] == 2)
+    finally:
+        page.unroute(pattern)
+        page.remove_listener("request", request_sent)
 
 
 def walk_lab_cache(page: Any) -> None:
@@ -490,15 +608,29 @@ def walk_profile(page: Any) -> None:
 
 
 def walk_body_save(page: Any) -> None:
-    """Today → Add weight and Add blood pressure: a failed save keeps the numbers and the note."""
+    """Today → Add weight and Add blood pressure: a failed save keeps the numbers and the note, stores nothing, and the next
+    try sends the same reading and stores it once (the server is asked, not only the screen)."""
     page.goto("/")
     wait_text(page, "#meals", "Banana")
     wait_text(page, "#body-today-body", "158.7")
-    for screen, add, sheet, typed, save, path, shows in (
+    today = date.today().isoformat()
+    for screen, add, sheet, typed, save, path, shows, key in (
             ("Weight", "#body-add-weight", "#sheet-weight", {"#weight-value": "154.3", "#weight-note": "after breakfast"},
-             "#weight-save", "/api/body/weights", "154.3"),
+             "#weight-save", "/api/body/weights", "154.3", "weights"),
             ("Blood pressure", "#body-add-bp", "#sheet-bp", {"#bp-systolic": "128", "#bp-diastolic": "82", "#bp-note": "left arm"},
-             "#bp-save", "/api/body/blood-pressure", "128")):
+             "#bp-save", "/api/body/blood-pressure", "128", "readings")):
+
+        def stored(path: str = path, key: str = key) -> int:
+            return len(page.request.get(f"{path}?start={today}&end={today}").json()[key])
+
+        before = stored()
+        bodies: list[Any] = []
+
+        def sent(r: Any, path: str = path) -> None:
+            if r.method == "POST" and urlsplit(r.url).path == path:
+                bodies.append(json.loads(r.post_data))
+
+        page.on("request", sent)
         page.click(add)
         page.wait_for_selector(f"{sheet}[open]")
         for sel, value in typed.items():
@@ -513,7 +645,11 @@ def walk_body_save(page: Any) -> None:
             page.wait_for_selector(sheet, state="hidden")
             wait_text(page, "#body-today-body", shows)
 
+        check(f"{screen}: a save that fails stores nothing", stored() == before)
         next_try_saves_once(page, screen, save, path, saved)
+        page.remove_listener("request", sent)
+        check(f"{screen}: the next try sends what the failed save sent", len(bodies) == 2 and bodies[0] == bodies[1], json.dumps(bodies)[:300])
+        check(f"{screen}: the server has the reading once", stored() == before + 1)
 
 
 def walk_body_slow(page: Any) -> None:
@@ -585,6 +721,7 @@ def main(argv: list[str] | None = None) -> int:
         ana.json("POST", "/api/body/weights", {"date": date.today().isoformat(), "kg": 72, "context": "morning"})  # 158.7 lb
         ana.json("POST", "/api/body/weights", {"date": yesterday, "kg": 68, "context": "morning"})  # 149.9 lb
         ana.json("POST", "/api/labs", {"analyte": "phosphate", "value": 4.1, "unit": "mg/dL", "taken_on": yesterday})
+        four = ana.json("POST", "/api/meals", {"name": "Four serving recipe", "items": [{"food_id": banana, "servings": 4}], "servings_made": 4})["id"]
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
@@ -599,6 +736,7 @@ def main(argv: list[str] | None = None) -> int:
                                    ("Fit data gaps", lambda: walk_fit_unknown(page)), ("Recipe", lambda: walk_recipe(page, recipe)),
                                    ("Plan editor", lambda: walk_plan_editor(page)),
                                    ("Plan, Add a saved meal", lambda: walk_plan_apply(page, crackers_only, crackers)),
+                                   ("Recipe servings", lambda: walk_apply_servings(page, ana, four)),
                                    ("Labs", lambda: walk_labs_save(page)), ("Labs, slow list", lambda: walk_labs_slow(page)),
                                    ("Weight and blood pressure", lambda: walk_body_save(page)),
                                    ("Weight and blood pressure, slow day", lambda: walk_body_slow(page)),

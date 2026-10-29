@@ -146,8 +146,9 @@ meantime, your change is held back and **Settings â†’ This device** shows a card
 another device while you were offline". It shows what your server has and your change side by side. Tap
 **Keep the saved one** to drop your change, or **Use mine** to send it on top of what is there now. If the entry
 was deleted elsewhere, the app says "This entry no longer exists" and drops your change. An entry you added
-offline that has not been sent yet is changed or deleted on the phone itself. Treating a low is changed and
-deleted like any other entry.
+offline that has not been sent yet is changed or deleted on the phone itself. If you change or delete it just
+as it is being sent, your change is sent right after it, so your server keeps what you did last. Treating a low
+is changed and deleted like any other entry.
 
 Your phone also keeps a copy of the last two weeks and the coming week, so **Today** opens while you are
 offline when the app was installed from an `https://` address (it says it is showing the copy saved on
@@ -172,6 +173,7 @@ meantime), the entry is kept as **not saved** with the reason under **Settings â
 
 - **"No foods match."** Use fewer words or a different word ("chicken breast" instead of "grilled
   chicken"), try **Quick add**, or search USDA.
+- **"Could not search."** The search did not work, so the old results are cleared. Tap **Retry**.
 - **The numbers look far too high.** The serving is probably 100 g while you ate less, or the other way
   round. Enter grams instead.
 - **A food has no potassium value.** Check the package label and add a corrected copy with

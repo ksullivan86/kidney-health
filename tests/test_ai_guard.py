@@ -234,7 +234,6 @@ def test_a_good_idea_is_labelled_and_numbered_by_the_server():
     ([idea([(999, 4)])], "not_a_candidate"),
     ([idea([(6, 4)])], "not_a_candidate"),  # banana: not offered for this dinner
     ([idea([(1, 0)])], "quarters_out_of_range"),
-    ([idea([(1, 13)])], "quarters_out_of_range"),
     ([idea([(1, 1), (3, 1), (4, 1), (5, 1), (7, 1), (11, 1)])], "too_many_items"),
     ([{"theme": "light", "items": []}], "empty"),
     ([{"theme": "light", "items": [{"food_id": "1", "quarters": 4}]}], "malformed_item"),
@@ -264,10 +263,17 @@ def test_avoid_ckd_and_low_treatments_are_dropped_even_if_named():
     assert [d["reason"] for d in checked["dropped"]] == ["avoid_ckd", "hypo_treatment"]
 
 
-def test_ideas_that_exceed_the_room_are_dropped():
+def test_ideas_that_exceed_the_room_are_made_smaller_to_fit():
     result = judge([idea([(1, 12), (3, 12)])])
-    assert result["status"] == "dropped_all"
-    assert result["dropped"][0]["reason"].startswith(("would_exceed:", "too_many_carbs", "portion_out_of_range"))
+    assert result["status"] == "ok" and result["dropped"] == []
+    assert result["portions_lowered"][0]["reason"].startswith(("would_exceed:", "too_many_carbs", "high_portion_too_large"))
+    shown = result["ideas"][0]
+    assert shown["portion_note"] == G.PORTIONS_LOWERED_TEXT  # both foods were made smaller
+    assert all(it["servings"] < 3 for it in shown["items"])
+    ctx, _ = setup()
+    room = meal_room(ctx, "dinner", totals=day_totals(ctx.day))
+    from app.guidance.score import check_meal
+    assert check_meal([(ctx.foods[it["food_id"]], it["servings"]) for it in shown["items"]], room, "ai").ok
 
 
 def test_more_than_three_ideas_and_duplicates_merge():

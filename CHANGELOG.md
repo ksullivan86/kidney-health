@@ -7,6 +7,44 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people using the app
+
+* **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
+  smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
+* **A new sharing link stays on the screen.** Stopping a share or cancelling another link just after making one no longer
+  hides the new link. It stays until it is used or cancelled.
+* **A device you signed out stays gone.** In Settings → Signed-in devices, a slow earlier load can no longer bring it back.
+* **A failed food search says so.** On the Add tab, the old results are cleared and you see "Could not search" with **Retry**.
+* **Symptoms, weight and blood pressure load on their own.** When you change the date on Today, the Symptoms card clears
+  and says it is loading. Neither card waits for the food log any more, so a slow or failed food day cannot leave the other
+  day's symptoms or weights on screen. If a card cannot load, **Try again** shows, also after you had to sign in again.
+* **Undo in Fit to my targets belongs to the recipe you replaced.** If you opened another recipe while **Replace** was still
+  saving, the new recipe could get the first one's **Undo**, and pressing it wrote the first recipe over the second. Now Undo
+  always puts back the recipe you replaced. Changing the fit target clears an older Replace question.
+* **Add a recipe to a day by servings.** For a recipe, **Add to a day** now asks for **Servings to add** and starts at 1, so it
+  adds one serving, the amount the recipe card shows. Before, it asked for a scale and 1 added the whole pot. If you used to
+  type a fraction such as 0.25 for one serving of a recipe that makes 4, type 1 now. The preview shows what will be added.
+  Plain saved meals still use Scale.
+* **A change made while an entry syncs is no longer lost.** Edit or delete a waiting entry as it is being sent, and your
+  change now follows it to the server.
+
+* **Bigger text works.** The text now follows the text size you set in your browser. At twice the size, nothing runs off the
+  side of the screen: long button words wrap, the meal choices keep every word, and the week on Plan and the boxes on Profile
+  make room.
+* **You can always see where you are with the keyboard.** With Tab, a button never hides under the tab bar at the bottom of a
+  phone screen, the calendar button in a date or time field shows the focus outline, and the meal choices in the entry sheet
+  scroll into view.
+* **Easier to read in the dark theme.** The web address field of a saved meal looks like the other fields, and the grey hint
+  text in it and in the steps box is easier to read.
+
+### For people who run a server
+
+* **New `PROMPT_VERSION` (`2026-10-29.1`).** Each meal candidate now tells the AI the most of it the app accepts. Run
+  `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
+* **An automated accessibility check.** `python tools/e2e/a11y.py` tabs through the main screens and sheets at phone and desktop
+  size, light and dark, and checks names, text at twice the size and contrast. Run it before the check on real phones
+  ([docs/maintainers.md](docs/maintainers.md)).
+
 ## 0.11.0 — 2026-10-29
 
 Version 0.11 makes daily logging easier to trust. Numbers a food does not list now say "not listed" or "≥" everywhere,

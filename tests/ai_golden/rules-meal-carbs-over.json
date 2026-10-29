@@ -22,9 +22,14 @@
     "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":8}],\"reason_codes\":[\"fits_carb_goal\"],\"handbook\":[\"potassium\"]}]}"
   ],
   "expect": {
-    "status": "dropped_all",
-    "dropped_reasons_include": [
+    "status": "ok",
+    "portions_lowered": 1,
+    "portions_lowered_include": [
       "too_many_carbs"
-    ]
+    ],
+    "shown_quarters_at_most": {
+      "Rice, white, long-grain, cooked": 6
+    },
+    "rule_fallback": false
   }
 }

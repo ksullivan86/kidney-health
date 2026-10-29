@@ -6,6 +6,7 @@
    "group": "protein",
    "id": 8,
    "liked": false,
+   "max_quarters": 12,
    "name": "Egg white, raw",
    "often": false,
    "per_portion": {
@@ -33,6 +34,7 @@
    "group": "protein",
    "id": 7,
    "liked": false,
+   "max_quarters": 4,
    "name": "Chicken breast, roasted",
    "often": false,
    "per_portion": {
@@ -67,6 +69,7 @@
    "group": "extra",
    "id": 6,
    "liked": false,
+   "max_quarters": 12,
    "name": "Water, tap",
    "often": false,
    "per_portion": {
@@ -96,6 +99,7 @@
    "group": "veg_fruit",
    "id": 2,
    "liked": false,
+   "max_quarters": 4,
    "name": "Apple, raw, with skin",
    "often": false,
    "per_portion": {

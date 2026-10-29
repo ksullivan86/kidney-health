@@ -503,7 +503,9 @@ Mobile-first single page, five views switched client-side (no router library):
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
-   (manual nutrients) and, when USDA is configured, "Search USDA". The USDA sheet shows only the
+   (manual nutrients) and, when USDA is configured, "Search USDA". Only the newest search draws the list; when it fails, the
+   list says "Could not search" with **Retry** under the new search's heading, in place of the old results
+   (`tests/js/food_search_failed.test.mjs`). The USDA sheet shows only the
    answer to the newest search while it is open: an older search, or one from before the sheet was
    closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
    without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
@@ -548,6 +550,10 @@ v0.2 changes to the other views:
   appears once the profile holds a weight, height, name or target.
 * Touch targets: on a coarse pointer or below 720 px every control (chips, segments, link
   buttons, checkboxes, `<summary>` toggles, saved-meal actions) is at least `--tap` (44 px) tall.
+* Text size and keyboard: text sizes are in `rem` (the page is 16 px only when the browser's text size is the default), so
+  the text follows the person's setting; at 200 % rows wrap and grids drop to fewer columns rather than scroll sideways.
+  The page keeps `scroll-padding` for the sticky header and the phone tab bar, so a control reached with Tab is never under
+  them. `tools/e2e/a11y.py` checks both, with names and contrast.
 * Trends: a **Period summary** card at the top (same data as GET /api/log/summary for the
   selected range): per nutrient the average per logged day vs target with level color, days over,
   change vs the previous period, and the interdialytic block when applicable; the explanatory
@@ -653,7 +659,12 @@ link with a host and no password, at most 900 characters, never fetched; `""` is
 the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
 `scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
-`per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
+`per_serving` and `unknown` are worked out again on read.
+The **Add to a day** sheet asks for **Servings to add** for a recipe and starts at 1. It previews
+that many recipe servings and sends the existing API multiplier `servings / servings_made`.
+Ordinary saved meals retain **Scale** (1 = as saved). The API's whole-pot scale contract is unchanged.
+The input limit also respects the API scale maximum for recipes whose Makes is less than 1.
+The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
 sentence; the New/Edit saved-meal preview also counts missing nutrients for its current ingredients,
 showing **not listed** when none list the value and **≥** for partial totals. **Makes** scales known
@@ -663,7 +674,11 @@ else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
 confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
 Each Fit check and the carbohydrate confirmation show missing amounts as **not listed** and partial amounts with **≥** (a grey
-`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0. The demo answers the route
+`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0.
+Each write stays bound to the recipe and fit result that were confirmed. Undo stores the original
+recipe id with its old body; a late Replace cannot attach Undo to a newly opened recipe. A late
+copy save cannot close a newer Fit sheet or use its carbohydrate figures. Closing invalidates pending
+fit reads, and changing the fit target dismisses any older Replace question. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
@@ -826,7 +841,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/rules_kidney.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
 | Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B, the screens: `js/engine/body_ui.js` (`KH.bodyUi`), `js/views/body.js` (`KH.body`: Today, the sheets, the Settings section, the Profile hints), `js/views/body_trends.js` (`KH.bodyTrends`), `css/body.css`, the cards, sheets and `#set-body` in `index.html`, the body section of `js/engine/visitprep.js` and `js/views/visit.js`, `handbook/docs/app/weight-and-blood-pressure.md`, `tests/test_body_ui*.py`, `tests/js/body_ui_runner.mjs`, `tools/e2e/body.py` |
-| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
+| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, `tests/js/outbox_inflight.test.mjs` with `tests/test_outbox_inflight.py` (changes made while a send is on its way), the `changes` section and step 5b of the `outbox` section of `tools/e2e/device.py` |
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
@@ -995,6 +1010,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
   The sign-in screen never hints at an account name (an upgraded v0.2 server's admin is `admin` or
   `ADMIN_USERNAME`; the server log, CHANGELOG and `docs/accounts.md` tell the operator): a public page
   must not reveal who has an account.
+  Signed-in devices (`loadDevices`) draws only its newest load, so a slow older list cannot show a device that was signed out
+  since (`tests/js/devices_loading.test.mjs`).
 * **Server administration** (v0.3.1; `#admin`, no tab; the header shield `#admin-open`, which
   `js/views/auth.js` shows only for `role = "admin"` through `data-admin-only`, and Settings → Admin;
   drawn by `js/views/settings.js`): People (accounts, invites and one-time links), Server settings,
@@ -1882,10 +1899,15 @@ day's status always use the same effective targets. `next-meal` and `plan-day` r
 ### Optional AI hook (note 06 §4.13, note 04 R2)
 
 `app/ai/` may use only `app.guidance.ai_bridge`: `candidates_for_ai(ctx, meal, mode)` (`rerank` |
-`ideas` | `swap` | `plan`; ≤ 40 candidate foods with refs, ≤ 5 familiar meals, the room, levels, allowed
-handbook slugs, `rules_hash`; never a low treatment), `validate_ai_items(ctx, meal, ideas)` (the same
-`check_meal()` and `score_meal()`; drops with `not_a_candidate`, `quarters_out_of_range`,
-`would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …), `validate_ai_plan(ctx, picks)` and
+`ideas` | `swap` | `plan`; ≤ 40 candidate foods with refs and `max_quarters`, the most of each food alone that
+`check_meal(kind "ai")` accepts in this meal, ≤ 5 familiar meals, the room, levels, allowed handbook slugs, `rules_hash`;
+never a low treatment), `validate_ai_items(ctx, meal, ideas)` (the same `check_meal()` and `score_meal()`; an idea that
+fails only because a portion is too big, `high_portion_too_large`, `would_exceed:<k>`, `too_many_carbs` or more than 12
+quarters, is made smaller one quarter at a time, never below one quarter and never a low treatment, by `lower_to_fit` and
+kept, listed in `portions_lowered: [{index, reason, changes: [{food_id, from_quarters, to_quarters}]}]`, after the full
+check passes again; an idea that also fails for any other reason at the proposed amounts is not repaired; drops with
+`not_a_candidate`, `quarters_out_of_range`, `would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …),
+`validate_ai_plan(ctx, picks)` and
 `register_ai_status(provider)` (feeds `next-meal`'s `ai` block; a failing provider reads as unavailable).
 `app.guidance.hypo.prefilter(text, dose_g)` returns the "Treating a low" card that must be shown
 **instead of** calling AI when free text may describe a low (note 04 G7).
@@ -2246,7 +2268,8 @@ with lookups off on both sides.
   device and syncs later."
 * **Checks:** `tests/test_device_ui.py` (static), `tools/e2e/device.py` (Chromium with
   `context.set_offline`: log offline, reload offline from the service worker, reconnect synced once, a lost
-  batch answer resent without a second row, Retry/Discard, the sign-out sheet; the demo's outbox).
+  batch answer resent without a second row, an edit and a delete made while the batch answer is on its way, Retry/Discard,
+  the sign-out sheet; the demo's outbox).
 
 ## M2 API: AI and photos
 
@@ -2391,7 +2414,8 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 AiAnswer = {"status": "ok" | "refused" | "dropped_all" | "no_fit" | "error" | "not_a_label" | "unreadable" | "no_food" | "unsure",
   "message"?, "reason"? (error: a coarse category), "fallback"? (the rule result: {note, meals, foods}),
   "ideas"? | "order"? + "rest"? | "pick"? | "plan"? + "ai_picks"? | "items"? | "draft"?,
-  "dropped": [{"index", "reason"}], "claims_corrected", "repaired", "retried", "trimmed",
+  "dropped": [{"index", "reason"}], "portions_lowered"? (ideas: [{"index", "reason", "changes"}]), "claims_corrected",
+  "repaired" (the client's JSON repair turn), "retried", "trimmed",
   "feature", "mode", "provider": {"id", "label", "model", "host"}, "prompt_version", "audit_id", "cached", "notes"}
 // "cached": true when next-meal reused the provider's answer to the same question from the last 10 minutes
 // (note 06 §4.13; app/ai/cache.py): nothing sent, no daily call spent, the rules checked it again on the current
@@ -2401,7 +2425,9 @@ Idea = {"source": "ai", "provider_label", "model", "checked": true,
         "index", "theme": "light" | "hearty" | "familiar" | "new_idea", "title" (server template),
         "reason_codes": [code] (1–3, checked against the recomputed numbers), "why" (server template),
         "items": [FoodPortion], "totals", "score", "after": {nutrient: {"used", "left_today_after"}, "carbs_g": {"meal_after", "goal"}},
-        "handbook": [{"slug", "title", "url"}] (≤ 2), "handbook_dropped"}
+        "handbook": [{"slug", "title", "url"}] (≤ 2), "handbook_dropped",
+        "portion_note"? ("The app made a portion smaller so the meal fits your targets." or "… some portions …": only
+        when the app lowered an amount; "items" and every number are the lowered ones)}
 Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "vision_model", "timeout_s", "max_tokens",
             "context_tokens", "structured", "reasoning_effort", "locked", "enabled", "disabled_reason", "key", "policy",
             "kind", "photos", "probe": {"ok", "structured", "vision", "tools", "models", "warnings", "errors"} | null,
@@ -3366,6 +3392,11 @@ that `handbook/REVIEW.md` tracks for the page itself.
   that stands out and is listed first; the handbook link is `KH.learn.href(red_flag.href)` (no handbook, no link; the line
   stays), opening in a new tab so a sheet in use is not lost. Days after today cannot be added to. Symptoms are not
   queued offline: a save needs the server and the card says so when it cannot load.
+  Changing the date clears the Symptoms card before waiting. The loading message cannot retain
+  another day's entries or handbook blocks; failures offer **Try again**, including handled
+  sign-in failures. Late replies and errors cannot replace the newest day's card.
+  The Symptoms read starts at the beginning of Today loading, independently of the food request;
+  rendering food or its error does not restart that read.
 * **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the
   worst severity, a strip of marks over the period (decoration, `aria-hidden`; a mark's height is the severity), the dates
   written out with their severity, and the same handbook line. No chart library.
@@ -3499,6 +3530,8 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   Changing the date clears the card and its summary immediately, including old alarm/goal lines.
   Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.
   Late replies or errors cannot replace the newest day's card.
+  Today starts the body read before waiting for food, as it does for Symptoms. Food rendering and
+  food errors do not restart the measurement read, so a slow food request cannot retain old rows.
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
@@ -4141,6 +4174,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
   cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**.
+  In the Settings block only the newest load of the list draws (a counter per block), so Stop sharing and Make a link at once
+  cannot redraw an older list. A link just made stays with the block through later loads, and a load that fails, until the list
+  no longer has it as unused; only the load that made it moves the focus to it (`tests/js/sharing_list_loading.test.mjs`).
   Checking another link clears the old Accept code; late info/accept responses or focus callbacks cannot change a newer
   or closed question. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
@@ -4470,6 +4506,24 @@ No schema step: nothing is stored for any of this.
 * **An entry that was made offline and is still waiting** (id `pending:<client_id>`): editing it **rewrites the queued create**
   (the same `client_id`, so it is still created exactly once) and deleting it **removes the queued create** with no request.
   If it has just been sent the person is told to open it again.
+* **Changes made while a send is on its way** are never lost (the server may have the entry before the page hears back):
+  * A create (`entry`, `quick`, `mark`) is marked **`sent`** in the same IndexedDB transaction that reads the body it sends
+    (`startSend`). From then on, editing it still rewrites the row but also sets **`edited_after_send`**, and deleting it keeps
+    the row as **`deleted`** (hidden from Today, listed as "Delete: …"). A row never sent, or refused, is removed as before.
+  * When the answer comes (`settleCreate`; the batch's entry is found by its `client_id`) the row is done, unless it was edited
+    or deleted meanwhile: then it becomes an ordinary `edit` (only the fields that differ from the server's entry,
+    `changedFields`) or `delete` of that entry, with the server's `version`, sent next with `If-Match` like any other change.
+    A lost answer leaves the row waiting; the resend answers `existing` with the entry, and the same follow-up goes.
+    A deleted row the server refuses (4xx) is simply removed: nothing was made.
+  * A change being sent carries **`rev`**, raised when another edit or a delete joins it. On a 2xx with a newer `rev` the row
+    stays, now made on the entry the server answered (its `version`, and only what still differs).
+  * Every write the sync makes to a row (sent, settled, failed, conflict, new version) is a read-modify-write in one
+    transaction (`store.update`), so it never writes over what the person did in between. In memory (demo, no IndexedDB)
+    rows are copied in and out, as IndexedDB does.
+  * Today shows an entry that is on the server and still being sent once, as it waits here (`withWaiting` hides the server's
+    copy by `client_id`), and not at all once deleted.
+  * No server change: it uses `client_id` idempotency, the batch answer's `client_id` and `If-Match`. A low treatment goes
+    through all of this like any other entry; nothing looks at `purpose`.
 * **Today** draws what waits: an edited entry in its new form (amount and nutrients worked out from the food this device knows,
   else by scaling the entry's own numbers; warnings from the rules twin), a deleted one gone, one moved to another day on both
   days, all marked "waiting to sync" and counted in the totals (`withWaiting`, the same day maths as the demo). A waiting
@@ -4518,6 +4572,10 @@ No schema step: nothing is stored for any of this.
   replay with `If-Match`, 412 and both answers, 404, a mark queued first, profile and targets still online-only), and the
   `changes` section of `tools/e2e/device.py` (Chromium with `context.set_offline`: edit and delete offline, reload offline,
   reconnect, the conflict card and both buttons, a deleted entry, an entry made offline, "Eaten", a low treatment).
+* `tests/js/outbox_inflight.test.mjs` (run by `tests/test_outbox_inflight.py`) holds a request open after the demo server has
+  applied it and changes the entry meanwhile: an entry and a quick add edited or deleted while sent, a lost answer, a refusal,
+  a second edit or a delete while a PUT is on its way, a low treatment, and one request only when nothing changed. Step 5b of
+  the `outbox` section of `tools/e2e/device.py` does the same in Chromium (`page.route` holds the batch answer).
 
 ## Keep my data in this browser (demo only)
 

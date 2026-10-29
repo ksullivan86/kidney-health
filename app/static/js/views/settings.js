@@ -403,12 +403,18 @@
     return details;
   }
 
+  // Only the newest load draws: a slow older list could show a device that was signed out since.
+  let devicesRequest = 0;
   async function loadDevices() {
     const box = $('#set-devices');
     if (!box) return;
+    const req = ++devicesRequest;
     let res;
-    try { res = await A.sessions(); } catch (err) { if (document.contains(box)) { clear(box); box.append(failed(err)); } return; }
-    if (!document.contains(box)) return;
+    try { res = await A.sessions(); } catch (err) {
+      if (req === devicesRequest && document.contains(box)) { clear(box); box.append(failed(err)); }
+      return;
+    }
+    if (req !== devicesRequest || !document.contains(box)) return;
     clear(box);
     const list = res.sessions || [];
     if (!list.length) {

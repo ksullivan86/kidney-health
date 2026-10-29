@@ -6,7 +6,7 @@
    them in `red_flag`; js/engine/symptoms.js is the demo's copy). A severe one is shown as a block that stands out and is
    listed first.
 
-   * Today (js/views/today.js calls KH.symptoms.today(date) after it draws a day): the day's symptoms, Edit and Delete
+   * Today (js/views/today.js starts KH.symptoms.today(date) independently of food): the day's symptoms, Edit and Delete
      for each, and Add, which opens the sheet. Nothing is saved until Save. Days after today cannot be added to.
    * Trends (js/views/trends.js calls KH.symptoms.trends(start, end)): one row per symptom with the number of days, the
      worst severity, a strip of marks over the period (a mark's height is its severity; the dates and the words are
@@ -89,13 +89,13 @@
       clear(todayBody).append(message('You can record symptoms for today and for days that have passed.'));
       return;
     }
+    clear(todayBody).append(h('p', { class: 'symptoms-empty', id: 'symptoms-today-loading' }, 'Loading symptoms…'));
     try {
       const res = await api.symptoms(date, date);
       if (req !== todayReq) return;
       renderToday(res.symptoms || []);
     } catch (err) {
       if (req !== todayReq) return;
-      if (err && err.handled) return;
       clear(todayBody).append(message(err && err.status ? 'Symptoms could not be loaded.' : 'Symptoms need a connection to your server, and there is none right now.'),
         h('button', { class: 'link-btn', type: 'button', onclick: () => loadToday(date) }, 'Try again'));
     }

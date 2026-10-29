@@ -7,7 +7,9 @@
   checks (``app.guidance.ai_bridge.validate_ai_items``: candidate ids only, ¼–3 servings in quarters,
   duplicates merged, ≤ 5 items, ≤ 3 ideas, then ``check_meal`` — no new ``over``, no ``avoid_ckd`` or
   low treatment, no ``high`` portion of a nutrient that is not ok today, at most one serving of a
-  ``high`` food — and ``score_meal``). Every number shown comes from the food rows. Before that, an idea with a food
+  ``high`` food — and ``score_meal``). An idea that fails only because a portion is too big is made smaller in quarters
+  until it passes (``lower_to_fit``) and shown with :data:`PORTION_LOWERED_TEXT`; the answer and the AI activity row list
+  it under ``portions_lowered``. Every number shown comes from the food rows. Before that, an idea with a food
   the person marked Not for me (or one of a group they never want suggested) is dropped whatever the model's
   reason (:func:`person_excluded`; note 09 §4.7: a food of a saved meal is a candidate id, but the person said no).
 * **V6 Text policy.** The meal features return no free text (§9 A2): an idea's ``theme`` and
@@ -48,6 +50,9 @@ from .schemas import REASON_CODES, THEMES
 REFUSED_TEXT = "This is outside what the app's AI helps with. Your care team can answer it."  # G11
 FALLBACK_TEXT = M.AI_FALLBACK  # V8 (one wording for guidance and AI)
 NO_FIT_TEXT = "The AI found nothing that fits your targets for this meal, so these are the app's own ideas."
+# Under an AI idea whose portion the app made smaller to fit (``validate_ai_items``: ``portions_lowered``).
+PORTION_LOWERED_TEXT = "The app made a portion smaller so the meal fits your targets."
+PORTIONS_LOWERED_TEXT = "The app made some portions smaller so the meal fits your targets."
 NOTICE = "AI idea · {label} · {model} · checked against your targets · not medical advice"  # G13
 
 # Binder and potassium-binder generic and brand names. The names blocklist below and the Ask chat's dose check
@@ -344,6 +349,7 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
     accepted_by_pos = {a["index"]: a for a in checked["ideas"]}
     for d in checked["dropped"]:
         dropped.append({"index": parsed[d["index"]][0] if d["index"] < len(parsed) else d["index"], "reason": d["reason"]})
+    lowered = [{**r, "index": parsed[r["index"]][0]} for r in checked.get("portions_lowered", [])]
     shown: list[dict[str, Any]] = []
     corrected_total = 0
     for pos, (index, raw, _items) in enumerate(parsed):
@@ -357,6 +363,8 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
         corrected += int(theme != theme_claim)
         pages, slugs_dropped = handbook_refs(raw.get("handbook") or [])
         corrected_total += corrected
+        changes = accepted.get("portions_lowered") or []
+        note = {"portion_note": PORTION_LOWERED_TEXT if len(changes) == 1 else PORTIONS_LOWERED_TEXT} if changes else {}
         shown.append({
             **label(provider_label, model),
             "index": index,
@@ -371,12 +379,13 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
             "after": after_room(room, vec_items),
             "handbook": pages,
             "handbook_dropped": slugs_dropped,
+            **note,
         })
     if not shown:
         status = "no_fit" if answer.get("refusal") == "no_fit" and not raw_ideas else "dropped_all"
         return {"status": status, "message": NO_FIT_TEXT if status == "no_fit" else FALLBACK_TEXT, "ideas": [],
-                "dropped": dropped, "claims_corrected": corrected_total}
-    return {"status": "ok", "ideas": shown, "dropped": dropped, "claims_corrected": corrected_total}
+                "dropped": dropped, "portions_lowered": lowered, "claims_corrected": corrected_total}
+    return {"status": "ok", "ideas": shown, "dropped": dropped, "portions_lowered": lowered, "claims_corrected": corrected_total}
 
 
 def after_room(room: Room, items: Sequence[tuple[FoodVec, float]]) -> dict[str, Any]:

@@ -89,7 +89,8 @@ def test_the_trends_card_is_between_the_period_summary_and_the_charts():
 
 
 def test_today_and_trends_ask_for_their_symptoms_and_the_api_wrappers_exist():
-    assert "KH.symptoms.today(day.date)" in TODAY and "KH.symptoms.trends(start, end, src)" in TRENDS
+    assert "KH.symptoms.today(state.date)" in TODAY and "KH.symptoms.trends(start, end, src)" in TRENDS
+    assert "KH.symptoms.today(day.date)" not in TODAY  # rendering food must not restart the independent Symptoms read
     for wrapper in ("symptoms: (start, end) => request('GET', '/api/symptoms?' + qs({ start, end }))", "addSymptom: (b) => request('POST', '/api/symptoms', b)",
                     "updateSymptom: (id, b) => request('PUT', `/api/symptoms/${id}`, b)", "deleteSymptom: (id) => request('DELETE', `/api/symptoms/${id}`)"):
         assert wrapper in CORE, wrapper
