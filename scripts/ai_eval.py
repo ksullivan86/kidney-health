@@ -63,7 +63,10 @@ that changes ``app/ai/prompts.py``, ``app/ai/schemas.py`` or ``app/ai/guard.py``
 
 The key is read from ``--api-key-file`` or the variable named by ``--api-key-env`` (default ``AI_API_KEY``, or ``AI_CLOUD_API_KEY``
 with ``--role cloud``), never from the command line, and never written to the report. The report's ``provider`` block records the
-``role`` and the ``upstream``. The app ignores
+``role`` and the ``upstream``. The output tuning comes from the same variables the server reads, so the run sends what the server
+sends: ``AI_MAX_TOKENS``, ``AI_STRUCTURED_OUTPUT``, ``AI_REASONING_EFFORT`` and ``AI_CONTEXT_TOKENS``, or their ``AI_CLOUD_*`` twins with
+``--role cloud``; the report's ``provider`` block records them. The run's own server allows a day before it asks for the password
+again (``REAUTH_MINUTES``), so a long run is not stopped half way. The app ignores
 ``HTTPS_PROXY`` for AI calls; pass ``--http-proxy`` (``AI_HTTP_PROXY``) when the provider is only
 reachable through a proxy. A private or loopback provider needs ``--private-host host:port``
 (``AI_PRIVATE_HOSTS``). Needs the development requirements (it reuses the golden fixtures in ``tests/``).
@@ -82,7 +85,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
 for extra in (ROOT, ROOT / "tests"):
@@ -92,7 +95,7 @@ for extra in (ROOT, ROOT / "tests"):
 from app.ai import guard  # noqa: E402
 from app.ai.presets import PRESETS, get as get_preset  # noqa: E402
 from app.ai.prompts import PROMPT_VERSION  # noqa: E402
-from app.config import AiCloudEnv, AiEnv, ConfigError, upstream_names  # noqa: E402
+from app.config import AiCloudEnv, AiEnv, ConfigError, load_ai_cloud_env, load_ai_env, upstream_names  # noqa: E402
 
 GOLDEN = ROOT / "tests" / "ai_golden"
 FOODS_JSON = ROOT / "data" / "foods.json"
@@ -143,6 +146,11 @@ class Options:
     chat: bool = False  # also run the Ask chat set (assistant step 2)
     role: str | None = None  # local | cloud: which environment provider the run stands for (None: from the preset's kind)
     upstream: str | None = None  # --role cloud with a self-hosted preset: the company it forwards to (AI_CLOUD_UPSTREAM)
+    # Output tuning, read from the server's own variables by main() (tuning_from_env). None: the server's default.
+    max_tokens: int | None = None
+    structured: str | None = None
+    reasoning_effort: str | None = None
+    context_tokens: int | None = None
 
     @property
     def resolved_role(self) -> str:
@@ -353,19 +361,32 @@ def load_cases(pattern: str | None) -> list[dict[str, Any]]:
     return cases
 
 
+TUNING = ("max_tokens", "structured", "reasoning_effort", "context_tokens")
+# The run's own temporary server: a run takes longer than the default REAUTH_MINUTES (10), and its admin writes must not stop it.
+RUN_REAUTH_MINUTES = 1440
+
+
+def tuning_from_env(env: Mapping[str, str], role: str) -> dict[str, Any]:
+    """The output tuning the server would use for ``role``, read by the server's own parsers (``AI_*`` for local, ``AI_CLOUD_*``
+    for cloud), defaults included."""
+    source: Any = load_ai_cloud_env(env) if role == "cloud" else load_ai_env(env)
+    return {k: getattr(source, k) for k in TUNING}
+
+
 def settings_for(options: Options, data_dir: Path) -> Any:
     from conftest import make_settings
 
+    tuning = {k: getattr(options, k) for k in TUNING if getattr(options, k) is not None}
     if options.resolved_role == "cloud":  # the second environment provider: AI_CLOUD_*, whatever its preset (docs/ai.md)
         cloud = AiCloudEnv(provider=options.preset, base_url=options.base_url, api_key=options.api_key, model=options.model,
                            vision_model=options.vision_model, timeout_s=options.timeout_s,
-                           upstream=options.upstream if get_preset(options.preset).can_proxy else None)
+                           upstream=options.upstream if get_preset(options.preset).can_proxy else None, **tuning)
         env = AiEnv(private_hosts=options.private_hosts, http_proxy=options.http_proxy, cloud=cloud)
     else:
         env = AiEnv(provider=options.preset, base_url=options.base_url, api_key=options.api_key, model=options.model,
                     vision_model=options.vision_model, timeout_s=options.timeout_s, private_hosts=options.private_hosts,
-                    http_proxy=options.http_proxy)
-    return make_settings(data_dir, FOODS_JSON, ai=env)
+                    http_proxy=options.http_proxy, **tuning)
+    return make_settings(data_dir, FOODS_JSON, ai=env, reauth_minutes=RUN_REAUTH_MINUTES)
 
 
 def first_idea_names(result: dict[str, Any]) -> set[str]:
@@ -458,7 +479,8 @@ def run_eval(options: Options, *, transport_factory: Any = None, data_dir: Path 
                         call = _call(feature, case["id"], mode, run, lambda: admin.post("/api/ai/next-meal", json=body),
                                      not_first=case.get("expect", {}).get("not_first_food_names", []))
                     elif feature == "recipes":
-                        # Measured with the steps switch on: the live run decides whether it may be turned on (note 16 §8.7).
+                        # Measured with the steps switch on (prepare() sets it per case): the live run decides whether it may be
+                        # turned on (note 16 §8.7). These admin writes are why the run's server allows RUN_REAUTH_MINUTES.
                         admin.patch("/api/admin/settings", json={"ai.recipe_steps": True})
                         rbody: dict[str, Any] = {"mode": fx.get("mode", "suggest"), "target": fx.get("target", "meal"), "date": DAY}
                         if rbody["target"] == "meal":
@@ -589,7 +611,9 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
         "prompt_version": PROMPT_VERSION,
         "provider": {"preset": preset.name, "kind": preset.kind, "role": role,
                      "upstream": options.upstream if role == "cloud" and preset.can_proxy else None,
-                     "model": options.model, "vision_model": options.vision_model, "base_url": options.base_url or preset.base_url},
+                     "model": options.model, "vision_model": options.vision_model, "base_url": options.base_url or preset.base_url,
+                     "max_tokens": options.max_tokens or 1500, "structured_output": options.structured or "auto",
+                     "reasoning_effort": options.reasoning_effort, "context_tokens": options.context_tokens},
         "runs": options.runs,
         "summary": summary,
         "gates": gates,
@@ -655,6 +679,11 @@ def main(argv: list[str] | None = None) -> int:
                       role=args.role, upstream=(args.upstream or "").strip() or None)
     if options.problem():
         parser.error(options.problem())
+    try:
+        for name, value in tuning_from_env(os.environ, options.resolved_role).items():
+            setattr(options, name, value)
+    except ConfigError as e:
+        parser.error(str(e))
     args.api_key_env = args.api_key_env or ("AI_CLOUD_API_KEY" if options.resolved_role == "cloud" else "AI_API_KEY")
     options.api_key = read_key(args)
     rep = run_eval(options)

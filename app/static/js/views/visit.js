@@ -319,6 +319,7 @@
     renderHead(range);
     for (const id of ['#visit-avg-body', '#visit-labs-body', '#visit-sym-body', '#visit-body-body']) clear($(id)).append(note('Loading…', 'muted'));
     $('#visit-avg-sub').textContent = '';
+    loadDay(); // change the shared day immediately, even if another part of the summary is slow
     const settle = (p) => p.then((v) => ({ ok: v }), (e) => ({ err: e }));
     const skip = Promise.resolve(null);
     const today = todayStr();
@@ -341,7 +342,6 @@
       const bodyErr = [bodySum, weights, readings, prof].find((x) => x.err);
       renderBody(bodyErr ? null : { summary: bodySum.ok, weights: weights.ok.weights || [], readings: readings.ok.readings || [] }, bodyErr ? bodyErr.err : null);
     } else clear($('#visit-body-body')).append(notShared('their weight and blood pressure'));
-    loadDay();
     live(`${S.source ? `${S.source.name}'s summary` : 'Visit summary'} ready for the ${lower(V.PERIODS.find((p) => p.days === S.days).label)}.`);
   }
 

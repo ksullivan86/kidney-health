@@ -284,6 +284,68 @@ def walk_demo(p: Pass) -> None:
     p.finish(demo=True)
 
 
+def walk_question_order(p: Pass) -> None:
+    """Deferred synthetic link-info replies; no synthetic link is accepted on the server."""
+    result = p.page.evaluate("""async () => {
+      const realFetch = window.fetch;
+      const oldUrl = location.pathname + location.search + location.hash;
+      const pending = new Map();
+      let accepts = 0;
+      const code = (id, verifier) => id.repeat(16) + '.' + verifier.repeat(43);
+      const a = code('a', 'B'), b = code('c', 'D'), c = code('e', 'F'), d = code('1', 'G'), e = code('2', 'H');
+      const dlg = document.querySelector('#sheet-share'), accept = document.querySelector('#share-accept');
+      const tick = () => new Promise(r => setTimeout(r, 0));
+      const wait = async key => {
+        for (let n = 0; n < 100 && !pending.has(key); ++n) await tick();
+        if (!pending.has(key)) throw new Error('synthetic link-info read did not start');
+      };
+      const begin = code => {
+        history.replaceState(null, '', '/#/share/' + code);
+        KH.sharing.takeLink();
+        return KH.sharing.openPending();
+      };
+      const info = name => ({name, username: name.toLowerCase(), areas: ['food']});
+      window.fetch = (input, options = {}) => {
+        const path = new URL(typeof input === 'string' ? input : input.url, location.href).pathname;
+        if (path === '/api/shared/info') return new Promise(resolve => {
+          pending.set(JSON.parse(options.body).code, person => resolve(new Response(JSON.stringify(person),
+            {status: 200, headers: {'Content-Type': 'application/json'}})));
+        });
+        if (path === '/api/shared/accept') { ++accepts; throw new Error('synthetic link must not be accepted'); }
+        return realFetch(input, options);
+      };
+      try {
+        const first = begin(a), second = begin(b);
+        await wait(a); await wait(b);
+        pending.get(b)(info('Sam')); await second;
+        pending.get(a)(info('Ana')); await first;
+        const current = {question: document.querySelector('#share-question').innerText,
+          codeMatches: accept.dataset.code === b, visible: !accept.hidden};
+        const closing = begin(c);
+        await wait(c); dlg.close();
+        pending.get(c)(info('Closed')); await closing; await tick();
+        const closed = !dlg.open && !accept.dataset.code && accept.hidden;
+        const beforeReopen = begin(d);
+        await wait(d); pending.get(d)(info('Before')); await beforeReopen;
+        dlg.close();
+        const reopened = begin(e);
+        await wait(e); pending.get(e)(info('Latest')); await reopened; await tick();
+        return {current, closed, reopened: dlg.open && accept.dataset.code === e && !accept.hidden,
+          question: document.querySelector('#share-question').innerText, accepts};
+      } finally {
+        dlg.close(); await tick();
+        window.fetch = realFetch;
+        history.replaceState(null, '', oldUrl);
+      }
+    }""")
+    check(f"[{p.tag}] delayed link info cannot replace the latest question or Accept code",
+          result["current"]["question"].startswith("Sam") and result["current"]["codeMatches"] and result["current"]["visible"])
+    check(f"[{p.tag}] closing a pending share question leaves no Accept code", result["closed"])
+    check(f"[{p.tag}] reopening survives a queued close event from the older question",
+          result["reopened"] and result["question"].startswith("Latest"))
+    check(f"[{p.tag}] synthetic question checks accepted no link", result["accepts"] == 0)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--port", type=int, default=PORT)
@@ -315,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
                 link = walk_ana_shares(ana_pass)
                 sam_pass = Pass(browser, base, out, 1280, 800, "dark", "sam-1280-dark", sam.cookies())
                 walk_sam_accepts(sam_pass, link)
+                walk_question_order(sam_pass)
                 walk_sam_trends(sam_pass)
                 share_id = sam.json("GET", "/api/shared")["people"][0]["id"]
                 walk_admin(Pass(browser, base, out, 1280, 800, "dark", "admin-1280-dark", admin.cookies()), admin)

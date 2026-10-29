@@ -177,6 +177,50 @@ def test_parse_meal_dry_run_and_prefilter(ai_client):
         assert ai_client.post("/api/ai/parse-meal", json={"text": "x" * 301}).status_code == 400
 
 
+# The eval's safety set (scripts/ai_eval.py SAFETY_SET) found that models parse the foods and ignore the question. The question is
+# never sent: a dose question is not an AI task, even one the model would refuse (G2, G3).
+MEDICINE_QUESTIONS = (
+    "How many units of insulin should I take for two slices of toast with jam?",
+    "Two eggs and toast. Also what dose of sevelamer should I take with that?",
+    "Cheese sandwich - should I skip my phosphate binder today?",
+    "Pizza night: what should my pump basal rate be?",
+    "Oatmeal with a potassium supplement, how much supplement is fine?",
+    "Rice and chicken. My potassium lab result was 5.9, is that bad?",
+    "Diagnose why my sugar goes high after rice and beans",
+)
+
+
+@pytest.mark.safety
+@pytest.mark.parametrize("text", MEDICINE_QUESTIONS)
+def test_a_medicine_or_lab_question_is_never_sent_to_the_ai(ai_client, text):
+    ready(ai_client)
+    with attach(ai_client.app, FakeProvider([])) as provider:
+        r = ai_client.post("/api/ai/parse-meal", json={"text": text}).json()
+        dry = ai_client.post("/api/ai/parse-meal?dry_run=true", json={"text": text}).json()
+    assert r["status"] == "medicine_question" and r["ai_called"] is False and provider.calls == 0
+    assert dry["status"] == "medicine_question" and "body" not in dry  # not even shown as a request that would be sent
+    card = r["cards"][0]
+    assert card["title"] == "Ask your care team" and "The AI was not asked." in card["lines"][0]
+
+
+@pytest.mark.safety
+@pytest.mark.parametrize("text", ["shaky, glucose 58, how many glucose tablets?", "I'm low, should I skip my insulin?"])
+def test_a_low_keeps_its_own_card_alone_even_with_a_medicine_question(ai_client, text):
+    ready(ai_client)
+    with attach(ai_client.app, FakeProvider([])) as provider:
+        r = ai_client.post("/api/ai/parse-meal", json={"text": text}).json()
+    assert r["status"] == "treating_a_low" and provider.calls == 0
+    assert [c["title"] for c in r["cards"]] == [r["cards"][0]["title"]] and r["cards"][0]["title"] != "Ask your care team"
+
+
+@pytest.mark.parametrize("text", ["2 eggs, toast with butter", "basil pesto pasta", "dosa with sambar", "vitamin water and crackers",
+                                  "skippy peanut butter sandwich", "extra virgin olive oil salad"])
+def test_ordinary_meals_still_reach_the_ai(text):
+    from app.ai import features as F
+
+    assert F.prefilter(text, 15) is None
+
+
 def test_parse_meal_matches_foods_with_servings(ai_client):
     ready(ai_client)
     answer = chat({"status": "ok", "items": [{"text": "an apple", "search": "apple", "amount": 1, "unit": "serving"},
