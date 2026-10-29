@@ -31,7 +31,7 @@ def test_the_fit_sheet_is_wired_to_the_route_and_saves_only_on_a_tap():
     assert "fitRecipe: (b) => request('POST', '/api/guidance/fit-recipe', b)" in CORE
     assert "api.fitRecipe(" in PLAN and "'Fit to my targets'" in PLAN
     # Save makes a new recipe; Replace asks first, shows carbohydrate before and after, and can be undone (decision 7).
-    assert "`${fit.meal.name} (fitted)`" in PLAN and "api.createMeal(fittedBody(" in PLAN
+    assert "`${meal.name} (fitted)`" in PLAN and "api.createMeal(fittedBody(" in PLAN
     replace = PLAN[PLAN.index("$('#fit-replace').addEventListener"):PLAN.index("async function undoReplace")]
     assert "confirm.inline(" in replace and "carbsLine()" in replace and "fit.undo = old" in replace
     assert "Carbohydrate per serving goes from" in PLAN and "'Undo'" in PLAN

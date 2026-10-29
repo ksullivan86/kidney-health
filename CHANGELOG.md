@@ -12,6 +12,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Symptoms, weight and blood pressure load on their own.** When you change the date on Today, the Symptoms card clears
   and says it is loading. Neither card waits for the food log any more, so a slow or failed food day cannot leave the other
   day's symptoms or weights on screen. If a card cannot load, **Try again** shows, also after you had to sign in again.
+* **Undo in Fit to my targets belongs to the recipe you replaced.** If you opened another recipe while **Replace** was still
+  saving, the new recipe could get the first one's **Undo**, and pressing it wrote the first recipe over the second. Now Undo
+  always puts back the recipe you replaced. Changing the fit target clears an older Replace question.
 
 ## 0.11.0 — 2026-10-29
 

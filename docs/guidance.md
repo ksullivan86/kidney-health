@@ -268,6 +268,10 @@ The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. 
 **not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
 or **Makes** updates the preview; a known zero stays 0.
 
+Replace and Undo stay attached to the recipe you confirmed. If you open another recipe while a
+save waits, the old save may finish, but it cannot offer Undo on the new recipe or close its sheet.
+Changing the fit target clears any earlier Replace question so you can review the new result.
+
 `POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
 meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One
 serving's share of a food is its amount in the whole recipe divided by the servings it makes. The gate is `check_meal` kind `recipe`:

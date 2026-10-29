@@ -663,7 +663,11 @@ else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
 confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
 Each Fit check and the carbohydrate confirmation show missing amounts as **not listed** and partial amounts with **≥** (a grey
-`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0. The demo answers the route
+`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0.
+Each write stays bound to the recipe and fit result that were confirmed. Undo stores the original
+recipe id with its old body; a late Replace cannot attach Undo to a newly opened recipe. A late
+copy save cannot close a newer Fit sheet or use its carbohydrate figures. Closing invalidates pending
+fit reads, and changing the fit target dismisses any older Replace question. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
