@@ -503,7 +503,10 @@ Mobile-first single page, five views switched client-side (no router library):
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
-   (manual nutrients) and, when USDA is configured, "Search USDA".
+   (manual nutrients) and, when USDA is configured, "Search USDA". The USDA sheet shows only the
+   answer to the newest search while it is open: an older search, or one from before the sheet was
+   closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
+   without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
 3. **Trends**: last 14 days, one small inline-SVG bar chart per limited nutrient
    (K, P, Na, protein, carbs, fluid if set) with target line. Export CSV button.
 4. **Profile & targets**: profile fields, targets editor, "Suggest targets" button

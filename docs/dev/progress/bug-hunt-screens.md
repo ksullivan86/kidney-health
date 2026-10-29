@@ -38,6 +38,12 @@ counter and an AbortController), loadDevices (checks the box is still on the pag
    - Shared helper for all vm tests: tests/js/fake_page.mjs.
    - Docs: ARCHITECTURE.md (Scan result, Quick add photo), handbook app/barcode-and-photo.md, docs/barcode-and-photos.md,
      CHANGELOG.
+2. **add.js: USDA search sheet** (candidate 3). Done.
+   - `usdaSearchTurn` per search and `usdaSheetTurn` per opening/closing. Old answers and errors are dropped; an import
+     that finishes after the sheet closed shows its toast (success or failure) but opens no entry sheet.
+   - Test: tests/js/usda_late_reply.test.mjs (+ tests/test_usda_late_reply.py). Old add.js: 6 of 7 fail; new: 7 of 7.
+     Also run: test_demo_servings_only, test_device_ui, test_offline_edits_ui, test_reliability_ui.
+   - Docs: ARCHITECTURE.md (Add food), handbook app/logging.md (Search USDA), CHANGELOG.
 
 ## Found, not changed (for the report)
 
