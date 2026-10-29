@@ -20,3 +20,13 @@ Main alone has already passed 6533 tests (2 skipped, existing warning only), rec
 current-main-validation.md on the health-save-retry branch. Each fix's note records its own
 focused and browser checks. This branch checks their compatibility with each other and current
 Claude changes. Next: merge/resolve, combined targeted tests and browser walks, then full suite.
+
+All seven merges are complete, preserving their original commits. Code snapshot: 12523c2.
+Resolved conflicts by keeping both changes in docs and all steps in reliability.py; no source fix
+was dropped. Ruff and diff checks pass. Fixed validation checkout:
+/tmp/kidney-reliability-batch-validation. Full pytest is running there (session 67615), log
+/tmp/kidney-reliability-batch-full-suite.log. Browser sessions: reliability 81431, Profile 53376,
+health retry 53187; logs /tmp/kidney-batch-{reliability,profile,health-retry}.log. These scripts run
+from the validation checkout so subsequent work in /workspace cannot affect the tested code.
+Next: inspect outcomes, run body/Symptoms/sharing/import/AI checks, parity and strict handbook build,
+record exact results and push this verification branch without PR/deployment.
