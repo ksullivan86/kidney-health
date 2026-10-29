@@ -1446,6 +1446,14 @@
             },
             "title": "Totals",
             "type": "object"
+          },
+          "unknown": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown",
+            "type": "array"
           }
         },
         "required": [
@@ -2498,6 +2506,14 @@
             },
             "title": "Totals",
             "type": "object"
+          },
+          "unknown": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown",
+            "type": "array"
           }
         },
         "required": [
@@ -6916,6 +6932,14 @@
               }
             ],
             "title": "Totals"
+          },
+          "unknown": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown",
+            "type": "array"
           },
           "why": {
             "items": {

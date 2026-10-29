@@ -38,6 +38,10 @@ for you, let the app write them into their own folder and keep the newest few: `
 that name. Mount `/backups` as a separate volume and point the backup tool there, never at the live
 database.
 
+**Server administration → About this server** shows when the last `app.admin backup` ran. When there was none in the last
+7 days, or ever, it says so with the command and a link to [Restore](#restore). A copy made another way (a snapshot of the
+volume) is not seen there.
+
 ## The secret key is separate
 
 `SECRET_KEY` encrypts the stored API keys. A `python -m app.admin backup` copy does **not** contain it.

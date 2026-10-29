@@ -157,6 +157,7 @@ class FamiliarMeal(_Out):
     score: float
     items: list[OptionItem]
     totals: dict[str, Number | None]
+    unknown: list[str] = []  # keys of totals some food does not list: the total is "at least"
     note: str
 
 
@@ -282,6 +283,7 @@ class Closest(_Out):
     scale: Number
     items: list[FoodPortion]
     totals: dict[str, Number | None]
+    unknown: list[str] = []
     reason: str | None
 
 
@@ -300,6 +302,7 @@ class PlanMeal(_Out):
     score: float | None
     items: list[FoodPortion]
     totals: dict[str, Number | None] | None
+    unknown: list[str] = []
     why: list[str]
     room: GuidanceRoom
     reason: str | None
