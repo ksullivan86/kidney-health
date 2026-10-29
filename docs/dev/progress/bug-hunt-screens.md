@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Bug hunt: stale data, late replies and lost typing on the remaining screens
 
