@@ -288,6 +288,63 @@ def walk_fit_context(page: Any, recipe_id: int) -> None:
         page.evaluate("() => { KH.loadMeals = window.originalFitLoadMeals; document.querySelector('#sheet-fit').close(); }")
 
 
+def walk_apply_servings(page: Any, person: Any, recipe_id: int) -> None:
+    """Recipe choices are servings; both the preview and actual logged food must match that choice."""
+    target = (date.today() + timedelta(days=2)).isoformat()
+    path = f"/api/meals/{recipe_id}/apply"
+    sent: list[dict[str, Any]] = []
+
+    def request_sent(request: Any) -> None:
+        if request.method == "POST" and urlsplit(request.url).path == path:
+            sent.append(json.loads(request.post_data))
+
+    def open_sheet(day: str) -> None:
+        page.evaluate("async ([id, day]) => KH.views.plan.openApplySheet({mealId: id, date: day, meal: 'dinner', status: 'planned'})", [recipe_id, day])
+        page.wait_for_selector("#sheet-apply[open]")
+
+    page.on("request", request_sent)
+    pattern = f"**{path}"
+    try:
+        open_sheet(target)
+        expected = page.evaluate("(id) => KH.rules.fmtNum(KH.state.meals.find(meal => meal.id === id).per_serving.carbs_g, 'carbs_g')", recipe_id)
+        check("Recipe apply: one serving is the default, with a plain servings label",
+              page.input_value("#apply-scale") == "1" and page.inner_text("#apply-scale-label") == "Servings to add")
+        check("Recipe apply: the default preview is one food serving and one serving's carbs",
+              page.locator("#apply-items .ci-amt").inner_text() == "1 serving"
+              and page.locator("#apply-preview-key .kn-v").first.inner_text() == expected)
+        page.route(pattern, lambda route: route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": "Test apply failure"})))
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path):
+            page.click("#apply-save")
+        page.wait_for_function("() => !document.querySelector('#apply-save').disabled")
+        check("Recipe apply: failed save keeps the serving count and selected date for retry",
+              page.is_visible("#sheet-apply") and page.input_value("#apply-scale") == "1" and page.input_value("#apply-date") == target)
+        check("Recipe apply: a failed save logs nothing", person.json("GET", "/api/log", params={"date": target})["entries"] == [])
+        page.unroute(pattern)
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path) as response:
+            page.click("#apply-save")
+        page.wait_for_selector("#sheet-apply", state="hidden")
+        entries = person.json("GET", "/api/log", params={"date": target})["entries"]
+        check("Recipe apply: retry sends the same quarter-pot scale and logs one serving once",
+              response.value.status == 201 and len(sent) == 2 and sent[0] == sent[1] and sent[1].get("scale") == 0.25
+              and len(entries) == 1 and entries[0]["servings"] == 1 and entries[0]["status"] == "planned" and entries[0]["meal"] == "dinner")
+        second = (date.today() + timedelta(days=3)).isoformat()
+        open_sheet(second)
+        page.fill("#apply-scale", "2")
+        expected_two = page.evaluate("(id) => KH.rules.fmtNum(KH.state.meals.find(meal => meal.id === id).totals.carbs_g / 2, 'carbs_g')", recipe_id)
+        check("Recipe apply: two servings preview two food servings and the matching carbs",
+              page.locator("#apply-items .ci-amt").inner_text() == "2 servings"
+              and page.locator("#apply-preview-key .kn-v").first.inner_text() == expected_two)
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path):
+            page.click("#apply-save")
+        page.wait_for_selector("#sheet-apply", state="hidden")
+        entries = person.json("GET", "/api/log", params={"date": second})["entries"]
+        check("Recipe apply: two servings send half the pot and log the previewed amount",
+              sent[-1].get("scale") == 0.5 and len(entries) == 1 and entries[0]["servings"] == 2)
+    finally:
+        page.unroute(pattern)
+        page.remove_listener("request", request_sent)
+
+
 def walk_lab_cache(page: Any) -> None:
     """Deferred list/function replies reproduce a save invalidating an older read, without writes."""
     result = page.evaluate("""async () => {
@@ -388,6 +445,7 @@ def main(argv: list[str] | None = None) -> int:
                                                "nutrients": {"calories_kcal": 20, "carbs_g": 5, "potassium_mg": 0, "phosphorus_mg": 0, "sodium_mg": 0}})["id"]
         ana.json("POST", "/api/meals", {"name": "Known zero", "items": [{"food_id": zero, "servings": 1}]})
         recipe = ana.json("POST", "/api/meals", {"name": "Big pot", "items": [{"food_id": banana, "servings": 10}], "servings_made": 100})["id"]
+        four = ana.json("POST", "/api/meals", {"name": "Four serving recipe", "items": [{"food_id": banana, "servings": 4}], "servings_made": 4})["id"]
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
@@ -399,7 +457,8 @@ def main(argv: list[str] | None = None) -> int:
                                    ("Failed save", lambda: walk_failed_save(page)), ("Lab cache", lambda: walk_lab_cache(page)),
                                    ("Shared cache", lambda: walk_shared_state_cache(page)), ("Saved meals", lambda: walk_saved_meals(page)),
                                    ("Fit data gaps", lambda: walk_fit_unknown(page)),
-                                   ("Meal editor", lambda: walk_meal_editor(page)), ("Recipe", lambda: walk_recipe(page, recipe))):
+                                   ("Meal editor", lambda: walk_meal_editor(page)), ("Recipe", lambda: walk_recipe(page, recipe)),
+                                   ("Recipe servings", lambda: walk_apply_servings(page, ana, four))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
                     except Exception:

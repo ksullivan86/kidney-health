@@ -358,16 +358,26 @@
     sheets.open(applyDlg, trigger, mealId ? $('#apply-date') : sel);
   }
   function applyTemplate() { return (state.meals || []).find((t) => t.id === Number($('#apply-meal-id').value)) || null; }
+  // Recipe amounts are servings in the sheet; the API still takes a multiplier of the whole pot.
+  function applyScale(t, amount) { return amount / (isRecipe(t) ? t.servings_made : 1); }
+  function applyAmountLimit(t) { return Math.min(100, 100 * (isRecipe(t) ? t.servings_made : 1)); }
   function updateApplyPreview() {
     const t = applyTemplate();
     const items = clear($('#apply-items'));
     const key = clear($('#apply-preview-key'));
     const box = clear($('#apply-warnings'));
     if (!t) return;
-    const scale = Number($('#apply-scale').value) > 0 ? Number($('#apply-scale').value) : 1;
+    const recipe = isRecipe(t);
+    const amount = Number($('#apply-scale').value) > 0 ? Number($('#apply-scale').value) : 1;
+    const scale = applyScale(t, amount);
+    $('#apply-scale-label').textContent = recipe ? 'Servings to add' : 'Scale';
+    $('#apply-scale-hint').textContent = recipe ? `1 = one serving; this recipe makes ${fmtServings(t.servings_made)}.` : '1 = as saved, 0.5 = half portions';
+    $('#apply-scale').max = String(applyAmountLimit(t));
     $('#sheet-apply-title').textContent = `Add “${t.name}”`;
     $('#sheet-apply-sub').textContent = t.note ? t.note : 'Logs every food in the saved meal onto one day.';
-    $('#apply-preview-amount').textContent = scale === 1 ? `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}` : `${t.items.length} foods × ${scale}`;
+    const count = `${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}`;
+    $('#apply-preview-amount').textContent = recipe ? `${fmtServings(amount)} of this recipe · ${count}`
+      : scale === 1 ? count : `${count} × ${scale}`;
     for (const it of t.items) {
       items.append(h('li', {}, ratingIcon(it.kidney_rating, { decorative: true }),
         h('span', { class: 'ci-name' }, it.food_name, it.hidden ? h('span', { class: 'food-source' }, 'hidden') : null),
@@ -400,8 +410,14 @@
     if (!t) return;
     const date = $('#apply-date').value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Pick a date', 'error'); $('#apply-date').focus(); return; }
-    const scale = Number($('#apply-scale').value);
-    if (!(scale > 0)) { toast('Scale must be more than 0', 'error'); $('#apply-scale').focus(); return; }
+    const amount = Number($('#apply-scale').value);
+    const label = isRecipe(t) ? 'Servings' : 'Scale';
+    if (!(amount > 0) || !Number.isFinite(amount)) { toast(`${label} must be more than 0`, 'error'); $('#apply-scale').focus(); return; }
+    if (amount > applyAmountLimit(t)) {
+      toast(isRecipe(t) ? `Add at most ${fmtServings(applyAmountLimit(t))}` : `Scale must be at most ${fmtNum(applyAmountLimit(t))}`, 'error');
+      $('#apply-scale').focus(); return;
+    }
+    const scale = applyScale(t, amount);
     const body = { date, meal: selectedMeal($('#apply-meal')), status: selectedStatus($('#apply-status')) };
     if (scale !== 1) body.scale = scale;
     applyBusy = true; $('#apply-save').disabled = true;
