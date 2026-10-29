@@ -23,8 +23,19 @@ Names, labels, images, live regions, sheet focus/Escape/close/return: all pass.
 8. **reflow**: Today 421 px at 375 (200 %); Profile, Settings, Trends at 320 px.
 Open questions in the harness (`OPEN_QUESTIONS`): desktop targets 24–43 px with a mouse; 11 px chart labels.
 
+## Fixes done (commits)
+- 2326187 keyboard: scroll-padding (tab bar/header), `input:focus-within`, `.meal-seg`/`.body-seg` position relative.
+  Keyboard part re-run on 375-light and 1280-dark: 164 passed, 0 failed. Static tests in tests/test_layout_ui.py fail on the old CSS.
+- 52b8ab1 large text + contrast: body 1rem + break-word, url field style, textarea placeholder, `.btn` wraps,
+  `min(100%, max-content)`, auto-fit grids (`.meal-seg`, `.form-grid`, `.strip-grid`, `.plan-grid`), wrap rows (sheet foot,
+  inline-row, meal-head, entry-planned, period-name, strip-label), `.status-msg` flex-shrink 0, rem max-widths (meal chip,
+  date input). Large part re-run on all configs: 280 passed, 0 failed. Harness got: text-grows check, words out of their
+  control / off the window, field text cut, 0.15em vertical glyph tolerance, `--shots` (screenshots off by default: the disk
+  filled up once).
+- Open questions (in OPEN_QUESTIONS): mouse targets 24–43 px; 11 px chart labels; tab bar words at 320 px + 200 %.
+
 ## In progress
-- Fixes, one at a time; re-run the relevant config after each.
+- Full run of all parts; then docs (README row done; maintainers.md, CHANGELOG).
 
 ## Commands
 - `python3 tools/e2e/a11y.py` (report in `<tmp>/kidney-health-e2e/a11y/report.json`); `--only 375-light --parts large`
