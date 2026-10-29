@@ -19,6 +19,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   sign-in**, or `AUTH_REQUIRE_TWO_STEP_ADMINS=true`. While it is on, an admin without two-step sign-in can still use the app, but
   Server administration only shows a note sending them to turn it on. You can turn the switch on only after turning on your own.
   It is off by default.
+* **Passkeys.** Anyone with a password can add passkeys in **Settings → Account → Passkeys** and then use **Sign in with a passkey**:
+  the phone or computer asks for a fingerprint, face or PIN, and no password or code is typed. The password keeps working. Passkeys
+  need the server's name, not an IP address: set `PUBLIC_URL` to the address people open. A lost device: **Server administration →
+  People → Remove passkeys**, or `python -m app.admin remove-passkeys USERNAME`. No new dependency; the checks are tested against the
+  W3C test vectors and Chromium's virtual authenticator. Schema step 23 adds one table and changes nothing else. See
+  [`docs/accounts.md`](docs/accounts.md#passkeys) and [design note 18](docs/dev/research/18-passkeys.md).
 
 ### For contributors
 

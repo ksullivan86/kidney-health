@@ -1611,6 +1611,13 @@ NOTE17:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-28
   kind: project
+NOTE18:
+  cite: "kidney-health design note 18: passkeys, signing in with a fingerprint, face or device PIN."
+  short: "Design note 18"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/18-passkeys.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-29
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

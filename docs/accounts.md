@@ -98,6 +98,25 @@ to use it. The codes come from the phone's clock, so they need no network, no te
 
 How it works, and why: [design note 17](dev/research/17-two-step-sign-in.md).
 
+## Passkeys
+
+Anyone with a password can also add **passkeys** in **Settings → Account → Passkeys**, up to 10. A passkey lets a person sign in with
+the fingerprint, face or PIN of their phone or computer, with no password and no code: the sign-in page shows **Sign in with a
+passkey**. The private key stays on the device, and the browser offers it only to this server's address, so it cannot be guessed,
+phished or reused from a leak.
+
+* Passkeys are an extra way in. The password keeps working, with the two-step code if that is on.
+* A passkey sign-in is not asked for the two-step code: the device has already checked a fingerprint, face or PIN.
+* Passkeys need the server's name, not an IP address, and HTTPS (or `localhost`). Set `PUBLIC_URL` to the address people open; a
+  passkey works only there. Opened by an IP address, Settings says why it cannot add one.
+* A failed passkey sign-in counts against the address like a wrong password. A passkey whose counter goes backwards, a sign of a
+  copied key, is refused and shown in the person's activity.
+* Lost or stolen device: the person removes that passkey in Settings, or you remove all of theirs in **Server administration →
+  People → Remove passkeys**, or with `python -m app.admin remove-passkeys USERNAME`.
+* The server stores public keys only. Nothing about them is secret, and they are not in the data export.
+
+How it works, and why: [design note 18](dev/research/18-passkeys.md).
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.
@@ -197,7 +216,7 @@ their account (including what an admin did to it), never an admin's actions on o
 ## Command reference
 
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
-`setup-code` · `revoke-sessions USER|--all` · `remove-two-step USER` (lost phone and recovery codes) · `export-user USER FILE|-` (that person's data export, for
+`setup-code` · `revoke-sessions USER|--all` · `remove-two-step USER` (lost phone and recovery codes) · `remove-passkeys USER` (lost or stolen device) · `export-user USER FILE|-` (that person's data export, for
 someone who cannot sign in) · `disable-user USER` (never the only admin; signs out their devices; enable
 it again in Settings → People) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings
