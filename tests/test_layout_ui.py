@@ -192,3 +192,54 @@ def test_a_hidden_radio_stays_inside_its_group() -> None:
     page, and Tab scrolled to them instead of to their labels."""
     assert "position: relative" in rule(BASE, ".meal-seg")
     assert "position: relative" in rule(BODY_CSS, ".body-seg")
+
+
+# ------------------------------------------------------------------------------------------------- large text (tools/e2e/a11y.py)
+ADD_CSS = read("css", "add.css")
+SHEETS_CSS = read("css", "sheets.css")
+TRENDS_CSS = read("css", "trends.css")
+AI_CSS = read("css", "ai.css")
+
+
+def test_text_grows_with_the_size_the_person_chose() -> None:
+    """The page's text was 16 px whatever the browser's text size: a size in px ignores it. 1rem is 16 px by default."""
+    body = rule(BASE, "body")
+    assert "font-size: 1rem" in body and "font-size: 16px" not in body
+    assert "overflow-wrap: break-word" in body  # a word longer than its line breaks instead of running out of its box
+    assert not re.search(r"font-size:\s*\d+(\.\d+)?px", BASE + TODAY_CSS + ADD_CSS + SHEETS_CSS + PLAN + SETTINGS_CSS), \
+        "text sizes in px do not grow (the 11 px chart labels are an open question in tools/e2e/a11y.py)"
+    assert "max-width: 16.25rem" in ADD_CSS and "max-width: 260px" not in ADD_CSS  # a saved-meal shortcut grows with its words
+    assert ".date-input { max-width: 11.875rem;" in TODAY_CSS
+
+
+def test_every_text_field_has_the_field_style_and_a_readable_placeholder() -> None:
+    """The web address field of a saved meal had no field style: 29 px tall, and a grey box in the dark theme. A textarea's
+    placeholder had the browser's grey, 3.9:1 on the dark surface."""
+    assert 'input[type="date"], input[type="url"], select, textarea {' in BASE
+    assert "input::placeholder, textarea::placeholder { color: var(--text-3);" in BASE
+
+
+def test_long_button_labels_wrap_instead_of_running_off_the_screen() -> None:
+    assert "white-space: nowrap" not in rule(BASE, ".btn")
+    assert "text-align: center" in rule(BASE, ".btn")
+    for css, selector in ((ADD_CSS, ".add-actions .btn"), (AI_CSS, ".ai-add .btn"), (GUIDANCE_CSS, ".guidance-actions .btn")):
+        assert "min-width: min(100%, max-content)" in rule(css, selector), selector
+    assert "flex-wrap: wrap" in rule(SHEETS_CSS, ".sheet-foot")
+    assert "flex-wrap: wrap" in rule(SETTINGS_CSS, ".inline-row")
+
+
+def test_rows_and_grids_make_room_for_large_text() -> None:
+    """At 200 % text: the meal choices lost "Dinner" and "Snack", Profile's labels ran out of their column, the daily totals and the
+    Trends summary made the page scroll sideways, and the week on Plan spilled its numbers out of each day."""
+    assert "repeat(auto-fit, minmax(min(100%, 4.25rem), 1fr))" in rule(BASE, ".meal-seg")
+    assert "repeat(auto-fit, minmax(min(100%, max(10rem, calc(50% - 6px))), 1fr))" in rule(BASE, ".form-grid")
+    assert "white-space: nowrap" not in rule(TODAY_CSS, ".stat-value")
+    assert "flex-wrap: wrap" in rule(TODAY_CSS, ".strip-label") and "auto-fit" in rule(TODAY_CSS, ".strip-grid")
+    assert "flex-wrap: wrap" in rule(TODAY_CSS, ".entry-planned")
+    assert "flex-wrap: wrap" in rule(TRENDS_CSS, ".period-name")
+    assert "repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr))" in block(PLAN, "@media (min-width: 720px) { .plan-grid")
+
+
+def test_a_message_in_a_sheet_keeps_its_height() -> None:
+    """In the Scan sheet with large text, "No camera was found" was squashed to 0 px and printed over the buttons."""
+    assert "flex-shrink: 0" in rule(SHEETS_CSS, ".status-msg")

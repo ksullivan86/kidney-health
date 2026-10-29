@@ -41,7 +41,7 @@
 @media (min-width: 720px) { .period-grid { grid-template-columns: 1fr 1fr; gap: 12px 24px; } }
 .period-row { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
 .period-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.period-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.period-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 600; }
 .strip-tag.weekly { color: var(--accent); background: var(--accent-tint); }
 .period-nums { font-size: 0.95rem; }
 .period-nums b { font-size: 1.1rem; }

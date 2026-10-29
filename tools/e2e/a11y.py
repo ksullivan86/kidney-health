@@ -64,6 +64,10 @@ OPEN_QUESTIONS: list[tuple[str, str, str]] = [
     ("grow", r"^\(chart label\)",
      "The labels inside the Trends and weight charts are 11 px in the drawing and do not grow with the text size. "
      "Bigger labels need a new chart layout; the same numbers are in 'Show as table', whose text does grow."),
+    ("spill", r'^span "\w+" in nav (spills out of button#tab-|runs off the window)',
+     "At 320 px wide with 200 % text, the words under the icons of the bottom tab bar (Today, Trends, Profile) are wider "
+     "than their tabs, and the first and last run a few pixels off the screen. Break the words, keep the tab words smaller "
+     "than the rest of the text, or show only the icons at that size?"),
 ]
 
 RESULTS: list[dict[str, Any]] = []
@@ -295,7 +299,16 @@ LAYOUT_JS = r"""
   const scope = scopeSel ? document.querySelector(scopeSel) : document.body;
   const se = document.scrollingElement || document.documentElement;
   const out = { hscroll: '', clipped: [], spill: [], small: [] };
-  if (!scopeSel && se.scrollWidth > innerWidth + 1) out.hscroll = `the page is ${se.scrollWidth} px wide in a ${innerWidth} px window`;
+  if (!scopeSel && se.scrollWidth > innerWidth + 1) {
+    // Name the widest boxes that start the overflow: they stick out while their parent does not.
+    const culprits = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      if (culprits.length >= 3 || el.closest('dialog') || !A.vis(el)) continue;
+      const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect();
+      if (r.right > innerWidth + 1 && p.right <= innerWidth + 1 && r.width > 0) culprits.push(`${A.describe(el)} to ${Math.round(r.right)} px`);
+    }
+    out.hscroll = `the page is ${se.scrollWidth} px wide in a ${innerWidth} px window: ${culprits.join('; ')}`;
+  }
   if (scopeSel && scope.scrollWidth > scope.clientWidth + 1) out.hscroll = `${A.describe(scope)} is ${scope.scrollWidth} px wide in ${scope.clientWidth} px`;
   const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
@@ -309,7 +322,9 @@ LAYOUT_JS = r"""
     const rects = [...range.getClientRects()].filter((q) => q.width > 0 && q.height > 0);
     if (!rects.length) continue;
     const t = { left: Math.min(...rects.map((q) => q.left)), right: Math.max(...rects.map((q) => q.right)), top: Math.min(...rects.map((q) => q.top)), bottom: Math.max(...rects.map((q) => q.bottom)) };
-    let block = null;
+    let block = null, scroller = false;
+    // A glyph's box is taller than its font size: with line-height 1 it pokes out of a fitting box by a few pixels and that is not a fault.
+    const tolY = Math.max(1, 0.15 * parseFloat(getComputedStyle(el).fontSize));
     for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
       const cs = getComputedStyle(a);
       if (cs.display === 'inline' || cs.display === 'contents') continue;
@@ -317,9 +332,10 @@ LAYOUT_JS = r"""
       const ox = cs.overflowX, oy = cs.overflowY;
       if (ox === 'auto' || ox === 'scroll' || oy === 'auto' || oy === 'scroll' || a.tagName === 'DIALOG') {
         // A scroll box: the text can be scrolled to; it is cut only where the box itself has no room for one line.
+        scroller = true;
         break;
       }
-      const outX = t.right > ar.right + 1 || t.left < ar.left - 1, outY = t.bottom > ar.bottom + 1 || t.top < ar.top - 1;
+      const outX = t.right > ar.right + 1 || t.left < ar.left - 1, outY = t.bottom > ar.bottom + tolY || t.top < ar.top - tolY;
       if (((ox === 'hidden' || ox === 'clip') && outX) || ((oy === 'hidden' || oy === 'clip') && outY)) {
         const d = `${A.describe(el)} cut off by ${A.describe(a)}`;
         if (!seenC.has(d)) { seenC.add(d); out.clipped.push(d); }
@@ -333,6 +349,24 @@ LAYOUT_JS = r"""
         }
       }
     }
+    // Words that stick out of their button or link, or out of the window (a fixed bar does not make the page scroll).
+    const control = el.closest('button, a, summary, label, [role=button], [role=tab]');
+    if (control && control !== block) {
+      const cr = control.getBoundingClientRect();
+      if (t.right > cr.right + 1 || t.left < cr.left - 1) {
+        const d = `${A.describe(el)} spills out of ${A.describe(control)} (sideways)`;
+        if (!seenS.has(d)) { seenS.add(d); out.spill.push(d); }
+      }
+    }
+    if (!scroller && (t.right > innerWidth + 1 || t.left < -1)) {
+      const d = `${A.describe(el)} runs off the window (${Math.round(t.left)} to ${Math.round(t.right)} px)`;
+      if (!seenS.has(d)) { seenS.add(d); out.spill.push(d); }
+    }
+  }
+  // The words inside a field (a date field keeps its own width).
+  for (const el of scope.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range])')) {
+    if ((!scopeSel && el.closest('dialog')) || !A.vis(el)) continue;
+    if (el.scrollWidth > el.clientWidth + 1 && !(el.value && el.value.length > 20)) out.clipped.push(`${A.describe(el)} shows ${el.clientWidth} of ${el.scrollWidth} px`);
   }
   const sel = 'button, [role=button], [role=tab], a.btn, a.icon-btn, summary, select, input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]), label';
   for (const el of scope.querySelectorAll(sel)) {
@@ -606,7 +640,7 @@ def sheet_large(w: Walk, base: str, name: str, dlg: str, go: Callable[[Any, str]
     page.keyboard.press("Escape")
 
 
-def run_config(browser: Any, base: str, cookies: dict[str, str], cfg: str, parts: tuple[str, ...], shots: Path) -> None:
+def run_config(browser: Any, base: str, cookies: dict[str, str], cfg: str, parts: tuple[str, ...], shots: Path | None) -> None:
     width, height, scheme, own = CONFIGS[cfg]
     parts = tuple(p for p in own if p in parts)
     if not parts:
@@ -646,7 +680,12 @@ def run_config(browser: Any, base: str, cookies: dict[str, str], cfg: str, parts
                     w.record(None)
                     big_text(page)
                     w.large(view.capitalize(), None)
-                    page.screenshot(path=str(shots / f"{cfg}-{view}-200.png"), full_page=True)
+                    if shots:  # for a person to look at; a very tall page can be too big to capture whole
+                        try:
+                            page.screenshot(path=str(shots / f"{cfg}-{view}-200.png"),
+                                            full_page=page.evaluate("document.documentElement.scrollHeight") < 12000)
+                        except Exception as exc:  # noqa: BLE001
+                            print(f"(no screenshot of {cfg} {view}: {str(exc).splitlines()[0]})", file=sys.stderr)
             step(view, screen)
         if "keyboard" in parts:
             step("tab bar", lambda: (show(page, base, "today"), w.tablist()))
@@ -691,6 +730,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--only", default="", help="comma-separated configurations: " + ", ".join(CONFIGS))
     ap.add_argument("--parts", default="keyboard,names,large,contrast")
+    ap.add_argument("--shots", action="store_true", help="save a screenshot of each screen at 200 %% text")
     args = ap.parse_args(argv)
     if khserver.port_in_use(args.port):
         print(f"port {args.port} is in use; pick another with --port", file=sys.stderr)
@@ -702,8 +742,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     parts = tuple(p.strip() for p in args.parts.split(",") if p.strip())
     out = khserver.free_dir(args.out)
-    shots = out / "screenshots"
-    shots.mkdir()
+    shots = out / "screenshots" if args.shots else None
+    if shots:
+        shots.mkdir()
     env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "NO_PROXY": "127.0.0.1,localhost",
            "HANDBOOK_DIR": str(out / "no-handbook")}
     server = Server(args.port, out / "data", log_path=out / "server.log", env=env)

@@ -4,7 +4,8 @@
 .plan-actions { display: flex; align-items: center; gap: 8px; margin-top: -8px; }
 .plan-legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: -4px 0 0; }
 .plan-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-@media (min-width: 720px) { .plan-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; } }
+/* The week in one row; with large text the days wrap onto more rows instead of their numbers running out of the boxes. */
+@media (min-width: 720px) { .plan-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr)); gap: 8px; } }
 .plan-day {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
   display: flex; flex-direction: column; min-width: 0;

@@ -5,7 +5,7 @@
 .date-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .date-center { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
 .date-label { font-weight: 700; font-size: 1.1rem; text-align: center; }
-.date-input { max-width: 190px; min-height: 36px; padding: 4px 10px; text-align: center; font-size: 0.9rem; }
+.date-input { max-width: 11.875rem; min-height: 36px; padding: 4px 10px; text-align: center; font-size: 0.9rem; }
 .date-today-row { text-align: center; margin-top: -8px; }
 .date-today-row:empty { display: none; }
 
@@ -21,7 +21,7 @@
 .status-bars { display: flex; flex-direction: column; gap: 12px; }
 .stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
 .stat-label { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; }
-.stat-value { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 0.9rem; text-align: right; white-space: nowrap; }
+.stat-value { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 0.9rem; text-align: right; } /* wraps only with large text */
 .stat-value b { color: var(--text); font-size: 1rem; }
 .stat-track { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 6px; background: var(--track); overflow: visible; }
 .stat-fill { height: 100%; border-radius: 6px; background: var(--lv); transition: width 0.25s ease; min-width: 0; }
@@ -37,7 +37,7 @@
 
 .meals { display: flex; flex-direction: column; gap: 12px; }
 .meal { padding: 10px 16px 6px; }
-.meal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.meal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .meal-name { font-size: 1rem; font-weight: 700; }
 .meal-carbs { font-weight: 700; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
 .meal-carbs .of { font-weight: 500; color: var(--text-2); font-size: 0.85rem; }
@@ -55,7 +55,10 @@
 .nutrient-grid .ng b { font-variant-numeric: tabular-nums; font-weight: 600; }
 
 /* ---------- planned entries ---------- */
-.entry-planned { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+/* The planned food and its Eaten button share a row; with large text the button goes under it. */
+.entry-planned { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.entry-planned > .row-btn { flex: 1 1 10rem; min-width: 0; }
+.entry-planned > .eaten-btn { flex: none; }
 .row-btn.planned { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); margin: 4px 0; background: transparent; }
 .row-btn.planned .row-title { color: var(--text-2); }
 .row-btn.planned .row-nums b { color: var(--text-2); }
@@ -99,10 +102,11 @@
 
 /* ---------- "Last 7 days" strip ---------- */
 .week-strip .card-head { margin-bottom: 10px; }
-.strip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+/* Two columns on a phone; one with large text, so "Phosphorus" is not cut. */
+.strip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(7.5rem, calc(50% - 7px))), 1fr)); gap: 10px 14px; }
 @media (min-width: 720px) { .strip-grid { grid-template-columns: repeat(4, 1fr); } }
 .strip-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.strip-label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); }
+.strip-label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); }
 .strip-tag {
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2);
   background: var(--surface-2); border-radius: 4px; padding: 1px 5px; white-space: nowrap;
