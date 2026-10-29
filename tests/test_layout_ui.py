@@ -171,3 +171,24 @@ def test_lab_rows_stack_the_date_above_the_value_on_a_phone() -> None:
 def test_c_cda_is_not_broken_at_its_hyphen() -> None:
     assert 'Import from a patient portal file (<span class="nobr">C-CDA .xml</span>)' in INDEX
     assert "white-space: nowrap" in rule(BASE, ".nobr")
+
+
+# ------------------------------------------------------------------------------------------------- keyboard (tools/e2e/a11y.py)
+def test_a_control_reached_with_tab_is_not_hidden_under_the_tab_bar() -> None:
+    """On a phone, Tab scrolled the next button just far enough to sit under the fixed tab bar at the bottom (WCAG 2.4.11).
+    The page keeps room for the bar and for the sticky header when it scrolls a control into view."""
+    padding = re.search(r"html \{ (scroll-padding-top:[^}]*)\}", BASE)
+    assert padding, "html needs scroll-padding"
+    assert "scroll-padding-bottom: calc(var(--tabbar-h)" in padding.group(1) and "scroll-padding-top: calc(64px" in padding.group(1)
+
+
+def test_the_calendar_button_inside_a_date_field_shows_the_focus_outline() -> None:
+    """Tab stops on the calendar button inside a date or time field, where the field does not match :focus."""
+    assert "outline: 3px solid var(--focus)" in rule(BASE, "input:focus, input:focus-within, select:focus")
+
+
+def test_a_hidden_radio_stays_inside_its_group() -> None:
+    """The radios behind the meal and "when" choices are absolutely placed; without a positioned group they sat elsewhere on the
+    page, and Tab scrolled to them instead of to their labels."""
+    assert "position: relative" in rule(BASE, ".meal-seg")
+    assert "position: relative" in rule(BODY_CSS, ".body-seg")

@@ -76,7 +76,7 @@ input[type="time"] {
 /* "How to measure" sits in the sentence: a 44 px link there would spread the lines apart (as the Ask answers do). */
 .body-bp-hint a.learn-more { display: inline; min-height: 0; margin: 0; padding: 0; }
 /* When it was taken: a few big choices that wrap on a phone */
-.body-seg { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.body-seg { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; position: relative; } /* the hidden radios stay inside it (as in .meal-seg) */
 .body-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .body-seg label {
   flex: 1 1 40%; display: flex; align-items: center; justify-content: center; min-height: var(--tap); padding: 0 10px; text-align: center;
