@@ -4100,7 +4100,8 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read
   `reads.range` / `reads.summary`, `KH.symptoms.trends` and `KH.bodyTrends.show` take the share as `source`, the `#trends-shared`
   banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
-  in, shows the signed-in person's own data.
+  in, shows the signed-in person's own data. Shared weight charts use only the owner's profile for the dry-weight line.
+  If that profile cannot be loaded, omit the line; never fall back to the viewer's profile, including on resize.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

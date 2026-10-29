@@ -237,7 +237,9 @@
       return;
     }
     const summary = sum.status === 'fulfilled' ? sum.value : null;
-    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, profile: profile || state.profile, shared: !!source, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
+    // A shared profile can fail independently of the readings. Never substitute the viewer's dry weight.
+    const chartProfile = source ? profile : profile || state.profile;
+    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, profile: chartProfile, shared: !!source, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
     render();
   }
 
