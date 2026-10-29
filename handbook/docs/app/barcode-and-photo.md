@@ -32,6 +32,7 @@ On **Add**, tap **Scan a barcode** and choose one:
    USB or Bluetooth scanner and with a screen reader.
 
 Your phone reads the code itself and sends **only the digits** to your server ([design note 03][NOTE03]).
+If you close Scan while a lookup is still running, nothing opens when the answer comes.
 
 ## Where the numbers come from
 
@@ -109,7 +110,8 @@ numbers and leaves missing ones empty; the app works out sodium from salt and ma
 from the % Daily Value. You get a draft with every field the AI filled marked "from photo". Check each one
 against the label, correct the ingredients if needed, then tap **Save as my food**: saving checks the
 ingredients you confirmed for phosphate and potassium additives. The app never saves it for you
-([design note 04][NOTE04]).
+([design note 04][NOTE04]). If you remove the photo, choose another one or close Quick add before the AI
+answers, its answer is dropped, so it cannot overwrite numbers you typed.
 
 ## Photo of a plate (optional, AI only)
 

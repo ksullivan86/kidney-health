@@ -98,7 +98,8 @@ database, including branded foods. Tap **Import** to copy one into your list. Im
 ([architecture contract][ARCH]). You can also add your own free USDA key in **Settings → Food data**
 ([USDA API guide][FDC-API]; [Settings and keys](settings-and-keys.md)).
 "USDA search is not set up on this server" means nobody has added a key yet: add your own, or ask
-your admin to share one.
+your admin to share one. USDA can take a few seconds to answer. If you search again before it does,
+you see only the newest results.
 
 ## Your own foods
 

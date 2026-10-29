@@ -503,7 +503,10 @@ Mobile-first single page, five views switched client-side (no router library):
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
-   (manual nutrients) and, when USDA is configured, "Search USDA".
+   (manual nutrients) and, when USDA is configured, "Search USDA". The USDA sheet shows only the
+   answer to the newest search while it is open: an older search, or one from before the sheet was
+   closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
+   without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
 3. **Trends**: last 14 days, one small inline-SVG bar chart per limited nutrient
    (K, P, Na, protein, carbs, fluid if set) with target line. Export CSV button.
 4. **Profile & targets**: profile fields, targets editor, "Suggest targets" button
@@ -993,7 +996,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
   Shared keys, Usage, Activity log, About this server, and AI providers (`KH.ai.renderAdmin`, moved out
   of Settings → AI ideas), with jump chips like Settings'. A member who opens `#admin` sees a one-line
   note and the page makes no `/api/admin` request; the server's `require_admin` is the real guard
-  (`tests/test_admin_page.py`).
+  (`tests/test_admin_page.py`). When two loads overlap (a second tap on the shield while the first
+  waits), only the newest builds the page, so each part is there once (`tests/js/admin_frame.test.mjs`).
 
 ## Milestones
 
@@ -2178,14 +2182,18 @@ with lookups off on both sides.
   and swaps refuse grams with the server's text, `tests/test_demo_servings_only.py` through `tests/js/demo_api.mjs`).
   404 → *Enter from the label* (Quick add with the barcode and the photo prompt) and the Open Food Facts contribute link; 503 `off_consent_required` → the
   consent panel (`PATCH /api/me/settings {"food.off_consent": true}` then the lookup again); 503 lookups off,
-  429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward.
+  429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward. Each lookup, and each
+  opening or closing of the sheet, takes a new turn: an answer for an older turn is dropped, so a lookup that answers after
+  the sheet was closed (or after another code was looked up) opens nothing (`tests/js/scan_late_reply.test.mjs`).
 * **Quick add** gains *Barcode* (optional, checked like the scan), *Ingredients* (optional; the browser
   additive scan shows "Phosphate additives / Potassium additives / …" before saving and the server stores
   the same flags) and *Use a photo of the label*: shown beside the form on wide screens (above it on
   phones), zoom 1×/2×/3×, an object URL revoked when removed or closed, never uploaded unless the person
   presses *Read the label for me (AI)* (offered when `KH.ai` reports the `label` feature): the browser
   re-encodes it to a JPEG with the long edge ≤ 1600 px through a canvas (no EXIF), asks consent once per
-  destination, and fills the fields marked "from photo" (the mark goes when a field is edited).
+  destination, and fills the fields marked "from photo" (the mark goes when a field is edited). An answer for a
+  photo that was removed or replaced, or for a Quick add that was closed, fills nothing, and the JPEG of an old photo
+  is never sent once a new one is chosen.
 * **Settings → About** lists the data sources (Open Food Facts ODbL notice and method file, USDA FoodData
   Central citation, the decoder's licences); Admin → Server settings groups the `food.*` keys.
 
@@ -3107,7 +3115,8 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   answer with `numbers`, a plain notice for `withheld`, `unfinished` and `error`, "New conversation", the consent sheet on
   first use (`KH.ai.withConsent('chat', …)`, with "What will be sent?"), and the line "Answers come from an AI model; every
   number is the app's own. Not medical advice." The last 20 messages are sent each time; nothing is stored in the browser.
-  A question that was not answered (consent declined, 429, 503) goes back into the box. Demo and preview: the tab shows a
+  A question that was not answered (consent declined, 429, 503) goes back into the box, before anything typed while it
+  waited (`tests/js/ask_late_reply.test.mjs`). Demo and preview: the tab shows a
   note that the chat works in the installed app with an AI provider, and no input (no mock answers).
   Saving (part C, the self-contained section "Saving from the chat" of `ask.js`): the trust line `#ask-trust`, the confirm card
   (`pending_save`: Save as eaten / Save as planned / Cancel), the saved card with Undo, and the app's questions; Save, import and

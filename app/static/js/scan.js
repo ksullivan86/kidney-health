@@ -292,7 +292,7 @@
   }
   $('#scan-camera').addEventListener('click', () => { chose = true; startCamera().catch((e) => { stopCamera(); toastError(e); }); });
   $('#scan-camera-stop').addEventListener('click', () => { stopCamera('Camera stopped.'); $('#scan-camera').focus(); });
-  dlg.addEventListener('close', () => stopCamera());
+  dlg.addEventListener('close', () => { lookupTurn += 1; stopCamera(); }); // a lookup still on its way answers nothing now
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && live) stopCamera('The camera stopped while the app was in the background. Tap “Use the camera” to start it again.'); });
   window.addEventListener('pagehide', () => stopCamera());
   window.addEventListener('hashchange', () => { if (live) stopCamera(); });
@@ -345,7 +345,11 @@
   // Lookup and its answers
   // ---------------------------------------------------------------------------
   let lastCode = null;
+  // Each lookup, and each opening or closing of the sheet, takes a new turn: an answer for an older turn (the person closed the
+  // sheet, or scanned or typed another code meanwhile) is dropped, so it can neither open the entry sheet nor replace a newer answer.
+  let lookupTurn = 0;
   async function lookup(code, format, { typed = false, refresh = false } = {}) {
+    const turn = ++lookupTurn;
     lastCode = { code, format, typed };
     clear(resultEl);
     resultEl.setAttribute('aria-busy', 'true');
@@ -353,11 +357,13 @@
     try {
       res = await request('POST', '/api/foods/barcode', { code, format, refresh });
     } catch (err) {
+      if (turn !== lookupTurn) return null;
       resultEl.removeAttribute('aria-busy');
       if (err.handled || err.cancelled) { say(''); return null; }
       showProblem(err, code);
       return null;
     }
+    if (turn !== lookupTurn) return null;
     resultEl.removeAttribute('aria-busy');
     found(res);
     return res;
@@ -457,6 +463,7 @@
   // ---------------------------------------------------------------------------
   function open({ trigger: from = null } = {}) {
     trigger = from;
+    lookupTurn += 1;
     stopCamera();
     clear(resultEl);
     say('');
@@ -538,7 +545,7 @@
   const photoImg = $('#q-photo-img');
   const photoFrame = $('#q-photo-frame');
   const aiBox = $('#q-photo-ai');
-  const photo = { file: null, url: null, jpeg: null };
+  const photo = { file: null, url: null, jpeg: null, turn: 0 }; // turn: a new number for each photo chosen or removed
 
   function setZoom(n) {
     for (const b of $$('[data-zoom]', photoView)) b.setAttribute('aria-pressed', String(Number(b.dataset.zoom) === n));
@@ -549,7 +556,7 @@
 
   function dropPhoto() {
     if (photo.url) URL.revokeObjectURL(photo.url);
-    photo.file = null; photo.url = null; photo.jpeg = null;
+    photo.file = null; photo.url = null; photo.jpeg = null; photo.turn += 1;
     photoImg.removeAttribute('src');
     photoView.hidden = true;
     quickDlg.classList.remove('with-photo');
@@ -559,7 +566,7 @@
   photoInput.addEventListener('change', () => {
     const file = photoInput.files && photoInput.files[0];
     if (photo.url) URL.revokeObjectURL(photo.url);
-    photo.jpeg = null;
+    photo.jpeg = null; photo.turn += 1;
     if (!file) { dropPhoto(); return; }
     photo.file = file;
     photo.url = URL.createObjectURL(file);
@@ -594,22 +601,40 @@
     }
     const out = h('div', { class: 'ai-results', 'aria-live': 'polite' });
     const err = h('div', { class: 'form-error', role: 'alert' });
-    const jpeg = async () => { if (!photo.jpeg) photo.jpeg = await KH.ai.prepareJpeg(photo.file); return photo.jpeg; };
+    // The JPEG of the photo shown now; null when another photo was chosen (or this one removed) while it was being made.
+    const jpeg = async () => {
+      if (photo.jpeg) return photo.jpeg;
+      const turn = photo.turn;
+      const blob = await KH.ai.prepareJpeg(photo.file);
+      if (turn !== photo.turn) return null;
+      photo.jpeg = blob;
+      return blob;
+    };
     const read = actionButton('Read the label for me (AI)', 'secondary', async (btn) => {
       clear(err); clear(out);
       btn.textContent = 'Reading…';
       out.setAttribute('aria-busy', 'true');
+      const turn = photo.turn;
       try {
         const blob = await jpeg();
+        if (!blob) return;
         const answer = await KH.ai.withConsent('photos', () => KH.ai.uploadPhoto('label', blob, false), () => KH.ai.uploadPhoto('label', blob, true), btn);
-        if (answer) fillFromLabel(answer, out);
+        // The photo was removed, replaced, or Quick add closed meanwhile: this answer is for a photo that is gone, and the
+        // person may have typed the numbers since. It fills nothing.
+        if (answer && turn === photo.turn) fillFromLabel(answer, out);
       } catch (e) {
+        if (turn !== photo.turn) return;
         if (!e.handled && !e.cancelled) err.append(h('p', {}, e.detail || e.message || 'The label could not be read.'));
       } finally { btn.textContent = 'Read the label for me (AI)'; out.removeAttribute('aria-busy'); }
     });
     const what = actionButton('What will be sent?', 'secondary', async (btn) => {
       clear(err);
-      try { await KH.ai.showSent(await KH.ai.uploadPhoto('label', await jpeg(), true), { trigger: btn }); } catch (e) { if (!e.handled) err.append(h('p', {}, e.detail || e.message)); }
+      const turn = photo.turn;
+      try {
+        const blob = await jpeg();
+        const sent = blob ? await KH.ai.uploadPhoto('label', blob, true) : null;
+        if (sent && turn === photo.turn) await KH.ai.showSent(sent, { trigger: btn });
+      } catch (e) { if (!e.handled && turn === photo.turn) err.append(h('p', {}, e.detail || e.message)); }
     });
     aiBox.append(h('p', { class: 'hint' }, `AI (${st.provider ? st.provider.label : 'your AI service'}) can copy the numbers from this photo into the form. Check each one before saving.`),
       h('div', { class: 'settings-actions' }, read, what), err, out);

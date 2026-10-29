@@ -522,7 +522,13 @@
   const USDA_DISABLED_MSG = MOCK
     ? 'USDA search needs the installed app with a USDA API key (free at api.data.gov); the server looks foods up for you. This preview has no server, so use the built-in list or Quick add.'
     : 'USDA search is not set up on this server. Add your own key in Settings → Food data (free at api.data.gov), or ask your admin to share one.';
+  // USDA answers can take seconds. Each search, and each opening or closing of the sheet, takes a new turn: an answer for an
+  // older turn is dropped, so two searches never mix their lists and a sheet opened again starts empty.
+  let usdaSheetTurn = 0;
+  let usdaSearchTurn = 0;
+  usdaDlg.addEventListener('close', () => { usdaSheetTurn += 1; });
   $('#btn-usda').addEventListener('click', (e) => {
+    usdaSheetTurn += 1;
     clear(usdaResults);
     usdaStatus.textContent = MOCK ? USDA_DISABLED_MSG : '';
     sheets.open(usdaDlg, e.currentTarget, $('#usda-q'));
@@ -532,8 +538,12 @@
     if (!q) { $('#usda-q').focus(); return; }
     usdaStatus.textContent = 'Searching USDA FoodData Central…';
     clear(usdaResults);
+    const turn = ++usdaSearchTurn;
+    const sheetTurn = usdaSheetTurn;
+    const current = () => turn === usdaSearchTurn && sheetTurn === usdaSheetTurn;
     try {
       const res = await api.usdaSearch(q);
+      if (!current()) return;
       const foods = res.foods || [];
       usdaStatus.textContent = foods.length ? `${foods.length} results. Tap one to import it.` : 'No results from USDA.';
       for (const f of foods) {
@@ -547,6 +557,7 @@
         usdaResults.append(h('li', {}, btn));
       }
     } catch (err) {
+      if (!current()) return;
       // v0.3: a 503 with a reason ("not_configured", "quota_exhausted", ...) says what to do,
       // e.g. "Add your own key in Settings → Food data"; an older 503 gets the general text.
       usdaStatus.textContent = err.status === 503 ? (err.data && err.data.reason && err.detail ? err.detail : USDA_DISABLED_MSG)
@@ -556,12 +567,15 @@
   async function usdaImport(f, btn) {
     btn.disabled = true;
     usdaStatus.textContent = `Importing “${f.description}”…`;
+    const sheetTurn = usdaSheetTurn;
     try {
       const food = await api.usdaImport(f.fdc_id);
+      if (sheetTurn !== usdaSheetTurn) { toast(`Imported ${food.name}`, 'ok'); return; } // the sheet was closed meanwhile: open nothing
       usdaDlg.close();
       toast(`Imported ${food.name}`, 'ok');
       openEntrySheet('add', { food, trigger: $('#btn-usda') });
     } catch (err) {
+      if (sheetTurn !== usdaSheetTurn) { if (!err.handled) toastError(err); return; } // closed meanwhile: still say it failed
       usdaStatus.textContent = err.status === 503 ? (err.data && err.data.reason && err.detail ? err.detail : USDA_DISABLED_MSG)
         : `Import failed: ${err.detail || err.message}`;
       btn.disabled = false;
