@@ -1,0 +1,473 @@
+{
+ "about": "Made by tests/data/gen_pairing_vectors.py from app/pairing.py. Replayed by ios/KidneyHealthCore (Pairing). Do not edit by hand.",
+ "constants": {
+  "scheme": "kidneyhealthsync",
+  "start": "://pair?",
+  "version": "1",
+  "fields": [
+   "v",
+   "server",
+   "token"
+  ],
+  "token_prefix": "khd_"
+ },
+ "link_cases": [
+  {
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://Kidney.Example.ORG",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2FKidney.Example.ORG&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://Kidney.Example.ORG",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2FKidney.Example.ORG&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://example.org:8443",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A8443&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://example.org:8443",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A8443&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://192.168.1.20:8000",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2F192.168.1.20%3A8000&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://192.168.1.20:8000",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2F192.168.1.20%3A8000&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://my-home-server.local",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fmy-home-server.local&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://my-home-server.local",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fmy-home-server.local&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://example.org:1",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A1&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://example.org:1",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A1&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "https://example.org:65535",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A65535&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "server": "https://example.org:65535",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A65535&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "server": "http://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "http://kidney.example.org",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org/",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org/",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org/kidney",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org/kidney",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://[2001:db8::1]",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://[2001:db8::1]",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://example.org:0",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://example.org:0",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://example.org:65536",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://example.org:65536",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://example.org:",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://example.org:",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://ana@example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://ana@example.org",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "kidney.example.org",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org?x=1",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org?x=1",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org#top",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org#top",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2RA",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": "kha_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYm+yLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  },
+  {
+   "server": "https://kidney.example.org",
+   "token": " khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "link": null
+  }
+ ],
+ "parse_cases": [
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "KIDNEYHEALTHSYNC://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "kidneyhealthsync://pair?token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&server=https%3A%2F%2Fkidney.example.org&v=1",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https://kidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "kidneyhealthsync://pair?%76=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd%5FZm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://kidney.example.org",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A8443&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "server": "https://example.org:8443",
+   "token": "khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A"
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2F192.168.1.20%3A8000&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "server": "https://192.168.1.20:8000",
+   "token": "khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R"
+  },
+  {
+   "link": "https://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsyncx://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://PAIR?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair/?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair:80?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair:?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://ana@pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://p%61ir?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync:pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R#",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R#x",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&v=1",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&token=khd__-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-A",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&server=https%3A%2F%2Fevil.example",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&name=phone",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R&",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=2&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=01&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?V=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org%2F&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=http%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fevil.example%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fana%40kidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org%23x&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org%3Fx%3D1&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney%20example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney+example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org%zz&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidn%C3%A9y.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2F%5B2001%3Adb8%3A%3A1%5D&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A99999&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2RA",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=kha_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2%3D",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2+",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R%0A",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=%20khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": " kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R ",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R\n",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1 &server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R",
+   "refused": true
+  },
+  {
+   "link": "",
+   "refused": true
+  },
+  {
+   "link": "kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_Zm9vYmFyLWJhei1xdXV4LTAxMjM0NTY3ODlfLWFiY2R?",
+   "refused": true
+  }
+ ]
+}

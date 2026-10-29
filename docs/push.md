@@ -122,6 +122,24 @@ app's **Test connection** button uses it ([`ios/README.md`](../ios/README.md)). 
 curl -sS https://food.example.org/push/v1/check -H "Authorization: Bearer khd_…"
 ```
 
+## Pairing the iPhone app by QR code
+
+When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and Settings → Phone shortcuts draws it as a QR code
+next to the token. It is shown once, like the token.
+
+```text
+kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
+```
+
+* `server` is `PUBLIC_URL`'s origin, or else the address the page came from. It must be `https://` and a host name or IPv4
+  address, with an optional port. Otherwise `pair_url` is `null` and the page says why: the app needs HTTPS.
+* The iPhone Camera opens the app with the link. The app asks "Pair with food.example.org?" before it saves the address and the
+  token, so a QR code from someone else cannot quietly point it at their server.
+* The app reads a link only in the exact form the server makes (`app/pairing.py`, `ios/KidneyHealthCore` `Pairing`, checked
+  by `tests/data/pairing_vectors.json`).
+* Another app on the phone could claim the same link scheme. The token can only add readings and can be revoked, so this is
+  the same risk as a token copied by hand. Paste the token instead if you prefer.
+
 ## What a leaked token can do
 
 It can add up to 60 requests of up to 50 plausible weights and readings an hour (never more than 20 weights and 30 readings a day) to

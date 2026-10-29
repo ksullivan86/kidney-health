@@ -425,6 +425,29 @@ What a replayer must get right:
 * In this file `rules` uses the note's rule ids (`P-2`). In `targets_vectors.json` the same rule is `P-2d` or `P-2n`.
 * The values are the note's. If a vector is wrong, change the note first and then this file.
 
+## pairing_vectors.json
+
+The link in the QR code that pairs the iPhone app with a new phone token (design note 15 §4.3), and how the app must read it. The app
+takes a link only in the exact form the server makes, so a QR code made by someone else cannot slip past its checks.
+
+* Server: `app/pairing.py` (`link` builds it, `parse` is the reference reading).
+* Native client: `ios/KidneyHealthCore` (`Pairing.parse`; `swift test --package-path ios/KidneyHealthCore`). There is no browser twin.
+* Made by `tests/data/gen_pairing_vectors.py`. It needs no server.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `constants`: `{scheme, start, version, fields, token_prefix}`. The link is `<scheme><start>` and then the fields, which are `v`, `server` and `token`.
+* `link_cases`: `{server, token, link: string | null}`. The link the server puts in the QR code, or `null` when it makes none.
+* `parse_cases`: `{link, server?, token?, refused?: true}`. What the app reads from a link, or `refused`.
+
+What a replayer must get right:
+
+* The scheme may be in any case. Everything after it is exact: `://pair?`, no `#` anywhere, and printable ASCII with no spaces.
+* Each field comes once, in any order, and there is no other field. `+` is a space and `%XX` escapes are read before the checks.
+* `server` is `https://`, a host of letters, digits, dots and hyphens, and an optional port from 1 to 65535. Nothing else.
+* `token` is `khd_` and 43 base64url characters, with nothing around it.
+
 ## push_vectors.json
 
 What the phone route `POST /push/v1/body` makes of each row, for the iOS app. One row the route refuses makes the whole request a `400`,

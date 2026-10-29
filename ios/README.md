@@ -12,6 +12,9 @@ What is here:
 * `KidneyHealthSync/`: the app, one screen with three parts.
   * **Your server**: the address (HTTPS only) and the phone token from Settings → Phone shortcuts. The token is kept in the Keychain
     for this phone only. **Test connection** asks the server whether the saved token works (`GET /push/v1/check`) and sends nothing else.
+  * **Pairing by QR code**: Settings → Phone shortcuts shows a QR code with a new token. The iPhone Camera opens the app with its
+    `kidneyhealthsync://pair?…` link (registered in `KidneyHealthSync-Info.plist`). The app asks "Pair with …?" and saves the address and
+    the token only when the person taps **Pair**. `Pairing.parse` in the package reads the link exactly as the server makes it.
   * **Apple Health**: one button asks to read weight and blood pressure. The app never asks to write.
   * **Sending**: what the last sync did, and **Send now**. Health wakes the app when it saves a new weight or reading.
 * `KidneyHealthSyncTests/`: tests that run in the iPhone simulator.
@@ -36,7 +39,8 @@ You need Swift 6.4 on Linux or a Mac. From the repository root:
 swift test --package-path ios/KidneyHealthCore
 ```
 
-The tests replay `tests/data/body_vectors.json`, `apple_health_vectors.json` and `push_vectors.json`, which hold the server's own answers.
+The tests replay `tests/data/body_vectors.json`, `apple_health_vectors.json`, `push_vectors.json` and `pairing_vectors.json`, which hold the
+server's own answers.
 If a replay fails, fix the Swift code, not the vectors. When the server's rules change, regenerate the vectors first
 (`python3 tests/data/gen_push_vectors.py` and the others in [`tests/data/README.md`](../tests/data/README.md)).
 

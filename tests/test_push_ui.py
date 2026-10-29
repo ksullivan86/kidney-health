@@ -100,6 +100,20 @@ def test_the_new_token_is_shown_once_with_its_address_and_copy_buttons():
     assert revoked["tokenStillShown"] is False and revoked["boxes"] == 0
 
 
+def test_the_new_token_comes_with_a_qr_code_for_the_iphone_app():
+    pair = page()["pair"]
+    assert pair["order"] == ["New token", "Address to send to", "Pair the iPhone app"]
+    assert pair["qr"] == [["kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=" + TOKEN,  # the server's link, as it came
+                           "QR code to scan with the iPhone Camera"]]
+    assert pair["svg"] == 1 and "Point the iPhone Camera at this code and tap the link. The app asks you before it saves anything." in pair["text"]
+    other = page()["pairless"]
+    assert other["noLinkSvg"] == 0 and "The iPhone app needs this server at an https:// address." in other["noLink"]
+    for words in (other["failed"], other["missing"]):
+        assert "The QR code could not be drawn here. Type the address and paste the token in the app instead." in words
+    two_step = (STATIC / "js" / "views" / "two_step.js").read_text(encoding="utf-8")
+    assert "KH.twoStep = { block, groupKey, codesFile, qrPath, qrSvg, leftText, QR_URL };" in two_step  # drawn on the page, no other site
+
+
 def test_the_list_names_each_token_with_its_prefix_dates_last_use_and_what_it_sent():
     rows = page()["list"]["rows"]
     assert [r["buttons"] for r in rows] == [["Revoke", "Delete what it sent"], ["Revoke", "Delete what it sent"], ["Revoke"], ["Delete what it sent"]]

@@ -50,12 +50,12 @@ from typing import Annotated, Any, get_args
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 
-from .. import brand
+from .. import brand, pairing
 from ..audit import audit
 from ..db import get_db, table_exists
 from . import clock, housekeeping
 from .accounts import begin_immediate
-from .context import AuthContext, auth_context, request_ip
+from .context import AuthContext, auth_context, public_base, request_ip
 from .deps import CurrentUser, RecentUser, _none_mode_user, current_user
 from .errors import ApiProblem, too_many
 from .models import User, clean_display, load_user
@@ -494,7 +494,8 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     ``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it
     save food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).
     A device token's scopes are always exactly ``["body:write"]``: the request cannot choose them (``can_log`` and
-    ``can_prefs`` are refused for it)."""
+    ``can_prefs`` are refused for it). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app
+    holds (:mod:`app.pairing`), or null when this server's address is not ``https://`` and a host."""
     ctx = auth_context(request)
     family = body.family
     for field, ticked in (("can_log", body.can_log), ("can_prefs", body.can_prefs)):
@@ -516,6 +517,8 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     audit(conn, user.id, "api_token.created", "api_token", item["id"], ip=request_ip(request),
           expires_in_days=body.expires_in_days, scopes=item["scopes"], family=family)
     conn.commit()
+    if family == DEVICE:
+        return {**item, "token": token, "pair_url": pairing.link(public_base(request, ctx.settings), token)}
     return {**item, "token": token}
 
 

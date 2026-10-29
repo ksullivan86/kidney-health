@@ -1067,12 +1067,29 @@
       h('a', { class: 'learn-more', href: target, target: '_blank', rel: 'noopener' }, 'How to make the shortcut', h('span', { class: 'sr-only' }, ' (opens in a new tab)')),
       ' — the handbook has the steps for the weight and for the blood pressure.');
   }
+  // The QR code that pairs the iPhone app (design note 15 §4.3; app/pairing.py): the server's link with this address and the new
+  // token, drawn on this page by the vendored QR module of two-step sign-in. None when the server's address is not https:// and a host.
+  const PUSH_PAIR = 'Using the iPhone app? Point the iPhone Camera at this code and tap the link. The app asks you before it saves anything.';
+  const PUSH_NO_PAIR = 'The iPhone app needs this server at an https:// address. When it has one, make a new token here to get a QR code for the app.';
+  const PUSH_QR_FAILED = 'The QR code could not be drawn here. Type the address and paste the token in the app instead.';
+  function pushPairBox(made) {
+    const box = h('div', { class: 'pair-box', role: 'group', 'aria-label': 'Pair the iPhone app' }, h('p', { class: 'label' }, 'Pair the iPhone app'));
+    if (!made.pair_url) {
+      box.append(h('p', { class: 'hint' }, PUSH_NO_PAIR));
+      return box;
+    }
+    const art = h('div', { class: 'pair-qr' }, h('p', { class: 'muted small' }, 'Drawing the QR code…'));
+    const draw = KH.twoStep && KH.twoStep.qrSvg ? KH.twoStep.qrSvg(made.pair_url, 'QR code to scan with the iPhone Camera') : Promise.reject(new Error('no QR module'));
+    draw.then((svg) => art.replaceChildren(svg), () => art.replaceChildren(h('p', { class: 'hint' }, PUSH_QR_FAILED)));
+    box.append(h('p', { class: 'hint' }, PUSH_PAIR), art);
+    return box;
+  }
   function pushTokenBox(made) {
     const address = linkBox(pushAddress(), ['Send to this address with the header Authorization: Bearer and the token.'],
       { label: 'Address to send to', copy: 'Copy address', copied: 'Address copied', group: 'Address to send to' });
     const box = linkBox(made.token, ['It is shown only now. Paste it into your shortcut.', 'It is not shown again. Revoke it here if it is lost.'],
       { label: `Token for “${made.name}” (shown only now)`, copy: 'Copy token', copied: 'Token copied', group: 'New token' }); // built last: it takes the focus
-    return [box, address];
+    return [box, address, pushPairBox(made)];
   }
   function pushTokenList(host, tokens) {
     pushFirstAction = null;

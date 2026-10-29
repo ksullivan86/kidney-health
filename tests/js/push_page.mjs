@@ -43,7 +43,9 @@ const walk = (el, fn) => { fn(el); if (el.nodeType === 1) el.children.forEach((c
 const find = (root, pred) => { const out = []; walk(root, (e) => { if (e.nodeType === 1 && pred(e)) out.push(e); }); return out; };
 const buttons = (root, label) => find(root, (e) => e.tag === 'button' && text(e) === label);
 
-const log = { calls: [], toasts: [], copied: [], confirms: [] };
+const log = { calls: [], toasts: [], copied: [], confirms: [], qr: [] };
+// js/views/two_step.js qrSvg: draws the pairing link as an SVG; null stands for a page where the QR module is missing
+let twoStep = { async qrSvg(url, label) { log.qr.push([url, label]); return h('svg', { role: 'img', 'aria-label': label }); } };
 let isAdmin = false;
 let answers = {};
 const A = {
@@ -78,7 +80,7 @@ let learn = null;
 function build(MOCK) {
   page.byId = {};
   const context = vm.createContext({
-    h, clear, action, A, state, confirm, linkBox, selectEl, MOCK, KH: { get learn() { return learn; } }, window: { location: { origin: 'https://food.example.org' } },
+    h, clear, action, A, state, confirm, linkBox, selectEl, MOCK, KH: { get learn() { return learn; }, get twoStep() { return twoStep; } }, window: { location: { origin: 'https://food.example.org' } },
     toast: (m, t) => log.toasts.push([t || '', m]), subtitle: (t, id) => h('h3', { id }, t), loading: () => h('p', {}, 'Loading…'),
     failed: (err) => h('p', { class: 'form-error' }, `Could not load this: ${err.detail || err.message}`),
     formError: () => h('div', { class: 'form-error' }),
@@ -86,13 +88,13 @@ function build(MOCK) {
     fmtDate: (s) => `d(${s})`, relTime: (s) => `r(${s})`, isAdmin: () => isAdmin, EXPIRY_LABEL: { 30: '30 days', 90: '90 days', 365: '1 year' },
     console, Number, Promise, String, Array, Object,
   });
-  vm.runInContext(`${code}\nglobalThis.pushBlock = pushBlock; globalThis.pushCountsText = pushCountsText; globalThis.pushTokenSub = pushTokenSub;`, context);
+  vm.runInContext(`${code}\nglobalThis.pushBlock = pushBlock; globalThis.pushCountsText = pushCountsText; globalThis.pushTokenSub = pushTokenSub; globalThis.pushPairBox = pushPairBox;`, context);
   return context;
 }
 const item = (over = {}) => ({ id: 1, name: 'Morning weight', prefix: 'khd_AbCd1234', scopes: ['body:write'], created_at: '2026-10-22T07:00:00Z', last_used_at: null,
   expires_at: '2027-01-20T07:00:00Z', revoked_at: null, state: 'active', sent: { weights: 0, readings: 0 }, ...over });
 const listOf = (tokens, over = {}) => ({ family: 'device', enabled: true, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens, ...over });
-const reset = () => { log.calls = []; log.toasts = []; log.copied = []; log.confirms = []; page.focused = null; };
+const reset = () => { log.calls = []; log.toasts = []; log.copied = []; log.confirms = []; log.qr = []; page.focused = null; };
 
 const out = {};
 
@@ -158,7 +160,8 @@ reset();
 await page.byId['set-push-create'].handlers.click[0]();
 out.emptyName = { calls: log.calls.length, message: text(find(block, (e) => e.attrs.class === 'form-error' && e.children.length)[0]), focused: page.focused };
 const made = { id: 7, name: 'Morning weight', prefix: 'khd_AbCd1234', scopes: ['body:write'], created_at: '2026-10-22T07:00:00Z', last_used_at: null,
-  expires_at: '2027-10-22T07:00:00Z', revoked_at: null, state: 'active', sent: { weights: 0, readings: 0 }, token: 'khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1' };
+  expires_at: '2027-10-22T07:00:00Z', revoked_at: null, state: 'active', sent: { weights: 0, readings: 0 }, token: 'khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1',
+  pair_url: 'kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1' };
 answers = { list: () => listOf([item({ id: 7, expires_at: made.expires_at })]), created: () => made };
 page.byId['set-push-name'].value = '  Morning weight ';
 page.byId['set-push-expiry'].value = '365';
@@ -168,6 +171,10 @@ await page.byId['set-push-create'].handlers.click[0]();
   const newBox = find(block, (e) => e.attrs.role === 'group' && e.attrs['aria-label'] === 'New token')[0];
   const addressBox = find(block, (e) => e.attrs.role === 'group' && e.attrs['aria-label'] === 'Address to send to')[0];
   const inputs = (box) => find(box, (e) => e.tag === 'input').map((e) => e.attrs.value);
+  await settle();
+  const pairBox = find(block, (e) => e.attrs.role === 'group' && e.attrs['aria-label'] === 'Pair the iPhone app')[0];
+  out.pair = { qr: log.qr.slice(), text: text(pairBox), svg: find(pairBox, (e) => e.tag === 'svg').length,
+    order: find(block, (e) => e.attrs.role === 'group').map((e) => e.attrs['aria-label']) };
   out.created = {
     calls: log.calls, token: inputs(newBox), address: inputs(addressBox), tokenText: text(newBox), addressText: text(addressBox),
     copyButtons: [buttons(newBox, 'Copy token').length, buttons(addressBox, 'Copy address').length], list: text(page.byId['set-push-list']),
@@ -262,6 +269,18 @@ answers.listError = null;
 {
   const c = ctx.pushCountsText;
   out.counts = [c({ weights: 0, readings: 0 }), c({ weights: 1, readings: 0 }), c({ weights: 0, readings: 1 }), c({ weights: 2, readings: 3 }), c(null), c({})];
+}
+
+// ---- the QR code: none for a server without an https:// address, words when the QR module cannot draw
+{
+  const noLink = ctx.pushPairBox({ ...made, pair_url: null });
+  twoStep = { qrSvg: async () => { throw new Error('module failed'); } };
+  const failedBox = ctx.pushPairBox(made);
+  await settle();
+  twoStep = null;
+  const missing = ctx.pushPairBox(made);
+  await settle();
+  out.pairless = { noLink: text(noLink), noLinkSvg: find(noLink, (e) => e.tag === 'svg').length, failed: text(failedBox), missing: text(missing) };
 }
 
 console.log(JSON.stringify(out));

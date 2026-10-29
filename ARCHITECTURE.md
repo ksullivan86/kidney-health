@@ -43,6 +43,7 @@ app/openapi_doc.py          the OpenAPI document made honest: operation ids, 400
 app/api_version.py          API_VERSION, the integer that is raised on a breaking change ("The API document and GET /api/meta")
 app/meta.py                 GET /api/meta: versions, what the signed-in person can use now, the nutrient registry, the meals
 app/brand.py                the brand strings in one place: names, cookie names, token prefixes, CSRF value, DB filename, export format, user agents, HKDF labels ("Brand strings")
+app/pairing.py              the iPhone app's pairing link in the QR code of a new device token: link() and the reference parse() ("Pairing the iPhone app")
 scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
 app/db.py                   sqlite connection helper; runs the ordered steps in app/migrations/ ("Database migrations")
@@ -817,6 +818,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
+| iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealthSync-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealthSync/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
 | API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
@@ -4021,7 +4023,8 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
 * **Routes**: `GET /api/me/tokens?family=assistant|device`, `POST /api/me/tokens` with `family` (default `assistant`: the Assistant
   access screen is unchanged), `DELETE /api/me/tokens/{id}` (either family), `DELETE /api/me/tokens/{id}/body-rows` (below). A device
   token's list item is a `TokenItem` plus `sent: {weights, readings}`: how many rows it sent that are still in the log (the Settings block
-  names the count before "Delete what it sent"). A device token's `POST` answer carries `"sent": {"weights": 0, "readings": 0}`.
+  names the count before "Delete what it sent"). A device token's `POST` answer carries `"sent": {"weights": 0, "readings": 0}` and
+  `pair_url` (below).
 * **Revoking**: `revoke_all` (password change or reset, account disabled or deleted, the admin's "Revoke tokens") ends **both families**;
   `GET /api/admin/users` shows `assistant_tokens` and `device_tokens` counts. `api_token.created` is audited with `family`.
 * **The switch** `push.enabled` (instance, bool, default **false**, env `PUSH_ENABLED`; Server administration → Server settings →
@@ -4035,6 +4038,19 @@ The iPhone app's **Test connection**. The same checks as `POST /push/v1/body` up
 `BEARER_PATHS`), any method but `GET` (`405`, `Allow: GET`), the device token with `body:write` (the generic `401`; switch off: the same,
 no lookup) and the shared `push_body` hour of the token (`429`). Then `200 {"ok": true}` with `Cache-Control: no-store`. It reads no body,
 stores nothing but the token's `last_used_at`, and names nothing of the person. Tests: the check section of `tests/test_push.py`.
+
+### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
+
+A device token's `POST /api/me/tokens` answer has `pair_url`: `kidneyhealthsync://pair?v=1&server=<origin>&token=khd_…` (scheme
+`brand.PAIRING_SCHEME`, every value percent-escaped). `server` is `public_base` (`PUBLIC_URL`'s origin, else the request's). It is `null`
+unless that is `https://` and a host of letters, digits, dots and hyphens with an optional port, the only form the app takes. It is shown
+once, like the token, and is never in the list. Settings → Phone shortcuts draws it as a QR code with `KH.twoStep.qrSvg` (the vendored
+`qrcode-generator`), or says why there is none. The iPhone Camera opens the app with it (`CFBundleURLTypes` in
+`ios/KidneyHealthSync-Info.plist`); the app asks "Pair with <host>?" and saves only on **Pair**. `KidneyHealthCore` `Pairing.parse`
+must read a link exactly as `pairing.parse` does: `tests/data/pairing_vectors.json` (`tests/data/gen_pairing_vectors.py`) has the links
+the server makes and 50 it refuses (another scheme or fixed part, a fragment, a field twice, missing or extra, another version, a server
+with a path, user, query or IPv6 literal, a token of the wrong shape, spaces or controls). Tests: `tests/test_pairing.py`, the pairing
+checks of `tests/test_push_ui.py` and `tests/test_ios_app.py`, `PairingVectorTests.swift`.
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 
@@ -4167,8 +4183,8 @@ sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by 
 answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain. Its rules
 are in the Swift package `ios/KidneyHealthCore` (design note 15 §4.1): the ranges, the context, the watch rule, the kilogram rounding, the
 `source_key` and requests of at most 50 rows. It has no dependencies and no HealthKit code, so CI tests it on Linux against
-`tests/data/body_vectors.json`, `apple_health_vectors.json` and `push_vectors.json`. The app checks each row as this route does before
-sending, because one refused row makes the whole request a `400`.
+`tests/data/body_vectors.json`, `apple_health_vectors.json`, `push_vectors.json` and `pairing_vectors.json`. The app checks each row as
+this route does before sending, because one refused row makes the whole request a `400`.
 
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 
@@ -4266,7 +4282,7 @@ for them. Gathering them changed no value.
 
 * **Compatibility surface.** Some strings are already stored, sent or remembered by something outside the process. Each constant in
   `app/brand.py` says whether it is one. They are the cookie names (`kh_session` and its `__Host-` form, `kh_device`), the
-  `X-Requested-With` value, the `X-KDL-Version` header, the token prefixes `kha_` and `khd_`, the bearer realm, the database file
+  `X-Requested-With` value, the `X-KDL-Version` header, the token prefixes `kha_` and `khd_`, the iPhone app's link scheme, the bearer realm, the database file
   `kidney.db`, the backup prefix, the `format` of `export.json`, the MCP server name and `source`, the HKDF labels (`kidney-health/v1/...`),
   the logger root and, in the browser, the IndexedDB name `kdl`. Changing one on an install in use signs people out, breaks tokens, makes
   stored API keys unreadable, starts an empty database or turns away the export files people kept. Names and display texts (`NAME`, `SCREEN_NAME`, `SLUG`, the User-Agent
