@@ -32,6 +32,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **The weight card shows the right day.** While another day loads, the Weight and blood pressure card on Today says
   "Loading weights and blood pressure…". Before, it kept showing the previous day's weights, alarm and goal under the new
   date. If the day cannot load, **Try again** shows.
+* **Suggested targets never replace what you typed.** If you change your details or targets in Profile while a suggestion
+  is loading, the app keeps your entries and asks you to suggest again.
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the
