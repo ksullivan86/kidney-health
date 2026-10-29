@@ -149,6 +149,7 @@ register(
         model=Annotated[int, Field(ge=1, le=90)],
         default=7,
         scope="instance",
+        env="INVITE_TTL_DAYS",
         label="Invite links expire after (days)",
     ),
     SettingDef(
@@ -164,6 +165,7 @@ register(
         model=bool,
         default=True,
         scope="instance",
+        env="USDA_SHARED_ENABLED",
         label="Share the server's USDA key",
         help="Effective only when a shared key is set.",
     ),
@@ -172,6 +174,7 @@ register(
         model=bool,
         default=True,
         scope="instance",
+        env="USDA_ALLOW_USER_KEYS",
         label="People may add their own USDA key",
     ),
     SettingDef(
@@ -188,6 +191,7 @@ register(
         model=Literal["system", "light", "dark"],
         default="system",
         scope="user_default",
+        env="UI_THEME",
         label="Theme",
     ),
 )
@@ -296,6 +300,7 @@ register(
         model=bool,
         default=True,
         scope="instance",
+        env="LAB_RULES_ENABLED",
         label="Let lab results change suggested targets",
         help="Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning "
         "for a very high potassium result is always shown. Keep it off on public demo servers until a clinician has "
@@ -306,6 +311,7 @@ register(
         model=FreshDays,
         default=90,
         scope="instance",
+        env="LAB_FRESH_DAYS_POTASSIUM",
         label="A potassium result counts for (days)",
     ),
     SettingDef(
@@ -313,6 +319,7 @@ register(
         model=FreshDays,
         default=90,
         scope="instance",
+        env="LAB_FRESH_DAYS_PHOSPHATE",
         label="A phosphate result counts for (days)",
     ),
     SettingDef(
@@ -320,6 +327,7 @@ register(
         model=FreshDays,
         default=180,
         scope="instance",
+        env="LAB_FRESH_DAYS_ALBUMIN",
         label="An albumin result counts for (days)",
     ),
     SettingDef(
@@ -327,6 +335,7 @@ register(
         model=FreshDays,
         default=180,
         scope="instance",
+        env="LAB_FRESH_DAYS_BICARBONATE",
         label="A bicarbonate result counts for (days)",
     ),
     SettingDef(
@@ -334,6 +343,7 @@ register(
         model=Literal["inactive", "low_active", "active", "very_active"],
         default="inactive",
         scope="instance",
+        env="DEFAULT_ACTIVITY",
         label="Activity level used until a person chooses theirs",
         help="Used for the calorie estimate (2023 Dietary Reference Intakes).",
     ),
@@ -342,6 +352,7 @@ register(
         model=Literal["us", "si"],
         default="us",
         scope="user_default",
+        env="LAB_UNITS",
         label="Units for lab results",
         help="us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, "
         "g/L, mg/mmol, mmol/mol. Only the unit offered first changes; any unit can still be entered.",
@@ -387,6 +398,7 @@ register(
         model=Literal["kg", "lb"],
         default="lb",
         scope="user_default",
+        env="WEIGHT_UNITS",
         label="Units for weight",
         help="lb or kg (the app's US default is lb). Only how a weight is shown and typed changes; weights are stored in kilograms.",
     ),

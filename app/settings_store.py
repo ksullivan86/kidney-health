@@ -2,7 +2,9 @@
 
 Precedence of :meth:`SettingsStore.effective` for ``(key, user_id)``:
 
-1. the key's env var is set → that value, ``source="env"``, **locked**;
+1. the key's env var is set → that value, ``source="env"``, **locked** (unless its name is listed in
+   ``SETTINGS_INITIAL_ONLY``: then it is a first value, written once by :meth:`SettingsStore.apply_initial`
+   and changeable in the app afterwards, note 20);
 2. scope ``user``/``user_default`` and the person has a row → their value, ``source="user"``;
 3. an ``instance_settings`` row → that value, ``source="instance"``;
 4. the registry default, ``source="default"``.
@@ -41,6 +43,10 @@ log = logging.getLogger(f"{brand.LOGGER_NAME}.settings")
 
 Source = Literal["env", "user", "instance", "default"]
 SETTINGS_VERSION_KEY = "settings_version"
+# Note 20: env names listed here (comma list, or * for all) are first values, not locks.
+INITIAL_ONLY_ENV = "SETTINGS_INITIAL_ONLY"
+# meta row per key once its first value was considered, so a value changed or reset in the app stays.
+INITIAL_META_PREFIX = "settings_initial:"
 
 # Schema v3 (note 07 §4.4). Called by m003; ``users`` must exist when foreign keys are enforced.
 SETTINGS_TABLES_DDL = """
@@ -132,6 +138,7 @@ class SettingsStore:
         self._lock = threading.Lock()
         self._cache: dict[str, _Snapshot] = {}
         self._env_values: dict[str, Any] = {}
+        self._initial: tuple[str, frozenset[str]] | None = None  # (raw SETTINGS_INITIAL_ONLY, the names)
 
     # ------------------------------------------------------------------ registry and env
     @property
@@ -151,10 +158,46 @@ class SettingsStore:
             return sorted(self._defs.values(), key=lambda d: d.key)
         return registry.all_settings()
 
+    def initial_only(self) -> frozenset[str]:
+        """The env names ``SETTINGS_INITIAL_ONLY`` lists (``*``: every setting's); raises :class:`ConfigError` on an unknown name."""
+        raw = (self.env.get(INITIAL_ONLY_ENV) or "").strip()
+        if not raw:
+            return frozenset()
+        cached = self._initial
+        if cached is not None and cached[0] == raw:
+            return cached[1]
+        names = self._initial_names(raw)
+        self._initial = (raw, names)
+        return names
+
+    def _initial_names(self, raw: str) -> frozenset[str]:
+        known = {d.env for d in self.definitions() if d.env}
+        names = {n.strip() for n in raw.split(",") if n.strip()}
+        if "*" in names:
+            if len(names) > 1:
+                raise ConfigError(f"{INITIAL_ONLY_ENV}: use * alone or a list of names, not both.")
+            return frozenset(known)
+        unknown = sorted(names - known)
+        if unknown:
+            raise ConfigError(f"{INITIAL_ONLY_ENV}: not the variable of a setting: {', '.join(unknown)}.")
+        return frozenset(names)
+
     def env_value(self, definition: SettingDef) -> tuple[bool, Any]:
-        """``(True, value)`` when the key's env lock is set; raises :class:`ConfigError` if it is invalid."""
-        if not definition.env:
+        """``(True, value)`` when the key's env lock is set; raises :class:`ConfigError` if it is invalid.
+
+        A variable listed in ``SETTINGS_INITIAL_ONLY`` is a first value, not a lock (:meth:`initial_value`)."""
+        if not definition.env or definition.env in self.initial_only():
             return False, None
+        return self._parse_env(definition)
+
+    def initial_value(self, definition: SettingDef) -> tuple[bool, Any]:
+        """``(True, value)`` when the key's variable is set and listed in ``SETTINGS_INITIAL_ONLY``."""
+        if not definition.env or definition.env not in self.initial_only():
+            return False, None
+        return self._parse_env(definition)
+
+    def _parse_env(self, definition: SettingDef) -> tuple[bool, Any]:
+        assert definition.env
         raw = self.env.get(definition.env)
         if raw is None or raw.strip() == "":
             return False, None
@@ -172,14 +215,46 @@ class SettingsStore:
         return True, value
 
     def validate_env_locks(self) -> list[str]:
-        """Parse every env lock now (start-up), so a typo fails loudly. Returns the locked keys."""
+        """Parse every env lock and first value now (start-up), so a typo fails loudly. Returns the locked keys."""
+        self.initial_keys()
         return [d.key for d in self.definitions() if self.env_value(d)[0]]
+
+    def initial_keys(self) -> list[str]:
+        """The keys that have a first value from the environment (``SETTINGS_INITIAL_ONLY``)."""
+        return [d.key for d in self.definitions() if self.initial_value(d)[0]]
+
+    def apply_initial(self, conn: sqlite3.Connection) -> list[tuple[str, Any, Any]]:
+        """Write each first value once (note 20; caller commits). Returns ``(key, old, new)`` for the audit log.
+
+        A key whose first value was already considered (a ``meta`` row) is left alone, so a value changed or reset
+        in the app stays after a restart. A key that already has a stored value keeps it."""
+        if not self.tables_exist(conn):
+            return []
+        written = []
+        for d in self.definitions():
+            present, value = self.initial_value(d)
+            if not present:
+                continue
+            marker = INITIAL_META_PREFIX + d.key
+            if conn.execute("SELECT 1 FROM meta WHERE key = ?", (marker,)).fetchone() is not None:
+                current = self.effective(conn, d.key).value
+                if d.to_python_json(current) != d.to_python_json(value):
+                    log.info("%s is a first value only (%s); the value chosen in the app is kept", d.env, INITIAL_ONLY_ENV)
+                continue
+            conn.execute("INSERT INTO meta (key, value) VALUES (?, ?)", (marker, utcnow()))
+            if conn.execute("SELECT 1 FROM instance_settings WHERE key = ?", (d.key,)).fetchone() is not None:
+                continue
+            old = d.to_python_json(self.effective(conn, d.key).value)
+            new = d.to_python_json(self.set_instance(conn, d.key, value).value)
+            written.append((d.key, old, new))
+        return written
 
     # ------------------------------------------------------------------ cache
     def invalidate(self) -> None:
         with self._lock:
             self._cache.clear()
             self._env_values.clear()
+            self._initial = None
 
     @staticmethod
     def tables_exist(conn: sqlite3.Connection) -> bool:

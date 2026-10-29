@@ -43,6 +43,17 @@ APP_VERSION = "0.9.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
+def _initial_settings(conn: sqlite3.Connection, store: SettingsStore) -> None:
+    """Write the first values of SETTINGS_INITIAL_ONLY once (note 20), each with an audit row."""
+    from .audit import audit_if_available
+
+    for key, old, new in store.apply_initial(conn):
+        env = store.definition(key).env
+        audit_if_available(conn, None, "settings.changed", target_type="setting", target_id=key, key=key, old=old, new=new, env=env)
+        logger.info("setting %s: first value from %s", key, env)
+    conn.commit()
+
+
 def _startup_maintenance(conn: sqlite3.Connection, store: SettingsStore) -> None:
     """Housekeeping that needs schema v3 tables; skipped on older databases."""
     if table_exists(conn, "audit_log"):
@@ -77,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             result = foods.import_builtin_foods(conn, settings.foods_json)
             app.state.foods_import = result
+            _initial_settings(conn, store)
             _startup_maintenance(conn, store)
             ai_routes.startup(app, conn)  # M2 ai: env provider row, AI activity retention
             try:

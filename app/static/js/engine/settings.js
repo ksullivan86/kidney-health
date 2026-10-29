@@ -6,7 +6,8 @@
    uses the same table and the precedence functions below to answer like the server.
 
    Precedence: env lock (read-only, source "env") > the person's own value (scopes user and
-   user_default) > the instance value > the registry default.
+   user_default) > the instance value > the registry default. A variable named in
+   SETTINGS_INITIAL_ONLY is a first value the server writes once (note 20), never a lock.
 
    Parity: tests/data/settings_vectors.json is generated from the Python registry and store
    (tests/data/gen_settings_vectors.py); pytest checks it is current and node
@@ -183,16 +184,16 @@
       label: 'Server name', help: 'Shown on the sign-in, invite and password pages, and in Settings under About & privacy.' },
     { key: 'providers.usda.daily_limit_per_user', type: 'int', min: 0, max: 100000, default: 200, scope: 'instance', env: 'USDA_SHARED_DAILY_LIMIT',
       label: 'Shared USDA lookups per person per day', help: '0 means unlimited.' },
-    { key: 'providers.usda.shared_enabled', type: 'bool', default: true, scope: 'instance', env: null,
+    { key: 'providers.usda.shared_enabled', type: 'bool', default: true, scope: 'instance', env: 'USDA_SHARED_ENABLED',
       label: "Share the server's USDA key", help: 'Effective only when a shared key is set.' },
-    { key: 'providers.usda.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: null,
+    { key: 'providers.usda.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: 'USDA_ALLOW_USER_KEYS',
       label: 'People may add their own USDA key', help: '' },
     // Phone shortcuts (design note 12; app/auth/api_tokens.py, app/push.py). The device tokens are rows of api_tokens, never settings.
     { key: 'push.enabled', type: 'bool', default: false, scope: 'instance', env: 'PUSH_ENABLED',
       label: 'Let people send weights and blood pressure from a phone shortcut',
       help: 'Off by default. When on, each person can make tokens in Settings → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log. '
         + 'A token can only add: it cannot read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
-    { key: 'registration.invite_ttl_days', type: 'int', min: 1, max: 90, default: 7, scope: 'instance', env: null,
+    { key: 'registration.invite_ttl_days', type: 'int', min: 1, max: 90, default: 7, scope: 'instance', env: 'INVITE_TTL_DAYS',
       label: 'Invite links expire after (days)', help: '' },
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',
       label: 'Registration',
@@ -203,27 +204,27 @@
       help: 'Off by default. When on, each person can make a link in Settings → Account → Sharing and send it to a caregiver or dietitian with an account here. '
         + 'Once they accept it, they can read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. While off, nobody can see anyone else\'s data; turned on again, shares that were not stopped work again.' },
     // Personalised targets and labs (note 05 §4.9; app/settings_registry.py).
-    { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: null,
+    { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: 'DEFAULT_ACTIVITY',
       label: 'Activity level used until a person chooses theirs', help: 'Used for the calorie estimate (2023 Dietary Reference Intakes).' },
-    { key: 'targets.lab_fresh_days.albumin', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null,
+    { key: 'targets.lab_fresh_days.albumin', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: 'LAB_FRESH_DAYS_ALBUMIN',
       label: 'An albumin result counts for (days)', help: '' },
-    { key: 'targets.lab_fresh_days.bicarbonate', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: null,
+    { key: 'targets.lab_fresh_days.bicarbonate', type: 'int', min: 1, max: 365, default: 180, scope: 'instance', env: 'LAB_FRESH_DAYS_BICARBONATE',
       label: 'A bicarbonate result counts for (days)', help: '' },
-    { key: 'targets.lab_fresh_days.phosphate', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null,
+    { key: 'targets.lab_fresh_days.phosphate', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: 'LAB_FRESH_DAYS_PHOSPHATE',
       label: 'A phosphate result counts for (days)', help: '' },
-    { key: 'targets.lab_fresh_days.potassium', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: null,
+    { key: 'targets.lab_fresh_days.potassium', type: 'int', min: 1, max: 365, default: 90, scope: 'instance', env: 'LAB_FRESH_DAYS_POTASSIUM',
       label: 'A potassium result counts for (days)', help: '' },
-    { key: 'targets.lab_rules_enabled', type: 'bool', default: true, scope: 'instance', env: null,
+    { key: 'targets.lab_rules_enabled', type: 'bool', default: true, scope: 'instance', env: 'LAB_RULES_ENABLED',
       label: 'Let lab results change suggested targets',
       help: 'Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning for a very high '
         + 'potassium result is always shown. Keep it off on public demo servers until a clinician has reviewed the lab rules.' },
-    { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: null,
+    { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: 'UI_THEME',
       label: 'Theme', help: '' },
-    { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: null,
+    { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: 'LAB_UNITS',
       label: 'Units for lab results',
       help: 'us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, '
         + 'mmol/mol. Only the unit offered first changes; any unit can still be entered.' },
-    { key: 'user.units.weight', type: 'choice', options: ['kg', 'lb'], default: 'lb', scope: 'user_default', env: null,
+    { key: 'user.units.weight', type: 'choice', options: ['kg', 'lb'], default: 'lb', scope: 'user_default', env: 'WEIGHT_UNITS',
       label: 'Units for weight',
       help: "lb or kg (the app's US default is lb). Only how a weight is shown and typed changes; weights are stored in kilograms." },
   ];
@@ -368,9 +369,15 @@
 
   // ctx = { env: {ENV_NAME: text}, instance: {key: value}, user: {key: value} | null }
   // → { value, source, locked, env }
+  function initialOnly(env) {
+    const names = String(env.SETTINGS_INITIAL_ONLY || '').split(',').map((n) => n.trim()).filter(Boolean);
+    return names.includes('*') ? null : names; // null: every setting's variable
+  }
   function effective(def, ctx) {
     const env = (ctx && ctx.env) || {};
-    if (def.env && env[def.env] != null && String(env[def.env]).trim() !== '') {
+    const initial = initialOnly(env);
+    const firstValueOnly = def.env && (initial === null || initial.includes(def.env));
+    if (def.env && !firstValueOnly && env[def.env] != null && String(env[def.env]).trim() !== '') {
       const parsed = parseEnv(def, env[def.env]);
       if (!parsed.error) return { value: parsed.value, source: 'env', locked: true, env: def.env };
     }

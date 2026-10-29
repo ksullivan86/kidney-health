@@ -101,6 +101,8 @@ spec:
             #   value: "true"                     # add weights and blood pressure readings (POST /push/v1/body)
             # - name: SHARING_ENABLED             # read-only sharing with someone else who has an account here
             #   value: "true"                     # (docs/accounts.md): they can read, never change
+            # - name: SETTINGS_INITIAL_ONLY       # these variables are first values, not locks: written once,
+            #   value: "SHARING_ENABLED"          # then changeable in the app (docs/deployment.md); * for all
             # - name: AUTH_REQUIRE_TWO_STEP_ADMINS  # admins must use two-step sign-in to open Server
             #   value: "true"                     # administration (docs/accounts.md)
           volumeMounts:

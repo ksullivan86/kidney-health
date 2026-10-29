@@ -1625,6 +1625,13 @@ NOTE19:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-29
   kind: project
+NOTE20:
+  cite: "kidney-health design note 20: set the server up by code, with first values from the environment."
+  short: "Design note 20"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/20-setup-by-code.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-29
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

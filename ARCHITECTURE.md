@@ -1299,9 +1299,20 @@ part (`js/views/ai.js`) ask `GET /api/me/totp` first and show a note with **Open
 
 M1 settings keys (`app/settings_registry.py`, instance scope; env lock in brackets): `instance.name` (Kidney Health
 [`INSTANCE_NAME`]), `registration.mode` (`invite` | `closed` | `open` [`REGISTRATION_MODE`]),
-`registration.invite_ttl_days` (7), `audit.retention_days` (365 [`AUDIT_RETENTION_DAYS`]),
-`providers.usda.shared_enabled` (`true`), `providers.usda.user_keys_allowed` (`true`),
-`providers.usda.daily_limit_per_user` (200 [`USDA_SHARED_DAILY_LIMIT`]). An empty env value counts as unset.
+`registration.invite_ttl_days` (7 [`INVITE_TTL_DAYS`]), `audit.retention_days` (365 [`AUDIT_RETENTION_DAYS`]),
+`providers.usda.shared_enabled` (`true` [`USDA_SHARED_ENABLED`]), `providers.usda.user_keys_allowed` (`true`
+[`USDA_ALLOW_USER_KEYS`]), `providers.usda.daily_limit_per_user` (200 [`USDA_SHARED_DAILY_LIMIT`]). An empty env value counts
+as unset.
+
+**First values from the environment** (design note 20). Every instance and `user_default` setting has an env name except
+`ai.route.local_provider` and `ai.route.cloud_provider` (they name a provider row; `tests/test_settings_initial.py` keeps this
+true). `SETTINGS_INITIAL_ONLY` (a comma list of those names, or `*`) turns the listed ones from locks into first values:
+`SettingsStore.env_value` ignores them, and `app/main.py` `_initial_settings` runs `SettingsStore.apply_initial` after the
+migrations on every start. For each first value it has never seen (no `meta` row `settings_initial:<key>`), it writes the
+instance row unless one exists, audits `settings.changed` with no actor and `env: <NAME>`, and writes the `meta` row, so a
+value changed or reset in the app survives restarts. A name that is not a setting's variable, `*` with names, or a bad value
+stops the start (`validate_env_locks`); `python -m app.admin check` lists locks and first values. The JavaScript twin
+(`js/engine/settings.js` `effective`) treats a listed variable as no lock, checked by two precedence vectors.
 
 ### Changes to existing routes
 

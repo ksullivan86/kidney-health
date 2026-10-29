@@ -38,6 +38,7 @@ insulin or medicines.
 * A second factor for local sign-in: one-time codes (TOTP) shipped in 0.9.0 ([note 17](dev/research/17-two-step-sign-in.md)), and so did requiring them for admins. Passkeys shipped in 0.9.0 as an extra way in, with the password kept ([note 18](dev/research/18-passkeys.md)). Using a passkey instead of retyping the password is built too. Still later: accounts with passkeys only; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * ~~Read-only sharing with a caregiver or dietitian~~ — built 2026-10-29 ([note 19](dev/research/19-sharing.md), [`accounts.md`](accounts.md#sharing-with-a-caregiver)): share links, four areas, the Visit prep page read-only, off until the admin turns it on. Later: a time limit on a share, sharing the Trends charts.
+* ~~Set the server up by code~~ — built 2026-10-29 ([note 20](dev/research/20-setup-by-code.md), [`deployment.md`](deployment.md#set-it-up-by-code)): a variable for every server setting, and `SETTINGS_INITIAL_ONLY` for first values an admin can change in the app later.
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").
 * One SQLite file per person (strongest isolation, deletion = removing a file) — note 07 §3.7 ("Revisit for v1.0").
 

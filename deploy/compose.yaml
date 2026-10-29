@@ -94,6 +94,12 @@ services:
       # world.openfoodfacts.org (Open Food Facts on AND the scanning person agreed), your AI provider
       # (AI_PROVIDER... AND "Optional AI ideas" on), api.pwnedpasswords.com (PASSWORD_BREACH_CHECK).
       # A value set here LOCKS that setting in Settings → Admin; leave it empty to let an admin choose.
+      # Names listed in SETTINGS_INITIAL_ONLY (or * for all) are first values instead: written once, then
+      # changeable in the app (docs/deployment.md, "Set it up by code"). Add a line like these for any
+      # other setting's variable you want to pass.
+      SETTINGS_INITIAL_ONLY: ${SETTINGS_INITIAL_ONLY:-}
+      INSTANCE_NAME: ${INSTANCE_NAME:-}
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-}
       OFF_ENABLED: ${OFF_ENABLED:-}
       OFF_CONTACT: ${OFF_CONTACT:-}
       GUIDANCE_ENABLED: ${GUIDANCE_ENABLED:-}
