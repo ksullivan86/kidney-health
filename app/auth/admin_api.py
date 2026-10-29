@@ -27,7 +27,7 @@ from .accounts import (
     would_remove_last_admin,
 )
 from .context import AuthContext, auth_context, public_base, request_ip
-from .deps import AdminUser, RecentAdmin, require_admin
+from .deps import TWO_STEP_SETTING, AdminUser, RecentAdmin, require_admin
 from .errors import ApiProblem
 from .me import provider_or_404, run_key_test, settings_error
 from .models import USER_COLUMNS, active_count, clean_display, normalize_username
@@ -340,6 +340,11 @@ def update_instance_settings(request: Request, admin: RecentAdmin, body: dict[st
         env_only = sorted(k for k in body if k in NO_SIGNIN_ENV_ONLY)
         if env_only:
             raise ApiProblem(403, "Set AI settings with environment variables when sign-in is off (AUTH_MODE=none).", keys=env_only)
+    # Requiring two-step sign-in of admins (design note 17 §10): only an admin who uses it may turn it on, or the change would
+    # shut the person making it out of this page.
+    if body.get(TWO_STEP_SETTING) is True and ctx.settings.auth_mode == "local" and admin.auth_source == "local" \
+            and not totp.is_enabled(conn, admin.id):
+        raise ApiProblem(409, "Turn on your own two-step sign-in first (Settings → Account → Two-step sign-in).", field=TWO_STEP_SETTING)
     try:
         changed = store.update_instance(conn, body, updated_by=admin.id)
     except Exception as exc:  # mapped to 400/403/409; anything else re-raised by settings_error

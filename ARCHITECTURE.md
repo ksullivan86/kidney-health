@@ -1123,7 +1123,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me` · `PATCH /api/me` | user | → Me; PATCH `{display_name}` |
 | `DELETE /api/me` | user + password | `{password, confirm: "DELETE"}` → 204, cookies cleared, `Clear-Site-Data`; 409 for the last active admin, and always 409 with `AUTH_MODE=none` (every request is user 1; start-up also recreates a missing user 1 in that mode). Deletes the account and everything it owns (cascade), after deleting the unused invites and links it created |
 | `POST /api/me/password` | user (local) | `{current_password, new_password}` → `{user: Me}`; signs out other devices, voids open reset links for the account, renews this session |
-| `GET /api/me/totp` | user | → `{available, enabled, enabled_at, recovery_codes_left}` (never the secret); `available` is false outside local mode and for a proxy account |
+| `GET /api/me/totp` | user | → `{available, enabled, enabled_at, recovery_codes_left, required}` (never the secret); `available` is false outside local mode and for a proxy account; `required` is true for an admin while `auth.require_two_step_admins` is on |
 | `POST /api/me/totp/setup` | user (local) *(re-auth)* | → `{secret, uri, issuer, account, digits: 6, period: 30}`: a new pending secret (the only time it leaves the server; replaces an unfinished one). `uri` is the `otpauth://totp/…` link for a QR code. 409 when on |
 | `POST /api/me/totp/enable` | user (local) *(re-auth)* | `{code}` → `{recovery_codes: [10], signed_out: n, enabled, enabled_at, recovery_codes_left}`: on when the code is right for the pending secret (that step counts as used); the other sessions are signed out; audit `totp.enabled`. 400 wrong code (`field: code`), 409 nothing pending or already on, 429 after 10 tries in 15 minutes (`totp_enable`) |
 | `POST /api/me/totp/recovery-codes` | user (local) *(re-auth)* | → `{recovery_codes: [10], …status}`: a new set, the old one void; audit `totp.recovery_codes_renewed`. 409 when off |
@@ -1268,6 +1268,13 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 | `GET /api/admin/about` | → `{version, schema_version, auth_mode, accounts, https, public_url, secret_key: {source, on_data_volume, warning, secrets: {current, older_key, unreadable}}, proxy: {first_forwarded_peer, ignored_identity_headers, …}, pre_v3_backup, last_backup_at}` |
 
 With `AUTH_MODE=none` the users and invites routes answer 404.
+
+**Admins must use two-step sign-in** (`auth.require_two_step_admins`, instance, bool, default false, env
+`AUTH_REQUIRE_TWO_STEP_ADMINS`; design note 17 §10). While on, `require_admin` (every `/api/admin` route) answers a local admin in
+`AUTH_MODE=local` who has no two-step sign-in with `403 {"detail", "two_step_required": true}`; the person's own routes, `/api/me/totp`
+included, keep working. `PATCH /api/admin/settings` turning it on is `409` (`field: auth.require_two_step_admins`) unless the admin
+making the change has it on. No effect in proxy or `none` mode. The admin page (`js/views/settings.js` `adminTwoStepBlocked`) and its AI
+part (`js/views/ai.js`) ask `GET /api/me/totp` first and show a note with **Open Settings** instead of calling the admin routes.
 
 M1 settings keys (`app/settings_registry.py`, instance scope; env lock in brackets): `instance.name` (Kidney Health
 [`INSTANCE_NAME`]), `registration.mode` (`invite` | `closed` | `open` [`REGISTRATION_MODE`]),

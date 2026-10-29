@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -147,6 +147,7 @@ Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in
 | Variable | Default | Purpose |
 |---|---|---|
 | `PUSH_ENABLED` | `false` | Phone shortcuts (also **Server administration → Server settings**): each person may make device tokens (**Settings → Account → Your data → Phone shortcuts**) for an iPhone Shortcut that adds their weight and blood pressure to their own log at `POST /push/v1/body`. A token can only add; it reads nothing. While off, the route answers `401` to everyone. The phone must reach the server (home network or your VPN); if a reverse proxy lists the paths it passes on, add `/push/v1/`. Nothing leaves the server for it ([design note 12][NOTE12]; [From a phone shortcut](../app/weight-and-blood-pressure.md#from-a-phone-shortcut)). |
+| `AUTH_REQUIRE_TWO_STEP_ADMINS` | `false` | Admins must use two-step sign-in (also **Server administration → Server settings**): an admin opens Server administration only after turning it on in **Settings → Account → Two-step sign-in**. You can switch it on there only once your own two-step sign-in is on. No effect with a sign-in proxy ([design note 17][NOTE17]). |
 
 ## Meal guidance
 

@@ -1411,11 +1411,23 @@
   // Section: Admin
   // ---------------------------------------------------------------------------
   const isAdmin = () => !!(state.me && state.me.role === 'admin');
-  function renderAdminFrame() {
+  // auth.require_two_step_admins (design note 17 §10): every admin route answers 403 until this admin turns two-step sign-in on.
+  async function adminTwoStepBlocked() {
+    const two = await request('GET', '/api/me/totp').catch(() => null);
+    return !!(two && two.required && !two.enabled);
+  }
+  async function renderAdminFrame() {
     const body = $('#set-admin-body');
     clear(body);
     if (!isAdmin()) {
       body.append(note('info', h('p', {}, 'Server administration is for admins. Ask your admin if your account needs a change.')));
+      return;
+    }
+    if (await adminTwoStepBlocked()) {
+      clear(body);
+      body.append(note('caution', h('p', {}, h('strong', {}, 'This server asks admins to use two-step sign-in. '),
+        'Turn it on in Settings → Account → Two-step sign-in, then come back here.')),
+      h('div', { class: 'settings-actions' }, h('a', { class: 'btn primary', href: '#settings', id: 'admin-two-step-go' }, 'Open Settings')));
       return;
     }
     const none = authMode() === 'none';
@@ -1743,7 +1755,7 @@
 
   // ---- Server settings (instance keys; env locks are read-only)
   const GROUPS = [
-    ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days']],
+    ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days', 'auth.require_two_step_admins']],
     ['Food data', ['food.off_enabled', 'food.off_contact', 'food.off_rate_per_minute', 'food.barcode_negative_ttl_hours', 'food.usda_branded_barcode',
       'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
     ['Default for everyone', ['ui.theme', 'user.units.labs', 'user.units.weight']],
@@ -2113,7 +2125,7 @@
     const me = state.me;
     $('#admin-who').textContent = isAdmin() ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username} · admin` : '';
     $('#set-admin-ai').hidden = !isAdmin(); // js/views/ai.js fills it when the view shows
-    renderAdminFrame();
+    await renderAdminFrame();
     renderAdminNav();
   }
   async function load() {
@@ -2132,7 +2144,8 @@
     renderFood();
     renderDevice().catch((err) => console.warn(err));
     // Server settings feed Food data's Open Food Facts line: read them for admins even with the admin view closed.
-    if (isAdmin() && !cache.adminSettings) adminSettingsReady = loadServerSettings();
+    // An admin the server asks to turn on two-step sign-in first gets 403 there (auth.require_two_step_admins): skip it until then.
+    if (isAdmin() && !cache.adminSettings) adminSettingsReady = adminTwoStepBlocked().then((blocked) => (blocked ? null : loadServerSettings()));
     const [settings, keys] = await Promise.allSettled([api.mySettings(), api.myKeys()]);
     cache.mySettings = settings.status === 'fulfilled' ? settings.value.settings : settings.reason;
     cache.myKeys = keys.status === 'fulfilled' ? keys.value : keys.reason;

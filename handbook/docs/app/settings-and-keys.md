@@ -132,6 +132,8 @@ assistant tokens keep working.
 - **No phone and no recovery codes:** ask your admin. They can remove two-step sign-in from your account, and you
   then sign in with your password alone.
 - A password reset link from your admin sets a new password but does not sign you in: you still need a code.
+- **Admins:** your server can ask every admin to use two-step sign-in. Until you turn it on, Server administration shows only a
+  note that sends you here.
 
 ## Assistant access
 

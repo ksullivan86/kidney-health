@@ -1115,6 +1115,10 @@
       clear(body).append(h('p', {}, `AI providers are set up in the installed app. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI service.`));
       return;
     }
+    // auth.require_two_step_admins (design note 17 §10): an admin without two-step sign-in gets 403 from every admin route; the
+    // page above already says why (js/views/settings.js renderAdminFrame), so this part asks for nothing.
+    const two = await request('GET', '/api/me/totp').catch(() => null);
+    if (two && two.required && !two.enabled) { if (ticket === adminRender) clear(body); return; }
     if (!body.childElementCount) body.append(h('p', { class: 'muted small' }, 'Loading…'));
     const part = await adminPart();
     if (ticket === adminRender) body.replaceChildren(part);

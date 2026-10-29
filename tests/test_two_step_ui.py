@@ -54,7 +54,7 @@ def test_settings_shows_the_block_only_for_a_password_account_and_the_admin_can_
 
 def test_the_demo_answers_the_routes_as_a_server_without_two_step_sign_in():
     mock = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
-    assert "route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0 }; });" in mock
+    assert "route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0, required: false }; });" in mock
     for path in ("'/api/me/totp/setup'", "'/api/me/totp/enable'", "'/api/me/totp/recovery-codes'", "['DELETE', '/api/me/totp']"):
         assert path in mock, path
     assert "route('DELETE', userIdRoute('/totp')" in mock and "two_step: false" in mock

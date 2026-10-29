@@ -90,6 +90,10 @@
         + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
+    // Two-step sign-in for admins (design note 17 §10; app/auth/deps.py require_admin).
+    { key: 'auth.require_two_step_admins', type: 'bool', default: false, scope: 'instance', env: 'AUTH_REQUIRE_TWO_STEP_ADMINS',
+      label: 'Admins must use two-step sign-in',
+      help: 'Off by default. When on, an admin must use two-step sign-in (a code from an authenticator app) to open Server administration. An admin without it can still use the app and turns it on in Settings → Account → Two-step sign-in. Has no effect when a sign-in proxy or no sign-in is used. You can turn it on only after turning on your own two-step sign-in.' },
     // Weight and blood pressure (note 10 §4.3; app/settings_registry.py "Note 10"). The alarm and the goal are the numbers the person's care
     // team gave them: no default, and the app never suggests either.
     { key: 'body.bp_goal', type: 'object', model: 'BpGoal', scope: 'user', env: null,

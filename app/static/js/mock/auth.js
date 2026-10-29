@@ -367,7 +367,7 @@
   route('DELETE', /^\/api\/me\/tokens\/(\d+)\/body-rows$/, function () { this._currentUser(); fail(404, 'token not found'); });
   // Two-step sign-in (app/auth/totp_api.py, design note 17): the demo has no real sign-in, so it answers as a server does where two-step
   // sign-in is not available (the sign-in proxy's case): the status says so and every change is a 404.
-  route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0 }; });
+  route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0, required: false }; });
   for (const [m, p] of [['POST', '/api/me/totp/setup'], ['POST', '/api/me/totp/enable'], ['POST', '/api/me/totp/recovery-codes'], ['DELETE', '/api/me/totp']]) {
     route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
   }
