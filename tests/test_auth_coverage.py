@@ -22,6 +22,8 @@ PUBLIC = {
     ("post", "/api/auth/register"),
     ("post", "/api/auth/reset"),
     ("post", "/api/auth/reset/info"),
+    ("post", "/api/auth/passkey/options"),  # passkey sign-in (note 18 §5)
+    ("post", "/api/auth/passkey"),
 }
 METHODS = ("get", "post", "put", "patch", "delete")
 

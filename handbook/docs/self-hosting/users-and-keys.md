@@ -93,6 +93,8 @@ from other machines ([HTTPS for phones](https.md)).
 - `python -m app.admin list-users` and `revoke-sessions USERNAME` (or `--all`) help after a lost phone.
 - Someone who uses two-step sign-in and lost both the phone and the recovery codes: `python -m app.admin remove-two-step USERNAME`.
   They sign in with the password alone and can turn it on again.
+- A lost or stolen device with a passkey: **Server administration → People → Remove passkeys**, or
+  `python -m app.admin remove-passkeys USERNAME`. Passkeys need the server's name: set `PUBLIC_URL` to the address people open.
 - `python -m app.admin export-user USERNAME export.zip` gives you a person's data export when they cannot
   sign in (it holds their health data: hand it over privately and delete your copy), and
   `disable-user USERNAME` stops an account and signs out its devices; enable it again in **Settings → People**.

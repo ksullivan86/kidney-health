@@ -135,6 +135,14 @@
 /* Two-step sign-in (js/views/two_step.js, design note 17). The QR code stays black on white in both themes: phone cameras read
    that best, and the quiet zone around it is part of the code. */
 .badge.two-step-on { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
+.badge.passkeys-on { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
+.passkey-list { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.5rem; }
+.passkey-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem 1rem;
+  padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.passkey-item > div:first-child { min-width: 0; flex: 1 1 14rem; }
+.passkey-name { overflow-wrap: anywhere; }
+.passkey-meta { margin: 0.15rem 0 0; }
+.passkey-rename input { min-width: 0; flex: 1 1 10rem; }
 .two-step-steps { padding-left: 1.25rem; display: grid; gap: 1rem; margin: 0.5rem 0 0; }
 .two-step-steps > li > p { margin: 0 0 0.5rem; }
 .two-step-qr-box { margin: 0.25rem 0 0.5rem; }

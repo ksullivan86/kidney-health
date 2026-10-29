@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from starlette.requests import Request
 
 from ..security import client_ip, effective_scheme, is_loopback
+from .passkeys import ChallengeStore
 from .ratelimit import RateLimits
 from .throttle import Throttle
 
@@ -23,6 +24,7 @@ class AuthContext:
     keyring: "Keyring | None" = None
     setup_complete: bool = False  # cached once observed (setup never becomes required again)
     housekeeping: dict[str, float] = field(default_factory=dict)  # last run per period (app.auth.housekeeping)
+    passkey_challenges: ChallengeStore = field(default_factory=ChallengeStore)  # single use, 5 minutes (note 18 §4)
     throttle: Throttle = field(init=False)
     limits: RateLimits = field(init=False)
 

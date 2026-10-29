@@ -65,6 +65,8 @@ The commands for each engine, and the fixes below in more detail, are in the dep
 | The only admin is locked out | `python -m app.admin reset-password USERNAME --stdin` ([design note 07][NOTE07]) |
 | A lost phone is still signed in | `python -m app.admin revoke-sessions USERNAME`, or **Signed-in devices** in the person's settings |
 | Two-step sign-in: the phone and the recovery codes are both lost | `python -m app.admin remove-two-step USERNAME` |
+| Settings says passkeys need a name for the server | open the app by its name, not an IP address, and set `PUBLIC_URL` to that address |
+| A device with a passkey is lost or stolen | **Server administration → People → Remove passkeys**, or `python -m app.admin remove-passkeys USERNAME` |
 | Proxy mode: "Your account is not enabled here" | create the account, or set `PROXY_AUTO_CREATE_USERS=true` |
 | Proxy mode will not start | `TRUSTED_PROXY_SECRET_FILE` is missing, or `TRUSTED_PROXIES` contains `0.0.0.0/0` |
 

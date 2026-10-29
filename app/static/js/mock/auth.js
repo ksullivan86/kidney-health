@@ -121,7 +121,8 @@
         can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
         created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
         assistant_tokens: 0, device_tokens: 0, // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
-        two_step: false }; // nor two-step sign-in (design note 17)
+        two_step: false, // nor two-step sign-in (design note 17)
+        passkeys: 0 }; // nor passkeys (design note 18)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
@@ -188,6 +189,7 @@
         user: u && u.status === 'active' ? this._me(u) : null,
         logout_url: null,
         no_login: false,
+        passkeys: false, // the demo has no passkeys (design note 18): the sign-in page offers none
       };
     },
     _sessionView(s) {
@@ -371,6 +373,12 @@
   for (const [m, p] of [['POST', '/api/me/totp/setup'], ['POST', '/api/me/totp/enable'], ['POST', '/api/me/totp/recovery-codes'], ['DELETE', '/api/me/totp']]) {
     route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
   }
+  // Passkeys (app/auth/passkeys_api.py, design note 18): the same, a server where they are not available.
+  route('GET', '/api/me/passkeys', function () { this._currentUser(); return { available: false, usable: false, reason: null, passkeys: [], max: 10 }; });
+  for (const [m, p] of [['POST', '/api/me/passkeys/options'], ['POST', '/api/me/passkeys'], ['PATCH', /^\/api\/me\/passkeys\/(\d+)$/],
+    ['DELETE', /^\/api\/me\/passkeys\/(\d+)$/]]) {
+    route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
+  }
 
   // ---------------------------------------------------------------------------
   // /api/admin: accounts, invites, usage, audit, about (settings and keys: js/mock/settings.js)
@@ -504,6 +512,12 @@
     this._requireRecent();
     targetUser(this, id); // nobody in the demo has two-step sign-in on
     return { removed: false };
+  });
+  route('DELETE', userIdRoute('/passkeys'), function ({ id }) {
+    this._requireAdmin();
+    this._requireRecent();
+    targetUser(this, id); // nobody in the demo has a passkey
+    return { removed: 0 };
   });
   route('GET', '/api/admin/invites', function () {
     this._requireAdmin();

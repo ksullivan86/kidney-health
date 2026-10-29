@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18]
 ---
 
 # Settings and keys
@@ -22,7 +22,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -104,7 +104,7 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
   another minimum). Your other devices are signed out.
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
-- Sensitive actions (changing a password or key, turning two-step sign-in on or off, making an assistant token,
+- Sensitive actions (changing a password or key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
   exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago.
 
 ## Two-step sign-in
@@ -134,6 +134,27 @@ assistant tokens keep working.
 - A password reset link from your admin sets a new password but does not sign you in: you still need a code.
 - **Admins:** your server can ask every admin to use two-step sign-in. Until you turn it on, Server administration shows only a
   note that sends you here.
+
+## Passkeys
+
+A passkey lets you sign in with your fingerprint, your face or your phone's PIN, with no password and no code to type. The
+passkey stays on your phone or computer, and it only works on your own server's address, so nobody can guess it or trick you
+into typing it on a fake page ([design note 18][NOTE18]). Your password keeps working too.
+
+To add one:
+
+1. **Settings → Account → Passkeys**. Give it a name if you like, such as "My phone", and tap **Add a passkey**. The app may ask
+   for your password again.
+2. Your phone or computer asks to save a passkey. Confirm with your fingerprint, face or PIN.
+
+To sign in with it, tap **Sign in with a passkey** under the sign-in form and confirm on your device.
+
+- Add one on each phone or computer you use. A passkey saved to iCloud Keychain or Google Password Manager also works on your
+  other devices signed in to that account; the list then says "synced".
+- **Lost or stolen device:** sign in with your password and **Remove** its passkey. If you cannot, ask your admin to remove your
+  passkeys.
+- Passkeys need your server's name, like `kidney.example.org`. If you open the app by a number address, Settings says so; ask
+  your admin.
 
 ## Assistant access
 
@@ -166,6 +187,7 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [ ] Check **Food data**: do you have shared lookups, or do you need your own USDA key?
 - [ ] Look at **Signed-in devices** after you get a new phone, and sign out the old one.
 - [ ] Turn on **Two-step sign-in**, and keep the recovery codes somewhere safe.
+- [ ] Add a **passkey** on the phone you use most, so signing in is a fingerprint or a glance.
 - [ ] Never send a key by text message or email to anyone; paste it only into the app.
 
 ## If something goes wrong

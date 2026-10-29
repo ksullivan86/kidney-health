@@ -81,6 +81,9 @@ ACTIONS: set[str] = {
     "totp.disabled",
     "totp.recovery_codes_renewed",
     "totp.recovery_code_used",
+    "passkey.added",  # passkeys (note 18; app/auth/passkeys_api.py, admin_api.py, app/admin.py)
+    "passkey.removed",
+    "passkey.counter_went_back",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -108,6 +111,9 @@ USER_VISIBLE_ACTIONS = frozenset(
         "totp.disabled",
         "totp.recovery_codes_renewed",
         "totp.recovery_code_used",
+        "passkey.added",
+        "passkey.removed",
+        "passkey.counter_went_back",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

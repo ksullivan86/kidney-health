@@ -556,6 +556,31 @@
         "title": "ApplySaved",
         "type": "object"
       },
+      "AssertionCredential": {
+        "properties": {
+          "rawId": {
+            "maxLength": 1400,
+            "minLength": 1,
+            "title": "Rawid",
+            "type": "string"
+          },
+          "response": {
+            "$ref": "#/components/schemas/PasskeyAssertionResponse"
+          },
+          "type": {
+            "default": "public-key",
+            "maxLength": 32,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rawId",
+          "response"
+        ],
+        "title": "AssertionCredential",
+        "type": "object"
+      },
       "Attribution": {
         "properties": {
           "license": {
@@ -6117,6 +6142,134 @@
         "title": "ParseMealBody",
         "type": "object"
       },
+      "PasskeyAddBody": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential": {
+            "$ref": "#/components/schemas/RegistrationCredential"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential"
+        ],
+        "title": "PasskeyAddBody",
+        "type": "object"
+      },
+      "PasskeyAssertionResponse": {
+        "properties": {
+          "authenticatorData": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Authenticatordata",
+            "type": "string"
+          },
+          "clientDataJSON": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Clientdatajson",
+            "type": "string"
+          },
+          "signature": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Signature",
+            "type": "string"
+          },
+          "userHandle": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Userhandle"
+          }
+        },
+        "required": [
+          "clientDataJSON",
+          "authenticatorData",
+          "signature"
+        ],
+        "title": "PasskeyAssertionResponse",
+        "type": "object"
+      },
+      "PasskeyAttestationResponse": {
+        "properties": {
+          "attestationObject": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Attestationobject",
+            "type": "string"
+          },
+          "clientDataJSON": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Clientdatajson",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientDataJSON",
+          "attestationObject"
+        ],
+        "title": "PasskeyAttestationResponse",
+        "type": "object"
+      },
+      "PasskeyNameBody": {
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PasskeyNameBody",
+        "type": "object"
+      },
+      "PasskeySignInBody": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential": {
+            "$ref": "#/components/schemas/AssertionCredential"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential"
+        ],
+        "title": "PasskeySignInBody",
+        "type": "object"
+      },
       "PasswordChangeBody": {
         "properties": {
           "current_password": {
@@ -8122,6 +8275,31 @@
           "password"
         ],
         "title": "RegisterBody",
+        "type": "object"
+      },
+      "RegistrationCredential": {
+        "properties": {
+          "rawId": {
+            "maxLength": 1400,
+            "minLength": 1,
+            "title": "Rawid",
+            "type": "string"
+          },
+          "response": {
+            "$ref": "#/components/schemas/PasskeyAttestationResponse"
+          },
+          "type": {
+            "default": "public-key",
+            "maxLength": 32,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rawId",
+          "response"
+        ],
+        "title": "RegistrationCredential",
         "type": "object"
       },
       "ResetBody": {
@@ -11275,6 +11453,61 @@
         ]
       }
     },
+    "/api/admin/users/{user_id}/passkeys": {
+      "delete": {
+        "description": "Remove all of another person's passkeys, for a lost or stolen device (note 18 §2). They sign in with the password and\ncan add new ones. ``{\"removed\": 0}`` when there were none.",
+        "operationId": "admin_remove_user_passkeys",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Remove User Passkeys",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove User Passkeys",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/users/{user_id}/reset-link": {
       "delete": {
         "description": "Void the account's open reset or account-setup link (404 when there is none).",
@@ -12353,6 +12586,94 @@
           }
         ],
         "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/passkey": {
+      "post": {
+        "description": "Sign in with a passkey: the same session as a password sign-in, without the two-step code (the device checked a\nfingerprint, face or PIN). Every failure is the same 401 and counts against the address.",
+        "operationId": "auth_passkey_sign_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeySignInBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Passkey Sign In",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Passkey Sign In",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/passkey/options": {
+      "post": {
+        "description": "Options for ``navigator.credentials.get``: a challenge (5 minutes, single use), no list of passkeys, so the device offers\nthe ones it holds for this server and nothing here says which accounts have one.",
+        "operationId": "auth_passkey_request_options",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Passkey Request Options",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Passkey Request Options",
         "tags": [
           "auth"
         ]
@@ -16576,6 +16897,256 @@
           }
         ],
         "summary": "Set My Key",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/passkeys": {
+      "get": {
+        "description": "The person's passkeys (names and dates only). ``usable`` is false, with ``reason``, when this server's address cannot carry\npasskeys (an IP address).",
+        "operationId": "me_list_passkeys",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me List Passkeys",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Passkeys",
+        "tags": [
+          "me"
+        ]
+      },
+      "post": {
+        "description": "Check what ``navigator.credentials.create`` returned (note 18 §3) and store the passkey.",
+        "operationId": "me_add_passkey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAddBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Add Passkey",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Add Passkey",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/passkeys/options": {
+      "post": {
+        "description": "Options for ``navigator.credentials.create``, with a single-use challenge for this person (5 minutes).",
+        "operationId": "me_passkey_creation_options",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Passkey Creation Options",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Passkey Creation Options",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/passkeys/{passkey_id}": {
+      "delete": {
+        "operationId": "me_remove_passkey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "passkey_id",
+            "required": true,
+            "schema": {
+              "title": "Passkey Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove Passkey",
+        "tags": [
+          "me"
+        ]
+      },
+      "patch": {
+        "operationId": "me_rename_passkey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "passkey_id",
+            "required": true,
+            "schema": {
+              "title": "Passkey Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyNameBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Rename Passkey",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Rename Passkey",
         "tags": [
           "me"
         ]
