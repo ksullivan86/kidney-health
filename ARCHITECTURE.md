@@ -837,6 +837,11 @@ one `include_router` line and its settings keys in `app/settings_registry.py`.
 
 ## Frontend modules (M1 restructure)
 
+`KH.loadProfile` and `KH.loadMeals` share pending reads within each cache. A forced refresh supersedes older reads;
+an earlier response or error cannot overwrite a completed save or a newer refresh. `KH.invalidateMeals` clears the meal
+cache and its pending read; `KH.invalidateSharedCaches` does the same for Profile and meals after an import, including when
+the cache was already empty. Invalidated readers converge on the current read. Both load helpers always return promises.
+
 `app/static/app.js` is split into plain scripts (no bundler, no ES module imports, so the preview
 build can inline them in order). All code hangs off one namespace `window.KH`:
 

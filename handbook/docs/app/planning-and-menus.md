@@ -67,6 +67,7 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 | Change or delete it | **Plan** → **Saved meals** → **Edit** or **Delete** |
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
+After a save or import, an older request will not bring back an out-of-date saved-meal list.
 
 ### Recipes
 

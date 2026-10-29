@@ -49,7 +49,8 @@ const log = { calls: [], toasts: [], labsInvalidated: 0, profileLoaded: 0 };
 let answer = () => ({});
 const A = { importData: async (body, o) => { log.calls.push({ options: { ...o }, keys: Object.keys(body) }); return answer(o); } };
 const state = { dayLoadedFor: 'x', plan: {}, planStart: 1, trends: {}, summary: {}, shopping: {}, meals: [] };
-const KH = { labs: { invalidate() { log.labsInvalidated += 1; } }, loadProfile: async () => { log.profileLoaded += 1; }, zip: globalThis.KH.zip };
+const KH = { labs: { invalidate() { log.labsInvalidated += 1; } }, loadProfile: async () => { log.profileLoaded += 1; }, zip: globalThis.KH.zip,
+  invalidateSharedCaches() { state.profile = null; state.meals = null; } };
 function action(label, cls, fn, attrs = {}) {
   const btn = h('button', { class: `btn ${cls}`, type: 'button', ...attrs }, label);
   btn.handlers.click = [async () => {

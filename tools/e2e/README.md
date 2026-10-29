@@ -55,6 +55,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`reliability.py` also checks that delayed Profile and saved-meal reads cannot replace a completed save in the real
+browser cache. Those controlled checks write no profile or meal to the server, and restore the normal reads afterward.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash
