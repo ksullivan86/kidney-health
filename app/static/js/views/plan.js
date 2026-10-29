@@ -499,10 +499,20 @@
   }
   function renderMealTotals() {
     const totals = Object.fromEntries(NUTRIENTS.map((n) => [n.key, 0]));
+    const missing = Object.fromEntries(NUTRIENTS.map((n) => [n.key, 0]));
     const makes = Number($('#meal-makes').value) > 0 ? Number($('#meal-makes').value) : 1;
-    for (const it of mealEd.items) for (const n of NUTRIENTS) totals[n.key] += (it.per[n.key] || 0) * it.servings / makes;
+    for (const it of mealEd.items) for (const n of NUTRIENTS) {
+      if (it.per[n.key] == null) missing[n.key] += 1;
+      else totals[n.key] += it.per[n.key] * it.servings / makes;
+    }
     const key = clear($('#meal-preview-key'));
-    for (const k of KEY_NUMBERS) key.append(h('div', { class: 'kn' }, h('span', { class: 'kn-v' }, fmtNum(totals[k], k)), h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    for (const k of KEY_NUMBERS) {
+      const unk = missing[k], none = mealEd.items.length > 0 && unk === mealEd.items.length;
+      const amount = none ? 'not listed' : atLeast(fmtNum(totals[k], k), unk);
+      key.append(h('div', { class: `kn${none ? ' kn-unknown' : ''}`, title: unk ? foodsNotListing(unk, k) : null,
+        'aria-label': `${NUT[k].label}: ${none ? 'not listed' : `${atLeastWords(fmtNum(totals[k], k), unk)} ${NUT[k].unit}`}${unk ? `; ${foodsNotListing(unk, k)}` : ''}` },
+        h('span', { class: 'kn-v' }, amount), none ? null : h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    }
     $('#meal-preview-count').textContent = `${mealEd.items.length} ${mealEd.items.length === 1 ? 'food' : 'foods'}${makes !== 1 ? ', one serving' : ''}`;
   }
   async function runMealSearch() {

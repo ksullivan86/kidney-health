@@ -652,7 +652,10 @@ the stored value, as for `meal_hint`; `null` clears it. The items of a recipe ar
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
 `per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
-sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
+sentence; the New/Edit saved-meal preview also counts missing nutrients for its current ingredients,
+showing **not listed** when none list the value and **≥** for partial totals. **Makes** scales known
+amounts without changing missing counts; removing ingredients recalculates both.
+**Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
 confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
