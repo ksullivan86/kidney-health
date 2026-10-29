@@ -185,10 +185,11 @@ sign-in activity.
   When you open their Trends, the previous person's charts clear while the new ones load. If a chart cannot load, tap **Retry**.
 - A link nobody has used yet can be cancelled from the same list.
 
-On a shared summary, the food-day card loads on its own. You can change the date while it loads;
-an older reply will not replace your choice. If the day cannot load, tap **Retry**.
-**Accept** appears after the app checks the link and shows who is sharing. If you open another link while waiting,
-the question follows that new link; an older reply will not replace it.
+On a shared summary, the food day loads on its own. If you change the date while it loads, you see the day you picked.
+If it cannot load, tap **Retry**.
+
+After you open a sharing link, **Accept** appears once the app has checked who is sharing. If you open another link while
+you wait, the question is about the newer link.
 
 ## Assistant access
 

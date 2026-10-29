@@ -35,6 +35,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Dose and lab questions never go to AI.** "Describe a meal" text that also asks about insulin, a medicine or supplement dose,
   a lab result or a diagnosis gets an **Ask your care team** card, and the AI is not called. Before, the AI was sent the question,
   read the foods and said nothing about it.
+* **Screens no longer show an answer for something you have moved away from.** If you change the meal or day while AI meal ideas
+  or recipes are loading, the old answer is not shown, so **Add to plan** cannot put it under the wrong meal. After you save a lab
+  result or change your profile, a slower older read cannot bring back the previous values or potassium alert. A shared food day
+  shows the day you picked last, with **Retry** if it cannot load. A sharing link's **Accept** button always belongs to the link
+  you opened last.
 
 ### For people who run a server
 
