@@ -31,9 +31,14 @@
     "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":12},{\"food_id\":\"{{id:Blueberries, raw}}\",\"quarters\":12}],\"reason_codes\":[\"low_potassium\"],\"handbook\":[\"potassium\"]}]}"
   ],
   "expect": {
-    "status": "dropped_all",
-    "dropped_reasons_include": [
+    "status": "ok",
+    "portions_lowered": 1,
+    "portions_lowered_include": [
       "high_portion_too_large"
-    ]
+    ],
+    "shown_quarters_at_most": {
+      "Green beans, boiled": 8
+    },
+    "rule_fallback": false
   }
 }

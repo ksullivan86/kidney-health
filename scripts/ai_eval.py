@@ -25,6 +25,8 @@ Reported (and written to ``docs/dev/ai-eval/<date>-<preset>-<model>.json``):
   AI calls;
 * ``next_meal_with_idea_rate``: next-meal "ideas" cases where at least one idea survived the rules (V3–V5);
 * ``idea_survival_rate``: ideas shown, of all ideas the model proposed;
+* ``ideas_lowered`` and ``lowered_reasons``: shown ideas the app made smaller to fit (a portion too big), by the reason the
+  meal check first gave; ``dropped_reasons`` counts the ideas it could not keep;
 * ``claims_corrected``: reason codes or themes the server removed as untrue (§9 A2's replacement for
   V6's text replacements; a "you said you like this" claim about a food the person did not mark counts here);
 * ``taste_first_cases`` and ``taste_first_violations`` (note 09 §4.7): of the meal ideas cases that say a food the person
@@ -198,6 +200,7 @@ class Call:
     refused: bool = False
     unsafe_text: bool = False
     dropped_reasons: list[str] = field(default_factory=list)
+    lowered_reasons: list[str] = field(default_factory=list)  # meal ideas the app made smaller to fit, by their first reason
     first_checked: bool = False  # the case says a food must not be the first idea (a food the person wants less often)
     first_violations: list[str] = field(default_factory=list)  # the foods of the first idea that the case says it must not hold
     recipe_changes: list[int] = field(default_factory=list)  # AI recipes: the app's changes to each recipe shown
@@ -420,6 +423,7 @@ def _call(kind: str, case_id: str, mode: str | None, run: int, request: Callable
                 reason=result.get("reason"), latency_ms=latency, ai_called=ai_called, shown=shown, dropped=len(dropped),
                 claims_corrected=int(result.get("claims_corrected") or 0), refused=status == "refused",
                 unsafe_text=unsafe(result), dropped_reasons=[str(d.get("reason")) for d in dropped],
+                lowered_reasons=[str(x.get("reason")) for x in result.get("portions_lowered") or []],
                 first_checked=bool(watched) and bool(first), first_violations=[n for n in watched if n in first],
                 recipe_changes=[len((r.get("fit") or {}).get("changes") or []) for r in recipes],
                 steps_shown=sum(len(r.get("steps") or []) for r in recipes),
@@ -565,6 +569,7 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
         "next_meal_with_idea_rate": pct(len(with_idea), len(meals)),
         "ideas_proposed": proposed,
         "idea_survival_rate": pct(shown, proposed),
+        "ideas_lowered": sum(len(c.lowered_reasons) for c in calls),
         "claims_corrected": sum(c.claims_corrected for c in calls),
         # Tastes (note 09 §4.7): meal ideas cases that say a food the person wants less often must not be the first idea,
         # and how many times the live model put one there. Reported, not a gate: the app ranks and filters, it cannot
@@ -585,6 +590,7 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
         "latency_ms": {"p50": percentile(latencies, 0.5), "p95": percentile(latencies, 0.95),
                        "mean": int(statistics.fmean(latencies)) if latencies else None},
         "dropped_reasons": dict(sorted(_count(r for c in calls for r in c.dropped_reasons).items())),
+        "lowered_reasons": dict(sorted(_count(r for c in calls for r in c.lowered_reasons).items())),
         "errors": dict(sorted(_count(c.reason or "unknown" for c in transport).items())),
     }
     gates = {name: summary[name] is not None and summary[name] >= limit for name, limit in GATES.items()}

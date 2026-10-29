@@ -63,12 +63,14 @@
     "{\"status\":\"ok\",\"refusal\":\"none\",\"ideas\":[{\"theme\":\"light\",\"items\":[{\"food_id\":\"{{id:#Chicken breast, roasted, skinless}}\",\"quarters\":8}],\"reason_codes\":[\"adds_protein\"],\"handbook\":[\"potassium\"]}]}"
   ],
   "expect": {
-    "status": "dropped_all",
-    "not_shown_food_names": [
-      "Chicken breast, roasted, skinless"
-    ],
-    "dropped_reasons_include": [
+    "status": "ok",
+    "portions_lowered": 1,
+    "portions_lowered_include": [
       "would_exceed:phosphorus_mg"
-    ]
+    ],
+    "shown_quarters_at_most": {
+      "Chicken breast, roasted, skinless": 4
+    },
+    "rule_fallback": false
   }
 }

@@ -9,6 +9,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
+  smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
 * **A new sharing link stays on the screen.** Stopping a share or cancelling another link just after making one no longer
   hides the new link. It stays until it is used or cancelled.
 * **A device you signed out stays gone.** In Settings → Signed-in devices, a slow earlier load can no longer bring it back.
@@ -23,6 +25,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   adds one serving, the amount the recipe card shows. Before, it asked for a scale and 1 added the whole pot. If you used to
   type a fraction such as 0.25 for one serving of a recipe that makes 4, type 1 now. The preview shows what will be added.
   Plain saved meals still use Scale.
+
+### For people who run a server
+
+* **New `PROMPT_VERSION` (`2026-10-29.1`).** Each meal candidate now tells the AI the most of it the app accepts. Run
+  `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
 
 ## 0.11.0 — 2026-10-29
 

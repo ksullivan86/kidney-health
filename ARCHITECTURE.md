@@ -1895,10 +1895,15 @@ day's status always use the same effective targets. `next-meal` and `plan-day` r
 ### Optional AI hook (note 06 §4.13, note 04 R2)
 
 `app/ai/` may use only `app.guidance.ai_bridge`: `candidates_for_ai(ctx, meal, mode)` (`rerank` |
-`ideas` | `swap` | `plan`; ≤ 40 candidate foods with refs, ≤ 5 familiar meals, the room, levels, allowed
-handbook slugs, `rules_hash`; never a low treatment), `validate_ai_items(ctx, meal, ideas)` (the same
-`check_meal()` and `score_meal()`; drops with `not_a_candidate`, `quarters_out_of_range`,
-`would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …), `validate_ai_plan(ctx, picks)` and
+`ideas` | `swap` | `plan`; ≤ 40 candidate foods with refs and `max_quarters`, the most of each food alone that
+`check_meal(kind "ai")` accepts in this meal, ≤ 5 familiar meals, the room, levels, allowed handbook slugs, `rules_hash`;
+never a low treatment), `validate_ai_items(ctx, meal, ideas)` (the same `check_meal()` and `score_meal()`; an idea that
+fails only because a portion is too big, `high_portion_too_large`, `would_exceed:<k>`, `too_many_carbs` or more than 12
+quarters, is made smaller one quarter at a time, never below one quarter and never a low treatment, by `lower_to_fit` and
+kept, listed in `portions_lowered: [{index, reason, changes: [{food_id, from_quarters, to_quarters}]}]`, after the full
+check passes again; an idea that also fails for any other reason at the proposed amounts is not repaired; drops with
+`not_a_candidate`, `quarters_out_of_range`, `would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …),
+`validate_ai_plan(ctx, picks)` and
 `register_ai_status(provider)` (feeds `next-meal`'s `ai` block; a failing provider reads as unavailable).
 `app.guidance.hypo.prefilter(text, dose_g)` returns the "Treating a low" card that must be shown
 **instead of** calling AI when free text may describe a low (note 04 G7).
@@ -2404,7 +2409,8 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 AiAnswer = {"status": "ok" | "refused" | "dropped_all" | "no_fit" | "error" | "not_a_label" | "unreadable" | "no_food" | "unsure",
   "message"?, "reason"? (error: a coarse category), "fallback"? (the rule result: {note, meals, foods}),
   "ideas"? | "order"? + "rest"? | "pick"? | "plan"? + "ai_picks"? | "items"? | "draft"?,
-  "dropped": [{"index", "reason"}], "claims_corrected", "repaired", "retried", "trimmed",
+  "dropped": [{"index", "reason"}], "portions_lowered"? (ideas: [{"index", "reason", "changes"}]), "claims_corrected",
+  "repaired" (the client's JSON repair turn), "retried", "trimmed",
   "feature", "mode", "provider": {"id", "label", "model", "host"}, "prompt_version", "audit_id", "cached", "notes"}
 // "cached": true when next-meal reused the provider's answer to the same question from the last 10 minutes
 // (note 06 §4.13; app/ai/cache.py): nothing sent, no daily call spent, the rules checked it again on the current
@@ -2414,7 +2420,9 @@ Idea = {"source": "ai", "provider_label", "model", "checked": true,
         "index", "theme": "light" | "hearty" | "familiar" | "new_idea", "title" (server template),
         "reason_codes": [code] (1–3, checked against the recomputed numbers), "why" (server template),
         "items": [FoodPortion], "totals", "score", "after": {nutrient: {"used", "left_today_after"}, "carbs_g": {"meal_after", "goal"}},
-        "handbook": [{"slug", "title", "url"}] (≤ 2), "handbook_dropped"}
+        "handbook": [{"slug", "title", "url"}] (≤ 2), "handbook_dropped",
+        "portion_note"? ("The app made a portion smaller so the meal fits your targets." or "… some portions …": only
+        when the app lowered an amount; "items" and every number are the lowered ones)}
 Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "vision_model", "timeout_s", "max_tokens",
             "context_tokens", "structured", "reasoning_effort", "locked", "enabled", "disabled_reason", "key", "policy",
             "kind", "photos", "probe": {"ok", "structured", "vision", "tools", "models", "warnings", "errors"} | null,

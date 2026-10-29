@@ -704,6 +704,26 @@ def test_retention_zero_keeps_metadata_only(ai_client):
     assert event["verdict_json"]["status"] == "dropped_all" and event["destination_host"] == "api.openai.com"
 
 
+def test_an_idea_made_smaller_is_shown_with_the_apps_sentence_and_kept_in_the_activity_row(ai_client):
+    """More quarters than the app accepts (``max_quarters``, sent with the candidate) is made smaller, not dropped."""
+    ready(ai_client)
+    with attach(ai_client.app, FakeProvider([])):
+        data = sent_data(ai_client.post("/api/ai/next-meal?dry_run=true", json={"meal": "dinner", "date": DAY}).json())
+    food = next(c for c in data["candidates"] if 1 <= c["max_quarters"] < 12)
+    answer = {"status": "ok", "refusal": "none", "ideas": [{"theme": "light", "items": [{"food_id": food["id"], "quarters": 12}],
+                                                            "reason_codes": [], "handbook": []}]}
+    with attach(ai_client.app, FakeProvider([chat(answer)])):
+        r = ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    body = r.json()
+    assert r.status_code == 200 and body["status"] == "ok" and "fallback" not in body, body
+    idea = body["ideas"][0]
+    assert idea["items"][0]["servings"] * 4 <= food["max_quarters"]
+    assert idea["portion_note"] == "The app made a portion smaller so the meal fits your targets."
+    row = ai_client.get("/api/ai/audit").json()["events"][0]["verdict_json"]
+    assert row["portions_lowered"][0]["changes"][0]["from_quarters"] == 12
+    assert row["repaired"] is False  # the client's JSON repair turn, a separate thing
+
+
 def test_logs_carry_metadata_only(ai_client, caplog):
     caplog.set_level(logging.INFO, logger="kidney_health.ai")
     ready(ai_client)

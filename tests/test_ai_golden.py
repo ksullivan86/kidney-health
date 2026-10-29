@@ -16,6 +16,7 @@ Case format (README in ``tests/ai_golden/``)::
      "model_outputs": [<content string> | {"content", "finish_reason", "refusal", "reasoning_content", "status"}],
      "expect": {"http", "status", "calls", "shown_food_names", "not_shown_food_names", "not_first_food_names",
                 "idea_reason_codes_include", "idea_reason_codes_exclude", "dropped_reasons_include",
+                "portions_lowered_include", "portions_lowered", "shown_quarters_at_most",
                 "claims_corrected", "rule_fallback", "repaired", "response_excludes", "payload_includes",
                 "payload_excludes", "cards", "draft", "items", "rows", "dropped",
                 "kind", "pending": {"tool", "preference", "target"}, "nothing_saved",
@@ -335,7 +336,7 @@ def test_golden_case(path: Path, golden):
     result = r.json()
     text = json.dumps(result, ensure_ascii=False)
     if __import__("os").environ.get("GOLDEN_DEBUG"):
-        print(json.dumps({k: result.get(k) for k in ("status", "dropped", "claims_corrected", "reason", "message")}, default=str))
+        print(json.dumps({k: result.get(k) for k in ("status", "dropped", "portions_lowered", "claims_corrected", "reason", "message")}, default=str))
         for idea in result.get("ideas") or []:
             print(idea["theme"], idea["reason_codes"], idea["totals"], idea["after"])
     if "status" in expect:
@@ -373,6 +374,16 @@ def test_golden_case(path: Path, golden):
     reasons = [d["reason"] for d in dropped] if isinstance(dropped, list) else []  # a lab report counts its dropped lines instead
     for prefix in expect.get("dropped_reasons_include", []):
         assert any(r_.startswith(prefix) for r_ in reasons), (case["id"], reasons)
+    lowered = [x["reason"] for x in result.get("portions_lowered") or []]
+    for prefix in expect.get("portions_lowered_include", []):  # an idea the app made smaller instead of dropping it
+        assert any(r_.startswith(prefix) for r_ in lowered), (case["id"], lowered)
+    if "portions_lowered" in expect:
+        assert len(lowered) == expect["portions_lowered"], (case["id"], lowered)
+        made_smaller = {x["index"] for x in result.get("portions_lowered") or []}
+        assert all(("portion_note" in i) == (i["index"] in made_smaller) for i in ideas), case["id"]  # the app's sentence
+    for name, most in (expect.get("shown_quarters_at_most") or {}).items():
+        amounts = [round(it["servings"] * 4) for i in ideas for it in i["items"] if it["name"] == name]
+        assert amounts and max(amounts) <= most, (case["id"], name, amounts)
     if "claims_corrected" in expect:
         assert result.get("claims_corrected") == expect["claims_corrected"], (case["id"], result.get("claims_corrected"))
     if "rule_fallback" in expect:
