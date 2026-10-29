@@ -165,19 +165,20 @@
   async function loadToday(date) {
     const req = ++S.req;
     S.shownDate = date;
+    S.summary = null;
     const future = date > todayStr();
     addWeightBtn.disabled = future;
     addBpBtn.disabled = future;
     // Another day's weights are never left under this day's heading while it loads.
     if (S.drawnDate !== date) { S.drawnDate = null; clear(todayBody).append(message('Loading…')); }
     if (future) { clear(todayBody).append(message('You can record weights and blood pressure for today and for days that have passed.')); return; }
+    clear(todayBody).append(h('p', { class: 'body-empty', id: 'body-today-loading' }, 'Loading weights and blood pressure…'));
     if (!state.profile) { try { await KH.loadProfile(); } catch (e) { /* the sheets then offer the choices that need no dialysis */ } }
     const [w, b, sum] = await Promise.allSettled([api.bodyWeights(date, date), api.bloodPressures(date, date), api.bodySummary(date)]);
     if (req !== S.req) return;
     const failure = [w, b].find((x) => x.status === 'rejected');
     if (failure) {
       const err = failure.reason;
-      if (err && err.handled) return;
       clear(todayBody).append(message(err && err.status ? 'Weights and blood pressure could not be loaded.' : NEEDS_CONNECTION),
         h('button', { class: 'link-btn', type: 'button', onclick: () => loadToday(date) }, 'Try again'));
       return;
