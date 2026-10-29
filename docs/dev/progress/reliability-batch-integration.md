@@ -1,12 +1,12 @@
-Status: in progress
+Status: complete
 
 Verification branch test/reliability-batch-integration, based on Claude cbc48fc and main 84330f3.
 Branches refreshed immediately before starting. No PR, deployment or environment publication.
 Claude's base already includes the shared-cache fix and its Settings-comment compatibility fix,
 Chromium XML diagnostics and the external-backup reminder work.
 
-Merge these tested branches without rewriting their history, preserve every fix when resolving
-overlapping docs/harness edits, then test the combined result:
+Merged these tested branches without rewriting their history, preserving every fix when resolving
+overlapping docs/harness edits:
 
 * fix/profile-suggestion-context e925af5
 * fix/recipe-fit-unknown-nutrients 3a3ff1d
@@ -19,21 +19,23 @@ overlapping docs/harness edits, then test the combined result:
 Main alone has already passed 6533 tests (2 skipped, existing warning only), recorded in
 current-main-validation.md on the health-save-retry branch. Each fix's note records its own
 focused and browser checks. This branch checks their compatibility with each other and current
-Claude changes. Next: merge/resolve, combined targeted tests and browser walks, then full suite.
+Claude changes present in its base.
 
 All seven merges are complete, preserving their original commits. Code snapshot: 12523c2.
 Resolved conflicts by keeping both changes in docs and all steps in reliability.py; no source fix
 was dropped. Ruff and diff checks pass. Fixed validation checkout:
-/tmp/kidney-reliability-batch-validation. Full pytest is running there (session 67615), log
-/tmp/kidney-reliability-batch-full-suite.log. Browser sessions: reliability 81431, Profile 53376,
-health retry 53187; logs /tmp/kidney-batch-{reliability,profile,health-retry}.log. These scripts run
-from the validation checkout so subsequent work in /workspace cannot affect the tested code.
-Next: inspect outcomes, run body/Symptoms/sharing/import/AI checks, parity and strict handbook build,
-record exact results and push this verification branch without PR/deployment.
+/tmp/kidney-reliability-batch-validation. Full pytest: 6551 passed, 2 skipped, one existing
+unused-handbook-sources warning, 904.41 seconds. Log /tmp/kidney-reliability-batch-full-suite.log.
+All scripts ran from that checkout so concurrent work could not affect the tested code.
 
 Combined browser results at 12523c2: reliability 35, Profile 8, health retry 30, body 366,
 Symptoms 79, AI recipes 40, sharing 43, import 109: 710 passed, no failures. Their reports are
 /tmp/kidney-batch-<name>-20261029/report.json (health retry: health-retry; AI: recipes-ai).
 Node parity and demo build pass. Handbook: 24 generated files current, 6 menus checked;
 strict build passed, 120 pages, 14803 internal links, 0 broken, 312 external URLs (not fetched).
-Full pytest is still running. No app source changed since its 12523c2 snapshot.
+No app source changed since the tested 12523c2 snapshot; subsequent commits only update this note.
+
+Main advanced to 6fa43ab (#120) while tests ran; its app/tests/tools match the Claude base already
+included here. Claude 289c2b3 also has new Scan/USDA/Ask/admin fixes in different files; those later
+changes are not in this snapshot. The recipe-apply serving improvement is on a separate branch
+and is not part of these results. No PR or deployment; this branch is ready for Claude's review.
