@@ -62,7 +62,7 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 |---|---|
 | Save a meal you just logged | **Today** → the meal's **Save as meal** |
 | Build one from scratch | **Plan** → **Saved meals** → **New saved meal**, then search and add foods |
-| Put it on a day | **Plan** → the meal → **Add to a day**: pick the date, the meal, Planned or Eaten, and a scale (0.5 for half, 2 for double); the sheet shows what it does to that day first |
+| Put it on a day | **Plan** → the meal → **Add to a day**: pick the date, the meal, Planned or Eaten, and how much to add; the sheet shows what it does to that day first |
 | Add it while logging | **Today** → **Add saved meal**, or tap it in the shortcuts on **Add** |
 | Change or delete it | **Plan** → **Saved meals** → **Edit** or **Delete** |
 
@@ -77,8 +77,9 @@ A recipe is a saved meal that makes more than one serving. Put the amounts for t
 servings in **Makes**. You can also keep the cooking steps and a link to where the recipe came from. The app never opens the
 link. Ask or a connected assistant can save a recipe for you too.
 
-The list shows a recipe's numbers for one serving, and **What fits now** offers it one serving at a time. To put one serving
-on a day, use **Add to a day** with a scale of 1 divided by the servings, for example 0.25 for a recipe that makes 4.
+The list shows a recipe's numbers for one serving, and **What fits now** offers it one serving at a time.
+**Add to a day** asks for **Servings to add**, starting at 1. Enter 2 for two recipe servings, or 0.5 for half a serving.
+The preview shows the amounts you will add. Plain saved meals still use Scale: 1 is the meal as saved.
 
 ### Fit to my targets
 

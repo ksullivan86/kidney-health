@@ -11,7 +11,7 @@ import pytest
 
 from app.nutrients import NUTRIENT_KEYS
 
-from conftest import find_food
+from conftest import DAY, find_food
 
 
 def recipe(client, **extra):
@@ -40,6 +40,19 @@ def test_a_plain_saved_meal_is_one_serving(client):
     meal, _ = recipe(client)
     assert (meal["servings_made"], meal["steps"], meal["source_url"]) == (None, None, None)
     assert meal["per_serving"]["potassium_mg"] == meal["totals"]["potassium_mg"]
+
+
+@pytest.mark.parametrize("scale, expected", [(None, 4), (0.5, 2), (0.25, 1)])
+def test_recipe_apply_api_keeps_the_whole_pot_scale_contract(client, scale, expected):
+    meal, food = recipe(client, servings_made=4)
+    body = {"date": DAY, "meal": "dinner", "status": "planned"}
+    if scale is not None:
+        body["scale"] = scale
+    response = client.post(f"/api/meals/{meal['id']}/apply", json=body)
+    assert response.status_code == 201, response.text
+    entries = response.json()["entries"]
+    assert len(entries) == 1 and entries[0]["food_id"] == food["id"]
+    assert entries[0]["servings"] == expected
 
 
 def test_put_keeps_what_it_leaves_out_and_null_clears(client):

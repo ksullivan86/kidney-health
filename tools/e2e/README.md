@@ -55,6 +55,10 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+The recipe-serving checks in `reliability.py` compare the Add-to-a-day preview, API scale and stored
+entries for one and two recipe servings. A failed apply keeps the count and date; retry sends the
+same body and logs one serving once.
+
 The recipe Fit checks in `reliability.py` open saved meals with missing, partial and known-zero
 potassium and verify the qualifiers on the nutrient row itself.
 

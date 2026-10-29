@@ -261,6 +261,10 @@ Chromium by `tools/e2e/prefs.py`.
 
 ## Recipes that fit
 
+**Add to a day** asks for recipe servings, starting at one, and previews those ingredient and nutrient
+amounts. The client divides by Makes to send the API's existing whole-pot `scale`; callers of the
+API and the demo API keep that contract. Plain saved meals continue to use Scale (1 = as saved).
+
 The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. It shows
 **not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
 or **Makes** updates the preview; a known zero stays 0.
