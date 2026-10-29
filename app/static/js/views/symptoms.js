@@ -89,13 +89,13 @@
       clear(todayBody).append(message('You can record symptoms for today and for days that have passed.'));
       return;
     }
+    clear(todayBody).append(h('p', { class: 'symptoms-empty', id: 'symptoms-today-loading' }, 'Loading symptoms…'));
     try {
       const res = await api.symptoms(date, date);
       if (req !== todayReq) return;
       renderToday(res.symptoms || []);
     } catch (err) {
       if (req !== todayReq) return;
-      if (err && err.handled) return;
       clear(todayBody).append(message(err && err.status ? 'Symptoms could not be loaded.' : 'Symptoms need a connection to your server, and there is none right now.'),
         h('button', { class: 'link-btn', type: 'button', onclick: () => loadToday(date) }, 'Try again'));
     }
