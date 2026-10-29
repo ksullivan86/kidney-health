@@ -30,3 +30,10 @@ health retry 53187; logs /tmp/kidney-batch-{reliability,profile,health-retry}.lo
 from the validation checkout so subsequent work in /workspace cannot affect the tested code.
 Next: inspect outcomes, run body/Symptoms/sharing/import/AI checks, parity and strict handbook build,
 record exact results and push this verification branch without PR/deployment.
+
+Combined browser results at 12523c2: reliability 35, Profile 8, health retry 30, body 366,
+Symptoms 79, AI recipes 40, sharing 43, import 109: 710 passed, no failures. Their reports are
+/tmp/kidney-batch-<name>-20261029/report.json (health retry: health-retry; AI: recipes-ai).
+Node parity and demo build pass. Handbook: 24 generated files current, 6 menus checked;
+strict build passed, 120 pages, 14803 internal links, 0 broken, 312 external URLs (not fetched).
+Full pytest is still running. No app source changed since its 12523c2 snapshot.
