@@ -243,7 +243,7 @@ def test_a_share_that_is_only_too_big_is_made_smaller_and_kept(c):
     n = card["body"]["servings_made"]
     share = {i["food_id"]: i["servings"] / n for i in card["body"]["items"]}
     assert all(q <= 3.0 + 1e-9 for q in share.values())  # one saved serving holds at most 3 servings of any food
-    assert card["portion_note"] == AR.PORTION_LOWERED_TEXT
+    assert card["portion_note"] == AR.FOOD_SWAPPED_TEXT  # the fit swapped the apple for another fruit
     assert card["fit"]["status"] != "fits" and card["fit"]["changes"]  # the fit's own lines say what it changed
     [lowered] = out["portions_lowered"]
     assert lowered["index"] == 0 and lowered["reason"] == "share_too_large"

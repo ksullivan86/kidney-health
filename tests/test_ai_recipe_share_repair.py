@@ -98,6 +98,7 @@ def test_a_protein_food_is_never_lowered_so_the_fit_swaps_it_and_says_why():
     [card] = out["recipes"]
     assert EGG not in shares(card) and max(shares(card).values()) <= 3.0 + 1e-9
     assert card["portions_lowered"] == [{"food_id": EGG, "from_servings": 3.5, "to_servings": 0.0}]
+    assert card["portion_note"] == AR.FOOD_SWAPPED_TEXT  # the egg white was swapped, not only made smaller
     [swap] = [c for c in card["fit"]["changes"] if c["code"] == "swapped"]
     assert swap["from_food_id"] == EGG and swap["because"] == "portion"
     assert swap["text"].endswith("because one serving held more of Egg white, cooked than the app allows.")

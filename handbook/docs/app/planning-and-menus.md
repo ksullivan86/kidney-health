@@ -115,7 +115,8 @@ sheet shows **Rework with AI**. Pick the meal, the kind of dish and how many ser
   number from your food list.
 * The app then fits each recipe the same way as Fit to my targets, and lists what it changed. A recipe that still does not
   fit is not shown. If the AI put more than 3 servings of a food in one serving, the app makes it smaller and you see
-  **"The app made a portion smaller so the recipe fits your targets."**
+  **"The app made a portion smaller so the recipe fits your targets."** If it swapped that food for another one instead, it
+  says **"The app changed a food so the recipe fits your targets."**
 * The title is made by the app from the main foods, such as "Rice and chicken breast stir-fry". A recipe it reworked keeps
   your name with "(reworked)". Your recipe's name, note, steps and link are never sent.
 * **Save recipe** adds it to your saved meals. **Add to plan** adds one serving to the meal. Nothing is saved until you tap.

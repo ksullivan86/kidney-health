@@ -46,6 +46,17 @@ DROPPED_ALL_TEXT = "The AI's recipes did not fit your targets, so none are shown
 # Under an AI recipe whose too-big share the fit made smaller (``portions_lowered``), worded like the meal ideas' note.
 PORTION_LOWERED_TEXT = "The app made a portion smaller so the recipe fits your targets."
 PORTIONS_LOWERED_TEXT = "The app made some portions smaller so the recipe fits your targets."
+# When the fit swapped a too-big food out (``to_servings`` 0) the note says so, since nothing was only made smaller.
+FOOD_SWAPPED_TEXT = "The app changed a food so the recipe fits your targets."
+def portion_note(changes: list[dict]) -> str | None:
+    """The sentence under a recipe whose too-big share the fit repaired, or None when nothing was repaired."""
+    if not changes:
+        return None
+    if any(c["to_servings"] == 0 for c in changes):
+        return FOOD_SWAPPED_TEXT
+    return PORTION_LOWERED_TEXT if len(changes) == 1 else PORTIONS_LOWERED_TEXT
+
+
 NOT_SENT_TEXT = ("This recipe has a food the app never sends to AI, so it cannot be reworked. Fit to my targets still works "
                  "without AI.")
 DISH_WORD = {"soup": "soup", "stew": "stew", "bowl": "bowl", "stir_fry": "stir-fry", "bake": "bake", "salad": "salad",
@@ -379,7 +390,7 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
             "steps_dropped": step_drops,
             "differences": differences(original, fitted["items"], ctx.foods) if mode == "change" else [],
             "portions_lowered": portion_changes,
-            "portion_note": (PORTION_LOWERED_TEXT if len(portion_changes) == 1 else PORTIONS_LOWERED_TEXT) if portion_changes else None,
+            "portion_note": portion_note(portion_changes),
             # The exact body for POST /api/meals: the person saves it with a tap, and every rule runs again there. A smaller serving
             # is kept by counting more servings in the same pot, so one serving is the fitted size.
             "body": {"name": title, "meal_hint": meal if target.kind == "meal" else None, "servings_made": servings_made,

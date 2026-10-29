@@ -1151,7 +1151,8 @@ and is agreed under the **Meal data** consent. That consent now names recipes, s
 * **What the app does.** It checks the ids and the amounts, works out one serving from the food rows, and runs the same fit
   as Fit to my targets. A recipe that still does not fit is dropped and counted. When the only problem is a share that is
   too big (more than 3 servings of a food in one serving), the fit makes it smaller and the card says "The app made a
-  portion smaller so the recipe fits your targets." The answer lists it under `portions_lowered`. A food to avoid, a low
+  portion smaller so the recipe fits your targets." If the fit swapped that food out instead, the card says "The app changed
+  a food so the recipe fits your targets." The answer lists it under `portions_lowered`. A food to avoid, a low
   treatment, alcohol, a food you marked Not for me, salt and an id the rules did not offer still drop the recipe. The title comes from the names of the main
   foods and the dish ("Rice and chicken breast stir-fry"); a recipe you rework is called "<your name> (reworked)", and your
   name for it is never sent.
