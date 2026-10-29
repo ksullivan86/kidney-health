@@ -24,6 +24,8 @@
     // A "Add this day to my plan" link from the handbook, kept in memory while signing in (js/views/menuplan.js): shows
     // its confirmation sheet now; nothing is saved until the person presses "Add to plan".
     if (KH.menuPlan) KH.menuPlan.openPending().catch((e) => console.warn('Menu day:', e));
+    // A share link (#/share/<code>, js/views/sharing.js), kept the same way: asks "Accept?" before anything is saved.
+    if (KH.sharing) KH.sharing.openPending().catch((e) => console.warn('Share link:', e));
     // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
     if (KH.pwa && KH.pwa.countVisit) KH.pwa.countVisit();
   }

@@ -1029,7 +1029,7 @@
     <div class="visit-head screen-only">
       <button class="link-btn visit-back" type="button" id="visit-back">Back to Trends</button>
       <h2 id="visit-title" class="visit-title" tabindex="-1">Visit prep</h2>
-      <p class="muted small">One page to bring to an appointment, made on this device from what you logged. Print it or save it as a PDF; nothing is sent anywhere.</p>
+      <p class="muted small" id="visit-intro">One page to bring to an appointment, made on this device from what you logged. Print it or save it as a PDF; nothing is sent anywhere.</p>
       <div class="visit-controls">
         <div class="segmented" role="group" aria-label="Period" id="visit-periods"></div>
         <button class="btn primary" type="button" id="visit-print">
@@ -1043,6 +1043,8 @@
       <header class="visit-doc-head">
         <h2 id="visit-page-title" class="visit-doc-title">Visit summary</h2>
         <p id="visit-who" class="visit-who" hidden></p>
+        <!-- Shown while the page holds what someone shares with the signed-in person (design note 19; js/views/sharing.js). -->
+        <p id="visit-shared" class="visit-shared" role="note" hidden></p>
         <p id="visit-period" class="visit-period"></p>
         <p id="visit-made" class="muted small"></p>
       </header>
@@ -1068,6 +1070,15 @@
         <div id="visit-body-body"></div>
       </section>
 
+      <section class="visit-section" id="visit-day" aria-labelledby="visit-day-h" hidden>
+        <h3 class="visit-h" id="visit-day-h">A day of food</h3>
+        <div class="field screen-only">
+          <label for="visit-day-date">Day</label>
+          <input id="visit-day-date" type="date">
+        </div>
+        <div id="visit-day-body"></div>
+      </section>
+
       <section class="visit-section" aria-labelledby="visit-q-h">
         <h3 class="visit-h" id="visit-q-h">My questions</h3>
         <p class="muted small screen-only">Write what you want to ask. The list stays on this page only: it is not saved on this device, not sent to your server and never seen by the AI. Print it or save it as a PDF before you leave the page.</p>
@@ -1087,7 +1098,7 @@
         <p class="small visit-check-link screen-only" id="visit-check-link"></p>
       </section>
 
-      <p class="visit-foot small">This page lists what you recorded in the app. It does not say what a result or a symptom means: your care team does.</p>
+      <p class="visit-foot small" id="visit-foot">This page lists what you recorded in the app. It does not say what a result or a symptom means: your care team does.</p>
     </article>
     <p class="sr-only" id="visit-live" aria-live="polite"></p>
   </section>
@@ -1903,6 +1914,30 @@
 </dialog>
 
 <!-- ===================== RE-AUTHENTICATION (js/views/auth.js): sensitive actions answer reauth_required ===================== -->
+<!-- A share link (#/share/<code>; design note 19; js/views/sharing.js): who is sharing what, and Accept. Nothing is saved until
+     the person presses Accept. -->
+<dialog id="sheet-share" class="sheet" aria-labelledby="sheet-share-title" aria-describedby="share-question">
+  <div class="sheet-form">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-share-title" class="sheet-title">Someone wants to share with you</h2>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p id="share-question"></p>
+      <div class="form-error" id="share-error" role="alert" hidden></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>No, thanks</button>
+      <button class="btn primary" type="button" id="share-accept">Accept</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="sheet-reauth" class="sheet" aria-labelledby="sheet-reauth-title" aria-describedby="sheet-reauth-sub">
   <form method="dialog" class="sheet-form" id="reauth-form" novalidate>
     <div class="sheet-head">
@@ -2302,6 +2337,7 @@
 <script src="js/views/settings.js"></script>
 <script src="js/views/two_step.js"></script>
 <script src="js/views/passkeys.js"></script>
+<script src="js/views/sharing.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

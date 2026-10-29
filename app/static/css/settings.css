@@ -151,6 +151,8 @@
 .two-step-qr .qr-dark { fill: #000; }
 .pair-box { margin-top: 0.75rem; }
 .pair-qr { margin: 0.25rem 0 0.5rem; }
+.sharing-form fieldset { border: 0; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.35rem; }
+.sharing-form legend { font-weight: 600; margin-bottom: 0.25rem; }
 .two-step-key { display: block; font-family: var(--mono); font-size: 1.05rem; letter-spacing: 0.06em; word-spacing: 0.2em; overflow-wrap: anywhere;
   background: var(--surface-2, transparent); border-radius: 6px; padding: 0.5rem 0.65rem; margin: 0 0 0.5rem; user-select: all; }
 .two-step-left.warn { color: var(--caution-text); font-weight: 600; }
