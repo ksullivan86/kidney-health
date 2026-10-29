@@ -10,7 +10,9 @@
   --surface: #ffffff;
   --surface-2: #eef0f3;
   --surface-3: #e3e6eb;
-  --border: #d7dbe2;
+  --border: #d7dbe2; /* cards, lists and dividers */
+  /* The edge of a field, a select or a choice box: at least 3:1 on bg, surface and surface-2 (WCAG 1.4.11) */
+  --control-border: #7d8590; /* 3.4:1 on bg, 3.7:1 on surface, 3.3:1 on surface-2 */
   --text: #1b1f24;
   --text-2: #4b5563;
   --text-3: #5f6673; /* 5.0:1 on surface-2, 5.3:1 on bg */
@@ -54,6 +56,7 @@
     --surface-2: #242a31;
     --surface-3: #2d343d;
     --border: #353d47;
+    --control-border: #76808c; /* 4.6:1 on bg, 4.1:1 on surface, 3.6:1 on surface-2 */
     --text: #f1f3f5;
     --text-2: #b5bcc6;
     --text-3: #8b949e;
@@ -84,6 +87,7 @@
   --surface-2: #242a31;
   --surface-3: #2d343d;
   --border: #353d47;
+  --control-border: #76808c;
   --text: #f1f3f5;
   --text-2: #b5bcc6;
   --text-3: #8b949e;
@@ -342,7 +346,7 @@ svg { display: inline-block; vertical-align: middle; }
 .link-btn { border: 0; background: none; color: var(--accent); font-weight: 600; min-height: 36px; padding: 0 8px; border-radius: 8px; }
 .link-btn:hover { text-decoration: underline; }
 
-.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+.segmented { display: inline-flex; border: 1px solid var(--control-border); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
 .segmented .seg {
   border: 0; background: none; min-height: 36px; min-width: 44px; padding: 0 12px; color: var(--text-2); font-weight: 600; font-size: 0.85rem;
 }
@@ -366,7 +370,7 @@ svg { display: inline-block; vertical-align: middle; }
 .field legend { padding: 0; margin-bottom: 6px; }
 input[type="text"], input[type="number"], input[type="search"], input[type="date"], input[type="url"], select, textarea {
   width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border: 1px solid var(--control-border); background: var(--surface); color: var(--text);
 }
 /* :focus-within: the calendar button inside a date or time field takes the focus without the field matching :focus. */
 input:focus, input:focus-within, select:focus { outline: 3px solid var(--focus); outline-offset: 0; border-color: transparent; }

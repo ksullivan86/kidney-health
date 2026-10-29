@@ -40,6 +40,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   scroll into view.
 * **Easier to read in the dark theme.** The web address field of a saved meal looks like the other fields, and the grey hint
   text in it and in the steps box is easier to read.
+* **Fields are easier to see.** The edge of each text box, drop-down list and choice box is darker in the light theme and
+  lighter in the dark one, so you can tell where to type or tap. Cards and the lines between rows look the same as before.
+* **The handbook's search box has an edge.** In the header it was a darker green box with no edge; on a phone the open box
+  now has a line under it.
 
 ### For people who run a server
 
@@ -47,7 +51,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
 * **An automated accessibility check.** `python tools/e2e/a11y.py` tabs through the main screens and sheets at phone and desktop
   size, light and dark, and checks names, text at twice the size and contrast. Run it before the check on real phones
-  ([docs/maintainers.md](docs/maintainers.md)).
+  ([docs/maintainers.md](docs/maintainers.md)). It also checks that the edge of every field and choice box stands out 3:1.
 
 ## 0.11.0 — 2026-10-29
 

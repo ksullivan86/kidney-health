@@ -18,7 +18,9 @@ reading and Scan, which opens without a camera). On each:
    scroll sideways, no text is cut off, spills out of its box or button or off the window, and buttons stay at
    least 44×44 px (24 px with a mouse, where 44 px is an open question).
 4. **Contrast.** Visible text against what is behind it, and placeholders: at least 4.5:1, or 3:1 for large text
-   (WCAG AA), in both themes.
+   (WCAG AA), in both themes. The edge of every field, select and choice box against the colour around it: at least
+   3:1 (WCAG 1.4.11), unless the control's own fill already stands out 3:1. A hidden radio or checkbox is measured on
+   the box that shows it (its label, or its group); a checkbox or radio the browser draws is measured on its pixels.
 
 Findings that need a design decision are listed in ``OPEN_QUESTIONS``: they are reported under "open" in the
 report and do not fail the run. Everything else does.
@@ -37,6 +39,7 @@ import sys
 import tempfile
 import time
 import traceback
+import zlib
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable
@@ -295,6 +298,71 @@ CONTRAST_JS = r"""
 }
 """
 
+# The edge of each field, select, textarea and choice box, against the colour around it (WCAG 1.4.11: 3:1). A checkbox
+# or radio the browser draws has no border to read: it is listed for ``Walk.native_edges``.
+CONTROLS_JS = r"""
+(scopeSel) => {
+  const A = window.__a11y;
+  const scope = scopeSel ? document.querySelector(scopeSel) : document.body;
+  const seen = new Map(), done = new Set(), natives = [];
+  const SIDES = ['Top', 'Right', 'Bottom', 'Left'];
+  const rgb = (c) => `rgb(${c.map(Math.round).slice(0, 3)})`;
+  const hasBorder = (cs) => SIDES.some((s) => (parseFloat(cs[`border${s}Width`]) || 0) >= 1);
+  const edge = (box, ctl) => {
+    if (done.has(box)) return;
+    done.add(box);
+    const out = A.bgOf(box.parentElement || box);
+    if (out.complex) return;
+    const fill = A.bgOf(box).bg;
+    if (A.ratio(fill, out.bg) >= 3) return; // the control's own fill shows where it is
+    const cs = getComputedStyle(box);
+    let best = 0, colour = null;
+    for (const side of SIDES) {
+      if ((parseFloat(cs[`border${side}Width`]) || 0) < 1 || ['none', 'hidden'].includes(cs[`border${side}Style`])) continue;
+      const c = A.parse(cs[`border${side}Color`]);
+      if (!c || c[3] === 0) continue;
+      const shown = A.blend(c, out.bg), r = A.ratio(shown, out.bg);
+      if (r > best) { best = r; colour = shown; }
+    }
+    if (best + 0.005 >= 3) return;
+    const what = box === ctl ? A.describe(ctl) : `${A.describe(box)} (the box of ${A.describe(ctl).replace(/ ".*$/, '')})`;
+    const key = `${what.replace(/ ".*$/, '')}|${colour ? rgb(colour) : '-'}|${rgb(out.bg)}`;
+    if (!seen.has(key)) seen.set(key, colour ? `${what} edge ${Math.round(best * 100) / 100}:1 < 3:1 (${rgb(colour)} on ${rgb(out.bg)})`
+      : `${what} has no edge and its fill is ${Math.round(A.ratio(fill, out.bg) * 100) / 100}:1 on ${rgb(out.bg)}`);
+  };
+  const SKIP = ['hidden', 'button', 'submit', 'reset', 'image', 'file', 'range', 'color'];
+  for (const el of scope.querySelectorAll('input, select, textarea')) {
+    if (!scopeSel && el.closest('dialog')) continue;
+    if (el.disabled || el.closest('fieldset:disabled, [inert]') || SKIP.includes(el.type)) continue;
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      if (cs.opacity !== '0' && r.width >= 4 && r.height >= 4) { // the box itself is shown
+        if (!A.vis(el) || el === document.activeElement) continue;
+        if (cs.appearance === 'none') edge(el, el); else natives.push(A.id(el));
+        continue;
+      }
+      const label = el.labels && [...el.labels].find(A.vis);
+      if (!label || el.checked) continue; // a chosen box is drawn in the accent colour
+      // In a row of choices the group's edge is the control's; the lines between the choices only divide it.
+      if (label.closest('.segmented')) edge(label.closest('.segmented'), el);
+      else if (hasBorder(getComputedStyle(label))) edge(label, el);
+      continue;
+    }
+    if (!A.vis(el) || el === document.activeElement) continue; // a focused field shows the focus outline instead
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    edge(el, el);
+  }
+  // A row of toggle buttons (Trends' 7 d, 14 d, 30 d): the group's edge.
+  for (const g of scope.querySelectorAll('.segmented')) {
+    if ((!scopeSel && g.closest('dialog')) || !A.vis(g)) continue;
+    const r = g.getBoundingClientRect();
+    if (r.width >= 1 && r.height >= 1) edge(g, g);
+  }
+  return { findings: [...seen.values()], natives };
+}
+"""
+
 LAYOUT_JS = r"""
 ([scopeSel, minimum]) => {
   const A = window.__a11y;
@@ -419,6 +487,61 @@ NEED_NAME = {"button", "link", "textbox", "searchbox", "combobox", "listbox", "c
              "slider", "tab", "menuitem", "menuitemcheckbox", "menuitemradio", "image", "img", "dialog", "alertdialog"}
 
 
+def ratio(a: Any, b: Any) -> float:
+    """WCAG contrast ratio of two sRGB colours (0 to 255 each)."""
+    def lum(c: Any) -> float:
+        f = [v / 255 for v in c[:3]]
+        f = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in f]
+        return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]
+    x, y = lum(a), lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def png_pixels(data: bytes) -> list[tuple[int, int, int]]:
+    """The pixels of an 8-bit RGB or RGBA PNG (what Chromium's screenshots are), without a picture library."""
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("not a PNG")
+    pos, idat, width, height, kind = 8, b"", 0, 0, 0
+    while pos < len(data):
+        size = int.from_bytes(data[pos:pos + 4], "big")
+        tag, body = data[pos + 4:pos + 8], data[pos + 8:pos + 8 + size]
+        pos += 12 + size
+        if tag == b"IHDR":
+            width, height = int.from_bytes(body[0:4], "big"), int.from_bytes(body[4:8], "big")
+            depth, kind, interlace = body[8], body[9], body[12]
+            if depth != 8 or kind not in (2, 6) or interlace:
+                raise ValueError(f"PNG kind {kind}, depth {depth}, interlace {interlace}")
+        elif tag == b"IDAT":
+            idat += body
+        elif tag == b"IEND":
+            break
+    raw = zlib.decompress(idat)
+    bpp = 3 if kind == 2 else 4
+    stride = width * bpp
+    prev = bytearray(stride)
+    out: list[tuple[int, int, int]] = []
+    for row in range(height):
+        start = row * (stride + 1)
+        ftype, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            a = line[i - bpp] if i >= bpp else 0
+            b = prev[i]
+            c = prev[i - bpp] if i >= bpp else 0
+            if ftype == 1:
+                line[i] = (line[i] + a) & 255
+            elif ftype == 2:
+                line[i] = (line[i] + b) & 255
+            elif ftype == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif ftype == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        out.extend((line[i], line[i + 1], line[i + 2]) for i in range(0, stride, bpp))
+        prev = line
+    return out
+
+
 # ------------------------------------------------------------------------------------------------ the checks
 class Walk:
     def __init__(self, page: Any, cfg: str, minimum: int = 44) -> None:
@@ -472,6 +595,38 @@ class Walk:
     def contrast(self, where: str, scope: str | None) -> None:
         self.helpers()
         check(f"{self.cfg} {where}: text contrast meets WCAG AA", self.page.evaluate(CONTRAST_JS, scope), "contrast")
+        out = self.page.evaluate(CONTROLS_JS, scope)
+        check(f"{self.cfg} {where}: the edges of fields and choice boxes stand out (3:1)",
+              out["findings"] + self.native_edges(out["natives"]), "control-contrast")
+
+    def native_edges(self, ids: list[int]) -> list[str]:
+        """A checkbox or radio the browser draws: its strongest pixel against the colour around it (a picture kept in memory)."""
+        found: list[str] = []
+        if not ids:
+            return found
+        handles = self.page.evaluate_handle("""(ids) => { const A = window.__a11y; const want = new Set(ids);
+            return [...document.querySelectorAll('input[type=checkbox], input[type=radio]')].filter((el) => want.has(A.id(el))); }""", ids)
+        try:
+            for prop in handles.get_properties().values():
+                el = prop.as_element()
+                if not el:
+                    continue
+                info = el.evaluate("""(el) => { const A = window.__a11y; const b = A.bgOf(el.parentElement);
+                    return { desc: A.describe(el), bg: b.complex ? null : b.bg.slice(0, 3) }; }""")
+                if not info["bg"]:
+                    continue
+                try:
+                    pixels = png_pixels(el.screenshot(timeout=3000, animations="disabled", caret="hide", scale="css"))
+                except Exception as exc:  # noqa: BLE001 - an element that went away or cannot be pictured
+                    print(f"(no picture of {info['desc']}: {str(exc).splitlines()[0]})", file=sys.stderr)
+                    continue
+                best = max((ratio(p, info["bg"]) for p in pixels), default=1.0)
+                if best + 0.005 < 3:
+                    bg = ",".join(str(round(v)) for v in info["bg"])
+                    found.append(f"{info['desc']} (drawn by the browser) edge {best:.2f}:1 < 3:1 on rgb({bg})")
+        finally:
+            handles.dispose()
+        return found
 
     # ---- keyboard
     def tab_walk(self, where: str, scope: str | None, *, start_top: bool) -> list[dict]:
