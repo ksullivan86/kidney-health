@@ -405,9 +405,13 @@ SymptomsShare = Annotated[User, Depends(shared_owner("symptoms"))]
 @shared_router.get("/{share_id}/profile", response_model=SharedProfile)
 def shared_profile(share_id: ShareId, owner: AnyShare, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """The owner's name and what the shared pages need from their profile: stage, dialysis, diabetes, dialysis days, the first day
-    of the week, the weight they set and their targets."""
+    of the week and their targets. The weight they set is a body measurement: it is ``null`` unless ``body`` was shared."""
     p = get_profile(conn, owner.id)
-    return {"name": (owner.display_name or "").strip() or owner.username, **{k: p[k] for k in SharedProfile.model_fields if k != "name"}}
+    out = {"name": (owner.display_name or "").strip() or owner.username, **{k: p[k] for k in SharedProfile.model_fields if k != "name"}}
+    row = conn.execute("SELECT areas FROM shares WHERE id = ?", (share_id,)).fetchone()  # shared_owner checked it is this person's
+    if row is None or "body" not in _areas(row["areas"]):
+        out["weight_kg"] = None
+    return out
 
 
 @shared_router.get("/{share_id}/log", response_model=DaySummary)

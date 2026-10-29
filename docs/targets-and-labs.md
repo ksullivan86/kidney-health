@@ -206,7 +206,9 @@ An older request still loading at that point cannot put the old results back. Pr
   to (% above)* (since 0.4.0, 0–10 %, default 0; see ARCHITECTURE.md "Tolerances (v0.3.1)") and *Week starts on*.
 
 **Suggest targets** works from the *saved* profile: when the form differs from it the app asks the
-person to save first. The answer fills the editor (not saved) and shows, in order: a very-high-potassium
+person to save first. If entries change while a suggestion is loading, the app keeps them and asks
+the person to suggest again. A late answer cannot replace those entries. The answer fills the editor
+(not saved) and shows, in order: a very-high-potassium
 alert if there is one; what would change compared with the saved targets, each with the first sentence
 of the deciding rule's note as the reason; how the numbers were worked out (weight basis, nutrition
 risk, age, sex, BMI, kcal/kg, activity and the lab results used); every target with a **Why this

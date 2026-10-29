@@ -655,10 +655,15 @@ the stored value, as for `meal_hint`; `null` clears it. The items of a recipe ar
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
 `per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
-sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
+sentence; the New/Edit saved-meal preview also counts missing nutrients for its current ingredients,
+showing **not listed** when none list the value and **≥** for partial totals. **Makes** scales known
+amounts without changing missing counts; removing ingredients recalculates both.
+**Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
-confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back). The demo answers the route
+confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
+Each Fit check and the carbohydrate confirmation show missing amounts as **not listed** and partial amounts with **≥** (a grey
+`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
@@ -1028,7 +1033,10 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-29): v0.10.0 is prepared.** It adds read-only sharing (note 19, schema step 24), passkeys for re-entry and in
+**Status (2026-10-29): v0.11.0 is prepared.** It makes daily logging easier to trust ("not listed" and "≥" in every
+suggestion, late answers that no longer jump in, failed saves that keep the sheet), sends no dose or lab question to the AI
+(`medicine_question`), lets a share end on a date and show Trends (schema step 25), and adds `BACKUP_REMINDER_DAYS` and
+`app.admin record-backup`; CHANGELOG.md 0.11.0. **v0.10.0** added read-only sharing (note 19, schema step 24), passkeys for re-entry and in
 the sign-in box's autofill (note 18 §10), QR pairing for the iPhone app and first values from the environment (note 20); CHANGELOG.md
 0.10.0. **v0.9.0** added two-step sign-in (note 17, schema step 22), "Admins must use two-step
 sign-in" (`auth.require_two_step_admins`) and passkeys (note 18, schema step 23); CHANGELOG.md 0.9.0. **v0.8.0** added recipes from AI (note 16 phase 3: the feature `recipes`,
@@ -1661,6 +1669,9 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   buttons for `missing_inputs`, and the END note. Each rule is paired with its note by position
   (`notes.length === rules.length + 1`). Refusals are recognised with `KH.targets` before the request
   (no 422 round trip) and render their message instead of numbers.
+  A pending suggestion disables all three suggestion buttons. Its reply applies only while both
+  the saved profile reference and all profile/target entries match the request. Changed entries
+  are kept with a live notice; superseded replies and errors cannot change the current form.
 * **Lab results** (`#labs`): unit picker defaulting from `user.units.labs`, the conversion echo and
   plausibility check before POST (the twin), *What this result changed* (suggestion before vs after),
   the cumulative *Review suggested targets* notice in Profile (`state.targetsReview`; never applied),
@@ -2081,7 +2092,11 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   edge), Plan's day chips, the saved-meal cards on Plan, the saved-meal shortcuts on Add and the "Add a saved meal" sheet (from
   the meal's `unknown` and `per_serving`) the same. The guidance meals (`FamiliarMeal`, `PlanMeal`, `Closest`) and AI ideas carry
   `unknown`, the keys of `totals` some food does not list (`unknown_json` in `app/guidance/fits.py`, `unknownJson` in the twin):
-  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …". The twin uses
+  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …".
+  Swap ideas (`SwapIdea.deltas`) hold `null` for a nutrient either food does not list, and the swap, smaller-portion and
+  low-treatment texts say "carbs not listed" / "potassium not listed" (`amount_word` / `amountWord`); a low-treatment row shows
+  "potassium not listed" too. On the Fit to my targets sheet each change line says "at least" (`amount_text` / `amountText`); its rows are under
+  "Recipes" above. The UNKNOWN cases of the guidance vectors and `tests/test_unknown_swaps_fit_ui.py` check both sides. The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 
@@ -3481,6 +3496,9 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   weight compared, and for a weight over the alarm the handbook's weight line, not prominent) and the **goal line** (the goal as the care team gave it and
   the server's 7-day average against it). With neither set, a line says where to enter them. Days after today cannot be added to; the card needs the
   connection and says so (a save offline says "need a connection to your server ... Nothing was saved" in the sheet).
+  Changing the date clears the card and its summary immediately, including old alarm/goal lines.
+  Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.
+  Late replies or errors cannot replace the newest day's card.
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
@@ -4096,7 +4114,7 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 | `DELETE /api/shared/{id}` | user | → 204: stop seeing it; audit `share.ended` (`by: grantee`) in the owner's activity; 404 if not yours |
 | `POST /api/shared/info` | user | `{code}` → `{name, username, areas, days, expires_at}` without using the link up; a wrong, used, cancelled or expired link (or one from a turned-off account) is the generic 404 "That link does not work. Ask for a new one."; your own link is 400; 20 tries an hour per account and per address (`share_link`) |
 | `POST /api/shared/accept` | user | `{code}` → 201 the item of `GET /api/shared`; a newer link from someone who already shares with you ends the old share (`ended_by: replaced`); 409 when the owner already shares with 10 people; audit `share.accepted` in the owner's activity |
-| `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field) |
+| `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field; `weight_kg` is `null` unless `body` was shared, since only the body pages use it) |
 | `GET /api/shared/{id}/log?date=`, `/log/range?start=&end=`, `/log/summary?start=&end=` | `food` | as `GET /api/log`, `/api/log/range` and `/api/log/summary` answer the owner |
 | `GET /api/shared/{id}/labs` | `labs` | as `GET /api/labs` |
 | `GET /api/shared/{id}/body/summary`, `/body/weights`, `/body/blood-pressure` | `body` | as the owner's `/api/body/*` |
@@ -4340,7 +4358,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.10.0", "api_version": 1,
+{"app_version": "0.11.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
@@ -4583,3 +4601,12 @@ loaded, so nothing is shown for it", with **Retry** (`#day-retry`, which calls `
 on the page keeps it and shows a toast, as before. Symptoms and weight load on their own for the chosen day. Checked by
 `tests/test_reliability_ui.py` and in Chromium by `tools/e2e/reliability.py`, which also checks the saved-meal "not listed"
 values and the 100-serving limit of a fitted recipe.
+
+## A failed save on a sheet (ROADMAP item 1)
+
+Sheets open with `showModal()`, so an open sheet is in the top layer and the page under it is inert. A toast left in `body` was
+drawn under the sheet and not read out. `toast()` in `js/core.js` now puts `#toast` into the open modal dialog (`toastHost`, the
+last one when sheets are stacked), and `setupDialog` moves it back to `body` when that dialog closes. A failed save on a sheet
+keeps the sheet open, what was typed and the button. Checked by `tests/js/reliability_ui.test.mjs` (run by
+`tests/test_reliability_ui.py`) and in Chromium by `tools/e2e/reliability.py`, on the entry sheet, Plan's saved meal editor and
+"Add to a day", Labs, Profile and the weight and blood pressure sheets.

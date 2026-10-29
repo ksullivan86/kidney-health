@@ -115,6 +115,44 @@ def test_unknown_values_stay_unknown():
     assert r["before"]["per_serving"]["potassium_mg"] is None and r["before"]["unknown"]["potassium_mg"] == 1
 
 
+def _without(fid: int, **missing: None) -> dict[int, Any]:
+    """The fixture foods with one food that does not list some values (``potassium_mg=None``)."""
+    from app.guidance.vectors import make_food
+
+    f = FS[fid]
+    fs = dict(FS)
+    fs[fid] = make_food(id=f.id, name=f.name, category=f.category, serving_desc=f.serving_desc, serving_g=f.serving_g,
+                        nutrients={**f.nutrients, **missing}, flags=f.flags, source="builtin")
+    return fs
+
+
+def _fit_with(fs: dict[int, Any], items: list[tuple[int, float]], n: float | None, target: Target = DINNER) -> dict[str, Any]:
+    return fit_recipe(context(food_map=fs), [(fs[i], q) for i, q in items], n, target)
+
+
+def test_a_value_some_foods_do_not_list_is_at_least_in_every_change_line():
+    # Lowered potatoes; the green beans list no potassium, so both per-serving figures are "at least".
+    r = _fit_with(_without(5, potassium_mg=None), [(2, 4), (5, 4)], 4)
+    assert r["status"] == "fits_after_changes"
+    assert r["before"]["unknown"]["potassium_mg"] == 1 and r["after"]["unknown"]["potassium_mg"] == 1
+    assert texts(r) == ["Used 3¼ × 1 medium (173 g) of Potato, baked instead of 4 × 1 medium (173 g), to keep potassium within "
+                        "this dinner's room. Potassium per serving: at least 925 → at least 752 mg (app figures)."]
+    # A smaller serving; the rice lists no phosphorus.
+    r = _fit_with(_without(1, phosphorus_mg=None), [(3, 4), (1, 4), (5, 4)], 4)
+    assert r["status"] == "fits_smaller_serving"
+    assert texts(r)[-1] == ("Have ¾ of a serving: a full serving would use at least 215 mg of phosphorus against 167 mg of room; "
+                            "¾ uses at least 161 mg (app figures).")
+    # Swaps; the chicken lists no potassium or protein, and the food it is swapped for does.
+    r = _fit_with(_without(3, potassium_mg=None, protein_g=None), [(2, 8), (3, 4)], 4, Target("meal", "lunch"))
+    assert "Potassium per serving: at least 1,850 → 100 mg; protein at least 8 → 6.9 g (app figures)." in texts(r)[0]
+    # Does not fit; the green beans list no phosphorus.
+    r = _fit_with(_without(5, phosphorus_mg=None), [(3, 4), (1, 4), (5, 4)], None)
+    assert r["status"] == "does_not_fit"
+    assert "Still over: phosphorus at least 460 mg against 167 mg of room (app figures)." in texts(r)[-1]
+    # With every value listed, the lines are unchanged: no "at least".
+    assert not any("at least" in t for t in texts(fit([(2, 8), (3, 4), (5, 4)], n=4)))
+
+
 def test_every_line_is_plain_words_with_no_banned_term_and_the_app_figures():
     cases = [([(3, 4), (1, 4), (5, 4)], 4), ([(3, 4), (1, 4), (5, 4)], None), ([(9, 1), (1, 1)], 1), ([(2, 8), (3, 4)], 4)]
     for items, n in cases:

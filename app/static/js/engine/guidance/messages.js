@@ -49,6 +49,14 @@
   }
   function fmtAmount(key, value) { return unitOf(key) === 'g' ? fmtG(value) : fmtInt(value); }
   function withUnit(key, value) { return `${fmtAmount(key, value)} ${NUT[key].unit}`; }
+  // "600 mg"; "at least 600 mg" when some food does not list the nutrient; "not listed" when none does (twin of amount_text).
+  function amountText(key, value, partial = false, unit = true) {
+    if (value == null) return 'not listed';
+    const text = unit ? withUnit(key, value) : fmtAmount(key, value);
+    return partial ? `at least ${text}` : text;
+  }
+  // "11 g carbs" or "carbs not listed" (twin of amount_word).
+  function amountWord(key, value) { return value == null ? `${NUTRIENT_WORD[key]} not listed` : `${withUnit(key, value)} ${NUTRIENT_WORD[key]}`; }
   function pct(fraction) { return whole(fraction * 100.0); }
   function joinAnd(parts) {
     const p = parts.filter((x) => x);
@@ -96,7 +104,7 @@
   // ---- what fits now -----------------------------------------------------------------------------
   function fitText(amounts, tracked, carbsFirst) {
     const parts = [];
-    if (carbsFirst) parts.push(`${fmtG(amounts[R.CARBS] || 0.0)} g carbs`);
+    if (carbsFirst) parts.push(amountWord(R.CARBS, amounts[R.CARBS]));
     for (const key of [R.K, R.P, R.NA, R.FLUID]) {
       if (!tracked.includes(key)) continue;
       const value = amounts[key];
@@ -196,15 +204,15 @@
     return less ? `${head}: ${less}` : head;
   }
   function swapAvoidText(name, servings, servingDesc, neu, original) {
-    return `${safeName(name)} (${portionShort(servings, servingDesc)}): ${fmtG(neu[R.CARBS] || 0.0)} g carbs and `
-      + `${fmtAmount(R.K, neu[R.K])} mg potassium, without the warning that ${safeName(original)} has`;
+    return `${safeName(name)} (${portionShort(servings, servingDesc)}): ${amountWord(R.CARBS, neu[R.CARBS])} and `
+      + `${amountWord(R.K, neu[R.K])}, without the warning that ${safeName(original)} has`;
   }
   function swapHypoText(name, servings, servingDesc, carbs, k) {
-    return `For your next low: ${safeName(name)} (${portionShort(servings, servingDesc)}) gives ${fmtG(carbs)} g carbs `
-      + `with ${fmtAmount(R.K, k)} mg potassium`;
+    const head = `For your next low: ${safeName(name)} (${portionShort(servings, servingDesc)}) gives ${fmtG(carbs)} g carbs`;
+    return k == null ? `${head}; potassium not listed` : `${head} with ${withUnit(R.K, k)} potassium`;
   }
   function portionOptionText(fraction, carbs, amounts, keys) {
-    const parts = [`${fmtG(carbs)} g carbs`, ...keys.map((k) => `${fmtAmount(k, amounts[k])} ${NUT[k].unit} ${NUTRIENT_WORD[k]}`)];
+    const parts = [amountWord(R.CARBS, carbs), ...keys.map((k) => amountWord(k, amounts[k]))];
     return `${fractionWord(fraction)} portion: ${joinAnd(parts)}. The carbs change, so count the new amount.`;
   }
 
@@ -336,33 +344,40 @@
   const FIGURES = ' (app figures).';
   const word = (key) => NUTRIENT_WORD[key] || key;
   function recipeTargetLabel(kind, meal) { return kind === 'day' ? 'what is left today' : `this ${meal}'s room`; }
-  function perServing(key, oldV, newV) { return `${capitalise(word(key))} per serving: ${fmtAmount(key, oldV)} → ${withUnit(key, newV)}`; }
-  function recipeLoweredText(name, servingDesc, oldQ, newQ, key, label, oldValue, newValue) {
+  function perServing(key, oldV, newV, oldPartial = false, newPartial = false) {
+    return `${capitalise(word(key))} per serving: ${amountText(key, oldV, oldPartial, false)} → ${amountText(key, newV, newPartial)}`;
+  }
+  const partialIn = (unknown, key) => !!unknown && Number(unknown[key] || 0) > 0;
+  function recipeLoweredText(name, servingDesc, oldQ, newQ, key, label, oldValue, newValue, oldPartial = false, newPartial = false) {
     const head = `Used ${portionText(newQ, servingDesc)} of ${safeName(name)} instead of ${portionText(oldQ, servingDesc)}`;
     if (!(key in NUTRIENT_WORD)) return `${head}, so one serving holds a smaller portion of it.`;
-    return `${head}, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, oldValue, newValue)}${FIGURES}`;
+    return `${head}, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, oldValue, newValue, oldPartial, newPartial)}${FIGURES}`;
   }
-  function recipeSwappedText(oldName, newName, servingDesc, amount, key, label, before, after) {
+  function recipeSwappedText(oldName, newName, servingDesc, amount, key, label, before, after, beforeUnknown = null, afterUnknown = null) {
     let text = `Swapped ${safeName(oldName)} for ${safeName(newName)}, ${portionText(amount, servingDesc)} in the whole recipe`;
     if (key === 'avoid_ckd') return `${text}, because ${safeName(oldName)} is on the app's list of foods to avoid with kidney disease.`;
     if (!(key in NUTRIENT_WORD)) return `${text}, because ${safeName(oldName)} does not list a value the app needs today.`;
-    text += `, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, before[key], after[key])}`;
-    if (key !== R.PROTEIN) text += `; protein ${fmtG(before[R.PROTEIN])} → ${fmtG(after[R.PROTEIN])} g`;
+    text += `, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, before[key], after[key], partialIn(beforeUnknown, key), partialIn(afterUnknown, key))}`;
+    if (key !== R.PROTEIN) {
+      text += `; protein ${amountText(R.PROTEIN, before[R.PROTEIN], partialIn(beforeUnknown, R.PROTEIN), false)} → `
+        + amountText(R.PROTEIN, after[R.PROTEIN], partialIn(afterUnknown, R.PROTEIN));
+    }
     return text + FIGURES;
   }
-  function recipeSmallerText(fraction, key, label, full, part, room) {
-    return `Have ${fmtServings(fraction)} of a serving: a full serving would use ${withUnit(key, full)} of ${word(key)} against ` +
-      `${withUnit(key, room)} of room; ${fmtServings(fraction)} uses ${withUnit(key, part)}${FIGURES}`;
+  function recipeSmallerText(fraction, key, label, full, part, room, partial = false) {
+    if (full == null || part == null) return `Have ${fmtServings(fraction)} of a serving. No food in it lists ${word(key)}${FIGURES}`;
+    return `Have ${fmtServings(fraction)} of a serving: a full serving would use ${amountText(key, full, partial)} of ${word(key)} against ` +
+      `${withUnit(key, room)} of room; ${fmtServings(fraction)} uses ${amountText(key, part, partial)}${FIGURES}`;
   }
-  function recipeNoFitText(label, over) {
+  function recipeNoFitText(label, over, partial = false) {
     const text = `This recipe does not fit ${label} after lowering amounts, swaps and a ½ serving.`;
     if (over == null) return text;
     const key = over.nutrient;
-    return `${text} Still over: ${word(key)} ${withUnit(key, over.used)} against ${withUnit(key, over.room)} of room${FIGURES}`;
+    return `${text} Still over: ${word(key)} ${amountText(key, over.used, partial)} against ${withUnit(key, over.room)} of room${FIGURES}`;
   }
 
   GE.M = {
-    RECIPE_NOTES, recipeTargetLabel, recipeLoweredText, recipeSwappedText, recipeSmallerText, recipeNoFitText,
+    RECIPE_NOTES, amountText, amountWord, recipeTargetLabel, recipeLoweredText, recipeSwappedText, recipeSmallerText, recipeNoFitText,
     DISCLAIMER, AI_FALLBACK, NO_TARGETS, DISABLED, NEEDS_CONNECTION, NUTRIENT_WORD,
     whole, fmtInt, fmtG, fmtAmount, withUnit, pct, joinAnd, capitalise, fmtServings, shortServing, portionText, portionShort,
     fractionWord, sizeWord, safeName, fitText, reasonText, NOTE_TEXTS, noteText, learnedReason, roomLine, noFitText, savedMealNote, swapText, swapAvoidText,

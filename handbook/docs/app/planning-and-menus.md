@@ -68,6 +68,8 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
 After a save or import, an older request will not bring back an out-of-date saved-meal list.
+The preview while creating or editing a meal says **not listed** for a missing nutrient amount and
+**≥** for a partial amount. Changing **Makes** divides the known amounts between the servings.
 
 ### Recipes
 
@@ -88,7 +90,9 @@ what is left today. If it does not fit, the app tries these in order and stops a
    changed.
 3. A smaller serving: ¾, then ½.
 
-Every change is listed with the app's figures. Nothing changes until you choose:
+Every change is listed with the app's figures. If a food in the recipe does not list a value, the numbers count only the
+other foods, so they say "at least" or "≥" and the row is grey, not green. A value no food lists says "not listed".
+Nothing changes until you choose:
 
 * **Save as a new recipe** keeps your recipe and adds "<name> (fitted)". A smaller serving is saved as more servings from
   the same pot, so one saved serving is the size that fits. A recipe makes at most 100 servings: when more would be needed,

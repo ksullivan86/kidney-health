@@ -1,7 +1,10 @@
-"""The three bugs from the 2026-10-29 code review (static checks; `tools/e2e/reliability.py` makes each happen in Chromium):
-Today after a day fails to load, unknown values in saved meals, and a fitted recipe over the 100-serving limit."""
+"""Static checks for the reliability fixes (`tools/e2e/reliability.py` makes each happen in Chromium): the three bugs from the
+2026-10-29 code review (Today after a day fails to load, unknown values in saved meals, a fitted recipe over the 100-serving
+limit), and from testing the other screens that save: a toast hidden under an open sheet."""
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 from app.models import MAX_RECIPE_SERVINGS
@@ -45,3 +48,13 @@ def test_a_fitted_recipe_is_kept_within_the_servings_limit():
     body = body[:body.index("\n  }\n")]
     assert "Math.min(want, MAX_RECIPE_SERVINGS)" in body
     assert "it.servings * scale" in body  # the amounts shrink instead, so one serving stays the size that fits
+
+
+# ---- the other screens that save (ROADMAP item 1) ------------------------------------------------------------------------
+# tests/js/reliability_ui.test.mjs runs core.js's real toast with a sheet open. Labs drawing an old answer is
+# tests/test_lab_cache.py, the weight card while a day loads tests/test_body_day_loading.py.
+def test_a_toast_is_shown_inside_an_open_sheet():
+    assert shutil.which("node"), "Node.js is required for the reliability UI checks"
+    runner = ROOT / "tests" / "js" / "reliability_ui.test.mjs"
+    result = subprocess.run(["node", "--test", str(runner)], capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr

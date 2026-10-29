@@ -115,7 +115,8 @@ your own meals.
 Treat a low first, with 15 g of fast carbohydrate when your glucose is under 70 mg/dL (3.9 mmol/L),
 and log it afterwards ([Treating a low](../t1d/treating-a-low.md)). If your profile says you have
 diabetes, **Today** has a **Treating a low** button: it shows what to do and your own low-treatment
-foods at your dose, lowest potassium first, each with **Log it**. It works even with meal guidance
+foods at your dose, lowest potassium first, each with **Log it**. A food that does not list potassium says
+"potassium not listed" and stays on the list. It works even with meal guidance
 switched off, and without a connection it still shows what to do. When you log a low treatment, keep
 **Used to treat a low** ticked (in the food sheet, under the food's numbers; it is ticked for you for glucose tablets, glucose gel and the other
 low-treatment foods; you can tick it for any food you used, and untick it when, say, apple juice was
@@ -158,6 +159,9 @@ potassium and offers swaps such as:
 Because the carbohydrate is about the same, your usual meal plan still fits. You can take the swap,
 or keep the potato on another day and leach potatoes when you do
 ([Potassium leaching](../eat/potassium-leaching.md)). Food values: [USDA FoodData Central][FDC].
+
+If a food in a swap idea does not list a value, the idea says so ("carbs not listed"). It never shows 0 or a
+difference from 0 for it.
 
 ## Settings
 

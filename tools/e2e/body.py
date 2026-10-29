@@ -118,7 +118,7 @@ def say(page: Any) -> str:
 def wait_today(page: Any, text: str | None = None, timeout: int = 15000) -> None:
     """The card has drawn (and, with ``text``, says it)."""
     if text is None:
-        page.wait_for_function("() => document.querySelector('#body-today-body') && document.querySelector('#body-today-body').children.length > 0", timeout=timeout)
+        page.wait_for_function("() => document.querySelector('#body-today-body') && document.querySelector('#body-today-body').children.length > 0 && !document.querySelector('#body-today-loading')", timeout=timeout)
     else:
         page.wait_for_function("(t) => document.querySelector('#body-today-body') && document.querySelector('#body-today-body').innerText.includes(t)", arg=text, timeout=timeout)
 
@@ -338,6 +338,7 @@ def walk_today(p: Pass, person: Any | None, mock: bool, hd: bool = False) -> Non
     page.click("#bp-save")
     page.wait_for_selector("#sheet-bp", state="hidden", timeout=10000)
     page.wait_for_function("() => !document.querySelector('#body-today-body .body-flag.prominent')", timeout=10000)
+    wait_today(page)
     check(f"[{tag}] edited to a normal reading, the block is gone and the new numbers are shown", "128/78" in say(page) and "180/95" not in say(page))
     # a note is text, delete asks first
     page.locator(".body-item", has_text="128/78").get_by_role("button", name="Delete").click()
@@ -365,6 +366,37 @@ def walk_today(p: Pass, person: Any | None, mock: bool, hd: bool = False) -> Non
         page.wait_for_selector("#sheet-weight", state="hidden", timeout=10000)
         check(f"[{tag}] and nothing was saved", len(person.json("GET", "/api/body/weights", params={"start": iso(0), "end": iso(0)})["weights"]) == 1)
     check(f"[{tag}] nobody else's weight or reading is on the card", "secret" not in page.inner_text("body").lower() and "177/97" not in say(page) and "99.8" not in say(page) and "219.9" not in say(page))
+
+
+def walk_date_loading(p: Pass) -> None:
+    """The other day's rows disappear while delayed reads wait; an old reply cannot restore them."""
+    page, tag = p.page, p.tag
+    original = say(page)
+    yesterday = iso(-1)
+    pattern = f"**/api/body/weights?start={yesterday}&end={yesterday}"
+    held: list[Any] = []
+    page.route(pattern, lambda route: held.append(route))
+    try:
+        page.click("#date-prev")
+        page.wait_for_selector("#body-today-loading")
+        for _ in range(50):
+            if held:
+                break
+            page.wait_for_timeout(100)
+        check(f"[{tag}] the delayed date has no old readings, alarm or goal",
+              bool(held) and page.locator("#body-today-body .body-item, #body-today-body .body-flag, #body-today-body .body-hint-line").count() == 0)
+        page.click("#date-next")
+        wait_today(page)
+        page.wait_for_function("(text) => document.querySelector('#body-today-body').innerText === text", arg=original)
+        for route in held:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"weights": []}))
+        held.clear()
+        page.wait_for_timeout(100)
+        check(f"[{tag}] a late weight reply cannot replace the day shown now", say(page) == original)
+    finally:
+        page.unroute(pattern)
+        for route in held:
+            route.abort()
 
 
 def walk_settings_and_alarm(p: Pass, person: Any | None, mock: bool, hd: bool = False) -> None:
@@ -615,6 +647,7 @@ def pass_full(browser: Any, server: Server | None, admin: Any | None, base: str,
         if not mock:
             # the walk through Today runs on a person with no alarm or goal yet: the card says where to enter them
             walk_today(p, person, mock, hd)
+            walk_date_loading(p)
         else:
             p.page.goto(mock_url)
             p.page.wait_for_selector("#body-add-weight", state="visible", timeout=30000)
@@ -659,6 +692,7 @@ def walk_today_demo(p: Pass, hd: bool) -> None:
     page.wait_for_selector(".confirm-row", timeout=10000)
     page.click(".confirm-row .btn.danger-solid")
     page.wait_for_function("() => !document.querySelector('#body-today-body .body-flag.prominent')", timeout=10000)
+    wait_today(page)
     check(f"[{tag}] deleting it takes the block away", page.locator("#body-today-body .body-item").count() == n)
     add_weight(page, "155", "morning", time="21:00")
     wait_today(page, "155.0 lb")

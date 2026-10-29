@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.10.0 release (2026-10-29).
+section. Last reviewed for the v0.11.0 release (2026-10-29).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 
@@ -13,10 +13,15 @@ recovery trustworthy before more AI or native-app features.
 1. **A reliability milestone.** Fixed: Today kept showing the previous day's food when a day failed to load; saved meals showed
    unknown potassium or phosphorus as 0; a fitted 100-serving recipe could not be saved. `tools/e2e/reliability.py` makes each one
    happen in Chromium, and so are a slow day load followed by a quick date change, and a failed save with its retry on the entry
-   sheet. Still to test the same way: the other screens that save (Plan, Labs, Profile, weight and blood pressure).
-2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
-   and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
-   to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
+   sheet. Done: the other screens that save are tested the same way (Plan's saved meal editor and "Add to a day", Labs,
+   Profile, the weight and blood pressure sheets, and a slow day on the weight card). That found three more bugs, now fixed:
+   an error message hidden under an open sheet, Labs drawing an older answer, and the weight card showing another day's
+   weights while a day loads. `tools/e2e/profile_reliability.py` checks that suggested targets that arrive late never replace
+   entries changed while they loaded.
+2. **Done: unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say
+   "not listed" and "≥". So do the "Add a saved meal" sheet, the New/Edit saved-meal preview, the meals in What fits now and
+   the day plan, AI meal ideas (`unknown` next to each meal's `totals`), the swap ideas and low treatments (a `null` difference,
+   "potassium not listed") and the Fit to my targets sheet ("≥" on a grey row, "at least" in each change line).
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
    after 7 days (`BACKUP_REMINDER_DAYS`) with the restore link, `tests/test_restore_roundtrip.py` restores a backup into an empty
    server in CI, and a backup job outside the app ends with `python -m app.admin record-backup` so the reminder sees it.

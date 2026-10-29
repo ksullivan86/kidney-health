@@ -101,6 +101,9 @@ the styles `css/body.css`, the cards and sheets in `index.html`. No screen adds 
 The words for a flagged number are never written by a screen: `flagBlock` draws `flag.text` from the server (the demo: the twin's copy, kept equal by the
 vectors). A screen says nothing about a cause, a treatment or a medicine (`tests/test_body_ui.py` greps the code and the markup for such words).
 
+Changing the date clears the card while the new day's weights and readings load. Old measurements,
+alarms and goals cannot stay under the new date. If loading fails, **Try again** reloads that day.
+
 ## Settings
 
 | Key | Scope | Values | Default |

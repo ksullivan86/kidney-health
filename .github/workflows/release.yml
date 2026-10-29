@@ -5,7 +5,7 @@
 #   push to main  ->  :edge  and  :sha-<short>
 #   tag vX.Y.Z    ->  :X.Y.Z, :X.Y and :latest   (a pre-release such as v0.3.0-rc1 gets only its own tag)
 #
-# A malicious or mistaken merge therefore reaches only people who track :edge; :latest and :0.10
+# A malicious or mistaken merge therefore reaches only people who track :edge; :latest and :0.11
 # move only on a version tag, which the tag ruleset protects. Tags move after the Grype gate passed
 # for both platforms, so a vulnerable build never gets a tag.
 #

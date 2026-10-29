@@ -258,8 +258,15 @@ Chromium by `tools/e2e/prefs.py`.
 * **Fallbacks**: a smaller portion of the same food (¾ when it clears every trigger, else ½ when it fits
   the room; none for a phosphate additive, none for a low treatment) and tips (leaching for potatoes,
   sweet potatoes, yams, carrots, beets and winter squash; additives; the low-treatment card).
+* **Values not listed**: a swap's `deltas` hold `null` for a nutrient that either food does not list, never a difference
+  from 0. The texts say "carbs not listed" or "potassium not listed" ("Blueberries (1 × 1/2 cup): carbs not listed and 55 mg
+  potassium, …"), and so does the smaller portion.
 
 ## Recipes that fit
+
+The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. It shows
+**not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
+or **Makes** updates the preview; a known zero stays 0.
 
 `POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
 meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One
@@ -283,6 +290,12 @@ Then any lowering that turned out not to be needed is given back. Every change i
 `POST /api/meals`. Cooking, soaking and draining are not counted, and seasonings missing from the food list are not counted; both
 are said under every result.
 
+When some food of the recipe does not list a nutrient, `before` and `after` count it in `unknown` and the figure counts only the
+other foods. Every change line then says "at least" ("Potassium per serving: at least 925 → at least 752 mg"), and a value no food
+lists is "not listed". The sheet shows such a row as "≥ 925 mg" on grey, never the green "fits", names those nutrients under the
+rows, and the message after Save or Replace says "at least" for carbohydrate too. Before and after each use their own `unknown`,
+since a swap can fill a gap ("≥ 100 mg → 100 mg"). A known 0 stays 0 mg.
+
 ## Treating a low
 
 `GET /api/guidance/hypo-options` lists the person's low-treatment foods at the amount that treats a low
@@ -290,7 +303,8 @@ are said under every result.
 delivery, which is why it is a personal setting "from my diabetes team"), lowest potassium first, then
 phosphorus and fluid, **never filtered by any budget** (and never by taste: only "Not for me" foods and "Never
 suggest" groups leave the list, and never all of it, see "Food preferences and what the log teaches"), with the rule-based card of the diet guide §4 and
-the handbook page `t1d/treating-a-low`. The same card is what `app/ai/` must show **instead of calling
+the handbook page `t1d/treating-a-low`. A low-treatment food that does not list potassium says "potassium not listed", both
+in its text and on the screen; it is still listed. The same card is what `app/ai/` must show **instead of calling
 an AI** when free text may describe a low (`app.guidance.hypo.prefilter`: "low", "hypo", "shaky",
 "sweaty", "dropped", "crashed", "fell", "need sugar", "glucose < 70", a reading under 70 mg/dL or
 3.9 mmol/L after a glucose word and its verb ("cgm says 3,4", "reading shows 61"), a bare "I'm at 58" or

@@ -7,6 +7,46 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.11.0 — 2026-10-29
+
+Version 0.11 makes daily logging easier to trust. Numbers a food does not list now say "not listed" or "≥" everywhere,
+answers that arrive late no longer jump in, and a failed save keeps your sheet open with the message on top. Questions about
+doses or lab results never go to the AI. A share can end on a date, and someone who shares with you can show you their Trends.
+
+**Before you upgrade, read [Upgrading from 0.10](#upgrading-from-010-read-this-first).** One schema step runs at the first
+start. Nothing new is switched on.
+
+### Highlights
+
+* **"Not listed" and "≥" everywhere**: meal ideas, swaps, Fit to my targets, saved meals and the day plan no longer show 0 for
+  a value a food does not list.
+* **Dose and lab questions never go to the AI.** They get an **Ask your care team** card instead.
+* **Late answers no longer jump in**: AI ideas, barcodes, label photos, USDA searches and days you moved away from.
+* **A failed save keeps your sheet**, with the message on top.
+* **Sharing**: a share can end on a date, and a person who shares with you can show you their Trends.
+* **Share or copy the shopping list**, and **Other ideas** for AI meals and recipes.
+* **A reminder to back up**, also for backups that run outside the app.
+
+### Upgrading from 0.10 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.11.0.db`). Schema step 25 runs at
+   the first start. It adds two columns to `shares`, and shares made before last until someone stops them.
+2. **Coming from 0.9 or older**, read [Upgrading from 0.9](#upgrading-from-09-read-this-first) too. All the database steps run
+   in one start.
+3. **Change the tag** to `:0.11`, or pin a digest from the release notes. The shipped files already say `:0.11`.
+4. **Nothing new is switched on.** The backup note shows in About this server after 7 days without a backup.
+   `BACKUP_REMINDER_DAYS=0` turns it off. If your backups run outside the app, end the job with
+   `python -m app.admin record-backup`.
+5. **If you run `scripts/ai_eval.py`**, it now sends your `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT` and
+   `AI_CONTEXT_TOKENS` (or the `AI_CLOUD_*` ones with `--role cloud`), so its numbers can differ from an older run.
+
+### Known limitations
+
+* AI meal ideas can still be dropped when a portion is too large for your targets, and then the app shows its own meals.
+  A fix that makes the portion smaller instead is planned for the next release.
+* Every account still needs a password.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people using the app
 
 * **A share can end on a date.** When you make a sharing link, pick how long it lasts: until you stop it, a week, 30 days,
@@ -21,11 +61,23 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Meal suggestions say "≥" or "not listed" too.** The meals in What fits now, the day plan, AI meal ideas and the
   "Add a saved meal" sheet no longer show 0 for a value a food does not list.
+* **Swap ideas and Fit to my targets say "not listed" or "at least" too.** A swap idea, its smaller portion and a low
+  treatment say "potassium not listed" when the food does not list it, instead of 0 or nothing. On Fit to my targets, a
+  number that leaves out a food shows as "≥" on a grey row, and each change line says "at least". The preview while you make
+  or change a saved meal says "not listed" and "≥" the same way.
 * **Share or copy the shopping list.** Plan → Shopping list has **Share list** (on a phone) and **Copy list**: what is not
   ticked yet, as text, for any list app.
 * **Show other foods.** What fits now has a **Show other foods** button that finds foods not already on the list, and
   **Back to the first choices** to start over. AI meal ideas have **Other ideas** and AI recipes **Other recipes**, which ask
   the AI again without the foods it already suggested. See [`docs/guidance.md`](docs/guidance.md).
+* **Error messages show over an open sheet.** When a save fails in a sheet, such as Add weight, Add blood pressure, a food
+  entry or a saved meal, the message now shows on top of the sheet and screen readers read it. Before, it was hidden
+  behind the sheet. The sheet keeps what you typed, so you can press Save again.
+* **The weight card shows the right day.** While another day loads, the Weight and blood pressure card on Today says
+  "Loading weights and blood pressure…". Before, it kept showing the previous day's weights, alarm and goal under the new
+  date. If the day cannot load, **Try again** shows.
+* **Suggested targets never replace what you typed.** If you change your details or targets in Profile while a suggestion
+  is loading, the app keeps your entries and asks you to suggest again.
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the
@@ -66,6 +118,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   values and its default. It is made from the app, so it matches the version you run. `--initial-only` starts it with
   `SETTINGS_INITIAL_ONLY=*`. See [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).
 * Schema step 25 adds two columns to `shares` at the first start. Shares made before last until someone stops them, as before.
+
+### Security
+
+* **A share without weight and blood pressure no longer shows the profile weight.** `GET /api/shared/{id}/profile` gave the
+  weight saved in the owner's profile to every share, also one of only the food log, labs or symptoms. It is now `null` unless
+  weight and blood pressure were shared. Nothing else in the answer changed.
 
 ## 0.10.0 — 2026-10-29
 
