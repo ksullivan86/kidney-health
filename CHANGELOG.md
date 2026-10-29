@@ -16,6 +16,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
   period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
 
+* **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
+  leaving the previous day's meals and totals under the new date.
+* **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the
+  Add tab's shortcuts say "not listed". When only some do, the number shows as "≥", as on Today.
+* **A fitted recipe can always be saved.** A recipe that makes 100 servings and fits as half a serving used to be refused
+  (200 servings is over the limit of 100). Now each serving is made the size that fits, and the recipe still makes 100.
+
 ### For people who run a server
 
 * **`python -m app.admin env-template`** prints every setting's variable as a `.env` file to fill in, with what each does, its

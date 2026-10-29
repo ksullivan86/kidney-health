@@ -51,10 +51,30 @@
       state.dayLoadedFor = state.date;
       renderToday();
     } catch (e) {
-      if (reqId === dayRequest) toastError(e);
+      if (reqId !== dayRequest) return;
+      // The day on screen is another day's: never leave its food and totals under this date's heading.
+      if (state.dayLoadedFor !== state.date && !(e && e.handled)) renderUnavailable(e);
+      else toastError(e);
     } finally {
-      mealsEl.style.opacity = '';
+      if (reqId === dayRequest) mealsEl.style.opacity = '';
     }
+  }
+
+  /** The chosen day could not be loaded: clear everything that belongs to a day and say so, with Retry. */
+  function renderUnavailable(err) {
+    state.day = null;
+    state.dayLoadedFor = null;
+    for (const el of [alertsEl, $('#projected-alerts'), statusBarsEl, totalsAllEl]) clear(el);
+    const statusSub = $('#status-heading').nextElementSibling;
+    if (statusSub) statusSub.textContent = '';
+    for (const id of ['#guidance-today', '#guidance-day-insights']) { const el = $(id); if (el) el.hidden = true; }
+    const why = err && err.status ? (err.detail || err.message || 'The server did not answer.') : 'There is no connection to your server right now.';
+    const retry = h('button', { class: 'btn primary', type: 'button', id: 'day-retry' }, 'Retry');
+    retry.addEventListener('click', () => loadDay());
+    clear(mealsEl).append(h('div', { class: 'card day-unavailable', role: 'alert', id: 'day-unavailable' },
+      h('p', {}, `${fmtDateLong(state.date)} could not be loaded, so nothing is shown for it. ${why}`), retry));
+    if (KH.symptoms) KH.symptoms.today(state.date).catch((e) => console.warn('Symptoms:', e)); // they load on their own
+    if (KH.body) KH.body.today(state.date).catch((e) => console.warn('Weight and blood pressure:', e));
   }
 
   function renderToday() {
