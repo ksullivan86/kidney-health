@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19]
 ---
 
 # Settings and keys
@@ -22,7 +22,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Sharing** (let a caregiver or dietitian look at your log: [Sharing with a caregiver](#sharing)), **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -157,6 +157,28 @@ To sign in with it, tap **Sign in with a passkey** under the sign-in form and co
 - Passkeys need your server's name, like `kidney.example.org`. If you open the app by a number address, Settings says so; ask
   your admin.
 
+## Sharing with a caregiver {#sharing}
+
+A partner, parent, adult child or dietitian can look at parts of your log if they have their own account on your server. They can
+look, but never change anything, and you can stop at any time ([design note 19][NOTE19]). Your admin turns sharing on first; until
+then, Settings says so.
+
+To share:
+
+1. **Settings → Account → Sharing**. Tick what to share: your food log, lab results, weight and blood pressure, symptoms. Tap
+   **Make a link**. The app may ask for your password again.
+2. Copy the link and send it to the person, for example in a text message. It works once, for 7 days. Send it only to them:
+   whoever opens it first can accept it.
+3. They open it while signed in, see your name and what you share, and tap **Accept**.
+
+They then see your summary page (the same page as Visit prep) and what you ate on any day, with a note at the top that it is
+yours and read-only. They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your
+sign-in activity.
+
+- Your list in **Sharing** shows who can see your data and when they last looked. **Stop sharing** ends it at once.
+- When someone shares with you, they are under **Shared with you**. **Open** shows their page; **Stop seeing** ends it.
+- A link nobody has used yet can be cancelled from the same list.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
@@ -211,4 +233,5 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.11, 4.12 and 4.17.
 - [Design note 02][NOTE02] (This device); [design note 03][NOTE03] (barcode settings); [design note 04][NOTE04] (AI keys);
   [design note 06][NOTE06] (guidance settings).
+- [Design note 19][NOTE19]: read-only sharing.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.

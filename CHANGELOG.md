@@ -9,6 +9,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Share your log, read-only, with a caregiver or dietitian.** In Settings → Account → Sharing, tick what to share (food log,
+  lab results, weight and blood pressure, symptoms) and send the link to someone with an account on your server. Once they
+  accept, they can look at your summary and your days, and never change anything. Either of you can stop at any time. Your admin
+  turns it on first. See [`docs/accounts.md`](docs/accounts.md#sharing-with-a-caregiver).
 * **A QR code to pair the iPhone app.** When you make a phone token in Settings → Phone shortcuts, the page also shows a QR code.
   Point the iPhone Camera at it and the iPhone app opens, asks "Pair with" your server, and saves the address and the token
   when you say yes. The code needs the server's `https://` address. See [`docs/push.md`](docs/push.md#pairing-the-iphone-app-by-qr-code).
@@ -16,6 +20,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   key, exporting your data), the sheet now has **Use a passkey instead** if you have a passkey. Your fingerprint, face or PIN
   answers it. Only your own passkeys count, and five failures in a row sign the device out, as wrong passwords do. See
   [`docs/accounts.md`](docs/accounts.md#passkeys).
+
+### For people who run a server
+
+* **Sharing is off until you turn it on:** `SHARING_ENABLED=true`, or Server administration → Server settings → Sharing. Schema
+  step 24 adds the `shares` table at the first start; nobody shares anything until they make a link. Server administration →
+  People shows who shares and has **End sharing**.
 
 ## 0.9.0 — 2026-10-29
 

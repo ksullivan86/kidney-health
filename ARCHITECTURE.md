@@ -43,6 +43,7 @@ app/openapi_doc.py          the OpenAPI document made honest: operation ids, 400
 app/api_version.py          API_VERSION, the integer that is raised on a breaking change ("The API document and GET /api/meta")
 app/meta.py                 GET /api/meta: versions, what the signed-in person can use now, the nutrient registry, the meals
 app/brand.py                the brand strings in one place: names, cookie names, token prefixes, CSRF value, DB filename, export format, user agents, HKDF labels ("Brand strings")
+app/sharing.py              read-only sharing with a caregiver or dietitian: share links, /api/me/shares, /api/shared and the read routes ("Sharing")
 app/pairing.py              the iPhone app's pairing link in the QR code of a new device token: link() and the reference parse() ("Pairing the iPhone app")
 scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
@@ -797,6 +798,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 20 | `m020_ai_env_slots.py` | two AI providers from the environment | `ai_providers.env_slot` (`main` or `cloud`; the row locked today becomes `main`) and `ai_providers.upstream` (who a proxy forwards to, at most 60 characters); the one-locked-row unique index is replaced by one locked row per slot ("Environment providers: main and cloud" under "M2 API: AI and photos" below). |
 | 21 | `m021_recipes.py` | recipes (note 16) | `meal_templates.servings_made` (REAL, > 0 and ≤ 100, NULL = a plain saved meal of one serving), `steps_json` (a JSON list of strings) and `source_url` (≤ 900 characters, never fetched). A note that is exactly the sentence `save_recipe` wrote (`Makes N serving(s).` with or without ` Source: <link>`) fills `servings_made` and `source_url`; the note itself is left alone and any other note leaves the columns NULL. |
 | 22 | `m022_totp.py` | two-step sign-in (note 17) | `totp_factors` (one row per person who started or turned it on: `secret_enc` sealed with the keyring, purpose `totp`, owner the person; `key_id`; `enabled_at`, NULL until the first code; `last_step`, so each code works once) and `totp_recovery_codes` (`code_hash`, the 32-byte SHA-256 of a code, and `used_at`). Both `ON DELETE CASCADE`. Nobody has it on after the upgrade. |
+| 24 | `m024_shares.py` | read-only sharing (note 19) | `shares`: a share link until it is accepted (`code_id`, the SHA-256 `verifier_hash`, `expires_at`), then a share (`grantee_user_id`, `accepted_at`; the link's fields cleared); `owner_user_id`, `areas` (a JSON list of `food`, `labs`, `body`, `symptoms`), `ended_at` and `ended_by` (`owner`, `grantee`, `admin`, `replaced`), `last_viewed_at`. `CHECK`s keep the two states apart and forbid sharing with yourself. `ON DELETE CASCADE` on both accounts. Nobody shares anything after the upgrade. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -819,6 +821,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealthSync-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealthSync/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
+| Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
 | API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
@@ -963,7 +966,7 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
 * **Sign-out** warns about unsynced offline entries when `KH.offline` exists (M2), calls
   `POST /api/auth/logout`, follows `redirect` (proxy `PROXY_LOGOUT_URL`), else reloads the page.
 * **Settings view** (`#settings`, no tab; header gear and Profile → Open Settings;
-  `js/views/settings.js`): Account (name, password, two-step sign-in from `js/views/two_step.js` (note 17), passkeys from `js/views/passkeys.js` (note 18), signed-in devices, export zip, delete account,
+  `js/views/settings.js`): Account (name, password, two-step sign-in from `js/views/two_step.js` (note 17), passkeys from `js/views/passkeys.js` (note 18), sharing from `js/views/sharing.js` (note 19), signed-in devices, export zip, delete account,
   recent activity, sign out), Preferences (theme saved as `ui.theme`, week start saved with the
   profile, units for lab results), Food data (own USDA key, shared-key status, Open Food Facts
   consent), AI ideas (placeholder `#set-ai-slot` for M2), This device (install, offline, storage,
@@ -1142,6 +1145,9 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `POST /api/me/passkeys` | user (local) *(re-auth)* | `{challenge_id, name?, credential}` → 201 the new item: the WebAuthn §7.1 checks (`app/auth/webauthn.py`); audit `passkey.added`. 400 with the reason when a check fails or the challenge is used, old or someone else's; 409 at 10 or when the passkey is already stored |
 | `PATCH /api/me/passkeys/{id}` | user (local) | `{name}` → the item; 404 if not yours |
 | `DELETE /api/me/passkeys/{id}` | user (local) *(re-auth)* | → 204; audit `passkey.removed` (`via: self`); 404 if not yours |
+| `GET /api/me/shares` | user | → `{enabled, areas, max: 10, sharing: [{id, name, username, areas, since, last_viewed_at, active}], codes: [{id, areas, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
+| `POST /api/me/shares` | user *(re-auth)* | `{areas}` (1 to 4 of `food`, `labs`, `body`, `symptoms`) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
+| `DELETE /api/me/shares/{id}` | user | → 204: stops a share (audit `share.ended`, `by: owner`) or cancels a link (`share.code_cancelled`); 404 if not yours or already ended |
 | `GET /api/me/sessions` | user | → `{sessions: [{id, created_at, last_seen_at, expires_at, user_agent, ip_prefix, current}]}` |
 | `DELETE /api/me/sessions/{id}` | user | → 204 (404 if not one of yours) |
 | `POST /api/me/sessions/revoke-others` | user *(re-auth)* | → `{revoked: n}` |
@@ -4038,6 +4044,39 @@ The iPhone app's **Test connection**. The same checks as `POST /push/v1/body` up
 `BEARER_PATHS`), any method but `GET` (`405`, `Allow: GET`), the device token with `body:write` (the generic `401`; switch off: the same,
 no lookup) and the shared `push_body` hour of the token (`429`). Then `200 {"ok": true}` with `Cache-Control: no-store`. It reads no body,
 stores nothing but the token's `last_used_at`, and names nothing of the person. Tests: the check section of `tests/test_push.py`.
+
+### Sharing (`app/sharing.py`, design note 19)
+
+A person (the owner) makes a link in Settings → Account → Sharing; someone with an account on the same server (the grantee) accepts
+it, then reads the areas the owner ticked. Every route needs a session and answers 404 while `sharing.enabled` (instance, default
+**off**, env `SHARING_ENABLED`) is off and in `AUTH_MODE=none`.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/shared` | user | → `{people: [{id, name, username, areas, since}]}`: who shares with you, while their account is active |
+| `DELETE /api/shared/{id}` | user | → 204: stop seeing it; audit `share.ended` (`by: grantee`) in the owner's activity; 404 if not yours |
+| `POST /api/shared/info` | user | `{code}` → `{name, username, areas, expires_at}` without using the link up; a wrong, used, cancelled or expired link (or one from a turned-off account) is the generic 404 "That link does not work. Ask for a new one."; your own link is 400; 20 tries an hour per account and per address (`share_link`) |
+| `POST /api/shared/accept` | user | `{code}` → 201 the item of `GET /api/shared`; a newer link from someone who already shares with you ends the old share (`ended_by: replaced`); 409 when the owner already shares with 10 people; audit `share.accepted` in the owner's activity |
+| `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field) |
+| `GET /api/shared/{id}/log?date=`, `/log/summary?start=&end=` | `food` | as `GET /api/log` and `/api/log/summary` answer the owner |
+| `GET /api/shared/{id}/labs` | `labs` | as `GET /api/labs` |
+| `GET /api/shared/{id}/body/summary`, `/body/weights`, `/body/blood-pressure` | `body` | as the owner's `/api/body/*` |
+| `GET /api/shared/{id}/symptoms` | `symptoms` | as `GET /api/symptoms` |
+
+* **One check.** Every `/api/shared/{id}/…` read goes through `shared_owner(area)`: the row is the signed-in person's share, active,
+  both accounts active, and the area was shared. It returns the owner's `User`, and the handler calls the owner's own route function
+  with it, so the answer is exactly the owner's and no query is written twice. Anything else is one 404 `"Not shared with you."`.
+  There is no write route under `/api/shared` (`tests/test_sharing.py` lists the methods).
+* **The link** is in the URL fragment, like invites: 16 hex characters of id and a 256-bit verifier, only the SHA-256 of which is
+  stored (`hmac.compare_digest`). Accepting clears the link's fields, so it works once.
+* **Activity.** The first read of a share each UTC day sets `last_viewed_at` and writes `share.viewed`. Rows that concern the owner
+  target the owner (`target_type: user`), so they land in the owner's activity; the owner's own actions target the share.
+* **Admin.** `GET /api/admin/users` has `shares` (active shares and unused links the person is on either side of);
+  `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
+* **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
+  cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**. **Open** shows the Visit
+  prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
+  owner, parts that were not shared say so, and a day card lists one day's food. The page has no control that writes.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

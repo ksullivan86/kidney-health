@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted, 2026-10-29. The owner asked for it ("go ahead with caregiver sharing") after passkeys and QR pairing. The choices below are the defaults this note took, listed in §10 so they can be changed. The schema step is **24**. |
+| Status | Accepted and built, 2026-10-29. The owner asked for it ("go ahead with caregiver sharing") after passkeys and QR pairing. The choices below are the defaults this note took, listed in §10 so they can be changed. The schema step is **24**. Two changes while building: the link's info and accept routes are `POST /api/shared/info` and `POST /api/shared/accept` (one router), and §5's audit rows go to the owner's activity only (the activity list finds rows by the person they concern). |
 | Scope | A person lets someone else with an account on the same server **see** parts of their log: food, labs, weight and blood pressure, symptoms. The other person reads; they can never add, change or delete anything. The person can take it back at any time and sees when it was last looked at. |
 | Out of scope | Writing on someone's behalf, notes from a clinician, sharing with someone who has no account, sharing across servers, an export link for people outside the server. Clinician accounts with notes (ROADMAP) build on this later (§11). |
 | Builds on | Note 07 §6 "Later (v0.4)": `shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)`. `app/auth/tokens.py` (invite links), `app/auth/api_tokens.py` (the instance switch pattern), the Visit prep page (`js/views/visit.js`). |
@@ -37,8 +37,8 @@ anything she did not tick. Sharing does not let Sam see anyone else's data, and 
   send to the server, so it stays out of proxy logs and `Referer`. `<id>` is 16 random hex characters, `<verifier>` 32 random
   bytes in base64url. Only the SHA-256 of the verifier is stored, compared with `hmac.compare_digest`.
 * Single use, 7 days, at most **5** unused codes per person and **10** people sharing a person's data at once.
-* Opening it is a two-step read: `POST /api/shares/info {code}` says who and what (it does not use the code up), then
-  `POST /api/shares/accept {code}` makes the share. Both need a signed-in session; both are limited to **20 tries an hour**
+* Opening it is a two-step read: `POST /api/shared/info {code}` says who and what (it does not use the code up), then
+  `POST /api/shared/accept {code}` makes the share. Both need a signed-in session; both are limited to **20 tries an hour**
   for each account and each address, and every wrong code counts.
 * A person cannot accept their own code (`400`), and a second code from the same person replaces the areas of an active share
   rather than making a second one.
@@ -77,8 +77,8 @@ All need a session (`current_user`); all answer `404` when the switch is off (§
 | `DELETE /api/me/shares/{id}` | owner | Stops a share or cancels a code. `204`; not yours is `404` |
 | `GET /api/shared` | grantee | `{people: [{id, name, username, areas, since}]}`: who shares with you |
 | `DELETE /api/shared/{id}` | grantee | Stops seeing it. `204`; not yours is `404` |
-| `POST /api/shares/info` | grantee | `{code}` → `{name, username, areas, expires_at}` or the generic `404 "That link does not work. Ask for a new one."` |
-| `POST /api/shares/accept` | grantee | `{code}` → `201` the share as `GET /api/shared` lists it |
+| `POST /api/shared/info` | grantee | `{code}` → `{name, username, areas, expires_at}` or the generic `404 "That link does not work. Ask for a new one."` |
+| `POST /api/shared/accept` | grantee | `{code}` → `201` the share as `GET /api/shared` lists it |
 | `GET /api/shared/{id}/profile` | grantee | `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}`: what the pages need, nothing more |
 | `GET /api/shared/{id}/log?date=` | grantee, `food` | The day, as `GET /api/log` answers it to the owner |
 | `GET /api/shared/{id}/log/summary?start=&end=` | grantee, `food` | As `GET /api/log/summary` |
@@ -95,7 +95,7 @@ an area not shared, an unknown id) is the same `404 "Not shared with you."`. The
 
 **Views are logged, once a day.** The first read of a share each day (UTC) sets `last_viewed_at` and writes `share.viewed` to the
 owner's activity. Audit actions: `share.code_created`, `share.code_cancelled`, `share.accepted`, `share.ended` (`by`: owner,
-grantee or admin), `share.viewed`. All but `share.code_created` and `share.code_cancelled` also go to the grantee's activity.
+grantee or admin), `share.viewed`. They all show in the owner's activity; the grantee sees their shares in Settings.
 
 ## 6. The switch
 

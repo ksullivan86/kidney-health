@@ -198,6 +198,7 @@
 [NOTE12]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/12-phone-push-tokens.md "Design note 12"
 [NOTE17]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/17-two-step-sign-in.md "Design note 17"
 [NOTE18]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/18-passkeys.md "Design note 18"
+[NOTE19]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/19-sharing.md "Design note 19"
 [APPLE-SHORTCUTS]: https://support.apple.com/guide/shortcuts/welcome/ios "Apple: Shortcuts User Guide"
 [DEPLOY]: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md "Deployment guide"
 [ASSISTANT-DOC]: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md "Assistant guide"

@@ -119,6 +119,31 @@ phished or reused from a leak.
 
 How it works, and why: [design note 18](dev/research/18-passkeys.md).
 
+## Sharing with a caregiver
+
+A person can let someone else with an account on the same server **see** parts of their log: a partner who helps with food, a
+parent, an adult child, a dietitian. The other person reads and never changes anything. It is off until you turn it on:
+`SHARING_ENABLED=true`, or **Server administration → Server settings → Sharing**.
+
+1. In **Settings → Account → Sharing**, the person ticks what to share (food log, lab results, weight and blood pressure,
+   symptoms) and presses **Make a link**. It asks for the password again, like making a token.
+2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
+   the right person.
+3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
+   you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, with a banner that says it is
+   read-only.
+
+* Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
+  the date of birth and other profile details.
+* Either side can stop at once: **Stop sharing** or **Stop seeing**. The person's list says who can see their data and when they
+  last looked. The first look each day goes to the person's activity.
+* At most 10 people can see one person's data, and a person can have 5 unused links.
+* You can end every share of a person in **Server administration → People → End sharing**. Deleting either account deletes its
+  shares. While an account is turned off, nothing it shares can be seen.
+* Not with `AUTH_MODE=none`, where there is only one person.
+
+How it works, and why: [design note 19](dev/research/19-sharing.md).
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.

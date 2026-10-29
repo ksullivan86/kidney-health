@@ -552,6 +552,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-28.
 - **NOTE18**: kidney-health design note 18: passkeys, signing in with a fingerprint, face or device PIN. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/18-passkeys.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-29.
+- **NOTE19**: kidney-health design note 19: read-only sharing with a caregiver or dietitian. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/19-sharing.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-29.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

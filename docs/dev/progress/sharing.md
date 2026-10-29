@@ -1,4 +1,4 @@
-Status: in progress (2026-10-29): design note and server done; screens next.
+Status: in progress (2026-10-29): server, screens and docs done; full suite, PR and merge next.
 
 # Read-only sharing with a caregiver or dietitian (design note 19)
 
@@ -14,6 +14,13 @@ Status: in progress (2026-10-29): design note and server done; screens next.
 * Route change from the note: info and accept are `POST /api/shared/info` and `POST /api/shared/accept` (one router).
 * Audit: rows are found by the activity query through the target, so `share.viewed`, `share.accepted` and the grantee's
   `share.ended` target the owner (`target_type='user'`) and land in the owner's activity; the owner's own actions target the share.
+
+* Screens: `js/views/sharing.js`, the shared mode of `js/views/visit.js` (reads from `KH.sharing.reads`, headings and banner name
+  the owner, areas not shared say so, a day card), `#sheet-share`, People badge and End sharing, activity labels, the demo's
+  answers, CSS. Verified: `tests/test_sharing_ui.py` (8), the visit and body UI tests, `tools/e2e/sharing.py` (29/29).
+* Docs: docs/accounts.md "Sharing with a caregiver", ARCHITECTURE (file map, feature row, migrations row, /api/me rows, "Sharing"),
+  CHANGELOG, ROADMAP, note 19 (built, route and audit changes), handbook settings-and-keys `#sharing` and caregivers link,
+  sources.yml NOTE19 (regenerated with scripts/build_handbook.py), tools/e2e/README.md, deploy files, docs/deployment.md.
 
 ## Next
 
