@@ -71,6 +71,9 @@ apostrophe in the file, so a spreadsheet does not run it as a formula ([architec
 
 ## Symptoms you write down
 
+When you change the date, the Symptoms card clears while that day's entries load.
+It loads separately from your food log. If it cannot load them, press **Try again**.
+
 **Today → Symptoms → Add** records a symptom for a day. Pick it from the list (swelling, itching, tiredness,
 cramps, nausea, breathlessness, poor appetite, or **Other** with a name of your own, up to 60 characters),
 choose **Mild**, **Moderate** or **Severe**, and add a note if you like, for example when it started. You can
