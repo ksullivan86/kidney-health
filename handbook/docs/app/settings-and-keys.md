@@ -183,6 +183,9 @@ sign-in activity.
   or 30 days; **Stop seeing** ends it.
 - A link nobody has used yet can be cancelled from the same list.
 
+**Accept** appears after the app checks the link and shows who is sharing. If you open another link while waiting,
+the question follows that new link; an older reply will not replace it.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat

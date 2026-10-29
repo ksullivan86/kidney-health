@@ -4092,7 +4092,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 * **Admin.** `GET /api/admin/users` has `shares` (active shares and unused links the person is on either side of);
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
-  cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**. **Open** shows the Visit
+  cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**.
+  Checking another link clears the old Accept code; late info/accept responses or focus callbacks cannot change a newer
+  or closed question. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
   owner, parts that were not shared say so, and a day card lists one day's food. The page has no control that writes.
   **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read

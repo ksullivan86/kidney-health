@@ -55,6 +55,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`sharing.py` also delays synthetic link-info replies and closes/reopens the share question. It checks that only the latest
+question can supply an Accept code; these controlled requests never accept a link on the server.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash

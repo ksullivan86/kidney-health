@@ -295,6 +295,7 @@
   // A link: #/share/<code>
   // ---------------------------------------------------------------------------
   let pending = null;
+  let questionRequest = 0;
   function takeLink() {
     let hash = '';
     try { hash = location.hash || ''; } catch (e) { return false; }
@@ -311,25 +312,31 @@
     pending = null;
     const dlg = $('#sheet-share');
     if (!dlg) return;
+    const req = ++questionRequest;
+    const current = () => req === questionRequest && dlg.open;
     const text = clear($('#share-question'));
     const problem = $('#share-error');
     clear(problem); problem.hidden = true;
     const accept = $('#share-accept');
+    delete accept.dataset.code;
+    accept.hidden = true;
+    accept.disabled = false;
     const fail = (err) => {
       text.textContent = '';
       problem.hidden = false;
       clear(problem).append(h('p', {}, !err ? BAD_LINK : err.status === 404 && err.detail === 'Not Found' ? SWITCHED_OFF : err.detail || BAD_LINK));
       accept.hidden = true;
     };
-    accept.hidden = false;
     text.textContent = 'Checking the link…';
     sheets.open(dlg, null, $('[data-close]', dlg));
     let info;
-    try { info = code ? await A.info(code) : null; } catch (err) { if (!err.handled) fail(err); return; }
+    try { info = code ? await A.info(code) : null; } catch (err) { if (current() && !err.handled) fail(err); return; }
+    if (!current()) return;
     if (!info) { fail(null); return; }
     text.textContent = questionText(info);
     accept.dataset.code = code;
-    setTimeout(() => accept.focus(), 30);
+    accept.hidden = false;
+    setTimeout(() => { if (current()) accept.focus(); }, 30);
   }
 
   function setupSheet() {
@@ -339,22 +346,30 @@
     const accept = $('#share-accept');
     accept.addEventListener('click', async () => {
       const code = accept.dataset.code;
-      if (!code || accept.disabled) return;
+      const req = questionRequest;
+      const current = () => req === questionRequest && dlg.open && accept.dataset.code === code;
+      if (!code || accept.disabled || accept.hidden || !dlg.open) return;
       accept.disabled = true;
       try {
         const person = await A.accept(code);
+        if (!current()) return;
         delete accept.dataset.code;
         dlg.close();
         toast(`You can now see ${person.name || person.username}'s ${areasText(person.areas)}`, 'ok');
         openShared(person);
       } catch (err) {
-        if (err.handled) return;
+        if (!current() || err.handled) return;
         const problem = $('#share-error');
         problem.hidden = false;
         clear(problem).append(h('p', {}, err.detail || BAD_LINK));
-      } finally { accept.disabled = false; }
+      } finally { if (req === questionRequest) accept.disabled = false; }
     });
-    dlg.addEventListener('close', () => { delete accept.dataset.code; });
+    dlg.addEventListener('close', () => {
+      if (dlg.open) return; // a queued close event can arrive after this dialog has reopened
+      ++questionRequest;
+      delete accept.dataset.code;
+      accept.hidden = true;
+    });
   }
 
   // A link followed while the app is already open: take it, and ask once someone is signed in.

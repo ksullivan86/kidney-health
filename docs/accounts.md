@@ -131,6 +131,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    the password again, like making a token.
 2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
    the right person.
+   The **Accept** button appears only after the app has checked that link. Opening another link replaces the question;
+   a slow reply from the earlier link cannot change it back.
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
    you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, and **Trends** shows their Trends
    charts, both with a banner that says it is read-only.
