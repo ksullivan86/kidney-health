@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Security review of the newest server features
 
@@ -51,9 +51,24 @@ The touched and related files (33 files: `tests/test_auth*.py`, `test_sharing*.p
 `test_api_tokens.py`, `test_admin_*.py`, `test_restore_roundtrip.py`, `test_secrets_v03.py`, `test_handbook_content.py`,
 `test_openapi_snapshot.py`) all pass; `ruff check .` clean; `scripts/gen_openapi.py --check` clean.
 
+## For the owner to decide (not changed)
+
+1. **The grantee's network shows in the owner's activity.** `share.viewed`, `share.accepted` and `share.ended`
+   (`by: grantee`) are written with the grantee's address and land in the owner's activity, where the page shows the
+   /24 (IPv6 /48) network. Drop `ip` from these rows if the owner should not see where the grantee reads from.
+2. **Passkeys outlive a password reset.** A reset link or password change ends sessions and tokens but keeps passkeys
+   (note 18 says nothing about it). After an account takeover, a passkey the attacker added still signs in until the
+   person or an admin removes it. Option: remove passkeys on a reset link, or list them prominently after a reset.
+3. **A food share shows each entry's note.** `GET /api/shared/{id}/log` is the owner's own day, notes included. Note 19
+   intends that; say so in the sharing screen if notes may be private.
+4. **An admin's "End sharing" writes one row**, on the person it was run for; the other side of each ended share gets
+   no row in their activity.
+5. `POST /api/me/shares` counts open links and shares outside a write transaction, so two requests at the same moment
+   could pass the limit of 5 links by one. Harmless; noted only.
+
 ## Next
 
-1. Write up the owner decisions in this note and mark it complete.
+Nothing. Commits are local only.
 
 ## Commands
 
