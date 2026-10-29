@@ -82,6 +82,9 @@ Leave a box empty and the app shows your numbers with no verdict. Why the app ha
 
 ## What the app shows
 
+When you change the date, the card clears while that day's weights and readings load.
+If it cannot load them, press **Try again**.
+
 - **Today** shows the day's weights and readings. When you have set an alarm, a line says how your weight
   changed and names the two weights it compared. When you have set a goal, a line shows your last 7 days'
   average against it. With fewer than 3 readings in those 7 days the app shows the average and says

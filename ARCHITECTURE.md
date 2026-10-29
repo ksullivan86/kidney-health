@@ -3477,6 +3477,9 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   weight compared, and for a weight over the alarm the handbook's weight line, not prominent) and the **goal line** (the goal as the care team gave it and
   the server's 7-day average against it). With neither set, a line says where to enter them. Days after today cannot be added to; the card needs the
   connection and says so (a save offline says "need a connection to your server ... Nothing was saved" in the sheet).
+  Changing the date clears the card and its summary immediately, including old alarm/goal lines.
+  Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.
+  Late replies or errors cannot replace the newest day's card.
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
