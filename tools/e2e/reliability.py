@@ -122,6 +122,8 @@ def walk_failed_save(page: Any) -> None:
     check("Add: a save that fails keeps the sheet open with the amount typed", still_open and kept,
           f"open={still_open} servings={page.input_value('#entry-servings') if still_open else '-'}")
     check("Add: the button can be pressed again after a failed save", page.is_enabled("#entry-save"))
+    seen = error_in_view(page)
+    check("Add: the error is shown where it can be seen, not under the sheet", seen == "ok", seen)
     page.unroute(failing)
     sent: list[str] = []
     page.on("request", lambda r: sent.append(r.url) if r.method == "POST" and urlsplit(r.url).path == "/api/log" else None)
@@ -176,6 +178,252 @@ def walk_recipe(page: Any, recipe_id: int) -> None:
     page.unroute("**/api/guidance/fit-recipe")
 
 
+# ---- the other screens that save: a failed save, then the next try ----------------------------------------------------------
+SERVER_PROBLEM = "The server had a problem."
+
+
+def fail_500(page: Any, path: str, method: str = "POST") -> Any:
+    """Answers 500 to `method` on `path` (any query string); everything else goes to the server. Returns what to unroute."""
+    def matches(url: str) -> bool:
+        return urlsplit(url).path == path
+
+    page.route(matches, lambda route: route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": SERVER_PROBLEM}))
+               if route.request.method == method else route.continue_())
+    return matches
+
+
+def error_in_view(page: Any) -> str:
+    """'ok' when the server's error is on screen and on top: a toast under an open sheet (the top layer) is not seen."""
+    return page.evaluate("""(needle) => {
+      const inline = [...document.querySelectorAll('dialog[open] [role=alert], dialog[open] .form-error, .view:not([hidden]) [role=alert]')]
+        .find((el) => el.offsetParent !== null && el.innerText.includes(needle));
+      if (inline) return 'ok';
+      const t = document.getElementById('toast');
+      if (!t || !t.classList.contains('show') || !t.textContent.includes(needle)) return `no error shown (toast: "${t ? t.textContent : ''}")`;
+      const r = t.getBoundingClientRect();
+      const was = t.style.pointerEvents;
+      t.style.pointerEvents = 'auto';  // the toast never takes a tap; for this look only
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      t.style.pointerEvents = was;
+      return top && t.contains(top) ? 'ok' : `the toast is hidden under ${top ? (top.id ? '#' + top.id : top.tagName.toLowerCase()) : 'nothing'}`;
+    }""", SERVER_PROBLEM)
+
+
+def after_failed_save(page: Any, screen: str, button: str, fields: dict[str, str], sheet: str | None = None) -> None:
+    page.wait_for_function("(sel) => { const b = document.querySelector(sel); return !!b && !b.disabled; }", arg=button)
+    page.wait_for_timeout(300)
+    if sheet:
+        check(f"{screen}: a save that fails keeps the sheet open", page.is_visible(f"{sheet}[open]"))
+    got = {sel: page.input_value(sel) for sel in fields}
+    check(f"{screen}: what was typed is kept", got == fields, json.dumps(got))
+    seen = error_in_view(page)
+    check(f"{screen}: a plain error is shown where it can be seen", seen == "ok", seen)
+    check(f"{screen}: the button works again", page.is_enabled(button))
+
+
+def next_try_saves_once(page: Any, screen: str, button: str, path: str, done: Any, method: str = "POST") -> None:
+    sent: list[str] = []
+
+    def note(r: Any) -> None:
+        if r.method == method and urlsplit(r.url).path == path:
+            sent.append(r.url)
+
+    page.on("request", note)
+    page.click(button)
+    done()
+    page.wait_for_timeout(500)
+    page.remove_listener("request", note)
+    check(f"{screen}: the next try saves once", len(sent) == 1, str(sent))
+
+
+def walk_plan_editor(page: Any) -> None:
+    """Plan → New saved meal: a save that fails keeps the name, note and foods."""
+    page.click("#tab-plan")
+    wait_text(page, "#saved-meals", "Crackers only")
+    page.click("#btn-new-meal")
+    page.wait_for_selector("#sheet-meal[open]")
+    page.fill("#meal-name", "Lunch bowl (test)")
+    page.fill("#meal-note", "with lime")
+    page.fill("#meal-search", "banana")
+    page.wait_for_selector("#meal-search-results .row-btn")
+    page.click("#meal-search-results .row-btn >> nth=0")
+    page.fill("#meal-items input", "2")
+    failing = fail_500(page, "/api/meals")
+    page.click("#meal-save")
+    after_failed_save(page, "Plan, saved meal editor", "#meal-save",
+                      {"#meal-name": "Lunch bowl (test)", "#meal-note": "with lime", "#meal-items input": "2"}, sheet="#sheet-meal")
+    page.unroute(failing)
+
+    def saved() -> None:
+        page.wait_for_selector("#sheet-meal", state="hidden")
+        wait_text(page, "#saved-meals", "Lunch bowl (test)")
+
+    next_try_saves_once(page, "Plan, saved meal editor", "#meal-save", "/api/meals", saved)
+    meals = [m for m in page.request.get("/api/meals").json()["meals"] if m["name"] == "Lunch bowl (test)"]
+    check("Plan, saved meal editor: the server has the meal once, with 2 servings",
+          len(meals) == 1 and [i["servings"] for i in meals[0]["items"]] == [2], json.dumps(meals)[:300])
+
+
+def walk_plan_apply(page: Any, meal_id: int, food_id: int) -> None:
+    """Plan → a saved meal → Add to a day: a failed save keeps the date and the scale."""
+    today = date.today().isoformat()
+    page.click("#tab-plan")
+    wait_text(page, "#saved-meals", "Crackers only")
+    page.locator("#saved-meals .saved-meal", has_text="Crackers only").get_by_role("button", name="Add to a day").click()
+    page.wait_for_selector("#sheet-apply[open]")
+    page.fill("#apply-date", today)
+    page.fill("#apply-scale", "2")
+    path = f"/api/meals/{meal_id}/apply"
+    failing = fail_500(page, path)
+    page.click("#apply-save")
+    after_failed_save(page, "Plan, Add a saved meal", "#apply-save", {"#apply-date": today, "#apply-scale": "2"}, sheet="#sheet-apply")
+    page.unroute(failing)
+    next_try_saves_once(page, "Plan, Add a saved meal", "#apply-save", path, lambda: page.wait_for_selector("#sheet-apply", state="hidden"))
+    entries = [e for e in page.request.get(f"/api/log?date={today}").json()["entries"] if e["food_id"] == food_id]
+    check("Plan, Add a saved meal: the day has the food once, twice the amount",
+          [e["servings"] for e in entries] == [2], json.dumps(entries)[:300])
+
+
+def walk_labs_save(page: Any) -> None:
+    """Labs → Add a result: a failed save keeps the test, the value and the note."""
+    page.click("#tab-profile")
+    page.click("#pf-open-labs")
+    page.wait_for_selector("#lab-unit option", state="attached")
+    page.select_option("#lab-analyte", "potassium")
+    page.fill("#lab-value", "4.6")
+    page.fill("#lab-note", "after lunch")
+    failing = fail_500(page, "/api/labs")
+    page.click("#lab-save")
+    after_failed_save(page, "Labs", "#lab-save", {"#lab-analyte": "potassium", "#lab-value": "4.6", "#lab-note": "after lunch"})
+    page.unroute(failing)
+    next_try_saves_once(page, "Labs", "#lab-save", "/api/labs", lambda: wait_text(page, "#labs-history", "4.6"))
+    rows = [r for r in page.request.get("/api/labs").json()["labs"] if r["analyte"] == "potassium"]
+    check("Labs: the server has the result once", len(rows) == 1, json.dumps(rows)[:300])
+
+
+def walk_labs_slow(page: Any) -> None:
+    """The list of results answers slowly; the person goes to Today and comes back. The old answer, late, is never drawn."""
+    for late in ("old results", "an error"):
+        page.click("#tab-profile")
+        page.wait_for_selector("#pf-open-labs")
+        held: list[Any] = []
+
+        def is_list(url: str) -> bool:
+            return urlsplit(url).path == "/api/labs"
+
+        def hold_first(route: Any) -> None:
+            if route.request.method == "GET" and not held:
+                held.append(route)
+            else:
+                route.continue_()
+
+        page.route(is_list, hold_first)
+        page.click("#pf-open-labs")
+        for _ in range(50):
+            if held:
+                break
+            page.wait_for_timeout(100)
+        page.click("#tab-today")
+        page.wait_for_timeout(300)
+        page.click("#tab-profile")
+        with page.expect_response(lambda r: urlsplit(r.url).path == "/api/me/settings"):
+            page.click("#pf-open-labs")  # Labs asks for the unit setting, then for the list
+        page.wait_for_timeout(500)  # so the old answer comes after this visit asked for the list
+        for route in held:
+            if late == "old results":
+                route.fulfill(status=200, content_type="application/json", body=json.dumps({"labs": [], "alerts": []}))
+            else:
+                route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": SERVER_PROBLEM}))
+        page.wait_for_timeout(800)
+        page.unroute(is_list)
+        shown = text_of(page, "#labs-history")
+        check(f"Labs: a slow answer from before ({late}) is not drawn over the results shown now",
+              held and "4.1" in shown and "could not be loaded" not in shown and "No results yet" not in shown, shown[:160])
+
+
+def walk_profile(page: Any) -> None:
+    """Profile → Save profile with new targets: a failed save keeps the numbers typed."""
+    page.click("#tab-profile")
+    page.wait_for_function("() => document.querySelector('#tg-potassium_mg').value === '2500'")
+    page.wait_for_timeout(300)
+    page.fill("#tg-potassium_mg", "2200")
+    page.fill("#tg-phosphorus_mg", "900")
+    failing = fail_500(page, "/api/profile", method="PUT")
+    page.click("#btn-save-profile")
+    after_failed_save(page, "Profile", "#btn-save-profile", {"#tg-potassium_mg": "2200", "#tg-phosphorus_mg": "900"})
+    page.unroute(failing)
+    next_try_saves_once(page, "Profile", "#btn-save-profile", "/api/profile", lambda: wait_text(page, "#toast", "Profile saved"), method="PUT")
+    targets = page.request.get("/api/profile").json()["targets"]
+    check("Profile: the server has the new targets", targets.get("potassium_mg") == 2200 and targets.get("phosphorus_mg") == 900,
+          json.dumps(targets)[:200])
+
+
+def walk_body_save(page: Any) -> None:
+    """Today → Add weight and Add blood pressure: a failed save keeps the numbers and the note."""
+    page.goto("/")
+    wait_text(page, "#meals", "Banana")
+    wait_text(page, "#body-today-body", "158.7")
+    for screen, add, sheet, typed, save, path, shows in (
+            ("Weight", "#body-add-weight", "#sheet-weight", {"#weight-value": "154.3", "#weight-note": "after breakfast"},
+             "#weight-save", "/api/body/weights", "154.3"),
+            ("Blood pressure", "#body-add-bp", "#sheet-bp", {"#bp-systolic": "128", "#bp-diastolic": "82", "#bp-note": "left arm"},
+             "#bp-save", "/api/body/blood-pressure", "128")):
+        page.click(add)
+        page.wait_for_selector(f"{sheet}[open]")
+        for sel, value in typed.items():
+            page.fill(sel, value)
+        page.click(f"{sheet} [id$=-context] label >> nth=0")  # "when it was taken": the label is what is tapped
+        failing = fail_500(page, path)
+        page.click(save)
+        after_failed_save(page, screen, save, typed, sheet=sheet)
+        page.unroute(failing)
+
+        def saved(sheet: str = sheet, shows: str = shows) -> None:
+            page.wait_for_selector(sheet, state="hidden")
+            wait_text(page, "#body-today-body", shows)
+
+        next_try_saves_once(page, screen, save, path, saved)
+
+
+def walk_body_slow(page: Any) -> None:
+    """The day before's weights answer slowly; the person goes back to today. Neither day's card shows the other's weight."""
+    for late in ("the day before's weights", "an error"):
+        page.goto("/")
+        wait_text(page, "#body-today-body", "158.7")
+        held: list[Any] = []
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+
+        def is_weights(url: str) -> bool:
+            u = urlsplit(url)
+            return u.path == "/api/body/weights" and f"start={yesterday}" in u.query
+
+        page.route(is_weights, lambda route: held.append(route))
+        page.click("#date-prev")
+        for _ in range(50):
+            if held:
+                break
+            page.wait_for_timeout(100)
+        page.wait_for_timeout(300)
+        waiting = text_of(page, "#body-today-body")
+        check(f"Weight and blood pressure ({late}): while the day before loads, today's weight is not shown under it",
+              held and "158.7" not in waiting, waiting[:160])
+        page.click("#date-next")
+        wait_text(page, "#body-today-body", "158.7")
+        page.unroute(is_weights)
+        for route in held:
+            try:
+                if late == "an error":
+                    route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": SERVER_PROBLEM}))
+                else:
+                    route.fulfill(response=route.fetch())
+            except Exception:  # noqa: BLE001 - the page gave up on it (the request was cancelled): also fine
+                pass
+        page.wait_for_timeout(800)
+        shown = text_of(page, "#body-today-body")
+        check(f"Weight and blood pressure: a slow answer for the day before ({late}) is not drawn over today",
+              "158.7" in shown and "149.9" not in shown and "could not be loaded" not in shown, shown[:160])
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--port", type=int, default=PORT)
@@ -196,9 +444,13 @@ def main(argv: list[str] | None = None) -> int:
         ana.json("POST", "/api/log", {"date": date.today().isoformat(), "meal": "breakfast", "food_id": banana, "servings": 1})
         crackers = ana.json("POST", "/api/foods", {"name": "Plain crackers (test)", "serving_desc": "5 crackers (30 g)", "serving_g": 30,
                                                    "nutrients": {"calories_kcal": 120, "carbs_g": 20, "sodium_mg": 180}})["id"]
-        ana.json("POST", "/api/meals", {"name": "Crackers only", "items": [{"food_id": crackers, "servings": 1}]})
+        crackers_only = ana.json("POST", "/api/meals", {"name": "Crackers only", "items": [{"food_id": crackers, "servings": 1}]})["id"]
         ana.json("POST", "/api/meals", {"name": "Crackers and banana", "items": [{"food_id": crackers, "servings": 1}, {"food_id": banana, "servings": 1}]})
         recipe = ana.json("POST", "/api/meals", {"name": "Big pot", "items": [{"food_id": banana, "servings": 10}], "servings_made": 100})["id"]
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        ana.json("POST", "/api/body/weights", {"date": date.today().isoformat(), "kg": 72, "context": "morning"})  # 158.7 lb
+        ana.json("POST", "/api/body/weights", {"date": yesterday, "kg": 68, "context": "morning"})  # 149.9 lb
+        ana.json("POST", "/api/labs", {"analyte": "phosphate", "value": 4.1, "unit": "mg/dL", "taken_on": yesterday})
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
@@ -208,11 +460,17 @@ def main(argv: list[str] | None = None) -> int:
                 page.set_default_timeout(15000)
                 for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
                                    ("Failed save", lambda: walk_failed_save(page)), ("Saved meals", lambda: walk_saved_meals(page)),
-                                   ("Recipe", lambda: walk_recipe(page, recipe))):
+                                   ("Recipe", lambda: walk_recipe(page, recipe)), ("Plan editor", lambda: walk_plan_editor(page)),
+                                   ("Plan, Add a saved meal", lambda: walk_plan_apply(page, crackers_only, crackers)),
+                                   ("Labs", lambda: walk_labs_save(page)), ("Labs, slow list", lambda: walk_labs_slow(page)),
+                                   ("Weight and blood pressure", lambda: walk_body_save(page)),
+                                   ("Weight and blood pressure, slow day", lambda: walk_body_slow(page)),
+                                   ("Profile", lambda: walk_profile(page))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
-                    except Exception:
-                        check(f"{name}: the step ran to the end", False, traceback.format_exc(limit=2).splitlines()[-1])
+                    except Exception as e:  # noqa: BLE001 - reported, then the next step runs
+                        why = (str(e).strip().splitlines() or [""])[0]
+                        check(f"{name}: the step ran to the end", False, f"{type(e).__name__}: {why}")
                         page.unroute_all()
                         page.goto("/")
                 ctx.close()
