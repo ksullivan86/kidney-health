@@ -183,6 +183,9 @@ sign-in activity.
   or 30 days; **Stop seeing** ends it.
 - A link nobody has used yet can be cancelled from the same list.
 
+In **Trends**, the symptom and weight/blood-pressure cards clear while loading. If one cannot load,
+tap **Retry** to try that person and period again.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat

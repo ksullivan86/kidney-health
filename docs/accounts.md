@@ -147,6 +147,9 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 
 How it works, and why: [design note 19](dev/research/19-sharing.md).
 
+When opening Trends, the symptom and weight/blood-pressure cards clear their old contents while loading.
+If a card cannot load, **Retry** tries the same person and period again. Resizing does not bring back an old chart.
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.
