@@ -58,7 +58,7 @@
   // The QR code
   // ---------------------------------------------------------------------------
   let qrModule = null;
-  async function qrSvg(uri) {
+  async function qrSvg(uri, label = 'QR code to scan with your authenticator app') {
     if (!qrModule) qrModule = import(QR_URL).then((m) => m.default);
     const qrcode = await qrModule;
     const qr = qrcode(0, 'M');
@@ -66,7 +66,7 @@
     qr.make();
     const n = qr.getModuleCount();
     const size = n + 8;
-    return s('svg', { class: 'two-step-qr', viewBox: `0 0 ${size} ${size}`, role: 'img', 'aria-label': 'QR code to scan with your authenticator app', focusable: 'false', 'shape-rendering': 'crispEdges' },
+    return s('svg', { class: 'two-step-qr', viewBox: `0 0 ${size} ${size}`, role: 'img', 'aria-label': label, focusable: 'false', 'shape-rendering': 'crispEdges' },
       s('rect', { class: 'qr-light', x: 0, y: 0, width: size, height: size }),
       s('path', { class: 'qr-dark', d: qrPath(n, (r, c) => qr.isDark(r, c)) }));
   }
@@ -241,5 +241,5 @@
       h('p', { class: 'hint' }, 'Keep them somewhere safe and away from your phone: in a password manager, or printed at home.'));
   }
 
-  KH.twoStep = { block, groupKey, codesFile, qrPath, leftText, QR_URL };
+  KH.twoStep = { block, groupKey, codesFile, qrPath, qrSvg, leftText, QR_URL }; // qrSvg also draws the iPhone app's pairing code (settings.js)
 })();

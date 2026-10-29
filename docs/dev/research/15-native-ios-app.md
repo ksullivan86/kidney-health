@@ -58,7 +58,7 @@ Note 12 built the server half of that: a write-only device token and an add-only
 
 * **Settings screen.**
   * The server address (HTTPS only).
-  * The device token, pasted, or (later) paired by scanning a QR code that Settings → Phone shortcuts shows once.
+  * The device token, pasted, or paired by scanning the QR code that Settings → Phone shortcuts shows once (built 2026-10-29, §4.3).
   * The token is stored in the Keychain, this device only (I4), never in `UserDefaults`, and never shown again after saving.
   * A **Test connection** button. Built as its own route, `GET /push/v1/check` (bearer, sends nothing, answers `{"ok": true}`, shares the token's hour), because `POST /push/v1/body` refuses a request with no rows.
 * **Permissions screen.**
@@ -76,6 +76,17 @@ Note 12 built the server half of that: a write-only device token and an add-only
 ### 4.3 What the server and the web app need (small)
 
 * **Optionally, a QR code for pairing** in Settings → Phone shortcuts, holding the address and the token once. It is drawn on the device by the page, without a vendored library if one fits in a few hundred lines; otherwise vendored and pinned.
+  Built 2026-10-29:
+  * `POST /api/me/tokens` answers `pair_url` for a device token: `kidneyhealthsync://pair?v=1&server=…&token=khd_…`, built by
+    `app/pairing.py` from `PUBLIC_URL` or the request's address. It is `null` unless the address is `https://` and a host, because the
+    app needs HTTPS. The page draws it with the `qrcode-generator` module already vendored for two-step sign-in.
+  * The iPhone Camera opens the app through its link scheme, so the app has no camera code and asks for no camera permission.
+  * The app asks "Pair with <host>?" before it saves, so a QR code made by someone else cannot quietly point it at their server.
+  * `KidneyHealthCore` `Pairing.parse` takes a link only in the exact form the server makes. `tests/data/pairing_vectors.json`
+    holds the server's reading, with 50 links it refuses.
+  * Another app could register the same scheme. A universal link would avoid that, but it needs a file on a domain the app names
+    when it is built, and every server here has its own domain. The token can only add readings and can be revoked, so the risk is
+    the same as a token pasted by hand.
 * **A way for the app to test a token without sending a reading.** Built as `GET /push/v1/check` (bearer, stores nothing, shares the token's 60 requests an hour).
 * Nothing else. The route, its limits and the same-reading check are the whole server side (note 12 §7).
 
@@ -114,7 +125,7 @@ Note 12 built the server half of that: a write-only device token and an add-only
    * The Xcode project is written by hand in the folder-based format (`objectVersion = 77`), because XcodeGen could not be fetched and
      pinned. Xcode adds new files in those folders by itself.
 3. **Signing, TestFlight and the owner's phone tests**: the owner's account and time, plus about 1M tokens of workflow and fixes.
-4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built.
+4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built. Built 2026-10-29 (§4.3).
 
 That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for the full shell (option B).
 
@@ -126,4 +137,4 @@ That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for th
 Decided 2026-10-22: the owner put option A next on the roadmap, Swift package first.
 
 3. When to buy the Apple Developer Program membership and add the signing secrets (step 3)?
-4. Pairing by QR code, or pasting the token only?
+4. Pairing by QR code, or pasting the token only? Decided 2026-10-29: both. The owner asked for the QR code.

@@ -257,6 +257,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "KidneyHealthSync-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health Sync";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";
@@ -286,6 +287,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "KidneyHealthSync-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health Sync";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";

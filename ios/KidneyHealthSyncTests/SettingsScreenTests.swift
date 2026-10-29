@@ -29,6 +29,20 @@ final class SettingsScreenTests: XCTestCase {
         XCTAssertEqual(m.appURL?.absoluteString, "https://kidney.example.org/")
     }
 
+    func testAQRCodeIsSavedOnlyAfterTheQuestionAndSaysWhatItReplaces() throws {
+        let m = model()
+        let token = "khd_" + String(repeating: "b", count: 43)
+        let link = try XCTUnwrap(Pairing.parse("kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=" + token))
+        XCTAssertFalse(m.hasToken)  // reading the link saves nothing
+        XCTAssertEqual(m.pairingQuestion(link), "This phone will send your weight and blood pressure to https://kidney.example.org. "
+                       + "Pair only with a QR code from your own server, under Settings → Phone shortcuts.")
+        XCTAssertNil(m.save(address: link.server, token: link.token))
+        XCTAssertTrue(m.hasToken)
+        XCTAssertEqual(m.address, "https://kidney.example.org")
+        XCTAssertTrue(m.pairingQuestion(link).hasSuffix(" The token saved on this phone now is replaced."))
+        XCTAssertNil(Pairing.parse("kidneyhealthsync://pair?v=1&server=http%3A%2F%2Fkidney.example.org&token=" + token))
+    }
+
     func testAnotherServerStartsAgainFromThreeMonthsBack() throws {
         let m = model()
         XCTAssertNil(m.save(address: "https://one.example.org", token: "khd_" + String(repeating: "a", count: 43)))

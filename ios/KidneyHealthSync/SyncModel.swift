@@ -68,6 +68,17 @@ final class SyncModel: ObservableObject {
         return nil
     }
 
+    /// Said when the app is opened with a link that is not a pairing link the server made.
+    static let notAPairingLink = "That is not a pairing code from Settings → Phone shortcuts. Make a new phone token there and scan its QR code."
+
+    /// What the app asks before it saves the address and token of a QR code, so a code made by someone else is not taken quietly.
+    func pairingQuestion(_ link: Pairing.Link) -> String {
+        var text = "This phone will send your weight and blood pressure to \(link.server). "
+            + "Pair only with a QR code from your own server, under Settings → Phone shortcuts."
+        if hasToken { text += " The token saved on this phone now is replaced." }
+        return text
+    }
+
     /// Removes the token and the anchors from this phone. Rows already sent stay on the server ("Delete what it sent" removes them).
     func removeToken() {
         Keychain.delete(.token)

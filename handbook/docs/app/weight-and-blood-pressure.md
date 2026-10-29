@@ -216,6 +216,13 @@ ask each time. Whether an automation runs without asking depends on your iOS ver
 - **429.** The token has sent more than 60 requests in an hour. Wait and try again.
 - **It cannot connect.** The phone cannot reach the server (see above).
 
+### The QR code next to the token
+
+When the server has an `https://` address, the page also shows a **QR code** with the new token. It is for the project's
+iPhone app, which sends new weights and readings from Health by itself. The app is not in the App Store yet, and a Shortcut
+does not need the code. Point the iPhone Camera at it and tap the link: the app asks "Pair with" and your server's name
+before it saves anything. Keep the code private, like the token, and do not photograph it.
+
 ### If the phone is lost or the shortcut was shared
 
 Open **Settings → Account → Your data → Phone shortcuts** on another device and **Revoke** the token. The shortcut stops

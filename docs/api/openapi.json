@@ -17581,7 +17581,7 @@
         ]
       },
       "post": {
-        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).\nA device token's scopes are always exactly ``[\"body:write\"]``: the request cannot choose them (``can_log`` and\n``can_prefs`` are refused for it).",
+        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).\nA device token's scopes are always exactly ``[\"body:write\"]``: the request cannot choose them (``can_log`` and\n``can_prefs`` are refused for it). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app\nholds (:mod:`app.pairing`), or null when this server's address is not ``https://`` and a host.",
         "operationId": "me_create_my_token",
         "requestBody": {
           "content": {

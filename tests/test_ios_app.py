@@ -80,3 +80,24 @@ def test_the_token_and_anchors_stay_on_this_device():
     assert "kSecAttrSynchronizable" not in keychain
     model = APP["KidneyHealthSync/SyncModel.swift"]
     assert re.search(r"defaults\.set\([^)]*token", model) is None  # the token never goes to UserDefaults
+
+
+def test_the_app_opens_only_its_pairing_links_and_asks_before_it_saves():
+    from app import brand
+
+    info = plistlib.loads((IOS / "KidneyHealthSync-Info.plist").read_bytes())
+    assert info == {"CFBundleURLTypes": [{"CFBundleTypeRole": "Viewer", "CFBundleURLName": "io.github.ksullivan86.kidneyhealth.sync.pair",
+                                          "CFBundleURLSchemes": [brand.PAIRING_SCHEME]}]}
+    app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth.sync;" in block]
+    assert len(app_configs) == 2 and all('INFOPLIST_FILE = "KidneyHealthSync-Info.plist";' in b for b in app_configs)
+    assert len(re.findall(r"\sINFOPLIST_FILE =", PROJECT)) == 2  # the tests target has none
+    pairing = SWIFT["KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift"]
+    assert f'public static let scheme = "{brand.PAIRING_SCHEME}"' in pairing
+    view = APP["KidneyHealthSync/ContentView.swift"]
+    assert ".onOpenURL { url in" in view and "Pairing.parse(url.absoluteString)" in view
+    # nothing is saved when the link arrives: only the alert's Pair button saves
+    opened = view[view.index(".onOpenURL"):view.index(".alert(")]
+    assert "model.save" not in opened
+    alert = view[view.index(".alert("):]
+    assert alert.index('Button("Pair")') < alert.index("model.save(address: link.server, token: link.token)")
+    assert 'Button("Cancel", role: .cancel)' in alert and "model.pairingQuestion(link)" in alert

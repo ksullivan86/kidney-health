@@ -51,6 +51,7 @@ PINNED = {
     "VERSION_HEADER": "X-KDL-Version",
     "ASSISTANT_TOKEN_PREFIX": "kha_",
     "DEVICE_TOKEN_PREFIX": "khd_",
+    "PAIRING_SCHEME": "kidneyhealthsync",
     "BEARER_REALM": "kidney-health",
     "MCP_SERVER_NAME": "kidney-health",
     "MCP_SERVER_TITLE": "Kidney Health food log",

@@ -1,4 +1,5 @@
 // The one screen: your server, Apple Health, and what was sent. Every other screen is in the web app.
+import KidneyHealthCore
 import SwiftUI
 
 struct ContentView: View {
@@ -7,6 +8,8 @@ struct ContentView: View {
     @State private var token = ""
     @State private var problem: String?
     @State private var saved = false
+    /// The address and token of a QR code the Camera opened the app with, until the person says yes or no.
+    @State private var pairing: Pairing.Link?
 
     var body: some View {
         NavigationStack {
@@ -43,7 +46,8 @@ struct ContentView: View {
                 } header: {
                     Text("Your server")
                 } footer: {
-                    Text("Make a token in the web app under Settings → Phone shortcuts. It is kept on this phone only and is never shown again. "
+                    Text("Make a token in the web app under Settings → Phone shortcuts, then scan its QR code with the Camera, or paste "
+                         + "the address and the token here. The token is kept on this phone only and is never shown again. "
                          + "Test connection checks the saved address and token, and sends nothing else.")
                 }
 
@@ -82,5 +86,27 @@ struct ContentView: View {
             .navigationTitle("Kidney Health Sync")
         }
         .onAppear { address = model.address }
+        .onOpenURL { url in
+            if let link = Pairing.parse(url.absoluteString) {
+                pairing = link
+            } else {
+                problem = SyncModel.notAPairingLink
+                saved = false
+            }
+        }
+        .alert("Pair with \(pairing?.host ?? "this server")?",
+               isPresented: Binding(get: { pairing != nil }, set: { if !$0 { pairing = nil } }), presenting: pairing) { link in
+            Button("Pair") {
+                problem = model.save(address: link.server, token: link.token)
+                saved = problem == nil
+                if saved {
+                    address = model.address
+                    token = ""
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { link in
+            Text(model.pairingQuestion(link))
+        }
     }
 }
