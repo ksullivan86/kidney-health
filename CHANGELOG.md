@@ -30,6 +30,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Show other foods.** What fits now has a **Show other foods** button that finds foods not already on the list, and
   **Back to the first choices** to start over. AI meal ideas have **Other ideas** and AI recipes **Other recipes**, which ask
   the AI again without the foods it already suggested. See [`docs/guidance.md`](docs/guidance.md).
+* **Error messages show over an open sheet.** When a save fails in a sheet, such as Add weight, Add blood pressure, a food
+  entry or a saved meal, the message now shows on top of the sheet and screen readers read it. Before, it was hidden
+  behind the sheet. The sheet keeps what you typed, so you can press Save again.
+* **The weight card shows the right day.** While another day loads, the Weight and blood pressure card on Today says
+  "Loading weights and blood pressure…". Before, it kept showing the previous day's weights, alarm and goal under the new
+  date. If the day cannot load, **Try again** shows.
+* **Suggested targets never replace what you typed.** If you change your details or targets in Profile while a suggestion
+  is loading, the app keeps your entries and asks you to suggest again.
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the

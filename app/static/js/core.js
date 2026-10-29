@@ -210,7 +210,15 @@
   // ---------------------------------------------------------------------------
   const toastEl = $('#toast');
   let toastTimer = null;
+  // An open sheet (a modal dialog) is drawn above the page and makes the page inert: a toast there would be hidden under the
+  // sheet and not read out. So the toast goes into the open sheet, and back to the page when the sheet closes.
+  function toastHost() {
+    const open = $$('dialog[open]').filter((d) => { try { return d.matches(':modal'); } catch (e) { return true; } });
+    return open.length ? open[open.length - 1] : document.body;
+  }
   function toast(message, type = '') {
+    const host = toastHost();
+    if (toastEl.parentElement !== host) host.append(toastEl);
     toastEl.textContent = message;
     toastEl.className = `toast show ${type}`.trim();
     clearTimeout(toastTimer);
@@ -746,6 +754,7 @@
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     $$('[data-close]', dlg).forEach((b) => b.addEventListener('click', () => dlg.close()));
     dlg.addEventListener('close', () => {
+      if (dlg.contains(toastEl)) document.body.append(toastEl); // a toast shown in the sheet stays in view (toastHost)
       $$('.sheet-foot', dlg).forEach((foot) => dismissConfirm(foot));
       const f = dlg._returnFocus;
       dlg._returnFocus = null;

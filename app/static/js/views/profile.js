@@ -362,6 +362,10 @@
   // Suggest targets
   // ---------------------------------------------------------------------------
   const sameNumber = (a, b) => (a ?? null) === (b ?? null) || (a != null && b != null && Number(a) === Number(b));
+  let suggestionRequest = 0;
+  const suggestionButtons = () => ['#btn-suggest', '#targets-stale-suggest', '#targets-review-suggest'].map((selector) => $(selector));
+  // Include targets as well as profile details: a delayed answer must not replace care-team entries.
+  const suggestionForm = () => JSON.stringify($$('input, select, textarea', profileForm).map((el) => [el.value, el.checked]));
   // The fields the suggestion reads that differ between the form and the saved profile.
   function unsavedChanges(saved) {
     const body = formBody(null);
@@ -376,7 +380,6 @@
     return changed;
   }
   async function suggestTargetsIntoForm({ from = null } = {}) {
-    const btn = from ? $(from) : $('#btn-suggest');
     // The endpoint works from the *saved* profile; check the form first so the person is told
     // what to do in plain words instead of seeing the server's 400, and is not handed numbers for
     // details the form no longer shows.
@@ -406,10 +409,16 @@
     // only come back 422. The server still refuses on its own.
     const refusal = refusalFor(saved);
     if (refusal) { renderRefusal(refusal.code, refusal.message); return; }
-    btn.disabled = true;
+    const request = ++suggestionRequest;
+    const form = suggestionForm();
+    const current = () => request === suggestionRequest && state.profile === saved && form === suggestionForm();
+    const keepEntries = () => { $('#suggest-live').textContent = 'Your entries changed while the suggestion was loading. They have been kept. Suggest again when you are ready.'; };
+    suggestionButtons().forEach((button) => { button.disabled = true; });
     $('#suggest-live').textContent = 'Working out suggested targets…';
     try {
       const res = await api.suggested();
+      if (request !== suggestionRequest) return;
+      if (!current()) { keepEntries(); return; }
       fillTargets(res.targets || {}, { onlyGiven: true });
       $('#suggest-refusal').hidden = true;
       renderSuggestion(res, saved);
@@ -421,11 +430,15 @@
       if (from) $('#suggest-notes').focus();
       toast('Targets suggested; review and save', 'ok');
     } catch (err) {
+      if (request !== suggestionRequest) return;
+      if (!current()) { keepEntries(); return; }
       $('#suggest-live').textContent = '';
       if (err.handled) return;
       if (err.status === 422 && err.data && err.data.code) renderRefusal(err.data.code, err.detail);
       else toastError(err);
-    } finally { btn.disabled = false; }
+    } finally {
+      if (request === suggestionRequest) suggestionButtons().forEach((button) => { button.disabled = false; });
+    }
   }
 
   // {code, message} when the rules refuse this saved profile (js/engine/targets.js OutOfScope), else null.
