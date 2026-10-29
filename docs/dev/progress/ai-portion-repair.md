@@ -43,10 +43,15 @@ Worktree: `/home/user/kidney-health/.claude/worktrees/agent-a0f680c60c2411e99`, 
      (`rules-large-portion-of-good-food-dropped` renamed `...-lowered`), 2 new cases.
    * No JS twin: the demo has no AI (js/mock/ai.js answers 404), and nothing in tests/data covers the bridge.
 
+2. Docs (verified: the doc tests, `pytest -k "doc or changelog or handbook or readme or architecture or plain or words"`,
+   941 passed): docs/ai.md (meal ideas row, G4, what is sent, "did not fit" row, the live run note for 2026-10-29.1),
+   ARCHITECTURE.md (ai_bridge hook, AiAnswer, Idea), handbook/docs/app/ai.md (the warning bullet and the "did not fit"
+   line, which also now quotes the real message), CHANGELOG.md (one line for people using the app, one for people who run a
+   server).
+
 ## Next
 
-1. Docs: docs/ai.md (G4 row, "did not fit" row, live eval note), ARCHITECTURE.md, handbook/docs/app/ai.md, CHANGELOG.
-2. Mark complete.
+1. Full `python -m pytest` run, then mark complete.
 
 ## Old vs new (tests/test_ai_portion_repair.py, rice 4 quarters + a 170 mg potassium food 6 quarters)
 

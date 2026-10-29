@@ -9,6 +9,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
+  smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
+
 * **A share can end on a date.** When you make a sharing link, pick how long it lasts: until you stop it, a week, 30 days,
   90 days or a year. On that day the share stops by itself, and your activity says so. Both of you see the end date. See
   [`docs/accounts.md`](docs/accounts.md#sharing-with-a-caregiver).
@@ -42,6 +45,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   you opened last. A slow read of your profile or saved meals can no longer undo a save or an import you just made.
 
 ### For people who run a server
+
+* **New `PROMPT_VERSION` (`2026-10-29.1`).** Each meal candidate now tells the AI the most of it the app accepts. Run
+  `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
 
 * **`scripts/ai_eval.py` sends what your server sends.** It reads `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT`
   and `AI_CONTEXT_TOKENS`, or their `AI_CLOUD_*` twins with `--role cloud`, and the report records them. Before, a cloud run always

@@ -87,7 +87,10 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
 - **Dose and lab questions never go to AI.** If what you type to describe a meal also asks about insulin, a medicine or
   supplement dose, a lab result or what a symptom means, the app shows **Ask your care team** and does not call AI. Describe
   only the food to log the meal.
-- **AI never overrides a warning.** An idea that would push your day over a limit is dropped.
+- **AI never overrides a warning.** An idea that would push your day over a limit is never shown as it is. If the only
+  problem is that a portion is too big, the app makes it smaller, a quarter of a serving at a time, until the meal fits.
+  You then see **"The app made a portion smaller so the meal fits your targets."** under the idea, and the amounts and
+  numbers shown are the smaller ones. Any other problem, such as a food to avoid with kidney disease, drops the idea.
 - **No free text from AI in the meal features.** The reasons you read under an idea ("Low in potassium; fits your
   dinner carbohydrate goal") are written by the app's maintainers, not by the AI. **Ask** is the one place
   where the AI writes sentences, and the app checks them before you see them (see "Ask" below).
@@ -310,8 +313,8 @@ How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs you
 
 ## If something goes wrong
 
-- **"The AI ideas did not fit your targets today, so these are the app's own ideas."** Every AI idea
-  failed the rules. Use the app's ideas.
+- **"The AI ideas did not fit your targets today, so these are the app's own."** Every AI idea failed the rules,
+  even after the app made too-big portions smaller. Use the app's ideas.
 - **"This is outside what the app's AI helps with. Your care team can answer it."** The question is
   medical. Ask your team.
 - **"This answer was not shown because it touched on medicine or insulin doses."** (in Ask) The app does not
