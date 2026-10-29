@@ -107,6 +107,9 @@ is waiting for clinical review.
 
 ## Suggested targets
 
+If you edit your details or targets while the suggestion loads, the app keeps your entries.
+Save any changed details, then suggest again when you are ready.
+
 "Suggest targets" in your profile fills in starting values from the same table as
 [Eating well](../eat/index.md#your-numbers), labeled "discuss with your care team":
 

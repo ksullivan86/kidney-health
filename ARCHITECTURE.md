@@ -1650,6 +1650,9 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   buttons for `missing_inputs`, and the END note. Each rule is paired with its note by position
   (`notes.length === rules.length + 1`). Refusals are recognised with `KH.targets` before the request
   (no 422 round trip) and render their message instead of numbers.
+  A pending suggestion disables all three suggestion buttons. Its reply applies only while both
+  the saved profile reference and all profile/target entries match the request. Changed entries
+  are kept with a live notice; superseded replies and errors cannot change the current form.
 * **Lab results** (`#labs`): unit picker defaulting from `user.units.labs`, the conversion echo and
   plausibility check before POST (the twin), *What this result changed* (suggestion before vs after),
   the cumulative *Review suggested targets* notice in Profile (`state.targetsReview`; never applied),
