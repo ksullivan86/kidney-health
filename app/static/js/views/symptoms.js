@@ -6,7 +6,7 @@
    them in `red_flag`; js/engine/symptoms.js is the demo's copy). A severe one is shown as a block that stands out and is
    listed first.
 
-   * Today (js/views/today.js calls KH.symptoms.today(date) after it draws a day): the day's symptoms, Edit and Delete
+   * Today (js/views/today.js starts KH.symptoms.today(date) independently of food): the day's symptoms, Edit and Delete
      for each, and Add, which opens the sheet. Nothing is saved until Save. Days after today cannot be added to.
    * Trends (js/views/trends.js calls KH.symptoms.trends(start, end)): one row per symptom with the number of days, the
      worst severity, a strip of marks over the period (a mark's height is its severity; the dates and the words are

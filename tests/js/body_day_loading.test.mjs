@@ -85,3 +85,28 @@ test('a future day clears the summary and invalidates an earlier pending read', 
   assert.match(JSON.stringify(s.body.children), /days that have passed/);
   assert.doesNotMatch(JSON.stringify(s.body.children), /old reply/);
 });
+
+const todaySource = readFileSync(new URL('../../app/static/js/views/today.js', import.meta.url), 'utf8');
+const loadStart = todaySource.indexOf('  let dayRequest = 0;');
+const loadEnd = todaySource.indexOf('  /** The chosen day', loadStart);
+assert.ok(loadStart >= 0 && loadEnd > loadStart);
+for (const failed of [false, true]) {
+  test(`weight/BP starts before food and is not restarted when food ${failed ? 'fails' : 'loads'}`, async () => {
+    const calls = [];
+    let resolve, reject;
+    const context = vm.createContext({
+      state: { date: '2026-10-28', dayLoadedFor: null },
+      dateInput: {}, dateLabel: {}, backToToday: {}, mealsEl: { style: {} },
+      fmtDateLong: (date) => date, todayStr: () => '2026-10-29', loadWeekStrip() {}, console,
+      KH: { body: { today: (date) => { calls.push(date); return Promise.resolve(); } } },
+      api: { day: () => new Promise((a, b) => { resolve = a; reject = b; }) },
+      renderToday() {}, renderUnavailable() {}, toastError() {},
+    });
+    vm.runInContext(todaySource.slice(loadStart, loadEnd), context);
+    const pending = context.loadDay();
+    assert.deepEqual(calls, ['2026-10-28']);
+    if (failed) reject({ status: 500 }); else resolve({ date: '2026-10-28' });
+    await pending;
+    assert.deepEqual(calls, ['2026-10-28']);
+  });
+}

@@ -43,6 +43,7 @@
     dateLabel.textContent = fmtDateLong(state.date);
     backToToday.hidden = state.date === todayStr();
     if (KH.symptoms) KH.symptoms.today(state.date).catch((e) => console.warn('Symptoms:', e)); // load independently of the food log
+    if (KH.body) KH.body.today(state.date).catch((e) => console.warn('Weight and blood pressure:', e));
     if (state.dayLoadedFor !== state.date) mealsEl.style.opacity = '0.6';
     loadWeekStrip();
     try {
@@ -74,7 +75,6 @@
     retry.addEventListener('click', () => loadDay());
     clear(mealsEl).append(h('div', { class: 'card day-unavailable', role: 'alert', id: 'day-unavailable' },
       h('p', {}, `${fmtDateLong(state.date)} could not be loaded, so nothing is shown for it. ${why}`), retry));
-    if (KH.body) KH.body.today(state.date).catch((e) => console.warn('Weight and blood pressure:', e));
   }
 
   function renderToday() {
@@ -238,7 +238,6 @@
     }
     $('#totals-details > summary').textContent = counts.planned > 0 ? 'All nutrient totals for the day (eaten → projected)' : 'All nutrient totals for the day';
     if (KH.guidance) KH.guidance.today(day).catch((e) => console.warn('Meal guidance:', e));
-    if (KH.body) KH.body.today(day.date).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body.js
   }
 
   // A goal with only a minimum (fibre, note 05 §4.8): progress toward it, never "over".

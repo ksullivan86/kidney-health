@@ -8,7 +8,7 @@
    and a link to its Get help now page (the server sends them in `flag`; js/engine/body.js is the demo's copy). A very high
    reading is a block that stands out and is listed first, with the 911 line first in it.
 
-   * Today (js/views/today.js calls KH.body.today(date) after it draws a day): the day's weights and readings with Edit and Delete,
+   * Today (js/views/today.js starts KH.body.today(date) independently of food): the day's weights and readings with Edit and Delete,
      Add weight and Add blood pressure (the sheets; nothing is saved until Save), and the alarm line or the goal line when the person
      set one, naming the two weights compared.
    * The sheets: the weight in the person's unit with the other unit echoed ("154.3 lb = 70.0 kg"), when it was taken (the dialysis

@@ -63,7 +63,7 @@ The recipe Fit checks in `reliability.py` open saved meals with missing, partial
 potassium and verify the qualifiers on the nutrient row itself.
 
 `body.py` also delays a previous day's weight read while the date changes back. It checks that
-the card clears during loading and the late reply cannot restore old measurements.
+the card clears even while food is held too, and late replies cannot restore old measurements.
 
 `symptoms.py` also delays a previous day's reply, changes back to today, and exercises a failed
 date read followed by **Try again**. It checks that old symptoms and handbook blocks clear first.
