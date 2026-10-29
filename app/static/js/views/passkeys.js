@@ -3,7 +3,8 @@
 
    KH.passkeys.block() returns the part of the Account section that lists, adds, renames and removes passkeys.
    KH.passkeys.signIn() runs a passkey sign-in and resolves to the server's {user, notice}; js/views/auth.js calls it from the
-   button under the sign-in form. The browser's navigator.credentials does the device part: it asks for a fingerprint, face or
+   button under the sign-in form. KH.passkeys.reauth() answers "Enter your password again" with a passkey instead (the re-auth
+   sheet shows that button when KH.passkeys.reauthAvailable() says the person has one). The browser's navigator.credentials does the device part: it asks for a fingerprint, face or
    PIN and keeps the private key on the device. This file only turns the server's JSON options into the binary form the
    browser wants, and the browser's answer back into JSON (base64url). Adding and removing need a recent password; js/core.js
    asks for it when the server answers reauth_required.
@@ -67,9 +68,10 @@
         signature: toB64url(r.signature), userHandle: r.userHandle && r.userHandle.byteLength ? toB64url(r.userHandle) : null } };
   }
   /** The person's words for an error from the browser's passkey prompt (a DOMException). */
-  function deviceMessage(err, adding) {
+  function deviceMessage(err, adding, reentry = false) {
     const name = err && err.name;
     if (name === 'NotAllowedError' || name === 'AbortError') {
+      if (reentry) return 'No passkey was used. Try again, or type your password.';
       return adding ? 'No passkey was saved. The request was cancelled or took too long.'
         : 'No passkey was used. Try again, or sign in with your password.';
     }
@@ -95,8 +97,8 @@
   // ---------------------------------------------------------------------------
   // Signing in (js/views/auth.js)
   // ---------------------------------------------------------------------------
-  function deviceError(err, adding) {
-    const out = new Error(deviceMessage(err, adding));
+  function deviceError(err, adding, reentry = false) {
+    const out = new Error(deviceMessage(err, adding, reentry));
     out.detail = out.message;
     out.device = true;
     return out;
@@ -109,6 +111,26 @@
     } catch (err) { throw deviceError(err, false); }
     if (!cred) throw deviceError(null, false);
     return request('POST', '/api/auth/passkey', { challenge_id: opts.challenge_id, credential: assertionJSON(cred) }, { quiet401: true });
+  }
+
+  // ---------------------------------------------------------------------------
+  // A passkey instead of the password when an action asks for it again (js/views/auth.js, the re-auth sheet)
+  // ---------------------------------------------------------------------------
+  async function reauthAvailable() {
+    if (MOCK || !supported()) return false;
+    try {
+      const st = await A.list();
+      return !!(st.available && st.usable && st.passkeys.length);
+    } catch (e) { return false; }
+  }
+  async function reauth() {
+    const opts = await request('POST', '/api/auth/reauth/passkey/options');
+    let cred;
+    try {
+      cred = await navigator.credentials.get({ publicKey: requestOptions(opts.publicKey) });
+    } catch (err) { throw deviceError(err, false, true); }
+    if (!cred) throw deviceError(null, false, true);
+    return request('POST', '/api/auth/reauth/passkey', { challenge_id: opts.challenge_id, credential: assertionJSON(cred) });
   }
 
   // ---------------------------------------------------------------------------
@@ -238,5 +260,5 @@
     return li;
   }
 
-  KH.passkeys = { block, signIn, supported, toB64url, fromB64url, creationOptions, requestOptions, registrationJSON, assertionJSON, deviceMessage, itemLine };
+  KH.passkeys = { block, signIn, reauth, reauthAvailable, supported, toB64url, fromB64url, creationOptions, requestOptions, registrationJSON, assertionJSON, deviceMessage, itemLine };
 })();

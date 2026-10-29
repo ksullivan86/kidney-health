@@ -40,7 +40,8 @@ def test_the_view_draws_with_elements_and_calls_only_its_routes():
     text = VIEW.read_text(encoding="utf-8")
     assert "innerHTML" not in text and "insertAdjacentHTML" not in text and "import(" not in text
     assert set(re.findall(r"'(/api/[^'`$]+)", text)) == {"/api/me/passkeys", "/api/me/passkeys/options", "/api/auth/passkey/options",
-                                                          "/api/auth/passkey"}
+                                                          "/api/auth/passkey", "/api/auth/reauth/passkey/options",
+                                                          "/api/auth/reauth/passkey"}
     assert "/api/admin" not in text
 
 
@@ -108,3 +109,14 @@ def test_the_pure_helpers():
                           "This device already has a passkey for your account.",
                           "No passkey was saved. The request was cancelled or took too long."]
     assert got["line"].endswith("not used yet · synced to your account in the cloud.")
+
+
+def test_the_password_sheet_offers_a_passkey_instead():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    sheet = html[html.index('<dialog id="sheet-reauth"'):html.index("</dialog>", html.index('<dialog id="sheet-reauth"'))]
+    assert '<div class="reauth-passkey" id="reauth-passkey" hidden>' in sheet
+    assert 'type="button" id="reauth-passkey-btn">Use a passkey instead</button>' in sheet
+    auth = (STATIC / "js" / "views" / "auth.js").read_text(encoding="utf-8")
+    assert "KH.passkeys.reauthAvailable().then(" in auth and "await KH.passkeys.reauth();" in auth
+    view = VIEW.read_text(encoding="utf-8")
+    assert "if (MOCK || !supported()) return false;" in view  # the demo never offers it

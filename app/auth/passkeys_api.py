@@ -25,6 +25,7 @@ from .ratelimit import register_limit
 
 me_router = APIRouter(prefix="/api/me/passkeys", tags=["me"], dependencies=[Depends(current_user)])
 auth_router = APIRouter(prefix="/api/auth/passkey", tags=["auth"])
+reauth_router = APIRouter(prefix="/api/auth/reauth/passkey", tags=["auth"], dependencies=[Depends(current_user)])
 
 register_limit("passkey_options", 30, 60, "Too many tries. Wait a minute and try again.")
 
@@ -33,6 +34,8 @@ SIGN_IN_FAILED = "That passkey did not work. Try again, or sign in with your pas
 TOO_MANY = f"You have {passkeys.MAX_PER_PERSON} passkeys, the most one account can have. Remove one first."
 ALREADY = "This passkey is already added."
 START_AGAIN = "That took too long or was already used. Tap Add a passkey again."
+REAUTH_FAILED = "That passkey did not work. Try again, or type your password."
+NO_PASSKEYS = "You have no passkeys. Type your password instead."
 IP_HOST = ("This server is opened by its IP address. Passkeys need a name for the server, like kidney.example.org, "
            "set in PUBLIC_URL.")
 
@@ -248,6 +251,21 @@ def _sign_in_gate(request: Request, conn: sqlite3.Connection, ctx: AuthContext) 
     return ip
 
 
+def _verify_assertion(request: Request, body: PasskeySignInBody, challenge: passkeys.Challenge, row: sqlite3.Row) -> webauthn.Asserted:
+    """The WebAuthn §7.2 checks of ``body`` against the stored passkey ``row``. Raises ``WebAuthnError``."""
+    rp_id, origin = relying_party(request)
+    if body.credential.type != "public-key":
+        raise webauthn.WebAuthnError("That is not a passkey.")
+    handle = body.credential.response.userHandle
+    if handle and _decode(handle) != bytes(row["user_handle"]):
+        raise webauthn.WebAuthnError("The passkey is for a different account.")
+    return webauthn.verify_authentication(
+        client_data_json=_decode(body.credential.response.clientDataJSON),
+        authenticator_data=_decode(body.credential.response.authenticatorData),
+        signature=_decode(body.credential.response.signature), challenge=challenge.value, origins=(origin,), rp_id=rp_id,
+        public_key=bytes(row["public_key"]), stored_sign_count=int(row["sign_count"]))
+
+
 @auth_router.post("/options")
 def passkey_request_options(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Options for ``navigator.credentials.get``: a challenge (5 minutes, single use), no list of passkeys, so the device offers
@@ -297,18 +315,8 @@ def passkey_sign_in(body: PasskeySignInBody, request: Request, response: Respons
     user = load_user(conn, int(row["user_id"]))
     if user is None or not user.is_active or user.auth_source != "local":
         raise failed("account not active")
-    rp_id, origin = relying_party(request)
     try:
-        if body.credential.type != "public-key":
-            raise webauthn.WebAuthnError("That is not a passkey.")
-        handle = body.credential.response.userHandle
-        if handle and _decode(handle) != bytes(row["user_handle"]):
-            raise webauthn.WebAuthnError("The passkey is for a different account.")
-        got = webauthn.verify_authentication(
-            client_data_json=_decode(body.credential.response.clientDataJSON),
-            authenticator_data=_decode(body.credential.response.authenticatorData),
-            signature=_decode(body.credential.response.signature), challenge=challenge.value, origins=(origin,), rp_id=rp_id,
-            public_key=bytes(row["public_key"]), stored_sign_count=int(row["sign_count"]))
+        got = _verify_assertion(request, body, challenge, row)
     except webauthn.WebAuthnError as exc:
         raise failed(str(exc)) from None
     if got.counter_went_back:
@@ -322,3 +330,81 @@ def passkey_sign_in(body: PasskeySignInBody, request: Request, response: Respons
     conn.commit()
     fresh = load_user(conn, user.id)
     return {"user": me_dict(fresh), "notice": notice}
+
+
+# --------------------------------------------------------------------------- #
+# /api/auth/reauth/passkey: a passkey instead of the password when an action asks for it again (note 18 §10)
+# --------------------------------------------------------------------------- #
+
+
+@reauth_router.post("/options")
+def passkey_reauth_options(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Options for ``navigator.credentials.get`` that list only this person's passkeys, with a challenge tied to them."""
+    _only_local(request, user)
+    ctx = auth_context(request)
+    ctx.limits.take("passkey_options", f"user:{user.id}")
+    rows = passkeys.list_for(conn, user.id)
+    if not rows:
+        raise ApiProblem(409, NO_PASSKEYS)
+    rp_id, _ = relying_party(request)
+    cid, challenge = _challenges(ctx).issue("reauth", user.id)
+    return {"challenge_id": cid, "publicKey": {
+        "challenge": webauthn.b64url(challenge.value), "rpId": rp_id, "timeout": TIMEOUT_MS, "userVerification": "required",
+        "allowCredentials": [{"type": "public-key", "id": webauthn.b64url(bytes(r["credential_id"]))} for r in rows]}}
+
+
+@reauth_router.post("")
+def passkey_reauth(body: PasskeySignInBody, request: Request, user: CurrentUser,
+                   conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The same as ``POST /api/auth/reauth`` with a password: the session may do sensitive things for the next minutes. Only the
+    person's own passkey counts. A failure counts like a wrong password here: five in a row sign this device out."""
+    from datetime import timedelta
+
+    from . import clock, sessions
+    from .throttle import REAUTH_MAX_FAILURES
+
+    _only_local(request, user)
+    ctx = auth_context(request)
+    th = ctx.throttle
+    ip = request_ip(request)
+    wait = th.ip_wait(ip)
+    if wait:
+        raise too_many(wait)
+    info = request.state.auth_session
+
+    def failed(reason: str) -> ApiProblem:
+        th.ip_failure(ip)
+        failures = th.reauth_failure(info.id)
+        audit(conn, user.id, "login.failed", "user", user.id, ip=ip, via="passkey_reauth", reason=reason[:120])
+        if failures >= REAUTH_MAX_FAILURES:
+            sessions.revoke(conn, info.id, user.id)
+            audit(conn, user.id, "session.revoked_reauth", "user", user.id, ip=ip)
+            conn.commit()
+            th.reauth_reset(info.id)
+            return ApiProblem(401, "Signed out after too many tries. Sign in again.")
+        conn.commit()
+        return ApiProblem(403, REAUTH_FAILED)
+
+    challenge = _challenges(ctx).take(body.challenge_id, "reauth", user.id)
+    if challenge is None:
+        raise failed("challenge")
+    try:
+        row = passkeys.find_by_credential(conn, _decode(body.credential.rawId))
+    except webauthn.WebAuthnError:
+        raise failed("id") from None
+    if row is None or int(row["user_id"]) != user.id:
+        raise failed("not this person's passkey")
+    try:
+        got = _verify_assertion(request, body, challenge, row)
+    except webauthn.WebAuthnError as exc:
+        raise failed(str(exc)) from None
+    if got.counter_went_back:
+        audit(conn, None, "passkey.counter_went_back", "user", user.id, ip=ip, passkey=int(row["id"]),
+              stored=int(row["sign_count"]), sent=got.sign_count)
+        raise failed("counter")
+    th.reauth_reset(info.id)
+    passkeys.used(conn, int(row["id"]), sign_count=got.sign_count, backed_up=got.backed_up)
+    at = sessions.mark_reauth(conn, info.id, user.id)
+    conn.commit()
+    until = clock.parse(at) + timedelta(minutes=ctx.settings.reauth_minutes)
+    return {"ok": True, "reauth_until": clock.iso(until)}

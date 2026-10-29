@@ -4,7 +4,7 @@
 |---|---|
 | Status | Accepted, 2026-10-29. The owner asked for it ("start passkeys") after two-step sign-in (note 17). The choices below are the defaults this note took, listed in §9 so they can be changed. Built 2026-10-29, the server and the screens together. The schema step is **23**. |
 | Scope | A person with a password can add **passkeys** (up to 10) and then sign in with one: the phone or computer asks for a fingerprint, face or device PIN, and no password or code is typed. Settings lists, renames and removes them; an admin, or the command line, can remove them all for an account. |
-| Out of scope | Accounts without a password, passkeys for re-authentication, passkeys in the autofill list of the username field ("conditional UI"), checking which company made an authenticator (attestation). All "Later", §10. |
+| Out of scope | Accounts without a password, passkeys in the autofill list of the username field ("conditional UI"), checking which company made an authenticator (attestation). All "Later", §10. |
 | Builds on | Note 17 (two-step sign-in), `app/auth/routes.py` (sign-in, throttles), `app/auth/me.py`, `app/auth/admin_api.py`, `app/admin.py`, `app/crypto.py`. |
 | Sources | W3C Web Authentication Level 3 (§7.1 registration and §7.2 authentication steps for a Relying Party, §6.1 authenticator data, §16 test vectors); RFC 8949 (CBOR); RFC 9052/9053 (COSE keys and algorithms); FIDO Alliance passkey guidance on discoverable credentials and user verification; NIST SP 800-63B-4 (a passkey with user verification is a multi-factor authenticator). |
 
@@ -118,6 +118,9 @@ migration; Chromium with a virtual authenticator (`WebAuthn.addVirtualAuthentica
 
 ## 10. Later
 
-* Passkeys for re-authentication, so a person who signs in with one never types the password.
+* ~~Passkeys for re-authentication, so a person who signs in with one never types the password.~~ Built 2026-10-29:
+  `POST /api/auth/reauth/passkey/options` lists only the person's own passkeys, `POST /api/auth/reauth/passkey` checks the answer
+  as a sign-in does and marks the session as recently checked. A failure counts toward the same five as a wrong password. The
+  "Enter your password again" sheet shows **Use a passkey instead** when the person has a passkey.
 * Passkeys in the username field's autofill ("conditional UI").
 * Accounts with passkeys only; then "Admins must use two-step sign-in" could accept a passkey.

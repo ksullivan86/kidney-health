@@ -13,6 +13,8 @@ phone, so the page, the browser's WebAuthn code and the server's checks all run 
   words (the browser's own "already has a passkey" answer); Rename changes the name;
 * she signs out: the sign-in page shows "Sign in with a passkey"; it signs her in with no password and no code, and the list then
   says when it was last used;
+* her password was last typed long ago: the next sensitive action opens "Enter your password again" with **Use a passkey
+  instead**, which answers it, and the action carries on;
 * the admin at 1280x800 dark: People shows "1 passkey" on Ana's row; Remove passkeys asks first, then the badge is gone;
 * Ana again: the passkey sign-in now fails with a plain message on the sign-in page, and her password still works;
 * the demo (``/?mock=1``): no passkey button at sign-in; the block says the demo has no passkeys and asks the network for nothing
@@ -26,9 +28,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import tempfile
 import traceback
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -73,8 +77,9 @@ class Watch:
     def _console(self, m: Any) -> None:
         if m.type != "error":
             return
-        # A signed-out page's first status check, and the passkey sign-in refused after the admin removed it (asked for).
-        if "status of 401" in m.text:
+        # A signed-out page's first status check, the passkey sign-in refused after the admin removed it, and the
+        # "enter your password again" answer the walk asks for on purpose (all asked for).
+        if "status of 401" in m.text or "status of 403" in m.text:
             return
         self.errors.append(m.text)
 
@@ -158,7 +163,18 @@ def sign_out(page: Any) -> None:
 
 
 # ------------------------------------------------------------------------------------------------ the walks
-def walk_ana(p: Pass, ana_api: Any) -> None:
+def make_password_old(db: Path, username: str, minutes: int = 30) -> None:
+    """The person last typed the password ``minutes`` ago (REAUTH_MINUTES is 10), as tools/e2e/import_walk.py does."""
+    old = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    conn = sqlite3.connect(db, timeout=20)
+    try:
+        conn.execute("UPDATE sessions SET reauth_at = ? WHERE user_id = (SELECT id FROM users WHERE username = ?)", (old, username))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def walk_ana(p: Pass, ana_api: Any, db: Path) -> None:
     page = p.page
     open_passkeys(page)
     check(f"[{p.tag}] the block says what a passkey is and that there are none yet",
@@ -201,6 +217,21 @@ def walk_ana(p: Pass, ana_api: Any) -> None:
     check(f"[{p.tag}] the passkey signs her in with no password and no code", page.is_visible("#settings-open"))
     open_passkeys(page)
     check(f"[{p.tag}] the list then says when it was last used", "last used" in text_of(page, "#set-passkey-list"), text_of(page, "#set-passkey-list"))
+
+    # A passkey instead of the password when an action asks for it again (note 18 §10).
+    make_password_old(db, "ana")
+    page.fill("#set-passkey-name", "After a while")
+    page.click("#set-passkey-add")
+    page.wait_for_selector("#sheet-reauth[open]", timeout=8000)
+    page.wait_for_selector("#reauth-passkey:not([hidden])", timeout=8000)
+    check(f"[{p.tag}] the password sheet offers Use a passkey instead", page.is_visible("#reauth-passkey-btn"))
+    p.shot("reauth", "#sheet-reauth")
+    p.no_overflow("reauth sheet")
+    page.click("#reauth-passkey-btn")
+    page.wait_for_function("() => !document.querySelector('#sheet-reauth').open", timeout=10000)
+    wait_text(page, "#set-passkeys .form-error", "already has a passkey")
+    check(f"[{p.tag}] the passkey answers it and the action carries on, with no password typed",
+          not page.is_visible("#sheet-reauth") and page.input_value("#reauth-password") == "")
 
 
 def walk_admin(p: Pass, admin: Any) -> None:
@@ -283,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
                 ana = Pass(browser, base, out, 375, 812, "light", "ana-375-light", ana_browser.cookies(), authenticator=True)
-                walk_ana(ana, ana_api)
+                walk_ana(ana, ana_api, server.data_dir / "kidney.db")
                 walk_admin(Pass(browser, base, out, 1280, 800, "dark", "admin-1280-dark", admin.cookies()), admin)
                 walk_ana_after(ana)
                 walk_demo(Pass(browser, base, out, 375, 812, "light", "demo-375-light"))

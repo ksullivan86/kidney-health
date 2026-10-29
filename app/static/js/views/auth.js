@@ -697,6 +697,8 @@
     clear($('#reauth-error'));
     hidePasswords(reauthDlg);
     $('#reauth-submit').disabled = false;
+    $('#reauth-passkey').hidden = true;
+    if (KH.passkeys) KH.passkeys.reauthAvailable().then((yes) => { if (reauthWaiter && reauthWaiter.promise === promise) $('#reauth-passkey').hidden = !yes; });
     sheets.open(reauthDlg, null, $('#reauth-password'));
     reauthDlg._returnFocus = null; // handled below, once the waiting request has settled
     return promise;
@@ -751,6 +753,23 @@
     } finally {
       if (!waitTimer || !btn.textContent.startsWith('Wait')) btn.disabled = false;
     }
+  });
+
+  // A passkey instead of the password (design note 18 §10): the device checks a fingerprint, face or PIN.
+  $('#reauth-passkey-btn').addEventListener('click', async () => {
+    const btn = $('#reauth-passkey-btn');
+    const errBox = $('#reauth-error');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    clear(errBox);
+    try {
+      await KH.passkeys.reauth();
+      if (reauthWaiter) reauthWaiter.done = true;
+      reauthDlg.close();
+    } catch (err) {
+      if (err.status === 401) { reauthDlg.close(); return; } // signed out after too many tries: the sign-in screen is up
+      if (!err.handled) errBox.append(h('p', {}, err.detail || err.message || 'That did not work. Try again.'));
+    } finally { btn.disabled = false; }
   });
 
   // ---------------------------------------------------------------------------
