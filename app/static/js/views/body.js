@@ -40,7 +40,7 @@
 
   const NEEDS_CONNECTION = 'Weights and blood pressure readings need a connection to your server, and there is none right now.';
   // What the person last saw: their weight unit (user.units.weight, "lb" until the server says otherwise).
-  const S = { units: 'lb', shownDate: null, drawnDate: null, req: 0, busy: false, summary: null };
+  const S = { units: 'lb', shownDate: null, req: 0, busy: false, summary: null };
 
   const live = (text) => { const el = $('#body-live'); if (el) el.textContent = text; };
   const message = (text) => h('p', { class: 'body-empty' }, text);
@@ -169,8 +169,6 @@
     const future = date > todayStr();
     addWeightBtn.disabled = future;
     addBpBtn.disabled = future;
-    // Another day's weights are never left under this day's heading while it loads.
-    if (S.drawnDate !== date) { S.drawnDate = null; clear(todayBody).append(message('Loading…')); }
     if (future) { clear(todayBody).append(message('You can record weights and blood pressure for today and for days that have passed.')); return; }
     clear(todayBody).append(h('p', { class: 'body-empty', id: 'body-today-loading' }, 'Loading weights and blood pressure…'));
     if (!state.profile) { try { await KH.loadProfile(); } catch (e) { /* the sheets then offer the choices that need no dialysis */ } }
@@ -186,7 +184,6 @@
     S.summary = sum.status === 'fulfilled' ? sum.value : null;
     if (S.summary && S.summary.units) S.units = S.summary.units;
     renderToday(w.value.weights || [], b.value.readings || [], S.summary);
-    S.drawnDate = date;
   }
 
   // ---- the sheets: shared parts ----------------------------------------------------------------------------------------

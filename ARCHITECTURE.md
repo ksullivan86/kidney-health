@@ -3465,8 +3465,7 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   "Reading 185/95 at 7:10 PM"; the same block shows **in the sheet before Save** from the twin (`KH.bodyRules.bpFlag`). Under it the **alarm line** (from
   `summary.weight.alarm`: "Weight up 1.8 lb. Over your alarm. Your alarm: more than 2.2 lb in 1 day.", the latest weight and the server's `message` that names the
   weight compared, and for a weight over the alarm the handbook's weight line, not prominent) and the **goal line** (the goal as the care team gave it and
-  the server's 7-day average against it). With neither set, a line says where to enter them. While another day loads the card says "Loading…" and never
-  keeps the other day's weights (`S.drawnDate`); only the newest request draws (`S.req`). Days after today cannot be added to; the card needs the
+  the server's 7-day average against it). With neither set, a line says where to enter them. Days after today cannot be added to; the card needs the
   connection and says so (a save offline says "need a connection to your server ... Nothing was saved" in the sheet).
   Changing the date clears the card and its summary immediately, including old alarm/goal lines.
   Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.

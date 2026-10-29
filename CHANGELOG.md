@@ -30,7 +30,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   entry or a saved meal, the message now shows on top of the sheet and screen readers read it. Before, it was hidden
   behind the sheet. The sheet keeps what you typed, so you can press Save again.
 * **The weight card shows the right day.** While another day loads, the Weight and blood pressure card on Today says
-  "Loading…". Before, it kept showing the previous day's weights under the new date.
+  "Loading weights and blood pressure…". Before, it kept showing the previous day's weights, alarm and goal under the new
+  date. If the day cannot load, **Try again** shows.
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the
