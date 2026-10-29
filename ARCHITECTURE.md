@@ -3465,7 +3465,8 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   "Reading 185/95 at 7:10 PM"; the same block shows **in the sheet before Save** from the twin (`KH.bodyRules.bpFlag`). Under it the **alarm line** (from
   `summary.weight.alarm`: "Weight up 1.8 lb. Over your alarm. Your alarm: more than 2.2 lb in 1 day.", the latest weight and the server's `message` that names the
   weight compared, and for a weight over the alarm the handbook's weight line, not prominent) and the **goal line** (the goal as the care team gave it and
-  the server's 7-day average against it). With neither set, a line says where to enter them. Days after today cannot be added to; the card needs the
+  the server's 7-day average against it). With neither set, a line says where to enter them. While another day loads the card says "Loading…" and never
+  keeps the other day's weights (`S.drawnDate`); only the newest request draws (`S.req`). Days after today cannot be added to; the card needs the
   connection and says so (a save offline says "need a connection to your server ... Nothing was saved" in the sheet).
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
@@ -4569,3 +4570,12 @@ loaded, so nothing is shown for it", with **Retry** (`#day-retry`, which calls `
 on the page keeps it and shows a toast, as before. Symptoms and weight load on their own for the chosen day. Checked by
 `tests/test_reliability_ui.py` and in Chromium by `tools/e2e/reliability.py`, which also checks the saved-meal "not listed"
 values and the 100-serving limit of a fitted recipe.
+
+## A failed save on a sheet (ROADMAP item 1)
+
+Sheets open with `showModal()`, so an open sheet is in the top layer and the page under it is inert. A toast left in `body` was
+drawn under the sheet and not read out. `toast()` in `js/core.js` now puts `#toast` into the open modal dialog (`toastHost`, the
+last one when sheets are stacked), and `setupDialog` moves it back to `body` when that dialog closes. A failed save on a sheet
+keeps the sheet open, what was typed and the button. Checked by `tests/js/reliability_ui.test.mjs` (run by
+`tests/test_reliability_ui.py`) and in Chromium by `tools/e2e/reliability.py`, on the entry sheet, Plan's saved meal editor and
+"Add to a day", Labs, Profile and the weight and blood pressure sheets.

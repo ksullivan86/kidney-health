@@ -38,6 +38,9 @@ pressure**. Nothing is saved until you press **Save**. Each entry has **Edit** a
   The app refuses a number that cannot be right, such as a top number lower than the bottom one.
 - Weights and readings need your connection to the server: if you are offline, the app says so and saves
   nothing ([architecture contract][ARCH]).
+- If the server cannot save it, the sheet stays open with what you typed and the message shows on top of
+  it. Press **Save** again to try once more.
+- While another day loads, the card says "Loading…". It never shows one day's weights under another date.
 
 ## How to measure blood pressure at home {#how-to-measure}
 

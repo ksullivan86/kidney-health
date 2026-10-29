@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reliability walk (the 2026-10-29 audit): three bugs, each made to happen in Chromium against a real server, and the fix seen.
+"""Reliability walk (the 2026-10-29 audit and ROADMAP item 1): each bug made to happen in Chromium against a real server, and the fix seen.
 
 1. **Today after a failed load.** Ana has a banana today. She goes to yesterday while the server's answer for that day fails: the
    banana and today's totals must not stay under yesterday's heading. The page says the day could not be loaded and offers Retry;
@@ -11,6 +11,12 @@
    server answers 201.
 4. **A slow day, then another.** The answer for the day before waits while Ana goes back to today; when it comes, today stays.
 5. **A save that fails.** The entry sheet stays open with the amount typed and its button works again; the next try saves once.
+6. **The other screens that save.** The same failed save on Plan's saved meal editor and "Add to a day", Labs, Profile, and the
+   weight and blood pressure sheets: the sheet stays open, what was typed is kept, the error is on top (a toast under an open
+   sheet is not seen; `error_in_view` checks with elementFromPoint), the button works again, and the next try saves once.
+7. **Slow lists.** Labs answers late (old results, then an error) while Ana goes to Today and back; "Lab cache" holds a read
+   across a save in the page itself. The weight card's day before answers late while Ana goes back to today. Neither old answer
+   is drawn, and the weight card says "Loading…" while a day loads, never the other day's weights.
 
     python3 tools/e2e/reliability.py            # a real server on 127.0.0.1:8097, Chromium; exit 1 on any failed check
 """
