@@ -588,6 +588,7 @@
       h('ul', { class: 'compact-items' }, card.items.map((it) => h('li', {}, `${it.portion_text} ${it.name}`))),
       h('p', { class: 'small' }, nutrientLine(card.per_serving, RECIPE_KEYS)),
       unknown.length ? h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`) : null,
+      card.portion_note ? h('p', { class: 'hint ai-portion-note' }, card.portion_note) : null,
       changes.length ? h('div', {}, h('h4', { class: 'settings-minor' }, 'What the app changed to fit your targets'),
         h('ul', { class: 'fit-changes' }, changes.map((c) => h('li', {}, c.text)))) : null,
       (card.steps || []).length ? h('div', { class: 'ai-steps' }, h('h4', { class: 'settings-minor' }, 'Steps'),

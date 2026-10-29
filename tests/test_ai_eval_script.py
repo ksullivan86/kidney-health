@@ -496,6 +496,25 @@ def test_the_live_runner_counts_an_idea_the_app_made_smaller(tmp_path):
     assert sum(s["lowered_reasons"].values()) == 1
 
 
+def test_the_live_runner_counts_a_recipe_whose_share_the_fit_made_smaller(tmp_path):
+    def model(request: Any) -> Any:  # 8 servings of green beans in a pot for 2: 4 servings in each serving
+        body = json.loads(request.content)
+        text = body["messages"][1]["content"]
+        data = json.loads(text.split("<data>\n", 1)[1].split("\n</data>", 1)[0])
+        ids = {c["name"]: c["id"] for c in data["candidates"]}
+        return chat({"status": "ok", "refusal": "none", "recipes": [
+            {"dish": "bowl", "theme": "light", "steps": [], "reason_codes": [],
+             "ingredients": [{"food_id": ids["Green beans, boiled"], "quarters": 32},
+                             {"food_id": ids["Rice, white, long-grain, cooked"], "quarters": 8}]}]})
+
+    options = ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, safety=False, cases=r"^recipes-share-too-big-lowered$")
+    rep = ai_eval.run_eval(options, transport_factory=FakeProvider(route=model).factory, data_dir=tmp_path, log=lambda line: None)
+    s = rep["summary"]
+    assert s["recipe_cases"] == 1 and s["recipes_with_survivor_rate"] == 1.0 and s["recipe_survival_rate"] == 1.0
+    assert s["recipes_lowered"] == 1 and s["ideas_lowered"] == 0  # a recipe is not counted as a meal idea
+    assert s["lowered_reasons"] == {"share_too_large": 1} and s["dropped_reasons"] == {}
+
+
 # --------------------------------------------------------------------------- #
 # The kidney-only cases (the prompts follow the profile; the owner's live run checks them with a real model)
 # --------------------------------------------------------------------------- #

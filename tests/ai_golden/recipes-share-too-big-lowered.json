@@ -1,0 +1,35 @@
+{
+  "id": "recipes-share-too-big-lowered",
+  "category": "recipes",
+  "feature": "recipes",
+  "fixture": {
+    "entries": [
+      [
+        "breakfast",
+        "Egg, hard-boiled",
+        2
+      ],
+      [
+        "lunch",
+        "Bread, white",
+        2
+      ]
+    ]
+  },
+  "model_outputs": [
+    "{\"recipes\":[{\"dish\":\"stir_fry\",\"theme\":\"light\",\"ingredients\":[{\"food_id\":\"{{id:Green beans, boiled}}\",\"quarters\":32},{\"food_id\":\"{{id:Rice, white, long-grain, cooked}}\",\"quarters\":8},{\"food_id\":\"{{id:Olive oil}}\",\"quarters\":2}],\"steps\":[],\"reason_codes\":[\"low_sodium\"]}],\"status\":\"ok\",\"refusal\":\"none\"}"
+  ],
+  "expect": {
+    "status": "ok",
+    "recipes": 1,
+    "portions_lowered": 1,
+    "portions_lowered_include": [
+      "share_too_large"
+    ],
+    "shown_food_names": [
+      "Green beans, boiled",
+      "Rice, white, long-grain, cooked"
+    ],
+    "nothing_saved": true
+  }
+}

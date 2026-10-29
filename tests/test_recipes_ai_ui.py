@@ -42,3 +42,10 @@ def test_a_rework_says_what_is_never_sent_and_the_consent_names_recipes():
 def test_the_handbook_explains_it():
     for needle in ("Suggest recipes with AI", "Rework with AI", "(reworked)", "never sent", "not for cooking times or food safety"):
         assert needle in HANDBOOK, needle
+
+
+def test_a_card_shows_the_apps_note_when_it_made_a_portion_smaller():
+    card = AI[AI.index("function recipeCard"):AI.index("function renderRecipes")]
+    note = "card.portion_note ? h('p', { class: 'hint ai-portion-note' }, card.portion_note) : null"
+    assert note in card
+    assert card.index(note) < card.index("What the app changed to fit your targets")  # the note, then the app's change lines
