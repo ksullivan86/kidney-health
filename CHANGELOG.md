@@ -7,6 +7,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people using the app
+
+* **Symptoms load on their own.** When you change the date on Today, the Symptoms card clears and says it is loading.
+  It no longer waits for the food log, so a slow or failed food day does not hold it back. If it cannot load, **Try again**
+  shows, also after you had to sign in again.
+
 ## 0.11.0 — 2026-10-29
 
 Version 0.11 makes daily logging easier to trust. Numbers a food does not list now say "not listed" or "≥" everywhere,

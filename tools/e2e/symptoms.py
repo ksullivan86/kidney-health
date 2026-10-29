@@ -92,6 +92,57 @@ def add_symptom(page: Any, kind: str, severity: int, note: str = "", label: str 
     page.wait_for_selector("#sheet-symptom", state="hidden", timeout=10000)
 
 
+def date_loading(page: Any, tag: str) -> None:
+    """Delay yesterday, switch back, then fail yesterday and retry without changing server data."""
+    page.evaluate("() => KH.views.today.loadDay()")
+    page.wait_for_selector("#symptoms-today-body .sym-item")
+    original = page.inner_text("#symptoms-today-body")
+    page.evaluate("""() => {
+      window.originalSymptoms = KH.api.symptoms;
+      window.originalFoodDay = KH.api.day;
+      window.pendingSymptoms = [];
+      window.pendingFoodDays = [];
+      const yesterday = KH.util.addDays(KH.util.todayStr(), -1);
+      KH.api.day = (date) => date === yesterday ? new Promise(resolve => window.pendingFoodDays.push(resolve)) : window.originalFoodDay(date);
+      KH.api.symptoms = (start, end) => start === yesterday
+        ? new Promise(resolve => window.pendingSymptoms.push(resolve)) : window.originalSymptoms(start, end);
+    }""")
+    try:
+        page.click("#date-prev")
+        page.wait_for_selector("#symptoms-today-loading")
+        check(f"[{tag}] the next date clears old symptoms and handbook blocks while loading",
+              page.locator("#symptoms-today-body .sym-item, #symptoms-today-body .sym-flag").count() == 0
+              and page.evaluate("window.pendingFoodDays.length > 0"))
+        page.click("#date-next")
+        page.wait_for_function("(text) => document.querySelector('#symptoms-today-body').innerText === text", arg=original)
+        page.evaluate("() => window.pendingSymptoms.forEach(resolve => resolve({symptoms: []}))")
+        page.evaluate("() => { KH.api.day = window.originalFoodDay; window.pendingFoodDays.forEach(resolve => resolve({date: KH.util.addDays(KH.util.todayStr(), -1)})); }")
+        page.wait_for_timeout(100)
+        shown = page.inner_text("#symptoms-today-body")
+        check(f"[{tag}] the late previous-date reply cannot replace today's symptoms", shown == original,
+              json.dumps({"expected": original, "shown": shown}))
+        page.evaluate("""() => {
+          const yesterday = KH.util.addDays(KH.util.todayStr(), -1);
+          KH.api.symptoms = async (start, end) => {
+            if (start === yesterday) throw Object.assign(new Error('Test read failure'), {status: 500});
+            return window.originalSymptoms(start, end);
+          };
+        }""")
+        page.click("#date-prev")
+        page.wait_for_function("() => document.querySelector('#symptoms-today-body').innerText.includes('could not be loaded')")
+        check(f"[{tag}] a failed date has no old symptoms and offers Try again",
+              page.locator("#symptoms-today-body .sym-item, #symptoms-today-body .sym-flag").count() == 0
+              and page.get_by_role("button", name="Try again", exact=True).is_visible())
+        page.evaluate("() => { KH.api.symptoms = window.originalSymptoms; }")
+        page.get_by_role("button", name="Try again", exact=True).click()
+        page.wait_for_function("() => !document.querySelector('#symptoms-today-loading') && !document.querySelector('#symptoms-today-body').innerText.includes('could not be loaded')")
+        check(f"[{tag}] Try again loads the selected date", page.inner_text("#symptoms-today-body") != original)
+        page.click("#date-next")
+        page.wait_for_function("(text) => document.querySelector('#symptoms-today-body').innerText === text", arg=original)
+    finally:
+        page.evaluate("() => { KH.api.symptoms = window.originalSymptoms; KH.api.day = window.originalFoodDay; }")
+
+
 def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, height: int, scheme: str, mock: bool = False) -> None:
     tag = f"{'demo-' if mock else ''}{width}-{scheme}"
     ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, base_url=base)
@@ -101,7 +152,7 @@ def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
     watch = Watch(page)
     page.goto("/?mock=1" if mock else "/")
     page.wait_for_selector("#symptoms-add", state="visible", timeout=30000)
-    page.wait_for_selector("#symptoms-today-body .symptoms-empty, #symptoms-today-body .sym-list", timeout=20000)
+    page.wait_for_selector("#symptoms-today-body .symptoms-empty:not(#symptoms-today-loading), #symptoms-today-body .sym-list", timeout=20000)
     if not mock:
         check(f"[{tag}] Today has the Symptoms card, empty to begin with", "No symptoms recorded for this day" in page.inner_text("#symptoms-today-body"),
               page.inner_text("#symptoms-today-body"))
@@ -174,6 +225,7 @@ def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
     check(f"[{tag}] the other person's symptom is on no page", "secret" not in page.inner_text("body").lower())
     page.click("#tab-today")
     page.wait_for_selector("#symptoms-today-body .sym-item", timeout=10000)
+    date_loading(page, tag)
     check(f"[{tag}] no sideways scroll on Today, no console error, no dialog", not overflow(page) and not watch.errors and not watch.dialogs, "; ".join(watch.errors))
     if not mock:
         others = sorted(h for h in watch.hosts if h not in (urlsplit(base).netloc,))
@@ -193,7 +245,8 @@ def main(argv: list[str] | None = None) -> int:
     (out / "shots").mkdir()
     env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "ALL_PROXY": "http://127.0.0.1:9",
            "https_proxy": "http://127.0.0.1:9", "http_proxy": "http://127.0.0.1:9", "all_proxy": "http://127.0.0.1:9",
-           "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "HANDBOOK_PUBLIC_URL": HANDBOOK}
+           "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "HANDBOOK_PUBLIC_URL": HANDBOOK,
+           "HANDBOOK_DIR": str(out / "no-handbook")}  # check the configured published link even if this checkout has a built handbook
     server = Server(args.port, out / "data", log_path=out / "server.log", env=env)
     try:
         server.start()

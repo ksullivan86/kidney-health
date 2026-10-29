@@ -3366,6 +3366,11 @@ that `handbook/REVIEW.md` tracks for the page itself.
   that stands out and is listed first; the handbook link is `KH.learn.href(red_flag.href)` (no handbook, no link; the line
   stays), opening in a new tab so a sheet in use is not lost. Days after today cannot be added to. Symptoms are not
   queued offline: a save needs the server and the card says so when it cannot load.
+  Changing the date clears the Symptoms card before waiting. The loading message cannot retain
+  another day's entries or handbook blocks; failures offer **Try again**, including handled
+  sign-in failures. Late replies and errors cannot replace the newest day's card.
+  The Symptoms read starts at the beginning of Today loading, independently of the food request;
+  rendering food or its error does not restart that read.
 * **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the
   worst severity, a strip of marks over the period (decoration, `aria-hidden`; a mark's height is the severity), the dates
   written out with their severity, and the same handbook line. No chart library.
