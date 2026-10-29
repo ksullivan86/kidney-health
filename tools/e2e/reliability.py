@@ -551,15 +551,29 @@ def walk_profile(page: Any) -> None:
 
 
 def walk_body_save(page: Any) -> None:
-    """Today → Add weight and Add blood pressure: a failed save keeps the numbers and the note."""
+    """Today → Add weight and Add blood pressure: a failed save keeps the numbers and the note, stores nothing, and the next
+    try sends the same reading and stores it once (the server is asked, not only the screen)."""
     page.goto("/")
     wait_text(page, "#meals", "Banana")
     wait_text(page, "#body-today-body", "158.7")
-    for screen, add, sheet, typed, save, path, shows in (
+    today = date.today().isoformat()
+    for screen, add, sheet, typed, save, path, shows, key in (
             ("Weight", "#body-add-weight", "#sheet-weight", {"#weight-value": "154.3", "#weight-note": "after breakfast"},
-             "#weight-save", "/api/body/weights", "154.3"),
+             "#weight-save", "/api/body/weights", "154.3", "weights"),
             ("Blood pressure", "#body-add-bp", "#sheet-bp", {"#bp-systolic": "128", "#bp-diastolic": "82", "#bp-note": "left arm"},
-             "#bp-save", "/api/body/blood-pressure", "128")):
+             "#bp-save", "/api/body/blood-pressure", "128", "readings")):
+
+        def stored(path: str = path, key: str = key) -> int:
+            return len(page.request.get(f"{path}?start={today}&end={today}").json()[key])
+
+        before = stored()
+        bodies: list[Any] = []
+
+        def sent(r: Any, path: str = path) -> None:
+            if r.method == "POST" and urlsplit(r.url).path == path:
+                bodies.append(json.loads(r.post_data))
+
+        page.on("request", sent)
         page.click(add)
         page.wait_for_selector(f"{sheet}[open]")
         for sel, value in typed.items():
@@ -574,7 +588,11 @@ def walk_body_save(page: Any) -> None:
             page.wait_for_selector(sheet, state="hidden")
             wait_text(page, "#body-today-body", shows)
 
+        check(f"{screen}: a save that fails stores nothing", stored() == before)
         next_try_saves_once(page, screen, save, path, saved)
+        page.remove_listener("request", sent)
+        check(f"{screen}: the next try sends what the failed save sent", len(bodies) == 2 and bodies[0] == bodies[1], json.dumps(bodies)[:300])
+        check(f"{screen}: the server has the reading once", stored() == before + 1)
 
 
 def walk_body_slow(page: Any) -> None:

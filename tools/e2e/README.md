@@ -68,6 +68,9 @@ the card clears even while food is held too, and late replies cannot restore old
 `symptoms.py` also delays a previous day's reply, changes back to today, and exercises a failed
 date read followed by **Try again**. It checks that old symptoms and handbook blocks clear first.
 
+For a failed weight or blood pressure save, `reliability.py` asks the server too: nothing is stored, the next try sends
+the same reading, and it is stored once.
+
 `reliability.py` also holds a recipe Replace while another Fit sheet opens. The late write must
 not offer the first recipe's Undo on the second, whose stored data stays unchanged. A normal
 Replace and Undo then restore the same recipe's foods and serving count.
