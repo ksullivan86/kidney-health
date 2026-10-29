@@ -223,12 +223,14 @@
     if (!target) return null;
     return h('a', { class: 'learn-more', href: target, target: '_blank', rel: 'noopener' }, `Learn: ${page.title}`, h('span', { class: 'sr-only' }, ' (opens in a new tab)'));
   }
-  function nutrientLine(values, keys) {
+  // `unknown` lists the keys some food does not list: "≥" or "not listed", never an exact number or 0.
+  function nutrientLine(values, keys, unknown = []) {
     const parts = [];
     for (const key of keys) {
       const v = values ? values[key] : null;
       if (v == null || !NUT[key]) continue;
-      parts.push(`${NUT[key].label} ${fmtNum(v, key)} ${NUT[key].unit}`);
+      if (!unknown.includes(key)) parts.push(`${NUT[key].label} ${fmtNum(v, key)} ${NUT[key].unit}`);
+      else parts.push(v > 0 ? `${NUT[key].label} ≥ ${fmtNum(v, key)} ${NUT[key].unit}` : `${NUT[key].label} not listed`);
     }
     return parts.join(' · ');
   }
@@ -455,7 +457,7 @@
       h('h3', { class: 'ai-idea-title' }, idea.title),
       h('p', { class: 'ai-why' }, idea.why),
       h('ul', { class: 'ai-items' }, idea.items.map(itemRow)),
-      h('p', { class: 'small' }, nutrientLine(idea.totals, ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'])),
+      h('p', { class: 'small' }, nutrientLine(idea.totals, ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'], idea.unknown || [])),
       afterParts.length ? h('p', { class: 'muted small' }, afterParts.join(' · ')) : null,
       (idea.handbook || []).length ? h('p', { class: 'ai-links' }, idea.handbook.map(learnLink).filter(Boolean)) : null,
       h('p', { class: 'ai-label' }, idea.notice),
@@ -476,6 +478,14 @@
         }, { 'aria-label': `Add ${f.name} to your plan` })))) : h('p', { class: 'muted small' }, 'Nothing else fits this meal today.'));
   }
 
+  // "Other ideas" and "Other recipes" send the foods already shown, so the AI gets other candidates. The server takes at most 60:
+  // past that, it starts again from the last answer.
+  const MAX_SEEN = 60;
+  function foodIdsOf(items) { return [...new Set(items.map((it) => it.food_id).filter((id) => Number.isInteger(id)))]; }
+  function moreSeen(seen, last) {
+    const next = [...new Set([...seen, ...last])];
+    return next.length > MAX_SEEN ? last.slice(0, MAX_SEEN) : next;
+  }
   function renderIdeas(out, answer, ctx) {
     clear(out);
     if (!answer) return;
@@ -490,30 +500,39 @@
   // ---------------------------------------------------------------------------
   // The person's AI ideas for one meal, as a block (guidance's "What fits now" can mount it).
   function mountIdeas(container, { date = state.date, meal = util.defaultMealForNow() } = {}) {
-    const ctx = { date, meal };
+    const ctx = { date, meal, seen: [], last: [] }; // seen: foods of the ideas shown so far, for "Other ideas"
     const out = h('div', { class: 'ai-results', 'aria-live': 'polite' });
     const err = formError();
-    const ask = button('Ask AI for ideas', 'primary', async (btn) => {
+    async function run(btn, exclude) {
       clear(err);
+      const label = btn.textContent;
       btn.textContent = 'Asking…';
       out.setAttribute('aria-busy', 'true');
       try {
-        const body = { meal: ctx.meal, date: ctx.date, mode: 'ideas' };
+        const body = { meal: ctx.meal, date: ctx.date, mode: 'ideas', ...(exclude.length ? { exclude_food_ids: exclude } : {}) };
         const answer = await withConsent('text', () => api.nextMeal(body), () => api.nextMeal(body, true), btn);
-        if (answer) renderIdeas(out, answer, ctx);
+        if (answer) {
+          renderIdeas(out, answer, ctx);
+          ctx.seen = exclude;
+          ctx.last = foodIdsOf((answer.ideas || []).flatMap((i) => i.items || []));
+          other.hidden = !ctx.last.length;
+        }
       } catch (e) {
         if (!e.handled && !e.cancelled) showError(err, e);
       } finally {
-        btn.textContent = 'Ask AI for ideas';
+        btn.textContent = label;
         out.removeAttribute('aria-busy');
       }
-    });
+    }
+    const ask = button('Ask AI for ideas', 'primary', (btn) => run(btn, []));
+    const other = button('Other ideas', 'secondary', (btn) => run(btn, moreSeen(ctx.seen, ctx.last)), { hidden: '' });
     const what = button('What will be sent?', 'secondary', async (btn) => {
       clear(err);
       try { await showSent(await api.nextMeal({ meal: ctx.meal, date: ctx.date, mode: 'ideas' }, true), { trigger: btn }); } catch (e) { showError(err, e); }
     });
-    clear(container).append(h('div', { class: 'settings-actions' }, ask, what), err, out);
-    return { setMeal(m) { ctx.meal = m; clear(out); }, setDate(d) { ctx.date = d; clear(out); } };
+    const reset = () => { clear(out); ctx.seen = []; ctx.last = []; other.hidden = true; };
+    clear(container).append(h('div', { class: 'settings-actions' }, ask, other, what), err, out);
+    return { setMeal(m) { ctx.meal = m; reset(); }, setDate(d) { ctx.date = d; reset(); } };
   }
   function openIdeas({ date = state.date, meal = state.addMealHint || util.defaultMealForNow(), trigger = null } = {}) {
     const { body, foot } = fillSheet(sheetEl, 'AI meal ideas', `Checked against your targets for ${util.fmtDateLong(date)}. Not medical advice.`);
@@ -586,29 +605,39 @@
     const ctx = { date, meal: meal || util.defaultMealForNow() };
     const pickName = uid('ai-recipe-meal');
     const picker = mealPicker(pickName, ctx.meal);
-    picker.addEventListener('change', () => { ctx.meal = segValue(picker, pickName); clear(out); });
+    picker.addEventListener('change', () => { ctx.meal = segValue(picker, pickName); reset(); });
     const dish = h('select', { id: uid('ai-dish') }, DISHES.map(([v, label]) => h('option', { value: v }, label)));
     const makes = h('select', { id: uid('ai-makes') }, MAKES.map((n) => h('option', { value: String(n), selected: n === 4 ? '' : null }, n === 1 ? '1 serving' : `${n} servings`)));
     const out = h('div', { class: 'ai-results', 'aria-live': 'polite' });
     const err = formError();
     const reqBody = () => (change ? { mode: 'change', meal_id: mealId, meal: ctx.meal, date: ctx.date }
       : { mode: 'suggest', dish: dish.value, makes: Number(makes.value), meal: ctx.meal, date: ctx.date });
-    const ask = button(change ? 'Ask AI to rework it' : 'Ask AI for recipes', 'primary', async (btn) => {
+    const seen = { foods: [], last: [] }; // foods of the recipes shown so far, for "Other recipes"
+    async function run(btn, exclude) {
       clear(err);
       const label = btn.textContent;
       btn.textContent = 'Asking…';
       out.setAttribute('aria-busy', 'true');
       try {
-        const b = reqBody();
+        const b = { ...reqBody(), ...(exclude.length ? { exclude_food_ids: exclude } : {}) };
         const answer = await withConsent('text', () => api.recipes(b), () => api.recipes(b, true), btn, 'recipes');
-        if (answer) renderRecipes(out, answer, ctx, onSaved);
+        if (answer) {
+          renderRecipes(out, answer, ctx, onSaved);
+          seen.foods = exclude;
+          seen.last = foodIdsOf((answer.recipes || []).flatMap((r) => (r.body && r.body.items) || []));
+          other.hidden = !seen.last.length;
+        }
       } catch (e) {
         if (!e.handled && !e.cancelled) showError(err, e);
       } finally {
         btn.textContent = label;
         out.removeAttribute('aria-busy');
       }
-    });
+    }
+    const ask = button(change ? 'Ask AI to rework it' : 'Ask AI for recipes', 'primary', (btn) => run(btn, []));
+    const other = button(change ? 'Another way' : 'Other recipes', 'secondary', (btn) => run(btn, moreSeen(seen.foods, seen.last)), { hidden: '' });
+    const reset = () => { clear(out); seen.foods = []; seen.last = []; other.hidden = true; };
+    for (const el of [dish, makes]) el.addEventListener('change', reset);
     const what = button('What will be sent?', 'secondary', async (btn) => {
       clear(err);
       try { await showSent(await api.recipes(reqBody(), true), { trigger: btn }); } catch (e) { showError(err, e); }
@@ -620,7 +649,7 @@
       picker,
       change ? null : field('Kind of dish', dish),
       change ? null : field('Makes', makes),
-      h('div', { class: 'settings-actions' }, ask, what), err, out].filter(Boolean));
+      h('div', { class: 'settings-actions' }, ask, other, what), err, out].filter(Boolean));
     foot.append(h('span', { class: 'spacer' }), closeButton(sheetEl));
     sheets.open(sheetEl, trigger);
   }

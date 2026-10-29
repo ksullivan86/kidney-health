@@ -16,6 +16,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
   period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
 
+* **Meal suggestions say "≥" or "not listed" too.** The meals in What fits now, the day plan, AI meal ideas and the
+  "Add a saved meal" sheet no longer show 0 for a value a food does not list.
+* **Share or copy the shopping list.** Plan → Shopping list has **Share list** (on a phone) and **Copy list**: what is not
+  ticked yet, as text, for any list app.
+* **Show other foods.** What fits now has a **Show other foods** button that finds foods not already on the list, and
+  **Back to the first choices** to start over. AI meal ideas have **Other ideas** and AI recipes **Other recipes**, which ask
+  the AI again without the foods it already suggested. See [`docs/guidance.md`](docs/guidance.md).
 * **Today no longer shows the wrong day's food.** If a day fails to load, the page says so and offers **Retry**, instead of
   leaving the previous day's meals and totals under the new date.
 * **Saved meals say "not listed" instead of 0.** When none of a saved meal's foods list potassium or phosphorus, Plan and the
@@ -25,6 +32,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **A reminder to back up.** Server administration → About this server says when no backup was taken in the last 7 days, or
+  ever, with the command and a link to the restore steps. A new test restores a backup into an empty server and finds every
+  entry, saved meal and target again.
+* **A release gate for real phones.** A release now waits for a person to check it on an iPhone offline, with the largest
+  text, by keyboard only, and with VoiceOver and TalkBack ([`docs/maintainers.md`](docs/maintainers.md#release-process)).
 * **`python -m app.admin env-template`** prints every setting's variable as a `.env` file to fill in, with what each does, its
   values and its default. It is made from the app, so it matches the version you run. `--initial-only` starts it with
   `SETTINGS_INITIAL_ONLY=*`. See [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).

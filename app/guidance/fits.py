@@ -150,11 +150,21 @@ def room_json(room: Room) -> dict[str, Any]:
     return out
 
 
-def totals_json(totals: Mapping[str, float], room: Room | None = None) -> dict[str, Any]:
+def _total_keys(room: Room | None) -> list[str]:
     keys = [R.CARBS, R.PROTEIN, R.K, R.P, R.NA]
     if room is not None and R.FLUID in room.nutrients:
         keys.append(R.FLUID)
-    return {k: round_value(k, totals.get(k, 0.0)) for k in keys}
+    return keys
+
+
+def totals_json(totals: Mapping[str, float], room: Room | None = None) -> dict[str, Any]:
+    return {k: round_value(k, totals.get(k, 0.0)) for k in _total_keys(room)}
+
+
+def unknown_json(unknown: Iterable[str], room: Room | None = None) -> list[str]:
+    """The keys of ``totals_json`` that some food of the meal does not list: the total is then "at least" (shown as ≥)."""
+    missing = set(unknown)
+    return sorted(k for k in _total_keys(room) if k in missing)
 
 
 # --------------------------------------------------------------------------- #
@@ -323,7 +333,7 @@ def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: 
     scaled_items = [(f, q * scale) for f, q in items]
     score = score_meal(scaled_items, room, today, ctx.profile.dialysis != "none", scale, counter,
                        pref=pref if pref is not None else pref_terms(ctx))
-    totals, _ = meal_totals(scaled_items)
+    totals, unknown = meal_totals(scaled_items)
     option: dict[str, Any] = {
         "template_id": template_id,
         "name": name,
@@ -345,6 +355,7 @@ def familiar_option(ctx: GuidanceContext, room: Room, today: TodayStats, items: 
     option.update({
         "items": [{"food_id": f.id, "name": f.name, "servings": R.round_to(q, 3)} for f, q in scaled_items],
         "totals": totals_json(totals, room),
+        "unknown": unknown_json(unknown, room),
         "note": M.saved_meal_note(scale, totals[R.CARBS], room.gap, goal, room.meal, limiting),
     })
     return option
@@ -493,15 +504,18 @@ def select(ranked: Sequence[tuple[Evaluation, Evaluation]], limit: int) -> list[
 
 
 def what_fits(ctx: GuidanceContext, meal: str, limit: int = R.DEFAULT_LIMIT, explain: bool = False,
-              counter: Counter | None = None) -> dict[str, Any]:
-    """The "What fits now" result for ``meal`` on ``ctx.date`` (the body of ``GET /api/guidance/next-meal``)."""
+              counter: Counter | None = None, exclude: frozenset[int] = frozenset()) -> dict[str, Any]:
+    """The "What fits now" result for ``meal`` on ``ctx.date`` (the body of ``GET /api/guidance/next-meal``).
+
+    ``exclude`` holds food ids the person has already seen ("Show other foods"); they are left out before ranking."""
     counter = counter if counter is not None else Counter()
     totals: DayTotals = day_totals(ctx.day)
     room = meal_room(ctx, meal, totals=totals)
     habit = habit_stats(ctx)
     today = today_stats(ctx.day)
     scorer = Scorer(room, habit, today, counter)
-    ranked, why_not = rank_foods(ctx, room, scorer, eligible_foods(ctx), explain)
+    pool = [f for f in eligible_foods(ctx) if f.id not in exclude]
+    ranked, why_not = rank_foods(ctx, room, scorer, pool, explain)
     chosen = select(ranked, max(1, min(int(limit), R.MAX_LIMIT)))
     tracked = tracked_keys(room)
     carbs_first = room.carbs is not None

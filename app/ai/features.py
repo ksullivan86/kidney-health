@@ -212,14 +212,14 @@ class ContextTooSmall(ValueError):
 
 
 def prepare_next_meal(ctx: GuidanceContext, cfg: ProviderConfig, *, meal: str, mode: Mode, person: Mapping[str, Any],
-                      swap: tuple[Any, float, str | None] | None = None) -> Prepared:
+                      swap: tuple[Any, float, str | None] | None = None, exclude: frozenset[int] = frozenset()) -> Prepared:
     """Build the next-meal call for ``mode`` from the rule result only (G5, G14).
 
     ``swap`` = (food vector, servings, purpose) for mode ``swap``. Raises ``ValueError`` for a low
     treatment in swap mode (G7) and :class:`ContextTooSmall` when nothing fits the prompt budget.
     """
     food, servings, purpose = swap if swap is not None else (None, None, None)
-    bridge = candidates_for_ai(ctx, meal, mode, food=food, servings=servings, purpose=purpose)
+    bridge = candidates_for_ai(ctx, meal, mode, food=food, servings=servings, purpose=purpose, exclude=exclude)
     meals_left = list(open_slots(meal, ctx.day))
     trimmed = 0
     while True:

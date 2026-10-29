@@ -100,6 +100,41 @@ def test_next_meal_answers_with_the_contract_shape(real):
     assert body["targets"]["profile_updated_at"]
 
 
+def test_meal_totals_say_which_values_a_food_does_not_list(real):
+    set_targets(real)
+    crackers = real.post("/api/foods", json={"name": "Plain crackers (test)", "serving_desc": "5 crackers (30 g)", "serving_g": 30,
+                                               "nutrients": {"calories_kcal": 120, "carbs_g": 20, "sodium_mg": 180, "protein_g": 2}}).json()["id"]
+    egg = food_id(real, "Egg, scrambled")
+    r = real.post("/api/meals", json={"name": "Crackers and egg", "meal_hint": "lunch",
+                                      "items": [{"food_id": crackers, "servings": 1}, {"food_id": egg, "servings": 1}]})
+    assert r.status_code == 201, r.text
+    fits = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()
+    meal = next(m for m in fits["saved_meals"] if m["name"] == "Crackers and egg")
+    assert meal["unknown"] == ["phosphorus_mg", "potassium_mg"]  # the egg's are counted, so the totals are "at least"
+    assert meal["totals"]["potassium_mg"] > 0
+    plan = real.post("/api/guidance/plan-day", json={"date": DAY, "meals": ["lunch"], "use_usual": False, "use_starters": False}).json()
+    lunch = plan["meals"][0]
+    assert "unknown" in lunch and (lunch["source"] != "saved" or lunch["unknown"] == ["phosphorus_mg", "potassium_mg"])
+
+
+def test_show_other_foods_leaves_out_the_ones_already_shown(real):
+    set_targets(real)
+    first = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()["foods"]
+    shown = [f["food_id"] for f in first]
+    assert shown
+    other = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch", "exclude": ",".join(map(str, shown))})
+    assert other.status_code == 200, other.text
+    again = [f["food_id"] for f in other.json()["foods"]]
+    assert again and not set(again) & set(shown)
+
+
+@pytest.mark.parametrize("bad", ["1,,2", "a", "-3", "1.5", ",".join(["1"] * 61), "1" * 13, "\u0661"])
+def test_show_other_foods_refuses_a_bad_exclude_list(real, bad):
+    set_targets(real)
+    r = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch", "exclude": bad})
+    assert r.status_code == 400 and r.json()["detail"] == "exclude: a comma list of at most 60 food ids"
+
+
 def test_guidance_follows_a_target_change_at_once(real):
     set_targets(real)
     room = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()["room"]

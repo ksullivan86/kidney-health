@@ -141,6 +141,13 @@ at 1, ½, 1½ or 2 servings (drinks and extras 1 or ½):
 4. Each food carries `fit_text` ("Fits: 45 g carbs · 55 mg potassium · …"), up to two reasons and one
    caution ("Low in potassium (55 mg)", "Brings dinner to 45 of your 60 g carbs", …) and links to the
    handbook pages behind them.
+   **Show other foods** asks again with `exclude=<ids>`, the foods already on the list (at most 60): they are left out before
+   ranking, so the next foods move up. The screen adds each answer's foods to the list until nothing else fits, and
+   **Back to the first choices** clears it. Saved meals are not affected. The demo answers the same way (`js/engine/guidance/fits.js`,
+   checked by the `OTHER` case of `tests/data/guidance_vectors.json`).
+   Every meal in the answer (saved and usual meals here, the planned meals and the closest one in a plan, AI ideas) has
+   `unknown` next to `totals`: the keys some food of the meal does not list. Those totals count only the foods that list them,
+   so the screens show them as "≥ …", or "… not listed" when the sum is 0 (the `UNKNOWN` cases of the vectors).
 5. **Saved and usual meals that fit**: saved meals for this slot (or without a slot, for main meals) and
    "usual meals" mined from the last 60 days (2–6 foods eaten together in this slot on at least 2 dates;
    none that holds a "Not for me" food or a food of a "Never suggest" group, none the person hid with "Not this meal",

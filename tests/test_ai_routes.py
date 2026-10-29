@@ -219,6 +219,26 @@ def test_swap_mode_needs_one_target_and_refuses_low_treatments(ai_client):
     assert r.json()["status"] == "treating_a_low" and r.json()["ai_called"] is False
 
 
+def sent_data(dry: dict) -> dict:
+    return json.loads(dry["body"]["messages"][-1]["content"].split("<data>\n", 1)[1].split("\n</data>", 1)[0])
+
+
+def test_other_ideas_leave_out_the_foods_already_shown(ai_client):
+    ready(ai_client)
+    with attach(ai_client.app, FakeProvider([])) as provider:
+        first = sent_data(ai_client.post("/api/ai/next-meal?dry_run=true", json={"meal": "dinner", "date": DAY}).json())
+        shown = [f["id"] for f in first["candidates"]][:2]  # the test list has 9 foods
+        again = sent_data(ai_client.post("/api/ai/next-meal?dry_run=true",
+                                         json={"meal": "dinner", "date": DAY, "exclude_food_ids": shown}).json())
+        assert provider.calls == 0
+    ids = {f["id"] for f in again["candidates"]}
+    assert shown and ids and not ids & set(shown)
+    swap = {"meal": "dinner", "mode": "swap", "food_id": shown[0], "servings": 1, "exclude_food_ids": shown}
+    assert ai_client.post("/api/ai/next-meal", json=swap).status_code == 400
+    too_many = {"meal": "dinner", "exclude_food_ids": list(range(1, 62))}
+    assert ai_client.post("/api/ai/next-meal", json=too_many).status_code == 400
+
+
 # --------------------------------------------------------------------------- #
 # Quotas and limits
 # --------------------------------------------------------------------------- #

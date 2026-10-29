@@ -109,6 +109,8 @@ sheet shows **Rework with AI**. Pick the meal, the kind of dish and how many ser
 * The title is made by the app from the main foods, such as "Rice and chicken breast stir-fry". A recipe it reworked keeps
   your name with "(reworked)". Your recipe's name, note, steps and link are never sent.
 * **Save recipe** adds it to your saved meals. **Add to plan** adds one serving to the meal. Nothing is saved until you tap.
+* **Other recipes** (or **Another way** when reworking) asks again without the main foods already shown. Oil, flour and the
+  like can still be used. Each ask counts as one AI call.
 * Cooking steps from AI appear only if your admin turned them on. The app removes any step about medicines, a low,
   nutrients or amounts. The rest are marked "Steps written by AI. The app checked them for medicine talk and nutrient claims,
   not for cooking times or food safety. Check them before you cook."
@@ -126,6 +128,10 @@ numbers worked out again from the foods. A good habit: copy a day that went well
 **Plan** → **Shopping list** adds up every **planned** food in the week you are looking at: how many
 servings, how many grams, and on how many days. Tick items as you shop. The ticks stay on this device
 only; **Clear checks** removes them.
+
+**Share list** (on a phone) and **Copy list** send what is not ticked yet as plain text, one food a line, to any list app:
+Reminders, Google Keep, Bring!, or a family list app such as KitchenOwl or Grocy. Nothing is sent anywhere until you choose
+where it goes. Where the browser does not allow copying, the list appears as text to select and copy yourself.
 
 ## Using the handbook's sample menus
 

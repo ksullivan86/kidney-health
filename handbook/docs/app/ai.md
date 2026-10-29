@@ -138,7 +138,8 @@ own provider fails, the app never sends your data to the shared one instead
 When AI is on for you, the **Add** screen shows **AI meal ideas**, **Describe a meal (AI)**, **Read a
 label (AI)** and, if your admin allows it, **Plate photo (AI)**, with the number of shared AI calls left
 today. Each AI idea shows its foods with their warnings, the totals, what is left of your day after it,
-and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead. If your admin
+and **Add to plan**. If no AI idea fits your targets, the app shows its own ideas instead. **Other ideas** asks again
+without the foods it has already suggested, so you get different ones. Each ask counts as one AI call. If your admin
 has switched on **Ask**, a tab called **Ask** is there too.
 
 ## Read a lab report from a photo or a PDF

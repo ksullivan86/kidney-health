@@ -100,6 +100,16 @@
     try { return BigInt(t); } catch (e) { return 0n; }
   }
   // app.guidance.api.parse_day: empty → today; else validate_date with the parameter's name.
+  // "exclude=12,40,7": the food ids already shown (parse_exclude in app/guidance/api.py).
+  const MAX_EXCLUDE = 60;
+  function parseExclude(value) {
+    if (value == null || value === '') return new Set();
+    const parts = value.split(',');
+    if (value.length > 13 * MAX_EXCLUDE || parts.length > MAX_EXCLUDE || !parts.every((p) => /^[0-9]{1,12}$/.test(p))) {
+      fail(400, `exclude: a comma list of at most ${MAX_EXCLUDE} food ids`);
+    }
+    return new Set(parts.map(Number));
+  }
   function parseDay(value, name = 'date') {
     if (value == null || value === '') return todayStr();
     const e = validDate(value);
@@ -284,14 +294,15 @@
   route('GET', '/api/guidance/next-meal', function ({ qp }) {
     this._currentUser();
     const q = new Query(qp);
-    q.meal('meal', { required: true }); q.str('date'); q.int('limit', { def: R.DEFAULT_LIMIT, ge: 1, le: R.MAX_LIMIT }); q.bool('explain');
+    q.meal('meal', { required: true }); q.str('date'); q.int('limit', { def: R.DEFAULT_LIMIT, ge: 1, le: R.MAX_LIMIT }); q.bool('explain'); q.str('exclude');
     const a = q.done();
     const day = parseDay(a.date);
+    const skip = parseExclude(a.exclude);
     const off = this._guidanceGate();
     if (off) return off;
     const ctx = this._guidanceContext(day);
     if (!this._guidanceHasTargets(ctx.profile)) return this._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
-    const result = GE.whatFits(ctx, a.meal, a.limit, a.explain);
+    const result = GE.whatFits(ctx, a.meal, a.limit, a.explain, null, skip);
     for (const food of result.foods) withNulls(food, ['explain']);
     result.ai = { available: false, provider_label: null };
     result.targets = this._guidanceTargets(ctx);

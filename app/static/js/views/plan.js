@@ -7,7 +7,7 @@
   const { h, $, $$, clear, api, state, toast, toastError, router, sheets, confirm } = KH;
   const { NUT, NUTRIENTS, MEALS, MEAL_LABEL, fmtNum, fmtServings, pct } = KH.rules;
   const { KEY_NUMBERS, ROW_NUMBERS, PLAN_CHIPS, WEEKDAYS, LEVEL_TEXT, ratingIcon, plusIcon, dashedIcon, checkIcon, closeIcon,
-    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, foodsNotListing, atLeast, atLeastWords } = KH.ui;
+    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, notListed, foodsNotListing, atLeast, atLeastWords } = KH.ui;
   const { todayStr, parseDate, addDays, fmtDateLong, fmtMonthDay, fmtRange, weekdayMon, weekStartOf, defaultStatusFor, defaultMealForNow, debounce } = KH.util;
   const { SHOP_KEY } = KH.keys;
 
@@ -155,8 +155,10 @@
         const none = !!t.per_serving && t.per_serving[k] == null; // the server sends null when no food in it lists the value
         nums.append(none
           ? h('span', { class: 'n', title: foodsNotListing(unk, k) }, `${NUT[k].short} `, h('b', {}, 'not listed'))
-          : h('span', { class: 'n', title: unk ? foodsNotListing(unk, k) : null, 'aria-label': `${NUT[k].label} ${atLeastWords(fmtNum(shown[k], k), unk)} ${NUT[k].unit}` },
-            `${NUT[k].short} `, h('b', {}, atLeast(fmtNum(shown[k], k), unk)), ` ${NUT[k].unit}`));
+          : h('span', { class: 'n', title: unk ? foodsNotListing(unk, k) : null,
+            'aria-label': `${NUT[k].label} ${atLeastWords(fmtNum(shown[k], k), unk)} ${NUT[k].unit}${unk ? `; ${foodsNotListing(unk, k)}` : ''}` },
+            `${NUT[k].short} `, h('b', {}, atLeast(fmtNum(shown[k], k), unk)), ` ${NUT[k].unit}`,
+            unk ? h('span', { class: 'not-listed' }, ` (${notListed(unk)})`) : null)); // as on Today's meal lines: "K ≥ 55 (+ 1 not listed)"
       }
       li.append(h('div', { class: 'saved-meal-main' },
         ratingIcon(t.kidney_rating),
@@ -214,6 +216,39 @@
     try { if (set.size) localStorage.setItem(shopKey(start), JSON.stringify([...set])); else localStorage.removeItem(shopKey(start)); } catch (e) { /* storage unavailable */ }
   }
   $('#shopping-clear').addEventListener('click', () => { if (state.shopping) { saveChecks(state.shopping.start, new Set()); renderShopping(); } });
+  // The list as plain text for any list app (design note 22, part A): what is not ticked yet, one food a line. Nothing leaves
+  // this device unless the person shares or pastes it.
+  function shoppingText(sh, checks) {
+    const items = sh.items || [];
+    const left = items.filter((it) => !checks.has(it.food_id));
+    const lines = (left.length ? left : items).map((it) => `- ${it.food_name}: ${fmtServings(it.servings)}${it.serving_desc ? ` of ${it.serving_desc}` : ''}`);
+    return [`Shopping list, ${fmtRange(sh.start, sh.end)}`, '', ...lines].join('\n');
+  }
+  function showShoppingText(text) { // where the clipboard is blocked: the text, selected, to copy by hand
+    const box = $('#shopping-text');
+    box.value = text;
+    box.hidden = false;
+    box.focus();
+    box.select();
+  }
+  async function copyShopping(text) {
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    let allowed = true;
+    try { allowed = !policy || typeof policy.allowsFeature !== 'function' || policy.allowsFeature('clipboard-write'); } catch (e) { allowed = true; }
+    try {
+      if (allowed && navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); toast('Shopping list copied', 'ok'); return; }
+    } catch (e) { /* fall back */ }
+    showShoppingText(text);
+    toast('Select the list and copy it (Ctrl+C, or touch and hold on a phone).');
+  }
+  $('#shopping-copy').addEventListener('click', () => { if (state.shopping) copyShopping(shoppingText(state.shopping, loadChecks(state.shopping.start))); });
+  $('#shopping-share').addEventListener('click', async () => {
+    if (!state.shopping) return;
+    const text = shoppingText(state.shopping, loadChecks(state.shopping.start));
+    try { await navigator.share({ title: 'Shopping list', text }); } catch (e) {
+      if (!(e && e.name === 'AbortError')) copyShopping(text); // closed by the person: nothing to do
+    }
+  });
   function renderShopping() {
     const sh = state.shopping;
     if (!sh) return;
@@ -222,6 +257,9 @@
     const items = sh.items || [];
     $('#shopping-sub').textContent = items.length ? `${items.length} ${items.length === 1 ? 'food' : 'foods'} · ${fmtRange(sh.start, sh.end)}` : fmtRange(sh.start, sh.end);
     $('#shopping-clear').hidden = !items.length || !checks.size;
+    $('#shopping-copy').hidden = !items.length;
+    $('#shopping-share').hidden = !items.length || typeof navigator.share !== 'function';
+    $('#shopping-text').hidden = true;
     if (!items.length) {
       shoppingEl.append(h('li', { class: 'empty-state' }, 'Nothing planned this week yet. Plan foods on a day, or add a saved meal, to build the list.'));
       return;
@@ -336,7 +374,14 @@
         h('span', { class: 'ci-amt muted' }, fmtServings(it.servings * scale))));
     }
     const scaled = scaledNutrients(t.totals, scale);
-    for (const k of KEY_NUMBERS) key.append(h('div', { class: 'kn' }, h('span', { class: 'kn-v' }, fmtNum(scaled[k], k)), h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    for (const k of KEY_NUMBERS) {
+      // Unknown is never 0: "not listed" when no food lists it, "≥" when only some do (the saved-meal card's rule).
+      const none = !!t.per_serving && t.per_serving[k] == null;
+      const unk = unknownOf(t.unknown, k);
+      key.append(h('div', { class: `kn${none ? ' kn-unknown' : ''}`, title: unk ? foodsNotListing(unk, k) : null },
+        h('span', { class: 'kn-v' }, none ? 'not listed' : atLeast(fmtNum(scaled[k], k), unk)),
+        none ? null : h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    }
     const date = $('#apply-date').value;
     if (state.day && state.dayLoadedFor === date) {
       const impact = impactOn(state.day, scaled, selectedMeal($('#apply-meal')), { status: selectedStatus($('#apply-status')) });

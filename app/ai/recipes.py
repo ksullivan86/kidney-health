@@ -76,7 +76,8 @@ def recipe_ineligible(f: FoodVec, ctx: GuidanceContext) -> str | None:
     return None
 
 
-def recipe_candidates(ctx: GuidanceContext, target: Target, extra: Sequence[FoodVec] = ()) -> dict[str, Any]:
+def recipe_candidates(ctx: GuidanceContext, target: Target, extra: Sequence[FoodVec] = (),
+                      exclude: frozenset[int] = frozenset()) -> dict[str, Any]:
     """The rule result for an AI recipe: up to :data:`AI_RECIPE_FOODS_MAX` foods that pass at ¼, ½ or 1 serving, ranked by the
     "What fits now" score: at least :data:`AI_RECIPE_INGREDIENTS_MIN` ingredients, then one food of each cooking category in turn,
     then drinks, sweets, ready meals and processed foods if there is room, plus ``extra`` (the foods of a recipe to rework) when they may be sent. Each candidate's numbers are
@@ -87,8 +88,8 @@ def recipe_candidates(ctx: GuidanceContext, target: Target, extra: Sequence[Food
     habit = scorer.habit
     ranked: list[tuple[float, FoodVec]] = []
     for f in ctx.foods.values():
-        if recipe_ineligible(f, ctx) is not None:
-            continue
+        if recipe_ineligible(f, ctx) is not None or (f.id in exclude and not f.ingredient):
+            continue  # ``exclude``: main foods of recipes already shown ("Other recipes"); oil, flour and the like stay
         best, _ = scorer.best_portion(f, RECIPE_PORTIONS)
         if best is None:
             continue
@@ -145,14 +146,14 @@ def quarters_of(servings: float) -> int:
 
 def prepare_recipes(ctx: GuidanceContext, cfg: ProviderConfig, *, target: Target, person: Mapping[str, Any], mode: str,
                     dish: str | None, makes: float, steps: bool, recipe: Sequence[tuple[FoodVec, float]] = (),
-                    name: str | None = None) -> Any:
+                    name: str | None = None, exclude: frozenset[int] = frozenset()) -> Any:
     """Build the AI recipes call (note 16 §8.2). ``recipe`` and ``name`` are the person's recipe in mode ``change``: its foods and
     pot amounts are sent, its name never is (the app adds "(reworked)" to it on the card)."""
     from .features import ContextTooSmall, Prepared, _fits
 
     if mode == "change" and any(f.hypo for f, _ in recipe):
         raise ValueError("a recipe with a low-treatment food is never sent to AI")
-    bridge = recipe_candidates(ctx, target, [f for f, _ in recipe])
+    bridge = recipe_candidates(ctx, target, [f for f, _ in recipe], exclude)
     meal = target.meal if target.kind == "meal" and target.meal else bridge["meal"]
     meals_left = list(open_slots(meal, ctx.day)) if target.kind == "meal" else []
     request: dict[str, Any] = {"mode": mode, "makes": makes}

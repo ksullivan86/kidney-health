@@ -109,8 +109,13 @@ def foods_for(inp: Mapping[str, Any], foods: Mapping[int, FoodVec]) -> dict[int,
 
 
 def context_from(inp: Mapping[str, Any], all_foods: Mapping[int, FoodVec]) -> GuidanceContext:
-    """The replayer: the same context ``app/guidance/context.py`` loads from SQLite."""
+    """The replayer: the same context ``app/guidance/context.py`` loads from SQLite. ``food_overrides`` ({id: {nutrient: value}})
+    changes a food's values for one case only, such as a food that does not list potassium."""
     foods = foods_for(inp, all_foods)
+    rows = {r["id"]: r for r in FOODS}
+    for fid, values in (inp.get("food_overrides") or {}).items():
+        row = rows[int(fid)]
+        foods[int(fid)] = food_map([{**row, "nutrients": {**row["nutrients"], **values}}])[int(fid)]
     def day_entry(e: Mapping[str, Any]) -> DayEntry:
         f = foods[e["food_id"]]
         return DayEntry(id=e["id"], meal=e["meal"], status=e["status"], food_id=f.id, name=e["name"], servings=e["servings"],
@@ -170,7 +175,8 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
                 "meal_high_k": room.meal_high_k, "day_high_k": room.day_high_k,
                 "usage_weight": dict(room.usage_weight), "day_left": {k: _finite(v) for k, v in room.day_left.items()}}
     if fn == "what_fits":
-        return fits.what_fits(ctx, spec["meal"], limit=spec.get("limit", R.DEFAULT_LIMIT), explain=spec.get("explain", False))
+        return fits.what_fits(ctx, spec["meal"], limit=spec.get("limit", R.DEFAULT_LIMIT), explain=spec.get("explain", False),
+                              exclude=frozenset(spec.get("exclude", ())))
     if fn == "find_swaps":
         return swaps.find_swaps(ctx, spec["meal"], foods[spec["food_id"]], spec["servings"], spec.get("purpose"),
                                 explain=spec.get("explain", False))
@@ -316,6 +322,14 @@ def preference_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("PREF a like lifts a food but not over better ones (real list)", real_input(
             food_pref=[[rid("Apple, raw, with skin"), "like"], [rid("Cheese, cheddar"), "like"], [bread, "like"]]),
          {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),
+        # A food that does not list potassium: a meal with it says which totals are "at least" (``unknown``).
+        ("UNKNOWN a saved meal with a food that lists no potassium", base_input(day=[], food_overrides={"3": {"potassium_mg": None}}),
+         {"fn": "what_fits", "meal": "dinner"}),
+        ("UNKNOWN a planned meal with a food that lists no potassium", base_input(day=[], food_overrides={"3": {"potassium_mg": None}}),
+         {"fn": "plan_day", "meals": ["dinner"]}),
+        ("OTHER foods already shown are left out, so the next ones move up (real list)", real_input(),
+         {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True,
+          "exclude": [rid("Apple, raw, with skin"), rid("Cheese, cheddar"), bread, rice]}),
         ("PREF less often on a grain and its group drops it behind the others (real list)", real_input(
             food_pref=[[rice, "less"]], less_categories=["Grains & Breads"]),
          {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True}),

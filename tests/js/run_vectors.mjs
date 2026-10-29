@@ -295,9 +295,13 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
   const REAL_ID0 = 101;
   const allFoods = new Map(doc.foods.map((r) => [r.id, GE.makeFood(r)]));
   const foodsFor = (inp) => {
-    if (inp.food_set === 'all') return allFoods;
     const fixture = inp.food_set === 'fixture';
-    return new Map([...allFoods].filter(([id]) => (id < REAL_ID0) === fixture));
+    const foods = inp.food_set === 'all' ? new Map(allFoods) : new Map([...allFoods].filter(([id]) => (id < REAL_ID0) === fixture));
+    for (const [fid, values] of Object.entries(inp.food_overrides || {})) { // one case's change to a food's values
+      const row = doc.foods.find((r) => r.id === Number(fid));
+      foods.set(Number(fid), GE.makeFood({ ...row, nutrients: { ...row.nutrients, ...values } }));
+    }
+    return foods;
   };
   const history = (rows, foods) => rows.map((h) => GE.historyEntry({ ...h, flags: foods.get(h.food_id).flags }));
   const contextFrom = (inp) => {
@@ -327,7 +331,7 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
       return { open_meals: [...room.open_meals], room: GE.roomJson(room), meal_has: { ...room.meal_has }, meal_high_k: room.meal_high_k,
         day_high_k: room.day_high_k, usage_weight: { ...room.usage_weight }, day_left: dayLeft };
     }
-    if (fn === 'what_fits') return GE.whatFits(ctx, spec.meal, spec.limit == null ? GE.R.DEFAULT_LIMIT : spec.limit, !!spec.explain);
+    if (fn === 'what_fits') return GE.whatFits(ctx, spec.meal, spec.limit == null ? GE.R.DEFAULT_LIMIT : spec.limit, !!spec.explain, null, new Set(spec.exclude || []));
     if (fn === 'find_swaps') return GE.findSwaps(ctx, spec.meal, ctx.foods.get(spec.food_id), spec.servings, spec.purpose || null, GE.R.SWAP_MAX, !!spec.explain);
     if (fn === 'hypo_options') return GE.hypoOptions(ctx);
     if (fn === 'plan_day') {

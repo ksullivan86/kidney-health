@@ -90,6 +90,14 @@ def test_validate_ai_items_drops_every_bad_idea_with_a_reason():
     assert more["note"] == M.AI_FALLBACK
 
 
+def test_an_idea_says_which_totals_a_food_does_not_list():
+    idea = [[{"food_id": 4, "quarters": 4}, {"food_id": 1, "quarters": 4}, {"food_id": 7, "quarters": 5}]]  # TV-P1's dinner
+    assert ai_bridge.validate_ai_items(fx.context(), "dinner", idea)["ideas"][0]["unknown"] == []
+    rows = [r if r[0] != 7 else (*r[:7], None, *r[8:]) for r in fx.FOOD_ROWS]  # blueberries without potassium
+    r = ai_bridge.validate_ai_items(fx.context(food_map=fx.foods(rows)), "dinner", idea)
+    assert r["ideas"][0]["unknown"] == ["potassium_mg"] and r["ideas"][0]["totals"]["potassium_mg"] > 0  # "at least"
+
+
 def test_an_idea_that_exceeds_potassium_is_dropped_with_would_exceed():
     ctx = fx.context()
     r = ai_bridge.validate_ai_items(ctx, "dinner", [[{"food_id": 2, "quarters": 4}]], candidate_ids=[2])
