@@ -260,6 +260,196 @@ await scenario('a low treatment edited while it is on its way is sent like any o
   expect('nothing waits', (await KH.offline.items()).length, 0);
 });
 
+// ---------------------------------------------------------------------------------------------------------------------------
+// The entry sheet was opened on a waiting entry, and the entry reached the server before the person pressed Save.
+// The sheet still holds the waiting entry (id "pending:…"); the change goes to the server's entry, never as a second entry.
+// ---------------------------------------------------------------------------------------------------------------------------
+const sheetBody = (entry, change) => ({ date: entry.date, meal: entry.meal, status: entry.status, note: entry.note, ...change });
+
+await scenario('the sheet is saved after the entry reached the server: the change is made on the server\'s entry', async ({ KH, nav, date, food, calls, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  await KH.offline.syncNow(); // the entry reaches the server while the sheet is open
+  calls.length = 0;
+  let saved = null; let error = null;
+  try { saved = await KH.api.updateEntry(made.id, sheetBody(made, { note: 'with tea', servings: 2 }), made); } catch (e) { error = e.detail || e.message; }
+  expect('saving the open sheet works', error, null);
+  expect('the answer is the server\'s entry', saved && [typeof saved.id, saved.note, saved.servings], ['number', 'with tea', 2]);
+  expect('sent as an edit of that entry', calls.filter((c) => !c.startsWith('GET')), [`PUT /api/log/${onServer()[0].id}`]);
+  expect('one entry on the server, with the change', onServer().map((e) => [e.servings, e.note]), [[2, 'with tea']]);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('the sheet is saved while the follow-up edit is on its way: the save joins it', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const batch = hold('POST /api/log/batch');
+  const put = hold('PUT /api/log/1');
+  const run = KH.offline.syncNow();
+  await batch.reached;
+  const first = await KH.api.updateEntry(made.id, { servings: 2 }, made); // the batch is on its way: the row gets a follow-up edit
+  batch.release();
+  await put.reached; // the follow-up edit is on its way now
+  let error = null;
+  try { await KH.api.updateEntry(made.id, sheetBody(first, { note: 'after a walk' }), first); } catch (e) { error = e.detail || e.message; }
+  expect('saving the open sheet works', error, null);
+  put.release();
+  await run;
+  await KH.offline.syncNow();
+  expect('one entry on the server, with both changes', onServer().map((e) => [e.servings, e.note]), [[2, 'after a walk']]);
+  expect('nothing waits, nothing to review', [(await KH.offline.items()).length, KH.offline.counts().conflict], [0, 0]);
+});
+
+await scenario('the sheet is saved after the entry reached the server and another device changed it: a conflict card, nothing overwritten', async ({ KH, api, nav, date, food, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  await KH.offline.syncNow();
+  const id = onServer()[0].id;
+  api.handle('PUT', `/api/log/${id}`, { note: 'from the tablet' }); // another device
+  let error = null;
+  try { await KH.api.updateEntry(made.id, sheetBody(made, { servings: 3 }), made); } catch (e) { error = e; }
+  expect('the save says it was changed on another device', !!(error && error.conflict), true);
+  expect('the server keeps the other device\'s entry', onServer().map((e) => [e.servings, e.note]), [[1, 'from the tablet']]);
+  const items = await KH.offline.items();
+  expect('the change waits as a card to decide on', items.map((i) => [i.state, i.entry_id, i.body.servings]), [['conflict', id, 3]]);
+});
+
+await scenario('the sheet is saved offline after the entry reached the server: queued as an edit with the server\'s version', async ({ KH, nav, date, food, onServer, calls }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'dinner', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  await KH.offline.syncNow();
+  const server = onServer()[0];
+  nav.onLine = false;
+  let saved = null; let error = null;
+  try { saved = await KH.api.updateEntry(made.id, sheetBody(made, { meal: 'snack' }), made); } catch (e) { error = e.detail || e.message; }
+  expect('saving the open sheet offline works', [error, saved && saved.pending], [null, true]);
+  const items = await KH.offline.items();
+  expect('one edit of the server\'s entry waits, with its version', items.map((i) => [i.kind, i.entry_id, i.version]), [['edit', server.id, server.version]]);
+  nav.onLine = true;
+  calls.length = 0;
+  await KH.offline.syncNow();
+  expect('sent as an edit, never as a second entry', calls.filter((c) => !c.startsWith('GET')), [`PUT /api/log/${server.id}`]);
+  expect('one entry on the server, moved to the snack', onServer().map((e) => e.meal), ['snack']);
+});
+
+await scenario('the sheet\'s Delete is used after the entry reached the server: the server\'s entry is deleted', async ({ KH, nav, date, food, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  await KH.offline.syncNow();
+  let error = null;
+  try { await KH.api.deleteEntry(made.id, made); } catch (e) { error = e.detail || e.message; }
+  expect('deleting from the open sheet works', error, null);
+  expect('the server has no entry', onServer().length, 0);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('a low treatment\'s sheet saved after it reached the server is changed like any other entry', async ({ KH, nav, date, onServer }) => {
+  nav.onLine = false;
+  const tablets = await KH.api.quick({ date, meal: 'snack', name: 'Glucose tablets', serving_g: 4, flags: ['hypo_treatment'],
+    nutrients: { carbs_g: 4, sugar_g: 4 }, servings: 4 });
+  nav.onLine = true;
+  await KH.offline.syncNow();
+  let error = null;
+  try { await KH.api.updateEntry(tablets.id, sheetBody(tablets, { note: '3.4 mmol/L' }), tablets); } catch (e) { error = e.detail || e.message; }
+  expect('saving works', error, null);
+  expect('the server has the note, still a low treatment', onServer().map((e) => [e.servings, e.note, e.purpose]), [[4, '3.4 mmol/L', 'hypo']]);
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// Discard in Settings → This device (and "Sign out and lose them") while the entry is being sent: the server may have it
+// already, so it ends deleted there, the way a delete made while it is on its way does.
+// ---------------------------------------------------------------------------------------------------------------------------
+await scenario('discarded in Settings while its batch is on its way: the entry is not left on the server', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  await KH.offline.discard(String(made.id).slice('pending:'.length));
+  expect('the day does not show it', (await KH.api.day(date)).entries.length, 0);
+  h.release();
+  await run;
+  await KH.offline.syncNow();
+  expect('the server has no entry', onServer().length, 0);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('discarded after its answer was lost, while offline: it waits as a delete and is deleted once back', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  h.lose();
+  await run;
+  nav.onLine = false;
+  await KH.offline.discard(String(made.id).slice('pending:'.length));
+  const items = await KH.offline.items();
+  expect('it waits as a delete, and is counted', [items.map((i) => !!i.deleted), KH.offline.counts().pending], [[true], 1]);
+  nav.onLine = true;
+  await KH.offline.syncNow();
+  expect('the server has no entry', onServer().length, 0);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('"Discard all" while a batch is on its way: nothing it held is left on the server, and nothing else is sent', async ({ KH, nav, date, food, hold, onServer, calls }) => {
+  nav.onLine = false;
+  await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  await KH.request('POST', '/api/log', { date, meal: 'dinner', food_id: food.id, servings: 2 });
+  await KH.api.quick({ date, meal: 'snack', name: 'Soup', serving_g: 250, nutrients: { calories_kcal: 120 }, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  await KH.offline.discardAll();
+  h.release();
+  await run;
+  await KH.offline.syncNow();
+  expect('the server has no entry', onServer().length, 0);
+  expect('the quick add was never sent', calls.includes('POST /api/log/quick'), false);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('"Sign out and lose them" while a batch is on its way: the entries are deleted on the server first', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  const lose = KH.offline.loseAll();
+  h.release();
+  await run;
+  const left = await lose;
+  expect('nothing is left that may be on the server', (left || []).length, 0);
+  expect('the server has no entry', onServer().length, 0);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('"Sign out and lose them" when the delete cannot be done: the app says which entry may be on the server', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  await KH.api.quick({ date, meal: 'snack', name: 'Soup', serving_g: 250, nutrients: { calories_kcal: 120 }, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  h.lose(); // the server has the entry, the device never hears
+  await run;
+  nav.onLine = false;
+  const left = await KH.offline.loseAll();
+  expect('the entry that may be on the server is named', (left || []).map((i) => i.name), [food.name]);
+  expect('the server still has it (it could not be reached)', onServer().length, 1);
+  expect('only that one still waits, as a delete', (await KH.offline.items()).map((i) => !!i.deleted), [true]);
+});
+
 if (failures.length) {
   for (const f of failures.slice(0, 20)) console.error(`MISMATCH ${f.label}\n   got:  ${JSON.stringify(f.got)}\n   want: ${JSON.stringify(f.want)}`);
   console.error(`\n${failures.length} of ${checks} checks failed (tests/js/outbox_inflight.test.mjs)`);
