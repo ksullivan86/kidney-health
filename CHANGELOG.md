@@ -67,6 +67,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   `SETTINGS_INITIAL_ONLY=*`. See [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).
 * Schema step 25 adds two columns to `shares` at the first start. Shares made before last until someone stops them, as before.
 
+### Security
+
+* **A share without weight and blood pressure no longer shows the profile weight.** `GET /api/shared/{id}/profile` gave the
+  weight saved in the owner's profile to every share, also one of only the food log, labs or symptoms. It is now `null` unless
+  weight and blood pressure were shared. Nothing else in the answer changed.
+
 ## 0.10.0 — 2026-10-29
 
 Version 0.10 lets a person share their log, read-only, with a caregiver or dietitian, and makes passkeys and the iPhone app

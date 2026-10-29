@@ -142,7 +142,7 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    is never left under the new heading. If a part cannot load, press **Retry**.
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
-  the date of birth and other profile details.
+  the date of birth and other profile details. The weight saved in the profile is shared only with weight and blood pressure.
 * A share with an end date stops by itself on that day, and the person's activity says so.
 * Either side can stop at once: **Stop sharing** or **Stop seeing**. The person's list says who can see their data and when they
   last looked. The first look each day goes to the person's activity.

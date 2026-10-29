@@ -175,7 +175,7 @@ To share:
 
 They then see your summary page (the same page as Visit prep) and what you ate on any day, with a note at the top that it is
 yours and read-only. They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your
-sign-in activity.
+sign-in activity. They see the weight in your profile only if you shared weight and blood pressure.
 
 - Your list in **Sharing** shows who can see your data, until when, and when they last looked. **Stop sharing** ends it at once.
 - A share with an end date stops by itself on that day. Your activity says so.
