@@ -581,6 +581,8 @@ def recipe_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("REC potatoes swapped at lunch", base_input(), fit([[2, 8], [3, 4]], 4, {"kind": "meal", "meal": "lunch"})),
         ("REC against what is left today", base_input(), fit([[2, 8], [3, 4]], 4, {"kind": "day"})),
         ("REC the next open meal", base_input(), fit([[1, 4], [5, 4]], 4, {"kind": "meal"})),
+        ("REC more than 3 servings of a food in a serving is lowered", base_input(), fit([[5, 3.5], [1, 0.5]], 1)),
+        ("REC more than 3 servings of a protein food in a serving is swapped", base_input(), fit([[4, 3.5], [1, 0.5]], 1)),
         ("REC a stew on real foods", real_input(), fit(stew, 4)),
         ("REC a stew on real foods, for one", real_input(), fit(stew, 1)),
         ("REC a stew on real foods, the day", real_input(), fit(stew, 2, {"kind": "day"})),

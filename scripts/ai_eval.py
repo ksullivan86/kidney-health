@@ -26,7 +26,7 @@ Reported (and written to ``docs/dev/ai-eval/<date>-<preset>-<model>.json``):
 * ``next_meal_with_idea_rate``: next-meal "ideas" cases where at least one idea survived the rules (V3–V5);
 * ``idea_survival_rate``: ideas shown, of all ideas the model proposed;
 * ``ideas_lowered`` and ``lowered_reasons``: shown ideas the app made smaller to fit (a portion too big), by the reason the
-  meal check first gave; ``dropped_reasons`` counts the ideas it could not keep;
+  meal check first gave (``share_too_large`` for a recipe); ``dropped_reasons`` counts the ideas it could not keep;
 * ``claims_corrected``: reason codes or themes the server removed as untrue (§9 A2's replacement for
   V6's text replacements; a "you said you like this" claim about a food the person did not mark counts here);
 * ``taste_first_cases`` and ``taste_first_violations`` (note 09 §4.7): of the meal ideas cases that say a food the person
@@ -38,7 +38,8 @@ Reported (and written to ``docs/dev/ai-eval/<date>-<preset>-<model>.json``):
 * ``latency_ms``: p50 and p95 of the AI calls.
 * AI recipes (note 16 §12; the golden cases with ``feature: recipes``, run with the steps switch on):
   ``recipes_with_survivor_rate`` (cases where at least one recipe passed the app's checks, a gate at 70 %),
-  ``recipe_survival_rate`` (recipes shown of all proposed), ``recipes_unchanged_rate`` (shown without a change by the app) and
+  ``recipe_survival_rate`` (recipes shown of all proposed), ``recipes_lowered`` (shown recipes with more than 3 servings of a
+  food in one serving, which the fit made smaller), ``recipes_unchanged_rate`` (shown without a change by the app) and
   ``recipe_changes_mean``, ``steps_dropped_rate`` (steps the app removed of all steps given), ``steps_unsafe_shown`` (must be
   0: steps shown that this script's own checker, independent of ``app/ai/recipe_steps.py``, finds unsafe) and
   ``recipe_p95_ms`` (a gate at 60 s local and 30 s cloud: a recipe is a longer answer).
@@ -200,7 +201,7 @@ class Call:
     refused: bool = False
     unsafe_text: bool = False
     dropped_reasons: list[str] = field(default_factory=list)
-    lowered_reasons: list[str] = field(default_factory=list)  # meal ideas the app made smaller to fit, by their first reason
+    lowered_reasons: list[str] = field(default_factory=list)  # ideas or recipes the app made smaller to fit, by their first reason
     first_checked: bool = False  # the case says a food must not be the first idea (a food the person wants less often)
     first_violations: list[str] = field(default_factory=list)  # the foods of the first idea that the case says it must not hold
     recipe_changes: list[int] = field(default_factory=list)  # AI recipes: the app's changes to each recipe shown
@@ -569,7 +570,7 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
         "next_meal_with_idea_rate": pct(len(with_idea), len(meals)),
         "ideas_proposed": proposed,
         "idea_survival_rate": pct(shown, proposed),
-        "ideas_lowered": sum(len(c.lowered_reasons) for c in calls),
+        "ideas_lowered": sum(len(c.lowered_reasons) for c in calls if c.kind != "recipes"),
         "claims_corrected": sum(c.claims_corrected for c in calls),
         # Tastes (note 09 §4.7): meal ideas cases that say a food the person wants less often must not be the first idea,
         # and how many times the live model put one there. Reported, not a gate: the app ranks and filters, it cannot
@@ -582,6 +583,7 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
         "recipe_cases": len(recipe_calls),
         "recipes_with_survivor_rate": pct(sum(1 for c in recipe_calls if c.status == "ok" and c.shown > 0), len(recipe_calls)),
         "recipe_survival_rate": pct(recipe_shown, recipe_shown + sum(c.dropped for c in recipe_calls)),
+        "recipes_lowered": sum(len(c.lowered_reasons) for c in recipe_calls),
         "recipes_unchanged_rate": pct(sum(1 for n in recipe_changes if n == 0), len(recipe_changes)),
         "recipe_changes_mean": round(statistics.fmean(recipe_changes), 2) if recipe_changes else None,
         "steps_dropped_rate": pct(sum(c.steps_dropped for c in recipe_calls), steps_given),

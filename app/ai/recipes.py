@@ -10,7 +10,9 @@ number. Pure apart from the guidance context the caller loaded.
   recipe's name, note, steps or link.
 * :func:`judge_recipes`: the checks of §8.5. The model gives foods and pot amounts in quarter servings and nothing else that
   becomes a number. The app merges duplicates, drops what is not a candidate, out of range or excluded, works out one serving
-  from the food rows, runs the fit engine (:func:`app.guidance.recipes.fit_recipe`) and drops what still does not fit. The
+  from the food rows, runs the fit engine (:func:`app.guidance.recipes.fit_recipe`) and drops what still does not fit. A share
+  that is only too big (more than 3 servings of a food in one serving) goes through the fit too, which makes it smaller; the
+  card then carries :data:`PORTION_LOWERED_TEXT` and the answer lists it under ``portions_lowered``. The
   title comes from a template, the "why" sentence from the app's own reason texts, checked against the final numbers. Steps
   are kept only with ``ai.recipe_steps`` on and only after :mod:`app.ai.recipe_steps`; a swap by the app drops them.
 """
@@ -41,6 +43,9 @@ NEVER_ADD = re.compile(r"\b(?:salt|salt substitutes?|salt replacers?|potassium c
 NOTICE = "AI recipe · {label} · {model} · checked against your targets · not medical advice"
 NO_FIT_TEXT = "The AI found no recipe that fits your targets for this meal."
 DROPPED_ALL_TEXT = "The AI's recipes did not fit your targets, so none are shown."
+# Under an AI recipe whose too-big share the fit made smaller (``portions_lowered``), worded like the meal ideas' note.
+PORTION_LOWERED_TEXT = "The app made a portion smaller so the recipe fits your targets."
+PORTIONS_LOWERED_TEXT = "The app made some portions smaller so the recipe fits your targets."
 NOT_SENT_TEXT = ("This recipe has a food the app never sends to AI, so it cannot be reworked. Fit to my targets still works "
                  "without AI.")
 DISH_WORD = {"soup": "soup", "stew": "stew", "bowl": "bowl", "stir_fry": "stir-fry", "bake": "bake", "salad": "salad",
@@ -262,8 +267,8 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
                   provider_label: str, model: str) -> dict[str, Any]:
     """V3 to V9 for AI recipes. ``answer`` is the V2-checked object (``status``, ``refusal``, ``recipes``)."""
     if answer.get("status") == "refused":
-        return {"status": "refused", "message": guard.REFUSED_TEXT, "recipes": [], "dropped": [], "claims_corrected": 0,
-                "steps_dropped": 0}
+        return {"status": "refused", "message": guard.REFUSED_TEXT, "recipes": [], "dropped": [], "portions_lowered": [],
+                "claims_corrected": 0, "steps_dropped": 0}
     candidates = {int(f["food_id"]) for f in bridge.get("foods", [])}
     often, liked = guard.often_ids(bridge), guard.liked_ids(bridge)
     room = room_for(ctx, target)
@@ -272,6 +277,7 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
     raw_recipes = list(answer.get("recipes") or [])
     shown: list[dict[str, Any]] = []
     dropped: list[dict[str, Any]] = []
+    lowered: list[dict[str, Any]] = []
     corrected_total = 0
     steps_dropped_total = 0
     for index, raw in enumerate(raw_recipes):
@@ -292,6 +298,7 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
         if not schemas.MIN_RECIPE_ITEMS <= len(merged) <= schemas.MAX_RECIPE_ITEMS:
             reason = "too_many_items" if len(merged) > schemas.MAX_RECIPE_ITEMS else "too_few_items"
         items: list[tuple[FoodVec, float]] = []
+        too_big: list[tuple[int, float]] = []  # (food id, share): more than 3 servings in one serving, for the fit to make smaller
         for fid, quarters in merged:
             if reason is not None:
                 break
@@ -300,8 +307,6 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
                 reason = "not_a_candidate"
             elif not 1 <= quarters <= schemas.MAX_RECIPE_QUARTERS:
                 reason = "quarters_out_of_range"
-            elif quarters / 4.0 / makes > R.PORTION_MAX + 1e-9:
-                reason = "share_too_large"
             else:
                 why = recipe_ineligible(food, ctx)
                 if why in guard.NOT_FOR_ME_REASONS:
@@ -310,18 +315,30 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
                     reason = "excluded_category" if why == "never_added" else "not_a_candidate"
                 else:
                     items.append((food, quarters / 4.0))
+                    if quarters / 4.0 / makes > R.PORTION_MAX + 1e-9:
+                        too_big.append((fid, quarters / 4.0 / makes))
         if reason is not None:
             dropped.append({"index": index, "reason": reason})
             continue
+        # The fit is the one gate: it makes a too-big share smaller (``portion_out_of_range``) as it lowers anything else, and
+        # every check of check_meal runs again on what it gives back.
         fit = fit_recipe(ctx, items, makes, target)
         if fit["status"] == "does_not_fit":
+            closest = fit["closest"]
+            still_big = any(float(i["servings"]) / makes * float(closest["serving_fraction"]) > R.PORTION_MAX + 1e-9
+                            for i in closest["items"])
             over = (fit.get("still_over") or ["portion"])[0]
-            dropped.append({"index": index, "reason": f"would_exceed:{over}"})
+            dropped.append({"index": index, "reason": "share_too_large" if still_big else f"would_exceed:{over}"})
             continue
         fitted = fit["fitted"]
         fraction = float(fitted["serving_fraction"])
         final = [(ctx.foods[int(i["food_id"])], float(i["servings"])) for i in fitted["items"]]
         one_serving = [(f, q / makes * fraction) for f, q in final]
+        # A food the fit swapped out is at 0: the fit's own change lines say what came in.
+        portion_changes = [{"food_id": fid, "from_servings": R.round_to(was, 2),
+                            "to_servings": R.round_to(sum(q for f, q in one_serving if f.id == fid), 2)} for fid, was in too_big]
+        if portion_changes:
+            lowered.append({"index": index, "reason": "share_too_large", "changes": portion_changes})
         codes, corrected = guard.check_claims([c for c in raw.get("reason_codes") or [] if isinstance(c, str)], one_serving, room,
                                               often, liked)
         theme_claim = raw.get("theme") if raw.get("theme") in schemas.THEMES else "light"
@@ -361,6 +378,8 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
             "steps_note": recipe_steps.STEPS_REMOVED_TEXT if swapped and raw_steps and steps else None,
             "steps_dropped": step_drops,
             "differences": differences(original, fitted["items"], ctx.foods) if mode == "change" else [],
+            "portions_lowered": portion_changes,
+            "portion_note": (PORTION_LOWERED_TEXT if len(portion_changes) == 1 else PORTIONS_LOWERED_TEXT) if portion_changes else None,
             # The exact body for POST /api/meals: the person saves it with a tap, and every rule runs again there. A smaller serving
             # is kept by counting more servings in the same pot, so one serving is the fitted size.
             "body": {"name": title, "meal_hint": meal if target.kind == "meal" else None, "servings_made": servings_made,
@@ -371,6 +390,7 @@ def judge_recipes(answer: Mapping[str, Any], ctx: GuidanceContext, target: Targe
     if not shown:
         status = "no_fit" if answer.get("refusal") == "no_fit" and not raw_recipes else "dropped_all"
         return {"status": status, "message": NO_FIT_TEXT if status == "no_fit" else DROPPED_ALL_TEXT, "recipes": [],
-                "dropped": dropped, "claims_corrected": corrected_total, "steps_dropped": steps_dropped_total}
-    return {"status": "ok", "recipes": shown, "dropped": dropped, "claims_corrected": corrected_total,
+                "dropped": dropped, "portions_lowered": lowered, "claims_corrected": corrected_total,
+                "steps_dropped": steps_dropped_total}
+    return {"status": "ok", "recipes": shown, "dropped": dropped, "portions_lowered": lowered, "claims_corrected": corrected_total,
             "steps_dropped": steps_dropped_total}

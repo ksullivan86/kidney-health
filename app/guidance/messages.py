@@ -465,6 +465,8 @@ def recipe_swapped_text(old_name: str, new_name: str, serving_desc: str, amount:
     text = f"Swapped {safe_name(old_name)} for {safe_name(new_name)}, {portion_text(amount, serving_desc)} in the whole recipe"
     if key == "avoid_ckd":
         return f"{text}, because {safe_name(old_name)} is on the app's list of foods to avoid with kidney disease."
+    if key == "portion":  # a share above the app's portion limits (a protein food is swapped, never lowered)
+        return f"{text}, because one serving held more of {safe_name(old_name)} than the app allows."
     if key not in NUTRIENT_WORD:
         return f"{text}, because {safe_name(old_name)} does not list a value the app needs today."
     text += (f", to keep {NUTRIENT_WORD[key]} within {label}. "

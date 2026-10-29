@@ -225,12 +225,34 @@ def test_the_title_is_a_template_even_when_the_model_sends_one(c):
     (lambda ids: [(ids[CHICKEN], 4)], "too_few_items"),
     (lambda ids: [(ids[APPLE], 0), (ids[CHICKEN], 4)], "quarters_out_of_range"),
     (lambda ids: [(ids[APPLE], 161), (ids[CHICKEN], 4)], "quarters_out_of_range"),
-    (lambda ids: [(ids[APPLE], 30), (ids[CHICKEN], 4)], "share_too_large"),  # 7.5 servings of apple in each of 2 servings
+    (lambda ids: [(ids[APPLE], 160), (ids[CHICKEN], 4)], "share_too_large"),  # 20 servings of apple in each of 2: too much to lower
 ])
 def test_every_drop_has_its_reason(c, make, reason):
     ids = {n: food_id(c, n) for n in (APPLE, CHICKEN, JUICE, STAR)}
     out = run(c, recipe(make(ids)))
     assert out["status"] == "dropped_all" and out["dropped"][0]["reason"] == reason, out
+
+
+def test_a_share_that_is_only_too_big_is_made_smaller_and_kept(c):
+    """7.5 servings of apple in a pot for 2 is 3.75 servings in each serving, above the 3 the meal check accepts. The live run of
+    2026-10-29 dropped such a recipe (``share_too_large``); the fit now makes the share smaller and the card says so."""
+    apple, chicken = food_id(c, APPLE), food_id(c, CHICKEN)
+    out = run(c, recipe([(apple, 30), (chicken, 4)]))
+    assert out["status"] == "ok" and out["dropped"] == [], out
+    [card] = out["recipes"]
+    n = card["body"]["servings_made"]
+    share = {i["food_id"]: i["servings"] / n for i in card["body"]["items"]}
+    assert all(q <= 3.0 + 1e-9 for q in share.values())  # one saved serving holds at most 3 servings of any food
+    assert card["portion_note"] == AR.PORTION_LOWERED_TEXT
+    assert card["fit"]["status"] != "fits" and card["fit"]["changes"]  # the fit's own lines say what it changed
+    [lowered] = out["portions_lowered"]
+    assert lowered["index"] == 0 and lowered["reason"] == "share_too_large"
+    assert lowered["changes"] == card["portions_lowered"]
+    [change] = lowered["changes"]
+    assert change["food_id"] == apple and change["from_servings"] == 3.75
+    assert change["to_servings"] == round(share.get(apple, 0.0), 2)  # 0 when the fit swapped the apple out
+    row = c.get("/api/ai/audit").json()["events"][0]["verdict_json"]
+    assert row["portions_lowered"][0]["reason"] == "share_too_large"
 
 
 def test_not_for_me_is_dropped(c):

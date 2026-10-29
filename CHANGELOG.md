@@ -11,6 +11,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
   smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
+* **An AI recipe with too much of one food is made smaller, not left out.** The app fits it like any other recipe and says
+  "The app made a portion smaller so the recipe fits your targets."
 * **A new sharing link stays on the screen.** Stopping a share or cancelling another link just after making one no longer
   hides the new link. It stays until it is used or cancelled.
 * **A device you signed out stays gone.** In Settings → Signed-in devices, a slow earlier load can no longer bring it back.

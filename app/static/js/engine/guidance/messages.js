@@ -356,6 +356,7 @@
   function recipeSwappedText(oldName, newName, servingDesc, amount, key, label, before, after, beforeUnknown = null, afterUnknown = null) {
     let text = `Swapped ${safeName(oldName)} for ${safeName(newName)}, ${portionText(amount, servingDesc)} in the whole recipe`;
     if (key === 'avoid_ckd') return `${text}, because ${safeName(oldName)} is on the app's list of foods to avoid with kidney disease.`;
+    if (key === 'portion') return `${text}, because one serving held more of ${safeName(oldName)} than the app allows.`;
     if (!(key in NUTRIENT_WORD)) return `${text}, because ${safeName(oldName)} does not list a value the app needs today.`;
     text += `, to keep ${NUTRIENT_WORD[key]} within ${label}. ${perServing(key, before[key], after[key], partialIn(beforeUnknown, key), partialIn(afterUnknown, key))}`;
     if (key !== R.PROTEIN) {
