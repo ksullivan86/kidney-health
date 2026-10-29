@@ -127,7 +127,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 `SHARING_ENABLED=true`, or **Server administration → Server settings → Sharing**.
 
 1. In **Settings → Account → Sharing**, the person ticks what to share (food log, lab results, weight and blood pressure,
-   symptoms) and presses **Make a link**. It asks for the password again, like making a token.
+   symptoms), picks how long (until they stop it, a week, 30 days, 90 days or a year) and presses **Make a link**. It asks for
+   the password again, like making a token.
 2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
    the right person.
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
@@ -136,6 +137,7 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
   the date of birth and other profile details.
+* A share with an end date stops by itself on that day, and the person's activity says so.
 * Either side can stop at once: **Stop sharing** or **Stop seeing**. The person's list says who can see their data and when they
   last looked. The first look each day goes to the person's activity.
 * At most 10 people can see one person's data, and a person can have 5 unused links.

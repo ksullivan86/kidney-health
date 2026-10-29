@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted and built, 2026-10-29. The owner asked for it ("go ahead with caregiver sharing") after passkeys and QR pairing. The choices below are the defaults this note took, listed in §10 so they can be changed. The schema step is **24**. Two changes while building: the link's info and accept routes are `POST /api/shared/info` and `POST /api/shared/accept` (one router), and §5's audit rows go to the owner's activity only (the activity list finds rows by the person they concern). |
+| Status | Accepted and built, 2026-10-29. The owner asked for it ("go ahead with caregiver sharing") after passkeys and QR pairing. The choices below are the defaults this note took, listed in §10 so they can be changed. The schema step is **24**; step **25** adds an end date (§11). Two changes while building: the link's info and accept routes are `POST /api/shared/info` and `POST /api/shared/accept` (one router), and §5's audit rows go to the owner's activity only (the activity list finds rows by the person they concern). |
 | Scope | A person lets someone else with an account on the same server **see** parts of their log: food, labs, weight and blood pressure, symptoms. The other person reads; they can never add, change or delete anything. The person can take it back at any time and sees when it was last looked at. |
 | Out of scope | Writing on someone's behalf, notes from a clinician, sharing with someone who has no account, sharing across servers, an export link for people outside the server. Clinician accounts with notes (ROADMAP) build on this later (§11). |
 | Builds on | Note 07 §6 "Later (v0.4)": `shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)`. `app/auth/tokens.py` (invite links), `app/auth/api_tokens.py` (the instance switch pattern), the Visit prep page (`js/views/visit.js`). |
@@ -149,4 +149,7 @@ people sharing and stopping.
 
 * Clinician accounts with notes (ROADMAP): a `clinician` role and notes the person can read; every view logged.
 * Sharing Trends charts as they look to the owner.
-* A time limit on a share ("for the next 30 days").
+* ~~A time limit on a share ("for the next 30 days")~~: built 2026-10-29, schema step 25. When making the link the owner picks
+  until they stop it, a week, 30 days, 90 days or a year (`days`, 1 to 365, in the API). The end date is set when the link is
+  accepted (`ends_at`). The next sharing request after it ends the share as if the owner stopped it (`ended_by: owner`), with
+  `share.ended` (`by: time`) in the owner's activity. A newer link that replaces a share brings its own end date.
