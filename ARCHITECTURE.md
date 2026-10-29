@@ -1033,7 +1033,10 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-29): v0.10.0 is prepared.** It adds read-only sharing (note 19, schema step 24), passkeys for re-entry and in
+**Status (2026-10-29): v0.11.0 is prepared.** It makes daily logging easier to trust ("not listed" and "≥" in every
+suggestion, late answers that no longer jump in, failed saves that keep the sheet), sends no dose or lab question to the AI
+(`medicine_question`), lets a share end on a date and show Trends (schema step 25), and adds `BACKUP_REMINDER_DAYS` and
+`app.admin record-backup`; CHANGELOG.md 0.11.0. **v0.10.0** added read-only sharing (note 19, schema step 24), passkeys for re-entry and in
 the sign-in box's autofill (note 18 §10), QR pairing for the iPhone app and first values from the environment (note 20); CHANGELOG.md
 0.10.0. **v0.9.0** added two-step sign-in (note 17, schema step 22), "Admins must use two-step
 sign-in" (`auth.require_two_step_admins`) and passkeys (note 18, schema step 23); CHANGELOG.md 0.9.0. **v0.8.0** added recipes from AI (note 16 phase 3: the feature `recipes`,

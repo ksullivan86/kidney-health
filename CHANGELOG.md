@@ -7,6 +7,46 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.11.0 — 2026-10-29
+
+Version 0.11 makes daily logging easier to trust. Numbers a food does not list now say "not listed" or "≥" everywhere,
+answers that arrive late no longer jump in, and a failed save keeps your sheet open with the message on top. Questions about
+doses or lab results never go to the AI. A share can end on a date, and someone who shares with you can show you their Trends.
+
+**Before you upgrade, read [Upgrading from 0.10](#upgrading-from-010-read-this-first).** One schema step runs at the first
+start. Nothing new is switched on.
+
+### Highlights
+
+* **"Not listed" and "≥" everywhere**: meal ideas, swaps, Fit to my targets, saved meals and the day plan no longer show 0 for
+  a value a food does not list.
+* **Dose and lab questions never go to the AI.** They get an **Ask your care team** card instead.
+* **Late answers no longer jump in**: AI ideas, barcodes, label photos, USDA searches and days you moved away from.
+* **A failed save keeps your sheet**, with the message on top.
+* **Sharing**: a share can end on a date, and a person who shares with you can show you their Trends.
+* **Share or copy the shopping list**, and **Other ideas** for AI meals and recipes.
+* **A reminder to back up**, also for backups that run outside the app.
+
+### Upgrading from 0.10 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.11.0.db`). Schema step 25 runs at
+   the first start. It adds two columns to `shares`, and shares made before last until someone stops them.
+2. **Coming from 0.9 or older**, read [Upgrading from 0.9](#upgrading-from-09-read-this-first) too. All the database steps run
+   in one start.
+3. **Change the tag** to `:0.11`, or pin a digest from the release notes. The shipped files already say `:0.11`.
+4. **Nothing new is switched on.** The backup note shows in About this server after 7 days without a backup.
+   `BACKUP_REMINDER_DAYS=0` turns it off. If your backups run outside the app, end the job with
+   `python -m app.admin record-backup`.
+5. **If you run `scripts/ai_eval.py`**, it now sends your `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT` and
+   `AI_CONTEXT_TOKENS` (or the `AI_CLOUD_*` ones with `--role cloud`), so its numbers can differ from an older run.
+
+### Known limitations
+
+* AI meal ideas can still be dropped when a portion is too large for your targets, and then the app shows its own meals.
+  A fix that makes the portion smaller instead is planned for the next release.
+* Every account still needs a password.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people using the app
 
 * **A share can end on a date.** When you make a sharing link, pick how long it lasts: until you stop it, a week, 30 days,
