@@ -38,12 +38,22 @@ Method: read the code; prove each suspected bug with a test against the real app
 * `tests/test_sharing_security.py`: every `/api/shared/{id}` read is in the area list; a one-area share opens only that
   area's routes (all four areas); an ended share is the same 404 on every route (owner stops, grantee stops, admin
   ends, end date passes, a newer link replaces it, owner's account turned off); a used link fails for a third person;
-  a new account after a deleted grantee sees nothing.
+  a new account after a deleted grantee sees nothing; a grantee's assistant and device tokens open no `/api/shared`
+  route and the assistant sees only the grantee's own log.
+* `tests/test_admin_about_security.py`: `/api/admin/about` holds no SECRET_KEY line, no derived key, no admin password
+  and no AI key, with the key from the environment and with the key file on the volume; a member gets 403;
+  `record-backup` adds one `backup.created` row with `target: outside` and no actor, nothing else.
+
+## Verified
+
+The touched and related files (33 files: `tests/test_auth*.py`, `test_sharing*.py`, `test_share*.py`, `test_shared_*.py`,
+`test_mcp*.py`, `test_push*.py`, `test_passkey*.py`, `test_totp.py`, `test_pairing.py`, `test_device_tokens.py`,
+`test_api_tokens.py`, `test_admin_*.py`, `test_restore_roundtrip.py`, `test_secrets_v03.py`, `test_handbook_content.py`,
+`test_openapi_snapshot.py`) all pass; `ruff check .` clean; `scripts/gen_openapi.py --check` clean.
 
 ## Next
 
-1. Test that `/api/admin/about` holds no secret.
-2. Full run of the touched and related test files; ruff.
+1. Write up the owner decisions in this note and mark it complete.
 
 ## Commands
 

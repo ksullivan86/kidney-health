@@ -12,7 +12,9 @@ from datetime import date, timedelta
 import pytest
 
 from app import sharing
-from conftest import USER_PASSWORD, add_user
+from conftest import USER_PASSWORD, TestClient, add_user
+from test_api_tokens import switch as assistant_switch
+from test_mcp import call, token_for
 from test_sharing import SAME, TODAY, code_of, fill, make_link, share, switch
 
 START = (date.today() - timedelta(days=13)).isoformat()
@@ -129,3 +131,22 @@ def test_a_deleted_grantee_leaves_nothing_behind_for_a_new_account_with_the_same
     assert new_sam.get("/api/shared").json()["people"] == []
     for sid in range(1, 5):
         assert new_sam.get(f"/api/shared/{sid}/profile").status_code == 404
+
+
+def test_a_grantees_tokens_never_reach_what_is_shared_with_them(people):
+    """A share is read with a session only: the grantee's assistant and device tokens open no /api/shared route, and the
+    assistant sees the grantee's own log, never the owner's."""
+    ana, sam, kim = people
+    fill(kim)
+    sid = share(kim, sam)
+    assistant_switch(ana, True)
+    assert ana.patch("/api/admin/settings", json={"push.enabled": True}).status_code == 200
+    assistant = token_for(sam)
+    device = sam.post("/api/me/tokens", json={"name": "phone", "family": "device"}).json()["token"]
+    for token in (assistant, device):
+        alone = TestClient(ana.app, base_url=str(ana.base_url), headers={"Authorization": f"Bearer {token}"})
+        for path in ["", *(f"/{sid}/{p}" for p in [*ROUTES, "profile"])]:
+            r = alone.get(f"/api/shared{path}")
+            assert r.status_code == 401, (token[:4], path)
+    today = call(ana.app, assistant, "get_today", date=TODAY)
+    assert today["entries"] == {"eaten": 0, "planned": 0}
