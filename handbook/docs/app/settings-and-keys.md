@@ -185,6 +185,9 @@ sign-in activity.
   When you open food trends, the previous charts and summary clear while loading. If they cannot load, tap **Retry**.
 - A link nobody has used yet can be cancelled from the same list.
 
+In **Trends**, the symptom and weight/blood-pressure cards clear while loading. If one cannot load,
+tap **Retry** to try that person and period again.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat

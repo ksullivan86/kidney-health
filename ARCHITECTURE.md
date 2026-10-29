@@ -4091,6 +4091,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 * **End date.** `accept` sets `ends_at` from the link's `lasts_days` (schema step 25). `expire(conn)`, run by every sharing route
   and the admin's count, ends each share past it (`ended_by: owner`, the owner chose the date) with `share.ended` (`by: time`, no
   actor) in the owner's activity. A newer link that replaces a share brings its own end date.
+* **Health-card loading.** Trends' symptom and weight/blood-pressure cards clear old content before a new read,
+  including when changing people or periods. The body-chart redraw cache clears too. Failed reads show Retry;
+  only the latest request can replace the loading, error or completed state.
 * **Admin.** `GET /api/admin/users` has `shares` (active shares and unused links the person is on either side of);
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
