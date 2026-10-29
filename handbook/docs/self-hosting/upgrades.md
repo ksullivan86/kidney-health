@@ -1,6 +1,6 @@
 ---
 title: Upgrades
-description: "Which image tag to follow, tags versus pinned digests, automatic updates, database migrations, and moving from v0.7 to v0.8, from v0.6, v0.5, v0.4, v0.3 or v0.2."
+description: "Which image tag to follow, tags versus pinned digests, automatic updates, database migrations, and moving from v0.8 to v0.9, from v0.7, v0.6, v0.5, v0.4, v0.3 or v0.2."
 slug: upgrades
 audience: [self-hoster]
 applies_to: [all]
@@ -22,8 +22,8 @@ at start-up, so the work is choosing **what to follow** and **keeping a backup**
 
 | Tag | Moves when | Use it for |
 |---|---|---|
-| `0.8` | every 0.8.x patch release | **most homes**: security fixes, no breaking changes |
-| `0.8.0` | never | a fixed release |
+| `0.9` | every 0.9.x patch release | **most homes**: security fixes, no breaking changes |
+| `0.9.0` | never | a fixed release |
 | `latest` | every release, including a new minor version | not on a machine you care about |
 | `edge`, `sha-<short>` | every merge to `main` | testing only |
 
@@ -32,14 +32,14 @@ Tags move only after the image passed a vulnerability scan; pushes to `main` pub
 
 ## Tag or digest?
 
-- **Track `:0.8` with auto-update** (simplest). Quadlet's `AutoUpdate=registry` plus
+- **Track `:0.9` with auto-update** (simplest). Quadlet's `AutoUpdate=registry` plus
   `podman-auto-update.timer` pulls new patch releases daily and restarts the service
   ([Podman: Quadlet][PODMAN-QUADLET]).
-- **Pin a digest** (`…:0.8.0@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
+- **Pin a digest** (`…:0.9.0@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
   purpose ([security policy][SECURITYMD]). This is the default on Kubernetes, with
   `imagePullPolicy: IfNotPresent`.
 
-Auto-update trusts whoever controls the tag you follow. Signing and the `:0.8` advice reduce that risk
+Auto-update trusts whoever controls the tag you follow. Signing and the `:0.9` advice reduce that risk
 but do not remove it.
 
 !!! warning "Never mount the container engine's socket into an updater"
@@ -47,13 +47,13 @@ but do not remove it.
     account on the host (or root, with a rootful socket). Use Quadlet auto-update or pinned digests
     instead ([operator security guide][SECDOC]).
 
-## Before a minor upgrade (for example 0.7 to 0.8)
+## Before a minor upgrade (for example 0.8 to 0.9)
 
 - [ ] Take a backup and check it ([Backups](backups.md)).
 - [ ] Read the release notes for changed settings and removed features.
 - [ ] Replace your deployment files if the notes say so.
 - [ ] Change the tag (or digest), start, and watch the log. The minor tag does not move to the next minor on its own: a host
-      that tracks `:0.7` stays on 0.7.x until you change it to `:0.8`.
+      that tracks `:0.8` stays on 0.8.x until you change it to `:0.9`.
 - [ ] Open the app, check **Server administration → About this server** for the version and schema.
 
 ## Database migrations
@@ -62,11 +62,25 @@ Schema changes are numbered, append-only steps that run in order at start-up and
 database. Each step checks before it changes anything, so a restart in the middle is safe
 ([architecture contract][ARCH]). A backup restores into the same or a newer version, never an older one.
 
+## From v0.8 to v0.9
+
+1. **Back up first.** The first start runs schema steps 22 (two-step sign-in) and 23 (passkeys). They add tables and change
+   nothing that is there.
+2. **Change the tag** from `:0.8` to `:0.9` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.9`) or to
+   a digest you verified.
+3. **Nothing new is switched on.** Two-step sign-in and passkeys are each person's choice. "Admins must use two-step sign-in"
+   is off until you turn it on (`AUTH_REQUIRE_TWO_STEP_ADMINS=true`, or the switch in Server settings).
+4. **For passkeys, set `PUBLIC_URL`** to the address people open. Browsers make passkeys only for a name over HTTPS, never for an
+   IP address.
+5. **`SECRET_KEY` now also protects the two-step secrets.** Keep backing it up apart from the database.
+
 ## From v0.7 to v0.8
 
+A host on 0.7 goes straight to the current release: back up, change the tag to `:0.9` and follow this section and
+"From v0.8 to v0.9" above. Schema steps 22 and 23 run at the first start.
+
 1. **Back up first.** This release has no schema step, but a backup before every upgrade is the habit to keep.
-2. **Change the tag** from `:0.7` to `:0.8` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.8`) or to
-   a digest you verified.
+2. **Change the tag** from `:0.7` to the current one (`:0.9`), as above.
 3. **Nothing new is switched on.** AI recipes run on the local AI by default (`AI_ROUTE_RECIPES=local`) and only for people who
    agree to Meal data. Cooking steps written by AI stay off until you set `AI_RECIPE_STEPS=true`, after a live run of
    `scripts/ai_eval.py`.
@@ -75,22 +89,22 @@ database. Each step checks before it changes anything, so a restart in the middl
 
 ## From v0.6 to v0.7
 
-A host on 0.6 goes straight to the current release: back up, change the tag to `:0.8` and follow this section and
+A host on 0.6 goes straight to the current release: back up, change the tag to `:0.9` and follow this section and
 "From v0.7 to v0.8" above. Schema step 21 runs at the first start.
 
 1. **Back up first.** The first start runs schema step 21: three columns on saved meals for recipes. A recipe that Ask or an
    assistant saved gets its servings and link copied from its note; no note changes.
-2. **Change the tag** from `:0.6` to the current one (`:0.8`), as above.
+2. **Change the tag** from `:0.6` to the current one (`:0.9`), as above.
 3. **Nothing new is switched on.** Recipes and "Fit to my targets" need no setting and send nothing to an AI.
 
 ## From v0.5 to v0.6
 
-A host on 0.5 goes straight to the current release: back up, change the tag to `:0.8` and follow this section and
+A host on 0.5 goes straight to the current release: back up, change the tag to `:0.9` and follow this section and
 the newer sections above. Schema steps 20 and 21 run in one start.
 
 1. **Back up first.** The first start runs schema step 20: two columns on the AI provider list. The provider you have now keeps
    every setting.
-2. **Change the tag** from `:0.5` to the current one (`:0.8`), as above.
+2. **Change the tag** from `:0.5` to the current one (`:0.9`), as above.
 3. **Nothing new is switched on.** A second AI from the environment (`AI_CLOUD_PROVIDER`) and the folder of AI test reports
    (`AI_EVAL_REPORTS_DIR`) do nothing until you set them.
 4. **Changing `AUTH_MODE`** now ends every assistant and phone-shortcut token. People make new ones in Settings.
@@ -99,7 +113,7 @@ the newer sections above. Schema steps 20 and 21 run in one start.
 
 ## From v0.4 to v0.5
 
-A host on 0.4 goes straight to the current release: back up, change the tag to `:0.8` and follow this section and
+A host on 0.4 goes straight to the current release: back up, change the tag to `:0.9` and follow this section and
 the newer sections above. The schema steps of both upgrades run in one start.
 
 1. **Back up first.** The first start runs schema steps 18 and 19, each in its own transaction: two new tables for weights and
@@ -116,12 +130,12 @@ the newer sections above. The schema steps of both upgrades run in one start.
 
 ## From v0.3 to v0.4
 
-A host on 0.3 goes straight to the current release: back up, change the tag to the current one (`:0.8`) and follow this
+A host on 0.3 goes straight to the current release: back up, change the tag to the current one (`:0.9`) and follow this
 section and the newer ones above. The schema steps of both upgrades run in one start.
 
 1. **Back up first.** The first start runs schema steps 8 to 17, each in its own transaction. There is no automatic copy as
    there was for 0.3, and a backup restores into the same or a newer version, never an older one.
-2. **Change the tag** from `:0.3` to the current one (the shipped Quadlet unit, compose file and Kubernetes base say `:0.8`)
+2. **Change the tag** from `:0.3` to the current one (the shipped Quadlet unit, compose file and Kubernetes base say `:0.9`)
    or to a digest you verified. The image now runs Python 3.15 on the same Chainguard base.
 3. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and the cloud fallback are off until an
    admin turns them on. The release notes list every new setting.
@@ -147,7 +161,7 @@ Upgrading from v0.2 now goes straight to the current release: do these steps wit
    - set `PUBLIC_URL` (or `ALLOWED_HOSTS`) if people use a host name: unknown names now get
      `400 Unknown host`;
    - `--forwarded-allow-ips=*` is gone: list your proxy in `TRUSTED_PROXIES`;
-   - `:latest` now means "newest release", not `main`; track the minor tag (`:0.8` now);
+   - `:latest` now means "newest release", not `main`; track the minor tag (`:0.9` now);
    - `--userns=keep-id` is no longer recommended ([design note 01][NOTE01]).
 4. **Accounts.** On first start the existing log becomes the admin's. A v0.2 `APP_PASSWORD` becomes the
    admin's password once (you are asked to change it if it is shorter than 15 characters); otherwise
