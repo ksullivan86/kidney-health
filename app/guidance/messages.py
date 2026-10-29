@@ -178,11 +178,12 @@ def safe_name(name: str | None) -> str:
 
 
 def fit_text(amounts: Mapping[str, float | None], tracked: Iterable[str], carbs_first: bool) -> str:
-    """"Fits: 45 g carbs · 55 mg potassium · 70 mg phosphorus · 0 mg sodium" (tracked nutrients only)."""
+    """"Fits: 45 g carbs · 55 mg potassium · 70 mg phosphorus · 0 mg sodium" (tracked nutrients only); a value the food does
+    not list reads "carbs not listed", never 0."""
     parts: list[str] = []
     tracked = list(tracked)
     if carbs_first:
-        parts.append(f"{fmt_g(amounts.get(R.CARBS) or 0.0)} g carbs")
+        parts.append(amount_word(R.CARBS, amounts.get(R.CARBS)))
     for key in (R.K, R.P, R.NA, R.FLUID):
         if key in tracked:
             value = amounts.get(key)

@@ -621,6 +621,8 @@
     return h('li', { class: cls }, h('span', {}, label), ' ', h('b', {}, is == null ? text : `${text} ${unit}`),
       h('span', { class: 'muted' }, ` of ${fmtNum(c.room, key)} ${unit} room`), ok ? '' : h('span', { class: 'fit-over-word' }, ' (over)'));
   }
+  // "potassium", "potassium and phosphorus", "carbohydrate, potassium and phosphorus".
+  const joinWords = (w) => (w.length < 2 ? w.join('') : `${w.slice(0, -1).join(', ')} and ${w[w.length - 1]}`);
   function renderFit() {
     const r = fit.result;
     const host = clear($('#fit-result'));
@@ -631,7 +633,7 @@
     const unknown = r.before.checks.map((c) => c.nutrient)
       .filter((k) => NUT[k] && (unknownOf(r.before.unknown, k) || (after && unknownOf(after.unknown, k))));
     host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, r.before, after))));
-    if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`));
+    if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${joinWords(unknown.map((k) => NUT[k].label.toLowerCase()))}, so those numbers are at least what is shown.`));
     if (r.changes.length) host.append(h('ul', { class: 'fit-changes' }, r.changes.map((c) => h('li', {}, c.text))));
     const shape = r.fitted || r.closest;
     if (shape && r.status !== 'fits') {

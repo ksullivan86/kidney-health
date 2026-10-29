@@ -104,7 +104,7 @@
   // ---- what fits now -----------------------------------------------------------------------------
   function fitText(amounts, tracked, carbsFirst) {
     const parts = [];
-    if (carbsFirst) parts.push(`${fmtG(amounts[R.CARBS] || 0.0)} g carbs`);
+    if (carbsFirst) parts.push(amountWord(R.CARBS, amounts[R.CARBS]));
     for (const key of [R.K, R.P, R.NA, R.FLUID]) {
       if (!tracked.includes(key)) continue;
       const value = amounts[key];

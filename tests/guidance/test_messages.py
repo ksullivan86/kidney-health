@@ -88,6 +88,7 @@ def test_a_value_that_is_not_listed_is_never_0_or_a_question_mark():
     assert M.recipe_no_fit_text("this dinner's room", {"nutrient": "potassium_mg", "used": 900, "room": 750}, True) == (
         "This recipe does not fit this dinner's room after lowering amounts, swaps and a ½ serving. Still over: potassium at "
         "least 900 mg against 750 mg of room (app figures).")
+    assert M.fit_text({"carbs_g": None, "potassium_mg": 55}, ["potassium_mg"], True) == "Fits: carbs not listed · 55 mg potassium"
     for text in (M.swap_hypo_text("Apple juice", 1, "1/2 cup", 15, None), M.portion_option_text(0.5, None, {}, ["potassium_mg"])):
         assert "?" not in text and " 0 " not in text
 

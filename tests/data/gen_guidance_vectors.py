@@ -327,6 +327,8 @@ def preference_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
          {"fn": "what_fits", "meal": "dinner"}),
         ("UNKNOWN a planned meal with a food that lists no potassium", base_input(day=[], food_overrides={"3": {"potassium_mg": None}}),
          {"fn": "plan_day", "meals": ["dinner"]}),
+        ("UNKNOWN what fits dinner leaves out the chicken, which lists no carbs", base_input(food_overrides={"3": {"carbs_g": None}}),
+         {"fn": "what_fits", "meal": "dinner"}),
         # Swap ideas name a value a food does not list as "not listed", and its difference is null, never a difference from 0.
         ("UNKNOWN swaps for star fruit, the blueberries list no carbs or potassium",
          base_input(food_overrides={"7": {"carbs_g": None, "potassium_mg": None}}),
