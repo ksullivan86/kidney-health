@@ -2,7 +2,7 @@
 
 A person (the **owner**) makes a link in Settings → Account → Sharing and sends it to someone with an account on the same
 server (the **grantee**), who accepts it. From then on the grantee can read the areas the owner ticked, and nothing else, until
-either side stops it.
+either side stops it, or until the end date the owner chose (``days``; :func:`expire` ends it then).
 
 * ``/api/me/shares``: the owner's list, a new link (recent password), stopping a share or cancelling a link.
 * ``/api/shared``: the grantee's list, stopping, and ``info`` / ``accept`` for a link.
@@ -65,6 +65,7 @@ SWITCH = "sharing.enabled"
 AREAS = ("food", "labs", "body", "symptoms")
 Area = Literal["food", "labs", "body", "symptoms"]
 CODE_DAYS = 7
+MAX_DAYS = 365  # the longest time limit a share can have
 MAX_CODES = 5  # unused links a person can have at once
 MAX_SHARES = 10  # people who can see one person's data at once
 MAX_ROW_ID = 2**63 - 1
@@ -94,6 +95,7 @@ ShareId = Annotated[int, Path(ge=1, le=MAX_ROW_ID)]
 class ShareCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     areas: list[Area] = Field(min_length=1, max_length=len(AREAS))
+    days: int | None = Field(default=None, ge=1, le=MAX_DAYS)  # how long the share lasts once accepted; None: until stopped
 
 
 class ShareCode(BaseModel):
@@ -131,6 +133,7 @@ def enabled(conn: sqlite3.Connection, request: Request) -> bool:
 def _available(request: Request, conn: sqlite3.Connection) -> None:
     if not enabled(conn, request):
         raise HTTPException(status_code=404, detail="Not Found")
+    expire(conn)
 
 
 def _areas(raw: str) -> list[str]:
@@ -161,19 +164,36 @@ FROM shares s JOIN users o ON o.id = s.owner_user_id LEFT JOIN users g ON g.id =
 
 
 def sharing_item(row: sqlite3.Row) -> dict[str, Any]:
-    """One person who can see the owner's data, as the owner's list shows it."""
+    """One person who can see the owner's data, as the owner's list shows it. ``until`` is when it ends (None: until stopped)."""
     return {"id": int(row["id"]), "name": _name(row, "grantee"), "username": row["grantee_username"], "areas": _areas(row["areas"]),
-            "since": row["accepted_at"], "last_viewed_at": row["last_viewed_at"], "active": row["grantee_status"] == "active"}
+            "since": row["accepted_at"], "until": row["ends_at"], "last_viewed_at": row["last_viewed_at"],
+            "active": row["grantee_status"] == "active"}
 
 
 def code_item(row: sqlite3.Row) -> dict[str, Any]:
-    return {"id": int(row["id"]), "areas": _areas(row["areas"]), "created_at": row["created_at"], "expires_at": row["expires_at"]}
+    """An unused link. ``days`` is how long the share will last once accepted (None: until stopped)."""
+    return {"id": int(row["id"]), "areas": _areas(row["areas"]), "days": row["lasts_days"], "created_at": row["created_at"],
+            "expires_at": row["expires_at"]}
 
 
 def person_item(row: sqlite3.Row) -> dict[str, Any]:
     """One person who shares with the signed-in person, as the grantee's list shows it."""
     return {"id": int(row["id"]), "name": _name(row, "owner"), "username": row["owner_username"], "areas": _areas(row["areas"]),
-            "since": row["accepted_at"]}
+            "since": row["accepted_at"], "until": row["ends_at"]}
+
+
+def expire(conn: sqlite3.Connection) -> int:
+    """End every share whose end date has passed, as if its owner stopped it, with a ``share.ended`` row (``by: time``) in the
+    owner's activity. Commits when it ends any. Returns how many it ended."""
+    now = clock.now_iso()
+    rows = conn.execute("SELECT id, owner_user_id FROM shares WHERE ends_at IS NOT NULL AND ends_at <= ? AND ended_at IS NULL "
+                        "AND accepted_at IS NOT NULL", (now,)).fetchall()
+    for row in rows:
+        conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'owner' WHERE id = ? AND ended_at IS NULL", (now, int(row["id"])))
+        audit(conn, None, "share.ended", "user", int(row["owner_user_id"]), share=int(row["id"]), by="time")
+    if rows:
+        conn.commit()
+    return len(rows)
 
 
 def active_count(conn: sqlite3.Connection, owner_id: int) -> int:
@@ -183,6 +203,7 @@ def active_count(conn: sqlite3.Connection, owner_id: int) -> int:
 
 def counts(conn: sqlite3.Connection) -> dict[int, int]:
     """Active shares and unused links where each person is either side, for the admin's people list."""
+    expire(conn)
     rows = conn.execute(
         "SELECT uid, COUNT(*) FROM (SELECT owner_user_id AS uid FROM shares WHERE ended_at IS NULL "
         "UNION ALL SELECT grantee_user_id FROM shares WHERE ended_at IS NULL AND grantee_user_id IS NOT NULL) GROUP BY uid"
@@ -227,6 +248,7 @@ def list_my_shares(request: Request, user: CurrentUser, conn: sqlite3.Connection
         if auth_context(request).settings.auth_mode == "none":
             raise HTTPException(status_code=404, detail="Not Found")
         return {"enabled": False, "areas": list(AREAS), "max": MAX_SHARES, "sharing": [], "codes": []}
+    expire(conn)
     sharing = conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL "
                                      "ORDER BY s.accepted_at, s.id", (user.id,)).fetchall()
     codes = conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NULL AND s.ended_at IS NULL AND s.expires_at > ? "
@@ -238,7 +260,8 @@ def list_my_shares(request: Request, user: CurrentUser, conn: sqlite3.Connection
 @me_router.post("", status_code=201)
 def create_share_link(body: ShareCreate, request: Request, user: RecentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,
-    for 7 days. Needs a recent password, like making a token."""
+    for 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until
+    someone stops it. Needs a recent password, like making a token."""
     _available(request, conn)
     areas = _clean_areas(body.areas)
     now = clock.now()
@@ -249,10 +272,11 @@ def create_share_link(body: ShareCreate, request: Request, user: RecentUser, con
     if active_count(conn, user.id) >= MAX_SHARES:
         raise ApiProblem(409, TOO_MANY_SHARES)
     code_id, verifier = secrets.token_hex(8), secrets.token_urlsafe(32)
-    cur = conn.execute("INSERT INTO shares (owner_user_id, code_id, verifier_hash, areas, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
-                       (user.id, code_id, _sha(verifier), json.dumps(areas), clock.iso(now), clock.iso(now + timedelta(days=CODE_DAYS))))
+    cur = conn.execute("INSERT INTO shares (owner_user_id, code_id, verifier_hash, areas, created_at, expires_at, lasts_days) "
+                       "VALUES (?, ?, ?, ?, ?, ?, ?)", (user.id, code_id, _sha(verifier), json.dumps(areas), clock.iso(now),
+                                                        clock.iso(now + timedelta(days=CODE_DAYS)), body.days))
     share_id = int(cur.lastrowid or 0)
-    audit(conn, user.id, "share.code_created", "share", share_id, ip=request_ip(request), areas=areas)
+    audit(conn, user.id, "share.code_created", "share", share_id, ip=request_ip(request), areas=areas, days=body.days)
     conn.commit()
     row = conn.execute(_PEOPLE + " WHERE s.id = ?", (share_id,)).fetchone()
     return {"code": code_item(row), "link": token_link(public_base(request, auth_context(request).settings), "share", f"{code_id}.{verifier}")}
@@ -295,13 +319,14 @@ def share_link_info(body: ShareCode, request: Request, user: CurrentUser, conn: 
     expired link is the generic ``404``; every try counts toward 20 an hour."""
     _available(request, conn)
     row = _find_code(conn, request, user, body.code)
-    return {"name": _name(row, "owner"), "username": row["owner_username"], "areas": _areas(row["areas"]), "expires_at": row["expires_at"]}
+    return {"name": _name(row, "owner"), "username": row["owner_username"], "areas": _areas(row["areas"]), "days": row["lasts_days"],
+            "expires_at": row["expires_at"]}
 
 
 @shared_router.post("/accept", status_code=201)
 def accept_share_link(body: ShareCode, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Accept a link: from now on you can read what it shares. A newer link from someone who already shares with you replaces the
-    areas of the old share."""
+    """Accept a link: from now on you can read what it shares, until either side stops it or its end date (``until``). A newer link
+    from someone who already shares with you replaces the old share, with the new link's areas and end date."""
     _available(request, conn)
     begin_immediate(conn)  # the count, the replacement and the update see the same rows
     try:
@@ -311,13 +336,15 @@ def accept_share_link(body: ShareCode, request: Request, user: CurrentUser, conn
                            "AND ended_at IS NULL", (owner_id, user.id)).fetchone()
         if old is None and active_count(conn, owner_id) >= MAX_SHARES:
             raise ApiProblem(409, OWNER_FULL)
-        now = clock.now_iso()
+        moment = clock.now()
+        now = clock.iso(moment)
+        ends = clock.iso(moment + timedelta(days=int(row["lasts_days"]))) if row["lasts_days"] else None
         if old is not None:
             conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'replaced' WHERE id = ?", (now, int(old["id"])))
-        conn.execute("UPDATE shares SET grantee_user_id = ?, accepted_at = ?, code_id = NULL, verifier_hash = NULL, expires_at = NULL "
-                     "WHERE id = ?", (user.id, now, int(row["id"])))
+        conn.execute("UPDATE shares SET grantee_user_id = ?, accepted_at = ?, ends_at = ?, code_id = NULL, verifier_hash = NULL, "
+                     "expires_at = NULL WHERE id = ?", (user.id, now, ends, int(row["id"])))
         audit(conn, user.id, "share.accepted", "user", owner_id, ip=request_ip(request), share=int(row["id"]), areas=_areas(row["areas"]),
-              replaced=old is not None)
+              replaced=old is not None, until=ends)
         conn.commit()
     except BaseException:
         conn.rollback()

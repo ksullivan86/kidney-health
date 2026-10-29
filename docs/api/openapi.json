@@ -8661,6 +8661,19 @@
             "minItems": 1,
             "title": "Areas",
             "type": "array"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
           }
         },
         "required": [
@@ -17762,7 +17775,7 @@
         ]
       },
       "post": {
-        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. Needs a recent password, like making a token.",
+        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until\nsomeone stops it. Needs a recent password, like making a token.",
         "operationId": "me_create_share_link",
         "requestBody": {
           "content": {
@@ -18969,7 +18982,7 @@
     },
     "/api/shared/accept": {
       "post": {
-        "description": "Accept a link: from now on you can read what it shares. A newer link from someone who already shares with you replaces the\nareas of the old share.",
+        "description": "Accept a link: from now on you can read what it shares, until either side stops it or its end date (``until``). A newer link\nfrom someone who already shares with you replaces the old share, with the new link's areas and end date.",
         "operationId": "shared_accept_share_link",
         "requestBody": {
           "content": {

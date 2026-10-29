@@ -166,8 +166,9 @@ then, Settings says so.
 
 To share:
 
-1. **Settings → Account → Sharing**. Tick what to share: your food log, lab results, weight and blood pressure, symptoms. Tap
-   **Make a link**. The app may ask for your password again.
+1. **Settings → Account → Sharing**. Tick what to share: your food log, lab results, weight and blood pressure, symptoms. Under
+   **For how long**, pick until you stop it, a week, 30 days, 90 days or a year. Tap **Make a link**. The app may ask for your
+   password again.
 2. Copy the link and send it to the person, for example in a text message. It works once, for 7 days. Send it only to them:
    whoever opens it first can accept it.
 3. They open it while signed in, see your name and what you share, and tap **Accept**.
@@ -176,7 +177,8 @@ They then see your summary page (the same page as Visit prep) and what you ate o
 yours and read-only. They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your
 sign-in activity.
 
-- Your list in **Sharing** shows who can see your data and when they last looked. **Stop sharing** ends it at once.
+- Your list in **Sharing** shows who can see your data, until when, and when they last looked. **Stop sharing** ends it at once.
+- A share with an end date stops by itself on that day. Your activity says so.
 - When someone shares with you, they are under **Shared with you**. **Open** shows their page; **Stop seeing** ends it.
 - A link nobody has used yet can be cancelled from the same list.
 

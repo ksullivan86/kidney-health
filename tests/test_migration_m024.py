@@ -67,7 +67,7 @@ def test_a_v23_database_upgrades_with_nobody_sharing(tmp_path):
 
 def test_a_fresh_database_has_the_same_table(tmp_path):
     conn = db.connect(tmp_path / "fresh.db")
-    db.migrate(conn)
+    db.migrate(conn, migrations.steps()[:24])  # step 25 adds two columns (tests/test_migration_m025.py)
     cols = {r[1] for r in conn.execute("PRAGMA table_info(shares)")}
     assert cols == {"id", "owner_user_id", "grantee_user_id", "code_id", "verifier_hash", "areas", "created_at", "expires_at",
                     "accepted_at", "ended_at", "ended_by", "last_viewed_at"}

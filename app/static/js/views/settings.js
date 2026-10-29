@@ -795,7 +795,7 @@
     if (ev.action === 'passkey.added' && d.synced) return 'synced to a cloud account';
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
-    if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin' }[d.by] || '';
+    if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin', time: 'on the end date you chose' }[d.by] || '';
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }

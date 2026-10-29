@@ -7,7 +7,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
-Nothing yet.
+### For people using the app
+
+* **A share can end on a date.** When you make a sharing link, pick how long it lasts: until you stop it, a week, 30 days,
+  90 days or a year. On that day the share stops by itself, and your activity says so. Both of you see the end date. See
+  [`docs/accounts.md`](docs/accounts.md#sharing-with-a-caregiver).
+
+### For people who run a server
+
+* Schema step 25 adds two columns to `shares` at the first start. Shares made before last until someone stops them, as before.
 
 ## 0.10.0 — 2026-10-29
 
