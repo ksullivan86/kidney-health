@@ -49,6 +49,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Server settings and the rest twice.
 * **Ask keeps what you typed while you waited.** When a question got no answer, it went back into the box and wiped your
   next question. Now both are there.
+* **A new sharing link stays on the screen.** Stopping a share or cancelling another link just after making one no longer
+  hides the new link. It stays until it is used or cancelled.
 
 ### For people who run a server
 

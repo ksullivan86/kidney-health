@@ -130,7 +130,7 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    symptoms), picks how long (until they stop it, a week, 30 days, 90 days or a year) and presses **Make a link**. It asks for
    the password again, like making a token.
 2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
-   the right person.
+   the right person. The link stays on the screen while Settings is open, until it is used or cancelled.
    The **Accept** button appears only after the app has checked that link. Opening another link replaces the question;
    a slow reply from the earlier link cannot change it back.
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with

@@ -118,22 +118,32 @@
     return h('div', { class: 'sharing' }, h('h3', { class: 'settings-subtitle', id: 'set-sharing-h' }, 'Sharing'), body);
   }
 
+  // Each Sharing block remembers its newest load and the link made there. Only the newest load draws. The new link stays on
+  // screen through later loads (Stop sharing, Cancel, a list that could not load) until it is used or cancelled.
+  const blocks = new WeakMap();
   async function load(body, made = null, focusSel = null) {
+    if (!blocks.has(body)) blocks.set(body, { request: 0, made: null });
+    const st = blocks.get(body);
+    const req = ++st.request;
+    if (made) st.made = made;
     let mine;
     let people = [];
     try {
       mine = await A.mine();
       if (mine.enabled) people = (await A.people()).people || [];
     } catch (err) {
+      if (req !== st.request) return;
       clear(body).append(h('p', { class: 'form-error' }, `Could not load this: ${(err && (err.detail || err.message)) || 'unknown error'}`));
-      if (made) body.append(linkBox(made)); // a new link is never lost because the list could not load
+      if (st.made) body.append(linkBox(st.made, !!made)); // a new link is never lost because the list could not load
       return;
     }
-    render(body, mine, people, made);
+    if (req !== st.request) return;
+    if (st.made && mine.enabled && !mine.codes.some((c) => c.id === st.made.code.id)) st.made = null; // used or cancelled
+    render(body, mine, people, st.made, !!made);
     if (focusSel) { const el = $(focusSel, body); if (el) el.focus(); }
   }
 
-  function render(body, mine, people, made) {
+  function render(body, mine, people, made, fresh) {
     clear(body);
     if (!mine.enabled) { body.append(h('p', { class: 'hint', id: 'set-sharing-off' }, MOCK ? DEMO : OFF)); return; }
     body.append(h('p', {}, INTRO));
@@ -173,7 +183,7 @@
     }
 
     body.append(shareForm(body, mine));
-    if (made) body.append(linkBox(made));
+    if (made) body.append(linkBox(made, fresh));
 
     body.append(h('h4', { class: 'settings-minor', id: 'set-shared-h' }, 'Shared with you'));
     if (!people.length) {
@@ -234,7 +244,8 @@
     return form;
   }
 
-  function linkBox(made) {
+  /** The new link with Copy link. `fresh`: it was just made, so the link gets the focus. */
+  function linkBox(made, fresh) {
     const id = 'set-share-link';
     const input = h('input', { id, type: 'text', class: 'link-input', readonly: true, value: made.link, spellcheck: 'false', autocomplete: 'off' });
     const copy = button('Copy link', 'primary', async () => {
@@ -243,7 +254,7 @@
         toast('Select the link and copy it (Ctrl+C, or touch and hold on a phone).');
       }
     });
-    setTimeout(() => { if (document.contains(input)) { input.focus(); input.select(); } }, 30);
+    if (fresh) setTimeout(() => { if (document.contains(input)) { input.focus(); input.select(); } }, 30);
     return h('div', { class: 'link-box', role: 'group', 'aria-label': 'New share link' },
       h('label', { for: id, class: 'label' }, `Link for your ${areasText(made.code.areas)} (shown only now)`),
       h('div', { class: 'link-row' }, input, copy),

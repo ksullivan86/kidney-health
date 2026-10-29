@@ -4123,6 +4123,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
   cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**.
+  In the Settings block only the newest load of the list draws (a counter per block), so Stop sharing and Make a link at once
+  cannot redraw an older list. A link just made stays with the block through later loads, and a load that fails, until the list
+  no longer has it as unused; only the load that made it moves the focus to it (`tests/js/sharing_list_loading.test.mjs`).
   Checking another link clears the old Accept code; late info/accept responses or focus callbacks cannot change a newer
   or closed question. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the

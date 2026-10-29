@@ -170,7 +170,8 @@ To share:
    **For how long**, pick until you stop it, a week, 30 days, 90 days or a year. Tap **Make a link**. The app may ask for your
    password again.
 2. Copy the link and send it to the person, for example in a text message. It works once, for 7 days. Send it only to them:
-   whoever opens it first can accept it.
+   whoever opens it first can accept it. The link stays on the screen while Settings is open, until it is used or you
+   cancel it.
 3. They open it while signed in, see your name and what you share, and tap **Accept**.
 
 They then see your summary page (the same page as Visit prep) and what you ate on any day, with a note at the top that it is
