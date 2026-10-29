@@ -151,6 +151,9 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 
 How it works, and why: [design note 19](dev/research/19-sharing.md).
 
+The shared food-day card loads without waiting for the rest of the summary. Changing the date or person
+discards older replies, so a slow response cannot replace the day you chose. If loading fails, press **Retry**.
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.

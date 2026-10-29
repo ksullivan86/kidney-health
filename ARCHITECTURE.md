@@ -4091,6 +4091,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   stored (`hmac.compare_digest`). Accepting clears the link's fields, so it works once.
 * **Activity.** The first read of a share each UTC day sets `last_viewed_at` and writes `share.viewed`. Rows that concern the owner
   target the owner (`target_type: user`), so they land in the owner's activity; the owner's own actions target the share.
+* **Shared day loading.** The shared food-day read starts when the Visit page opens, independently of other summary reads.
+  A per-box request guard discards older success and failure replies when changing date or person. Failure offers Retry for
+  that person and date. Separate day boxes can load independently.
 * **End date.** `accept` sets `ends_at` from the link's `lasts_days` (schema step 25). `expire(conn)`, run by every sharing route
   and the admin's count, ends each share past it (`ended_by: owner`, the owner chose the date) with `share.ended` (`by: time`, no
   actor) in the owner's activity. A newer link that replaces a share brings its own end date.

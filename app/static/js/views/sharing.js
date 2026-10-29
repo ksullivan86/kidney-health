@@ -264,13 +264,19 @@
   }
 
   /** One day of a shared food log into `box`: the entries by meal and the day's totals against the targets. */
+  const dayRequests = new WeakMap();
   async function renderDay(box, rd, date) {
+    const request = {};
+    dayRequests.set(box, request);
     clear(box).append(h('p', { class: 'muted' }, 'Loading…'));
     let day;
     try { day = await rd.day(date); } catch (err) {
-      clear(box).append(h('p', { class: 'visit-note visit-problem' }, `This day could not be loaded${err && err.detail ? ` (${err.detail})` : ''}.`));
+      if (dayRequests.get(box) !== request) return;
+      clear(box).append(h('p', { class: 'visit-note visit-problem' }, `This day could not be loaded${err && err.detail ? ` (${err.detail})` : ''}.`),
+        h('button', { class: 'btn secondary', type: 'button', onclick: () => renderDay(box, rd, date) }, 'Retry'));
       return;
     }
+    if (dayRequests.get(box) !== request) return;
     clear(box);
     const R = KH.rules;
     if (!day.entries.length) { box.append(h('p', { class: 'visit-note' }, 'Nothing was logged on this day.')); return; }
