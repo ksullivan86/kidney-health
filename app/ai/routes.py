@@ -313,7 +313,7 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
         conn, user.id, feature=prep.feature if prep.mode is None else f"{prep.feature}:{prep.mode}", cfg=prep.cfg,
         model=prep.model, prompt_version=PROMPT_VERSION, request=prep.audit_copy(),
         response_text=result.text if prep.keep_response else None,  # a lab report's answer is health data: the row keeps none of it
-        # ``repaired`` is the client's JSON repair turn; ``portions_lowered`` the meal ideas the app made smaller to fit.
+        # ``repaired`` is the client's JSON repair turn; ``portions_lowered`` the meal ideas and recipes the app made smaller to fit.
         verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "portions_lowered", "claims_corrected", "reason", "error",
                                                              "repaired", "retried", "trimmed", "steps_dropped")},
                  **Q.shown_of(verdict), **(extra or {})},

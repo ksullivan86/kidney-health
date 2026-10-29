@@ -74,7 +74,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 | **Plate photo** (`POST /api/vision/plate`, off by default) | Food names, a search term, a rough weight and how sure it is | Matches each name in **your** food list; suggests servings from the weight; unsure items start unticked; a fixed warning about photo portions | Normal search |
 | **Read a lab report photo** (`POST /api/ai/read-lab-report`, **local AI only**) | The printed result lines of the app's own lab tests (`potassium`, `phosphate`, `albumin`, `bicarbonate`, `uacr`, `creatinine`, `cystatin_c`, `egfr`, `a1c`): the number and unit exactly as printed, and the date as printed or `null`. Never a judgement, a range or advice | Keeps only the app's own tests and units, runs the checks of `POST /api/labs` on every value (a plausible number, converted by the app) and refuses a future date, counts what it left out ("3 lines were not recognised"), and returns **proposed rows**: every row starts **unticked**, a missing or ambiguous date is entered by you, and only the rows you tick are saved, through the ordinary `POST /api/labs/import`. It never says whether a value is normal, high or low | Type the result in Labs, or import a CSV |
 
-| **AI recipes** (`POST /api/ai/recipes`) | Up to 2 recipes (1 to rework one of yours) of 2–12 foods, each a food **id from the rule candidates** and the amount for the whole pot in quarter servings, a dish and a theme from fixed lists, reason codes, and cooking steps only when your admin turned them on | Works out one serving from the food rows, runs the same fit as **Fit to my targets** (lowers amounts, swaps a food, offers a smaller serving, and lists each change), drops what still does not fit, checks every reason claim, writes the title from the food names and the dish, and checks each step ([Recipes that fit](#recipes-that-fit)). It saves nothing: **Save recipe** is your tap | Saved recipes and Fit to my targets |
+| **AI recipes** (`POST /api/ai/recipes`) | Up to 2 recipes (1 to rework one of yours) of 2–12 foods, each a food **id from the rule candidates** and the amount for the whole pot in quarter servings, a dish and a theme from fixed lists, reason codes, and cooking steps only when your admin turned them on | Works out one serving from the food rows, runs the same fit as **Fit to my targets** (lowers amounts, swaps a food, offers a smaller serving, and lists each change), so more than 3 servings of a food in one serving is made smaller, not dropped; drops what still does not fit, checks every reason claim, writes the title from the food names and the dish, and checks each step ([Recipes that fit](#recipes-that-fit)). It saves nothing: **Save recipe** is your tap | Saved recipes and Fit to my targets |
 | **Ask** (`POST /api/ai/chat`, off by default: `ai.chat_enabled`) | One JSON step at a time: a call to a read-only tool (`get_today`, `search_foods`, `check_meal`), a request to save (`log_food`, `save_recipe`) or an answer in short plain words | Runs the tool for you with the app's own functions, feeds the result back, and checks the answer in code before it shows it: no insulin or medicine doses, no number the tools did not return, no links; the app's figures are shown under the answer. A request to save is **a card you press Save on** unless you chose to trust the assistant (see "Saving from Ask" below). A low or an emergency in your message is answered by the app's cards without asking the AI | The Today, Add and Plan screens |
 
 Ask is the one feature where the model writes free text for you, which is why its answer is checked in code
@@ -1149,7 +1149,11 @@ and is agreed under the **Meal data** consent. That consent now names recipes, s
   never) and gives the amount of each for the whole pot in quarter servings. It gives no number of its own, no title and no
   count of servings.
 * **What the app does.** It checks the ids and the amounts, works out one serving from the food rows, and runs the same fit
-  as Fit to my targets. A recipe that still does not fit is dropped and counted. The title comes from the names of the main
+  as Fit to my targets. A recipe that still does not fit is dropped and counted. When the only problem is a share that is
+  too big (more than 3 servings of a food in one serving), the fit makes it smaller and the card says "The app made a
+  portion smaller so the recipe fits your targets." If the fit swapped that food out instead, the card says "The app changed
+  a food so the recipe fits your targets." The answer lists it under `portions_lowered`. A food to avoid, a low
+  treatment, alcohol, a food you marked Not for me, salt and an id the rules did not offer still drop the recipe. The title comes from the names of the main
   foods and the dish ("Rice and chicken breast stir-fry"); a recipe you rework is called "<your name> (reworked)", and your
   name for it is never sent.
 * **Steps** are the one free text, and they are **off** until an admin turns on `ai.recipe_steps`. The app removes any
@@ -1235,8 +1239,8 @@ and is agreed under the **Meal data** consent. That consent now names recipes, s
   a too-big portion smaller instead of dropping the idea; `2026-10-21.1` added food preferences, `2026-10-15.4` the lab report
   line, .3 made the instructions follow the profile) has not had one yet: **the owner's live run,
   `python scripts/ai_eval.py --chat` with the model in use, is still to do**. Compare `dropped_reasons` with the
-  2026-10-29 run (23 of 118 ideas dropped for `high_portion_too_large`); the report now also counts `ideas_lowered` and
-  `lowered_reasons`
+  2026-10-29 run (23 of 118 ideas dropped for `high_portion_too_large`, 1 recipe for `share_too_large`); the report now
+  also counts `ideas_lowered`, `recipes_lowered` and `lowered_reasons`
   ([`ROADMAP.md`](ROADMAP.md)). The offline set runs with
   `python -m pytest tests/test_ai_golden.py tests/test_ai_prompts.py tests/test_ai_profile_prompts.py`. The live run, from
   the repository root, against OpenAI (key from a file, never the command line):

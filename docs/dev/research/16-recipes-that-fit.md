@@ -256,7 +256,7 @@ The wire schema follows `app/ai/schemas.py`: the strict subset of keywords, a ro
 | Step | Check | A failure |
 |---|---|---|
 | V2 | Shape and counts. | A repair turn, as today. |
-| V3 | Each `food_id` is in this request's candidate ids and in the person's foods. Duplicates are merged. 2 to 12 foods. `quarters` 1 to 160. A share is at most `PORTION_MAX` (3) servings of one food. | Recipe dropped: `not_a_candidate`, `quarters_out_of_range`, `too_many_items`, `share_too_large`. |
+| V3 | Each `food_id` is in this request's candidate ids and in the person's foods. Duplicates are merged. 2 to 12 foods. `quarters` 1 to 160. A share above `PORTION_MAX` (3) servings of one food goes to the fit, which makes it smaller (since 2026-10-29). | Recipe dropped: `not_a_candidate`, `quarters_out_of_range`, `too_many_items`; `share_too_large` only when the fit cannot bring the share down to 3. |
 | V3 | No food the person marked "Not for me" and none in a never-suggest group (`person_excluded`). No hidden, `avoid_ckd`, low-treatment, alcohol or supply food, whatever the candidate list said. | Dropped: `not_for_me`, `excluded_category`, `not_a_candidate`. |
 | V4 | The app computes the shares, the per-serving figures and the unknown counts from the food rows. | |
 | V5 | `check_meal` kind `recipe` on the target's room. If it fails, `fit_recipe` runs with the AI recipe as its input (§9). | Dropped with the reason (`would_exceed:potassium_mg`, …) when even the fit cannot make it pass. |

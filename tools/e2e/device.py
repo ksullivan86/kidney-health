@@ -814,6 +814,59 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
         check(area, "the edit made while it was on its way is on the server, the deleted one is gone",
               [(e["food_id"], e["servings"], e["note"]) for e in rows] == [(peach, 3, "harness edit")], json.dumps(rows)[:400])
         page.unroute("**/api/log/batch")
+        # 5c. The entry sheet is open on a waiting entry while the entry reaches the server: Save still changes it, as an edit of
+        # the server's entry, and nothing is logged twice. 5d. Discard in Settings while the entry is on its way: it ends deleted
+        # on the server. (Kiwi and nectarine: foods no other section logs.)
+        kiwi = hx.api("GET", "/api/foods?q=kiwifruit%20raw&limit=1")["foods"][0]["id"]
+        nectarine = hx.api("GET", "/api/foods?q=nectarine%20raw&limit=1")["foods"][0]["id"]
+        held.clear()
+        watch.offline = True
+        ctx.set_offline(True)
+        waiting = page.evaluate(f"KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {kiwi}, servings: 1 }})")
+        page.evaluate("KH.router.show('today')")
+        page.click(f"#meals .row-btn:has-text(\"{waiting['food_name']}\") >> nth=0")
+        page.wait_for_selector("#sheet-entry[open]")
+        page.route("**/api/log/batch", hold_answer)
+        ctx.set_offline(False)
+        watch.offline = False
+        wait_js(page, "navigator.onLine")
+        deadline = time.monotonic() + TIMEOUT_MS / 1000
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(100)
+        route, answer = held.pop()
+        route.fulfill(response=answer)
+        wait_js(page, "KH.offline.items().then((items) => items.length === 0)", TIMEOUT_MS)
+        page.fill("#entry-note", "sheet left open")
+        page.click("#entry-save")
+        wait_js(page, "!document.querySelector('#sheet-entry').open")
+        said = page.evaluate("document.querySelector('#toast').textContent")
+        rows = [e for e in hx.entries() if e["client_id"] == waiting["client_id"]]
+        check(area, "a sheet opened before the entry reached the server still saves, on the server's entry",
+              [(e["food_id"], e["note"]) for e in rows] == [(kiwi, "sheet left open")] and "just reached" not in said, f"{said} {json.dumps(rows)[:300]}")
+        page.unroute("**/api/log/batch")
+        watch.offline = True
+        ctx.set_offline(True)
+        dropped = page.evaluate(f"KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {nectarine}, servings: 1 }})")
+        page.route("**/api/log/batch", hold_answer)
+        ctx.set_offline(False)
+        watch.offline = False
+        wait_js(page, "navigator.onLine")
+        deadline = time.monotonic() + TIMEOUT_MS / 1000
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(100)
+        check(area, "in flight: the server has the entry before the page hears back",
+              any(e["client_id"] == dropped["client_id"] for e in hx.entries()))
+        page.click("#sync-badge")
+        page.wait_for_selector("#set-outbox .outbox-item .btn.danger")
+        page.click("#set-outbox .outbox-item .btn.danger")
+        asked = page.inner_text("#set-outbox .confirm-row")
+        page.click("#set-outbox .confirm-row .btn.danger-solid")
+        route, answer = held.pop()
+        route.fulfill(response=answer)
+        wait_js(page, "KH.offline.items().then((items) => items.length === 0)", TIMEOUT_MS)
+        check(area, "Discard while it is on its way says so, and the entry is not left on the server",
+              "may have reached your server" in asked and not any(e["client_id"] == dropped["client_id"] for e in hx.entries()), asked)
+        page.unroute("**/api/log/batch")
         # 6. Sign-out asks while something waits.
         watch.offline = True
         ctx.set_offline(True)

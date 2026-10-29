@@ -381,6 +381,8 @@ def test_golden_case(path: Path, golden):
         assert len(lowered) == expect["portions_lowered"], (case["id"], lowered)
         made_smaller = {x["index"] for x in result.get("portions_lowered") or []}
         assert all(("portion_note" in i) == (i["index"] in made_smaller) for i in ideas), case["id"]  # the app's sentence
+        for card in result.get("recipes") or []:  # an AI recipe whose too-big share the fit made smaller
+            assert (card.get("portion_note") is not None) == (card["index"] in made_smaller), case["id"]
     for name, most in (expect.get("shown_quarters_at_most") or {}).items():
         amounts = [round(it["servings"] * 4) for i in ideas for it in i["items"] if it["name"] == name]
         assert amounts and max(amounts) <= most, (case["id"], name, amounts)
