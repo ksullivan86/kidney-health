@@ -991,7 +991,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
   Shared keys, Usage, Activity log, About this server, and AI providers (`KH.ai.renderAdmin`, moved out
   of Settings → AI ideas), with jump chips like Settings'. A member who opens `#admin` sees a one-line
   note and the page makes no `/api/admin` request; the server's `require_admin` is the real guard
-  (`tests/test_admin_page.py`).
+  (`tests/test_admin_page.py`). When two loads overlap (a second tap on the shield while the first
+  waits), only the newest builds the page, so each part is there once (`tests/js/admin_frame.test.mjs`).
 
 ## Milestones
 

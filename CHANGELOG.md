@@ -45,6 +45,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   its answer no longer fills in the form over what you typed.
 * **Search USDA shows one list.** Searching twice before USDA answered could mix both answers in one list. Now you see only
   the newest search. If you close the sheet while a food is importing, it no longer opens on its own.
+* **Server administration shows each part once.** Tapping the shield twice on a slow connection could list People,
+  Server settings and the rest twice.
 * **Ask keeps what you typed while you waited.** When a question got no answer, it went back into the box and wiped your
   next question. Now both are there.
 

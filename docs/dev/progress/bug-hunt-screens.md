@@ -51,6 +51,15 @@ counter and an AbortController), loadDevices (checks the box is still on the pag
    - Test: tests/js/ask_late_reply.test.mjs (+ tests/test_ask_late_reply.py). Old ask.js: 1 of 3 fail (the bug case);
      new: 3 of 3. Also run: test_ai_cloud_env, test_ask_taste_ui, test_ask_ui, test_ask_voice_ui.
    - Docs: ARCHITECTURE.md (Ask chat), handbook app/ai.md, CHANGELOG.
+4. **settings.js: overlapping Server administration loads built every part twice** (candidate 5). Done.
+   - `adminRender` ticket in renderAdminFrame; an older load returns after its two-step check. Kept the plain `return;`
+     in each branch (tests/test_admin_page.py reads the source for it).
+   - Test: tests/js/admin_frame.test.mjs (+ tests/test_admin_frame.py), which cuts the frame out of settings.js like
+     tests/js/assistant_page.mjs. Old: 2 of 4 fail (the two overlap cases); new: 4 of 4.
+   - Also run 26 Settings-related pytest files: all pass except
+     test_settings_ui.py::test_the_ui_never_mentions_reminders_before_they_exist, which already fails on next-batch
+     (the BACKUP_REMINDER_DAYS comment from commit dd88a39), not touched here.
+   - Docs: ARCHITECTURE.md (Server administration), CHANGELOG. The handbook already describes the right behaviour.
 
 ## Found, not changed (for the report)
 
