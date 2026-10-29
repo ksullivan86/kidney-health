@@ -1923,6 +1923,11 @@
           <button class="pw-toggle" type="button" aria-controls="reauth-password" aria-pressed="false">Show</button>
         </div>
       </div>
+      <!-- A passkey instead (design note 18 §10): shown by js/views/auth.js when this person has a passkey and the browser can use it. -->
+      <div class="reauth-passkey" id="reauth-passkey" hidden>
+        <p class="auth-or" aria-hidden="true">or</p>
+        <button class="btn secondary auth-passkey-btn" type="button" id="reauth-passkey-btn">Use a passkey instead</button>
+      </div>
       <div class="auth-error" id="reauth-error" role="alert" aria-live="assertive"></div>
     </div>
     <div class="sheet-foot">

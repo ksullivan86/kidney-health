@@ -35,8 +35,9 @@ body.signed-out .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 
 .auth-submit { width: 100%; }
 .auth-alt { align-self: center; }
 /* Passkeys (design note 18 §6): "or" between the password form and the passkey button. */
-.auth-passkey { display: flex; flex-direction: column; gap: 8px; }
-.auth-passkey[hidden] { display: none; }
+.auth-passkey, .reauth-passkey { display: flex; flex-direction: column; gap: 8px; }
+.reauth-passkey { margin-top: 12px; }
+.auth-passkey[hidden], .reauth-passkey[hidden] { display: none; }
 .auth-or { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text-2); font-size: 0.85rem; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
 .auth-passkey-btn { width: 100%; }

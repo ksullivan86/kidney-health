@@ -39,6 +39,7 @@ def install(app: "FastAPI", settings: "Settings", store: "SettingsStore") -> Aut
     app.include_router(totp_api.router)
     app.include_router(passkeys_api.me_router)
     app.include_router(passkeys_api.auth_router)
+    app.include_router(passkeys_api.reauth_router)
     app.include_router(api_tokens.router)
     app.include_router(admin_api.router)
     return ctx

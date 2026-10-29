@@ -105,7 +105,8 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
 - Sensitive actions (changing a password or key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
-  exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago.
+  exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago. If you have a
+  passkey, **Use a passkey instead** answers with your fingerprint, face or PIN.
 
 ## Two-step sign-in
 

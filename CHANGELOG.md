@@ -7,7 +7,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
-Nothing yet.
+### For people using the app
+
+* **A passkey instead of retyping your password.** When an action asks for your password again (adding a passkey, changing a
+  key, exporting your data), the sheet now has **Use a passkey instead** if you have a passkey. Your fingerprint, face or PIN
+  answers it. Only your own passkeys count, and five failures in a row sign the device out, as wrong passwords do. See
+  [`docs/accounts.md`](docs/accounts.md#passkeys).
 
 ## 0.9.0 — 2026-10-29
 

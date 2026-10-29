@@ -369,3 +369,61 @@ def test_public_url_sets_where_passkeys_work(tmp_path: Any, foods_json: Any) -> 
         assert c.post("/api/me/passkeys/options").json()["publicKey"]["rp"]["id"] == "food.example.org"
         pk, _ = add_passkey(c)
         assert sign_in_with(c.app, pk, "https://food.example.org").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# A passkey instead of the password when an action asks for it again (note 18 §10)
+# --------------------------------------------------------------------------- #
+
+
+def reauth_with(client: TestClient, pk: SoftPasskey, **change: Any) -> Any:
+    opts = client.post("/api/auth/reauth/passkey/options")
+    assert opts.status_code == 200, opts.text
+    origin = change.pop("origin", base(client))
+    raw = pk.get(b64url_decode(opts.json()["publicKey"]["challenge"]), origin=origin, **change)
+    return client.post("/api/auth/reauth/passkey", json={"challenge_id": opts.json()["challenge_id"],
+                                                          "credential": assertion_json(pk, raw)})
+
+
+def test_a_passkey_answers_the_password_question(client: TestClient, fake_clock: FakeClock) -> None:
+    pk, _ = add_passkey(client)
+    fake_clock.advance(minutes=client.app.state.settings.reauth_minutes + 1)
+    assert client.post("/api/me/passkeys/options").json().get("reauth_required") is True
+    opts = client.post("/api/auth/reauth/passkey/options").json()["publicKey"]
+    assert [b64url_decode(c["id"]) for c in opts["allowCredentials"]] == [pk.credential_id]
+    assert opts["userVerification"] == "required"
+    r = reauth_with(client, pk)
+    assert r.status_code == 200 and r.json()["ok"] is True and r.json()["reauth_until"]
+    assert client.post("/api/me/passkeys/options").status_code == 200  # the action now goes through
+
+
+def test_only_your_own_passkey_counts(pair: tuple[TestClient, TestClient], fake_clock: FakeClock) -> None:
+    admin, sam = pair
+    add_passkey(admin)
+    sam_pk, _ = add_passkey(sam)
+    fake_clock.advance(minutes=admin.app.state.settings.reauth_minutes + 1)
+    r = reauth_with(admin, sam_pk)  # Sam's passkey on the admin's session
+    assert r.status_code == 403 and r.json()["detail"] == "That passkey did not work. Try again, or type your password."
+    assert any(a == "login.failed" and '"via":"passkey_reauth"' in (d or "") for a, d in audit_rows(admin.app))
+
+
+def test_with_no_passkey_there_is_nothing_to_ask(client: TestClient) -> None:
+    r = client.post("/api/auth/reauth/passkey/options")
+    assert r.status_code == 409 and "Type your password" in r.json()["detail"]
+
+
+def test_five_failed_passkey_answers_sign_the_device_out(client: TestClient, fake_clock: FakeClock) -> None:
+    pk, _ = add_passkey(client)
+    fake_clock.advance(minutes=client.app.state.settings.reauth_minutes + 1)
+    codes = [reauth_with(client, pk, uv=False).status_code for _ in range(5)]
+    assert codes == [403, 403, 403, 403, 401]
+    assert client.get("/api/me").status_code == 401
+
+
+def test_a_reentry_challenge_is_not_a_sign_in_challenge(client: TestClient) -> None:
+    pk, _ = add_passkey(client)
+    opts = client.post("/api/auth/reauth/passkey/options").json()
+    raw = pk.get(b64url_decode(opts["publicKey"]["challenge"]), origin=base(client))
+    r = TestClient(client.app).post("/api/auth/passkey", json={"challenge_id": opts["challenge_id"], "credential": assertion_json(pk, raw)})
+    assert r.status_code == 401
+    assert TestClient(client.app).post("/api/auth/reauth/passkey/options").status_code == 401  # signed in only

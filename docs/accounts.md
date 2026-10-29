@@ -113,6 +113,8 @@ phished or reused from a leak.
   copied key, is refused and shown in the person's activity.
 * Lost or stolen device: the person removes that passkey in Settings, or you remove all of theirs in **Server administration →
   People → Remove passkeys**, or with `python -m app.admin remove-passkeys USERNAME`.
+* When an action asks for the password again (adding a passkey, changing a key, exporting), **Use a passkey instead** answers
+  it with the fingerprint, face or PIN. Only the person's own passkey counts, and failures count like wrong passwords.
 * The server stores public keys only. Nothing about them is secret, and they are not in the data export.
 
 How it works, and why: [design note 18](dev/research/18-passkeys.md).
