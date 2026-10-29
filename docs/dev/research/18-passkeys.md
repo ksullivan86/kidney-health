@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted, 2026-10-29. The owner asked for it ("start passkeys") after two-step sign-in (note 17). The choices below are the defaults this note took, listed in §9 so they can be changed. The schema step is **23**. |
+| Status | Accepted, 2026-10-29. The owner asked for it ("start passkeys") after two-step sign-in (note 17). The choices below are the defaults this note took, listed in §9 so they can be changed. Built 2026-10-29, the server and the screens together. The schema step is **23**. |
 | Scope | A person with a password can add **passkeys** (up to 10) and then sign in with one: the phone or computer asks for a fingerprint, face or device PIN, and no password or code is typed. Settings lists, renames and removes them; an admin, or the command line, can remove them all for an account. |
 | Out of scope | Accounts without a password, passkeys for re-authentication, passkeys in the autofill list of the username field ("conditional UI"), checking which company made an authenticator (attestation). All "Later", §10. |
 | Builds on | Note 17 (two-step sign-in), `app/auth/routes.py` (sign-in, throttles), `app/auth/me.py`, `app/auth/admin_api.py`, `app/admin.py`, `app/crypto.py`. |
