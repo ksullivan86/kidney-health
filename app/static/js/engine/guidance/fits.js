@@ -297,14 +297,15 @@
     }
     return chosen;
   }
-  function whatFits(ctx, meal, limit = R.DEFAULT_LIMIT, explain = false, counter = null) {
+  function whatFits(ctx, meal, limit = R.DEFAULT_LIMIT, explain = false, counter = null, exclude = null) {
     counter = counter || S.newCounter();
     const totals = B.dayTotals(ctx.day);
     const room = B.mealRoom(ctx, meal, null, totals);
     const habit = S.habitStats(ctx);
     const today = S.todayStats(ctx.day);
     const scorer = new S.Scorer(room, habit, today, counter);
-    const [ranked, whyNot] = rankFoods(ctx, room, scorer, eligibleFoods(ctx), explain);
+    const pool = eligibleFoods(ctx).filter((f) => !(exclude && exclude.has(f.id))); // foods already shown ("Show other foods")
+    const [ranked, whyNot] = rankFoods(ctx, room, scorer, pool, explain);
     const chosen = select(ranked, Math.max(1, Math.min(Math.trunc(limit), R.MAX_LIMIT)));
     const tracked = trackedKeys(room);
     const carbsFirst = room.carbs != null;

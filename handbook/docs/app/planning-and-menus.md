@@ -109,6 +109,8 @@ sheet shows **Rework with AI**. Pick the meal, the kind of dish and how many ser
 * The title is made by the app from the main foods, such as "Rice and chicken breast stir-fry". A recipe it reworked keeps
   your name with "(reworked)". Your recipe's name, note, steps and link are never sent.
 * **Save recipe** adds it to your saved meals. **Add to plan** adds one serving to the meal. Nothing is saved until you tap.
+* **Other recipes** (or **Another way** when reworking) asks again without the main foods already shown. Oil, flour and the
+  like can still be used. Each ask counts as one AI call.
 * Cooking steps from AI appear only if your admin turned them on. The app removes any step about medicines, a low,
   nutrients or amounts. The rest are marked "Steps written by AI. The app checked them for medicine talk and nutrient claims,
   not for cooking times or food safety. Check them before you cook."

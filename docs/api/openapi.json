@@ -5576,6 +5576,16 @@
             ],
             "title": "Entry Id"
           },
+          "exclude_food_ids": {
+            "items": {
+              "maximum": 9.223372036854776e+18,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxItems": 60,
+            "title": "Exclude Food Ids",
+            "type": "array"
+          },
           "food_id": {
             "anyOf": [
               {
@@ -8163,6 +8173,16 @@
               }
             ],
             "title": "Dish"
+          },
+          "exclude_food_ids": {
+            "items": {
+              "maximum": 9.223372036854776e+18,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxItems": 60,
+            "title": "Exclude Food Ids",
+            "type": "array"
           },
           "makes": {
             "default": 4,
@@ -14832,7 +14852,7 @@
     },
     "/api/guidance/next-meal": {
       "get": {
-        "description": "What fits now (§4.5): foods, saved and usual meals that fit ``meal`` on ``date``.",
+        "description": "What fits now (§4.5): foods, saved and usual meals that fit ``meal`` on ``date``; ``exclude`` leaves out foods\nalready shown.",
         "operationId": "guidance_next_meal",
         "parameters": [
           {
@@ -14886,6 +14906,22 @@
               "default": false,
               "title": "Explain",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exclude",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude"
             }
           }
         ],
